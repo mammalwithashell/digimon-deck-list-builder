@@ -95,6 +95,36 @@ public class HeadlessGameManager : MonoBehaviour
         GameObject controllerObj = new GameObject("HeadlessContinuousController");
         controllerObj.AddComponent<HeadlessContinuousController>();
 
+        // Ensure GManager exists
+        if (GManager.instance == null)
+        {
+            GameObject gManagerObj = new GameObject("GManager");
+            gManagerObj.AddComponent<GManager>();
+            // Also need TurnStateMachine
+            gManagerObj.AddComponent<TurnStateMachine>();
+
+            // Initialize basics
+            GManager.instance.turnStateMachine = gManagerObj.GetComponent<TurnStateMachine>();
+            GManager.instance.turnStateMachine.gameContext = new GameContext();
+            GManager.instance.turnStateMachine.gameContext.Players = new Player[2];
+
+            // Create Players
+            GameObject player1Obj = new GameObject("Player1");
+            Player player1 = player1Obj.AddComponent<Player>();
+            player1.PlayerID = 0;
+
+            GameObject player2Obj = new GameObject("Player2");
+            Player player2 = player2Obj.AddComponent<Player>();
+            player2.PlayerID = 1;
+
+            GManager.instance.You = player1;
+            GManager.instance.Opponent = player2;
+            GManager.instance.turnStateMachine.gameContext.Players[0] = player1;
+            GManager.instance.turnStateMachine.gameContext.Players[1] = player2;
+        }
+
+        SetupHeadlessGManager();
+
         // Disable Audio
         AudioListener.pause = true;
         AudioListener.volume = 0;
@@ -106,7 +136,10 @@ public class HeadlessGameManager : MonoBehaviour
         {
             var effects = GManager.instance.GetComponent<Effects>();
             if (effects != null) Destroy(effects);
-            GManager.instance.gameObject.AddComponent<HeadlessEffects>();
+            if (GManager.instance.GetComponent<HeadlessEffects>() == null)
+            {
+                GManager.instance.gameObject.AddComponent<HeadlessEffects>();
+            }
         }
     }
 
