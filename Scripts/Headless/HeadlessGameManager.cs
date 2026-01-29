@@ -51,9 +51,14 @@ public class HeadlessGameManager : MonoBehaviour
         Debug.Log($"[Headless] Decks loaded. Player 1: {deck1.Count} cards, Player 2: {deck2.Count} cards.");
 
         // 4. Setup Game
-        // Wait for GManager to be ready if needed, or initialize it
-        // Assuming GManager exists in the scene
-        while (GManager.instance == null)
+        // Ensure GManager exists and is initialized
+        if (GManager.Instance == null)
+        {
+            InitializeGManager();
+        }
+
+        // Wait for GManager to be fully ready if needed
+        while (GManager.Instance == null)
         {
             yield return null;
         }
@@ -95,34 +100,6 @@ public class HeadlessGameManager : MonoBehaviour
         GameObject controllerObj = new GameObject("HeadlessContinuousController");
         controllerObj.AddComponent<HeadlessContinuousController>();
 
-        // Ensure GManager exists
-        if (GManager.instance == null)
-        {
-            GameObject gManagerObj = new GameObject("GManager");
-            gManagerObj.AddComponent<GManager>();
-            // Also need TurnStateMachine
-            gManagerObj.AddComponent<TurnStateMachine>();
-
-            // Initialize basics
-            GManager.instance.turnStateMachine = gManagerObj.GetComponent<TurnStateMachine>();
-            GManager.instance.turnStateMachine.gameContext = new GameContext();
-            GManager.instance.turnStateMachine.gameContext.Players = new Player[2];
-
-            // Create Players
-            GameObject player1Obj = new GameObject("Player1");
-            Player player1 = player1Obj.AddComponent<Player>();
-            player1.PlayerID = 0;
-
-            GameObject player2Obj = new GameObject("Player2");
-            Player player2 = player2Obj.AddComponent<Player>();
-            player2.PlayerID = 1;
-
-            GManager.instance.You = player1;
-            GManager.instance.Opponent = player2;
-            GManager.instance.turnStateMachine.gameContext.Players[0] = player1;
-            GManager.instance.turnStateMachine.gameContext.Players[1] = player2;
-        }
-
         SetupHeadlessGManager();
 
         // Disable Audio
@@ -130,15 +107,42 @@ public class HeadlessGameManager : MonoBehaviour
         AudioListener.volume = 0;
     }
 
+    private void InitializeGManager()
+    {
+        GameObject gManagerObj = new GameObject("GManager");
+        gManagerObj.AddComponent<GManager>();
+        // Also need TurnStateMachine
+        gManagerObj.AddComponent<TurnStateMachine>();
+
+        // Initialize basics
+        GManager.Instance.TurnStateMachine = gManagerObj.GetComponent<TurnStateMachine>();
+        GManager.Instance.TurnStateMachine.gameContext = new GameContext();
+        GManager.Instance.TurnStateMachine.gameContext.Players = new Player[2];
+
+        // Create Players
+        GameObject player1Obj = new GameObject("Player1");
+        Player player1 = player1Obj.AddComponent<Player>();
+        player1.PlayerID = 0;
+
+        GameObject player2Obj = new GameObject("Player2");
+        Player player2 = player2Obj.AddComponent<Player>();
+        player2.PlayerID = 1;
+
+        GManager.Instance.You = player1;
+        GManager.Instance.Opponent = player2;
+        GManager.Instance.TurnStateMachine.gameContext.Players[0] = player1;
+        GManager.Instance.TurnStateMachine.gameContext.Players[1] = player2;
+    }
+
     private void SetupHeadlessGManager()
     {
-        if (GManager.instance != null)
+        if (GManager.Instance != null)
         {
-            var effects = GManager.instance.GetComponent<Effects>();
+            var effects = GManager.Instance.GetComponent<Effects>();
             if (effects != null) Destroy(effects);
-            if (GManager.instance.GetComponent<HeadlessEffects>() == null)
+            if (GManager.Instance.GetComponent<HeadlessEffects>() == null)
             {
-                GManager.instance.gameObject.AddComponent<HeadlessEffects>();
+                GManager.Instance.gameObject.AddComponent<HeadlessEffects>();
             }
         }
     }
@@ -209,13 +213,13 @@ public class HeadlessGameManager : MonoBehaviour
 
         // For the purpose of this task, we assume the Agent is attached here.
         MCTSAgent agent = gameObject.AddComponent<MCTSAgent>();
-        agent.Initialize(GManager.instance);
+        agent.Initialize(GManager.Instance);
     }
 
     private IEnumerator GameLoop()
     {
         // Wait for game end
-        while (GManager.instance.turnStateMachine != null && !GManager.instance.turnStateMachine.endGame)
+        while (GManager.Instance.TurnStateMachine != null && !GManager.Instance.TurnStateMachine.endGame)
         {
             yield return null;
         }
@@ -230,10 +234,10 @@ public class HeadlessGameManager : MonoBehaviour
     {
         // Collect stats
         bool player1Won = false; // Retrieve from GManager
-        int turnCount = GManager.instance.turnStateMachine.TurnCount;
+        int turnCount = GManager.Instance.TurnStateMachine.TurnCount;
 
         // Find winner
-        foreach(var player in GManager.instance.turnStateMachine.gameContext.Players)
+        foreach(var player in GManager.Instance.TurnStateMachine.gameContext.Players)
         {
             if (!player.IsLose)
             {

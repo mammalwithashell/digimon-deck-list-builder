@@ -5,11 +5,11 @@ using UnityEngine;
 
 public class Permanent
 {
-    public List<CardSource> cardSources = new List<CardSource>();
-    public List<CardSource> DigivolutionCards => cardSources; // Simplification
-    public CardSource TopCard => cardSources.Count > 0 ? cardSources[cardSources.Count - 1] : null;
+    public List<CardSource> CardSources { get; set; } = new List<CardSource>();
+    public List<CardSource> DigivolutionCards => CardSources; // Simplification
+    public CardSource TopCard => CardSources.Count > 0 ? CardSources[CardSources.Count - 1] : null;
     public int Level => TopCard?.Level ?? 0;
-    public bool IsSuspended;
+    public bool IsSuspended { get; set; }
     public bool IsToken => TopCard?.IsToken ?? false;
     public bool IsDigimon => TopCard?.IsDigimon ?? false;
     public bool IsTamer => TopCard?.IsTamer ?? false;
@@ -23,12 +23,12 @@ public class Permanent
 
     public Permanent(List<CardSource> cardSources)
     {
-        this.cardSources = cardSources;
+        this.CardSources = cardSources;
     }
 
     public void AddCardSource(CardSource cardSource)
     {
-        cardSources.Add(cardSource);
+        CardSources.Add(cardSource);
     }
 
     public IEnumerator DiscardEvoRoots(bool ignoreOverflow = false, bool putToTrash = true)

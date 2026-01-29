@@ -5,25 +5,26 @@ using UnityEngine;
 
 public class GManager : MonoBehaviourPun
 {
-    public static GManager instance;
-    public Player You;
-    public Player Opponent;
-    public TurnStateMachine turnStateMachine;
-    public bool IsAI;
-    public int CardIndex;
+    public static GManager Instance { get; private set; }
+
+    public Player You { get; set; }
+    public Player Opponent { get; set; }
+    public TurnStateMachine TurnStateMachine { get; set; }
+    public bool IsAI { get; set; }
+    public int CardIndex { get; set; }
 
     // Stubs for fields
-    public bool isAuto;
+    public bool IsAuto { get; set; }
 
     private void Awake()
     {
-        instance = this;
+        Instance = this;
         // turnStateMachine = GetComponent<TurnStateMachine>(); // Usually attached
     }
 
     public void OnDestroy()
     {
-        if (instance == this) instance = null;
+        if (Instance == this) Instance = null;
     }
 
     // Stubs for RPCs and Methods

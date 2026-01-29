@@ -8,12 +8,11 @@ public class CardSource : MonoBehaviour
     public PhotonView PhotonView { get; set; }
     public Player Owner { get; set; }
     public int CardIndex { get; set; }
-    public CEntity_EffectController cEntity_EffectController;
+    public CEntity_EffectController CEntity_EffectController { get; set; }
     public bool IsFlipped { get; set; }
-    // HandCard ShowingHandCard; // Assuming HandCard is UI, so mock it or skip
-    public int BaseDP;
+    public int BaseDP { get; set; }
     public bool IsToken { get; set; }
-    public bool willBeRemoveSources { get; set; }
+    public bool WillBeRemoveSources { get; set; }
     public bool IsBeingRevealed { get; set; }
     public Permanent PermanentJustBeforeRemoveField { get; set; }
 
