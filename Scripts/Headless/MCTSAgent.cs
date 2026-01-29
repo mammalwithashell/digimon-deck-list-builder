@@ -177,7 +177,7 @@ public class MCTSAgent : MonoBehaviour
 //    In their 'Activate()' coroutines, instead of showing UI and waiting for clicks:
 //
 //    if (HeadlessGameManager.Instance != null) {
-//        IGameState currentState = new DCGOGameStateAdapter(GManager.instance);
+    //        IGameState currentState = new DCGOGameStateAdapter(GManager.Instance);
 //        int bestMove = HeadlessGameManager.Instance.GetComponent<MCTSAgent>().GetBestMove(currentState);
 //        // Apply bestMove to the selection result
 //        yield break;

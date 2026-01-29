@@ -168,11 +168,38 @@ public class HeadlessGameManager : MonoBehaviour
         }
     }
 
+    private void InitializeGManager()
+    {
+        GameObject gManagerObj = new GameObject("GManager");
+        gManagerObj.AddComponent<GManager>();
+        // Also need TurnStateMachine
+        gManagerObj.AddComponent<TurnStateMachine>();
+
+        // Initialize basics
+        GManager.Instance.TurnStateMachine = gManagerObj.GetComponent<TurnStateMachine>();
+        GManager.Instance.TurnStateMachine.gameContext = new GameContext();
+        GManager.Instance.TurnStateMachine.gameContext.Players = new Player[2];
+
+        // Create Players
+        GameObject player1Obj = new GameObject("Player1");
+        Player player1 = player1Obj.AddComponent<Player>();
+        player1.PlayerID = 0;
+
+        GameObject player2Obj = new GameObject("Player2");
+        Player player2 = player2Obj.AddComponent<Player>();
+        player2.PlayerID = 1;
+
+        GManager.Instance.You = player1;
+        GManager.Instance.Opponent = player2;
+        GManager.Instance.TurnStateMachine.gameContext.Players[0] = player1;
+        GManager.Instance.TurnStateMachine.gameContext.Players[1] = player2;
+    }
+
     private void SetupHeadlessGManager()
     {
-        if (GManager.instance != null)
+        if (GManager.Instance != null)
         {
-            var effects = GManager.instance.GetComponent<Effects>();
+            var effects = GManager.Instance.GetComponent<Effects>();
             if (effects != null) Destroy(effects);
 
             // Only add HeadlessEffects if not already there (though Destroy above should handle replacement)
@@ -246,7 +273,7 @@ public class HeadlessGameManager : MonoBehaviour
         if (existingAgent != null) Destroy(existingAgent);
 
         MCTSAgent agent = gameObject.AddComponent<MCTSAgent>();
-        agent.Initialize(GManager.instance);
+        agent.Initialize(GManager.Instance);
     }
 
     // Removed old InitializeHeadless as it's replaced by SessionLoop
@@ -257,10 +284,10 @@ public class HeadlessGameManager : MonoBehaviour
     {
         // Collect stats
         bool player1Won = false; // Retrieve from GManager
-        int turnCount = GManager.instance.turnStateMachine.TurnCount;
+        int turnCount = GManager.Instance.TurnStateMachine.TurnCount;
 
         // Find winner
-        foreach(var player in GManager.instance.turnStateMachine.gameContext.Players)
+        foreach(var player in GManager.Instance.TurnStateMachine.gameContext.Players)
         {
             if (!player.IsLose)
             {
