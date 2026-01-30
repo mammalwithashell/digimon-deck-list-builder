@@ -9,16 +9,10 @@ from python_impl.engine.data.card_database import CardDatabase
 
 def run_sim():
     # Load Cards
+    # Database singleton automatically loads cards.json from its own directory
     db = CardDatabase()
-    # Path is relative to where we run script
-    # Assuming running from repo root
-    json_path = os.path.join("python_impl", "engine", "data", "cards.json")
-    if not os.path.exists(json_path):
-        # try relative to file
-        json_path = os.path.join(os.path.dirname(__file__), "engine", "data", "cards.json")
 
-    print(f"Loading cards from {json_path}")
-    db.load_cards(json_path)
+    print(f"Database loaded with {len(db.cards)} cards.")
 
     # Create Game
     game = Game()
