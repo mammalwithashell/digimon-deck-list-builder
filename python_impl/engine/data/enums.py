@@ -90,3 +90,4 @@ class EffectTiming(Enum):
     WhenTopCardTrashed = 54
     RulesTiming = 55
     OnRemovedField = 56
+    WhenWouldDigivolve = 57

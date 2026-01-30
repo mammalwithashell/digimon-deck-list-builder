@@ -10,6 +10,7 @@ from python_impl.engine.core.card_source import CardSource
 from python_impl.engine.core.permanent import Permanent
 from python_impl.engine.core.player import Player
 from python_impl.engine.interfaces.card_effect import ICardEffect
+from python_impl.engine.data.card_database import CardDatabase
 
 def test_structure():
     print("Testing structure...")
@@ -41,6 +42,9 @@ def test_structure():
     print(f"Permanent created with top card: {permanent.top_card.card_names[0]}")
     print(f"Permanent Level: {permanent.level}")
     print(f"Permanent DP: {permanent.dp}")
+
+    # Test Database
+    db = CardDatabase()
 
     print("Structure test passed!")
 

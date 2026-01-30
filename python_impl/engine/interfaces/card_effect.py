@@ -71,6 +71,22 @@ class ICardEffect(ABC):
     def is_on_attack(self, value: bool):
         self._is_on_attack = value
 
+    @property
+    def dp_modifier(self) -> int:
+        return getattr(self, '_dp_modifier', 0)
+
+    @dp_modifier.setter
+    def dp_modifier(self, value: int):
+        self._dp_modifier = value
+
+    @property
+    def cost_reduction(self) -> int:
+        return getattr(self, '_cost_reduction', 0)
+
+    @cost_reduction.setter
+    def cost_reduction(self, value: int):
+        self._cost_reduction = value
+
     def set_up_icard_effect(self, effect_name: str, can_use_condition: Callable[[Dict[str, Any]], bool], card: 'CardSource'):
         self.effect_name = effect_name
         self.can_use_condition = can_use_condition
