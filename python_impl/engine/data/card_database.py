@@ -1,7 +1,7 @@
 import json
 import os
 import importlib
-from typing import Dict, Optional, List
+from typing import Dict, Optional, List, Any
 from ..core.entity_base import CEntity_Base
 from ..core.card_script import CardScript
 from ..core.card_source import CardSource
@@ -13,35 +13,6 @@ class CardDatabase:
     def __new__(cls):
         if cls._instance is None:
             cls._instance = super(CardDatabase, cls).__new__(cls)
-            cls._instance.cards = {}
-            cls._instance.load_cards()
-        return cls._instance
-
-    def load_cards(self):
-        # Determine the path to cards.json
-        current_dir = os.path.dirname(os.path.abspath(__file__))
-        json_path = os.path.join(current_dir, 'cards.json')
-
-        try:
-            with open(json_path, 'r', encoding='utf-8') as f:
-                card_list = json.load(f)
-                for card_data in card_list:
-                    self.cards[card_data['id']] = card_data
-            print(f"Loaded {len(self.cards)} cards from {json_path}")
-        except FileNotFoundError:
-            print(f"Error: cards.json not found at {json_path}")
-        except json.JSONDecodeError as e:
-            print(f"Error decoding cards.json: {e}")
-
-    def get_card_data(self, card_id: str) -> Optional[Dict[str, Any]]:
-        return self.cards.get(card_id)
-
-    def get_all_cards(self) -> Dict[str, Any]:
-        return self.cards
-
-if __name__ == "__main__":
-    db = CardDatabase()
-    print("Database contents:", db.get_all_cards().keys())
             cls._instance.initialized = False
         return cls._instance
 
@@ -91,12 +62,12 @@ if __name__ == "__main__":
 
             self.cards[entity.card_id] = entity
 
+        print(f"Database loaded with {len(self.cards)} cards.")
+
     def _load_script(self, entity: CEntity_Base):
         script_name = entity.card_effect_class_name
         # Assume set_id is the part before the first underscore or hyphen, but usually ST1_01 -> ST1
         # script_name is usually "ST1_01" (class name)
-        # We need to handle potential naming conventions.
-        # If class name is "ST1_01", we assume file is python_impl.engine.data.scripts.st1.st1_01
 
         parts = script_name.split('_')
         if len(parts) < 2:
@@ -121,9 +92,11 @@ if __name__ == "__main__":
                      script_class = getattr(module, script_name)
                      self.scripts[entity.card_id] = script_class()
                  except ImportError as e:
-                     print(f"Could not load script for {entity.card_id} ({script_name}): {e}")
+                     # print(f"Could not load script for {entity.card_id} ({script_name}): {e}")
+                     pass
              except AttributeError as e:
-                 print(f"Could not find class {script_name} in {module_path}: {e}")
+                 # print(f"Could not find class {script_name} in {module_path}: {e}")
+                 pass
 
     def get_card(self, card_id: str) -> Optional[CEntity_Base]:
         return self.cards.get(card_id)
@@ -140,3 +113,10 @@ if __name__ == "__main__":
         card_source = CardSource()
         card_source.set_base_data(entity, owner)
         return card_source
+
+    def get_all_cards(self) -> Dict[str, Any]:
+        return self.cards
+
+if __name__ == "__main__":
+    db = CardDatabase()
+    print("Database contents:", db.get_all_cards().keys())

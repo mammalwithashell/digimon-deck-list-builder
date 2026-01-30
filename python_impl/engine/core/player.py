@@ -71,6 +71,19 @@ class Player:
             self.battle_area.append(new_permanent)
             print(f"{self.player_name} played {card_source.card_names[0]}.")
 
+    def promote(self):
+        if self.breeding_area is None:
+            print("Cannot promote: Breeding area empty.")
+            return
+
+        perm = self.breeding_area
+        self.breeding_area = None
+        self.battle_area.append(perm)
+        if perm.top_card and perm.top_card.card_names:
+             print(f"{self.player_name} promoted {perm.top_card.card_names[0]}.")
+        else:
+             print(f"{self.player_name} promoted a Digimon.")
+
     def unsuspend_all(self):
         for perm in self.battle_area:
             perm.is_suspended = False
