@@ -99,3 +99,6 @@ class ICardEffect(ABC):
         if card_effect is None:
             return False
         return self.hash_string == card_effect.hash_string and self.root_card_effect == card_effect.root_card_effect
+
+    def get_change_dp_value(self, permanent: 'Permanent') -> int:
+        return 0

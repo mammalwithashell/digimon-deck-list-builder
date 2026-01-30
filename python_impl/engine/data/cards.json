@@ -226,5 +226,20 @@
     "card_colors": [0],
     "effect_description_eng": "[Main] Delete 1 of your opponent's Digimon.",
     "security_effect_description_eng": "[Security] Activate this card's [Main] effect."
+  },
+  {
+    "card_id": "BT22-001",
+    "card_index": 22001,
+    "card_name_eng": "Koromon",
+    "card_name_jpn": "コロモン",
+    "card_effect_class_name": "BT22_001",
+    "play_cost": 0,
+    "dp": 0,
+    "level": 2,
+    "card_kind": 3,
+    "rarity": 1,
+    "card_colors": [0],
+    "effect_description_eng": "Inherited: [Your Turn] While this Digimon has [Greymon] in its name, it gets +1000 DP.",
+    "security_effect_description_eng": ""
   }
 ]

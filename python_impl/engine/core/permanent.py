@@ -43,7 +43,19 @@ class Permanent:
 
     @property
     def dp(self) -> int:
-        return self.top_card.base_dp if self.top_card else 0
+        if not self.top_card:
+            return 0
+
+        base = self.top_card.base_dp
+        mod = 0
+
+        # Calculate DP modifications from effects
+        # Using NoTiming for continuous/static effects
+        for effect in self.effect_list(EffectTiming.NoTiming):
+            if not effect.is_disabled:
+                mod += effect.get_change_dp_value(self)
+
+        return max(0, base + mod)
 
     def can_attack(self, card_effect: Optional['ICardEffect'], without_tap: bool = False, is_vortex: bool = False) -> bool:
         return True
@@ -52,7 +64,30 @@ class Permanent:
         return False
 
     def effect_list(self, timing: EffectTiming) -> List['ICardEffect']:
-        return []
+        effects = []
+
+        # Top card effects
+        if self.top_card:
+            top_effects = self.top_card.effect_list(timing)
+            for eff in top_effects:
+                if not eff.is_inherited_effect:
+                    effects.append(eff)
+
+        # Inherited effects from sources
+        for card in self.card_sources:
+            if card == self.top_card:
+                continue
+
+            source_effects = card.effect_list(timing)
+            for eff in source_effects:
+                if eff.is_inherited_effect:
+                    effects.append(eff)
+
+        # Set the source permanent for all collected effects
+        for eff in effects:
+            eff.set_effect_source_permanent(self)
+
+        return effects
 
     def add_card_source(self, card_source: 'CardSource'):
         self.card_sources.append(card_source)
