@@ -4,6 +4,7 @@ import importlib
 from typing import Dict, Optional, List
 from ..core.entity_base import CEntity_Base
 from ..core.card_script import CardScript
+from ..core.card_source import CardSource
 from .enums import CardColor, CardKind, Rarity, EffectTiming
 
 class CardDatabase:
@@ -100,3 +101,13 @@ class CardDatabase:
 
     def get_script(self, card_id: str) -> Optional[CardScript]:
         return self.scripts.get(card_id)
+
+    def create_card_source(self, card_id: str, owner=None) -> Optional[CardSource]:
+        entity = self.get_card(card_id)
+        if not entity:
+            print(f"Card ID {card_id} not found.")
+            return None
+
+        card_source = CardSource()
+        card_source.set_base_data(entity, owner)
+        return card_source
