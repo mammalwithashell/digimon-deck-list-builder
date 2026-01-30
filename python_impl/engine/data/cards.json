@@ -10,7 +10,9 @@
     "level": 2,
     "card_kind": 3,
     "rarity": 1,
-    "card_colors": [0],
+    "card_colors": [
+      0
+    ],
     "inherited_effect_description_eng": "[Your Turn] While this Digimon has 4 or more digivolution cards, it gets +1000 DP."
   },
   {
@@ -24,7 +26,9 @@
     "level": 3,
     "card_kind": 0,
     "rarity": 0,
-    "card_colors": [0],
+    "card_colors": [
+      0
+    ],
     "effect_description_eng": ""
   },
   {
@@ -38,7 +42,9 @@
     "level": 3,
     "card_kind": 0,
     "rarity": 1,
-    "card_colors": [0],
+    "card_colors": [
+      0
+    ],
     "inherited_effect_description_eng": "[Your Turn] This Digimon gets +1000 DP."
   },
   {
@@ -52,7 +58,9 @@
     "level": 3,
     "card_kind": 0,
     "rarity": 0,
-    "card_colors": [0],
+    "card_colors": [
+      0
+    ],
     "effect_description_eng": ""
   },
   {
@@ -66,7 +74,9 @@
     "level": 4,
     "card_kind": 0,
     "rarity": 0,
-    "card_colors": [0],
+    "card_colors": [
+      0
+    ],
     "effect_description_eng": ""
   },
   {
@@ -80,7 +90,9 @@
     "level": 4,
     "card_kind": 0,
     "rarity": 0,
-    "card_colors": [0],
+    "card_colors": [
+      0
+    ],
     "effect_description_eng": ""
   },
   {
@@ -94,7 +106,9 @@
     "level": 4,
     "card_kind": 0,
     "rarity": 1,
-    "card_colors": [0],
+    "card_colors": [
+      0
+    ],
     "inherited_effect_description_eng": "[Your Turn] <Security Attack +1> (This Digimon checks 1 additional security card)."
   },
   {
@@ -108,7 +122,9 @@
     "level": 5,
     "card_kind": 0,
     "rarity": 1,
-    "card_colors": [0],
+    "card_colors": [
+      0
+    ],
     "effect_description_eng": ""
   },
   {
@@ -122,7 +138,9 @@
     "level": 5,
     "card_kind": 0,
     "rarity": 2,
-    "card_colors": [0],
+    "card_colors": [
+      0
+    ],
     "inherited_effect_description_eng": "[Your Turn] When this Digimon is blocked, gain 3 memory."
   },
   {
@@ -136,7 +154,9 @@
     "level": 6,
     "card_kind": 0,
     "rarity": 2,
-    "card_colors": [0],
+    "card_colors": [
+      0
+    ],
     "effect_description_eng": ""
   },
   {
@@ -150,7 +170,9 @@
     "level": 6,
     "card_kind": 0,
     "rarity": 3,
-    "card_colors": [0],
+    "card_colors": [
+      0
+    ],
     "effect_description_eng": "[Your Turn] For every 2 digivolution cards, this Digimon gains <Security Attack +1>."
   },
   {
@@ -164,7 +186,9 @@
     "level": 0,
     "card_kind": 1,
     "rarity": 2,
-    "card_colors": [0],
+    "card_colors": [
+      0
+    ],
     "effect_description_eng": "[Your Turn] All of your Red Digimon gain +1000 DP."
   },
   {
@@ -178,7 +202,9 @@
     "level": 0,
     "card_kind": 2,
     "rarity": 0,
-    "card_colors": [0],
+    "card_colors": [
+      0
+    ],
     "effect_description_eng": "[Main] 1 of your Digimon gets +3000 DP for the turn.",
     "security_effect_description_eng": "[Security] Add this card to your hand."
   },
@@ -193,7 +219,9 @@
     "level": 0,
     "card_kind": 2,
     "rarity": 0,
-    "card_colors": [0],
+    "card_colors": [
+      0
+    ],
     "effect_description_eng": "[Main] All of your Security Digimon get +7000 DP until the end of your opponent's next turn.",
     "security_effect_description_eng": "[Security] Add this card to your hand."
   },
@@ -208,7 +236,9 @@
     "level": 0,
     "card_kind": 2,
     "rarity": 0,
-    "card_colors": [0],
+    "card_colors": [
+      0
+    ],
     "effect_description_eng": "[Main] Delete up to 2 of your opponent's Digimon with 4000 DP or less.",
     "security_effect_description_eng": "[Security] Activate this card's [Main] effect."
   },
@@ -223,7 +253,9 @@
     "level": 0,
     "card_kind": 2,
     "rarity": 1,
-    "card_colors": [0],
+    "card_colors": [
+      0
+    ],
     "effect_description_eng": "[Main] Delete 1 of your opponent's Digimon.",
     "security_effect_description_eng": "[Security] Activate this card's [Main] effect."
   },
@@ -238,8 +270,14 @@
     "level": 2,
     "card_kind": 3,
     "rarity": 0,
-    "card_colors": [1],
-    "type_eng": ["Appmon", "Game", "Flick"],
+    "card_colors": [
+      1
+    ],
+    "type_eng": [
+      "Appmon",
+      "Game",
+      "Flick"
+    ],
     "inherited_effect_description_eng": "[When Attacking] [Once Per Turn] If this Digimon has the [Appmon] trait, <Draw 1>."
   },
   {
@@ -253,9 +291,1274 @@
     "level": 3,
     "card_kind": 0,
     "rarity": 0,
-    "card_colors": [0],
-    "type_eng": ["Reptile", "LIBERATOR", "Virus", "Rookie"],
+    "card_colors": [
+      0
+    ],
+    "type_eng": [
+      "Reptile",
+      "LIBERATOR",
+      "Virus",
+      "Rookie"
+    ],
     "effect_description_eng": "[Your Turn] When this Digimon would digivolve into a Digimon card with the [Reptile] or [Dragonkin] trait, reduce the digivolution cost by 1.",
     "inherited_effect_description_eng": "[Your Turn] This Digimon gets +2000 DP."
+  },
+  {
+    "card_id": "EX10-024",
+    "card_index": 20024,
+    "card_name_eng": "EX10 Card EX10-024",
+    "card_name_jpn": "",
+    "card_effect_class_name": "EX10_Stub",
+    "play_cost": 3,
+    "dp": 3000,
+    "level": 3,
+    "card_kind": 0,
+    "rarity": 0,
+    "card_colors": [
+      5
+    ],
+    "effect_description_eng": "Placeholder effect.",
+    "inherited_effect_description_eng": ""
+  },
+  {
+    "card_id": "EX10-036",
+    "card_index": 20036,
+    "card_name_eng": "EX10 Card EX10-036",
+    "card_name_jpn": "",
+    "card_effect_class_name": "EX10_Stub",
+    "play_cost": 3,
+    "dp": 3000,
+    "level": 3,
+    "card_kind": 0,
+    "rarity": 0,
+    "card_colors": [
+      5
+    ],
+    "effect_description_eng": "Placeholder effect.",
+    "inherited_effect_description_eng": ""
+  },
+  {
+    "card_id": "EX10-073",
+    "card_index": 20073,
+    "card_name_eng": "EX10 Card EX10-073",
+    "card_name_jpn": "",
+    "card_effect_class_name": "EX10_Stub",
+    "play_cost": 3,
+    "dp": 3000,
+    "level": 3,
+    "card_kind": 0,
+    "rarity": 0,
+    "card_colors": [
+      5
+    ],
+    "effect_description_eng": "Placeholder effect.",
+    "inherited_effect_description_eng": ""
+  },
+  {
+    "card_id": "EX10-030",
+    "card_index": 20030,
+    "card_name_eng": "EX10 Card EX10-030",
+    "card_name_jpn": "",
+    "card_effect_class_name": "EX10_Stub",
+    "play_cost": 3,
+    "dp": 3000,
+    "level": 3,
+    "card_kind": 0,
+    "rarity": 0,
+    "card_colors": [
+      5
+    ],
+    "effect_description_eng": "Placeholder effect.",
+    "inherited_effect_description_eng": ""
+  },
+  {
+    "card_id": "EX10-027",
+    "card_index": 20027,
+    "card_name_eng": "EX10 Card EX10-027",
+    "card_name_jpn": "",
+    "card_effect_class_name": "EX10_Stub",
+    "play_cost": 3,
+    "dp": 3000,
+    "level": 3,
+    "card_kind": 0,
+    "rarity": 0,
+    "card_colors": [
+      5
+    ],
+    "effect_description_eng": "Placeholder effect.",
+    "inherited_effect_description_eng": ""
+  },
+  {
+    "card_id": "EX10-062",
+    "card_index": 20062,
+    "card_name_eng": "EX10 Card EX10-062",
+    "card_name_jpn": "",
+    "card_effect_class_name": "EX10_Stub",
+    "play_cost": 3,
+    "dp": 3000,
+    "level": 3,
+    "card_kind": 0,
+    "rarity": 0,
+    "card_colors": [
+      5
+    ],
+    "effect_description_eng": "Placeholder effect.",
+    "inherited_effect_description_eng": ""
+  },
+  {
+    "card_id": "EX10-063",
+    "card_index": 20063,
+    "card_name_eng": "EX10 Card EX10-063",
+    "card_name_jpn": "",
+    "card_effect_class_name": "EX10_Stub",
+    "play_cost": 3,
+    "dp": 3000,
+    "level": 3,
+    "card_kind": 0,
+    "rarity": 0,
+    "card_colors": [
+      5
+    ],
+    "effect_description_eng": "Placeholder effect.",
+    "inherited_effect_description_eng": ""
+  },
+  {
+    "card_id": "EX10-033",
+    "card_index": 20033,
+    "card_name_eng": "EX10 Card EX10-033",
+    "card_name_jpn": "",
+    "card_effect_class_name": "EX10_Stub",
+    "play_cost": 3,
+    "dp": 3000,
+    "level": 3,
+    "card_kind": 0,
+    "rarity": 0,
+    "card_colors": [
+      5
+    ],
+    "effect_description_eng": "Placeholder effect.",
+    "inherited_effect_description_eng": ""
+  },
+  {
+    "card_id": "EX10-031",
+    "card_index": 20031,
+    "card_name_eng": "EX10 Card EX10-031",
+    "card_name_jpn": "",
+    "card_effect_class_name": "EX10_Stub",
+    "play_cost": 3,
+    "dp": 3000,
+    "level": 3,
+    "card_kind": 0,
+    "rarity": 0,
+    "card_colors": [
+      5
+    ],
+    "effect_description_eng": "Placeholder effect.",
+    "inherited_effect_description_eng": ""
+  },
+  {
+    "card_id": "EX10-034",
+    "card_index": 20034,
+    "card_name_eng": "EX10 Card EX10-034",
+    "card_name_jpn": "",
+    "card_effect_class_name": "EX10_Stub",
+    "play_cost": 3,
+    "dp": 3000,
+    "level": 3,
+    "card_kind": 0,
+    "rarity": 0,
+    "card_colors": [
+      5
+    ],
+    "effect_description_eng": "Placeholder effect.",
+    "inherited_effect_description_eng": ""
+  },
+  {
+    "card_id": "EX10-035",
+    "card_index": 20035,
+    "card_name_eng": "EX10 Card EX10-035",
+    "card_name_jpn": "",
+    "card_effect_class_name": "EX10_Stub",
+    "play_cost": 3,
+    "dp": 3000,
+    "level": 3,
+    "card_kind": 0,
+    "rarity": 0,
+    "card_colors": [
+      5
+    ],
+    "effect_description_eng": "Placeholder effect.",
+    "inherited_effect_description_eng": ""
+  },
+  {
+    "card_id": "EX10-032",
+    "card_index": 20032,
+    "card_name_eng": "EX10 Card EX10-032",
+    "card_name_jpn": "",
+    "card_effect_class_name": "EX10_Stub",
+    "play_cost": 3,
+    "dp": 3000,
+    "level": 3,
+    "card_kind": 0,
+    "rarity": 0,
+    "card_colors": [
+      5
+    ],
+    "effect_description_eng": "Placeholder effect.",
+    "inherited_effect_description_eng": ""
+  },
+  {
+    "card_id": "EX10-028",
+    "card_index": 20028,
+    "card_name_eng": "EX10 Card EX10-028",
+    "card_name_jpn": "",
+    "card_effect_class_name": "EX10_Stub",
+    "play_cost": 3,
+    "dp": 3000,
+    "level": 3,
+    "card_kind": 0,
+    "rarity": 0,
+    "card_colors": [
+      5
+    ],
+    "effect_description_eng": "Placeholder effect.",
+    "inherited_effect_description_eng": ""
+  },
+  {
+    "card_id": "EX10-029",
+    "card_index": 20029,
+    "card_name_eng": "EX10 Card EX10-029",
+    "card_name_jpn": "",
+    "card_effect_class_name": "EX10_Stub",
+    "play_cost": 3,
+    "dp": 3000,
+    "level": 3,
+    "card_kind": 0,
+    "rarity": 0,
+    "card_colors": [
+      5
+    ],
+    "effect_description_eng": "Placeholder effect.",
+    "inherited_effect_description_eng": ""
+  },
+  {
+    "card_id": "EX10-025",
+    "card_index": 20025,
+    "card_name_eng": "EX10 Card EX10-025",
+    "card_name_jpn": "",
+    "card_effect_class_name": "EX10_Stub",
+    "play_cost": 3,
+    "dp": 3000,
+    "level": 3,
+    "card_kind": 0,
+    "rarity": 0,
+    "card_colors": [
+      5
+    ],
+    "effect_description_eng": "Placeholder effect.",
+    "inherited_effect_description_eng": ""
+  },
+  {
+    "card_id": "EX10-002",
+    "card_index": 20002,
+    "card_name_eng": "DigiEgg EX10-002",
+    "card_name_jpn": "",
+    "card_effect_class_name": "EX10_002",
+    "play_cost": 0,
+    "dp": 0,
+    "level": 2,
+    "card_kind": 3,
+    "rarity": 0,
+    "card_colors": [
+      5
+    ],
+    "effect_description_eng": "Placeholder effect.",
+    "inherited_effect_description_eng": ""
+  },
+  {
+    "card_id": "EX10-070",
+    "card_index": 20070,
+    "card_name_eng": "EX10 Card EX10-070",
+    "card_name_jpn": "",
+    "card_effect_class_name": "EX10_Stub",
+    "play_cost": 3,
+    "dp": 3000,
+    "level": 3,
+    "card_kind": 0,
+    "rarity": 0,
+    "card_colors": [
+      5
+    ],
+    "effect_description_eng": "Placeholder effect.",
+    "inherited_effect_description_eng": ""
+  },
+  {
+    "card_id": "EX10-003",
+    "card_index": 20003,
+    "card_name_eng": "DigiEgg EX10-003",
+    "card_name_jpn": "",
+    "card_effect_class_name": "EX10_Stub",
+    "play_cost": 0,
+    "dp": 0,
+    "level": 2,
+    "card_kind": 3,
+    "rarity": 0,
+    "card_colors": [
+      5
+    ],
+    "effect_description_eng": "Placeholder effect.",
+    "inherited_effect_description_eng": ""
+  },
+  {
+    "card_id": "EX10-069",
+    "card_index": 20069,
+    "card_name_eng": "EX10 Card EX10-069",
+    "card_name_jpn": "",
+    "card_effect_class_name": "EX10_Stub",
+    "play_cost": 3,
+    "dp": 3000,
+    "level": 3,
+    "card_kind": 0,
+    "rarity": 0,
+    "card_colors": [
+      5
+    ],
+    "effect_description_eng": "Placeholder effect.",
+    "inherited_effect_description_eng": ""
+  },
+  {
+    "card_id": "EX10-026",
+    "card_index": 20026,
+    "card_name_eng": "EX10 Card EX10-026",
+    "card_name_jpn": "",
+    "card_effect_class_name": "EX10_Stub",
+    "play_cost": 3,
+    "dp": 3000,
+    "level": 3,
+    "card_kind": 0,
+    "rarity": 0,
+    "card_colors": [
+      5
+    ],
+    "effect_description_eng": "Placeholder effect.",
+    "inherited_effect_description_eng": ""
+  },
+  {
+    "card_id": "EX10-068",
+    "card_index": 20068,
+    "card_name_eng": "EX10 Card EX10-068",
+    "card_name_jpn": "",
+    "card_effect_class_name": "EX10_Stub",
+    "play_cost": 3,
+    "dp": 3000,
+    "level": 3,
+    "card_kind": 0,
+    "rarity": 0,
+    "card_colors": [
+      4
+    ],
+    "effect_description_eng": "Placeholder effect.",
+    "inherited_effect_description_eng": ""
+  },
+  {
+    "card_id": "EX10-061",
+    "card_index": 20061,
+    "card_name_eng": "EX10 Card EX10-061",
+    "card_name_jpn": "",
+    "card_effect_class_name": "EX10_Stub",
+    "play_cost": 3,
+    "dp": 3000,
+    "level": 3,
+    "card_kind": 0,
+    "rarity": 0,
+    "card_colors": [
+      4
+    ],
+    "effect_description_eng": "Placeholder effect.",
+    "inherited_effect_description_eng": ""
+  },
+  {
+    "card_id": "EX10-072",
+    "card_index": 20072,
+    "card_name_eng": "EX10 Card EX10-072",
+    "card_name_jpn": "",
+    "card_effect_class_name": "EX10_Stub",
+    "play_cost": 3,
+    "dp": 3000,
+    "level": 3,
+    "card_kind": 0,
+    "rarity": 0,
+    "card_colors": [
+      4
+    ],
+    "effect_description_eng": "Placeholder effect.",
+    "inherited_effect_description_eng": ""
+  },
+  {
+    "card_id": "EX10-012",
+    "card_index": 20012,
+    "card_name_eng": "EX10 Card EX10-012",
+    "card_name_jpn": "",
+    "card_effect_class_name": "EX10_Stub",
+    "play_cost": 3,
+    "dp": 3000,
+    "level": 3,
+    "card_kind": 0,
+    "rarity": 0,
+    "card_colors": [
+      1
+    ],
+    "effect_description_eng": "Placeholder effect.",
+    "inherited_effect_description_eng": ""
+  },
+  {
+    "card_id": "EX10-010",
+    "card_index": 20010,
+    "card_name_eng": "EX10 Card EX10-010",
+    "card_name_jpn": "",
+    "card_effect_class_name": "EX10_Stub",
+    "play_cost": 3,
+    "dp": 3000,
+    "level": 3,
+    "card_kind": 0,
+    "rarity": 0,
+    "card_colors": [
+      0
+    ],
+    "effect_description_eng": "Placeholder effect.",
+    "inherited_effect_description_eng": ""
+  },
+  {
+    "card_id": "EX10-008",
+    "card_index": 20008,
+    "card_name_eng": "EX10 Card EX10-008",
+    "card_name_jpn": "",
+    "card_effect_class_name": "EX10_Stub",
+    "play_cost": 3,
+    "dp": 3000,
+    "level": 3,
+    "card_kind": 0,
+    "rarity": 0,
+    "card_colors": [
+      0
+    ],
+    "effect_description_eng": "Placeholder effect.",
+    "inherited_effect_description_eng": ""
+  },
+  {
+    "card_id": "EX10-006",
+    "card_index": 20006,
+    "card_name_eng": "Agumon",
+    "card_name_jpn": "",
+    "card_effect_class_name": "EX10_006",
+    "play_cost": 3,
+    "dp": 2000,
+    "level": 3,
+    "card_kind": 0,
+    "rarity": 0,
+    "card_colors": [
+      0
+    ],
+    "effect_description_eng": "Placeholder effect.",
+    "inherited_effect_description_eng": ""
+  },
+  {
+    "card_id": "EX10-011",
+    "card_index": 20011,
+    "card_name_eng": "EX10 Card EX10-011",
+    "card_name_jpn": "",
+    "card_effect_class_name": "EX10_Stub",
+    "play_cost": 3,
+    "dp": 3000,
+    "level": 3,
+    "card_kind": 0,
+    "rarity": 0,
+    "card_colors": [
+      0
+    ],
+    "effect_description_eng": "Placeholder effect.",
+    "inherited_effect_description_eng": ""
+  },
+  {
+    "card_id": "EX10-007",
+    "card_index": 20007,
+    "card_name_eng": "EX10 Card EX10-007",
+    "card_name_jpn": "",
+    "card_effect_class_name": "EX10_Stub",
+    "play_cost": 3,
+    "dp": 3000,
+    "level": 3,
+    "card_kind": 0,
+    "rarity": 0,
+    "card_colors": [
+      0
+    ],
+    "effect_description_eng": "Placeholder effect.",
+    "inherited_effect_description_eng": ""
+  },
+  {
+    "card_id": "EX10-009",
+    "card_index": 20009,
+    "card_name_eng": "EX10 Card EX10-009",
+    "card_name_jpn": "",
+    "card_effect_class_name": "EX10_Stub",
+    "play_cost": 3,
+    "dp": 3000,
+    "level": 3,
+    "card_kind": 0,
+    "rarity": 0,
+    "card_colors": [
+      0
+    ],
+    "effect_description_eng": "Placeholder effect.",
+    "inherited_effect_description_eng": ""
+  },
+  {
+    "card_id": "EX10-020",
+    "card_index": 20020,
+    "card_name_eng": "EX10 Card EX10-020",
+    "card_name_jpn": "",
+    "card_effect_class_name": "EX10_Stub",
+    "play_cost": 3,
+    "dp": 3000,
+    "level": 3,
+    "card_kind": 0,
+    "rarity": 0,
+    "card_colors": [
+      3
+    ],
+    "effect_description_eng": "Placeholder effect.",
+    "inherited_effect_description_eng": ""
+  },
+  {
+    "card_id": "EX10-019",
+    "card_index": 20019,
+    "card_name_eng": "EX10 Card EX10-019",
+    "card_name_jpn": "",
+    "card_effect_class_name": "EX10_Stub",
+    "play_cost": 3,
+    "dp": 3000,
+    "level": 3,
+    "card_kind": 0,
+    "rarity": 0,
+    "card_colors": [
+      3
+    ],
+    "effect_description_eng": "Placeholder effect.",
+    "inherited_effect_description_eng": ""
+  },
+  {
+    "card_id": "EX10-023",
+    "card_index": 20023,
+    "card_name_eng": "EX10 Card EX10-023",
+    "card_name_jpn": "",
+    "card_effect_class_name": "EX10_Stub",
+    "play_cost": 3,
+    "dp": 3000,
+    "level": 3,
+    "card_kind": 0,
+    "rarity": 0,
+    "card_colors": [
+      3
+    ],
+    "effect_description_eng": "Placeholder effect.",
+    "inherited_effect_description_eng": ""
+  },
+  {
+    "card_id": "EX10-015",
+    "card_index": 20015,
+    "card_name_eng": "EX10 Card EX10-015",
+    "card_name_jpn": "",
+    "card_effect_class_name": "EX10_Stub",
+    "play_cost": 3,
+    "dp": 3000,
+    "level": 3,
+    "card_kind": 0,
+    "rarity": 0,
+    "card_colors": [
+      3
+    ],
+    "effect_description_eng": "Placeholder effect.",
+    "inherited_effect_description_eng": ""
+  },
+  {
+    "card_id": "EX10-001",
+    "card_index": 20001,
+    "card_name_eng": "DigiEgg EX10-001",
+    "card_name_jpn": "",
+    "card_effect_class_name": "EX10_001",
+    "play_cost": 0,
+    "dp": 0,
+    "level": 2,
+    "card_kind": 3,
+    "rarity": 0,
+    "card_colors": [
+      3
+    ],
+    "effect_description_eng": "Placeholder effect.",
+    "inherited_effect_description_eng": ""
+  },
+  {
+    "card_id": "EX10-018",
+    "card_index": 20018,
+    "card_name_eng": "EX10 Card EX10-018",
+    "card_name_jpn": "",
+    "card_effect_class_name": "EX10_Stub",
+    "play_cost": 3,
+    "dp": 3000,
+    "level": 3,
+    "card_kind": 0,
+    "rarity": 0,
+    "card_colors": [
+      3
+    ],
+    "effect_description_eng": "Placeholder effect.",
+    "inherited_effect_description_eng": ""
+  },
+  {
+    "card_id": "EX10-016",
+    "card_index": 20016,
+    "card_name_eng": "EX10 Card EX10-016",
+    "card_name_jpn": "",
+    "card_effect_class_name": "EX10_Stub",
+    "play_cost": 3,
+    "dp": 3000,
+    "level": 3,
+    "card_kind": 0,
+    "rarity": 0,
+    "card_colors": [
+      3
+    ],
+    "effect_description_eng": "Placeholder effect.",
+    "inherited_effect_description_eng": ""
+  },
+  {
+    "card_id": "EX10-022",
+    "card_index": 20022,
+    "card_name_eng": "EX10 Card EX10-022",
+    "card_name_jpn": "",
+    "card_effect_class_name": "EX10_Stub",
+    "play_cost": 3,
+    "dp": 3000,
+    "level": 3,
+    "card_kind": 0,
+    "rarity": 0,
+    "card_colors": [
+      3
+    ],
+    "effect_description_eng": "Placeholder effect.",
+    "inherited_effect_description_eng": ""
+  },
+  {
+    "card_id": "EX10-017",
+    "card_index": 20017,
+    "card_name_eng": "EX10 Card EX10-017",
+    "card_name_jpn": "",
+    "card_effect_class_name": "EX10_Stub",
+    "play_cost": 3,
+    "dp": 3000,
+    "level": 3,
+    "card_kind": 0,
+    "rarity": 0,
+    "card_colors": [
+      3
+    ],
+    "effect_description_eng": "Placeholder effect.",
+    "inherited_effect_description_eng": ""
+  },
+  {
+    "card_id": "EX10-021",
+    "card_index": 20021,
+    "card_name_eng": "EX10 Card EX10-021",
+    "card_name_jpn": "",
+    "card_effect_class_name": "EX10_Stub",
+    "play_cost": 3,
+    "dp": 3000,
+    "level": 3,
+    "card_kind": 0,
+    "rarity": 0,
+    "card_colors": [
+      3
+    ],
+    "effect_description_eng": "Placeholder effect.",
+    "inherited_effect_description_eng": ""
+  },
+  {
+    "card_id": "EX10-040",
+    "card_index": 20040,
+    "card_name_eng": "EX10 Card EX10-040",
+    "card_name_jpn": "",
+    "card_effect_class_name": "EX10_Stub",
+    "play_cost": 3,
+    "dp": 3000,
+    "level": 3,
+    "card_kind": 0,
+    "rarity": 0,
+    "card_colors": [
+      6
+    ],
+    "effect_description_eng": "Placeholder effect.",
+    "inherited_effect_description_eng": ""
+  },
+  {
+    "card_id": "EX10-038",
+    "card_index": 20038,
+    "card_name_eng": "EX10 Card EX10-038",
+    "card_name_jpn": "",
+    "card_effect_class_name": "EX10_Stub",
+    "play_cost": 3,
+    "dp": 3000,
+    "level": 3,
+    "card_kind": 0,
+    "rarity": 0,
+    "card_colors": [
+      6
+    ],
+    "effect_description_eng": "Placeholder effect.",
+    "inherited_effect_description_eng": ""
+  },
+  {
+    "card_id": "EX10-041",
+    "card_index": 20041,
+    "card_name_eng": "EX10 Card EX10-041",
+    "card_name_jpn": "",
+    "card_effect_class_name": "EX10_Stub",
+    "play_cost": 3,
+    "dp": 3000,
+    "level": 3,
+    "card_kind": 0,
+    "rarity": 0,
+    "card_colors": [
+      6
+    ],
+    "effect_description_eng": "Placeholder effect.",
+    "inherited_effect_description_eng": ""
+  },
+  {
+    "card_id": "EX10-051",
+    "card_index": 20051,
+    "card_name_eng": "EX10 Card EX10-051",
+    "card_name_jpn": "",
+    "card_effect_class_name": "EX10_Stub",
+    "play_cost": 3,
+    "dp": 3000,
+    "level": 3,
+    "card_kind": 0,
+    "rarity": 0,
+    "card_colors": [
+      6
+    ],
+    "effect_description_eng": "Placeholder effect.",
+    "inherited_effect_description_eng": ""
+  },
+  {
+    "card_id": "EX10-058",
+    "card_index": 20058,
+    "card_name_eng": "EX10 Card EX10-058",
+    "card_name_jpn": "",
+    "card_effect_class_name": "EX10_Stub",
+    "play_cost": 3,
+    "dp": 3000,
+    "level": 3,
+    "card_kind": 0,
+    "rarity": 0,
+    "card_colors": [
+      6
+    ],
+    "effect_description_eng": "Placeholder effect.",
+    "inherited_effect_description_eng": ""
+  },
+  {
+    "card_id": "EX10-054",
+    "card_index": 20054,
+    "card_name_eng": "EX10 Card EX10-054",
+    "card_name_jpn": "",
+    "card_effect_class_name": "EX10_Stub",
+    "play_cost": 3,
+    "dp": 3000,
+    "level": 3,
+    "card_kind": 0,
+    "rarity": 0,
+    "card_colors": [
+      6
+    ],
+    "effect_description_eng": "Placeholder effect.",
+    "inherited_effect_description_eng": ""
+  },
+  {
+    "card_id": "EX10-074",
+    "card_index": 20074,
+    "card_name_eng": "EX10 Card EX10-074",
+    "card_name_jpn": "",
+    "card_effect_class_name": "EX10_Stub",
+    "play_cost": 3,
+    "dp": 3000,
+    "level": 3,
+    "card_kind": 0,
+    "rarity": 0,
+    "card_colors": [
+      6
+    ],
+    "effect_description_eng": "Placeholder effect.",
+    "inherited_effect_description_eng": ""
+  },
+  {
+    "card_id": "EX10-048",
+    "card_index": 20048,
+    "card_name_eng": "EX10 Card EX10-048",
+    "card_name_jpn": "",
+    "card_effect_class_name": "EX10_Stub",
+    "play_cost": 3,
+    "dp": 3000,
+    "level": 3,
+    "card_kind": 0,
+    "rarity": 0,
+    "card_colors": [
+      6
+    ],
+    "effect_description_eng": "Placeholder effect.",
+    "inherited_effect_description_eng": ""
+  },
+  {
+    "card_id": "EX10-071",
+    "card_index": 20071,
+    "card_name_eng": "EX10 Card EX10-071",
+    "card_name_jpn": "",
+    "card_effect_class_name": "EX10_Stub",
+    "play_cost": 3,
+    "dp": 3000,
+    "level": 3,
+    "card_kind": 0,
+    "rarity": 0,
+    "card_colors": [
+      6
+    ],
+    "effect_description_eng": "Placeholder effect.",
+    "inherited_effect_description_eng": ""
+  },
+  {
+    "card_id": "EX10-044",
+    "card_index": 20044,
+    "card_name_eng": "EX10 Card EX10-044",
+    "card_name_jpn": "",
+    "card_effect_class_name": "EX10_Stub",
+    "play_cost": 3,
+    "dp": 3000,
+    "level": 3,
+    "card_kind": 0,
+    "rarity": 0,
+    "card_colors": [
+      6
+    ],
+    "effect_description_eng": "Placeholder effect.",
+    "inherited_effect_description_eng": ""
+  },
+  {
+    "card_id": "EX10-059",
+    "card_index": 20059,
+    "card_name_eng": "EX10 Card EX10-059",
+    "card_name_jpn": "",
+    "card_effect_class_name": "EX10_Stub",
+    "play_cost": 3,
+    "dp": 3000,
+    "level": 3,
+    "card_kind": 0,
+    "rarity": 0,
+    "card_colors": [
+      6
+    ],
+    "effect_description_eng": "Placeholder effect.",
+    "inherited_effect_description_eng": ""
+  },
+  {
+    "card_id": "EX10-037",
+    "card_index": 20037,
+    "card_name_eng": "EX10 Card EX10-037",
+    "card_name_jpn": "",
+    "card_effect_class_name": "EX10_Stub",
+    "play_cost": 3,
+    "dp": 3000,
+    "level": 3,
+    "card_kind": 0,
+    "rarity": 0,
+    "card_colors": [
+      6
+    ],
+    "effect_description_eng": "Placeholder effect.",
+    "inherited_effect_description_eng": ""
+  },
+  {
+    "card_id": "EX10-043",
+    "card_index": 20043,
+    "card_name_eng": "EX10 Card EX10-043",
+    "card_name_jpn": "",
+    "card_effect_class_name": "EX10_Stub",
+    "play_cost": 3,
+    "dp": 3000,
+    "level": 3,
+    "card_kind": 0,
+    "rarity": 0,
+    "card_colors": [
+      6
+    ],
+    "effect_description_eng": "Placeholder effect.",
+    "inherited_effect_description_eng": ""
+  },
+  {
+    "card_id": "EX10-060",
+    "card_index": 20060,
+    "card_name_eng": "EX10 Card EX10-060",
+    "card_name_jpn": "",
+    "card_effect_class_name": "EX10_Stub",
+    "play_cost": 3,
+    "dp": 3000,
+    "level": 3,
+    "card_kind": 0,
+    "rarity": 0,
+    "card_colors": [
+      6
+    ],
+    "effect_description_eng": "Placeholder effect.",
+    "inherited_effect_description_eng": ""
+  },
+  {
+    "card_id": "EX10-049",
+    "card_index": 20049,
+    "card_name_eng": "EX10 Card EX10-049",
+    "card_name_jpn": "",
+    "card_effect_class_name": "EX10_Stub",
+    "play_cost": 3,
+    "dp": 3000,
+    "level": 3,
+    "card_kind": 0,
+    "rarity": 0,
+    "card_colors": [
+      6
+    ],
+    "effect_description_eng": "Placeholder effect.",
+    "inherited_effect_description_eng": ""
+  },
+  {
+    "card_id": "EX10-065",
+    "card_index": 20065,
+    "card_name_eng": "EX10 Card EX10-065",
+    "card_name_jpn": "",
+    "card_effect_class_name": "EX10_Stub",
+    "play_cost": 3,
+    "dp": 3000,
+    "level": 3,
+    "card_kind": 0,
+    "rarity": 0,
+    "card_colors": [
+      6
+    ],
+    "effect_description_eng": "Placeholder effect.",
+    "inherited_effect_description_eng": ""
+  },
+  {
+    "card_id": "EX10-047",
+    "card_index": 20047,
+    "card_name_eng": "EX10 Card EX10-047",
+    "card_name_jpn": "",
+    "card_effect_class_name": "EX10_Stub",
+    "play_cost": 3,
+    "dp": 3000,
+    "level": 3,
+    "card_kind": 0,
+    "rarity": 0,
+    "card_colors": [
+      6
+    ],
+    "effect_description_eng": "Placeholder effect.",
+    "inherited_effect_description_eng": ""
+  },
+  {
+    "card_id": "EX10-053",
+    "card_index": 20053,
+    "card_name_eng": "EX10 Card EX10-053",
+    "card_name_jpn": "",
+    "card_effect_class_name": "EX10_Stub",
+    "play_cost": 3,
+    "dp": 3000,
+    "level": 3,
+    "card_kind": 0,
+    "rarity": 0,
+    "card_colors": [
+      6
+    ],
+    "effect_description_eng": "Placeholder effect.",
+    "inherited_effect_description_eng": ""
+  },
+  {
+    "card_id": "EX10-056",
+    "card_index": 20056,
+    "card_name_eng": "EX10 Card EX10-056",
+    "card_name_jpn": "",
+    "card_effect_class_name": "EX10_Stub",
+    "play_cost": 3,
+    "dp": 3000,
+    "level": 3,
+    "card_kind": 0,
+    "rarity": 0,
+    "card_colors": [
+      6
+    ],
+    "effect_description_eng": "Placeholder effect.",
+    "inherited_effect_description_eng": ""
+  },
+  {
+    "card_id": "EX10-052",
+    "card_index": 20052,
+    "card_name_eng": "EX10 Card EX10-052",
+    "card_name_jpn": "",
+    "card_effect_class_name": "EX10_Stub",
+    "play_cost": 3,
+    "dp": 3000,
+    "level": 3,
+    "card_kind": 0,
+    "rarity": 0,
+    "card_colors": [
+      6
+    ],
+    "effect_description_eng": "Placeholder effect.",
+    "inherited_effect_description_eng": ""
+  },
+  {
+    "card_id": "EX10-005",
+    "card_index": 20005,
+    "card_name_eng": "DigiEgg EX10-005",
+    "card_name_jpn": "",
+    "card_effect_class_name": "EX10_Stub",
+    "play_cost": 0,
+    "dp": 0,
+    "level": 2,
+    "card_kind": 3,
+    "rarity": 0,
+    "card_colors": [
+      6
+    ],
+    "effect_description_eng": "Placeholder effect.",
+    "inherited_effect_description_eng": ""
+  },
+  {
+    "card_id": "EX10-050",
+    "card_index": 20050,
+    "card_name_eng": "EX10 Card EX10-050",
+    "card_name_jpn": "",
+    "card_effect_class_name": "EX10_Stub",
+    "play_cost": 3,
+    "dp": 3000,
+    "level": 3,
+    "card_kind": 0,
+    "rarity": 0,
+    "card_colors": [
+      6
+    ],
+    "effect_description_eng": "Placeholder effect.",
+    "inherited_effect_description_eng": ""
+  },
+  {
+    "card_id": "EX10-055",
+    "card_index": 20055,
+    "card_name_eng": "EX10 Card EX10-055",
+    "card_name_jpn": "",
+    "card_effect_class_name": "EX10_Stub",
+    "play_cost": 3,
+    "dp": 3000,
+    "level": 3,
+    "card_kind": 0,
+    "rarity": 0,
+    "card_colors": [
+      6
+    ],
+    "effect_description_eng": "Placeholder effect.",
+    "inherited_effect_description_eng": ""
+  },
+  {
+    "card_id": "EX10-057",
+    "card_index": 20057,
+    "card_name_eng": "EX10 Card EX10-057",
+    "card_name_jpn": "",
+    "card_effect_class_name": "EX10_Stub",
+    "play_cost": 3,
+    "dp": 3000,
+    "level": 3,
+    "card_kind": 0,
+    "rarity": 0,
+    "card_colors": [
+      6
+    ],
+    "effect_description_eng": "Placeholder effect.",
+    "inherited_effect_description_eng": ""
+  },
+  {
+    "card_id": "EX10-067",
+    "card_index": 20067,
+    "card_name_eng": "EX10 Card EX10-067",
+    "card_name_jpn": "",
+    "card_effect_class_name": "EX10_Stub",
+    "play_cost": 3,
+    "dp": 3000,
+    "level": 3,
+    "card_kind": 0,
+    "rarity": 0,
+    "card_colors": [
+      6
+    ],
+    "effect_description_eng": "Placeholder effect.",
+    "inherited_effect_description_eng": ""
+  },
+  {
+    "card_id": "EX10-045",
+    "card_index": 20045,
+    "card_name_eng": "EX10 Card EX10-045",
+    "card_name_jpn": "",
+    "card_effect_class_name": "EX10_Stub",
+    "play_cost": 3,
+    "dp": 3000,
+    "level": 3,
+    "card_kind": 0,
+    "rarity": 0,
+    "card_colors": [
+      6
+    ],
+    "effect_description_eng": "Placeholder effect.",
+    "inherited_effect_description_eng": ""
+  },
+  {
+    "card_id": "EX10-046",
+    "card_index": 20046,
+    "card_name_eng": "EX10 Card EX10-046",
+    "card_name_jpn": "",
+    "card_effect_class_name": "EX10_Stub",
+    "play_cost": 3,
+    "dp": 3000,
+    "level": 3,
+    "card_kind": 0,
+    "rarity": 0,
+    "card_colors": [
+      6
+    ],
+    "effect_description_eng": "Placeholder effect.",
+    "inherited_effect_description_eng": ""
+  },
+  {
+    "card_id": "EX10-039",
+    "card_index": 20039,
+    "card_name_eng": "EX10 Card EX10-039",
+    "card_name_jpn": "",
+    "card_effect_class_name": "EX10_Stub",
+    "play_cost": 3,
+    "dp": 3000,
+    "level": 3,
+    "card_kind": 0,
+    "rarity": 0,
+    "card_colors": [
+      6
+    ],
+    "effect_description_eng": "Placeholder effect.",
+    "inherited_effect_description_eng": ""
+  },
+  {
+    "card_id": "EX10-066",
+    "card_index": 20066,
+    "card_name_eng": "EX10 Card EX10-066",
+    "card_name_jpn": "",
+    "card_effect_class_name": "EX10_Stub",
+    "play_cost": 3,
+    "dp": 3000,
+    "level": 3,
+    "card_kind": 0,
+    "rarity": 0,
+    "card_colors": [
+      6
+    ],
+    "effect_description_eng": "Placeholder effect.",
+    "inherited_effect_description_eng": ""
+  },
+  {
+    "card_id": "EX10-064",
+    "card_index": 20064,
+    "card_name_eng": "EX10 Card EX10-064",
+    "card_name_jpn": "",
+    "card_effect_class_name": "EX10_Stub",
+    "play_cost": 3,
+    "dp": 3000,
+    "level": 3,
+    "card_kind": 0,
+    "rarity": 0,
+    "card_colors": [
+      6
+    ],
+    "effect_description_eng": "Placeholder effect.",
+    "inherited_effect_description_eng": ""
+  },
+  {
+    "card_id": "EX10-042",
+    "card_index": 20042,
+    "card_name_eng": "EX10 Card EX10-042",
+    "card_name_jpn": "",
+    "card_effect_class_name": "EX10_Stub",
+    "play_cost": 3,
+    "dp": 3000,
+    "level": 3,
+    "card_kind": 0,
+    "rarity": 0,
+    "card_colors": [
+      6
+    ],
+    "effect_description_eng": "Placeholder effect.",
+    "inherited_effect_description_eng": ""
+  },
+  {
+    "card_id": "EX10-004",
+    "card_index": 20004,
+    "card_name_eng": "DigiEgg EX10-004",
+    "card_name_jpn": "",
+    "card_effect_class_name": "EX10_Stub",
+    "play_cost": 0,
+    "dp": 0,
+    "level": 2,
+    "card_kind": 3,
+    "rarity": 0,
+    "card_colors": [
+      6
+    ],
+    "effect_description_eng": "Placeholder effect.",
+    "inherited_effect_description_eng": ""
+  },
+  {
+    "card_id": "EX10-014",
+    "card_index": 20014,
+    "card_name_eng": "EX10 Card EX10-014",
+    "card_name_jpn": "",
+    "card_effect_class_name": "EX10_Stub",
+    "play_cost": 3,
+    "dp": 3000,
+    "level": 3,
+    "card_kind": 0,
+    "rarity": 0,
+    "card_colors": [
+      2
+    ],
+    "effect_description_eng": "Placeholder effect.",
+    "inherited_effect_description_eng": ""
+  },
+  {
+    "card_id": "EX10-013",
+    "card_index": 20013,
+    "card_name_eng": "EX10 Card EX10-013",
+    "card_name_jpn": "",
+    "card_effect_class_name": "EX10_Stub",
+    "play_cost": 3,
+    "dp": 3000,
+    "level": 3,
+    "card_kind": 0,
+    "rarity": 0,
+    "card_colors": [
+      2
+    ],
+    "effect_description_eng": "Placeholder effect.",
+    "inherited_effect_description_eng": ""
   }
 ]

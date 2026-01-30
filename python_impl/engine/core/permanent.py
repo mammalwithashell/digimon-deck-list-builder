@@ -42,6 +42,11 @@ class Permanent:
         return self.top_card.is_option if self.top_card else False
 
     @property
+    def link_cards(self) -> List['CardSource']:
+        # Link Cards are Tamer cards in the digivolution sources (not the top card)
+        return [source for source in self.card_sources[:-1] if source.is_tamer]
+
+    @property
     def dp(self) -> int:
         base = self.top_card.base_dp if self.top_card else 0
 
@@ -104,6 +109,50 @@ class Permanent:
     def add_card_source(self, card_source: 'CardSource'):
         self.card_sources.append(card_source)
 
+    def trash_source(self, source: 'CardSource'):
+        if source in self.card_sources:
+            self.card_sources.remove(source)
+            if source.owner:
+                source.owner.trash_cards.append(source)
+
+            # Check for OnLinkCardDiscarded
+            if source.is_tamer:
+                self._trigger_on_link_card_discarded(source)
+
+    def _trigger_on_link_card_discarded(self, discarded_card: 'CardSource'):
+        # Gather effects that trigger on Link Card Discarded
+        # This is a simplified trigger logic for PoC
+        active_effects = self.get_active_effects_by_timing(EffectTiming.OnLinkCardDiscarded)
+
+        context = {
+            "permanent": self,
+            "discarded_card": discarded_card
+        }
+
+        for effect in active_effects:
+            if effect.can_use_condition and effect.can_use_condition(context):
+                print(f"Triggering OnLinkCardDiscarded: {effect.effect_name}")
+                if effect.on_process_callback:
+                    effect.on_process_callback()
+
+    def get_active_effects_by_timing(self, timing: EffectTiming) -> List['ICardEffect']:
+        active = []
+        # Inherited
+        for source in self.card_sources[:-1]:
+            effects = source.effect_list(timing)
+            for effect in effects:
+                if effect.is_inherited_effect and effect.timing == timing:
+                    active.append(effect)
+        # Top
+        if self.top_card:
+            effects = self.top_card.effect_list(timing)
+            for effect in effects:
+                if not effect.is_inherited_effect and effect.timing == timing:
+                    active.append(effect)
+        return active
+
     def discard_evo_roots(self, ignore_overflow: bool = False, put_to_trash: bool = True):
-        # Generator placeholder
-        pass
+        # Discard the bottom-most source
+        if len(self.card_sources) > 1:
+            source_to_discard = self.card_sources[0]
+            self.trash_source(source_to_discard)
