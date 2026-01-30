@@ -1,0 +1,62 @@
+Based on the **Q-DeckRec** methodology described in the sources, specifically the paper "Q-DeckRec: A Fast Deck Recommendation System for Collectible Card Games", here is a detailed explanation of how to implement, train, and tune this system for your Digimon deck builder.
+
+The core concept of Q-DeckRec is to treat **deck building** as a sequential "game" played by an AI. Instead of evolving a deck (like a Genetic Algorithm), the agent learns a policy: "Given deck state $A$ and opponent $B$, the best move is to swap Card $X$ for Card $Y$."
+
+### 1. The Architecture: Deck Building as an MDP
+To implement Q-DeckRec in your Python backend, you must formulate the problem as a **Markov Decision Process (MDP)**.
+
+*   **The State ($S$):** The input fed into your Neural Network. It consists of three parts:
+    1.  **The Player's Deck ($x_p$):** A vector representing your current deck list. In Digimon, this would be a vector of counts for every legal card (e.g., 4 Agumons, 2 Greymons).
+    2.  **The Opponent's Deck ($x_o$):** The meta deck you are currently trying to beat.
+    3.  **Step Counter ($t$):** How many swaps have been made so far.
+*   **The Action ($A$):** A "Card Replacement." An action is defined as replacing exactly one card currently in the deck with another card from the available pool.
+*   **The Episode:** An episode consists of a fixed number of steps ($D$), usually equal to the deck size (or a set number of allowed modifications). The agent starts with a random deck and makes $D$ swaps to optimize it.
+
+### 2. The Reward Function: The "Secret Sauce"
+Standard win rates (e.g., 51% vs. 53%) are often too subtle for an AI to learn from efficiently. Q-DeckRec uses a specific **Cumulative Exponential Reward** to amplify the difference between good and bad decks.
+
+*   **The Formula:** Instead of just taking the win rate at the end, the reward $R$ is the sum of rewards calculated at *every step* of the modification process.
+    $$ R = \sum_{t=0}^{D-1} r_t $$
+    $$ r_t = \exp(b \cdot \text{win\_rate}) $$
+*   **Why this matters:** The constant $b$ (amplification factor) makes high win rates exponentially more valuable. In the source experiments, **$b$ was set to 10**. This ensures the agent aggressively pursues changes that spike the win rate, rather than settling for mediocre improvements.
+
+### 3. Training the Agent (The Loop)
+Your Python backend will run a training loop that alternates between the **Builder Agent** (Q-DeckRec) and your **Simulator** (The Environment).
+
+1.  **Initialize:** Start with a random deck $x_p$ and select a meta opponent $x_o$ (e.g., from your Egman Events database).
+2.  **Action Selection:** The Q-DeckRec agent (a Neural Network) observes the state and selects a card to swap. During training, use an **$\epsilon$-greedy policy** (explore random swaps occasionally to find hidden synergies).
+3.  **Simulation (The "Black Box"):**
+    *   This is where your custom Python simulator is used.
+    *   The system simulates a batch of matches (e.g., 300 games) between the current deck $x_p$ and opponent $x_o$.
+    *   **Note:** The agent playing the matches (the "Pilot") is different from the Q-DeckRec agent. The paper suggests using a heuristic "Greedy" pilot or MCTS for these simulations.
+4.  **Update:** The win rate is returned, converted into the exponential reward, and used to update the Q-DeckRec Neural Network using **Q-Learning** (specifically gradient descent to minimize TD-error).
+
+### 4. Tuning the Agent
+The sources provide specific hyperparameters used to achieve the result of building optimal decks in ~9 seconds (after training).
+
+#### Neural Network Architecture
+*   **Structure:** A Multi-Layer Perceptron (MLP).
+*   **Layers:**
+    *   **Input:** State representation (Deck Vector + Opponent Vector).
+    *   **Hidden:** One layer with **1000 Rectified Linear Units (ReLU)**.
+    *   **Output:** Single unit outputting the predicted Q-value (quality of the move).
+
+#### Hyperparameters
+*   **$\epsilon$-Greedy (Exploration):** Start $\epsilon$ at **1.0** (pure random exploration). Decrease it by **0.0005** per episode until it reaches **0.2**. This ensures the agent eventually stops acting randomly and starts using its learned knowledge.
+*   **Experience Replay:** Use **Prioritized Experience Replay**. This technique stores past state transitions and re-trains on them, prioritizing "surprising" results (high TD-error) where the agent's prediction was wrong.
+    *   **Batch Size:** 64 samples per update.
+    *   **Memory Size:** 100,000 transitions.
+*   **Reward Amplification ($b$):** Set to **10**.
+
+### 5. Implementation Strategy for Your Stack
+Since you are building the simulator in Python:
+
+1.  **The "Pilot" Agents:** Inside your simulator, implement a fast "Greedy" bot (plays highest cost card available) or a simplified MCTS bot. These pilots generate the `win_rate` used by Q-DeckRec.
+2.  **The Q-DeckRec Model:** Use **PyTorch** to build the MLP described above.
+3.  **The Meta "Gauntlet":**
+    *   To make the Q-DeckRec agent robust, do not train against just one deck.
+    *   Randomly initialize the opponent deck $x_o$ at the start of every episode from your database of scraped meta decks.
+    *   This forces the agent to learn general principles of Digimon deck building (e.g., "blocking plays are good against Aggro") rather than overfitting to beat a single specific list.
+
+**Performance Expectation:**
+Once trained (which may take days of background computing), the Q-DeckRec agent becomes a static function. You can give it a pile of cards and a target opponent, and it will execute $D$ swaps to build an optimal list in **milliseconds or seconds**, without needing to run thousands of simulations for that specific user request.
