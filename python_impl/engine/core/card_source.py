@@ -106,6 +106,11 @@ class CardSource:
         return None
 
     def effect_list(self, timing: EffectTiming) -> List['ICardEffect']:
+        from ..data.card_database import CardDatabase
+        db = CardDatabase()
+        script = db.get_script(self.card_id)
+        if script:
+            return script.get_card_effects(self)
         return []
 
     def paying_cost(self, root: object, target_permanents: List['Permanent'], check_availability: bool = False, ignore_level: bool = False, fixed_cost: int = -1) -> int:
