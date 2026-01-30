@@ -73,7 +73,25 @@ class Player:
 
     def unsuspend_all(self):
         for perm in self.battle_area:
-            perm.is_suspended = False
+            perm.unsuspend()
         if self.breeding_area:
-            self.breeding_area.is_suspended = False
+            self.breeding_area.unsuspend()
         print(f"{self.player_name} unsuspended all permanents.")
+
+    def gain_memory(self, amount: int):
+        self.memory += amount
+        print(f"{self.player_name} gained {amount} memory. Current: {self.memory}")
+
+    def trash_security(self, amount: int):
+        for _ in range(amount):
+            if self.security_cards:
+                card = self.security_cards.pop(0) # Top is index 0 usually
+                self.trash_cards.append(card)
+                print(f"{self.player_name} trashed security: {card.card_names[0]}")
+
+    def recovery(self, amount: int):
+        for _ in range(amount):
+            if self.library_cards:
+                card = self.library_cards.pop(0)
+                self.security_cards.insert(0, card) # Place on top
+                print(f"{self.player_name} recovered 1 security.")

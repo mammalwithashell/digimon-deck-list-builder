@@ -1,6 +1,7 @@
 from __future__ import annotations
 from typing import TYPE_CHECKING, Callable, Optional, Dict, Any
 from abc import ABC
+from ..data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ..core.card_source import CardSource
@@ -31,25 +32,49 @@ class ICardEffect(ABC):
         self.is_background_process: bool = False
         self.is_not_show_ui: bool = False
 
+        self.timing: EffectTiming = EffectTiming.NoTiming
+        self.is_keyword_effect: bool = False
+        self.keyword: str = ""
+        self._is_on_play: bool = False
+        self._is_when_digivolving: bool = False
+        self._is_on_deletion: bool = False
+        self._is_on_attack: bool = False
+
     @property
     def is_disabled(self) -> bool:
         return False
 
     @property
     def is_on_play(self) -> bool:
-        return False
+        return self._is_on_play
+
+    @is_on_play.setter
+    def is_on_play(self, value: bool):
+        self._is_on_play = value
 
     @property
     def is_when_digivolving(self) -> bool:
-        return False
+        return self._is_when_digivolving
+
+    @is_when_digivolving.setter
+    def is_when_digivolving(self, value: bool):
+        self._is_when_digivolving = value
 
     @property
     def is_on_deletion(self) -> bool:
-        return False
+        return self._is_on_deletion
+
+    @is_on_deletion.setter
+    def is_on_deletion(self, value: bool):
+        self._is_on_deletion = value
 
     @property
     def is_on_attack(self) -> bool:
-        return False
+        return self._is_on_attack
+
+    @is_on_attack.setter
+    def is_on_attack(self, value: bool):
+        self._is_on_attack = value
 
     def set_up_icard_effect(self, effect_name: str, can_use_condition: Callable[[Dict[str, Any]], bool], card: 'CardSource'):
         self.effect_name = effect_name
@@ -64,6 +89,9 @@ class ICardEffect(ABC):
 
     def set_max_count_per_turn(self, max_count_per_turn: int):
         self.max_count_per_turn = max_count_per_turn
+
+    def set_limit_once_per_turn(self):
+        self.max_count_per_turn = 1
 
     def set_effect_name(self, effect_name: str):
         self.effect_name = effect_name
@@ -85,6 +113,9 @@ class ICardEffect(ABC):
 
     def set_can_activate_condition(self, can_activate_condition: Callable[[Dict[str, Any]], bool]):
         self.can_activate_condition = can_activate_condition
+
+    def set_timing(self, timing: EffectTiming):
+        self.timing = timing
 
     def can_trigger(self, hashtable: Dict[str, Any]) -> bool:
         return True
