@@ -25,6 +25,13 @@ class Rarity(Enum):
     P = 5
     NoRarity = 6 # Renamed from None to avoid conflict
 
+class GamePhase(Enum):
+    Start = 0
+    Draw = 1
+    Breeding = 2
+    Main = 3
+    End = 4
+
 class EffectTiming(Enum):
     NoTiming = 0 # Renamed from None
     OnUseOption = 1

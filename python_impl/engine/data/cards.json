@@ -1,0 +1,29 @@
+[
+  {
+    "card_id": "ST1-01",
+    "card_name_eng": "Koromon",
+    "card_kind": "DigiEgg",
+    "card_colors": ["Red"],
+    "level": 2,
+    "play_cost": 0,
+    "dp": 0
+  },
+  {
+    "card_id": "ST1-03",
+    "card_name_eng": "Agumon",
+    "card_kind": "Digimon",
+    "card_colors": ["Red"],
+    "level": 3,
+    "play_cost": 3,
+    "dp": 2000
+  },
+  {
+    "card_id": "ST1-07",
+    "card_name_eng": "Greymon",
+    "card_kind": "Digimon",
+    "card_colors": ["Red"],
+    "level": 4,
+    "play_cost": 5,
+    "dp": 4000
+  }
+]
