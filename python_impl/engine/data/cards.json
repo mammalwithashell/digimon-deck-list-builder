@@ -1,0 +1,16 @@
+[
+  {
+    "card_id": "ST1-01",
+    "card_index": 1,
+    "card_name_eng": "Koromon",
+    "card_name_jpn": "コロモン",
+    "card_effect_class_name": "ST1_01",
+    "play_cost": 0,
+    "dp": 0,
+    "level": 2,
+    "card_kind": 3,
+    "rarity": 0,
+    "card_colors": [0],
+    "inherited_effect_description_eng": "[Your Turn] While this Digimon has 4 or more digivolution cards, it gets +1000 DP."
+  }
+]
