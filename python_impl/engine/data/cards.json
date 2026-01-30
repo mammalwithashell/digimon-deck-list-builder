@@ -1,0 +1,34 @@
+[
+  {
+    "id": "ST1-03",
+    "name": "Agumon",
+    "kind": "Digimon",
+    "color": "Red",
+    "level": 3,
+    "play_cost": 3,
+    "dp": 2000,
+    "effects": [
+      {
+        "trigger": "OnPlay",
+        "description": "Reveal the top 5 cards of your deck. Add 1 Tamer card and 1 Digimon card with [Agumon] in its name to your hand. Place the remaining cards at the bottom of your deck in any order.",
+        "script_id": "st1_03_on_play"
+      }
+    ]
+  },
+  {
+    "id": "ST1-01",
+    "name": "Koromon",
+    "kind": "DigiEgg",
+    "color": "Red",
+    "level": 2,
+    "play_cost": 0,
+    "dp": 0,
+    "effects": [
+        {
+            "trigger": "WhenDigivolving",
+            "description": "If you have a red tamer, gain 1 memory.",
+            "script_id": "st1_01_inherited"
+        }
+    ]
+  }
+]
