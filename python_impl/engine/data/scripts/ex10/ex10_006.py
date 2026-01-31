@@ -50,6 +50,14 @@ class EX10_006(CardScript):
         effect2.set_effect_name("EX10-006 ESS: +1000 DP")
         effect2.is_inherited_effect = True
         effect2.dp_modifier = 1000
+
+        def condition2(context: Dict[str, Any]) -> bool:
+            permanent = context.get("permanent")
+            if permanent and permanent.top_card.owner.is_my_turn:
+                return True
+            return False
+
+        effect2.set_can_use_condition(condition2)
         effects.append(effect2)
 
         return effects

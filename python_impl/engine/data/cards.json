@@ -697,19 +697,20 @@
   {
     "card_id": "EX10-012",
     "card_index": 20012,
-    "card_name_eng": "EX10 Card EX10-012",
+    "card_name_eng": "MetalSeadramon",
     "card_name_jpn": "",
-    "card_effect_class_name": "EX10_Stub",
-    "play_cost": 3,
-    "dp": 3000,
-    "level": 3,
+    "card_effect_class_name": "EX10_012",
+    "play_cost": 12,
+    "dp": 11000,
+    "level": 6,
     "card_kind": 0,
     "rarity": 0,
     "card_colors": [
       1
     ],
-    "effect_description_eng": "Placeholder effect.",
-    "inherited_effect_description_eng": ""
+    "effect_description_eng": "[Hand] [Main] If you don't have any Digimon other than Digimon with [Dark Masters] in their texts, you may play this card with the play cost reduced by 5. At turn end, delete the Digimon this effect played.",
+    "inherited_effect_description_eng": "",
+    "security_effect_description_eng": "[Security] If this card was face-up, you may play 1 level 5 or lower card with [Dark Masters] in its text from your hand or trash without paying the cost."
   },
   {
     "card_id": "EX10-010",
@@ -731,19 +732,19 @@
   {
     "card_id": "EX10-008",
     "card_index": 20008,
-    "card_name_eng": "EX10 Card EX10-008",
+    "card_name_eng": "MetalGreymon",
     "card_name_jpn": "",
-    "card_effect_class_name": "EX10_Stub",
-    "play_cost": 3,
-    "dp": 3000,
-    "level": 3,
+    "card_effect_class_name": "EX10_008",
+    "play_cost": 8,
+    "dp": 7000,
+    "level": 5,
     "card_kind": 0,
     "rarity": 0,
     "card_colors": [
       0
     ],
-    "effect_description_eng": "Placeholder effect.",
-    "inherited_effect_description_eng": ""
+    "effect_description_eng": "[On Play] [When Digivolving] Give 1 of your opponent's Digimon <Collision> and '[Start of Your Main Phase] This Digimon attacks.' until their turn ends.",
+    "inherited_effect_description_eng": "[Opponent's Turn] [Once Per Turn] When attack targets change, if this Digimon has [Greymon] in its name, trash your opponent's top security card."
   },
   {
     "card_id": "EX10-006",
@@ -867,19 +868,19 @@
   {
     "card_id": "EX10-015",
     "card_index": 20015,
-    "card_name_eng": "EX10 Card EX10-015",
+    "card_name_eng": "Monitamon",
     "card_name_jpn": "",
-    "card_effect_class_name": "EX10_Stub",
+    "card_effect_class_name": "EX10_015",
     "play_cost": 3,
-    "dp": 3000,
+    "dp": 2000,
     "level": 3,
     "card_kind": 0,
     "rarity": 0,
     "card_colors": [
       3
     ],
-    "effect_description_eng": "Placeholder effect.",
-    "inherited_effect_description_eng": ""
+    "effect_description_eng": "<DigiXros -2> 1 Digimon card with <Save> in text. [On Deletion] <Save>. [Start of Your Main Phase] By trashing 1 card with <Save> in its text from your hand, <Draw 1> and suspend 1 of your opponent's Digimon.",
+    "inherited_effect_description_eng": "<Piercing>"
   },
   {
     "card_id": "EX10-001",
@@ -1513,9 +1514,9 @@
   {
     "card_id": "EX10-004",
     "card_index": 20004,
-    "card_name_eng": "DigiEgg EX10-004",
+    "card_name_eng": "Cupimon",
     "card_name_jpn": "",
-    "card_effect_class_name": "EX10_Stub",
+    "card_effect_class_name": "EX10_004",
     "play_cost": 0,
     "dp": 0,
     "level": 2,
@@ -1525,7 +1526,7 @@
       6
     ],
     "effect_description_eng": "Placeholder effect.",
-    "inherited_effect_description_eng": ""
+    "inherited_effect_description_eng": "[Your Turn] [Once Per Turn] When any of your Digimon with [Lucemon] in their names move from the breeding area to the battle area, by trashing 1 card in your hand, <Draw 1> and gain 1 memory."
   },
   {
     "card_id": "EX10-014",
@@ -1547,9 +1548,9 @@
   {
     "card_id": "EX10-013",
     "card_index": 20013,
-    "card_name_eng": "EX10 Card EX10-013",
+    "card_name_eng": "Lucemon",
     "card_name_jpn": "",
-    "card_effect_class_name": "EX10_Stub",
+    "card_effect_class_name": "EX10_013",
     "play_cost": 3,
     "dp": 3000,
     "level": 3,
@@ -1558,7 +1559,7 @@
     "card_colors": [
       2
     ],
-    "effect_description_eng": "Placeholder effect.",
-    "inherited_effect_description_eng": ""
+    "effect_description_eng": "[Breeding] [When Digivolving] This Digimon may move. [End of Your Turn] By returning 5 cards with [Lucemon] in their texts from your trash to the bottom of the deck, this Digimon may digivolve into [Lucemon: Chaos Mode] in the trash without paying the cost.",
+    "inherited_effect_description_eng": "<Blocker>"
   }
 ]
