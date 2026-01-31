@@ -3,6 +3,7 @@ import os
 from typing import List
 import clr_loader
 from pythonnet import set_runtime
+import numpy as np
 
 # Configure .NET Runtime
 try:
@@ -26,7 +27,7 @@ sys.path.append(os.path.dirname(DLL_PATH))
 
 clr.AddReference("Digimon.Core")
 
-from Digimon.Core import HeadlessGame
+from Digimon.Core import HeadlessGame, CardRegistry
 from System.Collections.Generic import List as CsList
 from System import String
 
@@ -50,3 +51,12 @@ class CSharpGameWrapper:
 
     def step(self, action_id: int):
         self.headless_game.Step(action_id)
+
+    def get_board_tensor(self, player_id: int) -> np.ndarray:
+        # Get float array from C#
+        float_arr = self.headless_game.GameInstance.GetBoardStateTensor(player_id)
+        # Convert System.Single[] to numpy array
+        return np.array(float_arr, dtype=np.float32)
+
+    def register_card(self, card_id: str):
+        CardRegistry.Register(card_id)

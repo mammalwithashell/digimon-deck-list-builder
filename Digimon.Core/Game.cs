@@ -91,6 +91,98 @@ namespace Digimon.Core
             }
         }
 
+        public float[] GetBoardStateTensor(int playerId)
+        {
+            // Layout:
+            // 0-9: Global (Turn, Phase, Memory)
+            // 10-249: My Field (12 slots * 20 floats)
+            // 250-489: Opp Field (12 slots * 20 floats)
+            // 490-509: My Hand (20 ints)
+            // 510-529: Opp Hand (20 ints - masked? no, assuming perfect info for now or mask later)
+            // 530-539: My Trash (10 ints)
+            // 540-549: Opp Trash (10 ints)
+            // 550-559: My Security (10 ints)
+            // 560-569: Opp Security (10 ints)
+
+            // Total: 10 + 240 + 240 + 20 + 20 + 10 + 10 + 10 + 10 = 570 floats
+            List<float> tensor = new List<float>();
+
+            Player me = (playerId == 1) ? Player1 : Player2;
+            Player opp = (playerId == 1) ? Player2 : Player1;
+
+            // --- Global Data [0-9] ---
+            tensor.Add(TurnStateMachine.TurnCount);
+            tensor.Add((float)TurnStateMachine.CurrentPhase);
+            // Memory relative to me
+            tensor.Add(GetMemory(me));
+            // Pad remaining 7
+            for(int i=0; i<7; i++) tensor.Add(0);
+
+            // --- My Field [12 slots * 20] ---
+            AppendFieldData(tensor, me);
+
+            // --- Opp Field [12 slots * 20] ---
+            AppendFieldData(tensor, opp);
+
+            // --- My Hand [20] ---
+            AppendListIds(tensor, me.Hand, 20);
+
+            // --- Opp Hand [20] ---
+            AppendListIds(tensor, opp.Hand, 20);
+
+            // --- My Trash [10] ---
+            AppendListIds(tensor, me.Trash, 10);
+
+            // --- Opp Trash [10] ---
+            AppendListIds(tensor, opp.Trash, 10);
+
+            // --- My Security [10] ---
+            AppendListIds(tensor, me.Security, 10);
+
+            // --- Opp Security [10] ---
+            AppendListIds(tensor, opp.Security, 10);
+
+            return tensor.ToArray();
+        }
+
+        private void AppendFieldData(List<float> tensor, Player p)
+        {
+            // 12 Slots
+            for (int i = 0; i < 12; i++)
+            {
+                if (i < p.BattleArea.Count)
+                {
+                    Card c = p.BattleArea[i];
+                    // 1. Internal ID
+                    tensor.Add(CardRegistry.GetId(c.Id));
+                    // 2. DP
+                    tensor.Add(c.GetCurrentDP());
+                    // 3. Suspended
+                    tensor.Add(0); // Stub
+                    // 4. Source Count
+                    tensor.Add(0); // Stub
+                    // 5-20. Sources (16 slots)
+                    for(int j=0; j<16; j++) tensor.Add(0);
+                }
+                else
+                {
+                    // Empty Slot (20 floats)
+                    for(int j=0; j<20; j++) tensor.Add(0);
+                }
+            }
+        }
+
+        private void AppendListIds(List<float> tensor, List<Card> cards, int limit)
+        {
+            for (int i = 0; i < limit; i++)
+            {
+                if (i < cards.Count)
+                    tensor.Add(CardRegistry.GetId(cards[i].Id));
+                else
+                    tensor.Add(0);
+            }
+        }
+
         public void EndGame(Player winner)
         {
             IsGameOver = true;
