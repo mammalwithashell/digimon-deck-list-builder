@@ -7,17 +7,18 @@ if TYPE_CHECKING:
     from ....core.card_source import CardSource
     from ....core.permanent import Permanent
 
-class BT22_003(CardScript):
+class BT22_044(CardScript):
     def get_card_effects(self, card: 'CardSource') -> List['ICardEffect']:
-        return [BT22_003_OnPlayEffect()]
+        return [BT22_044_WhenDigivolvingEffect()]
 
-class BT22_003_OnPlayEffect(ICardEffect):
+class BT22_044_WhenDigivolvingEffect(ICardEffect):
     def __init__(self):
         super().__init__()
-        self.is_on_play = True
-        self.effect_name = "[On Play] Reveal the top 3 cards of your deck. Add 1 card to your hand."
+        self.is_when_digivolving = True
+        self.effect_name = "[When Digivolving] Suspend 1 of your opponent's Digimon."
 
     def on_process_callback(self):
-        # Mock reveal and add
-        # Real implementation would use player.reveal_cards, player.add_to_hand, etc.
+        # Suspend logic (mock target)
+        print("BT22-044 Effect: Suspending opponent Digimon...")
+        # In real engine, would select target.
         pass

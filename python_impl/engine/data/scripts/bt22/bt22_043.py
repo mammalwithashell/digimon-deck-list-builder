@@ -7,22 +7,20 @@ if TYPE_CHECKING:
     from ....core.card_source import CardSource
     from ....core.permanent import Permanent
 
-class BT22_002(CardScript):
+class BT22_043(CardScript):
     def get_card_effects(self, card: 'CardSource') -> List['ICardEffect']:
-        return [BT22_002_InheritedEffect()]
+        return [BT22_043_StartOfTurnEffect()]
 
-class BT22_002_InheritedEffect(ICardEffect):
+class BT22_043_StartOfTurnEffect(ICardEffect):
     def __init__(self):
         super().__init__()
-        self.is_inherited_effect = True
-        self.is_on_attack = True # Mocking When Attacking trigger
-        self.effect_name = "Inherited: [When Attacking] Draw 1."
+        # self.is_start_of_turn = True # Need to add this property if it doesn't exist
+        self.effect_name = "[Start of Turn] Gain 1 Memory if you have a Tamer."
 
     def can_trigger(self, hashtable: Dict[str, Any]) -> bool:
-        # Simple mock: Always trigger if it's the attacking permanent
-        return True # Real engine would check hashtable["permanent"] == self.effect_source_permanent
+        # Check Tamer condition
+        return False # Placeholder
 
     def on_process_callback(self):
-        # Mock Draw
         if self.effect_source_permanent and self.effect_source_permanent.top_card and self.effect_source_permanent.top_card.owner:
-            self.effect_source_permanent.top_card.owner.draw()
+            self.effect_source_permanent.top_card.owner.gain_memory(1)

@@ -7,16 +7,17 @@ if TYPE_CHECKING:
     from ....core.card_source import CardSource
     from ....core.permanent import Permanent
 
-class BT22_006(CardScript):
+class BT22_034(CardScript):
     def get_card_effects(self, card: 'CardSource') -> List['ICardEffect']:
-        return [BT22_006_WhenDigivolvingEffect()]
+        return [BT22_034_InheritedEffect()]
 
-class BT22_006_WhenDigivolvingEffect(ICardEffect):
+class BT22_034_InheritedEffect(ICardEffect):
     def __init__(self):
         super().__init__()
-        self.is_when_digivolving = True
-        self.effect_name = "[When Digivolving] Delete 1 of your opponent's Digimon with 3000 DP or less."
+        self.is_inherited_effect = True
+        self.effect_name = "Inherited: [Your Turn] This Digimon gets +1000 DP."
 
-    def on_process_callback(self):
-        # Mock deletion logic
-        pass
+    def get_change_dp_value(self, permanent: 'Permanent') -> int:
+        if permanent.top_card.owner and permanent.top_card.owner.is_my_turn:
+            return 1000
+        return 0

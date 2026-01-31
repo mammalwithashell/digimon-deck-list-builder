@@ -77,3 +77,16 @@ class Player:
         if self.breeding_area:
             self.breeding_area.is_suspended = False
         print(f"{self.player_name} unsuspended all permanents.")
+
+    def gain_memory(self, amount: int):
+        self.memory += amount
+        print(f"{self.player_name} gained {amount} memory. Total: {self.memory}")
+
+    def reveal_top(self, count: int) -> List['CardSource']:
+        revealed = []
+        for _ in range(count):
+            if self.library_cards:
+                card = self.library_cards.pop(0)
+                revealed.append(card)
+        print(f"{self.player_name} revealed {len(revealed)} cards.")
+        return revealed

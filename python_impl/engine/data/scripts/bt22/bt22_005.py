@@ -9,15 +9,17 @@ if TYPE_CHECKING:
 
 class BT22_005(CardScript):
     def get_card_effects(self, card: 'CardSource') -> List['ICardEffect']:
-        return [BT22_005_OnDeletionEffect()]
+        return [BT22_005_OnPlayEffect()]
 
-class BT22_005_OnDeletionEffect(ICardEffect):
+class BT22_005_OnPlayEffect(ICardEffect):
     def __init__(self):
         super().__init__()
-        self.is_on_deletion = True
-        self.effect_name = "[On Deletion] Gain 1 Memory."
+        self.is_on_play = True
+        self.effect_name = "[On Play] Reveal the top 3 cards of your deck."
 
     def on_process_callback(self):
-        # Mock memory gain
         if self.effect_source_permanent and self.effect_source_permanent.top_card and self.effect_source_permanent.top_card.owner:
-            self.effect_source_permanent.top_card.owner.memory += 1
+            # Reveal 3
+            revealed = self.effect_source_permanent.top_card.owner.reveal_top(3)
+            # Logic to add to hand would go here (complex selection UI needed)
+            pass

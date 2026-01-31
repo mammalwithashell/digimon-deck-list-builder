@@ -95,3 +95,6 @@ class Permanent:
     def discard_evo_roots(self, ignore_overflow: bool = False, put_to_trash: bool = True):
         # Generator placeholder
         pass
+
+    def suspend(self):
+        self.is_suspended = True
