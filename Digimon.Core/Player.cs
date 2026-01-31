@@ -8,7 +8,7 @@ namespace Digimon.Core
     {
         public int Id { get; set; }
         public string Name { get; set; }
-        public int Memory { get; set; }
+        // Memory is managed by Game.MemoryGauge
 
         public List<Card> Hand { get; set; } = new List<Card>();
         public List<Card> Deck { get; set; } = new List<Card>();

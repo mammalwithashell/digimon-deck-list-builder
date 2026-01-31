@@ -15,6 +15,11 @@ namespace Digimon.Core
         public bool IsGameOver { get; private set; }
         public Player Winner { get; private set; }
 
+        // Shared Memory Gauge: Positive for P1, Negative for P2.
+        // P1 turn: 1 to 10 (Max), P2 side is < 0.
+        // P2 turn: -1 to -10 (Max), P1 side is > 0.
+        public int MemoryGauge { get; private set; }
+
         public Game()
         {
             Player1 = new Player(1, "Player 1");
@@ -46,6 +51,43 @@ namespace Digimon.Core
             TurnStateMachine.StartTurn();
         }
 
+        public int GetMemory(Player player)
+        {
+            if (player == Player1) return MemoryGauge;
+            return -MemoryGauge;
+        }
+
+        public void AddMemory(Player player, int amount)
+        {
+            if (player == Player1)
+            {
+                MemoryGauge += amount;
+                if (MemoryGauge > 10) MemoryGauge = 10;
+            }
+            else
+            {
+                MemoryGauge -= amount;
+                if (MemoryGauge < -10) MemoryGauge = -10;
+            }
+        }
+
+        public void PayCost(Player player, int cost)
+        {
+            // Paying cost means moving towards opponent's side (subtracting memory from self)
+            // If P1 pays, MemoryGauge decreases.
+            // If P2 pays, MemoryGauge increases (from negative to positive).
+            if (player == Player1)
+            {
+                MemoryGauge -= cost;
+                if (MemoryGauge < -10) MemoryGauge = -10;
+            }
+            else
+            {
+                MemoryGauge += cost;
+                if (MemoryGauge > 10) MemoryGauge = 10;
+            }
+        }
+
         public void EndGame(Player winner)
         {
             IsGameOver = true;
@@ -58,11 +100,17 @@ namespace Digimon.Core
             CurrentPlayer = OpponentPlayer;
             CurrentPlayer.IsMyTurn = true;
 
-            // Reset Memory to 3 if less than 0?
-            // Simple rule: if turn ends, memory is passed.
-            // For now, assume fixed memory or memory gauge logic.
-            // We'll set memory to 3 for the new turn player as a simplification if we don't track full gauge.
-            CurrentPlayer.Memory = 3;
+            // Standard Rule:
+            // If new turn player has <= 0 memory (meaning opponent passed big or just barely passed),
+            // reset to 3.
+            // From perspective of new player:
+            int startMemory = GetMemory(CurrentPlayer);
+            if (startMemory <= 0)
+            {
+                // Set to 3
+                if (CurrentPlayer == Player1) MemoryGauge = 3;
+                else MemoryGauge = -3;
+            }
 
             TurnStateMachine.StartTurn();
         }
@@ -74,12 +122,13 @@ namespace Digimon.Core
                 TurnCount = TurnStateMachine.TurnCount,
                 CurrentPhase = TurnStateMachine.CurrentPhase.ToString(),
                 CurrentPlayer = CurrentPlayer.Id,
+                MemoryGauge = MemoryGauge,
                 IsGameOver = IsGameOver,
                 Winner = Winner?.Id,
                 Player1 = new
                 {
                     Id = Player1.Id,
-                    Memory = Player1.Memory,
+                    Memory = GetMemory(Player1),
                     HandCount = Player1.Hand.Count,
                     HandIds = Player1.Hand.Select(c => c.Id).ToList(),
                     SecurityCount = Player1.Security.Count,
@@ -89,7 +138,7 @@ namespace Digimon.Core
                 Player2 = new
                 {
                     Id = Player2.Id,
-                    Memory = Player2.Memory,
+                    Memory = GetMemory(Player2),
                     HandCount = Player2.Hand.Count,
                     HandIds = Player2.Hand.Select(c => c.Id).ToList(),
                     SecurityCount = Player2.Security.Count,

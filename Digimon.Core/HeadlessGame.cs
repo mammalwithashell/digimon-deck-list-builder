@@ -52,7 +52,8 @@ namespace Digimon.Core
                     break;
                 }
 
-                GameInstance.TurnStateMachine.EndTurn();
+                // Simulate Agent Action: Pass Turn
+                GameInstance.TurnStateMachine.PassTurn();
             }
 
             if (!GameInstance.IsGameOver)
@@ -70,8 +71,8 @@ namespace Digimon.Core
             // In reality, this would decode the actionId and apply it to GameInstance
             Console.WriteLine($"[HeadlessGame] Execute Action: {actionId}");
 
-            // For now, just advance phase to simulate progress
-            GameInstance.TurnStateMachine.EndTurn();
+            // For now, just advance phase to simulate progress (Pass Turn)
+            GameInstance.TurnStateMachine.PassTurn();
         }
     }
 }
