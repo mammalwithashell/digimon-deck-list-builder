@@ -1,9 +1,3 @@
-Based on our conversation history, your pivot to a Python/React stack, and the methodologies found in the **Q-DeckRec** and **DeckGym** sources, here is the updated `README.md`.
-
-You should replace the current file in your repository with this version. It accurately reflects the new architecture (OpenAI Gym, Headless Simulation, React Frontend) and the "Gauntlet" optimization strategy.
-
-***
-
 # Digimon TCG Deck List Builder & Optimizer
 
 > **Status:** Pre-Alpha / Active Development
@@ -25,13 +19,21 @@ Based on the **Q-DeckRec** algorithm. Instead of randomly evolving decks, an RL 
 *   **Objective:** Maximize win rate across a 4-Round "Locals" Tournament simulation.
 *   **Reward Function:** $R = \sum \exp(10 \cdot \text{WinRate})$
 
-### 3. The Gauntlet ("Locals Simulator")
+### 3. The Pilot ("Battle Agent")
+The AI responsible for piloting the decks during simulation. Unlike the Architect (which runs once per iteration), the Pilot runs thousands of times per iteration.
+*  **Modular Brains**: The engine supports swapping the Pilot's logic to trade off speed vs. accuracy.
+    * Greedy Heuristic: Fast execution (<1ms) for early-stage optimization.
+    * MCTS (Procedural Personas): Slower, deliberate play using Monte Carlo Tree Search to simulate human archetypes (Aggro, Control, Combo).
+    * RL Pilot (PPO): A trained neural network that approximates MCTS behavior for high-speed "Agent vs. Agent" training.
+* Action Masking: Ensures the Pilot only attempts valid moves (e.g., preventing attacks with summoning sickness) to minimize training noise
+
+### 4. The Gauntlet ("Locals Simulator")
 We do not optimize against a single opponent. The engine simulates a "Locals" environment:
 *   **Weighted Meta:** Opponents are sampled from a pool of Tier 1, Tier 2, and Rogue decks based on usage data (sourced from *Egman Events* & *Digimon Meta*).
 *   **Fixed Swiss:** The candidate deck plays all 4 rounds regardless of record to generate granular performance data (Variance Reduction).
 *   **Procedural Personas:** Opponent bots utilize **MCTS** with specific heuristic biases (Aggro, Control, Combo) to simulate human playstyles.
 
-### 4. The Frontend (React)
+### 5. The Frontend (React)
 A visualization tool for "Headed" gameplay and analysis.
 *   **Log Replay:** Visualizes the raw logs from the Python engine to help humans understand *why* a deck is winning or losing.
 *   **Human vs. Agent:** Allows a user to play against the MCTS/RL agents by sending actions via API.
