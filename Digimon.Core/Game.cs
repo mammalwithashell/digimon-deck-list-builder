@@ -99,7 +99,13 @@ namespace Digimon.Core
             // 0: Turn Count
             // 1: Current Phase (Enum Int)
             // 2: Memory Gauge (Relative to requesting player)
-            // 3-9: Padding (Reserved for future global state like Pending Actions)
+            // 3: Reserved / Padding
+            // 4: Reserved / Padding
+            // 5: Reserved / Padding
+            // 6: Reserved / Padding
+            // 7: Reserved / Padding
+            // 8: Reserved / Padding (e.g. Pending Action Type)
+            // 9: Reserved / Padding
             //
             // [10-249] MY BATTLE AREA (12 Slots * 20 Floats = 240 floats)
             // Each Slot Structure:
