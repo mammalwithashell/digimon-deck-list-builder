@@ -27,6 +27,7 @@ class Game:
 
         self.turn_count: int = 0
         self.current_phase: GamePhase = GamePhase.Start
+        self.pending_action: PendingAction = PendingAction.NO_ACTION
         self.game_over: bool = False
         self.winner: Optional[Player] = None
 
