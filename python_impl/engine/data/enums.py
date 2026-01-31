@@ -95,3 +95,10 @@ class EffectTiming(Enum):
     RulesTiming = 55
     OnRemovedField = 56
     WhenWouldDigivolve = 57
+    WhenDigivolving = 58
+
+class AttackResolution(Enum):
+    Survivor = 0
+    AttackerDeleted = 1
+    BattleDraw = 2 # Both deleted
+    GameEnd = 3 # Player lost
