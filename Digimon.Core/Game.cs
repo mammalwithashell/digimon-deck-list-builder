@@ -228,18 +228,6 @@ namespace Digimon.Core
             CurrentPlayer = OpponentPlayer;
             if (CurrentPlayer != null) CurrentPlayer.IsMyTurn = true;
 
-            // Standard Rule:
-            // If new turn player has <= 0 memory (meaning opponent passed big or just barely passed),
-            // reset to 3.
-            // From perspective of new player:
-            int startMemory = GetMemory(CurrentPlayer!);
-            if (startMemory <= 0)
-            {
-                // Set to 3
-                if (CurrentPlayer == Player1) MemoryGauge = 3;
-                else MemoryGauge = -3;
-            }
-
             TurnStateMachine.StartTurn();
         }
 
