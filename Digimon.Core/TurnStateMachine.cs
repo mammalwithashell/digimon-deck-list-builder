@@ -11,16 +11,10 @@ namespace Digimon.Core
         End
     }
 
-    public class TurnStateMachine
+    public class TurnStateMachine(Game game)
     {
-        private Game _game;
         public GamePhase CurrentPhase { get; private set; }
         public int TurnCount { get; private set; }
-
-        public TurnStateMachine(Game game)
-        {
-            _game = game;
-        }
 
         public void StartTurn()
         {
@@ -44,13 +38,13 @@ namespace Digimon.Core
             CurrentPhase = GamePhase.Draw;
             // Draw 1 unless first player first turn (Digimon rules: First player draws? No, usually not on turn 1 in some games, but Digimon TCG: First player does NOT draw on first turn).
             // Logic:
-            if (TurnCount == 1 && _game.CurrentPlayer.Id == 1)
+            if (TurnCount == 1 && game.CurrentPlayer!.Id == 1)
             {
                 // Skip draw
             }
             else
             {
-                _game.CurrentPlayer.Draw();
+                game.CurrentPlayer!.Draw();
             }
         }
 
@@ -74,7 +68,7 @@ namespace Digimon.Core
             if (CurrentPhase != GamePhase.Main) return;
 
             // Check memory condition
-            int currentMemory = _game.GetMemory(_game.CurrentPlayer);
+            int currentMemory = game.GetMemory(game.CurrentPlayer!);
             if (currentMemory < 0)
             {
                 EndTurn();
@@ -94,19 +88,19 @@ namespace Digimon.Core
             // Specifically: It consumes all your memory + gives opponent 3.
             // Actually, the rule is "Set memory gauge to 3 on opponent's side."
 
-            if (_game.CurrentPlayer == _game.Player1)
-                _game.PayCost(_game.CurrentPlayer, _game.GetMemory(_game.CurrentPlayer) + 3); // Naive math
+            if (game.CurrentPlayer == game.Player1)
+                game.PayCost(game.CurrentPlayer!, game.GetMemory(game.CurrentPlayer!) + 3); // Naive math
             else
-                _game.PayCost(_game.CurrentPlayer, _game.GetMemory(_game.CurrentPlayer) + 3);
+                game.PayCost(game.CurrentPlayer!, game.GetMemory(game.CurrentPlayer!) + 3);
 
             // Easier: Just set it directly.
-             if (_game.CurrentPlayer == _game.Player1)
+             if (game.CurrentPlayer == game.Player1)
              {
                  // Set to -3
                  // _game.MemoryGauge = -3; // Can't set private.
                  // Use a dedicated method or PayCost until -3.
-                 int cost = _game.MemoryGauge - (-3);
-                 _game.PayCost(_game.CurrentPlayer, cost);
+                 int cost = game.MemoryGauge - (-3);
+                 game.PayCost(game.CurrentPlayer!, cost);
              }
              else
              {
@@ -115,8 +109,8 @@ namespace Digimon.Core
                  // Current is negative (e.g. -2). Target is 3.
                  // Pay cost? P2 paying cost ADDS to gauge.
                  // Cost = Target - Current = 3 - (-2) = 5.
-                 int cost = 3 - _game.MemoryGauge;
-                 _game.PayCost(_game.CurrentPlayer, cost);
+                 int cost = 3 - game.MemoryGauge;
+                 game.PayCost(game.CurrentPlayer!, cost);
              }
 
              EndTurn();
@@ -126,7 +120,7 @@ namespace Digimon.Core
         {
             CurrentPhase = GamePhase.End;
             // Resolve end of turn effects
-            _game.SwitchTurn();
+            game.SwitchTurn();
         }
     }
 }

@@ -15,7 +15,7 @@ namespace Digimon.Core
             GameInstance.StartGame(deck1, deck2);
         }
 
-        private List<Card> CreateDeck(List<string> ids)
+        private static List<Card> CreateDeck(List<string> ids)
         {
             var deck = new List<Card>();
             foreach (var id in ids)
@@ -46,7 +46,7 @@ namespace Digimon.Core
                 // For this headless test, we just pass the turn.
 
                 // Check win condition (Deck out)
-                if (GameInstance.CurrentPlayer.Deck.Count == 0)
+                if (GameInstance.CurrentPlayer!.Deck.Count == 0)
                 {
                     GameInstance.EndGame(GameInstance.OpponentPlayer);
                     break;
@@ -62,7 +62,7 @@ namespace Digimon.Core
                 GameInstance.EndGame(GameInstance.Player1); // Draw/Tie breaker
             }
 
-            return GameInstance.Winner.Id;
+            return GameInstance.Winner?.Id ?? 0;
         }
 
         public void Step(int actionId)
