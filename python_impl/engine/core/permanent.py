@@ -93,13 +93,37 @@ class Permanent:
         return active
 
     def can_attack(self, card_effect: Optional['ICardEffect'], without_tap: bool = False, is_vortex: bool = False) -> bool:
+        if self.is_suspended and not without_tap:
+            return False
+
+        # Check summoning sickness (not tracked yet)
+
         return True
 
     def can_block(self, attacking_permanent: 'Permanent') -> bool:
+        # Check for Blocker effect and not suspended
+        # For now, return False unless we implement Blocker trait check
         return False
 
     def effect_list(self, timing: EffectTiming) -> List['ICardEffect']:
-        return []
+        # Aggregate effects from all sources for a specific timing
+        # This is used for "OnAttack", "WhenDigivolving" etc.
+        effects = []
+        # Sources (Inherited)
+        for source in self.card_sources[:-1]:
+            source_effects = source.effect_list(timing)
+            for eff in source_effects:
+                if eff.is_inherited_effect:
+                    effects.append(eff)
+
+        # Top Card (Not Inherited)
+        if self.top_card:
+            top_effects = self.top_card.effect_list(timing)
+            for eff in top_effects:
+                if not eff.is_inherited_effect:
+                    effects.append(eff)
+
+        return effects
 
     def add_card_source(self, card_source: 'CardSource'):
         self.card_sources.append(card_source)
@@ -107,3 +131,9 @@ class Permanent:
     def discard_evo_roots(self, ignore_overflow: bool = False, put_to_trash: bool = True):
         # Generator placeholder
         pass
+
+    def suspend(self):
+        self.is_suspended = True
+
+    def unsuspend(self):
+        self.is_suspended = False
