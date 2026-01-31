@@ -1,0 +1,52 @@
+INFO:     Shutting down
+INFO:     Waiting for application shutdown.
+INFO:     Application shutdown complete.
+INFO:     Finished server process [4351]
+INFO:     Started server process [4995]
+INFO:     Waiting for application startup.
+INFO:     Application startup complete.
+INFO:     Uvicorn running on http://127.0.0.1:8000 (Press CTRL+C to quit)
+INFO:     127.0.0.1:53182 - "GET / HTTP/1.1" 200 OK
+Loaded 18 cards.
+Game Started. First player: Player 1
+Player 1 drew a card. Hand size: 1
+Player 1 drew a card. Hand size: 2
+Player 1 drew a card. Hand size: 3
+Player 1 drew a card. Hand size: 4
+Player 1 drew a card. Hand size: 5
+Player 2 drew a card. Hand size: 1
+Player 2 drew a card. Hand size: 2
+Player 2 drew a card. Hand size: 3
+Player 2 drew a card. Hand size: 4
+Player 2 drew a card. Hand size: 5
+Player 1 unsuspended all permanents.
+Memory reset to 3 for Player 1.
+Phase Transition: Start -> Draw
+First turn: No draw.
+Phase Transition: Draw -> Breeding
+Breeding Phase: Waiting for action (hatch/move/pass).
+INFO:     127.0.0.1:53190 - "POST /game/start HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53204 - "GET /game/96106d47-1a43-4ad3-bfe2-1b0fed0aa38a HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53206 - "GET /game/96106d47-1a43-4ad3-bfe2-1b0fed0aa38a/actions HTTP/1.1" 200 OK
+Player 1 hatched Flickmon.
+INFO:     127.0.0.1:53220 - "POST /game/96106d47-1a43-4ad3-bfe2-1b0fed0aa38a/action HTTP/1.1" 200 OK
+Game Started. First player: Player 2
+Player 1 drew a card. Hand size: 1
+Player 1 drew a card. Hand size: 2
+Player 1 drew a card. Hand size: 3
+Player 1 drew a card. Hand size: 4
+Player 1 drew a card. Hand size: 5
+Player 2 drew a card. Hand size: 1
+Player 2 drew a card. Hand size: 2
+Player 2 drew a card. Hand size: 3
+Player 2 drew a card. Hand size: 4
+Player 2 drew a card. Hand size: 5
+Player 2 unsuspended all permanents.
+Memory reset to 3 for Player 2.
+Phase Transition: Start -> Draw
+First turn: No draw.
+Phase Transition: Draw -> Breeding
+Breeding Phase: Waiting for action (hatch/move/pass).
+INFO:     127.0.0.1:45560 - "POST /game/start HTTP/1.1" 200 OK
+INFO:     127.0.0.1:45574 - "GET /game/0879350b-2c2a-436a-8782-a354492c4bd4 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:45584 - "GET /game/0879350b-2c2a-436a-8782-a354492c4bd4/actions HTTP/1.1" 200 OK
