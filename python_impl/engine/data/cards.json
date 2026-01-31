@@ -595,9 +595,9 @@
   {
     "card_id": "EX10-003",
     "card_index": 20003,
-    "card_name_eng": "DigiEgg EX10-003",
+    "card_name_eng": "Tsumemon",
     "card_name_jpn": "",
-    "card_effect_class_name": "EX10_Stub",
+    "card_effect_class_name": "EX10_003",
     "play_cost": 0,
     "dp": 0,
     "level": 2,
@@ -607,7 +607,7 @@
       5
     ],
     "effect_description_eng": "Placeholder effect.",
-    "inherited_effect_description_eng": ""
+    "inherited_effect_description_eng": "[Opponent's Turn] [Once Per Turn] When one of your opponent's Digimon attacks, by trashing 3 [Mineral] or [Rock] trait cards from this Digimon's digivolution cards, end that attack."
   },
   {
     "card_id": "EX10-069",
@@ -783,35 +783,35 @@
   {
     "card_id": "EX10-007",
     "card_index": 20007,
-    "card_name_eng": "EX10 Card EX10-007",
+    "card_name_eng": "Greymon",
     "card_name_jpn": "",
-    "card_effect_class_name": "EX10_Stub",
-    "play_cost": 3,
-    "dp": 3000,
-    "level": 3,
+    "card_effect_class_name": "EX10_007",
+    "play_cost": 5,
+    "dp": 5000,
+    "level": 4,
     "card_kind": 0,
     "rarity": 0,
     "card_colors": [
       0
     ],
-    "effect_description_eng": "Placeholder effect.",
-    "inherited_effect_description_eng": ""
+    "effect_description_eng": "[On Play] [When Digivolving] 1 Digimon gets +3000 DP until your opponent's turn ends. <Raid>",
+    "inherited_effect_description_eng": "[Your Turn] This Digimon gets +1000 DP."
   },
   {
     "card_id": "EX10-009",
     "card_index": 20009,
-    "card_name_eng": "EX10 Card EX10-009",
+    "card_name_eng": "Creepymon",
     "card_name_jpn": "",
-    "card_effect_class_name": "EX10_Stub",
-    "play_cost": 3,
-    "dp": 3000,
-    "level": 3,
+    "card_effect_class_name": "EX10_009",
+    "play_cost": 13,
+    "dp": 12000,
+    "level": 6,
     "card_kind": 0,
     "rarity": 0,
     "card_colors": [
       0
     ],
-    "effect_description_eng": "Placeholder effect.",
+    "effect_description_eng": "[When Digivolving] [On Deletion] Delete all of your opponent's lowest DP Digimon. If this effect didn't delete, trash their deck's top 5 cards. [When Attacking] If your opponent has 10 or more cards in their trash, you may play 1 red or purple 5000 DP or lower Digimon card from your trash to your empty breeding area without paying the cost. [End of Your Turn] This Digimon may attack.",
     "inherited_effect_description_eng": ""
   },
   {
@@ -1327,9 +1327,9 @@
   {
     "card_id": "EX10-005",
     "card_index": 20005,
-    "card_name_eng": "DigiEgg EX10-005",
+    "card_name_eng": "Pagumon",
     "card_name_jpn": "",
-    "card_effect_class_name": "EX10_Stub",
+    "card_effect_class_name": "EX10_005",
     "play_cost": 0,
     "dp": 0,
     "level": 2,
@@ -1339,7 +1339,7 @@
       6
     ],
     "effect_description_eng": "Placeholder effect.",
-    "inherited_effect_description_eng": ""
+    "inherited_effect_description_eng": "[Your Turn] [Once Per Turn] When your opponent's deck is trashed from, <Draw 1>."
   },
   {
     "card_id": "EX10-050",
@@ -1531,19 +1531,19 @@
   {
     "card_id": "EX10-014",
     "card_index": 20014,
-    "card_name_eng": "EX10 Card EX10-014",
+    "card_name_eng": "Sukamon",
     "card_name_jpn": "",
-    "card_effect_class_name": "EX10_Stub",
+    "card_effect_class_name": "EX10_014",
     "play_cost": 3,
     "dp": 3000,
-    "level": 3,
+    "level": 4,
     "card_kind": 0,
     "rarity": 0,
     "card_colors": [
       2
     ],
-    "effect_description_eng": "Placeholder effect.",
-    "inherited_effect_description_eng": ""
+    "effect_description_eng": "[On Play] [When Digivolving] Give 2 of your opponent's Digimon <Security A. -1> until their turn ends. <Link> (Your Turn) ...",
+    "inherited_effect_description_eng": "[When Attacking] By trashing 1 of this Digimon's link cards, 1 of your opponent's Digimon gets -6000 DP for the turn."
   },
   {
     "card_id": "EX10-013",
