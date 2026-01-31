@@ -93,18 +93,45 @@ namespace Digimon.Core
 
         public float[] GetBoardStateTensor(int playerId)
         {
-            // Layout:
-            // 0-9: Global (Turn, Phase, Memory)
-            // 10-249: My Field (12 slots * 20 floats)
-            // 250-489: Opp Field (12 slots * 20 floats)
-            // 490-509: My Hand (20 ints)
-            // 510-529: Opp Hand (20 ints - masked? no, assuming perfect info for now or mask later)
-            // 530-539: My Trash (10 ints)
-            // 540-549: Opp Trash (10 ints)
-            // 550-559: My Security (10 ints)
-            // 560-569: Opp Security (10 ints)
+            // Tensor Layout (Total Size: 570 floats):
+            // ---------------------------------------------------------
+            // [0-9] GLOBAL DATA (10 floats)
+            // 0: Turn Count
+            // 1: Current Phase (Enum Int)
+            // 2: Memory Gauge (Relative to requesting player)
+            // 3-9: Padding (Reserved for future global state like Pending Actions)
+            //
+            // [10-249] MY BATTLE AREA (12 Slots * 20 Floats = 240 floats)
+            // Each Slot Structure:
+            //   Offset + 0: Top Card Internal ID (from CardRegistry)
+            //   Offset + 1: Current DP
+            //   Offset + 2: Is Suspended (1.0 = Yes, 0.0 = No)
+            //   Offset + 3: Source Count
+            //   Offset + 4-19: Source Card IDs (Bottom to Top, max 16)
+            // Slots 0-11 represent the field positions.
+            //
+            // [250-489] OPPONENT BATTLE AREA (12 Slots * 20 Floats = 240 floats)
+            // Same structure as My Battle Area.
+            //
+            // [490-509] MY HAND (20 floats)
+            // List of Card IDs. Paddings are 0.
+            //
+            // [510-529] OPPONENT HAND (20 floats)
+            // List of Card IDs (Perfect Information assumption for training).
+            //
+            // [530-539] MY TRASH (10 floats)
+            // Top 10 Card IDs in Trash.
+            //
+            // [540-549] OPPONENT TRASH (10 floats)
+            // Top 10 Card IDs in Trash.
+            //
+            // [550-559] MY SECURITY STACK (10 floats)
+            // Top 10 Card IDs (Revealed/Known state assumption or placeholders).
+            //
+            // [560-569] OPPONENT SECURITY STACK (10 floats)
+            // Top 10 Card IDs.
+            // ---------------------------------------------------------
 
-            // Total: 10 + 240 + 240 + 20 + 20 + 10 + 10 + 10 + 10 = 570 floats
             List<float> tensor = new List<float>();
 
             Player me = (playerId == 1) ? Player1 : Player2;
