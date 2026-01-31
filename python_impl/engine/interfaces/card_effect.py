@@ -30,26 +30,51 @@ class ICardEffect(ABC):
         self.chain_activations: int = 0
         self.is_background_process: bool = False
         self.is_not_show_ui: bool = False
+        self._is_disabled: bool = False
+        self._is_on_play: bool = False
+        self._is_when_digivolving: bool = False
+        self._is_on_deletion: bool = False
+        self._is_on_attack: bool = False
 
     @property
     def is_disabled(self) -> bool:
-        return False
+        return self._is_disabled
+
+    @is_disabled.setter
+    def is_disabled(self, value: bool):
+        self._is_disabled = value
 
     @property
     def is_on_play(self) -> bool:
-        return False
+        return self._is_on_play
+
+    @is_on_play.setter
+    def is_on_play(self, value: bool):
+        self._is_on_play = value
 
     @property
     def is_when_digivolving(self) -> bool:
-        return False
+        return self._is_when_digivolving
+
+    @is_when_digivolving.setter
+    def is_when_digivolving(self, value: bool):
+        self._is_when_digivolving = value
 
     @property
     def is_on_deletion(self) -> bool:
-        return False
+        return self._is_on_deletion
+
+    @is_on_deletion.setter
+    def is_on_deletion(self, value: bool):
+        self._is_on_deletion = value
 
     @property
     def is_on_attack(self) -> bool:
-        return False
+        return self._is_on_attack
+
+    @is_on_attack.setter
+    def is_on_attack(self, value: bool):
+        self._is_on_attack = value
 
     def set_up_icard_effect(self, effect_name: str, can_use_condition: Callable[[Dict[str, Any]], bool], card: 'CardSource'):
         self.effect_name = effect_name
