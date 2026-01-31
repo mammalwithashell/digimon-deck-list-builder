@@ -15,7 +15,6 @@ ACTION_UNSUSPEND = 21
 ACTION_PASS_TURN = 22
 ACTION_ATTACK_START = 23
 ACTION_ATTACK_END = 32 # Attack Security with Permanent 0-9
-ACTION_MOVE = 33
 # ... reserve others
 
 logger = logging.getLogger(__name__)
@@ -29,32 +28,7 @@ class GameState:
 
     def reset(self, deck1: Optional[List[str]] = None, deck2: Optional[List[str]] = None) -> Dict[str, np.ndarray]:
         self.game = Game()
-
-        from python_impl.engine.data.card_database import CardDatabase
-        db = CardDatabase()
-
-        # Populate logic
-        def load_deck(player, deck_ids):
-            if not deck_ids:
-                # Load default random deck if none provided
-                all_ids = list(db.get_all_cards().keys())
-                if not all_ids:
-                    return
-                # Create a mixed deck
-                deck_ids = (all_ids * 50)[:50]
-
-            for cid in deck_ids:
-                if not cid: continue
-                cs = db.create_card_source(cid.strip(), player)
-                if cs:
-                    if cs.is_digi_egg:
-                        player.digitama_library_cards.append(cs)
-                    else:
-                        player.library_cards.append(cs)
-
-        load_deck(self.game.player1, deck1)
-        load_deck(self.game.player2, deck2)
-
+        # In a real scenario, we'd load decks here.
         self.game.start_game()
         self.done = False
         return self.get_observation()
@@ -141,19 +115,8 @@ class GameState:
                 if not perm.is_suspended: # and can attack checks
                     mask[ACTION_ATTACK_START + i] = True
 
-        # Scenario 3: Breeding Phase
-        if self.game.current_phase == GamePhase.Breeding:
-            # Hatch (20)
-            if player.breeding_area is None and len(player.digitama_library_cards) > 0:
-                 mask[ACTION_HATCH] = True
-
-            # Move (33)
-            if player.breeding_area is not None:
-                 if player.breeding_area.level >= 3:
-                     mask[ACTION_MOVE] = True
-
-            # Pass Turn (22) - to skip breeding actions and go to Main
-            mask[ACTION_PASS_TURN] = True
+        # Scenario 3: Breeding Phase?
+        # If manual phase handling is required.
 
         return mask
 
@@ -232,10 +195,6 @@ class GameState:
         elif action == ACTION_HATCH:
             player.hatch()
 
-        # 3.5 MOVE
-        elif action == ACTION_MOVE:
-            player.move_from_breeding()
-
         # 4. PASS TURN
         elif action == ACTION_PASS_TURN:
             # Special case: If waiting for trash but hand is empty, we allow passing to escape loop
@@ -299,10 +258,6 @@ def greedy_policy(env: GameState) -> int:
     # Hatch?
     if ACTION_HATCH in valid_actions:
         return ACTION_HATCH
-
-    # Move?
-    if ACTION_MOVE in valid_actions:
-        return ACTION_MOVE
 
     # Play Card?
     best_play_action = -1
