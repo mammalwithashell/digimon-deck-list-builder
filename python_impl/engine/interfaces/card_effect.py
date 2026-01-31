@@ -1,6 +1,7 @@
 from __future__ import annotations
 from typing import TYPE_CHECKING, Callable, Optional, Dict, Any
 from abc import ABC
+from ..data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ..core.card_source import CardSource
@@ -30,6 +31,7 @@ class ICardEffect(ABC):
         self.chain_activations: int = 0
         self.is_background_process: bool = False
         self.is_not_show_ui: bool = False
+        self.timing: EffectTiming = EffectTiming.NoTiming
 
     @property
     def is_disabled(self) -> bool:
