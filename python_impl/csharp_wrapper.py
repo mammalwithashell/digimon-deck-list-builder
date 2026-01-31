@@ -27,12 +27,12 @@ sys.path.append(os.path.dirname(DLL_PATH))
 
 clr.AddReference("Digimon.Core")
 
-from Digimon.Core import HeadlessGame, CardRegistry
+from Digimon.Core import HeadlessGame, InteractiveGame, PlayerType
 from System.Collections.Generic import List as CsList
 from System import String
 
 class CSharpGameWrapper:
-    def __init__(self, deck1: List[str], deck2: List[str]):
+    def __init__(self, deck1: List[str], deck2: List[str], player1_type: str = "agent", player2_type: str = "agent"):
         cs_deck1 = CsList[String]()
         for card_id in deck1:
             cs_deck1.Add(card_id)
@@ -41,20 +41,47 @@ class CSharpGameWrapper:
         for card_id in deck2:
             cs_deck2.Add(card_id)
 
-        self.headless_game = HeadlessGame(cs_deck1, cs_deck2)
+        self.is_interactive = False
+        p1_human = player1_type.lower() == "human"
+        p2_human = player2_type.lower() == "human"
+        
+        if not p1_human and not p2_human:
+             self.runner = HeadlessGame(cs_deck1, cs_deck2)
+             self.is_interactive = False
+        else:
+             t1 = PlayerType.Human if p1_human else PlayerType.Agent
+             t2 = PlayerType.Human if p2_human else PlayerType.Agent
+             self.runner = InteractiveGame(cs_deck1, cs_deck2, t1, t2)
+             self.is_interactive = True
 
     def run_until_conclusion(self) -> int:
-        return self.headless_game.RunUntilConclusion()
+        if self.is_interactive:
+            # Interactive games usually require external input and don't run in a tight loop
+            raise NotImplementedError("run_until_conclusion is not supported for Interactive games.")
+        return self.runner.RunUntilConclusion(200)
 
     def get_state_json(self) -> str:
-        return self.headless_game.GameInstance.ToJson()
+        return self.runner.GameInstance.ToJson()
 
     def step(self, action_id: int):
-        self.headless_game.Step(action_id)
+        if self.is_interactive:
+            self.runner.Step(action_id)
+        else:
+            # For Headless, Step might not be relevant if it auto-plays, 
+            # but if we want to force an action or support step-wise agent:
+            pass
+
+    def run_step(self) -> str:
+        """Runs a single step of the game loop. Valid helpers for Interactive mode."""
+        if self.is_interactive:
+            return self.runner.RunStep()
+        else:
+            self.runner.RunAgentStep()
+            return self.runner.GameInstance.ToJson()
 
     def get_board_tensor(self, player_id: int) -> np.ndarray:
         # Get float array from C#
-        float_arr = self.headless_game.GameInstance.GetBoardStateTensor(player_id)
+        float_arr = self.runner.GameInstance.GetBoardStateTensor(player_id)
         # Convert System.Single[] to numpy array
         return np.array(float_arr, dtype=np.float32)
 
