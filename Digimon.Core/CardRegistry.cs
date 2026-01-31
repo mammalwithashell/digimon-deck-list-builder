@@ -5,8 +5,8 @@ namespace Digimon.Core
 {
     public static class CardRegistry
     {
-        private static readonly Dictionary<string, int> _idToInt = [];
-        private static readonly Dictionary<int, string> _intToId = [];
+        private static Dictionary<string, int> _idToInt = new Dictionary<string, int>();
+        private static Dictionary<int, string> _intToId = new Dictionary<int, string>();
         private static int _nextId = 1;
 
         public static void Register(string cardId)
@@ -26,9 +26,9 @@ namespace Digimon.Core
             return 0; // Unknown or Empty
         }
 
-        public static string? GetStringId(int internalId)
+        public static string GetStringId(int internalId)
         {
-            if (_intToId.TryGetValue(internalId, out string? id)) return id;
+            if (_intToId.TryGetValue(internalId, out string id)) return id;
             return null;
         }
 

@@ -4,44 +4,64 @@ using System.IO;
 using System.Linq;
 using System.Text.Json;
 using System.Text.RegularExpressions;
+using System.ComponentModel;
 
 namespace Digimon.Core
 {
+    public enum CardKeyword
+    {
+        Blocker,
+        Rush,
+        Piercing,
+        Recovery,
+        [Description("Security Attack")]
+        SecurityAttack,
+        Draw,
+        Memory,
+        [Description("De-Digivolve")]
+        DeDigivolve,
+        [Description("Digi-Burst")]
+        DigiBurst,
+        Delay,
+        Decoy,
+        Retaliation,
+        [Description("Armor Purge")]
+        ArmorPurge
+    }
+
     public static class CardFeatureExporter
     {
-        // Vocabulary
-        private static readonly List<string> Keywords = new List<string>
-        {
-            "Blocker", "Rush", "Piercing", "Recovery", "Security Attack", "Draw", "Memory",
-            "De-Digivolve", "Digi-Burst", "Delay", "Decoy", "Retaliation", "Armro Purge"
-        };
-
         private static readonly List<string> Timings = new List<string>
         {
             "On Play", "When Digivolving", "On Deletion", "End of Turn", "Start of Turn",
             "Your Turn", "Opponent's Turn", "All Turns", "Security"
         };
 
+        public static string GetDescription(Enum value)
+        {
+            var field = value.GetType().GetField(value.ToString());
+            var attribute = (DescriptionAttribute)Attribute.GetCustomAttribute(field, typeof(DescriptionAttribute));
+            return attribute == null ? value.ToString() : attribute.Description;
+        }
+
         public static Dictionary<string, int> ExtractFeatures(Card card)
         {
             var features = new Dictionary<string, int>();
 
             // Combine Name and Traits for text search (mocking "CardText" for now since Card model is slim)
-            // In a real scenario, Card would have 'EffectText' property.
-            // Using Name + Traits as proxy + some explicit logic if we had properties
             string combinedText = (card.Name + " " + string.Join(" ", card.Traits)).ToLower();
 
             // Check Keywords
-            foreach (var kw in Keywords)
+            foreach (CardKeyword kw in Enum.GetValues(typeof(CardKeyword)))
             {
-                // Simple regex or string check
-                if (combinedText.Contains(kw.ToLower()))
+                string searchTerm = GetDescription(kw).ToLower();
+                if (combinedText.Contains(searchTerm))
                 {
-                    features[kw] = 1;
+                    features[kw.ToString()] = 1;
                 }
                 else
                 {
-                    features[kw] = 0;
+                    features[kw.ToString()] = 0;
                 }
             }
 

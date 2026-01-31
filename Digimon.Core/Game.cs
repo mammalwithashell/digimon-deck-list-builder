@@ -9,11 +9,11 @@ namespace Digimon.Core
     {
         public Player Player1 { get; private set; }
         public Player Player2 { get; private set; }
-        public Player? CurrentPlayer { get; set; }
-        public Player? OpponentPlayer => CurrentPlayer == Player1 ? Player2 : Player1;
+        public Player CurrentPlayer { get; set; }
+        public Player OpponentPlayer => CurrentPlayer == Player1 ? Player2 : Player1;
         public TurnStateMachine TurnStateMachine { get; private set; }
         public bool IsGameOver { get; private set; }
-        public Player? Winner { get; private set; }
+        public Player Winner { get; private set; }
 
         // Shared Memory Gauge: Positive for P1, Negative for P2.
         // P1 turn: 1 to 10 (Max), P2 side is < 0.
@@ -93,19 +93,13 @@ namespace Digimon.Core
 
         public float[] GetBoardStateTensor(int playerId)
         {
-            // Tensor Layout (Total Size: 570 floats):
+            // Tensor Layout (Total Size: 680 floats):
             // ---------------------------------------------------------
             // [0-9] GLOBAL DATA (10 floats)
             // 0: Turn Count
             // 1: Current Phase (Enum Int)
             // 2: Memory Gauge (Relative to requesting player)
-            // 3: Reserved / Padding
-            // 4: Reserved / Padding
-            // 5: Reserved / Padding
-            // 6: Reserved / Padding
-            // 7: Reserved / Padding
-            // 8: Reserved / Padding (e.g. Pending Action Type)
-            // 9: Reserved / Padding
+            // 3-9: Reserved / Padding (Index 8: PendingAction)
             //
             // [10-249] MY BATTLE AREA (12 Slots * 20 Floats = 240 floats)
             // Each Slot Structure:
@@ -125,20 +119,26 @@ namespace Digimon.Core
             // [510-529] OPPONENT HAND (20 floats)
             // List of Card IDs (Perfect Information assumption for training).
             //
-            // [530-539] MY TRASH (10 floats)
-            // Top 10 Card IDs in Trash.
+            // [530-574] MY TRASH (45 floats)
+            // Top 45 Card IDs in Trash.
             //
-            // [540-549] OPPONENT TRASH (10 floats)
-            // Top 10 Card IDs in Trash.
+            // [575-619] OPPONENT TRASH (45 floats)
+            // Top 45 Card IDs in Trash.
             //
-            // [550-559] MY SECURITY STACK (10 floats)
+            // [620-629] MY SECURITY STACK (10 floats)
             // Top 10 Card IDs (Revealed/Known state assumption or placeholders).
             //
-            // [560-569] OPPONENT SECURITY STACK (10 floats)
+            // [630-639] OPPONENT SECURITY STACK (10 floats)
             // Top 10 Card IDs.
+            //
+            // [640-659] MY BREEDING AREA (1 Slot * 20 Floats = 20 floats)
+            // Standard slot structure.
+            //
+            // [660-679] OPPONENT BREEDING AREA (1 Slot * 20 Floats = 20 floats)
+            // Standard slot structure.
             // ---------------------------------------------------------
 
-            List<float> tensor = [];
+            List<float> tensor = new List<float>();
 
             Player me = (playerId == 1) ? Player1 : Player2;
             Player opp = (playerId == 1) ? Player2 : Player1;
@@ -152,10 +152,10 @@ namespace Digimon.Core
             for(int i=0; i<7; i++) tensor.Add(0);
 
             // --- My Field [12 slots * 20] ---
-            AppendFieldData(tensor, me);
+            AppendFieldData(tensor, me, 12);
 
             // --- Opp Field [12 slots * 20] ---
-            AppendFieldData(tensor, opp);
+            AppendFieldData(tensor, opp, 12);
 
             // --- My Hand [20] ---
             AppendListIds(tensor, me.Hand, 20);
@@ -163,11 +163,11 @@ namespace Digimon.Core
             // --- Opp Hand [20] ---
             AppendListIds(tensor, opp.Hand, 20);
 
-            // --- My Trash [10] ---
-            AppendListIds(tensor, me.Trash, 10);
+            // --- My Trash [45] ---
+            AppendListIds(tensor, me.Trash, 45);
 
-            // --- Opp Trash [10] ---
-            AppendListIds(tensor, opp.Trash, 10);
+            // --- Opp Trash [45] ---
+            AppendListIds(tensor, opp.Trash, 45);
 
             // --- My Security [10] ---
             AppendListIds(tensor, me.Security, 10);
@@ -175,17 +175,24 @@ namespace Digimon.Core
             // --- Opp Security [10] ---
             AppendListIds(tensor, opp.Security, 10);
 
-            return [.. tensor];
+            // --- My Breeding [1 slot * 20] ---
+            AppendFieldData(tensor, me, 1, true);
+
+            // --- Opp Breeding [1 slot * 20] ---
+            AppendFieldData(tensor, opp, 1, true);
+
+            return tensor.ToArray();
         }
 
-        private static void AppendFieldData(List<float> tensor, Player p)
+        private void AppendFieldData(List<float> tensor, Player p, int slots, bool isBreeding = false)
         {
-            // 12 Slots
-            for (int i = 0; i < 12; i++)
+            var sourceList = isBreeding ? p.BreedingArea : p.BattleArea;
+
+            for (int i = 0; i < slots; i++)
             {
-                if (i < p.BattleArea.Count)
+                if (i < sourceList.Count)
                 {
-                    Card c = p.BattleArea[i];
+                    Card c = sourceList[i];
                     // 1. Internal ID
                     tensor.Add(CardRegistry.GetId(c.Id));
                     // 2. DP
@@ -205,7 +212,7 @@ namespace Digimon.Core
             }
         }
 
-        private static void AppendListIds(List<float> tensor, List<Card> cards, int limit)
+        private void AppendListIds(List<float> tensor, List<Card> cards, int limit)
         {
             for (int i = 0; i < limit; i++)
             {
@@ -216,7 +223,7 @@ namespace Digimon.Core
             }
         }
 
-        public void EndGame(Player? winner)
+        public void EndGame(Player winner)
         {
             IsGameOver = true;
             Winner = winner;
@@ -224,15 +231,15 @@ namespace Digimon.Core
 
         public void SwitchTurn()
         {
-            if (CurrentPlayer != null) CurrentPlayer.IsMyTurn = false;
+            CurrentPlayer.IsMyTurn = false;
             CurrentPlayer = OpponentPlayer;
-            if (CurrentPlayer != null) CurrentPlayer.IsMyTurn = true;
+            CurrentPlayer.IsMyTurn = true;
 
             // Standard Rule:
             // If new turn player has <= 0 memory (meaning opponent passed big or just barely passed),
             // reset to 3.
             // From perspective of new player:
-            int startMemory = GetMemory(CurrentPlayer!);
+            int startMemory = GetMemory(CurrentPlayer);
             if (startMemory <= 0)
             {
                 // Set to 3
@@ -243,21 +250,19 @@ namespace Digimon.Core
             TurnStateMachine.StartTurn();
         }
 
-        private static readonly JsonSerializerOptions _jsonOptions = new() { WriteIndented = true };
-
         public string ToJson()
         {
             var state = new
             {
-                TurnStateMachine.TurnCount,
-                TurnStateMachine.CurrentPhase,
-                CurrentPlayer = CurrentPlayer?.Id,
-                MemoryGauge,
-                IsGameOver,
+                TurnCount = TurnStateMachine.TurnCount,
+                CurrentPhase = TurnStateMachine.CurrentPhase.ToString(),
+                CurrentPlayer = CurrentPlayer.Id,
+                MemoryGauge = MemoryGauge,
+                IsGameOver = IsGameOver,
                 Winner = Winner?.Id,
                 Player1 = new
                 {
-                    Player1.Id,
+                    Id = Player1.Id,
                     Memory = GetMemory(Player1),
                     HandCount = Player1.Hand.Count,
                     HandIds = Player1.Hand.Select(c => c.Id).ToList(),
@@ -267,7 +272,7 @@ namespace Digimon.Core
                 },
                 Player2 = new
                 {
-                    Player2.Id,
+                    Id = Player2.Id,
                     Memory = GetMemory(Player2),
                     HandCount = Player2.Hand.Count,
                     HandIds = Player2.Hand.Select(c => c.Id).ToList(),
@@ -277,7 +282,7 @@ namespace Digimon.Core
                 }
             };
 
-            return JsonSerializer.Serialize(state, _jsonOptions);
+            return JsonSerializer.Serialize(state, new JsonSerializerOptions { WriteIndented = true });
         }
     }
 }
