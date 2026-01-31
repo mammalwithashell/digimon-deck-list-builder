@@ -1,7 +1,7 @@
 import json
 import os
 import importlib
-from typing import Dict, Optional, Any
+from typing import Dict, Optional, List, Any
 from ..core.entity_base import CEntity_Base
 from ..core.card_script import CardScript
 from ..core.card_source import CardSource
@@ -91,9 +91,11 @@ class CardDatabase:
                      script_class = getattr(module, script_name)
                      self.scripts[entity.card_id] = script_class()
                  except ImportError as e:
-                     print(f"Could not load script for {entity.card_id} ({script_name}): {e}")
+                     # print(f"Could not load script for {entity.card_id} ({script_name}): {e}")
+                     pass
              except AttributeError as e:
-                 print(f"Could not find class {script_name} in {module_path}: {e}")
+                 # print(f"Could not find class {script_name} in {module_path}: {e}")
+                 pass
 
     def get_card(self, card_id: str) -> Optional[CEntity_Base]:
         return self.cards.get(card_id)

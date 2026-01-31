@@ -15,7 +15,7 @@ class TestDigimonGym(unittest.TestCase):
         cards = db.get_all_cards()
         self.assertGreater(len(cards), 0)
         self.assertIn("ST1-03", cards)
-        self.assertEqual(cards["ST1-03"]["name"], "Agumon")
+        self.assertEqual(cards["ST1-03"].card_name_eng, "Agumon")
 
     def test_game_state_initialization(self):
         obs = self.game.reset()
