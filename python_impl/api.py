@@ -2,10 +2,15 @@ from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
 from typing import List, Dict, Any
 from python_impl.digimon_gym import GameState, greedy_policy
+from python_impl.csharp_wrapper import CSharpGameWrapper
 import random
 import numpy as np
+import json
 
 app = FastAPI()
+
+# Global debug game instance
+active_debug_game: CSharpGameWrapper = None
 
 class SimulationRequest(BaseModel):
     deck1: str
@@ -71,3 +76,36 @@ def simulate_game(request: SimulationRequest):
 @app.get("/")
 def health_check():
     return {"status": "ok"}
+
+@app.get("/debug/state")
+def get_debug_state():
+    """
+    Returns the current state of the debug game in JSON format.
+    Initializes a new game if one doesn't exist.
+    """
+    global active_debug_game
+    if active_debug_game is None:
+        # Create dummy decks for debugging
+        dummy_deck = ["DebugCard_001"] * 50
+        active_debug_game = CSharpGameWrapper(dummy_deck, dummy_deck)
+
+    state_json = active_debug_game.get_state_json()
+    return json.loads(state_json)
+
+class ActionRequest(BaseModel):
+    action: int
+
+@app.post("/action")
+def perform_action(request: ActionRequest):
+    """
+    Executes an action in the debug game and returns the new state.
+    """
+    global active_debug_game
+    if active_debug_game is None:
+        dummy_deck = ["DebugCard_001"] * 50
+        active_debug_game = CSharpGameWrapper(dummy_deck, dummy_deck)
+
+    active_debug_game.step(request.action)
+
+    state_json = active_debug_game.get_state_json()
+    return {"status": "success", "state": json.loads(state_json)}
