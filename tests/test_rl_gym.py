@@ -79,6 +79,49 @@ def test_rl_gym_trash_pending():
     assert len(env.game.turn_player.hand_cards) == 4
     assert len(env.game.turn_player.trash_cards) == 1
 
+def test_rl_gym_invalid_action():
+    env = GameState()
+    env.reset()
+    setup_playable_state(env)
+
+    # 1. Masked Action (Trash when not pending)
+    # Mask should be False for Trash
+    mask = env.get_action_mask()
+    action = ACTION_TRASH_CARD_START
+    assert mask[action] == False
+
+    obs, reward, done, info = env.step(action)
+    assert reward == -1.0
+    assert info["error"] == "Invalid Action"
+
+    # 2. Out of Bounds Action
+    action = 999
+    obs, reward, done, info = env.step(action)
+    assert reward == -1.0
+    assert info["error"] == "Action Out of Bounds"
+
+def test_rl_gym_trash_empty_hand_fallback():
+    env = GameState()
+    env.reset()
+    # Do NOT run setup_playable_state -> Hand is empty
+
+    # Force pending action
+    env.game.pending_action = PendingAction.TRASH_CARD
+
+    mask = env.get_action_mask()
+
+    # Since hand is empty, should allow PASS_TURN
+    assert mask[ACTION_PASS_TURN] == True
+    assert mask[ACTION_TRASH_CARD_START] == False
+
+    # Execute PASS_TURN
+    obs, reward, done, info = env.step(ACTION_PASS_TURN)
+
+    # Should clear pending action and NOT actually pass turn (stay in same phase/turn count)
+    # The logic says: if pending_trash -> pending_no_action.
+    assert env.game.pending_action == PendingAction.NO_ACTION
+    assert reward == 0.0
+
 def test_greedy_policy():
     env = GameState()
     env.reset()

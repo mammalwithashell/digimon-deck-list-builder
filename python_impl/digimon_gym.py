@@ -1,9 +1,11 @@
 import numpy as np
+import logging
 from typing import List, Tuple, Dict, Any, Optional
 from python_impl.engine.game import Game
 from python_impl.engine.data.enums import GamePhase, PendingAction
 
 # Action Space Constants
+ACTION_SPACE_SIZE = 50
 ACTION_PLAY_CARD_START = 0
 ACTION_PLAY_CARD_END = 9
 ACTION_TRASH_CARD_START = 10
@@ -14,6 +16,8 @@ ACTION_PASS_TURN = 22
 ACTION_ATTACK_START = 23
 ACTION_ATTACK_END = 32 # Attack Security with Permanent 0-9
 # ... reserve others
+
+logger = logging.getLogger(__name__)
 
 class GameState:
     def __init__(self):
@@ -68,13 +72,19 @@ class GameState:
         return obs
 
     def get_action_mask(self) -> np.ndarray:
-        mask = np.zeros(50, dtype=bool)
+        mask = np.zeros(ACTION_SPACE_SIZE, dtype=bool)
 
         player = self.game.turn_player
         hand_size = len(player.hand_cards)
 
         # Scenario 1: Game is waiting for a TRASH decision (e.g. from an effect)
         if self.game.pending_action == PendingAction.TRASH_CARD:
+            # If there are no cards to trash, allow PASS_TURN as a safe fallback
+            # so policies don't get stuck repeatedly selecting invalid actions.
+            if hand_size == 0:
+                mask[ACTION_PASS_TURN] = True
+                return mask
+
             # Enable Trash actions for existing cards
             # Clamp to max 10
             limit = min(hand_size, 10)
@@ -117,15 +127,15 @@ class GameState:
         if self.done:
             return self.get_observation(), 0.0, True, self.info
 
+        # Bounds check
+        if action < 0 or action >= ACTION_SPACE_SIZE:
+             return self.get_observation(), -1.0, self.done, {"error": "Action Out of Bounds"}
+
         player = self.game.turn_player
         mask = self.get_action_mask()
 
         if not mask[action]:
             # Invalid action!
-            # For RL, we might return a large negative reward or just ignore.
-            # But the user said: "If your agent tries to 'Attack' when the game is waiting for a 'Trash' decision, the game will crash or loop."
-            # So we should probably raise error or penalize heavily.
-            # Let's ignore it or just return same state with negative reward to encourage learning valid masks.
             return self.get_observation(), -1.0, self.done, {"error": "Invalid Action"}
 
         # Execute Action
@@ -161,7 +171,7 @@ class GameState:
             if idx < len(player.hand_cards):
                 card = player.hand_cards.pop(idx)
                 player.trash_cards.append(card)
-                print(f"{player.player_name} trashed {card.card_names[0]}.")
+                logger.info(f"{player.player_name} trashed {card.card_names[0]}.")
 
             # If we were waiting for this, clear the flag
             if self.game.pending_action == PendingAction.TRASH_CARD:
@@ -177,9 +187,9 @@ class GameState:
                 # Check for "On Play" effects?
                 # For PoC, let's pretend every Option card requires a Trash.
                 # This tests the PendingAction logic.
-                if card.card_kind.name == "Option":
+                if card.is_option:
                      self.game.pending_action = PendingAction.TRASH_CARD
-                     print("Effect triggered: Trash 1 card from hand.")
+                     logger.info("Effect triggered: Trash 1 card from hand.")
 
         # 3. HATCH
         elif action == ACTION_HATCH:
@@ -187,7 +197,11 @@ class GameState:
 
         # 4. PASS TURN
         elif action == ACTION_PASS_TURN:
-            self.game.pass_turn()
+            # Special case: If waiting for trash but hand is empty, we allow passing to escape loop
+            if self.game.pending_action == PendingAction.TRASH_CARD:
+                self.game.pending_action = PendingAction.NO_ACTION
+            else:
+                self.game.pass_turn()
 
         # 5. ATTACK (Placeholder)
         elif ACTION_ATTACK_START <= action <= ACTION_ATTACK_END:
@@ -196,7 +210,7 @@ class GameState:
                 perm = player.battle_area[idx]
                 # Perform attack logic...
                 perm.is_suspended = True
-                print(f"{player.player_name}'s Digimon attacked!")
+                logger.info(f"{player.player_name}'s Digimon attacked!")
 
 def greedy_policy(env: GameState) -> int:
     """
