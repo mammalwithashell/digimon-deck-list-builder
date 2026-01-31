@@ -15,11 +15,12 @@ except Exception as e:
 import clr
 
 # Path to DLL
-# Assuming running from repo root
-DLL_PATH = os.path.abspath("Digimon.Core/bin/Debug/net8.0/Digimon.Core.dll")
+# Allow override via environment variable, default to Debug build
+default_path = "Digimon.Core/bin/Debug/net8.0/Digimon.Core.dll"
+DLL_PATH = os.environ.get("DIGIMON_CORE_DLL_PATH", os.path.abspath(default_path))
 
 if not os.path.exists(DLL_PATH):
-    raise FileNotFoundError(f"DLL not found at {DLL_PATH}. Please build the C# project.")
+    raise FileNotFoundError(f"DLL not found at {DLL_PATH}. Please build the C# project or set DIGIMON_CORE_DLL_PATH.")
 
 sys.path.append(os.path.dirname(DLL_PATH))
 

@@ -35,6 +35,9 @@ namespace Digimon.Core
             Player1.SetupSecurity(5);
             Player2.SetupSecurity(5);
 
+            // Set Initial Memory
+            MemoryGauge = 0;
+
             // Initial Draw
             for(int i=0; i<5; i++)
             {

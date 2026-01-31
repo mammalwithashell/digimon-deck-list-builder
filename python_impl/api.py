@@ -92,6 +92,19 @@ def get_debug_state():
     state_json = active_debug_game.get_state_json()
     return json.loads(state_json)
 
+@app.post("/debug/reset")
+def reset_debug_game():
+    """
+    Resets the debug game instance to a fresh state.
+    """
+    global active_debug_game
+    # Create dummy decks for debugging
+    dummy_deck = ["DebugCard_001"] * 50
+    active_debug_game = CSharpGameWrapper(dummy_deck, dummy_deck)
+
+    state_json = active_debug_game.get_state_json()
+    return {"status": "reset", "state": json.loads(state_json)}
+
 class ActionRequest(BaseModel):
     action: int
 
