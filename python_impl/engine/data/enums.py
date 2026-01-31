@@ -91,3 +91,4 @@ class EffectTiming(Enum):
     RulesTiming = 55
     OnRemovedField = 56
     WhenWouldDigivolve = 57
+    WhenDigivolving = 58
