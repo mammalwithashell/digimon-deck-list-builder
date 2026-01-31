@@ -1,7 +1,7 @@
 from __future__ import annotations
 from typing import TYPE_CHECKING, Optional
 import random
-from python_impl.engine.data.enums import GamePhase
+from python_impl.engine.data.enums import GamePhase, PendingAction
 from python_impl.engine.core.player import Player
 
 if TYPE_CHECKING:
@@ -26,6 +26,7 @@ class Game:
 
         self.turn_count: int = 0
         self.current_phase: GamePhase = GamePhase.Start
+        self.pending_action: PendingAction = PendingAction.NO_ACTION
         self.game_over: bool = False
         self.winner: Optional[Player] = None
 

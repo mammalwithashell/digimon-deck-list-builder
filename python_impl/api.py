@@ -1,8 +1,9 @@
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
 from typing import List, Dict, Any
-from python_impl.digimon_gym import GameState
+from python_impl.digimon_gym import GameState, greedy_policy
 import random
+import numpy as np
 
 app = FastAPI()
 
@@ -34,9 +35,13 @@ def simulate_game(request: SimulationRequest):
 
         # Simple simulation loop
         while not done and steps < 200:
-            # Random action placeholder
-            action = random.randint(0, 10)
-            obs, reward, done = game.step(action)
+            # Use Greedy Policy or Random Valid Action
+            # action = random.randint(0, 50) # Old way
+
+            action = greedy_policy(game)
+
+            # Step returns 4 values now
+            obs, reward, done, info = game.step(action)
             steps += 1
 
         # Determine winner based on GameState (scaffolded)

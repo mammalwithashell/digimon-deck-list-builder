@@ -32,6 +32,10 @@ class GamePhase(Enum):
     Main = 3
     End = 4
 
+class PendingAction(Enum):
+    NO_ACTION = 0
+    TRASH_CARD = 1
+
 class EffectTiming(Enum):
     NoTiming = 0 # Renamed from None
     OnUseOption = 1
