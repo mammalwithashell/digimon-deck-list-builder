@@ -59,7 +59,7 @@ class CardSource:
 
     @property
     def card_traits(self) -> List[str]:
-        return []
+        return self.c_entity_base.type_eng if self.c_entity_base else []
 
     @property
     def is_digimon(self) -> bool:

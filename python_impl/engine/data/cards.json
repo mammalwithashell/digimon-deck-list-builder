@@ -226,5 +226,36 @@
     "card_colors": [0],
     "effect_description_eng": "[Main] Delete 1 of your opponent's Digimon.",
     "security_effect_description_eng": "[Security] Activate this card's [Main] effect."
+  },
+  {
+    "card_id": "BT23-001",
+    "card_index": 17,
+    "card_name_eng": "Flickmon",
+    "card_name_jpn": "フリックモン",
+    "card_effect_class_name": "BT23_001",
+    "play_cost": 0,
+    "dp": 0,
+    "level": 2,
+    "card_kind": 3,
+    "rarity": 0,
+    "card_colors": [1],
+    "type_eng": ["Appmon", "Game", "Flick"],
+    "inherited_effect_description_eng": "[When Attacking] [Once Per Turn] If this Digimon has the [Appmon] trait, <Draw 1>."
+  },
+  {
+    "card_id": "BT23-005",
+    "card_index": 18,
+    "card_name_eng": "Elizamon",
+    "card_name_jpn": "エリザモン",
+    "card_effect_class_name": "BT23_005",
+    "play_cost": 3,
+    "dp": 1000,
+    "level": 3,
+    "card_kind": 0,
+    "rarity": 0,
+    "card_colors": [0],
+    "type_eng": ["Reptile", "LIBERATOR", "Virus", "Rookie"],
+    "effect_description_eng": "[Your Turn] When this Digimon would digivolve into a Digimon card with the [Reptile] or [Dragonkin] trait, reduce the digivolution cost by 1.",
+    "inherited_effect_description_eng": "[Your Turn] This Digimon gets +2000 DP."
   }
 ]

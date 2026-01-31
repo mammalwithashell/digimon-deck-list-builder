@@ -2,6 +2,9 @@ from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
 from typing import List, Dict, Any
 from python_impl.headless_runner import HeadlessRunner
+from python_impl.digimon_gym import GameState, greedy_policy
+import random
+import numpy as np
 
 app = FastAPI()
 

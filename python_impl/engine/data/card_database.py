@@ -5,7 +5,7 @@ from typing import Dict, Optional, List, Any
 from ..core.entity_base import CEntity_Base
 from ..core.card_script import CardScript
 from ..core.card_source import CardSource
-from .enums import CardColor, CardKind, Rarity, EffectTiming
+from .enums import CardColor, CardKind, Rarity
 
 class CardDatabase:
     _instance = None
@@ -41,6 +41,8 @@ class CardDatabase:
             entity.card_index = entry.get('card_index', 0)
             entity.card_name_eng = entry.get('card_name_eng', '')
             entity.card_name_jpn = entry.get('card_name_jpn', '')
+            entity.type_eng = entry.get('type_eng', [])
+            entity.type_jpn = entry.get('type_jpn', [])
             entity.card_effect_class_name = entry.get('card_effect_class_name', '')
             entity.play_cost = entry.get('play_cost', 0)
             entity.dp = entry.get('dp', 0)
@@ -62,16 +64,13 @@ class CardDatabase:
 
             self.cards[entity.card_id] = entity
 
-        print(f"Database loaded with {len(self.cards)} cards.")
+        print(f"Loaded {len(self.cards)} cards.")
 
     def _load_script(self, entity: CEntity_Base):
         script_name = entity.card_effect_class_name
-        # Assume set_id is the part before the first underscore or hyphen, but usually ST1_01 -> ST1
-        # script_name is usually "ST1_01" (class name)
-
+        # Assume set_id is the part before the first underscore or hyphen
         parts = script_name.split('_')
         if len(parts) < 2:
-             # Fallback or different naming
              parts = script_name.split('-')
 
         if len(parts) >= 1:
@@ -104,6 +103,9 @@ class CardDatabase:
     def get_script(self, card_id: str) -> Optional[CardScript]:
         return self.scripts.get(card_id)
 
+    def get_all_cards(self) -> Dict[str, CEntity_Base]:
+        return self.cards
+
     def create_card_source(self, card_id: str, owner=None) -> Optional[CardSource]:
         entity = self.get_card(card_id)
         if not entity:
@@ -114,9 +116,6 @@ class CardDatabase:
         card_source.set_base_data(entity, owner)
         return card_source
 
-    def get_all_cards(self) -> Dict[str, Any]:
-        return self.cards
-
 if __name__ == "__main__":
     db = CardDatabase()
-    print("Database contents:", db.get_all_cards().keys())
+    print("Database contents:", list(db.get_all_cards().keys()))

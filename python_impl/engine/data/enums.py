@@ -32,6 +32,10 @@ class GamePhase(Enum):
     Main = 3
     End = 4
 
+class PendingAction(Enum):
+    NO_ACTION = 0
+    TRASH_CARD = 1
+
 class EffectTiming(Enum):
     NoTiming = 0 # Renamed from None
     OnUseOption = 1
@@ -90,3 +94,11 @@ class EffectTiming(Enum):
     WhenTopCardTrashed = 54
     RulesTiming = 55
     OnRemovedField = 56
+    WhenWouldDigivolve = 57
+    WhenDigivolving = 58
+
+class AttackResolution(Enum):
+    Survivor = 0
+    AttackerDeleted = 1
+    BattleDraw = 2 # Both deleted
+    GameEnd = 3 # Player lost
