@@ -10,12 +10,13 @@ namespace Digimon.Core
         public string Name { get; set; }
         // Memory is managed by Game.MemoryGauge
 
-        public List<Card> Hand { get; set; } = new List<Card>();
-        public List<Card> Deck { get; set; } = new List<Card>();
-        public List<Card> Security { get; set; } = new List<Card>();
-        public List<Card> Trash { get; set; } = new List<Card>();
-        public List<Card> BreedingArea { get; set; } = new List<Card>(); // Using Card for now, maybe Permanent later
-        public List<Card> BattleArea { get; set; } = new List<Card>();
+        public List<Card> Hand { get; set; } = [];
+        public List<Card> Deck { get; set; } = [];
+        public List<Card> DigitamaDeck { get; set; } = [];
+        public List<Card> Security { get; set; } = [];
+        public List<Card> Trash { get; set; } = [];
+        public List<Permanent> BreedingArea { get; set; } = [];
+        public List<Permanent> BattleArea { get; set; } = [];
 
         public bool IsMyTurn { get; set; }
 
@@ -43,8 +44,21 @@ namespace Digimon.Core
 
         public void SetupDeck(List<Card> newDeck)
         {
-            Deck = new List<Card>(newDeck);
-            // Shuffle stub
+            Deck = [];
+            DigitamaDeck = [];
+
+            foreach (var card in newDeck)
+            {
+                if (card.IsDigiEgg)
+                {
+                    DigitamaDeck.Add(card);
+                }
+                else
+                {
+                    Deck.Add(card);
+                }
+            }
+            // Shuffle stub for both decks would go here
         }
 
         public void SetupSecurity(int count)
@@ -58,6 +72,38 @@ namespace Digimon.Core
                     Security.Add(card);
                 }
             }
+        }
+
+
+
+        public void Hatch()
+        {
+            if (DigitamaDeck.Count > 0 && BreedingArea.Count == 0)
+            {
+                Card egg = DigitamaDeck[0];
+                DigitamaDeck.RemoveAt(0);
+                
+                Permanent permanent = new Permanent(egg);
+                BreedingArea.Add(permanent);
+                // Console.WriteLine($"[Player {Id}] Hatched {egg.Name} ({egg.Id})");
+            }
+        }
+
+        public void MoveBreedingToBattle()
+        {
+            if (BreedingArea.Count > 0)
+            {
+                Permanent digimon = BreedingArea[0];
+                BreedingArea.Clear();
+                BattleArea.Add(digimon);
+                // Console.WriteLine($"[Player {Id}] Moved {digimon.TopCard.Name} to Battle Area.");
+            }
+        }
+
+        public void UnsuspendAll()
+        {
+            foreach (var p in BreedingArea) p.Unsuspend();
+            foreach (var p in BattleArea) p.Unsuspend();
         }
     }
 }

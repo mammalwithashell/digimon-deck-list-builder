@@ -11,6 +11,8 @@ app = FastAPI()
 
 # Global debug game instance
 active_debug_game: CSharpGameWrapper = None
+# Global game history buffer: List of (StateTensor, ActionID)
+game_history = []
 
 class SimulationRequest(BaseModel):
     deck1: str
@@ -98,9 +100,11 @@ def reset_debug_game():
     Resets the debug game instance to a fresh state.
     """
     global active_debug_game
+    global game_history
     # Create dummy decks for debugging
     dummy_deck = ["DebugCard_001"] * 50
     active_debug_game = CSharpGameWrapper(dummy_deck, dummy_deck)
+    game_history = []
 
     state_json = active_debug_game.get_state_json()
     return {"status": "reset", "state": json.loads(state_json)}
@@ -114,11 +118,58 @@ def perform_action(request: ActionRequest):
     Executes an action in the debug game and returns the new state.
     """
     global active_debug_game
+    global game_history
     if active_debug_game is None:
         dummy_deck = ["DebugCard_001"] * 50
         active_debug_game = CSharpGameWrapper(dummy_deck, dummy_deck)
+        game_history = []
 
+    # 1. Capture State before action
+    # We need to know whose turn it is to get the correct perspective
+    # Parsing JSON state to get CurrentPlayer ID is expensive but robust.
+    # Alternatively, CSharpGameWrapper could expose a quick property.
+    # For now, let's parse the JSON state (inefficient but works with current API)
+    # OR better: Add a simple `get_current_player_id()` to Wrapper.
+    # Falling back to JSON parse for now since I can't easily change Wrapper + Recompile right now without re-verify.
+    state_json_str = active_debug_game.get_state_json()
+    state_dict = json.loads(state_json_str)
+    current_player_id = state_dict["CurrentPlayer"]
+
+    # Get Tensor
+    tensor = active_debug_game.get_board_tensor(current_player_id)
+    
+    # Record (State, Action)
+    # Convert tensor to simple list for JSON serialization
+    game_history.append({
+        "state": tensor.tolist(),
+        "action": request.action,
+        "player": current_player_id
+    })
+
+    # 2. Execute Action
     active_debug_game.step(request.action)
 
-    state_json = active_debug_game.get_state_json()
-    return {"status": "success", "state": json.loads(state_json)}
+    # 3. Check for Winner
+    # Re-fetch state to check GameOver status
+    new_state_json_str = active_debug_game.get_state_json()
+    new_state_dict = json.loads(new_state_json_str)
+
+    if new_state_dict["IsGameOver"]:
+        winner_id = new_state_dict["Winner"]
+        if winner_id is not None:
+             # Save to file
+             data_entry = {
+                 "winner": winner_id,
+                 "history": game_history
+             }
+             
+             try:
+                 with open("training_data.json", "a") as f:
+                     f.write(json.dumps(data_entry) + "\n")
+             except Exception as e:
+                 print(f"Failed to save training data: {e}")
+        
+        # Clear history after game over
+        game_history = []
+
+    return {"status": "success", "state": new_state_dict}

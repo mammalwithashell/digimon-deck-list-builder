@@ -1,47 +1,22 @@
-using System;
-using System.Collections.Generic;
-using System.IO;
-using System.Linq;
 using System.Text.Json;
-using System.Text.RegularExpressions;
 using System.ComponentModel;
+using Digimon.Core.Constants;
 
 namespace Digimon.Core
 {
-    public enum CardKeyword
-    {
-        Blocker,
-        Rush,
-        Piercing,
-        Recovery,
-        [Description("Security Attack")]
-        SecurityAttack,
-        Draw,
-        Memory,
-        [Description("De-Digivolve")]
-        DeDigivolve,
-        [Description("Digi-Burst")]
-        DigiBurst,
-        Delay,
-        Decoy,
-        Retaliation,
-        [Description("Armor Purge")]
-        ArmorPurge
-    }
-
     public static class CardFeatureExporter
     {
-        private static readonly List<string> Timings = new List<string>
-        {
-            "On Play", "When Digivolving", "On Deletion", "End of Turn", "Start of Turn",
-            "Your Turn", "Opponent's Turn", "All Turns", "Security"
-        };
+
+
+        private static readonly JsonSerializerOptions _jsonOptions = new() { WriteIndented = true };
 
         public static string GetDescription(Enum value)
         {
             var field = value.GetType().GetField(value.ToString());
-            var attribute = (DescriptionAttribute)Attribute.GetCustomAttribute(field, typeof(DescriptionAttribute));
-            return attribute == null ? value.ToString() : attribute.Description;
+            if (field is null) return value.ToString();
+
+            var attribute = Attribute.GetCustomAttribute(field, typeof(DescriptionAttribute)) as DescriptionAttribute;
+            return attribute?.Description ?? value.ToString();
         }
 
         public static Dictionary<string, int> ExtractFeatures(Card card)
@@ -49,13 +24,13 @@ namespace Digimon.Core
             var features = new Dictionary<string, int>();
 
             // Combine Name and Traits for text search (mocking "CardText" for now since Card model is slim)
-            string combinedText = (card.Name + " " + string.Join(" ", card.Traits)).ToLower();
+            string combinedText = card.Name + " " + string.Join(" ", card.Traits);
 
             // Check Keywords
             foreach (CardKeyword kw in Enum.GetValues(typeof(CardKeyword)))
             {
-                string searchTerm = GetDescription(kw).ToLower();
-                if (combinedText.Contains(searchTerm))
+                string searchTerm = GetDescription(kw);
+                if (combinedText.Contains(searchTerm, StringComparison.OrdinalIgnoreCase))
                 {
                     features[kw.ToString()] = 1;
                 }
@@ -66,15 +41,16 @@ namespace Digimon.Core
             }
 
             // Check Timings
-            foreach (var time in Timings)
+            foreach (EffectTiming time in Enum.GetValues(typeof(EffectTiming)))
             {
-                if (combinedText.Contains(time.ToLower()))
+                string searchTerm = GetDescription(time);
+                if (combinedText.Contains(searchTerm, StringComparison.OrdinalIgnoreCase))
                 {
-                    features[time] = 1;
+                    features[time.ToString()] = 1;
                 }
                 else
                 {
-                    features[time] = 0;
+                    features[time.ToString()] = 0;
                 }
             }
 
@@ -85,6 +61,12 @@ namespace Digimon.Core
             features["Level"] = card.Level;
             features["PlayCost"] = card.PlayCost;
             features["DP"] = card.BaseDP;
+            
+            // Color Features (Static Tensor)
+            foreach (CardColor cVal in Enum.GetValues(typeof(CardColor)))
+            {
+                features[$"Is_{cVal}"] = card.Colors.Contains(cVal) ? 1 : 0;
+            }
 
             return features;
         }
@@ -105,7 +87,7 @@ namespace Digimon.Core
                 exportData[id] = ExtractFeatures(card);
             }
 
-            string json = JsonSerializer.Serialize(exportData, new JsonSerializerOptions { WriteIndented = true });
+            string json = JsonSerializer.Serialize(exportData, _jsonOptions);
             File.WriteAllText(outputPath, json);
         }
     }

@@ -1,18 +1,7 @@
-using System;
-using System.Collections.Generic;
+using Digimon.Core.Constants;
 
 namespace Digimon.Core
 {
-    public enum CardColor
-    {
-        Red, Blue, Yellow, Green, Black, Purple, White, Multi
-    }
-
-    public enum CardKind
-    {
-        Digimon, Tamer, Option, DigiEgg
-    }
-
     public class Card
     {
         public string Id { get; set; }
@@ -21,7 +10,7 @@ namespace Digimon.Core
         public int UseCost { get; set; }
         public int BaseDP { get; set; }
         public int Level { get; set; }
-        public CardColor Color { get; set; }
+        public List<CardColor> Colors { get; set; }
         public CardKind Kind { get; set; }
         public List<string> Traits { get; set; } = new List<string>();
 
@@ -31,12 +20,12 @@ namespace Digimon.Core
         public bool IsOption => Kind == CardKind.Option;
         public bool IsDigiEgg => Kind == CardKind.DigiEgg;
 
-        public Card(string id, string name, CardKind kind, CardColor color, int level, int dp, int playCost)
+        public Card(string id, string name, CardKind kind, List<CardColor> colors, int level, int dp, int playCost)
         {
             Id = id;
             Name = name;
             Kind = kind;
-            Color = color;
+            Colors = colors;
             Level = level;
             BaseDP = dp;
             PlayCost = playCost;

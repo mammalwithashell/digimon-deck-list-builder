@@ -1,16 +1,9 @@
 using System;
 
+using Digimon.Core.Constants;
+
 namespace Digimon.Core
 {
-    public enum GamePhase
-    {
-        Start,
-        Draw,
-        Breeding,
-        Main,
-        End
-    }
-
     public class TurnStateMachine
     {
         private Game _game;
@@ -24,48 +17,69 @@ namespace Digimon.Core
 
         public void StartTurn()
         {
-            TurnCount++;
             CurrentPhase = GamePhase.Start;
-            // Auto advance through start phases for headless
+            // Only increment global turn count on Player 1? Or both?
+            // Usually "Turn" is "Player 1's Turn", then "Player 2's Turn".
+            // TurnCount typically counts Total Turns or Pairs. 
+            // For now, simple increment.
+            TurnCount++; 
+
             UnsuspendPhase();
             DrawPhase();
             BreedingPhase();
-            MainPhase();
+            // MainPhase(); // Removed: Handled by Breeding Actions or Pass
         }
 
         private void UnsuspendPhase()
         {
-            // Unsuspend all permanents logic here
-            // _game.CurrentPlayer.UnsuspendAll();
+            _game.CurrentPlayer.UnsuspendAll();
         }
 
         private void DrawPhase()
         {
             CurrentPhase = GamePhase.Draw;
-            // Draw 1 unless first player first turn (Digimon rules: First player draws? No, usually not on turn 1 in some games, but Digimon TCG: First player does NOT draw on first turn).
-            // Logic:
+
+            // Player 1, Turn 1: No Draw
+            // Note: If using a "First Turn" flag or checking Player ID + Game Turn.
+            // Assuming Game.TurnCount starts at 0 or 1.
+            // If TurnCount is incremented at start of every turn, then TurnCount == 1 is Player 1 Turn 1.
+            
             if (TurnCount == 1 && _game.CurrentPlayer.Id == 1)
             {
-                // Skip draw
+                // Skip draw 
+                return;
             }
-            else
+
+            if (_game.CurrentPlayer.Deck.Count == 0)
             {
-                _game.CurrentPlayer.Draw();
+                _game.EndGame(_game.OpponentPlayer);
+                return;
             }
+
+            _game.CurrentPlayer.Draw();
         }
 
         private void BreedingPhase()
         {
             CurrentPhase = GamePhase.Breeding;
-            // In headless, maybe skip or random hatch?
-            // For now, pass.
+            // Waits for Agent Action: Hatch, Move, or Pass
+        }
+
+        public void OnBreedingActionCompleted()
+        {
+            // Transition to Main Phase after Hatch or Move
+            MainPhase();
+        }
+
+        public void SkipBreedingPhase()
+        {
+            // Transition to Main Phase if Agent chooses to do nothing
+            MainPhase();
         }
 
         private void MainPhase()
         {
             CurrentPhase = GamePhase.Main;
-            // The Main Phase continues until the player passes or memory crosses 0.
-            // Logic handled by Game loop / Agent inputs.
         }
 
         // Called by Game Loop when an action finishes
@@ -73,9 +87,10 @@ namespace Digimon.Core
         {
             if (CurrentPhase != GamePhase.Main) return;
 
-            // Check memory condition
-            int currentMemory = _game.GetMemory(_game.CurrentPlayer);
-            if (currentMemory < 0)
+            // Turn ends if Memory is on opponent's side (< 0 relative to current player)
+            // AND (implied) no pending effects.
+            int mem = _game.GetMemory(_game.CurrentPlayer);
+            if (mem < 0)
             {
                 EndTurn();
             }
@@ -83,50 +98,47 @@ namespace Digimon.Core
 
         public void PassTurn()
         {
-            // Passing turn means giving opponent 3 memory.
-            // Move memory to opponent's side (3).
-            // Current Player is P1: MemoryGauge -> -3
-            // Current Player is P2: MemoryGauge -> 3
+            // Set memory gauge to 3 on opponent's side.
+            // Opponent side 3 means Memory for Current Player is -3.
+            
+            int targetMemory = -3;
+            int currentMemory = _game.GetMemory(_game.CurrentPlayer);
 
-            // Only if we are currently positive or 0?
-            // Rule: You can pass any time. If you have >0 memory, opponent starts at 3.
-            // Wait, standard rule: Pass Turn sets memory to 3 on opponent side.
-            // Specifically: It consumes all your memory + gives opponent 3.
-            // Actually, the rule is "Set memory gauge to 3 on opponent's side."
-
-            if (_game.CurrentPlayer == _game.Player1)
-                _game.PayCost(_game.CurrentPlayer, _game.GetMemory(_game.CurrentPlayer) + 3); // Naive math
-            else
-                _game.PayCost(_game.CurrentPlayer, _game.GetMemory(_game.CurrentPlayer) + 3);
-
-            // Easier: Just set it directly.
-             if (_game.CurrentPlayer == _game.Player1)
-             {
-                 // Set to -3
-                 // _game.MemoryGauge = -3; // Can't set private.
-                 // Use a dedicated method or PayCost until -3.
-                 int cost = _game.MemoryGauge - (-3);
-                 _game.PayCost(_game.CurrentPlayer, cost);
-             }
-             else
-             {
-                 // Set to 3
-                 // _game.MemoryGauge = 3;
-                 // Current is negative (e.g. -2). Target is 3.
-                 // Pay cost? P2 paying cost ADDS to gauge.
-                 // Cost = Target - Current = 3 - (-2) = 5.
-                 int cost = 3 - _game.MemoryGauge;
-                 _game.PayCost(_game.CurrentPlayer, cost);
-             }
-
-             EndTurn();
+            if (currentMemory > targetMemory)
+            {
+                int cost = currentMemory - targetMemory;
+                _game.PayCost(_game.CurrentPlayer, cost);
+            }
+            
+            // CheckTurnEnd will handle the transition
+            CheckTurnEnd();
         }
 
         private void EndTurn()
         {
             CurrentPhase = GamePhase.End;
-            // Resolve end of turn effects
+            
+            // 1. Resolve [End of Turn] effects
+            ResolveEndOfTurnEffects();
+
+            // 2. Check Memory again. 
+            // If effects changed memory back to >= 0, turn resumes.
+            int mem = _game.GetMemory(_game.CurrentPlayer);
+            if (mem >= 0)
+            {
+                // Resume Main Phase
+                CurrentPhase = GamePhase.Main;
+                return;
+            }
+
+            // 3. Switch Turn
             _game.SwitchTurn();
+        }
+
+        private void ResolveEndOfTurnEffects()
+        {
+            // TODO: Iterate over all permanents and active effects to find "End of Turn" triggers.
+            // For now, this is a stub.
         }
     }
 }

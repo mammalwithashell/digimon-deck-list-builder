@@ -2,6 +2,7 @@ using System;
 using System.Text.Json;
 using System.Collections.Generic;
 using System.Linq;
+using Digimon.Core.Constants;
 
 namespace Digimon.Core
 {
@@ -13,7 +14,9 @@ namespace Digimon.Core
         public Player OpponentPlayer => CurrentPlayer == Player1 ? Player2 : Player1;
         public TurnStateMachine TurnStateMachine { get; private set; }
         public bool IsGameOver { get; private set; }
-        public Player Winner { get; private set; }
+        public Player? Winner { get; private set; }
+
+        private static readonly JsonSerializerOptions _jsonOptions = new() { WriteIndented = true };
 
         // Shared Memory Gauge: Positive for P1, Negative for P2.
         // P1 turn: 1 to 10 (Max), P2 side is < 0.
@@ -24,6 +27,7 @@ namespace Digimon.Core
         {
             Player1 = new Player(1, "Player 1");
             Player2 = new Player(2, "Player 2");
+            CurrentPlayer = Player1;
             TurnStateMachine = new TurnStateMachine(this);
         }
 
@@ -138,7 +142,7 @@ namespace Digimon.Core
             // Standard slot structure.
             // ---------------------------------------------------------
 
-            List<float> tensor = new List<float>();
+            List<float> tensor = [];
 
             Player me = (playerId == 1) ? Player1 : Player2;
             Player opp = (playerId == 1) ? Player2 : Player1;
@@ -181,10 +185,10 @@ namespace Digimon.Core
             // --- Opp Breeding [1 slot * 20] ---
             AppendFieldData(tensor, opp, 1, true);
 
-            return tensor.ToArray();
+            return [.. tensor];
         }
 
-        private void AppendFieldData(List<float> tensor, Player p, int slots, bool isBreeding = false)
+        private static void AppendFieldData(List<float> tensor, Player p, int slots, bool isBreeding = false)
         {
             var sourceList = isBreeding ? p.BreedingArea : p.BattleArea;
 
@@ -192,17 +196,24 @@ namespace Digimon.Core
             {
                 if (i < sourceList.Count)
                 {
-                    Card c = sourceList[i];
+                    Permanent perm = sourceList[i];
+                    Card c = perm.TopCard;
                     // 1. Internal ID
                     tensor.Add(CardRegistry.GetId(c.Id));
                     // 2. DP
-                    tensor.Add(c.GetCurrentDP());
+                    tensor.Add(perm.CurrentDP);
                     // 3. Suspended
-                    tensor.Add(0); // Stub
+                    tensor.Add(perm.IsSuspended ? 1.0f : 0.0f);
                     // 4. Source Count
-                    tensor.Add(0); // Stub
+                    tensor.Add(perm.Sources.Count);
                     // 5-20. Sources (16 slots)
-                    for(int j=0; j<16; j++) tensor.Add(0);
+                    for(int j=0; j<16; j++) 
+                    {
+                        if (j < perm.Sources.Count)
+                            tensor.Add(CardRegistry.GetId(perm.Sources[j].Id));
+                        else
+                            tensor.Add(0);
+                    }
                 }
                 else
                 {
@@ -212,7 +223,7 @@ namespace Digimon.Core
             }
         }
 
-        private void AppendListIds(List<float> tensor, List<Card> cards, int limit)
+        private static void AppendListIds(List<float> tensor, List<Card> cards, int limit)
         {
             for (int i = 0; i < limit; i++)
             {
@@ -238,19 +249,61 @@ namespace Digimon.Core
             TurnStateMachine.StartTurn();
         }
 
+        // --- Breeding Phase Actions (Agent Controlled) ---
+
+        public void BreedingHatch()
+        {
+            if (TurnStateMachine.CurrentPhase != GamePhase.Breeding) return;
+            
+            // Logic handled by Player, but we wrap it to advance phase
+            int initialCount = CurrentPlayer.BreedingArea.Count;
+            CurrentPlayer.Hatch();
+            
+            // Validate if hatch actually happened (it might fail if area full or empty deck)
+            // But for now we assume if it didn't error, proceed.
+            // If the count changed, it was successful.
+            if (CurrentPlayer.BreedingArea.Count > initialCount)
+            {
+                TurnStateMachine.OnBreedingActionCompleted();
+            }
+        }
+
+        public void BreedingMove()
+        {
+            if (TurnStateMachine.CurrentPhase != GamePhase.Breeding) return;
+
+            if (CurrentPlayer.BreedingArea.Count == 0) return;
+            if (CurrentPlayer.BreedingArea[0].TopCard.Level < 3) return;
+
+            int initialCount = CurrentPlayer.BreedingArea.Count;
+            CurrentPlayer.MoveBreedingToBattle();
+
+            // Check if move happened
+            if (CurrentPlayer.BreedingArea.Count < initialCount)
+            {
+                TurnStateMachine.OnBreedingActionCompleted();
+            }
+        }
+
+        public void BreedingPass()
+        {
+            if (TurnStateMachine.CurrentPhase != GamePhase.Breeding) return;
+            TurnStateMachine.SkipBreedingPhase();
+        }
+
         public string ToJson()
         {
             var state = new
             {
-                TurnCount = TurnStateMachine.TurnCount,
+                TurnStateMachine.TurnCount,
                 CurrentPhase = TurnStateMachine.CurrentPhase.ToString(),
                 CurrentPlayer = CurrentPlayer.Id,
-                MemoryGauge = MemoryGauge,
-                IsGameOver = IsGameOver,
+                MemoryGauge,
+                IsGameOver,
                 Winner = Winner?.Id,
                 Player1 = new
                 {
-                    Id = Player1.Id,
+                    Player1.Id,
                     Memory = GetMemory(Player1),
                     HandCount = Player1.Hand.Count,
                     HandIds = Player1.Hand.Select(c => c.Id).ToList(),
@@ -260,7 +313,7 @@ namespace Digimon.Core
                 },
                 Player2 = new
                 {
-                    Id = Player2.Id,
+                    Player2.Id,
                     Memory = GetMemory(Player2),
                     HandCount = Player2.Hand.Count,
                     HandIds = Player2.Hand.Select(c => c.Id).ToList(),
@@ -270,7 +323,7 @@ namespace Digimon.Core
                 }
             };
 
-            return JsonSerializer.Serialize(state, new JsonSerializerOptions { WriteIndented = true });
+            return JsonSerializer.Serialize(state, _jsonOptions);
         }
     }
 }
