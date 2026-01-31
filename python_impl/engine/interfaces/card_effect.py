@@ -117,6 +117,9 @@ class ICardEffect(ABC):
     def set_timing(self, timing: EffectTiming):
         self.timing = timing
 
+    def get_change_dp_value(self, permanent: 'Permanent') -> int:
+        return 0
+
     def can_trigger(self, hashtable: Dict[str, Any]) -> bool:
         return True
 
