@@ -1,4 +1,7 @@
 AGENTS.md
+Refer to RULES_CONTEXT.md for rule implementation
+
+
 Project Overview
 This project utilizes two distinct types of AI agents to solve the Digimon TCG Deck Optimization problem:
 1. The Architect (Deck Builder): An RL agent that optimizes deck lists using the Q-DeckRec algorithm.
