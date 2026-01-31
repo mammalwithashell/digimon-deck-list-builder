@@ -2,7 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Optional
 import random
 from .permanent import Permanent
-from ..data.enums import EffectTiming, CardKind
+from ..data.enums import EffectTiming, CardKind, AttackResolution
 
 if TYPE_CHECKING:
     from .card_source import CardSource
@@ -52,15 +52,15 @@ class Player:
         for _ in range(5):
             self.draw()
 
-    def draw(self):
+    def draw(self) -> bool:
         if not self.library_cards:
-            print(f"{self.player_name} cannot draw! Deck empty. GAME OVER.")
-            # In real engine, set game_over flag or raise event.
-            return
+            print(f"{self.player_name} cannot draw! Deck empty.")
+            return False
 
         card = self.library_cards.pop(0)
         self.hand_cards.append(card)
         print(f"{self.player_name} drew a card. Hand size: {len(self.hand_cards)}")
+        return True
 
     def hatch(self):
         if self.breeding_area is not None:
@@ -154,21 +154,24 @@ class Player:
 
         return final_cost
 
-    def security_attack(self, attacker: 'Permanent'):
+    def delete_permanent(self, permanent: 'Permanent'):
+        if permanent in self.battle_area:
+            self.battle_area.remove(permanent)
+            self.trash_cards.extend(permanent.card_sources)
+            print(f"{self.player_name}'s permanent {permanent.top_card.card_names[0]} deleted.")
+
+    def security_attack(self, attacker: 'Permanent') -> AttackResolution:
         print(f"{self.player_name} receives Security Attack from {attacker.top_card.card_names[0] if attacker.top_card else 'Unknown'}!")
 
         if len(self.security_cards) == 0:
             print("Direct Attack! No Security cards left.")
-            # Trigger Loss Condition Logic here in a real game event system.
-            # For now, return True indicating loss or let Game handle it.
-            return True # Loss
+            return AttackResolution.GameEnd
 
         # Reveal top card
         security_card = self.security_cards.pop(0)
         print(f"Security Check: Revealed {security_card.card_names[0]}")
 
         # Execute Security Effects
-        # Note: Security effects activate immediately.
         security_effects = security_card.effect_list(EffectTiming.SecuritySkill)
         for effect in security_effects:
             if effect.is_security_effect:
@@ -176,20 +179,20 @@ class Player:
                 if effect.on_process_callback:
                     effect.on_process_callback()
 
+        result = AttackResolution.Survivor
+
         # Battle
         if security_card.is_digimon:
             print(f"Battle: Attacker DP {attacker.dp} vs Security DP {security_card.base_dp}")
             if attacker.dp < security_card.base_dp:
                 print(f"Attacker {attacker.top_card.card_names[0]} is deleted by Security Digimon!")
-                # Delete attacker logic (not implemented fully yet, needs to remove from opponent board)
-                # We can mark it for deletion or handle it in Game.
-                return "AttackerDeleted"
+                result = AttackResolution.AttackerDeleted
             elif attacker.dp == security_card.base_dp:
                 print(f"Attacker {attacker.top_card.card_names[0]} is deleted by Security Digimon (Equal DP).")
-                return "AttackerDeleted"
+                result = AttackResolution.AttackerDeleted
             else:
                 print(f"Attacker {attacker.top_card.card_names[0]} survives.")
 
         # Trash the security card
         self.trash_cards.append(security_card)
-        return False # Not a loss yet
+        return result

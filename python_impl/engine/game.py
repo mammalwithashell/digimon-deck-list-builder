@@ -1,7 +1,7 @@
 from __future__ import annotations
 from typing import TYPE_CHECKING, Optional, Union
 import random
-from python_impl.engine.data.enums import GamePhase, EffectTiming
+from python_impl.engine.data.enums import GamePhase, EffectTiming, AttackResolution
 from python_impl.engine.core.player import Player
 from python_impl.engine.core.permanent import Permanent
 
@@ -99,7 +99,9 @@ class Game:
         if self.turn_count == 1:
             print("First turn: No draw.")
         else:
-            self.turn_player.draw()
+            if not self.turn_player.draw():
+                self.declare_winner(self.opponent_player)
+                return
             # Trigger OnDraw effects?
             self.execute_effects(EffectTiming.OnDraw)
 
@@ -165,11 +167,27 @@ class Game:
         for perm in all_perms:
             effects = perm.effect_list(timing)
             for effect in effects:
-                context = {"game": self, "player": self.turn_player, "permanent": perm}
+                # Context should refer to the owner of the effect/permanent
+                owner = perm.top_card.owner if perm.top_card and perm.top_card.owner else None
+                if owner is None:
+                    # Fallback logic to find owner
+                    if perm in self.turn_player.battle_area:
+                        owner = self.turn_player
+                    elif perm in self.opponent_player.battle_area:
+                        owner = self.opponent_player
+                    else:
+                        owner = self.turn_player # Default safely
+
+                context = {"game": self, "player": owner, "permanent": perm}
                 if effect.can_use_condition is None or effect.can_use_condition(context):
                     print(f"Triggering effect: {effect.effect_name}")
                     if effect.on_process_callback:
                         effect.on_process_callback()
+
+    def declare_winner(self, winner: Player):
+        self.game_over = True
+        self.winner = winner
+        print(f"Game Over! Winner: {self.winner.player_name}")
 
     def resolve_attack(self, attacker: Permanent, target: Union[Permanent, Player]):
         if not attacker.can_attack(None):
@@ -187,24 +205,22 @@ class Game:
         # Battle
         if isinstance(target, Player):
             result = target.security_attack(attacker)
-            if result == "AttackerDeleted":
-                # Handle deletion
-                pass
-            elif result is True:
-                self.game_over = True
-                self.winner = self.turn_player
-                print(f"Game Over! Winner: {self.winner.player_name}")
+            if result == AttackResolution.AttackerDeleted:
+                self.turn_player.delete_permanent(attacker)
+            elif result == AttackResolution.GameEnd:
+                self.declare_winner(self.turn_player)
         elif isinstance(target, Permanent):
             print(f"Battling Digimon: {attacker.dp} vs {target.dp}")
             if attacker.dp > target.dp:
                 print(f"Defender {target.top_card.card_names[0]} deleted.")
-                # Delete target logic
+                self.opponent_player.delete_permanent(target)
             elif attacker.dp < target.dp:
                 print(f"Attacker {attacker.top_card.card_names[0]} deleted.")
-                # Delete attacker logic
+                self.turn_player.delete_permanent(attacker)
             else:
                 print("Draw! Both deleted.")
-                # Delete both
+                self.opponent_player.delete_permanent(target)
+                self.turn_player.delete_permanent(attacker)
 
         self.execute_effects(EffectTiming.OnEndAttack)
         self.check_turn_end()
@@ -253,6 +269,9 @@ class Game:
 
     def action_attack_player(self, attacker_index: int):
         if self.current_phase != GamePhase.Main: return
+        if attacker_index < 0 or attacker_index >= len(self.turn_player.battle_area):
+            print("Invalid attacker index.")
+            return
         attacker = self.turn_player.battle_area[attacker_index]
         self.resolve_attack(attacker, self.opponent_player)
 
