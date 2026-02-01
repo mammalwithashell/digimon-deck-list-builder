@@ -41,6 +41,13 @@ class CSharpGameWrapper:
         for card_id in deck2:
             cs_deck2.Add(card_id)
 
+        # Initialize CardRegistry
+        cards_json_path = os.path.join(os.path.dirname(__file__), "engine", "data", "cards.json")
+        if os.path.exists(cards_json_path):
+             CardRegistry.Initialize(cards_json_path)
+        else:
+             print(f"Warning: cards.json not found at {cards_json_path}. CardRegistry not initialized.")
+
         self.is_interactive = False
         p1_human = player1_type.lower() == "human"
         p2_human = player2_type.lower() == "human"
@@ -84,6 +91,3 @@ class CSharpGameWrapper:
         float_arr = self.runner.GameInstance.GetBoardStateTensor(player_id)
         # Convert System.Single[] to numpy array
         return np.array(float_arr, dtype=np.float32)
-
-    def register_card(self, card_id: str):
-        CardRegistry.Register(card_id)

@@ -9,6 +9,28 @@ namespace Digimon.Core
         {
             Console.WriteLine("=== Starting Verification ===");
             
+            // 0. Card Registry Test
+            Console.WriteLine("--- Test 0: CardRegistry ---");
+            CardRegistry.Reset();
+            var testCards = new List<string> { "BT1-002", "BT1-001", "ST1-01" };
+            CardRegistry.InitializeFromList(testCards);
+            
+            // Expect alphabetical sorting: BT1-001 (1), BT1-002 (2), ST1-01 (3)
+            int id1 = CardRegistry.GetId("BT1-001");
+            int id2 = CardRegistry.GetId("BT1-002");
+            int id3 = CardRegistry.GetId("ST1-01");
+            int idUnknown = CardRegistry.GetId("UNKNOWN");
+
+            Console.WriteLine($"BT1-001 ID: {id1} (Expected 1)");
+            Console.WriteLine($"BT1-002 ID: {id2} (Expected 2)");
+            Console.WriteLine($"ST1-01 ID: {id3} (Expected 3)");
+            Console.WriteLine($"Unknown ID: {idUnknown} (Expected 0)");
+
+            if (id1 == 1 && id2 == 2 && id3 == 3 && idUnknown == 0)
+                Console.WriteLine("SUCCESS: CardRegistry IDs correct.");
+            else
+                Console.WriteLine("FAILURE: CardRegistry IDs incorrect.");
+
             // 1. Agent vs Agent (Classic)
             Console.WriteLine("--- Test 1: Agent vs Agent (Auto Run via HeadlessGame) ---");
             var gameAA = new HeadlessGame(new List<string>(), new List<string>());

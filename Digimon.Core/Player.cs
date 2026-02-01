@@ -83,7 +83,7 @@ namespace Digimon.Core
                 Card egg = DigitamaDeck[0];
                 DigitamaDeck.RemoveAt(0);
                 
-                Permanent permanent = new Permanent(egg);
+                Permanent permanent = new(egg);
                 BreedingArea.Add(permanent);
                 // Console.WriteLine($"[Player {Id}] Hatched {egg.Name} ({egg.Id})");
             }

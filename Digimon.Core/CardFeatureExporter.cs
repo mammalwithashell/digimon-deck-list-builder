@@ -78,11 +78,8 @@ namespace Digimon.Core
             foreach (var card in allCards)
             {
                 int id = CardRegistry.GetId(card.Id);
-                if (id == 0)
-                {
-                    CardRegistry.Register(card.Id);
-                    id = CardRegistry.GetId(card.Id);
-                }
+                // If id is 0, it means it wasn't in the registry. 
+                // We proceed with 0 or log warning? For now proceed with 0 as it's the "Padding/Unknown" ID.
 
                 exportData[id] = ExtractFeatures(card);
             }
