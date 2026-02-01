@@ -171,6 +171,33 @@ class Player:
         security_card = self.security_cards.pop(0)
         print(f"Security Check: Revealed {security_card.card_names[0]}")
 
+        # Trigger Attacker Effects (OnSecurityCheck)
+        # Context includes the revealed card
+        context = {
+            "player": self, # The player owning the security stack (Defending player)
+            "attacker": attacker,
+            "security_card": security_card
+        }
+        # Note: Attacker is owned by the opponent.
+        # We need to execute attacker's effects.
+        attacker_effects = attacker.effect_list(EffectTiming.OnSecurityCheck)
+        for effect in attacker_effects:
+             # Context for the effect usually expects "permanent" to be the source.
+             # And "player" to be the effect owner.
+             # We should probably construct context properly for the effect.
+             # But here we are in Player (Defender).
+             # We can just run the callback if condition passes.
+             effect_owner = attacker.top_card.owner if attacker.top_card else None
+             eff_context = {
+                 "player": effect_owner,
+                 "permanent": attacker,
+                 "target_card": security_card
+             }
+             if effect.can_use_condition and effect.can_use_condition(eff_context):
+                 print(f"Activating Attacker Effect: {effect.effect_name}")
+                 if effect.on_process_callback:
+                     effect.on_process_callback()
+
         # Execute Security Effects
         security_effects = security_card.effect_list(EffectTiming.SecuritySkill)
         for effect in security_effects:
