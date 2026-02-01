@@ -3,3 +3,5 @@ __pycache__/
 /bin
 /obj
 .gemini/GEMINI.md
+Digimon.Core/bin
+Digimon.Core/obj
