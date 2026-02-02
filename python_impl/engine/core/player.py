@@ -163,6 +163,20 @@ class Player:
     def security_attack(self, attacker: 'Permanent') -> AttackResolution:
         print(f"{self.player_name} receives Security Attack from {attacker.top_card.card_names[0] if attacker.top_card else 'Unknown'}!")
 
+        # Trigger OnSecurityCheck on attacker
+        check_effects = attacker.effect_list(EffectTiming.OnSecurityCheck)
+        for effect in check_effects:
+            # Filter for effects that are specifically for Security Check
+            if not getattr(effect, 'is_on_security_check', False):
+                continue
+
+            owner = attacker.top_card.owner if attacker.top_card else None
+            context = {"player": owner, "permanent": attacker}
+            if effect.can_use_condition is None or effect.can_use_condition(context):
+                print(f"Triggering OnSecurityCheck effect: {effect.effect_name}")
+                if effect.on_process_callback:
+                    effect.on_process_callback()
+
         if len(self.security_cards) == 0:
             print("Direct Attack! No Security cards left.")
             return AttackResolution.GameEnd
