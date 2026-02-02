@@ -18,8 +18,9 @@ The `Board State Tensor` is a flattened `float[]` array (Size: 680) representing
 | `+0` | Top Card ID | Internal Integer ID from `CardRegistry`. 0 if empty. |
 | `+1` | Current DP | Digimon Power |
 | `+2` | Is Suspended | `1.0` = Suspended, `0.0` = Active |
-| `+3` | Source Count | Number of digivolution sources |
-| `+4-19` | Source IDs | Bottom-to-Top list of up to 16 source card IDs. Padding 0. |
+| `+3` | Has Used OPT | `1.0` = Used Once-Per-Turn Effect, `0.0` = Available |
+| `+4` | Source Count | Number of digivolution sources |
+| `+5-19` | Source IDs | Bottom-to-Top list of up to 15 source card IDs. Padding 0. |
 
 ## Opponent Battle Area [250-489]
 *Slots 0-11 (12 Slots * 20 Floats each)*

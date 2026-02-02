@@ -110,8 +110,9 @@ namespace Digimon.Core
             //   Offset + 0: Top Card Internal ID (from CardRegistry)
             //   Offset + 1: Current DP
             //   Offset + 2: Is Suspended (1.0 = Yes, 0.0 = No)
-            //   Offset + 3: Source Count
-            //   Offset + 4-19: Source Card IDs (Bottom to Top, max 16)
+            //   Offset + 3: Has Used OPT (1.0 = Yes, 0.0 = No)
+            //   Offset + 4: Source Count
+            //   Offset + 5-19: Source Card IDs (Bottom to Top, max 15)
             // Slots 0-11 represent the field positions.
             //
             // [250-489] OPPONENT BATTLE AREA (12 Slots * 20 Floats = 240 floats)
@@ -204,10 +205,12 @@ namespace Digimon.Core
                     tensor.Add(perm.CurrentDP);
                     // 3. Suspended
                     tensor.Add(perm.IsSuspended ? 1.0f : 0.0f);
-                    // 4. Source Count
+                    // 4. Has Used OPT
+                    tensor.Add(perm.HasUsedOpt ? 1.0f : 0.0f);
+                    // 5. Source Count
                     tensor.Add(perm.Sources.Count);
-                    // 5-20. Sources (16 slots)
-                    for(int j=0; j<16; j++) 
+                    // 6-20. Sources (15 slots)
+                    for(int j=0; j<15; j++) 
                     {
                         if (j < perm.Sources.Count)
                             tensor.Add(CardRegistry.GetId(perm.Sources[j].Id));

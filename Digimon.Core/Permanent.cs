@@ -31,5 +31,13 @@ namespace Digimon.Core
         {
             IsSuspended = false;
         }
+
+        public bool HasUsedOpt { get; set; } = false;
+
+        public void ResetTurnStats()
+        {
+            // Reset Once Per Turn flags at start of turn
+            HasUsedOpt = false;
+        }
     }
 }

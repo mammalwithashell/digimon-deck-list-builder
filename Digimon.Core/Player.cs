@@ -102,8 +102,16 @@ namespace Digimon.Core
 
         public void UnsuspendAll()
         {
-            foreach (var p in BreedingArea) p.Unsuspend();
-            foreach (var p in BattleArea) p.Unsuspend();
+            foreach (var p in BreedingArea) 
+            {
+                p.Unsuspend();
+                p.ResetTurnStats();
+            }
+            foreach (var p in BattleArea) 
+            {
+                p.Unsuspend();
+                p.ResetTurnStats();
+            }
         }
 
         public void PlayCard(int handIndex, Game game)
