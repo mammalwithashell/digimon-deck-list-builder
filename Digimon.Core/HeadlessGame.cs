@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using Digimon.Core.Constants;
 
 namespace Digimon.Core
 {
@@ -38,6 +39,12 @@ namespace Digimon.Core
              {
                  ExecuteAgentTurn();
              }
+        }
+
+        public void Step(int actionId)
+        {
+             // Use ActionDecoder to handle logic based on current state
+             ActionDecoder.DecodeAndExecute(GameInstance, actionId);
         }
     }
 }

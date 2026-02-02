@@ -105,5 +105,39 @@ namespace Digimon.Core
             foreach (var p in BreedingArea) p.Unsuspend();
             foreach (var p in BattleArea) p.Unsuspend();
         }
+
+        public void PlayCard(int handIndex, Game game)
+        {
+            if (handIndex < 0 || handIndex >= Hand.Count) return;
+
+            Card card = Hand[handIndex];
+            
+            // 1. Pay Cost (Standard Play Cost)
+            // Check if enough memory? (Game rules allow going negative, but Turn ends)
+            // But we should subtract cost.
+            game.PayCost(this, card.PlayCost);
+
+            // 2. Place on Board
+            Hand.RemoveAt(handIndex);
+            
+            if (card.IsDigimon || card.IsTamer)
+            {
+                Permanent perm = new(card);
+                BattleArea.Add(perm);
+                Console.WriteLine($"[Player {Id}] Played {card.Name}. Memory: {game.MemoryGauge}");
+            }
+            else if (card.IsOption)
+            {
+                // Option Resolution Stub
+                // Use Main Effect -> Then Trash
+                Trash.Add(card);
+                Console.WriteLine($"[Player {Id}] Used Option {card.Name}. Memory: {game.MemoryGauge}");
+            }
+            
+            // 3. Trigger OnPlay Effects (Stub)
+            
+            // 4. Check Turn End via Game Loop (Caller handles this usually, or TurnStateMachine checks)
+            game.TurnStateMachine.CheckTurnEnd();
+        }
     }
 }

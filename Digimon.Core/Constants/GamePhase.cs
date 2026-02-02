@@ -6,6 +6,13 @@ namespace Digimon.Core.Constants
         Draw,
         Breeding,
         Main,
-        End
+        End,
+        // Pending Action States
+        SelectTarget,
+        SelectMaterial,
+        BlockTiming,
+        CounterTiming,
+        SelectTrash,
+        SelectSource
     }
 }

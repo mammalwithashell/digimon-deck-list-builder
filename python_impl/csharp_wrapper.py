@@ -27,7 +27,7 @@ sys.path.append(os.path.dirname(DLL_PATH))
 
 clr.AddReference("Digimon.Core")
 
-from Digimon.Core import HeadlessGame, InteractiveGame, PlayerType
+from Digimon.Core import HeadlessGame, InteractiveGame, PlayerType, CardRegistry
 from System.Collections.Generic import List as CsList
 from System import String
 
@@ -74,9 +74,8 @@ class CSharpGameWrapper:
         if self.is_interactive:
             self.runner.Step(action_id)
         else:
-            # For Headless, Step might not be relevant if it auto-plays, 
-            # but if we want to force an action or support step-wise agent:
-            pass
+            # For Headless, Step is now supported via stub
+            self.runner.Step(action_id)
 
     def run_step(self) -> str:
         """Runs a single step of the game loop. Valid helpers for Interactive mode."""

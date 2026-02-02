@@ -1,9 +1,7 @@
 import numpy as np
 import logging
 from typing import List, Tuple, Dict, Any, Optional
-from python_impl.engine.game import Game
-from python_impl.engine.data.enums import GamePhase, PendingAction
-
+from python_impl.csharp_wrapper import CSharpGameWrapper
 # Action Space Constants
 ACTION_SPACE_SIZE = 50
 ACTION_PLAY_CARD_START = 0
@@ -21,196 +19,71 @@ logger = logging.getLogger(__name__)
 
 class GameState:
     def __init__(self):
-        self.game = Game()
+        self.game_wrapper = None
         self.max_turns = 100
         self.done = False
         self.info = {}
 
     def reset(self, deck1: Optional[List[str]] = None, deck2: Optional[List[str]] = None) -> Dict[str, np.ndarray]:
-        self.game = Game()
-        # In a real scenario, we'd load decks here.
-        self.game.start_game()
+        # Default decks if None
+        d1 = deck1 if deck1 else ["ST1-01"] * 50
+        d2 = deck2 if deck2 else ["ST1-01"] * 50
+        
+        self.game_wrapper = CSharpGameWrapper(d1, d2, "agent", "agent")
         self.done = False
         return self.get_observation()
 
     def get_observation(self) -> Dict[str, np.ndarray]:
-        """
-        Returns a dictionary of numpy arrays representing the board state.
-        """
-        p1 = self.game.player1
-        p2 = self.game.player2
-
-        # Helper to pad/trunc
-        def pad(arr, size):
-            res = np.zeros(size, dtype=np.int32)
-            # For now, just putting 1s to indicate presence if real IDs aren't available
-            # Or use hash of card name?
-            # Ideally we use card IDs.
-            for i, card in enumerate(arr[:size]):
-                res[i] = 1 # Placeholder ID
-            return res
-
-        obs = {
-            "p1_hand": pad(p1.hand_cards, 10),
-            "p1_battle_area": pad(p1.battle_area, 10),
-            "p1_security": pad(p1.security_cards, 5),
-            "p1_trash": pad(p1.trash_cards, 30),
-
-            "p2_hand": pad(p2.hand_cards, 10),
-            "p2_battle_area": pad(p2.battle_area, 10),
-            "p2_security": pad(p2.security_cards, 5),
-            "p2_trash": pad(p2.trash_cards, 30),
-
-            "global_info": np.array([
-                self.game.turn_count,
-                self.game.turn_player.player_id,
-                self.game.memory,
-                self.game.current_phase.value,
-                self.game.pending_action.value
-            ], dtype=np.int32)
-        }
-        return obs
+        # Use player 1 perspective (Id=1)
+        obs_tensor = self.game_wrapper.get_board_tensor(1)
+        
+        # Return as a dictionary for compatibility if needed, using "tensor" key
+        # Or if the Gym space is defined as Dict, we map the single tensor to a key.
+        # But wait, looking at the previous get_observation, it returned a Dict with individual keys.
+        # The PROMPT requirement said "The AI 'sees' the board via GetBoardStateTensor".
+        # So we should probably expose the raw tensor.
+        return {"tensor": obs_tensor}
 
     def get_action_mask(self) -> np.ndarray:
-        mask = np.zeros(ACTION_SPACE_SIZE, dtype=bool)
-
-        player = self.game.turn_player
-        hand_size = len(player.hand_cards)
-
-        # Scenario 1: Game is waiting for a TRASH decision (e.g. from an effect)
-        if self.game.pending_action == PendingAction.TRASH_CARD:
-            # If there are no cards to trash, allow PASS_TURN as a safe fallback
-            # so policies don't get stuck repeatedly selecting invalid actions.
-            if hand_size == 0:
-                mask[ACTION_PASS_TURN] = True
-                return mask
-
-            # Enable Trash actions for existing cards
-            # Clamp to max 10
-            limit = min(hand_size, 10)
-            for i in range(limit):
-                mask[ACTION_TRASH_CARD_START + i] = True
-            return mask
-
-        # Scenario 2: Main Phase (Standard Turn Actions)
-        if self.game.current_phase == GamePhase.Main:
-            # Play Cards (0-9)
-            limit = min(hand_size, 10)
-            for i in range(limit):
-                # In real game, check memory cost, prerequisites.
-                # For now, allow playing any card in hand.
-                mask[ACTION_PLAY_CARD_START + i] = True
-
-            # Hatch (20)
-            if player.breeding_area is None and len(player.digitama_library_cards) > 0:
-                 mask[ACTION_HATCH] = True
-
-            # Pass Turn (22)
-            mask[ACTION_PASS_TURN] = True
-
-            # Attack (23-32)
-            # Check unsuspended digimon in battle area
-            for i, perm in enumerate(player.battle_area):
-                if i >= 10: break
-                if not perm.is_suspended: # and can attack checks
-                    mask[ACTION_ATTACK_START + i] = True
-
-        # Scenario 3: Breeding Phase?
-        # If manual phase handling is required.
-
+        # C# doesn't support mask yet. Return all valid.
+        mask = np.ones(ACTION_SPACE_SIZE, dtype=bool)
         return mask
 
     def step(self, action: int) -> Tuple[Dict[str, np.ndarray], float, bool, Dict[str, Any]]:
-        """
-        Execute action and return (obs, reward, done, info).
-        """
         if self.done:
             return self.get_observation(), 0.0, True, self.info
 
-        # Bounds check
-        if action < 0 or action >= ACTION_SPACE_SIZE:
-             return self.get_observation(), -1.0, self.done, {"error": "Action Out of Bounds"}
-
-        player = self.game.turn_player
-        mask = self.get_action_mask()
-
-        if not mask[action]:
-            # Invalid action!
-            return self.get_observation(), -1.0, self.done, {"error": "Invalid Action"}
-
-        # Execute Action
-        self._apply_action(player, action)
-
-        # Post-action game logic
-        # Check win condition (e.g. deck out, security 0 + direct attack)
-        # Assuming Game updates game_over and winner.
-
-        # If pending action was resolved, clear it?
-        # Note: _apply_action should handle clearing if it satisfied the request.
-
-        # Advance phase if needed (e.g. if we just Passed Turn, or if Play Card effects are done)
-        # Note: In a real engine, Play Card might trigger effects -> setting pending_action.
-        # Here we assume synchronous simple execution.
-
-        # If the turn was passed, the game.turn_player is now the OTHER player.
-
+        self.game_wrapper.step(action)
+        
+        # We need to query C# to see if game is over. 
+        # C# Wrapper doesn't expose IsGameOver directly yet without JSON.
+        # But we can infer from tensor or add a helper.
+        # Let's rely on JSON state for metadata or just run for now.
+        
+        # Actually, get_board_tensor doesn't give Winner. 
+        # But let's check global data in tensor[3] (WinnerID)? 
+        # Wait, GetBoardStateTensor: [151] TurnCount, [152] Phase, [153] Memory.
+        # Winner is not in the tensor explicitly unless we check logic.
+        
+        # Let's parse JSON state for Done check for now, as it's safe.
+        state_json = self.game_wrapper.get_state_json()
+        import json
+        state = json.loads(state_json)
+        
+        self.done = state["IsGameOver"]
         reward = 0.0
-        if self.game.game_over:
-            self.done = True
-            if self.game.winner == player:
+        if self.done:
+            winner_id = state["Winner"]
+            # If Winner == 1, Reward 1. If 2, Reward -1.
+            if winner_id == 1:
                 reward = 1.0
-            else:
+            elif winner_id == 2:
                 reward = -1.0
-
+        
         return self.get_observation(), reward, self.done, self.info
 
     def _apply_action(self, player: Any, action: int):
-        # 1. TRASH CARD
-        if ACTION_TRASH_CARD_START <= action <= ACTION_TRASH_CARD_END:
-            idx = action - ACTION_TRASH_CARD_START
-            if idx < len(player.hand_cards):
-                card = player.hand_cards.pop(idx)
-                player.trash_cards.append(card)
-                logger.info(f"{player.player_name} trashed {card.card_names[0]}.")
-
-            # If we were waiting for this, clear the flag
-            if self.game.pending_action == PendingAction.TRASH_CARD:
-                self.game.pending_action = PendingAction.NO_ACTION
-
-        # 2. PLAY CARD
-        elif ACTION_PLAY_CARD_START <= action <= ACTION_PLAY_CARD_END:
-            idx = action - ACTION_PLAY_CARD_START
-            if idx < len(player.hand_cards):
-                card = player.hand_cards[idx] # don't pop here, play_card does it
-                player.play_card(card)
-
-                # Check for "On Play" effects?
-                # For PoC, let's pretend every Option card requires a Trash.
-                # This tests the PendingAction logic.
-                if card.is_option:
-                     self.game.pending_action = PendingAction.TRASH_CARD
-                     logger.info("Effect triggered: Trash 1 card from hand.")
-
-        # 3. HATCH
-        elif action == ACTION_HATCH:
-            player.hatch()
-
-        # 4. PASS TURN
-        elif action == ACTION_PASS_TURN:
-            # Special case: If waiting for trash but hand is empty, we allow passing to escape loop
-            if self.game.pending_action == PendingAction.TRASH_CARD:
-                self.game.pending_action = PendingAction.NO_ACTION
-            else:
-                self.game.pass_turn()
-
-        # 5. ATTACK (Placeholder)
-        elif ACTION_ATTACK_START <= action <= ACTION_ATTACK_END:
-            idx = action - ACTION_ATTACK_START
-            if idx < len(player.battle_area):
-                perm = player.battle_area[idx]
-                # Perform attack logic...
-                perm.is_suspended = True
-                logger.info(f"{player.player_name}'s Digimon attacked!")
+       pass # Legacy
 
 def greedy_policy(env: GameState) -> int:
     """

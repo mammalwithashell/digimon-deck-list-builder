@@ -140,5 +140,27 @@ namespace Digimon.Core
             // TODO: Iterate over all permanents and active effects to find "End of Turn" triggers.
             // For now, this is a stub.
         }
+
+        public void SetPendingState(GamePhase phase)
+        {
+            // Allow transition to pending states
+            if (phase == GamePhase.SelectTarget || phase == GamePhase.SelectMaterial || phase == GamePhase.BlockTiming)
+            {
+                CurrentPhase = phase;
+            }
+        }
+
+        public void ClearPendingState()
+        {
+            // Return to Main Phase if in pending state
+            // Or if it was Opponent Turn (BlockTiming), resume End Turn sequence?
+            // For BlockTiming, we need to return to processing the Attack. 
+            // For now, assume we go back to Main Phase or End Phase depending on whose turn it is.
+            // Simplified: Go to Main.
+             CurrentPhase = GamePhase.Main;
+             
+             // Check end of turn conditions after clearing pending actions
+             CheckTurnEnd();
+        }
     }
 }
