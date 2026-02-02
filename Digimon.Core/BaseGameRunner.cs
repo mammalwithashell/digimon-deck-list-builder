@@ -21,21 +21,19 @@ namespace Digimon.Core
             var deck = new List<Card>();
              foreach (var id in ids)
             {
-                // In a real scenario, look up card by ID in CardDatabase
-                // Here we create a dummy card
-                // Using Red as default color if not looked up
-                deck.Add(new Card(id, $"Card {id}", CardKind.Digimon, new List<CardColor>{ CardColor.Red }, 3, 2000, 3));
+                // Look up card data from registry
+                deck.Add(CardRegistry.CreateCard(id));
             }
             // Ensure minimum deck size for simulation if empty
             if (deck.Count == 0)
             {
                 // Add 5 DigiEggs
                 for(int i=0; i<5; i++)
-                    deck.Add(new Card($"egg_{i}", "DigiEgg", CardKind.DigiEgg, new List<CardColor>{ CardColor.Red }, 2, 0, 0));
+                    deck.Add(CardRegistry.CreateCard("ST1-01")); // Koromon
 
                 // Add 45 Digimon
                 for(int i=0; i<45; i++)
-                    deck.Add(new Card($"dummy_{i}", "Dummy Card", CardKind.Digimon, new List<CardColor>{ CardColor.Red }, 3, 2000, 3));
+                     deck.Add(CardRegistry.CreateCard("ST1-03")); // Agumon
             }
             return deck;
         }

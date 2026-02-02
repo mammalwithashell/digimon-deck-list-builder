@@ -39,5 +39,17 @@ namespace Digimon.Core
             // Reset Once Per Turn flags at start of turn
             HasUsedOpt = false;
         }
+
+        public bool HasKeyword(string keyword)
+        {
+            if (TopCard.Keywords.Contains(keyword)) return true;
+            
+            foreach(var source in Sources)
+            {
+                if (source.InheritedKeywords.Contains(keyword)) return true;
+            }
+            
+            return false;
+        }
     }
 }

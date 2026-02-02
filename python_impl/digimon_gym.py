@@ -3,17 +3,23 @@ import logging
 from typing import List, Tuple, Dict, Any, Optional
 from python_impl.csharp_wrapper import CSharpGameWrapper
 # Action Space Constants
-ACTION_SPACE_SIZE = 50
+# Action Space Constants
+ACTION_SPACE_SIZE = 2120
 ACTION_PLAY_CARD_START = 0
-ACTION_PLAY_CARD_END = 9
-ACTION_TRASH_CARD_START = 10
-ACTION_TRASH_CARD_END = 19
-ACTION_HATCH = 20
-ACTION_UNSUSPEND = 21
-ACTION_PASS_TURN = 22
-ACTION_ATTACK_START = 23
-ACTION_ATTACK_END = 32 # Attack Security with Permanent 0-9
-# ... reserve others
+ACTION_PLAY_CARD_END = 29
+ACTION_TRASH_CARD_START = 30
+ACTION_TRASH_CARD_END = 59
+ACTION_HATCH = 60
+ACTION_MOVE = 61
+ACTION_PASS_TURN = 62
+ACTION_ATTACK_START = 100
+ACTION_ATTACK_END = 399 
+ACTION_DIGIVOLVE_START = 400
+ACTION_DIGIVOLVE_END = 999
+ACTION_EFFECT_START = 1000
+ACTION_EFFECT_END = 1999
+ACTION_SOURCE_START = 2000
+ACTION_SOURCE_END = 2119
 
 logger = logging.getLogger(__name__)
 
@@ -45,9 +51,14 @@ class GameState:
         return {"tensor": obs_tensor}
 
     def get_action_mask(self) -> np.ndarray:
-        # C# doesn't support mask yet. Return all valid.
-        mask = np.ones(ACTION_SPACE_SIZE, dtype=bool)
-        return mask
+        if self.game_wrapper:
+            # Get mask for Player 1 (Agent)
+            mask_float = self.game_wrapper.get_action_mask(1)
+            # Convert to bool
+            return mask_float > 0.5
+        
+        # Fallback
+        return np.ones(ACTION_SPACE_SIZE, dtype=bool)
 
     def step(self, action: int) -> Tuple[Dict[str, np.ndarray], float, bool, Dict[str, Any]]:
         if self.done:

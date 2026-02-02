@@ -13,6 +13,8 @@ namespace Digimon.Core
         public List<CardColor> Colors { get; set; }
         public CardKind Kind { get; set; }
         public List<string> Traits { get; set; } = new List<string>();
+        public HashSet<string> Keywords { get; set; } = new HashSet<string>();
+        public HashSet<string> InheritedKeywords { get; set; } = new HashSet<string>();
 
         // Logic placeholders
         public bool IsDigimon => Kind == CardKind.Digimon;

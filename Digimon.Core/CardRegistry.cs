@@ -3,6 +3,8 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Text.Json;
+using System.Text.RegularExpressions;
+using Digimon.Core.Constants;
 
 namespace Digimon.Core
 {
@@ -10,8 +12,25 @@ namespace Digimon.Core
     {
         private static readonly Dictionary<string, int> _idToInt = [];
         private static readonly Dictionary<int, string> _intToId = [];
+        private static readonly Dictionary<string, CardInfo> _cardMetadata = [];
         // 0 is reserved for padding/null
         public static readonly int PaddingId = 0;
+        
+        // Regex to find text inside < >
+        private static readonly Regex _keywordRegex = new(@"<([^>]+)>");
+
+        private class CardInfo 
+        {
+            public string Name { get; set; } = "";
+            public CardKind Kind { get; set; }
+            public List<CardColor> Colors { get; set; } = [];
+            public int Level { get; set; }
+            public int DP { get; set; }
+            public int PlayCost { get; set; }
+            public List<string> Traits { get; set; } = [];
+            public HashSet<string> Keywords { get; set; } = [];
+            public HashSet<string> InheritedKeywords { get; set; } = [];
+        }
 
         public static void Initialize(string jsonPath)
         {
@@ -24,11 +43,63 @@ namespace Digimon.Core
             using JsonDocument doc = JsonDocument.Parse(json);
             
             var cardIds = new HashSet<string>();
+            _cardMetadata.Clear();
+
             foreach (var element in doc.RootElement.EnumerateArray())
             {
                 if (element.TryGetProperty("card_id", out var idProp))
                 {
-                   cardIds.Add(idProp.GetString() ?? string.Empty);
+                   string id = idProp.GetString() ?? string.Empty;
+                   if (string.IsNullOrEmpty(id)) continue;
+
+                   cardIds.Add(id);
+                   
+                   // Parse Metadata
+                   var info = new CardInfo();
+                   info.Name = element.GetProperty("card_name_eng").GetString() ?? "Unknown";
+                   
+                   int kindInt = element.GetProperty("card_kind").GetInt32();
+                   info.Kind = (CardKind)kindInt; 
+                   
+                   info.PlayCost = element.TryGetProperty("play_cost", out var pc) ? pc.GetInt32() : 0;
+                   info.DP = element.TryGetProperty("dp", out var dp) ? dp.GetInt32() : 0;
+                   info.Level = element.TryGetProperty("level", out var lv) ? lv.GetInt32() : 0;
+                   
+                   info.Colors = new List<CardColor>();
+                   if(element.TryGetProperty("card_colors", out var colors))
+                   {
+                       foreach(var c in colors.EnumerateArray()) 
+                           info.Colors.Add((CardColor)c.GetInt32());
+                   }
+                   
+                   if(element.TryGetProperty("type_eng", out var types))
+                   {
+                       foreach(var t in types.EnumerateArray())
+                           info.Traits.Add(t.GetString() ?? "");
+                   }
+
+                   // Keyword Parsing
+                   if (element.TryGetProperty("effect_description_eng", out var effect))
+                   {
+                       string text = effect.GetString() ?? "";
+                       foreach(Match match in _keywordRegex.Matches(text))
+                       {
+                           if (match.Groups.Count > 1)
+                               info.Keywords.Add(match.Groups[1].Value);
+                       }
+                   }
+
+                   if (element.TryGetProperty("inherited_effect_description_eng", out var inherited))
+                   {
+                       string text = inherited.GetString() ?? "";
+                       foreach(Match match in _keywordRegex.Matches(text))
+                       {
+                           if (match.Groups.Count > 1)
+                               info.InheritedKeywords.Add(match.Groups[1].Value);
+                       }
+                   }
+
+                   _cardMetadata[id] = info;
                 }
             }
 
@@ -70,11 +141,6 @@ namespace Digimon.Core
         {
             if (string.IsNullOrEmpty(cardId)) return PaddingId;
             if (_idToInt.TryGetValue(cardId, out int id)) return id;
-            
-            // Allow dynamic temporary registration for debugging if not found? 
-            // Better to return PaddingId (0) or throw? 
-            // Request said "Reserve 0 for Empty/Padding". 
-            // If unknown, let's treat as padding/unknown (0)
             return PaddingId;
         }
 
@@ -89,6 +155,23 @@ namespace Digimon.Core
         {
             _idToInt.Clear();
             _intToId.Clear();
+            _cardMetadata.Clear();
+        }
+
+        public static Card CreateCard(string id)
+        {
+            if (_cardMetadata.TryGetValue(id, out var info))
+            {
+                var c = new Card(id, info.Name, info.Kind, new List<CardColor>(info.Colors), info.Level, info.DP, info.PlayCost);
+                c.Traits.AddRange(info.Traits);
+                foreach(var k in info.Keywords) c.Keywords.Add(k);
+                foreach(var k in info.InheritedKeywords) c.InheritedKeywords.Add(k);
+                return c;
+            }
+            
+            // Fallback for unknown IDs
+            Console.WriteLine($"[CardRegistry] Warning: creating dummy card for unknown ID: {id}");
+            return new Card(id, $"Dummy {id}", CardKind.Digimon, new List<CardColor>{ CardColor.Red }, 3, 2000, 3);
         }
     }
 }

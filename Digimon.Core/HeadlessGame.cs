@@ -46,5 +46,11 @@ namespace Digimon.Core
              // Use ActionDecoder to handle logic based on current state
              ActionDecoder.DecodeAndExecute(GameInstance, actionId);
         }
+
+        public float[] GetActionMask()
+        {
+            // Return mask for the player whose turn it is (or who needs to act)
+            return GameInstance.GetActionMask(GameInstance.CurrentPlayer.Id);
+        }
     }
 }

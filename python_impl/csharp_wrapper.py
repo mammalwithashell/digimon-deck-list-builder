@@ -90,3 +90,12 @@ class CSharpGameWrapper:
         float_arr = self.runner.GameInstance.GetBoardStateTensor(player_id)
         # Convert System.Single[] to numpy array
         return np.array(float_arr, dtype=np.float32)
+
+    def get_action_mask(self, player_id: int) -> np.ndarray:
+        # Get float array (0.0/1.0) from C#
+        float_arr = self.runner.GameInstance.GetActionMask(player_id)
+        # Convert to numpy boolean array (or keep as float)
+        # Using float for now as it's often used as mask multiplier
+        # But Gym often prefers bool for explicit masking API.
+        # Let's return float to be safe with C# return type.
+        return np.array(float_arr, dtype=np.float32)

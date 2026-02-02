@@ -243,6 +243,109 @@ namespace Digimon.Core
             Winner = winner;
         }
 
+        public float[] GetActionMask(int playerId)
+        {
+             // Returns a boolean mask as floats (1.0 = valid, 0.0 = invalid)
+             // Size: 2120 (Covering all ranges)
+             float[] mask = new float[2120]; 
+             
+             // Default all to 0
+             Array.Fill(mask, 0.0f);
+
+             Player me = (playerId == 1) ? Player1 : Player2;
+             GamePhase phase = TurnStateMachine.CurrentPhase;
+
+             if (phase == GamePhase.Main)
+             {
+                 // 1. Play Cards (0-29)
+                 for(int i=0; i < me.Hand.Count; i++)
+                 {
+                     mask[i] = 1.0f;
+                 }
+
+                 // 2. Trash (30-59) - Check effects? kept 0 for now.
+                 
+                 // 3. Attack (100-399)
+                 for(int i=0; i<me.BattleArea.Count; i++)
+                 {
+                     Permanent attacker = me.BattleArea[i];
+                     if (attacker.IsSuspended) continue; 
+                     
+                     // Security Attack (Target 12)
+                     mask[100 + (i * 15) + 12] = 1.0f;
+
+                     // Digimon Attacks (Targets 0-11)
+                     for(int j=0; j<OpponentPlayer.BattleArea.Count; j++)
+                     {
+                         Permanent target = OpponentPlayer.BattleArea[j];
+                         if (target.IsSuspended) 
+                         {
+                             mask[100 + (i * 15) + j] = 1.0f;
+                         }
+                     }
+                 }
+
+                 // 4. Digivolve (400-999)
+                 for(int h=0; h<me.Hand.Count; h++)
+                 {
+                     Card evolveCard = me.Hand[h];
+                     if (!evolveCard.IsDigimon) continue;
+
+                     for(int f=0; f<me.BattleArea.Count; f++)
+                     {
+                         Permanent baseMon = me.BattleArea[f];
+                         bool colorMatch = baseMon.TopCard.Colors.Intersect(evolveCard.Colors).Any();
+                         bool levelValid = (evolveCard.Level - baseMon.TopCard.Level) == 1;
+
+                         if (colorMatch && levelValid)
+                         {
+                             mask[400 + (h * 15) + f] = 1.0f;
+                         }
+                     }
+                 }
+                 
+                 // 5. Effects (1000-1999)
+                 
+                 // 6. Pass (62) - End Turn
+                 mask[62] = 1.0f;
+             }
+             else if (phase == GamePhase.Breeding)
+             {
+                 // Hatch (60)
+                 if (me.BreedingArea.Count == 0 && me.DigitamaDeck.Count > 0) mask[60] = 1.0f;
+                 // Move (61)
+                 if (me.BreedingArea.Count > 0 && me.BreedingArea[0].TopCard.Level >= 3) mask[61] = 1.0f;
+                 // Pass (62)
+                 mask[62] = 1.0f;
+             }
+             else if (phase == GamePhase.SelectTarget) 
+             {
+                 // Enable logical candidates (placeholder)
+             }
+             else if (phase == GamePhase.SelectTrash)
+             {
+                  for(int i=0; i<me.Trash.Count; i++) mask[i] = 1.0f;
+             }
+             else if (phase == GamePhase.BlockTiming)
+             {
+                 mask[62] = 1.0f; // Pass
+                 for(int i=0; i<me.BattleArea.Count; i++)
+                 {
+                     Permanent p = me.BattleArea[i];
+                     if (!p.IsSuspended && p.HasKeyword("Blocker")) 
+                     {
+                         mask[100 + i] = 1.0f;
+                     }
+                 }
+             }
+             else if (phase == GamePhase.CounterTiming)
+             {
+                  mask[62] = 1.0f; // Pass
+             }
+
+             return mask;
+        }
+
         public void SwitchTurn()
         {
             CurrentPlayer.IsMyTurn = false;
