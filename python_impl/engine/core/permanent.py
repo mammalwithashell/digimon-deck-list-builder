@@ -113,6 +113,7 @@ class Permanent:
         for source in self.card_sources[:-1]:
             source_effects = source.effect_list(timing)
             for eff in source_effects:
+                eff.set_effect_source_permanent(self)
                 if eff.is_inherited_effect:
                     effects.append(eff)
 
@@ -120,6 +121,7 @@ class Permanent:
         if self.top_card:
             top_effects = self.top_card.effect_list(timing)
             for eff in top_effects:
+                eff.set_effect_source_permanent(self)
                 if not eff.is_inherited_effect:
                     effects.append(eff)
 

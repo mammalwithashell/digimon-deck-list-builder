@@ -21,6 +21,22 @@ class Player:
 
         self.battle_area: List['Permanent'] = []
         self.breeding_area: Optional['Permanent'] = None
+        self.game = None
+
+    def gain_memory(self, amount: int):
+        if self.game:
+            # Memory is relative to turn player.
+            # If I am turn player, +amount.
+            # If I am opponent (e.g. Blocker causing memory gain?), -amount?
+            # Memory is always relative to *turn player* in Game.
+            # If I am turn player, increasing memory (to my side) means +amount.
+            # If I am opponent, gaining memory means moving gauge to MY side (negative).
+            if self.is_my_turn:
+                self.game.memory += amount
+                print(f"{self.player_name} gained {amount} memory. Memory: {self.game.memory}")
+            else:
+                self.game.memory -= amount
+                print(f"{self.player_name} gained {amount} memory. Memory: {self.game.memory}")
 
     @property
     def is_lose(self) -> bool:
@@ -61,6 +77,15 @@ class Player:
         self.hand_cards.append(card)
         print(f"{self.player_name} drew a card. Hand size: {len(self.hand_cards)}")
         return True
+
+    def recovery(self, amount: int):
+        for _ in range(amount):
+            if not self.library_cards:
+                print("Cannot recover: Deck empty.")
+                break
+            card = self.library_cards.pop(0)
+            self.security_cards.insert(0, card)
+            print(f"{self.player_name} recovers 1 security.")
 
     def hatch(self):
         if self.breeding_area is not None:
@@ -156,6 +181,27 @@ class Player:
 
     def delete_permanent(self, permanent: 'Permanent'):
         if permanent in self.battle_area:
+            # Trigger On Deletion effects BEFORE removing from field?
+            # Usually On Deletion happens when it hits trash? Or while on field pending?
+            # Rule: Triggers when deleted.
+            # If we remove it from battle_area, execute_effects won't find it (it iterates battle_area).
+            # So we must trigger it explicitly for this permanent?
+            # Or trigger generic "Anyone Deleted" which observers see.
+            # But the deleted card itself needs to trigger.
+            # If it's not in battle_area, Game.execute_effects won't check it.
+            # So we should probably execute effects for THIS permanent specifically here.
+
+            # Note: This is a simplified handling. Ideally, Game handles the event queue.
+            if self.game:
+                # We need to manually invoke effects for this permanent because it's about to leave
+                # or we rely on Game to do it.
+                # If we rely on Game.execute_effects(OnDestroyedAnyone), we must ensure
+                # this permanent is still considered "active" or passed explicitly.
+                # Current Game.execute_effects iterates battle_area.
+                # So we must call it BEFORE removing.
+                # But if we call it before removing, it's still on field.
+                self.game.execute_effects(EffectTiming.OnDestroyedAnyone, caused_by_permanent=permanent)
+
             self.battle_area.remove(permanent)
             self.trash_cards.extend(permanent.card_sources)
             print(f"{self.player_name}'s permanent {permanent.top_card.card_names[0]} deleted.")

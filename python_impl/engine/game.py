@@ -1,7 +1,7 @@
 from __future__ import annotations
 from typing import TYPE_CHECKING, Optional, Union
 import random
-from python_impl.engine.data.enums import GamePhase, EffectTiming, AttackResolution
+from python_impl.engine.data.enums import GamePhase, EffectTiming, AttackResolution, PendingAction
 from python_impl.engine.core.player import Player
 from python_impl.engine.core.permanent import Permanent
 
@@ -16,6 +16,8 @@ class Game:
         self.player2.player_name = "Player 2"
         self.player1.player_id = 1
         self.player2.player_id = 2
+        self.player1.game = self
+        self.player2.game = self
 
         self.turn_player: Player = self.player1
         self.opponent_player: Player = self.player2
@@ -158,7 +160,7 @@ class Game:
             self.current_phase = GamePhase.End
             self.next_phase()
 
-    def execute_effects(self, timing: EffectTiming):
+    def execute_effects(self, timing: EffectTiming, **kwargs):
         # Naive implementation: iterate all permanents of turn player
         # In full engine, iterate ALL permanents (both players) and check conditions
         all_perms = self.turn_player.battle_area + self.opponent_player.battle_area
@@ -179,7 +181,21 @@ class Game:
                     else:
                         owner = self.turn_player # Default safely
 
-                context = {"game": self, "player": owner, "permanent": perm}
+                context = {"game": self, "player": owner, "permanent": perm, "timing": timing}
+                context.update(kwargs)
+
+                # Basic timing filtering based on flags
+                has_flags = effect.is_on_attack or effect.is_when_digivolving or effect.is_on_play or effect.is_on_deletion
+                if has_flags:
+                    matches = False
+                    if effect.is_on_attack and timing == EffectTiming.OnUseAttack: matches = True
+                    if effect.is_when_digivolving and timing == EffectTiming.WhenDigivolving: matches = True
+                    if effect.is_on_play and timing == EffectTiming.OnEnterFieldAnyone: matches = True
+                    if effect.is_on_deletion and timing == EffectTiming.OnDestroyedAnyone: matches = True
+
+                    if not matches:
+                        continue
+
                 if effect.can_use_condition is None or effect.can_use_condition(context):
                     print(f"Triggering effect: {effect.effect_name}")
                     if effect.on_process_callback:
@@ -247,7 +263,7 @@ class Game:
         self.memory -= cost
         print(f"Played {card.card_names[0]}. Memory: {self.memory}")
 
-        self.execute_effects(EffectTiming.OnEnterFieldAnyone)
+        self.execute_effects(EffectTiming.OnEnterFieldAnyone, caused_by_card=card)
         self.check_turn_end()
 
     def action_digivolve(self, permanent_index: int, card_index: int):

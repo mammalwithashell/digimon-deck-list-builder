@@ -257,5 +257,53 @@
     "type_eng": ["Reptile", "LIBERATOR", "Virus", "Rookie"],
     "effect_description_eng": "[Your Turn] When this Digimon would digivolve into a Digimon card with the [Reptile] or [Dragonkin] trait, reduce the digivolution cost by 1.",
     "inherited_effect_description_eng": "[Your Turn] This Digimon gets +2000 DP."
+  },
+  {
+    "card_id": "BT13-009",
+    "card_index": 100,
+    "card_name_eng": "Huckmon",
+    "card_name_jpn": "ハックモン",
+    "card_effect_class_name": "BT13_009",
+    "play_cost": 3,
+    "dp": 2000,
+    "level": 3,
+    "card_kind": 0,
+    "rarity": 0,
+    "card_colors": [0],
+    "type_eng": ["Mini Dragon", "Huckmon"],
+    "effect_description_eng": "[Your Turn] When you play a Digimon with [Sistermon] in its name, you may digivolve this Digimon into a [BaoHuckmon] in your hand without paying its cost.",
+    "inherited_effect_description_eng": "[Your Turn] [Once Per Turn] When you play a Digimon with [Sistermon] in its name, gain 1 memory."
+  },
+  {
+    "card_id": "BT13-011",
+    "card_index": 101,
+    "card_name_eng": "Aquilamon",
+    "card_name_jpn": "アクィラモン",
+    "card_effect_class_name": "BT13_011",
+    "play_cost": 5,
+    "dp": 5000,
+    "level": 4,
+    "card_kind": 0,
+    "rarity": 0,
+    "card_colors": [0],
+    "type_eng": ["Giant Bird", "Free"],
+    "effect_description_eng": "[On Play] [When Digivolving] Delete 1 of your opponent's Digimon with 3000 DP or less.",
+    "inherited_effect_description_eng": "[On Deletion] <Draw 1> (Draw 1 card from your deck.)"
+  },
+  {
+    "card_id": "BT13-012",
+    "card_index": 102,
+    "card_name_eng": "GeoGreymon",
+    "card_name_jpn": "ジオグレイモン",
+    "card_effect_class_name": "BT13_012",
+    "play_cost": 5,
+    "dp": 5000,
+    "level": 4,
+    "card_kind": 0,
+    "rarity": 0,
+    "card_colors": [0, 2],
+    "type_eng": ["Dinosaur", "Vaccine"],
+    "effect_description_eng": "[When Digivolving] Search your security stack, and you may play 1 red or yellow Tamer card among it without paying its cost. If you did, <Recovery +1 (Deck)>. Then, shuffle your security stack.",
+    "inherited_effect_description_eng": "[Your Turn] [Once Per Turn] When one of your red or yellow Tamers becomes suspended, you may delete 1 of your opponent's Digimon with 3000 DP or less."
   }
 ]
