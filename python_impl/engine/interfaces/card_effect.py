@@ -14,7 +14,7 @@ class ICardEffect(ABC):
         self.effect_name: str = ""
         self.effect_description: str = ""
         self.hash_string: str = ""
-        self.on_process_callback: Optional[Callable[[], None]] = None
+        self.on_process_callback: Optional[Callable[[Dict[str, Any]], None]] = None
         self.root_card_effect: Optional['ICardEffect'] = None
         self.can_use_condition: Optional[Callable[[Dict[str, Any]], bool]] = None
         self.can_activate_condition: Optional[Callable[[Dict[str, Any]], bool]] = None
@@ -110,7 +110,7 @@ class ICardEffect(ABC):
     def set_hash_string(self, hash_string: str):
         self.hash_string = hash_string
 
-    def set_on_process_callback(self, on_process_callback: Callable[[], None]):
+    def set_on_process_callback(self, on_process_callback: Callable[[Dict[str, Any]], None]):
         self.on_process_callback = on_process_callback
 
     def set_root_card_effect(self, root_card_effect: 'ICardEffect'):

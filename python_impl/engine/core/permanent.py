@@ -10,6 +10,7 @@ class Permanent:
     def __init__(self, card_sources: List['CardSource']):
         self.card_sources: List['CardSource'] = card_sources
         self.is_suspended: bool = False
+        self.temp_dp_modifier: int = 0
 
     @property
     def digivolution_cards(self) -> List['CardSource']:
@@ -52,7 +53,7 @@ class Permanent:
         active_effects = self.get_active_effects()
         modifier = sum(effect.dp_modifier for effect in active_effects)
 
-        return max(0, base + modifier)
+        return max(0, base + modifier + self.temp_dp_modifier)
 
     def get_active_effects(self) -> List['ICardEffect']:
         # Gather effects from all sources in stack

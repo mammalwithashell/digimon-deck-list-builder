@@ -1,7 +1,7 @@
 from __future__ import annotations
 from typing import TYPE_CHECKING, Optional, Union
 import random
-from python_impl.engine.data.enums import GamePhase, EffectTiming, AttackResolution
+from python_impl.engine.data.enums import GamePhase, EffectTiming, AttackResolution, PendingAction
 from python_impl.engine.core.player import Player
 from python_impl.engine.core.permanent import Permanent
 
@@ -179,11 +179,11 @@ class Game:
                     else:
                         owner = self.turn_player # Default safely
 
-                context = {"game": self, "player": owner, "permanent": perm}
+                context = {"game": self, "player": owner, "permanent": perm, "timing": timing}
                 if effect.can_use_condition is None or effect.can_use_condition(context):
                     print(f"Triggering effect: {effect.effect_name}")
                     if effect.on_process_callback:
-                        effect.on_process_callback()
+                        effect.on_process_callback(context)
 
     def declare_winner(self, winner: Player):
         self.game_over = True
