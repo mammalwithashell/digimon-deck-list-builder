@@ -10,7 +10,9 @@
     "level": 2,
     "card_kind": 3,
     "rarity": 1,
-    "card_colors": [0],
+    "card_colors": [
+      0
+    ],
     "inherited_effect_description_eng": "[Your Turn] While this Digimon has 4 or more digivolution cards, it gets +1000 DP."
   },
   {
@@ -24,7 +26,9 @@
     "level": 3,
     "card_kind": 0,
     "rarity": 0,
-    "card_colors": [0],
+    "card_colors": [
+      0
+    ],
     "effect_description_eng": ""
   },
   {
@@ -38,7 +42,9 @@
     "level": 3,
     "card_kind": 0,
     "rarity": 1,
-    "card_colors": [0],
+    "card_colors": [
+      0
+    ],
     "inherited_effect_description_eng": "[Your Turn] This Digimon gets +1000 DP."
   },
   {
@@ -52,7 +58,9 @@
     "level": 3,
     "card_kind": 0,
     "rarity": 0,
-    "card_colors": [0],
+    "card_colors": [
+      0
+    ],
     "effect_description_eng": ""
   },
   {
@@ -66,7 +74,9 @@
     "level": 4,
     "card_kind": 0,
     "rarity": 0,
-    "card_colors": [0],
+    "card_colors": [
+      0
+    ],
     "effect_description_eng": ""
   },
   {
@@ -80,7 +90,9 @@
     "level": 4,
     "card_kind": 0,
     "rarity": 0,
-    "card_colors": [0],
+    "card_colors": [
+      0
+    ],
     "effect_description_eng": ""
   },
   {
@@ -90,11 +102,14 @@
     "card_name_jpn": "グレイモン",
     "card_effect_class_name": "ST1_07",
     "play_cost": 5,
+    "digivolve_cost": 2,
     "dp": 4000,
     "level": 4,
     "card_kind": 0,
     "rarity": 1,
-    "card_colors": [0],
+    "card_colors": [
+      0
+    ],
     "inherited_effect_description_eng": "[Your Turn] <Security Attack +1> (This Digimon checks 1 additional security card)."
   },
   {
@@ -108,7 +123,9 @@
     "level": 5,
     "card_kind": 0,
     "rarity": 1,
-    "card_colors": [0],
+    "card_colors": [
+      0
+    ],
     "effect_description_eng": ""
   },
   {
@@ -122,7 +139,9 @@
     "level": 5,
     "card_kind": 0,
     "rarity": 2,
-    "card_colors": [0],
+    "card_colors": [
+      0
+    ],
     "inherited_effect_description_eng": "[Your Turn] When this Digimon is blocked, gain 3 memory."
   },
   {
@@ -136,7 +155,9 @@
     "level": 6,
     "card_kind": 0,
     "rarity": 2,
-    "card_colors": [0],
+    "card_colors": [
+      0
+    ],
     "effect_description_eng": ""
   },
   {
@@ -150,7 +171,9 @@
     "level": 6,
     "card_kind": 0,
     "rarity": 3,
-    "card_colors": [0],
+    "card_colors": [
+      0
+    ],
     "effect_description_eng": "[Your Turn] For every 2 digivolution cards, this Digimon gains <Security Attack +1>."
   },
   {
@@ -164,7 +187,9 @@
     "level": 0,
     "card_kind": 1,
     "rarity": 2,
-    "card_colors": [0],
+    "card_colors": [
+      0
+    ],
     "effect_description_eng": "[Your Turn] All of your Red Digimon gain +1000 DP."
   },
   {
@@ -178,7 +203,9 @@
     "level": 0,
     "card_kind": 2,
     "rarity": 0,
-    "card_colors": [0],
+    "card_colors": [
+      0
+    ],
     "effect_description_eng": "[Main] 1 of your Digimon gets +3000 DP for the turn.",
     "security_effect_description_eng": "[Security] Add this card to your hand."
   },
@@ -193,7 +220,9 @@
     "level": 0,
     "card_kind": 2,
     "rarity": 0,
-    "card_colors": [0],
+    "card_colors": [
+      0
+    ],
     "effect_description_eng": "[Main] All of your Security Digimon get +7000 DP until the end of your opponent's next turn.",
     "security_effect_description_eng": "[Security] Add this card to your hand."
   },
@@ -208,7 +237,9 @@
     "level": 0,
     "card_kind": 2,
     "rarity": 0,
-    "card_colors": [0],
+    "card_colors": [
+      0
+    ],
     "effect_description_eng": "[Main] Delete up to 2 of your opponent's Digimon with 4000 DP or less.",
     "security_effect_description_eng": "[Security] Activate this card's [Main] effect."
   },
@@ -223,7 +254,9 @@
     "level": 0,
     "card_kind": 2,
     "rarity": 1,
-    "card_colors": [0],
+    "card_colors": [
+      0
+    ],
     "effect_description_eng": "[Main] Delete 1 of your opponent's Digimon.",
     "security_effect_description_eng": "[Security] Activate this card's [Main] effect."
   },
@@ -238,8 +271,14 @@
     "level": 2,
     "card_kind": 3,
     "rarity": 0,
-    "card_colors": [1],
-    "type_eng": ["Appmon", "Game", "Flick"],
+    "card_colors": [
+      1
+    ],
+    "type_eng": [
+      "Appmon",
+      "Game",
+      "Flick"
+    ],
     "inherited_effect_description_eng": "[When Attacking] [Once Per Turn] If this Digimon has the [Appmon] trait, <Draw 1>."
   },
   {
@@ -253,8 +292,15 @@
     "level": 3,
     "card_kind": 0,
     "rarity": 0,
-    "card_colors": [0],
-    "type_eng": ["Reptile", "LIBERATOR", "Virus", "Rookie"],
+    "card_colors": [
+      0
+    ],
+    "type_eng": [
+      "Reptile",
+      "LIBERATOR",
+      "Virus",
+      "Rookie"
+    ],
     "effect_description_eng": "[Your Turn] When this Digimon would digivolve into a Digimon card with the [Reptile] or [Dragonkin] trait, reduce the digivolution cost by 1.",
     "inherited_effect_description_eng": "[Your Turn] This Digimon gets +2000 DP."
   }

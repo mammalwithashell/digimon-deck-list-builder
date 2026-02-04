@@ -5,3 +5,8 @@ __pycache__/
 .gemini/GEMINI.md
 Digimon.Core/bin
 Digimon.Core/obj
+Digimon TCG resources/manual.pdf
+Digimon TCG resources/general_rule.pdf
+Digimon.Shim
+Digimon.DCGO
+dcgo_build_errors_*

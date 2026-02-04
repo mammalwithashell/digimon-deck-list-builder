@@ -9,6 +9,7 @@ namespace Digimon.Core
         public int PlayCost { get; set; }
         public int UseCost { get; set; }
         public int BaseDP { get; set; }
+        public int DigivolveCost { get; set; } // MVP: Primary Evo Cost
         public int Level { get; set; }
         public List<CardColor> Colors { get; set; }
         public CardKind Kind { get; set; }
@@ -22,7 +23,7 @@ namespace Digimon.Core
         public bool IsOption => Kind == CardKind.Option;
         public bool IsDigiEgg => Kind == CardKind.DigiEgg;
 
-        public Card(string id, string name, CardKind kind, List<CardColor> colors, int level, int dp, int playCost)
+        public Card(string id, string name, CardKind kind, List<CardColor> colors, int level, int dp, int playCost, int digivolveCost = 0)
         {
             Id = id;
             Name = name;
@@ -31,6 +32,7 @@ namespace Digimon.Core
             Level = level;
             BaseDP = dp;
             PlayCost = playCost;
+            DigivolveCost = digivolveCost;
         }
 
         // Additional logic from CardSource can be added here

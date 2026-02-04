@@ -2,15 +2,17 @@ using System;
 using System.Collections.Generic;
 using Digimon.Core.Constants;
 
+using Digimon.Core.Loggers;
+
 namespace Digimon.Core
 {
     public abstract class BaseGameRunner
     {
         public Game GameInstance { get; protected set; }
 
-        public BaseGameRunner(List<string> deck1Ids, List<string> deck2Ids)
+        public BaseGameRunner(List<string> deck1Ids, List<string> deck2Ids, IGameLogger? logger = null)
         {
-            GameInstance = new Game();
+            GameInstance = new Game(logger);
             var deck1 = CreateDeck(deck1Ids);
             var deck2 = CreateDeck(deck2Ids);
             GameInstance.StartGame(deck1, deck2);

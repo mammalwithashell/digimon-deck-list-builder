@@ -63,7 +63,8 @@ namespace Digimon.Core
                      // For now, just play it directly using existing logic stub
                      // We need a PlayCard method in Player/Game that handles memory payment
                      // game.CurrentPlayer.PlayCard(handIndex);
-                     Console.WriteLine($"[ActionDecoder] Play Card Index {handIndex}");
+                     // Console.WriteLine($"[ActionDecoder] Play Card Index {handIndex}");
+                     game.Logger.LogVerbose($"[ActionDecoder] Play Card Index {handIndex}");
                      game.CurrentPlayer.PlayCard(handIndex, game); // Assuming we'll add this
                  }
                  else if (actionId >= 30 && actionId <= 59) // Trash Card (30-59)
@@ -90,8 +91,8 @@ namespace Digimon.Core
                  int attackerIndex = normalized / 15;
                  int targetIndex = normalized % 15;
                  
-                 Console.WriteLine($"[ActionDecoder] Attack: Slot {attackerIndex} -> Target {targetIndex}");
-                 // game.ExecuteAttack(attackerIndex, targetIndex);
+                 game.Logger.Log($"[ActionDecoder] Attack: Slot {attackerIndex} -> Target {targetIndex}");
+                 game.ExecuteAttack(attackerIndex, targetIndex);
              }
              // Digivolve (400-999)
              else if (actionId >= 400 && actionId <= 999)
@@ -101,8 +102,8 @@ namespace Digimon.Core
                  int handIndex = normalized / 15;
                  int fieldIndex = normalized % 15;
 
-                 Console.WriteLine($"[ActionDecoder] Digivolve: Hand {handIndex} -> Field {fieldIndex}");
-                 // game.ExecuteDigivolve(handIndex, fieldIndex);
+                 game.Logger.Log($"[ActionDecoder] Digivolve: Hand {handIndex} -> Field {fieldIndex}");
+                 game.ExecuteDigivolve(handIndex, fieldIndex);
              }
              // Activate Effect (1000-1999)
              else if (actionId >= 1000 && actionId <= 1999)
@@ -111,7 +112,7 @@ namespace Digimon.Core
                  int sourceIndex = normalized / 10;
                  int effectIndex = normalized % 10;
 
-                 Console.WriteLine($"[ActionDecoder] Effect: Source {sourceIndex}, Effect {effectIndex}");
+                 game.Logger.Log($"[ActionDecoder] Effect: Source {sourceIndex}, Effect {effectIndex}");
                  // game.ExecuteEffect(sourceIndex, effectIndex);
              }
         }
@@ -133,7 +134,7 @@ namespace Digimon.Core
              // Re-interpret indices for selection
              if (actionId >= 0 && actionId <= 29)
              {
-                 Console.WriteLine($"[ActionDecoder] Selected Hand Card {actionId}");
+                 game.Logger.LogVerbose($"[ActionDecoder] Selected Hand Card {actionId}");
                  // game.ResolveSelection(TargetType.Hand, actionId);
              }
              else if (actionId >= 100 && actionId <= 299)
@@ -144,7 +145,7 @@ namespace Digimon.Core
                  int normalized = actionId - 100;
                  // Determine slot.. roughly. 
                  // We can simplify and just say 100+ = Field Entity selection.
-                  Console.WriteLine($"[ActionDecoder] Selected Field Entity {actionId}");
+                  game.Logger.LogVerbose($"[ActionDecoder] Selected Field Entity {actionId}");
              }
              
              // After selection, transition back to Main or Next Step
@@ -164,7 +165,7 @@ namespace Digimon.Core
              else if (actionId >= 100 && actionId <= 111)
              {
                  int blockerIndex = actionId - 100;
-                  Console.WriteLine($"[ActionDecoder] Block with Slot {blockerIndex}");
+                  game.Logger.Log($"[ActionDecoder] Block with Slot {blockerIndex}");
                   // game.ExecuteBlock(blockerIndex);
                   game.TurnStateMachine.ClearPendingState();
              }
@@ -182,7 +183,7 @@ namespace Digimon.Core
                  int normalized = actionId - 400;
                  int handIndex = normalized / 15;
                  int fieldIndex = normalized % 15;
-                 Console.WriteLine($"[ActionDecoder] Counter Blast Digivolve: Hand {handIndex} -> Field {fieldIndex}");
+                 game.Logger.Log($"[ActionDecoder] Counter Blast Digivolve: Hand {handIndex} -> Field {fieldIndex}");
                  // game.ExecuteBlastDigivolve(handIndex, fieldIndex);
                  game.TurnStateMachine.ClearPendingState(); 
             }
@@ -193,7 +194,7 @@ namespace Digimon.Core
             // Reuse 0-59 for Trash Indices
             if (actionId >= 0 && actionId <= 59)
             {
-                Console.WriteLine($"[ActionDecoder] Selected Trash Index {actionId}");
+                game.Logger.LogVerbose($"[ActionDecoder] Selected Trash Index {actionId}");
                 // game.ResolveSelection(TargetType.Trash, actionId);
                 game.TurnStateMachine.ClearPendingState();
             }
@@ -207,7 +208,7 @@ namespace Digimon.Core
                  int normalized = actionId - 2000;
                  int fieldIndex = normalized / 10;
                  int sourceIndex = normalized % 10;
-                 Console.WriteLine($"[ActionDecoder] Selected Source: Field {fieldIndex}, Source {sourceIndex}");
+                 game.Logger.LogVerbose($"[ActionDecoder] Selected Source: Field {fieldIndex}, Source {sourceIndex}");
                  // game.ResolveSelection(TargetType.Source, fieldIndex, sourceIndex);
                  game.TurnStateMachine.ClearPendingState();
              }

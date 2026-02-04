@@ -32,7 +32,7 @@ from System.Collections.Generic import List as CsList
 from System import String
 
 class CSharpGameWrapper:
-    def __init__(self, deck1: List[str], deck2: List[str], player1_type: str = "agent", player2_type: str = "agent"):
+    def __init__(self, deck1: List[str], deck2: List[str], player1_type: str = "agent", player2_type: str = "agent", verbose_logging: bool = False):
         cs_deck1 = CsList[String]()
         for card_id in deck1:
             cs_deck1.Add(card_id)
@@ -53,13 +53,23 @@ class CSharpGameWrapper:
         p2_human = player2_type.lower() == "human"
         
         if not p1_human and not p2_human:
-             self.runner = HeadlessGame(cs_deck1, cs_deck2)
+             # Headless Game supports verbose flag
+             self.runner = HeadlessGame(cs_deck1, cs_deck2, verbose_logging)
              self.is_interactive = False
         else:
              t1 = PlayerType.Human if p1_human else PlayerType.Agent
              t2 = PlayerType.Human if p2_human else PlayerType.Agent
+             # Interactive Game defaults to Verbose Logger inside C#
              self.runner = InteractiveGame(cs_deck1, cs_deck2, t1, t2)
              self.is_interactive = True
+
+    def get_log(self) -> List[str]:
+        """Retrieves and clears the current log buffer."""
+        # Access Logger via GameInstance
+        logger = self.runner.GameInstance.Logger
+        logs = list(logger.GetLogs())
+        logger.Clear()
+        return logs
 
     def run_until_conclusion(self) -> int:
         if self.is_interactive:

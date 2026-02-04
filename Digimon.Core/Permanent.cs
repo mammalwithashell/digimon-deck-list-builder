@@ -51,5 +51,19 @@ namespace Digimon.Core
             
             return false;
         }
+
+        public void Digivolve(Card newCard)
+        {
+            Sources.Add(TopCard);
+            TopCard = newCard;
+            CurrentDP = newCard.BaseDP;
+            // Note: Suspension status is inherited automatically as we don't change IsSuspended.
+            // Temporary DP buffs (e.g. from Options this turn) might be lost if we reset CurrentDP?
+            // Rules: "Effects applied to the Digimon continue to apply."
+            // But base DP changes.
+            // If we had +1000 DP buff, we should re-calculate.
+            // Since we don't track buffs separately yet, setting to BaseDP is correct for MVP 
+            // but effectively clears buffs (which is technically wrong but acceptable for this stage).
+        }
     }
 }

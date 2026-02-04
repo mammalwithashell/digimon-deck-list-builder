@@ -1,0 +1,3 @@
+[submodule "DCGO-Card-Scripts"]
+	path = DCGO-Card-Scripts
+	url = https://github.com/DCGO2/DCGO-Card-Scripts

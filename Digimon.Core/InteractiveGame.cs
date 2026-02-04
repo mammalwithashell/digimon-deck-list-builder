@@ -1,6 +1,4 @@
-using System;
-using System.Collections.Generic;
-using Digimon.Core.Constants;
+using Digimon.Core.Loggers;
 
 namespace Digimon.Core
 {
@@ -10,7 +8,7 @@ namespace Digimon.Core
         public PlayerType Player2Type { get; private set; }
 
         public InteractiveGame(List<string> deck1Ids, List<string> deck2Ids, PlayerType player1Type, PlayerType player2Type)
-            : base(deck1Ids, deck2Ids)
+            : base(deck1Ids, deck2Ids, new VerboseLogger())
         {
             Player1Type = player1Type;
             Player2Type = player2Type;
@@ -50,27 +48,18 @@ namespace Digimon.Core
 
         public void Step(int actionId)
         {
-            // Stub for human interaction
-            // In reality, this would decode the actionId and apply it to GameInstance
-            // Console.WriteLine($"[InteractiveGame] Human Execute Action: {actionId}");
-            
-            // Intelligence: Handle Phase
-            if (GameInstance.TurnStateMachine.CurrentPhase == GamePhase.Breeding)
-            {
-                // For this stub, assume actionId 0 means "Proceed" or "Skip"
-                GameInstance.BreedingPass(); 
-                
-                if (GameInstance.TurnStateMachine.CurrentPhase == GamePhase.Main)
-                {
-                    // Check if we should auto-pass main, but usually human wants to do things.
-                    // For now, let's keep the existing stub logic:
-                    GameInstance.TurnStateMachine.PassTurn();
-                }
-            }
-            else if (GameInstance.TurnStateMachine.CurrentPhase == GamePhase.Main)
-            {
-                GameInstance.TurnStateMachine.PassTurn();
-            }
+            // Execute Action using Decoder (which logs to VerboseLogger)
+            ActionDecoder.DecodeAndExecute(GameInstance, actionId);
+        }
+        
+        public List<string> GetLastLog()
+        {
+            return GameInstance.Logger.GetLogs();
+        }
+
+        public void ClearLog()
+        {
+           GameInstance.Logger.Clear();
         }
     }
 }

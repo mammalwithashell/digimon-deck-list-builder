@@ -27,6 +27,7 @@ namespace Digimon.Core
             public int Level { get; set; }
             public int DP { get; set; }
             public int PlayCost { get; set; }
+            public int DigivolveCost { get; set; } // Added
             public List<string> Traits { get; set; } = [];
             public HashSet<string> Keywords { get; set; } = [];
             public HashSet<string> InheritedKeywords { get; set; } = [];
@@ -62,6 +63,7 @@ namespace Digimon.Core
                    info.Kind = (CardKind)kindInt; 
                    
                    info.PlayCost = element.TryGetProperty("play_cost", out var pc) ? pc.GetInt32() : 0;
+                   info.DigivolveCost = element.TryGetProperty("digivolve_cost", out var dc) ? dc.GetInt32() : 0; // Parse
                    info.DP = element.TryGetProperty("dp", out var dp) ? dp.GetInt32() : 0;
                    info.Level = element.TryGetProperty("level", out var lv) ? lv.GetInt32() : 0;
                    
@@ -103,6 +105,8 @@ namespace Digimon.Core
                 }
             }
 
+            // ... (Rest of Init Code) ...
+            
             // Sort alphabetically for deterministic IDs
             var sortedIds = cardIds.Where(id => !string.IsNullOrEmpty(id)).OrderBy(id => id).ToList();
 
@@ -162,7 +166,7 @@ namespace Digimon.Core
         {
             if (_cardMetadata.TryGetValue(id, out var info))
             {
-                var c = new Card(id, info.Name, info.Kind, new List<CardColor>(info.Colors), info.Level, info.DP, info.PlayCost);
+                var c = new Card(id, info.Name, info.Kind, new List<CardColor>(info.Colors), info.Level, info.DP, info.PlayCost, info.DigivolveCost);
                 c.Traits.AddRange(info.Traits);
                 foreach(var k in info.Keywords) c.Keywords.Add(k);
                 foreach(var k in info.InheritedKeywords) c.InheritedKeywords.Add(k);
@@ -171,7 +175,7 @@ namespace Digimon.Core
             
             // Fallback for unknown IDs
             Console.WriteLine($"[CardRegistry] Warning: creating dummy card for unknown ID: {id}");
-            return new Card(id, $"Dummy {id}", CardKind.Digimon, new List<CardColor>{ CardColor.Red }, 3, 2000, 3);
+            return new Card(id, $"Dummy {id}", CardKind.Digimon, new List<CardColor>{ CardColor.Red }, 3, 2000, 3, 0);
         }
     }
 }

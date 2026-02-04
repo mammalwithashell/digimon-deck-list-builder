@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using Digimon.Core.Loggers;
 
 namespace Digimon.Core
 {
@@ -26,19 +27,19 @@ namespace Digimon.Core
             Name = name;
         }
 
-        public void Draw()
+        public void Draw(IGameLogger? logger = null)
         {
             if (Deck.Count > 0)
             {
                 Card card = Deck[0];
                 Deck.RemoveAt(0);
                 Hand.Add(card);
-                // Console.WriteLine($"[Player {Id}] Drew {card.Name} ({card.Id})");
+                logger?.LogVerbose($"[Player {Id}] Drew {card.Name} ({card.Id})");
             }
             else
             {
                 // Deck out logic handled by Game
-                // Console.WriteLine($"[Player {Id}] Cannot draw - Deck empty.");
+                logger?.LogVerbose($"[Player {Id}] Cannot draw - Deck empty.");
             }
         }
 
@@ -76,7 +77,7 @@ namespace Digimon.Core
 
 
 
-        public void Hatch()
+        public void Hatch(IGameLogger? logger = null)
         {
             if (DigitamaDeck.Count > 0 && BreedingArea.Count == 0)
             {
@@ -85,18 +86,18 @@ namespace Digimon.Core
                 
                 Permanent permanent = new(egg);
                 BreedingArea.Add(permanent);
-                // Console.WriteLine($"[Player {Id}] Hatched {egg.Name} ({egg.Id})");
+                logger?.Log($"[Player {Id}] Hatched {egg.Name} ({egg.Id})");
             }
         }
 
-        public void MoveBreedingToBattle()
+        public void MoveBreedingToBattle(IGameLogger? logger = null)
         {
             if (BreedingArea.Count > 0)
             {
                 Permanent digimon = BreedingArea[0];
                 BreedingArea.Clear();
                 BattleArea.Add(digimon);
-                // Console.WriteLine($"[Player {Id}] Moved {digimon.TopCard.Name} to Battle Area.");
+                logger?.Log($"[Player {Id}] Moved {digimon.TopCard.Name} to Battle Area.");
             }
         }
 
@@ -132,20 +133,34 @@ namespace Digimon.Core
             {
                 Permanent perm = new(card);
                 BattleArea.Add(perm);
-                Console.WriteLine($"[Player {Id}] Played {card.Name}. Memory: {game.MemoryGauge}");
+                game.Logger.Log($"[Player {Id}] Played {card.Name}. Memory: {game.MemoryGauge}");
             }
             else if (card.IsOption)
             {
                 // Option Resolution Stub
                 // Use Main Effect -> Then Trash
                 Trash.Add(card);
-                Console.WriteLine($"[Player {Id}] Used Option {card.Name}. Memory: {game.MemoryGauge}");
+                game.Logger.Log($"[Player {Id}] Used Option {card.Name}. Memory: {game.MemoryGauge}");
             }
             
             // 3. Trigger OnPlay Effects (Stub)
             
             // 4. Check Turn End via Game Loop (Caller handles this usually, or TurnStateMachine checks)
             game.TurnStateMachine.CheckTurnEnd();
+        }
+
+        public void RemovePermanent(Permanent permanent)
+        {
+            if (BattleArea.Contains(permanent))
+            {
+                BattleArea.Remove(permanent);
+            }
+            // Could also be in Breeding, but usually Deletion is from Battle
+        }
+
+        public void AddCardsToTrash(List<Card> cards)
+        {
+            Trash.AddRange(cards);
         }
     }
 }

@@ -2,13 +2,20 @@ using System;
 using System.Collections.Generic;
 using Digimon.Core.Constants;
 
+using Digimon.Core.Loggers;
+
 namespace Digimon.Core
 {
     public class HeadlessGame : BaseGameRunner
     {
-        public HeadlessGame(List<string> deck1Ids, List<string> deck2Ids) 
-            : base(deck1Ids, deck2Ids)
+        public HeadlessGame(List<string> deck1Ids, List<string> deck2Ids, bool verbose = false) 
+            : base(deck1Ids, deck2Ids, verbose ? new VerboseLogger() : new SilentLogger())
         {
+        }
+        
+        public List<string> GetLastLog()
+        {
+            return GameInstance.Logger.GetLogs(); 
         }
 
         public int RunUntilConclusion(int maxTurns = 200)

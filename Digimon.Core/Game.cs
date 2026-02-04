@@ -4,6 +4,8 @@ using System.Collections.Generic;
 using System.Linq;
 using Digimon.Core.Constants;
 
+using Digimon.Core.Loggers;
+
 namespace Digimon.Core
 {
     public class Game
@@ -15,6 +17,8 @@ namespace Digimon.Core
         public TurnStateMachine TurnStateMachine { get; private set; }
         public bool IsGameOver { get; private set; }
         public Player? Winner { get; private set; }
+        
+        public IGameLogger Logger { get; private set; }
 
         private static readonly JsonSerializerOptions _jsonOptions = new() { WriteIndented = true };
 
@@ -23,8 +27,9 @@ namespace Digimon.Core
         // P2 turn: -1 to -10 (Max), P1 side is > 0.
         public int MemoryGauge { get; private set; }
 
-        public Game()
+        public Game(IGameLogger? logger = null)
         {
+            Logger = logger ?? new SilentLogger();
             Player1 = new Player(1, "Player 1");
             Player2 = new Player(2, "Player 2");
             CurrentPlayer = Player1;
@@ -45,8 +50,8 @@ namespace Digimon.Core
             // Initial Draw
             for(int i=0; i<5; i++)
             {
-                Player1.Draw();
-                Player2.Draw();
+                Player1.Draw(this.Logger);
+                Player2.Draw(this.Logger);
             }
 
             // Decide who goes first (random or fixed)
@@ -363,7 +368,7 @@ namespace Digimon.Core
             
             // Logic handled by Player, but we wrap it to advance phase
             int initialCount = CurrentPlayer.BreedingArea.Count;
-            CurrentPlayer.Hatch();
+            CurrentPlayer.Hatch(this.Logger);
             
             // Validate if hatch actually happened (it might fail if area full or empty deck)
             // But for now we assume if it didn't error, proceed.
@@ -382,7 +387,7 @@ namespace Digimon.Core
             if (CurrentPlayer.BreedingArea[0].TopCard.Level < 3) return;
 
             int initialCount = CurrentPlayer.BreedingArea.Count;
-            CurrentPlayer.MoveBreedingToBattle();
+            CurrentPlayer.MoveBreedingToBattle(this.Logger);
 
             // Check if move happened
             if (CurrentPlayer.BreedingArea.Count < initialCount)
@@ -430,6 +435,206 @@ namespace Digimon.Core
             };
 
             return JsonSerializer.Serialize(state, _jsonOptions);
+        }
+        public void ExecuteAttack(int attackerIndex, int targetIndex)
+        {
+             // 1. Validate Phase
+             if (TurnStateMachine.CurrentPhase != GamePhase.Main) return;
+
+             // 2. Get Attacker
+             if (attackerIndex < 0 || attackerIndex >= CurrentPlayer.BattleArea.Count) return;
+             Permanent attacker = CurrentPlayer.BattleArea[attackerIndex];
+
+             if (attacker.IsSuspended) 
+             {
+                 Logger.LogVerbose($"[Attack] Invalid: {attacker.TopCard.Name} is already suspended.");
+                 return;
+             }
+             
+             // 3. Suspend Attacker (Attack Cost)
+             attacker.Suspend();
+             Logger.Log($"[Attack] {CurrentPlayer.Name}'s {attacker.TopCard.Name} (DP: {attacker.CurrentDP}) Attacks!");
+
+             // 4. Determine Target
+             // Target 12 = Security
+             // Target 0-11 = Digimon
+             if (targetIndex == 12)
+             {
+                 Logger.LogVerbose($"[Attack] Target: Security Stack ({OpponentPlayer.Security.Count} cards)");
+                 ResolveSecurityBattle(attacker);
+             }
+             else
+             {
+                 if (targetIndex < 0 || targetIndex >= OpponentPlayer.BattleArea.Count) return;
+                 Permanent defender = OpponentPlayer.BattleArea[targetIndex];
+
+                 if (!defender.IsSuspended)
+                 {
+                      Logger.LogVerbose($"[Attack] Target: {defender.TopCard.Name} (Unsuspend) - Usually blocks, but direct attack invalid.");
+                      // Rules: usually can only attack Suspended Digimon. 
+                      // Check for "Blocker" or "Redirect" later. 
+                      // For now, allow direct attack logic only if suspended, or assume ActionMask filtered this.
+                 }
+
+                 Logger.LogVerbose($"[Attack] Target: {defender.TopCard.Name} (DP: {defender.CurrentDP})");
+                 ResolveBattle(attacker, defender);
+             }
+             
+             // 5. Post-Attack Check
+             TurnStateMachine.CheckTurnEnd();
+        }
+
+        private void ResolveBattle(Permanent attacker, Permanent defender)
+        {
+            // Determine Metric: DP or Iceclad (Sources)
+            bool useIceclad = attacker.HasKeyword("Iceclad") || defender.HasKeyword("Iceclad");
+            
+            int attackerValue = useIceclad ? attacker.Sources.Count : attacker.CurrentDP;
+            int defenderValue = useIceclad ? defender.Sources.Count : defender.CurrentDP;
+
+            string metricName = useIceclad ? "Sources" : "DP";
+            Logger.LogVerbose($"[Battle] {attacker.TopCard.Name} ({attackerValue} {metricName}) vs {defender.TopCard.Name} ({defenderValue} {metricName})");
+
+            if (attackerValue > defenderValue)
+            {
+                Logger.Log($"[Battle] Attacker Wins! Deleting Defender.");
+                DeletePermanent(defender);
+            }
+            else if (attackerValue < defenderValue)
+            {
+                Logger.Log($"[Battle] Defender Wins! Deleting Attacker.");
+                DeletePermanent(attacker);
+            }
+            else
+            {
+                Logger.Log($"[Battle] Tie! Both Deleted.");
+                DeletePermanent(attacker);
+                DeletePermanent(defender);
+            }
+        }
+
+        private void ResolveSecurityBattle(Permanent attacker)
+        {
+            // 1. Check if Opponent has Security
+            if (OpponentPlayer.Security.Count == 0)
+            {
+                Logger.Log($"[Battle] Direct Attack! {CurrentPlayer.Name} wins!");
+                EndGame(CurrentPlayer);
+                return;
+            }
+
+            // 2. Reveal Top Card
+            Card securityCard = OpponentPlayer.Security[0];
+            OpponentPlayer.Security.RemoveAt(0);
+            Logger.Log($"[Security] Revealed: {securityCard.Name} ({securityCard.Id}) [DP: {securityCard.BaseDP}]");
+            
+            // Allow Effect Hook
+            // TriggerSecurityRemoved(securityCard);
+
+            // 3. Security Effect (Option/Tamer)
+            if (securityCard.IsOption || securityCard.IsTamer)
+            {
+                 // Stub: Activate [Security] effect
+                 Logger.LogVerbose($"[Security] Effect Activated (Stub).");
+                 // Then add to hand or trash depending on card? Standard rule: usually Hand or Trash.
+                 // Options usually Trash after effect. Tamers play.
+                 OpponentPlayer.Trash.Add(securityCard); 
+            }
+            else if (securityCard.IsDigimon)
+            {
+                // 4. Security Battle (DP Only - Iceclad does not apply to Security Digimon)
+                int attackerDp = attacker.CurrentDP;
+                int securityDp = securityCard.BaseDP;
+
+                Logger.LogVerbose($"[Security Battle] Attacker DP: {attackerDp} vs Security DP: {securityDp}");
+
+                if (attackerDp < securityDp)
+                {
+                    Logger.Log($"[Security] Attacker Deleted by Security Digimon.");
+                    DeletePermanent(attacker);
+                    // Security digimon is discarded? Yes.
+                }
+                else
+                {
+                    Logger.Log($"[Security] Attacker survives.");
+                }
+                // Security Digimon always goes to trash after battle (unless effect says otherwise)
+                OpponentPlayer.Trash.Add(securityCard);
+            }
+        }
+
+        private void DeletePermanent(Permanent p)
+        {
+            Player owner = (p.TopCard.Id.StartsWith("P1") || Player1.BattleArea.Contains(p)) ? Player1 : Player2; 
+            // Better owner check logic needed if we share IDs, but currently we rely on list containment
+            if (Player1.BattleArea.Contains(p)) owner = Player1;
+            else if (Player2.BattleArea.Contains(p)) owner = Player2;
+            else return; // Already deleted?
+
+            Logger.LogVerbose($"[Delete] Deleting {p.TopCard.Name} and {p.Sources.Count} sources.");
+            
+            // Move sources + top card to Trash
+            List<Card> allCards = new List<Card>(p.Sources);
+            allCards.Add(p.TopCard);
+            owner.AddCardsToTrash(allCards);
+
+            // Remove from Field
+            owner.RemovePermanent(p);
+        }
+
+        public void ExecuteDigivolve(int handIndex, int fieldIndex)
+        {
+             // 1. Validate Phase
+             if (TurnStateMachine.CurrentPhase != GamePhase.Main) return;
+
+             // 2. Validate Indices
+             if (handIndex < 0 || handIndex >= CurrentPlayer.Hand.Count) return;
+             // Field Index 0-15 usually (ActionDecoder normalization)
+             if (fieldIndex < 0 || fieldIndex >= CurrentPlayer.BattleArea.Count) return;
+
+             Card evoCard = CurrentPlayer.Hand[handIndex];
+             Permanent baseMon = CurrentPlayer.BattleArea[fieldIndex];
+
+             // 3. Validate Logic
+             // Level Check: New = Old + 1
+             if (evoCard.Level != baseMon.TopCard.Level + 1)
+             {
+                 Logger.LogVerbose($"[Digivolve] Invalid Level: {baseMon.TopCard.Name} (Lv{baseMon.TopCard.Level}) -> {evoCard.Name} (Lv{evoCard.Level})");
+                 return;
+             }
+
+             // Color Check: Must share at least one color
+             bool colorMatch = false;
+             foreach(var c in evoCard.Colors)
+             {
+                 if(baseMon.TopCard.Colors.Contains(c)) 
+                 {
+                     colorMatch = true;
+                     break;
+                 }
+             }
+
+             if (!colorMatch)
+             {
+                 Logger.LogVerbose($"[Digivolve] Invalid Color: Base {baseMon.TopCard.Colors[0]} vs Evo {evoCard.Colors[0]}");
+                 return;
+             }
+
+             // 4. Pay Cost & Execute
+             CurrentPlayer.Hand.RemoveAt(handIndex);
+             PayCost(CurrentPlayer, evoCard.DigivolveCost);
+             Logger.Log($"[Digivolve] {CurrentPlayer.Name} evolves {baseMon.TopCard.Name} into {evoCard.Name} (Cost: {evoCard.DigivolveCost})");
+             
+             baseMon.Digivolve(evoCard);
+
+             // 5. Bonus Draw
+             CurrentPlayer.Draw(Logger);
+
+             // 6. Triggers (When Digivolving) - Stub
+             // ActivateEffects(WhenDigivolving);
+
+             // 7. Check Turn End
+             TurnStateMachine.CheckTurnEnd();
         }
     }
 }
