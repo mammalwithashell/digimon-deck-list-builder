@@ -62,6 +62,10 @@ class Player:
         print(f"{self.player_name} drew a card. Hand size: {len(self.hand_cards)}")
         return True
 
+    def add_to_hand(self, card_source: 'CardSource'):
+        self.hand_cards.append(card_source)
+        print(f"{self.player_name} added {card_source.card_names[0]} to hand. Hand size: {len(self.hand_cards)}")
+
     def hatch(self):
         if self.breeding_area is not None:
             print("Cannot hatch: Breeding area occupied.")
