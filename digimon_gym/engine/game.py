@@ -10,14 +10,20 @@ try:
     from python_impl.engine.core.permanent import Permanent
     from python_impl.engine.data.card_registry import CardRegistry
     from python_impl.engine.loggers import IGameLogger, SilentLogger
-    from python_impl.engine.validation.digivolve_validator import can_digivolve
+    from python_impl.engine.validation.digivolve_validator import (
+        can_digivolve, has_valid_dna_targets, get_valid_dna_first_targets,
+        get_valid_dna_second_targets, get_dna_stacking_order,
+    )
 except ImportError:
     from digimon_gym.engine.data.enums import GamePhase, EffectTiming, AttackResolution, PendingAction
     from digimon_gym.engine.core.player import Player
     from digimon_gym.engine.core.permanent import Permanent
     from digimon_gym.engine.data.card_registry import CardRegistry
     from digimon_gym.engine.loggers import IGameLogger, SilentLogger
-    from digimon_gym.engine.validation.digivolve_validator import can_digivolve
+    from digimon_gym.engine.validation.digivolve_validator import (
+        can_digivolve, has_valid_dna_targets, get_valid_dna_first_targets,
+        get_valid_dna_second_targets, get_dna_stacking_order,
+    )
 
 if TYPE_CHECKING:
     from .core.card_source import CardSource
@@ -656,6 +662,14 @@ class Game:
                     if can_digivolve(card, base_perm):
                         mask[400 + h * 15 + f] = 1.0
 
+            # DNA Digivolve (63-92): 63 + hand_idx
+            for h in range(min(len(me.hand_cards), 30)):
+                card = me.hand_cards[h]
+                if not card.is_digimon:
+                    continue
+                if has_valid_dna_targets(card, me.battle_area):
+                    mask[63 + h] = 1.0
+
             # Pass (62) - always valid in main
             mask[62] = 1.0
 
@@ -753,6 +767,9 @@ class Game:
                 self.action_attack_player(attacker_idx)
             else:
                 self.action_attack_digimon(attacker_idx, target_idx)
+        elif 63 <= action_id <= 92:
+            hand_idx = action_id - 63
+            self._initiate_dna_digivolve(hand_idx)
         elif 400 <= action_id <= 999:
             normalized = action_id - 400
             hand_idx = normalized // 15
@@ -929,3 +946,89 @@ class Game:
         )
         self.current_phase = phase
         self.active_player = player
+
+    # ─── DNA Digivolve ────────────────────────────────────────────────
+
+    def _initiate_dna_digivolve(self, hand_idx: int):
+        """Start DNA digivolve: enter SelectMaterial to pick first field target."""
+        if self.current_phase != GamePhase.Main:
+            return
+        if hand_idx >= len(self.turn_player.hand_cards):
+            return
+
+        card = self.turn_player.hand_cards[hand_idx]
+        if not card.is_digimon or not card.c_entity_base or not card.c_entity_base.dna_costs:
+            return
+
+        valid_first = get_valid_dna_first_targets(card, self.turn_player.battle_area)
+        if not valid_first:
+            return
+
+        self.request_selection(
+            GamePhase.SelectMaterial,
+            self.turn_player,
+            lambda first_idx: self._dna_select_second(hand_idx, first_idx),
+            valid_indices=valid_first,
+        )
+
+    def _dna_select_second(self, hand_idx: int, first_field_idx: int):
+        """DNA digivolve step 2: select second field target."""
+        if hand_idx >= len(self.turn_player.hand_cards):
+            return
+        if first_field_idx >= len(self.turn_player.battle_area):
+            return
+
+        card = self.turn_player.hand_cards[hand_idx]
+        valid_second = get_valid_dna_second_targets(
+            card, first_field_idx, self.turn_player.battle_area,
+        )
+        if not valid_second:
+            return
+
+        self.request_selection(
+            GamePhase.SelectMaterial,
+            self.turn_player,
+            lambda second_idx: self._execute_dna_digivolve(
+                hand_idx, first_field_idx, second_idx,
+            ),
+            valid_indices=valid_second,
+        )
+
+    def _execute_dna_digivolve(self, hand_idx: int, first_field_idx: int,
+                                second_field_idx: int):
+        """Execute the actual DNA digivolve after both targets are selected."""
+        player = self.turn_player
+        if hand_idx >= len(player.hand_cards):
+            return
+        if first_field_idx >= len(player.battle_area):
+            return
+        if second_field_idx >= len(player.battle_area):
+            return
+
+        card = player.hand_cards[hand_idx]
+        perm1 = player.battle_area[first_field_idx]
+        perm2 = player.battle_area[second_field_idx]
+
+        stacking = get_dna_stacking_order(card, perm1, perm2)
+        if stacking is None:
+            return
+
+        top_perm, bottom_perm, dna_cost = stacking
+
+        top_name = top_perm.top_card.card_names[0] if top_perm.top_card else "Unknown"
+        bottom_name = bottom_perm.top_card.card_names[0] if bottom_perm.top_card else "Unknown"
+        card_name = card.card_names[0] if card.card_names else "Unknown"
+        self.logger.log(
+            f"[DNA Digivolve] {card_name} from "
+            f"{top_name} + {bottom_name} (cost: {dna_cost.memory_cost})"
+        )
+
+        cost = player.dna_digivolve(top_perm, bottom_perm, card, dna_cost)
+        self.memory -= cost
+
+        # Find the new permanent (last in battle area after dna_digivolve)
+        new_perm = player.battle_area[-1] if player.battle_area else None
+
+        self.execute_effects(EffectTiming.WhenDigivolving, {"digivolved_permanent": new_perm})
+        self.execute_effects(EffectTiming.OnEnterFieldAnyone, {"played_card": card})
+        self.check_turn_end()

@@ -6,6 +6,7 @@ from ..data.enums import EffectTiming, CardKind, AttackResolution
 
 if TYPE_CHECKING:
     from .card_source import CardSource
+    from ..data.evo_cost import DnaCost
 
 class Player:
     def __init__(self):
@@ -176,6 +177,56 @@ class Player:
         self._log(f"Digivolved into {card_source.card_names[0]}.")
 
         return final_cost
+
+    def dna_digivolve(self, top_perm: 'Permanent', bottom_perm: 'Permanent',
+                      card_source: 'CardSource', dna_cost: 'DnaCost') -> int:
+        """Execute DNA Digivolution: combine two permanents under a new card.
+
+        Stacking order (bottom to top):
+          bottom_perm's sources → top_perm's sources → card_source
+
+        Rules applied:
+        - Both permanents are removed from battle area
+        - New permanent is placed unsuspended (can attack immediately)
+        - Digivolution bonus: draw 1 card
+        - The result is treated as a new Digimon
+
+        Args:
+            top_perm: The permanent matching requirement1 (sources go on top).
+            bottom_perm: The permanent matching requirement2 (sources go on bottom).
+            card_source: The DNA digivolve card from hand.
+            dna_cost: The DnaCost entry being used.
+
+        Returns:
+            The memory cost paid.
+        """
+        base_cost = dna_cost.memory_cost
+
+        # Remove card from hand
+        if card_source in self.hand_cards:
+            self.hand_cards.remove(card_source)
+
+        # Build combined source stack: bottom sources, then top sources, then DNA card
+        combined_sources = list(bottom_perm.card_sources) + list(top_perm.card_sources)
+        combined_sources.append(card_source)
+
+        # Remove both permanents from battle area
+        if top_perm in self.battle_area:
+            self.battle_area.remove(top_perm)
+        if bottom_perm in self.battle_area:
+            self.battle_area.remove(bottom_perm)
+
+        # Create new permanent with combined stack (unsuspended)
+        new_perm = Permanent(combined_sources)
+        new_perm.is_suspended = False
+        self.battle_area.append(new_perm)
+
+        self._log(f"{self.player_name} DNA Digivolved into {card_source.card_names[0]}.")
+
+        # Digivolution bonus: draw 1
+        self.draw()
+
+        return base_cost
 
     def delete_permanent(self, permanent: 'Permanent'):
         if permanent in self.battle_area:

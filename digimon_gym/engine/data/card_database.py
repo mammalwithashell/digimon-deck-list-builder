@@ -1,12 +1,109 @@
 import json
 import os
+import re
 import importlib
-from typing import Dict, Optional, Any
+from typing import Dict, Optional, Any, List
 from ..core.entity_base import CEntity_Base
 from ..core.card_script import CardScript
 from ..core.card_source import CardSource
 from .enums import CardColor, CardKind, Rarity
-from .evo_cost import EvoCost
+from .evo_cost import EvoCost, DnaCost, DnaRequirement
+
+# Map color name strings to CardColor enum values
+_COLOR_NAME_MAP = {
+    "red": CardColor.Red,
+    "blue": CardColor.Blue,
+    "yellow": CardColor.Yellow,
+    "green": CardColor.Green,
+    "white": CardColor.White,
+    "black": CardColor.Black,
+    "purple": CardColor.Purple,
+}
+
+
+def parse_xros_req(xros_req: str) -> List[DnaCost]:
+    """Parse the xros_req text from DigimonCard.io API into DnaCost objects.
+
+    Supported formats:
+      "[DNA Digivolve] Blue Lv.4 + Green Lv.4: Cost 0"
+      "[DNA Digivolve] Lv.6 w/[Greymon] in name + Lv.6 w/[Garurumon] in name : Cost 0"
+      "[DNA Digivolve] Blue/Purple Lv.6 + Black/Yellow Lv.6: Cost 0"
+
+    Returns a list of DnaCost (one per [DNA Digivolve] entry found).
+    """
+    if not xros_req:
+        return []
+
+    results: List[DnaCost] = []
+
+    # Split by lines and find all DNA Digivolve entries
+    lines = xros_req.replace('\r\n', '\n').replace('\r', '\n').split('\n')
+    full_text = ' '.join(lines)
+
+    # Find all [DNA Digivolve] blocks
+    dna_pattern = r'\[DNA Digivolve\]\s*(.+?):\s*Cost\s*(\d+)'
+    for match in re.finditer(dna_pattern, full_text):
+        req_text = match.group(1).strip()
+        memory_cost = int(match.group(2))
+
+        # Split requirements by '+'
+        parts = req_text.split('+')
+        if len(parts) != 2:
+            continue
+
+        req1 = _parse_dna_requirement(parts[0].strip())
+        req2 = _parse_dna_requirement(parts[1].strip())
+        if req1 and req2:
+            results.append(DnaCost(
+                requirement1=req1,
+                requirement2=req2,
+                memory_cost=memory_cost,
+            ))
+
+    return results
+
+
+def _parse_dna_requirement(text: str) -> Optional[DnaRequirement]:
+    """Parse a single DNA requirement half like 'Blue Lv.4' or 'Lv.6 w/[Greymon] in name'.
+
+    Supported patterns:
+      "Blue Lv.4"
+      "Blue/Purple Lv.6"
+      "Lv.6 w/[Greymon] in name"
+      "Lv.6 w/[Greymon] in text"
+    """
+    # Extract name constraint: w/[Name] in name or w/[Name] in text
+    name_contains = ""
+    name_match = re.search(r'w/\[([^\]]+)\]\s+in\s+(?:name|text)', text)
+    if name_match:
+        name_contains = name_match.group(1).strip()
+
+    # Extract level: Lv.N or Lv N
+    level = 0
+    level_match = re.search(r'Lv\.?\s*(\d+)', text)
+    if level_match:
+        level = int(level_match.group(1))
+
+    if level == 0:
+        return None
+
+    # Extract color(s): look for color names before 'Lv'
+    card_color = None
+    color_text = text.split('Lv')[0].strip() if 'Lv' in text else ""
+    if color_text:
+        # Handle multi-color like "Blue/Purple"
+        color_names = [c.strip().lower() for c in color_text.split('/')]
+        for cn in color_names:
+            if cn in _COLOR_NAME_MAP:
+                card_color = _COLOR_NAME_MAP[cn]
+                break  # Use the first color for matching
+
+    return DnaRequirement(
+        level=level,
+        card_color=card_color,
+        name_contains=name_contains,
+    )
+
 
 class CardDatabase:
     _instance = None
@@ -61,6 +158,31 @@ class CardDatabase:
                     level=ec.get('level', 0),
                     memory_cost=ec.get('memory_cost', 0),
                 ))
+
+            # DNA costs (structured format)
+            for dc in entry.get('dna_costs', []):
+                req1_data = dc.get('requirement1', {})
+                req2_data = dc.get('requirement2', {})
+                req1 = DnaRequirement(
+                    level=req1_data.get('level', 0),
+                    card_color=CardColor(req1_data['card_color']) if 'card_color' in req1_data and req1_data['card_color'] is not None else None,
+                    name_contains=req1_data.get('name_contains', ''),
+                )
+                req2 = DnaRequirement(
+                    level=req2_data.get('level', 0),
+                    card_color=CardColor(req2_data['card_color']) if 'card_color' in req2_data and req2_data['card_color'] is not None else None,
+                    name_contains=req2_data.get('name_contains', ''),
+                )
+                entity.dna_costs.append(DnaCost(
+                    requirement1=req1,
+                    requirement2=req2,
+                    memory_cost=dc.get('memory_cost', 0),
+                ))
+
+            # DNA costs from xros_req text (API format)
+            xros_req = entry.get('xros_req', '')
+            if xros_req and not entity.dna_costs:
+                entity.dna_costs = parse_xros_req(xros_req)
 
             # Form and attribute
             entity.form_eng = entry.get('form_eng', [])
