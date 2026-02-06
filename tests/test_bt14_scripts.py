@@ -61,7 +61,7 @@ def test_bt14_cards_in_database():
     """cards.json should contain all 102 BT14 cards."""
     import json
     cards_path = os.path.join(os.path.dirname(__file__), "..", "digimon_gym", "engine", "data", "cards.json")
-    with open(cards_path) as f:
+    with open(cards_path, encoding="utf-8") as f:
         cards = json.load(f)
     bt14_cards = [c for c in cards if c["card_id"].startswith("BT14")]
     assert len(bt14_cards) == 102, f"Expected 102 BT14 cards in database, found {len(bt14_cards)}"

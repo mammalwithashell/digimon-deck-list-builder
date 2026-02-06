@@ -1,3 +1,4 @@
+import re
 from typing import List
 from ..data.enums import CardColor, CardKind, Rarity
 from ..data.evo_cost import EvoCost
@@ -45,7 +46,23 @@ class CEntity_Base:
 
     @property
     def is_ace(self) -> bool:
-        return False
+        """Check if this card is an ACE card (has Ace Overflow text)."""
+        return "Ace Overflow" in self.inherited_effect_description_eng
+
+    @property
+    def ace_overflow_cost(self) -> int:
+        """Extract the overflow memory penalty from ACE cards.
+
+        Parses 'Ace Overflow ＜-N＞' or 'Ace Overflow <-N>' from inherited
+        effect text. Returns N (positive int) or 0 if not an ACE card.
+        """
+        if not self.is_ace:
+            return 0
+        match = re.search(
+            r'Ace Overflow\s*[＜<]\s*-(\d+)\s*[＞>]',
+            self.inherited_effect_description_eng,
+        )
+        return int(match.group(1)) if match else self.overflow_memory
 
     @property
     def set_id(self) -> str:

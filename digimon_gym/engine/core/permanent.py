@@ -84,6 +84,32 @@ class Permanent:
         return True
 
     def can_block(self, attacking_permanent: 'Permanent') -> bool:
+        """Check if this permanent has <Blocker> and can block the attack.
+
+        Requires: unsuspended, is a Digimon, has _is_blocker effect.
+        Scans inherited effects from sources and non-inherited from top card,
+        matching the pattern in effect_list().
+        """
+        if self.is_suspended:
+            return False
+        if not self.is_digimon:
+            return False
+
+        # Check all card sources for _is_blocker flag
+        for source in self.card_sources[:-1]:
+            # Inherited effects from under top card
+            effects = source.effect_list(EffectTiming.NoTiming)
+            for effect in effects:
+                if effect.is_inherited_effect and getattr(effect, '_is_blocker', False):
+                    return True
+
+        if self.top_card:
+            # Non-inherited effects from top card
+            effects = self.top_card.effect_list(EffectTiming.NoTiming)
+            for effect in effects:
+                if not effect.is_inherited_effect and getattr(effect, '_is_blocker', False):
+                    return True
+
         return False
 
     def effect_list(self, timing: EffectTiming) -> List['ICardEffect']:

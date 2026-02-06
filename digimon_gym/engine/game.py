@@ -1,5 +1,6 @@
 from __future__ import annotations
-from typing import TYPE_CHECKING, Optional, Union, List
+from typing import TYPE_CHECKING, Optional, Union, List, Dict, Any, Callable
+from dataclasses import dataclass, field
 import random
 
 # Support both import prefixes
@@ -8,11 +9,15 @@ try:
     from python_impl.engine.core.player import Player
     from python_impl.engine.core.permanent import Permanent
     from python_impl.engine.data.card_registry import CardRegistry
+    from python_impl.engine.loggers import IGameLogger, SilentLogger
+    from python_impl.engine.validation.digivolve_validator import can_digivolve
 except ImportError:
     from digimon_gym.engine.data.enums import GamePhase, EffectTiming, AttackResolution, PendingAction
     from digimon_gym.engine.core.player import Player
     from digimon_gym.engine.core.permanent import Permanent
     from digimon_gym.engine.data.card_registry import CardRegistry
+    from digimon_gym.engine.loggers import IGameLogger, SilentLogger
+    from digimon_gym.engine.validation.digivolve_validator import can_digivolve
 
 if TYPE_CHECKING:
     from .core.card_source import CardSource
@@ -28,8 +33,29 @@ MAX_SECURITY = 10
 MAX_SOURCES = 15
 
 
+@dataclass
+class PendingAttack:
+    """Context for an attack in progress (paused for block/counter decisions)."""
+    attacker: Permanent
+    original_target: Union[Permanent, Player]
+    effective_target: Union[Permanent, Player]  # changes if blocked
+    is_blocked: bool = False
+    blocker: Optional[Permanent] = None
+
+
+@dataclass
+class PendingSelection:
+    """Context for an effect waiting for player selection."""
+    callback: Callable[[int], None]  # receives the selected index
+    selecting_player: Player
+    previous_phase: GamePhase
+    valid_indices: List[int] = field(default_factory=list)
+
+
 class Game:
-    def __init__(self):
+    def __init__(self, logger: Optional[IGameLogger] = None):
+        self.logger: IGameLogger = logger if logger is not None else SilentLogger()
+
         self.player1: Player = Player()
         self.player2: Player = Player()
         self.player1.player_name = "Player 1"
@@ -52,6 +78,22 @@ class Game:
         self.pending_action: PendingAction = PendingAction.NO_ACTION
         self.game_over: bool = False
         self.winner: Optional[Player] = None
+
+        # Interrupt phase state
+        self.pending_attack: Optional[PendingAttack] = None
+        self.pending_selection: Optional[PendingSelection] = None
+        self.active_player: Optional[Player] = None  # None = turn_player
+
+    @property
+    def current_player_id(self) -> int:
+        """Return the player_id of the active player.
+
+        During normal phases, this is the turn player.
+        During BlockTiming/CounterTiming, this is the opponent (defender).
+        """
+        if self.active_player is not None:
+            return self.active_player.player_id
+        return self.turn_player.player_id
 
     def start_game(self):
         if random.choice([True, False]):
@@ -94,6 +136,7 @@ class Game:
 
     def phase_start(self):
         self.current_phase = GamePhase.Start
+        self.logger.log(f"=== Turn {self.turn_count} — {self.turn_player.player_name} ===")
         self.turn_player.unsuspend_all()
         self._reset_effect_turn_counts()
         self._clear_temp_dp()
@@ -116,9 +159,11 @@ class Game:
         self.next_phase()
 
     def phase_breeding(self):
+        self.logger.log_verbose("Phase: Breeding")
         pass  # Waiting for agent action
 
     def phase_main(self):
+        self.logger.log_verbose("Phase: Main")
         self.execute_effects(EffectTiming.OnStartMainPhase)
         pass  # Waiting for agent actions
 
@@ -228,15 +273,131 @@ class Game:
     def declare_winner(self, winner: Player):
         self.game_over = True
         self.winner = winner
+        self.logger.log(f"Game Over! Winner: {winner.player_name}")
+
+    def to_json(self) -> Dict[str, Any]:
+        """Serialize game state to a dictionary (mirrors C# Game.ToJson)."""
+        def player_data(p: Player) -> Dict[str, Any]:
+            return {
+                "Id": p.player_id,
+                "Memory": self._get_memory_for(p),
+                "HandCount": len(p.hand_cards),
+                "HandIds": [c.card_id for c in p.hand_cards],
+                "SecurityCount": len(p.security_cards),
+                "DeckCount": len(p.library_cards),
+                "BattleAreaCount": len(p.battle_area),
+                "BattleArea": [
+                    {
+                        "TopCardId": perm.top_card.card_id if perm.top_card else None,
+                        "TopCardName": perm.top_card.card_names[0] if perm.top_card and perm.top_card.card_names else None,
+                        "DP": perm.dp,
+                        "Level": perm.level,
+                        "IsSuspended": perm.is_suspended,
+                        "SourceCount": len(perm.card_sources),
+                    }
+                    for perm in p.battle_area
+                ],
+                "BreedingArea": {
+                    "TopCardId": p.breeding_area.top_card.card_id if p.breeding_area and p.breeding_area.top_card else None,
+                    "Level": p.breeding_area.level if p.breeding_area else None,
+                } if p.breeding_area else None,
+            }
+
+        return {
+            "TurnCount": self.turn_count,
+            "CurrentPhase": self.current_phase.name,
+            "CurrentPlayer": self.turn_player.player_id,
+            "MemoryGauge": self.memory,
+            "IsGameOver": self.game_over,
+            "Winner": self.winner.player_id if self.winner else None,
+            "Player1": player_data(self.player1),
+            "Player2": player_data(self.player2),
+        }
 
     def resolve_attack(self, attacker: Permanent, target: Union[Permanent, Player]):
+        """Begin an attack sequence. May pause for BlockTiming/CounterTiming.
+
+        When blockers or counter options exist, the game transitions to
+        interrupt phases and returns control to the game loop. The decoders
+        for those phases resume the attack flow.
+
+        When no interrupts are available, the entire attack resolves
+        synchronously in a single call (backward compatible).
+        """
         if not attacker.can_attack():
             return
 
+        target_name = target.player_name if isinstance(target, Player) else (target.top_card.card_names[0] if target.top_card else "Unknown")
+        attacker_name = attacker.top_card.card_names[0] if attacker.top_card else "Unknown"
+        self.logger.log(f"[Attack] {attacker_name} attacks {target_name}")
         attacker.suspend()
 
         # Trigger When Attacking (OnAllyAttack for the attacker's effects)
         self.execute_effects(EffectTiming.OnAllyAttack, {"attacker": attacker})
+
+        # Store pending attack context
+        self.pending_attack = PendingAttack(
+            attacker=attacker,
+            original_target=target,
+            effective_target=target,
+        )
+
+        # Check if opponent has any potential blockers
+        has_blockers = any(
+            perm.can_block(attacker) for perm in self.opponent_player.battle_area
+        )
+
+        if has_blockers:
+            # Transition to BlockTiming — opponent decides
+            self.current_phase = GamePhase.BlockTiming
+            self.active_player = self.opponent_player
+            return  # Park here; _decode_block() will resume
+
+        # No blockers — check for counter timing
+        self._enter_counter_timing()
+
+    def _enter_counter_timing(self):
+        """Check for counter opportunities and enter CounterTiming if any exist."""
+        has_counter = self._opponent_has_counter_options()
+
+        if has_counter:
+            self.current_phase = GamePhase.CounterTiming
+            self.active_player = self.opponent_player
+            return  # Park here; _decode_counter() will resume
+
+        # No counter options — resolve battle immediately
+        self._resolve_battle()
+
+    def _opponent_has_counter_options(self) -> bool:
+        """Check if the defending player has any valid blast digivolve options."""
+        defender = self.opponent_player
+        for card in defender.hand_cards:
+            if not card.is_digimon:
+                continue
+            # Check if this card has blast digivolve
+            effects = card.effect_list(EffectTiming.NoTiming)
+            has_blast = any(getattr(e, '_is_blast_digivolve', False) for e in effects)
+            if not has_blast:
+                continue
+            # Check if there's a valid target on field using proper evo_costs validation
+            for perm in defender.battle_area:
+                if can_digivolve(card, perm):
+                    return True
+        return False
+
+    def _resolve_battle(self):
+        """Execute the actual battle resolution after block/counter decisions."""
+        pa = self.pending_attack
+        if pa is None:
+            return
+
+        attacker = pa.attacker
+        target = pa.effective_target
+
+        # Clear interrupt state — back to turn_player control
+        self.active_player = None
+        self.pending_attack = None
+        self.current_phase = GamePhase.Main
 
         if isinstance(target, Player):
             result = target.security_attack(attacker)
@@ -265,6 +426,7 @@ class Game:
         card = self.turn_player.hand_cards[card_index]
         cost = card.get_cost_itself
 
+        self.logger.log(f"[Play] {self.turn_player.player_name} plays {card.card_names[0]} (cost: {cost})")
         self.turn_player.play_card(card)
         self.memory -= cost
 
@@ -313,22 +475,26 @@ class Game:
         """Hatch from digitama deck into breeding area."""
         if self.current_phase != GamePhase.Breeding:
             return
+        self.logger.log(f"[Hatch] {self.turn_player.player_name} hatches from egg deck")
         self.turn_player.hatch()
 
     def action_move_from_breeding(self):
         """Move breeding area digimon to battle area."""
         if self.current_phase != GamePhase.Breeding:
             return
+        self.logger.log(f"[Move] {self.turn_player.player_name} moves from breeding to battle area")
         self.turn_player.move_from_breeding()
 
     def action_breeding_pass(self):
         """Skip breeding phase and advance to main."""
         if self.current_phase != GamePhase.Breeding:
             return
+        self.logger.log_verbose(f"{self.turn_player.player_name} passes breeding phase")
         self.current_phase = GamePhase.Main
         self.phase_main()
 
     def action_pass_turn(self):
+        self.logger.log(f"[Pass] {self.turn_player.player_name} passes turn (memory: {self.memory})")
         self.pass_turn()
 
     # ─── Board State Tensor ──────────────────────────────────────────
@@ -487,15 +653,7 @@ class Game:
                     continue
                 for f in range(min(len(me.battle_area), FIELD_SLOTS)):
                     base_perm = me.battle_area[f]
-                    if not base_perm.top_card:
-                        continue
-                    # Level check: evo card = base + 1
-                    if card.level != base_perm.level + 1:
-                        continue
-                    # Color check: must share at least one color
-                    base_colors = set(base_perm.top_card.card_colors)
-                    evo_colors = set(card.card_colors)
-                    if base_colors & evo_colors:
+                    if can_digivolve(card, base_perm):
                         mask[400 + h * 15 + f] = 1.0
 
             # Pass (62) - always valid in main
@@ -512,18 +670,49 @@ class Game:
             mask[62] = 1.0
 
         elif phase == GamePhase.BlockTiming:
-            mask[62] = 1.0  # pass
+            mask[62] = 1.0  # always can decline
+            attacker = self.pending_attack.attacker if self.pending_attack else Permanent([])
             for i in range(min(len(me.battle_area), FIELD_SLOTS)):
                 perm = me.battle_area[i]
-                if not perm.is_suspended and perm.can_block(Permanent([])):
+                if perm.can_block(attacker):
                     mask[100 + i] = 1.0
 
         elif phase == GamePhase.CounterTiming:
-            mask[62] = 1.0  # pass
+            mask[62] = 1.0  # always can decline
+            # Blast digivolve options (400-999): 400 + hand*15 + field
+            for h in range(min(len(me.hand_cards), 30)):
+                card = me.hand_cards[h]
+                if not card.is_digimon:
+                    continue
+                # Check for blast digivolve effect
+                effects = card.effect_list(EffectTiming.NoTiming)
+                has_blast = any(getattr(e, '_is_blast_digivolve', False) for e in effects)
+                if not has_blast:
+                    continue
+                # Check valid field targets using proper evo_costs validation
+                for f in range(min(len(me.battle_area), FIELD_SLOTS)):
+                    base_perm = me.battle_area[f]
+                    if can_digivolve(card, base_perm):
+                        mask[400 + h * 15 + f] = 1.0
 
         elif phase == GamePhase.SelectTrash:
             for i in range(min(len(me.trash_cards), 60)):
                 mask[i] = 1.0
+
+        elif phase == GamePhase.SelectSource:
+            # Source selection (2000-2119): 2000 + field*10 + sourceIdx
+            for f in range(min(len(me.battle_area), FIELD_SLOTS)):
+                perm = me.battle_area[f]
+                for s in range(min(len(perm.card_sources), 10)):
+                    mask[2000 + f * 10 + s] = 1.0
+
+        elif phase in (GamePhase.SelectTarget, GamePhase.SelectMaterial):
+            # Use valid_indices from pending selection if available
+            ps = self.pending_selection
+            if ps and ps.valid_indices:
+                for idx in ps.valid_indices:
+                    if 0 <= idx < ACTION_SPACE_SIZE:
+                        mask[idx] = 1.0
 
         return mask
 
@@ -579,30 +768,164 @@ class Game:
             self.action_breeding_pass()
 
     def _decode_selection(self, action_id: int):
-        pass  # Placeholder for target/material selection
+        """Handle target or material selection from an effect callback."""
+        ps = self.pending_selection
+        if ps is None:
+            return
+
+        if ps.valid_indices and action_id not in ps.valid_indices:
+            return  # invalid selection, ignore
+
+        callback = ps.callback
+        prev_phase = ps.previous_phase
+        self.pending_selection = None
+        self.current_phase = prev_phase
+        self.active_player = None
+        callback(action_id)
 
     def _decode_block(self, action_id: int):
+        """Handle the defender's blocking decision during an attack."""
+        pa = self.pending_attack
+        if pa is None:
+            return
+
         if action_id == 62:
-            pass  # decline block
+            # Decline to block — proceed to counter timing
+            self.logger.log("[Block] Declined to block")
+            self._enter_counter_timing()
+
         elif 100 <= action_id <= 111:
-            pass  # block with slot action_id - 100
+            blocker_idx = action_id - 100
+            defender = self.opponent_player
+
+            if blocker_idx >= len(defender.battle_area):
+                return
+
+            blocker = defender.battle_area[blocker_idx]
+            if not blocker.can_block(pa.attacker):
+                return
+
+            # Suspend the blocker and redirect the attack
+            blocker.suspend()
+            pa.is_blocked = True
+            pa.blocker = blocker
+            pa.effective_target = blocker
+
+            blocker_name = blocker.top_card.card_names[0] if blocker.top_card else "Unknown"
+            self.logger.log(f"[Block] {blocker_name} blocks the attack")
+
+            # Fire block-related effects
+            self.execute_effects(EffectTiming.OnBlockAnyone, {"blocker": blocker})
+            self.execute_effects(EffectTiming.OnEndBlockDesignation, {"blocker": blocker})
+
+            # Proceed to counter timing
+            self._enter_counter_timing()
 
     def _decode_counter(self, action_id: int):
+        """Handle the defender's counter/blast digivolve decision."""
+        pa = self.pending_attack
+        if pa is None:
+            return
+
         if action_id == 62:
-            pass  # decline counter
+            # Decline counter — resolve battle
+            self.logger.log("[Counter] Declined counter")
+            self._resolve_battle()
+
         elif 400 <= action_id <= 999:
             normalized = action_id - 400
             hand_idx = normalized // 15
             field_idx = normalized % 15
-            pass  # blast digivolve
+
+            defender = self.opponent_player
+
+            if hand_idx >= len(defender.hand_cards):
+                self._resolve_battle()
+                return
+            if field_idx >= len(defender.battle_area):
+                self._resolve_battle()
+                return
+
+            card = defender.hand_cards[hand_idx]
+            perm = defender.battle_area[field_idx]
+
+            # Validate blast digivolve effect exists on card
+            effects = card.effect_list(EffectTiming.NoTiming)
+            has_blast = any(getattr(e, '_is_blast_digivolve', False) for e in effects)
+            if not has_blast:
+                self._resolve_battle()
+                return
+
+            # Execute blast digivolve (free cost — no memory change)
+            card_name = card.card_names[0] if card.card_names else "Unknown"
+            target_name = perm.top_card.card_names[0] if perm.top_card else "Unknown"
+            self.logger.log(f"[Counter] Blast Digivolve: {card_name} onto {target_name}")
+
+            defender.hand_cards.remove(card)
+            perm.add_card_source(card)
+
+            # Fire digivolution-related effects
+            self.execute_effects(EffectTiming.OnCounterTiming, {"counter_card": card, "counter_permanent": perm})
+            self.execute_effects(EffectTiming.WhenDigivolving, {"digivolved_permanent": perm})
+            self.execute_effects(EffectTiming.OnEnterFieldAnyone, {"played_card": card})
+
+            # Resolve battle (DP has changed due to digivolution)
+            self._resolve_battle()
 
     def _decode_trash_selection(self, action_id: int):
+        """Handle trash card selection from an effect callback."""
+        ps = self.pending_selection
+        if ps is None:
+            return
+
         if 0 <= action_id <= 59:
-            pass  # select trash index
+            selecting = ps.selecting_player
+            if action_id < len(selecting.trash_cards):
+                callback = ps.callback
+                prev_phase = ps.previous_phase
+                self.pending_selection = None
+                self.current_phase = prev_phase
+                self.active_player = None
+                callback(action_id)
 
     def _decode_source_selection(self, action_id: int):
+        """Handle digivolution source selection from an effect callback."""
+        ps = self.pending_selection
+        if ps is None:
+            return
+
         if 2000 <= action_id <= 2119:
             normalized = action_id - 2000
             field_idx = normalized // 10
             source_idx = normalized % 10
-            pass  # select source
+
+            selecting = ps.selecting_player
+            if field_idx < len(selecting.battle_area):
+                perm = selecting.battle_area[field_idx]
+                if source_idx < len(perm.card_sources):
+                    callback = ps.callback
+                    prev_phase = ps.previous_phase
+                    self.pending_selection = None
+                    self.current_phase = prev_phase
+                    self.active_player = None
+                    callback(action_id)
+
+    # ─── Selection Request Helper ─────────────────────────────────
+
+    def request_selection(self, phase: GamePhase, player: Player,
+                          callback: Callable[[int], None],
+                          valid_indices: Optional[List[int]] = None):
+        """Pause the game to request a selection from the given player.
+
+        Used by effect callbacks that need player input (target, trash, source).
+        The game transitions to the specified phase and parks until the
+        player's agent provides a selection via decode_action().
+        """
+        self.pending_selection = PendingSelection(
+            callback=callback,
+            selecting_player=player,
+            previous_phase=self.current_phase,
+            valid_indices=valid_indices or [],
+        )
+        self.current_phase = phase
+        self.active_player = player

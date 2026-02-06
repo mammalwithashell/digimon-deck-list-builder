@@ -12,6 +12,7 @@ from digimon_gym.engine.game import (
 )
 from digimon_gym.engine.data.enums import GamePhase, CardKind, CardColor
 from digimon_gym.engine.data.card_registry import CardRegistry
+from digimon_gym.engine.data.evo_cost import EvoCost
 from digimon_gym.engine.core.player import Player
 from digimon_gym.engine.core.permanent import Permanent
 from digimon_gym.engine.core.card_source import CardSource
@@ -21,7 +22,8 @@ from digimon_gym.engine.core.entity_base import CEntity_Base
 # ─── Helpers ─────────────────────────────────────────────────────────
 
 def make_card(card_id="BT14-001", name="TestDigimon", kind=CardKind.Digimon,
-              dp=5000, level=4, play_cost=5, colors=None, owner=None):
+              dp=5000, level=4, play_cost=5, colors=None, owner=None,
+              evo_costs=None):
     entity = CEntity_Base()
     entity.card_id = card_id
     entity.card_name_eng = name
@@ -30,6 +32,8 @@ def make_card(card_id="BT14-001", name="TestDigimon", kind=CardKind.Digimon,
     entity.level = level
     entity.play_cost = play_cost
     entity.card_colors = colors or [CardColor.Red]
+    if evo_costs is not None:
+        entity.evo_costs = evo_costs
     cs = CardSource()
     cs.set_base_data(entity, owner)
     return cs
@@ -337,9 +341,10 @@ class TestActionMask:
         game = setup_game_at_phase(GamePhase.Main, memory=5)
         p1 = game.player1
 
-        # Hand card: level 4 Red
+        # Hand card: level 4 Red with evo_costs requiring Red Lv3
         evo = make_card("BT14-010", "Champion", dp=6000, level=4,
-                        play_cost=5, colors=[CardColor.Red], owner=p1)
+                        play_cost=5, colors=[CardColor.Red], owner=p1,
+                        evo_costs=[EvoCost(CardColor.Red, 3, 2)])
         p1.hand_cards.append(evo)
 
         # Field: level 3 Red
@@ -356,8 +361,9 @@ class TestActionMask:
         game = setup_game_at_phase(GamePhase.Main, memory=5)
         p1 = game.player1
 
-        # Hand card: level 5
-        evo = make_card("BT14-010", level=5, colors=[CardColor.Red], owner=p1)
+        # Hand card: level 5 with evo_costs requiring Red Lv4
+        evo = make_card("BT14-010", level=5, colors=[CardColor.Red], owner=p1,
+                        evo_costs=[EvoCost(CardColor.Red, 4, 3)])
         p1.hand_cards.append(evo)
 
         # Field: level 3 (need level 4 to evolve to 5)
@@ -371,9 +377,12 @@ class TestActionMask:
         game = setup_game_at_phase(GamePhase.Main, memory=5)
         p1 = game.player1
 
-        evo = make_card("BT14-010", level=4, colors=[CardColor.Blue], owner=p1)
+        # Hand card: Blue Lv4 with evo_costs requiring Blue Lv3
+        evo = make_card("BT14-010", level=4, colors=[CardColor.Blue], owner=p1,
+                        evo_costs=[EvoCost(CardColor.Blue, 3, 2)])
         p1.hand_cards.append(evo)
 
+        # Field: Red Lv3 (wrong color for Blue evo requirement)
         base_card = make_card("BT14-003", level=3, colors=[CardColor.Red], owner=p1)
         p1.battle_area.append(Permanent([base_card]))
 
