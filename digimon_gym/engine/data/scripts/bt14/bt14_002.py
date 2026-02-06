@@ -1,0 +1,27 @@
+from __future__ import annotations
+from typing import TYPE_CHECKING, List, Dict, Any
+from ....core.card_script import CardScript
+from ....interfaces.card_effect import ICardEffect
+
+if TYPE_CHECKING:
+    from ....core.card_source import CardSource
+
+
+class BT14_002(CardScript):
+    """Auto-transpiled from DCGO BT14_002.cs"""
+
+    def get_card_effects(self, card: 'CardSource') -> List['ICardEffect']:
+        effects = []
+
+        # Factory effect: jamming
+        # Jamming
+        effect0 = ICardEffect()
+        effect0.set_effect_name("BT14-002 Jamming")
+        effect0.set_effect_description("Jamming")
+        # TODO: Jamming keyword - security checks don't activate
+        def condition0(context: Dict[str, Any]) -> bool:
+            return True
+        effect0.set_can_use_condition(condition0)
+        effects.append(effect0)
+
+        return effects

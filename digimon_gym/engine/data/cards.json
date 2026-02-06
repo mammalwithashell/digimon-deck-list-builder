@@ -303,5 +303,3124 @@
     ],
     "effect_description_eng": "[Your Turn] When this Digimon would digivolve into a Digimon card with the [Reptile] or [Dragonkin] trait, reduce the digivolution cost by 1.",
     "inherited_effect_description_eng": "[Your Turn] This Digimon gets +2000 DP."
+  },
+  {
+    "card_id": "BT14-001",
+    "card_index": 1,
+    "card_name_eng": "Koromon",
+    "card_name_jpn": "",
+    "card_effect_class_name": "BT14_001",
+    "play_cost": 0,
+    "dp": 0,
+    "level": 2,
+    "card_kind": 3,
+    "rarity": 1,
+    "card_colors": [
+      0
+    ],
+    "type_eng": [
+      "Lesser"
+    ],
+    "form_eng": [
+      "In-Training"
+    ],
+    "attribute_eng": [],
+    "effect_description_eng": "Inherited Effect [Your Turn] [Once Per Turn] When a card is removed from your opponent's security stack, ＜Draw 1＞ (Draw 1 card from your deck.)",
+    "inherited_effect_description_eng": "",
+    "security_effect_description_eng": "",
+    "evo_costs": []
+  },
+  {
+    "card_id": "BT14-002",
+    "card_index": 2,
+    "card_name_eng": "Bukamon",
+    "card_name_jpn": "",
+    "card_effect_class_name": "BT14_002",
+    "play_cost": 0,
+    "dp": 0,
+    "level": 2,
+    "card_kind": 3,
+    "rarity": 1,
+    "card_colors": [
+      1
+    ],
+    "type_eng": [
+      "Lesser"
+    ],
+    "form_eng": [
+      "In-Training"
+    ],
+    "attribute_eng": [],
+    "effect_description_eng": "Inherited Effect [Your Turn] While your opponent has no Digimon with with as many or more digivolution cards than this Digimon, this Digimon gains ＜Jamming＞ (This Digimon can't be deleted in battles against Security Digimon.).",
+    "inherited_effect_description_eng": "",
+    "security_effect_description_eng": "",
+    "evo_costs": []
+  },
+  {
+    "card_id": "BT14-003",
+    "card_index": 3,
+    "card_name_eng": "Tokomon",
+    "card_name_jpn": "",
+    "card_effect_class_name": "BT14_003",
+    "play_cost": 0,
+    "dp": 0,
+    "level": 2,
+    "card_kind": 3,
+    "rarity": 1,
+    "card_colors": [
+      2
+    ],
+    "type_eng": [
+      "Lesser"
+    ],
+    "form_eng": [
+      "In-Training"
+    ],
+    "attribute_eng": [],
+    "effect_description_eng": "Inherited Effect [Your Turn] [Once Per Turn] When a card is added to your security stack, ＜Draw 1＞ (Draw 1 card from your deck.)",
+    "inherited_effect_description_eng": "",
+    "security_effect_description_eng": "",
+    "evo_costs": []
+  },
+  {
+    "card_id": "BT14-004",
+    "card_index": 4,
+    "card_name_eng": "Tanemon",
+    "card_name_jpn": "",
+    "card_effect_class_name": "BT14_004",
+    "play_cost": 0,
+    "dp": 0,
+    "level": 2,
+    "card_kind": 3,
+    "rarity": 1,
+    "card_colors": [
+      3
+    ],
+    "type_eng": [
+      "Bulb"
+    ],
+    "form_eng": [
+      "In-Training"
+    ],
+    "attribute_eng": [],
+    "effect_description_eng": "Inherited Effect [Your Turn] [Once Per Turn] When one of your effects suspends a Tamer, this Digimon gets +2000 DP for the turn.",
+    "inherited_effect_description_eng": "",
+    "security_effect_description_eng": "",
+    "evo_costs": []
+  },
+  {
+    "card_id": "BT14-005",
+    "card_index": 5,
+    "card_name_eng": "Missimon",
+    "card_name_jpn": "",
+    "card_effect_class_name": "BT14_005",
+    "play_cost": 0,
+    "dp": 0,
+    "level": 2,
+    "card_kind": 3,
+    "rarity": 1,
+    "card_colors": [
+      5
+    ],
+    "type_eng": [
+      "Machine"
+    ],
+    "form_eng": [
+      "In-Training"
+    ],
+    "attribute_eng": [],
+    "effect_description_eng": "Inherited Effect [When Attacking] [Once Per Turn] By returning 3 cards with the [D-Brigade] or [DigiPolice] trait from your trash to the top of the deck, this Digimon gets +2000 DP for the turn.",
+    "inherited_effect_description_eng": "",
+    "security_effect_description_eng": "",
+    "evo_costs": []
+  },
+  {
+    "card_id": "BT14-006",
+    "card_index": 6,
+    "card_name_eng": "Bowmon",
+    "card_name_jpn": "",
+    "card_effect_class_name": "BT14_006",
+    "play_cost": 0,
+    "dp": 0,
+    "level": 2,
+    "card_kind": 3,
+    "rarity": 1,
+    "card_colors": [
+      6
+    ],
+    "type_eng": [
+      "Lesser",
+      "X Antibody",
+      "SoC"
+    ],
+    "form_eng": [
+      "In-Training"
+    ],
+    "attribute_eng": [],
+    "effect_description_eng": "Inherited Effect [Your Turn] When a Digimon card with the [Dark Animal] or [SoC] trait is trashed from your hand, this Digimon may digivolve into that card.",
+    "inherited_effect_description_eng": "",
+    "security_effect_description_eng": "",
+    "evo_costs": []
+  },
+  {
+    "card_id": "BT14-007",
+    "card_index": 7,
+    "card_name_eng": "Agumon",
+    "card_name_jpn": "",
+    "card_effect_class_name": "BT14_007",
+    "play_cost": 3,
+    "dp": 1000,
+    "level": 3,
+    "card_kind": 0,
+    "rarity": 3,
+    "card_colors": [
+      0
+    ],
+    "type_eng": [
+      "Reptile"
+    ],
+    "form_eng": [
+      "Rookie"
+    ],
+    "attribute_eng": [
+      "Vaccine"
+    ],
+    "effect_description_eng": "[Start of Your Main Phase] If you have a Tamer with [Tai Kamiya] in its name, this Digimon may digivolve into [Greymon] in your hand without paying the cost.",
+    "inherited_effect_description_eng": "[Your Turn] While this Digimon has [Greymon] or [Omnimon] in its name, it gets +2000 DP.",
+    "security_effect_description_eng": "",
+    "evo_costs": []
+  },
+  {
+    "card_id": "BT14-008",
+    "card_index": 8,
+    "card_name_eng": "Gizamon",
+    "card_name_jpn": "",
+    "card_effect_class_name": "BT14_008",
+    "play_cost": 3,
+    "dp": 2000,
+    "level": 3,
+    "card_kind": 0,
+    "rarity": 0,
+    "card_colors": [
+      0
+    ],
+    "type_eng": [
+      "Sea Animal"
+    ],
+    "form_eng": [
+      "Rookie"
+    ],
+    "attribute_eng": [
+      "Virus"
+    ],
+    "effect_description_eng": "Inherited Effect [When Attacking] [Once Per Turn] Delete 1 of your opponent's Digimon with 3000 DP or less.",
+    "inherited_effect_description_eng": "",
+    "security_effect_description_eng": "",
+    "evo_costs": []
+  },
+  {
+    "card_id": "BT14-009",
+    "card_index": 9,
+    "card_name_eng": "Gotsumon",
+    "card_name_jpn": "",
+    "card_effect_class_name": "BT14_009",
+    "play_cost": 3,
+    "dp": 2000,
+    "level": 3,
+    "card_kind": 0,
+    "rarity": 0,
+    "card_colors": [
+      0
+    ],
+    "type_eng": [
+      "Rock"
+    ],
+    "form_eng": [
+      "Rookie"
+    ],
+    "attribute_eng": [
+      "Data"
+    ],
+    "effect_description_eng": "[All Turns] Players can't play Digimon by effects.",
+    "inherited_effect_description_eng": "",
+    "security_effect_description_eng": "",
+    "evo_costs": []
+  },
+  {
+    "card_id": "BT14-010",
+    "card_index": 10,
+    "card_name_eng": "Kokatorimon",
+    "card_name_jpn": "",
+    "card_effect_class_name": "BT14_010",
+    "play_cost": 4,
+    "dp": 5000,
+    "level": 4,
+    "card_kind": 0,
+    "rarity": 0,
+    "card_colors": [
+      0
+    ],
+    "type_eng": [
+      "Giant Bird"
+    ],
+    "form_eng": [
+      "Champion"
+    ],
+    "attribute_eng": [
+      "Data"
+    ],
+    "effect_description_eng": "＜Jamming＞ (This Digimon can't be deleted in battles against Security Digimon.)",
+    "inherited_effect_description_eng": "",
+    "security_effect_description_eng": "",
+    "evo_costs": [
+      {
+        "card_color": 0,
+        "level": 3,
+        "memory_cost": 2
+      }
+    ]
+  },
+  {
+    "card_id": "BT14-011",
+    "card_index": 11,
+    "card_name_eng": "Monochromon",
+    "card_name_jpn": "",
+    "card_effect_class_name": "BT14_011",
+    "play_cost": 4,
+    "dp": 5000,
+    "level": 4,
+    "card_kind": 0,
+    "rarity": 0,
+    "card_colors": [
+      0
+    ],
+    "type_eng": [
+      "Ankylosaur"
+    ],
+    "form_eng": [
+      "Champion"
+    ],
+    "attribute_eng": [
+      "Data"
+    ],
+    "effect_description_eng": "＜Blocker＞ (This Digimon can block in the blocker timing.)",
+    "inherited_effect_description_eng": "",
+    "security_effect_description_eng": "",
+    "evo_costs": [
+      {
+        "card_color": 0,
+        "level": 3,
+        "memory_cost": 2
+      }
+    ]
+  },
+  {
+    "card_id": "BT14-012",
+    "card_index": 12,
+    "card_name_eng": "Greymon",
+    "card_name_jpn": "",
+    "card_effect_class_name": "BT14_012",
+    "play_cost": 5,
+    "dp": 5000,
+    "level": 4,
+    "card_kind": 0,
+    "rarity": 2,
+    "card_colors": [
+      0
+    ],
+    "type_eng": [
+      "Dinosaur"
+    ],
+    "form_eng": [
+      "Champion"
+    ],
+    "attribute_eng": [
+      "Vaccine"
+    ],
+    "effect_description_eng": "[When Attacking] This Digimon gets +2000 DP for the turn. Then, if you have a Tamer with [Tai Kamiya] in its name, gain 1 memory.",
+    "inherited_effect_description_eng": "[Your Turn] While this Digimon has [Greymon] or [Omnimon] in its name, it gets +2000 DP.",
+    "security_effect_description_eng": "",
+    "evo_costs": [
+      {
+        "card_color": 0,
+        "level": 3,
+        "memory_cost": 2
+      }
+    ]
+  },
+  {
+    "card_id": "BT14-013",
+    "card_index": 13,
+    "card_name_eng": "Tyrannomon",
+    "card_name_jpn": "",
+    "card_effect_class_name": "BT14_013",
+    "play_cost": 5,
+    "dp": 5000,
+    "level": 4,
+    "card_kind": 0,
+    "rarity": 1,
+    "card_colors": [
+      0,
+      3
+    ],
+    "type_eng": [
+      "Dinosaur"
+    ],
+    "form_eng": [
+      "Champion"
+    ],
+    "attribute_eng": [
+      "Data"
+    ],
+    "effect_description_eng": "[Start of Your Main Phase] For the turn, when this Digimon would digivolve into a card with [Tyrannomon] in its name, or the [Dinosaur] or [Ceratopsian] trait, reduce the digivolution cost by 1.",
+    "inherited_effect_description_eng": "[End of Your Turn] [Once Per Turn] If this Digimon has [Tyrannomon] in its name, or the [Dinosaur] or [Ceratopsian] trait, it may attack.",
+    "security_effect_description_eng": "",
+    "evo_costs": []
+  },
+  {
+    "card_id": "BT14-014",
+    "card_index": 14,
+    "card_name_eng": "MetalGreymon",
+    "card_name_jpn": "",
+    "card_effect_class_name": "BT14_014",
+    "play_cost": 4,
+    "dp": 8000,
+    "level": 5,
+    "card_kind": 0,
+    "rarity": 3,
+    "card_colors": [
+      0
+    ],
+    "type_eng": [
+      "Cyborg"
+    ],
+    "form_eng": [
+      "Ultimate"
+    ],
+    "attribute_eng": [
+      "Vaccine"
+    ],
+    "effect_description_eng": "[Hand] [Counter] ＜Blast Digivolve＞ (Your Digimon may digivolve into this card without paying the cost.)\r\n[On Play] [When Digivolving] Delete 1 of your opponent's Digimon with 6000 DP or less.",
+    "inherited_effect_description_eng": "Ace Overflow ＜-3＞ (As this card moves from the field or under a card to an area other than those, lose 3 memory.)",
+    "security_effect_description_eng": "",
+    "evo_costs": [
+      {
+        "card_color": 0,
+        "level": 4,
+        "memory_cost": 3
+      }
+    ]
+  },
+  {
+    "card_id": "BT14-015",
+    "card_index": 15,
+    "card_name_eng": "Megadramon",
+    "card_name_jpn": "",
+    "card_effect_class_name": "BT14_015",
+    "play_cost": 6,
+    "dp": 7000,
+    "level": 5,
+    "card_kind": 0,
+    "rarity": 0,
+    "card_colors": [
+      0
+    ],
+    "type_eng": [
+      "Cyborg"
+    ],
+    "form_eng": [
+      "Ultimate"
+    ],
+    "attribute_eng": [
+      "Virus"
+    ],
+    "effect_description_eng": "Inherited Effect [When Attacking] [Once Per Turn] Delete 1 of your opponent's Digimon with 5000 DP or less.",
+    "inherited_effect_description_eng": "",
+    "security_effect_description_eng": "",
+    "evo_costs": [
+      {
+        "card_color": 0,
+        "level": 4,
+        "memory_cost": 3
+      }
+    ]
+  },
+  {
+    "card_id": "BT14-016",
+    "card_index": 16,
+    "card_name_eng": "Triceramon",
+    "card_name_jpn": "",
+    "card_effect_class_name": "BT14_016",
+    "play_cost": 7,
+    "dp": 7000,
+    "level": 5,
+    "card_kind": 0,
+    "rarity": 0,
+    "card_colors": [
+      0
+    ],
+    "type_eng": [
+      "Ceratopsian"
+    ],
+    "form_eng": [
+      "Ultimate"
+    ],
+    "attribute_eng": [
+      "Data"
+    ],
+    "effect_description_eng": "＜Raid＞ (When this Digimon attacks, you may switch the target of attack to 1 of your opponent's unsuspended Digimon with the highest DP.)",
+    "inherited_effect_description_eng": "",
+    "security_effect_description_eng": "",
+    "evo_costs": [
+      {
+        "card_color": 0,
+        "level": 4,
+        "memory_cost": 2
+      }
+    ]
+  },
+  {
+    "card_id": "BT14-017",
+    "card_index": 17,
+    "card_name_eng": "Dinorexmon",
+    "card_name_jpn": "",
+    "card_effect_class_name": "BT14_017",
+    "play_cost": 11,
+    "dp": 11000,
+    "level": 6,
+    "card_kind": 0,
+    "rarity": 1,
+    "card_colors": [
+      0
+    ],
+    "type_eng": [
+      "Dinosaur",
+      "X Antibody"
+    ],
+    "form_eng": [
+      "Mega"
+    ],
+    "attribute_eng": [
+      "Data"
+    ],
+    "effect_description_eng": "[When Digivolving] ＜Blitz＞ (If your opponent has 1 or more memory, this Digimon may attack.)\r\n[All Turns] While your opponent has 1 or more memory, they can't play Digimon with 6000 DP or less, and this Digimon gets +4000 DP.",
+    "inherited_effect_description_eng": "",
+    "security_effect_description_eng": "",
+    "evo_costs": [
+      {
+        "card_color": 0,
+        "level": 5,
+        "memory_cost": 3
+      }
+    ]
+  },
+  {
+    "card_id": "BT14-018",
+    "card_index": 18,
+    "card_name_eng": "Goldramon",
+    "card_name_jpn": "",
+    "card_effect_class_name": "BT14_018",
+    "play_cost": 12,
+    "dp": 12000,
+    "level": 6,
+    "card_kind": 0,
+    "rarity": 2,
+    "card_colors": [
+      0,
+      2
+    ],
+    "type_eng": [
+      "Holy Dragon",
+      "Four Great Dragons"
+    ],
+    "form_eng": [
+      "Mega"
+    ],
+    "attribute_eng": [
+      "Vaccine"
+    ],
+    "effect_description_eng": "[On Play] [When Digivolving] Play 1 [Amon of Crimson Flame] Token (Digimon/Red/6000 DP/＜Rush＞) and 1 [Umon of Blue Thunder] Token. (Digimon/Yellow/6000 DP/＜Blocker＞)\r\n[All Turns] When this Digimon would digivolve or leave the battle area, delete all of your [Amon of Crimson Flame]s and [Umon of Blue Thunder]s. If you deleted a Digimon with this effect, ＜Recovery +1 (Deck)＞ (Place the top card of your deck on top of your security stack.)",
+    "inherited_effect_description_eng": "",
+    "security_effect_description_eng": "",
+    "evo_costs": [
+      {
+        "card_color": 0,
+        "level": 5,
+        "memory_cost": 4
+      }
+    ]
+  },
+  {
+    "card_id": "BT14-019",
+    "card_index": 19,
+    "card_name_eng": "Otamamon",
+    "card_name_jpn": "",
+    "card_effect_class_name": "BT14_019",
+    "play_cost": 3,
+    "dp": 2000,
+    "level": 3,
+    "card_kind": 0,
+    "rarity": 0,
+    "card_colors": [
+      1
+    ],
+    "type_eng": [
+      "Amphibian"
+    ],
+    "form_eng": [
+      "Rookie"
+    ],
+    "attribute_eng": [
+      "Virus"
+    ],
+    "effect_description_eng": "Inherited Effect [Opponent's Turn] [Once Per Turn] When an opponent's Digimon attacks, trash its bottom 2 digivolution cards.",
+    "inherited_effect_description_eng": "",
+    "security_effect_description_eng": "",
+    "evo_costs": []
+  },
+  {
+    "card_id": "BT14-020",
+    "card_index": 20,
+    "card_name_eng": "Gomamon",
+    "card_name_jpn": "",
+    "card_effect_class_name": "BT14_020",
+    "play_cost": 3,
+    "dp": 1000,
+    "level": 3,
+    "card_kind": 0,
+    "rarity": 3,
+    "card_colors": [
+      1
+    ],
+    "type_eng": [
+      "Sea Beast"
+    ],
+    "form_eng": [
+      "Rookie"
+    ],
+    "attribute_eng": [
+      "Vaccine"
+    ],
+    "effect_description_eng": "[Start of Your Main Phase] Trash any 1 digivolution card of 1 of your opponent's Digimon. Then, this Digimon can't be blocked for the turn.",
+    "inherited_effect_description_eng": "[Opponent's Turn] When this Digimon would be deleted, you may play 1 [Gomamon] from this Digimon's digivolution cards without paying the cost.",
+    "security_effect_description_eng": "",
+    "evo_costs": []
+  },
+  {
+    "card_id": "BT14-021",
+    "card_index": 21,
+    "card_name_eng": "Syakomon",
+    "card_name_jpn": "",
+    "card_effect_class_name": "BT14_021",
+    "play_cost": 3,
+    "dp": 2000,
+    "level": 3,
+    "card_kind": 0,
+    "rarity": 0,
+    "card_colors": [
+      1
+    ],
+    "type_eng": [
+      "Crustacean"
+    ],
+    "form_eng": [
+      "Rookie"
+    ],
+    "attribute_eng": [
+      "Virus"
+    ],
+    "effect_description_eng": "＜Evade＞ (When this Digimon would be deleted, you may suspend it to prevent that deletion.)",
+    "inherited_effect_description_eng": "",
+    "security_effect_description_eng": "",
+    "evo_costs": []
+  },
+  {
+    "card_id": "BT14-022",
+    "card_index": 22,
+    "card_name_eng": "Gesomon",
+    "card_name_jpn": "",
+    "card_effect_class_name": "BT14_022",
+    "play_cost": 4,
+    "dp": 4000,
+    "level": 4,
+    "card_kind": 0,
+    "rarity": 0,
+    "card_colors": [
+      1
+    ],
+    "type_eng": [
+      "Mollusk"
+    ],
+    "form_eng": [
+      "Champion"
+    ],
+    "attribute_eng": [
+      "Virus"
+    ],
+    "effect_description_eng": "[When Attacking] Trash any 1 digivolution card of 1 of your opponent's Digimon. Then, return 1 of your opponent's level 5 or lower Digimon with no digivolution cards to its owner's hand.",
+    "inherited_effect_description_eng": "",
+    "security_effect_description_eng": "",
+    "evo_costs": [
+      {
+        "card_color": 1,
+        "level": 3,
+        "memory_cost": 2
+      }
+    ]
+  },
+  {
+    "card_id": "BT14-023",
+    "card_index": 23,
+    "card_name_eng": "Ikkakumon",
+    "card_name_jpn": "",
+    "card_effect_class_name": "BT14_023",
+    "play_cost": 5,
+    "dp": 5000,
+    "level": 4,
+    "card_kind": 0,
+    "rarity": 2,
+    "card_colors": [
+      1
+    ],
+    "type_eng": [
+      "Sea Beast"
+    ],
+    "form_eng": [
+      "Champion"
+    ],
+    "attribute_eng": [
+      "Vaccine"
+    ],
+    "effect_description_eng": "[When Digivolving] Trash any 2 digivolution cards from your opponent's Digimon.\r\n[When Attacking] [Once Per Turn] Until the end of your opponent's turn, 1 of your opponent's Digimon with as many or fewer digivolution cards as this Digimon can't attack.",
+    "inherited_effect_description_eng": "[When Attacking] [Once Per Turn] Until the end of your opponent's turn, 1 of your opponent's Digimon with as many or fewer digivolution cards as this Digimon can't attack.",
+    "security_effect_description_eng": "",
+    "evo_costs": [
+      {
+        "card_color": 1,
+        "level": 3,
+        "memory_cost": 2
+      }
+    ]
+  },
+  {
+    "card_id": "BT14-024",
+    "card_index": 24,
+    "card_name_eng": "Gekomon",
+    "card_name_jpn": "",
+    "card_effect_class_name": "BT14_024",
+    "play_cost": 5,
+    "dp": 6000,
+    "level": 4,
+    "card_kind": 0,
+    "rarity": 0,
+    "card_colors": [
+      1
+    ],
+    "type_eng": [
+      "Amphibian"
+    ],
+    "form_eng": [
+      "Champion"
+    ],
+    "attribute_eng": [
+      "Virus"
+    ],
+    "effect_description_eng": "Inherited Effect [Opponent's Turn] [Once Per Turn] When an opponent's Digimon attacks, trash its bottom 2 digivolution cards.",
+    "inherited_effect_description_eng": "",
+    "security_effect_description_eng": "",
+    "evo_costs": [
+      {
+        "card_color": 1,
+        "level": 3,
+        "memory_cost": 2
+      }
+    ]
+  },
+  {
+    "card_id": "BT14-025",
+    "card_index": 25,
+    "card_name_eng": "Shellmon",
+    "card_name_jpn": "",
+    "card_effect_class_name": "BT14_025",
+    "play_cost": 5,
+    "dp": 6000,
+    "level": 4,
+    "card_kind": 0,
+    "rarity": 0,
+    "card_colors": [
+      1
+    ],
+    "type_eng": [
+      "Mollusk"
+    ],
+    "form_eng": [
+      "Champion"
+    ],
+    "attribute_eng": [
+      "Data"
+    ],
+    "effect_description_eng": "＜Evade＞ (When this Digimon would be deleted, you may suspend it to prevent that deletion.)",
+    "inherited_effect_description_eng": "",
+    "security_effect_description_eng": "",
+    "evo_costs": [
+      {
+        "card_color": 1,
+        "level": 3,
+        "memory_cost": 2
+      }
+    ]
+  },
+  {
+    "card_id": "BT14-026",
+    "card_index": 26,
+    "card_name_eng": "Zudomon",
+    "card_name_jpn": "",
+    "card_effect_class_name": "BT14_026",
+    "play_cost": 4,
+    "dp": 8000,
+    "level": 5,
+    "card_kind": 0,
+    "rarity": 3,
+    "card_colors": [
+      1
+    ],
+    "type_eng": [
+      "Sea Beast"
+    ],
+    "form_eng": [
+      "Ultimate"
+    ],
+    "attribute_eng": [
+      "Vaccine"
+    ],
+    "effect_description_eng": "[Hand] [Counter] ＜Blast Digivolve＞ (Your Digimon may digivolve into this card without paying the cost.)\r\n[On Play] [When Digivolving] Trash any 2 digivolution cards from your opponent's Digimon. Then, return 1 of your opponent's Digimon with no digivolution cards to the hand.",
+    "inherited_effect_description_eng": "Ace Overflow ＜-3＞ (As this card moves from the field or under a card to an area other than those, lose 3 memory.)",
+    "security_effect_description_eng": "",
+    "evo_costs": [
+      {
+        "card_color": 1,
+        "level": 4,
+        "memory_cost": 3
+      }
+    ]
+  },
+  {
+    "card_id": "BT14-027",
+    "card_index": 27,
+    "card_name_eng": "MarineDevimon",
+    "card_name_jpn": "",
+    "card_effect_class_name": "BT14_027",
+    "play_cost": 6,
+    "dp": 7000,
+    "level": 5,
+    "card_kind": 0,
+    "rarity": 0,
+    "card_colors": [
+      1
+    ],
+    "type_eng": [
+      "Aquabeast"
+    ],
+    "form_eng": [
+      "Ultimate"
+    ],
+    "attribute_eng": [
+      "Virus"
+    ],
+    "effect_description_eng": "[On Play] [When Digivolving] Return all level 3 Digimon to their owner's hands.",
+    "inherited_effect_description_eng": "",
+    "security_effect_description_eng": "",
+    "evo_costs": [
+      {
+        "card_color": 1,
+        "level": 4,
+        "memory_cost": 3
+      }
+    ]
+  },
+  {
+    "card_id": "BT14-028",
+    "card_index": 28,
+    "card_name_eng": "ShogunGekomon",
+    "card_name_jpn": "",
+    "card_effect_class_name": "BT14_028",
+    "play_cost": 7,
+    "dp": 7000,
+    "level": 5,
+    "card_kind": 0,
+    "rarity": 1,
+    "card_colors": [
+      1
+    ],
+    "type_eng": [
+      "Amphibian"
+    ],
+    "form_eng": [
+      "Ultimate"
+    ],
+    "attribute_eng": [
+      "Virus"
+    ],
+    "effect_description_eng": "＜Blocker＞ (This Digimon can block in the blocker timing.)\r\n[All Turns] [Once Per Turn] When a digivolution card of an opponent's Digimon is trashed, this Digimon can't be deleted in battle until the end of your opponent's turn.",
+    "inherited_effect_description_eng": "",
+    "security_effect_description_eng": "",
+    "evo_costs": [
+      {
+        "card_color": 1,
+        "level": 4,
+        "memory_cost": 3
+      }
+    ]
+  },
+  {
+    "card_id": "BT14-029",
+    "card_index": 29,
+    "card_name_eng": "Plesiomon",
+    "card_name_jpn": "",
+    "card_effect_class_name": "BT14_029",
+    "play_cost": 11,
+    "dp": 11000,
+    "level": 6,
+    "card_kind": 0,
+    "rarity": 2,
+    "card_colors": [
+      1
+    ],
+    "type_eng": [
+      "Plesiosaur"
+    ],
+    "form_eng": [
+      "Mega"
+    ],
+    "attribute_eng": [
+      "Data"
+    ],
+    "effect_description_eng": "[When Digivolving] Trash any 3 digivolution cards from your opponent's Digimon.\r\n[When Attacking] [Once Per Turn] If your opponent has no Digimon with as many or more digivolution cards as this Digimon, unsuspend this Digimon.",
+    "inherited_effect_description_eng": "",
+    "security_effect_description_eng": "",
+    "evo_costs": [
+      {
+        "card_color": 1,
+        "level": 5,
+        "memory_cost": 3
+      }
+    ]
+  },
+  {
+    "card_id": "BT14-030",
+    "card_index": 30,
+    "card_name_eng": "MarineAngemon",
+    "card_name_jpn": "",
+    "card_effect_class_name": "BT14_030",
+    "play_cost": 11,
+    "dp": 11000,
+    "level": 6,
+    "card_kind": 0,
+    "rarity": 1,
+    "card_colors": [
+      1
+    ],
+    "type_eng": [
+      "Fairy"
+    ],
+    "form_eng": [
+      "Mega"
+    ],
+    "attribute_eng": [
+      "Vaccine"
+    ],
+    "effect_description_eng": "[On Play] [When Digivolving] By returning 1 of your opponent's level 3 Digimon or 1 of your Digimon to the hand, return 1 of your opponent's Digimon with an equal or lower level to the hand.\r\n[Your Turn] [Once Per Turn] When another Digimon is returned to the hand, ＜Recovery +1 (Deck)＞ (Place the top card of your deck on top of your security stack.)",
+    "inherited_effect_description_eng": "",
+    "security_effect_description_eng": "",
+    "evo_costs": [
+      {
+        "card_color": 1,
+        "level": 5,
+        "memory_cost": 3
+      }
+    ]
+  },
+  {
+    "card_id": "BT14-031",
+    "card_index": 31,
+    "card_name_eng": "Elecmon",
+    "card_name_jpn": "",
+    "card_effect_class_name": "BT14_031",
+    "play_cost": 3,
+    "dp": 2000,
+    "level": 3,
+    "card_kind": 0,
+    "rarity": 0,
+    "card_colors": [
+      2
+    ],
+    "type_eng": [
+      "Mammal"
+    ],
+    "form_eng": [
+      "Rookie"
+    ],
+    "attribute_eng": [
+      "Data"
+    ],
+    "effect_description_eng": "Inherited Effect [When Attacking] [Once Per Turn] 1 of your opponent's Digimon gets -2000 DP for the turn.",
+    "inherited_effect_description_eng": "",
+    "security_effect_description_eng": "",
+    "evo_costs": []
+  },
+  {
+    "card_id": "BT14-032",
+    "card_index": 32,
+    "card_name_eng": "Chuumon",
+    "card_name_jpn": "",
+    "card_effect_class_name": "BT14_032",
+    "play_cost": 3,
+    "dp": 1000,
+    "level": 3,
+    "card_kind": 0,
+    "rarity": 0,
+    "card_colors": [
+      2
+    ],
+    "type_eng": [
+      "Beast"
+    ],
+    "form_eng": [
+      "Rookie"
+    ],
+    "attribute_eng": [
+      "Virus"
+    ],
+    "effect_description_eng": "[On Play] Add the top card of your security stack to the hand. Then, you may place 1 card with [Sukamon] in its name from your hand on top of your security stack.",
+    "inherited_effect_description_eng": "[On Deletion] 1 of your opponent's Digimon gets -3000 DP for the turn.",
+    "security_effect_description_eng": "",
+    "evo_costs": []
+  },
+  {
+    "card_id": "BT14-033",
+    "card_index": 33,
+    "card_name_eng": "Patamon",
+    "card_name_jpn": "",
+    "card_effect_class_name": "BT14_033",
+    "play_cost": 3,
+    "dp": 1000,
+    "level": 3,
+    "card_kind": 0,
+    "rarity": 3,
+    "card_colors": [
+      2
+    ],
+    "type_eng": [
+      "Mammal"
+    ],
+    "form_eng": [
+      "Rookie"
+    ],
+    "attribute_eng": [
+      "Data"
+    ],
+    "effect_description_eng": "[Start of Your Main Phase] Search your security stack. This Digimon may digivolve into a yellow Digimon card with the [Vaccine] trait among them without paying the cost. Then, shuffle your security stack. If digivolved by this effect, you may place 1 yellow card with the [Vaccine] trait from your hand at the bottom of your security stack.",
+    "inherited_effect_description_eng": "[Your Turn] [Once Per Turn] When a card is added to your security stack, gain 1 memory.",
+    "security_effect_description_eng": "",
+    "evo_costs": []
+  },
+  {
+    "card_id": "BT14-034",
+    "card_index": 34,
+    "card_name_eng": "Sukamon",
+    "card_name_jpn": "",
+    "card_effect_class_name": "BT14_034",
+    "play_cost": 3,
+    "dp": 1000,
+    "level": 4,
+    "card_kind": 0,
+    "rarity": 1,
+    "card_colors": [
+      2,
+      5
+    ],
+    "type_eng": [
+      "Abnormal"
+    ],
+    "form_eng": [
+      "Champion"
+    ],
+    "attribute_eng": [
+      "Virus"
+    ],
+    "effect_description_eng": "[Security] At the end of the battle, play this card without paying the cost.",
+    "inherited_effect_description_eng": "[On Deletion] 1 of your opponent's Digimon gets -3000 DP for the turn.",
+    "security_effect_description_eng": "",
+    "evo_costs": [
+      {
+        "card_color": 2,
+        "level": 3,
+        "memory_cost": 2
+      }
+    ]
+  },
+  {
+    "card_id": "BT14-035",
+    "card_index": 35,
+    "card_name_eng": "Unimon",
+    "card_name_jpn": "",
+    "card_effect_class_name": "BT14_035",
+    "play_cost": 4,
+    "dp": 5000,
+    "level": 4,
+    "card_kind": 0,
+    "rarity": 0,
+    "card_colors": [
+      2
+    ],
+    "type_eng": [
+      "Mythical Beast"
+    ],
+    "form_eng": [
+      "Champion"
+    ],
+    "attribute_eng": [
+      "Vaccine"
+    ],
+    "effect_description_eng": "＜Barrier＞ (When this Digimon would be deleted in battle, by trashing the top card of your security stack, prevent that deletion.)",
+    "inherited_effect_description_eng": "",
+    "security_effect_description_eng": "",
+    "evo_costs": [
+      {
+        "card_color": 2,
+        "level": 3,
+        "memory_cost": 2
+      }
+    ]
+  },
+  {
+    "card_id": "BT14-036",
+    "card_index": 36,
+    "card_name_eng": "Centarumon",
+    "card_name_jpn": "",
+    "card_effect_class_name": "BT14_036",
+    "play_cost": 5,
+    "dp": 5000,
+    "level": 4,
+    "card_kind": 0,
+    "rarity": 1,
+    "card_colors": [
+      2
+    ],
+    "type_eng": [
+      "Beastkin"
+    ],
+    "form_eng": [
+      "Champion"
+    ],
+    "attribute_eng": [
+      "Data"
+    ],
+    "effect_description_eng": "[When Digivolving] 1 of your opponent's Digimon gets -3000 DP for the turn.",
+    "inherited_effect_description_eng": "[When Attacking] [Once Per Turn] 1 of your opponent's Digimon gets -2000 DP for the turn.",
+    "security_effect_description_eng": "",
+    "evo_costs": [
+      {
+        "card_color": 2,
+        "level": 3,
+        "memory_cost": 2
+      }
+    ]
+  },
+  {
+    "card_id": "BT14-037",
+    "card_index": 37,
+    "card_name_eng": "MagnaAngemon",
+    "card_name_jpn": "",
+    "card_effect_class_name": "BT14_037",
+    "play_cost": 4,
+    "dp": 8000,
+    "level": 5,
+    "card_kind": 0,
+    "rarity": 3,
+    "card_colors": [
+      2
+    ],
+    "type_eng": [
+      "Archangel"
+    ],
+    "form_eng": [
+      "Ultimate"
+    ],
+    "attribute_eng": [
+      "Vaccine"
+    ],
+    "effect_description_eng": "[Hand] [Counter] ＜Blast Digivolve＞ (Your Digimon may digivolve into this card without paying the cost.)\r\n[On Play] [When Digivolving] If you have 5 or fewer Security cards, ＜Recovery +1 (Deck)＞. Then, for the turn, 1 of your opponent's Digimon gets -1000 DP for each card in your security stack.",
+    "inherited_effect_description_eng": "Ace Overflow ＜-3＞ (As this card moves from the field or under a card to an area other than those, lose 3 memory.)",
+    "security_effect_description_eng": "",
+    "evo_costs": [
+      {
+        "card_color": 2,
+        "level": 4,
+        "memory_cost": 3
+      }
+    ]
+  },
+  {
+    "card_id": "BT14-038",
+    "card_index": 38,
+    "card_name_eng": "Etemon",
+    "card_name_jpn": "",
+    "card_effect_class_name": "BT14_038",
+    "play_cost": 7,
+    "dp": 7000,
+    "level": 5,
+    "card_kind": 0,
+    "rarity": 2,
+    "card_colors": [
+      2
+    ],
+    "type_eng": [
+      "Puppet"
+    ],
+    "form_eng": [
+      "Ultimate"
+    ],
+    "attribute_eng": [
+      "Virus"
+    ],
+    "effect_description_eng": "[Security] If you have 3 or more cards with [Sukamon] in their names in your trash, you may play 1 level 6 Digimon card with [Etemon] in its name from your hand without paying its cost.\r\n[On Deletion] Place this card at the bottom of your security stack.",
+    "inherited_effect_description_eng": "[On Deletion] Place 1 [Etemon] from your trash at the bottom of your security stack.",
+    "security_effect_description_eng": "",
+    "evo_costs": [
+      {
+        "card_color": 2,
+        "level": 4,
+        "memory_cost": 4
+      }
+    ]
+  },
+  {
+    "card_id": "BT14-039",
+    "card_index": 39,
+    "card_name_eng": "Monzaemon",
+    "card_name_jpn": "",
+    "card_effect_class_name": "BT14_039",
+    "play_cost": 7,
+    "dp": 7000,
+    "level": 5,
+    "card_kind": 0,
+    "rarity": 2,
+    "card_colors": [
+      2
+    ],
+    "type_eng": [
+      "Puppet"
+    ],
+    "form_eng": [
+      "Ultimate"
+    ],
+    "attribute_eng": [
+      "Vaccine"
+    ],
+    "effect_description_eng": "＜Armor Purge＞ (When this Digimon would be deleted, you may trash the top card of this Digimon to prevent that deletion.)\r\n[On Play] By placing 1 Digimon card with [Numemon] in its name, from your trash as this Digimon's bottom digivolution card, gain 2 memory.",
+    "inherited_effect_description_eng": "[Your Turn] While this Digimon has [Monzaemon] or [Numemon] in its name, it gains ＜Security A. +1＞ (This Digimon checks 1 additional security card.)",
+    "security_effect_description_eng": "",
+    "evo_costs": [
+      {
+        "card_color": 2,
+        "level": 4,
+        "memory_cost": 4
+      }
+    ]
+  },
+  {
+    "card_id": "BT14-040",
+    "card_index": 40,
+    "card_name_eng": "Jijimon",
+    "card_name_jpn": "",
+    "card_effect_class_name": "BT14_040",
+    "play_cost": 11,
+    "dp": 11000,
+    "level": 6,
+    "card_kind": 0,
+    "rarity": 1,
+    "card_colors": [
+      2
+    ],
+    "type_eng": [
+      "Ancient"
+    ],
+    "form_eng": [
+      "Mega"
+    ],
+    "attribute_eng": [
+      "Vaccine"
+    ],
+    "effect_description_eng": "[On Play] [When Digivolving] You may place 1 Tamer card from your hand on top of your security stack.\r\n[All Turns] [Once Per Turn] When you play a Tamer, you may play 1 level 3 Digimon from your hand without paying its cost.",
+    "inherited_effect_description_eng": "",
+    "security_effect_description_eng": "",
+    "evo_costs": [
+      {
+        "card_color": 2,
+        "level": 5,
+        "memory_cost": 3
+      }
+    ]
+  },
+  {
+    "card_id": "BT14-041",
+    "card_index": 41,
+    "card_name_eng": "Seraphimon",
+    "card_name_jpn": "",
+    "card_effect_class_name": "BT14_041",
+    "play_cost": 12,
+    "dp": 12000,
+    "level": 6,
+    "card_kind": 0,
+    "rarity": 2,
+    "card_colors": [
+      2
+    ],
+    "type_eng": [
+      "Seraph",
+      "Three Great Angels"
+    ],
+    "form_eng": [
+      "Mega"
+    ],
+    "attribute_eng": [
+      "Vaccine"
+    ],
+    "effect_description_eng": "[When Digivolving] ＜Recovery +1 (Deck)＞ (Place the top card of your deck on top of your security stack.)\r\n[All Turns] [Once Per Turn] When a card is added to your security stack, 1 of your opponent's Digimon gets -7000 DP and this Digimon gains ＜Security A. +1＞ (This Digimon checks 1 additional security card.), for the turn.",
+    "inherited_effect_description_eng": "",
+    "security_effect_description_eng": "",
+    "evo_costs": [
+      {
+        "card_color": 2,
+        "level": 5,
+        "memory_cost": 4
+      }
+    ]
+  },
+  {
+    "card_id": "BT14-042",
+    "card_index": 42,
+    "card_name_eng": "Kunemon",
+    "card_name_jpn": "",
+    "card_effect_class_name": "BT14_042",
+    "play_cost": 3,
+    "dp": 2000,
+    "level": 3,
+    "card_kind": 0,
+    "rarity": 0,
+    "card_colors": [
+      3
+    ],
+    "type_eng": [
+      "Larva"
+    ],
+    "form_eng": [
+      "Rookie"
+    ],
+    "attribute_eng": [
+      "Virus"
+    ],
+    "effect_description_eng": "[On Play] By suspending this Digimon, reveal the top 3 cards of your deck. Add 1 green card among them to your hand. Return the rest to the bottom of your deck in any order.",
+    "inherited_effect_description_eng": "",
+    "security_effect_description_eng": "",
+    "evo_costs": []
+  },
+  {
+    "card_id": "BT14-043",
+    "card_index": 43,
+    "card_name_eng": "KoDokugumon",
+    "card_name_jpn": "",
+    "card_effect_class_name": "BT14_043",
+    "play_cost": 3,
+    "dp": 2000,
+    "level": 3,
+    "card_kind": 0,
+    "rarity": 0,
+    "card_colors": [
+      3
+    ],
+    "type_eng": [
+      "Insectoid"
+    ],
+    "form_eng": [
+      "Rookie"
+    ],
+    "attribute_eng": [
+      "Virus"
+    ],
+    "effect_description_eng": "[On Play] By suspending 1 of your Digimon, suspend 1 of your opponent's Digimon.",
+    "inherited_effect_description_eng": "",
+    "security_effect_description_eng": "",
+    "evo_costs": []
+  },
+  {
+    "card_id": "BT14-044",
+    "card_index": 44,
+    "card_name_eng": "Palmon",
+    "card_name_jpn": "",
+    "card_effect_class_name": "BT14_044",
+    "play_cost": 3,
+    "dp": 1000,
+    "level": 3,
+    "card_kind": 0,
+    "rarity": 3,
+    "card_colors": [
+      3
+    ],
+    "type_eng": [
+      "Vegetation"
+    ],
+    "form_eng": [
+      "Rookie"
+    ],
+    "attribute_eng": [
+      "Data"
+    ],
+    "effect_description_eng": "[Start of Your Main Phase] 1 of your opponent's Digimon gains \"[All Turns] When this Digimon becomes suspended, lose 2 memory.\" until the end of their turn.",
+    "inherited_effect_description_eng": "[Your Turn] [Once Per Turn] When this Digimon would digivolve, if you have a green Tamer, reduce the cost by 1.",
+    "security_effect_description_eng": "",
+    "evo_costs": []
+  },
+  {
+    "card_id": "BT14-045",
+    "card_index": 45,
+    "card_name_eng": "Kuwagamon",
+    "card_name_jpn": "",
+    "card_effect_class_name": "BT14_045",
+    "play_cost": 4,
+    "dp": 5000,
+    "level": 4,
+    "card_kind": 0,
+    "rarity": 0,
+    "card_colors": [
+      3
+    ],
+    "type_eng": [
+      "Insectoid"
+    ],
+    "form_eng": [
+      "Champion"
+    ],
+    "attribute_eng": [
+      "Virus"
+    ],
+    "effect_description_eng": "＜Jamming＞ (This Digimon can't be deleted in battles against Security Digimon.)",
+    "inherited_effect_description_eng": "",
+    "security_effect_description_eng": "",
+    "evo_costs": [
+      {
+        "card_color": 3,
+        "level": 3,
+        "memory_cost": 2
+      }
+    ]
+  },
+  {
+    "card_id": "BT14-046",
+    "card_index": 46,
+    "card_name_eng": "Togemon",
+    "card_name_jpn": "",
+    "card_effect_class_name": "BT14_046",
+    "play_cost": 4,
+    "dp": 3000,
+    "level": 4,
+    "card_kind": 0,
+    "rarity": 1,
+    "card_colors": [
+      3
+    ],
+    "type_eng": [
+      "Vegetation"
+    ],
+    "form_eng": [
+      "Champion"
+    ],
+    "attribute_eng": [
+      "Data"
+    ],
+    "effect_description_eng": "[Your Turn] [Once Per Turn] When you would play a green Tamer from your hand, by suspending 1 of your green Digimon, reduce the play cost by 3.",
+    "inherited_effect_description_eng": "[Your Turn] [Once Per Turn] When this Digimon would digivolve, if you have a green Tamer, reduce the digivolution cost by 1.",
+    "security_effect_description_eng": "",
+    "evo_costs": [
+      {
+        "card_color": 3,
+        "level": 3,
+        "memory_cost": 2
+      }
+    ]
+  },
+  {
+    "card_id": "BT14-047",
+    "card_index": 47,
+    "card_name_eng": "Dokugumon",
+    "card_name_jpn": "",
+    "card_effect_class_name": "BT14_047",
+    "play_cost": 5,
+    "dp": 5000,
+    "level": 4,
+    "card_kind": 0,
+    "rarity": 0,
+    "card_colors": [
+      3
+    ],
+    "type_eng": [
+      "Insectoid"
+    ],
+    "form_eng": [
+      "Champion"
+    ],
+    "attribute_eng": [
+      "Virus"
+    ],
+    "effect_description_eng": "[On Play] [When Digivolving] Suspend 1 of your opponent's Digimon. During your opponent's next unsuspend phase, all of your opponent's Digimon with 5000 DP or less don't unsuspend.",
+    "inherited_effect_description_eng": "",
+    "security_effect_description_eng": "",
+    "evo_costs": [
+      {
+        "card_color": 3,
+        "level": 3,
+        "memory_cost": 2
+      }
+    ]
+  },
+  {
+    "card_id": "BT14-048",
+    "card_index": 48,
+    "card_name_eng": "Leomon",
+    "card_name_jpn": "",
+    "card_effect_class_name": "BT14_048",
+    "play_cost": 5,
+    "dp": 4000,
+    "level": 4,
+    "card_kind": 0,
+    "rarity": 2,
+    "card_colors": [
+      3
+    ],
+    "type_eng": [
+      "Beastkin"
+    ],
+    "form_eng": [
+      "Champion"
+    ],
+    "attribute_eng": [
+      "Vaccine"
+    ],
+    "effect_description_eng": "[When Attacking] If attacking a Digimon with DP higher than this Digimon, this Digimon may digivolve into 1 level 6 Digimon card with [Leomon] in its name in your hand for a cost of 6, ignoring its digivolution requirements.",
+    "inherited_effect_description_eng": "[Your Turn] While this Digimon has [Leomon] in its name, it gets +2000 DP.",
+    "security_effect_description_eng": "",
+    "evo_costs": []
+  },
+  {
+    "card_id": "BT14-049",
+    "card_index": 49,
+    "card_name_eng": "Lillymon",
+    "card_name_jpn": "",
+    "card_effect_class_name": "BT14_049",
+    "play_cost": 4,
+    "dp": 8000,
+    "level": 5,
+    "card_kind": 0,
+    "rarity": 3,
+    "card_colors": [
+      3
+    ],
+    "type_eng": [
+      "Fairy"
+    ],
+    "form_eng": [
+      "Ultimate"
+    ],
+    "attribute_eng": [
+      "Data"
+    ],
+    "effect_description_eng": "[Hand] [Counter] ＜Blast Digivolve＞ (Your Digimon may digivolve into this card without paying the cost.)\r\n[On Play] [When Digivolving] Suspend 1 of your opponent's Digimon. Then, you may return 1 of your opponent's suspended Digimon with 5000 DP or less to the bottom of the deck.",
+    "inherited_effect_description_eng": "Ace Overflow ＜-3＞ (As this card moves from the field or under a card to an area other than those, lose 3 memory.)",
+    "security_effect_description_eng": "",
+    "evo_costs": [
+      {
+        "card_color": 3,
+        "level": 4,
+        "memory_cost": 3
+      }
+    ]
+  },
+  {
+    "card_id": "BT14-050",
+    "card_index": 50,
+    "card_name_eng": "Piximon",
+    "card_name_jpn": "",
+    "card_effect_class_name": "BT14_050",
+    "play_cost": 6,
+    "dp": 7000,
+    "level": 5,
+    "card_kind": 0,
+    "rarity": 0,
+    "card_colors": [
+      3
+    ],
+    "type_eng": [
+      "Fairy"
+    ],
+    "form_eng": [
+      "Ultimate"
+    ],
+    "attribute_eng": [
+      "Data"
+    ],
+    "effect_description_eng": "[On Play] [When Digivolving] 1 of your opponent's Digimon doesn't unsuspend until the end of their turn.",
+    "inherited_effect_description_eng": "",
+    "security_effect_description_eng": "",
+    "evo_costs": [
+      {
+        "card_color": 3,
+        "level": 4,
+        "memory_cost": 3
+      }
+    ]
+  },
+  {
+    "card_id": "BT14-051",
+    "card_index": 51,
+    "card_name_eng": "Okuwamon",
+    "card_name_jpn": "",
+    "card_effect_class_name": "BT14_051",
+    "play_cost": 7,
+    "dp": 7000,
+    "level": 5,
+    "card_kind": 0,
+    "rarity": 0,
+    "card_colors": [
+      3
+    ],
+    "type_eng": [
+      "Insectoid"
+    ],
+    "form_eng": [
+      "Ultimate"
+    ],
+    "attribute_eng": [
+      "Virus"
+    ],
+    "effect_description_eng": "[End of Opponent's Turn] [Once Per Turn] By suspending 1 of your Digimon, reveal the top 5 cards of your deck. Add 2 green Digimon cards among them to your hand. Return the rest to deck bottom of your deck.",
+    "inherited_effect_description_eng": "",
+    "security_effect_description_eng": "",
+    "evo_costs": [
+      {
+        "card_color": 3,
+        "level": 4,
+        "memory_cost": 3
+      }
+    ]
+  },
+  {
+    "card_id": "BT14-052",
+    "card_index": 52,
+    "card_name_eng": "Panjyamon",
+    "card_name_jpn": "",
+    "card_effect_class_name": "BT14_052",
+    "play_cost": 8,
+    "dp": 7000,
+    "level": 5,
+    "card_kind": 0,
+    "rarity": 0,
+    "card_colors": [
+      3
+    ],
+    "type_eng": [
+      "Beastkin"
+    ],
+    "form_eng": [
+      "Ultimate"
+    ],
+    "attribute_eng": [
+      "Vaccine"
+    ],
+    "effect_description_eng": "＜Piercing＞ (When this Digimon attacks and deletes an opponent's Digimon and survives the battle, it performs any security checks it normally would.)\r\n[When Digivolving] Suspend 1 of your opponent's Digimon.",
+    "inherited_effect_description_eng": "[Your Turn] While this Digimon has [Leomon] in its name, it gets +2000 DP.",
+    "security_effect_description_eng": "",
+    "evo_costs": [
+      {
+        "card_color": 3,
+        "level": 4,
+        "memory_cost": 3
+      }
+    ]
+  },
+  {
+    "card_id": "BT14-053",
+    "card_index": 53,
+    "card_name_eng": "Rosemon",
+    "card_name_jpn": "",
+    "card_effect_class_name": "BT14_053",
+    "play_cost": 11,
+    "dp": 11000,
+    "level": 6,
+    "card_kind": 0,
+    "rarity": 2,
+    "card_colors": [
+      3
+    ],
+    "type_eng": [
+      "Fairy"
+    ],
+    "form_eng": [
+      "Mega"
+    ],
+    "attribute_eng": [
+      "Data"
+    ],
+    "effect_description_eng": "[When Digivolving] [When Attacking] Suspend 1 of your opponent's Digimon or Tamers.\r\n[Your Turn] [Once Per Turn] When an effect suspends a Digimon or Tamer, you may unsuspend this Digimon.",
+    "inherited_effect_description_eng": "",
+    "security_effect_description_eng": "",
+    "evo_costs": [
+      {
+        "card_color": 3,
+        "level": 5,
+        "memory_cost": 3
+      }
+    ]
+  },
+  {
+    "card_id": "BT14-054",
+    "card_index": 54,
+    "card_name_eng": "SaberLeomon",
+    "card_name_jpn": "",
+    "card_effect_class_name": "BT14_054",
+    "play_cost": 12,
+    "dp": 12000,
+    "level": 6,
+    "card_kind": 0,
+    "rarity": 0,
+    "card_colors": [
+      3
+    ],
+    "type_eng": [
+      "Ancient Animal"
+    ],
+    "form_eng": [
+      "Mega"
+    ],
+    "attribute_eng": [
+      "Vaccine"
+    ],
+    "effect_description_eng": "＜Piercing＞ (When this Digimon attacks and deletes an opponent's Digimon and survives the battle, it performs any security checks it normally would.)\r\n[When Digivolving] By unsuspending this Digimon, suspend 1 of your opponent's Digimon.\r\n[End of Your Turn] This Digimon may attack an opponent's Digimon.",
+    "inherited_effect_description_eng": "",
+    "security_effect_description_eng": "",
+    "evo_costs": [
+      {
+        "card_color": 3,
+        "level": 5,
+        "memory_cost": 4
+      }
+    ]
+  },
+  {
+    "card_id": "BT14-055",
+    "card_index": 55,
+    "card_name_eng": "Kokuwamon",
+    "card_name_jpn": "",
+    "card_effect_class_name": "BT14_055",
+    "play_cost": 3,
+    "dp": 2000,
+    "level": 3,
+    "card_kind": 0,
+    "rarity": 0,
+    "card_colors": [
+      5
+    ],
+    "type_eng": [
+      "Machine"
+    ],
+    "form_eng": [
+      "Rookie"
+    ],
+    "attribute_eng": [
+      "Data"
+    ],
+    "effect_description_eng": "Inherited Effect ＜Blocker＞ (This Digimon can block in the blocker timing.)",
+    "inherited_effect_description_eng": "",
+    "security_effect_description_eng": "",
+    "evo_costs": []
+  },
+  {
+    "card_id": "BT14-056",
+    "card_index": 56,
+    "card_name_eng": "Commandramon",
+    "card_name_jpn": "",
+    "card_effect_class_name": "BT14_056",
+    "play_cost": 3,
+    "dp": 1000,
+    "level": 3,
+    "card_kind": 0,
+    "rarity": 3,
+    "card_colors": [
+      5
+    ],
+    "type_eng": [
+      "Cyborg",
+      "D-Brigade",
+      "DigiPolice"
+    ],
+    "form_eng": [
+      "Rookie"
+    ],
+    "attribute_eng": [
+      "Virus"
+    ],
+    "effect_description_eng": "[On Play] Reveal the top 5 cards of your deck. Add 1 card with the [D-Brigade] or [DigiPolice] trait among them to your hand. Place the rest at either the top or bottom of your deck.",
+    "inherited_effect_description_eng": "[All Turns] [Once Per Turn] When this Digimon would leave the battle area other than by your effect, by deleting 1 of your other Digimon with the [D-Brigade] trait, prevent it from leaving play.",
+    "security_effect_description_eng": "",
+    "evo_costs": []
+  },
+  {
+    "card_id": "BT14-057",
+    "card_index": 57,
+    "card_name_eng": "ChuuChuumon",
+    "card_name_jpn": "",
+    "card_effect_class_name": "BT14_057",
+    "play_cost": 3,
+    "dp": 2000,
+    "level": 3,
+    "card_kind": 0,
+    "rarity": 0,
+    "card_colors": [
+      5,
+      6
+    ],
+    "type_eng": [
+      "Beast",
+      "Bagra Army",
+      "Twilight"
+    ],
+    "form_eng": [
+      "Rookie"
+    ],
+    "attribute_eng": [
+      "Virus"
+    ],
+    "effect_description_eng": "[On Deletion] ＜Save＞ (You may place this card under one of your Tamers.)",
+    "inherited_effect_description_eng": "＜Blocker＞ (This Digimon can block in the blocker timing.)",
+    "security_effect_description_eng": "",
+    "evo_costs": [
+      {
+        "card_color": 5,
+        "level": 2,
+        "memory_cost": 1
+      }
+    ]
+  },
+  {
+    "card_id": "BT14-058",
+    "card_index": 58,
+    "card_name_eng": "Numemon",
+    "card_name_jpn": "",
+    "card_effect_class_name": "BT14_058",
+    "play_cost": 3,
+    "dp": 2000,
+    "level": 4,
+    "card_kind": 0,
+    "rarity": 2,
+    "card_colors": [
+      5
+    ],
+    "type_eng": [
+      "Mollusk",
+      "DigiPolice"
+    ],
+    "form_eng": [
+      "Champion"
+    ],
+    "attribute_eng": [
+      "Virus"
+    ],
+    "effect_description_eng": "[On Play] [When Digivolving] By placing 1 [Satsuki Tamahime] from your hand as this Digimon's bottom digivolution card, 1 of your Digimon gains ＜Rush＞ for the turn. (This Digimon can attack the turn it comes into play.)",
+    "inherited_effect_description_eng": "＜Blocker＞ (This Digimon can block in the blocker timing.)",
+    "security_effect_description_eng": "",
+    "evo_costs": [
+      {
+        "card_color": 5,
+        "level": 3,
+        "memory_cost": 2
+      }
+    ]
+  },
+  {
+    "card_id": "BT14-059",
+    "card_index": 59,
+    "card_name_eng": "Damemon",
+    "card_name_jpn": "",
+    "card_effect_class_name": "BT14_059",
+    "play_cost": 4,
+    "dp": 3000,
+    "level": 4,
+    "card_kind": 0,
+    "rarity": 0,
+    "card_colors": [
+      5,
+      6
+    ],
+    "type_eng": [
+      "Mutant",
+      "Bagra Army",
+      "Twilight"
+    ],
+    "form_eng": [
+      "Champion"
+    ],
+    "attribute_eng": [
+      "Virus"
+    ],
+    "effect_description_eng": "＜Retaliation＞ (When this Digimon is deleted after losing a battle, delete the Digimon it was battling.)\r\n[On Deletion] ＜Save＞ (You may place this card under one of your Tamers.)",
+    "inherited_effect_description_eng": "＜Blocker＞ (This Digimon can block in the blocker timing.)",
+    "security_effect_description_eng": "",
+    "evo_costs": [
+      {
+        "card_color": 5,
+        "level": 3,
+        "memory_cost": 2
+      }
+    ]
+  },
+  {
+    "card_id": "BT14-060",
+    "card_index": 60,
+    "card_name_eng": "Hi-Commandramon",
+    "card_name_jpn": "",
+    "card_effect_class_name": "BT14_060",
+    "play_cost": 4,
+    "dp": 4000,
+    "level": 4,
+    "card_kind": 0,
+    "rarity": 1,
+    "card_colors": [
+      5
+    ],
+    "type_eng": [
+      "Cyborg",
+      "D-Brigade",
+      "DigiPolice"
+    ],
+    "form_eng": [
+      "Champion"
+    ],
+    "attribute_eng": [
+      "Virus"
+    ],
+    "effect_description_eng": "[When Attacking] Reveal the top 3 cards of your deck. You may play 1 card with the [D-Brigade] or [DigiPolice] trait with a play cost of 3 or less among them without paying the cost. Return the rest the the bottom of the deck.",
+    "inherited_effect_description_eng": "[All Turns] [Once Per Turn] When this Digimon would leave the battle area other than by one of your effects, by deleting 1 of your other Digimon with the [D-Brigade] trait, prevent it from leaving.",
+    "security_effect_description_eng": "",
+    "evo_costs": [
+      {
+        "card_color": 5,
+        "level": 3,
+        "memory_cost": 2
+      }
+    ]
+  },
+  {
+    "card_id": "BT14-061",
+    "card_index": 61,
+    "card_name_eng": "Vegiemon",
+    "card_name_jpn": "",
+    "card_effect_class_name": "BT14_061",
+    "play_cost": 4,
+    "dp": 4000,
+    "level": 4,
+    "card_kind": 0,
+    "rarity": 0,
+    "card_colors": [
+      5
+    ],
+    "type_eng": [
+      "Carnivorous Plant"
+    ],
+    "form_eng": [
+      "Champion"
+    ],
+    "attribute_eng": [
+      "Virus"
+    ],
+    "effect_description_eng": "[On Play] [When Digivolving] By returning 1 Digimon card from your opponent's trash to the top of their deck, gain 1 memory.",
+    "inherited_effect_description_eng": "",
+    "security_effect_description_eng": "",
+    "evo_costs": [
+      {
+        "card_color": 5,
+        "level": 3,
+        "memory_cost": 2
+      }
+    ]
+  },
+  {
+    "card_id": "BT14-062",
+    "card_index": 62,
+    "card_name_eng": "Datamon",
+    "card_name_jpn": "",
+    "card_effect_class_name": "BT14_062",
+    "play_cost": 6,
+    "dp": 6000,
+    "level": 5,
+    "card_kind": 0,
+    "rarity": 0,
+    "card_colors": [
+      5
+    ],
+    "type_eng": [
+      "Machine"
+    ],
+    "form_eng": [
+      "Ultimate"
+    ],
+    "attribute_eng": [
+      "Virus"
+    ],
+    "effect_description_eng": "[All Turns] This Digimon can't be deleted by your opponent's effects.",
+    "inherited_effect_description_eng": "",
+    "security_effect_description_eng": "",
+    "evo_costs": [
+      {
+        "card_color": 5,
+        "level": 4,
+        "memory_cost": 2
+      }
+    ]
+  },
+  {
+    "card_id": "BT14-063",
+    "card_index": 63,
+    "card_name_eng": "BlackKingNumemon",
+    "card_name_jpn": "",
+    "card_effect_class_name": "BT14_063",
+    "play_cost": 6,
+    "dp": 6000,
+    "level": 5,
+    "card_kind": 0,
+    "rarity": 1,
+    "card_colors": [
+      5
+    ],
+    "type_eng": [
+      "Mollusk"
+    ],
+    "form_eng": [
+      "Ultimate"
+    ],
+    "attribute_eng": [
+      "Virus"
+    ],
+    "effect_description_eng": "[On Deletion] Reveal the top 3 cards of your deck. Add 1 card with [Monzaemon] in its name from among them to your hand, and play 1 Digimon card with [Numemon] in its name from among them without paying its cost. Return the rest to the bottom of your deck.",
+    "inherited_effect_description_eng": "＜Blocker＞ (This Digimon can block in the blocker timing.)",
+    "security_effect_description_eng": "",
+    "evo_costs": [
+      {
+        "card_color": 5,
+        "level": 4,
+        "memory_cost": 3
+      }
+    ]
+  },
+  {
+    "card_id": "BT14-064",
+    "card_index": 64,
+    "card_name_eng": "Cargodramon",
+    "card_name_jpn": "",
+    "card_effect_class_name": "BT14_064",
+    "play_cost": 7,
+    "dp": 7000,
+    "level": 5,
+    "card_kind": 0,
+    "rarity": 2,
+    "card_colors": [
+      5
+    ],
+    "type_eng": [
+      "Machine",
+      "D-Brigade",
+      "DigiPolice"
+    ],
+    "form_eng": [
+      "Ultimate"
+    ],
+    "attribute_eng": [
+      "Virus"
+    ],
+    "effect_description_eng": "[On Play] [When Digivolving] Reveal the top 3 cards of your deck. You may play 1 card with the [D-Brigade] or [DigiPolice] trait with a play cost of 4 or less among them without paying the cost. Trash the rest.",
+    "inherited_effect_description_eng": "[All Turns] [Once Per Turn] When one of your other Digimon are deleted, reveal the top 3 cards of your deck. You may play 1 [Commandramon] without paying its cost. Trash the rest.",
+    "security_effect_description_eng": "",
+    "evo_costs": [
+      {
+        "card_color": 5,
+        "level": 4,
+        "memory_cost": 3
+      }
+    ]
+  },
+  {
+    "card_id": "BT14-065",
+    "card_index": 65,
+    "card_name_eng": "Vademon",
+    "card_name_jpn": "",
+    "card_effect_class_name": "BT14_065",
+    "play_cost": 7,
+    "dp": 7000,
+    "level": 5,
+    "card_kind": 0,
+    "rarity": 0,
+    "card_colors": [
+      5
+    ],
+    "type_eng": [
+      "Alien"
+    ],
+    "form_eng": [
+      "Ultimate"
+    ],
+    "attribute_eng": [
+      "Virus"
+    ],
+    "effect_description_eng": "[On Play] [When Digivolving] Your opponent reveals the top 3 cards of their deck. ＜De-Digivolve 1＞ 1 of your opponent's Digimon. (Trash the top card. You can't trash past level 3 cards.) for each Digimon card among them. Return the cards to either the top or bottom of the deck.",
+    "inherited_effect_description_eng": "",
+    "security_effect_description_eng": "",
+    "evo_costs": [
+      {
+        "card_color": 5,
+        "level": 4,
+        "memory_cost": 3
+      }
+    ]
+  },
+  {
+    "card_id": "BT14-066",
+    "card_index": 66,
+    "card_name_eng": "PlatinumNumemon",
+    "card_name_jpn": "",
+    "card_effect_class_name": "BT14_066",
+    "play_cost": 10,
+    "dp": 9000,
+    "level": 6,
+    "card_kind": 0,
+    "rarity": 2,
+    "card_colors": [
+      2,
+      5
+    ],
+    "type_eng": [
+      "Mutant"
+    ],
+    "form_eng": [
+      "Mega"
+    ],
+    "attribute_eng": [
+      "Virus"
+    ],
+    "effect_description_eng": "[On Play] [When Digivolving] By trashing 1 card with [Numemon] in its name from your hand, gain 2 memory.\r\n[On Deletion] You may play 1 level 5 or lower Digimon card with [Numemon] or [Monzaemon] in its name from your hand without paying the cost.",
+    "inherited_effect_description_eng": "",
+    "security_effect_description_eng": "",
+    "evo_costs": [
+      {
+        "card_color": 5,
+        "level": 5,
+        "memory_cost": 3
+      }
+    ]
+  },
+  {
+    "card_id": "BT14-067",
+    "card_index": 67,
+    "card_name_eng": "Ebemon",
+    "card_name_jpn": "",
+    "card_effect_class_name": "BT14_067",
+    "play_cost": 11,
+    "dp": 11000,
+    "level": 6,
+    "card_kind": 0,
+    "rarity": 1,
+    "card_colors": [
+      5
+    ],
+    "type_eng": [
+      "Cyborg"
+    ],
+    "form_eng": [
+      "Mega"
+    ],
+    "attribute_eng": [
+      "Virus"
+    ],
+    "effect_description_eng": "[On Play] [When Digivolving] Your opponent reveals the top 3 cards of their deck. Choose 1 Digimon card among them, and delete up to its play cost's total worth of your opponent's Digimon. Return the revealed cards to either the top or bottom of the deck.",
+    "inherited_effect_description_eng": "",
+    "security_effect_description_eng": "",
+    "evo_costs": [
+      {
+        "card_color": 5,
+        "level": 5,
+        "memory_cost": 3
+      }
+    ]
+  },
+  {
+    "card_id": "BT14-068",
+    "card_index": 68,
+    "card_name_eng": "Brigadramon",
+    "card_name_jpn": "",
+    "card_effect_class_name": "BT14_068",
+    "play_cost": 12,
+    "dp": 12000,
+    "level": 6,
+    "card_kind": 0,
+    "rarity": 3,
+    "card_colors": [
+      5
+    ],
+    "type_eng": [
+      "Cyborg",
+      "D-Brigade",
+      "DigiPolice"
+    ],
+    "form_eng": [
+      "Mega"
+    ],
+    "attribute_eng": [
+      "Virus"
+    ],
+    "effect_description_eng": "[When Digivolving] Delete up to 7 play cost's total worth of your opponent's Digimon.\r\n[Opponent's Turn] All of your Digimon with the [D-Brigade] trait gain ＜Blocker＞ (This Digimon can block in the blocker timing.).\r\n[End of Your Turn] [Once Per Turn] Reveal the top 3 cards of your deck. You may play up to 7 play cost's total worth of cards with the [D-Brigade] or [DigiPolice] trait among them without paying the costs. Trash the rest.",
+    "inherited_effect_description_eng": "",
+    "security_effect_description_eng": "",
+    "evo_costs": [
+      {
+        "card_color": 5,
+        "level": 5,
+        "memory_cost": 4
+      }
+    ]
+  },
+  {
+    "card_id": "BT14-069",
+    "card_index": 69,
+    "card_name_eng": "Gazimon",
+    "card_name_jpn": "",
+    "card_effect_class_name": "BT14_069",
+    "play_cost": 3,
+    "dp": 2000,
+    "level": 3,
+    "card_kind": 0,
+    "rarity": 0,
+    "card_colors": [
+      6
+    ],
+    "type_eng": [
+      "Mammal"
+    ],
+    "form_eng": [
+      "Rookie"
+    ],
+    "attribute_eng": [
+      "Virus"
+    ],
+    "effect_description_eng": "Inherited Effect [On Deletion] Gain 1 memory.",
+    "inherited_effect_description_eng": "",
+    "security_effect_description_eng": "",
+    "evo_costs": []
+  },
+  {
+    "card_id": "BT14-070",
+    "card_index": 70,
+    "card_name_eng": "Goblimon",
+    "card_name_jpn": "",
+    "card_effect_class_name": "BT14_070",
+    "play_cost": 3,
+    "dp": 2000,
+    "level": 3,
+    "card_kind": 0,
+    "rarity": 0,
+    "card_colors": [
+      6
+    ],
+    "type_eng": [
+      "Demon"
+    ],
+    "form_eng": [
+      "Rookie"
+    ],
+    "attribute_eng": [
+      "Virus"
+    ],
+    "effect_description_eng": "Inherited Effect [Your Turn] [Once Per Turn] When one of your effects trashes a card in your hand, gain 1 memory.",
+    "inherited_effect_description_eng": "",
+    "security_effect_description_eng": "",
+    "evo_costs": []
+  },
+  {
+    "card_id": "BT14-071",
+    "card_index": 71,
+    "card_name_eng": "Loogamon",
+    "card_name_jpn": "",
+    "card_effect_class_name": "BT14_071",
+    "play_cost": 3,
+    "dp": 1000,
+    "level": 3,
+    "card_kind": 0,
+    "rarity": 3,
+    "card_colors": [
+      6
+    ],
+    "type_eng": [
+      "Dark Animal",
+      "X Antibody",
+      "SoC"
+    ],
+    "form_eng": [
+      "Rookie"
+    ],
+    "attribute_eng": [
+      "Virus"
+    ],
+    "effect_description_eng": "[Start of Your Main Phase] By placing 1 [Eiji Nagasumi] from your hand or trash as this Digimon's bottom digivolution card, gain 1 memory.",
+    "inherited_effect_description_eng": "[Your Turn] [Once Per Turn] When you play a card with the [Dark Animal] or [SoC] trait, gain 1 memory.",
+    "security_effect_description_eng": "",
+    "evo_costs": []
+  },
+  {
+    "card_id": "BT14-072",
+    "card_index": 72,
+    "card_name_eng": "Fangmon",
+    "card_name_jpn": "",
+    "card_effect_class_name": "BT14_072",
+    "play_cost": 4,
+    "dp": 4000,
+    "level": 4,
+    "card_kind": 0,
+    "rarity": 0,
+    "card_colors": [
+      6
+    ],
+    "type_eng": [
+      "Dark Animal"
+    ],
+    "form_eng": [
+      "Champion"
+    ],
+    "attribute_eng": [
+      "Data"
+    ],
+    "effect_description_eng": "[On Play] [When Attacking] Return 1 purple Digimon card with the [Dark Animal] trait from your trash to the hand. Then, trash 1 card in your hand.",
+    "inherited_effect_description_eng": "",
+    "security_effect_description_eng": "",
+    "evo_costs": [
+      {
+        "card_color": 6,
+        "level": 3,
+        "memory_cost": 2
+      }
+    ]
+  },
+  {
+    "card_id": "BT14-073",
+    "card_index": 73,
+    "card_name_eng": "Ogremon",
+    "card_name_jpn": "",
+    "card_effect_class_name": "BT14_073",
+    "play_cost": 5,
+    "dp": 5000,
+    "level": 4,
+    "card_kind": 0,
+    "rarity": 0,
+    "card_colors": [
+      6
+    ],
+    "type_eng": [
+      "Demon"
+    ],
+    "form_eng": [
+      "Champion"
+    ],
+    "attribute_eng": [
+      "Virus"
+    ],
+    "effect_description_eng": "[Your Turn] [Once Per Turn] When one of your effects trashes a card in your hand, gain 1 memory.",
+    "inherited_effect_description_eng": "[Your Turn] [Once Per Turn] When one of your effects trashes a card in your hand, gain 1 memory.",
+    "security_effect_description_eng": "",
+    "evo_costs": [
+      {
+        "card_color": 6,
+        "level": 3,
+        "memory_cost": 2
+      }
+    ]
+  },
+  {
+    "card_id": "BT14-074",
+    "card_index": 74,
+    "card_name_eng": "Loogarmon",
+    "card_name_jpn": "",
+    "card_effect_class_name": "BT14_074",
+    "play_cost": 6,
+    "dp": 6000,
+    "level": 4,
+    "card_kind": 0,
+    "rarity": 0,
+    "card_colors": [
+      6
+    ],
+    "type_eng": [
+      "Dark Animal",
+      "X Antibody",
+      "SoC"
+    ],
+    "form_eng": [
+      "Champion"
+    ],
+    "attribute_eng": [
+      "Virus"
+    ],
+    "effect_description_eng": "[When Attacking] By trashing 1 card in your hand, ＜Draw 1＞. If this Digimon has [Eiji Nagasumi] in its digivolution cards, gain 1 memory.",
+    "inherited_effect_description_eng": "[Your Turn] [Once Per Turn] When your card with the [Dark Animal] or [SoC] trait is played, gain 1 memory.",
+    "security_effect_description_eng": "",
+    "evo_costs": [
+      {
+        "card_color": 6,
+        "level": 3,
+        "memory_cost": 2
+      }
+    ]
+  },
+  {
+    "card_id": "BT14-075",
+    "card_index": 75,
+    "card_name_eng": "Devimon",
+    "card_name_jpn": "",
+    "card_effect_class_name": "BT14_075",
+    "play_cost": 7,
+    "dp": 6000,
+    "level": 4,
+    "card_kind": 0,
+    "rarity": 2,
+    "card_colors": [
+      6
+    ],
+    "type_eng": [
+      "Fallen Angel"
+    ],
+    "form_eng": [
+      "Champion"
+    ],
+    "attribute_eng": [
+      "Virus"
+    ],
+    "effect_description_eng": "[On Play] [When Attacking] Trash the top 3 cards of your deck.\r\n[Your Turn] This Digimon gets +1000 DP for every 3 cards in your trash.\r\n[On Deletion] Trash 1 card in your opponent's hand without looking.",
+    "inherited_effect_description_eng": "",
+    "security_effect_description_eng": "",
+    "evo_costs": [
+      {
+        "card_color": 6,
+        "level": 3,
+        "memory_cost": 3
+      }
+    ]
+  },
+  {
+    "card_id": "BT14-076",
+    "card_index": 76,
+    "card_name_eng": "SkullGreymon",
+    "card_name_jpn": "",
+    "card_effect_class_name": "BT14_076",
+    "play_cost": 7,
+    "dp": 7000,
+    "level": 5,
+    "card_kind": 0,
+    "rarity": 2,
+    "card_colors": [
+      6
+    ],
+    "type_eng": [
+      "Undead"
+    ],
+    "form_eng": [
+      "Ultimate"
+    ],
+    "attribute_eng": [
+      "Virus"
+    ],
+    "effect_description_eng": "[When Digivolving] By trashing 1 card in your hand, delete 1 of your Digimon with the lowest level and 1 of your opponent's Digimon with the lowest level.\r\n[On Deletion] You may play 1 [Agumon] from your trash without paying the cost. If you have a Tamer with [Tai Kamiya] in its name, that Digimon gains ＜Rush＞ for the turn. (This Digimon can attack the turn it comes into play.)",
+    "inherited_effect_description_eng": "",
+    "security_effect_description_eng": "",
+    "evo_costs": [
+      {
+        "card_color": 6,
+        "level": 4,
+        "memory_cost": 3
+      }
+    ]
+  },
+  {
+    "card_id": "BT14-077",
+    "card_index": 77,
+    "card_name_eng": "SkullSatamon",
+    "card_name_jpn": "",
+    "card_effect_class_name": "BT14_077",
+    "play_cost": 7,
+    "dp": 7000,
+    "level": 5,
+    "card_kind": 0,
+    "rarity": 0,
+    "card_colors": [
+      6
+    ],
+    "type_eng": [
+      "Undead"
+    ],
+    "form_eng": [
+      "Ultimate"
+    ],
+    "attribute_eng": [
+      "Virus"
+    ],
+    "effect_description_eng": "[On Play] [When Digivolving] Trash the top 2 cards of both players' decks.\r\n[Your Turn] [Once Per Turn] When a card in your opponent's deck is trashed, gain 1 memory.",
+    "inherited_effect_description_eng": "",
+    "security_effect_description_eng": "",
+    "evo_costs": [
+      {
+        "card_color": 6,
+        "level": 4,
+        "memory_cost": 3
+      }
+    ]
+  },
+  {
+    "card_id": "BT14-078",
+    "card_index": 78,
+    "card_name_eng": "Helloogarmon",
+    "card_name_jpn": "",
+    "card_effect_class_name": "BT14_078",
+    "play_cost": 7,
+    "dp": 9000,
+    "level": 5,
+    "card_kind": 0,
+    "rarity": 1,
+    "card_colors": [
+      6
+    ],
+    "type_eng": [
+      "Dark Animal",
+      "X Antibody",
+      "SoC"
+    ],
+    "form_eng": [
+      "Ultimate"
+    ],
+    "attribute_eng": [
+      "Virus"
+    ],
+    "effect_description_eng": "[End of Your Turn] Delete this Digimon and ＜Draw 2＞ (Draw 2 cards from your deck.) Then, you may return 1 [Loogamon] from your trash to your hand. [On Deletion] You may trash up to 3 [Dark Animal] or [SoC] trait cards from your hand. Then, delete 1 of your opponent's level 3 or lower Digimon. For each card you trashed with this effect, increase this level by 1.",
+    "inherited_effect_description_eng": "",
+    "security_effect_description_eng": "",
+    "evo_costs": [
+      {
+        "card_color": 6,
+        "level": 4,
+        "memory_cost": 3
+      }
+    ]
+  },
+  {
+    "card_id": "BT14-079",
+    "card_index": 79,
+    "card_name_eng": "Soloogarmon",
+    "card_name_jpn": "",
+    "card_effect_class_name": "BT14_079",
+    "play_cost": 8,
+    "dp": 8000,
+    "level": 5,
+    "card_kind": 0,
+    "rarity": 2,
+    "card_colors": [
+      6
+    ],
+    "type_eng": [
+      "Dark Animal",
+      "X Antibody",
+      "SoC"
+    ],
+    "form_eng": [
+      "Ultimate"
+    ],
+    "attribute_eng": [
+      "Virus"
+    ],
+    "effect_description_eng": "[When Digivolving] You may play 1 level 3 or lower card with the [Dark Animal] or [SoC] trait from your trash without paying its cost. If [Eiji Nagasumi] is in this Digimon's digivolution cards, increase the level by 1.\r\n[When Attacking] By trashing 1 card in your hand, gain 1 memory.",
+    "inherited_effect_description_eng": "[Your Turn] [Once Per Turn] When you play a card with the [Dark Animal] or [SoC] trait, you may unsuspend this Digimon.",
+    "security_effect_description_eng": "",
+    "evo_costs": [
+      {
+        "card_color": 6,
+        "level": 4,
+        "memory_cost": 3
+      }
+    ]
+  },
+  {
+    "card_id": "BT14-080",
+    "card_index": 80,
+    "card_name_eng": "Ghoulmon",
+    "card_name_jpn": "",
+    "card_effect_class_name": "BT14_080",
+    "play_cost": 11,
+    "dp": 11000,
+    "level": 6,
+    "card_kind": 0,
+    "rarity": 1,
+    "card_colors": [
+      6
+    ],
+    "type_eng": [
+      "Demon Lord"
+    ],
+    "form_eng": [
+      "Mega"
+    ],
+    "attribute_eng": [
+      "Data"
+    ],
+    "effect_description_eng": "[When Digivolving] [When Attacking] [Once Per Turn] For every 10 cards in your trash, trash the top 3 cards of your opponent's deck.\r\n[When Attacking] [Once Per Turn] If your opponent has 10 or more cards in their trash, this Digimon gains ＜Security A. +1＞ for the turn. (This Digimon checks 1 additional security card.)",
+    "inherited_effect_description_eng": "",
+    "security_effect_description_eng": "",
+    "evo_costs": [
+      {
+        "card_color": 6,
+        "level": 5,
+        "memory_cost": 3
+      }
+    ]
+  },
+  {
+    "card_id": "BT14-081",
+    "card_index": 81,
+    "card_name_eng": "Fenriloogamon",
+    "card_name_jpn": "",
+    "card_effect_class_name": "BT14_081",
+    "play_cost": 12,
+    "dp": 12000,
+    "level": 6,
+    "card_kind": 0,
+    "rarity": 3,
+    "card_colors": [
+      6
+    ],
+    "type_eng": [
+      "Dark Animal",
+      "X Antibody",
+      "SoC"
+    ],
+    "form_eng": [
+      "Mega"
+    ],
+    "attribute_eng": [
+      "Virus"
+    ],
+    "effect_description_eng": "[When Digivolving] You may play 1 level 4 or lower card with the [Dark Animal] or [SoC] trait from your trash without paying its cost. If [Eiji Nagasumi] is in this Digimon's digivolution cards, increase the number of Digimon you can play with this effect by 2.\r\n[When Attacking] [Once Per Turn] By deleting 1 of your opponent's level 3 or lower Digimon, unsuspend this Digimon. For each of your Digimon, add 1 to the level this effect may choose.\r\n[Your Turn] Your turn end condition is the opponent having 3 or more memory.",
+    "inherited_effect_description_eng": "",
+    "security_effect_description_eng": "",
+    "evo_costs": [
+      {
+        "card_color": 6,
+        "level": 5,
+        "memory_cost": 4
+      }
+    ]
+  },
+  {
+    "card_id": "BT14-082",
+    "card_index": 82,
+    "card_name_eng": "Tai Kamiya",
+    "card_name_jpn": "",
+    "card_effect_class_name": "BT14_082",
+    "play_cost": 3,
+    "dp": 0,
+    "level": 0,
+    "card_kind": 1,
+    "rarity": 2,
+    "card_colors": [
+      0
+    ],
+    "type_eng": [],
+    "form_eng": [],
+    "attribute_eng": [],
+    "effect_description_eng": "[Start of Your Main Phase] 1 of your Digimon with the [Vaccine] trait gets +2000 DP for the turn.\r\n[Your Turn] When a card is removed from your opponent's security stack, by suspending this Tamer, gain 1 memory.",
+    "inherited_effect_description_eng": "Security Effect [Security] Play this card without paying the cost.",
+    "security_effect_description_eng": "",
+    "evo_costs": []
+  },
+  {
+    "card_id": "BT14-083",
+    "card_index": 83,
+    "card_name_eng": "Joe Kido",
+    "card_name_jpn": "",
+    "card_effect_class_name": "BT14_083",
+    "play_cost": 3,
+    "dp": 0,
+    "level": 0,
+    "card_kind": 1,
+    "rarity": 2,
+    "card_colors": [
+      1
+    ],
+    "type_eng": [],
+    "form_eng": [],
+    "attribute_eng": [],
+    "effect_description_eng": "[On Play] Trash 1 digivolution card of 1 of your opponent's Digimon.\r\n[Your Turn] When a card is trashed from under one of your opponent's Digimon, by suspending this Tamer, gain 1 memory.",
+    "inherited_effect_description_eng": "Security Effect [Security] Play this card without paying the cost.",
+    "security_effect_description_eng": "",
+    "evo_costs": []
+  },
+  {
+    "card_id": "BT14-084",
+    "card_index": 84,
+    "card_name_eng": "T.K. Takaishi",
+    "card_name_jpn": "",
+    "card_effect_class_name": "BT14_084",
+    "play_cost": 3,
+    "dp": 0,
+    "level": 0,
+    "card_kind": 1,
+    "rarity": 2,
+    "card_colors": [
+      2
+    ],
+    "type_eng": [],
+    "form_eng": [],
+    "attribute_eng": [],
+    "effect_description_eng": "[On Play] By returning the top card of your security stack to your hand, you may place 1 yellow card with the [Vaccine] trait from your hand at the bottom of your security stack.\r\n[Your Turn] When a card is added to your security stack, you may suspend this Tamer to gain 1 Memory.",
+    "inherited_effect_description_eng": "Security Effect [Security] Play this card without paying the cost.",
+    "security_effect_description_eng": "",
+    "evo_costs": []
+  },
+  {
+    "card_id": "BT14-085",
+    "card_index": 85,
+    "card_name_eng": "Mimi Tachikawa",
+    "card_name_jpn": "",
+    "card_effect_class_name": "BT14_085",
+    "play_cost": 3,
+    "dp": 0,
+    "level": 0,
+    "card_kind": 1,
+    "rarity": 2,
+    "card_colors": [
+      3
+    ],
+    "type_eng": [],
+    "form_eng": [],
+    "attribute_eng": [],
+    "effect_description_eng": "[On Play] Reveal the top 3 cards of your deck. Add 1 Digimon card with [Vegetation], [Plant] or [Fairy] in any of its traits among them to the hand. Return the rest to the bottom of the deck in any order.\r\n[Your Turn] When an effect suspends a Digimon, by suspending this Tamer, gain 1 memory.",
+    "inherited_effect_description_eng": "Security Effect [Security] Play this card without paying the cost.",
+    "security_effect_description_eng": "",
+    "evo_costs": []
+  },
+  {
+    "card_id": "BT14-086",
+    "card_index": 86,
+    "card_name_eng": "Satsuki Tamahime",
+    "card_name_jpn": "",
+    "card_effect_class_name": "BT14_086",
+    "play_cost": 3,
+    "dp": 0,
+    "level": 0,
+    "card_kind": 1,
+    "rarity": 2,
+    "card_colors": [
+      5
+    ],
+    "type_eng": [
+      "DigiPolice"
+    ],
+    "form_eng": [],
+    "attribute_eng": [],
+    "effect_description_eng": "[Security] Play this card without paying the cost.\r\n[Start of Your Main Phase] If your opponent has a Digimon, gain 1 memory.\r\n[Main] ＜Mind Link＞ to 1 of your Digimon with [Numemon] or [Monzaemon] in its name or the [DigiPolice] trait. (Place this Tamer as that Digimon's bottom digivolution card if there are no Tamer cards in its digivolution cards.)",
+    "inherited_effect_description_eng": "[All Turns] While this Digimon has [Numemon] or [Monzaemon] in its name or the [DigiPolice] trait, this Digimon gains ＜Jamming＞ (This Digimon can't be deleted in battles against Security Digimon.) and ＜Reboot＞ (Unsuspend this Digimon during your opponent's unsuspend phase.)\r\n[End of All Turns] You may play 1 [Satsuki Tamahime] from this Digimon's digivolution cards without paying the cost.",
+    "security_effect_description_eng": "",
+    "evo_costs": []
+  },
+  {
+    "card_id": "BT14-087",
+    "card_index": 87,
+    "card_name_eng": "Eiji Nagasumi",
+    "card_name_jpn": "",
+    "card_effect_class_name": "BT14_087",
+    "play_cost": 3,
+    "dp": 0,
+    "level": 0,
+    "card_kind": 1,
+    "rarity": 2,
+    "card_colors": [
+      6
+    ],
+    "type_eng": [
+      "SoC"
+    ],
+    "form_eng": [],
+    "attribute_eng": [],
+    "effect_description_eng": "[Security] Play this card without paying the cost.\r\n[Start of Your Main Phase] If your opponent has a Digimon, gain 1 memory.\r\n[Main] ＜Mind Link＞ to 1 of your Digimon with the [Dark Animal] or [SoC] trait. (Place this Tamer as that Digimon's bottom digivolution card if there are no Tamer cards in its digivolution cards.)",
+    "inherited_effect_description_eng": "[All Turns] While this Digimon has the [Dark Animal] or [SoC] trait, this Digimon gains ＜Alliance＞ (When this Digimon attacks, by suspending 1 of your other Digimon, add the suspended Digimon's DP to this Digimon and it gains ＜Security A. +1＞ for the attack.) and ＜Blocker＞ (This Digimon can block in the blocker timing.)\r\n[End of All Turns] You may play 1 [Eiji Nagasumi] from this Digimon's digivolution cards without paying the cost.",
+    "security_effect_description_eng": "",
+    "evo_costs": []
+  },
+  {
+    "card_id": "BT14-088",
+    "card_index": 88,
+    "card_name_eng": "Gennai",
+    "card_name_jpn": "",
+    "card_effect_class_name": "BT14_088",
+    "play_cost": 3,
+    "dp": 0,
+    "level": 0,
+    "card_kind": 1,
+    "rarity": 2,
+    "card_colors": [
+      4
+    ],
+    "type_eng": [],
+    "form_eng": [],
+    "attribute_eng": [],
+    "effect_description_eng": "[On Play] You may reveal the top 5 cards of your deck. Add 1 level 3 Digimon card and 1 non-white Tamer card among them to your hand. Return the rest to the bottom of the deck.\r\n[Opponent's Turn] When an opponent's level 5 or higher Digimon attacks, by suspending this Tamer, move 1 of your Digimon in your breeding area to your battle area.",
+    "inherited_effect_description_eng": "Security Effect [Security] Play this card without paying the cost.",
+    "security_effect_description_eng": "",
+    "evo_costs": []
+  },
+  {
+    "card_id": "BT14-089",
+    "card_index": 89,
+    "card_name_eng": "Mega Flame",
+    "card_name_jpn": "",
+    "card_effect_class_name": "BT14_089",
+    "play_cost": 4,
+    "dp": 0,
+    "level": 0,
+    "card_kind": 2,
+    "rarity": 0,
+    "card_colors": [
+      0
+    ],
+    "type_eng": [],
+    "form_eng": [],
+    "attribute_eng": [],
+    "effect_description_eng": "[Main] Delete 1 of your opponent's Digimon with 6000 DP or less. If you have a Digimon with [Greymon] in its name, delete 1 opposing Digimon with the lowest DP instead.",
+    "inherited_effect_description_eng": "Security Effect [Security] Activate this card's [Main] effects.",
+    "security_effect_description_eng": "",
+    "evo_costs": []
+  },
+  {
+    "card_id": "BT14-090",
+    "card_index": 90,
+    "card_name_eng": "Dragon of Courage",
+    "card_name_jpn": "",
+    "card_effect_class_name": "BT14_090",
+    "play_cost": 4,
+    "dp": 0,
+    "level": 0,
+    "card_kind": 2,
+    "rarity": 1,
+    "card_colors": [
+      0
+    ],
+    "type_eng": [],
+    "form_eng": [],
+    "attribute_eng": [],
+    "effect_description_eng": "While you have a Tamer with [Tai Kamiya] in its name, you can ignore this card's color requirements.\r\n[Main] By placing 1 [Greymon] and 1 [MetalGreymon] from your trash as the bottom digivolution cards of 1 of your [Agumon], it may digivolve in to a [WarGreymon] from hand ignoring its digivolution requirements and without paying its cost.",
+    "inherited_effect_description_eng": "Security Effect [Security] You may play 1 [Agumon] from your hand or trash without paying the cost. Then, add this card to your hand.",
+    "security_effect_description_eng": "",
+    "evo_costs": []
+  },
+  {
+    "card_id": "BT14-091",
+    "card_index": 91,
+    "card_name_eng": "Wave of Reliability",
+    "card_name_jpn": "",
+    "card_effect_class_name": "BT14_091",
+    "play_cost": 2,
+    "dp": 0,
+    "level": 0,
+    "card_kind": 2,
+    "rarity": 1,
+    "card_colors": [
+      1
+    ],
+    "type_eng": [],
+    "form_eng": [],
+    "attribute_eng": [],
+    "effect_description_eng": "[Main] Trash 2 digivolution cards from your opponent's Digimon. Then, if you have a Tamer with [Joe Kido] in its name, choose 1 of your Digimon. If your opponent has no Digimon with as many or more digivolution cards as that Digimon, unsuspend it.",
+    "inherited_effect_description_eng": "Security Effect [Security] Activate this card's [Main] effects. Then, add this card to your hand.",
+    "security_effect_description_eng": "",
+    "evo_costs": []
+  },
+  {
+    "card_id": "BT14-092",
+    "card_index": 92,
+    "card_name_eng": "Marching Fishes",
+    "card_name_jpn": "",
+    "card_effect_class_name": "BT14_092",
+    "play_cost": 3,
+    "dp": 0,
+    "level": 0,
+    "card_kind": 2,
+    "rarity": 0,
+    "card_colors": [
+      1
+    ],
+    "type_eng": [],
+    "form_eng": [],
+    "attribute_eng": [],
+    "effect_description_eng": "[Main] Choose 1 of your Digimon. Until the end of your opponent's turn, 3 of your opponent's Digimon with as many or fewer digivolution cards at that Digimon can't attack or block.",
+    "inherited_effect_description_eng": "Security Effect [Security] 1 of your opponent's Digimon can't attack for the turn. Then, add this card to your hand.",
+    "security_effect_description_eng": "",
+    "evo_costs": []
+  },
+  {
+    "card_id": "BT14-093",
+    "card_index": 93,
+    "card_name_eng": "Emissary of Hope",
+    "card_name_jpn": "",
+    "card_effect_class_name": "BT14_093",
+    "play_cost": 1,
+    "dp": 0,
+    "level": 0,
+    "card_kind": 2,
+    "rarity": 1,
+    "card_colors": [
+      2
+    ],
+    "type_eng": [],
+    "form_eng": [],
+    "attribute_eng": [],
+    "effect_description_eng": "[Main] Search your security stack. 1 of your Digimon may digivolve in to 1 yellow level 6 or lower Digimon with the [Vaccine] trait among them without paying its cost. Then, shuffle your security stack. If digivolved by this effect and you have Tamer with [T.K. Takaishi] in its name, ＜Recovery +1 (Deck)＞ (Place the top card of your deck on top of your security stack.)",
+    "inherited_effect_description_eng": "Security Effect [Security] You may play 1 [Patamon] from your hand or trash without paying the cost. Then, add this card to your hand.",
+    "security_effect_description_eng": "",
+    "evo_costs": []
+  },
+  {
+    "card_id": "BT14-094",
+    "card_index": 94,
+    "card_name_eng": "Heaven's Knuckle",
+    "card_name_jpn": "",
+    "card_effect_class_name": "BT14_094",
+    "play_cost": 4,
+    "dp": 0,
+    "level": 0,
+    "card_kind": 2,
+    "rarity": 0,
+    "card_colors": [
+      2
+    ],
+    "type_eng": [],
+    "form_eng": [],
+    "attribute_eng": [],
+    "effect_description_eng": "[Main] Activate 1 of the effects below:\r\n・1 opponent's Digimon gets -6000 DP for the turn.\r\n・By deleting 1 of your [Angemon], place 1 of your opponent's Digimon at the bottom of their security stack.",
+    "inherited_effect_description_eng": "Security Effect [Security] Activate this card's [Main] effects.",
+    "security_effect_description_eng": "",
+    "evo_costs": []
+  },
+  {
+    "card_id": "BT14-095",
+    "card_index": 95,
+    "card_name_eng": "Poison Ivy",
+    "card_name_jpn": "",
+    "card_effect_class_name": "BT14_095",
+    "play_cost": 1,
+    "dp": 0,
+    "level": 0,
+    "card_kind": 2,
+    "rarity": 0,
+    "card_colors": [
+      3
+    ],
+    "type_eng": [],
+    "form_eng": [],
+    "attribute_eng": [],
+    "effect_description_eng": "[Main] 1 of your opponent's Digimon gains \"[All Turns] When this Digimon becomes suspended, lose 2 memory.\" until the end of your opponent's turn.",
+    "inherited_effect_description_eng": "Security Effect [Security] Activate this card's [Main] effects. Then, add this card to your hand.",
+    "security_effect_description_eng": "",
+    "evo_costs": []
+  },
+  {
+    "card_id": "BT14-096",
+    "card_index": 96,
+    "card_name_eng": "Blooming of Sincerity",
+    "card_name_jpn": "",
+    "card_effect_class_name": "BT14_096",
+    "play_cost": 3,
+    "dp": 0,
+    "level": 0,
+    "card_kind": 2,
+    "rarity": 1,
+    "card_colors": [
+      3
+    ],
+    "type_eng": [],
+    "form_eng": [],
+    "attribute_eng": [],
+    "effect_description_eng": "[Main] Suspend 1 of your opponent's Digimon. Then, if you have a Tamer with [Mimi Tachikawa] in its name, 1 of your opponent's Digimon doesn't unsuspend until the end of their turn.",
+    "inherited_effect_description_eng": "Security Effect [Security] Activate this card's [Main] effects. Then, add this card to your hand.",
+    "security_effect_description_eng": "",
+    "evo_costs": []
+  },
+  {
+    "card_id": "BT14-097",
+    "card_index": 97,
+    "card_name_eng": "Suka's Curse",
+    "card_name_jpn": "",
+    "card_effect_class_name": "BT14_097",
+    "play_cost": 3,
+    "dp": 0,
+    "level": 0,
+    "card_kind": 2,
+    "rarity": 1,
+    "card_colors": [
+      5,
+      2
+    ],
+    "type_eng": [],
+    "form_eng": [],
+    "attribute_eng": [],
+    "effect_description_eng": "[Main] 1 of your non-white Digimon may digivolve into a Digimon card with [Sukamon] in its name in your hand without paying the cost, ignoring its digivolution requirements.",
+    "inherited_effect_description_eng": "Security Effect [Security] Until the end of your turn, change 1 of your opponent's Digimon into being white and having 3000 DP and an original name of [Sukamon]",
+    "security_effect_description_eng": "",
+    "evo_costs": []
+  },
+  {
+    "card_id": "BT14-098",
+    "card_index": 98,
+    "card_name_eng": "DCD Bomb",
+    "card_name_jpn": "",
+    "card_effect_class_name": "BT14_098",
+    "play_cost": 4,
+    "dp": 0,
+    "level": 0,
+    "card_kind": 2,
+    "rarity": 0,
+    "card_colors": [
+      5
+    ],
+    "type_eng": [
+      "D-Brigade"
+    ],
+    "form_eng": [],
+    "attribute_eng": [],
+    "effect_description_eng": "[Main] ＜De-Digivolve 1＞ 1 of your opponent's Digimon. (Trash the top card. You can't trash past level 3 cards.) Then, by returning 3 cards with the [D-Brigade] or [DigiPolice] trait from your trash to the top of the deck, delete up to 6 play cost's total worth of your opponent's Digimon.",
+    "inherited_effect_description_eng": "Security Effect [Security] Activate this card's [Main] effects.",
+    "security_effect_description_eng": "",
+    "evo_costs": []
+  },
+  {
+    "card_id": "BT14-099",
+    "card_index": 99,
+    "card_name_eng": "Dark Wings Delusion",
+    "card_name_jpn": "",
+    "card_effect_class_name": "BT14_099",
+    "play_cost": 1,
+    "dp": 0,
+    "level": 0,
+    "card_kind": 2,
+    "rarity": 1,
+    "card_colors": [
+      6
+    ],
+    "type_eng": [],
+    "form_eng": [],
+    "attribute_eng": [],
+    "effect_description_eng": "[Main] Trash the top 3 cards of your deck. Then, 1 of your Digimon with [Devimon] in its name gains ＜Security A. +1＞ for the turn. (This Digimon checks 1 additional security card.)",
+    "inherited_effect_description_eng": "Security Effect [Security] Activate this card's [Main] effects.",
+    "security_effect_description_eng": "",
+    "evo_costs": []
+  },
+  {
+    "card_id": "BT14-100",
+    "card_index": 100,
+    "card_name_eng": "Pummel Whack",
+    "card_name_jpn": "",
+    "card_effect_class_name": "BT14_100",
+    "play_cost": 3,
+    "dp": 0,
+    "level": 0,
+    "card_kind": 2,
+    "rarity": 0,
+    "card_colors": [
+      6
+    ],
+    "type_eng": [],
+    "form_eng": [],
+    "attribute_eng": [],
+    "effect_description_eng": "When one of your effects trashes this card in your hand, ＜Draw 1＞ (Draw 1 card from your deck.)\r\n[Main] Delete 1 of your opponent's level 4 or lower Digimon.",
+    "inherited_effect_description_eng": "Security Effect [Security] Activate this card's [Main] effects.",
+    "security_effect_description_eng": "",
+    "evo_costs": []
+  },
+  {
+    "card_id": "BT14-101",
+    "card_index": 101,
+    "card_name_eng": "WarGreymon",
+    "card_name_jpn": "",
+    "card_effect_class_name": "BT14_101",
+    "play_cost": 12,
+    "dp": 12000,
+    "level": 6,
+    "card_kind": 0,
+    "rarity": 4,
+    "card_colors": [
+      0
+    ],
+    "type_eng": [
+      "Dragonkin"
+    ],
+    "form_eng": [
+      "Mega"
+    ],
+    "attribute_eng": [
+      "Vaccine"
+    ],
+    "effect_description_eng": "While you have a Tamer with [Tai Kamiya] in its name and your opponent has a Digimon with 10000 DP or more, 1 of your [Agumon] may digivolve into this card in your hand for a cost of 4, ignoring its digivolution requirements.\r\n[When Digivolving] This Digimon gains ＜Raid＞ for the turn. (When this Digimon attacks, you may switch the target of attack to 1 of your opponent's unsuspended Digimon with the highest DP.) Then, it may attack.\r\n[When Attacking] If you have a Tamer, this Digimon gains ＜Security A. +1＞ (This Digimon checks 1 additional security card.) and ＜Piercing＞ for the turn. (When this Digimon attacks and deletes an opponent's Digimon and survives the battle, it performs any security checks it normally would.)",
+    "inherited_effect_description_eng": "",
+    "security_effect_description_eng": "",
+    "evo_costs": [
+      {
+        "card_color": 0,
+        "level": 5,
+        "memory_cost": 4
+      }
+    ]
+  },
+  {
+    "card_id": "BT14-102",
+    "card_index": 102,
+    "card_name_eng": "Angemon",
+    "card_name_jpn": "",
+    "card_effect_class_name": "BT14_102",
+    "play_cost": 6,
+    "dp": 6000,
+    "level": 4,
+    "card_kind": 0,
+    "rarity": 4,
+    "card_colors": [
+      2
+    ],
+    "type_eng": [
+      "Angel"
+    ],
+    "form_eng": [
+      "Champion"
+    ],
+    "attribute_eng": [
+      "Vaccine"
+    ],
+    "effect_description_eng": "[When Attacking] By deleting this Digimon, activate 1 of the effects below:\r\n・Place 1 of your opponent's Digimon with the [Virus] trait at the bottom of their security stack.\r\n・1 opponent's Digimon gets -5000 DP for the turn.\r\n[On Deletion] Place this card at the bottom of your security stack. Then, if you have a Tamer in play, you may hatch a Digi-Egg in your breeding area.",
+    "inherited_effect_description_eng": "[On Deletion] Place 1 yellow Digimon with the [Vaccine] trait from your hand at the bottom of your security stack.",
+    "security_effect_description_eng": "",
+    "evo_costs": [
+      {
+        "card_color": 2,
+        "level": 3,
+        "memory_cost": 3
+      }
+    ]
   }
 ]
