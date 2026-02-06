@@ -20,10 +20,9 @@ class BT14_017(CardScript):
         effect0.set_effect_description("Effect")
 
         def condition0(context: Dict[str, Any]) -> bool:
-            # Conditions extracted from DCGO source:
-            # Check: card is on battle area
-            # card.permanent_of_this_card() is not None
-            return True  # TODO: implement condition checks against game state
+            if card and card.permanent_of_this_card() is None:
+                return False
+            return True
 
         effect0.set_can_use_condition(condition0)
         effects.append(effect0)
@@ -33,7 +32,7 @@ class BT14_017(CardScript):
         effect1 = ICardEffect()
         effect1.set_effect_name("BT14-017 DP modifier")
         effect1.set_effect_description("DP modifier")
-        # Static DP modifier
+        effect1.dp_modifier = 0  # TODO: extract DP value from C# source
         def condition1(context: Dict[str, Any]) -> bool:
             return True
         effect1.set_can_use_condition(condition1)

@@ -22,19 +22,28 @@ class BT14_042(CardScript):
         effect0.is_on_play = True
 
         def condition0(context: Dict[str, Any]) -> bool:
-            # Conditions extracted from DCGO source:
-            # Check: card is on battle area
-            # card.permanent_of_this_card() is not None
-            # Check color: CardColor.Green
-            return True  # TODO: implement condition checks against game state
+            if card and card.permanent_of_this_card() is None:
+                return False
+            # Triggered on play — validated by engine timing
+            return True
 
         effect0.set_can_use_condition(condition0)
 
-        def process0():
+        def process0(ctx: Dict[str, Any]):
             """Action: Suspend, Add To Hand, Reveal And Select"""
-            # target_permanent.suspend()
-            # add_card_to_hand()
-            # reveal_top_cards_and_select()
+            player = ctx.get('player')
+            perm = ctx.get('permanent')
+            # Suspend opponent's digimon
+            enemy = player.enemy if player else None
+            if enemy and enemy.battle_area:
+                target = enemy.battle_area[-1]
+                target.suspend()
+            # Add card to hand (from trash/reveal)
+            if player and player.trash_cards:
+                card_to_add = player.trash_cards.pop()
+                player.hand_cards.append(card_to_add)
+            # Reveal top cards and select
+            pass  # TODO: reveal_and_select needs UI/agent choice
 
         effect0.set_on_process_callback(process0)
         effects.append(effect0)

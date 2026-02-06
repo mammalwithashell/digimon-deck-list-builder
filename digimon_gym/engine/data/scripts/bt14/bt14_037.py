@@ -19,7 +19,7 @@ class BT14_037(CardScript):
         effect0.set_effect_name("BT14-037 Blast Digivolve")
         effect0.set_effect_description("Blast Digivolve")
         effect0.is_counter_effect = True
-        # Blast Digivolve
+        effect0._is_blast_digivolve = True
         def condition0(context: Dict[str, Any]) -> bool:
             return True
         effect0.set_can_use_condition(condition0)
@@ -33,16 +33,19 @@ class BT14_037(CardScript):
         effect1.is_on_play = True
 
         def condition1(context: Dict[str, Any]) -> bool:
-            # Conditions extracted from DCGO source:
-            # Check: card is on battle area
-            # card.permanent_of_this_card() is not None
-            return True  # TODO: implement condition checks against game state
+            if card and card.permanent_of_this_card() is None:
+                return False
+            # Triggered on play — validated by engine timing
+            return True
 
         effect1.set_can_use_condition(condition1)
 
-        def process1():
+        def process1(ctx: Dict[str, Any]):
             """Action: Recovery +1"""
-            # card.owner.recover(1)
+            player = ctx.get('player')
+            perm = ctx.get('permanent')
+            if player:
+                player.recovery(1)
 
         effect1.set_on_process_callback(process1)
         effects.append(effect1)
@@ -55,16 +58,19 @@ class BT14_037(CardScript):
         effect2.is_on_play = True
 
         def condition2(context: Dict[str, Any]) -> bool:
-            # Conditions extracted from DCGO source:
-            # Check: card is on battle area
-            # card.permanent_of_this_card() is not None
-            return True  # TODO: implement condition checks against game state
+            if card and card.permanent_of_this_card() is None:
+                return False
+            # Triggered when digivolving — validated by engine timing
+            return True
 
         effect2.set_can_use_condition(condition2)
 
-        def process2():
+        def process2(ctx: Dict[str, Any]):
             """Action: Recovery +1"""
-            # card.owner.recover(1)
+            player = ctx.get('player')
+            perm = ctx.get('permanent')
+            if player:
+                player.recovery(1)
 
         effect2.set_on_process_callback(process2)
         effects.append(effect2)

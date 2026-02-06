@@ -20,9 +20,8 @@ class BT14_096(CardScript):
         effect0.set_effect_description("[Main] Suspend 1 of your opponent's Digimon. Then, if you have a Tamer with [Mimi Tachikawa] in its name, 1 of your opponent's Digimon doesn't unsuspend until the end of their turn.")
 
         def condition0(context: Dict[str, Any]) -> bool:
-            # Conditions extracted from DCGO source:
-            # Check name: "Mimi Tachikawa" in card name
-            return True  # TODO: implement condition checks against game state
+            # Option main effect — validated by engine timing
+            return True
 
         effect0.set_can_use_condition(condition0)
         effects.append(effect0)

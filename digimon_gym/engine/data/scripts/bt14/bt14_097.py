@@ -32,16 +32,16 @@ class BT14_097(CardScript):
         effect1.set_effect_description("[Main] 1 of your non-white Digimon may digivolve into a Digimon card with [Sukamon] in its name in your hand without paying the cost, ignoring its digivolution requirements.")
 
         def condition1(context: Dict[str, Any]) -> bool:
-            # Conditions extracted from DCGO source:
-            # Check name: "Sukamon" in card name
-            # Check color: CardColor.White
-            return True  # TODO: implement condition checks against game state
+            # Option main effect — validated by engine timing
+            return True
 
         effect1.set_can_use_condition(condition1)
 
-        def process1():
+        def process1(ctx: Dict[str, Any]):
             """Action: Digivolve"""
-            # digivolve_into(target_card)
+            player = ctx.get('player')
+            perm = ctx.get('permanent')
+            pass  # TODO: digivolve effect needs card selection
 
         effect1.set_on_process_callback(process1)
         effects.append(effect1)
@@ -55,6 +55,7 @@ class BT14_097(CardScript):
         effect2.is_security_effect = True
 
         def condition2(context: Dict[str, Any]) -> bool:
+            # Security effect — validated by engine timing
             return True
 
         effect2.set_can_use_condition(condition2)

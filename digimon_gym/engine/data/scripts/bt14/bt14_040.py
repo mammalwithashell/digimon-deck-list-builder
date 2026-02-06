@@ -22,17 +22,23 @@ class BT14_040(CardScript):
         effect0.is_on_play = True
 
         def condition0(context: Dict[str, Any]) -> bool:
-            # Conditions extracted from DCGO source:
-            # Check: card is on battle area
-            # card.permanent_of_this_card() is not None
-            return True  # TODO: implement condition checks against game state
+            if card and card.permanent_of_this_card() is None:
+                return False
+            # Triggered on play — validated by engine timing
+            return True
 
         effect0.set_can_use_condition(condition0)
 
-        def process0():
+        def process0(ctx: Dict[str, Any]):
             """Action: Trash From Hand, Add To Security"""
-            # card.owner.trash_from_hand(count)
-            # card.owner.add_to_security()
+            player = ctx.get('player')
+            perm = ctx.get('permanent')
+            # Trash from hand (cost/effect)
+            if player and player.hand_cards:
+                player.trash_from_hand([player.hand_cards[-1]])
+            # Add top card of deck to security
+            if player:
+                player.recovery(1)
 
         effect0.set_on_process_callback(process0)
         effects.append(effect0)
@@ -46,17 +52,23 @@ class BT14_040(CardScript):
         effect1.is_on_play = True
 
         def condition1(context: Dict[str, Any]) -> bool:
-            # Conditions extracted from DCGO source:
-            # Check: card is on battle area
-            # card.permanent_of_this_card() is not None
-            return True  # TODO: implement condition checks against game state
+            if card and card.permanent_of_this_card() is None:
+                return False
+            # Triggered when digivolving — validated by engine timing
+            return True
 
         effect1.set_can_use_condition(condition1)
 
-        def process1():
+        def process1(ctx: Dict[str, Any]):
             """Action: Trash From Hand, Add To Security"""
-            # card.owner.trash_from_hand(count)
-            # card.owner.add_to_security()
+            player = ctx.get('player')
+            perm = ctx.get('permanent')
+            # Trash from hand (cost/effect)
+            if player and player.hand_cards:
+                player.trash_from_hand([player.hand_cards[-1]])
+            # Add top card of deck to security
+            if player:
+                player.recovery(1)
 
         effect1.set_on_process_callback(process1)
         effects.append(effect1)
@@ -72,17 +84,21 @@ class BT14_040(CardScript):
         effect2.is_on_play = True
 
         def condition2(context: Dict[str, Any]) -> bool:
-            # Conditions extracted from DCGO source:
-            # Check: card is on battle area
-            # card.permanent_of_this_card() is not None
-            return True  # TODO: implement condition checks against game state
+            if card and card.permanent_of_this_card() is None:
+                return False
+            return True
 
         effect2.set_can_use_condition(condition2)
 
-        def process2():
+        def process2(ctx: Dict[str, Any]):
             """Action: Play Card, Trash From Hand"""
-            # play_card_from_hand_or_trash()
-            # card.owner.trash_from_hand(count)
+            player = ctx.get('player')
+            perm = ctx.get('permanent')
+            # Play a card (from hand/trash/reveal)
+            pass  # TODO: target selection for play_card
+            # Trash from hand (cost/effect)
+            if player and player.hand_cards:
+                player.trash_from_hand([player.hand_cards[-1]])
 
         effect2.set_on_process_callback(process2)
         effects.append(effect2)

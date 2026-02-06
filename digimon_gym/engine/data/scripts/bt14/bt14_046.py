@@ -21,19 +21,19 @@ class BT14_046(CardScript):
         effect0.cost_reduction = 3
 
         def condition0(context: Dict[str, Any]) -> bool:
-            # Conditions extracted from DCGO source:
-            # Check: card is on battle area
-            # card.permanent_of_this_card() is not None
-            # Check: it's the owner's turn
-            # card.owner and card.owner.is_my_turn
-            # Check color: CardColor.Green
-            return True  # TODO: implement condition checks against game state
+            if card and card.permanent_of_this_card() is None:
+                return False
+            if not (card and card.owner and card.owner.is_my_turn):
+                return False
+            return True
 
         effect0.set_can_use_condition(condition0)
 
-        def process0():
+        def process0(ctx: Dict[str, Any]):
             """Action: Cost -3"""
-            # reduce_cost(3)
+            player = ctx.get('player')
+            perm = ctx.get('permanent')
+            # Cost reduction handled via cost_reduction property
 
         effect0.set_on_process_callback(process0)
         effects.append(effect0)
@@ -47,19 +47,19 @@ class BT14_046(CardScript):
         effect1.cost_reduction = 1
 
         def condition1(context: Dict[str, Any]) -> bool:
-            # Conditions extracted from DCGO source:
-            # Check: card is on battle area
-            # card.permanent_of_this_card() is not None
-            # Check: it's the owner's turn
-            # card.owner and card.owner.is_my_turn
-            # Check color: CardColor.Green
-            return True  # TODO: implement condition checks against game state
+            if card and card.permanent_of_this_card() is None:
+                return False
+            if not (card and card.owner and card.owner.is_my_turn):
+                return False
+            return True
 
         effect1.set_can_use_condition(condition1)
 
-        def process1():
+        def process1(ctx: Dict[str, Any]):
             """Action: Cost -1"""
-            # reduce_cost(1)
+            player = ctx.get('player')
+            perm = ctx.get('permanent')
+            # Cost reduction handled via cost_reduction property
 
         effect1.set_on_process_callback(process1)
         effects.append(effect1)

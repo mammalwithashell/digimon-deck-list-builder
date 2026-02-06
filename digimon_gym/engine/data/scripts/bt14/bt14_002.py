@@ -18,7 +18,7 @@ class BT14_002(CardScript):
         effect0 = ICardEffect()
         effect0.set_effect_name("BT14-002 Jamming")
         effect0.set_effect_description("Jamming")
-        # TODO: Jamming keyword - security checks don't activate
+        effect0._is_jamming = True
         def condition0(context: Dict[str, Any]) -> bool:
             return True
         effect0.set_can_use_condition(condition0)

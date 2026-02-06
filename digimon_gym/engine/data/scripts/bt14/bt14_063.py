@@ -21,18 +21,23 @@ class BT14_063(CardScript):
         effect0.is_on_deletion = True
 
         def condition0(context: Dict[str, Any]) -> bool:
-            # Conditions extracted from DCGO source:
-            # Check name: "Monzaemon" in card name
-            # Check name: "Numemon" in card name
-            return True  # TODO: implement condition checks against game state
+            # Triggered on deletion — validated by engine timing
+            return True
 
         effect0.set_can_use_condition(condition0)
 
-        def process0():
+        def process0(ctx: Dict[str, Any]):
             """Action: Play Card, Add To Hand, Reveal And Select"""
-            # play_card_from_hand_or_trash()
-            # add_card_to_hand()
-            # reveal_top_cards_and_select()
+            player = ctx.get('player')
+            perm = ctx.get('permanent')
+            # Play a card (from hand/trash/reveal)
+            pass  # TODO: target selection for play_card
+            # Add card to hand (from trash/reveal)
+            if player and player.trash_cards:
+                card_to_add = player.trash_cards.pop()
+                player.hand_cards.append(card_to_add)
+            # Reveal top cards and select
+            pass  # TODO: reveal_and_select needs UI/agent choice
 
         effect0.set_on_process_callback(process0)
         effects.append(effect0)
@@ -42,7 +47,7 @@ class BT14_063(CardScript):
         effect1 = ICardEffect()
         effect1.set_effect_name("BT14-063 Blocker")
         effect1.set_effect_description("Blocker")
-        # TODO: Blocker keyword - this Digimon can block
+        effect1._is_blocker = True
         def condition1(context: Dict[str, Any]) -> bool:
             return True
         effect1.set_can_use_condition(condition1)

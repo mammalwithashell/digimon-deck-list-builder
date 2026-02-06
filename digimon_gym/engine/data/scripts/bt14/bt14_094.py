@@ -21,13 +21,20 @@ class BT14_094(CardScript):
         effect0.dp_modifier = -6000
 
         def condition0(context: Dict[str, Any]) -> bool:
+            # Option main effect — validated by engine timing
             return True
 
         effect0.set_can_use_condition(condition0)
 
-        def process0():
+        def process0(ctx: Dict[str, Any]):
             """Action: DP -6000"""
-            # target.change_dp(-6000)
+            player = ctx.get('player')
+            perm = ctx.get('permanent')
+            # DP change targets opponent digimon
+            enemy = player.enemy if player else None
+            if enemy and enemy.battle_area:
+                target = min(enemy.battle_area, key=lambda p: p.dp)
+                target.change_dp(-6000)
 
         effect0.set_on_process_callback(process0)
         effects.append(effect0)

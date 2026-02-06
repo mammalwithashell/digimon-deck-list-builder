@@ -24,9 +24,12 @@ class BT14_100(CardScript):
 
         effect0.set_can_use_condition(condition0)
 
-        def process0():
+        def process0(ctx: Dict[str, Any]):
             """Action: Draw 1"""
-            # card.owner.draw(1)
+            player = ctx.get('player')
+            perm = ctx.get('permanent')
+            if player:
+                player.draw_cards(1)
 
         effect0.set_on_process_callback(process0)
         effects.append(effect0)
@@ -38,13 +41,20 @@ class BT14_100(CardScript):
         effect1.set_effect_description("[Main] Delete 1 of your opponent's level 4 or lower Digimon.")
 
         def condition1(context: Dict[str, Any]) -> bool:
+            # Option main effect — validated by engine timing
             return True
 
         effect1.set_can_use_condition(condition1)
 
-        def process1():
+        def process1(ctx: Dict[str, Any]):
             """Action: Delete"""
-            # target_permanent.delete()
+            player = ctx.get('player')
+            perm = ctx.get('permanent')
+            # Delete: target selection needed for full impl
+            enemy = player.enemy if player else None
+            if enemy and enemy.battle_area:
+                target = min(enemy.battle_area, key=lambda p: p.dp)
+                enemy.delete_permanent(target)
 
         effect1.set_on_process_callback(process1)
         effects.append(effect1)

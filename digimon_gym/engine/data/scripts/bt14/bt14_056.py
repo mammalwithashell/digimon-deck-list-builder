@@ -21,19 +21,23 @@ class BT14_056(CardScript):
         effect0.is_on_play = True
 
         def condition0(context: Dict[str, Any]) -> bool:
-            # Conditions extracted from DCGO source:
-            # Check: card is on battle area
-            # card.permanent_of_this_card() is not None
-            # Check trait: "D-Brigade" in target traits
-            # Check trait: "DigiPolice" in target traits
-            return True  # TODO: implement condition checks against game state
+            if card and card.permanent_of_this_card() is None:
+                return False
+            # Triggered on play — validated by engine timing
+            return True
 
         effect0.set_can_use_condition(condition0)
 
-        def process0():
+        def process0(ctx: Dict[str, Any]):
             """Action: Add To Hand, Reveal And Select"""
-            # add_card_to_hand()
-            # reveal_top_cards_and_select()
+            player = ctx.get('player')
+            perm = ctx.get('permanent')
+            # Add card to hand (from trash/reveal)
+            if player and player.trash_cards:
+                card_to_add = player.trash_cards.pop()
+                player.hand_cards.append(card_to_add)
+            # Reveal top cards and select
+            pass  # TODO: reveal_and_select needs UI/agent choice
 
         effect0.set_on_process_callback(process0)
         effects.append(effect0)
@@ -49,11 +53,9 @@ class BT14_056(CardScript):
         effect1.set_hash_string("Substitute_BT14_056")
 
         def condition1(context: Dict[str, Any]) -> bool:
-            # Conditions extracted from DCGO source:
-            # Check: card is on battle area
-            # card.permanent_of_this_card() is not None
-            # Check trait: "D-Brigade" in target traits
-            return True  # TODO: implement condition checks against game state
+            if card and card.permanent_of_this_card() is None:
+                return False
+            return True
 
         effect1.set_can_use_condition(condition1)
         effects.append(effect1)

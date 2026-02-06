@@ -21,10 +21,10 @@ class BT14_018(CardScript):
         effect0.is_on_play = True
 
         def condition0(context: Dict[str, Any]) -> bool:
-            # Conditions extracted from DCGO source:
-            # Check: card is on battle area
-            # card.permanent_of_this_card() is not None
-            return True  # TODO: implement condition checks against game state
+            if card and card.permanent_of_this_card() is None:
+                return False
+            # Triggered on play — validated by engine timing
+            return True
 
         effect0.set_can_use_condition(condition0)
         effects.append(effect0)
@@ -37,10 +37,10 @@ class BT14_018(CardScript):
         effect1.is_on_play = True
 
         def condition1(context: Dict[str, Any]) -> bool:
-            # Conditions extracted from DCGO source:
-            # Check: card is on battle area
-            # card.permanent_of_this_card() is not None
-            return True  # TODO: implement condition checks against game state
+            if card and card.permanent_of_this_card() is None:
+                return False
+            # Triggered when digivolving — validated by engine timing
+            return True
 
         effect1.set_can_use_condition(condition1)
         effects.append(effect1)
@@ -53,17 +53,23 @@ class BT14_018(CardScript):
         effect2.set_hash_string("Recovery1_BT14_018")
 
         def condition2(context: Dict[str, Any]) -> bool:
-            # Conditions extracted from DCGO source:
-            # Check: card is on battle area
-            # card.permanent_of_this_card() is not None
-            return True  # TODO: implement condition checks against game state
+            if card and card.permanent_of_this_card() is None:
+                return False
+            return True
 
         effect2.set_can_use_condition(condition2)
 
-        def process2():
+        def process2(ctx: Dict[str, Any]):
             """Action: Recovery +1, Delete"""
-            # card.owner.recover(1)
-            # target_permanent.delete()
+            player = ctx.get('player')
+            perm = ctx.get('permanent')
+            if player:
+                player.recovery(1)
+            # Delete: target selection needed for full impl
+            enemy = player.enemy if player else None
+            if enemy and enemy.battle_area:
+                target = min(enemy.battle_area, key=lambda p: p.dp)
+                enemy.delete_permanent(target)
 
         effect2.set_on_process_callback(process2)
         effects.append(effect2)
@@ -76,17 +82,23 @@ class BT14_018(CardScript):
         effect3.set_hash_string("Recovery1_BT14_018")
 
         def condition3(context: Dict[str, Any]) -> bool:
-            # Conditions extracted from DCGO source:
-            # Check: card is on battle area
-            # card.permanent_of_this_card() is not None
-            return True  # TODO: implement condition checks against game state
+            if card and card.permanent_of_this_card() is None:
+                return False
+            return True
 
         effect3.set_can_use_condition(condition3)
 
-        def process3():
+        def process3(ctx: Dict[str, Any]):
             """Action: Recovery +1, Delete"""
-            # card.owner.recover(1)
-            # target_permanent.delete()
+            player = ctx.get('player')
+            perm = ctx.get('permanent')
+            if player:
+                player.recovery(1)
+            # Delete: target selection needed for full impl
+            enemy = player.enemy if player else None
+            if enemy and enemy.battle_area:
+                target = min(enemy.battle_area, key=lambda p: p.dp)
+                enemy.delete_permanent(target)
 
         effect3.set_on_process_callback(process3)
         effects.append(effect3)

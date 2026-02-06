@@ -19,7 +19,6 @@ class BT14_034(CardScript):
         effect0.set_effect_name("BT14-034 Security: Play this card")
         effect0.set_effect_description("Security: Play this card")
         effect0.is_security_effect = True
-        # Security effect: play this card without paying cost
         def condition0(context: Dict[str, Any]) -> bool:
             return True
         effect0.set_can_use_condition(condition0)
@@ -35,13 +34,20 @@ class BT14_034(CardScript):
         effect1.dp_modifier = -3000
 
         def condition1(context: Dict[str, Any]) -> bool:
+            # Triggered on deletion — validated by engine timing
             return True
 
         effect1.set_can_use_condition(condition1)
 
-        def process1():
+        def process1(ctx: Dict[str, Any]):
             """Action: DP -3000"""
-            # target.change_dp(-3000)
+            player = ctx.get('player')
+            perm = ctx.get('permanent')
+            # DP change targets opponent digimon
+            enemy = player.enemy if player else None
+            if enemy and enemy.battle_area:
+                target = min(enemy.battle_area, key=lambda p: p.dp)
+                target.change_dp(-3000)
 
         effect1.set_on_process_callback(process1)
         effects.append(effect1)

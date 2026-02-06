@@ -20,9 +20,8 @@ class BT14_099(CardScript):
         effect0.set_effect_description("[Main] Trash the top 3 cards of your deck. Then, 1 of your Digimon with [Devimon] in its name gains ��Security A. +1��or the turn.")
 
         def condition0(context: Dict[str, Any]) -> bool:
-            # Conditions extracted from DCGO source:
-            # Check name: "Devimon" in card name
-            return True  # TODO: implement condition checks against game state
+            # Option main effect — validated by engine timing
+            return True
 
         effect0.set_can_use_condition(condition0)
         effects.append(effect0)

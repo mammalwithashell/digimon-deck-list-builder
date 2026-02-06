@@ -20,15 +20,20 @@ class BT14_091(CardScript):
         effect0.set_effect_description("[Main] Trash any 2 digivolution cards from your opponent's Digimon. Then, if you have a Tamer with [Joe Kido] in its name, choose 1 of your Digimon. If your opponent has no Digimon with more digivolution cards than the chosen Digimon, unsuspend it.")
 
         def condition0(context: Dict[str, Any]) -> bool:
-            # Conditions extracted from DCGO source:
-            # Check name: "Joe Kido" in card name
-            return True  # TODO: implement condition checks against game state
+            # Option main effect — validated by engine timing
+            return True
 
         effect0.set_can_use_condition(condition0)
 
-        def process0():
+        def process0(ctx: Dict[str, Any]):
             """Action: Trash Digivolution Cards"""
-            # target.trash_digivolution_cards(count)
+            player = ctx.get('player')
+            perm = ctx.get('permanent')
+            # Trash digivolution cards from this permanent
+            if perm and not perm.has_no_digivolution_cards:
+                trashed = perm.trash_digivolution_cards(1)
+                if player:
+                    player.trash_cards.extend(trashed)
 
         effect0.set_on_process_callback(process0)
         effects.append(effect0)

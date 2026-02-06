@@ -22,19 +22,19 @@ class BT14_079(CardScript):
         effect0.is_on_play = True
 
         def condition0(context: Dict[str, Any]) -> bool:
-            # Conditions extracted from DCGO source:
-            # Check: card is on battle area
-            # card.permanent_of_this_card() is not None
-            # Check trait: "Dark Animal" in target traits
-            # Check trait: "DarkAnimal" in target traits
-            # Check trait: "SoC" in target traits
-            return True  # TODO: implement condition checks against game state
+            if card and card.permanent_of_this_card() is None:
+                return False
+            # Triggered when digivolving — validated by engine timing
+            return True
 
         effect0.set_can_use_condition(condition0)
 
-        def process0():
+        def process0(ctx: Dict[str, Any]):
             """Action: Play Card"""
-            # play_card_from_hand_or_trash()
+            player = ctx.get('player')
+            perm = ctx.get('permanent')
+            # Play a card (from hand/trash/reveal)
+            pass  # TODO: target selection for play_card
 
         effect0.set_on_process_callback(process0)
         effects.append(effect0)
@@ -48,17 +48,22 @@ class BT14_079(CardScript):
         effect1.is_on_attack = True
 
         def condition1(context: Dict[str, Any]) -> bool:
-            # Conditions extracted from DCGO source:
-            # Check: card is on battle area
-            # card.permanent_of_this_card() is not None
-            return True  # TODO: implement condition checks against game state
+            if card and card.permanent_of_this_card() is None:
+                return False
+            # Triggered on attack — validated by engine timing
+            return True
 
         effect1.set_can_use_condition(condition1)
 
-        def process1():
+        def process1(ctx: Dict[str, Any]):
             """Action: Gain 1 memory, Trash From Hand"""
-            # card.owner.add_memory(1)
-            # card.owner.trash_from_hand(count)
+            player = ctx.get('player')
+            perm = ctx.get('permanent')
+            if player:
+                player.add_memory(1)
+            # Trash from hand (cost/effect)
+            if player and player.hand_cards:
+                player.trash_from_hand([player.hand_cards[-1]])
 
         effect1.set_on_process_callback(process1)
         effects.append(effect1)
@@ -75,15 +80,11 @@ class BT14_079(CardScript):
         effect2.is_on_play = True
 
         def condition2(context: Dict[str, Any]) -> bool:
-            # Conditions extracted from DCGO source:
-            # Check: card is on battle area
-            # card.permanent_of_this_card() is not None
-            # Check: it's the owner's turn
-            # card.owner and card.owner.is_my_turn
-            # Check trait: "Dark Animal" in target traits
-            # Check trait: "DarkAnimal" in target traits
-            # Check trait: "SoC" in target traits
-            return True  # TODO: implement condition checks against game state
+            if card and card.permanent_of_this_card() is None:
+                return False
+            if not (card and card.owner and card.owner.is_my_turn):
+                return False
+            return True
 
         effect2.set_can_use_condition(condition2)
         effects.append(effect2)

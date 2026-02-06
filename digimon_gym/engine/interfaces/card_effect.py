@@ -1,10 +1,11 @@
 from __future__ import annotations
-from typing import TYPE_CHECKING, Callable, Optional, Dict, Any
+from typing import TYPE_CHECKING, Callable, Optional, Dict, Any, List
 from abc import ABC
 
 if TYPE_CHECKING:
     from ..core.card_source import CardSource
     from ..core.permanent import Permanent
+    from ..data.enums import EffectTiming
 
 class ICardEffect(ABC):
     def __init__(self):
@@ -14,7 +15,7 @@ class ICardEffect(ABC):
         self.effect_name: str = ""
         self.effect_description: str = ""
         self.hash_string: str = ""
-        self.on_process_callback: Optional[Callable[[], None]] = None
+        self.on_process_callback: Optional[Callable[[Dict[str, Any]], None]] = None
         self.root_card_effect: Optional['ICardEffect'] = None
         self.can_use_condition: Optional[Callable[[Dict[str, Any]], bool]] = None
         self.can_activate_condition: Optional[Callable[[Dict[str, Any]], bool]] = None
@@ -30,6 +31,9 @@ class ICardEffect(ABC):
         self.chain_activations: int = 0
         self.is_background_process: bool = False
         self.is_not_show_ui: bool = False
+        self.timing: Optional['EffectTiming'] = None
+        self._activate_count: int = 0
+        self._turn_activate_count: int = 0
 
     @property
     def is_disabled(self) -> bool:
@@ -110,8 +114,23 @@ class ICardEffect(ABC):
     def set_hash_string(self, hash_string: str):
         self.hash_string = hash_string
 
-    def set_on_process_callback(self, on_process_callback: Callable[[], None]):
+    def set_on_process_callback(self, on_process_callback: Callable[[Dict[str, Any]], None]):
         self.on_process_callback = on_process_callback
+
+    def set_timing(self, timing: 'EffectTiming'):
+        self.timing = timing
+
+    def reset_turn_count(self):
+        self._turn_activate_count = 0
+
+    def can_activate_this_turn(self) -> bool:
+        if self.max_count_per_turn <= 0:
+            return True
+        return self._turn_activate_count < self.max_count_per_turn
+
+    def record_activation(self):
+        self._activate_count += 1
+        self._turn_activate_count += 1
 
     def set_root_card_effect(self, root_card_effect: 'ICardEffect'):
         self.root_card_effect = root_card_effect

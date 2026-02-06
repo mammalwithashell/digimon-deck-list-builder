@@ -18,7 +18,7 @@ class BT14_028(CardScript):
         effect0 = ICardEffect()
         effect0.set_effect_name("BT14-028 Blocker")
         effect0.set_effect_description("Blocker")
-        # TODO: Blocker keyword - this Digimon can block
+        effect0._is_blocker = True
         def condition0(context: Dict[str, Any]) -> bool:
             return True
         effect0.set_can_use_condition(condition0)
@@ -32,10 +32,9 @@ class BT14_028(CardScript):
         effect1.set_max_count_per_turn(1)
 
         def condition1(context: Dict[str, Any]) -> bool:
-            # Conditions extracted from DCGO source:
-            # Check: card is on battle area
-            # card.permanent_of_this_card() is not None
-            return True  # TODO: implement condition checks against game state
+            if card and card.permanent_of_this_card() is None:
+                return False
+            return True
 
         effect1.set_can_use_condition(condition1)
         effects.append(effect1)

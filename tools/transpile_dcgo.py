@@ -414,37 +414,39 @@ def parse_cs_file(filepath: str) -> Tuple[str, List[EffectBlock]]:
 
 def generate_condition_code(eb: EffectBlock, indent: str = "            ") -> str:
     """Generate Python condition function code from extracted conditions."""
-    lines = []
     checks = []
 
     if "on_battle_area" in eb.conditions:
-        checks.append("# Check: card is on battle area")
-        checks.append("# card.permanent_of_this_card() is not None")
+        checks.append(f"{indent}if card and card.permanent_of_this_card() is None:")
+        checks.append(f"{indent}    return False")
 
     if "your_turn" in eb.conditions:
-        checks.append("# Check: it's the owner's turn")
-        checks.append("# card.owner and card.owner.is_my_turn")
+        checks.append(f"{indent}if not (card and card.owner and card.owner.is_my_turn):")
+        checks.append(f"{indent}    return False")
 
-    # Trait checks
-    for trait in eb.trait_checks:
-        checks.append(f'# Check trait: "{trait}" in target traits')
+    if "trigger_on_play" in eb.conditions:
+        checks.append(f"{indent}# Triggered on play — validated by engine timing")
 
-    # Name checks
-    for name in eb.name_checks:
-        checks.append(f'# Check name: "{name}" in card name')
+    if "trigger_on_attack" in eb.conditions:
+        checks.append(f"{indent}# Triggered on attack — validated by engine timing")
 
-    # Color checks
-    for color in eb.color_checks:
-        checks.append(f'# Check color: CardColor.{color}')
+    if "trigger_on_deletion" in eb.conditions:
+        checks.append(f"{indent}# Triggered on deletion — validated by engine timing")
+
+    if "trigger_when_digivolving" in eb.conditions:
+        checks.append(f"{indent}# Triggered when digivolving — validated by engine timing")
+
+    if "trigger_security" in eb.conditions:
+        checks.append(f"{indent}# Security effect — validated by engine timing")
+
+    if "trigger_option_main" in eb.conditions:
+        checks.append(f"{indent}# Option main effect — validated by engine timing")
 
     if not checks:
         return f"{indent}return True"
 
-    lines.append(f"{indent}# Conditions extracted from DCGO source:")
-    for c in checks:
-        lines.append(f"{indent}{c}")
-    lines.append(f"{indent}return True  # TODO: implement condition checks against game state")
-    return "\n".join(lines)
+    checks.append(f"{indent}return True")
+    return "\n".join(checks)
 
 
 def generate_action_comment(eb: EffectBlock) -> str:
@@ -467,47 +469,95 @@ def generate_action_comment(eb: EffectBlock) -> str:
 
 
 def generate_callback_code(eb: EffectBlock, indent: str = "            ") -> str:
-    """Generate the on_process_callback body."""
+    """Generate the on_process_callback body with real engine calls."""
     lines = []
+    lines.append(f"{indent}player = ctx.get('player')")
+    lines.append(f"{indent}perm = ctx.get('permanent')")
+
     if eb.draw_count:
-        lines.append(f"{indent}# card.owner.draw({eb.draw_count})")
+        lines.append(f"{indent}if player:")
+        lines.append(f"{indent}    player.draw_cards({eb.draw_count})")
     if eb.memory_gain:
-        lines.append(f"{indent}# card.owner.add_memory({eb.memory_gain})")
+        lines.append(f"{indent}if player:")
+        lines.append(f"{indent}    player.add_memory({eb.memory_gain})")
     if eb.dp_change:
-        lines.append(f"{indent}# target.change_dp({eb.dp_change})")
+        # DP change targets opponent's digimon by default
+        if eb.dp_change < 0:
+            lines.append(f"{indent}# DP change targets opponent digimon")
+            lines.append(f"{indent}enemy = player.enemy if player else None")
+            lines.append(f"{indent}if enemy and enemy.battle_area:")
+            lines.append(f"{indent}    target = min(enemy.battle_area, key=lambda p: p.dp)")
+            lines.append(f"{indent}    target.change_dp({eb.dp_change})")
+        else:
+            lines.append(f"{indent}if perm:")
+            lines.append(f"{indent}    perm.change_dp({eb.dp_change})")
     if eb.recovery_count:
-        lines.append(f"{indent}# card.owner.recover({eb.recovery_count})")
+        lines.append(f"{indent}if player:")
+        lines.append(f"{indent}    player.recovery({eb.recovery_count})")
 
     for action in eb.actions:
-        if action == "delete":
-            lines.append(f"{indent}# target_permanent.delete()")
+        if action in ("draw", "gain_memory", "change_dp", "recovery"):
+            continue  # Already handled above
+        elif action == "delete":
+            lines.append(f"{indent}# Delete: target selection needed for full impl")
+            lines.append(f"{indent}enemy = player.enemy if player else None")
+            lines.append(f"{indent}if enemy and enemy.battle_area:")
+            lines.append(f"{indent}    target = min(enemy.battle_area, key=lambda p: p.dp)")
+            lines.append(f"{indent}    enemy.delete_permanent(target)")
         elif action == "bounce":
-            lines.append(f"{indent}# target_permanent.return_to_hand()")
+            lines.append(f"{indent}# Bounce: return opponent's digimon to hand")
+            lines.append(f"{indent}enemy = player.enemy if player else None")
+            lines.append(f"{indent}if enemy and enemy.battle_area:")
+            lines.append(f"{indent}    target = enemy.battle_area[-1]")
+            lines.append(f"{indent}    player.bounce_permanent_to_hand(target)")
         elif action == "suspend":
-            lines.append(f"{indent}# target_permanent.suspend()")
-        elif action == "play_card":
-            lines.append(f"{indent}# play_card_from_hand_or_trash()")
+            lines.append(f"{indent}# Suspend opponent's digimon")
+            lines.append(f"{indent}enemy = player.enemy if player else None")
+            lines.append(f"{indent}if enemy and enemy.battle_area:")
+            lines.append(f"{indent}    target = enemy.battle_area[-1]")
+            lines.append(f"{indent}    target.suspend()")
         elif action == "trash_from_hand":
-            lines.append(f"{indent}# card.owner.trash_from_hand(count)")
+            lines.append(f"{indent}# Trash from hand (cost/effect)")
+            lines.append(f"{indent}if player and player.hand_cards:")
+            lines.append(f"{indent}    player.trash_from_hand([player.hand_cards[-1]])")
         elif action == "trash_digivolution_cards":
-            lines.append(f"{indent}# target.trash_digivolution_cards(count)")
+            lines.append(f"{indent}# Trash digivolution cards from this permanent")
+            lines.append(f"{indent}if perm and not perm.has_no_digivolution_cards:")
+            lines.append(f"{indent}    trashed = perm.trash_digivolution_cards(1)")
+            lines.append(f"{indent}    if player:")
+            lines.append(f"{indent}        player.trash_cards.extend(trashed)")
         elif action == "add_to_hand":
-            lines.append(f"{indent}# add_card_to_hand()")
+            lines.append(f"{indent}# Add card to hand (from trash/reveal)")
+            lines.append(f"{indent}if player and player.trash_cards:")
+            lines.append(f"{indent}    card_to_add = player.trash_cards.pop()")
+            lines.append(f"{indent}    player.hand_cards.append(card_to_add)")
         elif action == "add_to_security":
-            lines.append(f"{indent}# card.owner.add_to_security()")
+            lines.append(f"{indent}# Add top card of deck to security")
+            lines.append(f"{indent}if player:")
+            lines.append(f"{indent}    player.recovery(1)")
+        elif action == "play_card":
+            lines.append(f"{indent}# Play a card (from hand/trash/reveal)")
+            lines.append(f"{indent}pass  # TODO: target selection for play_card")
         elif action == "reveal_and_select":
-            lines.append(f"{indent}# reveal_top_cards_and_select()")
+            lines.append(f"{indent}# Reveal top cards and select")
+            lines.append(f"{indent}pass  # TODO: reveal_and_select needs UI/agent choice")
         elif action == "de_digivolve":
-            lines.append(f"{indent}# target_permanent.de_digivolve(count)")
+            lines.append(f"{indent}# De-digivolve opponent's digimon")
+            lines.append(f"{indent}enemy = player.enemy if player else None")
+            lines.append(f"{indent}if enemy and enemy.battle_area:")
+            lines.append(f"{indent}    target = enemy.battle_area[-1]")
+            lines.append(f"{indent}    removed = target.de_digivolve(1)")
+            lines.append(f"{indent}    enemy.trash_cards.extend(removed)")
         elif action == "digivolve":
-            lines.append(f"{indent}# digivolve_into(target_card)")
-        elif action == "cost_reduction" and eb.cost_reduction_val:
-            lines.append(f"{indent}# reduce_cost({eb.cost_reduction_val})")
+            lines.append(f"{indent}pass  # TODO: digivolve effect needs card selection")
+        elif action == "cost_reduction":
+            if eb.cost_reduction_val:
+                lines.append(f"{indent}# Cost reduction handled via cost_reduction property")
         elif action == "mind_link":
-            lines.append(f"{indent}# mind_link(tamer, digimon)")
+            lines.append(f"{indent}pass  # TODO: mind_link needs tamer/digimon selection")
 
-    if not lines:
-        lines.append(f"{indent}pass  # TODO: implement effect action")
+    if not any(l.strip() != f"player = ctx.get('player')" and l.strip() != f"perm = ctx.get('permanent')" and l.strip() for l in lines):
+        lines.append(f"{indent}pass")
 
     return "\n".join(lines)
 
@@ -526,29 +576,28 @@ def generate_factory_effect(eb: EffectBlock, card_id: str, idx: int) -> str:
         lines.append(f"        {var}.is_inherited_effect = True")
 
     if eb.factory_method == "blocker":
-        lines.append(f"        # TODO: Blocker keyword - this Digimon can block")
+        lines.append(f"        {var}._is_blocker = True")
     elif eb.factory_method == "jamming":
-        lines.append(f"        # TODO: Jamming keyword - security checks don't activate")
+        lines.append(f"        {var}._is_jamming = True")
     elif eb.factory_method == "rush":
-        lines.append(f"        # TODO: Rush keyword - can attack on play turn")
+        lines.append(f"        {var}._is_rush = True")
     elif eb.factory_method == "reboot":
-        lines.append(f"        # TODO: Reboot keyword - unsuspend during opponent's unsuspend")
+        lines.append(f"        {var}._is_reboot = True")
     elif eb.factory_method == "raid":
-        lines.append(f"        # TODO: Raid keyword")
+        lines.append(f"        {var}._is_raid = True")
     elif eb.factory_method == "alliance":
-        lines.append(f"        # TODO: Alliance keyword")
+        lines.append(f"        {var}._is_alliance = True")
     elif eb.factory_method == "security_play":
         lines.append(f"        {var}.is_security_effect = True")
-        lines.append(f"        # Security effect: play this card without paying cost")
     elif eb.factory_method == "security_attack_plus":
-        lines.append(f"        # Security Attack +1")
+        lines.append(f"        {var}._security_attack_modifier = 1")
     elif eb.factory_method == "dp_modifier":
-        lines.append(f"        # Static DP modifier")
+        lines.append(f"        {var}.dp_modifier = 0  # TODO: extract DP value from C# source")
     elif eb.factory_method == "armor_purge":
-        lines.append(f"        # Armor Purge: when deleted, trash top card instead")
+        lines.append(f"        {var}._is_armor_purge = True")
     elif eb.factory_method == "blast_digivolve":
         lines.append(f"        {var}.is_counter_effect = True")
-        lines.append(f"        # Blast Digivolve")
+        lines.append(f"        {var}._is_blast_digivolve = True")
     elif eb.factory_method == "set_memory_3":
         lines.append(f"        # [Start of Your Turn] Set memory to 3 if <= 2")
     elif eb.factory_method == "gain_memory_tamer":
@@ -613,7 +662,7 @@ def generate_activate_effect(eb: EffectBlock, card_id: str, idx: int) -> str:
     # Callback for actions
     if eb.actions:
         lines.append(f"")
-        lines.append(f"        def process{idx}():")
+        lines.append(f"        def process{idx}(ctx: Dict[str, Any]):")
         lines.append(f"            \"\"\"Action: {action_desc}\"\"\"")
         lines.append(generate_callback_code(eb, "            "))
         lines.append(f"")

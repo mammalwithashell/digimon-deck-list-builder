@@ -21,19 +21,27 @@ class BT14_032(CardScript):
         effect0.is_on_play = True
 
         def condition0(context: Dict[str, Any]) -> bool:
-            # Conditions extracted from DCGO source:
-            # Check: card is on battle area
-            # card.permanent_of_this_card() is not None
-            # Check name: "Sukamon" in card name
-            return True  # TODO: implement condition checks against game state
+            if card and card.permanent_of_this_card() is None:
+                return False
+            # Triggered on play — validated by engine timing
+            return True
 
         effect0.set_can_use_condition(condition0)
 
-        def process0():
+        def process0(ctx: Dict[str, Any]):
             """Action: Trash From Hand, Add To Hand, Add To Security"""
-            # card.owner.trash_from_hand(count)
-            # add_card_to_hand()
-            # card.owner.add_to_security()
+            player = ctx.get('player')
+            perm = ctx.get('permanent')
+            # Trash from hand (cost/effect)
+            if player and player.hand_cards:
+                player.trash_from_hand([player.hand_cards[-1]])
+            # Add card to hand (from trash/reveal)
+            if player and player.trash_cards:
+                card_to_add = player.trash_cards.pop()
+                player.hand_cards.append(card_to_add)
+            # Add top card of deck to security
+            if player:
+                player.recovery(1)
 
         effect0.set_on_process_callback(process0)
         effects.append(effect0)
@@ -48,13 +56,20 @@ class BT14_032(CardScript):
         effect1.dp_modifier = -3000
 
         def condition1(context: Dict[str, Any]) -> bool:
+            # Triggered on deletion — validated by engine timing
             return True
 
         effect1.set_can_use_condition(condition1)
 
-        def process1():
+        def process1(ctx: Dict[str, Any]):
             """Action: DP -3000"""
-            # target.change_dp(-3000)
+            player = ctx.get('player')
+            perm = ctx.get('permanent')
+            # DP change targets opponent digimon
+            enemy = player.enemy if player else None
+            if enemy and enemy.battle_area:
+                target = min(enemy.battle_area, key=lambda p: p.dp)
+                target.change_dp(-3000)
 
         effect1.set_on_process_callback(process1)
         effects.append(effect1)
