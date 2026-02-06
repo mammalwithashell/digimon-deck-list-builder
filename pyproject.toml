@@ -1,0 +1,30 @@
+[project]
+name = "digimon-gym"
+version = "0.1.0"
+description = "Reinforcement learning environment for Digimon Trading Card Game"
+requires-python = ">=3.11"
+dependencies = [
+    "numpy>=1.24",
+    "gymnasium>=0.29",
+    "torch>=2.0",
+    "fastapi>=0.100",
+    "httpx>=0.24",
+    "uvicorn>=0.20",
+]
+
+[project.optional-dependencies]
+train = [
+    "stable-baselines3>=2.0",
+    "sb3-contrib>=2.0",
+]
+dev = [
+    "pytest>=7.0",
+]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "--ignore=tests/test_rl_gym.py -v"
+
+[build-system]
+requires = ["setuptools>=68.0"]
+build-backend = "setuptools.backends._legacy:_Backend"

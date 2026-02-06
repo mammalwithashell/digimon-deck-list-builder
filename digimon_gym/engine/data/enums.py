@@ -108,3 +108,7 @@ class AttackResolution(Enum):
     AttackerDeleted = 1
     BattleDraw = 2 # Both deleted
     GameEnd = 3 # Player lost
+
+class PlayerType(Enum):
+    Agent = 0
+    Human = 1

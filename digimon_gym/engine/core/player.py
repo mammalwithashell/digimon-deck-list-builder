@@ -25,6 +25,26 @@ class Player:
         self.enemy: Optional['Player'] = None
         self.game: Optional[object] = None  # Back-reference to Game, set at start
 
+    def _log(self, message: str):
+        """Log via the game's logger if available."""
+        if self.game and hasattr(self.game, 'logger'):
+            self.game.logger.log(message)
+
+    def _apply_ace_overflow(self, card_sources: List['CardSource']):
+        """Check card sources for ACE cards and apply overflow memory penalty.
+
+        ACE Overflow triggers when an ACE card moves from the field or from
+        under a card to any other area (trash, hand, deck, security).
+        Uses lose_memory() which correctly adjusts Game.memory based on
+        which player is losing memory.
+        """
+        for card in card_sources:
+            if card.c_entity_base and card.c_entity_base.is_ace:
+                penalty = card.c_entity_base.ace_overflow_cost
+                if penalty > 0:
+                    self.lose_memory(penalty)
+                    self._log(f"ACE Overflow: {card.card_names[0]} loses {penalty} memory")
+
     @property
     def is_lose(self) -> bool:
         # Loss condition: Deck out is checked at Draw.
@@ -57,50 +77,50 @@ class Player:
 
     def draw(self) -> bool:
         if not self.library_cards:
-            print(f"{self.player_name} cannot draw! Deck empty.")
+            self._log(f"{self.player_name} cannot draw! Deck empty.")
             return False
 
         card = self.library_cards.pop(0)
         self.hand_cards.append(card)
-        print(f"{self.player_name} drew a card. Hand size: {len(self.hand_cards)}")
+        self._log(f"{self.player_name} drew a card. Hand size: {len(self.hand_cards)}")
         return True
 
     def hatch(self):
         if self.breeding_area is not None:
-            print("Cannot hatch: Breeding area occupied.")
+            self._log("Cannot hatch: Breeding area occupied.")
             return
 
         if not self.digitama_library_cards:
-            print("Cannot hatch: Digitama deck empty.")
+            self._log("Cannot hatch: Digitama deck empty.")
             return
 
         card = self.digitama_library_cards.pop(0)
         new_permanent = Permanent([card])
         self.breeding_area = new_permanent
-        print(f"{self.player_name} hatched {card.card_names[0]}.")
+        self._log(f"{self.player_name} hatched {card.card_names[0]}.")
 
     def move_from_breeding(self):
         if self.breeding_area is None:
-            print("Cannot move: Breeding area empty.")
+            self._log("Cannot move: Breeding area empty.")
             return
 
         # Rule: Must be Level 3 or higher to move?
         # Actually, Level 2 (Digitama) cannot move. Level 3 (Rookie) can.
         if self.breeding_area.level < 3:
-            print("Cannot move: Digimon level too low (must be Level 3+).")
+            self._log("Cannot move: Digimon level too low (must be Level 3+).")
             return
 
         perm = self.breeding_area
         self.breeding_area = None
         self.battle_area.append(perm)
-        print(f"{self.player_name} moved {perm.top_card.card_names[0]} from Breeding to Battle Area.")
+        self._log(f"{self.player_name} moved {perm.top_card.card_names[0]} from Breeding to Battle Area.")
 
     def play_card(self, card_source: 'CardSource'):
         if card_source in self.hand_cards:
             self.hand_cards.remove(card_source)
             new_permanent = Permanent([card_source])
             self.battle_area.append(new_permanent)
-            print(f"{self.player_name} played {card_source.card_names[0]}.")
+            self._log(f"{self.player_name} played {card_source.card_names[0]}.")
 
     def unsuspend_all(self):
         for perm in self.battle_area:
@@ -110,7 +130,7 @@ class Player:
             # Breeding area cards don't really suspend/unsuspend in standard play logic usually?
             # They stay active. But sure.
             perm.is_suspended = False
-        print(f"{self.player_name} unsuspended all permanents.")
+        self._log(f"{self.player_name} unsuspended all permanents.")
 
     def digivolve(self, permanent: 'Permanent', card_source: 'CardSource'):
         # 1. Determine Base Cost
@@ -140,45 +160,46 @@ class Player:
             if effect.can_use_condition and effect.can_use_condition(context):
                 if effect.cost_reduction > 0:
                     reduction += effect.cost_reduction
-                    print(f"Effect {effect.effect_name} reduced cost by {effect.cost_reduction}")
+                    self._log(f"Effect {effect.effect_name} reduced cost by {effect.cost_reduction}")
 
         final_cost = max(0, base_cost - reduction)
 
         # 3. Pay Cost
         # Memory can go negative.
         # self.memory -= final_cost # Game handles memory
-        print(f"{self.player_name} pays {final_cost} memory to digivolve.")
+        self._log(f"{self.player_name} pays {final_cost} memory to digivolve.")
 
         # 4. Stack Card
         if card_source in self.hand_cards:
             self.hand_cards.remove(card_source)
         permanent.add_card_source(card_source)
-        print(f"Digivolved into {card_source.card_names[0]}.")
+        self._log(f"Digivolved into {card_source.card_names[0]}.")
 
         return final_cost
 
     def delete_permanent(self, permanent: 'Permanent'):
         if permanent in self.battle_area:
             self.battle_area.remove(permanent)
+            self._apply_ace_overflow(permanent.card_sources)
             self.trash_cards.extend(permanent.card_sources)
-            print(f"{self.player_name}'s permanent {permanent.top_card.card_names[0]} deleted.")
+            self._log(f"{self.player_name}'s permanent {permanent.top_card.card_names[0]} deleted.")
 
     def security_attack(self, attacker: 'Permanent') -> AttackResolution:
-        print(f"{self.player_name} receives Security Attack from {attacker.top_card.card_names[0] if attacker.top_card else 'Unknown'}!")
+        self._log(f"{self.player_name} receives Security Attack from {attacker.top_card.card_names[0] if attacker.top_card else 'Unknown'}!")
 
         if len(self.security_cards) == 0:
-            print("Direct Attack! No Security cards left.")
+            self._log("Direct Attack! No Security cards left.")
             return AttackResolution.GameEnd
 
         # Reveal top card
         security_card = self.security_cards.pop(0)
-        print(f"Security Check: Revealed {security_card.card_names[0]}")
+        self._log(f"Security Check: Revealed {security_card.card_names[0]}")
 
         # Execute Security Effects
         security_effects = security_card.effect_list(EffectTiming.SecuritySkill)
         for effect in security_effects:
             if effect.is_security_effect:
-                print(f"Activating Security Effect: {effect.effect_name}")
+                self._log(f"Activating Security Effect: {effect.effect_name}")
                 if effect.on_process_callback:
                     effect.on_process_callback()
 
@@ -186,15 +207,15 @@ class Player:
 
         # Battle
         if security_card.is_digimon:
-            print(f"Battle: Attacker DP {attacker.dp} vs Security DP {security_card.base_dp}")
+            self._log(f"Battle: Attacker DP {attacker.dp} vs Security DP {security_card.base_dp}")
             if attacker.dp < security_card.base_dp:
-                print(f"Attacker {attacker.top_card.card_names[0]} is deleted by Security Digimon!")
+                self._log(f"Attacker {attacker.top_card.card_names[0]} is deleted by Security Digimon!")
                 result = AttackResolution.AttackerDeleted
             elif attacker.dp == security_card.base_dp:
-                print(f"Attacker {attacker.top_card.card_names[0]} is deleted by Security Digimon (Equal DP).")
+                self._log(f"Attacker {attacker.top_card.card_names[0]} is deleted by Security Digimon (Equal DP).")
                 result = AttackResolution.AttackerDeleted
             else:
-                print(f"Attacker {attacker.top_card.card_names[0]} survives.")
+                self._log(f"Attacker {attacker.top_card.card_names[0]} survives.")
 
         # Trash the security card
         self.trash_cards.append(security_card)
@@ -239,8 +260,10 @@ class Player:
             owner.battle_area.remove(permanent)
             if permanent.top_card:
                 owner.hand_cards.append(permanent.top_card)
-            # Digivolution cards under top go to trash
-            for card in permanent.card_sources[:-1]:
+            # Digivolution cards under top go to trash — trigger ACE overflow
+            under_cards = permanent.card_sources[:-1]
+            self._apply_ace_overflow(under_cards)
+            for card in under_cards:
                 owner.trash_cards.append(card)
 
     def recovery(self, count: int):
