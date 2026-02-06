@@ -6,6 +6,7 @@ from ..core.entity_base import CEntity_Base
 from ..core.card_script import CardScript
 from ..core.card_source import CardSource
 from .enums import CardColor, CardKind, Rarity
+from .evo_cost import EvoCost
 
 class CardDatabase:
     _instance = None
@@ -53,6 +54,18 @@ class CardDatabase:
             entity.inherited_effect_description_eng = entry.get('inherited_effect_description_eng', '')
             entity.security_effect_description_eng = entry.get('security_effect_description_eng', '')
 
+            # Evo costs
+            for ec in entry.get('evo_costs', []):
+                entity.evo_costs.append(EvoCost(
+                    card_color=CardColor(ec.get('card_color', 0)),
+                    level=ec.get('level', 0),
+                    memory_cost=ec.get('memory_cost', 0),
+                ))
+
+            # Form and attribute
+            entity.form_eng = entry.get('form_eng', [])
+            entity.attribute_eng = entry.get('attribute_eng', [])
+
             # Enums
             entity.card_kind = CardKind(entry.get('card_kind', 0))
             entity.rarity = Rarity(entry.get('rarity', 0))
@@ -77,23 +90,32 @@ class CardDatabase:
              set_id = parts[0].lower()
              module_name = script_name.lower()
 
-             module_path = f"python_impl.engine.data.scripts.{set_id}.{module_name}"
+             # Try multiple package prefixes (python_impl and digimon_gym)
+             prefixes = ["python_impl.engine.data.scripts", "digimon_gym.engine.data.scripts"]
+             loaded = False
 
-             try:
-                 module = importlib.import_module(module_path)
-                 script_class = getattr(module, script_name)
-                 self.scripts[entity.card_id] = script_class()
-             except ImportError:
-                 # Try ignoring set folder
+             for prefix in prefixes:
+                 module_path = f"{prefix}.{set_id}.{module_name}"
                  try:
-                     module_path = f"python_impl.engine.data.scripts.{module_name}"
                      module = importlib.import_module(module_path)
                      script_class = getattr(module, script_name)
                      self.scripts[entity.card_id] = script_class()
-                 except ImportError as e:
-                     print(f"Could not load script for {entity.card_id} ({script_name}): {e}")
-             except AttributeError as e:
-                 print(f"Could not find class {script_name} in {module_path}: {e}")
+                     loaded = True
+                     break
+                 except (ImportError, AttributeError):
+                     # Try without set folder
+                     try:
+                         module_path = f"{prefix}.{module_name}"
+                         module = importlib.import_module(module_path)
+                         script_class = getattr(module, script_name)
+                         self.scripts[entity.card_id] = script_class()
+                         loaded = True
+                         break
+                     except (ImportError, AttributeError):
+                         continue
+
+             if not loaded:
+                 pass  # No script found for this card (vanilla cards with no effects)
 
     def get_card(self, card_id: str) -> Optional[CEntity_Base]:
         return self.cards.get(card_id)
