@@ -109,7 +109,7 @@ def reset_registry():
     CardRegistry.initialize_from_list([
         "TEST-001", "TEST-002", "TEST-003", "DNA-001", "DNA-002",
         "BLUE-001", "GREEN-001", "BASE-001", "BASE-002",
-        "LIB-001", "LIB-002",
+        "LIB-001", "LIB-002", "BT16-025", "EX6-062",
     ])
     yield
     CardRegistry.reset()
@@ -751,3 +751,364 @@ class TestDnaStacking:
         top_perm2, bottom_perm2, _ = stacking2
         assert top_perm2 is greymon_perm
         assert bottom_perm2 is garurumon_perm
+
+
+# ═══════════════════════════════════════════════════════════════════════
+# G. Real Card Tests: BT16-025 Paildramon & EX6-062 UltimateChaosmon
+# ═══════════════════════════════════════════════════════════════════════
+
+# --- BT16-025 Paildramon ---
+# Level 5, Blue/Green, DP 8000, Play Cost 8
+# [DNA Digivolve] Blue Lv.4 + Green Lv.4 : Cost 0
+# Also has normal evo: Blue Lv.4 cost 4, Green Lv.4 cost 4
+
+BT16_025_XROS_REQ = (
+    "[DNA Digivolve] Blue Lv.4 + Green Lv.4 : Cost 0 "
+    "Stack the 2 specified Digimon and digivolve unsuspended."
+)
+
+# --- EX6-062 UltimateChaosmon ---
+# Level 7, White, DP 16000, Play Cost 16
+# [DNA Digivolve] Yellow/Black Lv.6 + Green/Purple Lv.6 : Cost 0
+
+EX6_062_XROS_REQ = (
+    "[DNA Digivolve] Yellow/Black Lv.6 + Green/Purple Lv.6 : Cost 0 "
+    "Stack the 2 specified Digimon and digivolve unsuspended."
+)
+
+
+def make_paildramon(owner=None):
+    """BT16-025 Paildramon with parsed xros_req DNA costs + normal evo."""
+    dna_costs = parse_xros_req(BT16_025_XROS_REQ)
+    return make_card(
+        card_id="BT16-025", name="Paildramon", dp=8000, level=5,
+        play_cost=8, colors=[CardColor.Blue, CardColor.Green],
+        owner=owner,
+        evo_costs=[
+            EvoCost(card_color=CardColor.Blue, level=4, memory_cost=4),
+            EvoCost(card_color=CardColor.Green, level=4, memory_cost=4),
+        ],
+        dna_costs=dna_costs,
+    )
+
+
+def make_ultimate_chaosmon(owner=None):
+    """EX6-062 UltimateChaosmon with parsed xros_req DNA costs + normal evo."""
+    dna_costs = parse_xros_req(EX6_062_XROS_REQ)
+    return make_card(
+        card_id="EX6-062", name="UltimateChaosmon", dp=16000, level=7,
+        play_cost=16, colors=[CardColor.White],
+        owner=owner,
+        evo_costs=[
+            EvoCost(card_color=CardColor.Yellow, level=6, memory_cost=7),
+            EvoCost(card_color=CardColor.Green, level=6, memory_cost=7),
+        ],
+        dna_costs=dna_costs,
+    )
+
+
+class TestBT16Paildramon:
+    """Tests using BT16-025 Paildramon: [DNA Digivolve] Blue Lv.4 + Green Lv.4: Cost 0."""
+
+    def test_paildramon_xros_req_parsed(self):
+        """The xros_req text is parsed into correct DnaCost."""
+        card = make_paildramon()
+        assert len(card.c_entity_base.dna_costs) == 1
+        dna = card.c_entity_base.dna_costs[0]
+        assert dna.requirement1.card_color == CardColor.Blue
+        assert dna.requirement1.level == 4
+        assert dna.requirement2.card_color == CardColor.Green
+        assert dna.requirement2.level == 4
+        assert dna.memory_cost == 0
+
+    def test_paildramon_dna_valid_with_blue_green(self):
+        """Paildramon can DNA digivolve from Blue Lv4 + Green Lv4."""
+        paildramon = make_paildramon()
+
+        # ExVeemon (Blue Lv4)
+        exveemon = Permanent([make_card(
+            card_id="BLUE-001", name="ExVeemon", level=4, dp=5000,
+            colors=[CardColor.Blue],
+        )])
+        # Stingmon (Green Lv4)
+        stingmon = Permanent([make_card(
+            card_id="GREEN-001", name="Stingmon", level=4, dp=5000,
+            colors=[CardColor.Green],
+        )])
+        assert can_dna_digivolve(paildramon, exveemon, stingmon) is True
+
+    def test_paildramon_dna_invalid_two_blues(self):
+        """Paildramon cannot DNA from two Blue Lv4 (need Blue + Green)."""
+        paildramon = make_paildramon()
+
+        blue1 = Permanent([make_card(name="Blue1", level=4, colors=[CardColor.Blue])])
+        blue2 = Permanent([make_card(name="Blue2", level=4, colors=[CardColor.Blue])])
+
+        assert can_dna_digivolve(paildramon, blue1, blue2) is False
+
+    def test_paildramon_dna_valid_with_dual_color_perm(self):
+        """A Blue/Green dual-color Lv4 can serve as either requirement."""
+        paildramon = make_paildramon()
+
+        # Dual color Blue/Green Lv4 (e.g., Lighdramon)
+        dual = Permanent([make_card(
+            name="DualMon", level=4, colors=[CardColor.Blue, CardColor.Green],
+        )])
+        green = Permanent([make_card(name="GreenMon", level=4, colors=[CardColor.Green])])
+
+        # dual can match Blue req, green matches Green req
+        assert can_dna_digivolve(paildramon, dual, green) is True
+
+    def test_paildramon_also_has_normal_evo(self):
+        """Paildramon can also normal-digivolve onto a Blue or Green Lv4."""
+        from digimon_gym.engine.validation.digivolve_validator import can_digivolve
+        paildramon = make_paildramon()
+
+        blue_lv4 = Permanent([make_card(name="BlueMon", level=4, colors=[CardColor.Blue])])
+        assert can_digivolve(paildramon, blue_lv4) is True
+
+        green_lv4 = Permanent([make_card(name="GreenMon", level=4, colors=[CardColor.Green])])
+        assert can_digivolve(paildramon, green_lv4) is True
+
+    def test_paildramon_stacking_order(self):
+        """Paildramon DNA: Blue sources on top, Green sources on bottom."""
+        paildramon = make_paildramon()
+
+        exveemon = make_card(name="ExVeemon", level=4, colors=[CardColor.Blue])
+        stingmon = make_card(name="Stingmon", level=4, colors=[CardColor.Green])
+        exv_perm = Permanent([exveemon])
+        stg_perm = Permanent([stingmon])
+
+        stacking = get_dna_stacking_order(paildramon, exv_perm, stg_perm)
+        assert stacking is not None
+        top, bottom, cost = stacking
+        # req1=Blue → ExVeemon on top, req2=Green → Stingmon on bottom
+        assert top is exv_perm
+        assert bottom is stg_perm
+        assert cost.memory_cost == 0
+
+    def test_paildramon_full_game_flow(self):
+        """Full game flow: DNA digivolve into Paildramon at Cost 0."""
+        game = setup_game_at_phase(GamePhase.Main, memory=3)
+        player = game.player1
+
+        paildramon = make_paildramon(owner=player)
+        player.hand_cards.append(paildramon)
+
+        exveemon = Permanent([make_card(
+            card_id="BLUE-001", name="ExVeemon", level=4, dp=5000,
+            colors=[CardColor.Blue], owner=player,
+        )])
+        stingmon = Permanent([make_card(
+            card_id="GREEN-001", name="Stingmon", level=4, dp=5000,
+            colors=[CardColor.Green], owner=player,
+        )])
+        player.battle_area.extend([exveemon, stingmon])
+
+        # Initiate DNA (hand idx 0)
+        game.decode_action(63, 1)
+        assert game.current_phase == GamePhase.SelectMaterial
+
+        # Select ExVeemon (field idx 0)
+        game.decode_action(0, 1)
+        assert game.current_phase == GamePhase.SelectMaterial
+
+        # Select Stingmon (field idx 1)
+        game.decode_action(1, 1)
+
+        # Result
+        assert game.current_phase == GamePhase.Main
+        assert game.memory == 3  # Cost 0 → unchanged
+        assert len(player.battle_area) == 1
+
+        new_perm = player.battle_area[0]
+        assert new_perm.top_card is paildramon
+        assert new_perm.is_suspended is False
+        # Stack: stingmon (bottom), exveemon, paildramon (top)
+        assert len(new_perm.card_sources) == 3
+
+    def test_paildramon_dna_invalid_wrong_level(self):
+        """Paildramon cannot DNA from Blue Lv3 + Green Lv4."""
+        paildramon = make_paildramon()
+
+        blue_lv3 = Permanent([make_card(name="BlueLv3", level=3, colors=[CardColor.Blue])])
+        green_lv4 = Permanent([make_card(name="GreenLv4", level=4, colors=[CardColor.Green])])
+
+        assert can_dna_digivolve(paildramon, blue_lv3, green_lv4) is False
+
+
+class TestEX6UltimateChaosmon:
+    """Tests using EX6-062 UltimateChaosmon: [DNA Digivolve] Yellow/Black Lv.6 + Green/Purple Lv.6: Cost 0."""
+
+    def test_chaosmon_xros_req_parsed(self):
+        """The xros_req text is parsed into correct DnaCost."""
+        card = make_ultimate_chaosmon()
+        assert len(card.c_entity_base.dna_costs) == 1
+        dna = card.c_entity_base.dna_costs[0]
+        # "Yellow/Black" → parser picks first color: Yellow
+        assert dna.requirement1.card_color == CardColor.Yellow
+        assert dna.requirement1.level == 6
+        # "Green/Purple" → parser picks first color: Green
+        assert dna.requirement2.card_color == CardColor.Green
+        assert dna.requirement2.level == 6
+        assert dna.memory_cost == 0
+
+    def test_chaosmon_dna_yellow_green(self):
+        """UltimateChaosmon DNA: Yellow Lv6 + Green Lv6 is valid."""
+        chaosmon = make_ultimate_chaosmon()
+
+        yellow_lv6 = Permanent([make_card(
+            name="YellowMega", level=6, dp=12000, colors=[CardColor.Yellow],
+        )])
+        green_lv6 = Permanent([make_card(
+            name="GreenMega", level=6, dp=12000, colors=[CardColor.Green],
+        )])
+
+        assert can_dna_digivolve(chaosmon, yellow_lv6, green_lv6) is True
+
+    def test_chaosmon_dna_reversed_order(self):
+        """Order of permanents doesn't matter for validation."""
+        chaosmon = make_ultimate_chaosmon()
+
+        yellow_lv6 = Permanent([make_card(
+            name="YellowMega", level=6, colors=[CardColor.Yellow],
+        )])
+        green_lv6 = Permanent([make_card(
+            name="GreenMega", level=6, colors=[CardColor.Green],
+        )])
+
+        assert can_dna_digivolve(chaosmon, green_lv6, yellow_lv6) is True
+
+    def test_chaosmon_dna_wrong_level(self):
+        """Lv5 materials don't match Lv6 requirement."""
+        chaosmon = make_ultimate_chaosmon()
+
+        yellow_lv5 = Permanent([make_card(
+            name="YellowUlt", level=5, colors=[CardColor.Yellow],
+        )])
+        green_lv5 = Permanent([make_card(
+            name="GreenUlt", level=5, colors=[CardColor.Green],
+        )])
+
+        assert can_dna_digivolve(chaosmon, yellow_lv5, green_lv5) is False
+
+    def test_chaosmon_dna_wrong_colors(self):
+        """Blue + Red doesn't match Yellow/Black + Green/Purple."""
+        chaosmon = make_ultimate_chaosmon()
+
+        blue_lv6 = Permanent([make_card(
+            name="BlueMega", level=6, colors=[CardColor.Blue],
+        )])
+        red_lv6 = Permanent([make_card(
+            name="RedMega", level=6, colors=[CardColor.Red],
+        )])
+
+        assert can_dna_digivolve(chaosmon, blue_lv6, red_lv6) is False
+
+    def test_chaosmon_stacking_order(self):
+        """Yellow on top (req1), Green on bottom (req2)."""
+        chaosmon = make_ultimate_chaosmon()
+
+        yellow = make_card(name="YellowMega", level=6, colors=[CardColor.Yellow])
+        green = make_card(name="GreenMega", level=6, colors=[CardColor.Green])
+        yellow_perm = Permanent([yellow])
+        green_perm = Permanent([green])
+
+        stacking = get_dna_stacking_order(chaosmon, yellow_perm, green_perm)
+        assert stacking is not None
+        top, bottom, cost = stacking
+        assert top is yellow_perm  # Yellow matches req1 → top
+        assert bottom is green_perm  # Green matches req2 → bottom
+
+    def test_chaosmon_full_game_flow(self):
+        """Full game flow: DNA digivolve into UltimateChaosmon."""
+        game = setup_game_at_phase(GamePhase.Main, memory=5)
+        player = game.player1
+
+        chaosmon = make_ultimate_chaosmon(owner=player)
+        player.hand_cards.append(chaosmon)
+
+        yellow_mega = Permanent([make_card(
+            card_id="BASE-001", name="YellowMega", level=6, dp=12000,
+            colors=[CardColor.Yellow], owner=player,
+        )])
+        green_mega = Permanent([make_card(
+            card_id="BASE-002", name="GreenMega", level=6, dp=12000,
+            colors=[CardColor.Green], owner=player,
+        )])
+        player.battle_area.extend([yellow_mega, green_mega])
+
+        # Initiate
+        game.decode_action(63, 1)
+        assert game.current_phase == GamePhase.SelectMaterial
+
+        # Select Yellow (field idx 0)
+        game.decode_action(0, 1)
+        assert game.current_phase == GamePhase.SelectMaterial
+
+        # Select Green (field idx 1)
+        game.decode_action(1, 1)
+
+        # Verify
+        assert game.current_phase == GamePhase.Main
+        assert game.memory == 5  # Cost 0
+        assert len(player.battle_area) == 1
+
+        new_perm = player.battle_area[0]
+        assert new_perm.top_card is chaosmon
+        assert new_perm.is_suspended is False
+        assert new_perm.dp == 16000
+        # Stack: green_mega (bottom), yellow_mega, chaosmon (top)
+        assert len(new_perm.card_sources) == 3
+
+    def test_chaosmon_deep_digivolution_stacks(self):
+        """DNA with multi-card digivolution stacks combines correctly."""
+        game = setup_game_at_phase(GamePhase.Main)
+        player = game.player1
+
+        chaosmon = make_ultimate_chaosmon(owner=player)
+
+        # Yellow stack: egg → rookie → champion → ultimate (lv6)
+        y_egg = make_card(name="YellowEgg", level=2, kind=CardKind.DigiEgg,
+                           colors=[CardColor.Yellow], owner=player)
+        y_rook = make_card(name="YellowRookie", level=3, dp=2000,
+                            colors=[CardColor.Yellow], owner=player)
+        y_champ = make_card(name="YellowChamp", level=4, dp=5000,
+                             colors=[CardColor.Yellow], owner=player)
+        y_ult = make_card(card_id="BASE-001", name="YellowMega", level=6, dp=12000,
+                           colors=[CardColor.Yellow], owner=player)
+        yellow_perm = Permanent([y_egg, y_rook, y_champ, y_ult])
+
+        # Green stack: rookie → champion → ultimate (lv6)
+        g_rook = make_card(name="GreenRookie", level=3, dp=2000,
+                            colors=[CardColor.Green], owner=player)
+        g_champ = make_card(name="GreenChamp", level=4, dp=5000,
+                             colors=[CardColor.Green], owner=player)
+        g_ult = make_card(card_id="BASE-002", name="GreenMega", level=6, dp=12000,
+                           colors=[CardColor.Green], owner=player)
+        green_perm = Permanent([g_rook, g_champ, g_ult])
+
+        player.battle_area.extend([yellow_perm, green_perm])
+        player.hand_cards.append(chaosmon)
+
+        dna_cost = chaosmon.c_entity_base.dna_costs[0]
+        stacking = get_dna_stacking_order(chaosmon, yellow_perm, green_perm)
+        top, bottom, cost = stacking
+
+        player.dna_digivolve(top, bottom, chaosmon, cost)
+
+        new_perm = player.battle_area[0]
+        # Stack: green sources (3) + yellow sources (4) + chaosmon (1) = 8
+        assert len(new_perm.card_sources) == 8
+        # Bottom: green stack
+        assert new_perm.card_sources[0] is g_rook
+        assert new_perm.card_sources[1] is g_champ
+        assert new_perm.card_sources[2] is g_ult
+        # Middle: yellow stack
+        assert new_perm.card_sources[3] is y_egg
+        assert new_perm.card_sources[4] is y_rook
+        assert new_perm.card_sources[5] is y_champ
+        assert new_perm.card_sources[6] is y_ult
+        # Top: chaosmon
+        assert new_perm.card_sources[7] is chaosmon
+        assert new_perm.top_card is chaosmon
