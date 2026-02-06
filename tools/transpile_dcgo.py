@@ -2,8 +2,13 @@
 """
 Transpile DCGO C# card effect scripts into Python CardScript files.
 
-Reads BT14 .cs files from the DCGO-Card-Scripts repo and generates
+Reads .cs files from the DCGO-Card-Scripts repo and generates
 Python equivalents compatible with the digimon_gym engine.
+
+Usage:
+    python tools/transpile_dcgo.py <DCGO_DIR> <OUTPUT_DIR>
+    python tools/transpile_dcgo.py /tmp/dcgo-scripts/CardEffect/BT14 digimon_gym/engine/data/scripts/bt14
+    python tools/transpile_dcgo.py /tmp/dcgo-scripts/CardEffect/BT24 digimon_gym/engine/data/scripts/bt24
 
 Strategy:
 - Parse C# structurally using regex (not a full parser)
@@ -711,9 +716,16 @@ def generate_python_script(class_name: str, card_id: str, effects: List[EffectBl
 # ─── Main ────────────────────────────────────────────────────────────
 
 def main():
-    dcgo_dir = sys.argv[1] if len(sys.argv) > 1 else "/tmp/dcgo-scripts/CardEffect/BT14"
+    if len(sys.argv) < 2:
+        print("Usage: python transpile_dcgo.py <DCGO_DIR> [OUTPUT_DIR]")
+        print("  e.g. python transpile_dcgo.py /tmp/dcgo-scripts/CardEffect/BT24")
+        sys.exit(1)
+
+    dcgo_dir = sys.argv[1]
+    # Infer set_id from directory name (e.g. /tmp/.../BT24 -> bt24)
+    set_id = os.path.basename(dcgo_dir.rstrip("/")).lower()
     output_dir = sys.argv[2] if len(sys.argv) > 2 else os.path.join(
-        os.path.dirname(__file__), "..", "digimon_gym", "engine", "data", "scripts", "bt14"
+        os.path.dirname(__file__), "..", "digimon_gym", "engine", "data", "scripts", set_id
     )
 
     output_dir = os.path.abspath(output_dir)
@@ -783,7 +795,7 @@ def main():
     # Write report
     report_path = os.path.join(output_dir, "TRANSPILE_REPORT.md")
     with open(report_path, "w", encoding="utf-8") as f:
-        f.write("# BT14 Transpilation Report\n\n")
+        f.write(f"# {set_id.upper()} Transpilation Report\n\n")
         f.write(f"Generated from DCGO C# card scripts.\n\n")
         f.write(f"- Total scripts: {stats['total']}\n")
         f.write(f"- Scripts with effects: {stats['with_effects']}\n")
