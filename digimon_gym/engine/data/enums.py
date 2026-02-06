@@ -31,6 +31,12 @@ class GamePhase(Enum):
     Breeding = 2
     Main = 3
     End = 4
+    SelectTarget = 5
+    SelectMaterial = 6
+    BlockTiming = 7
+    CounterTiming = 8
+    SelectTrash = 9
+    SelectSource = 10
 
 class PendingAction(Enum):
     NO_ACTION = 0
