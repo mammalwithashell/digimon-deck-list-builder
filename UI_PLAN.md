@@ -2,11 +2,12 @@
 
 ## Overview
 
-Three main surfaces:
+Four main surfaces:
 
-1. **Game UI** — Play interactive Human vs Agent games in the browser
-2. **Replay Viewer** — Play back recorded Agent vs Agent games
-3. **Admin Dashboard** — Manage agents, launch training runs, view metrics
+1. **Game UI** — Play interactive games (Human vs Agent, Human vs Human)
+2. **Lobby** — Matchmaking, room codes, game creation
+3. **Replay Viewer** — Play back recorded Agent vs Agent games
+4. **Admin Dashboard** — Manage agents, launch training runs, view metrics
 
 Tech stack: **React 19 + TypeScript + Vite**, with **Zustand** for state management and **WebSocket** for real-time game communication. The existing **FastAPI** backend is extended with new endpoints.
 
@@ -170,13 +171,257 @@ interface PermanentInfo {
 
 ---
 
-## 2. Replay Viewer — Agent vs Agent Playback
+## 2. Lobby & Multiplayer
 
-### 2.1 Concept
+### 2.1 Game Modes
+
+| Mode | Description | How it starts |
+|------|-------------|---------------|
+| **vs Agent** | Human vs AI agent | Solo — pick agent + deck, start immediately |
+| **Private Room** | Human vs Human, invite via code | Host creates room → gets 4-char code → guest joins with code |
+| **Quick Match** | Human vs Human, random opponent | Join queue → server pairs two players |
+| **Spectate** | Watch a live game | Enter room code or pick from active games list |
+
+### 2.2 Lobby Page
+
+```
+┌──────────────────────────────────────────────────────────────┐
+│  DIGIMON TCG SIMULATOR                                       │
+│                                                              │
+│  ┌─────────────┐  ┌─────────────┐  ┌─────────────┐         │
+│  │  VS AGENT   │  │ PLAY ONLINE │  │  REPLAYS    │         │
+│  │             │  │             │  │             │         │
+│  │ Practice    │  │ Challenge a │  │ Watch past  │         │
+│  │ against AI  │  │ friend or   │  │ games       │         │
+│  │             │  │ find match  │  │             │         │
+│  └─────────────┘  └─────────────┘  └─────────────┘         │
+│                                                              │
+│  ── Play Online ──────────────────────────────────────────  │
+│                                                              │
+│  Deck: [Red Starter ST1 ▼]                                  │
+│                                                              │
+│  ┌──────────────────┐  ┌──────────────────┐                 │
+│  │  CREATE ROOM     │  │  JOIN ROOM       │                 │
+│  │                  │  │                  │                 │
+│  │ Get a room code  │  │  Code: [____]    │                 │
+│  │ to share with a  │  │                  │                 │
+│  │ friend           │  │  [Join]          │                 │
+│  │                  │  │                  │                 │
+│  │ [Create]         │  │                  │                 │
+│  └──────────────────┘  └──────────────────┘                 │
+│                                                              │
+│  ┌──────────────────┐  ┌──────────────────────────────────┐ │
+│  │  QUICK MATCH     │  │  ACTIVE ROOMS (spectate)         │ │
+│  │                  │  │                                  │ │
+│  │  [Find Match]    │  │  ABCD - Player1 vs Player2  [👁] │ │
+│  │  Searching...    │  │  EFGH - Player3 vs (waiting) [👁] │ │
+│  │                  │  │  IJKL - Player4 vs Player5  [👁] │ │
+│  └──────────────────┘  └──────────────────────────────────┘ │
+└──────────────────────────────────────────────────────────────┘
+```
+
+### 2.3 Room Lifecycle
+
+```
+Host creates room
+  │
+  ├─► Room enters "waiting" state
+  │   Room code generated (e.g., "ABCD")
+  │   Host selects deck, sees "Waiting for opponent..."
+  │
+  ├─► Guest joins with code (or Quick Match pairs them)
+  │   Guest selects deck
+  │   Both players see opponent's name/avatar
+  │
+  ├─► Both players ready → Game starts
+  │   Room state transitions to "playing"
+  │   Both clients connect to game WebSocket
+  │
+  ├─► Game ends → Results shown
+  │   Option to rematch (swap first player) or return to lobby
+  │
+  └─► Room cleaned up after both players leave or timeout
+```
+
+### 2.4 Room Codes
+
+- **4 uppercase alphanumeric characters** (e.g., `ABCD`, `X7KM`) — 36^4 = ~1.7M combinations, plenty for concurrent rooms
+- Generated server-side, collision-checked against active rooms
+- Codes are reusable after room is closed
+- Codes are case-insensitive on input (normalized to uppercase)
+
+### 2.5 Waiting Room UI
+
+```
+┌──────────────────────────────────────────────────────────────┐
+│  Room: ABCD                              [Copy Code] [Leave] │
+│                                                              │
+│  ┌─────────────────────┐    ┌─────────────────────┐         │
+│  │  PLAYER 1 (you)     │    │  PLAYER 2           │         │
+│  │                     │    │                     │         │
+│  │  Deck: Red Starter  │    │  Waiting...         │         │
+│  │  ✓ Ready            │    │                     │         │
+│  │                     │    │                     │         │
+│  └─────────────────────┘    └─────────────────────┘         │
+│                                                              │
+│  Share this code with your opponent: ABCD                    │
+│                                                              │
+│  [Start Game]  (disabled until both players ready)           │
+└──────────────────────────────────────────────────────────────┘
+```
+
+### 2.6 PvP Game Differences
+
+In Human vs Human, both players are connected via WebSocket. Key differences from Human vs Agent:
+
+| Aspect | vs Agent | vs Human (PvP) |
+|--------|----------|-----------------|
+| Connections | 1 WebSocket (human player) | 2 WebSockets (one per player) |
+| Hidden info | Agent sees full state; human sees own hand only | Each player sees only their own hand |
+| Turn flow | Agent moves are instant after human passes | Both players wait for opponent |
+| Action source | Human clicks UI or agent auto-plays | Both players click UI |
+| Disconnection | Agent never disconnects | Handle reconnection, timeout, forfeit |
+
+**State filtering**: The server must send **player-specific views** — each client only receives their own hand cards and security contents. Opponent hand is shown as face-down card backs with a count. This requires a new `to_player_json(player_id)` method on `Game`.
+
+### 2.7 Spectator Mode
+
+Spectators connect to a game's WebSocket with a `role=spectator` parameter. They receive the same state as Player 1 (or a neutral view with both hands hidden). Spectators cannot send actions.
+
+### 2.8 Lobby WebSocket: `/ws/lobby`
+
+A persistent WebSocket for lobby state. All connected clients receive room list updates.
+
+**Client → Server:**
+```json
+{"type": "create_room", "deck_ids": ["ST1-01", ...], "player_name": "Alice"}
+
+{"type": "join_room", "room_code": "ABCD", "deck_ids": ["BT14-001", ...], "player_name": "Bob"}
+
+{"type": "leave_room"}
+
+{"type": "set_ready", "ready": true}
+
+{"type": "queue_quickmatch", "deck_ids": ["ST1-01", ...], "player_name": "Alice"}
+
+{"type": "cancel_quickmatch"}
+```
+
+**Server → Client:**
+```json
+{
+  "type": "room_created",
+  "room_code": "ABCD",
+  "room": { "code": "ABCD", "host": "Alice", "guest": null, "status": "waiting" }
+}
+
+{
+  "type": "player_joined",
+  "room": { "code": "ABCD", "host": "Alice", "guest": "Bob", "status": "waiting" }
+}
+
+{
+  "type": "game_starting",
+  "room_code": "ABCD",
+  "game_id": "uuid",
+  "your_player_id": 1
+}
+
+{
+  "type": "room_list",
+  "rooms": [
+    {"code": "ABCD", "host": "Alice", "guest": "Bob", "status": "playing"},
+    {"code": "EFGH", "host": "Charlie", "guest": null, "status": "waiting"}
+  ]
+}
+
+{
+  "type": "quickmatch_found",
+  "game_id": "uuid",
+  "opponent_name": "Bob",
+  "your_player_id": 1
+}
+
+{
+  "type": "player_disconnected",
+  "player_name": "Bob"
+}
+
+{
+  "type": "player_reconnected",
+  "player_name": "Bob"
+}
+```
+
+### 2.9 PvP Game WebSocket Changes
+
+The existing `/ws/game/{game_id}` WebSocket is extended for PvP:
+
+**Client → Server** (same as before, but with player auth):
+```json
+{"type": "connect", "player_id": 1, "reconnect_token": "..."}
+{"type": "action", "action_id": 60}
+```
+
+**Server → Client** (player-specific state):
+```json
+{
+  "type": "state_update",
+  "state": { /* filtered to_player_json() — only your hand visible */ },
+  "action_mask": [0, 0, 1, ...],  /* only sent to active player */
+  "logs": ["Player 1 plays Agumon"],
+  "is_your_turn": true,
+  "is_game_over": false
+}
+
+{
+  "type": "opponent_action",
+  "action_description": "Opponent plays a card from hand",
+  "logs": ["Player 2 plays a Digimon"]
+}
+
+{
+  "type": "waiting_for_opponent"
+}
+```
+
+### 2.10 Disconnection & Reconnection
+
+- Each player gets a **reconnect token** when the game starts (short-lived JWT or random UUID stored server-side)
+- If a WebSocket drops, the server keeps the game alive for **5 minutes**
+- Player can reconnect using the token and resume from current state
+- If timeout expires, disconnected player **forfeits**
+- Opponent sees "Opponent disconnected... waiting for reconnection" message
+- Spectators see a disconnection indicator
+
+### 2.11 Rematch Flow
+
+After a game ends:
+
+```json
+// Player sends
+{"type": "request_rematch"}
+
+// Opponent receives
+{"type": "rematch_requested", "from": "Alice"}
+
+// Opponent accepts
+{"type": "accept_rematch"}
+
+// Both receive
+{"type": "game_starting", "game_id": "new-uuid", "your_player_id": 2}
+// (player IDs swap so first-player alternates)
+```
+
+---
+
+## 3. Replay Viewer — Agent vs Agent Playback
+
+### 3.1 Concept
 
 Record full game state snapshots at every action during Agent vs Agent games. The replay viewer loads the recording and lets the user scrub through it like a video timeline.
 
-### 2.2 Recording Format
+### 3.2 Recording Format
 
 Each recorded game is a JSON file:
 
@@ -214,7 +459,7 @@ Each recorded game is a JSON file:
 }
 ```
 
-### 2.3 Replay UI
+### 3.3 Replay UI
 
 The replay viewer reuses the same `GameBoard` component from the interactive game, but in read-only mode with playback controls:
 
@@ -247,7 +492,7 @@ The replay viewer reuses the same `GameBoard` component from the interactive gam
 - Auto-scroll log to current frame
 - Both players' hands are visible (since it's a replay, no hidden information)
 
-### 2.4 Replay State Store
+### 3.4 Replay State Store
 
 ```typescript
 // stores/replayStore.ts
@@ -268,9 +513,9 @@ interface ReplayStore {
 
 ---
 
-## 3. Admin Dashboard
+## 4. Admin Dashboard
 
-### 3.1 Pages
+### 4.1 Pages
 
 | Page | Purpose |
 |------|---------|
@@ -281,7 +526,7 @@ interface ReplayStore {
 | **Replay Browser** | List and filter recorded replays by agents, date, winner |
 | **Card Database** | Browse the 222-card database, view stats |
 
-### 3.2 Agent Management
+### 4.2 Agent Management
 
 ```
 ┌─────────────────────────────────────────────────────────┐
@@ -295,7 +540,7 @@ interface ReplayStore {
 └─────────────────────────────────────────────────────────┘
 ```
 
-### 3.3 Training Job Panel
+### 4.3 Training Job Panel
 
 ```
 ┌─────────────────────────────────────────────────────────┐
@@ -315,7 +560,7 @@ interface ReplayStore {
 └─────────────────────────────────────────────────────────┘
 ```
 
-### 3.4 Matchup Matrix
+### 4.4 Matchup Matrix
 
 ```
 ┌──────────────────────────────────────────────┐
@@ -333,9 +578,9 @@ interface ReplayStore {
 
 ---
 
-## 4. API Endpoints
+## 5. API Endpoints
 
-### 4.1 Existing Endpoints (keep as-is)
+### 5.1 Existing Endpoints (keep as-is)
 
 | Method | Path | Purpose |
 |--------|------|---------|
@@ -349,7 +594,7 @@ interface ReplayStore {
 | GET | `/game/{id}/log` | Get game log |
 | DELETE | `/game/{id}` | Delete session |
 
-### 4.2 New Endpoints — Game UI
+### 5.2 New Endpoints — Game UI
 
 #### WebSocket: `/ws/game/{game_id}`
 
@@ -410,7 +655,111 @@ Return the full card database for client-side card rendering.
 
 Return card image. Initially can return a placeholder; later integrate with card image CDN or local assets.
 
-### 4.3 New Endpoints — Replay System
+### 5.3 New Endpoints — Lobby & Multiplayer
+
+#### `POST /rooms`
+
+Create a private room.
+
+```json
+// Request
+{
+  "player_name": "Alice",
+  "deck_ids": ["ST1-01", "ST1-02", ...]
+}
+
+// Response
+{
+  "room_code": "ABCD",
+  "room": {
+    "code": "ABCD",
+    "host": "Alice",
+    "guest": null,
+    "status": "waiting",
+    "created_at": "2026-02-06T..."
+  }
+}
+```
+
+#### `POST /rooms/{code}/join`
+
+Join an existing room by code.
+
+```json
+// Request
+{
+  "player_name": "Bob",
+  "deck_ids": ["BT14-001", "BT14-002", ...]
+}
+
+// Response
+{
+  "room_code": "ABCD",
+  "room": {
+    "code": "ABCD",
+    "host": "Alice",
+    "guest": "Bob",
+    "status": "waiting"
+  }
+}
+```
+
+#### `GET /rooms`
+
+List public/active rooms (for spectator browsing).
+
+```json
+{
+  "rooms": [
+    {"code": "ABCD", "host": "Alice", "guest": "Bob", "status": "playing"},
+    {"code": "EFGH", "host": "Charlie", "guest": null, "status": "waiting"}
+  ]
+}
+```
+
+#### `POST /rooms/{code}/start`
+
+Host starts the game (both players must be ready).
+
+```json
+// Response
+{
+  "game_id": "uuid",
+  "room_code": "ABCD"
+}
+```
+
+#### `DELETE /rooms/{code}`
+
+Leave / close a room.
+
+#### `POST /quickmatch/queue`
+
+Join the quickmatch queue.
+
+```json
+// Request
+{
+  "player_name": "Alice",
+  "deck_ids": ["ST1-01", ...]
+}
+
+// Response
+{
+  "queue_position": 1,
+  "status": "searching"
+}
+```
+
+#### `DELETE /quickmatch/queue`
+
+Leave the quickmatch queue.
+
+#### WebSocket: `/ws/lobby`
+
+Persistent lobby connection for real-time room updates and quickmatch notifications. See section 2.8 for the full message protocol.
+
+### 5.4 New Endpoints — Replay System
 
 #### `POST /replay/record`
 
@@ -487,7 +836,7 @@ Get full replay data (metadata + all frames).
 
 Delete a replay.
 
-### 4.4 New Endpoints — Admin / Agent Management
+### 5.5 New Endpoints — Admin / Agent Management
 
 #### `GET /agents`
 
@@ -649,9 +998,9 @@ Get matchup results.
 
 ---
 
-## 5. Frontend Architecture
+## 6. Frontend Architecture
 
-### 5.1 Directory Structure
+### 6.1 Directory Structure
 
 ```
 frontend/
@@ -671,15 +1020,19 @@ frontend/
 │   │   ├── agentApi.ts          # Agent management
 │   │   └── trainingApi.ts       # Training jobs
 │   ├── ws/
-│   │   └── gameSocket.ts        # WebSocket connection manager
+│   │   ├── gameSocket.ts        # WebSocket connection for game
+│   │   └── lobbySocket.ts       # WebSocket connection for lobby
 │   ├── stores/
 │   │   ├── gameStore.ts         # Interactive game state (Zustand)
+│   │   ├── lobbyStore.ts        # Room list, queue status, current room
 │   │   ├── replayStore.ts       # Replay playback state
 │   │   ├── uiStore.ts           # UI state (selected cards, modals)
 │   │   └── adminStore.ts        # Agent/training state
 │   ├── pages/
-│   │   ├── HomePage.tsx         # Landing: new game / browse replays / admin
-│   │   ├── GamePage.tsx         # Interactive game board
+│   │   ├── HomePage.tsx         # Landing: new game / play online / replays / admin
+│   │   ├── LobbyPage.tsx        # Room creation, join, quickmatch, active rooms
+│   │   ├── WaitingRoomPage.tsx  # Pre-game room (deck select, ready up)
+│   │   ├── GamePage.tsx         # Interactive game board (PvA and PvP)
 │   │   ├── ReplayPage.tsx       # Replay viewer
 │   │   ├── ReplayListPage.tsx   # Browse/filter replays
 │   │   ├── AdminPage.tsx        # Agent list + training dashboard
@@ -697,6 +1050,12 @@ frontend/
 │   │   │   ├── BreedingArea.tsx
 │   │   │   ├── TrashPile.tsx
 │   │   │   └── MemoryGauge.tsx
+│   │   ├── lobby/
+│   │   │   ├── CreateRoom.tsx   # Create private room form
+│   │   │   ├── JoinRoom.tsx     # Join by code input
+│   │   │   ├── QuickMatchButton.tsx # Queue for random match
+│   │   │   ├── ActiveRoomsList.tsx  # Spectatable games list
+│   │   │   └── WaitingRoom.tsx  # Pre-game player cards + ready state
 │   │   ├── game/
 │   │   │   ├── ActionBar.tsx    # Contextual action buttons
 │   │   │   ├── PhaseIndicator.tsx
@@ -730,7 +1089,7 @@ frontend/
 │       └── admin.ts            # Agent, TrainingJob, Matchup
 ```
 
-### 5.2 Key Libraries
+### 6.2 Key Libraries
 
 | Library | Purpose |
 |---------|---------|
@@ -744,7 +1103,7 @@ frontend/
 | Recharts or Chart.js | Training metrics charts |
 | Tailwind CSS | Styling (utility-first, fast iteration) |
 
-### 5.3 Card Rendering
+### 6.3 Card Rendering
 
 Cards need images. Options in priority order:
 
@@ -756,7 +1115,7 @@ The `Card` component should accept a `cardId` and render whatever is available, 
 
 ---
 
-## 6. Implementation Phases
+## 7. Implementation Phases
 
 ### Phase 1: Foundation
 - Set up React + Vite + TypeScript project in `frontend/`
@@ -773,14 +1132,25 @@ The `Card` component should accept a `cardId` and render whatever is available, 
 - Build `useActionMask` hook (translates 2120 mask → UI-friendly action list)
 - Connect `GamePage` end-to-end: create game → play → game over
 
-### Phase 3: Replay System
+### Phase 3: Multiplayer (PvP)
+- Implement `/rooms` CRUD endpoints and room code generation
+- Implement `/ws/lobby` WebSocket for real-time room updates
+- Add `to_player_json(player_id)` to `Game` for player-specific state filtering
+- Build `LobbyPage`, `WaitingRoomPage` components
+- Extend `/ws/game/{game_id}` for two-player connections
+- Implement quickmatch queue with pairing logic
+- Add disconnection handling, reconnect tokens, forfeit timeout
+- Add spectator mode (read-only WebSocket connection)
+- Add rematch flow
+
+### Phase 4: Replay System
 - Implement replay recording in backend (wrap HeadlessGame)
 - Implement `/replays` CRUD endpoints
 - Build `PlaybackControls` + `Timeline` components
 - Build `ReplayPage` reusing `GameBoard` in read-only mode
 - Build `ReplayListPage` with filtering
 
-### Phase 4: Admin Dashboard
+### Phase 5: Admin Dashboard
 - Implement `/agents` CRUD endpoints
 - Implement `/training/start`, `/training/jobs` endpoints
 - Build agent list and detail views
@@ -789,7 +1159,7 @@ The `Card` component should accept a `cardId` and render whatever is available, 
 - Implement `/matchup` endpoints
 - Build matchup matrix view
 
-### Phase 5: Polish
+### Phase 6: Polish
 - Card images (replace placeholders)
 - Attack arrows (SVG overlay)
 - Suspend/unsuspend animations
@@ -799,13 +1169,14 @@ The `Card` component should accept a `cardId` and render whatever is available, 
 
 ---
 
-## 7. Backend Changes Summary
+## 8. Backend Changes Summary
 
 ### New files to create:
 
 | File | Purpose |
 |------|---------|
-| `digimon_gym/api_ws.py` | WebSocket game handler |
+| `digimon_gym/api_ws.py` | WebSocket game handler (PvA + PvP) |
+| `digimon_gym/lobby.py` | Room management, quickmatch queue, lobby WebSocket |
 | `digimon_gym/replay.py` | Replay recording and storage |
 | `digimon_gym/agents/registry.py` | Agent registration and loading |
 | `digimon_gym/training/manager.py` | Training job lifecycle |
@@ -815,8 +1186,8 @@ The `Card` component should accept a `cardId` and render whatever is available, 
 
 | File | Changes |
 |------|---------|
-| `digimon_gym/api.py` | Add card, replay, agent, training, matchup endpoints; mount WebSocket |
-| `digimon_gym/engine/game.py` | Add `action_description()` method for human-readable action logs |
+| `digimon_gym/api.py` | Add card, room, replay, agent, training, matchup endpoints; mount WebSockets |
+| `digimon_gym/engine/game.py` | Add `action_description()` and `to_player_json(player_id)` methods |
 | `digimon_gym/engine/runners/headless_game.py` | Add replay recording hooks |
 | `digimon_gym/engine/data/card_database.py` | Add `to_dict()` for card API serialization |
 
@@ -832,7 +1203,7 @@ Migrate to SQLite or PostgreSQL when needed.
 
 ---
 
-## 8. Action Mask → UI Mapping
+## 9. Action Mask → UI Mapping
 
 The 2120-element action mask needs to be translated into UI-friendly actions. The `useActionMask` hook does this:
 
