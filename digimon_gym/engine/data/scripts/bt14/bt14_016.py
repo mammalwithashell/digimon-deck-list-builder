@@ -18,7 +18,7 @@ class BT14_016(CardScript):
         effect0 = ICardEffect()
         effect0.set_effect_name("BT14-016 Raid")
         effect0.set_effect_description("Raid")
-        # TODO: Raid keyword
+        effect0._is_raid = True
         def condition0(context: Dict[str, Any]) -> bool:
             return True
         effect0.set_can_use_condition(condition0)

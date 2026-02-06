@@ -10,10 +10,15 @@ class Permanent:
     def __init__(self, card_sources: List['CardSource']):
         self.card_sources: List['CardSource'] = card_sources
         self.is_suspended: bool = False
+        self._dp_modifiers: List[int] = []  # Temporary DP changes from effects
 
     @property
     def digivolution_cards(self) -> List['CardSource']:
         return self.card_sources
+
+    @property
+    def has_no_digivolution_cards(self) -> bool:
+        return len(self.card_sources) <= 1
 
     @property
     def top_card(self) -> Optional['CardSource']:
@@ -44,93 +49,113 @@ class Permanent:
     @property
     def dp(self) -> int:
         base = self.top_card.base_dp if self.top_card else 0
-
-        # Calculate active effects
-        # Currently, we don't have a global EffectTiming.Continuous or similar for passive buffs.
-        # But we can iterate all sources and check for inherited/self effects that satisfy condition.
-        # This is a simplified check.
         active_effects = self.get_active_effects()
         modifier = sum(effect.dp_modifier for effect in active_effects)
-
-        return max(0, base + modifier)
+        temp_modifier = sum(self._dp_modifiers)
+        return max(0, base + modifier + temp_modifier)
 
     def get_active_effects(self) -> List['ICardEffect']:
-        # Gather effects from all sources in stack
-        # Check conditions (requires context, usually passed or available globally)
-        # For PoC, assuming context availability or simplified check inside condition.
         active = []
 
         # Inherited effects from sources UNDER top card
-        for i, source in enumerate(self.card_sources[:-1]):
-            # Inherited effects
-            effects = source.effect_list(EffectTiming.NoTiming) # Or specific timing? Scripts set is_inherited_effect
-            # Note: Scripts usually return effects regardless of timing, we filter properties.
-            # But effect_list currently calls get_card_effects which returns a LIST.
-            # We need to iterate that list.
+        for source in self.card_sources[:-1]:
+            effects = source.effect_list(EffectTiming.NoTiming)
             for effect in effects:
                 if effect.is_inherited_effect:
-                    # Check condition
-                    # Condition requires 'context'. For continuous effects, context is essentially "Now".
-                    # We pass 'self' as permanent context.
-                    # We need a proper context dict.
                     ctx = {"permanent": self}
                     if effect.can_use_condition and effect.can_use_condition(ctx):
                         active.append(effect)
 
-        # Effects from Top Card (not inherited, unless specified otherwise)
+        # Effects from Top Card (not inherited)
         if self.top_card:
             effects = self.top_card.effect_list(EffectTiming.NoTiming)
             for effect in effects:
-                if not effect.is_inherited_effect: # Normal effects
-                     # Check if it's a continuous effect (has no specific trigger timing usually, or we flag it)
-                     # For DP buff, it's usually just there.
-                     # Using dp_modifier > 0 as proxy for "Continuous Stat Buff" if timing is generic.
-                     if effect.dp_modifier != 0:
+                if not effect.is_inherited_effect:
+                    if effect.dp_modifier != 0:
                         ctx = {"permanent": self}
                         if effect.can_use_condition and effect.can_use_condition(ctx):
                             active.append(effect)
 
         return active
 
-    def can_attack(self, card_effect: Optional['ICardEffect'], without_tap: bool = False, is_vortex: bool = False) -> bool:
+    def can_attack(self, card_effect: Optional['ICardEffect'] = None, without_tap: bool = False, is_vortex: bool = False) -> bool:
         if self.is_suspended and not without_tap:
             return False
-
-        # Check summoning sickness (not tracked yet)
-
         return True
 
     def can_block(self, attacking_permanent: 'Permanent') -> bool:
-        # Check for Blocker effect and not suspended
-        # For now, return False unless we implement Blocker trait check
         return False
 
     def effect_list(self, timing: EffectTiming) -> List['ICardEffect']:
-        # Aggregate effects from all sources for a specific timing
-        # This is used for "OnAttack", "WhenDigivolving" etc.
         effects = []
-        # Sources (Inherited)
         for source in self.card_sources[:-1]:
             source_effects = source.effect_list(timing)
             for eff in source_effects:
                 if eff.is_inherited_effect:
                     effects.append(eff)
-
-        # Top Card (Not Inherited)
         if self.top_card:
             top_effects = self.top_card.effect_list(timing)
             for eff in top_effects:
                 if not eff.is_inherited_effect:
                     effects.append(eff)
-
         return effects
 
     def add_card_source(self, card_source: 'CardSource'):
         self.card_sources.append(card_source)
 
-    def discard_evo_roots(self, ignore_overflow: bool = False, put_to_trash: bool = True):
-        # Generator placeholder
-        pass
+    # ─── Effect Action Methods ───────────────────────────────────────
+
+    def change_dp(self, amount: int):
+        """Apply a temporary DP modifier (lasts until end of turn)."""
+        self._dp_modifiers.append(amount)
+
+    def clear_temp_dp(self):
+        """Clear temporary DP modifiers at end of turn."""
+        self._dp_modifiers.clear()
+
+    def de_digivolve(self, count: int = 1) -> List['CardSource']:
+        """Remove top N digivolution cards (not the base) and send to trash.
+        Returns the removed cards."""
+        removed = []
+        for _ in range(count):
+            if len(self.card_sources) <= 1:
+                break
+            card = self.card_sources.pop()
+            removed.append(card)
+        # Caller is responsible for putting removed cards in trash
+        return removed
+
+    def trash_digivolution_cards(self, count: int, from_top: bool = True) -> List['CardSource']:
+        """Trash N digivolution cards (from under the top card).
+        Returns the trashed cards."""
+        trashed = []
+        for _ in range(count):
+            if len(self.card_sources) <= 1:
+                break
+            if from_top:
+                # Trash from just under top (index -2, -3, etc.)
+                idx = len(self.card_sources) - 2
+            else:
+                # Trash from bottom
+                idx = 0
+            if idx >= 0:
+                card = self.card_sources.pop(idx)
+                trashed.append(card)
+        return trashed
+
+    def contains_card_name(self, name: str) -> bool:
+        """Check if the top card's name contains the given string."""
+        if self.top_card:
+            for card_name in self.top_card.card_names:
+                if name.lower() in card_name.lower():
+                    return True
+        return False
+
+    def has_trait(self, trait: str) -> bool:
+        """Check if the top card has a given trait."""
+        if self.top_card:
+            return trait in self.top_card.card_traits
+        return False
 
     def suspend(self):
         self.is_suspended = True

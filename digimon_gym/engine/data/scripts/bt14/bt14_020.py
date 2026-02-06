@@ -20,18 +20,23 @@ class BT14_020(CardScript):
         effect0.set_effect_description("[Start of Your Main Phase] Trash any 1 digivolution card of 1 of your opponent's Digimon. This Digimon can't be blocked for the turn.")
 
         def condition0(context: Dict[str, Any]) -> bool:
-            # Conditions extracted from DCGO source:
-            # Check: card is on battle area
-            # card.permanent_of_this_card() is not None
-            # Check: it's the owner's turn
-            # card.owner and card.owner.is_my_turn
-            return True  # TODO: implement condition checks against game state
+            if card and card.permanent_of_this_card() is None:
+                return False
+            if not (card and card.owner and card.owner.is_my_turn):
+                return False
+            return True
 
         effect0.set_can_use_condition(condition0)
 
-        def process0():
+        def process0(ctx: Dict[str, Any]):
             """Action: Trash Digivolution Cards"""
-            # target.trash_digivolution_cards(count)
+            player = ctx.get('player')
+            perm = ctx.get('permanent')
+            # Trash digivolution cards from this permanent
+            if perm and not perm.has_no_digivolution_cards:
+                trashed = perm.trash_digivolution_cards(1)
+                if player:
+                    player.trash_cards.extend(trashed)
 
         effect0.set_on_process_callback(process0)
         effects.append(effect0)
@@ -46,16 +51,18 @@ class BT14_020(CardScript):
         effect1.set_hash_string("PlayDigivolutionCards_BT14_020")
 
         def condition1(context: Dict[str, Any]) -> bool:
-            # Conditions extracted from DCGO source:
-            # Check: card is on battle area
-            # card.permanent_of_this_card() is not None
-            return True  # TODO: implement condition checks against game state
+            if card and card.permanent_of_this_card() is None:
+                return False
+            return True
 
         effect1.set_can_use_condition(condition1)
 
-        def process1():
+        def process1(ctx: Dict[str, Any]):
             """Action: Play Card"""
-            # play_card_from_hand_or_trash()
+            player = ctx.get('player')
+            perm = ctx.get('permanent')
+            # Play a card (from hand/trash/reveal)
+            pass  # TODO: target selection for play_card
 
         effect1.set_on_process_callback(process1)
         effects.append(effect1)

@@ -1,5 +1,5 @@
 from __future__ import annotations
-from typing import TYPE_CHECKING, List, Optional
+from typing import TYPE_CHECKING, List, Optional, Callable
 import random
 from .permanent import Permanent
 from ..data.enums import EffectTiming, CardKind, AttackResolution
@@ -21,6 +21,9 @@ class Player:
 
         self.battle_area: List['Permanent'] = []
         self.breeding_area: Optional['Permanent'] = None
+
+        self.enemy: Optional['Player'] = None
+        self.game: Optional[object] = None  # Back-reference to Game, set at start
 
     @property
     def is_lose(self) -> bool:
@@ -196,3 +199,99 @@ class Player:
         # Trash the security card
         self.trash_cards.append(security_card)
         return result
+
+    # ─── Effect Action Methods ───────────────────────────────────────
+
+    def draw_cards(self, count: int) -> List['CardSource']:
+        """Draw N cards. Returns the cards drawn."""
+        drawn = []
+        for _ in range(count):
+            if not self.library_cards:
+                break
+            card = self.library_cards.pop(0)
+            self.hand_cards.append(card)
+            drawn.append(card)
+        return drawn
+
+    def add_memory(self, amount: int):
+        """Gain memory for this player (adjusts Game.memory)."""
+        if self.game:
+            if self is self.game.turn_player:
+                self.game.memory += amount
+            else:
+                self.game.memory -= amount
+
+    def lose_memory(self, amount: int):
+        """Lose memory for this player."""
+        self.add_memory(-amount)
+
+    def trash_from_hand(self, cards: List['CardSource']):
+        """Move specific cards from hand to trash."""
+        for card in cards:
+            if card in self.hand_cards:
+                self.hand_cards.remove(card)
+                self.trash_cards.append(card)
+
+    def bounce_permanent_to_hand(self, permanent: 'Permanent'):
+        """Return a permanent from battle area to its owner's hand (top card only, rest to trash)."""
+        owner = self._find_permanent_owner(permanent)
+        if owner and permanent in owner.battle_area:
+            owner.battle_area.remove(permanent)
+            if permanent.top_card:
+                owner.hand_cards.append(permanent.top_card)
+            # Digivolution cards under top go to trash
+            for card in permanent.card_sources[:-1]:
+                owner.trash_cards.append(card)
+
+    def recovery(self, count: int):
+        """Add cards from the top of library to security stack."""
+        for _ in range(count):
+            if self.library_cards:
+                card = self.library_cards.pop(0)
+                self.security_cards.append(card)
+
+    def mill(self, count: int) -> List['CardSource']:
+        """Trash cards from the top of library."""
+        milled = []
+        for _ in range(count):
+            if self.library_cards:
+                card = self.library_cards.pop(0)
+                self.trash_cards.append(card)
+                milled.append(card)
+        return milled
+
+    def add_to_security_from_hand(self, card: 'CardSource', to_top: bool = True):
+        """Move a card from hand to security stack."""
+        if card in self.hand_cards:
+            self.hand_cards.remove(card)
+            if to_top:
+                self.security_cards.append(card)
+            else:
+                self.security_cards.insert(0, card)
+
+    def reveal_top_cards(self, count: int) -> List['CardSource']:
+        """Reveal top N cards of library (peek without removing)."""
+        return self.library_cards[:count]
+
+    def play_card_from_source(self, card: 'CardSource', pay_cost: bool = True):
+        """Play a card (from hand, trash, or reveal) onto the battle area."""
+        if card in self.hand_cards:
+            self.hand_cards.remove(card)
+        elif card in self.trash_cards:
+            self.trash_cards.remove(card)
+        # Don't remove from library — caller handles reveal placement
+        new_permanent = Permanent([card])
+        self.battle_area.append(new_permanent)
+        return new_permanent
+
+    def get_battle_area_digimons(self) -> List['Permanent']:
+        """Get all Digimon permanents in battle area."""
+        return [p for p in self.battle_area if p.is_digimon]
+
+    def _find_permanent_owner(self, permanent: 'Permanent') -> Optional['Player']:
+        """Find which player owns a permanent."""
+        if permanent in self.battle_area:
+            return self
+        if self.enemy and permanent in self.enemy.battle_area:
+            return self.enemy
+        return None

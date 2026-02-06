@@ -22,16 +22,22 @@ class BT14_030(CardScript):
         effect0.is_on_play = True
 
         def condition0(context: Dict[str, Any]) -> bool:
-            # Conditions extracted from DCGO source:
-            # Check: card is on battle area
-            # card.permanent_of_this_card() is not None
-            return True  # TODO: implement condition checks against game state
+            if card and card.permanent_of_this_card() is None:
+                return False
+            # Triggered on play — validated by engine timing
+            return True
 
         effect0.set_can_use_condition(condition0)
 
-        def process0():
+        def process0(ctx: Dict[str, Any]):
             """Action: Bounce"""
-            # target_permanent.return_to_hand()
+            player = ctx.get('player')
+            perm = ctx.get('permanent')
+            # Bounce: return opponent's digimon to hand
+            enemy = player.enemy if player else None
+            if enemy and enemy.battle_area:
+                target = enemy.battle_area[-1]
+                player.bounce_permanent_to_hand(target)
 
         effect0.set_on_process_callback(process0)
         effects.append(effect0)
@@ -45,16 +51,22 @@ class BT14_030(CardScript):
         effect1.is_on_play = True
 
         def condition1(context: Dict[str, Any]) -> bool:
-            # Conditions extracted from DCGO source:
-            # Check: card is on battle area
-            # card.permanent_of_this_card() is not None
-            return True  # TODO: implement condition checks against game state
+            if card and card.permanent_of_this_card() is None:
+                return False
+            # Triggered when digivolving — validated by engine timing
+            return True
 
         effect1.set_can_use_condition(condition1)
 
-        def process1():
+        def process1(ctx: Dict[str, Any]):
             """Action: Bounce"""
-            # target_permanent.return_to_hand()
+            player = ctx.get('player')
+            perm = ctx.get('permanent')
+            # Bounce: return opponent's digimon to hand
+            enemy = player.enemy if player else None
+            if enemy and enemy.battle_area:
+                target = enemy.battle_area[-1]
+                player.bounce_permanent_to_hand(target)
 
         effect1.set_on_process_callback(process1)
         effects.append(effect1)
@@ -68,18 +80,20 @@ class BT14_030(CardScript):
         effect2.set_hash_string("Recovery_BT14_030")
 
         def condition2(context: Dict[str, Any]) -> bool:
-            # Conditions extracted from DCGO source:
-            # Check: card is on battle area
-            # card.permanent_of_this_card() is not None
-            # Check: it's the owner's turn
-            # card.owner and card.owner.is_my_turn
-            return True  # TODO: implement condition checks against game state
+            if card and card.permanent_of_this_card() is None:
+                return False
+            if not (card and card.owner and card.owner.is_my_turn):
+                return False
+            return True
 
         effect2.set_can_use_condition(condition2)
 
-        def process2():
+        def process2(ctx: Dict[str, Any]):
             """Action: Recovery +1"""
-            # card.owner.recover(1)
+            player = ctx.get('player')
+            perm = ctx.get('permanent')
+            if player:
+                player.recovery(1)
 
         effect2.set_on_process_callback(process2)
         effects.append(effect2)

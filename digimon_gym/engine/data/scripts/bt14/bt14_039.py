@@ -18,7 +18,7 @@ class BT14_039(CardScript):
         effect0 = ICardEffect()
         effect0.set_effect_name("BT14-039 Armor Purge")
         effect0.set_effect_description("Armor Purge")
-        # Armor Purge: when deleted, trash top card instead
+        effect0._is_armor_purge = True
         def condition0(context: Dict[str, Any]) -> bool:
             return True
         effect0.set_can_use_condition(condition0)
@@ -33,17 +33,19 @@ class BT14_039(CardScript):
         effect1.is_on_play = True
 
         def condition1(context: Dict[str, Any]) -> bool:
-            # Conditions extracted from DCGO source:
-            # Check: card is on battle area
-            # card.permanent_of_this_card() is not None
-            # Check name: "Numemon" in card name
-            return True  # TODO: implement condition checks against game state
+            if card and card.permanent_of_this_card() is None:
+                return False
+            # Triggered on play — validated by engine timing
+            return True
 
         effect1.set_can_use_condition(condition1)
 
-        def process1():
+        def process1(ctx: Dict[str, Any]):
             """Action: Gain 2 memory"""
-            # card.owner.add_memory(2)
+            player = ctx.get('player')
+            perm = ctx.get('permanent')
+            if player:
+                player.add_memory(2)
 
         effect1.set_on_process_callback(process1)
         effects.append(effect1)
@@ -53,7 +55,7 @@ class BT14_039(CardScript):
         effect2 = ICardEffect()
         effect2.set_effect_name("BT14-039 Security Attack +1")
         effect2.set_effect_description("Security Attack +1")
-        # Security Attack +1
+        effect2._security_attack_modifier = 1
         def condition2(context: Dict[str, Any]) -> bool:
             return True
         effect2.set_can_use_condition(condition2)

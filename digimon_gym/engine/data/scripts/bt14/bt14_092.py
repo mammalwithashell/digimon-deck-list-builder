@@ -20,6 +20,7 @@ class BT14_092(CardScript):
         effect0.set_effect_description("[Main] Choose 1 of your Digimon. Until the end of your opponent's turn, 3 of your opponent's Digimon with as many or fewer digivolution cards as that Digimon can't attack or block.")
 
         def condition0(context: Dict[str, Any]) -> bool:
+            # Option main effect — validated by engine timing
             return True
 
         effect0.set_can_use_condition(condition0)
@@ -34,13 +35,19 @@ class BT14_092(CardScript):
         effect1.is_security_effect = True
 
         def condition1(context: Dict[str, Any]) -> bool:
+            # Security effect — validated by engine timing
             return True
 
         effect1.set_can_use_condition(condition1)
 
-        def process1():
+        def process1(ctx: Dict[str, Any]):
             """Action: Add To Hand"""
-            # add_card_to_hand()
+            player = ctx.get('player')
+            perm = ctx.get('permanent')
+            # Add card to hand (from trash/reveal)
+            if player and player.trash_cards:
+                card_to_add = player.trash_cards.pop()
+                player.hand_cards.append(card_to_add)
 
         effect1.set_on_process_callback(process1)
         effects.append(effect1)

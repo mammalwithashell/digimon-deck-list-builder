@@ -21,19 +21,19 @@ class BT14_007(CardScript):
         effect0.is_optional = True
 
         def condition0(context: Dict[str, Any]) -> bool:
-            # Conditions extracted from DCGO source:
-            # Check: card is on battle area
-            # card.permanent_of_this_card() is not None
-            # Check: it's the owner's turn
-            # card.owner and card.owner.is_my_turn
-            # Check name: "Tai Kamiya" in card name
-            return True  # TODO: implement condition checks against game state
+            if card and card.permanent_of_this_card() is None:
+                return False
+            if not (card and card.owner and card.owner.is_my_turn):
+                return False
+            return True
 
         effect0.set_can_use_condition(condition0)
 
-        def process0():
+        def process0(ctx: Dict[str, Any]):
             """Action: Digivolve"""
-            # digivolve_into(target_card)
+            player = ctx.get('player')
+            perm = ctx.get('permanent')
+            pass  # TODO: digivolve effect needs card selection
 
         effect0.set_on_process_callback(process0)
         effects.append(effect0)
@@ -43,7 +43,7 @@ class BT14_007(CardScript):
         effect1 = ICardEffect()
         effect1.set_effect_name("BT14-007 DP modifier")
         effect1.set_effect_description("DP modifier")
-        # Static DP modifier
+        effect1.dp_modifier = 0  # TODO: extract DP value from C# source
         def condition1(context: Dict[str, Any]) -> bool:
             return True
         effect1.set_can_use_condition(condition1)

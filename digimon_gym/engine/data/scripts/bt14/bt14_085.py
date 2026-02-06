@@ -21,17 +21,23 @@ class BT14_085(CardScript):
         effect0.is_on_play = True
 
         def condition0(context: Dict[str, Any]) -> bool:
-            # Conditions extracted from DCGO source:
-            # Check: card is on battle area
-            # card.permanent_of_this_card() is not None
-            return True  # TODO: implement condition checks against game state
+            if card and card.permanent_of_this_card() is None:
+                return False
+            # Triggered on play — validated by engine timing
+            return True
 
         effect0.set_can_use_condition(condition0)
 
-        def process0():
+        def process0(ctx: Dict[str, Any]):
             """Action: Add To Hand, Reveal And Select"""
-            # add_card_to_hand()
-            # reveal_top_cards_and_select()
+            player = ctx.get('player')
+            perm = ctx.get('permanent')
+            # Add card to hand (from trash/reveal)
+            if player and player.trash_cards:
+                card_to_add = player.trash_cards.pop()
+                player.hand_cards.append(card_to_add)
+            # Reveal top cards and select
+            pass  # TODO: reveal_and_select needs UI/agent choice
 
         effect0.set_on_process_callback(process0)
         effects.append(effect0)
@@ -44,19 +50,25 @@ class BT14_085(CardScript):
         effect1.is_optional = True
 
         def condition1(context: Dict[str, Any]) -> bool:
-            # Conditions extracted from DCGO source:
-            # Check: card is on battle area
-            # card.permanent_of_this_card() is not None
-            # Check: it's the owner's turn
-            # card.owner and card.owner.is_my_turn
-            return True  # TODO: implement condition checks against game state
+            if card and card.permanent_of_this_card() is None:
+                return False
+            if not (card and card.owner and card.owner.is_my_turn):
+                return False
+            return True
 
         effect1.set_can_use_condition(condition1)
 
-        def process1():
+        def process1(ctx: Dict[str, Any]):
             """Action: Gain 1 memory, Suspend"""
-            # card.owner.add_memory(1)
-            # target_permanent.suspend()
+            player = ctx.get('player')
+            perm = ctx.get('permanent')
+            if player:
+                player.add_memory(1)
+            # Suspend opponent's digimon
+            enemy = player.enemy if player else None
+            if enemy and enemy.battle_area:
+                target = enemy.battle_area[-1]
+                target.suspend()
 
         effect1.set_on_process_callback(process1)
         effects.append(effect1)
@@ -67,7 +79,6 @@ class BT14_085(CardScript):
         effect2.set_effect_name("BT14-085 Security: Play this card")
         effect2.set_effect_description("Security: Play this card")
         effect2.is_security_effect = True
-        # Security effect: play this card without paying cost
         def condition2(context: Dict[str, Any]) -> bool:
             return True
         effect2.set_can_use_condition(condition2)

@@ -103,7 +103,21 @@ class CardSource:
             self.base_dp = self.c_entity_base.dp
 
     def permanent_of_this_card(self) -> Optional['Permanent']:
+        """Find the Permanent that contains this card in its digivolution stack."""
+        if self.owner:
+            for perm in self.owner.battle_area:
+                if self in perm.card_sources:
+                    return perm
+            if self.owner.breeding_area and self in self.owner.breeding_area.card_sources:
+                return self.owner.breeding_area
         return None
+
+    def contains_card_name(self, name: str) -> bool:
+        """Check if this card's name contains the given string."""
+        for card_name in self.card_names:
+            if name.lower() in card_name.lower():
+                return True
+        return False
 
     def effect_list(self, timing: EffectTiming) -> List['ICardEffect']:
         from ..data.card_database import CardDatabase

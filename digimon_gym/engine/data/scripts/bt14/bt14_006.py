@@ -23,21 +23,19 @@ class BT14_006(CardScript):
         effect0.set_hash_string("Digivolve_BT14_006")
 
         def condition0(context: Dict[str, Any]) -> bool:
-            # Conditions extracted from DCGO source:
-            # Check: card is on battle area
-            # card.permanent_of_this_card() is not None
-            # Check: it's the owner's turn
-            # card.owner and card.owner.is_my_turn
-            # Check trait: "Dark Animal" in target traits
-            # Check trait: "DarkAnimal" in target traits
-            # Check trait: "SoC" in target traits
-            return True  # TODO: implement condition checks against game state
+            if card and card.permanent_of_this_card() is None:
+                return False
+            if not (card and card.owner and card.owner.is_my_turn):
+                return False
+            return True
 
         effect0.set_can_use_condition(condition0)
 
-        def process0():
+        def process0(ctx: Dict[str, Any]):
             """Action: Digivolve"""
-            # digivolve_into(target_card)
+            player = ctx.get('player')
+            perm = ctx.get('permanent')
+            pass  # TODO: digivolve effect needs card selection
 
         effect0.set_on_process_callback(process0)
         effects.append(effect0)

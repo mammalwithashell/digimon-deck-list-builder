@@ -24,16 +24,22 @@ class BT14_015(CardScript):
         effect0.is_on_attack = True
 
         def condition0(context: Dict[str, Any]) -> bool:
-            # Conditions extracted from DCGO source:
-            # Check: card is on battle area
-            # card.permanent_of_this_card() is not None
-            return True  # TODO: implement condition checks against game state
+            if card and card.permanent_of_this_card() is None:
+                return False
+            # Triggered on attack — validated by engine timing
+            return True
 
         effect0.set_can_use_condition(condition0)
 
-        def process0():
+        def process0(ctx: Dict[str, Any]):
             """Action: Delete"""
-            # target_permanent.delete()
+            player = ctx.get('player')
+            perm = ctx.get('permanent')
+            # Delete: target selection needed for full impl
+            enemy = player.enemy if player else None
+            if enemy and enemy.battle_area:
+                target = min(enemy.battle_area, key=lambda p: p.dp)
+                enemy.delete_permanent(target)
 
         effect0.set_on_process_callback(process0)
         effects.append(effect0)

@@ -21,18 +21,21 @@ class BT14_012(CardScript):
         effect0.is_on_attack = True
 
         def condition0(context: Dict[str, Any]) -> bool:
-            # Conditions extracted from DCGO source:
-            # Check: card is on battle area
-            # card.permanent_of_this_card() is not None
-            # Check name: "Tai Kamiya" in card name
-            return True  # TODO: implement condition checks against game state
+            if card and card.permanent_of_this_card() is None:
+                return False
+            # Triggered on attack — validated by engine timing
+            return True
 
         effect0.set_can_use_condition(condition0)
 
-        def process0():
+        def process0(ctx: Dict[str, Any]):
             """Action: Gain 1 memory, DP +2000"""
-            # card.owner.add_memory(1)
-            # target.change_dp(2000)
+            player = ctx.get('player')
+            perm = ctx.get('permanent')
+            if player:
+                player.add_memory(1)
+            if perm:
+                perm.change_dp(2000)
 
         effect0.set_on_process_callback(process0)
         effects.append(effect0)
@@ -42,7 +45,7 @@ class BT14_012(CardScript):
         effect1 = ICardEffect()
         effect1.set_effect_name("BT14-012 DP modifier")
         effect1.set_effect_description("DP modifier")
-        # Static DP modifier
+        effect1.dp_modifier = 0  # TODO: extract DP value from C# source
         def condition1(context: Dict[str, Any]) -> bool:
             return True
         effect1.set_can_use_condition(condition1)

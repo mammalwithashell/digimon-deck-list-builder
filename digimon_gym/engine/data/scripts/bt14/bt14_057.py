@@ -18,7 +18,7 @@ class BT14_057(CardScript):
         effect0 = ICardEffect()
         effect0.set_effect_name("BT14-057 Blocker")
         effect0.set_effect_description("Blocker")
-        # TODO: Blocker keyword - this Digimon can block
+        effect0._is_blocker = True
         def condition0(context: Dict[str, Any]) -> bool:
             return True
         effect0.set_can_use_condition(condition0)

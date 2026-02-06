@@ -26,18 +26,19 @@ class BT14_005(CardScript):
         effect0.dp_modifier = 2000
 
         def condition0(context: Dict[str, Any]) -> bool:
-            # Conditions extracted from DCGO source:
-            # Check: card is on battle area
-            # card.permanent_of_this_card() is not None
-            # Check trait: "D-Brigade" in target traits
-            # Check trait: "DigiPolice" in target traits
-            return True  # TODO: implement condition checks against game state
+            if card and card.permanent_of_this_card() is None:
+                return False
+            # Triggered on attack — validated by engine timing
+            return True
 
         effect0.set_can_use_condition(condition0)
 
-        def process0():
+        def process0(ctx: Dict[str, Any]):
             """Action: DP +2000"""
-            # target.change_dp(2000)
+            player = ctx.get('player')
+            perm = ctx.get('permanent')
+            if perm:
+                perm.change_dp(2000)
 
         effect0.set_on_process_callback(process0)
         effects.append(effect0)

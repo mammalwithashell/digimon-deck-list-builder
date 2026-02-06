@@ -19,7 +19,6 @@ class BT14_086(CardScript):
         effect0.set_effect_name("BT14-086 Security: Play this card")
         effect0.set_effect_description("Security: Play this card")
         effect0.is_security_effect = True
-        # Security effect: play this card without paying cost
         def condition0(context: Dict[str, Any]) -> bool:
             return True
         effect0.set_can_use_condition(condition0)
@@ -32,18 +31,20 @@ class BT14_086(CardScript):
         effect1.set_effect_description("[Start of Your Main Phase] If your opponent has a Digimon, gain 1 memory.")
 
         def condition1(context: Dict[str, Any]) -> bool:
-            # Conditions extracted from DCGO source:
-            # Check: card is on battle area
-            # card.permanent_of_this_card() is not None
-            # Check: it's the owner's turn
-            # card.owner and card.owner.is_my_turn
-            return True  # TODO: implement condition checks against game state
+            if card and card.permanent_of_this_card() is None:
+                return False
+            if not (card and card.owner and card.owner.is_my_turn):
+                return False
+            return True
 
         effect1.set_can_use_condition(condition1)
 
-        def process1():
+        def process1(ctx: Dict[str, Any]):
             """Action: Gain 1 memory"""
-            # card.owner.add_memory(1)
+            player = ctx.get('player')
+            perm = ctx.get('permanent')
+            if player:
+                player.add_memory(1)
 
         effect1.set_on_process_callback(process1)
         effects.append(effect1)
@@ -55,19 +56,17 @@ class BT14_086(CardScript):
         effect2.set_effect_description("[Main] <Mind Link> with 1 of your Digimon with [Numemon] or [Monzaemon] in its name, or the [DigiPolice] trait. (Place this Tamer as that Digimon's bottom digivolution card if there are no Tamer cards in its digivolution cards.)")
 
         def condition2(context: Dict[str, Any]) -> bool:
-            # Conditions extracted from DCGO source:
-            # Check: card is on battle area
-            # card.permanent_of_this_card() is not None
-            # Check trait: "DigiPolice" in target traits
-            # Check name: "Numemon" in card name
-            # Check name: "Monzaemon" in card name
-            return True  # TODO: implement condition checks against game state
+            if card and card.permanent_of_this_card() is None:
+                return False
+            return True
 
         effect2.set_can_use_condition(condition2)
 
-        def process2():
+        def process2(ctx: Dict[str, Any]):
             """Action: Mind Link"""
-            # mind_link(tamer, digimon)
+            player = ctx.get('player')
+            perm = ctx.get('permanent')
+            pass  # TODO: mind_link needs tamer/digimon selection
 
         effect2.set_on_process_callback(process2)
         effects.append(effect2)
@@ -77,7 +76,7 @@ class BT14_086(CardScript):
         effect3 = ICardEffect()
         effect3.set_effect_name("BT14-086 Jamming")
         effect3.set_effect_description("Jamming")
-        # TODO: Jamming keyword - security checks don't activate
+        effect3._is_jamming = True
         def condition3(context: Dict[str, Any]) -> bool:
             return True
         effect3.set_can_use_condition(condition3)
@@ -88,7 +87,7 @@ class BT14_086(CardScript):
         effect4 = ICardEffect()
         effect4.set_effect_name("BT14-086 Reboot")
         effect4.set_effect_description("Reboot")
-        # TODO: Reboot keyword - unsuspend during opponent's unsuspend
+        effect4._is_reboot = True
         def condition4(context: Dict[str, Any]) -> bool:
             return True
         effect4.set_can_use_condition(condition4)
@@ -103,16 +102,18 @@ class BT14_086(CardScript):
         effect5.is_optional = True
 
         def condition5(context: Dict[str, Any]) -> bool:
-            # Conditions extracted from DCGO source:
-            # Check: card is on battle area
-            # card.permanent_of_this_card() is not None
-            return True  # TODO: implement condition checks against game state
+            if card and card.permanent_of_this_card() is None:
+                return False
+            return True
 
         effect5.set_can_use_condition(condition5)
 
-        def process5():
+        def process5(ctx: Dict[str, Any]):
             """Action: Play Card"""
-            # play_card_from_hand_or_trash()
+            player = ctx.get('player')
+            perm = ctx.get('permanent')
+            # Play a card (from hand/trash/reveal)
+            pass  # TODO: target selection for play_card
 
         effect5.set_on_process_callback(process5)
         effects.append(effect5)

@@ -21,17 +21,24 @@ class BT14_067(CardScript):
         effect0.is_on_play = True
 
         def condition0(context: Dict[str, Any]) -> bool:
-            # Conditions extracted from DCGO source:
-            # Check: card is on battle area
-            # card.permanent_of_this_card() is not None
-            return True  # TODO: implement condition checks against game state
+            if card and card.permanent_of_this_card() is None:
+                return False
+            # Triggered on play — validated by engine timing
+            return True
 
         effect0.set_can_use_condition(condition0)
 
-        def process0():
+        def process0(ctx: Dict[str, Any]):
             """Action: Delete, Reveal And Select"""
-            # target_permanent.delete()
-            # reveal_top_cards_and_select()
+            player = ctx.get('player')
+            perm = ctx.get('permanent')
+            # Delete: target selection needed for full impl
+            enemy = player.enemy if player else None
+            if enemy and enemy.battle_area:
+                target = min(enemy.battle_area, key=lambda p: p.dp)
+                enemy.delete_permanent(target)
+            # Reveal top cards and select
+            pass  # TODO: reveal_and_select needs UI/agent choice
 
         effect0.set_on_process_callback(process0)
         effects.append(effect0)
@@ -44,17 +51,24 @@ class BT14_067(CardScript):
         effect1.is_on_play = True
 
         def condition1(context: Dict[str, Any]) -> bool:
-            # Conditions extracted from DCGO source:
-            # Check: card is on battle area
-            # card.permanent_of_this_card() is not None
-            return True  # TODO: implement condition checks against game state
+            if card and card.permanent_of_this_card() is None:
+                return False
+            # Triggered when digivolving — validated by engine timing
+            return True
 
         effect1.set_can_use_condition(condition1)
 
-        def process1():
+        def process1(ctx: Dict[str, Any]):
             """Action: Delete, Reveal And Select"""
-            # target_permanent.delete()
-            # reveal_top_cards_and_select()
+            player = ctx.get('player')
+            perm = ctx.get('permanent')
+            # Delete: target selection needed for full impl
+            enemy = player.enemy if player else None
+            if enemy and enemy.battle_area:
+                target = min(enemy.battle_area, key=lambda p: p.dp)
+                enemy.delete_permanent(target)
+            # Reveal top cards and select
+            pass  # TODO: reveal_and_select needs UI/agent choice
 
         effect1.set_on_process_callback(process1)
         effects.append(effect1)

@@ -21,16 +21,22 @@ class BT14_023(CardScript):
         effect0.is_on_play = True
 
         def condition0(context: Dict[str, Any]) -> bool:
-            # Conditions extracted from DCGO source:
-            # Check: card is on battle area
-            # card.permanent_of_this_card() is not None
-            return True  # TODO: implement condition checks against game state
+            if card and card.permanent_of_this_card() is None:
+                return False
+            # Triggered when digivolving — validated by engine timing
+            return True
 
         effect0.set_can_use_condition(condition0)
 
-        def process0():
+        def process0(ctx: Dict[str, Any]):
             """Action: Trash Digivolution Cards"""
-            # target.trash_digivolution_cards(count)
+            player = ctx.get('player')
+            perm = ctx.get('permanent')
+            # Trash digivolution cards from this permanent
+            if perm and not perm.has_no_digivolution_cards:
+                trashed = perm.trash_digivolution_cards(1)
+                if player:
+                    player.trash_cards.extend(trashed)
 
         effect0.set_on_process_callback(process0)
         effects.append(effect0)
@@ -45,10 +51,10 @@ class BT14_023(CardScript):
         effect1.is_on_attack = True
 
         def condition1(context: Dict[str, Any]) -> bool:
-            # Conditions extracted from DCGO source:
-            # Check: card is on battle area
-            # card.permanent_of_this_card() is not None
-            return True  # TODO: implement condition checks against game state
+            if card and card.permanent_of_this_card() is None:
+                return False
+            # Triggered on attack — validated by engine timing
+            return True
 
         effect1.set_can_use_condition(condition1)
         effects.append(effect1)
@@ -64,10 +70,10 @@ class BT14_023(CardScript):
         effect2.is_on_attack = True
 
         def condition2(context: Dict[str, Any]) -> bool:
-            # Conditions extracted from DCGO source:
-            # Check: card is on battle area
-            # card.permanent_of_this_card() is not None
-            return True  # TODO: implement condition checks against game state
+            if card and card.permanent_of_this_card() is None:
+                return False
+            # Triggered on attack — validated by engine timing
+            return True
 
         effect2.set_can_use_condition(condition2)
         effects.append(effect2)

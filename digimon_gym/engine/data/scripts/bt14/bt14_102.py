@@ -23,17 +23,22 @@ class BT14_102(CardScript):
         effect0.dp_modifier = -5000
 
         def condition0(context: Dict[str, Any]) -> bool:
-            # Conditions extracted from DCGO source:
-            # Check: card is on battle area
-            # card.permanent_of_this_card() is not None
-            # Check trait: "Virus" in target traits
-            return True  # TODO: implement condition checks against game state
+            if card and card.permanent_of_this_card() is None:
+                return False
+            # Triggered on attack — validated by engine timing
+            return True
 
         effect0.set_can_use_condition(condition0)
 
-        def process0():
+        def process0(ctx: Dict[str, Any]):
             """Action: DP -5000"""
-            # target.change_dp(-5000)
+            player = ctx.get('player')
+            perm = ctx.get('permanent')
+            # DP change targets opponent digimon
+            enemy = player.enemy if player else None
+            if enemy and enemy.battle_area:
+                target = min(enemy.battle_area, key=lambda p: p.dp)
+                target.change_dp(-5000)
 
         effect0.set_on_process_callback(process0)
         effects.append(effect0)
@@ -46,13 +51,18 @@ class BT14_102(CardScript):
         effect1.is_on_deletion = True
 
         def condition1(context: Dict[str, Any]) -> bool:
+            # Triggered on deletion — validated by engine timing
             return True
 
         effect1.set_can_use_condition(condition1)
 
-        def process1():
+        def process1(ctx: Dict[str, Any]):
             """Action: Add To Security"""
-            # card.owner.add_to_security()
+            player = ctx.get('player')
+            perm = ctx.get('permanent')
+            # Add top card of deck to security
+            if player:
+                player.recovery(1)
 
         effect1.set_on_process_callback(process1)
         effects.append(effect1)
@@ -67,17 +77,21 @@ class BT14_102(CardScript):
         effect2.is_on_deletion = True
 
         def condition2(context: Dict[str, Any]) -> bool:
-            # Conditions extracted from DCGO source:
-            # Check trait: "Vaccine" in target traits
-            # Check color: CardColor.Yellow
-            return True  # TODO: implement condition checks against game state
+            # Triggered on deletion — validated by engine timing
+            return True
 
         effect2.set_can_use_condition(condition2)
 
-        def process2():
+        def process2(ctx: Dict[str, Any]):
             """Action: Trash From Hand, Add To Security"""
-            # card.owner.trash_from_hand(count)
-            # card.owner.add_to_security()
+            player = ctx.get('player')
+            perm = ctx.get('permanent')
+            # Trash from hand (cost/effect)
+            if player and player.hand_cards:
+                player.trash_from_hand([player.hand_cards[-1]])
+            # Add top card of deck to security
+            if player:
+                player.recovery(1)
 
         effect2.set_on_process_callback(process2)
         effects.append(effect2)

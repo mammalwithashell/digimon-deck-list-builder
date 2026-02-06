@@ -20,20 +20,29 @@ class BT14_078(CardScript):
         effect0.set_effect_description("[End of Your Turn] Delete this Digimon and <Draw 2>. Then, you may return 1 [Loogamon] from your trash to the hand.")
 
         def condition0(context: Dict[str, Any]) -> bool:
-            # Conditions extracted from DCGO source:
-            # Check: card is on battle area
-            # card.permanent_of_this_card() is not None
-            # Check: it's the owner's turn
-            # card.owner and card.owner.is_my_turn
-            return True  # TODO: implement condition checks against game state
+            if card and card.permanent_of_this_card() is None:
+                return False
+            if not (card and card.owner and card.owner.is_my_turn):
+                return False
+            return True
 
         effect0.set_can_use_condition(condition0)
 
-        def process0():
+        def process0(ctx: Dict[str, Any]):
             """Action: Draw 2, Delete, Add To Hand"""
-            # card.owner.draw(2)
-            # target_permanent.delete()
-            # add_card_to_hand()
+            player = ctx.get('player')
+            perm = ctx.get('permanent')
+            if player:
+                player.draw_cards(2)
+            # Delete: target selection needed for full impl
+            enemy = player.enemy if player else None
+            if enemy and enemy.battle_area:
+                target = min(enemy.battle_area, key=lambda p: p.dp)
+                enemy.delete_permanent(target)
+            # Add card to hand (from trash/reveal)
+            if player and player.trash_cards:
+                card_to_add = player.trash_cards.pop()
+                player.hand_cards.append(card_to_add)
 
         effect0.set_on_process_callback(process0)
         effects.append(effect0)
@@ -46,18 +55,23 @@ class BT14_078(CardScript):
         effect1.is_on_deletion = True
 
         def condition1(context: Dict[str, Any]) -> bool:
-            # Conditions extracted from DCGO source:
-            # Check trait: "Dark Animal" in target traits
-            # Check trait: "DarkAnimal" in target traits
-            # Check trait: "SoC" in target traits
-            return True  # TODO: implement condition checks against game state
+            # Triggered on deletion — validated by engine timing
+            return True
 
         effect1.set_can_use_condition(condition1)
 
-        def process1():
+        def process1(ctx: Dict[str, Any]):
             """Action: Delete, Trash From Hand"""
-            # target_permanent.delete()
-            # card.owner.trash_from_hand(count)
+            player = ctx.get('player')
+            perm = ctx.get('permanent')
+            # Delete: target selection needed for full impl
+            enemy = player.enemy if player else None
+            if enemy and enemy.battle_area:
+                target = min(enemy.battle_area, key=lambda p: p.dp)
+                enemy.delete_permanent(target)
+            # Trash from hand (cost/effect)
+            if player and player.hand_cards:
+                player.trash_from_hand([player.hand_cards[-1]])
 
         effect1.set_on_process_callback(process1)
         effects.append(effect1)

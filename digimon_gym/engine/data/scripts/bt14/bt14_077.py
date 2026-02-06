@@ -21,10 +21,10 @@ class BT14_077(CardScript):
         effect0.is_on_play = True
 
         def condition0(context: Dict[str, Any]) -> bool:
-            # Conditions extracted from DCGO source:
-            # Check: card is on battle area
-            # card.permanent_of_this_card() is not None
-            return True  # TODO: implement condition checks against game state
+            if card and card.permanent_of_this_card() is None:
+                return False
+            # Triggered on play — validated by engine timing
+            return True
 
         effect0.set_can_use_condition(condition0)
         effects.append(effect0)
@@ -37,10 +37,10 @@ class BT14_077(CardScript):
         effect1.is_on_play = True
 
         def condition1(context: Dict[str, Any]) -> bool:
-            # Conditions extracted from DCGO source:
-            # Check: card is on battle area
-            # card.permanent_of_this_card() is not None
-            return True  # TODO: implement condition checks against game state
+            if card and card.permanent_of_this_card() is None:
+                return False
+            # Triggered when digivolving — validated by engine timing
+            return True
 
         effect1.set_can_use_condition(condition1)
         effects.append(effect1)
@@ -54,18 +54,20 @@ class BT14_077(CardScript):
         effect2.set_hash_string("Memory+_BT14_077")
 
         def condition2(context: Dict[str, Any]) -> bool:
-            # Conditions extracted from DCGO source:
-            # Check: card is on battle area
-            # card.permanent_of_this_card() is not None
-            # Check: it's the owner's turn
-            # card.owner and card.owner.is_my_turn
-            return True  # TODO: implement condition checks against game state
+            if card and card.permanent_of_this_card() is None:
+                return False
+            if not (card and card.owner and card.owner.is_my_turn):
+                return False
+            return True
 
         effect2.set_can_use_condition(condition2)
 
-        def process2():
+        def process2(ctx: Dict[str, Any]):
             """Action: Gain 1 memory"""
-            # card.owner.add_memory(1)
+            player = ctx.get('player')
+            perm = ctx.get('permanent')
+            if player:
+                player.add_memory(1)
 
         effect2.set_on_process_callback(process2)
         effects.append(effect2)

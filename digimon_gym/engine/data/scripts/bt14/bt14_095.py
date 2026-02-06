@@ -20,6 +20,7 @@ class BT14_095(CardScript):
         effect0.set_effect_description("Effect")
 
         def condition0(context: Dict[str, Any]) -> bool:
+            # Option main effect — validated by engine timing
             return True
 
         effect0.set_can_use_condition(condition0)
