@@ -1,5 +1,7 @@
 Processed 71 decks.
 Set Priority List (by total card usage count):
+
+BT24
 BT23: 1288
 BT20: 401
 BT22: 263
