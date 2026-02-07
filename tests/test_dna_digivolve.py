@@ -28,7 +28,7 @@ from digimon_gym.engine.core.entity_base import CEntity_Base
 from digimon_gym.engine.validation.digivolve_validator import (
     can_dna_digivolve, has_valid_dna_targets,
     get_valid_dna_first_targets, get_valid_dna_second_targets,
-    get_dna_stacking_order, _perm_matches_dna_req,
+    get_dna_stacking_order,
 )
 from digimon_gym.engine.data.card_database import parse_xros_req
 

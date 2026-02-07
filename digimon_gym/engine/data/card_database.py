@@ -1,4 +1,5 @@
 import json
+import logging
 import os
 import re
 import importlib
@@ -8,6 +9,8 @@ from ..core.card_script import CardScript
 from ..core.card_source import CardSource
 from .enums import CardColor, CardKind, Rarity
 from .evo_cost import EvoCost, DnaCost, DnaRequirement
+
+logger = logging.getLogger(__name__)
 
 # Map color name strings to CardColor enum values
 _COLOR_NAME_MAP = {
@@ -30,6 +33,7 @@ def parse_xros_req(xros_req: str) -> List[DnaCost]:
       "[DNA Digivolve] Blue/Purple Lv.6 + Black/Yellow Lv.6: Cost 0"
 
     Returns a list of DnaCost (one per [DNA Digivolve] entry found).
+    Logs warnings for malformed segments that cannot be parsed.
     """
     if not xros_req:
         return []
@@ -49,10 +53,22 @@ def parse_xros_req(xros_req: str) -> List[DnaCost]:
         # Split requirements by '+'
         parts = req_text.split('+')
         if len(parts) != 2:
+            logger.warning(
+                "DNA Digivolve requirement expected 2 parts separated by '+', "
+                "got %d: %r", len(parts), req_text,
+            )
             continue
 
         req1 = _parse_dna_requirement(parts[0].strip())
         req2 = _parse_dna_requirement(parts[1].strip())
+        if not req1:
+            logger.warning(
+                "Failed to parse DNA requirement 1: %r", parts[0].strip(),
+            )
+        if not req2:
+            logger.warning(
+                "Failed to parse DNA requirement 2: %r", parts[1].strip(),
+            )
         if req1 and req2:
             results.append(DnaCost(
                 requirement1=req1,
@@ -69,14 +85,20 @@ def _parse_dna_requirement(text: str) -> Optional[DnaRequirement]:
     Supported patterns:
       "Blue Lv.4"
       "Blue/Purple Lv.6"
-      "Lv.6 w/[Greymon] in name"
-      "Lv.6 w/[Greymon] in text"
+      "Lv.6 w/[Greymon] in name"   → stored as name_contains
+      "Lv.6 w/[Greymon] in text"   → stored as text_contains
     """
-    # Extract name constraint: w/[Name] in name or w/[Name] in text
+    # Extract constraint: w/[Name] in name OR w/[Name] in text
     name_contains = ""
-    name_match = re.search(r'w/\[([^\]]+)\]\s+in\s+(?:name|text)', text)
-    if name_match:
-        name_contains = name_match.group(1).strip()
+    text_contains = ""
+    constraint_match = re.search(r'w/\[([^\]]+)\]\s+in\s+(name|text)', text)
+    if constraint_match:
+        value = constraint_match.group(1).strip()
+        kind = constraint_match.group(2)
+        if kind == "name":
+            name_contains = value
+        else:
+            text_contains = value
 
     # Extract level: Lv.N or Lv N
     level = 0
@@ -85,6 +107,7 @@ def _parse_dna_requirement(text: str) -> Optional[DnaRequirement]:
         level = int(level_match.group(1))
 
     if level == 0:
+        logger.warning("No valid level found in DNA requirement: %r", text)
         return None
 
     # Extract color(s): look for color names before 'Lv'
@@ -102,6 +125,7 @@ def _parse_dna_requirement(text: str) -> Optional[DnaRequirement]:
         level=level,
         card_color=card_color,
         name_contains=name_contains,
+        text_contains=text_contains,
     )
 
 

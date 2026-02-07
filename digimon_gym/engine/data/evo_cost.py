@@ -14,12 +14,16 @@ class EvoCost:
 class DnaRequirement:
     """One half of a DNA Digivolution requirement.
 
-    Specifies the color, level, and optional name constraint for one
+    Specifies the color, level, and optional name/text constraint for one
     of the two Digimon needed for DNA Digivolution.
+
+    name_contains: matches against the card's name (w/[X] in name)
+    text_contains: matches against the card's effect text (w/[X] in text)
     """
     level: int
     card_color: Optional[CardColor] = None
     name_contains: str = ""
+    text_contains: str = ""
 
 
 @dataclass
