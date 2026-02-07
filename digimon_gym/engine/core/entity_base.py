@@ -1,7 +1,7 @@
 import re
 from typing import List
 from ..data.enums import CardColor, CardKind, Rarity
-from ..data.evo_cost import EvoCost
+from ..data.evo_cost import EvoCost, DnaCost
 
 class CEntity_Base:
     def __init__(self):
@@ -9,6 +9,7 @@ class CEntity_Base:
         self.card_colors: List[CardColor] = []
         self.play_cost: int = 0
         self.evo_costs: List[EvoCost] = []
+        self.dna_costs: List[DnaCost] = []
         self.level: int = 0
         self.card_name_jpn: str = ""
         self.card_name_eng: str = ""
