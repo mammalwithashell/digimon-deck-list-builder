@@ -11,6 +11,7 @@ class Permanent:
         self.card_sources: List['CardSource'] = card_sources
         self.is_suspended: bool = False
         self._dp_modifiers: List[int] = []  # Temporary DP changes from effects
+        self.linked_cards: List['CardSource'] = []  # Option cards linked sideways (e.g. [TS])
 
     @property
     def digivolution_cards(self) -> List['CardSource']:
@@ -124,6 +125,12 @@ class Permanent:
             for eff in top_effects:
                 if not eff.is_inherited_effect:
                     effects.append(eff)
+        # Effects from linked option cards (not inherited)
+        for linked in self.linked_cards:
+            linked_effects = linked.effect_list(timing)
+            for eff in linked_effects:
+                if not eff.is_inherited_effect:
+                    effects.append(eff)
         return effects
 
     def add_card_source(self, card_source: 'CardSource'):
@@ -182,6 +189,16 @@ class Permanent:
         if self.top_card:
             return trait in self.top_card.card_traits
         return False
+
+    def link_card(self, card: 'CardSource'):
+        """Link an option card sideways to this permanent (e.g. [TS] options)."""
+        self.linked_cards.append(card)
+
+    def unlink_all(self) -> List['CardSource']:
+        """Remove all linked cards and return them (for when permanent leaves field)."""
+        cards = list(self.linked_cards)
+        self.linked_cards.clear()
+        return cards
 
     def suspend(self):
         self.is_suspended = True

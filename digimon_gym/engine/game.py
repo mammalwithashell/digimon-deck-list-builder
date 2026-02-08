@@ -50,6 +50,7 @@ SEL_MY_SECURITY_START = 40 # 40-49:    select from own security stack
 SEL_MY_SECURITY_END = 49
 SEL_OPP_SECURITY_START = 50 # 50-59:   select from opponent's security stack
 SEL_OPP_SECURITY_END = 59
+SEL_MY_BREEDING = 99       # 99:       select own breeding area permanent
 SEL_MY_FIELD_START = 100   # 100-111:  select own battle_area permanent
 SEL_MY_FIELD_END = 111
 SEL_OPP_FIELD_START = 112  # 112-123:  select opponent's battle_area permanent
@@ -627,8 +628,8 @@ class Game:
                 tensor.append(float(perm.dp))
                 # +2: suspended
                 tensor.append(1.0 if perm.is_suspended else 0.0)
-                # +3: has used OPT (once-per-turn)
-                tensor.append(0.0)  # TODO: track OPT usage
+                # +3: linked card count (option cards attached sideways, e.g. [TS])
+                tensor.append(float(len(perm.linked_cards)))
                 # +4: source count
                 tensor.append(float(len(perm.card_sources)))
                 # +5-19: source card IDs (bottom to top, max 15)
@@ -1356,6 +1357,65 @@ class Game:
 
         self.request_selection(
             GamePhase.SelectSecurity, player, on_select, valid, is_optional)
+
+    def effect_link_to_permanent(
+        self, player: Player, card_to_link: 'CardSource',
+        filter_fn: Optional[Callable[['Permanent'], bool]] = None,
+        is_optional: bool = True,
+    ):
+        """Let agent choose a Digimon to link an option card to (sideways attach).
+
+        Covers: [TS] option cards (BT24-091, 092, 095, 097) that link after
+        their security/main effect resolves. Includes battle area and breeding
+        area targets.
+
+        Restrictions: Cannot link to tokens or eggs (level <= 2 in breeding).
+
+        Args:
+            player: The player whose effect is triggering.
+            card_to_link: The option card to link.
+            filter_fn: Optional additional filter on target permanents.
+            is_optional: If True, player can decline (default True).
+        """
+        valid = []
+
+        # Battle area targets (100-111): exclude tokens
+        for i, perm in enumerate(player.battle_area):
+            if perm.is_token:
+                continue
+            if not perm.is_digimon:
+                continue
+            if filter_fn is not None and not filter_fn(perm):
+                continue
+            valid.append(SEL_MY_FIELD_START + i)
+
+        # Breeding area target (99): must be a Digimon, not an egg (level > 2)
+        ba = player.breeding_area
+        if ba is not None and ba.is_digimon and ba.level > 2:
+            if filter_fn is None or filter_fn(ba):
+                valid.append(SEL_MY_BREEDING)
+
+        if not valid:
+            return
+
+        def on_select(action_id: int):
+            if action_id == SEL_MY_BREEDING:
+                target = player.breeding_area
+            else:
+                idx = action_id - SEL_MY_FIELD_START
+                if 0 <= idx < len(player.battle_area):
+                    target = player.battle_area[idx]
+                else:
+                    return
+            if target is None:
+                return
+            target.link_card(card_to_link)
+            self.logger.log(
+                f"[Link] {card_to_link.card_names[0]} linked to "
+                f"{target.top_card.card_names[0] if target.top_card else 'Unknown'}")
+
+        self.request_selection(
+            GamePhase.SelectTarget, player, on_select, valid, is_optional)
 
     # ─── DNA Digivolve ────────────────────────────────────────────────
 

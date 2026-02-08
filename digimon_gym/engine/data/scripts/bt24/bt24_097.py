@@ -38,14 +38,24 @@ class BT24_097(CardScript):
         effect1.set_can_use_condition(condition1)
 
         def process1(ctx: Dict[str, Any]):
-            """Action: Delete"""
+            """Action: Delete 1 opponent's level 6 or lower Digimon. Then link."""
             player = ctx.get('player')
-            perm = ctx.get('permanent')
-            # Delete: target selection needed for full impl
-            enemy = player.enemy if player else None
-            if enemy and enemy.battle_area:
-                target = min(enemy.battle_area, key=lambda p: p.dp)
-                enemy.delete_permanent(target)
+            game = ctx.get('game')
+            if not (player and game):
+                return
+
+            def on_target_selected(target_perm):
+                enemy = player.enemy if player else None
+                if enemy:
+                    enemy.delete_permanent(target_perm)
+                    game.logger.log(
+                        f"[Effect] Deleted {target_perm.top_card.card_names[0] if target_perm.top_card else 'Unknown'}")
+                # Then, may link this card
+                game.effect_link_to_permanent(player, card, is_optional=True)
+
+            game.effect_select_opponent_permanent(
+                player, on_target_selected,
+                filter_fn=lambda p: p.is_digimon and p.level <= 6)
 
         effect1.set_on_process_callback(process1)
         effects.append(effect1)
@@ -66,14 +76,22 @@ class BT24_097(CardScript):
         effect2.set_can_use_condition(condition2)
 
         def process2(ctx: Dict[str, Any]):
-            """Action: Delete"""
+            """Action: Delete 1 opponent's level 5 or higher Digimon."""
             player = ctx.get('player')
-            perm = ctx.get('permanent')
-            # Delete: target selection needed for full impl
-            enemy = player.enemy if player else None
-            if enemy and enemy.battle_area:
-                target = min(enemy.battle_area, key=lambda p: p.dp)
-                enemy.delete_permanent(target)
+            game = ctx.get('game')
+            if not (player and game):
+                return
+
+            def on_selected(target_perm):
+                enemy = player.enemy if player else None
+                if enemy:
+                    enemy.delete_permanent(target_perm)
+                    game.logger.log(
+                        f"[Effect] Deleted {target_perm.top_card.card_names[0] if target_perm.top_card else 'Unknown'}")
+
+            game.effect_select_opponent_permanent(
+                player, on_selected,
+                filter_fn=lambda p: p.is_digimon and p.level >= 5)
 
         effect2.set_on_process_callback(process2)
         effects.append(effect2)

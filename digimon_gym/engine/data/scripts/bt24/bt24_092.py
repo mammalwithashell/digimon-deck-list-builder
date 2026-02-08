@@ -36,6 +36,32 @@ class BT24_092(CardScript):
             return True
 
         effect1.set_can_use_condition(condition1)
+
+        def process1(ctx: Dict[str, Any]):
+            """Action: 1 opponent's Digimon gets -6000 DP. Then link."""
+            player = ctx.get('player')
+            game = ctx.get('game')
+            if not (player and game):
+                return
+
+            def on_target_selected(target_perm):
+                target_perm.change_dp(-6000)
+                game.logger.log(
+                    f"[Effect] {target_perm.top_card.card_names[0] if target_perm.top_card else 'Unknown'} "
+                    f"gets -6000 DP")
+                # Check if DP <= 0 (deletion by DP reduction)
+                if target_perm.dp <= 0:
+                    opp = player.enemy if player else None
+                    if opp:
+                        opp.delete_permanent(target_perm)
+                # Then, may link this card
+                game.effect_link_to_permanent(player, card, is_optional=True)
+
+            game.effect_select_opponent_permanent(
+                player, on_target_selected,
+                filter_fn=lambda p: p.is_digimon)
+
+        effect1.set_on_process_callback(process1)
         effects.append(effect1)
 
         # Timing: EffectTiming.OnAllyAttack
@@ -52,6 +78,29 @@ class BT24_092(CardScript):
             return True
 
         effect2.set_can_use_condition(condition2)
+
+        def process2(ctx: Dict[str, Any]):
+            """Action: 1 opponent's Digimon gets -6000 DP for the turn."""
+            player = ctx.get('player')
+            game = ctx.get('game')
+            if not (player and game):
+                return
+
+            def on_selected(target_perm):
+                target_perm.change_dp(-6000)
+                game.logger.log(
+                    f"[Effect] {target_perm.top_card.card_names[0] if target_perm.top_card else 'Unknown'} "
+                    f"gets -6000 DP")
+                if target_perm.dp <= 0:
+                    opp = player.enemy if player else None
+                    if opp:
+                        opp.delete_permanent(target_perm)
+
+            game.effect_select_opponent_permanent(
+                player, on_selected,
+                filter_fn=lambda p: p.is_digimon)
+
+        effect2.set_on_process_callback(process2)
         effects.append(effect2)
 
         return effects

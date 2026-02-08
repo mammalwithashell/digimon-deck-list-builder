@@ -163,6 +163,7 @@ Phases flow: `Start -> Draw -> Breeding -> Main -> End -> (next turn)`
 | 30-39 | Select from revealed cards |
 | 40-49 | Select from own security stack |
 | 50-59 | Select from opponent's security stack |
+| 99 | Select own breeding area permanent |
 | 100-111 | Select own battle_area permanent |
 | 112-123 | Select opponent's battle_area permanent |
 | 1000-1009 | Choose between effect branches |

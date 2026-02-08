@@ -36,6 +36,27 @@ class BT24_095(CardScript):
             return True
 
         effect1.set_can_use_condition(condition1)
+
+        def process1(ctx: Dict[str, Any]):
+            """Action: Suspend 1 opponent's Digimon or Tamer. Then link."""
+            player = ctx.get('player')
+            game = ctx.get('game')
+            if not (player and game):
+                return
+
+            def on_target_selected(target_perm):
+                target_perm.suspend()
+                game.logger.log(
+                    f"[Effect] Suspended {target_perm.top_card.card_names[0] if target_perm.top_card else 'Unknown'} "
+                    f"(can't unsuspend in next unsuspend phase)")
+                # Then, may link this card
+                game.effect_link_to_permanent(player, card, is_optional=True)
+
+            game.effect_select_opponent_permanent(
+                player, on_target_selected,
+                filter_fn=lambda p: p.is_digimon or p.is_tamer)
+
+        effect1.set_on_process_callback(process1)
         effects.append(effect1)
 
         # Timing: EffectTiming.OnAllyAttack
@@ -54,14 +75,21 @@ class BT24_095(CardScript):
         effect2.set_can_use_condition(condition2)
 
         def process2(ctx: Dict[str, Any]):
-            """Action: Bounce"""
+            """Action: Bounce 1 opponent's suspended Digimon."""
             player = ctx.get('player')
             perm = ctx.get('permanent')
-            # Bounce: return opponent's digimon to hand
-            enemy = player.enemy if player else None
-            if enemy and enemy.battle_area:
-                target = enemy.battle_area[-1]
-                player.bounce_permanent_to_hand(target)
+            game = ctx.get('game')
+            if not (player and game):
+                return
+
+            def on_selected(target_perm):
+                player.bounce_permanent_to_hand(target_perm)
+                game.logger.log(
+                    f"[Effect] Bounced {target_perm.top_card.card_names[0] if target_perm.top_card else 'Unknown'}")
+
+            game.effect_select_opponent_permanent(
+                player, on_selected,
+                filter_fn=lambda p: p.is_digimon and p.is_suspended)
 
         effect2.set_on_process_callback(process2)
         effects.append(effect2)
