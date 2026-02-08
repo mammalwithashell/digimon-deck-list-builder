@@ -160,8 +160,8 @@ class TestBoardStateTensor:
         assert tensor[base + 0] == float(CardRegistry.get_id("BT14-001"))  # card ID
         assert tensor[base + 1] == 5000.0  # DP
         assert tensor[base + 2] == 1.0     # suspended
-        assert tensor[base + 4] == 1.0     # source count
-        assert tensor[base + 5] == float(CardRegistry.get_id("BT14-001"))  # source[0]
+        assert tensor[base + 5] == 1.0     # source count
+        assert tensor[base + 6] == float(CardRegistry.get_id("BT14-001"))  # source[0]
 
     def test_digivolution_stack_encoding(self):
         game = setup_game_at_phase(GamePhase.Main)
@@ -177,9 +177,9 @@ class TestBoardStateTensor:
         slot_base = 10
         assert tensor[slot_base + 0] == float(CardRegistry.get_id("BT14-010"))  # top card
         assert tensor[slot_base + 1] == 6000.0  # DP
-        assert tensor[slot_base + 4] == 2.0     # 2 sources
-        assert tensor[slot_base + 5] == float(CardRegistry.get_id("BT14-002"))  # source[0] = base
-        assert tensor[slot_base + 6] == float(CardRegistry.get_id("BT14-010"))  # source[1] = top
+        assert tensor[slot_base + 5] == 2.0     # 2 sources
+        assert tensor[slot_base + 6] == float(CardRegistry.get_id("BT14-002"))  # source[0] = base
+        assert tensor[slot_base + 7] == float(CardRegistry.get_id("BT14-010"))  # source[1] = top
 
     def test_opponent_field_offset(self):
         game = setup_game_at_phase(GamePhase.Main)
@@ -247,7 +247,7 @@ class TestBoardStateTensor:
 
         # My breeding starts at 640
         assert tensor[640] == float(CardRegistry.get_id("BT14-001"))
-        assert tensor[644] == 1.0  # source count
+        assert tensor[645] == 1.0  # source count
 
 
 # ─── Action Mask Tests ───────────────────────────────────────────────

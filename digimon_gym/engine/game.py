@@ -36,7 +36,7 @@ SLOT_SIZE = 20
 MAX_HAND = 20
 MAX_TRASH = 45
 MAX_SECURITY = 10
-MAX_SOURCES = 15
+MAX_SOURCES = 14
 MAX_REVEALED = 10
 
 # ─── Selection Action Conventions ───────────────────────────────────
@@ -628,11 +628,13 @@ class Game:
                 tensor.append(float(perm.dp))
                 # +2: suspended
                 tensor.append(1.0 if perm.is_suspended else 0.0)
-                # +3: linked card count (option cards attached sideways, e.g. [TS])
+                # +3: OPT exhausted (1.0 if all once-per-turn effects used)
+                tensor.append(1.0 if perm.opt_exhausted else 0.0)
+                # +4: linked card count (option cards attached sideways, e.g. [TS])
                 tensor.append(float(len(perm.linked_cards)))
-                # +4: source count
+                # +5: source count
                 tensor.append(float(len(perm.card_sources)))
-                # +5-19: source card IDs (bottom to top, max 15)
+                # +6-19: source card IDs (bottom to top, max 14)
                 for j in range(MAX_SOURCES):
                     if j < len(perm.card_sources):
                         src = perm.card_sources[j]

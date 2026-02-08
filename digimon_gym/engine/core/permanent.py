@@ -190,6 +190,17 @@ class Permanent:
             return trait in self.top_card.card_traits
         return False
 
+    @property
+    def opt_exhausted(self) -> bool:
+        """True if this permanent has once-per-turn effects and ALL are exhausted."""
+        opt_effects = []
+        for effect in self.effect_list(EffectTiming.NoTiming):
+            if effect.max_count_per_turn > 0:
+                opt_effects.append(effect)
+        if not opt_effects:
+            return False
+        return all(not e.can_activate_this_turn() for e in opt_effects)
+
     def link_card(self, card: 'CardSource'):
         """Link an option card sideways to this permanent (e.g. [TS] options)."""
         self.linked_cards.append(card)
