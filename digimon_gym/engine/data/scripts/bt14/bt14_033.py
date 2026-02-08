@@ -29,17 +29,53 @@ class BT14_033(CardScript):
         effect0.set_can_use_condition(condition0)
 
         def process0(ctx: Dict[str, Any]):
-            """Action: Play Card, Trash From Hand, Add To Security"""
+            """Action: Search security, digivolve into yellow Vaccine Digimon, then optionally place yellow Vaccine from hand to bottom of security."""
             player = ctx.get('player')
             perm = ctx.get('permanent')
-            # Play a card (from hand/trash/reveal)
-            pass  # TODO: target selection for play_card
-            # Trash from hand (cost/effect)
-            if player and player.hand_cards:
-                player.trash_from_hand([player.hand_cards[-1]])
-            # Add top card of deck to security
-            if player:
-                player.recovery(1)
+            game = ctx.get('game')
+            if not (player and perm and game):
+                return
+            if not player.security_cards:
+                return
+
+            def is_yellow_vaccine_digimon(c):
+                """Filter: yellow Digimon with [Vaccine] trait."""
+                if not c.is_digimon:
+                    return False
+                from ....data.enums import CardColor
+                if c.color != CardColor.Yellow:
+                    return False
+                traits = getattr(c, 'traits', []) or []
+                return any('Vaccine' in t for t in traits)
+
+            def on_security_selected(sec_card):
+                # Remove from security, stack onto permanent
+                player.remove_from_security(sec_card)
+                perm.add_card_source(sec_card)
+                game.logger.log(
+                    f"[Effect] {player.player_name} digivolved "
+                    f"{perm.top_card.card_names[0] if perm.top_card else 'Unknown'} "
+                    f"from security (no cost)")
+                # Draw 1 (digivolution bonus)
+                player.draw()
+                # Shuffle security stack
+                import random
+                random.shuffle(player.security_cards)
+                # Then, may place 1 yellow [Vaccine] from hand at bottom of security
+                hand_vaccine = [c for c in player.hand_cards if is_yellow_vaccine_digimon(c)]
+                if hand_vaccine:
+                    def on_hand_selected(hand_card):
+                        player.add_to_security_from_hand(hand_card, to_top=False)
+                        game.logger.log(
+                            f"[Effect] {player.player_name} placed "
+                            f"{hand_card.card_names[0]} at bottom of security")
+                    game.effect_select_hand_card(
+                        player, is_yellow_vaccine_digimon, on_hand_selected,
+                        is_optional=True)
+
+            game.effect_select_own_security(
+                player, is_yellow_vaccine_digimon, on_security_selected,
+                is_optional=True)
 
         effect0.set_on_process_callback(process0)
         effects.append(effect0)

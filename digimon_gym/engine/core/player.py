@@ -343,6 +343,19 @@ class Player:
             else:
                 self.security_cards.insert(0, card)
 
+    def trash_security_card(self, card: 'CardSource'):
+        """Remove a specific card from the security stack and trash it."""
+        if card in self.security_cards:
+            self.security_cards.remove(card)
+            self.trash_cards.append(card)
+
+    def remove_from_security(self, card: 'CardSource') -> Optional['CardSource']:
+        """Remove a card from the security stack (without trashing). Returns the card."""
+        if card in self.security_cards:
+            self.security_cards.remove(card)
+            return card
+        return None
+
     def reveal_top_cards(self, count: int) -> List['CardSource']:
         """Reveal top N cards of library (peek without removing)."""
         return self.library_cards[:count]

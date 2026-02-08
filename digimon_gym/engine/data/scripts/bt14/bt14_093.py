@@ -26,13 +26,62 @@ class BT14_093(CardScript):
         effect0.set_can_use_condition(condition0)
 
         def process0(ctx: Dict[str, Any]):
-            """Action: Recovery +1, Play Card"""
+            """Action: Search security, digivolve 1 of your Digimon into yellow Lv6-or-lower Vaccine from security. If digivolved and have T.K. Takaishi, Recovery +1."""
             player = ctx.get('player')
             perm = ctx.get('permanent')
-            if player:
-                player.recovery(1)
-            # Play a card (from hand/trash/reveal)
-            pass  # TODO: target selection for play_card
+            game = ctx.get('game')
+            if not (player and game):
+                return
+            if not player.security_cards:
+                return
+
+            def is_yellow_vaccine_lv6_or_lower(c):
+                """Filter: yellow Digimon with [Vaccine] trait, level 6 or lower."""
+                if not c.is_digimon:
+                    return False
+                from ....data.enums import CardColor
+                if c.color != CardColor.Yellow:
+                    return False
+                if getattr(c, 'level', 99) > 6:
+                    return False
+                traits = getattr(c, 'traits', []) or []
+                return any('Vaccine' in t for t in traits)
+
+            # First, select target Digimon on own field to digivolve
+            def on_field_selected(target_perm):
+                # Now select security card to digivolve into
+                def on_security_selected(sec_card):
+                    player.remove_from_security(sec_card)
+                    target_perm.add_card_source(sec_card)
+                    game.logger.log(
+                        f"[Effect] {player.player_name} digivolved "
+                        f"{target_perm.top_card.card_names[0] if target_perm.top_card else 'Unknown'} "
+                        f"from security (no cost)")
+                    # Draw 1 (digivolution bonus)
+                    player.draw()
+                    # Shuffle security stack
+                    import random
+                    random.shuffle(player.security_cards)
+                    # If have T.K. Takaishi tamer, Recovery +1
+                    has_tk = any(
+                        any('T.K. Takaishi' in n for n in p.top_card.card_names)
+                        for p in player.battle_area
+                        if p.top_card and p.top_card.is_tamer
+                    )
+                    if has_tk:
+                        player.recovery(1)
+                        game.logger.log(
+                            f"[Effect] Recovery +1 (T.K. Takaishi present)")
+
+                game.effect_select_own_security(
+                    player, is_yellow_vaccine_lv6_or_lower,
+                    on_security_selected, is_optional=True)
+
+            # Select one of your Digimon to digivolve
+            game.effect_select_own_permanent(
+                player, on_field_selected,
+                filter_fn=lambda p: p.is_digimon,
+                is_optional=True)
 
         effect0.set_on_process_callback(process0)
         effects.append(effect0)
@@ -52,18 +101,25 @@ class BT14_093(CardScript):
         effect1.set_can_use_condition(condition1)
 
         def process1(ctx: Dict[str, Any]):
-            """Action: Play Card, Trash From Hand, Add To Hand"""
+            """Action: Play 1 [Patamon] from hand or trash without cost, then add this to hand."""
             player = ctx.get('player')
             perm = ctx.get('permanent')
-            # Play a card (from hand/trash/reveal)
-            pass  # TODO: target selection for play_card
-            # Trash from hand (cost/effect)
-            if player and player.hand_cards:
-                player.trash_from_hand([player.hand_cards[-1]])
-            # Add card to hand (from trash/reveal)
-            if player and player.trash_cards:
-                card_to_add = player.trash_cards.pop()
-                player.hand_cards.append(card_to_add)
+            game = ctx.get('game')
+            if not (player and game):
+                return
+
+            def is_patamon(c):
+                return any('Patamon' in n for n in c.card_names)
+
+            # Check hand first, then trash for Patamon
+            has_in_hand = any(is_patamon(c) for c in player.hand_cards)
+            has_in_trash = any(is_patamon(c) for c in player.trash_cards)
+            if has_in_hand:
+                game.effect_play_from_zone(
+                    player, 'hand', is_patamon, free=True, is_optional=True)
+            elif has_in_trash:
+                game.effect_play_from_zone(
+                    player, 'trash', is_patamon, free=True, is_optional=True)
 
         effect1.set_on_process_callback(process1)
         effects.append(effect1)

@@ -40,12 +40,16 @@ MAX_SOURCES = 15
 MAX_REVEALED = 10
 
 # ─── Selection Action Conventions ───────────────────────────────────
-# When in SelectTarget/SelectMaterial/SelectHand/SelectReveal, valid_indices
-# use these ranges so the RL agent can distinguish what it's selecting:
+# When in SelectTarget/SelectMaterial/SelectHand/SelectReveal/SelectSecurity,
+# valid_indices use these ranges so the RL agent can distinguish what it's selecting:
 SEL_HAND_START = 0         # 0-29:     select hand card by index
 SEL_HAND_END = 29
 SEL_REVEALED_START = 30    # 30-39:    select from revealed cards
 SEL_REVEALED_END = 39
+SEL_MY_SECURITY_START = 40 # 40-49:    select from own security stack
+SEL_MY_SECURITY_END = 49
+SEL_OPP_SECURITY_START = 50 # 50-59:   select from opponent's security stack
+SEL_OPP_SECURITY_END = 59
 SEL_MY_FIELD_START = 100   # 100-111:  select own battle_area permanent
 SEL_MY_FIELD_END = 111
 SEL_OPP_FIELD_START = 112  # 112-123:  select opponent's battle_area permanent
@@ -596,7 +600,7 @@ class Game:
             GamePhase.SelectTarget, GamePhase.SelectMaterial,
             GamePhase.SelectTrash, GamePhase.SelectSource,
             GamePhase.SelectHand, GamePhase.SelectReveal,
-            GamePhase.SelectEffectChoice,
+            GamePhase.SelectEffectChoice, GamePhase.SelectSecurity,
         ) else 0.0)
         t.append(float(len(ps.valid_indices)) if ps else 0.0)
         t.append(float(ps.selecting_player.player_id) if ps else 0.0)
@@ -760,7 +764,7 @@ class Game:
 
         elif phase in (GamePhase.SelectTarget, GamePhase.SelectMaterial,
                        GamePhase.SelectHand, GamePhase.SelectReveal,
-                       GamePhase.SelectEffectChoice):
+                       GamePhase.SelectEffectChoice, GamePhase.SelectSecurity):
             # Generic selection: use valid_indices from pending selection
             ps = self.pending_selection
             if ps and ps.valid_indices:
@@ -788,7 +792,7 @@ class Game:
             self._decode_breeding(action_id)
         elif phase in (GamePhase.SelectTarget, GamePhase.SelectMaterial,
                        GamePhase.SelectHand, GamePhase.SelectReveal,
-                       GamePhase.SelectEffectChoice):
+                       GamePhase.SelectEffectChoice, GamePhase.SelectSecurity):
             self._decode_selection(action_id)
         elif phase == GamePhase.BlockTiming:
             self._decode_block(action_id)
@@ -1286,6 +1290,72 @@ class Game:
 
         self.request_selection(
             GamePhase.SelectEffectChoice, player, on_select, valid)
+
+    def effect_select_own_security(
+        self, player: Player,
+        filter_fn: Callable[['CardSource'], bool],
+        callback: Callable[['CardSource'], None],
+        is_optional: bool = True,
+    ):
+        """Let agent select a card from their own security stack.
+
+        Covers: search_security (BT14-033 Patamon, BT14-093 Emissary of Hope),
+        barrier cost, and effects that interact with own security.
+
+        Args:
+            player: The player whose security stack is searched.
+            filter_fn: Which security cards are valid selections.
+            callback: Called with the selected CardSource.
+            is_optional: If True, player can decline.
+        """
+        valid = []
+        for i, card in enumerate(player.security_cards):
+            if filter_fn(card):
+                valid.append(SEL_MY_SECURITY_START + i)
+        if not valid:
+            return
+
+        def on_select(action_id: int):
+            idx = action_id - SEL_MY_SECURITY_START
+            if 0 <= idx < len(player.security_cards):
+                callback(player.security_cards[idx])
+
+        self.request_selection(
+            GamePhase.SelectSecurity, player, on_select, valid, is_optional)
+
+    def effect_select_opponent_security(
+        self, player: Player,
+        filter_fn: Optional[Callable[['CardSource'], bool]],
+        callback: Callable[['CardSource'], None],
+        is_optional: bool = True,
+    ):
+        """Let agent select a card from the opponent's security stack.
+
+        Covers: BT24-018 Styracomon (trash opponent security), and effects
+        that interact with opponent security cards.
+
+        Args:
+            player: The player whose effect is triggering.
+            filter_fn: Optional filter on opponent's security cards.
+            callback: Called with the selected CardSource.
+            is_optional: If True, player can decline.
+        """
+        opponent = self.player2 if player is self.player1 else self.player1
+        valid = []
+        for i, card in enumerate(opponent.security_cards):
+            if filter_fn is None or filter_fn(card):
+                valid.append(SEL_OPP_SECURITY_START + i)
+        if not valid:
+            return
+
+        def on_select(action_id: int):
+            idx = action_id - SEL_OPP_SECURITY_START
+            opp = self.player2 if player is self.player1 else self.player1
+            if 0 <= idx < len(opp.security_cards):
+                callback(opp.security_cards[idx])
+
+        self.request_selection(
+            GamePhase.SelectSecurity, player, on_select, valid, is_optional)
 
     # ─── DNA Digivolve ────────────────────────────────────────────────
 

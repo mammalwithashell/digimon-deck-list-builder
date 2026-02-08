@@ -40,6 +40,7 @@ class GamePhase(Enum):
     SelectHand = 11        # Select card(s) from hand (effect-driven trash/discard)
     SelectReveal = 12      # Select from revealed cards (reveal-and-pick)
     SelectEffectChoice = 13  # Choose between multiple effect branches
+    SelectSecurity = 14      # Select from own or opponent's security stack
 
 class PendingAction(Enum):
     NO_ACTION = 0
