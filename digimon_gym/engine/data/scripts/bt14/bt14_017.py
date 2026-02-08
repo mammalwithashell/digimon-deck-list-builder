@@ -32,7 +32,7 @@ class BT14_017(CardScript):
         effect1 = ICardEffect()
         effect1.set_effect_name("BT14-017 DP modifier")
         effect1.set_effect_description("DP modifier")
-        effect1.dp_modifier = 0  # TODO: extract DP value from C# source
+        effect1.dp_modifier = 4000  # Main: +4000 DP while opponent has 1+ memory
         def condition1(context: Dict[str, Any]) -> bool:
             return True
         effect1.set_can_use_condition(condition1)

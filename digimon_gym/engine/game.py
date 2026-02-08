@@ -29,7 +29,7 @@ if TYPE_CHECKING:
     from .core.card_source import CardSource
 
 # ─── Tensor / Action Space Constants (match C# Digimon.Core) ────────
-TENSOR_SIZE = 680
+TENSOR_SIZE = 695
 ACTION_SPACE_SIZE = 2120
 FIELD_SLOTS = 12
 SLOT_SIZE = 20
@@ -37,6 +37,21 @@ MAX_HAND = 20
 MAX_TRASH = 45
 MAX_SECURITY = 10
 MAX_SOURCES = 15
+MAX_REVEALED = 10
+
+# ─── Selection Action Conventions ───────────────────────────────────
+# When in SelectTarget/SelectMaterial/SelectHand/SelectReveal, valid_indices
+# use these ranges so the RL agent can distinguish what it's selecting:
+SEL_HAND_START = 0         # 0-29:     select hand card by index
+SEL_HAND_END = 29
+SEL_REVEALED_START = 30    # 30-39:    select from revealed cards
+SEL_REVEALED_END = 39
+SEL_MY_FIELD_START = 100   # 100-111:  select own battle_area permanent
+SEL_MY_FIELD_END = 111
+SEL_OPP_FIELD_START = 112  # 112-123:  select opponent's battle_area permanent
+SEL_OPP_FIELD_END = 123
+SEL_EFFECT_CHOICE_START = 1000  # 1000-1009: choose between effect branches
+SEL_EFFECT_CHOICE_END = 1009
 
 
 @dataclass
@@ -56,6 +71,7 @@ class PendingSelection:
     selecting_player: Player
     previous_phase: GamePhase
     valid_indices: List[int] = field(default_factory=list)
+    is_optional: bool = False  # if True, player can decline with action 62
 
 
 class Game:
@@ -89,6 +105,9 @@ class Game:
         self.pending_attack: Optional[PendingAttack] = None
         self.pending_selection: Optional[PendingSelection] = None
         self.active_player: Optional[Player] = None  # None = turn_player
+
+        # Revealed cards zone (for reveal-and-select effects)
+        self.revealed_cards: List['CardSource'] = []
 
     @property
     def current_player_id(self) -> int:
@@ -506,7 +525,7 @@ class Game:
     # ─── Board State Tensor ──────────────────────────────────────────
 
     def get_board_state_tensor(self, player_id: int) -> List[float]:
-        """Build a 680-float tensor representing the board from player's perspective.
+        """Build a 695-float tensor representing the board from player's perspective.
 
         Layout matches C# Digimon.Core.Game.GetBoardStateTensor exactly:
           [0-9]     Global data
@@ -563,6 +582,25 @@ class Game:
         # --- Opp breeding [660-679] ---
         opp_breeding_list = [opp.breeding_area] if opp.breeding_area else []
         self._append_field(t, opp_breeding_list, 1)
+
+        # --- Revealed cards [680-689] ---
+        self._append_card_ids(t, self.revealed_cards, MAX_REVEALED)
+
+        # --- Selection context [690-694] ---
+        # 690: selection phase type (0=none, 5=SelectTarget, 6=SelectMaterial, etc.)
+        # 691: number of valid selections
+        # 692: selecting player (0=none, 1=player1, 2=player2)
+        # 693-694: reserved
+        ps = self.pending_selection
+        t.append(float(self.current_phase.value) if self.current_phase in (
+            GamePhase.SelectTarget, GamePhase.SelectMaterial,
+            GamePhase.SelectTrash, GamePhase.SelectSource,
+            GamePhase.SelectHand, GamePhase.SelectReveal,
+            GamePhase.SelectEffectChoice,
+        ) else 0.0)
+        t.append(float(len(ps.valid_indices)) if ps else 0.0)
+        t.append(float(ps.selecting_player.player_id) if ps else 0.0)
+        t.extend([0.0, 0.0])  # reserved
 
         return t
 
@@ -720,13 +758,18 @@ class Game:
                 for s in range(min(len(perm.card_sources), 10)):
                     mask[2000 + f * 10 + s] = 1.0
 
-        elif phase in (GamePhase.SelectTarget, GamePhase.SelectMaterial):
-            # Use valid_indices from pending selection if available
+        elif phase in (GamePhase.SelectTarget, GamePhase.SelectMaterial,
+                       GamePhase.SelectHand, GamePhase.SelectReveal,
+                       GamePhase.SelectEffectChoice):
+            # Generic selection: use valid_indices from pending selection
             ps = self.pending_selection
             if ps and ps.valid_indices:
                 for idx in ps.valid_indices:
                     if 0 <= idx < ACTION_SPACE_SIZE:
                         mask[idx] = 1.0
+            # Optional selections allow declining (pass)
+            if ps and getattr(ps, 'is_optional', False):
+                mask[62] = 1.0
 
         return mask
 
@@ -743,7 +786,9 @@ class Game:
             self._decode_main(action_id)
         elif phase == GamePhase.Breeding:
             self._decode_breeding(action_id)
-        elif phase in (GamePhase.SelectTarget, GamePhase.SelectMaterial):
+        elif phase in (GamePhase.SelectTarget, GamePhase.SelectMaterial,
+                       GamePhase.SelectHand, GamePhase.SelectReveal,
+                       GamePhase.SelectEffectChoice):
             self._decode_selection(action_id)
         elif phase == GamePhase.BlockTiming:
             self._decode_block(action_id)
@@ -788,6 +833,15 @@ class Game:
         """Handle target or material selection from an effect callback."""
         ps = self.pending_selection
         if ps is None:
+            return
+
+        # Optional selection: action 62 = decline/pass
+        if action_id == 62 and getattr(ps, 'is_optional', False):
+            prev_phase = ps.previous_phase
+            self.pending_selection = None
+            self.revealed_cards = []  # clear any revealed cards
+            self.current_phase = prev_phase
+            self.active_player = None
             return
 
         if ps.valid_indices and action_id not in ps.valid_indices:
@@ -931,21 +985,307 @@ class Game:
 
     def request_selection(self, phase: GamePhase, player: Player,
                           callback: Callable[[int], None],
-                          valid_indices: Optional[List[int]] = None):
+                          valid_indices: Optional[List[int]] = None,
+                          is_optional: bool = False):
         """Pause the game to request a selection from the given player.
 
         Used by effect callbacks that need player input (target, trash, source).
         The game transitions to the specified phase and parks until the
         player's agent provides a selection via decode_action().
+
+        Args:
+            phase: The GamePhase to transition to during selection.
+            player: The player who must make the selection.
+            callback: Called with the selected action_id when chosen.
+            valid_indices: List of valid action IDs the player can choose from.
+            is_optional: If True, the player can decline (action 62 = pass).
         """
         self.pending_selection = PendingSelection(
             callback=callback,
             selecting_player=player,
             previous_phase=self.current_phase,
             valid_indices=valid_indices or [],
+            is_optional=is_optional,
         )
         self.current_phase = phase
         self.active_player = player
+
+    # ─── Effect Helper Methods ─────────────────────────────────────────
+    # These helpers implement common effect patterns that card scripts use.
+    # They handle selection conventions, tensor integration, and callbacks.
+
+    def effect_select_opponent_permanent(
+        self, player: Player, callback: Callable[['Permanent'], None],
+        filter_fn: Optional[Callable[['Permanent'], bool]] = None,
+        is_optional: bool = False,
+    ):
+        """Request selection of an opponent's permanent (for delete, suspend, bounce, etc.).
+
+        Covers: delete_opponent (34 cards), suspend_target (19), return_bounce (15),
+        de_digivolve (13) = 81 cards total.
+
+        Args:
+            player: The player whose effect is triggering.
+            callback: Called with the selected Permanent.
+            filter_fn: Optional filter (e.g. lambda p: p.dp <= 5000).
+            is_optional: If True, player can decline.
+        """
+        opponent = self.player2 if player is self.player1 else self.player1
+        valid = []
+        for i, perm in enumerate(opponent.battle_area):
+            if filter_fn is None or filter_fn(perm):
+                valid.append(SEL_OPP_FIELD_START + i)
+        if not valid:
+            return
+
+        def on_select(action_id: int):
+            idx = action_id - SEL_OPP_FIELD_START
+            opp = self.player2 if player is self.player1 else self.player1
+            if 0 <= idx < len(opp.battle_area):
+                callback(opp.battle_area[idx])
+
+        self.request_selection(
+            GamePhase.SelectTarget, player, on_select, valid, is_optional)
+
+    def effect_select_own_permanent(
+        self, player: Player, callback: Callable[['Permanent'], None],
+        filter_fn: Optional[Callable[['Permanent'], bool]] = None,
+        is_optional: bool = False,
+    ):
+        """Request selection of one of the player's own permanents.
+
+        Covers: mind_link (3 cards), save (2), sacrifice_cost (12) = 17 cards.
+
+        Args:
+            player: The player making the selection.
+            callback: Called with the selected Permanent.
+            filter_fn: Optional filter (e.g. lambda p: 'SoC' in p.traits).
+            is_optional: If True, player can decline.
+        """
+        valid = []
+        for i, perm in enumerate(player.battle_area):
+            if filter_fn is None or filter_fn(perm):
+                valid.append(SEL_MY_FIELD_START + i)
+        if not valid:
+            return
+
+        def on_select(action_id: int):
+            idx = action_id - SEL_MY_FIELD_START
+            if 0 <= idx < len(player.battle_area):
+                callback(player.battle_area[idx])
+
+        self.request_selection(
+            GamePhase.SelectTarget, player, on_select, valid, is_optional)
+
+    def effect_reveal_and_select(
+        self, player: Player, count: int,
+        filter_fn: Callable[['CardSource'], bool],
+        on_selected: Callable[['CardSource', List['CardSource']], None],
+        is_optional: bool = False,
+    ):
+        """Reveal top N cards, let agent pick one matching filter, return rest to bottom.
+
+        Covers: reveal_top (28 cards).
+
+        Args:
+            player: The player revealing cards.
+            count: Number of cards to reveal.
+            filter_fn: Which revealed cards are valid picks.
+            on_selected: Called with (selected_card, remaining_cards).
+            is_optional: If True, player can decline (all go to bottom).
+        """
+        revealed = player.library_cards[:count]
+        if not revealed:
+            return
+
+        # Store in game state so tensor can see them
+        self.revealed_cards = list(revealed)
+
+        valid = []
+        for i, card in enumerate(revealed):
+            if filter_fn(card):
+                valid.append(SEL_REVEALED_START + i)
+        if not valid:
+            # No valid picks — return all to bottom
+            for card in revealed:
+                player.library_cards.remove(card)
+                player.library_cards.append(card)
+            self.revealed_cards = []
+            return
+
+        def on_select(action_id: int):
+            idx = action_id - SEL_REVEALED_START
+            if 0 <= idx < len(revealed):
+                selected = revealed[idx]
+                remaining = [c for c in revealed if c is not selected]
+                # Remove all revealed from library top
+                for c in revealed:
+                    if c in player.library_cards:
+                        player.library_cards.remove(c)
+                on_selected(selected, remaining)
+            self.revealed_cards = []
+
+        self.request_selection(
+            GamePhase.SelectReveal, player, on_select, valid, is_optional)
+
+    def effect_play_from_zone(
+        self, player: Player,
+        zone: str,
+        filter_fn: Callable[['CardSource'], bool],
+        free: bool = True,
+        is_optional: bool = True,
+    ):
+        """Let agent pick a card from a zone to play onto the field.
+
+        Covers: play (85 cards).
+
+        Args:
+            player: The player whose effect triggers.
+            zone: 'hand', 'trash', or 'revealed' (which zone to pick from).
+            filter_fn: Which cards in the zone are valid.
+            free: If True, play without paying cost.
+            is_optional: If True, player can decline.
+        """
+        if zone == 'hand':
+            source_list = player.hand_cards
+            offset = SEL_HAND_START
+        elif zone == 'trash':
+            source_list = player.trash_cards
+            offset = SEL_HAND_START  # reuse 0-29 for trash in SelectTarget
+        elif zone == 'revealed':
+            source_list = list(self.revealed_cards)
+            offset = SEL_REVEALED_START
+        else:
+            return
+
+        valid = []
+        for i, card in enumerate(source_list):
+            if filter_fn(card) and (offset + i) < ACTION_SPACE_SIZE:
+                valid.append(offset + i)
+        if not valid:
+            return
+
+        def on_select(action_id: int):
+            idx = action_id - offset
+            if 0 <= idx < len(source_list):
+                card = source_list[idx]
+                player.play_card_from_source(card, pay_cost=not free)
+                self.logger.log(f"[Effect] {player.player_name} played "
+                                f"{card.card_names[0]} from {zone}")
+                self.execute_effects(EffectTiming.OnEnterFieldAnyone,
+                                     {"played_card": card})
+
+        phase = GamePhase.SelectReveal if zone == 'revealed' else GamePhase.SelectTarget
+        self.request_selection(phase, player, on_select, valid, is_optional)
+
+    def effect_digivolve_from_hand(
+        self, player: Player, permanent: 'Permanent',
+        filter_fn: Callable[['CardSource'], bool],
+        cost_override: Optional[int] = None,
+        cost_reduction: int = 0,
+        ignore_requirements: bool = False,
+        is_optional: bool = True,
+    ):
+        """Let agent pick a hand card to digivolve a permanent into via effect.
+
+        Covers: digivolve_into (52 cards).
+
+        Args:
+            player: The card owner.
+            permanent: The permanent to digivolve.
+            filter_fn: Which hand cards are valid digivolution targets.
+            cost_override: Fixed cost (None = use card's evo cost).
+            cost_reduction: Reduce normal evo cost by this amount.
+            ignore_requirements: If True, skip level/color requirements.
+            is_optional: If True, player can decline.
+        """
+        valid = []
+        for i, card in enumerate(player.hand_cards):
+            if filter_fn(card):
+                valid.append(SEL_HAND_START + i)
+        if not valid:
+            return
+
+        def on_select(action_id: int):
+            idx = action_id - SEL_HAND_START
+            if 0 <= idx < len(player.hand_cards):
+                card = player.hand_cards[idx]
+                if cost_override is not None:
+                    cost = cost_override
+                else:
+                    base = card.get_cost_itself
+                    cost = max(0, base - cost_reduction)
+                # Stack card onto permanent
+                player.hand_cards.remove(card)
+                permanent.add_card_source(card)
+                self.memory -= cost
+                self.logger.log(
+                    f"[Effect Digivolve] {card.card_names[0]} onto "
+                    f"{permanent.top_card.card_names[0] if permanent.top_card else 'Unknown'} "
+                    f"(cost: {cost})")
+                # Draw 1 (digivolution bonus)
+                player.draw()
+                self.execute_effects(EffectTiming.WhenDigivolving,
+                                     {"digivolved_permanent": permanent})
+                self.execute_effects(EffectTiming.OnEnterFieldAnyone,
+                                     {"played_card": card})
+
+        self.request_selection(
+            GamePhase.SelectTarget, player, on_select, valid, is_optional)
+
+    def effect_select_hand_card(
+        self, player: Player,
+        filter_fn: Callable[['CardSource'], bool],
+        callback: Callable[['CardSource'], None],
+        is_optional: bool = False,
+    ):
+        """Let agent pick a card from hand (for trash-as-cost, discard, etc.).
+
+        Covers: trash_selection (19 cards), general hand picks.
+
+        Args:
+            player: The player selecting.
+            filter_fn: Which hand cards are valid.
+            callback: Called with the selected CardSource.
+            is_optional: If True, player can decline.
+        """
+        valid = []
+        for i, card in enumerate(player.hand_cards):
+            if filter_fn(card):
+                valid.append(SEL_HAND_START + i)
+        if not valid:
+            return
+
+        def on_select(action_id: int):
+            idx = action_id - SEL_HAND_START
+            if 0 <= idx < len(player.hand_cards):
+                callback(player.hand_cards[idx])
+
+        self.request_selection(
+            GamePhase.SelectHand, player, on_select, valid, is_optional)
+
+    def effect_choose_branch(
+        self, player: Player, num_choices: int,
+        callback: Callable[[int], None],
+    ):
+        """Let agent choose between N effect branches ("activate 1 of the effects below").
+
+        Covers: multi_choice (2 cards).
+
+        Args:
+            player: The player choosing.
+            num_choices: Number of branches (typically 2-3).
+            callback: Called with the branch index (0-based).
+        """
+        valid = [SEL_EFFECT_CHOICE_START + i for i in range(num_choices)]
+
+        def on_select(action_id: int):
+            branch = action_id - SEL_EFFECT_CHOICE_START
+            if 0 <= branch < num_choices:
+                callback(branch)
+
+        self.request_selection(
+            GamePhase.SelectEffectChoice, player, on_select, valid)
 
     # ─── DNA Digivolve ────────────────────────────────────────────────
 

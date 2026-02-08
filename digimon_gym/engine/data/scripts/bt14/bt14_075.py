@@ -45,15 +45,27 @@ class BT14_075(CardScript):
         effect1.set_can_use_condition(condition1)
         effects.append(effect1)
 
-        # Factory effect: dp_modifier
-        # DP modifier
+        # [Your Turn] This Digimon gets +1000 DP for every 3 cards in your trash.
+        # Dynamic DP — computed from trash count, not a flat modifier.
         effect2 = ICardEffect()
-        effect2.set_effect_name("BT14-075 DP modifier")
-        effect2.set_effect_description("DP modifier")
-        effect2.dp_modifier = 0  # TODO: extract DP value from C# source
+        effect2.set_effect_name("BT14-075 DP +1000 per 3 trash")
+        effect2.set_effect_description("[Your Turn] This Digimon gets +1000 DP for every 3 cards in your trash.")
+
         def condition2(context: Dict[str, Any]) -> bool:
-            return True
+            if card and card.permanent_of_this_card() is None:
+                return False
+            return card.owner is not None and card.owner.is_my_turn
+
         effect2.set_can_use_condition(condition2)
+
+        def process2(ctx: Dict[str, Any]):
+            player = ctx.get('player')
+            perm = ctx.get('permanent')
+            if player and perm:
+                bonus = (len(player.trash_cards) // 3) * 1000
+                perm.change_dp(bonus)
+
+        effect2.set_on_process_callback(process2)
         effects.append(effect2)
 
         # Timing: EffectTiming.OnDestroyedAnyone

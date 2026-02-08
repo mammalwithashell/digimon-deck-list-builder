@@ -121,7 +121,7 @@ IGameLogger (ABC)
 from digimon_gym.digimon_gym import DigimonEnv
 
 env = DigimonEnv()
-obs, info = env.reset()                     # (680,) float32, info has 'action_mask'
+obs, info = env.reset()                     # (695,) float32, info has 'action_mask'
 obs, reward, terminated, truncated, info = env.step(action)  # Gymnasium v1.0 API
 mask = env.action_mask()                    # (2120,) int8 for SB3 MaskablePPO
 ```
@@ -148,17 +148,28 @@ Phases flow: `Start -> Draw -> Breeding -> Main -> End -> (next turn)`
 | 30-59 | Trash card from hand (index) |
 | 60 | Hatch from egg deck |
 | 61 | Move from breeding area |
-| 62 | Pass turn / breeding pass |
+| 62 | Pass turn / breeding pass / decline optional |
+| 63-92 | DNA Digivolve (hand index) |
 | 100-399 | Attack with permanent (slot x target) |
-| 400-999 | Digivolve (slot x source) |
-| 1000-1999 | Effect selection |
-| 2000-2119 | Source selection |
+| 400-999 | Digivolve (hand x field) |
+| 1000-1999 | Effect activation (source x effectIdx) |
+| 2000-2119 | Source selection (field x sourceIdx) |
+
+**Selection conventions** (used in `SelectTarget`/`SelectMaterial`/`SelectHand`/`SelectReveal`):
+
+| Range | Selection Meaning |
+|-------|-------------------|
+| 0-29 | Select hand card by index |
+| 30-39 | Select from revealed cards |
+| 100-111 | Select own battle_area permanent |
+| 112-123 | Select opponent's battle_area permanent |
+| 1000-1009 | Choose between effect branches |
 
 Action masking via `get_action_mask()` / `action_mask()` enforces legal moves.
 
 ### Core Classes
 
-- **`Game`** (`engine/game.py`) — Orchestrates turns, phases, combat resolution. 680-element tensor, 2120 action space.
+- **`Game`** (`engine/game.py`) — Orchestrates turns, phases, combat resolution. 695-element tensor (680 board + 10 revealed + 5 selection context), 2120 action space.
 - **`Player`** (`engine/core/player.py`) — Manages board zones: `hand_cards`, `library_cards`, `security_cards`, `trash_cards`, `breeding_area`, `battle_area`, `digitama_library_cards`
 - **`CardSource`** (`engine/core/card_source.py`) — Runtime card instance wrapping `CEntity_Base`
 - **`Permanent`** (`engine/core/permanent.py`) — A digimon/tamer on the field with digivolution stack
@@ -202,7 +213,8 @@ Card abilities are implemented as per-card scripts:
 
 ## Known Gaps
 
-- 5 phase decoders are stubbed: `_decode_block`, `_decode_counter`, `_decode_selection`, `_decode_trash_selection`, `_decode_source_selection`
+- ~110 card scripts have stubbed effect callbacks (target selection, reveal-and-select, digivolve, mind link). Game helper methods are in place — scripts need updating to use them.
 - No CI/CD pipeline
 - No frontend implementation yet (React planned)
 - `test_rl_gym.py` uses old `python_impl` imports
+- Q-DeckRec agent not yet implemented (architecture specced in AGENTS.md)

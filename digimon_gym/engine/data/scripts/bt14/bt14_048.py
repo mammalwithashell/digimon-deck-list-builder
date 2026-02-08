@@ -43,7 +43,7 @@ class BT14_048(CardScript):
         effect1 = ICardEffect()
         effect1.set_effect_name("BT14-048 DP modifier")
         effect1.set_effect_description("DP modifier")
-        effect1.dp_modifier = 0  # TODO: extract DP value from C# source
+        effect1.dp_modifier = 2000  # Inherited: +2000 DP while name contains [Leomon]
         def condition1(context: Dict[str, Any]) -> bool:
             return True
         effect1.set_can_use_condition(condition1)

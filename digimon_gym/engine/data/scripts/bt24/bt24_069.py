@@ -50,14 +50,16 @@ class BT24_069(CardScript):
         effect2.set_can_use_condition(condition2)
         effects.append(effect2)
 
-        # Factory effect: dp_modifier
-        # DP modifier
+        # [All Turns] While opponent has 10+ trash, gains Blocker and +2000 DP.
+        # Blocker is handled by effect2 above. DP is conditional.
         effect3 = ICardEffect()
-        effect3.set_effect_name("BT24-069 DP modifier")
-        effect3.set_effect_description("DP modifier")
-        effect3.dp_modifier = 0  # TODO: extract DP value from C# source
+        effect3.set_effect_name("BT24-069 DP +2000 (conditional)")
+        effect3.set_effect_description("[All Turns] While opponent has 10+ trash, +2000 DP.")
+        effect3.dp_modifier = 2000  # Conditional: only when opponent has 10+ trash cards
         def condition3(context: Dict[str, Any]) -> bool:
-            return True
+            if card and card.owner and card.owner.enemy:
+                return len(card.owner.enemy.trash_cards) >= 10
+            return False
         effect3.set_can_use_condition(condition3)
         effects.append(effect3)
 
