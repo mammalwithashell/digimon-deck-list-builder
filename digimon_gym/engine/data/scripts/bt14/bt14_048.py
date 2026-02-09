@@ -30,10 +30,21 @@ class BT14_048(CardScript):
         effect0.set_can_use_condition(condition0)
 
         def process0(ctx: Dict[str, Any]):
-            """Action: Digivolve"""
+            """Action: Digivolve into Lv6 [Leomon] for cost 6"""
             player = ctx.get('player')
             perm = ctx.get('permanent')
-            pass  # TODO: digivolve effect needs card selection
+            game = ctx.get('game')
+            if not (player and perm and game):
+                return
+            def is_lv6_leomon(c):
+                if not c.is_digimon:
+                    return False
+                if c.level != 6:
+                    return False
+                return any('Leomon' in n for n in c.card_names)
+            game.effect_digivolve_from_hand(
+                player, perm, is_lv6_leomon,
+                cost_override=6, ignore_requirements=True, is_optional=True)
 
         effect0.set_on_process_callback(process0)
         effects.append(effect0)
