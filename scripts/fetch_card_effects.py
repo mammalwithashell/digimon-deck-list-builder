@@ -21,7 +21,8 @@ API_URLS = {
 # Only keep cards whose IDs start with these exact prefixes
 VALID_SET_PREFIXES = ("BT14-", "BT24-", "ST1-", "BT23-")
 
-OUTPUT_PATH = Path("/home/user/digimon-deck-list-builder/digimon_gym/engine/data/card_effects_api.json")
+REPO_ROOT = Path(__file__).resolve().parent.parent
+OUTPUT_PATH = REPO_ROOT / "digimon_gym" / "engine" / "data" / "card_effects_api.json"
 
 
 def fetch_set(set_name, url):

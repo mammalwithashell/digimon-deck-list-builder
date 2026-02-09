@@ -50,6 +50,8 @@ SEL_MY_SECURITY_START = 40 # 40-49:    select from own security stack
 SEL_MY_SECURITY_END = 49
 SEL_OPP_SECURITY_START = 50 # 50-59:   select from opponent's security stack
 SEL_OPP_SECURITY_END = 59
+SEL_TRASH_START = 60       # 60-89:    select trash card by index
+SEL_TRASH_END = 89
 SEL_MY_BREEDING = 99       # 99:       select own breeding area permanent
 SEL_MY_FIELD_START = 100   # 100-111:  select own battle_area permanent
 SEL_MY_FIELD_END = 111
@@ -1178,7 +1180,7 @@ class Game:
             offset = SEL_HAND_START
         elif zone == 'trash':
             source_list = player.trash_cards
-            offset = SEL_HAND_START  # reuse 0-29 for trash in SelectTarget
+            offset = SEL_TRASH_START
         elif zone == 'revealed':
             source_list = list(self.revealed_cards)
             offset = SEL_REVEALED_START

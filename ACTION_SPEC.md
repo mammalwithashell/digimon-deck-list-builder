@@ -109,6 +109,7 @@ When an effect requires the player to choose a target, the game enters a selecti
 | 30-39 | Select from revealed cards |
 | 40-49 | Select from own security stack |
 | 50-59 | Select from opponent's security stack |
+| 60-89 | Select trash card by index |
 | 62 | Decline optional selection |
 | 99 | Select own breeding area permanent |
 | 100-111 | Select own battle area permanent |
