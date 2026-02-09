@@ -13,24 +13,17 @@ Requires: pip install stable-baselines3 sb3-contrib tensorboard
 """
 
 import os
-import sys
 import argparse
 import time
 from datetime import datetime
-from pathlib import Path
 from typing import Callable, Optional, List
 
 import numpy as np
 import gymnasium
-from gymnasium import spaces
 
 from sb3_contrib import MaskablePPO
 from sb3_contrib.common.wrappers import ActionMasker
-from stable_baselines3.common.callbacks import BaseCallback, EvalCallback
-from stable_baselines3.common.logger import TensorBoardOutputFormat
-
-# Ensure project root is importable
-sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
+from stable_baselines3.common.callbacks import BaseCallback
 
 from digimon_gym.digimon_gym import DigimonEnv, greedy_policy, ACTION_PASS_TURN
 from digimon_gym.engine.game import ACTION_SPACE_SIZE
@@ -140,6 +133,7 @@ class WinRateCallback(BaseCallback):
                  verbose: int = 1):
         super().__init__(verbose)
         self._eval_env_fn = eval_env_fn
+        self._eval_env: Optional[gymnasium.Env] = None
         self.eval_freq = eval_freq
         self.n_eval_episodes = n_eval_episodes
         self.games_played = 0
@@ -163,9 +157,17 @@ class WinRateCallback(BaseCallback):
 
         return True
 
+    def close(self):
+        """Clean up the reused evaluation environment."""
+        if self._eval_env is not None:
+            self._eval_env.close()
+            self._eval_env = None
+
     def _run_evaluation(self):
         """Run evaluation games and log win rate."""
-        eval_env = self._eval_env_fn()
+        if self._eval_env is None:
+            self._eval_env = self._eval_env_fn()
+        eval_env = self._eval_env
         wins = 0
         total_reward = 0.0
         total_steps = 0
@@ -233,14 +235,28 @@ def make_env(opponent: str = "greedy",
     if opponent == "self-play":
         env = base_env
     else:
-        opponent_fn = greedy_policy if opponent == "greedy" else random_policy
+        opponent_policies = {
+            "greedy": greedy_policy,
+            "random": random_policy,
+        }
+        try:
+            opponent_fn = opponent_policies[opponent]
+        except KeyError:
+            valid_opponents = list(opponent_policies.keys()) + ["self-play"]
+            raise ValueError(
+                f"Unknown opponent {opponent!r}. "
+                f"Expected one of {valid_opponents}."
+            )
         env = OpponentWrapper(base_env, opponent_fn=opponent_fn)
 
     def mask_fn(env):
-        # Unwrap to get the actual DigimonEnv
+        # Unwrap to reach DigimonEnv for the action mask
         unwrapped = env
-        while hasattr(unwrapped, 'env'):
-            unwrapped = unwrapped.env
+        while not isinstance(unwrapped, DigimonEnv):
+            if hasattr(unwrapped, 'env'):
+                unwrapped = unwrapped.env
+            else:
+                break
         return unwrapped.action_mask()
 
     return ActionMasker(env, mask_fn)
@@ -331,10 +347,13 @@ def train(total_timesteps: int = 100_000,
 
     # Train
     start = time.time()
-    model.learn(
-        total_timesteps=total_timesteps,
-        callback=win_rate_cb,
-    )
+    try:
+        model.learn(
+            total_timesteps=total_timesteps,
+            callback=win_rate_cb,
+        )
+    finally:
+        win_rate_cb.close()
     elapsed = time.time() - start
 
     if verbose:
