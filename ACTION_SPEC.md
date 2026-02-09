@@ -113,6 +113,7 @@ When an effect requires the player to choose a target, the game enters a selecti
 | 99 | Select own breeding area permanent |
 | 100-111 | Select own battle area permanent |
 | 112-123 | Select opponent's battle area permanent |
+| 130-179 | Select trash card by index (up to 50) |
 | 1000-1009 | Choose between effect branches |
 
 ### Selection Phases
