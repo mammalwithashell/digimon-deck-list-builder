@@ -191,15 +191,22 @@ class Permanent:
         return False
 
     @property
-    def opt_exhausted(self) -> bool:
-        """True if this permanent has once-per-turn effects and ALL are exhausted."""
-        opt_effects = []
+    def opt_total(self) -> int:
+        """Count of once-per-turn effects on this permanent (inherited + top + linked)."""
+        count = 0
         for effect in self.effect_list(EffectTiming.NoTiming):
             if effect.max_count_per_turn > 0:
-                opt_effects.append(effect)
-        if not opt_effects:
-            return False
-        return all(not e.can_activate_this_turn() for e in opt_effects)
+                count += 1
+        return count
+
+    @property
+    def opt_used(self) -> int:
+        """Count of once-per-turn effects that have been activated this turn."""
+        count = 0
+        for effect in self.effect_list(EffectTiming.NoTiming):
+            if effect.max_count_per_turn > 0 and not effect.can_activate_this_turn():
+                count += 1
+        return count
 
     def link_card(self, card: 'CardSource'):
         """Link an option card sideways to this permanent (e.g. [TS] options)."""
