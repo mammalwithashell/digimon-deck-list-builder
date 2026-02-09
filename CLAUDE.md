@@ -163,10 +163,11 @@ Phases flow: `Start -> Draw -> Breeding -> Main -> End -> (next turn)`
 | 30-39 | Select from revealed cards |
 | 40-49 | Select from own security stack |
 | 50-59 | Select from opponent's security stack |
-| 60-89 | Select trash card by index |
+| 62 | Decline optional selection |
 | 99 | Select own breeding area permanent |
 | 100-111 | Select own battle_area permanent |
 | 112-123 | Select opponent's battle_area permanent |
+| 130-179 | Select trash card by index (up to 50) |
 | 1000-1009 | Choose between effect branches |
 
 Action masking via `get_action_mask()` / `action_mask()` enforces legal moves.

@@ -50,13 +50,13 @@ SEL_MY_SECURITY_START = 40 # 40-49:    select from own security stack
 SEL_MY_SECURITY_END = 49
 SEL_OPP_SECURITY_START = 50 # 50-59:   select from opponent's security stack
 SEL_OPP_SECURITY_END = 59
-SEL_TRASH_START = 60       # 60-89:    select trash card by index
-SEL_TRASH_END = 89
 SEL_MY_BREEDING = 99       # 99:       select own breeding area permanent
 SEL_MY_FIELD_START = 100   # 100-111:  select own battle_area permanent
 SEL_MY_FIELD_END = 111
 SEL_OPP_FIELD_START = 112  # 112-123:  select opponent's battle_area permanent
 SEL_OPP_FIELD_END = 123
+SEL_TRASH_START = 130      # 130-179:  select trash card by index (up to 50)
+SEL_TRASH_END = 179
 SEL_EFFECT_CHOICE_START = 1000  # 1000-1009: choose between effect branches
 SEL_EFFECT_CHOICE_END = 1009
 
@@ -777,8 +777,9 @@ class Game:
                         mask[400 + h * 15 + f] = 1.0
 
         elif phase == GamePhase.SelectTrash:
-            for i in range(min(len(me.trash_cards), 60)):
-                mask[i] = 1.0
+            max_trash_sel = SEL_TRASH_END - SEL_TRASH_START + 1  # 50 slots
+            for i in range(min(len(me.trash_cards), max_trash_sel)):
+                mask[SEL_TRASH_START + i] = 1.0
 
         elif phase == GamePhase.SelectSource:
             # Source selection (2000-2119): 2000 + field*10 + sourceIdx
@@ -978,15 +979,16 @@ class Game:
         if ps is None:
             return
 
-        if 0 <= action_id <= 59:
+        if SEL_TRASH_START <= action_id <= SEL_TRASH_END:
+            idx = action_id - SEL_TRASH_START
             selecting = ps.selecting_player
-            if action_id < len(selecting.trash_cards):
+            if idx < len(selecting.trash_cards):
                 callback = ps.callback
                 prev_phase = ps.previous_phase
                 self.pending_selection = None
                 self.current_phase = prev_phase
                 self.active_player = None
-                callback(action_id)
+                callback(idx)
 
     def _decode_source_selection(self, action_id: int):
         """Handle digivolution source selection from an effect callback."""
