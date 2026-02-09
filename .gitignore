@@ -13,3 +13,4 @@ dcgo_build_errors_*
 .vscode/settings.json
 models/
 runs/
+.claude/settings.local.json

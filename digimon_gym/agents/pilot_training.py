@@ -138,8 +138,6 @@ class WinRateCallback(BaseCallback):
         self.n_eval_episodes = n_eval_episodes
         self.games_played = 0
         self._last_eval_step = 0
-        self._episode_rewards: List[float] = []
-        self._episode_lengths: List[int] = []
 
     def _on_step(self) -> bool:
         # Track episode completions from training
@@ -147,8 +145,6 @@ class WinRateCallback(BaseCallback):
         for info in infos:
             if "episode" in info:
                 self.games_played += 1
-                self._episode_rewards.append(info["episode"]["r"])
-                self._episode_lengths.append(info["episode"]["l"])
 
         # Periodic evaluation (only once per eval_freq interval)
         if self.num_timesteps - self._last_eval_step >= self.eval_freq:
@@ -174,18 +170,19 @@ class WinRateCallback(BaseCallback):
         total_steps = 0
 
         for _ in range(self.n_eval_episodes):
-            obs, info = eval_env.reset()
+            obs, _ = eval_env.reset()
             episode_reward = 0.0
             steps = 0
             done = False
 
             while not done:
-                mask = info["action_mask"]
+                # Derive mask via the same ActionMasker path used in training
+                mask = eval_env.action_masks()
                 action, _ = self.model.predict(
                     obs, deterministic=True,
                     action_masks=mask
                 )
-                obs, reward, terminated, truncated, info = eval_env.step(
+                obs, reward, terminated, truncated, _ = eval_env.step(
                     int(action)
                 )
                 episode_reward += reward
