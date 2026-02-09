@@ -344,6 +344,7 @@ def train(total_timesteps: int = 100_000,
         n_epochs=n_epochs,
         gamma=gamma,
         tensorboard_log=tensorboard_log,
+        verbose=verbose,
         verbose=0,
     )
 
