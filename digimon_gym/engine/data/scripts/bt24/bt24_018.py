@@ -36,11 +36,12 @@ class BT24_018(CardScript):
         effects.append(effect1)
 
         # Timing: EffectTiming.OnEnterFieldAnyone
-        # Effect
+        # [When Digivolving] May trash 1 opponent's security card. Then, may unsuspend.
         effect2 = ICardEffect()
         effect2.set_effect_name("BT24-018 May trash 1 opponent's security. Then, this may unsuspend.")
-        effect2.set_effect_description("Effect")
+        effect2.set_effect_description("[When Digivolving] May trash 1 opponent's security card, then may unsuspend.")
         effect2.is_on_play = True
+        effect2.is_optional = True
 
         def condition2(context: Dict[str, Any]) -> bool:
             if card and card.permanent_of_this_card() is None:
@@ -49,6 +50,31 @@ class BT24_018(CardScript):
             return True
 
         effect2.set_can_use_condition(condition2)
+
+        def process2(ctx: Dict[str, Any]):
+            """Action: Trash opponent's security, then unsuspend self."""
+            player = ctx.get('player')
+            perm = ctx.get('permanent')
+            game = ctx.get('game')
+            if not (player and game):
+                return
+            opponent = player.enemy if player else None
+            if not (opponent and opponent.security_cards):
+                return
+
+            def on_security_selected(sec_card):
+                opponent.trash_security_card(sec_card)
+                game.logger.log(f"[Effect] {player.player_name} trashed "
+                                f"{sec_card.card_names[0]} from opponent's security")
+                # Then, may unsuspend this Digimon
+                if perm and perm.is_suspended:
+                    perm.unsuspend()
+                    game.logger.log(f"[Effect] {perm.top_card.card_names[0] if perm.top_card else 'Unknown'} unsuspended")
+
+            game.effect_select_opponent_security(
+                player, None, on_security_selected, is_optional=True)
+
+        effect2.set_on_process_callback(process2)
         effects.append(effect2)
 
         # Timing: EffectTiming.OnLoseSecurity
@@ -66,14 +92,21 @@ class BT24_018(CardScript):
         effect3.set_can_use_condition(condition3)
 
         def process3(ctx: Dict[str, Any]):
-            """Action: Delete"""
+            """Action: Delete 1 opponent's Digimon."""
             player = ctx.get('player')
             perm = ctx.get('permanent')
-            # Delete: target selection needed for full impl
-            enemy = player.enemy if player else None
-            if enemy and enemy.battle_area:
-                target = min(enemy.battle_area, key=lambda p: p.dp)
-                enemy.delete_permanent(target)
+            game = ctx.get('game')
+            if not (player and game):
+                return
+
+            def on_target_selected(target_perm):
+                owner = target_perm.owner if hasattr(target_perm, 'owner') else player.enemy
+                if owner:
+                    owner.delete_permanent(target_perm)
+                    game.logger.log(f"[Effect] Deleted {target_perm.top_card.card_names[0] if target_perm.top_card else 'Unknown'}")
+
+            game.effect_select_opponent_permanent(
+                player, on_target_selected, is_optional=True)
 
         effect3.set_on_process_callback(process3)
         effects.append(effect3)

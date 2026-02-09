@@ -38,10 +38,36 @@ class BT14_090(CardScript):
         effect1.set_can_use_condition(condition1)
 
         def process1(ctx: Dict[str, Any]):
-            """Action: Digivolve"""
+            """Action: Place Greymon+MetalGreymon from trash, digivolve Agumon into WarGreymon"""
             player = ctx.get('player')
-            perm = ctx.get('permanent')
-            pass  # TODO: digivolve effect needs card selection
+            game = ctx.get('game')
+            if not (player and game):
+                return
+            def is_agumon(p):
+                return p.top_card and any('Agumon' in n for n in p.top_card.card_names)
+            def on_agumon_selected(agumon_perm):
+                greymon = None
+                metalgreymon = None
+                for tc in player.trash_cards:
+                    if not greymon and any('Greymon' in n and 'MetalGreymon' not in n for n in tc.card_names):
+                        greymon = tc
+                    elif not metalgreymon and any('MetalGreymon' in n for n in tc.card_names):
+                        metalgreymon = tc
+                if greymon:
+                    player.trash_cards.remove(greymon)
+                    agumon_perm.card_sources.insert(0, greymon)
+                if metalgreymon:
+                    player.trash_cards.remove(metalgreymon)
+                    agumon_perm.card_sources.insert(0, metalgreymon)
+                def is_wargreymon(c):
+                    if not c.is_digimon:
+                        return False
+                    return any('WarGreymon' in n for n in c.card_names)
+                game.effect_digivolve_from_hand(
+                    player, agumon_perm, is_wargreymon,
+                    cost_override=0, ignore_requirements=True, is_optional=True)
+            game.effect_select_own_permanent(
+                player, on_agumon_selected, filter_fn=is_agumon, is_optional=True)
 
         effect1.set_on_process_callback(process1)
         effects.append(effect1)
@@ -61,18 +87,23 @@ class BT14_090(CardScript):
         effect2.set_can_use_condition(condition2)
 
         def process2(ctx: Dict[str, Any]):
-            """Action: Play Card, Trash From Hand, Add To Hand"""
+            """Action: Play [Agumon] from hand or trash, add this card to hand"""
             player = ctx.get('player')
-            perm = ctx.get('permanent')
-            # Play a card (from hand/trash/reveal)
-            pass  # TODO: target selection for play_card
-            # Trash from hand (cost/effect)
-            if player and player.hand_cards:
-                player.trash_from_hand([player.hand_cards[-1]])
-            # Add card to hand (from trash/reveal)
-            if player and player.trash_cards:
-                card_to_add = player.trash_cards.pop()
-                player.hand_cards.append(card_to_add)
+            game = ctx.get('game')
+            if not (player and game):
+                return
+            def is_agumon(c):
+                return any('Agumon' in n for n in c.card_names)
+            has_in_hand = any(is_agumon(c) for c in player.hand_cards)
+            has_in_trash = any(is_agumon(c) for c in player.trash_cards)
+            if has_in_hand:
+                game.effect_play_from_zone(player, 'hand', is_agumon, free=True, is_optional=True)
+            elif has_in_trash:
+                game.effect_play_from_zone(player, 'trash', is_agumon, free=True, is_optional=True)
+            # Add this option card to hand
+            if card and card in player.trash_cards:
+                player.trash_cards.remove(card)
+                player.hand_cards.append(card)
 
         effect2.set_on_process_callback(process2)
         effects.append(effect2)

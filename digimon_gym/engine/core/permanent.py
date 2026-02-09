@@ -11,6 +11,7 @@ class Permanent:
         self.card_sources: List['CardSource'] = card_sources
         self.is_suspended: bool = False
         self._dp_modifiers: List[int] = []  # Temporary DP changes from effects
+        self.linked_cards: List['CardSource'] = []  # Option cards linked sideways (e.g. [TS])
 
     @property
     def digivolution_cards(self) -> List['CardSource']:
@@ -124,6 +125,12 @@ class Permanent:
             for eff in top_effects:
                 if not eff.is_inherited_effect:
                     effects.append(eff)
+        # Effects from linked option cards (not inherited)
+        for linked in self.linked_cards:
+            linked_effects = linked.effect_list(timing)
+            for eff in linked_effects:
+                if not eff.is_inherited_effect:
+                    effects.append(eff)
         return effects
 
     def add_card_source(self, card_source: 'CardSource'):
@@ -182,6 +189,83 @@ class Permanent:
         if self.top_card:
             return trait in self.top_card.card_traits
         return False
+
+    @property
+    def opt_total(self) -> int:
+        """Count of once-per-turn effects on this permanent (inherited + top + linked)."""
+        count = 0
+        for effect in self.effect_list(EffectTiming.NoTiming):
+            if effect.max_count_per_turn > 0:
+                count += 1
+        return count
+
+    @property
+    def opt_used(self) -> int:
+        """Count of once-per-turn effects that have been activated this turn."""
+        count = 0
+        for effect in self.effect_list(EffectTiming.NoTiming):
+            if effect.max_count_per_turn > 0 and not effect.can_activate_this_turn():
+                count += 1
+        return count
+
+    def source_opt_state(self, source: 'CardSource') -> float:
+        """Return OPT availability state for a specific source card.
+
+        Returns:
+          -1.0  — source has no once-per-turn effects
+           0.0  — all OPT effects exhausted this turn
+           1.0  — all OPT effects still available
+           0.0-1.0 — fraction available (e.g. 0.5 = 1 of 2 available)
+
+        For inherited sources (under top card), only considers inherited effects.
+        For the top card, considers non-inherited effects only.
+        """
+        is_under = source is not self.top_card
+        total = 0
+        available = 0
+        for effect in source.effect_list(EffectTiming.NoTiming):
+            if is_under and not effect.is_inherited_effect:
+                continue
+            if not is_under and effect.is_inherited_effect:
+                continue
+            if effect.max_count_per_turn > 0:
+                total += 1
+                if effect.can_activate_this_turn():
+                    available += 1
+        if total == 0:
+            return -1.0
+        return float(available) / float(total)
+
+    def source_dp_contribution(self, source: 'CardSource') -> float:
+        """Return the DP modifier this source currently contributes.
+
+        For inherited sources (under top card): sums dp_modifier from active
+        inherited effects whose can_use_condition passes right now (e.g. [Your Turn]
+        effects return 0 on the opponent's turn).
+        For the top card: sums dp_modifier from active non-inherited effects.
+        """
+        is_under = source is not self.top_card
+        total_dp = 0
+        ctx = {"permanent": self}
+        for effect in source.effect_list(EffectTiming.NoTiming):
+            if is_under and not effect.is_inherited_effect:
+                continue
+            if not is_under and effect.is_inherited_effect:
+                continue
+            if effect.dp_modifier != 0:
+                if effect.can_use_condition and effect.can_use_condition(ctx):
+                    total_dp += effect.dp_modifier
+        return float(total_dp)
+
+    def link_card(self, card: 'CardSource'):
+        """Link an option card sideways to this permanent (e.g. [TS] options)."""
+        self.linked_cards.append(card)
+
+    def unlink_all(self) -> List['CardSource']:
+        """Remove all linked cards and return them (for when permanent leaves field)."""
+        cards = list(self.linked_cards)
+        self.linked_cards.clear()
+        return cards
 
     def suspend(self):
         self.is_suspended = True

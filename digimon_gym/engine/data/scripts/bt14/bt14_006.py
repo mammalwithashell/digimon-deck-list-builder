@@ -32,10 +32,20 @@ class BT14_006(CardScript):
         effect0.set_can_use_condition(condition0)
 
         def process0(ctx: Dict[str, Any]):
-            """Action: Digivolve"""
+            """Action: Digivolve into discarded [Dark Animal]/[SoC] card"""
             player = ctx.get('player')
             perm = ctx.get('permanent')
-            pass  # TODO: digivolve effect needs card selection
+            game = ctx.get('game')
+            if not (player and perm and game):
+                return
+            def is_dark_animal_or_soc(c):
+                if not c.is_digimon:
+                    return False
+                traits = getattr(c, 'card_traits', []) or []
+                return any('Dark Animal' in t or 'SoC' in t for t in traits)
+            game.effect_digivolve_from_hand(
+                player, perm, is_dark_animal_or_soc,
+                cost_override=0, ignore_requirements=True, is_optional=True)
 
         effect0.set_on_process_callback(process0)
         effects.append(effect0)

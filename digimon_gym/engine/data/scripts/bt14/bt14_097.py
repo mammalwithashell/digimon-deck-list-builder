@@ -38,10 +38,29 @@ class BT14_097(CardScript):
         effect1.set_can_use_condition(condition1)
 
         def process1(ctx: Dict[str, Any]):
-            """Action: Digivolve"""
+            """Action: Digivolve non-white Digimon into [Sukamon] without cost"""
             player = ctx.get('player')
-            perm = ctx.get('permanent')
-            pass  # TODO: digivolve effect needs card selection
+            game = ctx.get('game')
+            if not (player and game):
+                return
+            from ....data.enums import CardColor
+            def is_non_white(p):
+                if not p.is_digimon:
+                    return False
+                if p.top_card:
+                    colors = getattr(p.top_card, 'card_colors', [])
+                    return CardColor.White not in colors
+                return True
+            def on_perm_selected(target_perm):
+                def is_sukamon(c):
+                    if not c.is_digimon:
+                        return False
+                    return any('Sukamon' in n for n in c.card_names)
+                game.effect_digivolve_from_hand(
+                    player, target_perm, is_sukamon,
+                    cost_override=0, ignore_requirements=True, is_optional=True)
+            game.effect_select_own_permanent(
+                player, on_perm_selected, filter_fn=is_non_white, is_optional=True)
 
         effect1.set_on_process_callback(process1)
         effects.append(effect1)

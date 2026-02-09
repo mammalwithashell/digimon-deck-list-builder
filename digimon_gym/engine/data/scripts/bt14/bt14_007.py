@@ -30,10 +30,25 @@ class BT14_007(CardScript):
         effect0.set_can_use_condition(condition0)
 
         def process0(ctx: Dict[str, Any]):
-            """Action: Digivolve"""
+            """Action: Digivolve into [Greymon] without cost"""
             player = ctx.get('player')
             perm = ctx.get('permanent')
-            pass  # TODO: digivolve effect needs card selection
+            game = ctx.get('game')
+            if not (player and perm and game):
+                return
+            has_tai = any(
+                p.top_card and any('Tai Kamiya' in n for n in p.top_card.card_names)
+                for p in player.battle_area if p.is_tamer
+            )
+            if not has_tai:
+                return
+            def is_greymon(c):
+                if not c.is_digimon:
+                    return False
+                return any('Greymon' in n for n in c.card_names)
+            game.effect_digivolve_from_hand(
+                player, perm, is_greymon,
+                cost_override=0, ignore_requirements=True, is_optional=True)
 
         effect0.set_on_process_callback(process0)
         effects.append(effect0)
@@ -43,7 +58,7 @@ class BT14_007(CardScript):
         effect1 = ICardEffect()
         effect1.set_effect_name("BT14-007 DP modifier")
         effect1.set_effect_description("DP modifier")
-        effect1.dp_modifier = 0  # TODO: extract DP value from C# source
+        effect1.dp_modifier = 2000  # Inherited: +2000 DP while name contains [Greymon] or [Omnimon]
         def condition1(context: Dict[str, Any]) -> bool:
             return True
         effect1.set_can_use_condition(condition1)
