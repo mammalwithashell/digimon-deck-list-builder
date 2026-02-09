@@ -29,10 +29,10 @@ if TYPE_CHECKING:
     from .core.card_source import CardSource
 
 # ─── Tensor / Action Space Constants (match C# Digimon.Core) ────────
-TENSOR_SIZE = 799
+TENSOR_SIZE = 981
 ACTION_SPACE_SIZE = 2120
 FIELD_SLOTS = 12
-SLOT_SIZE = 24
+SLOT_SIZE = 31
 MAX_HAND = 20
 MAX_TRASH = 45
 MAX_SECURITY = 10
@@ -533,22 +533,22 @@ class Game:
     # ─── Board State Tensor ──────────────────────────────────────────
 
     def get_board_state_tensor(self, player_id: int) -> List[float]:
-        """Build a 799-float tensor representing the board from player's perspective.
+        """Build a 981-float tensor representing the board from player's perspective.
 
         Layout:
           [0-9]     Global data
-          [10-297]  My battle area  (12 slots × 24)
-          [298-585] Opp battle area (12 slots × 24)
-          [586-605] My hand  (20)
-          [606-625] Opp hand (20)
-          [626-670] My trash (45)
-          [671-715] Opp trash (45)
-          [716-725] My security (10)
-          [726-735] Opp security (10)
-          [736-759] My breeding (1 slot × 24)
-          [760-783] Opp breeding (1 slot × 24)
-          [784-793] Revealed cards (10)
-          [794-798] Selection context (5)
+          [10-381]  My battle area  (12 slots × 31)
+          [382-753] Opp battle area (12 slots × 31)
+          [754-773] My hand  (20)
+          [774-793] Opp hand (20)
+          [794-838] My trash (45)
+          [839-883] Opp trash (45)
+          [884-893] My security (10)
+          [894-903] Opp security (10)
+          [904-934] My breeding (1 slot × 31)
+          [935-965] Opp breeding (1 slot × 31)
+          [966-975] Revealed cards (10)
+          [976-980] Selection context (5)
         """
         me = self.player1 if player_id == 1 else self.player2
         opp = self.player2 if player_id == 1 else self.player1
@@ -561,46 +561,42 @@ class Game:
         t.append(float(self._get_memory_for(me)))                   # 2
         t.extend([0.0] * 7)                                        # 3-9 reserved
 
-        # --- My field [10-297] ---
+        # --- My field [10-381] ---
         self._append_field(t, me.battle_area, FIELD_SLOTS)
 
-        # --- Opp field [298-585] ---
+        # --- Opp field [382-753] ---
         self._append_field(t, opp.battle_area, FIELD_SLOTS)
 
-        # --- My hand [586-605] ---
+        # --- My hand [754-773] ---
         self._append_card_ids(t, me.hand_cards, MAX_HAND)
 
-        # --- Opp hand [606-625] ---
+        # --- Opp hand [774-793] ---
         self._append_card_ids(t, opp.hand_cards, MAX_HAND)
 
-        # --- My trash [626-670] ---
+        # --- My trash [794-838] ---
         self._append_card_ids(t, me.trash_cards, MAX_TRASH)
 
-        # --- Opp trash [671-715] ---
+        # --- Opp trash [839-883] ---
         self._append_card_ids(t, opp.trash_cards, MAX_TRASH)
 
-        # --- My security [716-725] ---
+        # --- My security [884-893] ---
         self._append_card_ids(t, me.security_cards, MAX_SECURITY)
 
-        # --- Opp security [726-735] ---
+        # --- Opp security [894-903] ---
         self._append_card_ids(t, opp.security_cards, MAX_SECURITY)
 
-        # --- My breeding [736-759] ---
+        # --- My breeding [904-934] ---
         breeding_list = [me.breeding_area] if me.breeding_area else []
         self._append_field(t, breeding_list, 1)
 
-        # --- Opp breeding [760-783] ---
+        # --- Opp breeding [935-965] ---
         opp_breeding_list = [opp.breeding_area] if opp.breeding_area else []
         self._append_field(t, opp_breeding_list, 1)
 
-        # --- Revealed cards [784-793] ---
+        # --- Revealed cards [966-975] ---
         self._append_card_ids(t, self.revealed_cards, MAX_REVEALED)
 
-        # --- Selection context [794-798] ---
-        # 690: selection phase type (0=none, 5=SelectTarget, 6=SelectMaterial, etc.)
-        # 691: number of valid selections
-        # 692: selecting player (0=none, 1=player1, 2=player2)
-        # 693-694: reserved
+        # --- Selection context [976-980] ---
         ps = self.pending_selection
         t.append(float(self.current_phase.value) if self.current_phase in (
             GamePhase.SelectTarget, GamePhase.SelectMaterial,
@@ -622,7 +618,7 @@ class Game:
 
     @staticmethod
     def _append_field(tensor: List[float], permanents: List[Permanent], slots: int):
-        """Append field slot data: per slot 24 floats.
+        """Append field slot data: per slot 31 floats.
 
         Layout per slot:
           +0:  top card internal ID
@@ -632,10 +628,11 @@ class Game:
           +4:  OPT used  (count of OPT effects activated this turn)
           +5:  linked card count
           +6:  source count
-          +7:  reserved
-          +8..+23: 8 source entries × 2 floats each:
-                   [card_id, opt_state]
+          +7..+30: 8 source entries × 3 floats each:
+                   [card_id, opt_state, dp_contribution]
                    opt_state: -1.0 = no OPT, 0.0 = exhausted, 1.0 = available
+                   dp_contribution: DP modifier this source currently provides
+                     (reflects turn-specific conditions, e.g. [Your Turn] +2000)
         """
         for i in range(slots):
             if i < len(permanents):
@@ -655,16 +652,15 @@ class Game:
                 tensor.append(float(len(perm.linked_cards)))
                 # +6: source count
                 tensor.append(float(len(perm.card_sources)))
-                # +7: reserved
-                tensor.append(0.0)
-                # +8..+23: source entries [card_id, opt_state] × 8
+                # +7..+30: source entries [card_id, opt_state, dp_contribution] × 8
                 for j in range(MAX_SOURCES):
                     if j < len(perm.card_sources):
                         src = perm.card_sources[j]
                         tensor.append(float(CardRegistry.get_id(src.card_id)))
                         tensor.append(perm.source_opt_state(src))
+                        tensor.append(perm.source_dp_contribution(src))
                     else:
-                        tensor.extend([0.0, 0.0])
+                        tensor.extend([0.0, 0.0, 0.0])
             else:
                 tensor.extend([0.0] * SLOT_SIZE)
 

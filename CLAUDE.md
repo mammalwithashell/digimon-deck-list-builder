@@ -121,7 +121,7 @@ IGameLogger (ABC)
 from digimon_gym.digimon_gym import DigimonEnv
 
 env = DigimonEnv()
-obs, info = env.reset()                     # (799,) float32, info has 'action_mask'
+obs, info = env.reset()                     # (981,) float32, info has 'action_mask'
 obs, reward, terminated, truncated, info = env.step(action)  # Gymnasium v1.0 API
 mask = env.action_mask()                    # (2120,) int8 for SB3 MaskablePPO
 ```
@@ -172,7 +172,7 @@ Action masking via `get_action_mask()` / `action_mask()` enforces legal moves.
 
 ### Core Classes
 
-- **`Game`** (`engine/game.py`) — Orchestrates turns, phases, combat resolution. 799-element tensor (784 board + 10 revealed + 5 selection context), 2120 action space.
+- **`Game`** (`engine/game.py`) — Orchestrates turns, phases, combat resolution. 981-element tensor (966 board + 10 revealed + 5 selection context), 2120 action space.
 - **`Player`** (`engine/core/player.py`) — Manages board zones: `hand_cards`, `library_cards`, `security_cards`, `trash_cards`, `breeding_area`, `battle_area`, `digitama_library_cards`
 - **`CardSource`** (`engine/core/card_source.py`) — Runtime card instance wrapping `CEntity_Base`
 - **`Permanent`** (`engine/core/permanent.py`) — A digimon/tamer on the field with digivolution stack

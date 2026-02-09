@@ -236,6 +236,27 @@ class Permanent:
             return -1.0
         return float(available) / float(total)
 
+    def source_dp_contribution(self, source: 'CardSource') -> float:
+        """Return the DP modifier this source currently contributes.
+
+        For inherited sources (under top card): sums dp_modifier from active
+        inherited effects whose can_use_condition passes right now (e.g. [Your Turn]
+        effects return 0 on the opponent's turn).
+        For the top card: sums dp_modifier from active non-inherited effects.
+        """
+        is_under = source is not self.top_card
+        total_dp = 0
+        ctx = {"permanent": self}
+        for effect in source.effect_list(EffectTiming.NoTiming):
+            if is_under and not effect.is_inherited_effect:
+                continue
+            if not is_under and effect.is_inherited_effect:
+                continue
+            if effect.dp_modifier != 0:
+                if effect.can_use_condition and effect.can_use_condition(ctx):
+                    total_dp += effect.dp_modifier
+        return float(total_dp)
+
     def link_card(self, card: 'CardSource'):
         """Link an option card sideways to this permanent (e.g. [TS] options)."""
         self.linked_cards.append(card)
