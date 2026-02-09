@@ -169,6 +169,7 @@ class WinRateCallback(BaseCallback):
             self._eval_env = self._eval_env_fn()
         eval_env = self._eval_env
         wins = 0
+        draws = 0
         total_reward = 0.0
         total_steps = 0
 
@@ -193,14 +194,24 @@ class WinRateCallback(BaseCallback):
 
             total_reward += episode_reward
             total_steps += steps
-            if episode_reward > 0:
-                wins += 1
+
+            # Use the actual game outcome instead of reward as a proxy
+            base_env = eval_env.unwrapped
+            game = getattr(base_env, 'game', None)
+            if game is not None and game.winner is not None:
+                if game.winner.player_id == 1:
+                    wins += 1
+            else:
+                draws += 1
 
         win_rate = wins / self.n_eval_episodes
         mean_reward = total_reward / self.n_eval_episodes
         mean_length = total_steps / self.n_eval_episodes
 
+        draw_rate = draws / self.n_eval_episodes
+
         self.logger.record("pilot/win_rate", win_rate)
+        self.logger.record("pilot/draw_rate", draw_rate)
         self.logger.record("pilot/mean_eval_reward", mean_reward)
         self.logger.record("pilot/mean_eval_episode_length", mean_length)
         self.logger.record("pilot/games_played", self.games_played)
@@ -256,7 +267,10 @@ def make_env(opponent: str = "greedy",
             if hasattr(unwrapped, 'env'):
                 unwrapped = unwrapped.env
             else:
-                break
+                raise RuntimeError(
+                    f"Could not find DigimonEnv in wrapper stack. "
+                    f"Innermost layer is {type(unwrapped).__name__}."
+                )
         return unwrapped.action_mask()
 
     return ActionMasker(env, mask_fn)
@@ -379,12 +393,13 @@ def main():
         "--timesteps", type=int, default=100_000,
         help="Total training timesteps (default: 100000)"
     )
-    parser.add_argument(
-        "--opponent", choices=["greedy", "random", "self-play"],
+    opponent_group = parser.add_mutually_exclusive_group()
+    opponent_group.add_argument(
+        "--opponent", choices=["greedy", "random"],
         default="greedy",
         help="Opponent policy (default: greedy)"
     )
-    parser.add_argument(
+    opponent_group.add_argument(
         "--self-play", action="store_true",
         help="Enable self-play (agent plays both sides)"
     )
