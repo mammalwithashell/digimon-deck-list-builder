@@ -29,14 +29,14 @@ if TYPE_CHECKING:
     from .core.card_source import CardSource
 
 # ─── Tensor / Action Space Constants (match C# Digimon.Core) ────────
-TENSOR_SIZE = 695
+TENSOR_SIZE = 799
 ACTION_SPACE_SIZE = 2120
 FIELD_SLOTS = 12
-SLOT_SIZE = 20
+SLOT_SIZE = 24
 MAX_HAND = 20
 MAX_TRASH = 45
 MAX_SECURITY = 10
-MAX_SOURCES = 13
+MAX_SOURCES = 8
 MAX_REVEALED = 10
 
 # ─── Selection Action Conventions ───────────────────────────────────
@@ -287,6 +287,9 @@ class Game:
                 for source in perm.card_sources:
                     for effect in source.effect_list(EffectTiming.NoTiming):
                         effect.reset_turn_count()
+                for linked in perm.linked_cards:
+                    for effect in linked.effect_list(EffectTiming.NoTiming):
+                        effect.reset_turn_count()
             if player.breeding_area:
                 for source in player.breeding_area.card_sources:
                     for effect in source.effect_list(EffectTiming.NoTiming):
@@ -530,20 +533,22 @@ class Game:
     # ─── Board State Tensor ──────────────────────────────────────────
 
     def get_board_state_tensor(self, player_id: int) -> List[float]:
-        """Build a 695-float tensor representing the board from player's perspective.
+        """Build a 799-float tensor representing the board from player's perspective.
 
-        Layout matches C# Digimon.Core.Game.GetBoardStateTensor exactly:
+        Layout:
           [0-9]     Global data
-          [10-249]  My battle area  (12 slots × 20)
-          [250-489] Opp battle area (12 slots × 20)
-          [490-509] My hand  (20)
-          [510-529] Opp hand (20)
-          [530-574] My trash (45)
-          [575-619] Opp trash (45)
-          [620-629] My security (10)
-          [630-639] Opp security (10)
-          [640-659] My breeding (1 slot × 20)
-          [660-679] Opp breeding (1 slot × 20)
+          [10-297]  My battle area  (12 slots × 24)
+          [298-585] Opp battle area (12 slots × 24)
+          [586-605] My hand  (20)
+          [606-625] Opp hand (20)
+          [626-670] My trash (45)
+          [671-715] Opp trash (45)
+          [716-725] My security (10)
+          [726-735] Opp security (10)
+          [736-759] My breeding (1 slot × 24)
+          [760-783] Opp breeding (1 slot × 24)
+          [784-793] Revealed cards (10)
+          [794-798] Selection context (5)
         """
         me = self.player1 if player_id == 1 else self.player2
         opp = self.player2 if player_id == 1 else self.player1
@@ -556,42 +561,42 @@ class Game:
         t.append(float(self._get_memory_for(me)))                   # 2
         t.extend([0.0] * 7)                                        # 3-9 reserved
 
-        # --- My field [10-249] ---
+        # --- My field [10-297] ---
         self._append_field(t, me.battle_area, FIELD_SLOTS)
 
-        # --- Opp field [250-489] ---
+        # --- Opp field [298-585] ---
         self._append_field(t, opp.battle_area, FIELD_SLOTS)
 
-        # --- My hand [490-509] ---
+        # --- My hand [586-605] ---
         self._append_card_ids(t, me.hand_cards, MAX_HAND)
 
-        # --- Opp hand [510-529] ---
+        # --- Opp hand [606-625] ---
         self._append_card_ids(t, opp.hand_cards, MAX_HAND)
 
-        # --- My trash [530-574] ---
+        # --- My trash [626-670] ---
         self._append_card_ids(t, me.trash_cards, MAX_TRASH)
 
-        # --- Opp trash [575-619] ---
+        # --- Opp trash [671-715] ---
         self._append_card_ids(t, opp.trash_cards, MAX_TRASH)
 
-        # --- My security [620-629] ---
+        # --- My security [716-725] ---
         self._append_card_ids(t, me.security_cards, MAX_SECURITY)
 
-        # --- Opp security [630-639] ---
+        # --- Opp security [726-735] ---
         self._append_card_ids(t, opp.security_cards, MAX_SECURITY)
 
-        # --- My breeding [640-659] ---
+        # --- My breeding [736-759] ---
         breeding_list = [me.breeding_area] if me.breeding_area else []
         self._append_field(t, breeding_list, 1)
 
-        # --- Opp breeding [660-679] ---
+        # --- Opp breeding [760-783] ---
         opp_breeding_list = [opp.breeding_area] if opp.breeding_area else []
         self._append_field(t, opp_breeding_list, 1)
 
-        # --- Revealed cards [680-689] ---
+        # --- Revealed cards [784-793] ---
         self._append_card_ids(t, self.revealed_cards, MAX_REVEALED)
 
-        # --- Selection context [690-694] ---
+        # --- Selection context [794-798] ---
         # 690: selection phase type (0=none, 5=SelectTarget, 6=SelectMaterial, etc.)
         # 691: number of valid selections
         # 692: selecting player (0=none, 1=player1, 2=player2)
@@ -617,7 +622,20 @@ class Game:
 
     @staticmethod
     def _append_field(tensor: List[float], permanents: List[Permanent], slots: int):
-        """Append field slot data: per slot 20 floats."""
+        """Append field slot data: per slot 24 floats.
+
+        Layout per slot:
+          +0:  top card internal ID
+          +1:  current DP
+          +2:  suspended (0/1)
+          +3:  OPT total (count of all once-per-turn effects)
+          +4:  OPT used  (count of OPT effects activated this turn)
+          +5:  linked card count
+          +6:  source count
+          +7:  reserved
+          +8..+23: 8 source entries × 2 floats each:
+                   [card_id, per_source_opt_used]
+        """
         for i in range(slots):
             if i < len(permanents):
                 perm = permanents[i]
@@ -630,19 +648,22 @@ class Game:
                 tensor.append(1.0 if perm.is_suspended else 0.0)
                 # +3: OPT total (count of once-per-turn effects, incl. inherited)
                 tensor.append(float(perm.opt_total))
-                # +4: OPT used (count of once-per-turn effects activated this turn)
+                # +4: OPT used (aggregate count of OPT effects activated this turn)
                 tensor.append(float(perm.opt_used))
                 # +5: linked card count (option cards attached sideways, e.g. [TS])
                 tensor.append(float(len(perm.linked_cards)))
                 # +6: source count
                 tensor.append(float(len(perm.card_sources)))
-                # +7-19: source card IDs (bottom to top, max 13)
+                # +7: reserved
+                tensor.append(0.0)
+                # +8..+23: source entries [card_id, opt_used] × 8
                 for j in range(MAX_SOURCES):
                     if j < len(perm.card_sources):
                         src = perm.card_sources[j]
                         tensor.append(float(CardRegistry.get_id(src.card_id)))
+                        tensor.append(perm.source_opt_used(src))
                     else:
-                        tensor.append(0.0)
+                        tensor.extend([0.0, 0.0])
             else:
                 tensor.extend([0.0] * SLOT_SIZE)
 

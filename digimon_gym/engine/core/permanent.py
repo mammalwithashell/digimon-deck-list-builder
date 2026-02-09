@@ -208,6 +208,25 @@ class Permanent:
                 count += 1
         return count
 
+    def source_opt_used(self, source: 'CardSource') -> float:
+        """Return how many of a specific source card's OPT effects have fired this turn.
+
+        For inherited sources (under top card), only counts inherited effects.
+        For the top card, counts non-inherited effects.
+        This lets the tensor encode per-source OPT state so the agent can
+        see which card in the stack has spent its abilities.
+        """
+        is_under = source is not self.top_card
+        used = 0
+        for effect in source.effect_list(EffectTiming.NoTiming):
+            if is_under and not effect.is_inherited_effect:
+                continue
+            if not is_under and effect.is_inherited_effect:
+                continue
+            if effect.max_count_per_turn > 0 and not effect.can_activate_this_turn():
+                used += 1
+        return float(used)
+
     def link_card(self, card: 'CardSource'):
         """Link an option card sideways to this permanent (e.g. [TS] options)."""
         self.linked_cards.append(card)

@@ -20,6 +20,7 @@ class CardSource:
         self.will_be_remove_sources: bool = False
         self.is_being_revealed: bool = False
         self.permanent_just_before_remove_field: Optional['Permanent'] = None
+        self._cached_effects: Optional[List['ICardEffect']] = None
 
     @property
     def can_play_from_hand_during_main_phase(self) -> bool:
@@ -120,12 +121,22 @@ class CardSource:
         return False
 
     def effect_list(self, timing: EffectTiming) -> List['ICardEffect']:
-        from ..data.card_database import CardDatabase
-        db = CardDatabase()
-        script = db.get_script(self.card_id)
-        if script:
-            return script.get_card_effects(self)
-        return []
+        """Return cached effects for this card source.
+
+        Effects are created once and cached so that per-turn activation
+        counts (_turn_activate_count) persist across calls.  Without
+        caching, OPT enforcement was broken — every call to
+        get_card_effects() produced fresh objects with count = 0.
+        """
+        if self._cached_effects is None:
+            from ..data.card_database import CardDatabase
+            db = CardDatabase()
+            script = db.get_script(self.card_id)
+            if script:
+                self._cached_effects = script.get_card_effects(self)
+            else:
+                self._cached_effects = []
+        return self._cached_effects
 
     def paying_cost(self, root: object, target_permanents: List['Permanent'], check_availability: bool = False, ignore_level: bool = False, fixed_cost: int = -1) -> int:
         return self.get_cost_itself
