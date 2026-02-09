@@ -634,7 +634,8 @@ class Game:
           +6:  source count
           +7:  reserved
           +8..+23: 8 source entries × 2 floats each:
-                   [card_id, per_source_opt_used]
+                   [card_id, opt_state]
+                   opt_state: -1.0 = no OPT, 0.0 = exhausted, 1.0 = available
         """
         for i in range(slots):
             if i < len(permanents):
@@ -656,12 +657,12 @@ class Game:
                 tensor.append(float(len(perm.card_sources)))
                 # +7: reserved
                 tensor.append(0.0)
-                # +8..+23: source entries [card_id, opt_used] × 8
+                # +8..+23: source entries [card_id, opt_state] × 8
                 for j in range(MAX_SOURCES):
                     if j < len(perm.card_sources):
                         src = perm.card_sources[j]
                         tensor.append(float(CardRegistry.get_id(src.card_id)))
-                        tensor.append(perm.source_opt_used(src))
+                        tensor.append(perm.source_opt_state(src))
                     else:
                         tensor.extend([0.0, 0.0])
             else:

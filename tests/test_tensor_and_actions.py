@@ -162,6 +162,7 @@ class TestBoardStateTensor:
         assert tensor[base + 2] == 1.0     # suspended
         assert tensor[base + 6] == 1.0     # source count
         assert tensor[base + 8] == float(CardRegistry.get_id("BT14-001"))  # source[0] card_id
+        assert tensor[base + 9] == -1.0   # source[0] opt_state: no OPT effects
 
     def test_digivolution_stack_encoding(self):
         game = setup_game_at_phase(GamePhase.Main)
@@ -179,7 +180,9 @@ class TestBoardStateTensor:
         assert tensor[slot_base + 1] == 6000.0  # DP
         assert tensor[slot_base + 6] == 2.0     # 2 sources
         assert tensor[slot_base + 8] == float(CardRegistry.get_id("BT14-002"))   # source[0] card_id
+        assert tensor[slot_base + 9] == -1.0    # source[0] opt_state: no OPT
         assert tensor[slot_base + 10] == float(CardRegistry.get_id("BT14-010"))  # source[1] card_id
+        assert tensor[slot_base + 11] == -1.0   # source[1] opt_state: no OPT
 
     def test_opponent_field_offset(self):
         game = setup_game_at_phase(GamePhase.Main)
