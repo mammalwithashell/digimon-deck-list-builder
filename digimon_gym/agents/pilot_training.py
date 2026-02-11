@@ -29,6 +29,25 @@ from digimon_gym.digimon_gym import DigimonEnv, greedy_policy, ACTION_PASS_TURN
 from digimon_gym.engine.game import ACTION_SPACE_SIZE
 
 
+# ─── Helpers ─────────────────────────────────────────────────────────
+
+def _unwrap_to_digimon_env(env: gymnasium.Env) -> DigimonEnv:
+    """Walk the wrapper stack until we reach a DigimonEnv.
+
+    Raises RuntimeError if no DigimonEnv is found.
+    """
+    unwrapped = env
+    while not isinstance(unwrapped, DigimonEnv):
+        if hasattr(unwrapped, 'env'):
+            unwrapped = unwrapped.env
+        else:
+            raise RuntimeError(
+                f"Could not find DigimonEnv in wrapper stack. "
+                f"Innermost layer is {type(unwrapped).__name__}."
+            )
+    return unwrapped
+
+
 # ─── Opponent Policies ──────────────────────────────────────────────
 
 def random_policy(env: DigimonEnv) -> int:
@@ -71,12 +90,14 @@ class OpponentWrapper(gymnasium.Wrapper):
         if terminated or truncated:
             return obs, reward, terminated, truncated, info
 
-        # Auto-play opponent turns, accumulating reward
-        obs, info, opp_reward, terminated, truncated = self._play_opponent(
-            obs, info
+        # Auto-play opponent turns. Only terminal outcomes (win/loss)
+        # are attributed to this timestep — intermediate dense shaping
+        # from opponent moves reflects board changes the agent can't
+        # control, so we exclude those to keep reward signal clean.
+        obs, info, terminal_reward, terminated, truncated = (
+            self._play_opponent(obs, info)
         )
-        # Opponent reward is from Player 1's perspective (same as env reward)
-        reward += opp_reward
+        reward += terminal_reward
 
         return obs, reward, terminated, truncated, info
 
@@ -95,9 +116,15 @@ class OpponentWrapper(gymnasium.Wrapper):
         return obs, info
 
     def _play_opponent(self, obs, info):
-        """Auto-play Player 2 turns, returning accumulated reward."""
+        """Auto-play Player 2 turns until Player 1 acts or game ends.
+
+        Returns only terminal reward (win/loss) from the opponent
+        sequence. Dense shaping rewards from individual opponent steps
+        are discarded — they reflect board changes the agent cannot
+        influence and would add noise to the learning signal.
+        """
         game = self._unwrapped_env.game
-        total_opp_reward = 0.0
+        terminal_reward = 0.0
 
         while (game is not None
                and not game.game_over
@@ -106,13 +133,14 @@ class OpponentWrapper(gymnasium.Wrapper):
             obs, reward, terminated, truncated, info = self.env.step(
                 int(opp_action)
             )
-            total_opp_reward += reward
             if terminated or truncated:
-                return obs, info, total_opp_reward, terminated, truncated
+                # Only the terminal reward (±1.0 win/loss) is meaningful
+                terminal_reward = reward
+                return obs, info, terminal_reward, terminated, truncated
 
         terminated = game.game_over if game else True
         truncated = False
-        return obs, info, total_opp_reward, terminated, truncated
+        return obs, info, terminal_reward, terminated, truncated
 
 
 # ─── Callbacks ───────────────────────────────────────────────────────
@@ -193,8 +221,7 @@ class WinRateCallback(BaseCallback):
             total_steps += steps
 
             # Use the actual game outcome instead of reward as a proxy
-            base_env = eval_env.unwrapped
-            game = getattr(base_env, 'game', None)
+            game = _unwrap_to_digimon_env(eval_env).game
             if game is not None and game.winner is not None:
                 if game.winner.player_id == 1:
                     wins += 1
@@ -258,17 +285,7 @@ def make_env(opponent: str = "greedy",
         env = OpponentWrapper(base_env, opponent_fn=opponent_fn)
 
     def mask_fn(env):
-        # Unwrap to reach DigimonEnv for the action mask
-        unwrapped = env
-        while not isinstance(unwrapped, DigimonEnv):
-            if hasattr(unwrapped, 'env'):
-                unwrapped = unwrapped.env
-            else:
-                raise RuntimeError(
-                    f"Could not find DigimonEnv in wrapper stack. "
-                    f"Innermost layer is {type(unwrapped).__name__}."
-                )
-        return unwrapped.action_mask()
+        return _unwrap_to_digimon_env(env).action_mask()
 
     return ActionMasker(env, mask_fn)
 
