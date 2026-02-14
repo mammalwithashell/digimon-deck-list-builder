@@ -284,7 +284,7 @@ class Player:
 
         # <Barrier>: trash top security card to prevent deletion (battle only)
         if is_battle and permanent.has_keyword('_is_barrier') and len(self.security_cards) > 0:
-            trashed_sec = self.security_cards.pop()
+            trashed_sec = self.security_cards.pop(0)  # Remove from top (index 0)
             self.trash_cards.append(trashed_sec)
             self._log(f"{perm_name} activates Barrier! Trashed top security to survive.")
             return
