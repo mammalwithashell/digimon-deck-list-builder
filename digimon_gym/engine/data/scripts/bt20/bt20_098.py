@@ -78,7 +78,7 @@ class BT20_098(CardScript):
                     return False
                 return True
             game.effect_play_from_zone(
-                player, 'hand', play_filter, free=True, is_optional=True)
+                player, 'trash', play_filter, free=True, is_optional=True)
 
         effect1.set_on_process_callback(process1)
         effects.append(effect1)
