@@ -53,7 +53,7 @@ class BT20_065(CardScript):
         effect1 = ICardEffect()
         effect1.set_effect_name("BT20-065 Memory -1")
         effect1.set_effect_description("[On Deletion] Lose 1 memory.")
-        effect1.is_on_play = True
+        effect1.is_on_deletion = True
 
         effect = effect1  # alias for condition closure
         def condition1(context: Dict[str, Any]) -> bool:
