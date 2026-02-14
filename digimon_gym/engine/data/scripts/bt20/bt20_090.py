@@ -26,10 +26,10 @@ class BT20_090(CardScript):
         effects.append(effect0)
 
         # Timing: EffectTiming.OnEndTurn
-        # [End of Your Turn] If you have 4 pr fewer cards in your hand, by suspending this Tamer, 1 of your [Dark Dragon] or [Evil Dragon] trait Digimon may attack a player.
+        # [End of Your Turn] If you have 4 or fewer cards in your hand, by suspending this Tamer, 1 of your [Dark Dragon] or [Evil Dragon] trait Digimon may attack a player.
         effect1 = ICardEffect()
         effect1.set_effect_name("BT20-090 1 of your [Dark Dragon] or [Evil Dragon] Digimon may attack a player.")
-        effect1.set_effect_description("[End of Your Turn] If you have 4 pr fewer cards in your hand, by suspending this Tamer, 1 of your [Dark Dragon] or [Evil Dragon] trait Digimon may attack a player.")
+        effect1.set_effect_description("[End of Your Turn] If you have 4 or fewer cards in your hand, by suspending this Tamer, 1 of your [Dark Dragon] or [Evil Dragon] trait Digimon may attack a player.")
         effect1.is_optional = True
 
         effect = effect1  # alias for condition closure
