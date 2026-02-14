@@ -491,7 +491,7 @@ class Game:
                     self.logger.log(f"[Retaliation] {attacker.top_card.card_names[0] if attacker.top_card else 'Unknown'} retaliates!")
                     self.opponent_player.delete_permanent(target, is_battle=True)
             else:
-                # Tie: both deleted
+                # Tie: both deleted (Retaliation doesn't trigger since neither "wins")
                 self.opponent_player.delete_permanent(target, is_battle=True)
                 self.turn_player.delete_permanent(attacker, is_battle=True)
 
