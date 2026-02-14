@@ -8,22 +8,21 @@ if TYPE_CHECKING:
 
 
 class BT24_063(CardScript):
-    """Auto-transpiled from DCGO BT24_063.cs"""
+    """BT24-063 Locomon | Lv.5"""
 
     def get_card_effects(self, card: 'CardSource') -> List['ICardEffect']:
         effects = []
 
-        # Timing: EffectTiming.OnEnterFieldAnyone
-        # Effect
+        # Factory effect: alt_digivolve_req
+        # Alternate digivolution requirement
         effect0 = ICardEffect()
-        effect0.set_effect_name("BT24-063 Effect")
-        effect0.set_effect_description("Effect")
-        effect0.is_on_play = True
+        effect0.set_effect_name("BT24-063 Alternate digivolution requirement")
+        effect0.set_effect_description("Alternate digivolution requirement")
+        # Alternate digivolution: alternate source for cost 3
+        effect0._alt_digi_cost = 3
 
         def condition0(context: Dict[str, Any]) -> bool:
-            # Triggered on play — validated by engine timing
             return True
-
         effect0.set_can_use_condition(condition0)
         effects.append(effect0)
 
@@ -34,11 +33,31 @@ class BT24_063(CardScript):
         effect1.set_effect_description("Effect")
         effect1.is_on_play = True
 
+        effect = effect1  # alias for condition closure
         def condition1(context: Dict[str, Any]) -> bool:
-            # Triggered when digivolving — validated by engine timing
+            if card and card.permanent_of_this_card() is None:
+                return False
+            # Triggered on play — validated by engine timing
             return True
 
         effect1.set_can_use_condition(condition1)
         effects.append(effect1)
+
+        # Timing: EffectTiming.OnEnterFieldAnyone
+        # Effect
+        effect2 = ICardEffect()
+        effect2.set_effect_name("BT24-063 Effect")
+        effect2.set_effect_description("Effect")
+        effect2.is_when_digivolving = True
+
+        effect = effect2  # alias for condition closure
+        def condition2(context: Dict[str, Any]) -> bool:
+            if card and card.permanent_of_this_card() is None:
+                return False
+            # Triggered when digivolving — validated by engine timing
+            return True
+
+        effect2.set_can_use_condition(condition2)
+        effects.append(effect2)
 
         return effects

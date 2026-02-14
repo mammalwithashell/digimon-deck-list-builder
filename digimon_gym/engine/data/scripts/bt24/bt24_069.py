@@ -8,7 +8,7 @@ if TYPE_CHECKING:
 
 
 class BT24_069(CardScript):
-    """Auto-transpiled from DCGO BT24_069.cs"""
+    """BT24-069 Vilemon | Lv.4"""
 
     def get_card_effects(self, card: 'CardSource') -> List['ICardEffect']:
         effects = []
@@ -19,7 +19,10 @@ class BT24_069(CardScript):
         effect0.set_effect_name("BT24-069 Effect")
         effect0.set_effect_description("Effect")
 
+        effect = effect0  # alias for condition closure
         def condition0(context: Dict[str, Any]) -> bool:
+            if card and card.permanent_of_this_card() is None:
+                return False
             return True
 
         effect0.set_can_use_condition(condition0)
@@ -30,9 +33,12 @@ class BT24_069(CardScript):
         effect1 = ICardEffect()
         effect1.set_effect_name("BT24-069 Effect")
         effect1.set_effect_description("Effect")
-        effect1.is_on_play = True
+        effect1.is_when_digivolving = True
 
+        effect = effect1  # alias for condition closure
         def condition1(context: Dict[str, Any]) -> bool:
+            if card and card.permanent_of_this_card() is None:
+                return False
             # Triggered when digivolving — validated by engine timing
             return True
 
@@ -45,21 +51,21 @@ class BT24_069(CardScript):
         effect2.set_effect_name("BT24-069 Blocker")
         effect2.set_effect_description("Blocker")
         effect2._is_blocker = True
+
         def condition2(context: Dict[str, Any]) -> bool:
             return True
         effect2.set_can_use_condition(condition2)
         effects.append(effect2)
 
-        # [All Turns] While opponent has 10+ trash, gains Blocker and +2000 DP.
-        # Blocker is handled by effect2 above. DP is conditional.
+        # Factory effect: dp_modifier
+        # DP modifier
         effect3 = ICardEffect()
-        effect3.set_effect_name("BT24-069 DP +2000 (conditional)")
-        effect3.set_effect_description("[All Turns] While opponent has 10+ trash, +2000 DP.")
-        effect3.dp_modifier = 2000  # Conditional: only when opponent has 10+ trash cards
+        effect3.set_effect_name("BT24-069 DP modifier")
+        effect3.set_effect_description("DP modifier")
+        effect3.dp_modifier = 2000
+
         def condition3(context: Dict[str, Any]) -> bool:
-            if card and card.owner and card.owner.enemy:
-                return len(card.owner.enemy.trash_cards) >= 10
-            return False
+            return True
         effect3.set_can_use_condition(condition3)
         effects.append(effect3)
 
@@ -73,7 +79,10 @@ class BT24_069(CardScript):
         effect4.set_hash_string("BT24_069_TrashTopDeck")
         effect4.is_on_attack = True
 
+        effect = effect4  # alias for condition closure
         def condition4(context: Dict[str, Any]) -> bool:
+            if card and card.permanent_of_this_card() is None:
+                return False
             # Triggered on attack — validated by engine timing
             return True
 

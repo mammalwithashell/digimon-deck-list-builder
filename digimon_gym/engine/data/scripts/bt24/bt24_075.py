@@ -8,22 +8,25 @@ if TYPE_CHECKING:
 
 
 class BT24_075(CardScript):
-    """Auto-transpiled from DCGO BT24_075.cs"""
+    """BT24-075 SkullBaluchimon | Lv.5"""
 
     def get_card_effects(self, card: 'CardSource') -> List['ICardEffect']:
         effects = []
 
-        # Timing: EffectTiming.OnEnterFieldAnyone
-        # Effect
+        # Factory effect: alt_digivolve_req
+        # Alternate digivolution requirement
         effect0 = ICardEffect()
-        effect0.set_effect_name("BT24-075 Effect")
-        effect0.set_effect_description("Effect")
-        effect0.is_on_play = True
+        effect0.set_effect_name("BT24-075 Alternate digivolution requirement")
+        effect0.set_effect_description("Alternate digivolution requirement")
+        # Alternate digivolution: with [Demon] trait for cost 3
+        effect0._alt_digi_cost = 3
+        effect0._alt_digi_trait = "Demon"
 
         def condition0(context: Dict[str, Any]) -> bool:
-            # Triggered on play — validated by engine timing
+            permanent = card.permanent_of_this_card() if card else None
+            if not (permanent and permanent.top_card and (any('Demon' in tr for tr in (getattr(permanent.top_card, 'card_traits', []) or [])))):
+                return False
             return True
-
         effect0.set_can_use_condition(condition0)
         effects.append(effect0)
 
@@ -34,22 +37,54 @@ class BT24_075(CardScript):
         effect1.set_effect_description("Effect")
         effect1.is_on_play = True
 
+        effect = effect1  # alias for condition closure
         def condition1(context: Dict[str, Any]) -> bool:
-            # Triggered when digivolving — validated by engine timing
+            if card and card.permanent_of_this_card() is None:
+                return False
+            # Triggered on play — validated by engine timing
             return True
 
         effect1.set_can_use_condition(condition1)
         effects.append(effect1)
 
-        # Factory effect: security_attack_plus
-        # Security Attack +1
+        # Timing: EffectTiming.OnEnterFieldAnyone
+        # Effect
         effect2 = ICardEffect()
-        effect2.set_effect_name("BT24-075 Security Attack +1")
-        effect2.set_effect_description("Security Attack +1")
-        effect2._security_attack_modifier = 1
+        effect2.set_effect_name("BT24-075 Effect")
+        effect2.set_effect_description("Effect")
+        effect2.is_when_digivolving = True
+
+        effect = effect2  # alias for condition closure
         def condition2(context: Dict[str, Any]) -> bool:
+            if card and card.permanent_of_this_card() is None:
+                return False
+            # Triggered when digivolving — validated by engine timing
             return True
+
         effect2.set_can_use_condition(condition2)
         effects.append(effect2)
+
+        # Factory effect: security_attack_plus
+        # Security Attack +1
+        effect3 = ICardEffect()
+        effect3.set_effect_name("BT24-075 Security Attack +1")
+        effect3.set_effect_description("Security Attack +1")
+        effect3.is_inherited_effect = True
+        effect3._security_attack_modifier = 1
+
+        def condition3(context: Dict[str, Any]) -> bool:
+            if not (card and card.owner and card.owner.is_my_turn):
+                return False
+            if card and card.permanent_of_this_card() is None:
+                return False
+            permanent = card.permanent_of_this_card() if card else None
+            if not (permanent and (permanent.contains_card_name('Titamon'))):
+                return False
+            permanent = card.permanent_of_this_card() if card else None
+            if not (permanent and permanent.top_card and (any('Titan' in tr for tr in (getattr(permanent.top_card, 'card_traits', []) or [])))):
+                return False
+            return True
+        effect3.set_can_use_condition(condition3)
+        effects.append(effect3)
 
         return effects

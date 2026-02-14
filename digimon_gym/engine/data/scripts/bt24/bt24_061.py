@@ -8,22 +8,21 @@ if TYPE_CHECKING:
 
 
 class BT24_061(CardScript):
-    """Auto-transpiled from DCGO BT24_061.cs"""
+    """BT24-061 Vademon | Lv.5"""
 
     def get_card_effects(self, card: 'CardSource') -> List['ICardEffect']:
         effects = []
 
-        # Timing: EffectTiming.OnEnterFieldAnyone
-        # Effect
+        # Factory effect: alt_digivolve_req
+        # Alternate digivolution requirement
         effect0 = ICardEffect()
-        effect0.set_effect_name("BT24-061 Effect")
-        effect0.set_effect_description("Effect")
-        effect0.is_on_play = True
+        effect0.set_effect_name("BT24-061 Alternate digivolution requirement")
+        effect0.set_effect_description("Alternate digivolution requirement")
+        # Alternate digivolution: alternate source for cost 3
+        effect0._alt_digi_cost = 3
 
         def condition0(context: Dict[str, Any]) -> bool:
-            # Triggered on play — validated by engine timing
             return True
-
         effect0.set_can_use_condition(condition0)
         effects.append(effect0)
 
@@ -34,41 +33,68 @@ class BT24_061(CardScript):
         effect1.set_effect_description("Effect")
         effect1.is_on_play = True
 
+        effect = effect1  # alias for condition closure
         def condition1(context: Dict[str, Any]) -> bool:
-            # Triggered when digivolving — validated by engine timing
+            if card and card.permanent_of_this_card() is None:
+                return False
+            # Triggered on play — validated by engine timing
             return True
 
         effect1.set_can_use_condition(condition1)
         effects.append(effect1)
 
-        # Timing: EffectTiming.OnAllyAttack
-        # [When Attacking] (Once Per Turn) <De-Digivolve 1> 1 of your opponent's Digimon.
+        # Timing: EffectTiming.OnEnterFieldAnyone
+        # Effect
         effect2 = ICardEffect()
-        effect2.set_effect_name("BT24-061 <De-Digivolve 1> 1 of your opponent's Digimon")
-        effect2.set_effect_description("[When Attacking] (Once Per Turn) <De-Digivolve 1> 1 of your opponent's Digimon.")
-        effect2.is_inherited_effect = True
-        effect2.set_max_count_per_turn(1)
-        effect2.set_hash_string("BT24_061_Inherited")
-        effect2.is_on_attack = True
+        effect2.set_effect_name("BT24-061 Effect")
+        effect2.set_effect_description("Effect")
+        effect2.is_when_digivolving = True
 
+        effect = effect2  # alias for condition closure
         def condition2(context: Dict[str, Any]) -> bool:
-            # Triggered on attack — validated by engine timing
+            if card and card.permanent_of_this_card() is None:
+                return False
+            # Triggered when digivolving — validated by engine timing
             return True
 
         effect2.set_can_use_condition(condition2)
+        effects.append(effect2)
 
-        def process2(ctx: Dict[str, Any]):
+        # Timing: EffectTiming.OnAllyAttack
+        # [When Attacking] (Once Per Turn) <De-Digivolve 1> 1 of your opponent's Digimon.
+        effect3 = ICardEffect()
+        effect3.set_effect_name("BT24-061 <De-Digivolve 1> 1 of your opponent's Digimon")
+        effect3.set_effect_description("[When Attacking] (Once Per Turn) <De-Digivolve 1> 1 of your opponent's Digimon.")
+        effect3.is_inherited_effect = True
+        effect3.set_max_count_per_turn(1)
+        effect3.set_hash_string("BT24_061_Inherited")
+        effect3.is_on_attack = True
+
+        effect = effect3  # alias for condition closure
+        def condition3(context: Dict[str, Any]) -> bool:
+            if card and card.permanent_of_this_card() is None:
+                return False
+            # Triggered on attack — validated by engine timing
+            return True
+
+        effect3.set_can_use_condition(condition3)
+
+        def process3(ctx: Dict[str, Any]):
             """Action: De Digivolve"""
             player = ctx.get('player')
             perm = ctx.get('permanent')
-            # De-digivolve opponent's digimon
-            enemy = player.enemy if player else None
-            if enemy and enemy.battle_area:
-                target = enemy.battle_area[-1]
-                removed = target.de_digivolve(1)
-                enemy.trash_cards.extend(removed)
+            game = ctx.get('game')
+            if not (player and game):
+                return
+            def on_de_digivolve(target_perm):
+                removed = target_perm.de_digivolve(1)
+                enemy = player.enemy if player else None
+                if enemy:
+                    enemy.trash_cards.extend(removed)
+            game.effect_select_opponent_permanent(
+                player, on_de_digivolve, filter_fn=lambda p: p.is_digimon, is_optional=False)
 
-        effect2.set_on_process_callback(process2)
-        effects.append(effect2)
+        effect3.set_on_process_callback(process3)
+        effects.append(effect3)
 
         return effects

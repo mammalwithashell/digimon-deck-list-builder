@@ -8,7 +8,7 @@ if TYPE_CHECKING:
 
 
 class BT24_003(CardScript):
-    """Auto-transpiled from DCGO BT24_003.cs"""
+    """BT24-003 Tsunomon | Lv.2"""
 
     def get_card_effects(self, card: 'CardSource') -> List['ICardEffect']:
         effects = []
@@ -23,7 +23,10 @@ class BT24_003(CardScript):
         effect0.set_max_count_per_turn(1)
         effect0.set_hash_string("BT24_003_Inherited")
 
+        effect = effect0  # alias for condition closure
         def condition0(context: Dict[str, Any]) -> bool:
+            if card and card.permanent_of_this_card() is None:
+                return False
             if not (card and card.owner and card.owner.is_my_turn):
                 return False
             return True
@@ -34,7 +37,13 @@ class BT24_003(CardScript):
             """Action: Digivolve"""
             player = ctx.get('player')
             perm = ctx.get('permanent')
-            pass  # TODO: digivolve effect needs card selection
+            game = ctx.get('game')
+            if not (player and perm and game):
+                return
+            def digi_filter(c):
+                return True
+            game.effect_digivolve_from_hand(
+                player, perm, digi_filter, is_optional=True)
 
         effect0.set_on_process_callback(process0)
         effects.append(effect0)

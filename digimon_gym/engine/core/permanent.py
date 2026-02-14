@@ -12,6 +12,8 @@ class Permanent:
         self.is_suspended: bool = False
         self._dp_modifiers: List[int] = []  # Temporary DP changes from effects
         self.linked_cards: List['CardSource'] = []  # Option cards linked sideways (e.g. [TS])
+        self.turn_played: int = -1  # Turn this permanent entered the field (-1 = not tracked)
+        self._owner_game: Optional[object] = None  # Back-reference to Game for turn tracking
 
     @property
     def digivolution_cards(self) -> List['CardSource']:
@@ -28,8 +30,14 @@ class Permanent:
         return None
 
     @property
-    def level(self) -> int:
-        return self.top_card.level if self.top_card else 0
+    def level(self) -> Optional[int]:
+        """Level of the top card. None for tamers/options and some Digimon (e.g. Eater Bit)."""
+        return self.top_card.level if self.top_card else None
+
+    @property
+    def is_digi_egg(self) -> bool:
+        """True if the top card is a Digi-Egg (Lv.2)."""
+        return self.top_card.is_digi_egg if self.top_card else False
 
     @property
     def is_token(self) -> bool:
@@ -48,8 +56,18 @@ class Permanent:
         return self.top_card.is_option if self.top_card else False
 
     @property
-    def dp(self) -> int:
-        base = self.top_card.base_dp if self.top_card else 0
+    def has_dp(self) -> bool:
+        """True if this permanent has a DP value (Digimon top card). False for eggs/tamers."""
+        return self.top_card.has_dp if self.top_card else False
+
+    @property
+    def dp(self) -> Optional[int]:
+        """DP of this permanent. None if the top card has no DP (egg/tamer/option).
+        For Digimon, returns base DP + effect modifiers (minimum 0).
+        Cards like Lucemon: Larva have 0 DP (a real value, not None)."""
+        if not self.top_card or self.top_card.base_dp is None:
+            return None
+        base = self.top_card.base_dp
         active_effects = self.get_active_effects()
         modifier = sum(effect.dp_modifier for effect in active_effects)
         temp_modifier = sum(self._dp_modifiers)
@@ -79,9 +97,49 @@ class Permanent:
 
         return active
 
+    def has_keyword(self, keyword_attr: str) -> bool:
+        """Check if this permanent has a keyword effect (e.g. '_is_rush', '_is_jamming').
+
+        Scans inherited effects from sources under top card and
+        non-inherited effects from the top card, matching the same
+        pattern used in can_block() and effect_list().
+        """
+        for source in self.card_sources[:-1]:
+            effects = source.effect_list(EffectTiming.NoTiming)
+            for effect in effects:
+                if effect.is_inherited_effect and getattr(effect, keyword_attr, False):
+                    return True
+        if self.top_card:
+            effects = self.top_card.effect_list(EffectTiming.NoTiming)
+            for effect in effects:
+                if not effect.is_inherited_effect and getattr(effect, keyword_attr, False):
+                    return True
+        return False
+
+    def security_attack_modifier(self) -> int:
+        """Sum of all <Security Attack +/-X> modifiers on this permanent."""
+        total = 0
+        for source in self.card_sources[:-1]:
+            effects = source.effect_list(EffectTiming.NoTiming)
+            for effect in effects:
+                if effect.is_inherited_effect:
+                    total += getattr(effect, '_security_attack_modifier', 0)
+        if self.top_card:
+            effects = self.top_card.effect_list(EffectTiming.NoTiming)
+            for effect in effects:
+                if not effect.is_inherited_effect:
+                    total += getattr(effect, '_security_attack_modifier', 0)
+        return total
+
     def can_attack(self, card_effect: Optional['ICardEffect'] = None, without_tap: bool = False, is_vortex: bool = False) -> bool:
         if self.is_suspended and not without_tap:
             return False
+        if not self.is_digimon:
+            return False
+        # Summoning sickness: can't attack the turn played, unless has <Rush>
+        if self.turn_played >= 0 and self._owner_game is not None:
+            if self.turn_played == self._owner_game.turn_count and not self.has_keyword('_is_rush'):
+                return False
         return True
 
     def can_block(self, attacking_permanent: 'Permanent') -> bool:

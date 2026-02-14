@@ -8,7 +8,7 @@ if TYPE_CHECKING:
 
 
 class BT14_090(CardScript):
-    """Auto-transpiled from DCGO BT14_090.cs"""
+    """BT14-090 Dragon of Courage"""
 
     def get_card_effects(self, card: 'CardSource') -> List['ICardEffect']:
         effects = []
@@ -19,6 +19,7 @@ class BT14_090(CardScript):
         effect0.set_effect_name("BT14-090 Ignore color requirements")
         effect0.set_effect_description("Effect")
 
+        effect = effect0  # alias for condition closure
         def condition0(context: Dict[str, Any]) -> bool:
             return True
 
@@ -31,6 +32,7 @@ class BT14_090(CardScript):
         effect1.set_effect_name("BT14-090 Digivolve")
         effect1.set_effect_description("[Main] By placing 1 [Greymon] and 1 [MetalGreymon] from your trash as 1 of your [Agumon]'s bottom digivolution cards, that Digimon may digivolve into [WarGreymon] in your hand without paying the cost, ignoring its digivolution requirements.")
 
+        effect = effect1  # alias for condition closure
         def condition1(context: Dict[str, Any]) -> bool:
             # Option main effect — validated by engine timing
             return True
@@ -38,36 +40,16 @@ class BT14_090(CardScript):
         effect1.set_can_use_condition(condition1)
 
         def process1(ctx: Dict[str, Any]):
-            """Action: Place Greymon+MetalGreymon from trash, digivolve Agumon into WarGreymon"""
+            """Action: Digivolve"""
             player = ctx.get('player')
+            perm = ctx.get('permanent')
             game = ctx.get('game')
-            if not (player and game):
+            if not (player and perm and game):
                 return
-            def is_agumon(p):
-                return p.top_card and any('Agumon' in n for n in p.top_card.card_names)
-            def on_agumon_selected(agumon_perm):
-                greymon = None
-                metalgreymon = None
-                for tc in player.trash_cards:
-                    if not greymon and any('Greymon' in n and 'MetalGreymon' not in n for n in tc.card_names):
-                        greymon = tc
-                    elif not metalgreymon and any('MetalGreymon' in n for n in tc.card_names):
-                        metalgreymon = tc
-                if greymon:
-                    player.trash_cards.remove(greymon)
-                    agumon_perm.card_sources.insert(0, greymon)
-                if metalgreymon:
-                    player.trash_cards.remove(metalgreymon)
-                    agumon_perm.card_sources.insert(0, metalgreymon)
-                def is_wargreymon(c):
-                    if not c.is_digimon:
-                        return False
-                    return any('WarGreymon' in n for n in c.card_names)
-                game.effect_digivolve_from_hand(
-                    player, agumon_perm, is_wargreymon,
-                    cost_override=0, ignore_requirements=True, is_optional=True)
-            game.effect_select_own_permanent(
-                player, on_agumon_selected, filter_fn=is_agumon, is_optional=True)
+            def digi_filter(c):
+                return True
+            game.effect_digivolve_from_hand(
+                player, perm, digi_filter, is_optional=True)
 
         effect1.set_on_process_callback(process1)
         effects.append(effect1)
@@ -80,6 +62,7 @@ class BT14_090(CardScript):
         effect2.is_security_effect = True
         effect2.is_security_effect = True
 
+        effect = effect2  # alias for condition closure
         def condition2(context: Dict[str, Any]) -> bool:
             # Security effect — validated by engine timing
             return True
@@ -87,23 +70,30 @@ class BT14_090(CardScript):
         effect2.set_can_use_condition(condition2)
 
         def process2(ctx: Dict[str, Any]):
-            """Action: Play [Agumon] from hand or trash, add this card to hand"""
+            """Action: Play Card, Trash From Hand, Add To Hand"""
             player = ctx.get('player')
+            perm = ctx.get('permanent')
             game = ctx.get('game')
             if not (player and game):
                 return
-            def is_agumon(c):
-                return any('Agumon' in n for n in c.card_names)
-            has_in_hand = any(is_agumon(c) for c in player.hand_cards)
-            has_in_trash = any(is_agumon(c) for c in player.trash_cards)
-            if has_in_hand:
-                game.effect_play_from_zone(player, 'hand', is_agumon, free=True, is_optional=True)
-            elif has_in_trash:
-                game.effect_play_from_zone(player, 'trash', is_agumon, free=True, is_optional=True)
-            # Add this option card to hand
-            if card and card in player.trash_cards:
-                player.trash_cards.remove(card)
-                player.hand_cards.append(card)
+            def play_filter(c):
+                return True
+            game.effect_play_from_zone(
+                player, 'hand', play_filter, free=True, is_optional=True)
+            if not (player and game):
+                return
+            def hand_filter(c):
+                return True
+            def on_trashed(selected):
+                if selected in player.hand_cards:
+                    player.hand_cards.remove(selected)
+                    player.trash_cards.append(selected)
+            game.effect_select_hand_card(
+                player, hand_filter, on_trashed, is_optional=False)
+            # Add card to hand (from trash/reveal)
+            if player and player.trash_cards:
+                card_to_add = player.trash_cards.pop()
+                player.hand_cards.append(card_to_add)
 
         effect2.set_on_process_callback(process2)
         effects.append(effect2)

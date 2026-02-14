@@ -8,7 +8,7 @@ if TYPE_CHECKING:
 
 
 class BT14_006(CardScript):
-    """Auto-transpiled from DCGO BT14_006.cs"""
+    """BT14-006 Bowmon | Lv.2"""
 
     def get_card_effects(self, card: 'CardSource') -> List['ICardEffect']:
         effects = []
@@ -22,6 +22,7 @@ class BT14_006(CardScript):
         effect0.is_optional = True
         effect0.set_hash_string("Digivolve_BT14_006")
 
+        effect = effect0  # alias for condition closure
         def condition0(context: Dict[str, Any]) -> bool:
             if card and card.permanent_of_this_card() is None:
                 return False
@@ -32,20 +33,18 @@ class BT14_006(CardScript):
         effect0.set_can_use_condition(condition0)
 
         def process0(ctx: Dict[str, Any]):
-            """Action: Digivolve into discarded [Dark Animal]/[SoC] card"""
+            """Action: Digivolve"""
             player = ctx.get('player')
             perm = ctx.get('permanent')
             game = ctx.get('game')
             if not (player and perm and game):
                 return
-            def is_dark_animal_or_soc(c):
-                if not c.is_digimon:
+            def digi_filter(c):
+                if not (any('Dark Animal' in _t or 'DarkAnimal' in _t or 'SoC' in _t for _t in (getattr(c, 'card_traits', []) or []))):
                     return False
-                traits = getattr(c, 'card_traits', []) or []
-                return any('Dark Animal' in t or 'SoC' in t for t in traits)
+                return True
             game.effect_digivolve_from_hand(
-                player, perm, is_dark_animal_or_soc,
-                cost_override=0, ignore_requirements=True, is_optional=True)
+                player, perm, digi_filter, is_optional=True)
 
         effect0.set_on_process_callback(process0)
         effects.append(effect0)

@@ -8,7 +8,7 @@ if TYPE_CHECKING:
 
 
 class BT24_073(CardScript):
-    """Auto-transpiled from DCGO BT24_073.cs"""
+    """BT24-073 SkullSatamon | Lv.5"""
 
     def get_card_effects(self, card: 'CardSource') -> List['ICardEffect']:
         effects = []
@@ -19,6 +19,7 @@ class BT24_073(CardScript):
         effect0.set_effect_name("BT24-073 Blocker")
         effect0.set_effect_description("Blocker")
         effect0._is_blocker = True
+
         def condition0(context: Dict[str, Any]) -> bool:
             return True
         effect0.set_can_use_condition(condition0)
@@ -29,9 +30,12 @@ class BT24_073(CardScript):
         effect1 = ICardEffect()
         effect1.set_effect_name("BT24-073 Effect")
         effect1.set_effect_description("Effect")
-        effect1.is_on_play = True
+        effect1.is_when_digivolving = True
 
+        effect = effect1  # alias for condition closure
         def condition1(context: Dict[str, Any]) -> bool:
+            if card and card.permanent_of_this_card() is None:
+                return False
             # Triggered when digivolving — validated by engine timing
             return True
 
@@ -45,6 +49,7 @@ class BT24_073(CardScript):
         effect2.set_effect_description("Effect")
         effect2.is_on_deletion = True
 
+        effect = effect2  # alias for condition closure
         def condition2(context: Dict[str, Any]) -> bool:
             # Triggered on deletion — validated by engine timing
             return True
@@ -62,7 +67,10 @@ class BT24_073(CardScript):
         effect3.set_hash_string("BT24_073_Inherited")
         effect3.is_on_attack = True
 
+        effect = effect3  # alias for condition closure
         def condition3(context: Dict[str, Any]) -> bool:
+            if card and card.permanent_of_this_card() is None:
+                return False
             # Triggered on attack — validated by engine timing
             return True
 

@@ -8,7 +8,7 @@ if TYPE_CHECKING:
 
 
 class BT24_098(CardScript):
-    """Auto-transpiled from DCGO BT24_098.cs"""
+    """BT24-098 Invasion of the Titans"""
 
     def get_card_effects(self, card: 'CardSource') -> List['ICardEffect']:
         effects = []
@@ -19,6 +19,7 @@ class BT24_098(CardScript):
         effect0.set_effect_name("BT24-098 Draw 2, Trash 2")
         effect0.set_effect_description("[Main] <Draw 2> and trash 2 cards in your hand. Then, place this card in the battle area.")
 
+        effect = effect0  # alias for condition closure
         def condition0(context: Dict[str, Any]) -> bool:
             # Option main effect — validated by engine timing
             return True
@@ -29,11 +30,19 @@ class BT24_098(CardScript):
             """Action: Draw 2, Trash From Hand"""
             player = ctx.get('player')
             perm = ctx.get('permanent')
+            game = ctx.get('game')
             if player:
                 player.draw_cards(2)
-            # Trash from hand (cost/effect)
-            if player and player.hand_cards:
-                player.trash_from_hand([player.hand_cards[-1]])
+            if not (player and game):
+                return
+            def hand_filter(c):
+                return True
+            def on_trashed(selected):
+                if selected in player.hand_cards:
+                    player.hand_cards.remove(selected)
+                    player.trash_cards.append(selected)
+            game.effect_select_hand_card(
+                player, hand_filter, on_trashed, is_optional=False)
 
         effect0.set_on_process_callback(process0)
         effects.append(effect0)
@@ -46,6 +55,7 @@ class BT24_098(CardScript):
         effect1.is_optional = True
         effect1.is_on_play = True
 
+        effect = effect1  # alias for condition closure
         def condition1(context: Dict[str, Any]) -> bool:
             if card and card.permanent_of_this_card() is None:
                 return False
@@ -57,8 +67,15 @@ class BT24_098(CardScript):
             """Action: Play Card"""
             player = ctx.get('player')
             perm = ctx.get('permanent')
-            # Play a card (from hand/trash/reveal)
-            pass  # TODO: target selection for play_card
+            game = ctx.get('game')
+            if not (player and game):
+                return
+            def play_filter(c):
+                if getattr(c, 'level', None) is None or c.level > 5:
+                    return False
+                return True
+            game.effect_play_from_zone(
+                player, 'trash', play_filter, free=True, is_optional=True)
 
         effect1.set_on_process_callback(process1)
         effects.append(effect1)
@@ -71,6 +88,7 @@ class BT24_098(CardScript):
         effect2.is_security_effect = True
         effect2.is_security_effect = True
 
+        effect = effect2  # alias for condition closure
         def condition2(context: Dict[str, Any]) -> bool:
             # Security effect — validated by engine timing
             return True
@@ -81,11 +99,27 @@ class BT24_098(CardScript):
             """Action: Play Card, Trash From Hand, Add To Hand"""
             player = ctx.get('player')
             perm = ctx.get('permanent')
-            # Play a card (from hand/trash/reveal)
-            pass  # TODO: target selection for play_card
-            # Trash from hand (cost/effect)
-            if player and player.hand_cards:
-                player.trash_from_hand([player.hand_cards[-1]])
+            game = ctx.get('game')
+            if not (player and game):
+                return
+            def play_filter(c):
+                if getattr(c, 'level', None) is None or c.level > 4:
+                    return False
+                return True
+            game.effect_play_from_zone(
+                player, 'hand', play_filter, free=True, is_optional=True)
+            if not (player and game):
+                return
+            def hand_filter(c):
+                if getattr(c, 'level', None) is None or c.level > 4:
+                    return False
+                return True
+            def on_trashed(selected):
+                if selected in player.hand_cards:
+                    player.hand_cards.remove(selected)
+                    player.trash_cards.append(selected)
+            game.effect_select_hand_card(
+                player, hand_filter, on_trashed, is_optional=False)
             # Add card to hand (from trash/reveal)
             if player and player.trash_cards:
                 card_to_add = player.trash_cards.pop()

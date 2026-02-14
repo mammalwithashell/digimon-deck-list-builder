@@ -13,13 +13,14 @@ from pathlib import Path
 
 API_URLS = {
     "BT14": "https://digimoncard.io/api-public/search.php?card=BT14&sort=cardnumber&sortdirection=asc",
+    "BT20": "https://digimoncard.io/api-public/search.php?card=BT20&sort=cardnumber&sortdirection=asc",
     "BT24": "https://digimoncard.io/api-public/search.php?card=BT24&sort=cardnumber&sortdirection=asc",
     "ST1": "https://digimoncard.io/api-public/search.php?card=ST1&sort=cardnumber&sortdirection=asc",
     "BT23": "https://digimoncard.io/api-public/search.php?card=BT23&sort=cardnumber&sortdirection=asc",
 }
 
 # Only keep cards whose IDs start with these exact prefixes
-VALID_SET_PREFIXES = ("BT14-", "BT24-", "ST1-", "BT23-")
+VALID_SET_PREFIXES = ("BT14-", "BT20-", "BT24-", "ST1-", "BT23-")
 
 OUTPUT_PATH = Path("/home/user/digimon-deck-list-builder/digimon_gym/engine/data/card_effects_api.json")
 

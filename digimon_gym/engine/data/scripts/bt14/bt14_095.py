@@ -8,7 +8,7 @@ if TYPE_CHECKING:
 
 
 class BT14_095(CardScript):
-    """Auto-transpiled from DCGO BT14_095.cs"""
+    """BT14-095 Poison Ivy"""
 
     def get_card_effects(self, card: 'CardSource') -> List['ICardEffect']:
         effects = []
@@ -19,6 +19,7 @@ class BT14_095(CardScript):
         effect0.set_effect_name("BT14-095 Effect")
         effect0.set_effect_description("Effect")
 
+        effect = effect0  # alias for condition closure
         def condition0(context: Dict[str, Any]) -> bool:
             # Option main effect — validated by engine timing
             return True
@@ -32,6 +33,7 @@ class BT14_095(CardScript):
         effect1.set_effect_name("BT14-095 Memory -2")
         effect1.set_effect_description("[All Turns] When this Digimon becomes suspended, lose 2 memory.")
 
+        effect = effect1  # alias for condition closure
         def condition1(context: Dict[str, Any]) -> bool:
             return True
 

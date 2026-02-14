@@ -8,7 +8,7 @@ if TYPE_CHECKING:
 
 
 class BT14_016(CardScript):
-    """Auto-transpiled from DCGO BT14_016.cs"""
+    """BT14-016 Triceramon | Lv.5"""
 
     def get_card_effects(self, card: 'CardSource') -> List['ICardEffect']:
         effects = []
@@ -19,6 +19,7 @@ class BT14_016(CardScript):
         effect0.set_effect_name("BT14-016 Raid")
         effect0.set_effect_description("Raid")
         effect0._is_raid = True
+
         def condition0(context: Dict[str, Any]) -> bool:
             return True
         effect0.set_can_use_condition(condition0)

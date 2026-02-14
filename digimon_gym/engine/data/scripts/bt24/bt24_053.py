@@ -8,17 +8,19 @@ if TYPE_CHECKING:
 
 
 class BT24_053(CardScript):
-    """Auto-transpiled from DCGO BT24_053.cs"""
+    """BT24-053 Protecmon | Lv.3"""
 
     def get_card_effects(self, card: 'CardSource') -> List['ICardEffect']:
         effects = []
 
-        # Factory effect: blocker
-        # Blocker
+        # Factory effect: alt_digivolve_req
+        # Alternate digivolution requirement
         effect0 = ICardEffect()
-        effect0.set_effect_name("BT24-053 Blocker")
-        effect0.set_effect_description("Blocker")
-        effect0._is_blocker = True
+        effect0.set_effect_name("BT24-053 Alternate digivolution requirement")
+        effect0.set_effect_description("Alternate digivolution requirement")
+        # Alternate digivolution: alternate source for cost 0
+        effect0._alt_digi_cost = 0
+
         def condition0(context: Dict[str, Any]) -> bool:
             return True
         effect0.set_can_use_condition(condition0)
@@ -30,9 +32,22 @@ class BT24_053(CardScript):
         effect1.set_effect_name("BT24-053 Blocker")
         effect1.set_effect_description("Blocker")
         effect1._is_blocker = True
+
         def condition1(context: Dict[str, Any]) -> bool:
             return True
         effect1.set_can_use_condition(condition1)
         effects.append(effect1)
+
+        # Factory effect: blocker
+        # Blocker
+        effect2 = ICardEffect()
+        effect2.set_effect_name("BT24-053 Blocker")
+        effect2.set_effect_description("Blocker")
+        effect2._is_blocker = True
+
+        def condition2(context: Dict[str, Any]) -> bool:
+            return True
+        effect2.set_can_use_condition(condition2)
+        effects.append(effect2)
 
         return effects

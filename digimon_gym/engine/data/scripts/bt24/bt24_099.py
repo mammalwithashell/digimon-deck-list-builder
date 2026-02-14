@@ -8,7 +8,7 @@ if TYPE_CHECKING:
 
 
 class BT24_099(CardScript):
-    """Auto-transpiled from DCGO BT24_099.cs"""
+    """BT24-099 Super Hacking"""
 
     def get_card_effects(self, card: 'CardSource') -> List['ICardEffect']:
         effects = []
@@ -19,6 +19,7 @@ class BT24_099(CardScript):
         effect0.set_effect_name("BT24-099 Ignore color requirements")
         effect0.set_effect_description("Effect")
 
+        effect = effect0  # alias for condition closure
         def condition0(context: Dict[str, Any]) -> bool:
             return True
 
@@ -31,6 +32,7 @@ class BT24_099(CardScript):
         effect1.set_effect_name("BT24-099 Trash 1, Draw 2")
         effect1.set_effect_description("[Main] By trashing 1 [Appmon] trait card from your hand, <Draw 2>. Then, place this card in the battle area.")
 
+        effect = effect1  # alias for condition closure
         def condition1(context: Dict[str, Any]) -> bool:
             # Option main effect — validated by engine timing
             return True
@@ -41,11 +43,19 @@ class BT24_099(CardScript):
             """Action: Draw 2, Trash From Hand"""
             player = ctx.get('player')
             perm = ctx.get('permanent')
+            game = ctx.get('game')
+            if not (player and game):
+                return
+            def hand_filter(c):
+                return True
+            def on_trashed(selected):
+                if selected in player.hand_cards:
+                    player.hand_cards.remove(selected)
+                    player.trash_cards.append(selected)
+            game.effect_select_hand_card(
+                player, hand_filter, on_trashed, is_optional=False)
             if player:
                 player.draw_cards(2)
-            # Trash from hand (cost/effect)
-            if player and player.hand_cards:
-                player.trash_from_hand([player.hand_cards[-1]])
 
         effect1.set_on_process_callback(process1)
         effects.append(effect1)
@@ -58,6 +68,7 @@ class BT24_099(CardScript):
         effect2.is_optional = True
         effect2.is_on_deletion = True
 
+        effect = effect2  # alias for condition closure
         def condition2(context: Dict[str, Any]) -> bool:
             if card and card.permanent_of_this_card() is None:
                 return False
@@ -74,6 +85,7 @@ class BT24_099(CardScript):
         effect3.is_security_effect = True
         effect3.is_security_effect = True
 
+        effect = effect3  # alias for condition closure
         def condition3(context: Dict[str, Any]) -> bool:
             # Security effect — validated by engine timing
             return True

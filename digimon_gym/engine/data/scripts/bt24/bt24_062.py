@@ -8,87 +8,122 @@ if TYPE_CHECKING:
 
 
 class BT24_062(CardScript):
-    """Auto-transpiled from DCGO BT24_062.cs"""
+    """BT24-062 MasterBlimpmon | Lv.5"""
 
     def get_card_effects(self, card: 'CardSource') -> List['ICardEffect']:
         effects = []
 
-        # Factory effect: blocker
-        # Blocker
+        # Factory effect: alt_digivolve_req
+        # Alternate digivolution requirement
         effect0 = ICardEffect()
-        effect0.set_effect_name("BT24-062 Blocker")
-        effect0.set_effect_description("Blocker")
-        effect0._is_blocker = True
+        effect0.set_effect_name("BT24-062 Alternate digivolution requirement")
+        effect0.set_effect_description("Alternate digivolution requirement")
+        # Alternate digivolution: with [Machine] trait for cost 0
+        effect0._alt_digi_cost = 0
+        effect0._alt_digi_trait = "Machine"
+
         def condition0(context: Dict[str, Any]) -> bool:
+            permanent = card.permanent_of_this_card() if card else None
+            if not (permanent and permanent.top_card and (any('Machine' in tr for tr in (getattr(permanent.top_card, 'card_traits', []) or [])) or any('Cyborg' in tr for tr in (getattr(permanent.top_card, 'card_traits', []) or [])))):
+                return False
             return True
         effect0.set_can_use_condition(condition0)
         effects.append(effect0)
 
-        # Factory effect: armor_purge
-        # Armor Purge
+        # Factory effect: blocker
+        # Blocker
         effect1 = ICardEffect()
-        effect1.set_effect_name("BT24-062 Armor Purge")
-        effect1.set_effect_description("Armor Purge")
-        effect1._is_armor_purge = True
+        effect1.set_effect_name("BT24-062 Blocker")
+        effect1.set_effect_description("Blocker")
+        effect1._is_blocker = True
+
         def condition1(context: Dict[str, Any]) -> bool:
             return True
         effect1.set_can_use_condition(condition1)
         effects.append(effect1)
 
-        # Timing: EffectTiming.None
-        # Effect
+        # Factory effect: armor_purge
+        # Armor Purge
         effect2 = ICardEffect()
-        effect2.set_effect_name("BT24-062 Effect")
-        effect2.set_effect_description("Effect")
+        effect2.set_effect_name("BT24-062 Armor Purge")
+        effect2.set_effect_description("Armor Purge")
+        effect2._is_armor_purge = True
 
         def condition2(context: Dict[str, Any]) -> bool:
             return True
-
         effect2.set_can_use_condition(condition2)
         effects.append(effect2)
 
-        # Timing: EffectTiming.OnEndAttack
+        # Timing: EffectTiming.None
         # Effect
         effect3 = ICardEffect()
         effect3.set_effect_name("BT24-062 Effect")
         effect3.set_effect_description("Effect")
 
+        effect = effect3  # alias for condition closure
         def condition3(context: Dict[str, Any]) -> bool:
-            if card and card.permanent_of_this_card() is None:
-                return False
-            # Triggered on attack — validated by engine timing
             return True
 
         effect3.set_can_use_condition(condition3)
         effects.append(effect3)
 
-        # Timing: EffectTiming.OnEndTurn
+        # Timing: EffectTiming.OnEndAttack
         # Effect
         effect4 = ICardEffect()
         effect4.set_effect_name("BT24-062 Effect")
         effect4.set_effect_description("Effect")
 
+        effect = effect4  # alias for condition closure
         def condition4(context: Dict[str, Any]) -> bool:
             if card and card.permanent_of_this_card() is None:
                 return False
+            # Triggered on attack — validated by engine timing
             return True
 
         effect4.set_can_use_condition(condition4)
         effects.append(effect4)
 
-        # Timing: EffectTiming.None
+        # Timing: EffectTiming.OnEndTurn
         # Effect
         effect5 = ICardEffect()
-        effect5.set_effect_name("BT24-062 This Digimon's attack target can't be switched.")
+        effect5.set_effect_name("BT24-062 Effect")
         effect5.set_effect_description("Effect")
-        effect5.is_inherited_effect = True
 
+        effect = effect5  # alias for condition closure
         def condition5(context: Dict[str, Any]) -> bool:
-            if not (card and card.owner and card.owner.is_my_turn):
+            if card and card.permanent_of_this_card() is None:
                 return False
             return True
 
         effect5.set_can_use_condition(condition5)
         effects.append(effect5)
+
+        # Timing: EffectTiming.None
+        # Target Lock
+        effect6 = ICardEffect()
+        effect6.set_effect_name("BT24-062 This Digimon's attack target can't be switched.")
+        effect6.set_effect_description("Target Lock")
+        effect6.is_inherited_effect = True
+
+        effect = effect6  # alias for condition closure
+        def condition6(context: Dict[str, Any]) -> bool:
+            if card and card.permanent_of_this_card() is None:
+                return False
+            if not (card and card.owner and card.owner.is_my_turn):
+                return False
+            return True
+
+        effect6.set_can_use_condition(condition6)
+
+        def process6(ctx: Dict[str, Any]):
+            """Action: Target Lock"""
+            player = ctx.get('player')
+            perm = ctx.get('permanent')
+            game = ctx.get('game')
+            # Target lock — this Digimon's attack target can't be switched
+            pass  # Handled by engine attack target resolution
+
+        effect6.set_on_process_callback(process6)
+        effects.append(effect6)
 
         return effects

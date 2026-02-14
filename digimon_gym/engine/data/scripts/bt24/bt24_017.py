@@ -8,7 +8,7 @@ if TYPE_CHECKING:
 
 
 class BT24_017(CardScript):
-    """Auto-transpiled from DCGO BT24_017.cs"""
+    """BT24-017 Medusamon | Lv.6"""
 
     def get_card_effects(self, card: 'CardSource') -> List['ICardEffect']:
         effects = []
@@ -19,6 +19,7 @@ class BT24_017(CardScript):
         effect0.set_effect_name("BT24-017 Raid")
         effect0.set_effect_description("Raid")
         effect0._is_raid = True
+
         def condition0(context: Dict[str, Any]) -> bool:
             return True
         effect0.set_can_use_condition(condition0)
@@ -29,8 +30,9 @@ class BT24_017(CardScript):
         effect1 = ICardEffect()
         effect1.set_effect_name("BT24-017 Delete lowest DP Digimon, Return 2 cards from their trash to deck to play 2 Tokens and gain 2k DP per opponent's Digimon.")
         effect1.set_effect_description("DP +2000, Delete")
-        effect1.is_on_play = True
+        effect1.is_when_digivolving = True
 
+        effect = effect1  # alias for condition closure
         def condition1(context: Dict[str, Any]) -> bool:
             if card and card.permanent_of_this_card() is None:
                 return False
@@ -43,13 +45,19 @@ class BT24_017(CardScript):
             """Action: DP +2000, Delete"""
             player = ctx.get('player')
             perm = ctx.get('permanent')
+            game = ctx.get('game')
             if perm:
                 perm.change_dp(2000)
-            # Delete: target selection needed for full impl
-            enemy = player.enemy if player else None
-            if enemy and enemy.battle_area:
-                target = min(enemy.battle_area, key=lambda p: p.dp)
-                enemy.delete_permanent(target)
+            if not (player and game):
+                return
+            def target_filter(p):
+                return p.is_digimon
+            def on_delete(target_perm):
+                enemy = player.enemy if player else None
+                if enemy:
+                    enemy.delete_permanent(target_perm)
+            game.effect_select_opponent_permanent(
+                player, on_delete, filter_fn=target_filter, is_optional=False)
 
         effect1.set_on_process_callback(process1)
         effects.append(effect1)

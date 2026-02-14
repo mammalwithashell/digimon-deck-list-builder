@@ -8,7 +8,7 @@ if TYPE_CHECKING:
 
 
 class BT24_006(CardScript):
-    """Auto-transpiled from DCGO BT24_006.cs"""
+    """BT24-006 Tapmon | Lv.2"""
 
     def get_card_effects(self, card: 'CardSource') -> List['ICardEffect']:
         effects = []
@@ -22,7 +22,10 @@ class BT24_006(CardScript):
         effect0.set_max_count_per_turn(1)
         effect0.set_hash_string("Draw_BT24_006")
 
+        effect = effect0  # alias for condition closure
         def condition0(context: Dict[str, Any]) -> bool:
+            if card and card.permanent_of_this_card() is None:
+                return False
             if not (card and card.owner and card.owner.is_my_turn):
                 return False
             return True
@@ -33,11 +36,19 @@ class BT24_006(CardScript):
             """Action: Draw 1, Trash From Hand"""
             player = ctx.get('player')
             perm = ctx.get('permanent')
+            game = ctx.get('game')
             if player:
                 player.draw_cards(1)
-            # Trash from hand (cost/effect)
-            if player and player.hand_cards:
-                player.trash_from_hand([player.hand_cards[-1]])
+            if not (player and game):
+                return
+            def hand_filter(c):
+                return True
+            def on_trashed(selected):
+                if selected in player.hand_cards:
+                    player.hand_cards.remove(selected)
+                    player.trash_cards.append(selected)
+            game.effect_select_hand_card(
+                player, hand_filter, on_trashed, is_optional=False)
 
         effect0.set_on_process_callback(process0)
         effects.append(effect0)
