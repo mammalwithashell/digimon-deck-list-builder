@@ -8,7 +8,7 @@ if TYPE_CHECKING:
 
 
 class BT14_060(CardScript):
-    """Auto-transpiled from DCGO BT14_060.cs"""
+    """BT14-060 Hi-Commandramon | Lv.4"""
 
     def get_card_effects(self, card: 'CardSource') -> List['ICardEffect']:
         effects = []
@@ -19,6 +19,7 @@ class BT14_060(CardScript):
         effect0.set_effect_name("BT14-060 Also treated as [Commandramon]")
         effect0.set_effect_description("Effect")
 
+        effect = effect0  # alias for condition closure
         def condition0(context: Dict[str, Any]) -> bool:
             return True
 
@@ -32,6 +33,7 @@ class BT14_060(CardScript):
         effect1.set_effect_description("[When Attacking] Reveal the top 3 cards of your deck. You may play 1 card with the [D-Brigade] or [DigiPolice] trait and a play cost of 3 or less among them without paying the cost. Return the rest to the bottom of the deck.")
         effect1.is_on_attack = True
 
+        effect = effect1  # alias for condition closure
         def condition1(context: Dict[str, Any]) -> bool:
             if card and card.permanent_of_this_card() is None:
                 return False
@@ -44,10 +46,27 @@ class BT14_060(CardScript):
             """Action: Play Card, Reveal And Select"""
             player = ctx.get('player')
             perm = ctx.get('permanent')
-            # Play a card (from hand/trash/reveal)
-            pass  # TODO: target selection for play_card
-            # Reveal top cards and select
-            pass  # TODO: reveal_and_select needs UI/agent choice
+            game = ctx.get('game')
+            if not (player and game):
+                return
+            def play_filter(c):
+                if not (any('D-Brigade' in _t or 'DigiPolice' in _t for _t in (getattr(c, 'card_traits', []) or []))):
+                    return False
+                return True
+            game.effect_play_from_zone(
+                player, 'hand', play_filter, free=True, is_optional=True)
+            if not (player and game):
+                return
+            def reveal_filter(c):
+                if not (any('D-Brigade' in _t or 'DigiPolice' in _t for _t in (getattr(c, 'card_traits', []) or []))):
+                    return False
+                return True
+            def on_revealed(selected, remaining):
+                player.hand_cards.append(selected)
+                for c in remaining:
+                    player.library_cards.append(c)
+            game.effect_reveal_and_select(
+                player, 3, reveal_filter, on_revealed, is_optional=True)
 
         effect1.set_on_process_callback(process1)
         effects.append(effect1)
@@ -62,6 +81,7 @@ class BT14_060(CardScript):
         effect2.set_max_count_per_turn(1)
         effect2.set_hash_string("Substitute_BT14_060")
 
+        effect = effect2  # alias for condition closure
         def condition2(context: Dict[str, Any]) -> bool:
             if card and card.permanent_of_this_card() is None:
                 return False

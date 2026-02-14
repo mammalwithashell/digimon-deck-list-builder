@@ -167,8 +167,8 @@ class CardDatabase:
             entity.type_jpn = entry.get('type_jpn', [])
             entity.card_effect_class_name = entry.get('card_effect_class_name', '')
             entity.play_cost = entry.get('play_cost', 0)
-            entity.dp = entry.get('dp', 0)
-            entity.level = entry.get('level', 0)
+            entity.dp = entry.get('dp')  # None for eggs/tamers/options
+            entity.level = entry.get('level')  # None for tamers/options without level
             entity.max_count_in_deck = entry.get('max_count_in_deck', 4)
             entity.card_sprite_name = entry.get('card_sprite_name', '')
             entity.effect_description_eng = entry.get('effect_description_eng', '')

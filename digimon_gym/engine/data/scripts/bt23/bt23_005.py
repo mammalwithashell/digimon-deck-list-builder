@@ -6,73 +6,55 @@ from ....interfaces.card_effect import ICardEffect
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
 
+
 class BT23_005(CardScript):
+    """BT23-005 Elizamon | Lv.3"""
+
     def get_card_effects(self, card: 'CardSource') -> List['ICardEffect']:
         effects = []
 
-        # Main Effect: [Your Turn] When this Digimon would digivolve into a Digimon card with the [Reptile] or [Dragonkin] trait, reduce the digivolution cost by 1.
+        # Timing: EffectTiming.BeforePayCost
+        # [Your Turn] When this Digimon would digivolve into a Digimon card with the [Reptile] or [Dragonkin] trait, reduce the digivolution cost by 1.
+        effect0 = ICardEffect()
+        effect0.set_effect_name("BT23-005 Reduce the digivolution cost by 1")
+        effect0.set_effect_description("[Your Turn] When this Digimon would digivolve into a Digimon card with the [Reptile] or [Dragonkin] trait, reduce the digivolution cost by 1.")
+        effect0.cost_reduction = 1
+
+        effect = effect0  # alias for condition closure
+        def condition0(context: Dict[str, Any]) -> bool:
+            if card and card.permanent_of_this_card() is None:
+                return False
+            if not (card and card.owner and card.owner.is_my_turn):
+                return False
+            return True
+
+        effect0.set_can_use_condition(condition0)
+
+        def process0(ctx: Dict[str, Any]):
+            """Action: Cost -1"""
+            player = ctx.get('player')
+            perm = ctx.get('permanent')
+            game = ctx.get('game')
+            # Cost reduction handled via cost_reduction property
+
+        effect0.set_on_process_callback(process0)
+        effects.append(effect0)
+
+        # Factory effect: dp_modifier
+        # DP modifier
         effect1 = ICardEffect()
-        effect1.set_effect_name("BT23-005 Main Effect")
-        effect1.set_effect_description("[Your Turn] When this Digimon would digivolve into a Digimon card with the [Reptile] or [Dragonkin] trait, reduce the digivolution cost by 1.")
-
-        # Set timing if supported by engine iteration (Player.digivolve iterates WhenWouldDigivolve)
-        # Note: ICardEffect doesn't have a 'timing' property itself, the timing is determined by where it's called from.
-        # But for 'effect_list(timing)' to return it, we might need to rely on the script organization or just filtering.
-        # The engine uses `CardScript.get_card_effects` which returns ALL effects.
-        # Then `CardSource.effect_list(timing)` should technically filter.
-        # BUT current `CardSource.effect_list` returns EVERYTHING.
-        # I need to update `CardSource.effect_list` to filter or just assume the caller filters.
-        # Player.digivolve filters by `WhenWouldDigivolve`? No, it asks for `EffectTiming.WhenWouldDigivolve`.
-        # I need to ensure `CardSource.effect_list` handles timing?
-        # Actually `CardSource.effect_list` calls `script.get_card_effects`.
-        # I should probably just return everything and let the caller assume checking properties?
-        # WAIT: `Player.digivolve` calls `source.effect_list(EffectTiming.WhenWouldDigivolve)`.
-        # But `CardSource.effect_list` implementation is:
-        # def effect_list(self, timing):
-        #     ...
-        #     return script.get_card_effects(self)
-        # It ignores the timing arg!
-        # So I need to add a way to distinguish timings in the effect itself or filter it.
-        # `ICardEffect` doesn't have a `timing` field.
-        # Convention: ICardEffect properties like `is_on_attack`, `is_when_digivolving`.
-        # I need `is_when_would_digivolve`.
-        # But I haven't added `is_when_would_digivolve` to ICardEffect.
-        # I should Add it. Or use a generic check.
-        # For now, I will add `is_when_would_digivolve` property to ICardEffect via dynamic setter in this script if possible, or assume caller filters by name/type?
-        # No, better to add the property to ICardEffect in the previous step... I missed it.
-        # I will assume I can add it dynamically or just rely on the fact that `cost_reduction > 0` implies it's for cost reduction timing.
-
-        effect1.cost_reduction = 1
+        effect1.set_effect_name("BT23-005 DP modifier")
+        effect1.set_effect_description("DP modifier")
+        effect1.is_inherited_effect = True
+        effect1.dp_modifier = 2000
 
         def condition1(context: Dict[str, Any]) -> bool:
-            if not card.owner or not card.owner.is_my_turn:
+            if not (card and card.owner and card.owner.is_my_turn):
                 return False
-
-            # Check target card traits
-            target_card = context.get("card_source")
-            if target_card:
-                traits = target_card.card_traits
-                return "Reptile" in traits or "Dragonkin" in traits
-            return False
-
+            if card and card.permanent_of_this_card() is None:
+                return False
+            return True
         effect1.set_can_use_condition(condition1)
         effects.append(effect1)
-
-        # Inherited Effect: [Your Turn] This Digimon gets +2000 DP.
-        effect2 = ICardEffect()
-        effect2.set_effect_name("BT23-005 Inherited Effect")
-        effect2.set_effect_description("[Your Turn] This Digimon gets +2000 DP.")
-        effect2.is_inherited_effect = True
-        effect2.dp_modifier = 2000
-
-        def condition2(context: Dict[str, Any]) -> bool:
-            # Context has "permanent".
-            perm = context.get("permanent")
-            if perm and perm.top_card and perm.top_card.owner:
-                return perm.top_card.owner.is_my_turn
-            return False
-
-        effect2.set_can_use_condition(condition2)
-        effects.append(effect2)
 
         return effects

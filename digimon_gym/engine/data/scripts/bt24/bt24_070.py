@@ -8,7 +8,7 @@ if TYPE_CHECKING:
 
 
 class BT24_070(CardScript):
-    """Auto-transpiled from DCGO BT24_070.cs"""
+    """BT24-070 Growlmon | Lv.4"""
 
     def get_card_effects(self, card: 'CardSource') -> List['ICardEffect']:
         effects = []
@@ -20,7 +20,10 @@ class BT24_070(CardScript):
         effect0.set_effect_description("Effect")
         effect0.is_on_play = True
 
+        effect = effect0  # alias for condition closure
         def condition0(context: Dict[str, Any]) -> bool:
+            if card and card.permanent_of_this_card() is None:
+                return False
             # Triggered on play — validated by engine timing
             return True
 
@@ -32,9 +35,12 @@ class BT24_070(CardScript):
         effect1 = ICardEffect()
         effect1.set_effect_name("BT24-070 Effect")
         effect1.set_effect_description("Effect")
-        effect1.is_on_play = True
+        effect1.is_when_digivolving = True
 
+        effect = effect1  # alias for condition closure
         def condition1(context: Dict[str, Any]) -> bool:
+            if card and card.permanent_of_this_card() is None:
+                return False
             # Triggered when digivolving — validated by engine timing
             return True
 
@@ -51,7 +57,10 @@ class BT24_070(CardScript):
         effect2.set_hash_string("BT24_070_Inherited")
         effect2.is_on_attack = True
 
+        effect = effect2  # alias for condition closure
         def condition2(context: Dict[str, Any]) -> bool:
+            if card and card.permanent_of_this_card() is None:
+                return False
             # Triggered on attack — validated by engine timing
             return True
 
@@ -61,11 +70,17 @@ class BT24_070(CardScript):
             """Action: Delete"""
             player = ctx.get('player')
             perm = ctx.get('permanent')
-            # Delete: target selection needed for full impl
-            enemy = player.enemy if player else None
-            if enemy and enemy.battle_area:
-                target = min(enemy.battle_area, key=lambda p: p.dp)
-                enemy.delete_permanent(target)
+            game = ctx.get('game')
+            if not (player and game):
+                return
+            def target_filter(p):
+                return p.is_digimon
+            def on_delete(target_perm):
+                enemy = player.enemy if player else None
+                if enemy:
+                    enemy.delete_permanent(target_perm)
+            game.effect_select_opponent_permanent(
+                player, on_delete, filter_fn=target_filter, is_optional=False)
 
         effect2.set_on_process_callback(process2)
         effects.append(effect2)

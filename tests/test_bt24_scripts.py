@@ -101,6 +101,35 @@ def make_game_context():
         turn_player = p1
         opponent_player = p2
         memory = 3
+
+        class logger:
+            @staticmethod
+            def log(msg):
+                pass
+
+        def effect_select_hand_card(self, player, filter_fn, callback, is_optional=False):
+            """Auto-select first matching hand card."""
+            for c in list(player.hand_cards):
+                if filter_fn(c):
+                    callback(c)
+                    return
+
+        def effect_select_opponent_permanent(self, player, callback, filter_fn=None, is_optional=False):
+            """Auto-select first matching opponent permanent."""
+            enemy = player.enemy if player else None
+            if not enemy:
+                return
+            for p in list(enemy.battle_area):
+                if filter_fn is None or filter_fn(p):
+                    callback(p)
+                    return
+
+        def effect_link_to_permanent(self, player, card, is_optional=False):
+            pass
+
+        def effect_digivolve_from_hand(self, player, perm, filter_fn, **kwargs):
+            pass
+
     game = FakeGame()
     p1.game = game
     p2.game = game
@@ -178,14 +207,14 @@ class TestBT24EffectsExecute:
         script = BT24_010()
         effects = script.get_card_effects(card)
 
-        # Should have: blocker, on-deletion (de-digivolve), raid
-        assert effects[0]._is_blocker
-        assert effects[1].is_on_deletion
-        assert effects[2]._is_raid
+        # Should have: alt_digivolve_req, blocker, on-deletion (de-digivolve), raid
+        assert effects[1]._is_blocker
+        assert effects[2].is_on_deletion
+        assert effects[3]._is_raid
 
         # Test de-digivolve callback
         ctx = {"game": game, "player": p1, "permanent": perm}
-        effects[1].on_process_callback(ctx)
+        effects[2].on_process_callback(ctx)
 
         assert len(opp_perm.card_sources) == 1
         assert opp_perm.top_card is opp_base
@@ -206,9 +235,9 @@ class TestBT24EffectsExecute:
 
         script = BT24_014()
         effects = script.get_card_effects(card)
-        digi_effect = effects[1]
+        digi_effect = effects[2]  # [0]=alt_digi, [1]=security_attack, [2]=when_digivolving
 
-        assert digi_effect.is_on_play  # Used for OnPlay/WhenDigivolving
+        assert digi_effect.is_when_digivolving
 
         ctx = {"game": game, "player": p1, "permanent": perm}
         digi_effect.on_process_callback(ctx)
@@ -314,4 +343,4 @@ class TestBT24EffectsExecute:
             instance = script_class()
             effects = instance.get_card_effects(None)
             total_effects += len(effects)
-        assert total_effects == 320, f"Expected 320 total effects, got {total_effects}"
+        assert total_effects == 401, f"Expected 401 total effects, got {total_effects}"

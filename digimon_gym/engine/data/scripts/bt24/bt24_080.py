@@ -8,7 +8,7 @@ if TYPE_CHECKING:
 
 
 class BT24_080(CardScript):
-    """Auto-transpiled from DCGO BT24_080.cs"""
+    """BT24-080 Megidramon | Lv.6"""
 
     def get_card_effects(self, card: 'CardSource') -> List['ICardEffect']:
         effects = []
@@ -19,6 +19,7 @@ class BT24_080(CardScript):
         effect0.set_effect_name("BT24-080 Also treated as [ChaosGallantmon]")
         effect0.set_effect_description("Effect")
 
+        effect = effect0  # alias for condition closure
         def condition0(context: Dict[str, Any]) -> bool:
             return True
 
@@ -32,6 +33,7 @@ class BT24_080(CardScript):
         effect1.set_effect_description("[Trash] [End of Your Turn] If you have 4 or fewer cards in your hand, 1 of your [Dark Dragon] or [Evil Dragon] trait Digimon may digivolve into this card without paying the cost.")
         effect1.is_optional = True
 
+        effect = effect1  # alias for condition closure
         def condition1(context: Dict[str, Any]) -> bool:
             if not (card and card.owner and card.owner.is_my_turn):
                 return False
@@ -43,7 +45,13 @@ class BT24_080(CardScript):
             """Action: Digivolve"""
             player = ctx.get('player')
             perm = ctx.get('permanent')
-            pass  # TODO: digivolve effect needs card selection
+            game = ctx.get('game')
+            if not (player and perm and game):
+                return
+            def digi_filter(c):
+                return True
+            game.effect_digivolve_from_hand(
+                player, perm, digi_filter, is_optional=True)
 
         effect1.set_on_process_callback(process1)
         effects.append(effect1)
@@ -54,6 +62,7 @@ class BT24_080(CardScript):
         effect2.set_effect_name("BT24-080 Blocker")
         effect2.set_effect_description("Blocker")
         effect2._is_blocker = True
+
         def condition2(context: Dict[str, Any]) -> bool:
             return True
         effect2.set_can_use_condition(condition2)
@@ -66,7 +75,10 @@ class BT24_080(CardScript):
         effect3.set_effect_description("Effect")
         effect3.is_on_play = True
 
+        effect = effect3  # alias for condition closure
         def condition3(context: Dict[str, Any]) -> bool:
+            if card and card.permanent_of_this_card() is None:
+                return False
             # Triggered on play — validated by engine timing
             return True
 
@@ -78,9 +90,12 @@ class BT24_080(CardScript):
         effect4 = ICardEffect()
         effect4.set_effect_name("BT24-080 Effect")
         effect4.set_effect_description("Effect")
-        effect4.is_on_play = True
+        effect4.is_when_digivolving = True
 
+        effect = effect4  # alias for condition closure
         def condition4(context: Dict[str, Any]) -> bool:
+            if card and card.permanent_of_this_card() is None:
+                return False
             # Triggered when digivolving — validated by engine timing
             return True
 
@@ -94,6 +109,7 @@ class BT24_080(CardScript):
         effect5.set_effect_description("Effect")
         effect5.is_on_deletion = True
 
+        effect = effect5  # alias for condition closure
         def condition5(context: Dict[str, Any]) -> bool:
             # Triggered on deletion — validated by engine timing
             return True

@@ -8,7 +8,7 @@ if TYPE_CHECKING:
 
 
 class BT14_030(CardScript):
-    """Auto-transpiled from DCGO BT14_030.cs"""
+    """BT14-030 MarineAngemon | Lv.6"""
 
     def get_card_effects(self, card: 'CardSource') -> List['ICardEffect']:
         effects = []
@@ -21,6 +21,7 @@ class BT14_030(CardScript):
         effect0.is_optional = True
         effect0.is_on_play = True
 
+        effect = effect0  # alias for condition closure
         def condition0(context: Dict[str, Any]) -> bool:
             if card and card.permanent_of_this_card() is None:
                 return False
@@ -33,11 +34,17 @@ class BT14_030(CardScript):
             """Action: Bounce"""
             player = ctx.get('player')
             perm = ctx.get('permanent')
-            # Bounce: return opponent's digimon to hand
-            enemy = player.enemy if player else None
-            if enemy and enemy.battle_area:
-                target = enemy.battle_area[-1]
-                player.bounce_permanent_to_hand(target)
+            game = ctx.get('game')
+            if not (player and game):
+                return
+            def target_filter(p):
+                return True
+            def on_bounce(target_perm):
+                enemy = player.enemy if player else None
+                if enemy:
+                    enemy.bounce_permanent_to_hand(target_perm)
+            game.effect_select_opponent_permanent(
+                player, on_bounce, filter_fn=target_filter, is_optional=True)
 
         effect0.set_on_process_callback(process0)
         effects.append(effect0)
@@ -48,8 +55,9 @@ class BT14_030(CardScript):
         effect1.set_effect_name("BT14-030 Return Digimons to hand")
         effect1.set_effect_description("[When Digivolving] By returning 1 of your opponent's level 3 Digimon or 1 of your Digimon to the hand, return 1 of your opponent's Digimon whose level is less than or equal to the returned Digimon's level to the hand.")
         effect1.is_optional = True
-        effect1.is_on_play = True
+        effect1.is_when_digivolving = True
 
+        effect = effect1  # alias for condition closure
         def condition1(context: Dict[str, Any]) -> bool:
             if card and card.permanent_of_this_card() is None:
                 return False
@@ -62,11 +70,17 @@ class BT14_030(CardScript):
             """Action: Bounce"""
             player = ctx.get('player')
             perm = ctx.get('permanent')
-            # Bounce: return opponent's digimon to hand
-            enemy = player.enemy if player else None
-            if enemy and enemy.battle_area:
-                target = enemy.battle_area[-1]
-                player.bounce_permanent_to_hand(target)
+            game = ctx.get('game')
+            if not (player and game):
+                return
+            def target_filter(p):
+                return True
+            def on_bounce(target_perm):
+                enemy = player.enemy if player else None
+                if enemy:
+                    enemy.bounce_permanent_to_hand(target_perm)
+            game.effect_select_opponent_permanent(
+                player, on_bounce, filter_fn=target_filter, is_optional=True)
 
         effect1.set_on_process_callback(process1)
         effects.append(effect1)
@@ -79,6 +93,7 @@ class BT14_030(CardScript):
         effect2.set_max_count_per_turn(1)
         effect2.set_hash_string("Recovery_BT14_030")
 
+        effect = effect2  # alias for condition closure
         def condition2(context: Dict[str, Any]) -> bool:
             if card and card.permanent_of_this_card() is None:
                 return False
@@ -92,6 +107,7 @@ class BT14_030(CardScript):
             """Action: Recovery +1"""
             player = ctx.get('player')
             perm = ctx.get('permanent')
+            game = ctx.get('game')
             if player:
                 player.recovery(1)
 

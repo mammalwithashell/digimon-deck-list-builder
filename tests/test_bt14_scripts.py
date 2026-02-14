@@ -106,6 +106,35 @@ def make_game_context():
         turn_player = p1
         opponent_player = p2
         memory = 3
+
+        class logger:
+            @staticmethod
+            def log(msg):
+                pass
+
+        def effect_select_hand_card(self, player, filter_fn, callback, is_optional=False):
+            """Auto-select first matching hand card."""
+            for c in list(player.hand_cards):
+                if filter_fn(c):
+                    callback(c)
+                    return
+
+        def effect_select_opponent_permanent(self, player, callback, filter_fn=None, is_optional=False):
+            """Auto-select first matching opponent permanent."""
+            enemy = player.enemy if player else None
+            if not enemy:
+                return
+            for p in list(enemy.battle_area):
+                if filter_fn is None or filter_fn(p):
+                    callback(p)
+                    return
+
+        def effect_link_to_permanent(self, player, card, is_optional=False):
+            pass
+
+        def effect_digivolve_from_hand(self, player, perm, filter_fn, **kwargs):
+            pass
+
     game = FakeGame()
     p1.game = game
     p2.game = game

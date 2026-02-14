@@ -169,7 +169,10 @@ class Game:
     def phase_start(self):
         self.current_phase = GamePhase.Start
         self.logger.log(f"=== Turn {self.turn_count} — {self.turn_player.player_name} ===")
-        self.turn_player.unsuspend_all()
+        # Unsuspend turn player's permanents (skip those with <Reboot> — they unsuspend on opponent's turn)
+        self.turn_player.unsuspend_all(skip_reboot=True)
+        # <Reboot>: unsuspend opponent's Reboot permanents (they unsuspend during opponent's unsuspend phase)
+        self.opponent_player.unsuspend_reboot_only()
         self._reset_effect_turn_counts()
         self._clear_temp_dp()
         self.execute_effects(EffectTiming.OnStartTurn)
@@ -435,19 +438,64 @@ class Game:
         self.current_phase = GamePhase.Main
 
         if isinstance(target, Player):
-            result = target.security_attack(attacker)
-            if result == AttackResolution.AttackerDeleted:
-                self.turn_player.delete_permanent(attacker)
-            elif result == AttackResolution.GameEnd:
-                self.declare_winner(self.turn_player)
+            # Security attack: check multiple cards based on <Security Attack +/-X>
+            sa_mod = attacker.security_attack_modifier()
+            num_checks = max(0, 1 + sa_mod)
+            for _ in range(num_checks):
+                if self.game_over:
+                    break
+                # Check attacker still on field (could be deleted by security effect)
+                if attacker not in self.turn_player.battle_area:
+                    break
+                result = target.security_attack(attacker)
+                if result == AttackResolution.AttackerDeleted:
+                    self.turn_player.delete_permanent(attacker, is_battle=True)
+                    break
+                elif result == AttackResolution.GameEnd:
+                    self.declare_winner(self.turn_player)
+                    break
         elif isinstance(target, Permanent):
-            if attacker.dp > target.dp:
-                self.opponent_player.delete_permanent(target)
-            elif attacker.dp < target.dp:
-                self.turn_player.delete_permanent(attacker)
+            a_dp = attacker.dp or 0
+            t_dp = target.dp or 0
+            attacker_wins = a_dp > t_dp
+            defender_wins = a_dp < t_dp
+            tie = a_dp == t_dp
+
+            if attacker_wins:
+                # <Retaliation>: when this Digimon is deleted in battle, delete the winner
+                has_retaliation = target.has_keyword('_is_retaliation')
+                self.opponent_player.delete_permanent(target, is_battle=True)
+                if has_retaliation:
+                    self.logger.log(f"[Retaliation] {target.top_card.card_names[0] if target.top_card else 'Unknown'} retaliates!")
+                    self.turn_player.delete_permanent(attacker, is_battle=True)
+                # <Piercing>: after winning battle vs Digimon, check security
+                elif attacker.has_keyword('_is_piercing') and attacker in self.turn_player.battle_area:
+                    self.logger.log(f"[Piercing] {attacker.top_card.card_names[0] if attacker.top_card else 'Unknown'} pierces through!")
+                    sa_mod = attacker.security_attack_modifier()
+                    num_checks = max(0, 1 + sa_mod)
+                    for _ in range(num_checks):
+                        if self.game_over:
+                            break
+                        if attacker not in self.turn_player.battle_area:
+                            break
+                        result = self.opponent_player.security_attack(attacker)
+                        if result == AttackResolution.AttackerDeleted:
+                            self.turn_player.delete_permanent(attacker, is_battle=True)
+                            break
+                        elif result == AttackResolution.GameEnd:
+                            self.declare_winner(self.turn_player)
+                            break
+            elif defender_wins:
+                # <Retaliation> on attacker: when deleted in battle, delete the winner
+                has_retaliation = attacker.has_keyword('_is_retaliation')
+                self.turn_player.delete_permanent(attacker, is_battle=True)
+                if has_retaliation:
+                    self.logger.log(f"[Retaliation] {attacker.top_card.card_names[0] if attacker.top_card else 'Unknown'} retaliates!")
+                    self.opponent_player.delete_permanent(target, is_battle=True)
             else:
-                self.opponent_player.delete_permanent(target)
-                self.turn_player.delete_permanent(attacker)
+                # Tie: both deleted (Retaliation doesn't trigger since neither "wins")
+                self.opponent_player.delete_permanent(target, is_battle=True)
+                self.turn_player.delete_permanent(attacker, is_battle=True)
 
         self.execute_effects(EffectTiming.OnEndAttack)
         self.check_turn_end()
@@ -642,8 +690,8 @@ class Game:
                 top = perm.top_card
                 # +0: top card internal ID
                 tensor.append(float(CardRegistry.get_id(top.card_id) if top else 0))
-                # +1: current DP
-                tensor.append(float(perm.dp))
+                # +1: current DP (None for eggs/tamers → 0.0)
+                tensor.append(float(perm.dp or 0))
                 # +2: suspended
                 tensor.append(1.0 if perm.is_suspended else 0.0)
                 # +3: OPT total (count of once-per-turn effects, incl. inherited)
@@ -707,17 +755,25 @@ class Game:
             # Attack (100-399): 100 + attacker*15 + target
             for i in range(min(len(me.battle_area), FIELD_SLOTS)):
                 attacker = me.battle_area[i]
-                if attacker.is_suspended:
-                    continue
-                if not attacker.is_digimon:
+                if not attacker.can_attack():
                     continue
                 # Security attack (target index 12)
                 mask[100 + i * 15 + 12] = 1.0
                 # Digimon attacks (targets 0-11, suspended only per rules)
+                has_raid = attacker.has_keyword('_is_raid')
                 for j in range(min(len(opp.battle_area), FIELD_SLOTS)):
                     target = opp.battle_area[j]
                     if target.is_suspended:
                         mask[100 + i * 15 + j] = 1.0
+                    elif has_raid and not target.is_suspended and target.is_digimon:
+                        # <Raid>: can attack unsuspended Digimon with highest DP
+                        # Find the highest DP among unsuspended opponent Digimon
+                        unsuspended_dps = [
+                            (p.dp or 0) for p in opp.battle_area
+                            if not p.is_suspended and p.is_digimon
+                        ]
+                        if unsuspended_dps and (target.dp or 0) == max(unsuspended_dps):
+                            mask[100 + i * 15 + j] = 1.0
 
             # Digivolve (400-999): 400 + hand*15 + field
             for h in range(min(len(me.hand_cards), 30)):
@@ -745,7 +801,7 @@ class Game:
             if me.breeding_area is None and me.digitama_library_cards:
                 mask[60] = 1.0
             # Move (61)
-            if me.breeding_area is not None and me.breeding_area.level >= 3:
+            if me.breeding_area is not None and (me.breeding_area.level or 0) >= 3:
                 mask[61] = 1.0
             # Pass (62)
             mask[62] = 1.0
@@ -1417,7 +1473,7 @@ class Game:
 
         # Breeding area target (99): must be a Digimon, not an egg (level > 2)
         ba = player.breeding_area
-        if ba is not None and ba.is_digimon and ba.level > 2:
+        if ba is not None and ba.is_digimon and (ba.level or 0) > 2:
             if filter_fn is None or filter_fn(ba):
                 valid.append(SEL_MY_BREEDING)
 

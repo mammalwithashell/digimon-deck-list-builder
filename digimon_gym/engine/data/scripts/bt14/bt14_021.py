@@ -8,9 +8,21 @@ if TYPE_CHECKING:
 
 
 class BT14_021(CardScript):
-    """Auto-transpiled from DCGO BT14_021.cs"""
+    """BT14-021 Syakomon | Lv.3"""
 
     def get_card_effects(self, card: 'CardSource') -> List['ICardEffect']:
         effects = []
-        # No effects found in DCGO source
+
+        # Factory effect: evade
+        # Evade
+        effect0 = ICardEffect()
+        effect0.set_effect_name("BT14-021 Evade")
+        effect0.set_effect_description("Evade")
+        effect0._is_evade = True
+
+        def condition0(context: Dict[str, Any]) -> bool:
+            return True
+        effect0.set_can_use_condition(condition0)
+        effects.append(effect0)
+
         return effects

@@ -8,7 +8,7 @@ if TYPE_CHECKING:
 
 
 class BT24_048(CardScript):
-    """Auto-transpiled from DCGO BT24_048.cs"""
+    """BT24-048 Deramon | Lv.5"""
 
     def get_card_effects(self, card: 'CardSource') -> List['ICardEffect']:
         effects = []
@@ -19,6 +19,7 @@ class BT24_048(CardScript):
         effect0.set_effect_name("BT24-048 Blocker")
         effect0.set_effect_description("Blocker")
         effect0._is_blocker = True
+
         def condition0(context: Dict[str, Any]) -> bool:
             return True
         effect0.set_can_use_condition(condition0)
@@ -31,7 +32,10 @@ class BT24_048(CardScript):
         effect1.set_effect_description("Effect")
         effect1.is_on_play = True
 
+        effect = effect1  # alias for condition closure
         def condition1(context: Dict[str, Any]) -> bool:
+            if card and card.permanent_of_this_card() is None:
+                return False
             # Triggered on play — validated by engine timing
             return True
 
@@ -43,9 +47,12 @@ class BT24_048(CardScript):
         effect2 = ICardEffect()
         effect2.set_effect_name("BT24-048 Effect")
         effect2.set_effect_description("Effect")
-        effect2.is_on_play = True
+        effect2.is_when_digivolving = True
 
+        effect = effect2  # alias for condition closure
         def condition2(context: Dict[str, Any]) -> bool:
+            if card and card.permanent_of_this_card() is None:
+                return False
             # Triggered when digivolving — validated by engine timing
             return True
 
@@ -63,10 +70,29 @@ class BT24_048(CardScript):
         effect3.set_hash_string("BT24_048_Inherited")
         effect3.is_on_deletion = True
 
+        effect = effect3  # alias for condition closure
         def condition3(context: Dict[str, Any]) -> bool:
+            if card and card.permanent_of_this_card() is None:
+                return False
             return True
 
         effect3.set_can_use_condition(condition3)
+
+        def process3(ctx: Dict[str, Any]):
+            """Action: Unsuspend"""
+            player = ctx.get('player')
+            perm = ctx.get('permanent')
+            game = ctx.get('game')
+            if not (player and game):
+                return
+            def target_filter(p):
+                return True
+            def on_unsuspend(target_perm):
+                target_perm.unsuspend()
+            game.effect_select_own_permanent(
+                player, on_unsuspend, filter_fn=target_filter, is_optional=True)
+
+        effect3.set_on_process_callback(process3)
         effects.append(effect3)
 
         return effects

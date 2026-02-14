@@ -8,7 +8,7 @@ if TYPE_CHECKING:
 
 
 class BT14_072(CardScript):
-    """Auto-transpiled from DCGO BT14_072.cs"""
+    """BT14-072 Fangmon | Lv.4"""
 
     def get_card_effects(self, card: 'CardSource') -> List['ICardEffect']:
         effects = []
@@ -20,6 +20,7 @@ class BT14_072(CardScript):
         effect0.set_effect_description("[On Play] Return 1 purple Digimon card with the [Dark Animal] trait from your trash to the hand. Then, trash 1 card in your hand.")
         effect0.is_on_play = True
 
+        effect = effect0  # alias for condition closure
         def condition0(context: Dict[str, Any]) -> bool:
             if card and card.permanent_of_this_card() is None:
                 return False
@@ -32,9 +33,19 @@ class BT14_072(CardScript):
             """Action: Trash From Hand, Add To Hand"""
             player = ctx.get('player')
             perm = ctx.get('permanent')
-            # Trash from hand (cost/effect)
-            if player and player.hand_cards:
-                player.trash_from_hand([player.hand_cards[-1]])
+            game = ctx.get('game')
+            if not (player and game):
+                return
+            def hand_filter(c):
+                if not (any('Dark Animal' in _t or 'DarkAnimal' in _t for _t in (getattr(c, 'card_traits', []) or []))):
+                    return False
+                return True
+            def on_trashed(selected):
+                if selected in player.hand_cards:
+                    player.hand_cards.remove(selected)
+                    player.trash_cards.append(selected)
+            game.effect_select_hand_card(
+                player, hand_filter, on_trashed, is_optional=False)
             # Add card to hand (from trash/reveal)
             if player and player.trash_cards:
                 card_to_add = player.trash_cards.pop()
@@ -50,6 +61,7 @@ class BT14_072(CardScript):
         effect1.set_effect_description("[When Attacking] Return 1 purple Digimon card with the [Dark Animal] trait from your trash to the hand. Then, trash 1 card in your hand.")
         effect1.is_on_attack = True
 
+        effect = effect1  # alias for condition closure
         def condition1(context: Dict[str, Any]) -> bool:
             if card and card.permanent_of_this_card() is None:
                 return False
@@ -62,9 +74,19 @@ class BT14_072(CardScript):
             """Action: Trash From Hand, Add To Hand"""
             player = ctx.get('player')
             perm = ctx.get('permanent')
-            # Trash from hand (cost/effect)
-            if player and player.hand_cards:
-                player.trash_from_hand([player.hand_cards[-1]])
+            game = ctx.get('game')
+            if not (player and game):
+                return
+            def hand_filter(c):
+                if not (any('Dark Animal' in _t or 'DarkAnimal' in _t for _t in (getattr(c, 'card_traits', []) or []))):
+                    return False
+                return True
+            def on_trashed(selected):
+                if selected in player.hand_cards:
+                    player.hand_cards.remove(selected)
+                    player.trash_cards.append(selected)
+            game.effect_select_hand_card(
+                player, hand_filter, on_trashed, is_optional=False)
             # Add card to hand (from trash/reveal)
             if player and player.trash_cards:
                 card_to_add = player.trash_cards.pop()

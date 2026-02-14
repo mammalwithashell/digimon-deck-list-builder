@@ -8,7 +8,7 @@ if TYPE_CHECKING:
 
 
 class BT24_068(CardScript):
-    """Auto-transpiled from DCGO BT24_068.cs"""
+    """BT24-068 DemiDevimon | Lv.3"""
 
     def get_card_effects(self, card: 'CardSource') -> List['ICardEffect']:
         effects = []
@@ -20,6 +20,7 @@ class BT24_068(CardScript):
         effect0.set_effect_description("[On Play] Reveal the top 3 cards of your deck. Add 1 card with the [Evil] or [Fallen Angel] trait and 1 card with the [Seven Great Demon Lords] trait among them to the hand. Return the rest to the bottom of the deck. Then, trash 1 card in your hand.")
         effect0.is_on_play = True
 
+        effect = effect0  # alias for condition closure
         def condition0(context: Dict[str, Any]) -> bool:
             if card and card.permanent_of_this_card() is None:
                 return False
@@ -32,15 +33,31 @@ class BT24_068(CardScript):
             """Action: Trash From Hand, Add To Hand, Reveal And Select"""
             player = ctx.get('player')
             perm = ctx.get('permanent')
-            # Trash from hand (cost/effect)
-            if player and player.hand_cards:
-                player.trash_from_hand([player.hand_cards[-1]])
+            game = ctx.get('game')
+            if not (player and game):
+                return
+            def hand_filter(c):
+                return True
+            def on_trashed(selected):
+                if selected in player.hand_cards:
+                    player.hand_cards.remove(selected)
+                    player.trash_cards.append(selected)
+            game.effect_select_hand_card(
+                player, hand_filter, on_trashed, is_optional=False)
             # Add card to hand (from trash/reveal)
             if player and player.trash_cards:
                 card_to_add = player.trash_cards.pop()
                 player.hand_cards.append(card_to_add)
-            # Reveal top cards and select
-            pass  # TODO: reveal_and_select needs UI/agent choice
+            if not (player and game):
+                return
+            def reveal_filter(c):
+                return True
+            def on_revealed(selected, remaining):
+                player.hand_cards.append(selected)
+                for c in remaining:
+                    player.library_cards.append(c)
+            game.effect_reveal_and_select(
+                player, 3, reveal_filter, on_revealed, is_optional=True)
 
         effect0.set_on_process_callback(process0)
         effects.append(effect0)
@@ -55,6 +72,7 @@ class BT24_068(CardScript):
         effect1.set_hash_string("BT24_068_TrashTopDeck")
         effect1.is_on_attack = True
 
+        effect = effect1  # alias for condition closure
         def condition1(context: Dict[str, Any]) -> bool:
             # Triggered on attack — validated by engine timing
             return True

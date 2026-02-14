@@ -8,7 +8,7 @@ if TYPE_CHECKING:
 
 
 class BT14_062(CardScript):
-    """Auto-transpiled from DCGO BT14_062.cs"""
+    """BT14-062 Datamon | Lv.5"""
 
     def get_card_effects(self, card: 'CardSource') -> List['ICardEffect']:
         effects = []

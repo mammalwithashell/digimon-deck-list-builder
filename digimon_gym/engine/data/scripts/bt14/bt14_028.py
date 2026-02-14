@@ -8,7 +8,7 @@ if TYPE_CHECKING:
 
 
 class BT14_028(CardScript):
-    """Auto-transpiled from DCGO BT14_028.cs"""
+    """BT14-028 ShogunGekomon | Lv.5"""
 
     def get_card_effects(self, card: 'CardSource') -> List['ICardEffect']:
         effects = []
@@ -19,6 +19,7 @@ class BT14_028(CardScript):
         effect0.set_effect_name("BT14-028 Blocker")
         effect0.set_effect_description("Blocker")
         effect0._is_blocker = True
+
         def condition0(context: Dict[str, Any]) -> bool:
             return True
         effect0.set_can_use_condition(condition0)
@@ -31,6 +32,7 @@ class BT14_028(CardScript):
         effect1.set_effect_description("[All Turns][Once Per Turn] When a digivolution card of an opponent's Digimon is trashed, this Digimon can't be deleted in battle until the end of your opponent's turn.")
         effect1.set_max_count_per_turn(1)
 
+        effect = effect1  # alias for condition closure
         def condition1(context: Dict[str, Any]) -> bool:
             if card and card.permanent_of_this_card() is None:
                 return False

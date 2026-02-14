@@ -8,7 +8,7 @@ if TYPE_CHECKING:
 
 
 class BT14_022(CardScript):
-    """Auto-transpiled from DCGO BT14_022.cs"""
+    """BT14-022 Gesomon | Lv.4"""
 
     def get_card_effects(self, card: 'CardSource') -> List['ICardEffect']:
         effects = []
@@ -20,6 +20,7 @@ class BT14_022(CardScript):
         effect0.set_effect_description("[When Attacking] Trash any 1 digivolution card of 1 of your opponent's Digimon. Then, return 1 of your opponent's level 5 or lower Digimon with no digivolution cards to the hand.")
         effect0.is_on_attack = True
 
+        effect = effect0  # alias for condition closure
         def condition0(context: Dict[str, Any]) -> bool:
             if card and card.permanent_of_this_card() is None:
                 return False
@@ -32,11 +33,19 @@ class BT14_022(CardScript):
             """Action: Bounce, Trash Digivolution Cards"""
             player = ctx.get('player')
             perm = ctx.get('permanent')
-            # Bounce: return opponent's digimon to hand
-            enemy = player.enemy if player else None
-            if enemy and enemy.battle_area:
-                target = enemy.battle_area[-1]
-                player.bounce_permanent_to_hand(target)
+            game = ctx.get('game')
+            if not (player and game):
+                return
+            def target_filter(p):
+                if p.level is None or p.level > 5:
+                    return False
+                return True
+            def on_bounce(target_perm):
+                enemy = player.enemy if player else None
+                if enemy:
+                    enemy.bounce_permanent_to_hand(target_perm)
+            game.effect_select_opponent_permanent(
+                player, on_bounce, filter_fn=target_filter, is_optional=False)
             # Trash digivolution cards from this permanent
             if perm and not perm.has_no_digivolution_cards:
                 trashed = perm.trash_digivolution_cards(1)

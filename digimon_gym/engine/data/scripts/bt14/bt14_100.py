@@ -8,7 +8,7 @@ if TYPE_CHECKING:
 
 
 class BT14_100(CardScript):
-    """Auto-transpiled from DCGO BT14_100.cs"""
+    """BT14-100 Pummel Whack"""
 
     def get_card_effects(self, card: 'CardSource') -> List['ICardEffect']:
         effects = []
@@ -19,6 +19,7 @@ class BT14_100(CardScript):
         effect0.set_effect_name("BT14-100 Draw 1")
         effect0.set_effect_description("When one of your effects trashes this card in your hand, <Draw 1>.")
 
+        effect = effect0  # alias for condition closure
         def condition0(context: Dict[str, Any]) -> bool:
             return True
 
@@ -28,6 +29,7 @@ class BT14_100(CardScript):
             """Action: Draw 1"""
             player = ctx.get('player')
             perm = ctx.get('permanent')
+            game = ctx.get('game')
             if player:
                 player.draw_cards(1)
 
@@ -40,6 +42,7 @@ class BT14_100(CardScript):
         effect1.set_effect_name("BT14-100 Delete")
         effect1.set_effect_description("[Main] Delete 1 of your opponent's level 4 or lower Digimon.")
 
+        effect = effect1  # alias for condition closure
         def condition1(context: Dict[str, Any]) -> bool:
             # Option main effect — validated by engine timing
             return True
@@ -50,11 +53,23 @@ class BT14_100(CardScript):
             """Action: Delete"""
             player = ctx.get('player')
             perm = ctx.get('permanent')
-            # Delete: target selection needed for full impl
-            enemy = player.enemy if player else None
-            if enemy and enemy.battle_area:
-                target = min(enemy.battle_area, key=lambda p: p.dp)
-                enemy.delete_permanent(target)
+            game = ctx.get('game')
+            if not (player and game):
+                return
+            def target_filter(p):
+                # Ensure we only target Digimon before checking level to avoid attribute errors
+                if not getattr(p, "is_digimon", False):
+                    return False
+                level = getattr(p, "level", None)
+                if level is None or level > 4:
+                    return False
+                return True
+            def on_delete(target_perm):
+                enemy = player.enemy if player else None
+                if enemy:
+                    enemy.delete_permanent(target_perm)
+            game.effect_select_opponent_permanent(
+                player, on_delete, filter_fn=target_filter, is_optional=False)
 
         effect1.set_on_process_callback(process1)
         effects.append(effect1)

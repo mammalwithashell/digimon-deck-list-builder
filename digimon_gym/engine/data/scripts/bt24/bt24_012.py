@@ -8,7 +8,7 @@ if TYPE_CHECKING:
 
 
 class BT24_012(CardScript):
-    """Auto-transpiled from DCGO BT24_012.cs"""
+    """BT24-012 Dimetromon | Lv.4"""
 
     def get_card_effects(self, card: 'CardSource') -> List['ICardEffect']:
         effects = []
@@ -19,6 +19,7 @@ class BT24_012(CardScript):
         effect0.set_effect_name("BT24-012 Blocker")
         effect0.set_effect_description("Blocker")
         effect0._is_blocker = True
+
         def condition0(context: Dict[str, Any]) -> bool:
             return True
         effect0.set_can_use_condition(condition0)
@@ -31,7 +32,10 @@ class BT24_012(CardScript):
         effect1.set_effect_description("[All Turns] When any of your other Digimon with the [Reptile] or [Dragonkin] trait would leave the battle area by your opponent's effects, by returning this Digimon to the hand, they don't leave.")
         effect1.is_optional = True
 
+        effect = effect1  # alias for condition closure
         def condition1(context: Dict[str, Any]) -> bool:
+            if card and card.permanent_of_this_card() is None:
+                return False
             return True
 
         effect1.set_can_use_condition(condition1)
@@ -46,7 +50,10 @@ class BT24_012(CardScript):
         effect2.set_max_count_per_turn(1)
         effect2.set_hash_string("GainMemory_BT24-012")
 
+        effect = effect2  # alias for condition closure
         def condition2(context: Dict[str, Any]) -> bool:
+            if card and card.permanent_of_this_card() is None:
+                return False
             if not (card and card.owner and card.owner.is_my_turn):
                 return False
             return True
@@ -57,6 +64,7 @@ class BT24_012(CardScript):
             """Action: Gain 1 memory"""
             player = ctx.get('player')
             perm = ctx.get('permanent')
+            game = ctx.get('game')
             if player:
                 player.add_memory(1)
 

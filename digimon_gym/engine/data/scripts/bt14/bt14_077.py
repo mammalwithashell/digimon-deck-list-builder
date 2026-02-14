@@ -8,7 +8,7 @@ if TYPE_CHECKING:
 
 
 class BT14_077(CardScript):
-    """Auto-transpiled from DCGO BT14_077.cs"""
+    """BT14-077 SkullSatamon | Lv.5"""
 
     def get_card_effects(self, card: 'CardSource') -> List['ICardEffect']:
         effects = []
@@ -20,6 +20,7 @@ class BT14_077(CardScript):
         effect0.set_effect_description("[On Play] Trash the top 2 cards of both players' decks.")
         effect0.is_on_play = True
 
+        effect = effect0  # alias for condition closure
         def condition0(context: Dict[str, Any]) -> bool:
             if card and card.permanent_of_this_card() is None:
                 return False
@@ -34,8 +35,9 @@ class BT14_077(CardScript):
         effect1 = ICardEffect()
         effect1.set_effect_name("BT14-077 Both players trash the top 2 cards of their decks")
         effect1.set_effect_description("[When Digivolving] Trash the top 2 cards of both players' decks.")
-        effect1.is_on_play = True
+        effect1.is_when_digivolving = True
 
+        effect = effect1  # alias for condition closure
         def condition1(context: Dict[str, Any]) -> bool:
             if card and card.permanent_of_this_card() is None:
                 return False
@@ -53,6 +55,7 @@ class BT14_077(CardScript):
         effect2.set_max_count_per_turn(1)
         effect2.set_hash_string("Memory+_BT14_077")
 
+        effect = effect2  # alias for condition closure
         def condition2(context: Dict[str, Any]) -> bool:
             if card and card.permanent_of_this_card() is None:
                 return False
@@ -66,6 +69,7 @@ class BT14_077(CardScript):
             """Action: Gain 1 memory"""
             player = ctx.get('player')
             perm = ctx.get('permanent')
+            game = ctx.get('game')
             if player:
                 player.add_memory(1)
 

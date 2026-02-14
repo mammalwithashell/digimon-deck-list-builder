@@ -8,7 +8,7 @@ if TYPE_CHECKING:
 
 
 class BT24_044(CardScript):
-    """Auto-transpiled from DCGO BT24_044.cs"""
+    """BT24-044 Muchomon | Lv.3"""
 
     def get_card_effects(self, card: 'CardSource') -> List['ICardEffect']:
         effects = []
@@ -20,6 +20,7 @@ class BT24_044(CardScript):
         effect0.set_effect_description("[On Play] You may suspend 1 level 6 or lower Digimon. If this effect suspended your Digimon, reveal the top 3 cards of your deck. Add 1 [Shoto Kazama] and 1 card with [Avian] or [Bird] in any of its traits or the [Vortex Warriors] trait among them to the hand. Return the rest to the bottom of the deck.")
         effect0.is_on_play = True
 
+        effect = effect0  # alias for condition closure
         def condition0(context: Dict[str, Any]) -> bool:
             if card and card.permanent_of_this_card() is None:
                 return False
@@ -32,17 +33,35 @@ class BT24_044(CardScript):
             """Action: Suspend, Add To Hand, Reveal And Select"""
             player = ctx.get('player')
             perm = ctx.get('permanent')
-            # Suspend opponent's digimon
-            enemy = player.enemy if player else None
-            if enemy and enemy.battle_area:
-                target = enemy.battle_area[-1]
-                target.suspend()
+            game = ctx.get('game')
+            if not (player and game):
+                return
+            def target_filter(p):
+                if p.level is None or p.level > 6:
+                    return False
+                return True
+            def on_suspend(target_perm):
+                target_perm.suspend()
+            game.effect_select_opponent_permanent(
+                player, on_suspend, filter_fn=target_filter, is_optional=False)
             # Add card to hand (from trash/reveal)
             if player and player.trash_cards:
                 card_to_add = player.trash_cards.pop()
                 player.hand_cards.append(card_to_add)
-            # Reveal top cards and select
-            pass  # TODO: reveal_and_select needs UI/agent choice
+            if not (player and game):
+                return
+            def reveal_filter(c):
+                if not (any('Shoto Kazama' in _n for _n in getattr(c, 'card_names', []))):
+                    return False
+                if getattr(c, 'level', None) is None or c.level > 6:
+                    return False
+                return True
+            def on_revealed(selected, remaining):
+                player.hand_cards.append(selected)
+                for c in remaining:
+                    player.library_cards.append(c)
+            game.effect_reveal_and_select(
+                player, 3, reveal_filter, on_revealed, is_optional=True)
 
         effect0.set_on_process_callback(process0)
         effects.append(effect0)
@@ -56,7 +75,10 @@ class BT24_044(CardScript):
         effect1.set_max_count_per_turn(1)
         effect1.set_hash_string("BT24_044_Inherited")
 
+        effect = effect1  # alias for condition closure
         def condition1(context: Dict[str, Any]) -> bool:
+            if card and card.permanent_of_this_card() is None:
+                return False
             return True
 
         effect1.set_can_use_condition(condition1)
@@ -65,6 +87,7 @@ class BT24_044(CardScript):
             """Action: Gain 1 memory"""
             player = ctx.get('player')
             perm = ctx.get('permanent')
+            game = ctx.get('game')
             if player:
                 player.add_memory(1)
 

@@ -8,7 +8,7 @@ if TYPE_CHECKING:
 
 
 class BT24_092(CardScript):
-    """Auto-transpiled from DCGO BT24_092.cs"""
+    """BT24-092 Shock Plasma"""
 
     def get_card_effects(self, card: 'CardSource') -> List['ICardEffect']:
         effects = []
@@ -19,6 +19,7 @@ class BT24_092(CardScript):
         effect0.set_effect_name("BT24-092 Ignore color requirements")
         effect0.set_effect_description("Effect")
 
+        effect = effect0  # alias for condition closure
         def condition0(context: Dict[str, Any]) -> bool:
             return True
 
@@ -31,37 +32,12 @@ class BT24_092(CardScript):
         effect1.set_effect_name("BT24-092 1 opponent's Digimon gets -6K DP for the turn. Then, you may link this card.")
         effect1.set_effect_description("Effect")
 
+        effect = effect1  # alias for condition closure
         def condition1(context: Dict[str, Any]) -> bool:
             # Option main effect — validated by engine timing
             return True
 
         effect1.set_can_use_condition(condition1)
-
-        def process1(ctx: Dict[str, Any]):
-            """Action: 1 opponent's Digimon gets -6000 DP. Then link."""
-            player = ctx.get('player')
-            game = ctx.get('game')
-            if not (player and game):
-                return
-
-            def on_target_selected(target_perm):
-                target_perm.change_dp(-6000)
-                game.logger.log(
-                    f"[Effect] {target_perm.top_card.card_names[0] if target_perm.top_card else 'Unknown'} "
-                    f"gets -6000 DP")
-                # Check if DP <= 0 (deletion by DP reduction)
-                if target_perm.dp <= 0:
-                    opp = player.enemy if player else None
-                    if opp:
-                        opp.delete_permanent(target_perm)
-                # Then, may link this card
-                game.effect_link_to_permanent(player, card, is_optional=True)
-
-            game.effect_select_opponent_permanent(
-                player, on_target_selected,
-                filter_fn=lambda p: p.is_digimon)
-
-        effect1.set_on_process_callback(process1)
         effects.append(effect1)
 
         # Timing: EffectTiming.OnAllyAttack
@@ -73,34 +49,14 @@ class BT24_092(CardScript):
         effect2.set_hash_string("WA_BT24-092")
         effect2.is_on_attack = True
 
+        effect = effect2  # alias for condition closure
         def condition2(context: Dict[str, Any]) -> bool:
+            if card and card.permanent_of_this_card() is None:
+                return False
             # Triggered on attack — validated by engine timing
             return True
 
         effect2.set_can_use_condition(condition2)
-
-        def process2(ctx: Dict[str, Any]):
-            """Action: 1 opponent's Digimon gets -6000 DP for the turn."""
-            player = ctx.get('player')
-            game = ctx.get('game')
-            if not (player and game):
-                return
-
-            def on_selected(target_perm):
-                target_perm.change_dp(-6000)
-                game.logger.log(
-                    f"[Effect] {target_perm.top_card.card_names[0] if target_perm.top_card else 'Unknown'} "
-                    f"gets -6000 DP")
-                if target_perm.dp <= 0:
-                    opp = player.enemy if player else None
-                    if opp:
-                        opp.delete_permanent(target_perm)
-
-            game.effect_select_opponent_permanent(
-                player, on_selected,
-                filter_fn=lambda p: p.is_digimon)
-
-        effect2.set_on_process_callback(process2)
         effects.append(effect2)
 
         return effects

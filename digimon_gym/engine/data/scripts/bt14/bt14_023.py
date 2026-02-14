@@ -8,7 +8,7 @@ if TYPE_CHECKING:
 
 
 class BT14_023(CardScript):
-    """Auto-transpiled from DCGO BT14_023.cs"""
+    """BT14-023 Ikkakumon | Lv.4"""
 
     def get_card_effects(self, card: 'CardSource') -> List['ICardEffect']:
         effects = []
@@ -18,8 +18,9 @@ class BT14_023(CardScript):
         effect0 = ICardEffect()
         effect0.set_effect_name("BT14-023 Trash digivolution cards and ")
         effect0.set_effect_description("[When Digivolving] Trash any 2 digivolution cards from your opponent's Digimon.")
-        effect0.is_on_play = True
+        effect0.is_when_digivolving = True
 
+        effect = effect0  # alias for condition closure
         def condition0(context: Dict[str, Any]) -> bool:
             if card and card.permanent_of_this_card() is None:
                 return False
@@ -32,6 +33,7 @@ class BT14_023(CardScript):
             """Action: Trash Digivolution Cards"""
             player = ctx.get('player')
             perm = ctx.get('permanent')
+            game = ctx.get('game')
             # Trash digivolution cards from this permanent
             if perm and not perm.has_no_digivolution_cards:
                 trashed = perm.trash_digivolution_cards(1)
@@ -50,6 +52,7 @@ class BT14_023(CardScript):
         effect1.set_hash_string("CantAtatck_BT14_023")
         effect1.is_on_attack = True
 
+        effect = effect1  # alias for condition closure
         def condition1(context: Dict[str, Any]) -> bool:
             if card and card.permanent_of_this_card() is None:
                 return False
@@ -69,6 +72,7 @@ class BT14_023(CardScript):
         effect2.set_hash_string("CantAtatck_BT14_023_inherited")
         effect2.is_on_attack = True
 
+        effect = effect2  # alias for condition closure
         def condition2(context: Dict[str, Any]) -> bool:
             if card and card.permanent_of_this_card() is None:
                 return False

@@ -8,7 +8,7 @@ if TYPE_CHECKING:
 
 
 class BT14_048(CardScript):
-    """Auto-transpiled from DCGO BT14_048.cs"""
+    """BT14-048 Leomon | Lv.4"""
 
     def get_card_effects(self, card: 'CardSource') -> List['ICardEffect']:
         effects = []
@@ -21,6 +21,7 @@ class BT14_048(CardScript):
         effect0.is_optional = True
         effect0.is_on_attack = True
 
+        effect = effect0  # alias for condition closure
         def condition0(context: Dict[str, Any]) -> bool:
             if card and card.permanent_of_this_card() is None:
                 return False
@@ -30,21 +31,18 @@ class BT14_048(CardScript):
         effect0.set_can_use_condition(condition0)
 
         def process0(ctx: Dict[str, Any]):
-            """Action: Digivolve into Lv6 [Leomon] for cost 6"""
+            """Action: Digivolve"""
             player = ctx.get('player')
             perm = ctx.get('permanent')
             game = ctx.get('game')
             if not (player and perm and game):
                 return
-            def is_lv6_leomon(c):
-                if not c.is_digimon:
+            def digi_filter(c):
+                if not (any('Leomon' in _n for _n in getattr(c, 'card_names', []))):
                     return False
-                if c.level != 6:
-                    return False
-                return any('Leomon' in n for n in c.card_names)
+                return True
             game.effect_digivolve_from_hand(
-                player, perm, is_lv6_leomon,
-                cost_override=6, ignore_requirements=True, is_optional=True)
+                player, perm, digi_filter, is_optional=True)
 
         effect0.set_on_process_callback(process0)
         effects.append(effect0)
@@ -54,8 +52,12 @@ class BT14_048(CardScript):
         effect1 = ICardEffect()
         effect1.set_effect_name("BT14-048 DP modifier")
         effect1.set_effect_description("DP modifier")
-        effect1.dp_modifier = 2000  # Inherited: +2000 DP while name contains [Leomon]
+        effect1.is_inherited_effect = True
+        effect1.dp_modifier = 2000
+
         def condition1(context: Dict[str, Any]) -> bool:
+            if not (card and card.owner and card.owner.is_my_turn):
+                return False
             return True
         effect1.set_can_use_condition(condition1)
         effects.append(effect1)

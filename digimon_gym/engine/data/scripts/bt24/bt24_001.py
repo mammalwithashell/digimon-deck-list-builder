@@ -8,7 +8,7 @@ if TYPE_CHECKING:
 
 
 class BT24_001(CardScript):
-    """Auto-transpiled from DCGO BT24_001.cs"""
+    """BT24-001 Gigimon | Lv.2"""
 
     def get_card_effects(self, card: 'CardSource') -> List['ICardEffect']:
         effects = []
@@ -23,7 +23,10 @@ class BT24_001(CardScript):
         effect0.set_max_count_per_turn(1)
         effect0.set_hash_string("Delete_BT24_001")
 
+        effect = effect0  # alias for condition closure
         def condition0(context: Dict[str, Any]) -> bool:
+            if card and card.permanent_of_this_card() is None:
+                return False
             if not (card and card.owner and card.owner.is_my_turn):
                 return False
             return True
@@ -34,11 +37,19 @@ class BT24_001(CardScript):
             """Action: Delete"""
             player = ctx.get('player')
             perm = ctx.get('permanent')
-            # Delete: target selection needed for full impl
-            enemy = player.enemy if player else None
-            if enemy and enemy.battle_area:
-                target = min(enemy.battle_area, key=lambda p: p.dp)
-                enemy.delete_permanent(target)
+            game = ctx.get('game')
+            if not (player and game):
+                return
+            def target_filter(p):
+                if p.dp is None or p.dp > 3000:
+                    return False
+                return p.is_digimon
+            def on_delete(target_perm):
+                enemy = player.enemy if player else None
+                if enemy:
+                    enemy.delete_permanent(target_perm)
+            game.effect_select_opponent_permanent(
+                player, on_delete, filter_fn=target_filter, is_optional=True)
 
         effect0.set_on_process_callback(process0)
         effects.append(effect0)

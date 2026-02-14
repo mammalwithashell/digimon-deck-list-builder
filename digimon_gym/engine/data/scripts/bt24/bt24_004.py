@@ -8,7 +8,7 @@ if TYPE_CHECKING:
 
 
 class BT24_004(CardScript):
-    """Auto-transpiled from DCGO BT24_004.cs"""
+    """BT24-004 Wanyamon | Lv.2"""
 
     def get_card_effects(self, card: 'CardSource') -> List['ICardEffect']:
         effects = []
@@ -23,7 +23,10 @@ class BT24_004(CardScript):
         effect0.set_hash_string("BT24_004_Draw1")
         effect0.is_on_play = True
 
+        effect = effect0  # alias for condition closure
         def condition0(context: Dict[str, Any]) -> bool:
+            if card and card.permanent_of_this_card() is None:
+                return False
             if not (card and card.owner and card.owner.is_my_turn):
                 return False
             return True
@@ -34,6 +37,7 @@ class BT24_004(CardScript):
             """Action: Draw 1"""
             player = ctx.get('player')
             perm = ctx.get('permanent')
+            game = ctx.get('game')
             if player:
                 player.draw_cards(1)
 

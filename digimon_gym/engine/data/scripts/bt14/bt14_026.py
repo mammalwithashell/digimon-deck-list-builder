@@ -8,7 +8,7 @@ if TYPE_CHECKING:
 
 
 class BT14_026(CardScript):
-    """Auto-transpiled from DCGO BT14_026.cs"""
+    """BT14-026 Zudomon | Lv.5"""
 
     def get_card_effects(self, card: 'CardSource') -> List['ICardEffect']:
         effects = []
@@ -20,6 +20,7 @@ class BT14_026(CardScript):
         effect0.set_effect_description("Blast Digivolve")
         effect0.is_counter_effect = True
         effect0._is_blast_digivolve = True
+
         def condition0(context: Dict[str, Any]) -> bool:
             return True
         effect0.set_can_use_condition(condition0)
@@ -32,6 +33,7 @@ class BT14_026(CardScript):
         effect1.set_effect_description("[On Play] Trash any 2 digivolution cards from your opponent's Digimon. Then, return 1 of your opponent's Digimon with no digivolution cards to the hand.")
         effect1.is_on_play = True
 
+        effect = effect1  # alias for condition closure
         def condition1(context: Dict[str, Any]) -> bool:
             if card and card.permanent_of_this_card() is None:
                 return False
@@ -44,11 +46,17 @@ class BT14_026(CardScript):
             """Action: Bounce, Trash Digivolution Cards"""
             player = ctx.get('player')
             perm = ctx.get('permanent')
-            # Bounce: return opponent's digimon to hand
-            enemy = player.enemy if player else None
-            if enemy and enemy.battle_area:
-                target = enemy.battle_area[-1]
-                player.bounce_permanent_to_hand(target)
+            game = ctx.get('game')
+            if not (player and game):
+                return
+            def target_filter(p):
+                return True
+            def on_bounce(target_perm):
+                enemy = player.enemy if player else None
+                if enemy:
+                    enemy.bounce_permanent_to_hand(target_perm)
+            game.effect_select_opponent_permanent(
+                player, on_bounce, filter_fn=target_filter, is_optional=False)
             # Trash digivolution cards from this permanent
             if perm and not perm.has_no_digivolution_cards:
                 trashed = perm.trash_digivolution_cards(1)
@@ -63,8 +71,9 @@ class BT14_026(CardScript):
         effect2 = ICardEffect()
         effect2.set_effect_name("BT14-026 Trash digivolution cards and return 1 Digimon to hand")
         effect2.set_effect_description("[When Digivolving] Trash any 2 digivolution cards from your opponent's Digimon. Then, return 1 of your opponent's Digimon with no digivolution cards to the hand.")
-        effect2.is_on_play = True
+        effect2.is_when_digivolving = True
 
+        effect = effect2  # alias for condition closure
         def condition2(context: Dict[str, Any]) -> bool:
             if card and card.permanent_of_this_card() is None:
                 return False
@@ -77,11 +86,17 @@ class BT14_026(CardScript):
             """Action: Bounce, Trash Digivolution Cards"""
             player = ctx.get('player')
             perm = ctx.get('permanent')
-            # Bounce: return opponent's digimon to hand
-            enemy = player.enemy if player else None
-            if enemy and enemy.battle_area:
-                target = enemy.battle_area[-1]
-                player.bounce_permanent_to_hand(target)
+            game = ctx.get('game')
+            if not (player and game):
+                return
+            def target_filter(p):
+                return True
+            def on_bounce(target_perm):
+                enemy = player.enemy if player else None
+                if enemy:
+                    enemy.bounce_permanent_to_hand(target_perm)
+            game.effect_select_opponent_permanent(
+                player, on_bounce, filter_fn=target_filter, is_optional=False)
             # Trash digivolution cards from this permanent
             if perm and not perm.has_no_digivolution_cards:
                 trashed = perm.trash_digivolution_cards(1)

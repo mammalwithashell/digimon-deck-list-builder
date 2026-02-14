@@ -210,6 +210,18 @@ Card abilities are implemented as per-card scripts:
 - Mock card helpers exist in test files — reuse them for new tests
 - Run `python -m pytest tests/ --ignore=tests/test_rl_gym.py -v` for the full suite
 
+## Card Data API
+
+Card details for any Digimon card can be fetched from the digimoncard.io public API:
+```
+https://digimoncard.io/index.php/api-public/search?card=BT20-001
+https://digimoncard.io/index.php/api-public/search?pack=BT-20:%20Booster%20Over%20the%20X
+```
+- Single card lookup: `?card={CARD_ID}` (e.g. `?card=BT20-001`)
+- Full set lookup: `?pack=BT-{N}:%20{SetName}` (e.g. `?pack=BT-20:%20Booster%20Over%20the%20X`)
+- Returns JSON with card metadata including effect text, DP, level, colors, evolution costs, traits, etc.
+- Use this API to verify card effect text when implementing or reviewing card scripts.
+
 ## Key Documentation
 
 - **AGENTS.md** — RL agent specs, MDP formulation, pilot agent types

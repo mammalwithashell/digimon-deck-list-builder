@@ -8,7 +8,7 @@ if TYPE_CHECKING:
 
 
 class BT14_050(CardScript):
-    """Auto-transpiled from DCGO BT14_050.cs"""
+    """BT14-050 Piximon | Lv.5"""
 
     def get_card_effects(self, card: 'CardSource') -> List['ICardEffect']:
         effects = []
@@ -20,6 +20,7 @@ class BT14_050(CardScript):
         effect0.set_effect_description("[On Play] 1 of your opponent's Digimon cannot unsuspend until the end of your opponent's turn.")
         effect0.is_on_play = True
 
+        effect = effect0  # alias for condition closure
         def condition0(context: Dict[str, Any]) -> bool:
             if card and card.permanent_of_this_card() is None:
                 return False
@@ -34,8 +35,9 @@ class BT14_050(CardScript):
         effect1 = ICardEffect()
         effect1.set_effect_name("BT14-050 Opponent's 1 Digimon can't unsuspend")
         effect1.set_effect_description("[When Digivolving] 1 of your opponent's Digimon cannot unsuspend until the end of your opponent's turn.")
-        effect1.is_on_play = True
+        effect1.is_when_digivolving = True
 
+        effect = effect1  # alias for condition closure
         def condition1(context: Dict[str, Any]) -> bool:
             if card and card.permanent_of_this_card() is None:
                 return False

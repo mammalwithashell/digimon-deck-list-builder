@@ -8,37 +8,31 @@ if TYPE_CHECKING:
 
 
 class BT24_040(CardScript):
-    """Auto-transpiled from DCGO BT24_040.cs"""
+    """BT24-040 Venusmon | Lv.6"""
 
     def get_card_effects(self, card: 'CardSource') -> List['ICardEffect']:
         effects = []
 
-        # Timing: EffectTiming.BeforePayCost
-        # When this card would be played, if you have 3 or fewer security cards, reduce the play cost by 5.
+        # Factory effect: alt_digivolve_req
+        # Alternate digivolution requirement
         effect0 = ICardEffect()
-        effect0.set_effect_name("BT24-040 Reduce play cost (5)")
-        effect0.set_effect_description("When this card would be played, if you have 3 or fewer security cards, reduce the play cost by 5.")
+        effect0.set_effect_name("BT24-040 Alternate digivolution requirement")
+        effect0.set_effect_description("Alternate digivolution requirement")
+        # Alternate digivolution: alternate source for cost 3
+        effect0._alt_digi_cost = 3
 
         def condition0(context: Dict[str, Any]) -> bool:
             return True
-
         effect0.set_can_use_condition(condition0)
-
-        def process0(ctx: Dict[str, Any]):
-            """Action: Effect"""
-            player = ctx.get('player')
-            perm = ctx.get('permanent')
-            pass
-
-        effect0.set_on_process_callback(process0)
         effects.append(effect0)
 
-        # Timing: EffectTiming.None
-        # Effect
+        # Timing: EffectTiming.BeforePayCost
+        # When this card would be played, if you have 3 or fewer security cards, reduce the play cost by 5.
         effect1 = ICardEffect()
-        effect1.set_effect_name("BT24-040 Play Cost -5")
-        effect1.set_effect_description("Effect")
+        effect1.set_effect_name("BT24-040 Reduce play cost (5)")
+        effect1.set_effect_description("When this card would be played, if you have 3 or fewer security cards, reduce the play cost by 5.")
 
+        effect = effect1  # alias for condition closure
         def condition1(context: Dict[str, Any]) -> bool:
             return True
 
@@ -48,23 +42,32 @@ class BT24_040(CardScript):
             """Action: Effect"""
             player = ctx.get('player')
             perm = ctx.get('permanent')
+            game = ctx.get('game')
             pass
 
         effect1.set_on_process_callback(process1)
         effects.append(effect1)
 
-        # Timing: EffectTiming.OnEnterFieldAnyone
+        # Timing: EffectTiming.None
         # Effect
         effect2 = ICardEffect()
-        effect2.set_effect_name("BT24-040 Effect")
+        effect2.set_effect_name("BT24-040 Play Cost -5")
         effect2.set_effect_description("Effect")
-        effect2.is_on_play = True
 
+        effect = effect2  # alias for condition closure
         def condition2(context: Dict[str, Any]) -> bool:
-            # Triggered on play — validated by engine timing
             return True
 
         effect2.set_can_use_condition(condition2)
+
+        def process2(ctx: Dict[str, Any]):
+            """Action: Effect"""
+            player = ctx.get('player')
+            perm = ctx.get('permanent')
+            game = ctx.get('game')
+            pass
+
+        effect2.set_on_process_callback(process2)
         effects.append(effect2)
 
         # Timing: EffectTiming.OnEnterFieldAnyone
@@ -74,28 +77,49 @@ class BT24_040(CardScript):
         effect3.set_effect_description("Effect")
         effect3.is_on_play = True
 
+        effect = effect3  # alias for condition closure
         def condition3(context: Dict[str, Any]) -> bool:
-            # Triggered when digivolving — validated by engine timing
+            if card and card.permanent_of_this_card() is None:
+                return False
+            # Triggered on play — validated by engine timing
             return True
 
         effect3.set_can_use_condition(condition3)
         effects.append(effect3)
 
-        # Timing: EffectTiming.WhenRemoveField
-        # [All Turns] [Once Per Turn] When any of your [TS] trait Digimon would leave the battle area other than by your effects, by placing 1 other Digimon with no digivolution cards as the bottom security card, they don't leave.
+        # Timing: EffectTiming.OnEnterFieldAnyone
+        # Effect
         effect4 = ICardEffect()
-        effect4.set_effect_name("BT24-040 By placing a sourceless Digimon to Security, your [TS] digimon won't leave the field")
-        effect4.set_effect_description("[All Turns] [Once Per Turn] When any of your [TS] trait Digimon would leave the battle area other than by your effects, by placing 1 other Digimon with no digivolution cards as the bottom security card, they don't leave.")
-        effect4.is_optional = True
-        effect4.set_max_count_per_turn(1)
-        effect4.set_hash_string("BT24_040_AT")
+        effect4.set_effect_name("BT24-040 Effect")
+        effect4.set_effect_description("Effect")
+        effect4.is_when_digivolving = True
 
+        effect = effect4  # alias for condition closure
         def condition4(context: Dict[str, Any]) -> bool:
             if card and card.permanent_of_this_card() is None:
                 return False
+            # Triggered when digivolving — validated by engine timing
             return True
 
         effect4.set_can_use_condition(condition4)
         effects.append(effect4)
+
+        # Timing: EffectTiming.WhenRemoveField
+        # [All Turns] [Once Per Turn] When any of your [TS] trait Digimon would leave the battle area other than by your effects, by placing 1 other Digimon with no digivolution cards as the bottom security card, they don't leave.
+        effect5 = ICardEffect()
+        effect5.set_effect_name("BT24-040 By placing a sourceless Digimon to Security, your [TS] digimon won't leave the field")
+        effect5.set_effect_description("[All Turns] [Once Per Turn] When any of your [TS] trait Digimon would leave the battle area other than by your effects, by placing 1 other Digimon with no digivolution cards as the bottom security card, they don't leave.")
+        effect5.is_optional = True
+        effect5.set_max_count_per_turn(1)
+        effect5.set_hash_string("BT24_040_AT")
+
+        effect = effect5  # alias for condition closure
+        def condition5(context: Dict[str, Any]) -> bool:
+            if card and card.permanent_of_this_card() is None:
+                return False
+            return True
+
+        effect5.set_can_use_condition(condition5)
+        effects.append(effect5)
 
         return effects

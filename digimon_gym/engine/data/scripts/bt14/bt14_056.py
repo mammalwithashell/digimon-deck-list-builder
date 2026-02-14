@@ -8,7 +8,7 @@ if TYPE_CHECKING:
 
 
 class BT14_056(CardScript):
-    """Auto-transpiled from DCGO BT14_056.cs"""
+    """BT14-056 Commandramon | Lv.3"""
 
     def get_card_effects(self, card: 'CardSource') -> List['ICardEffect']:
         effects = []
@@ -20,6 +20,7 @@ class BT14_056(CardScript):
         effect0.set_effect_description("[On Play] Reveal the top 5 cards of your deck. Add 1 card with the [D-Brigade] or [DigiPolice] trait among them to the hand. Return the rest to the top or bottom of the deck.")
         effect0.is_on_play = True
 
+        effect = effect0  # alias for condition closure
         def condition0(context: Dict[str, Any]) -> bool:
             if card and card.permanent_of_this_card() is None:
                 return False
@@ -32,12 +33,23 @@ class BT14_056(CardScript):
             """Action: Add To Hand, Reveal And Select"""
             player = ctx.get('player')
             perm = ctx.get('permanent')
+            game = ctx.get('game')
             # Add card to hand (from trash/reveal)
             if player and player.trash_cards:
                 card_to_add = player.trash_cards.pop()
                 player.hand_cards.append(card_to_add)
-            # Reveal top cards and select
-            pass  # TODO: reveal_and_select needs UI/agent choice
+            if not (player and game):
+                return
+            def reveal_filter(c):
+                if not (any('D-Brigade' in _t or 'DigiPolice' in _t for _t in (getattr(c, 'card_traits', []) or []))):
+                    return False
+                return True
+            def on_revealed(selected, remaining):
+                player.hand_cards.append(selected)
+                for c in remaining:
+                    player.library_cards.append(c)
+            game.effect_reveal_and_select(
+                player, 5, reveal_filter, on_revealed, is_optional=True)
 
         effect0.set_on_process_callback(process0)
         effects.append(effect0)
@@ -52,6 +64,7 @@ class BT14_056(CardScript):
         effect1.set_max_count_per_turn(1)
         effect1.set_hash_string("Substitute_BT14_056")
 
+        effect = effect1  # alias for condition closure
         def condition1(context: Dict[str, Any]) -> bool:
             if card and card.permanent_of_this_card() is None:
                 return False

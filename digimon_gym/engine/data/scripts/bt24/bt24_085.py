@@ -8,7 +8,7 @@ if TYPE_CHECKING:
 
 
 class BT24_085(CardScript):
-    """Auto-transpiled from DCGO BT24_085.cs"""
+    """BT24-085 Dan Yuki & Kanan Yuki"""
 
     def get_card_effects(self, card: 'CardSource') -> List['ICardEffect']:
         effects = []
@@ -19,6 +19,7 @@ class BT24_085(CardScript):
         effect0.set_effect_name("BT24-085 Memory +1")
         effect0.set_effect_description("Gain 1 memory")
 
+        effect = effect0  # alias for condition closure
         def condition0(context: Dict[str, Any]) -> bool:
             if card and card.permanent_of_this_card() is None:
                 return False
@@ -32,6 +33,7 @@ class BT24_085(CardScript):
             """Action: Gain 1 memory"""
             player = ctx.get('player')
             perm = ctx.get('permanent')
+            game = ctx.get('game')
             if player:
                 player.add_memory(1)
 
@@ -45,6 +47,7 @@ class BT24_085(CardScript):
         effect1.set_effect_description("Suspend, Trash From Hand")
         effect1.is_optional = True
 
+        effect = effect1  # alias for condition closure
         def condition1(context: Dict[str, Any]) -> bool:
             if card and card.permanent_of_this_card() is None:
                 return False
@@ -56,14 +59,25 @@ class BT24_085(CardScript):
             """Action: Suspend, Trash From Hand"""
             player = ctx.get('player')
             perm = ctx.get('permanent')
-            # Suspend opponent's digimon
-            enemy = player.enemy if player else None
-            if enemy and enemy.battle_area:
-                target = enemy.battle_area[-1]
-                target.suspend()
-            # Trash from hand (cost/effect)
-            if player and player.hand_cards:
-                player.trash_from_hand([player.hand_cards[-1]])
+            game = ctx.get('game')
+            if not (player and game):
+                return
+            def target_filter(p):
+                return True
+            def on_suspend(target_perm):
+                target_perm.suspend()
+            game.effect_select_opponent_permanent(
+                player, on_suspend, filter_fn=target_filter, is_optional=True)
+            if not (player and game):
+                return
+            def hand_filter(c):
+                return True
+            def on_trashed(selected):
+                if selected in player.hand_cards:
+                    player.hand_cards.remove(selected)
+                    player.trash_cards.append(selected)
+            game.effect_select_hand_card(
+                player, hand_filter, on_trashed, is_optional=True)
 
         effect1.set_on_process_callback(process1)
         effects.append(effect1)
@@ -74,6 +88,7 @@ class BT24_085(CardScript):
         effect2.set_effect_name("BT24-085 Security: Play this card")
         effect2.set_effect_description("Security: Play this card")
         effect2.is_security_effect = True
+
         def condition2(context: Dict[str, Any]) -> bool:
             return True
         effect2.set_can_use_condition(condition2)

@@ -8,7 +8,7 @@ if TYPE_CHECKING:
 
 
 class BT14_092(CardScript):
-    """Auto-transpiled from DCGO BT14_092.cs"""
+    """BT14-092 Marching Fishes"""
 
     def get_card_effects(self, card: 'CardSource') -> List['ICardEffect']:
         effects = []
@@ -19,6 +19,7 @@ class BT14_092(CardScript):
         effect0.set_effect_name("BT14-092 Effect")
         effect0.set_effect_description("[Main] Choose 1 of your Digimon. Until the end of your opponent's turn, 3 of your opponent's Digimon with as many or fewer digivolution cards as that Digimon can't attack or block.")
 
+        effect = effect0  # alias for condition closure
         def condition0(context: Dict[str, Any]) -> bool:
             # Option main effect — validated by engine timing
             return True
@@ -34,6 +35,7 @@ class BT14_092(CardScript):
         effect1.is_security_effect = True
         effect1.is_security_effect = True
 
+        effect = effect1  # alias for condition closure
         def condition1(context: Dict[str, Any]) -> bool:
             # Security effect — validated by engine timing
             return True
@@ -44,6 +46,7 @@ class BT14_092(CardScript):
             """Action: Add To Hand"""
             player = ctx.get('player')
             perm = ctx.get('permanent')
+            game = ctx.get('game')
             # Add card to hand (from trash/reveal)
             if player and player.trash_cards:
                 card_to_add = player.trash_cards.pop()
