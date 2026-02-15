@@ -2,7 +2,8 @@
 
 > Updated 2026-02-15. Reflects engine state after merge of main: 981-float tensor,
 > 3,651-card database, DNA Digivolution, 15 keyword mechanics, 10 selection phases,
-> revealed cards zone, linked option cards, and pilot_training.py agent infrastructure.
+> revealed cards zone, linked option cards, pilot_training.py agent infrastructure,
+> and deck_loader.py (TTS/text import, validation, restricted list enforcement).
 
 ## Overview
 
@@ -614,8 +615,14 @@ A full deck editor where players create, save, edit, and manage their decks. Dec
 Digimon TCG deck rules:
 - **Main deck**: exactly 50 cards (no more, no less)
 - **Egg deck (Digitama)**: 0-5 Digi-Egg cards (separate from main deck)
-- **Max 4 copies** of any card (by card number, e.g. max 4x BT14-010)
+- **Max 4 copies** of any card (by card number, e.g. max 4x BT14-010) — some cards have lower limits via `max_count_in_deck`
 - **No color restrictions** on deck composition
+- **Restricted list** (enforced by `deck_loader.RESTRICTED_LIST`):
+  - **3 Banned cards** (0 copies): BT2-090 (Matt Ishida), BT5-109 (Mega Digimon Fusion!), EX5-065 (Sayo & Koh)
+  - **47 Restricted cards** (max 1 copy): e.g. BT14-002 (Bukamon), EX1-068 (Ice Wall!), P-123 (Ukkomon)
+  - **2 Choice groups** — cards from group A and group B cannot coexist in the same deck:
+    - Choice 1: EX2-007 (Mother D-Reaper) vs EX7-064 (Shoto Kazama)
+    - Choice 2: BT20-037 (Chaosmon: Valdur Arm) vs BT17-035 (Taomon) + EX8-037 (Sakuyamon X-Antibody)
 
 ### 3.2 Deck Builder Layout
 
@@ -747,7 +754,37 @@ A small stats box at the bottom of the deck panel:
 | Level curve | Sparkline histogram (bars for each level) |
 | Unique cards | Count |
 
-### 3.5 Deck Management
+### 3.5 Validation & Restricted List UI
+
+The deck builder shows real-time validation feedback using `deck_loader.validate_deck()` via the `POST /deck/validate` endpoint. Validation runs on every card add/remove.
+
+#### Validation Error Display
+
+```
+┌─ VALIDATION ──────────────────────────────┐
+│  ❌ Main deck must be exactly 50 (got 48) │
+│  ❌ BT14-002 (Bukamon): 2 copies exceeds  │
+│     restricted limit of 1                  │
+│  ⚠️ Unknown card: FAKE-001 (not in DB)     │
+│  ❌ Choice restriction: cannot include     │
+│     [EX2-007] and [EX7-064] together       │
+└───────────────────────────────────────────┘
+```
+
+#### Restricted Card Indicators
+
+- Cards on the **banned** list (limit 0) show a red "BANNED" badge in search results — cannot be added to deck
+- Cards on the **restricted** list (limit 1) show an orange "1x" badge in search results — "Add" disabled after 1 copy
+- Cards in a **choice group** show a link icon — when one side is in deck, the other side's cards are dimmed with "CONFLICT" tooltip explaining the choice restriction
+- The deck list panel marks restricted cards with an orange border and banned cards with a red border
+
+#### Save Gate
+
+- Decks can be saved regardless of validation state (to allow work-in-progress saving)
+- Starting a game with an invalid deck shows a confirmation dialog: "This deck has validation errors. Start anyway?"
+- Tournament-mode games (future) will enforce strict validation
+
+### 3.6 Deck Management
 
 #### Saved Decks
 
@@ -765,24 +802,23 @@ A small stats box at the bottom of the deck panel:
 
 #### Import / Export
 
-- **Export** → copies deck list to clipboard as text (one card ID per line, e.g. "4 BT14-010\n4 BT14-005\n...")
-- **Import** → paste a text deck list, parser resolves card IDs and populates the deck
-- Format: `{count} {card_id}` per line (matches common community formats)
+Backend support: `deck_loader.parse_deck()` auto-detects TTS or text format. The `POST /deck/parse` endpoint returns parsed card IDs + summary, and `POST /deck/validate` adds rule + restricted list checking.
 
-```
-// Example export format:
-4 BT14-001
-4 BT14-005
-4 BT14-010
-3 BT14-015
-...
-// Egg deck (after separator)
----
-4 BT14-001
-1 ST1-01
-```
+- **Export** → copies deck list to clipboard in digimoncard.io text format:
+  ```
+  // DigimonCard.io Deck List
+  4 Medusamon BT24-017
+  2 Agumon BT21-007
+  4 Styracomon BT24-018
+  ...
+  ```
+- **Import** → paste or upload, supports two formats:
+  - **digimoncard.io text format**: `{count} {name} {card_id}` per line, `//` comments for deck name
+  - **TTS (Tabletop Simulator)**: JSON array `["BT24-017", "BT24-017", ...]` (non-card entries like export headers are filtered out)
+- After import, automatically validate via `POST /deck/validate` and show any errors/warnings inline
+- Invalid cards (not in database) show as warnings, not hard errors — allows importing decks with cards from sets not yet ingested
 
-### 3.6 Drag-and-Drop in Deck Builder
+### 3.7 Drag-and-Drop in Deck Builder
 
 The deck builder also uses @dnd-kit for adding/removing/reordering cards:
 
@@ -793,7 +829,7 @@ The deck builder also uses @dnd-kit for adding/removing/reordering cards:
 
 Visual feedback: dragging a card from search shows a ghost card following cursor; deck panel highlights as valid drop target with a green border and "Drop to add" text.
 
-### 3.7 Deck Builder State (Zustand)
+### 3.8 Deck Builder State (Zustand)
 
 ```typescript
 // stores/deckBuilderStore.ts
@@ -812,6 +848,10 @@ interface DeckBuilderStore {
 
   // Selected card (for detail panel)
   selectedCardId: string | null;
+
+  // Validation (from POST /deck/validate via deck_loader.validate_deck)
+  validationResult: DeckValidationResult | null;
+  isValidating: boolean;
 
   // Saved decks list
   savedDecks: DeckSummary[];
@@ -832,8 +872,15 @@ interface DeckBuilderStore {
   saveDeck: () => Promise<void>;
   loadDeck: (deckId: string) => Promise<void>;
   deleteDeck: (deckId: string) => Promise<void>;
-  importDeck: (text: string) => void;
+  importDeck: (text: string) => Promise<void>;  // calls POST /deck/parse then validates
   exportDeck: () => string;
+  validateDeck: () => Promise<void>;  // calls POST /deck/validate
+}
+
+interface DeckValidationResult {
+  is_valid: boolean;
+  errors: string[];    // hard failures (banned card, wrong size, copy limit)
+  warnings: string[];  // soft issues (unknown card IDs)
 }
 
 interface DeckData {
@@ -875,11 +922,11 @@ interface CardSearchResult {
 
 ## 4. Replay Viewer — Agent vs Agent Playback
 
-### 3.1 Concept
+### 4.1 Concept
 
 Record full game state snapshots at every action during Agent vs Agent games. The replay viewer loads the recording and lets the user scrub through it like a video timeline.
 
-### 3.2 Recording Format
+### 4.2 Recording Format
 
 Each recorded game is a JSON file. Frames use the enhanced `to_ui_json()` so keyword badges, linked cards, and selection phases are visible during playback.
 
@@ -916,7 +963,7 @@ Each recorded game is a JSON file. Frames use the enhanced `to_ui_json()` so key
 }
 ```
 
-### 3.3 Replay UI
+### 4.3 Replay UI
 
 The replay viewer reuses the same `GameBoard` component from the interactive game, but in read-only mode with playback controls:
 
@@ -950,7 +997,7 @@ The replay viewer reuses the same `GameBoard` component from the interactive gam
 - Auto-scroll log to current frame
 - Both players' hands are visible (since it's a replay, no hidden information)
 
-### 3.4 Replay State Store
+### 4.4 Replay State Store
 
 ```typescript
 // stores/replayStore.ts
@@ -1045,19 +1092,39 @@ Training launch wraps `pilot_training.py` as a subprocess rather than reimplemen
 
 ## 6. API Endpoints
 
-### 6.1 Existing Endpoints (keep as-is)
+### 6.1 Existing Endpoints
 
 | Method | Path | Purpose |
 |--------|------|---------|
 | GET | `/` | Health check |
-| POST | `/simulate` | Batch simulation |
-| POST | `/game/create` | Create game session |
+| POST | `/simulate` | Batch simulation (now accepts TTS/text deck strings via `parse_deck()`) |
+| POST | `/game/create` | Create game session (accepts `deck1_raw`/`deck2_raw` for TTS/text import) |
 | POST | `/game/{id}/action` | Execute action |
 | POST | `/game/{id}/step` | Advance interactive game |
 | GET | `/game/{id}/state` | Get game state |
 | GET | `/game/{id}/mask` | Get action mask |
 | GET | `/game/{id}/log` | Get game log |
 | DELETE | `/game/{id}` | Delete session |
+| POST | `/deck/parse` | Parse deck string (TTS or text) → card IDs + summary (**new**) |
+| POST | `/deck/validate` | Parse + validate deck against rules & restricted list (**new**) |
+
+The `/deck/parse` and `/deck/validate` endpoints use `deck_loader.py` (`parse_deck()`, `validate_deck()`, `summarize_deck()`). Both accept a `DeckRequest` body with a `deck` string field.
+
+**`POST /deck/validate` response:**
+```json
+{
+  "is_valid": false,
+  "errors": [
+    "Main deck must be exactly 50 cards (got 48)",
+    "BT14-002 (Bukamon): 2 copies exceeds restricted limit of 1",
+    "BT2-090 (Matt Ishida) is banned",
+    "Choice restriction violated: cannot include cards from [EX2-007] and [EX7-064] in the same deck"
+  ],
+  "warnings": ["Unknown card ID: FAKE-999 (not in card database)"],
+  "summary": {"BT24-017": 4, "BT24-018": 4, "...": "..."},
+  "total_cards": 48
+}
+```
 
 ### 6.2 New Endpoints — Game UI
 
@@ -1347,19 +1414,24 @@ Delete a deck.
 
 #### `POST /decks/{deck_id}/validate`
 
-Validate a deck against Digimon TCG rules.
+Validate a saved deck against Digimon TCG rules and restricted list. Uses `deck_loader.validate_deck()` internally — same validation as `POST /deck/validate` but operates on a saved deck by ID rather than raw text. Returns `DeckValidationResult`:
 
 ```json
 // Response
 {
-  "valid": false,
+  "is_valid": false,
   "errors": [
-    "Main deck has 48 cards (must be exactly 50)",
-    "Card BT14-010 has 5 copies (max 4)"
+    "Main deck must be exactly 50 cards (got 48)",
+    "BT14-010 (Greymon): 5 copies exceeds max 4 per deck",
+    "BT2-090 (Matt Ishida) is banned",
+    "BT14-002 (Bukamon): 2 copies exceeds restricted limit of 1",
+    "Choice restriction violated: cannot include cards from [EX2-007] and [EX7-064] in the same deck"
   ],
   "warnings": [
-    "Egg deck has 0 cards (recommend 1-5)"
-  ]
+    "Unknown card ID: FAKE-001 (not in card database)"
+  ],
+  "summary": {"BT14-010": 5, "BT14-005": 4, "...": "..."},
+  "total_cards": 48
 }
 ```
 
@@ -1966,15 +2038,18 @@ The `delay: 150` on touch prevents accidental drags when scrolling.
 - Reference `TENSOR_SPEC.md` and `ACTION_SPEC.md` for all mappings
 
 ### Phase 2: Deck Builder
+- ~~Implement deck parsing and validation~~ (**Done**: `deck_loader.py` — `parse_deck()`, `validate_deck()`, `RESTRICTED_LIST`)
+- ~~Implement `POST /deck/parse` and `POST /deck/validate`~~ (**Done**: already in `api.py`)
 - Enhance `GET /cards` with full filter support (color, kind, level, set, cost, DP, form, attribute, rarity, text search)
 - Add `CardDatabase.search()` method with query building
-- Implement `/decks` CRUD endpoints with file-based storage
-- Implement `POST /decks/{id}/validate` for rule checking
+- Implement `/decks` CRUD endpoints with file-based storage (`decks.py`, builds on `deck_loader.py`)
+- Implement `POST /decks/{id}/validate` wrapping existing `validate_deck()`
 - Build `CardSearchPanel` with `FilterBar` (multi-select chips, range sliders, dropdowns)
 - Build `CardGrid` with paginated card images and "in deck" count badges
 - Build `DeckListPanel` with level-grouped cards, count controls, and drag-to-add
 - Build `DeckStats` (color distribution, cost curve, card counts)
-- Build import/export (text format: "4 BT14-010" per line)
+- Build `ValidationPanel` showing errors/warnings from `validate_deck()` with restricted list indicators
+- Build import/export using `POST /deck/parse` (supports TTS + digimoncard.io text format)
 - Build `DeckSelector` dropdown for switching between saved decks
 - Integrate deck selection into lobby (pick from saved decks when creating/joining games)
 
@@ -2063,7 +2138,15 @@ Same as `to_ui_json()` but filters hidden information:
 - Opponent's security shows only count, not card IDs
 - Own hand and security are fully visible
 
-### New files to create:
+### Already implemented (from recent main merge):
+
+| File | Status | What it provides |
+|------|--------|-----------------|
+| `digimon_gym/engine/data/deck_loader.py` | **Done** | `parse_tts()`, `parse_text()`, `parse_deck()` (auto-detect), `validate_deck()`, `summarize_deck()`, `expand_deck_dict()`, `RESTRICTED_LIST` (3 banned, 47 restricted, 2 choice groups), `CardRestriction` / `DeckValidationResult` dataclasses |
+| `digimon_gym/api.py` (deck endpoints) | **Done** | `POST /deck/parse`, `POST /deck/validate`, updated `POST /game/create` (raw deck strings), updated `POST /simulate` (TTS/text deck strings) |
+| `tests/test_deck_loader.py` | **Done** | 486 lines, full coverage of parsing + validation + restricted list + Medusamon integration deck |
+
+### New files still to create:
 
 | File | Purpose |
 |------|---------|
@@ -2072,14 +2155,14 @@ Same as `to_ui_json()` but filters hidden information:
 | `digimon_gym/replay.py` | Replay recording and storage |
 | `digimon_gym/agents/registry.py` | Agent registration (wraps pilot_training.py) |
 | `digimon_gym/training/manager.py` | Training job lifecycle (subprocess wrapper) |
-| `digimon_gym/decks.py` | Deck CRUD operations, validation (50 main + 0-5 eggs, max 4 copies) |
+| `digimon_gym/decks.py` | Deck CRUD operations (save/load/list/delete), builds on `deck_loader.py` for validation |
 | `digimon_gym/training/metrics.py` | Metrics collection from WinRateCallback |
 
 ### Modifications to existing files:
 
 | File | Changes |
 |------|---------|
-| `digimon_gym/api.py` | Add card (paginated), room, replay, agent, training, matchup endpoints; mount WebSockets; add CORS middleware |
+| `digimon_gym/api.py` | Add card (paginated), room, deck CRUD, replay, agent, training, matchup endpoints; mount WebSockets; add CORS middleware |
 | `digimon_gym/engine/game.py` | Add `to_ui_json()`, `to_player_json(player_id)`, `action_description(action_id)` |
 | `digimon_gym/engine/runners/headless_game.py` | Add replay recording hooks |
 | `digimon_gym/engine/data/card_database.py` | Add `to_dict()`, `search(set, color, kind, level, cost, dp, form, attribute, rarity, query)` for card API with full filter support |
