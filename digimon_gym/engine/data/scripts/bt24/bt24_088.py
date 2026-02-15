@@ -16,7 +16,7 @@ class BT24_088(CardScript):
         # Timing: EffectTiming.OnStartTurn
         # Play Card
         effect0 = ICardEffect()
-        effect0.set_effect_name("BT24-088 Return to deck to play another or a lvl 4- [TS] or [Three Musketeers]")
+        effect0.set_effect_name("BT24-088 Return to deck to play another or a lvl 4 or lower [TS] or [Three Musketeers]")
         effect0.set_effect_description("Play Card")
         effect0.is_optional = True
 

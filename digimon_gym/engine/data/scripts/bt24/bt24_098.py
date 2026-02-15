@@ -55,6 +55,8 @@ class BT24_098(CardScript):
         effect1._is_delay = True
 
         def condition1(context: Dict[str, Any]) -> bool:
+            if not (card and card.owner and card.owner.is_my_turn):
+                return False
             if card and card.permanent_of_this_card() is None:
                 return False
             permanent = card.permanent_of_this_card() if card else None
@@ -75,6 +77,8 @@ class BT24_098(CardScript):
         effect = effect2  # alias for condition closure
         def condition2(context: Dict[str, Any]) -> bool:
             if card and card.permanent_of_this_card() is None:
+                return False
+            if not (card and card.owner and card.owner.is_my_turn):
                 return False
             return True
 

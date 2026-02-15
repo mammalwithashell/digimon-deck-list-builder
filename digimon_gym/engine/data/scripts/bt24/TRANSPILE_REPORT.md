@@ -4,9 +4,9 @@ Generated from DCGO C# card scripts.
 
 - Total scripts: 102
 - Scripts with effects: 102
-- Total effects: 411
+- Total effects: 412
 - Factory effects: 141
-- Activate effects: 270
+- Activate effects: 271
 
 ## Per-Card Breakdown
 
@@ -171,7 +171,7 @@ BT24_090: 6 effects
   [factory] blocker
   [factory] alliance
   [EffectTiming.None] grant_skill
-  [EffectTiming.OptionSkill] play_card, trash_from_hand
+  [EffectTiming.OptionSkill] play_card, trash_from_hand, cost_reduction
   [EffectTiming.SecuritySkill] play_card, trash_from_hand
 BT24_091: 3 effects
   [EffectTiming.None] ignore_color_req (descriptive-tagged)
@@ -240,7 +240,7 @@ BT24_094: 6 effects
   [factory] alliance
   [factory] dp_modifier_all
   [EffectTiming.None] grant_skill
-  [EffectTiming.OptionSkill] play_card, trash_from_hand
+  [EffectTiming.OptionSkill] play_card, trash_from_hand, cost_reduction
   [EffectTiming.SecuritySkill] play_card, trash_from_hand
 BT24_095: 3 effects
   [EffectTiming.None] ignore_color_req (descriptive-tagged)
@@ -482,8 +482,9 @@ BT24_038: 5 effects
   [EffectTiming.OnEnterFieldAnyone] trash_from_hand
   [EffectTiming.WhenLinked] change_dp (1/turn)
   [EffectTiming.WhenLinked] change_dp
-BT24_039: 5 effects
+BT24_039: 6 effects
   [factory] alt_digivolve_req
+  [EffectTiming.None] no-action
   [EffectTiming.SecuritySkill] play_card
   [factory] blocker
   [factory] barrier

@@ -1,121 +1,164 @@
 # Digimon TCG Deck List Builder & Optimizer
 
 > **Status:** Pre-Alpha / Active Development
-> **Stack:** Python (Gymnasium, PyTorch, FastAPI) + React
+> **Stack:** Python 3.11+ (Gymnasium, PyTorch, Stable-Baselines3, FastAPI)
 
-A high-performance, headless deck optimization engine for the **Digimon Trading Card Game**. Unlike standard simulators, this project treats deck building as a **Markov Decision Process (MDP)**, using Reinforcement Learning and Genetic Algorithms to discover optimal lists against a weighted "Meta Gauntlet."
+A high-performance, headless game engine and deck optimization platform for the **Digimon Trading Card Game**. The project treats deck building as a **Markov Decision Process (MDP)**, using Reinforcement Learning to discover optimal lists against a weighted meta gauntlet.
 
-## 🏗 Architecture
+## Architecture
 
-### 1. The Engine (`digimon_gym`)
-A custom, lightweight Python implementation of the Digimon TCG rules, built to the **OpenAI Gym (Gymnasium)** standard.
-*   **Headless by Design:** Runs purely on CPU with no graphical overhead, enabling thousands of simulations per minute (similar to **DeckGym**).
-*   **Vectorized State:** The game board (Security, Hand, Battle Area) is serialized into **NumPy arrays** for direct consumption by Neural Networks.
-*   **Action Masking:** Implements strict validity masking to prevent agents from attempting illegal moves (e.g., evolving a Tamer).
+### Game Engine (`digimon_gym/engine/`)
 
-### 2. The Optimizer ("The Architect")
-Based on the **Q-DeckRec** algorithm. Instead of randomly evolving decks, an RL agent learns a "Search Policy" to iteratively swap cards to maximize a **Cumulative Exponential Reward**.
-*   **Input:** A core list of cards + A "Side Deck" pool.
-*   **Objective:** Maximize win rate across a 4-Round "Locals" Tournament simulation.
-*   **Reward Function:** $R = \sum \exp(10 \cdot \text{WinRate})$
+A custom Python implementation of the Digimon TCG rules, built to the **Gymnasium** standard.
 
-### 3. The Pilot ("Battle Agent")
-The AI responsible for piloting the decks during simulation. Unlike the Architect (which runs once per iteration), the Pilot runs thousands of times per iteration.
-*  **Modular Brains**: The engine supports swapping the Pilot's logic to trade off speed vs. accuracy.
-    * Greedy Heuristic: Fast execution (<1ms) for early-stage optimization.
-    * MCTS (Procedural Personas): Slower, deliberate play using Monte Carlo Tree Search to simulate human archetypes (Aggro, Control, Combo).
-    * RL Pilot (PPO): A trained neural network that approximates MCTS behavior for high-speed "Agent vs. Agent" training.
-* Action Masking: Ensures the Pilot only attempts valid moves (e.g., preventing attacks with summoning sickness) to minimize training noise
+- **Headless by design** — runs purely on CPU with no graphical overhead, enabling thousands of simulations per minute
+- **981-float board tensor** — game state (security, hand, battle area, breeding, trash) serialized into NumPy arrays for direct neural network consumption
+- **2,120 discrete actions** — play, digivolve, attack, hatch, activate effects, select targets, and more (see [ACTION_SPEC.md](ACTION_SPEC.md))
+- **Action masking** — strict validity masking prevents illegal moves (summoning sickness, wrong evolution level, insufficient memory, etc.)
+- **Game state machine** — Start > Draw > Breeding > Main > End, with memory gauge (-10 to +10) controlling turn flow
 
-### 4. The Gauntlet ("Locals Simulator")
-We do not optimize against a single opponent. The engine simulates a "Locals" environment:
-*   **Weighted Meta:** Opponents are sampled from a pool of Tier 1, Tier 2, and Rogue decks based on usage data (sourced from *Egman Events* & *Digimon Meta*).
-*   **Fixed Swiss:** The candidate deck plays all 4 rounds regardless of record to generate granular performance data (Variance Reduction).
-*   **Procedural Personas:** Opponent bots utilize **MCTS** with specific heuristic biases (Aggro, Control, Combo) to simulate human playstyles.
+### Card Effect System
 
-### 5. The Frontend (React)
-A visualization tool for "Headed" gameplay and analysis.
-*   **Log Replay:** Visualizes the raw logs from the Python engine to help humans understand *why* a deck is winning or losing.
-*   **Human vs. Agent:** Allows a user to play against the MCTS/RL agents by sending actions via API.
+Card abilities are implemented via a **transpiler pipeline** that converts C# scripts from the [DCGO](https://github.com/DCGO2/DCGO) Unity project into Python:
+
+- **3,651 cards** across 45 sets in the card database (`cards.json`)
+- **412 transpiled scripts** across 5 sets (ST1, BT14, BT20, BT23, BT24) with keyword flags, effect timing, and action callbacks
+- **27+ keyword mechanics** — Blocker, Rush, Piercing, Jamming, Retaliation, Blitz, Collision, Raid, Reboot, Armor Purge, Evade, Barrier, and more
+- **Transpiler** (`tools/transpiler/`) — regex-based C# to Python converter with 52 factory patterns, 32 action types, and 59 timing mappings
+
+### RL Environment (`digimon_gym/digimon_gym.py`)
+
+```python
+from digimon_gym.digimon_gym import DigimonEnv
+
+env = DigimonEnv()
+obs, info = env.reset()                     # (981,) float32
+obs, reward, terminated, truncated, info = env.step(action)
+mask = env.action_mask()                    # (2,120) int8 for MaskablePPO
+```
+
+- Full **Gymnasium v1.0** API compatibility (SB3, RLlib, CleanRL)
+- Dense reward: security delta, board DP differential, terminal +/-1.0
+- Action masking via `info['action_mask']` (SB3 `MaskablePPO` convention)
+
+### Agents
+
+| Agent | Role | Status |
+|-------|------|--------|
+| **Pilot (PPO)** | Plays games during simulation | Training pipeline implemented (`agents/pilot_training.py`) |
+| **Q-DeckRec** | Optimizes deck construction | Architecture specced ([AGENTS.md](AGENTS.md)), not yet implemented |
+
+### DCGO Reference (`DCGO/`)
+
+The full [DCGO Unity project](https://github.com/DCGO2/DCGO) is included as a **sparse-checkout git submodule**, providing:
+
+- `Assets/Scripts/CardEffect/` — per-card C# effect scripts (BT1-BT24, EX1-EX11, ST1-ST24+)
+- `Assets/Scripts/Script/` — core game logic (`CardController.cs`, `AttackProcess.cs`, `AutoProcessing.cs`, `TurnStateMachine.cs`, etc.)
+- `Assets/CardBaseEntity/` — card metadata ScriptableObjects
+
+This serves as the authoritative reference for game rules — the Python engine replicates game mechanics, not Unity logic.
 
 ---
 
-## 🚀 Getting Started
+## Getting Started
 
 ### Prerequisites
-*   Python 3.10+
-*   Node.js 18+
+
+- Python 3.11+
+- Git (with submodule support)
 
 ### Installation
 
-1.  **Clone the repository**
-    ```bash
-    git clone https://github.com/mammalwithashell/digimon-deck-list-builder.git
-    cd digimon-deck-list-builder
-    ```
-
-2.  **Install Python Dependencies**
-    ```bash
-    pip install -r requirements.txt
-    # Requires: gymnasium, numpy, torch, fastapi, uvicorn
-    ```
-
-3.  **Install Frontend Dependencies**
-    ```bash
-    cd frontend
-    npm install
-    ```
-
----
-
-## 💻 Usage
-
-### 1. Headless Optimization (CLI)
-To run the optimizer on a deck list against the current meta gauntlet:
-
 ```bash
-python main.py optimize --deck "path/to/my_deck.txt" --gauntlet "data/meta_bt14" --sims 1000
+# Clone with submodules
+git clone --recurse-submodules https://github.com/mammalwithashell/digimon-deck-list-builder.git
+cd digimon-deck-list-builder
+
+# Install dependencies
+pip install -r requirements.txt
 ```
-*   `--sims`: Number of simulations per iteration.
-*   `--gauntlet`: Folder containing opponent deck lists.
 
-### 2. Interactive Mode (React)
-To launch the web interface for playing against agents or viewing optimization graphs:
+If you already cloned without `--recurse-submodules`:
 
 ```bash
-# Terminal 1: Start Backend
-uvicorn api.main:app --reload
+git submodule update --init
+cd DCGO && git sparse-checkout set Assets/Scripts Assets/CardBaseEntity && cd ..
+```
 
-# Terminal 2: Start Frontend
-cd frontend
-npm start
+### Quick Validation
+
+```bash
+# Verify the Gymnasium environment
+python -c "from digimon_gym.digimon_gym import DigimonEnv; env = DigimonEnv(); obs, info = env.reset(); print(obs.shape, info['action_mask'].shape)"
+
+# Run the full test suite (1,122 tests)
+python -m pytest tests/ --ignore=tests/test_rl_gym.py -v
+
+# Run the SB3 smoke test
+python scripts/train_smoke_test.py
 ```
 
 ---
 
-## 🧠 Agent Configuration
+## Usage
 
-See [AGENTS.md](AGENTS.md) for detailed specifications on:
-*   **State Space:** How cards are converted to One-Hot vectors.
-*   **Action Mapping:** How Integer `42` maps to "Trash Card at Index 2".
-*   **MCTS Heuristics:** The math behind the "Aggro" and "Control" personas.
+### Transpiler Pipeline
+
+Convert DCGO C# card scripts to Python engine scripts:
+
+```bash
+# 1. Ingest card metadata from digimoncard.io
+python tools/ingest_cards.py --set BT22           # Single set
+python tools/ingest_cards.py --bulk                # All priority sets
+
+# 2. Transpile C# scripts to Python
+python tools/transpile_dcgo.py DCGO/Assets/Scripts/CardEffect/BT20 digimon_gym/engine/data/scripts/bt20
+
+# 3. Analyze pattern coverage
+python tools/transpile_dcgo.py --scan-api BT22
+```
+
+### API Server
+
+```bash
+cd digimon_gym && uvicorn api:app --reload
+```
+
+Session-based game management supporting human-vs-agent and agent-vs-agent modes.
 
 ---
 
-## 🛠 Contributing
+## Testing
 
-**Current Focus: The Gym Wrapper**
-We are currently migrating logic from the legacy C# dump to the Python `digimon_gym` environment.
+```bash
+# Full suite
+python -m pytest tests/ --ignore=tests/test_rl_gym.py -v
 
-**Contribution Rules for AI/Jules:**
-1.  **No Blocking Input:** Do not use `input()` or `await`. All logic must be contained within `env.step(action)`.
-2.  **Strict Typing:** Observations must be returned as `np.array`.
-3.  **Action Integers:** The engine must accept `int` actions. Use the `ActionMapper` class to translate integers to game logic.
+# By category
+python -m pytest tests/test_runners.py -v              # Game runner tests (30)
+python -m pytest tests/test_tensor_and_actions.py -v    # Tensor/action tests (48)
+python -m pytest tests/test_bt24_scripts.py -v          # BT24 script validation (216)
+python -m pytest tests/test_digivolve_validation.py -v  # Digivolution rules (25)
+python -m pytest tests/test_dna_digivolve.py -v         # DNA/Jogress mechanics (50)
+```
 
 ---
 
-## 📚 References & Credits
-*   **Q-DeckRec:** Chen et al. (2018) - *A Fast Deck Recommendation System for CCGs*.
-*   **DeckGym:** High-performance TCG simulation architecture.
-*   **DCGO:** Original C# card logic reference.
-*   **Digimon Meta / Egman Events:** Sources for tournament deck lists.
+## Documentation
+
+| Document | Description |
+|----------|-------------|
+| [ACTION_SPEC.md](ACTION_SPEC.md) | Full action space specification (2,120 discrete actions) |
+| [TENSOR_SPEC.md](TENSOR_SPEC.md) | Board state tensor layout (981-float tensor) |
+| [AGENTS.md](AGENTS.md) | RL agent specs, MDP formulation, pilot agent types |
+| [RULES_CONTEXT.md](RULES_CONTEXT.md) | Digimon TCG official rules reference |
+| [CLAUDE.md](CLAUDE.md) | AI assistant development guide |
+
+---
+
+## References & Credits
+
+- **Q-DeckRec:** Chen et al. (2018) — *A Fast Deck Recommendation System for CCGs*
+- **DCGO:** Open-source Unity Digimon TCG engine ([github.com/DCGO2/DCGO](https://github.com/DCGO2/DCGO))
+- **digimoncard.io:** Card database API for metadata and effect text
+- **Egman Events / Digimon Meta:** Tournament deck list sources

@@ -2,7 +2,7 @@
 
 ## Project Overview
 
-Digimon Deck List Builder is a **reinforcement learning game engine** for the Digimon Trading Card Game. It simulates games headlessly, trains RL agents (Q-DeckRec) to optimize deck construction, and exposes a FastAPI endpoint for running simulations. The primary implementation is Python; a C# reference implementation exists in `Digimon.Core/` for comparison.
+Digimon Deck List Builder is a **reinforcement learning game engine** for the Digimon Trading Card Game. It simulates games headlessly, trains RL agents (Q-DeckRec) to optimize deck construction, and exposes a FastAPI endpoint for running simulations. The primary implementation is Python; a C# reference implementation exists in `Digimon.Core/` for comparison. The full DCGO Unity project is included as a sparse-checkout submodule in `DCGO/` for reference game logic and card effect scripts.
 
 **Development stage:** Pre-alpha. Active development on the Python game engine and RL gym.
 
@@ -63,7 +63,7 @@ tools/                           # Build & pipeline tools
 ├── ingest_cards.py              # Card metadata ingestion from digimoncard.io API
 └── ingest_bt14_cards.py         # BT14-specific card metadata ingestion
 
-tests/                           # Pytest test suite (~1028 tests)
+tests/                           # Pytest test suite (~1122 tests)
 ├── test_runners.py              # HeadlessGame/InteractiveGame tests (30 tests)
 ├── test_tensor_and_actions.py   # Tensor encoding/action decoding tests (48 tests)
 ├── test_bt14_scripts.py         # BT14 card script validation (200 parametrized tests)
@@ -80,7 +80,10 @@ scripts/
 └── fetch_card_effects.py        # Fetch card effect text from digimoncard.io API
 
 Digimon.Core/                    # C# reference implementation (read-only)
-DCGO-Card-Scripts/               # Git submodule: 3,675 C# CardEffect source scripts
+DCGO/                            # Git submodule (sparse checkout): full DCGO Unity project
+├── Assets/Scripts/CardEffect/   #   Per-card C# effect scripts (BT1-BT24, EX1-EX11, ST1-ST22+)
+├── Assets/Scripts/Script/       #   Core game logic (CardController, AttackProcess, AutoProcessing, etc.)
+└── Assets/CardBaseEntity/       #   Card metadata ScriptableObjects (.asset files)
 ACTION_SPEC.md                   # Action space specification (2120 discrete actions)
 TENSOR_SPEC.md                   # Board state tensor specification (981-float tensor)
 AGENTS.md                        # RL agent specifications (Q-DeckRec, Pilot agents)
@@ -131,7 +134,7 @@ python tools/ingest_cards.py --bulk                # All priority sets
 
 # Transpile a set of C# DCGO card scripts to Python
 python tools/transpile_dcgo.py <DCGO_CARDEFFECT_DIR> <OUTPUT_DIR>
-# Example: python tools/transpile_dcgo.py /tmp/dcgo-scripts/CardEffect/BT20 digimon_gym/engine/data/scripts/bt20
+# Example: python tools/transpile_dcgo.py DCGO/Assets/Scripts/CardEffect/BT20 digimon_gym/engine/data/scripts/bt20
 ```
 
 **Install dependencies:** `pip install -r requirements.txt`
@@ -271,7 +274,7 @@ Entry point: `python tools/transpile_dcgo.py` (thin wrapper importing `transpile
 
 **Adding a new card set:**
 1. `python tools/ingest_cards.py --set BT22` — fetches metadata into `cards.json` (or `--bulk` for all priority sets)
-2. `python tools/transpile_dcgo.py <C#_DIR> <OUTPUT_DIR>` — generates Python scripts
+2. `python tools/transpile_dcgo.py DCGO/Assets/Scripts/CardEffect/<SET> <OUTPUT_DIR>` — generates Python scripts
 3. Write `tests/test_{set}_scripts.py` — validate transpiled scripts load and produce effects
 4. Check `<OUTPUT_DIR>/TRANSPILE_REPORT.md` — tracks stubs vs fully-implemented scripts
 5. `python tools/transpile_dcgo.py --scan-api <SET_ID|ALL>` — analyze keyword/action/timing pattern coverage
@@ -334,7 +337,7 @@ The engine checks keyword abilities at runtime via the `Permanent.has_keyword()`
 
 ## Testing Guidelines
 
-- Use **pytest** for all tests (~1028 tests across 10 files)
+- Use **pytest** for all tests (~1122 tests across 10 files)
 - Test files go in `tests/` (root level)
 - `test_rl_gym.py` uses legacy `python_impl` imports — excluded via `--ignore`
 - Mock card helpers exist in test files — reuse them for new tests

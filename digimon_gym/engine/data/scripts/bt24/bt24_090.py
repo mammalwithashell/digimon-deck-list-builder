@@ -97,6 +97,7 @@ class BT24_090(CardScript):
         effect4 = ICardEffect()
         effect4.set_effect_name("BT24-090 Replace your bottom sec with this face-up card, play a [TS] Digimon for -3")
         effect4.set_effect_description("[Main] Add your bottom security card to the hand and place this card face up as the bottom security card. Then, you may play 1 blue or yellow [TS] trait Digimon card from your hand with the play cost reduced by 3.")
+        effect4.cost_reduction = 3
 
         effect = effect4  # alias for condition closure
         def condition4(context: Dict[str, Any]) -> bool:
@@ -106,7 +107,7 @@ class BT24_090(CardScript):
         effect4.set_can_use_condition(condition4)
 
         def process4(ctx: Dict[str, Any]):
-            """Action: Play Card, Trash From Hand"""
+            """Action: Cost -3, Play Card, Trash From Hand"""
             player = ctx.get('player')
             perm = ctx.get('permanent')
             game = ctx.get('game')
@@ -126,6 +127,8 @@ class BT24_090(CardScript):
                     player.trash_cards.append(selected)
             game.effect_select_hand_card(
                 player, hand_filter, on_trashed, is_optional=False)
+            # Cost reduction by 3 — handled via cost_reduction property
+            pass  # descriptive-tagged: cost_reduction
 
         effect4.set_on_process_callback(process4)
         effects.append(effect4)

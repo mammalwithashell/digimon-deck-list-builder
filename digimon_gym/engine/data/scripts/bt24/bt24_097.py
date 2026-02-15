@@ -39,7 +39,7 @@ class BT24_097(CardScript):
         # Timing: EffectTiming.OptionSkill
         # Delete
         effect1 = ICardEffect()
-        effect1.set_effect_name("BT24-097 Delete 1 opponent's level 6 or lower Digimon. Then, you may link this card.")
+        effect1.set_effect_name("BT24-097 Delete 1 opponent's level 6 or higher Digimon. Then, you may link this card.")
         effect1.set_effect_description("Delete")
 
         effect = effect1  # alias for condition closure
@@ -57,7 +57,7 @@ class BT24_097(CardScript):
             if not (player and game):
                 return
             def target_filter(p):
-                if p.level is None or p.level > 6:
+                if p.level is None or p.level < 6:
                     return False
                 return p.is_digimon
             def on_delete(target_perm):

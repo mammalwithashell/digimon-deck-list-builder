@@ -51,6 +51,8 @@ class BT24_085(CardScript):
         def condition1(context: Dict[str, Any]) -> bool:
             if card and card.permanent_of_this_card() is None:
                 return False
+            if not (card and card.owner and card.owner.is_my_turn):
+                return False
             return True
 
         effect1.set_can_use_condition(condition1)

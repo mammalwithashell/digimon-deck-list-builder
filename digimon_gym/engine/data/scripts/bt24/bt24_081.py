@@ -47,6 +47,8 @@ class BT24_081(CardScript):
 
         effect = effect2  # alias for condition closure
         def condition2(context: Dict[str, Any]) -> bool:
+            if card and card.permanent_of_this_card() is None:
+                return False
             # Triggered on play — validated by engine timing
             return True
 
@@ -90,6 +92,8 @@ class BT24_081(CardScript):
 
         effect = effect3  # alias for condition closure
         def condition3(context: Dict[str, Any]) -> bool:
+            if card and card.permanent_of_this_card() is None:
+                return False
             # Triggered when digivolving — validated by engine timing
             return True
 
@@ -133,6 +137,8 @@ class BT24_081(CardScript):
 
         effect = effect4  # alias for condition closure
         def condition4(context: Dict[str, Any]) -> bool:
+            if card and card.permanent_of_this_card() is None:
+                return False
             # Triggered on attack — validated by engine timing
             return True
 
