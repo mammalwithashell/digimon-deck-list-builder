@@ -43,7 +43,8 @@ class BT24_040(CardScript):
             player = ctx.get('player')
             perm = ctx.get('permanent')
             game = ctx.get('game')
-            pass
+            # Cost reduction (variable amount) — handled via cost_reduction property
+            pass  # descriptive-tagged: cost_reduction
 
         effect1.set_on_process_callback(process1)
         effects.append(effect1)
@@ -65,7 +66,8 @@ class BT24_040(CardScript):
             player = ctx.get('player')
             perm = ctx.get('permanent')
             game = ctx.get('game')
-            pass
+            # Cost reduction (variable amount) — handled via cost_reduction property
+            pass  # descriptive-tagged: cost_reduction
 
         effect2.set_on_process_callback(process2)
         effects.append(effect2)
@@ -98,7 +100,6 @@ class BT24_040(CardScript):
                 if player:
                     player.trash_cards.extend(trashed)
             # Keyword grant: cannot_suspend_player — flag set on effect object
-            pass
             # Disable/invalidate effects on target — not yet in engine
             pass  # descriptive-tagged: disable_effect
 
@@ -133,7 +134,6 @@ class BT24_040(CardScript):
                 if player:
                     player.trash_cards.extend(trashed)
             # Keyword grant: cannot_suspend_player — flag set on effect object
-            pass
             # Disable/invalidate effects on target — not yet in engine
             pass  # descriptive-tagged: disable_effect
 

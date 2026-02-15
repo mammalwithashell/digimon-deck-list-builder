@@ -53,7 +53,7 @@ class BT20_059(CardScript):
         effect1.set_can_use_condition(condition1)
 
         def process1(ctx: Dict[str, Any]):
-            """Action: De Digivolve"""
+            """Action: De Digivolve, Effect Immunity"""
             player = ctx.get('player')
             perm = ctx.get('permanent')
             game = ctx.get('game')
@@ -66,6 +66,8 @@ class BT20_059(CardScript):
                     enemy.trash_cards.extend(removed)
             game.effect_select_opponent_permanent(
                 player, on_de_digivolve, filter_fn=lambda p: p.is_digimon, is_optional=False)
+            # Grant effect immunity (CanNotAffectedClass) — not yet in engine
+            pass  # descriptive-tagged: effect_immunity
 
         effect1.set_on_process_callback(process1)
         effects.append(effect1)

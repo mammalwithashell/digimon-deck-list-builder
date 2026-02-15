@@ -61,7 +61,6 @@ class BT20_016(CardScript):
             if perm:
                 perm.change_dp(4000)
             # Keyword grant: piercing — flag set on effect object
-            pass
             # Force attack — target Digimon may attack (requires engine SelectAttack)
             pass  # descriptive-tagged: force_attack
 
@@ -93,7 +92,6 @@ class BT20_016(CardScript):
             if perm:
                 perm.change_dp(4000)
             # Keyword grant: piercing — flag set on effect object
-            pass
             # Force attack — target Digimon may attack (requires engine SelectAttack)
             pass  # descriptive-tagged: force_attack
 

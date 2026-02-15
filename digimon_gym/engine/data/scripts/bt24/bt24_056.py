@@ -62,7 +62,6 @@ class BT24_056(CardScript):
             perm = ctx.get('permanent')
             game = ctx.get('game')
             # Keyword grant: cannot_return_to_deck — flag set on effect object
-            pass
             # Keyword grant: cannot_return_to_hand — flag set on effect object
             pass
 
@@ -93,7 +92,6 @@ class BT24_056(CardScript):
             perm = ctx.get('permanent')
             game = ctx.get('game')
             # Keyword grant: cannot_return_to_deck — flag set on effect object
-            pass
             # Keyword grant: cannot_return_to_hand — flag set on effect object
             pass
 

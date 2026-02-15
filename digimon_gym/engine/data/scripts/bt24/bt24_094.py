@@ -68,10 +68,10 @@ class BT24_094(CardScript):
         effects.append(effect2)
 
         # Timing: EffectTiming.None
-        # Effect
+        # Grant Skill
         effect3 = ICardEffect()
         effect3.set_effect_name("BT24-094 Your Digimon gain <Alliance>")
-        effect3.set_effect_description("Effect")
+        effect3.set_effect_description("Grant Skill")
 
         effect = effect3  # alias for condition closure
         def condition3(context: Dict[str, Any]) -> bool:
@@ -81,6 +81,16 @@ class BT24_094(CardScript):
             return True
 
         effect3.set_can_use_condition(condition3)
+
+        def process3(ctx: Dict[str, Any]):
+            """Action: Grant Skill"""
+            player = ctx.get('player')
+            perm = ctx.get('permanent')
+            game = ctx.get('game')
+            # Grant keyword to other permanents (AddSkillClass) — not yet in engine
+            pass  # descriptive-tagged: grant_skill
+
+        effect3.set_on_process_callback(process3)
         effects.append(effect3)
 
         # Timing: EffectTiming.OptionSkill

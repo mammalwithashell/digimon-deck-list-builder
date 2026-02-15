@@ -41,7 +41,6 @@ class BT14_020(CardScript):
                 if player:
                     player.trash_cards.extend(trashed)
             # Keyword grant: cannot_be_blocked — flag set on effect object
-            pass
 
         effect0.set_on_process_callback(process0)
         effects.append(effect0)

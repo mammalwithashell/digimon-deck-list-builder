@@ -36,6 +36,7 @@ class BT20_043(CardScript):
         effect1.set_effect_name("BT20-043 Reduce the play cost by 5")
         effect1.set_effect_description("When this card would be played, if you have a Digimon with the [ACCEL] trait, reduce the play cost by 5.")
         effect1.set_hash_string("PlayCost-5_BT20_043")
+        effect1.cost_reduction = 5
 
         effect = effect1  # alias for condition closure
         def condition1(context: Dict[str, Any]) -> bool:
@@ -44,20 +45,22 @@ class BT20_043(CardScript):
         effect1.set_can_use_condition(condition1)
 
         def process1(ctx: Dict[str, Any]):
-            """Action: Effect"""
+            """Action: Cost -5"""
             player = ctx.get('player')
             perm = ctx.get('permanent')
             game = ctx.get('game')
-            pass
+            # Cost reduction by 5 — handled via cost_reduction property
+            pass  # descriptive-tagged: cost_reduction
 
         effect1.set_on_process_callback(process1)
         effects.append(effect1)
 
         # Timing: EffectTiming.None
-        # Effect
+        # Cost -5
         effect2 = ICardEffect()
         effect2.set_effect_name("BT20-043 Play Cost -5")
-        effect2.set_effect_description("Effect")
+        effect2.set_effect_description("Cost -5")
+        effect2.cost_reduction = 5
 
         effect = effect2  # alias for condition closure
         def condition2(context: Dict[str, Any]) -> bool:
@@ -66,11 +69,12 @@ class BT20_043(CardScript):
         effect2.set_can_use_condition(condition2)
 
         def process2(ctx: Dict[str, Any]):
-            """Action: Effect"""
+            """Action: Cost -5"""
             player = ctx.get('player')
             perm = ctx.get('permanent')
             game = ctx.get('game')
-            pass
+            # Cost reduction by 5 — handled via cost_reduction property
+            pass  # descriptive-tagged: cost_reduction
 
         effect2.set_on_process_callback(process2)
         effects.append(effect2)

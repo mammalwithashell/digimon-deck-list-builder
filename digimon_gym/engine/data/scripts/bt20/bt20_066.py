@@ -39,6 +39,8 @@ class BT20_066(CardScript):
             if not (player and game):
                 return
             def target_filter(p):
+                if not (p.contains_card_name('Imperialdramon') or any('Free' in t for t in (getattr(p.top_card, 'card_traits', []) or []))):
+                    return False
                 return p.is_digimon
             def on_delete(target_perm):
                 enemy = player.enemy if player else None
@@ -96,6 +98,8 @@ class BT20_066(CardScript):
             if not (player and game):
                 return
             def target_filter(p):
+                if not (p.contains_card_name('Imperialdramon') or any('Free' in t for t in (getattr(p.top_card, 'card_traits', []) or []))):
+                    return False
                 return p.is_digimon
             def on_delete(target_perm):
                 enemy = player.enemy if player else None

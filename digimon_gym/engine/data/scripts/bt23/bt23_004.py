@@ -36,7 +36,6 @@ class BT23_004(CardScript):
             perm = ctx.get('permanent')
             game = ctx.get('game')
             # Keyword grant: blocker — flag set on effect object
-            pass
             # Keyword grant: retaliation — flag set on effect object
             pass
 

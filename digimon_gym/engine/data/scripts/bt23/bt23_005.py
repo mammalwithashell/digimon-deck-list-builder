@@ -35,7 +35,8 @@ class BT23_005(CardScript):
             player = ctx.get('player')
             perm = ctx.get('permanent')
             game = ctx.get('game')
-            # Cost reduction handled via cost_reduction property
+            # Cost reduction by 1 — handled via cost_reduction property
+            pass  # descriptive-tagged: cost_reduction
 
         effect0.set_on_process_callback(process0)
         effects.append(effect0)

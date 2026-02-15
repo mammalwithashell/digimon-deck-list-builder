@@ -39,6 +39,8 @@ class BT24_044(CardScript):
             def target_filter(p):
                 if p.level is None or p.level > 6:
                     return False
+                if not (p.contains_card_name('Shoto Kazama')):
+                    return False
                 return True
             def on_suspend(target_perm):
                 target_perm.suspend()

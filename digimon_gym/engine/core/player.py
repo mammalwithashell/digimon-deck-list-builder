@@ -254,7 +254,7 @@ class Player:
 
         return base_cost
 
-    def delete_permanent(self, permanent: 'Permanent', is_battle: bool = False):
+    def delete_permanent(self, permanent: 'Permanent', is_battle: bool = False) -> bool:
         """Delete a permanent from the battle area.
 
         Checks deletion prevention keywords in order:
@@ -265,9 +265,13 @@ class Player:
         Args:
             permanent: The permanent to delete.
             is_battle: True if deletion is from battle resolution (needed for Barrier).
+
+        Returns:
+            True if the permanent was actually deleted, False if not found or
+            deletion was prevented by a keyword (Armor Purge, Evade, Barrier).
         """
         if permanent not in self.battle_area:
-            return
+            return False
 
         perm_name = permanent.top_card.card_names[0] if permanent.top_card else "Unknown"
 
@@ -277,20 +281,20 @@ class Player:
             if trashed:
                 self.trash_cards.extend(trashed)
                 self._log(f"{perm_name} activates Armor Purge! Trashed top card to survive.")
-                return
+                return False
 
         # <Evade>: suspend self to prevent deletion (must be unsuspended)
         if permanent.has_keyword('_is_evade') and not permanent.is_suspended:
             permanent.suspend()
             self._log(f"{perm_name} activates Evade! Suspended to survive.")
-            return
+            return False
 
         # <Barrier>: trash top security card to prevent deletion (battle only)
         if is_battle and permanent.has_keyword('_is_barrier') and len(self.security_cards) > 0:
             trashed_sec = self.security_cards.pop(0)  # Remove from top (index 0)
             self.trash_cards.append(trashed_sec)
             self._log(f"{perm_name} activates Barrier! Trashed top security to survive.")
-            return
+            return False
 
         # No prevention — actually delete
         self.battle_area.remove(permanent)
@@ -301,6 +305,8 @@ class Player:
         # Execute On Deletion effects
         if self.game and hasattr(self.game, 'execute_deletion_effects'):
             self.game.execute_deletion_effects(permanent, self)
+
+        return True
 
     def security_attack(self, attacker: 'Permanent') -> AttackResolution:
         self._log(f"{self.player_name} receives Security Attack from {attacker.top_card.card_names[0] if attacker.top_card else 'Unknown'}!")

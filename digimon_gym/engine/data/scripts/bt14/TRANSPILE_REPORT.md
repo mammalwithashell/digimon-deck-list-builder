@@ -28,7 +28,7 @@ BT14_059: 3 effects
   [factory] save
   [factory] blocker
 BT14_060: 3 effects
-  [EffectTiming.None] no-action
+  [EffectTiming.None] also_treated_as (descriptive-tagged)
   [EffectTiming.OnAllyAttack] play_card, reveal_and_select
   [EffectTiming.WhenRemoveField] no-action (inherited) (1/turn)
 BT14_061: 2 effects
@@ -66,7 +66,7 @@ BT14_086: 6 effects
   [factory] reboot
   [EffectTiming.OnEndTurn] play_card (inherited)
 BT14_097: 3 effects
-  [EffectTiming.None] no-action
+  [EffectTiming.None] also_treated_as (descriptive-tagged)
   [EffectTiming.OptionSkill] digivolve
   [EffectTiming.SecuritySkill] add_temp_effect (descriptive-tagged)
 BT14_098: 1 effects
@@ -141,7 +141,7 @@ BT14_050: 2 effects
 BT14_051: 1 effects
   [EffectTiming.OnEndTurn] suspend, add_to_hand, reveal_and_select (1/turn)
 BT14_052: 3 effects
-  [EffectTiming.None] no-action
+  [EffectTiming.None] also_treated_as (descriptive-tagged)
   [EffectTiming.OnEnterFieldAnyone] suspend
   [factory] dp_modifier
 BT14_053: 3 effects

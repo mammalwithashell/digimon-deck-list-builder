@@ -34,7 +34,6 @@ class BT14_092(CardScript):
             perm = ctx.get('permanent')
             game = ctx.get('game')
             # Keyword grant: cannot_attack — flag set on effect object
-            pass
             # Keyword grant: cannot_block — flag set on effect object
             pass
 
@@ -67,7 +66,6 @@ class BT14_092(CardScript):
                 card_to_add = player.trash_cards.pop()
                 player.hand_cards.append(card_to_add)
             # Keyword grant: cannot_attack — flag set on effect object
-            pass
 
         effect1.set_on_process_callback(process1)
         effects.append(effect1)

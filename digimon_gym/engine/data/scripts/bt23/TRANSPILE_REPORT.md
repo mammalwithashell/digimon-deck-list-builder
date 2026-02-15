@@ -78,7 +78,7 @@ BT23_059: 7 effects
   [EffectTiming.OnEnterFieldAnyone] delete
   [EffectTiming.OnEnterFieldAnyone] delete
   [EffectTiming.OnAllyAttack] delete
-  [EffectTiming.OnDestroyedAnyone] unsuspend (1/turn)
+  [EffectTiming.OnDestroyedAnyone] unsuspend, effect_immunity (1/turn)
 BT23_060: 6 effects
   [factory] alt_digivolve_req
   [factory] reboot
@@ -230,7 +230,7 @@ BT23_046: 4 effects
   [factory] alt_digivolve_req
   [EffectTiming.OnEnterFieldAnyone] suspend, gain_keyword_cannot_unsuspend
   [EffectTiming.OnEnterFieldAnyone] suspend, gain_keyword_cannot_unsuspend
-  [EffectTiming.OnAllyAttack] no-action (1/turn)
+  [EffectTiming.OnAllyAttack] redirect_attack (1/turn)
 BT23_047: 7 effects
   [factory] alt_digivolve_req
   [EffectTiming.None] jogress_condition
@@ -429,7 +429,7 @@ BT23_076: 2 effects
   [EffectTiming.OnEnterFieldAnyone] recovery, add_to_hand, destroy_security
   [EffectTiming.OnTappedAnyone] digivolve
 BT23_077: 4 effects
-  [EffectTiming.None] no-action
+  [EffectTiming.None] also_treated_as (descriptive-tagged)
   [factory] blocker
   [EffectTiming.OnEnterFieldAnyone] delete
   [EffectTiming.OnTappedAnyone] de_digivolve

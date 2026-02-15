@@ -47,7 +47,8 @@ class BT24_051(CardScript):
             player = ctx.get('player')
             perm = ctx.get('permanent')
             game = ctx.get('game')
-            pass
+            # Cost reduction (variable amount) — handled via cost_reduction property
+            pass  # descriptive-tagged: cost_reduction
 
         effect1.set_on_process_callback(process1)
         effects.append(effect1)
@@ -69,7 +70,8 @@ class BT24_051(CardScript):
             player = ctx.get('player')
             perm = ctx.get('permanent')
             game = ctx.get('game')
-            pass
+            # Cost reduction (variable amount) — handled via cost_reduction property
+            pass  # descriptive-tagged: cost_reduction
 
         effect2.set_on_process_callback(process2)
         effects.append(effect2)
@@ -217,10 +219,10 @@ class BT24_051(CardScript):
         effects.append(effect6)
 
         # Timing: EffectTiming.None
-        # Effect
+        # Grant Skill
         effect7 = ICardEffect()
         effect7.set_effect_name("BT24-051 [Your Turn] All of your [Iliad] trait Digimon gain <Rush> and <Piercing>.")
-        effect7.set_effect_description("Effect")
+        effect7.set_effect_description("Grant Skill")
 
         effect = effect7  # alias for condition closure
         def condition7(context: Dict[str, Any]) -> bool:
@@ -231,6 +233,16 @@ class BT24_051(CardScript):
             return True
 
         effect7.set_can_use_condition(condition7)
+
+        def process7(ctx: Dict[str, Any]):
+            """Action: Grant Skill"""
+            player = ctx.get('player')
+            perm = ctx.get('permanent')
+            game = ctx.get('game')
+            # Grant keyword to other permanents (AddSkillClass) — not yet in engine
+            pass  # descriptive-tagged: grant_skill
+
+        effect7.set_on_process_callback(process7)
         effects.append(effect7)
 
         return effects

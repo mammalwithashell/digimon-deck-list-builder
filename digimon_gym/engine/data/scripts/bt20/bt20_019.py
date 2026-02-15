@@ -59,21 +59,23 @@ class BT20_019(CardScript):
         effect2.set_can_use_condition(condition2)
 
         def process2(ctx: Dict[str, Any]):
-            """Action: Force Attack"""
+            """Action: Force Attack, Effect Immunity"""
             player = ctx.get('player')
             perm = ctx.get('permanent')
             game = ctx.get('game')
             # Force attack — target Digimon may attack (requires engine SelectAttack)
             pass  # descriptive-tagged: force_attack
+            # Grant effect immunity (CanNotAffectedClass) — not yet in engine
+            pass  # descriptive-tagged: effect_immunity
 
         effect2.set_on_process_callback(process2)
         effects.append(effect2)
 
         # Timing: EffectTiming.None
-        # Effect
+        # Grant Skill
         effect3 = ICardEffect()
         effect3.set_effect_name("BT20-019 Your Digimon with [Sistermon] in their names or the [Royal Knight] trait gain Pierce")
-        effect3.set_effect_description("Effect")
+        effect3.set_effect_description("Grant Skill")
 
         effect = effect3  # alias for condition closure
         def condition3(context: Dict[str, Any]) -> bool:
@@ -84,13 +86,23 @@ class BT20_019(CardScript):
             return True
 
         effect3.set_can_use_condition(condition3)
+
+        def process3(ctx: Dict[str, Any]):
+            """Action: Grant Skill"""
+            player = ctx.get('player')
+            perm = ctx.get('permanent')
+            game = ctx.get('game')
+            # Grant keyword to other permanents (AddSkillClass) — not yet in engine
+            pass  # descriptive-tagged: grant_skill
+
+        effect3.set_on_process_callback(process3)
         effects.append(effect3)
 
         # Timing: EffectTiming.None
-        # Effect
+        # Attack Unsuspended
         effect4 = ICardEffect()
-        effect4.set_effect_name("BT20-019 Effect")
-        effect4.set_effect_description("Effect")
+        effect4.set_effect_name("BT20-019 Attack Unsuspended")
+        effect4.set_effect_description("Attack Unsuspended")
 
         effect = effect4  # alias for condition closure
         def condition4(context: Dict[str, Any]) -> bool:
@@ -101,13 +113,23 @@ class BT20_019(CardScript):
             return True
 
         effect4.set_can_use_condition(condition4)
+
+        def process4(ctx: Dict[str, Any]):
+            """Action: Attack Unsuspended"""
+            player = ctx.get('player')
+            perm = ctx.get('permanent')
+            game = ctx.get('game')
+            # Can attack unsuspended Digimon (CanAttackTargetDefendingPermanentClass) — not yet in engine
+            pass  # descriptive-tagged: attack_unsuspended
+
+        effect4.set_on_process_callback(process4)
         effects.append(effect4)
 
         # Timing: EffectTiming.None
-        # Effect
+        # Grant Skill, Attack Unsuspended
         effect5 = ICardEffect()
         effect5.set_effect_name("BT20-019 [Your Turn] While this Digimon is [Jesmon GX], all of your Digimon gain <Piercing> and can also attack your opponent's unsuspended Digimon.")
-        effect5.set_effect_description("Effect")
+        effect5.set_effect_description("Grant Skill, Attack Unsuspended")
         effect5.is_inherited_effect = True
 
         effect = effect5  # alias for condition closure
@@ -122,6 +144,18 @@ class BT20_019(CardScript):
             return True
 
         effect5.set_can_use_condition(condition5)
+
+        def process5(ctx: Dict[str, Any]):
+            """Action: Grant Skill, Attack Unsuspended"""
+            player = ctx.get('player')
+            perm = ctx.get('permanent')
+            game = ctx.get('game')
+            # Grant keyword to other permanents (AddSkillClass) — not yet in engine
+            pass  # descriptive-tagged: grant_skill
+            # Can attack unsuspended Digimon (CanAttackTargetDefendingPermanentClass) — not yet in engine
+            pass  # descriptive-tagged: attack_unsuspended
+
+        effect5.set_on_process_callback(process5)
         effects.append(effect5)
 
         return effects

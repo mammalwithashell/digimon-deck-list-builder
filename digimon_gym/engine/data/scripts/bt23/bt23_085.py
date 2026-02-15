@@ -65,9 +65,7 @@ class BT23_085(CardScript):
             perm = ctx.get('permanent')
             game = ctx.get('game')
             # Keyword grant: immune_dp_minus — flag set on effect object
-            pass
             # Keyword grant: blocker — flag set on effect object
-            pass
             # Keyword grant: reboot — flag set on effect object
             pass
 

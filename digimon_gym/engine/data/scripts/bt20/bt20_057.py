@@ -19,6 +19,7 @@ class BT20_057(CardScript):
         effect0.set_effect_name("BT20-057 Reduce the play cost by 4")
         effect0.set_effect_description("When this card would be played, if you have a Digimon with [Huckmon], [Jesmon], or [Sistermon] in its name, reduce the play cost by 4.")
         effect0.set_hash_string("PlayCost-4_BT20_057")
+        effect0.cost_reduction = 4
 
         effect = effect0  # alias for condition closure
         def condition0(context: Dict[str, Any]) -> bool:
@@ -27,20 +28,22 @@ class BT20_057(CardScript):
         effect0.set_can_use_condition(condition0)
 
         def process0(ctx: Dict[str, Any]):
-            """Action: Effect"""
+            """Action: Cost -4"""
             player = ctx.get('player')
             perm = ctx.get('permanent')
             game = ctx.get('game')
-            pass
+            # Cost reduction by 4 — handled via cost_reduction property
+            pass  # descriptive-tagged: cost_reduction
 
         effect0.set_on_process_callback(process0)
         effects.append(effect0)
 
         # Timing: EffectTiming.None
-        # Effect
+        # Cost -4
         effect1 = ICardEffect()
         effect1.set_effect_name("BT20-057 Play Cost -4")
-        effect1.set_effect_description("Effect")
+        effect1.set_effect_description("Cost -4")
+        effect1.cost_reduction = 4
 
         effect = effect1  # alias for condition closure
         def condition1(context: Dict[str, Any]) -> bool:
@@ -49,11 +52,12 @@ class BT20_057(CardScript):
         effect1.set_can_use_condition(condition1)
 
         def process1(ctx: Dict[str, Any]):
-            """Action: Effect"""
+            """Action: Cost -4"""
             player = ctx.get('player')
             perm = ctx.get('permanent')
             game = ctx.get('game')
-            pass
+            # Cost reduction by 4 — handled via cost_reduction property
+            pass  # descriptive-tagged: cost_reduction
 
         effect1.set_on_process_callback(process1)
         effects.append(effect1)

@@ -89,7 +89,7 @@ BT24_065: 5 effects
   [EffectTiming.OnEnterFieldAnyone] delete, de_digivolve
   [EffectTiming.WhenRemoveField] play_card, trash_from_hand (1/turn)
 BT24_086: 7 effects
-  [EffectTiming.None] no-action
+  [EffectTiming.None] also_treated_as (descriptive-tagged)
   [factory] security_play
   [EffectTiming.OnStartMainPhase] gain_memory
   [EffectTiming.OnEnterFieldAnyone] mind_link
@@ -170,7 +170,7 @@ BT24_090: 6 effects
   [EffectTiming.None] ignore_color_req (descriptive-tagged)
   [factory] blocker
   [factory] alliance
-  [EffectTiming.None] no-action
+  [EffectTiming.None] grant_skill
   [EffectTiming.OptionSkill] play_card, trash_from_hand
   [EffectTiming.SecuritySkill] play_card, trash_from_hand
 BT24_091: 3 effects
@@ -230,7 +230,7 @@ BT24_051: 8 effects
   [EffectTiming.OnEnterFieldAnyone] change_dp, suspend, force_attack
   [EffectTiming.OnEnterFieldAnyone] unsuspend
   [EffectTiming.OnAllyAttack] unsuspend
-  [EffectTiming.None] no-action
+  [EffectTiming.None] grant_skill
 BT24_085: 3 effects
   [EffectTiming.OnStartMainPhase] gain_memory
   [EffectTiming.OnEndTurn] suspend, trash_from_hand, force_attack
@@ -239,7 +239,7 @@ BT24_094: 6 effects
   [EffectTiming.None] ignore_color_req (descriptive-tagged)
   [factory] alliance
   [factory] dp_modifier_all
-  [EffectTiming.None] no-action
+  [EffectTiming.None] grant_skill
   [EffectTiming.OptionSkill] play_card, trash_from_hand
   [EffectTiming.SecuritySkill] play_card, trash_from_hand
 BT24_095: 3 effects
@@ -322,7 +322,7 @@ BT24_079: 5 effects
   [EffectTiming.OnEnterFieldAnyone] play_card, trash_from_hand
   [EffectTiming.OnDestroyedAnyone] no-action (1/turn)
 BT24_080: 6 effects
-  [EffectTiming.None] no-action
+  [EffectTiming.None] also_treated_as (descriptive-tagged)
   [EffectTiming.OnEndTurn] digivolve
   [factory] blocker
   [EffectTiming.OnEnterFieldAnyone] delete

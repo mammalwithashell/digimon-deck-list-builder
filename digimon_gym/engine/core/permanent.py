@@ -127,6 +127,12 @@ class Permanent:
             for effect in effects:
                 if not effect.is_inherited_effect and getattr(effect, keyword_attr, False):
                     return True
+        # Effects from linked option cards (non-inherited)
+        for linked in self.linked_cards:
+            effects = linked.effect_list(EffectTiming.NoTiming)
+            for effect in effects:
+                if not effect.is_inherited_effect and getattr(effect, keyword_attr, False):
+                    return True
         return False
 
     def grant_keyword(self, keyword_attr: str, duration: int = -1):
@@ -156,6 +162,12 @@ class Permanent:
                     total += getattr(effect, '_security_attack_modifier', 0)
         if self.top_card:
             effects = self.top_card.effect_list(EffectTiming.NoTiming)
+            for effect in effects:
+                if not effect.is_inherited_effect:
+                    total += getattr(effect, '_security_attack_modifier', 0)
+        # Linked option cards (non-inherited)
+        for linked in self.linked_cards:
+            effects = linked.effect_list(EffectTiming.NoTiming)
             for effect in effects:
                 if not effect.is_inherited_effect:
                     total += getattr(effect, '_security_attack_modifier', 0)

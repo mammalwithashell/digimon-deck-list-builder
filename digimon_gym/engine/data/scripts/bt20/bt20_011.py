@@ -41,6 +41,8 @@ class BT20_011(CardScript):
             def target_filter(p):
                 if p.dp is None or p.dp > 3000:
                     return False
+                if not (p.contains_card_name('Imperialdramon') or any('Free' in t for t in (getattr(p.top_card, 'card_traits', []) or []))):
+                    return False
                 return p.is_digimon
             def on_delete(target_perm):
                 enemy = player.enemy if player else None
@@ -99,6 +101,8 @@ class BT20_011(CardScript):
                 return
             def target_filter(p):
                 if p.dp is None or p.dp > 3000:
+                    return False
+                if not (p.contains_card_name('Imperialdramon') or any('Free' in t for t in (getattr(p.top_card, 'card_traits', []) or []))):
                     return False
                 return p.is_digimon
             def on_delete(target_perm):

@@ -181,7 +181,7 @@ class BT23_059(CardScript):
         effect6.set_can_use_condition(condition6)
 
         def process6(ctx: Dict[str, Any]):
-            """Action: Unsuspend"""
+            """Action: Unsuspend, Effect Immunity"""
             player = ctx.get('player')
             perm = ctx.get('permanent')
             game = ctx.get('game')
@@ -193,6 +193,8 @@ class BT23_059(CardScript):
                 target_perm.unsuspend()
             game.effect_select_own_permanent(
                 player, on_unsuspend, filter_fn=target_filter, is_optional=False)
+            # Grant effect immunity (CanNotAffectedClass) — not yet in engine
+            pass  # descriptive-tagged: effect_immunity
 
         effect6.set_on_process_callback(process6)
         effects.append(effect6)

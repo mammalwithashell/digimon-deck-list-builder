@@ -76,6 +76,8 @@ class BT14_078(CardScript):
             if not (player and game):
                 return
             def target_filter(p):
+                if not (any('Dark Animal' in t for t in (getattr(p.top_card, 'card_traits', []) or [])) or any('DarkAnimal' in t for t in (getattr(p.top_card, 'card_traits', []) or [])) or any('SoC' in t for t in (getattr(p.top_card, 'card_traits', []) or []))):
+                    return False
                 return p.is_digimon
             def on_delete(target_perm):
                 enemy = player.enemy if player else None

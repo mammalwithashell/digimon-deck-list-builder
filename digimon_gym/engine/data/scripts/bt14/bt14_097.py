@@ -14,16 +14,26 @@ class BT14_097(CardScript):
         effects = []
 
         # Timing: EffectTiming.None
-        # Effect
+        # Also Treated As
         effect0 = ICardEffect()
         effect0.set_effect_name("BT14-097 Also treated as having [Sukamon] in its name")
-        effect0.set_effect_description("Effect")
+        effect0.set_effect_description("Also Treated As")
 
         effect = effect0  # alias for condition closure
         def condition0(context: Dict[str, Any]) -> bool:
             return True
 
         effect0.set_can_use_condition(condition0)
+
+        def process0(ctx: Dict[str, Any]):
+            """Action: Also Treated As"""
+            player = ctx.get('player')
+            perm = ctx.get('permanent')
+            game = ctx.get('game')
+            # Also treated as [Name] — name aliasing not modeled in engine
+            pass  # descriptive-tagged: also_treated_as_name
+
+        effect0.set_on_process_callback(process0)
         effects.append(effect0)
 
         # Timing: EffectTiming.OptionSkill

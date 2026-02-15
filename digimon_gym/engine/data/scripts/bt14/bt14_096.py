@@ -43,7 +43,6 @@ class BT14_096(CardScript):
             game.effect_select_opponent_permanent(
                 player, on_suspend, filter_fn=target_filter, is_optional=False)
             # Keyword grant: cannot_unsuspend — flag set on effect object
-            pass
 
         effect0.set_on_process_callback(process0)
         effects.append(effect0)

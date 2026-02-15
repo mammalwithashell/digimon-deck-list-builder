@@ -45,7 +45,8 @@ class BT23_044(CardScript):
             player = ctx.get('player')
             perm = ctx.get('permanent')
             game = ctx.get('game')
-            # Cost reduction handled via cost_reduction property
+            # Cost reduction by 3 — handled via cost_reduction property
+            pass  # descriptive-tagged: cost_reduction
 
         effect1.set_on_process_callback(process1)
         effects.append(effect1)
@@ -68,7 +69,8 @@ class BT23_044(CardScript):
             player = ctx.get('player')
             perm = ctx.get('permanent')
             game = ctx.get('game')
-            # Cost reduction handled via cost_reduction property
+            # Cost reduction by 3 — handled via cost_reduction property
+            pass  # descriptive-tagged: cost_reduction
 
         effect2.set_on_process_callback(process2)
         effects.append(effect2)
@@ -105,9 +107,7 @@ class BT23_044(CardScript):
             game.effect_select_opponent_permanent(
                 player, on_suspend, filter_fn=target_filter, is_optional=False)
             # Keyword grant: cannot_return_to_hand — flag set on effect object
-            pass
             # Keyword grant: cannot_return_to_deck — flag set on effect object
-            pass
 
         effect3.set_on_process_callback(process3)
         effects.append(effect3)
@@ -144,9 +144,7 @@ class BT23_044(CardScript):
             game.effect_select_opponent_permanent(
                 player, on_suspend, filter_fn=target_filter, is_optional=False)
             # Keyword grant: cannot_return_to_hand — flag set on effect object
-            pass
             # Keyword grant: cannot_return_to_deck — flag set on effect object
-            pass
 
         effect4.set_on_process_callback(process4)
         effects.append(effect4)

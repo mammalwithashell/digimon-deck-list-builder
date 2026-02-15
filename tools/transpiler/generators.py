@@ -95,12 +95,13 @@ def generate_action_comment(eb: EffectBlock) -> str:
     return ", ".join(parts) if parts else "Effect"
 
 
-def _build_target_filter_code(eb: EffectBlock, indent: str = "            ",
-                               perm_only: bool = False) -> List[str]:
+def _build_target_filter_code(eb: EffectBlock, indent: str = "            ") -> List[str]:
     """Build filter condition lines for opponent permanent targeting.
 
-    Fix 3: When perm_only=True, only include DP/level checks, not name/trait
-    checks (which belong to card selection filters in multi-action blocks).
+    Includes DP/level checks and name/trait checks. Name/trait filters are
+    always applied — effects that target permanents by name or trait (e.g.
+    "Delete 1 Digimon with [Dragon] in its type") need these filters on the
+    permanent selection, not just on card selection.
     """
     parts = []
     if eb.target_dp_limit is not None:
@@ -115,10 +116,9 @@ def _build_target_filter_code(eb: EffectBlock, indent: str = "            ",
     if eb.target_level_min is not None:
         parts.append(f"{indent}    if p.level is None or p.level < {eb.target_level_min}:")
         parts.append(f"{indent}        return False")
-    if not perm_only:
-        # Fix 2: Use OR logic for combined name/trait checks
-        if eb.name_checks or eb.trait_checks:
-            parts.extend(_build_or_filter_perm(eb.name_checks, eb.trait_checks, indent))
+    # Use OR logic for combined name/trait checks
+    if eb.name_checks or eb.trait_checks:
+        parts.extend(_build_or_filter_perm(eb.name_checks, eb.trait_checks, indent))
     return parts
 
 
@@ -180,12 +180,9 @@ def generate_callback_code(eb: EffectBlock, indent: str = "            ") -> str
     lines.append(f"{indent}perm = ctx.get('permanent')")
     lines.append(f"{indent}game = ctx.get('game')")
 
-    # Fix 3: Determine if this is a multi-action block where delete and card
-    # selection actions coexist — need to separate their filters.
-    has_perm_action = any(a in eb.actions for a in ("delete", "bounce", "suspend"))
-    has_card_action = any(a in eb.actions for a in (
-        "play_card", "digivolve", "reveal_and_select", "trash_from_hand"))
-    use_perm_only = has_perm_action and has_card_action
+    # Note: name/trait filters are now always applied to both permanent and card
+    # targeting. The previous perm_only logic was too aggressive in stripping
+    # filters from permanent selection in multi-action blocks.
 
     # Fix 6: Handle trash-as-cost ordering.
     # When trash is a cost (e.g. "By trashing X, draw Y"), emit trash first.
@@ -203,7 +200,7 @@ def generate_callback_code(eb: EffectBlock, indent: str = "            ") -> str
         for action in eb.actions:
             if action in ("draw", "gain_memory", "trash_from_hand"):
                 continue
-            _emit_action(eb, action, lines, indent, use_perm_only)
+            _emit_action(eb, action, lines, indent)
     else:
         # Normal ordering: draw/memory/dp/recovery first, then other actions
         if eb.draw_count:
@@ -231,14 +228,27 @@ def generate_callback_code(eb: EffectBlock, indent: str = "            ") -> str
         for action in eb.actions:
             if action in ("draw", "gain_memory", "change_dp", "recovery"):
                 continue
-            _emit_action(eb, action, lines, indent, use_perm_only)
+            _emit_action(eb, action, lines, indent)
 
+    # WI 6: Determine if callback has substantive content
+    # Lines that don't count: preamble ctx.get() calls, pure comments, blank lines
     preamble_lines = {
         f"player = ctx.get('player')",
         f"perm = ctx.get('permanent')",
         f"game = ctx.get('game')",
     }
-    if not any(l.strip() not in preamble_lines and l.strip() for l in lines):
+
+    def _is_substantive(l):
+        stripped = l.strip()
+        if not stripped:
+            return False
+        if stripped in preamble_lines:
+            return False
+        if stripped.startswith('#'):
+            return False
+        return True
+
+    if not any(_is_substantive(l) for l in lines):
         lines.append(f"{indent}pass")
 
     return "\n".join(lines)
@@ -263,14 +273,12 @@ def _emit_trash_from_hand(eb: EffectBlock, lines: List[str], indent: str):
     lines.append(f"{indent}    player, hand_filter, on_trashed, is_optional={eb.is_optional})")
 
 
-def _emit_action(eb: EffectBlock, action: str, lines: List[str], indent: str,
-                  use_perm_only: bool = False):
+def _emit_action(eb: EffectBlock, action: str, lines: List[str], indent: str):
     """Emit code for a single action type."""
     if action == "delete":
         lines.append(f"{indent}if not (player and game):")
         lines.append(f"{indent}    return")
-        # Fix 3: When multi-action, only use DP/level filters for delete
-        target_filter = _build_target_filter_code(eb, indent, perm_only=use_perm_only)
+        target_filter = _build_target_filter_code(eb, indent)
         lines.append(f"{indent}def target_filter(p):")
         if target_filter:
             lines.extend(target_filter)
@@ -286,7 +294,7 @@ def _emit_action(eb: EffectBlock, action: str, lines: List[str], indent: str,
     elif action == "bounce":
         lines.append(f"{indent}if not (player and game):")
         lines.append(f"{indent}    return")
-        target_filter = _build_target_filter_code(eb, indent, perm_only=use_perm_only)
+        target_filter = _build_target_filter_code(eb, indent)
         lines.append(f"{indent}def target_filter(p):")
         if target_filter:
             lines.extend(target_filter)
@@ -302,7 +310,7 @@ def _emit_action(eb: EffectBlock, action: str, lines: List[str], indent: str,
     elif action == "suspend":
         lines.append(f"{indent}if not (player and game):")
         lines.append(f"{indent}    return")
-        target_filter = _build_target_filter_code(eb, indent, perm_only=use_perm_only)
+        target_filter = _build_target_filter_code(eb, indent)
         lines.append(f"{indent}def target_filter(p):")
         if target_filter:
             lines.extend(target_filter)
@@ -392,8 +400,12 @@ def _emit_action(eb: EffectBlock, action: str, lines: List[str], indent: str,
         lines.append(f"{indent}game.effect_digivolve_from_hand(")
         lines.append(f"{indent}    player, perm, digi_filter, {kwargs_str})")
     elif action == "cost_reduction":
-        if eb.cost_reduction_val:
-            lines.append(f"{indent}# Cost reduction handled via cost_reduction property")
+        val = eb.cost_reduction_val
+        if val:
+            lines.append(f"{indent}# Cost reduction by {val} — handled via cost_reduction property")
+        else:
+            lines.append(f"{indent}# Cost reduction (variable amount) — handled via cost_reduction property")
+        lines.append(f"{indent}pass  # descriptive-tagged: cost_reduction")
     elif action == "mind_link":
         lines.append(f"{indent}if not (player and game):")
         lines.append(f"{indent}    return")
@@ -438,7 +450,7 @@ def _emit_action(eb: EffectBlock, action: str, lines: List[str], indent: str,
     elif action == "return_to_deck":
         lines.append(f"{indent}if not (player and game):")
         lines.append(f"{indent}    return")
-        target_filter = _build_target_filter_code(eb, indent, perm_only=use_perm_only)
+        target_filter = _build_target_filter_code(eb, indent)
         lines.append(f"{indent}def target_filter(p):")
         if target_filter:
             lines.extend(target_filter)
@@ -478,7 +490,6 @@ def _emit_action(eb: EffectBlock, action: str, lines: List[str], indent: str,
             lines.append(f"{indent}    player, on_grant, filter_fn=target_filter, is_optional={eb.is_optional})")
         else:
             lines.append(f"{indent}# Keyword grant: {keyword} — flag set on effect object")
-            lines.append(f"{indent}pass")
     elif action == "mill":
         # P2: Mill — trash cards from top of deck
         count = eb.mill_count or 3
@@ -508,8 +519,26 @@ def _emit_action(eb: EffectBlock, action: str, lines: List[str], indent: str,
         lines.append(f"{indent}# Link condition setup — not yet supported")
         lines.append(f"{indent}pass  # descriptive-tagged")
     elif action == "also_treated_as":
-        lines.append(f"{indent}# Also treated as [Name] — name aliasing not modeled")
-        lines.append(f"{indent}pass  # descriptive-tagged")
+        tag = getattr(eb, 'descriptive_tag', 'also_treated_as') or 'also_treated_as'
+        if tag == "also_treated_as_level":
+            lines.append(f"{indent}# Also treated as additional levels — metadata not modeled in engine")
+        elif tag == "also_treated_as_name":
+            lines.append(f"{indent}# Also treated as [Name] — name aliasing not modeled in engine")
+        else:
+            lines.append(f"{indent}# Also treated as [Name/Level] — metadata not modeled in engine")
+        lines.append(f"{indent}pass  # descriptive-tagged: {tag}")
+    elif action == "redirect_attack":
+        lines.append(f"{indent}# Redirect attack target (SwitchDefender) — not yet in engine")
+        lines.append(f"{indent}pass  # descriptive-tagged: redirect_attack")
+    elif action == "effect_immunity":
+        lines.append(f"{indent}# Grant effect immunity (CanNotAffectedClass) — not yet in engine")
+        lines.append(f"{indent}pass  # descriptive-tagged: effect_immunity")
+    elif action == "grant_skill":
+        lines.append(f"{indent}# Grant keyword to other permanents (AddSkillClass) — not yet in engine")
+        lines.append(f"{indent}pass  # descriptive-tagged: grant_skill")
+    elif action == "attack_unsuspended":
+        lines.append(f"{indent}# Can attack unsuspended Digimon (CanAttackTargetDefendingPermanentClass) — not yet in engine")
+        lines.append(f"{indent}pass  # descriptive-tagged: attack_unsuspended")
     elif action == "play_restriction":
         lines.append(f"{indent}# Play restriction (CanNotPutFieldClass) — opponent play restrictions")
         lines.append(f"{indent}pass  # descriptive-tagged")

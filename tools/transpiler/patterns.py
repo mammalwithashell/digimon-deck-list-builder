@@ -325,3 +325,27 @@ RE_CUSTOM_CALLBACK = re.compile(
 # afterSelectPermanentCoroutine parameter
 RE_AFTER_CUSTOM_CALLBACK = re.compile(
     r'afterSelectPermanentCoroutine:\s*(\w+)')
+
+# ─── P7: Stub reduction — new helper class patterns ─────────────────
+
+# WI 2: ChangeCostClass cost value extraction (targetCost/targetCount += N)
+RE_CHANGE_COST_VALUE = re.compile(r'(?:targetCost|targetCount|Cost)\s*[-+]=\s*(\d+)')
+
+# WI 3: Helper classes inside Mode.Custom callbacks
+# IDegeneration — de-digivolve via helper class (also catches inline use)
+RE_IDEGENERATION = re.compile(r'new\s+IDegeneration\s*\(\s*\w+\s*,\s*(\d+)')
+# SwitchDefender — redirect attack target
+RE_SWITCH_DEFENDER = re.compile(r'SwitchDefender\s*\(')
+# PlayPermanentCards — play card via helper
+RE_PLAY_PERMANENT_CARDS = re.compile(r'CardEffectCommons\.PlayPermanentCards\s*\(')
+# DigivolveIntoHandOrTrashCard — digivolve from hand or trash
+RE_DIGIVOLVE_INTO = re.compile(r'DigivolveIntoHandOrTrashCard\s*\(')
+
+# WI 4: AddSkillClass — grants keywords to other permanents
+RE_ADD_SKILL_CLASS = re.compile(r'AddSkillClass|SetUpAddSkillClass')
+
+# WI 5: Metadata-only classes
+RE_ADD_JOGRESS_LEVELS = re.compile(r'AddJogressLevelsClass|SetUpAddJogressLevelsClass')
+RE_CHANGE_CARD_NAMES = re.compile(r'ChangeCardNamesClass|SetUpChangeCardNamesClass')
+RE_CAN_ATTACK_TARGET = re.compile(r'CanAttackTargetDefendingPermanentClass')
+RE_CAN_NOT_AFFECTED = re.compile(r'CanNotAffectedClass')

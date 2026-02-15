@@ -104,7 +104,6 @@ class BT23_047(CardScript):
             game.effect_select_opponent_permanent(
                 player, on_suspend, filter_fn=target_filter, is_optional=False)
             # Keyword grant: cannot_unsuspend_player — flag set on effect object
-            pass
             # Force attack — target Digimon may attack (requires engine SelectAttack)
             pass  # descriptive-tagged: force_attack
 
@@ -142,7 +141,6 @@ class BT23_047(CardScript):
             game.effect_select_opponent_permanent(
                 player, on_suspend, filter_fn=target_filter, is_optional=False)
             # Keyword grant: cannot_unsuspend_player — flag set on effect object
-            pass
             # Force attack — target Digimon may attack (requires engine SelectAttack)
             pass  # descriptive-tagged: force_attack
 

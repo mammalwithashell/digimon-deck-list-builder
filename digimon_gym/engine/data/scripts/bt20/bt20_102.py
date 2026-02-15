@@ -182,7 +182,6 @@ class BT20_102(CardScript):
             perm = ctx.get('permanent')
             game = ctx.get('game')
             # Keyword grant: rush — flag set on effect object
-            pass
             # Force attack — target Digimon may attack (requires engine SelectAttack)
             pass  # descriptive-tagged: force_attack
 

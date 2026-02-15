@@ -88,9 +88,7 @@ class BT23_030(CardScript):
             game.effect_select_hand_card(
                 player, hand_filter, on_trashed, is_optional=False)
             # Keyword grant: reboot — flag set on effect object
-            pass
             # Keyword grant: blocker — flag set on effect object
-            pass
 
         effect2.set_on_process_callback(process2)
         effects.append(effect2)

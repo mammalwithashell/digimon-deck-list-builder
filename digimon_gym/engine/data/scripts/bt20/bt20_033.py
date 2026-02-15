@@ -116,6 +116,16 @@ class BT20_033(CardScript):
             return True
 
         effect3.set_can_use_condition(condition3)
+
+        def process3(ctx: Dict[str, Any]):
+            """Action: Redirect Attack"""
+            player = ctx.get('player')
+            perm = ctx.get('permanent')
+            game = ctx.get('game')
+            # Redirect attack target (SwitchDefender) — not yet in engine
+            pass  # descriptive-tagged: redirect_attack
+
+        effect3.set_on_process_callback(process3)
         effects.append(effect3)
 
         return effects

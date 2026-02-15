@@ -312,6 +312,12 @@ class Game:
     def declare_winner(self, winner: Player):
         self.game_over = True
         self.winner = winner
+        # Clear all pending state so serialization / API clients see clean state
+        self.pending_attack = None
+        self.pending_selection = None
+        self.active_player = None
+        if hasattr(self, 'revealed_cards'):
+            self.revealed_cards.clear()
         self.logger.log(f"Game Over! Winner: {winner.player_name}")
 
     def to_json(self) -> Dict[str, Any]:
@@ -424,6 +430,32 @@ class Game:
                     return True
         return False
 
+    def _execute_security_checks(self, attacker: Permanent, defender_player: Player) -> bool:
+        """Run security check loop for an attacker against a defending player.
+
+        Handles <Security Attack +/-X> modifier, game-over detection, and
+        attacker deletion from security effects.
+
+        Returns:
+            True if the attacker survived all security checks, False otherwise.
+        """
+        sa_mod = attacker.security_attack_modifier()
+        num_checks = max(0, 1 + sa_mod)
+        for _ in range(num_checks):
+            if self.game_over:
+                return False
+            # Check attacker still on field (could be deleted by security effect)
+            if attacker not in self.turn_player.battle_area:
+                return False
+            result = defender_player.security_attack(attacker)
+            if result == AttackResolution.AttackerDeleted:
+                self.turn_player.delete_permanent(attacker, is_battle=True)
+                return False
+            elif result == AttackResolution.GameEnd:
+                self.declare_winner(self.turn_player)
+                return False
+        return True
+
     def _resolve_battle(self):
         """Execute the actual battle resolution after block/counter decisions."""
         pa = self.pending_attack
@@ -439,22 +471,7 @@ class Game:
         self.current_phase = GamePhase.Main
 
         if isinstance(target, Player):
-            # Security attack: check multiple cards based on <Security Attack +/-X>
-            sa_mod = attacker.security_attack_modifier()
-            num_checks = max(0, 1 + sa_mod)
-            for _ in range(num_checks):
-                if self.game_over:
-                    break
-                # Check attacker still on field (could be deleted by security effect)
-                if attacker not in self.turn_player.battle_area:
-                    break
-                result = target.security_attack(attacker)
-                if result == AttackResolution.AttackerDeleted:
-                    self.turn_player.delete_permanent(attacker, is_battle=True)
-                    break
-                elif result == AttackResolution.GameEnd:
-                    self.declare_winner(self.turn_player)
-                    break
+            self._execute_security_checks(attacker, target)
         elif isinstance(target, Permanent):
             a_dp = attacker.dp or 0
             t_dp = target.dp or 0
@@ -465,32 +482,20 @@ class Game:
             if attacker_wins:
                 # <Retaliation>: when this Digimon is deleted in battle, delete the winner
                 has_retaliation = target.has_keyword('_is_retaliation')
-                self.opponent_player.delete_permanent(target, is_battle=True)
-                if has_retaliation:
+                was_deleted = self.opponent_player.delete_permanent(target, is_battle=True)
+                if has_retaliation and was_deleted:
                     self.logger.log(f"[Retaliation] {target.top_card.card_names[0] if target.top_card else 'Unknown'} retaliates!")
                     self.turn_player.delete_permanent(attacker, is_battle=True)
                 # <Piercing>: after winning battle vs Digimon, check security
-                elif attacker.has_keyword('_is_piercing') and attacker in self.turn_player.battle_area:
+                # Only triggers when the target was actually deleted (not prevented)
+                elif was_deleted and attacker.has_keyword('_is_piercing') and attacker in self.turn_player.battle_area:
                     self.logger.log(f"[Piercing] {attacker.top_card.card_names[0] if attacker.top_card else 'Unknown'} pierces through!")
-                    sa_mod = attacker.security_attack_modifier()
-                    num_checks = max(0, 1 + sa_mod)
-                    for _ in range(num_checks):
-                        if self.game_over:
-                            break
-                        if attacker not in self.turn_player.battle_area:
-                            break
-                        result = self.opponent_player.security_attack(attacker)
-                        if result == AttackResolution.AttackerDeleted:
-                            self.turn_player.delete_permanent(attacker, is_battle=True)
-                            break
-                        elif result == AttackResolution.GameEnd:
-                            self.declare_winner(self.turn_player)
-                            break
+                    self._execute_security_checks(attacker, self.opponent_player)
             elif defender_wins:
                 # <Retaliation> on attacker: when deleted in battle, delete the winner
                 has_retaliation = attacker.has_keyword('_is_retaliation')
-                self.turn_player.delete_permanent(attacker, is_battle=True)
-                if has_retaliation:
+                was_deleted = self.turn_player.delete_permanent(attacker, is_battle=True)
+                if has_retaliation and was_deleted:
                     self.logger.log(f"[Retaliation] {attacker.top_card.card_names[0] if attacker.top_card else 'Unknown'} retaliates!")
                     self.opponent_player.delete_permanent(target, is_battle=True)
             else:
@@ -503,8 +508,10 @@ class Game:
 
     def action_play_card(self, card_index: int):
         if self.current_phase != GamePhase.Main:
+            self.logger.log(f"[Rejected] action_play_card: not in Main phase (phase={self.current_phase})")
             return
         if card_index < 0 or card_index >= len(self.turn_player.hand_cards):
+            self.logger.log(f"[Rejected] action_play_card: index {card_index} out of range (hand size={len(self.turn_player.hand_cards)})")
             return
 
         card = self.turn_player.hand_cards[card_index]
@@ -519,10 +526,13 @@ class Game:
 
     def action_digivolve(self, permanent_index: int, card_index: int):
         if self.current_phase != GamePhase.Main:
+            self.logger.log(f"[Rejected] action_digivolve: not in Main phase (phase={self.current_phase})")
             return
         if permanent_index >= len(self.turn_player.battle_area):
+            self.logger.log(f"[Rejected] action_digivolve: permanent index {permanent_index} out of range (field size={len(self.turn_player.battle_area)})")
             return
         if card_index >= len(self.turn_player.hand_cards):
+            self.logger.log(f"[Rejected] action_digivolve: card index {card_index} out of range (hand size={len(self.turn_player.hand_cards)})")
             return
 
         perm = self.turn_player.battle_area[permanent_index]
@@ -540,8 +550,10 @@ class Game:
 
     def action_attack_player(self, attacker_index: int):
         if self.current_phase != GamePhase.Main:
+            self.logger.log(f"[Rejected] action_attack_player: not in Main phase (phase={self.current_phase})")
             return
         if attacker_index < 0 or attacker_index >= len(self.turn_player.battle_area):
+            self.logger.log(f"[Rejected] action_attack_player: attacker index {attacker_index} out of range (field size={len(self.turn_player.battle_area)})")
             return
         attacker = self.turn_player.battle_area[attacker_index]
         self.resolve_attack(attacker, self.opponent_player)
@@ -549,10 +561,13 @@ class Game:
     def action_attack_digimon(self, attacker_index: int, target_index: int):
         """Attack an opponent's digimon (by field index)."""
         if self.current_phase != GamePhase.Main:
+            self.logger.log(f"[Rejected] action_attack_digimon: not in Main phase (phase={self.current_phase})")
             return
         if attacker_index < 0 or attacker_index >= len(self.turn_player.battle_area):
+            self.logger.log(f"[Rejected] action_attack_digimon: attacker index {attacker_index} out of range (field size={len(self.turn_player.battle_area)})")
             return
         if target_index < 0 or target_index >= len(self.opponent_player.battle_area):
+            self.logger.log(f"[Rejected] action_attack_digimon: target index {target_index} out of range (opponent field size={len(self.opponent_player.battle_area)})")
             return
         attacker = self.turn_player.battle_area[attacker_index]
         target = self.opponent_player.battle_area[target_index]
@@ -561,6 +576,7 @@ class Game:
     def action_hatch(self):
         """Hatch from digitama deck into breeding area."""
         if self.current_phase != GamePhase.Breeding:
+            self.logger.log(f"[Rejected] action_hatch: not in Breeding phase (phase={self.current_phase})")
             return
         self.logger.log(f"[Hatch] {self.turn_player.player_name} hatches from egg deck")
         self.turn_player.hatch()
@@ -568,6 +584,7 @@ class Game:
     def action_move_from_breeding(self):
         """Move breeding area digimon to battle area."""
         if self.current_phase != GamePhase.Breeding:
+            self.logger.log(f"[Rejected] action_move_from_breeding: not in Breeding phase (phase={self.current_phase})")
             return
         self.logger.log(f"[Move] {self.turn_player.player_name} moves from breeding to battle area")
         self.turn_player.move_from_breeding()
@@ -575,6 +592,7 @@ class Game:
     def action_breeding_pass(self):
         """Skip breeding phase and advance to main."""
         if self.current_phase != GamePhase.Breeding:
+            self.logger.log(f"[Rejected] action_breeding_pass: not in Breeding phase (phase={self.current_phase})")
             return
         self.logger.log_verbose(f"{self.turn_player.player_name} passes breeding phase")
         self.current_phase = GamePhase.Main

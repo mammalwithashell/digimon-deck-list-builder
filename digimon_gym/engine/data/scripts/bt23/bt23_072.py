@@ -76,13 +76,9 @@ class BT23_072(CardScript):
             game.effect_select_opponent_permanent(
                 player, on_suspend, filter_fn=target_filter, is_optional=True)
             # Keyword grant: rush — flag set on effect object
-            pass
             # Keyword grant: raid — flag set on effect object
-            pass
             # Keyword grant: reboot — flag set on effect object
-            pass
             # Keyword grant: blocker — flag set on effect object
-            pass
 
         effect1.set_on_process_callback(process1)
         effects.append(effect1)

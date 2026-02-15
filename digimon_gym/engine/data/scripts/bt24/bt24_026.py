@@ -85,9 +85,7 @@ class BT24_026(CardScript):
             game.effect_select_hand_card(
                 player, hand_filter, on_trashed, is_optional=False)
             # Keyword grant: jamming — flag set on effect object
-            pass
             # Keyword grant: blocker — flag set on effect object
-            pass
 
         effect2.set_on_process_callback(process2)
         effects.append(effect2)
@@ -124,9 +122,7 @@ class BT24_026(CardScript):
             game.effect_select_hand_card(
                 player, hand_filter, on_trashed, is_optional=False)
             # Keyword grant: jamming — flag set on effect object
-            pass
             # Keyword grant: blocker — flag set on effect object
-            pass
 
         effect3.set_on_process_callback(process3)
         effects.append(effect3)

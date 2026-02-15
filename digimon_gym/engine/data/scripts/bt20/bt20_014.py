@@ -120,6 +120,8 @@ class BT20_014(CardScript):
             if not (player and game):
                 return
             def target_filter(p):
+                if not (p.contains_card_name('Jesmon')):
+                    return False
                 return True
             def on_suspend(target_perm):
                 target_perm.suspend()

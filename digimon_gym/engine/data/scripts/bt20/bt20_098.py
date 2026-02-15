@@ -50,9 +50,7 @@ class BT20_098(CardScript):
             game.effect_select_opponent_permanent(
                 player, on_return, filter_fn=target_filter, is_optional=False)
             # Keyword grant: rush — flag set on effect object
-            pass
             # Keyword grant: blocker — flag set on effect object
-            pass
 
         effect0.set_on_process_callback(process0)
         effects.append(effect0)

@@ -370,16 +370,16 @@ Alliance, Fortitude, Decoy, Save, Material Save, Overclock, Vortex, Training, Pr
 **Recently implemented (Tiers 0-1):** Blitz, Collision, restriction keywords (cannot_attack, cannot_attack_player, cannot_block, cannot_be_blocked, cannot_unsuspend), granted keyword mechanism, option color requirement.
 
 ### Transpiler Stub Summary
-72 effect callbacks across 4 sets still produce no-action stubs (down from 109 after P5 new action patterns, P6 Mode.Custom callback resolution, HandBounceClass detection, and DP change via helper). Additionally, ~54 effects are descriptive-tagged (down from ~59 after put_to_security became functional): token play, forced attack, SA modifier, effect disable, temp effect grant, plus prior color ignore, app fusion, link conditions, play restrictions.
+19 effect callbacks across 4 sets still produce no-action stubs (down from 116 after P7 stub reduction: widened `_extract_method_body()` regex, ChangeCostClass value extraction, Mode.Custom helper class scanning (IDegeneration, SwitchDefender, PlayPermanentCards, DigivolveIntoHandOrTrashCard, CanNotAffectedClass), AddSkillClass detection, metadata class detection (AddJogressLevelsClass, ChangeCardNamesClass, CanAttackTargetDefendingPermanentClass), and orphan pass elimination). Additionally, ~180 effects are descriptive-tagged: cost reduction, redirect attack, effect immunity, grant skill, attack unsuspended, also treated as level/name, token play, forced attack, SA modifier, effect disable, temp effect grant, plus prior color ignore, app fusion, link conditions, play restrictions.
 
 | Set | No-action stubs | Descriptive-tagged |
 |-----|----------------|--------------------|
-| BT14 | 11 | ~8 |
-| BT20 | 21 | ~10 |
-| BT23 | 16 | ~24 |
-| BT24 | 24 | ~12 |
+| BT14 | 1 | ~18 |
+| BT20 | 8 | ~61 |
+| BT23 | 7 | ~60 |
+| BT24 | 3 | ~41 |
 
-Remaining stubs are mostly complex multi-step sequences with nested coroutines, `OnAddDigivolutionCards` timing blocks, and effects requiring engine features not yet supported.
+Remaining stubs are complex multi-step sequences with nested coroutines, `OnAddDigivolutionCards` timing blocks, and effects requiring engine features not yet supported.
 
 ### Other Gaps
 - EX8 and EX10 script directories are empty placeholders (no scripts transpiled yet)

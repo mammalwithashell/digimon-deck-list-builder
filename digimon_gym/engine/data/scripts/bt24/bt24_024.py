@@ -83,7 +83,8 @@ class BT24_024(CardScript):
                     player.trash_cards.append(selected)
             game.effect_select_hand_card(
                 player, hand_filter, on_trashed, is_optional=True)
-            # Cost reduction handled via cost_reduction property
+            # Cost reduction by 2 — handled via cost_reduction property
+            pass  # descriptive-tagged: cost_reduction
 
         effect2.set_on_process_callback(process2)
         effects.append(effect2)

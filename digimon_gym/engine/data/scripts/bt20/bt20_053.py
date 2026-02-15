@@ -51,7 +51,7 @@ class BT20_053(CardScript):
         effect1.set_can_use_condition(condition1)
 
         def process1(ctx: Dict[str, Any]):
-            """Action: DP +5000, Play Card, Trash From Hand"""
+            """Action: DP +5000, Play Card, Trash From Hand, Effect Immunity"""
             player = ctx.get('player')
             perm = ctx.get('permanent')
             game = ctx.get('game')
@@ -73,6 +73,8 @@ class BT20_053(CardScript):
                     player.trash_cards.append(selected)
             game.effect_select_hand_card(
                 player, hand_filter, on_trashed, is_optional=False)
+            # Grant effect immunity (CanNotAffectedClass) — not yet in engine
+            pass  # descriptive-tagged: effect_immunity
 
         effect1.set_on_process_callback(process1)
         effects.append(effect1)
@@ -94,7 +96,7 @@ class BT20_053(CardScript):
         effect2.set_can_use_condition(condition2)
 
         def process2(ctx: Dict[str, Any]):
-            """Action: DP +5000, Play Card, Trash From Hand"""
+            """Action: DP +5000, Play Card, Trash From Hand, Effect Immunity"""
             player = ctx.get('player')
             perm = ctx.get('permanent')
             game = ctx.get('game')
@@ -116,6 +118,8 @@ class BT20_053(CardScript):
                     player.trash_cards.append(selected)
             game.effect_select_hand_card(
                 player, hand_filter, on_trashed, is_optional=False)
+            # Grant effect immunity (CanNotAffectedClass) — not yet in engine
+            pass  # descriptive-tagged: effect_immunity
 
         effect2.set_on_process_callback(process2)
         effects.append(effect2)
@@ -138,6 +142,16 @@ class BT20_053(CardScript):
             return True
 
         effect3.set_can_use_condition(condition3)
+
+        def process3(ctx: Dict[str, Any]):
+            """Action: Redirect Attack"""
+            player = ctx.get('player')
+            perm = ctx.get('permanent')
+            game = ctx.get('game')
+            # Redirect attack target (SwitchDefender) — not yet in engine
+            pass  # descriptive-tagged: redirect_attack
+
+        effect3.set_on_process_callback(process3)
         effects.append(effect3)
 
         return effects

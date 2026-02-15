@@ -59,7 +59,6 @@ class BT20_042(CardScript):
             game.effect_select_opponent_permanent(
                 player, on_suspend, filter_fn=target_filter, is_optional=False)
             # Keyword grant: cannot_unsuspend — flag set on effect object
-            pass
 
         effect1.set_on_process_callback(process1)
         effects.append(effect1)
@@ -93,16 +92,15 @@ class BT20_042(CardScript):
             game.effect_select_opponent_permanent(
                 player, on_suspend, filter_fn=target_filter, is_optional=False)
             # Keyword grant: cannot_unsuspend — flag set on effect object
-            pass
 
         effect2.set_on_process_callback(process2)
         effects.append(effect2)
 
         # Timing: EffectTiming.None
-        # Effect
+        # Also Treated As
         effect3 = ICardEffect()
         effect3.set_effect_name("BT20-042 Also treated as level 6 for DNA Digivolution")
-        effect3.set_effect_description("Effect")
+        effect3.set_effect_description("Also Treated As")
 
         effect = effect3  # alias for condition closure
         def condition3(context: Dict[str, Any]) -> bool:
@@ -111,13 +109,23 @@ class BT20_042(CardScript):
             return True
 
         effect3.set_can_use_condition(condition3)
+
+        def process3(ctx: Dict[str, Any]):
+            """Action: Also Treated As"""
+            player = ctx.get('player')
+            perm = ctx.get('permanent')
+            game = ctx.get('game')
+            # Also treated as additional levels — metadata not modeled in engine
+            pass  # descriptive-tagged: also_treated_as_level
+
+        effect3.set_on_process_callback(process3)
         effects.append(effect3)
 
         # Timing: EffectTiming.None
-        # Effect
+        # Also Treated As
         effect4 = ICardEffect()
         effect4.set_effect_name("BT20-042 Also treated as [Breakdramon]")
-        effect4.set_effect_description("Effect")
+        effect4.set_effect_description("Also Treated As")
 
         effect = effect4  # alias for condition closure
         def condition4(context: Dict[str, Any]) -> bool:
@@ -126,6 +134,16 @@ class BT20_042(CardScript):
             return True
 
         effect4.set_can_use_condition(condition4)
+
+        def process4(ctx: Dict[str, Any]):
+            """Action: Also Treated As"""
+            player = ctx.get('player')
+            perm = ctx.get('permanent')
+            game = ctx.get('game')
+            # Also treated as [Name] — name aliasing not modeled in engine
+            pass  # descriptive-tagged: also_treated_as_name
+
+        effect4.set_on_process_callback(process4)
         effects.append(effect4)
 
         # Timing: EffectTiming.OnEndBattle

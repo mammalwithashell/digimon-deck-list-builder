@@ -80,9 +80,7 @@ class BT23_054(CardScript):
             if player:
                 player.draw_cards(1)
             # Keyword grant: cannot_return_to_hand — flag set on effect object
-            pass
             # Keyword grant: cannot_return_to_deck — flag set on effect object
-            pass
 
         effect3.set_on_process_callback(process3)
         effects.append(effect3)
@@ -113,9 +111,7 @@ class BT23_054(CardScript):
             if player:
                 player.draw_cards(1)
             # Keyword grant: cannot_return_to_hand — flag set on effect object
-            pass
             # Keyword grant: cannot_return_to_deck — flag set on effect object
-            pass
 
         effect4.set_on_process_callback(process4)
         effects.append(effect4)

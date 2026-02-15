@@ -45,7 +45,6 @@ class BT20_049(CardScript):
             game.effect_select_opponent_permanent(
                 player, on_restrict, filter_fn=target_filter, is_optional=False)
             # Keyword grant: cannot_attack_player — flag set on effect object
-            pass
 
         effect0.set_on_process_callback(process0)
         effects.append(effect0)
@@ -82,7 +81,6 @@ class BT20_049(CardScript):
             game.effect_select_opponent_permanent(
                 player, on_restrict, filter_fn=target_filter, is_optional=False)
             # Keyword grant: cannot_attack_player — flag set on effect object
-            pass
 
         effect1.set_on_process_callback(process1)
         effects.append(effect1)

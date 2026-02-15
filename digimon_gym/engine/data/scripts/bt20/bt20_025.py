@@ -105,10 +105,10 @@ class BT20_025(CardScript):
         effects.append(effect2)
 
         # Timing: EffectTiming.None
-        # Effect
+        # Also Treated As
         effect3 = ICardEffect()
         effect3.set_effect_name("BT20-025 Also treated as level 6 for DNA Digivolution")
-        effect3.set_effect_description("Effect")
+        effect3.set_effect_description("Also Treated As")
 
         effect = effect3  # alias for condition closure
         def condition3(context: Dict[str, Any]) -> bool:
@@ -117,13 +117,23 @@ class BT20_025(CardScript):
             return True
 
         effect3.set_can_use_condition(condition3)
+
+        def process3(ctx: Dict[str, Any]):
+            """Action: Also Treated As"""
+            player = ctx.get('player')
+            perm = ctx.get('permanent')
+            game = ctx.get('game')
+            # Also treated as additional levels — metadata not modeled in engine
+            pass  # descriptive-tagged: also_treated_as_level
+
+        effect3.set_on_process_callback(process3)
         effects.append(effect3)
 
         # Timing: EffectTiming.None
-        # Effect
+        # Also Treated As
         effect4 = ICardEffect()
         effect4.set_effect_name("BT20-025 Also treated as [Slayerdramon]")
-        effect4.set_effect_description("Effect")
+        effect4.set_effect_description("Also Treated As")
 
         effect = effect4  # alias for condition closure
         def condition4(context: Dict[str, Any]) -> bool:
@@ -132,6 +142,16 @@ class BT20_025(CardScript):
             return True
 
         effect4.set_can_use_condition(condition4)
+
+        def process4(ctx: Dict[str, Any]):
+            """Action: Also Treated As"""
+            player = ctx.get('player')
+            perm = ctx.get('permanent')
+            game = ctx.get('game')
+            # Also treated as [Name] — name aliasing not modeled in engine
+            pass  # descriptive-tagged: also_treated_as_name
+
+        effect4.set_on_process_callback(process4)
         effects.append(effect4)
 
         # Factory effect: security_attack_plus
