@@ -1,5 +1,9 @@
 # UI & API Plan — Digimon Game Simulator
 
+> Updated 2026-02-15. Reflects engine state after merge of main: 981-float tensor,
+> 3,651-card database, DNA Digivolution, 15 keyword mechanics, 10 selection phases,
+> revealed cards zone, linked option cards, and pilot_training.py agent infrastructure.
+
 ## Overview
 
 Four main surfaces:
@@ -23,13 +27,16 @@ Inspired by the [WE-Kaito simulator](https://github.com/WE-Kaito/digimon-tcg-sim
 ┌──────────────────────────────────────────────────────────────┐
 │  OPPONENT AREA (top half, cards inverted)                    │
 │  ┌─────┐ ┌─────────────────────────────────┐ ┌────┐ ┌────┐ │
-│  │Egg  │ │  Battle Area (8+ slots)         │ │Deck│ │Sec │ │
+│  │Egg  │ │  Battle Area (12 slots)         │ │Deck│ │Sec │ │
 │  │Deck │ │  [Perm][Perm][Perm]...          │ │    │ │ury │ │
 │  └─────┘ └─────────────────────────────────┘ └────┘ └────┘ │
 │  ┌─────┐                                            ┌────┐ │
 │  │Breed│                                            │Trsh│ │
 │  └─────┘                                            └────┘ │
 │                                                              │
+│  ┌──────────────────────────────────────────────────────┐   │
+│  │  Revealed Cards Zone (face-up, during reveal effects) │   │
+│  └──────────────────────────────────────────────────────┘   │
 │  ┌──────────────────────────────────────────────────────┐   │
 │  │            MEMORY GAUGE  [-10 ... 0 ... +10]         │   │
 │  └──────────────────────────────────────────────────────┘   │
@@ -38,7 +45,7 @@ Inspired by the [WE-Kaito simulator](https://github.com/WE-Kaito/digimon-tcg-sim
 │  │Breed│                                            │Trsh│ │
 │  └─────┘                                            └────┘ │
 │  ┌─────┐ ┌─────────────────────────────────┐ ┌────┐ ┌────┐ │
-│  │Egg  │ │  Battle Area (8+ slots)         │ │Deck│ │Sec │ │
+│  │Egg  │ │  Battle Area (12 slots)         │ │Deck│ │Sec │ │
 │  │Deck │ │  [Perm][Perm][Perm]...          │ │    │ │ury │ │
 │  └─────┘ └─────────────────────────────────┘ └────┘ └────┘ │
 │                                                              │
@@ -61,18 +68,21 @@ Inspired by the [WE-Kaito simulator](https://github.com/WE-Kaito/digimon-tcg-sim
 | `GameBoard` | Root layout, CSS grid, two mirrored halves | — |
 | `PlayerHalf` | One player's full zone set | — |
 | `BattleArea` | 12 `PermanentSlot` components in a row, scrollable if >8 | Drop target for play/digivolve |
-| `PermanentSlot` | Single permanent: top card art, DP badge, level badge, suspend tilt, digivolution stack indicator | Click to select attacker/target, hover for detail |
-| `HandZone` | Horizontally fanned cards, dynamic spacing | Click card to see valid actions (play, digivolve targets), drag-and-drop optional |
+| `PermanentSlot` | Top card art, DP badge, level badge, suspend tilt (30deg), keyword badges, linked cards, digivolution stack depth | Click to select attacker/target, hover for detail |
+| `KeywordBadges` | Small tags on permanents: Rush, Blocker, Jamming, Piercing, Retaliation, Blitz, Reboot, Collision, Evade, Armor Purge, Barrier, Security Attack +/-X | Display only |
+| `LinkedCards` | Sideways mini-cards rendered next to the permanent (for [TS] option cards) | Click to view |
+| `HandZone` | Horizontally fanned cards, dynamic spacing, compresses beyond 7 | Click card to see valid actions (play, digivolve, DNA targets) |
 | `SecurityStack` | Face-down pile with count badge | Hover shows count, click to browse (own only) |
 | `DeckPile` | Face-down pile with count badge | — |
 | `EggDeck` | Digitama pile with count | Click for hatch action |
 | `BreedingArea` | Single permanent slot | Click for move-to-battle action |
 | `TrashPile` | Count badge, click to browse | Modal dialog listing all cards |
-| `MemoryGauge` | 21-segment horizontal bar, color-coded | Display only (updated by server) |
-| `PhaseIndicator` | Shows current phase name + turn number | Display only |
-| `CardDetail` | Right sidebar, shows full card image + text when hovering | — |
+| `RevealedCardsZone` | Temporary row of face-up cards between the halves | Click to select during `SelectReveal` |
+| `MemoryGauge` | 21-segment horizontal bar, color-coded (blue positive, red negative) | Display only (updated by server) |
+| `PhaseIndicator` | Shows current phase name + turn number (15 phases, see §1.7) | Display only |
+| `CardDetail` | Right sidebar, shows full card image + text + inherited effects when hovering | — |
 | `GameLog` | Scrollable text panel showing VerboseLogger output | Auto-scrolls to bottom |
-| `ActionBar` | Contextual buttons based on game state | Pass, Hatch, Move from Breeding, confirm attack target |
+| `ActionBar` | Contextual buttons based on game state and current phase | Pass, Hatch, Move from Breeding, confirm target, decline optional |
 
 ### 1.3 Interaction Flow
 
@@ -87,32 +97,63 @@ The game uses a **click-to-act** model (not drag-and-drop). This is simpler to i
 **Attacking:**
 1. Player clicks an unsuspended permanent in their battle area → it highlights as "attacker"
 2. Valid targets light up (opponent permanents + security icon)
-3. Player clicks a target → sends attack action
-4. Backend resolves combat, returns new state
+3. Player clicks a target → sends attack action (100 + attacker*15 + target)
+4. **BlockTiming**: If opponent has blockers, UI shows "Block?" prompt to opponent with valid blockers highlighted, plus "Decline" button
+5. **CounterTiming**: If opponent can blast digivolve, UI shows blast digivolve options, plus "Decline" button
+6. Backend resolves combat, returns new state
 
 **Digivolving:**
 1. Player clicks a card in hand that can digivolve
 2. Valid digivolution targets on the field highlight
-3. Player clicks a target permanent → sends digivolve action
+3. Player clicks a target permanent → sends digivolve action (400 + hand*15 + field)
+
+**DNA Digivolving (new):**
+1. Player clicks a hand card with DNA digivolve capability
+2. Action bar shows "DNA Digivolve" button → sends action (63 + hand_index)
+3. Game enters `SelectMaterial` phase — valid first materials highlight on field
+4. Player clicks first material
+5. Valid second materials highlight
+6. Player clicks second material → backend resolves DNA digivolution
 
 **Hatching / Moving from Breeding:**
-- Action bar shows "Hatch" button when in Breeding phase with eggs available
-- Action bar shows "Move" button when breeding area has a L3+ digimon
+- Action bar shows "Hatch" button when in Breeding phase with eggs available (action 60)
+- Action bar shows "Move" button when breeding area has a L3+ digimon (action 61)
 
-**Passing:**
+**Passing / Declining:**
 - "Pass" button always visible during player's turn, sends action 62
+- During selection phases with `is_optional`, "Decline" button sends action 62
 
-### 1.4 Visual Effects (Phase 2)
+### 1.4 Selection Phase UI
+
+The engine now has 10 selection phases beyond Main/Breeding. Each needs specific UI treatment:
+
+| Phase | UI Behavior |
+|-------|-------------|
+| `SelectTarget` (5) | Highlight valid permanents on field (own + opponent). Player clicks one. |
+| `SelectMaterial` (6) | Two-step: highlight valid first materials → click → highlight valid second materials → click. Used by DNA Digivolve. |
+| `BlockTiming` (7) | Show opponent's valid blockers highlighted. "Block with [name]" buttons + "Decline" (62). |
+| `CounterTiming` (8) | Show opponent's blast digivolve options. "Blast Digivolve [card]" buttons + "Decline" (62). |
+| `SelectTrash` (9) | Open `TrashBrowser` modal. Player clicks a card from trash. Valid indices 130-179. |
+| `SelectSource` (10) | Open `StackBrowser` modal showing digivolution stack. Player clicks a source card. |
+| `SelectHand` (11) | Highlight selectable hand cards. Player clicks one. Valid indices 0-29. |
+| `SelectReveal` (12) | Populate `RevealedCardsZone` with face-up cards. Player clicks one. Valid indices 30-39. |
+| `SelectEffectChoice` (13) | Show `EffectChoicePanel` with 2+ buttons describing each branch. Valid indices 1000-1009. |
+| `SelectSecurity` (14) | Open `SecurityBrowser` modal. Player clicks a security card. Valid indices 40-59. |
+
+A `SelectionOverlay` component wraps the board during any selection phase, dimming non-interactive elements and showing a prompt ("Choose a target", "Select a card from trash", etc.).
+
+### 1.5 Visual Effects (Phase 2)
 
 These are nice-to-have and can be added incrementally:
-- Attack arrows (SVG lines between attacker and target)
+- Attack arrows (SVG lines between attacker and target, with pulsing animation)
 - Card play animation (hand → field slide)
 - Suspend/unsuspend tilt animation (CSS transform rotate 30deg)
 - DP modifier badges (green +, red -)
 - Security check flip animation
 - Turn transition overlay
+- Keyword grant/remove flash effects
 
-### 1.5 State Management (Zustand)
+### 1.6 State Management (Zustand)
 
 ```typescript
 // stores/gameStore.ts
@@ -121,22 +162,37 @@ interface GameStore {
   gameId: string | null;
   wsConnected: boolean;
 
-  // Game state (from server)
+  // Game state (from server to_ui_json)
   turnCount: number;
-  currentPhase: string;
+  currentPhase: GamePhase;  // 0-14
   currentPlayer: 1 | 2;
   memoryGauge: number;
   isGameOver: boolean;
   winner: number | null;
   player1: PlayerState;
   player2: PlayerState;
+  revealedCards: CardInfo[];
 
-  // Action mask (from server)
-  actionMask: number[];    // 2120 elements
+  // Selection state (from server)
+  pendingSelection: {
+    phase: GamePhase;
+    validIndices: number[];
+    isOptional: boolean;
+    prompt: string;
+    selectingPlayer: 1 | 2;
+  } | null;
+  pendingAttack: {
+    attackerSlot: number;
+    targetSlot: number;
+  } | null;
+
+  // Action mask (from server, 2120 elements)
+  actionMask: number[];
 
   // Local UI state
   selectedHandCard: number | null;
   selectedAttacker: number | null;
+  selectedMaterials: number[];  // for DNA two-step
   hoveredCard: CardInfo | null;
   logs: string[];
 
@@ -151,12 +207,14 @@ interface GameStore {
 
 interface PlayerState {
   handCount: number;
-  handIds: string[];       // only for "our" player
+  handIds: string[];       // only for "our" player in PvP
   securityCount: number;
+  securityIds: string[];   // only for own player
   deckCount: number;
+  eggDeckCount: number;
   battleArea: PermanentInfo[];
   breedingArea: PermanentInfo | null;
-  trashCards: string[];    // card IDs
+  trashIds: string[];
 }
 
 interface PermanentInfo {
@@ -166,8 +224,41 @@ interface PermanentInfo {
   level: number;
   isSuspended: boolean;
   sourceCount: number;
+  sources: SourceInfo[];          // full digivolution stack
+  linkedCardIds: string[];        // [TS] option cards
+  keywords: string[];             // ["rush", "blocker", "jamming", ...]
+  securityAttackModifier: number; // +1, -1, etc.
+  turnPlayed: number;
+}
+
+interface SourceInfo {
+  cardId: string;
+  optState: number;     // -1 = no OPT, 0 = exhausted, 1 = available
+  dpContribution: number;
 }
 ```
+
+### 1.7 Game Phases Reference
+
+All 15 phases the UI must handle (from `GamePhase` enum):
+
+| Value | Phase | UI Mode |
+|-------|-------|---------|
+| 0 | Start | Automatic (no UI) |
+| 1 | Draw | Automatic (no UI) |
+| 2 | Breeding | Action bar: Hatch / Move / Pass |
+| 3 | Main | Full interaction: play, attack, digivolve, DNA, effects |
+| 4 | End | Automatic (no UI) |
+| 5 | SelectTarget | Selection overlay on field |
+| 6 | SelectMaterial | Two-step field selection |
+| 7 | BlockTiming | Opponent: blocker selection or decline |
+| 8 | CounterTiming | Opponent: blast digivolve or decline |
+| 9 | SelectTrash | Trash browser modal |
+| 10 | SelectSource | Stack browser modal |
+| 11 | SelectHand | Hand card highlighting |
+| 12 | SelectReveal | Revealed cards zone |
+| 13 | SelectEffectChoice | Effect choice buttons |
+| 14 | SelectSecurity | Security browser modal |
 
 ---
 
@@ -213,9 +304,9 @@ interface PermanentInfo {
 │  ┌──────────────────┐  ┌──────────────────────────────────┐ │
 │  │  QUICK MATCH     │  │  ACTIVE ROOMS (spectate)         │ │
 │  │                  │  │                                  │ │
-│  │  [Find Match]    │  │  ABCD - Player1 vs Player2  [👁] │ │
-│  │  Searching...    │  │  EFGH - Player3 vs (waiting) [👁] │ │
-│  │                  │  │  IJKL - Player4 vs Player5  [👁] │ │
+│  │  [Find Match]    │  │  ABCD - Player1 vs Player2  [W]  │ │
+│  │  Searching...    │  │  EFGH - Player3 vs (waiting) [W] │ │
+│  │                  │  │  IJKL - Player4 vs Player5  [W]  │ │
 │  └──────────────────┘  └──────────────────────────────────┘ │
 └──────────────────────────────────────────────────────────────┘
 ```
@@ -224,23 +315,23 @@ interface PermanentInfo {
 
 ```
 Host creates room
-  │
-  ├─► Room enters "waiting" state
-  │   Room code generated (e.g., "ABCD")
-  │   Host selects deck, sees "Waiting for opponent..."
-  │
-  ├─► Guest joins with code (or Quick Match pairs them)
-  │   Guest selects deck
-  │   Both players see opponent's name/avatar
-  │
-  ├─► Both players ready → Game starts
-  │   Room state transitions to "playing"
-  │   Both clients connect to game WebSocket
-  │
-  ├─► Game ends → Results shown
-  │   Option to rematch (swap first player) or return to lobby
-  │
-  └─► Room cleaned up after both players leave or timeout
+  |
+  +-> Room enters "waiting" state
+  |   Room code generated (e.g., "ABCD")
+  |   Host selects deck, sees "Waiting for opponent..."
+  |
+  +-> Guest joins with code (or Quick Match pairs them)
+  |   Guest selects deck
+  |   Both players see opponent's name/avatar
+  |
+  +-> Both players ready -> Game starts
+  |   Room state transitions to "playing"
+  |   Both clients connect to game WebSocket
+  |
+  +-> Game ends -> Results shown
+  |   Option to rematch (swap first player) or return to lobby
+  |
+  +-> Room cleaned up after both players leave or timeout
 ```
 
 ### 2.4 Room Codes
@@ -253,21 +344,21 @@ Host creates room
 ### 2.5 Waiting Room UI
 
 ```
-┌──────────────────────────────────────────────────────────────┐
-│  Room: ABCD                              [Copy Code] [Leave] │
-│                                                              │
-│  ┌─────────────────────┐    ┌─────────────────────┐         │
-│  │  PLAYER 1 (you)     │    │  PLAYER 2           │         │
-│  │                     │    │                     │         │
-│  │  Deck: Red Starter  │    │  Waiting...         │         │
-│  │  ✓ Ready            │    │                     │         │
-│  │                     │    │                     │         │
-│  └─────────────────────┘    └─────────────────────┘         │
-│                                                              │
-│  Share this code with your opponent: ABCD                    │
-│                                                              │
-│  [Start Game]  (disabled until both players ready)           │
-└──────────────────────────────────────────────────────────────┘
++--------------------------------------------------------------+
+|  Room: ABCD                              [Copy Code] [Leave] |
+|                                                              |
+|  +---------------------+    +---------------------+         |
+|  |  PLAYER 1 (you)     |    |  PLAYER 2           |         |
+|  |                     |    |                     |         |
+|  |  Deck: Red Starter  |    |  Waiting...         |         |
+|  |  Ready              |    |                     |         |
+|  |                     |    |                     |         |
+|  +---------------------+    +---------------------+         |
+|                                                              |
+|  Share this code with your opponent: ABCD                    |
+|                                                              |
+|  [Start Game]  (disabled until both players ready)           |
++--------------------------------------------------------------+
 ```
 
 ### 2.6 PvP Game Differences
@@ -286,13 +377,13 @@ In Human vs Human, both players are connected via WebSocket. Key differences fro
 
 ### 2.7 Spectator Mode
 
-Spectators connect to a game's WebSocket with a `role=spectator` parameter. They receive the same state as Player 1 (or a neutral view with both hands hidden). Spectators cannot send actions.
+Spectators connect to a game's WebSocket with a `role=spectator` parameter. They receive a neutral view with both hands hidden. Spectators cannot send actions.
 
 ### 2.8 Lobby WebSocket: `/ws/lobby`
 
 A persistent WebSocket for lobby state. All connected clients receive room list updates.
 
-**Client → Server:**
+**Client -> Server:**
 ```json
 {"type": "create_room", "deck_ids": ["ST1-01", ...], "player_name": "Alice"}
 
@@ -307,7 +398,7 @@ A persistent WebSocket for lobby state. All connected clients receive room list 
 {"type": "cancel_quickmatch"}
 ```
 
-**Server → Client:**
+**Server -> Client:**
 ```json
 {
   "type": "room_created",
@@ -357,18 +448,18 @@ A persistent WebSocket for lobby state. All connected clients receive room list 
 
 The existing `/ws/game/{game_id}` WebSocket is extended for PvP:
 
-**Client → Server** (same as before, but with player auth):
+**Client -> Server** (same as before, but with player auth):
 ```json
 {"type": "connect", "player_id": 1, "reconnect_token": "..."}
 {"type": "action", "action_id": 60}
 ```
 
-**Server → Client** (player-specific state):
+**Server -> Client** (player-specific state):
 ```json
 {
   "type": "state_update",
-  "state": { /* filtered to_player_json() — only your hand visible */ },
-  "action_mask": [0, 0, 1, ...],  /* only sent to active player */
+  "state": { /* filtered to_player_json() */ },
+  "action_mask": [0, 0, 1, ...],
   "logs": ["Player 1 plays Agumon"],
   "is_your_turn": true,
   "is_game_over": false
@@ -387,7 +478,7 @@ The existing `/ws/game/{game_id}` WebSocket is extended for PvP:
 
 ### 2.10 Disconnection & Reconnection
 
-- Each player gets a **reconnect token** when the game starts (short-lived JWT or random UUID stored server-side)
+- Each player gets a **reconnect token** when the game starts (random UUID stored server-side)
 - If a WebSocket drops, the server keeps the game alive for **5 minutes**
 - Player can reconnect using the token and resume from current state
 - If timeout expires, disconnected player **forfeits**
@@ -423,7 +514,7 @@ Record full game state snapshots at every action during Agent vs Agent games. Th
 
 ### 3.2 Recording Format
 
-Each recorded game is a JSON file:
+Each recorded game is a JSON file. Frames use the enhanced `to_ui_json()` so keyword badges, linked cards, and selection phases are visible during playback.
 
 ```json
 {
@@ -443,7 +534,7 @@ Each recorded game is a JSON file:
       "frame_id": 0,
       "action_id": null,
       "action_description": "Game Start",
-      "state": { /* full to_json() snapshot */ },
+      "state": { /* full to_ui_json() snapshot */ },
       "logs": ["Game started. Player 1 goes first."]
     },
     {
@@ -451,10 +542,9 @@ Each recorded game is a JSON file:
       "action_id": 60,
       "action_description": "Player 1: Hatch",
       "player": 1,
-      "state": { /* to_json() */ },
+      "state": { /* to_ui_json() */ },
       "logs": ["Player 1 hatches ST1-01 Koromon"]
     }
-    // ... one frame per action
   ]
 }
 ```
@@ -464,24 +554,25 @@ Each recorded game is a JSON file:
 The replay viewer reuses the same `GameBoard` component from the interactive game, but in read-only mode with playback controls:
 
 ```
-┌────────────────────────────────────────────────────────┐
-│  Same board layout as interactive game (read-only)     │
-│                                                        │
-│  ┌──────────────────────────────────────────────────┐  │
-│  │ ◄◄  ◄  ▶  ►►  │  Frame 47/187  │  1x  2x  4x  │  │
-│  │ Timeline scrubber ════════●══════════════════════│  │
-│  └──────────────────────────────────────────────────┘  │
-│                                                        │
-│  ┌──────────────────────────────────────────────────┐  │
-│  │  Action Log (synced to current frame)            │  │
-│  │  > Player 1: Play Agumon (cost 3, memory 4→1)   │  │
-│  │  > Player 1: Attack with Greymon → Security      │  │
-│  │  > Player 1: Pass turn                           │  │
-│  │  ► Player 2: Hatch Tokomon                       │  │
-│  └──────────────────────────────────────────────────┘  │
-│                                                        │
-│  Metadata: Agent1=greedy vs Agent2=ppo_v3 | Winner: P1│
-└────────────────────────────────────────────────────────┘
++--------------------------------------------------------+
+|  Same board layout as interactive game (read-only)     |
+|  Both players' hands visible (no hidden info)          |
+|                                                        |
+|  +--------------------------------------------------+  |
+|  | <<  <  >  >>  |  Frame 47/187  |  1x  2x  4x    |  |
+|  | Timeline scrubber =========O=====================|  |
+|  +--------------------------------------------------+  |
+|                                                        |
+|  +--------------------------------------------------+  |
+|  |  Action Log (synced to current frame)            |  |
+|  |  > Player 1: Play Agumon (cost 3, memory 4->1)  |  |
+|  |  > Player 1: Attack with Greymon -> Security     |  |
+|  |  > Player 1: Pass turn                           |  |
+|  |  > Player 2: Hatch Tokomon                       |  |
+|  +--------------------------------------------------+  |
+|                                                        |
+|  Metadata: Agent1=greedy vs Agent2=ppo_v3 | Winner: P1|
++--------------------------------------------------------+
 ```
 
 **Controls:**
@@ -524,56 +615,63 @@ interface ReplayStore {
 | **Training Jobs** | Launch new training runs, monitor progress, stop/resume |
 | **Matchup Matrix** | Run Agent A vs Agent B simulations, see win rates in a grid |
 | **Replay Browser** | List and filter recorded replays by agents, date, winner |
-| **Card Database** | Browse the 222-card database, view stats |
+| **Card Database** | Browse the 3,651-card database with set/color/kind filters |
 
 ### 4.2 Agent Management
 
+The backend already has `pilot_training.py` with `OpponentWrapper`, `WinRateCallback`, and CLI args (`--timesteps`, `--opponent`, `--self-play`). The admin UI wraps this.
+
+Available agent types: `greedy` (built-in), `random` (built-in), `maskable_ppo` (via pilot_training.py).
+
 ```
-┌─────────────────────────────────────────────────────────┐
-│  Agents                                    [+ New Agent] │
-│─────────────────────────────────────────────────────────│
-│  Name          │ Type        │ Status  │ Win Rate │ Act │
-│  greedy_v1     │ Greedy      │ Ready   │ 43.2%    │ ▶ 📊│
-│  ppo_v3        │ MaskablePPO │ Ready   │ 61.8%    │ ▶ 📊│
-│  ppo_v4        │ MaskablePPO │ Training│ —        │ ⏹ 📊│
-│  q_deck_rec_v1 │ Q-DeckRec   │ Ready   │ 55.1%    │ ▶ 📊│
-└─────────────────────────────────────────────────────────┘
++-----------------------------------------------------+
+|  Agents                                  [+ New Agent]|
+|----------------------------------------------------- |
+|  Name          | Type        | Status  | Win Rate    |
+|  greedy_v1     | Greedy      | Ready   | 43.2%       |
+|  random_v1     | Random      | Ready   | 12.4%       |
+|  ppo_v3        | MaskablePPO | Ready   | 61.8%       |
+|  ppo_v4        | MaskablePPO | Training| --          |
++-----------------------------------------------------+
 ```
 
 ### 4.3 Training Job Panel
 
+Training launch wraps `pilot_training.py` as a subprocess rather than reimplementing. Metrics come from `WinRateCallback` output.
+
 ```
-┌─────────────────────────────────────────────────────────┐
-│  New Training Job                                        │
-│                                                          │
-│  Agent Type:   [MaskablePPO ▼]                          │
-│  Base Agent:   [ppo_v3 ▼] (or "from scratch")          │
-│  Deck Pool:    [ST1 Starter ▼] [BT14 Meta ▼]           │
-│  Timesteps:    [1,000,000    ]                          │
-│  Learning Rate:[0.0003       ]                          │
-│                                                          │
-│  [Launch Training]                                       │
-│                                                          │
-│  ── Active Jobs ──                                      │
-│  ppo_v4 │ 340k/1M steps │ ████████░░░░ 34% │ [Stop]    │
-│  Reward curve: [sparkline chart]                         │
-└─────────────────────────────────────────────────────────┘
++-----------------------------------------------------+
+|  New Training Job                                    |
+|                                                      |
+|  Agent Type:   [MaskablePPO v]                       |
+|  Base Agent:   [ppo_v3 v] (or "from scratch")       |
+|  Opponent:     [greedy v] / [random v] / [self-play] |
+|  Timesteps:    [1,000,000    ]                       |
+|  Learning Rate:[0.0003       ]                       |
+|                                                      |
+|  [Launch Training]                                   |
+|                                                      |
+|  -- Active Jobs --                                   |
+|  ppo_v4 | 340k/1M steps | ========---- 34% | [Stop] |
+|  Reward curve: [sparkline chart]                     |
+|  Win rate: 54.2% (eval every 10k steps)              |
++-----------------------------------------------------+
 ```
 
 ### 4.4 Matchup Matrix
 
 ```
-┌──────────────────────────────────────────────┐
-│  Matchup Matrix (100 games each)             │
-│                                              │
-│              │greedy│ppo_v3│ppo_v4│q_deck_v1│
-│  greedy      │  —   │ 38%  │ 41%  │  45%    │
-│  ppo_v3      │ 62%  │  —   │ 52%  │  58%    │
-│  ppo_v4      │ 59%  │ 48%  │  —   │  54%    │
-│  q_deck_v1   │ 55%  │ 42%  │ 46%  │   —     │
-│                                              │
-│  [Run Full Matrix]  [Export CSV]             │
-└──────────────────────────────────────────────┘
++----------------------------------------------+
+|  Matchup Matrix (100 games each)             |
+|                                              |
+|              |greedy|random|ppo_v3|ppo_v4    |
+|  greedy      |  --  | 78%  | 38%  | 41%     |
+|  random      | 22%  |  --  | 12%  | 15%     |
+|  ppo_v3      | 62%  | 88%  |  --  | 52%     |
+|  ppo_v4      | 59%  | 85%  | 48%  |  --     |
+|                                              |
+|  [Run Full Matrix]  [Export CSV]             |
++----------------------------------------------+
 ```
 
 ---
@@ -598,22 +696,29 @@ interface ReplayStore {
 
 #### WebSocket: `/ws/game/{game_id}`
 
-Replace polling with a WebSocket connection for real-time game state updates.
+Replace polling with a WebSocket connection for real-time game state updates. Supports PvA (1 connection) and PvP (2 connections + spectators).
 
-**Client → Server messages:**
+**Client -> Server messages:**
 ```json
+{"type": "connect", "player_id": 1, "reconnect_token": "..."}
 {"type": "action", "action_id": 60}
 {"type": "step"}
 ```
 
-**Server → Client messages:**
+**Server -> Client messages:**
 ```json
 {
   "type": "state_update",
-  "state": { /* to_json() */ },
+  "state": { /* to_ui_json() or to_player_json() */ },
   "action_mask": [0, 0, 1, ...],
   "logs": ["Player 1 hatches..."],
-  "is_human_turn": true,
+  "pending_selection": {
+    "phase": "SelectTarget",
+    "valid_indices": [100, 101, 112, 113],
+    "is_optional": true,
+    "prompt": "Choose a Digimon to return to hand"
+  },
+  "is_your_turn": true,
   "is_game_over": false
 }
 ```
@@ -627,27 +732,32 @@ Replace polling with a WebSocket connection for real-time game state updates.
 }
 ```
 
-This replaces the current REST polling pattern with push-based updates. The existing REST endpoints remain for non-interactive use (scripts, agents, testing).
-
 #### `GET /cards`
 
-Return the full card database for client-side card rendering.
+Return the card database with pagination and filtering (3,651 cards).
+
+```
+GET /cards?set=BT14&color=Red&kind=Digimon&q=Agumon&page=1&limit=50
+```
 
 ```json
 {
-  "cards": {
-    "ST1-01": {
-      "card_id": "ST1-01",
+  "cards": [
+    {
+      "card_id": "BT14-001",
       "card_name": "Koromon",
       "card_color": "Red",
-      "card_kind": "Digi-Egg",
+      "card_kind": "DigiEgg",
       "level": 2,
       "dp": null,
       "cost": 0,
-      "image_url": "...",
-      "card_text": "..."
+      "card_text": "...",
+      "image_url": null
     }
-  }
+  ],
+  "total": 3651,
+  "page": 1,
+  "page_size": 50
 }
 ```
 
@@ -665,7 +775,7 @@ Create a private room.
 // Request
 {
   "player_name": "Alice",
-  "deck_ids": ["ST1-01", "ST1-02", ...]
+  "deck_ids": ["ST1-01", "ST1-02", "..."]
 }
 
 // Response
@@ -689,7 +799,7 @@ Join an existing room by code.
 // Request
 {
   "player_name": "Bob",
-  "deck_ids": ["BT14-001", "BT14-002", ...]
+  "deck_ids": ["BT14-001", "BT14-002", "..."]
 }
 
 // Response
@@ -741,7 +851,7 @@ Join the quickmatch queue.
 // Request
 {
   "player_name": "Alice",
-  "deck_ids": ["ST1-01", ...]
+  "deck_ids": ["ST1-01", "..."]
 }
 
 // Response
@@ -768,8 +878,8 @@ Start recording a game. This creates a headless game that records every frame.
 ```json
 // Request
 {
-  "deck1": ["ST1-01", ...],
-  "deck2": ["BT14-001", ...],
+  "deck1": ["ST1-01", "..."],
+  "deck2": ["BT14-001", "..."],
   "agent1": "greedy",
   "agent2": "ppo_v3",
   "max_turns": 200
@@ -800,10 +910,11 @@ Execute the recorded game to completion (agents play automatically).
 
 List available replays with metadata filtering.
 
-```json
-// Query params: ?agent1=ppo_v3&agent2=greedy&limit=20&offset=0
+```
+GET /replays?agent1=ppo_v3&agent2=greedy&limit=20&offset=0
+```
 
-// Response
+```json
 {
   "replays": [
     {
@@ -823,14 +934,6 @@ List available replays with metadata filtering.
 #### `GET /replays/{replay_id}`
 
 Get full replay data (metadata + all frames).
-
-```json
-// Response — the full recording format from §2.2
-{
-  "metadata": { ... },
-  "frames": [ ... ]
-}
-```
 
 #### `DELETE /replays/{replay_id}`
 
@@ -871,7 +974,7 @@ List all registered agents.
 
 #### `POST /agents`
 
-Register a new agent (greedy agents are instant; RL agents need training).
+Register a new agent.
 
 ```json
 // Request
@@ -883,7 +986,7 @@ Register a new agent (greedy agents are instant; RL agents need training).
     "n_steps": 2048,
     "batch_size": 64
   },
-  "base_agent_id": "ppo_v3"  // optional, for fine-tuning
+  "base_agent_id": "ppo_v3"
 }
 ```
 
@@ -897,15 +1000,15 @@ Remove an agent.
 
 #### `POST /training/start`
 
-Launch a training job.
+Launch a training job (wraps `pilot_training.py` as a subprocess).
 
 ```json
 // Request
 {
   "agent_id": "ppo_v5",
   "total_timesteps": 1000000,
-  "opponent_agent_id": "greedy_v1",
-  "deck_pool": ["ST1", "BT14"],
+  "opponent": "greedy",
+  "self_play": false,
   "checkpoint_interval": 100000
 }
 
@@ -931,7 +1034,8 @@ List active and completed training jobs.
         "current_timesteps": 340000,
         "total_timesteps": 1000000,
         "mean_reward": 0.23,
-        "mean_episode_length": 87
+        "mean_episode_length": 87,
+        "win_rate": 0.542
       },
       "started_at": "2026-02-06T..."
     }
@@ -945,14 +1049,13 @@ Stop a running training job and save the current checkpoint.
 
 #### `GET /training/jobs/{job_id}/metrics`
 
-Get training metrics (reward curve, loss, episode stats) for charting.
+Get training metrics (from `WinRateCallback`) for charting.
 
 ```json
 {
   "metrics": [
-    {"timestep": 10000, "mean_reward": -0.5, "mean_ep_length": 120},
-    {"timestep": 20000, "mean_reward": -0.3, "mean_ep_length": 105},
-    // ...
+    {"timestep": 10000, "mean_reward": -0.5, "mean_ep_length": 120, "win_rate": 0.32},
+    {"timestep": 20000, "mean_reward": -0.3, "mean_ep_length": 105, "win_rate": 0.41}
   ]
 }
 ```
@@ -966,8 +1069,7 @@ Run a matchup between two agents.
 {
   "agent1_id": "ppo_v3",
   "agent2_id": "greedy_v1",
-  "num_games": 100,
-  "deck_pool": ["ST1"]
+  "num_games": 100
 }
 
 // Response
@@ -1016,6 +1118,7 @@ frontend/
 │   ├── api/
 │   │   ├── client.ts            # Axios instance, base URL config
 │   │   ├── gameApi.ts           # REST endpoints for game
+│   │   ├── cardApi.ts           # Card database with pagination
 │   │   ├── replayApi.ts         # Replay CRUD
 │   │   ├── agentApi.ts          # Agent management
 │   │   └── trainingApi.ts       # Training jobs
@@ -1041,7 +1144,7 @@ frontend/
 │   │   ├── board/
 │   │   │   ├── GameBoard.tsx    # Root board layout (shared by game + replay)
 │   │   │   ├── PlayerHalf.tsx   # One player's zones
-│   │   │   ├── BattleArea.tsx   # Field permanents
+│   │   │   ├── BattleArea.tsx   # Field permanents (12 slots)
 │   │   │   ├── PermanentSlot.tsx# Single permanent with stack
 │   │   │   ├── HandZone.tsx     # Player hand
 │   │   │   ├── SecurityStack.tsx
@@ -1049,7 +1152,10 @@ frontend/
 │   │   │   ├── EggDeck.tsx
 │   │   │   ├── BreedingArea.tsx
 │   │   │   ├── TrashPile.tsx
-│   │   │   └── MemoryGauge.tsx
+│   │   │   ├── MemoryGauge.tsx
+│   │   │   ├── RevealedCardsZone.tsx  # Face-up revealed cards row
+│   │   │   ├── LinkedCards.tsx         # Sideways option cards on permanent
+│   │   │   └── KeywordBadges.tsx      # Keyword icons on permanents
 │   │   ├── lobby/
 │   │   │   ├── CreateRoom.tsx   # Create private room form
 │   │   │   ├── JoinRoom.tsx     # Join by code input
@@ -1060,7 +1166,13 @@ frontend/
 │   │   │   ├── ActionBar.tsx    # Contextual action buttons
 │   │   │   ├── PhaseIndicator.tsx
 │   │   │   ├── GameLog.tsx
-│   │   │   └── CardDetail.tsx   # Sidebar card preview
+│   │   │   ├── CardDetail.tsx   # Sidebar card preview
+│   │   │   ├── SelectionOverlay.tsx   # Phase-aware selection dimming + prompt
+│   │   │   ├── DnaDigivolveFlow.tsx   # Multi-step DNA material picker
+│   │   │   ├── TrashBrowser.tsx       # Modal for SelectTrash phase
+│   │   │   ├── StackBrowser.tsx       # Modal for SelectSource phase
+│   │   │   ├── EffectChoicePanel.tsx  # Buttons for SelectEffectChoice
+│   │   │   └── SecurityBrowser.tsx    # Modal for SelectSecurity phase
 │   │   ├── replay/
 │   │   │   ├── PlaybackControls.tsx
 │   │   │   ├── Timeline.tsx
@@ -1077,12 +1189,13 @@ frontend/
 │   │       ├── CardStack.tsx    # Digivolution stack view
 │   │       └── Modal.tsx
 │   ├── hooks/
-│   │   ├── useGameSocket.ts    # WebSocket hook
+│   │   ├── useGameSocket.ts    # WebSocket hook for game
+│   │   ├── useLobbySocket.ts   # WebSocket hook for lobby
 │   │   ├── useActionMask.ts    # Parse mask into actionable UI state
 │   │   └── useReplayPlayer.ts  # Playback timer logic
 │   ├── utils/
-│   │   ├── actionDecoder.ts    # Decode action ID → human description
-│   │   └── constants.ts        # Action ranges, phase names
+│   │   ├── actionDecoder.ts    # Decode action ID -> human description
+│   │   └── constants.ts        # Action ranges, phase names, keyword list
 │   └── types/
 │       ├── game.ts             # GameState, PlayerState, PermanentInfo
 │       ├── replay.ts           # ReplayData, Frame
@@ -1107,7 +1220,7 @@ frontend/
 
 Cards need images. Options in priority order:
 
-1. **Placeholder cards** — Colored rectangles with card name, level, DP, cost text. Good enough for development.
+1. **Placeholder cards** — Colored rectangles with card name, level, DP, cost text. Color-coded by CardColor. Good enough for development.
 2. **Local assets** — Download card images and serve from `/public/cards/`.
 3. **CDN proxy** — Proxy card images from an external source through the backend.
 
@@ -1119,18 +1232,24 @@ The `Card` component should accept a `cardId` and render whatever is available, 
 
 ### Phase 1: Foundation
 - Set up React + Vite + TypeScript project in `frontend/`
-- Implement `GET /cards` endpoint
-- Build `Card` component with placeholder rendering
+- Add CORS middleware to FastAPI
+- Implement `GET /cards` endpoint with pagination (3,651 cards)
+- Build `Card` component with placeholder rendering (color-coded by CardColor)
 - Build `GameBoard` layout with all zones (static/mock data)
 - Build `MemoryGauge`, `PhaseIndicator`, `GameLog` components
+- Reference `TENSOR_SPEC.md` and `ACTION_SPEC.md` for all mappings
 
-### Phase 2: Interactive Game
+### Phase 2: Interactive Game (Human vs Agent)
 - Implement WebSocket endpoint `/ws/game/{game_id}`
 - Build `useGameSocket` hook
-- Implement click-to-act interaction flow
+- Implement click-to-act interaction flow for Main + Breeding phases
 - Build `ActionBar` with contextual buttons derived from action mask
-- Build `useActionMask` hook (translates 2120 mask → UI-friendly action list)
-- Connect `GamePage` end-to-end: create game → play → game over
+- Build `useActionMask` hook (translates 2120 mask -> UI-friendly action list)
+- Build all 10 selection phase UIs (SelectionOverlay, TrashBrowser, StackBrowser, EffectChoicePanel, SecurityBrowser, DnaDigivolveFlow)
+- Implement keyword badge rendering on permanents
+- Implement linked card display
+- Implement revealed cards zone
+- Connect `GamePage` end-to-end: create game -> play -> game over
 
 ### Phase 3: Multiplayer (PvP)
 - Implement `/rooms` CRUD endpoints and room code generation
@@ -1144,7 +1263,7 @@ The `Card` component should accept a `cardId` and render whatever is available, 
 - Add rematch flow
 
 ### Phase 4: Replay System
-- Implement replay recording in backend (wrap HeadlessGame)
+- Implement replay recording in backend (wrap HeadlessGame, use `to_ui_json()`)
 - Implement `/replays` CRUD endpoints
 - Build `PlaybackControls` + `Timeline` components
 - Build `ReplayPage` reusing `GameBoard` in read-only mode
@@ -1152,16 +1271,17 @@ The `Card` component should accept a `cardId` and render whatever is available, 
 
 ### Phase 5: Admin Dashboard
 - Implement `/agents` CRUD endpoints
-- Implement `/training/start`, `/training/jobs` endpoints
+- Implement `/training/start` wrapping `pilot_training.py` as subprocess
+- Expose `WinRateCallback` metrics via `/training/jobs/{id}/metrics`
 - Build agent list and detail views
 - Build training job launch form
-- Build metrics chart (reward curve over timesteps)
+- Build metrics chart (reward curve + win rate over timesteps)
 - Implement `/matchup` endpoints
 - Build matchup matrix view
 
 ### Phase 6: Polish
 - Card images (replace placeholders)
-- Attack arrows (SVG overlay)
+- Attack arrows (SVG overlay with pulsing animation)
 - Suspend/unsuspend animations
 - Sound effects
 - Mobile-responsive layout
@@ -1171,25 +1291,53 @@ The `Card` component should accept a `cardId` and render whatever is available, 
 
 ## 8. Backend Changes Summary
 
+### New `to_ui_json()` method on `Game`
+
+The current `to_json()` lacks data the UI needs. A new `to_ui_json()` (or enhanced `to_json()`) must include:
+
+**Per-permanent (extends existing `BattleArea` entries):**
+- `Keywords`: list of active keyword strings (rush, blocker, jamming, piercing, retaliation, blitz, reboot, collision, evade, armor_purge, barrier)
+- `SecurityAttackModifier`: int (+1, -1, etc.)
+- `LinkedCardIds`: list of attached option card IDs
+- `Sources`: full digivolution stack (card_id, opt_state, dp_contribution per source)
+- `TurnPlayed`: int (for rush/summoning sickness display)
+
+**Game-level (new fields):**
+- `RevealedCards`: list of {card_id, card_name} for revealed cards zone
+- `PendingSelection`: {phase, valid_indices, is_optional, prompt, selecting_player} or null
+- `PendingAttack`: {attacker_slot, target_slot} or null (for attack arrow rendering)
+
+**Player-level (extends existing):**
+- `TrashIds`: list of card IDs in trash
+- `SecurityIds`: list of card IDs (own player only, hidden for opponent)
+- `EggDeckCount`: int
+
+### New `to_player_json(player_id)` method
+
+Same as `to_ui_json()` but filters hidden information:
+- Opponent's hand shows only count, not card IDs
+- Opponent's security shows only count, not card IDs
+- Own hand and security are fully visible
+
 ### New files to create:
 
 | File | Purpose |
 |------|---------|
-| `digimon_gym/api_ws.py` | WebSocket game handler (PvA + PvP) |
+| `digimon_gym/api_ws.py` | WebSocket game handler (PvA + PvP + spectator) |
 | `digimon_gym/lobby.py` | Room management, quickmatch queue, lobby WebSocket |
 | `digimon_gym/replay.py` | Replay recording and storage |
-| `digimon_gym/agents/registry.py` | Agent registration and loading |
-| `digimon_gym/training/manager.py` | Training job lifecycle |
-| `digimon_gym/training/metrics.py` | Metrics collection during training |
+| `digimon_gym/agents/registry.py` | Agent registration (wraps pilot_training.py) |
+| `digimon_gym/training/manager.py` | Training job lifecycle (subprocess wrapper) |
+| `digimon_gym/training/metrics.py` | Metrics collection from WinRateCallback |
 
 ### Modifications to existing files:
 
 | File | Changes |
 |------|---------|
-| `digimon_gym/api.py` | Add card, room, replay, agent, training, matchup endpoints; mount WebSockets |
-| `digimon_gym/engine/game.py` | Add `action_description()` and `to_player_json(player_id)` methods |
+| `digimon_gym/api.py` | Add card (paginated), room, replay, agent, training, matchup endpoints; mount WebSockets; add CORS middleware |
+| `digimon_gym/engine/game.py` | Add `to_ui_json()`, `to_player_json(player_id)`, `action_description(action_id)` |
 | `digimon_gym/engine/runners/headless_game.py` | Add replay recording hooks |
-| `digimon_gym/engine/data/card_database.py` | Add `to_dict()` for card API serialization |
+| `digimon_gym/engine/data/card_database.py` | Add `to_dict()`, `search(set, color, kind, query)` for card API |
 
 ### Data storage:
 
@@ -1203,33 +1351,48 @@ Migrate to SQLite or PostgreSQL when needed.
 
 ---
 
-## 9. Action Mask → UI Mapping
+## 9. Action Mask -> UI Mapping
 
-The 2120-element action mask needs to be translated into UI-friendly actions. The `useActionMask` hook does this:
+The 2120-element action mask needs to be translated into UI-friendly actions. The `useActionMask` hook does this, referencing `ACTION_SPEC.md`:
 
 ```typescript
 interface ParsedActions {
-  canPlay: { handIndex: number; cardId: string }[];
-  canTrash: { handIndex: number; cardId: string }[];
-  canHatch: boolean;
-  canMoveFromBreeding: boolean;
-  canPass: boolean;
-  canAttack: { attackerSlot: number; targets: { slot: number; isPlayer: boolean }[] }[];
-  canDigivolve: { handIndex: number; targets: number[] }[];
-  canActivateEffect: { sourceSlot: number; effectIndex: number }[];
-  canSelectSource: { fieldSlot: number; sourceIndex: number }[];
+  // Main phase actions
+  canPlay: { handIndex: number; cardId: string }[];          // 0-29
+  canTrash: { handIndex: number; cardId: string }[];          // 30-59
+  canHatch: boolean;                                          // 60
+  canMoveFromBreeding: boolean;                               // 61
+  canPass: boolean;                                           // 62
+  canDnaDigivolve: { handIndex: number; cardId: string }[];   // 63-92
+  canAttack: {                                                // 100-399
+    attackerSlot: number;
+    targets: { slot: number; isSecurity: boolean }[];
+  }[];
+  canDigivolve: { handIndex: number; targets: number[] }[];   // 400-999
+  canActivateEffect: { permanentSlot: number; effectIdx: number }[]; // 1000-1999
+  canSelectSource: { fieldSlot: number; sourceIdx: number }[]; // 2000-2119
+
+  // Selection phase actions (context-dependent, from PendingSelection.valid_indices)
+  canSelectHandCard: number[];       // indices 0-29
+  canSelectRevealed: number[];       // indices 30-39
+  canSelectOwnSecurity: number[];    // indices 40-49
+  canSelectOppSecurity: number[];    // indices 50-59
+  canSelectBreeding: boolean;        // index 99
+  canSelectOwnField: number[];       // indices 100-111
+  canSelectOppField: number[];       // indices 112-123
+  canSelectTrash: number[];          // indices 130-179
+  canSelectEffectBranch: number[];   // indices 1000-1009
 }
 
-function parseActionMask(mask: number[], handCards: string[]): ParsedActions {
-  // Actions 0-29: play from hand
-  // Actions 30-59: trash from hand
-  // Action 60: hatch
-  // Action 61: move from breeding
-  // Action 62: pass
-  // Actions 100-399: attack (slot * 15 + target)
-  // Actions 400-999: digivolve (hand * 15 + field)
-  // Actions 1000-1999: effect (source * 10 + effectIdx)
-  // Actions 2000-2119: source selection (field * 10 + sourceIdx)
+function parseActionMask(
+  mask: number[],
+  handCards: string[],
+  phase: GamePhase
+): ParsedActions {
+  // During selection phases, valid_indices from PendingSelection
+  // map directly to action IDs in the mask.
+  // During Main/Breeding, use the standard action ranges.
+  // See ACTION_SPEC.md for full formulas.
 }
 ```
 
