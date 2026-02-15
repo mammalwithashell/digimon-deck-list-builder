@@ -67,11 +67,13 @@ Inspired by the [WE-Kaito simulator](https://github.com/WE-Kaito/digimon-tcg-sim
 |-----------|-------------|--------------|
 | `GameBoard` | Root layout, CSS grid, two mirrored halves | — |
 | `PlayerHalf` | One player's full zone set | — |
-| `BattleArea` | 12 `PermanentSlot` components in a row, scrollable if >8 | Drop target for play/digivolve |
-| `PermanentSlot` | Top card art, DP badge, level badge, suspend tilt (30deg), keyword badges, linked cards, digivolution stack depth | Click to select attacker/target, hover for detail |
-| `KeywordBadges` | Small tags on permanents: Rush, Blocker, Jamming, Piercing, Retaliation, Blitz, Reboot, Collision, Evade, Armor Purge, Barrier, Security Attack +/-X | Display only |
-| `LinkedCards` | Sideways mini-cards rendered next to the permanent (for [TS] option cards) | Click to view |
-| `HandZone` | Horizontally fanned cards, dynamic spacing, compresses beyond 7 | Click card to see valid actions (play, digivolve, DNA targets) |
+| `BattleArea` | 12 `PermanentSlot` components in a row, scrollable if >8. Each slot is a drop zone. | Drop target for play/digivolve from hand |
+| `PermanentSlot` | Top card image, DP badge, level badge, suspend tilt (90deg), keyword badges, linked cards, stack depth indicator | Click to open Stack Inspector, click to select attacker/target, drop zone for digivolve |
+| `KeywordBadges` | Small colored tags on permanents: Rush, Blocker, Jamming, Piercing, Retaliation, Blitz, Reboot, Collision, Evade, Armor Purge, Barrier, Security Attack +/-X | Display only, tooltip on hover |
+| `LinkedCards` | Sideways mini-cards rendered next to the permanent (for [TS] option cards) | Click to view in Stack Inspector |
+| `HandZone` | Horizontally fanned cards with CDN images, dynamic spacing, compresses beyond 7 | Drag card to field (play/digivolve), click for fallback actions |
+| `StackInspector` | Right panel: full card image, effect text, DP breakdown, keyword tags, digivolution stack thumbnails, linked cards | Click source thumbnails to view full detail |
+| `CardTooltip` | Floating large card image on hover (any card, any zone) | Follows cursor, auto-positions to avoid edges |
 | `SecurityStack` | Face-down pile with count badge | Hover shows count, click to browse (own only) |
 | `DeckPile` | Face-down pile with count badge | — |
 | `EggDeck` | Digitama pile with count | Click for hatch action |
@@ -84,36 +86,132 @@ Inspired by the [WE-Kaito simulator](https://github.com/WE-Kaito/digimon-tcg-sim
 | `GameLog` | Scrollable text panel showing VerboseLogger output | Auto-scrolls to bottom |
 | `ActionBar` | Contextual buttons based on game state and current phase | Pass, Hatch, Move from Breeding, confirm target, decline optional |
 
-### 1.3 Interaction Flow
+### 1.3 Interaction Flow — Drag-and-Drop + Click
 
-The game uses a **click-to-act** model (not drag-and-drop). This is simpler to implement and works well on mobile. Drag-and-drop can be added later.
+The primary interaction is **drag-and-drop**. Players drag cards from hand onto valid field zones. Click-to-act is the fallback for actions that don't map to drag (attacking, passing, effect activation). Both input methods coexist — the user can always click instead of dragging.
 
-**Playing a card from hand:**
-1. Player clicks a card in hand
-2. UI highlights the card; action bar shows "Play" button (if action mask allows it)
-3. Player clicks "Play" → sends action to backend
-4. Backend returns new state + logs
+**Library:** `@dnd-kit/core` + `@dnd-kit/utilities` for drag-and-drop. It supports both mouse and touch, has accessible keyboard fallback, and provides smooth drag overlays.
 
-**Attacking:**
+#### Drag Sources and Drop Targets
+
+| Drag Source | Drop Target | Action Produced | Validation |
+|-------------|-------------|-----------------|------------|
+| Hand card (Digimon/Tamer) | Empty battle area slot | **Play** (action 0-29) | action mask bit for that hand index |
+| Hand card (Option) | Battle area (anywhere) | **Play Option** (action 0-29) | action mask bit + option color req |
+| Hand card (Digimon) | Occupied permanent slot | **Digivolve** (action 400-999) | action mask bit for hand*15+field |
+| Hand card (DNA) | Occupied permanent slot | **DNA Digivolve** (action 63-92) | then enters SelectMaterial flow |
+| Breeding area permanent | Empty battle area slot | **Move from Breeding** (action 61) | action mask bit 61 |
+
+When a card is picked up, **valid drop targets glow green** and invalid zones dim. If the card is dropped on an invalid zone, it snaps back to hand.
+
+#### Drag Overlay
+
+While dragging, a semi-transparent copy of the card follows the cursor (`DragOverlay` from @dnd-kit). The original card in hand dims to 30% opacity. On drop, a brief slide animation transitions the card to its new position.
+
+#### Digivolve vs Play Disambiguation
+
+When dragging a hand card over an occupied field slot, the slot shows **two drop zones stacked vertically**:
+- **Top half**: "Digivolve onto [CardName]" (if digivolution is valid for this pair)
+- **Bottom half**: "Play to field" (if an empty adjacent slot exists)
+
+If only one action is valid, the entire slot is the drop target.
+
+#### Click-to-Act (Fallback & Non-Drag Actions)
+
+Some actions don't map to drag-and-drop:
+
+**Attacking (click-to-click):**
 1. Player clicks an unsuspended permanent in their battle area → it highlights as "attacker"
-2. Valid targets light up (opponent permanents + security icon)
+2. Valid targets light up (opponent permanents + security icon) with red outlines
 3. Player clicks a target → sends attack action (100 + attacker*15 + target)
-4. **BlockTiming**: If opponent has blockers, UI shows "Block?" prompt to opponent with valid blockers highlighted, plus "Decline" button
+4. **BlockTiming**: If opponent has blockers, UI shows "Block?" prompt with valid blockers highlighted, plus "Decline" button
 5. **CounterTiming**: If opponent can blast digivolve, UI shows blast digivolve options, plus "Decline" button
 6. Backend resolves combat, returns new state
 
-**Digivolving:**
-1. Player clicks a card in hand that can digivolve
-2. Valid digivolution targets on the field highlight
-3. Player clicks a target permanent → sends digivolve action (400 + hand*15 + field)
+**DNA Digivolving (drag + click hybrid):**
+1. Player drags DNA-capable hand card onto a valid field permanent → sends action (63 + hand_index)
+2. Game enters `SelectMaterial` phase — valid first materials highlight on field
+3. Player clicks first material
+4. Valid second materials highlight
+5. Player clicks second material → backend resolves DNA digivolution
 
-**DNA Digivolving (new):**
-1. Player clicks a hand card with DNA digivolve capability
-2. Action bar shows "DNA Digivolve" button → sends action (63 + hand_index)
-3. Game enters `SelectMaterial` phase — valid first materials highlight on field
-4. Player clicks first material
-5. Valid second materials highlight
-6. Player clicks second material → backend resolves DNA digivolution
+**Effect Activation (click):**
+1. Player clicks a permanent with activatable effects → effect panel appears
+2. Panel shows available effects with descriptions
+3. Player clicks "Activate" on one → sends action (1000 + slot*10 + effectIdx)
+
+**Hatching (click):**
+- Click egg deck during Breeding phase → sends hatch action (60)
+
+**Passing (click):**
+- "Pass" button always visible during player's turn → sends action 62
+- During selection phases with `is_optional`, "Decline" button → sends action 62
+
+### 1.4 Card Detail & Stack Inspector
+
+Clicking a permanent on the field opens a **Stack Inspector** panel (replaces the simple card detail sidebar). This is essential for understanding board state in a game with digivolution stacks.
+
+#### Stack Inspector Layout
+
+```
+┌─ Stack Inspector ──────────────────────────┐
+│                                            │
+│  ┌────────────┐  Greymon (BT14-010)        │
+│  │            │  Level 4 | Champion        │
+│  │  [CARD     │  DP: 8000  (base 6000)     │
+│  │   IMAGE]   │  Color: Red                │
+│  │            │  Cost: 5                   │
+│  │            │  Type: Dinosaur            │
+│  └────────────┘                            │
+│                                            │
+│  Keywords: [Rush] [Piercing]               │
+│  SA: +1  |  OPT: 1 available              │
+│                                            │
+│  ── Card Effect ──────────────────────     │
+│  [When Digivolving] Delete 1 of your       │
+│  opponent's Digimon with 4000 DP or less.  │
+│                                            │
+│  ── Inherited Effect ─────────────────     │
+│  [Your Turn] This Digimon gets +2000 DP.   │
+│                                            │
+│  ── Digivolution Stack (2 cards) ────      │
+│                                            │
+│  ┌──────┐ ┌──────┐                        │
+│  │Korom │ │Agumon│   ← click to inspect    │
+│  │ L2   │ │ L3   │     individual card     │
+│  │      │ │+2000 │     (shows effect text) │
+│  └──────┘ └──────┘                        │
+│                                            │
+│  ── Linked Cards ─────────────────────     │
+│  ┌──────┐                                  │
+│  │Option│  Training Memory Boost           │
+│  │ Card │  (linked sideways)               │
+│  └──────┘                                  │
+│                                            │
+│  [Close]                                   │
+└────────────────────────────────────────────┘
+```
+
+#### Inspector Features
+
+- **Top card**: full card image + all metadata (name, level, DP, color, cost, type/attribute/form)
+- **DP breakdown**: shows base DP + modifier contributions (e.g. "6000 + 2000 inherited = 8000")
+- **Keywords**: rendered as colored tags with tooltips explaining each keyword's rule
+- **Card effect text**: the main effect, inherited effect, and security effect (if any), each in their own section
+- **Digivolution stack**: thumbnail row of all source cards bottom-to-top. Each shows:
+  - Card image (small)
+  - Name and level
+  - DP contribution this source provides (from `SourceInfo.dpContribution`)
+  - OPT state indicator (green dot = available, gray = exhausted, no dot = no OPT)
+  - Click a source thumbnail to view its full card detail (image + effect text)
+- **Linked cards**: any option cards attached sideways, shown as thumbnails with name/effect
+- **Close button** or click outside to dismiss
+
+#### Hover vs Click
+
+- **Hover** over any card (hand, field, trash, security) → shows a **quick tooltip** with card image only (like a magnifying glass). Fast and non-blocking.
+- **Click** a field permanent → opens the **full Stack Inspector** panel. Persistent until closed.
+- **Right-click** a card → future: context menu for advanced actions
 
 **Hatching / Moving from Breeding:**
 - Action bar shows "Hatch" button when in Breeding phase with eggs available (action 60)
@@ -1185,13 +1283,17 @@ frontend/
 │   │   │   ├── MetricsChart.tsx
 │   │   │   └── MatchupMatrix.tsx
 │   │   └── shared/
-│   │       ├── Card.tsx         # Card renderer (image + overlays)
+│   │       ├── Card.tsx         # Card renderer (image + overlays + drag source)
 │   │       ├── CardStack.tsx    # Digivolution stack view
+│   │       ├── StackInspector.tsx # Full card detail + stack browser panel
+│   │       ├── CardTooltip.tsx  # Hover tooltip (large card image)
 │   │       └── Modal.tsx
 │   ├── hooks/
 │   │   ├── useGameSocket.ts    # WebSocket hook for game
 │   │   ├── useLobbySocket.ts   # WebSocket hook for lobby
 │   │   ├── useActionMask.ts    # Parse mask into actionable UI state
+│   │   ├── useCardImage.ts     # CDN image loading + fallback
+│   │   ├── useDragDrop.ts      # Drag validation + action resolution
 │   │   └── useReplayPlayer.ts  # Playback timer logic
 │   ├── utils/
 │   │   ├── actionDecoder.ts    # Decode action ID -> human description
@@ -1213,18 +1315,229 @@ frontend/
 | React Router | Page navigation |
 | Axios | REST API calls |
 | native WebSocket | Real-time game updates (no library needed) |
+| `@dnd-kit/core` | Drag-and-drop (accessible, touch support, smooth overlays) |
 | Recharts or Chart.js | Training metrics charts |
 | Tailwind CSS | Styling (utility-first, fast iteration) |
 
-### 6.3 Card Rendering
+### 6.3 Card Image Pipeline
 
-Cards need images. Options in priority order:
+Card images are sourced from the **digimoncard.io CDN** using a deterministic URL pattern:
 
-1. **Placeholder cards** — Colored rectangles with card name, level, DP, cost text. Color-coded by CardColor. Good enough for development.
-2. **Local assets** — Download card images and serve from `/public/cards/`.
-3. **CDN proxy** — Proxy card images from an external source through the backend.
+```
+https://images.digimoncard.io/images/cards/{CARD_ID}.webp
+```
 
-The `Card` component should accept a `cardId` and render whatever is available, falling back gracefully.
+Examples:
+- `BT14-001` → `https://images.digimoncard.io/images/cards/BT14-001.webp`
+- `ST1-01` → `https://images.digimoncard.io/images/cards/ST1-01.webp`
+
+No image URLs need to be stored in `cards.json` — they are constructed at render time from the card ID.
+
+#### Image Loading Strategy
+
+```
+┌─ Image Resolution Order ──────────────────────────┐
+│                                                    │
+│  1. Check browser cache (Service Worker / HTTP)    │
+│  2. Load from CDN: images.digimoncard.io           │
+│  3. On error → show placeholder                    │
+│                                                    │
+└────────────────────────────────────────────────────┘
+```
+
+**`useCardImage(cardId)` hook:**
+
+```typescript
+function useCardImage(cardId: string): {
+  src: string;
+  isLoading: boolean;
+  hasError: boolean;
+} {
+  const cdnUrl = `https://images.digimoncard.io/images/cards/${cardId}.webp`;
+  // Uses <img onLoad/onError> to track state
+  // Returns cdnUrl as src, tracks loading/error
+  // On error, Card component renders placeholder fallback
+}
+```
+
+#### Card Component Rendering
+
+The `Card` component renders differently depending on context:
+
+| Context | Size | Shows | Image |
+|---------|------|-------|-------|
+| **Hand** (full) | ~100x140px | Full card image | CDN image |
+| **Field** (permanent top) | ~80x112px | Card image + DP/level badge overlay | CDN image |
+| **Stack thumbnail** (inspector) | ~60x84px | Small card image + level badge | CDN image |
+| **Hover tooltip** | ~200x280px | Large card image only | CDN image |
+| **Face-down** (opponent hand, security) | ~80x112px | Card back image | Local asset |
+| **Placeholder fallback** | Same as context | Colored rectangle + name/level/DP text | None |
+
+```typescript
+interface CardProps {
+  cardId: string;
+  size: 'sm' | 'md' | 'lg' | 'xl';  // 60, 80, 100, 200px wide
+  faceDown?: boolean;
+  suspended?: boolean;     // rotates 90deg clockwise
+  dimmed?: boolean;        // 30% opacity (during drag)
+  highlighted?: boolean;   // green glow (valid drop target)
+  targeted?: boolean;      // red glow (attack target)
+  overlay?: {
+    dp?: number;
+    level?: number;
+    keywords?: string[];
+    saModifier?: number;
+  };
+  onClick?: () => void;
+  onHover?: () => void;
+  draggable?: boolean;     // enables @dnd-kit drag source
+}
+```
+
+#### Placeholder Fallback
+
+When CDN image fails to load (or during development), render a styled placeholder:
+
+```
+┌──────────────┐
+│  ▓▓▓▓▓▓▓▓▓▓  │  ← Color bar (Red/Blue/Yellow/Green/Purple/Black/White)
+│              │
+│   Greymon    │  ← Card name
+│              │
+│   Lv.4      │  ← Level
+│   DP: 6000  │  ← DP
+│   Cost: 5   │  ← Play cost
+│              │
+│  [Champion]  │  ← Form
+└──────────────┘
+```
+
+Colors map to `CardColor` enum: Red=#D32F2F, Blue=#1976D2, Yellow=#FBC02D, Green=#388E3C, Purple=#7B1FA2, Black=#424242, White=#BDBDBD.
+
+#### Caching & Performance
+
+- **Browser caching**: CDN images have long cache headers; once loaded, they're cached for the session
+- **Lazy loading**: Cards not in viewport use `loading="lazy"` on `<img>` tags
+- **Preloading**: When a game starts, preload images for all cards in both decks (50-55 unique cards per game) in a background `Promise.all`
+- **Card back**: Single static asset in `/public/card-back.webp`, loaded once
+
+#### Backend Card Image Proxy (Optional, Phase 6)
+
+If CDN direct access has CORS issues or for offline/self-hosted deployments, add a backend proxy:
+
+```
+GET /cards/{card_id}/image
+→ Proxies to https://images.digimoncard.io/images/cards/{card_id}.webp
+→ Adds CORS headers
+→ Caches in /data/card_images/ (file-based)
+→ Returns image/webp
+```
+
+This is optional — direct CDN access should work for most cases since image CDNs typically allow cross-origin requests.
+
+### 6.4 Drag-and-Drop Architecture
+
+#### DnD Provider Setup
+
+The entire `GameBoard` is wrapped in a `DndContext` from @dnd-kit:
+
+```typescript
+<DndContext
+  onDragStart={handleDragStart}
+  onDragEnd={handleDragEnd}
+  modifiers={[restrictToWindowEdges]}
+>
+  <GameBoard />
+  <DragOverlay>
+    {activeDragCard && <Card cardId={activeDragCard} size="md" />}
+  </DragOverlay>
+</DndContext>
+```
+
+#### Drag Data
+
+Each draggable card carries its hand index and card ID:
+
+```typescript
+// Hand card draggable
+useDraggable({
+  id: `hand-${handIndex}`,
+  data: { type: 'hand-card', handIndex, cardId }
+})
+```
+
+#### Drop Zones
+
+```typescript
+// Empty battle area slot
+useDroppable({
+  id: `field-slot-${slotIndex}`,
+  data: { type: 'empty-field-slot', slotIndex }
+})
+
+// Occupied permanent (digivolve target)
+useDroppable({
+  id: `permanent-${slotIndex}`,
+  data: { type: 'occupied-field-slot', slotIndex, permanentId }
+})
+
+// Battle area general (for options)
+useDroppable({
+  id: 'battle-area',
+  data: { type: 'battle-area' }
+})
+```
+
+#### Drop Validation & Action Resolution
+
+```typescript
+function handleDragEnd(event: DragEndEvent) {
+  const { active, over } = event;
+  if (!over) return; // dropped outside a target
+
+  const handIndex = active.data.current?.handIndex;
+  const target = over.data.current;
+
+  if (target.type === 'empty-field-slot') {
+    // Play card: action = handIndex (0-29)
+    if (actionMask[handIndex]) sendAction(handIndex);
+  }
+  else if (target.type === 'occupied-field-slot') {
+    // Digivolve: action = 400 + handIndex * 15 + target.slotIndex
+    const action = 400 + handIndex * 15 + target.slotIndex;
+    if (actionMask[action]) sendAction(action);
+  }
+  else if (target.type === 'battle-area') {
+    // Play option/tamer: action = handIndex
+    if (actionMask[handIndex]) sendAction(handIndex);
+  }
+}
+```
+
+#### Visual Feedback During Drag
+
+| State | Visual |
+|-------|--------|
+| Card picked up | Original dims to 30% opacity; `DragOverlay` shows card following cursor |
+| Over valid target | Drop zone glows green with dashed border |
+| Over invalid target | Drop zone shows red X or no highlight |
+| Over digivolve target | Permanent slot shows "Digivolve" label overlay |
+| Dropped successfully | Brief slide animation to final position |
+| Dropped on invalid | Card snaps back to hand position |
+
+#### Mobile/Touch Support
+
+@dnd-kit includes touch sensors by default. Additional config:
+
+```typescript
+const sensors = useSensors(
+  useSensor(PointerSensor, { activationConstraint: { distance: 8 } }),
+  useSensor(TouchSensor, { activationConstraint: { delay: 150, tolerance: 5 } }),
+  useSensor(KeyboardSensor)  // accessibility
+);
+```
+
+The `delay: 150` on touch prevents accidental drags when scrolling.
 
 ---
 
@@ -1234,21 +1547,29 @@ The `Card` component should accept a `cardId` and render whatever is available, 
 - Set up React + Vite + TypeScript project in `frontend/`
 - Add CORS middleware to FastAPI
 - Implement `GET /cards` endpoint with pagination (3,651 cards)
-- Build `Card` component with placeholder rendering (color-coded by CardColor)
+- Build `Card` component with CDN image loading (`useCardImage` hook) + placeholder fallback
+- Build card back asset for face-down cards
 - Build `GameBoard` layout with all zones (static/mock data)
 - Build `MemoryGauge`, `PhaseIndicator`, `GameLog` components
+- Set up @dnd-kit `DndContext` with `DragOverlay` around `GameBoard`
+- Build `StackInspector` panel (click permanent → full card detail + digivolution stack)
+- Build `CardTooltip` (hover → large card image)
 - Reference `TENSOR_SPEC.md` and `ACTION_SPEC.md` for all mappings
 
 ### Phase 2: Interactive Game (Human vs Agent)
 - Implement WebSocket endpoint `/ws/game/{game_id}`
 - Build `useGameSocket` hook
-- Implement click-to-act interaction flow for Main + Breeding phases
+- Implement drag-and-drop: hand → field (play), hand → permanent (digivolve)
+- Build drop zone validation with action mask checking
+- Build visual drag feedback (green glow valid, dim invalid, digivolve label)
+- Implement click-to-act fallback for attacking, effects, passing
 - Build `ActionBar` with contextual buttons derived from action mask
 - Build `useActionMask` hook (translates 2120 mask -> UI-friendly action list)
 - Build all 10 selection phase UIs (SelectionOverlay, TrashBrowser, StackBrowser, EffectChoicePanel, SecurityBrowser, DnaDigivolveFlow)
 - Implement keyword badge rendering on permanents
 - Implement linked card display
 - Implement revealed cards zone
+- Preload card images for both decks on game start
 - Connect `GamePage` end-to-end: create game -> play -> game over
 
 ### Phase 3: Multiplayer (PvP)
@@ -1280,11 +1601,12 @@ The `Card` component should accept a `cardId` and render whatever is available, 
 - Build matchup matrix view
 
 ### Phase 6: Polish
-- Card images (replace placeholders)
+- Backend image proxy (`GET /cards/{id}/image`) for CORS/offline fallback
 - Attack arrows (SVG overlay with pulsing animation)
 - Suspend/unsuspend animations
+- Card play slide animation (hand → field)
 - Sound effects
-- Mobile-responsive layout
+- Mobile-responsive layout (touch drag tuning)
 - Error handling and reconnection logic
 
 ---
