@@ -124,6 +124,37 @@ def make_game_context():
                     callback(p)
                     return
 
+        def effect_select_own_permanent(self, player, callback, filter_fn=None, is_optional=False):
+            """Auto-select first matching own permanent."""
+            if not player:
+                return
+            for p in list(player.battle_area):
+                if filter_fn is None or filter_fn(p):
+                    callback(p)
+                    return
+
+        def effect_reveal_and_select(self, player, count, filter_fn, callback, is_optional=False):
+            """Auto-reveal and select first matching card."""
+            if not player or not player.library_cards:
+                return
+            revealed = player.library_cards[:count]
+            player.library_cards = player.library_cards[count:]
+            selected = None
+            remaining = []
+            for c in revealed:
+                if selected is None and filter_fn(c):
+                    selected = c
+                else:
+                    remaining.append(c)
+            if selected:
+                callback(selected, remaining)
+            else:
+                player.library_cards = revealed + player.library_cards
+
+        def effect_play_from_zone(self, player, zone, filter_fn, free=False, is_optional=False):
+            """Auto-play first matching card from zone."""
+            pass
+
         def effect_link_to_permanent(self, player, card, is_optional=False):
             pass
 
@@ -235,7 +266,7 @@ class TestBT24EffectsExecute:
 
         script = BT24_014()
         effects = script.get_card_effects(card)
-        digi_effect = effects[2]  # [0]=alt_digi, [1]=security_attack, [2]=when_digivolving
+        digi_effect = effects[3]  # [0]=alt_digi, [1]=security_attack, [2]=decode, [3]=when_digivolving
 
         assert digi_effect.is_when_digivolving
 
@@ -259,8 +290,9 @@ class TestBT24EffectsExecute:
 
         script = BT24_057()
         effects = script.get_card_effects(card)
-        # effect3 is the de-digivolve on deletion
-        dedigivolve = [e for e in effects if e.is_on_deletion and e.on_process_callback is not None][0]
+        # Find the de-digivolve on deletion (not the keyword grant)
+        dedigivolve = [e for e in effects if e.is_on_deletion and e.on_process_callback is not None
+                       and "De-Digivolve" in (e.effect_description or "")][0]
 
         ctx = {"game": game, "player": p1, "permanent": None}
         dedigivolve.on_process_callback(ctx)
@@ -343,4 +375,4 @@ class TestBT24EffectsExecute:
             instance = script_class()
             effects = instance.get_card_effects(None)
             total_effects += len(effects)
-        assert total_effects == 401, f"Expected 401 total effects, got {total_effects}"
+        assert total_effects == 411, f"Expected 411 total effects, got {total_effects}"
