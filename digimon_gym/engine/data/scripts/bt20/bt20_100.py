@@ -49,36 +49,48 @@ class BT20_100(CardScript):
         effect0.set_on_process_callback(process0)
         effects.append(effect0)
 
-        # Timing: EffectTiming.WhenRemoveField
-        # [All Turns] When any of your Digimon with [Omnimon] in their names would leave the battle area, <Delay>.\r\n� 1 of those Digimon doesn't leave.
+        # Factory effect: delay
+        # Delay
         effect1 = ICardEffect()
-        effect1.set_effect_name("BT20-100 Prevent Removal")
-        effect1.set_effect_description("[All Turns] When any of your Digimon with [Omnimon] in their names would leave the battle area, <Delay>.\r\n� 1 of those Digimon doesn't leave.")
-        effect1.is_optional = True
+        effect1.set_effect_name("BT20-100 Delay")
+        effect1.set_effect_description("Delay")
+        effect1._is_delay = True
 
-        effect = effect1  # alias for condition closure
         def condition1(context: Dict[str, Any]) -> bool:
             return True
-
         effect1.set_can_use_condition(condition1)
         effects.append(effect1)
 
-        # Timing: EffectTiming.SecuritySkill
-        # [Security] You may play 1 [Omekamon] or [Cool Boy] from your hand or trash without paying the cost. Then, place this card in the battle area.
+        # Timing: EffectTiming.WhenRemoveField
+        # [All Turns] When any of your Digimon with [Omnimon] in their names would leave the battle area, <Delay>.\r\n� 1 of those Digimon doesn't leave.
         effect2 = ICardEffect()
-        effect2.set_effect_name("BT20-100 Play Card, Trash From Hand")
-        effect2.set_effect_description("[Security] You may play 1 [Omekamon] or [Cool Boy] from your hand or trash without paying the cost. Then, place this card in the battle area.")
-        effect2.is_security_effect = True
-        effect2.is_security_effect = True
+        effect2.set_effect_name("BT20-100 Prevent Removal")
+        effect2.set_effect_description("[All Turns] When any of your Digimon with [Omnimon] in their names would leave the battle area, <Delay>.\r\n� 1 of those Digimon doesn't leave.")
+        effect2.is_optional = True
 
         effect = effect2  # alias for condition closure
         def condition2(context: Dict[str, Any]) -> bool:
-            # Security effect — validated by engine timing
             return True
 
         effect2.set_can_use_condition(condition2)
+        effects.append(effect2)
 
-        def process2(ctx: Dict[str, Any]):
+        # Timing: EffectTiming.SecuritySkill
+        # [Security] You may play 1 [Omekamon] or [Cool Boy] from your hand or trash without paying the cost. Then, place this card in the battle area.
+        effect3 = ICardEffect()
+        effect3.set_effect_name("BT20-100 Play Card, Trash From Hand")
+        effect3.set_effect_description("[Security] You may play 1 [Omekamon] or [Cool Boy] from your hand or trash without paying the cost. Then, place this card in the battle area.")
+        effect3.is_security_effect = True
+        effect3.is_security_effect = True
+
+        effect = effect3  # alias for condition closure
+        def condition3(context: Dict[str, Any]) -> bool:
+            # Security effect — validated by engine timing
+            return True
+
+        effect3.set_can_use_condition(condition3)
+
+        def process3(ctx: Dict[str, Any]):
             """Action: Play Card, Trash From Hand"""
             player = ctx.get('player')
             perm = ctx.get('permanent')
@@ -100,7 +112,7 @@ class BT20_100(CardScript):
             game.effect_select_hand_card(
                 player, hand_filter, on_trashed, is_optional=False)
 
-        effect2.set_on_process_callback(process2)
-        effects.append(effect2)
+        effect3.set_on_process_callback(process3)
+        effects.append(effect3)
 
         return effects

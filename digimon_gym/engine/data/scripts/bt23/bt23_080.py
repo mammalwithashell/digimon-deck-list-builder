@@ -8,7 +8,7 @@ if TYPE_CHECKING:
 
 
 class BT23_080(CardScript):
-    """BT23-080"""
+    """BT23-080 Yu Nogi"""
 
     def get_card_effects(self, card: 'CardSource') -> List['ICardEffect']:
         effects = []
@@ -39,6 +39,24 @@ class BT23_080(CardScript):
             return True
 
         effect1.set_can_use_condition(condition1)
+
+        def process1(ctx: Dict[str, Any]):
+            """Action: Put To Security"""
+            player = ctx.get('player')
+            perm = ctx.get('permanent')
+            game = ctx.get('game')
+            # Place a permanent into the security stack
+            if not (player and game):
+                return
+            def target_filter(p):
+                return p.is_digimon
+            def on_put_security(target_perm):
+                if player:
+                    player.put_permanent_to_security(target_perm)
+            game.effect_select_own_permanent(
+                player, on_put_security, filter_fn=target_filter, is_optional=True)
+
+        effect1.set_on_process_callback(process1)
         effects.append(effect1)
 
         # Factory effect: security_play

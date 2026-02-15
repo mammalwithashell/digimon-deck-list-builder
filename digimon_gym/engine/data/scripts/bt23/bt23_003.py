@@ -8,7 +8,7 @@ if TYPE_CHECKING:
 
 
 class BT23_003(CardScript):
-    """BT23-003"""
+    """BT23-003 Motimon | Lv.2"""
 
     def get_card_effects(self, card: 'CardSource') -> List['ICardEffect']:
         effects = []
@@ -33,6 +33,16 @@ class BT23_003(CardScript):
             return True
 
         effect0.set_can_use_condition(condition0)
+
+        def process0(ctx: Dict[str, Any]):
+            """Action: Force Attack"""
+            player = ctx.get('player')
+            perm = ctx.get('permanent')
+            game = ctx.get('game')
+            # Force attack — target Digimon may attack (requires engine SelectAttack)
+            pass  # descriptive-tagged: force_attack
+
+        effect0.set_on_process_callback(process0)
         effects.append(effect0)
 
         return effects

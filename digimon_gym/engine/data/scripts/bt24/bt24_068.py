@@ -78,6 +78,20 @@ class BT24_068(CardScript):
             return True
 
         effect1.set_can_use_condition(condition1)
+
+        def process1(ctx: Dict[str, Any]):
+            """Action: Mill"""
+            player = ctx.get('player')
+            perm = ctx.get('permanent')
+            game = ctx.get('game')
+            # Mill 1 cards from own deck
+            if player and player.library_cards:
+                mill_count = min(1, len(player.library_cards))
+                trashed = player.library_cards[:mill_count]
+                player.library_cards = player.library_cards[mill_count:]
+                player.trash_cards.extend(trashed)
+
+        effect1.set_on_process_callback(process1)
         effects.append(effect1)
 
         return effects

@@ -57,7 +57,7 @@ class BT20_044(CardScript):
         effect2.set_can_use_condition(condition2)
 
         def process2(ctx: Dict[str, Any]):
-            """Action: Suspend"""
+            """Action: Suspend, Force Attack"""
             player = ctx.get('player')
             perm = ctx.get('permanent')
             game = ctx.get('game')
@@ -69,6 +69,8 @@ class BT20_044(CardScript):
                 target_perm.suspend()
             game.effect_select_opponent_permanent(
                 player, on_suspend, filter_fn=target_filter, is_optional=False)
+            # Force attack — target Digimon may attack (requires engine SelectAttack)
+            pass  # descriptive-tagged: force_attack
 
         effect2.set_on_process_callback(process2)
         effects.append(effect2)
@@ -88,7 +90,7 @@ class BT20_044(CardScript):
         effect3.set_can_use_condition(condition3)
 
         def process3(ctx: Dict[str, Any]):
-            """Action: Suspend"""
+            """Action: Suspend, Force Attack"""
             player = ctx.get('player')
             perm = ctx.get('permanent')
             game = ctx.get('game')
@@ -100,6 +102,8 @@ class BT20_044(CardScript):
                 target_perm.suspend()
             game.effect_select_opponent_permanent(
                 player, on_suspend, filter_fn=target_filter, is_optional=False)
+            # Force attack — target Digimon may attack (requires engine SelectAttack)
+            pass  # descriptive-tagged: force_attack
 
         effect3.set_on_process_callback(process3)
         effects.append(effect3)

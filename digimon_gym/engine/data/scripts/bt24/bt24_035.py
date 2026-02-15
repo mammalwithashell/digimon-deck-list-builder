@@ -27,10 +27,10 @@ class BT24_035(CardScript):
         effects.append(effect0)
 
         # Timing: EffectTiming.OnEnterFieldAnyone
-        # Effect
+        # DP -3000, Play Card, Trash From Hand
         effect1 = ICardEffect()
-        effect1.set_effect_name("BT24-035 Effect")
-        effect1.set_effect_description("Effect")
+        effect1.set_effect_name("BT24-035 DP -3000, Play Card, Trash From Hand")
+        effect1.set_effect_description("DP -3000, Play Card, Trash From Hand")
         effect1.is_on_play = True
 
         effect = effect1  # alias for condition closure
@@ -41,13 +41,44 @@ class BT24_035(CardScript):
             return True
 
         effect1.set_can_use_condition(condition1)
+
+        def process1(ctx: Dict[str, Any]):
+            """Action: DP -3000, Play Card, Trash From Hand"""
+            player = ctx.get('player')
+            perm = ctx.get('permanent')
+            game = ctx.get('game')
+            # DP change targets opponent digimon
+            enemy = player.enemy if player else None
+            if enemy and enemy.battle_area:
+                dp_targets = [p for p in enemy.battle_area if p.is_digimon and p.dp is not None]
+                if dp_targets:
+                    target = min(dp_targets, key=lambda p: p.dp)
+                    target.change_dp(-3000)
+            if not (player and game):
+                return
+            def play_filter(c):
+                return True
+            game.effect_play_from_zone(
+                player, 'hand', play_filter, free=True, is_optional=True)
+            if not (player and game):
+                return
+            def hand_filter(c):
+                return True
+            def on_trashed(selected):
+                if selected in player.hand_cards:
+                    player.hand_cards.remove(selected)
+                    player.trash_cards.append(selected)
+            game.effect_select_hand_card(
+                player, hand_filter, on_trashed, is_optional=False)
+
+        effect1.set_on_process_callback(process1)
         effects.append(effect1)
 
         # Timing: EffectTiming.OnEnterFieldAnyone
-        # Effect
+        # DP -3000, Play Card, Trash From Hand
         effect2 = ICardEffect()
-        effect2.set_effect_name("BT24-035 Effect")
-        effect2.set_effect_description("Effect")
+        effect2.set_effect_name("BT24-035 DP -3000, Play Card, Trash From Hand")
+        effect2.set_effect_description("DP -3000, Play Card, Trash From Hand")
         effect2.is_when_digivolving = True
 
         effect = effect2  # alias for condition closure
@@ -58,6 +89,37 @@ class BT24_035(CardScript):
             return True
 
         effect2.set_can_use_condition(condition2)
+
+        def process2(ctx: Dict[str, Any]):
+            """Action: DP -3000, Play Card, Trash From Hand"""
+            player = ctx.get('player')
+            perm = ctx.get('permanent')
+            game = ctx.get('game')
+            # DP change targets opponent digimon
+            enemy = player.enemy if player else None
+            if enemy and enemy.battle_area:
+                dp_targets = [p for p in enemy.battle_area if p.is_digimon and p.dp is not None]
+                if dp_targets:
+                    target = min(dp_targets, key=lambda p: p.dp)
+                    target.change_dp(-3000)
+            if not (player and game):
+                return
+            def play_filter(c):
+                return True
+            game.effect_play_from_zone(
+                player, 'hand', play_filter, free=True, is_optional=True)
+            if not (player and game):
+                return
+            def hand_filter(c):
+                return True
+            def on_trashed(selected):
+                if selected in player.hand_cards:
+                    player.hand_cards.remove(selected)
+                    player.trash_cards.append(selected)
+            game.effect_select_hand_card(
+                player, hand_filter, on_trashed, is_optional=False)
+
+        effect2.set_on_process_callback(process2)
         effects.append(effect2)
 
         # Factory effect: barrier

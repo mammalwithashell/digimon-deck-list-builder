@@ -71,6 +71,16 @@ class BT14_054(CardScript):
             return True
 
         effect1.set_can_use_condition(condition1)
+
+        def process1(ctx: Dict[str, Any]):
+            """Action: Force Attack"""
+            player = ctx.get('player')
+            perm = ctx.get('permanent')
+            game = ctx.get('game')
+            # Force attack — target Digimon may attack (requires engine SelectAttack)
+            pass  # descriptive-tagged: force_attack
+
+        effect1.set_on_process_callback(process1)
         effects.append(effect1)
 
         return effects

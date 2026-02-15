@@ -16,8 +16,10 @@ class BT20_098(CardScript):
         # Timing: EffectTiming.OptionSkill
         # [Main] By returning 9 levels' total worth of Digimon cards from your opponent's trash to the bottom of the deck, you may play 1 [Ghost] trait Digimon card of each returned card's level from your trash without paying the costs. Then, the Digimon this effect played gain <Rush> and <Blocker> until the end of your opponent's turn.
         effect0 = ICardEffect()
-        effect0.set_effect_name("BT20-098 Play Card, Return To Deck")
+        effect0.set_effect_name("BT20-098 Play Card, Return To Deck, Gain Keyword Rush, Gain Keyword Blocker")
         effect0.set_effect_description("[Main] By returning 9 levels' total worth of Digimon cards from your opponent's trash to the bottom of the deck, you may play 1 [Ghost] trait Digimon card of each returned card's level from your trash without paying the costs. Then, the Digimon this effect played gain <Rush> and <Blocker> until the end of your opponent's turn.")
+        effect0._is_rush = True
+        effect0._is_blocker = True
 
         effect = effect0  # alias for condition closure
         def condition0(context: Dict[str, Any]) -> bool:
@@ -27,7 +29,7 @@ class BT20_098(CardScript):
         effect0.set_can_use_condition(condition0)
 
         def process0(ctx: Dict[str, Any]):
-            """Action: Play Card, Return To Deck"""
+            """Action: Play Card, Return To Deck, Gain Keyword Rush, Gain Keyword Blocker"""
             player = ctx.get('player')
             perm = ctx.get('permanent')
             game = ctx.get('game')
@@ -47,6 +49,10 @@ class BT20_098(CardScript):
                     enemy.return_permanent_to_deck_bottom(target_perm)
             game.effect_select_opponent_permanent(
                 player, on_return, filter_fn=target_filter, is_optional=False)
+            # Keyword grant: rush — flag set on effect object
+            pass
+            # Keyword grant: blocker — flag set on effect object
+            pass
 
         effect0.set_on_process_callback(process0)
         effects.append(effect0)
@@ -78,7 +84,7 @@ class BT20_098(CardScript):
                     return False
                 return True
             game.effect_play_from_zone(
-                player, 'trash', play_filter, free=True, is_optional=True)
+                player, 'hand', play_filter, free=True, is_optional=True)
 
         effect1.set_on_process_callback(process1)
         effects.append(effect1)

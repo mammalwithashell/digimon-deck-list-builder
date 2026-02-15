@@ -8,7 +8,7 @@ if TYPE_CHECKING:
 
 
 class BT23_014(CardScript):
-    """BT23-014"""
+    """BT23-014 Gallantmon | Lv.6"""
 
     def get_card_effects(self, card: 'CardSource') -> List['ICardEffect']:
         effects = []
@@ -41,6 +41,16 @@ class BT23_014(CardScript):
             return True
 
         effect1.set_can_use_condition(condition1)
+
+        def process1(ctx: Dict[str, Any]):
+            """Action: Play Restriction"""
+            player = ctx.get('player')
+            perm = ctx.get('permanent')
+            game = ctx.get('game')
+            # Play restriction (CanNotPutFieldClass) — opponent play restrictions
+            pass  # descriptive-tagged
+
+        effect1.set_on_process_callback(process1)
         effects.append(effect1)
 
         # Timing: EffectTiming.OnEnterFieldAnyone
@@ -58,12 +68,22 @@ class BT23_014(CardScript):
             return True
 
         effect2.set_can_use_condition(condition2)
+
+        def process2(ctx: Dict[str, Any]):
+            """Action: Play Restriction"""
+            player = ctx.get('player')
+            perm = ctx.get('permanent')
+            game = ctx.get('game')
+            # Play restriction (CanNotPutFieldClass) — opponent play restrictions
+            pass  # descriptive-tagged
+
+        effect2.set_on_process_callback(process2)
         effects.append(effect2)
 
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [On Play] Delete 1 of your opponent's Digimon with 8000 DP or less. For each of their Digimon and Tamers, add 2000 to this DP deletion effect's maximum.
         effect3 = ICardEffect()
-        effect3.set_effect_name("BT23-014 Effect")
+        effect3.set_effect_name("BT23-014 Delete")
         effect3.set_effect_description("[On Play] Delete 1 of your opponent's Digimon with 8000 DP or less. For each of their Digimon and Tamers, add 2000 to this DP deletion effect's maximum.")
         effect3.is_on_play = True
 
@@ -75,12 +95,30 @@ class BT23_014(CardScript):
             return True
 
         effect3.set_can_use_condition(condition3)
+
+        def process3(ctx: Dict[str, Any]):
+            """Action: Delete"""
+            player = ctx.get('player')
+            perm = ctx.get('permanent')
+            game = ctx.get('game')
+            if not (player and game):
+                return
+            def target_filter(p):
+                return p.is_digimon
+            def on_delete(target_perm):
+                enemy = player.enemy if player else None
+                if enemy:
+                    enemy.delete_permanent(target_perm)
+            game.effect_select_opponent_permanent(
+                player, on_delete, filter_fn=target_filter, is_optional=False)
+
+        effect3.set_on_process_callback(process3)
         effects.append(effect3)
 
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [When Digivolving] Delete 1 of your opponent's Digimon with 8000 DP or less. For each of their Digimon and Tamers, add 2000 to this DP deletion effect's maximum.
         effect4 = ICardEffect()
-        effect4.set_effect_name("BT23-014 Effect")
+        effect4.set_effect_name("BT23-014 Delete")
         effect4.set_effect_description("[When Digivolving] Delete 1 of your opponent's Digimon with 8000 DP or less. For each of their Digimon and Tamers, add 2000 to this DP deletion effect's maximum.")
         effect4.is_when_digivolving = True
 
@@ -92,12 +130,30 @@ class BT23_014(CardScript):
             return True
 
         effect4.set_can_use_condition(condition4)
+
+        def process4(ctx: Dict[str, Any]):
+            """Action: Delete"""
+            player = ctx.get('player')
+            perm = ctx.get('permanent')
+            game = ctx.get('game')
+            if not (player and game):
+                return
+            def target_filter(p):
+                return p.is_digimon
+            def on_delete(target_perm):
+                enemy = player.enemy if player else None
+                if enemy:
+                    enemy.delete_permanent(target_perm)
+            game.effect_select_opponent_permanent(
+                player, on_delete, filter_fn=target_filter, is_optional=False)
+
+        effect4.set_on_process_callback(process4)
         effects.append(effect4)
 
         # Timing: EffectTiming.OnAllyAttack
         # [When Attacking] Delete 1 of your opponent's Digimon with 8000 DP or less. For each of their Digimon and Tamers, add 2000 to this DP deletion effect's maximum.
         effect5 = ICardEffect()
-        effect5.set_effect_name("BT23-014 Effect")
+        effect5.set_effect_name("BT23-014 Delete")
         effect5.set_effect_description("[When Attacking] Delete 1 of your opponent's Digimon with 8000 DP or less. For each of their Digimon and Tamers, add 2000 to this DP deletion effect's maximum.")
         effect5.is_on_attack = True
 
@@ -109,6 +165,24 @@ class BT23_014(CardScript):
             return True
 
         effect5.set_can_use_condition(condition5)
+
+        def process5(ctx: Dict[str, Any]):
+            """Action: Delete"""
+            player = ctx.get('player')
+            perm = ctx.get('permanent')
+            game = ctx.get('game')
+            if not (player and game):
+                return
+            def target_filter(p):
+                return p.is_digimon
+            def on_delete(target_perm):
+                enemy = player.enemy if player else None
+                if enemy:
+                    enemy.delete_permanent(target_perm)
+            game.effect_select_opponent_permanent(
+                player, on_delete, filter_fn=target_filter, is_optional=False)
+
+        effect5.set_on_process_callback(process5)
         effects.append(effect5)
 
         return effects

@@ -14,23 +14,34 @@ class BT24_095(CardScript):
         effects = []
 
         # Timing: EffectTiming.None
-        # Effect
+        # Ignore Color Req
         effect0 = ICardEffect()
         effect0.set_effect_name("BT24-095 Ignore color requirements")
-        effect0.set_effect_description("Effect")
+        effect0.set_effect_description("Ignore Color Req")
 
         effect = effect0  # alias for condition closure
         def condition0(context: Dict[str, Any]) -> bool:
             return True
 
         effect0.set_can_use_condition(condition0)
+
+        def process0(ctx: Dict[str, Any]):
+            """Action: Ignore Color Req"""
+            player = ctx.get('player')
+            perm = ctx.get('permanent')
+            game = ctx.get('game')
+            # Ignores color requirement for playing Options — not modeled in engine
+            pass  # descriptive-tagged
+
+        effect0.set_on_process_callback(process0)
         effects.append(effect0)
 
         # Timing: EffectTiming.OptionSkill
-        # Suspend
+        # Suspend, Gain Keyword Cannot Unsuspend
         effect1 = ICardEffect()
         effect1.set_effect_name("BT24-095 Suspend 1 of opponent's Digimon or Tamers. It can't unsuspend in their next unsuspend phase. Then, you may link this card.")
-        effect1.set_effect_description("Suspend")
+        effect1.set_effect_description("Suspend, Gain Keyword Cannot Unsuspend")
+        effect1._is_cannot_unsuspend = True
 
         effect = effect1  # alias for condition closure
         def condition1(context: Dict[str, Any]) -> bool:
@@ -40,7 +51,7 @@ class BT24_095(CardScript):
         effect1.set_can_use_condition(condition1)
 
         def process1(ctx: Dict[str, Any]):
-            """Action: Suspend"""
+            """Action: Suspend, Gain Keyword Cannot Unsuspend"""
             player = ctx.get('player')
             perm = ctx.get('permanent')
             game = ctx.get('game')
@@ -52,6 +63,8 @@ class BT24_095(CardScript):
                 target_perm.suspend()
             game.effect_select_opponent_permanent(
                 player, on_suspend, filter_fn=target_filter, is_optional=False)
+            # Keyword grant: cannot_unsuspend — flag set on effect object
+            pass
 
         effect1.set_on_process_callback(process1)
         effects.append(effect1)

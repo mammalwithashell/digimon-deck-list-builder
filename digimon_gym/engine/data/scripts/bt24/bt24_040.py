@@ -71,11 +71,12 @@ class BT24_040(CardScript):
         effects.append(effect2)
 
         # Timing: EffectTiming.OnEnterFieldAnyone
-        # Effect
+        # Trash Digivolution Cards, Gain Keyword Cannot Suspend Player, Disable Effect
         effect3 = ICardEffect()
-        effect3.set_effect_name("BT24-040 Effect")
-        effect3.set_effect_description("Effect")
+        effect3.set_effect_name("BT24-040 Trash Digivolution Cards, Gain Keyword Cannot Suspend Player, Disable Effect")
+        effect3.set_effect_description("Trash Digivolution Cards, Gain Keyword Cannot Suspend Player, Disable Effect")
         effect3.is_on_play = True
+        effect3._is_cannot_suspend_player = True
 
         effect = effect3  # alias for condition closure
         def condition3(context: Dict[str, Any]) -> bool:
@@ -85,14 +86,32 @@ class BT24_040(CardScript):
             return True
 
         effect3.set_can_use_condition(condition3)
+
+        def process3(ctx: Dict[str, Any]):
+            """Action: Trash Digivolution Cards, Gain Keyword Cannot Suspend Player, Disable Effect"""
+            player = ctx.get('player')
+            perm = ctx.get('permanent')
+            game = ctx.get('game')
+            # Trash digivolution cards from this permanent
+            if perm and not perm.has_no_digivolution_cards:
+                trashed = perm.trash_digivolution_cards(1)
+                if player:
+                    player.trash_cards.extend(trashed)
+            # Keyword grant: cannot_suspend_player — flag set on effect object
+            pass
+            # Disable/invalidate effects on target — not yet in engine
+            pass  # descriptive-tagged: disable_effect
+
+        effect3.set_on_process_callback(process3)
         effects.append(effect3)
 
         # Timing: EffectTiming.OnEnterFieldAnyone
-        # Effect
+        # Trash Digivolution Cards, Gain Keyword Cannot Suspend Player, Disable Effect
         effect4 = ICardEffect()
-        effect4.set_effect_name("BT24-040 Effect")
-        effect4.set_effect_description("Effect")
+        effect4.set_effect_name("BT24-040 Trash Digivolution Cards, Gain Keyword Cannot Suspend Player, Disable Effect")
+        effect4.set_effect_description("Trash Digivolution Cards, Gain Keyword Cannot Suspend Player, Disable Effect")
         effect4.is_when_digivolving = True
+        effect4._is_cannot_suspend_player = True
 
         effect = effect4  # alias for condition closure
         def condition4(context: Dict[str, Any]) -> bool:
@@ -102,6 +121,23 @@ class BT24_040(CardScript):
             return True
 
         effect4.set_can_use_condition(condition4)
+
+        def process4(ctx: Dict[str, Any]):
+            """Action: Trash Digivolution Cards, Gain Keyword Cannot Suspend Player, Disable Effect"""
+            player = ctx.get('player')
+            perm = ctx.get('permanent')
+            game = ctx.get('game')
+            # Trash digivolution cards from this permanent
+            if perm and not perm.has_no_digivolution_cards:
+                trashed = perm.trash_digivolution_cards(1)
+                if player:
+                    player.trash_cards.extend(trashed)
+            # Keyword grant: cannot_suspend_player — flag set on effect object
+            pass
+            # Disable/invalidate effects on target — not yet in engine
+            pass  # descriptive-tagged: disable_effect
+
+        effect4.set_on_process_callback(process4)
         effects.append(effect4)
 
         # Timing: EffectTiming.WhenRemoveField
@@ -120,6 +156,24 @@ class BT24_040(CardScript):
             return True
 
         effect5.set_can_use_condition(condition5)
+
+        def process5(ctx: Dict[str, Any]):
+            """Action: Put To Security"""
+            player = ctx.get('player')
+            perm = ctx.get('permanent')
+            game = ctx.get('game')
+            # Place a permanent into the security stack
+            if not (player and game):
+                return
+            def target_filter(p):
+                return p.is_digimon
+            def on_put_security(target_perm):
+                if player:
+                    player.put_permanent_to_security(target_perm)
+            game.effect_select_own_permanent(
+                player, on_put_security, filter_fn=target_filter, is_optional=True)
+
+        effect5.set_on_process_callback(process5)
         effects.append(effect5)
 
         return effects

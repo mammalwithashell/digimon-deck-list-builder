@@ -301,10 +301,11 @@ class Game:
                         effect.reset_turn_count()
 
     def _clear_temp_dp(self):
-        """Clear temporary DP modifiers at start of turn."""
+        """Clear temporary DP modifiers and expired keyword grants at start of turn."""
         for player in [self.player1, self.player2]:
             for perm in player.battle_area:
                 perm.clear_temp_dp()
+                perm.clear_expired_grants(self.turn_count)
 
     # ─── Game Actions ────────────────────────────────────────────────
 
@@ -530,6 +531,9 @@ class Game:
         cost = self.turn_player.digivolve(perm, card)
         self.memory -= cost
 
+        # Track digivolution turn for <Blitz> checks
+        perm.turn_digivolved = self.turn_count
+
         self.execute_effects(EffectTiming.WhenDigivolving, {"digivolved_permanent": perm})
         self.execute_effects(EffectTiming.OnEnterFieldAnyone, {"played_card": card})
         self.check_turn_end()
@@ -750,6 +754,17 @@ class Game:
             for i in range(min(len(me.hand_cards), 30)):
                 card = me.hand_cards[i]
                 if card.get_cost_itself <= self.memory:
+                    # Option color requirement: must have a matching-color
+                    # Digimon or Tamer on the field to play an Option card
+                    if card.is_option:
+                        option_colors = set(card.card_colors)
+                        has_color_match = any(
+                            bool(option_colors & set(p.top_card.card_colors))
+                            for p in me.battle_area
+                            if p.top_card and (p.is_digimon or p.is_tamer)
+                        )
+                        if not has_color_match:
+                            continue
                     mask[i] = 1.0
 
             # Attack (100-399): 100 + attacker*15 + target
@@ -757,8 +772,17 @@ class Game:
                 attacker = me.battle_area[i]
                 if not attacker.can_attack():
                     continue
-                # Security attack (target index 12)
-                mask[100 + i * 15 + 12] = 1.0
+                # <Blitz>: when digivolved this turn, can attack even when memory < 0
+                # Normal rule: can only attack during own turn (memory >= 0)
+                if self.memory < 0:
+                    has_blitz = attacker.has_keyword('_is_blitz')
+                    digivolved_this_turn = (attacker.turn_digivolved >= 0 and
+                                            attacker.turn_digivolved == self.turn_count)
+                    if not (has_blitz and digivolved_this_turn):
+                        continue
+                # Security attack (target index 12) — check cannot_attack_player
+                if attacker.can_attack_player():
+                    mask[100 + i * 15 + 12] = 1.0
                 # Digimon attacks (targets 0-11, suspended only per rules)
                 has_raid = attacker.has_keyword('_is_raid')
                 for j in range(min(len(opp.battle_area), FIELD_SLOTS)):
@@ -807,12 +831,19 @@ class Game:
             mask[62] = 1.0
 
         elif phase == GamePhase.BlockTiming:
-            mask[62] = 1.0  # always can decline
             attacker = self.pending_attack.attacker if self.pending_attack else Permanent([])
+            has_collision = attacker.has_keyword('_is_collision')
+            has_any_blocker = False
             for i in range(min(len(me.battle_area), FIELD_SLOTS)):
                 perm = me.battle_area[i]
                 if perm.can_block(attacker):
                     mask[100 + i] = 1.0
+                    has_any_blocker = True
+            # <Collision>: opponent must block (cannot decline) if blockers exist
+            if has_collision and has_any_blocker:
+                mask[62] = 0.0  # forced block
+            else:
+                mask[62] = 1.0  # can decline
 
         elif phase == GamePhase.CounterTiming:
             mask[62] = 1.0  # always can decline
@@ -1305,6 +1336,7 @@ class Game:
                 # Stack card onto permanent
                 player.hand_cards.remove(card)
                 permanent.add_card_source(card)
+                permanent.turn_digivolved = self.turn_count  # Track for <Blitz>
                 self.memory -= cost
                 self.logger.log(
                     f"[Effect Digivolve] {card.card_names[0]} onto "

@@ -57,13 +57,9 @@ class BT14_100(CardScript):
             if not (player and game):
                 return
             def target_filter(p):
-                # Ensure we only target Digimon before checking level to avoid attribute errors
-                if not getattr(p, "is_digimon", False):
+                if p.level is None or p.level > 4:
                     return False
-                level = getattr(p, "level", None)
-                if level is None or level > 4:
-                    return False
-                return True
+                return p.is_digimon
             def on_delete(target_perm):
                 enemy = player.enemy if player else None
                 if enemy:

@@ -27,10 +27,10 @@ class BT24_049(CardScript):
         effects.append(effect0)
 
         # Timing: EffectTiming.OnEnterFieldAnyone
-        # Effect
+        # Bounce, Suspend
         effect1 = ICardEffect()
-        effect1.set_effect_name("BT24-049 Effect")
-        effect1.set_effect_description("Effect")
+        effect1.set_effect_name("BT24-049 Bounce, Suspend")
+        effect1.set_effect_description("Bounce, Suspend")
         effect1.is_on_play = True
 
         effect = effect1  # alias for condition closure
@@ -41,13 +41,39 @@ class BT24_049(CardScript):
             return True
 
         effect1.set_can_use_condition(condition1)
+
+        def process1(ctx: Dict[str, Any]):
+            """Action: Bounce, Suspend"""
+            player = ctx.get('player')
+            perm = ctx.get('permanent')
+            game = ctx.get('game')
+            if not (player and game):
+                return
+            def target_filter(p):
+                return True
+            def on_bounce(target_perm):
+                enemy = player.enemy if player else None
+                if enemy:
+                    enemy.bounce_permanent_to_hand(target_perm)
+            game.effect_select_opponent_permanent(
+                player, on_bounce, filter_fn=target_filter, is_optional=False)
+            if not (player and game):
+                return
+            def target_filter(p):
+                return True
+            def on_suspend(target_perm):
+                target_perm.suspend()
+            game.effect_select_opponent_permanent(
+                player, on_suspend, filter_fn=target_filter, is_optional=False)
+
+        effect1.set_on_process_callback(process1)
         effects.append(effect1)
 
         # Timing: EffectTiming.OnEnterFieldAnyone
-        # Effect
+        # Bounce, Suspend
         effect2 = ICardEffect()
-        effect2.set_effect_name("BT24-049 Effect")
-        effect2.set_effect_description("Effect")
+        effect2.set_effect_name("BT24-049 Bounce, Suspend")
+        effect2.set_effect_description("Bounce, Suspend")
         effect2.is_when_digivolving = True
 
         effect = effect2  # alias for condition closure
@@ -58,6 +84,32 @@ class BT24_049(CardScript):
             return True
 
         effect2.set_can_use_condition(condition2)
+
+        def process2(ctx: Dict[str, Any]):
+            """Action: Bounce, Suspend"""
+            player = ctx.get('player')
+            perm = ctx.get('permanent')
+            game = ctx.get('game')
+            if not (player and game):
+                return
+            def target_filter(p):
+                return True
+            def on_bounce(target_perm):
+                enemy = player.enemy if player else None
+                if enemy:
+                    enemy.bounce_permanent_to_hand(target_perm)
+            game.effect_select_opponent_permanent(
+                player, on_bounce, filter_fn=target_filter, is_optional=False)
+            if not (player and game):
+                return
+            def target_filter(p):
+                return True
+            def on_suspend(target_perm):
+                target_perm.suspend()
+            game.effect_select_opponent_permanent(
+                player, on_suspend, filter_fn=target_filter, is_optional=False)
+
+        effect2.set_on_process_callback(process2)
         effects.append(effect2)
 
         # Timing: EffectTiming.OnEndBattle

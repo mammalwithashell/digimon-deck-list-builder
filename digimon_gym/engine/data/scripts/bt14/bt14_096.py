@@ -16,8 +16,9 @@ class BT14_096(CardScript):
         # Timing: EffectTiming.OptionSkill
         # [Main] Suspend 1 of your opponent's Digimon. Then, if you have a Tamer with [Mimi Tachikawa] in its name, 1 of your opponent's Digimon doesn't unsuspend until the end of their turn.
         effect0 = ICardEffect()
-        effect0.set_effect_name("BT14-096 Suspend")
+        effect0.set_effect_name("BT14-096 Suspend, Gain Keyword Cannot Unsuspend")
         effect0.set_effect_description("[Main] Suspend 1 of your opponent's Digimon. Then, if you have a Tamer with [Mimi Tachikawa] in its name, 1 of your opponent's Digimon doesn't unsuspend until the end of their turn.")
+        effect0._is_cannot_unsuspend = True
 
         effect = effect0  # alias for condition closure
         def condition0(context: Dict[str, Any]) -> bool:
@@ -27,7 +28,7 @@ class BT14_096(CardScript):
         effect0.set_can_use_condition(condition0)
 
         def process0(ctx: Dict[str, Any]):
-            """Action: Suspend"""
+            """Action: Suspend, Gain Keyword Cannot Unsuspend"""
             player = ctx.get('player')
             perm = ctx.get('permanent')
             game = ctx.get('game')
@@ -41,6 +42,8 @@ class BT14_096(CardScript):
                 target_perm.suspend()
             game.effect_select_opponent_permanent(
                 player, on_suspend, filter_fn=target_filter, is_optional=False)
+            # Keyword grant: cannot_unsuspend — flag set on effect object
+            pass
 
         effect0.set_on_process_callback(process0)
         effects.append(effect0)

@@ -8,7 +8,7 @@ if TYPE_CHECKING:
 
 
 class BT23_025(CardScript):
-    """BT23-025"""
+    """BT23-025 MarineAngemon | Lv.6"""
 
     def get_card_effects(self, card: 'CardSource') -> List['ICardEffect']:
         effects = []
@@ -42,13 +42,15 @@ class BT23_025(CardScript):
         effect1.set_can_use_condition(condition1)
 
         def process1(ctx: Dict[str, Any]):
-            """Action: Add To Security"""
+            """Action: Add To Security, Change Security Attack"""
             player = ctx.get('player')
             perm = ctx.get('permanent')
             game = ctx.get('game')
             # Add top card of deck to security
             if player:
                 player.recovery(1)
+            # Grant Security Attack modifier to target permanent
+            pass  # descriptive-tagged: change_security_attack
 
         effect1.set_on_process_callback(process1)
         effects.append(effect1)

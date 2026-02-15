@@ -8,7 +8,7 @@ if TYPE_CHECKING:
 
 
 class BT23_032(CardScript):
-    """BT23-032"""
+    """BT23-032 Shakkoumon | Lv.5"""
 
     def get_card_effects(self, card: 'CardSource') -> List['ICardEffect']:
         effects = []
@@ -80,7 +80,7 @@ class BT23_032(CardScript):
         effect3.set_can_use_condition(condition3)
 
         def process3(ctx: Dict[str, Any]):
-            """Action: De Digivolve"""
+            """Action: De Digivolve, Force Attack"""
             player = ctx.get('player')
             perm = ctx.get('permanent')
             game = ctx.get('game')
@@ -93,15 +93,17 @@ class BT23_032(CardScript):
                     enemy.trash_cards.extend(removed)
             game.effect_select_opponent_permanent(
                 player, on_de_digivolve, filter_fn=lambda p: p.is_digimon, is_optional=False)
+            # Force attack — target Digimon may attack (requires engine SelectAttack)
+            pass  # descriptive-tagged: force_attack
 
         effect3.set_on_process_callback(process3)
         effects.append(effect3)
 
         # Timing: EffectTiming.WhenRemoveField
-        # Effect
+        # Play Card
         effect4 = ICardEffect()
-        effect4.set_effect_name("BT23-032 Effect")
-        effect4.set_effect_description("Effect")
+        effect4.set_effect_name("BT23-032 Play Card")
+        effect4.set_effect_description("Play Card")
         effect4.set_hash_string("BT23_032_AT")
 
         effect = effect4  # alias for condition closure
@@ -111,13 +113,29 @@ class BT23_032(CardScript):
             return True
 
         effect4.set_can_use_condition(condition4)
+
+        def process4(ctx: Dict[str, Any]):
+            """Action: Play Card"""
+            player = ctx.get('player')
+            perm = ctx.get('permanent')
+            game = ctx.get('game')
+            if not (player and game):
+                return
+            def play_filter(c):
+                if getattr(c, 'level', None) is None or c.level > 4:
+                    return False
+                return True
+            game.effect_play_from_zone(
+                player, 'hand', play_filter, free=True, is_optional=True)
+
+        effect4.set_on_process_callback(process4)
         effects.append(effect4)
 
         # Timing: EffectTiming.WhenRemoveField
-        # Effect
+        # Play Card
         effect5 = ICardEffect()
-        effect5.set_effect_name("BT23-032 Effect")
-        effect5.set_effect_description("Effect")
+        effect5.set_effect_name("BT23-032 Play Card")
+        effect5.set_effect_description("Play Card")
         effect5.is_inherited_effect = True
         effect5.set_hash_string("BT23_032_AT_ESS")
 
@@ -126,6 +144,22 @@ class BT23_032(CardScript):
             return True
 
         effect5.set_can_use_condition(condition5)
+
+        def process5(ctx: Dict[str, Any]):
+            """Action: Play Card"""
+            player = ctx.get('player')
+            perm = ctx.get('permanent')
+            game = ctx.get('game')
+            if not (player and game):
+                return
+            def play_filter(c):
+                if getattr(c, 'level', None) is None or c.level > 4:
+                    return False
+                return True
+            game.effect_play_from_zone(
+                player, 'hand', play_filter, free=True, is_optional=True)
+
+        effect5.set_on_process_callback(process5)
         effects.append(effect5)
 
         return effects

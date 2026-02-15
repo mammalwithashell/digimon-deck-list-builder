@@ -8,7 +8,7 @@ if TYPE_CHECKING:
 
 
 class BT23_047(CardScript):
-    """BT23-047"""
+    """BT23-047 Examon | Lv.7"""
 
     def get_card_effects(self, card: 'CardSource') -> List['ICardEffect']:
         effects = []
@@ -61,59 +61,113 @@ class BT23_047(CardScript):
         effect2.set_can_use_condition(condition2)
         effects.append(effect2)
 
-        # Timing: EffectTiming.OnEnterFieldAnyone
-        # Effect
+        # Factory effect: partition
+        # Partition
         effect3 = ICardEffect()
-        effect3.set_effect_name("BT23-047 Suspend 5 digimon/tamer, none can unsuspend. Then you may attack")
-        effect3.set_effect_description("Effect")
-        effect3.is_on_play = True
+        effect3.set_effect_name("BT23-047 Partition")
+        effect3.set_effect_description("Partition")
+        effect3._is_partition = True
 
-        effect = effect3  # alias for condition closure
         def condition3(context: Dict[str, Any]) -> bool:
-            if card and card.permanent_of_this_card() is None:
-                return False
-            # Triggered on play — validated by engine timing
             return True
-
         effect3.set_can_use_condition(condition3)
         effects.append(effect3)
 
         # Timing: EffectTiming.OnEnterFieldAnyone
-        # Effect
+        # Suspend, Gain Keyword Cannot Unsuspend Player, Force Attack
         effect4 = ICardEffect()
         effect4.set_effect_name("BT23-047 Suspend 5 digimon/tamer, none can unsuspend. Then you may attack")
-        effect4.set_effect_description("Effect")
-        effect4.is_when_digivolving = True
+        effect4.set_effect_description("Suspend, Gain Keyword Cannot Unsuspend Player, Force Attack")
+        effect4.is_on_play = True
+        effect4._is_cannot_unsuspend_player = True
 
         effect = effect4  # alias for condition closure
         def condition4(context: Dict[str, Any]) -> bool:
             if card and card.permanent_of_this_card() is None:
                 return False
-            # Triggered when digivolving — validated by engine timing
+            # Triggered on play — validated by engine timing
             return True
 
         effect4.set_can_use_condition(condition4)
+
+        def process4(ctx: Dict[str, Any]):
+            """Action: Suspend, Gain Keyword Cannot Unsuspend Player, Force Attack"""
+            player = ctx.get('player')
+            perm = ctx.get('permanent')
+            game = ctx.get('game')
+            if not (player and game):
+                return
+            def target_filter(p):
+                return True
+            def on_suspend(target_perm):
+                target_perm.suspend()
+            game.effect_select_opponent_permanent(
+                player, on_suspend, filter_fn=target_filter, is_optional=False)
+            # Keyword grant: cannot_unsuspend_player — flag set on effect object
+            pass
+            # Force attack — target Digimon may attack (requires engine SelectAttack)
+            pass  # descriptive-tagged: force_attack
+
+        effect4.set_on_process_callback(process4)
         effects.append(effect4)
 
-        # Timing: EffectTiming.OnLoseSecurity
-        # [Your Turn] [Once Per Turn] When your opponent's security stack is removed from, trash 1 of their Option cards in the battle area. Then, delete 1 of their suspended Digimon or Tamers.
+        # Timing: EffectTiming.OnEnterFieldAnyone
+        # Suspend, Gain Keyword Cannot Unsuspend Player, Force Attack
         effect5 = ICardEffect()
-        effect5.set_effect_name("BT23-047 Trash 1 option card, then delete 1 suspended digimon/tamer")
-        effect5.set_effect_description("[Your Turn] [Once Per Turn] When your opponent's security stack is removed from, trash 1 of their Option cards in the battle area. Then, delete 1 of their suspended Digimon or Tamers.")
-        effect5.set_max_count_per_turn(1)
-        effect5.set_hash_string("YT_BT23_047")
+        effect5.set_effect_name("BT23-047 Suspend 5 digimon/tamer, none can unsuspend. Then you may attack")
+        effect5.set_effect_description("Suspend, Gain Keyword Cannot Unsuspend Player, Force Attack")
+        effect5.is_when_digivolving = True
+        effect5._is_cannot_unsuspend_player = True
 
         effect = effect5  # alias for condition closure
         def condition5(context: Dict[str, Any]) -> bool:
+            if card and card.permanent_of_this_card() is None:
+                return False
+            # Triggered when digivolving — validated by engine timing
+            return True
+
+        effect5.set_can_use_condition(condition5)
+
+        def process5(ctx: Dict[str, Any]):
+            """Action: Suspend, Gain Keyword Cannot Unsuspend Player, Force Attack"""
+            player = ctx.get('player')
+            perm = ctx.get('permanent')
+            game = ctx.get('game')
+            if not (player and game):
+                return
+            def target_filter(p):
+                return True
+            def on_suspend(target_perm):
+                target_perm.suspend()
+            game.effect_select_opponent_permanent(
+                player, on_suspend, filter_fn=target_filter, is_optional=False)
+            # Keyword grant: cannot_unsuspend_player — flag set on effect object
+            pass
+            # Force attack — target Digimon may attack (requires engine SelectAttack)
+            pass  # descriptive-tagged: force_attack
+
+        effect5.set_on_process_callback(process5)
+        effects.append(effect5)
+
+        # Timing: EffectTiming.OnLoseSecurity
+        # [Your Turn] [Once Per Turn] When your opponent's security stack is removed from, trash 1 of their Option cards in the battle area. Then, delete 1 of their suspended Digimon or Tamers.
+        effect6 = ICardEffect()
+        effect6.set_effect_name("BT23-047 Trash 1 option card, then delete 1 suspended digimon/tamer")
+        effect6.set_effect_description("[Your Turn] [Once Per Turn] When your opponent's security stack is removed from, trash 1 of their Option cards in the battle area. Then, delete 1 of their suspended Digimon or Tamers.")
+        effect6.set_max_count_per_turn(1)
+        effect6.set_hash_string("YT_BT23_047")
+
+        effect = effect6  # alias for condition closure
+        def condition6(context: Dict[str, Any]) -> bool:
             if card and card.permanent_of_this_card() is None:
                 return False
             if not (card and card.owner and card.owner.is_my_turn):
                 return False
             return True
 
-        effect5.set_can_use_condition(condition5)
+        effect6.set_can_use_condition(condition6)
 
-        def process5(ctx: Dict[str, Any]):
+        def process6(ctx: Dict[str, Any]):
             """Action: Delete"""
             player = ctx.get('player')
             perm = ctx.get('permanent')
@@ -129,7 +183,7 @@ class BT23_047(CardScript):
             game.effect_select_opponent_permanent(
                 player, on_delete, filter_fn=target_filter, is_optional=False)
 
-        effect5.set_on_process_callback(process5)
-        effects.append(effect5)
+        effect6.set_on_process_callback(process6)
+        effects.append(effect6)
 
         return effects

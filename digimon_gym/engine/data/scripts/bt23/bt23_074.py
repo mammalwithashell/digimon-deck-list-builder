@@ -8,7 +8,7 @@ if TYPE_CHECKING:
 
 
 class BT23_074(CardScript):
-    """BT23-074"""
+    """BT23-074 Eater Legion"""
 
     def get_card_effects(self, card: 'CardSource') -> List['ICardEffect']:
         effects = []

@@ -46,10 +46,10 @@ class BT24_016(CardScript):
         effects.append(effect0)
 
         # Timing: EffectTiming.OnAllyAttack
-        # Effect
+        # Trash From Hand, Add To Security, Destroy Security
         effect1 = ICardEffect()
         effect1.set_effect_name("BT24-016 Opponent places 1 card from hand in security bottom. Trash their security top")
-        effect1.set_effect_description("Effect")
+        effect1.set_effect_description("Trash From Hand, Add To Security, Destroy Security")
         effect1.set_hash_string("WAWD_BT24-016")
         effect1.is_on_attack = True
 
@@ -61,13 +61,41 @@ class BT24_016(CardScript):
             return True
 
         effect1.set_can_use_condition(condition1)
+
+        def process1(ctx: Dict[str, Any]):
+            """Action: Trash From Hand, Add To Security, Destroy Security"""
+            player = ctx.get('player')
+            perm = ctx.get('permanent')
+            game = ctx.get('game')
+            if not (player and game):
+                return
+            def hand_filter(c):
+                return True
+            def on_trashed(selected):
+                if selected in player.hand_cards:
+                    player.hand_cards.remove(selected)
+                    player.trash_cards.append(selected)
+            game.effect_select_hand_card(
+                player, hand_filter, on_trashed, is_optional=False)
+            # Add top card of deck to security
+            if player:
+                player.recovery(1)
+            # Trash opponent's top security card(s)
+            enemy = player.enemy if player else None
+            if enemy:
+                for _ in range(1):
+                    if enemy.security_cards:
+                        trashed = enemy.security_cards.pop()
+                        enemy.trash_cards.append(trashed)
+
+        effect1.set_on_process_callback(process1)
         effects.append(effect1)
 
         # Timing: EffectTiming.OnEnterFieldAnyone
-        # Effect
+        # Trash From Hand, Add To Security, Destroy Security
         effect2 = ICardEffect()
         effect2.set_effect_name("BT24-016 Opponent places 1 card from hand in security bottom. Trash their security top")
-        effect2.set_effect_description("Effect")
+        effect2.set_effect_description("Trash From Hand, Add To Security, Destroy Security")
         effect2.set_hash_string("WAWD_BT24-016")
         effect2.is_when_digivolving = True
 
@@ -79,6 +107,34 @@ class BT24_016(CardScript):
             return True
 
         effect2.set_can_use_condition(condition2)
+
+        def process2(ctx: Dict[str, Any]):
+            """Action: Trash From Hand, Add To Security, Destroy Security"""
+            player = ctx.get('player')
+            perm = ctx.get('permanent')
+            game = ctx.get('game')
+            if not (player and game):
+                return
+            def hand_filter(c):
+                return True
+            def on_trashed(selected):
+                if selected in player.hand_cards:
+                    player.hand_cards.remove(selected)
+                    player.trash_cards.append(selected)
+            game.effect_select_hand_card(
+                player, hand_filter, on_trashed, is_optional=False)
+            # Add top card of deck to security
+            if player:
+                player.recovery(1)
+            # Trash opponent's top security card(s)
+            enemy = player.enemy if player else None
+            if enemy:
+                for _ in range(1):
+                    if enemy.security_cards:
+                        trashed = enemy.security_cards.pop()
+                        enemy.trash_cards.append(trashed)
+
+        effect2.set_on_process_callback(process2)
         effects.append(effect2)
 
         # Timing: EffectTiming.OnLoseSecurity

@@ -55,20 +55,15 @@ class BT24_023(CardScript):
         effect2.set_can_use_condition(condition2)
         effects.append(effect2)
 
-        # Timing: EffectTiming.OnEnterFieldAnyone
-        # Effect
+        # Factory effect: decode
+        # Decode
         effect3 = ICardEffect()
-        effect3.set_effect_name("BT24-023 Effect")
-        effect3.set_effect_description("Effect")
-        effect3.is_on_play = True
+        effect3.set_effect_name("BT24-023 Decode")
+        effect3.set_effect_description("Decode")
+        effect3._is_decode = True
 
-        effect = effect3  # alias for condition closure
         def condition3(context: Dict[str, Any]) -> bool:
-            if card and card.permanent_of_this_card() is None:
-                return False
-            # Triggered on play — validated by engine timing
             return True
-
         effect3.set_can_use_condition(condition3)
         effects.append(effect3)
 
@@ -77,29 +72,46 @@ class BT24_023(CardScript):
         effect4 = ICardEffect()
         effect4.set_effect_name("BT24-023 Effect")
         effect4.set_effect_description("Effect")
-        effect4.is_when_digivolving = True
+        effect4.is_on_play = True
 
         effect = effect4  # alias for condition closure
         def condition4(context: Dict[str, Any]) -> bool:
             if card and card.permanent_of_this_card() is None:
                 return False
-            # Triggered when digivolving — validated by engine timing
+            # Triggered on play — validated by engine timing
             return True
 
         effect4.set_can_use_condition(condition4)
         effects.append(effect4)
 
-        # Factory effect: jamming
-        # Jamming
+        # Timing: EffectTiming.OnEnterFieldAnyone
+        # Effect
         effect5 = ICardEffect()
-        effect5.set_effect_name("BT24-023 Jamming")
-        effect5.set_effect_description("Jamming")
-        effect5.is_inherited_effect = True
-        effect5._is_jamming = True
+        effect5.set_effect_name("BT24-023 Effect")
+        effect5.set_effect_description("Effect")
+        effect5.is_when_digivolving = True
 
+        effect = effect5  # alias for condition closure
         def condition5(context: Dict[str, Any]) -> bool:
+            if card and card.permanent_of_this_card() is None:
+                return False
+            # Triggered when digivolving — validated by engine timing
             return True
+
         effect5.set_can_use_condition(condition5)
         effects.append(effect5)
+
+        # Factory effect: jamming
+        # Jamming
+        effect6 = ICardEffect()
+        effect6.set_effect_name("BT24-023 Jamming")
+        effect6.set_effect_description("Jamming")
+        effect6.is_inherited_effect = True
+        effect6._is_jamming = True
+
+        def condition6(context: Dict[str, Any]) -> bool:
+            return True
+        effect6.set_can_use_condition(condition6)
+        effects.append(effect6)
 
         return effects

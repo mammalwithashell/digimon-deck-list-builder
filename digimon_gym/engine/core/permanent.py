@@ -13,7 +13,9 @@ class Permanent:
         self._dp_modifiers: List[int] = []  # Temporary DP changes from effects
         self.linked_cards: List['CardSource'] = []  # Option cards linked sideways (e.g. [TS])
         self.turn_played: int = -1  # Turn this permanent entered the field (-1 = not tracked)
+        self.turn_digivolved: int = -1  # Turn this permanent last digivolved (-1 = never)
         self._owner_game: Optional[object] = None  # Back-reference to Game for turn tracking
+        self._granted_keywords: dict = {}  # keyword_attr -> expiry_turn (or -1 for permanent)
 
     @property
     def digivolution_cards(self) -> List['CardSource']:
@@ -103,7 +105,18 @@ class Permanent:
         Scans inherited effects from sources under top card and
         non-inherited effects from the top card, matching the same
         pattern used in can_block() and effect_list().
+        Also checks granted keywords from effects like CardEffectCommons.Gain*().
         """
+        # Check granted keywords first (from effects that grant keywords to targets)
+        if keyword_attr in self._granted_keywords:
+            expiry = self._granted_keywords[keyword_attr]
+            if expiry == -1:
+                return True  # permanent grant
+            if self._owner_game and self._owner_game.turn_count <= expiry:
+                return True
+            # Expired — clean up
+            del self._granted_keywords[keyword_attr]
+
         for source in self.card_sources[:-1]:
             effects = source.effect_list(EffectTiming.NoTiming)
             for effect in effects:
@@ -115,6 +128,23 @@ class Permanent:
                 if not effect.is_inherited_effect and getattr(effect, keyword_attr, False):
                     return True
         return False
+
+    def grant_keyword(self, keyword_attr: str, duration: int = -1):
+        """Grant a keyword to this permanent.
+
+        Args:
+            keyword_attr: The keyword attribute name (e.g. '_is_rush', '_is_cannot_attack').
+            duration: Number of turns the grant lasts. -1 = permanent (until removed).
+                      Positive values are absolute turn number of expiry.
+        """
+        self._granted_keywords[keyword_attr] = duration
+
+    def clear_expired_grants(self, current_turn: int):
+        """Remove expired keyword grants."""
+        expired = [k for k, v in self._granted_keywords.items()
+                   if v != -1 and current_turn > v]
+        for k in expired:
+            del self._granted_keywords[k]
 
     def security_attack_modifier(self) -> int:
         """Sum of all <Security Attack +/-X> modifiers on this permanent."""
@@ -136,40 +166,49 @@ class Permanent:
             return False
         if not self.is_digimon:
             return False
+        # Restriction: cannot attack
+        if self.has_keyword('_is_cannot_attack'):
+            return False
+        # Restriction: cannot attack player (partial — checked separately for target filtering)
         # Summoning sickness: can't attack the turn played, unless has <Rush>
         if self.turn_played >= 0 and self._owner_game is not None:
             if self.turn_played == self._owner_game.turn_count and not self.has_keyword('_is_rush'):
                 return False
         return True
 
+    def can_attack_player(self) -> bool:
+        """Check if this permanent can attack the player directly.
+        Returns False if restricted by <cannot attack player>."""
+        if self.has_keyword('_is_cannot_attack_player'):
+            return False
+        return True
+
     def can_block(self, attacking_permanent: 'Permanent') -> bool:
         """Check if this permanent has <Blocker> and can block the attack.
 
         Requires: unsuspended, is a Digimon, has _is_blocker effect.
-        Scans inherited effects from sources and non-inherited from top card,
-        matching the pattern in effect_list().
+        Also checks:
+        - <cannot block> restriction on this blocker
+        - <cannot be blocked> on the attacker
+        - <Collision> on the attacker (all Digimon gain Blocker, skip _is_blocker check)
         """
         if self.is_suspended:
             return False
         if not self.is_digimon:
             return False
+        # Restriction: this Digimon cannot block
+        if self.has_keyword('_is_cannot_block'):
+            return False
+        # Restriction: attacker cannot be blocked
+        if attacking_permanent.has_keyword('_is_cannot_be_blocked'):
+            return False
 
-        # Check all card sources for _is_blocker flag
-        for source in self.card_sources[:-1]:
-            # Inherited effects from under top card
-            effects = source.effect_list(EffectTiming.NoTiming)
-            for effect in effects:
-                if effect.is_inherited_effect and getattr(effect, '_is_blocker', False):
-                    return True
+        # <Collision>: all opponent Digimon gain Blocker while the attacker is attacking
+        if attacking_permanent.has_keyword('_is_collision'):
+            return True
 
-        if self.top_card:
-            # Non-inherited effects from top card
-            effects = self.top_card.effect_list(EffectTiming.NoTiming)
-            for effect in effects:
-                if not effect.is_inherited_effect and getattr(effect, '_is_blocker', False):
-                    return True
-
-        return False
+        # Standard Blocker check: scan all card sources for _is_blocker flag
+        return self.has_keyword('_is_blocker')
 
     def effect_list(self, timing: EffectTiming) -> List['ICardEffect']:
         effects = []
@@ -193,6 +232,10 @@ class Permanent:
 
     def add_card_source(self, card_source: 'CardSource'):
         self.card_sources.append(card_source)
+
+    def add_card_source_bottom(self, card_source: 'CardSource'):
+        """Add a card source at the bottom of the digivolution stack."""
+        self.card_sources.insert(0, card_source)
 
     # ─── Effect Action Methods ───────────────────────────────────────
 

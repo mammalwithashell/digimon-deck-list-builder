@@ -8,7 +8,7 @@ if TYPE_CHECKING:
 
 
 class BT23_044(CardScript):
-    """BT23-044"""
+    """BT23-044 Lilamon | Lv.5"""
 
     def get_card_effects(self, card: 'CardSource') -> List['ICardEffect']:
         effects = []
@@ -79,6 +79,8 @@ class BT23_044(CardScript):
         effect3.set_effect_name("BT23-044 By suspending 1 digimon, 1 digimon cant be bounced to hand & deck")
         effect3.set_effect_description("[On Play] By suspending 1 Digimon, until your opponent's turn ends, their effects can't return 1 of your Digimon with [Vegetation], [Plant] or [Fairy] in any of its traits or the [CS] trait to hands or decks.")
         effect3.is_on_play = True
+        effect3._is_cannot_return_to_hand = True
+        effect3._is_cannot_return_to_deck = True
 
         effect = effect3  # alias for condition closure
         def condition3(context: Dict[str, Any]) -> bool:
@@ -88,6 +90,26 @@ class BT23_044(CardScript):
             return True
 
         effect3.set_can_use_condition(condition3)
+
+        def process3(ctx: Dict[str, Any]):
+            """Action: Suspend, Gain Keyword Cannot Return To Hand, Gain Keyword Cannot Return To Deck"""
+            player = ctx.get('player')
+            perm = ctx.get('permanent')
+            game = ctx.get('game')
+            if not (player and game):
+                return
+            def target_filter(p):
+                return True
+            def on_suspend(target_perm):
+                target_perm.suspend()
+            game.effect_select_opponent_permanent(
+                player, on_suspend, filter_fn=target_filter, is_optional=False)
+            # Keyword grant: cannot_return_to_hand — flag set on effect object
+            pass
+            # Keyword grant: cannot_return_to_deck — flag set on effect object
+            pass
+
+        effect3.set_on_process_callback(process3)
         effects.append(effect3)
 
         # Timing: EffectTiming.OnEnterFieldAnyone
@@ -96,6 +118,8 @@ class BT23_044(CardScript):
         effect4.set_effect_name("BT23-044 By suspending 1 digimon, 1 digimon cant be bounced to hand & deck")
         effect4.set_effect_description("[When Digivolving] By suspending 1 Digimon, until your opponent's turn ends, their effects can't return 1 of your Digimon with [Vegetation], [Plant] or [Fairy] in any of its traits or the [CS] trait to hands or decks.")
         effect4.is_when_digivolving = True
+        effect4._is_cannot_return_to_hand = True
+        effect4._is_cannot_return_to_deck = True
 
         effect = effect4  # alias for condition closure
         def condition4(context: Dict[str, Any]) -> bool:
@@ -105,6 +129,26 @@ class BT23_044(CardScript):
             return True
 
         effect4.set_can_use_condition(condition4)
+
+        def process4(ctx: Dict[str, Any]):
+            """Action: Suspend, Gain Keyword Cannot Return To Hand, Gain Keyword Cannot Return To Deck"""
+            player = ctx.get('player')
+            perm = ctx.get('permanent')
+            game = ctx.get('game')
+            if not (player and game):
+                return
+            def target_filter(p):
+                return True
+            def on_suspend(target_perm):
+                target_perm.suspend()
+            game.effect_select_opponent_permanent(
+                player, on_suspend, filter_fn=target_filter, is_optional=False)
+            # Keyword grant: cannot_return_to_hand — flag set on effect object
+            pass
+            # Keyword grant: cannot_return_to_deck — flag set on effect object
+            pass
+
+        effect4.set_on_process_callback(process4)
         effects.append(effect4)
 
         # Timing: EffectTiming.OnEndBattle

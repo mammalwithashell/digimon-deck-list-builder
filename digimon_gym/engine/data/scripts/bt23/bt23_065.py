@@ -8,7 +8,7 @@ if TYPE_CHECKING:
 
 
 class BT23_065(CardScript):
-    """BT23-065"""
+    """BT23-065 Phantomon | Lv.5"""
 
     def get_card_effects(self, card: 'CardSource') -> List['ICardEffect']:
         effects = []
@@ -46,10 +46,10 @@ class BT23_065(CardScript):
         effects.append(effect0)
 
         # Timing: EffectTiming.OnDestroyedAnyone
-        # Effect
+        # Play Card
         effect1 = ICardEffect()
         effect1.set_effect_name("BT23-065 Play 1 level 4 [Ghost] trait from trash")
-        effect1.set_effect_description("Effect")
+        effect1.set_effect_description("Play Card")
         effect1.is_on_deletion = True
 
         effect = effect1  # alias for condition closure
@@ -58,13 +58,29 @@ class BT23_065(CardScript):
             return True
 
         effect1.set_can_use_condition(condition1)
+
+        def process1(ctx: Dict[str, Any]):
+            """Action: Play Card"""
+            player = ctx.get('player')
+            perm = ctx.get('permanent')
+            game = ctx.get('game')
+            if not (player and game):
+                return
+            def play_filter(c):
+                if getattr(c, 'level', None) is None or c.level > 4:
+                    return False
+                return True
+            game.effect_play_from_zone(
+                player, 'hand', play_filter, free=True, is_optional=True)
+
+        effect1.set_on_process_callback(process1)
         effects.append(effect1)
 
         # Timing: EffectTiming.OnDestroyedAnyone
-        # Effect
+        # Play Card
         effect2 = ICardEffect()
         effect2.set_effect_name("BT23-065 Play 1 level 4 [Ghost] trait from trash")
-        effect2.set_effect_description("Effect")
+        effect2.set_effect_description("Play Card")
         effect2.is_inherited_effect = True
         effect2.is_on_deletion = True
 
@@ -74,6 +90,22 @@ class BT23_065(CardScript):
             return True
 
         effect2.set_can_use_condition(condition2)
+
+        def process2(ctx: Dict[str, Any]):
+            """Action: Play Card"""
+            player = ctx.get('player')
+            perm = ctx.get('permanent')
+            game = ctx.get('game')
+            if not (player and game):
+                return
+            def play_filter(c):
+                if getattr(c, 'level', None) is None or c.level > 4:
+                    return False
+                return True
+            game.effect_play_from_zone(
+                player, 'hand', play_filter, free=True, is_optional=True)
+
+        effect2.set_on_process_callback(process2)
         effects.append(effect2)
 
         return effects

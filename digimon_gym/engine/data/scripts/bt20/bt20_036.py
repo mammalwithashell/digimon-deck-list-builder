@@ -175,7 +175,7 @@ class BT20_036(CardScript):
         effect5.set_can_use_condition(condition5)
 
         def process5(ctx: Dict[str, Any]):
-            """Action: Play Card, Trash From Hand"""
+            """Action: Play Card, Trash From Hand, Force Attack"""
             player = ctx.get('player')
             perm = ctx.get('permanent')
             game = ctx.get('game')
@@ -199,6 +199,8 @@ class BT20_036(CardScript):
                     player.trash_cards.append(selected)
             game.effect_select_hand_card(
                 player, hand_filter, on_trashed, is_optional=True)
+            # Force attack — target Digimon may attack (requires engine SelectAttack)
+            pass  # descriptive-tagged: force_attack
 
         effect5.set_on_process_callback(process5)
         effects.append(effect5)

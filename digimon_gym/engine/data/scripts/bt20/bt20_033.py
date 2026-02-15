@@ -36,7 +36,6 @@ class BT20_033(CardScript):
         effect1.set_effect_name("BT20-033 1 Opponent's Digimon gets can't activate [When Digivolving] and -3000 DP")
         effect1.set_effect_description("[On Play] Until the end of your opponent's turn, 1 of their Digimon can't activate [When Digivolving] effects and gets -3000 DP.")
         effect1.is_on_play = True
-        effect1.dp_modifier = -3000
 
         effect = effect1  # alias for condition closure
         def condition1(context: Dict[str, Any]) -> bool:
@@ -48,7 +47,7 @@ class BT20_033(CardScript):
         effect1.set_can_use_condition(condition1)
 
         def process1(ctx: Dict[str, Any]):
-            """Action: DP -3000"""
+            """Action: DP -3000, Disable Effect"""
             player = ctx.get('player')
             perm = ctx.get('permanent')
             game = ctx.get('game')
@@ -59,6 +58,8 @@ class BT20_033(CardScript):
                 if dp_targets:
                     target = min(dp_targets, key=lambda p: p.dp)
                     target.change_dp(-3000)
+            # Disable/invalidate effects on target — not yet in engine
+            pass  # descriptive-tagged: disable_effect
 
         effect1.set_on_process_callback(process1)
         effects.append(effect1)
@@ -69,7 +70,6 @@ class BT20_033(CardScript):
         effect2.set_effect_name("BT20-033 1 Opponent's Digimon gets can't activate [When Digivolving] and -3000 DP")
         effect2.set_effect_description("[When Digivolving] Until the end of your opponent's turn, 1 of their Digimon can't activate [When Digivolving] effects and gets -3000 DP.")
         effect2.is_when_digivolving = True
-        effect2.dp_modifier = -3000
 
         effect = effect2  # alias for condition closure
         def condition2(context: Dict[str, Any]) -> bool:
@@ -81,7 +81,7 @@ class BT20_033(CardScript):
         effect2.set_can_use_condition(condition2)
 
         def process2(ctx: Dict[str, Any]):
-            """Action: DP -3000"""
+            """Action: DP -3000, Disable Effect"""
             player = ctx.get('player')
             perm = ctx.get('permanent')
             game = ctx.get('game')
@@ -92,6 +92,8 @@ class BT20_033(CardScript):
                 if dp_targets:
                     target = min(dp_targets, key=lambda p: p.dp)
                     target.change_dp(-3000)
+            # Disable/invalidate effects on target — not yet in engine
+            pass  # descriptive-tagged: disable_effect
 
         effect2.set_on_process_callback(process2)
         effects.append(effect2)

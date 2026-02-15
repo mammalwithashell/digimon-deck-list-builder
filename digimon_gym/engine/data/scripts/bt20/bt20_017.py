@@ -29,6 +29,16 @@ class BT20_017(CardScript):
             return True
 
         effect0.set_can_use_condition(condition0)
+
+        def process0(ctx: Dict[str, Any]):
+            """Action: Play Token"""
+            player = ctx.get('player')
+            perm = ctx.get('permanent')
+            game = ctx.get('game')
+            # Play AthoRenePor Token — token play not yet supported in engine
+            pass  # descriptive-tagged: play_token
+
+        effect0.set_on_process_callback(process0)
         effects.append(effect0)
 
         # Timing: EffectTiming.OnEnterFieldAnyone
@@ -47,6 +57,16 @@ class BT20_017(CardScript):
             return True
 
         effect1.set_can_use_condition(condition1)
+
+        def process1(ctx: Dict[str, Any]):
+            """Action: Play Token"""
+            player = ctx.get('player')
+            perm = ctx.get('permanent')
+            game = ctx.get('game')
+            # Play AthoRenePor Token — token play not yet supported in engine
+            pass  # descriptive-tagged: play_token
+
+        effect1.set_on_process_callback(process1)
         effects.append(effect1)
 
         # Timing: EffectTiming.OnEnterFieldAnyone
@@ -69,7 +89,7 @@ class BT20_017(CardScript):
         effect2.set_can_use_condition(condition2)
 
         def process2(ctx: Dict[str, Any]):
-            """Action: Delete"""
+            """Action: Delete, Force Attack"""
             player = ctx.get('player')
             perm = ctx.get('permanent')
             game = ctx.get('game')
@@ -85,6 +105,8 @@ class BT20_017(CardScript):
                     enemy.delete_permanent(target_perm)
             game.effect_select_opponent_permanent(
                 player, on_delete, filter_fn=target_filter, is_optional=False)
+            # Force attack — target Digimon may attack (requires engine SelectAttack)
+            pass  # descriptive-tagged: force_attack
 
         effect2.set_on_process_callback(process2)
         effects.append(effect2)

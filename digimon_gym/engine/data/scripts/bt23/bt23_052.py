@@ -8,7 +8,7 @@ if TYPE_CHECKING:
 
 
 class BT23_052(CardScript):
-    """BT23-052"""
+    """BT23-052 Consulmon | Lv.4"""
 
     def get_card_effects(self, card: 'CardSource') -> List['ICardEffect']:
         effects = []
@@ -36,6 +36,7 @@ class BT23_052(CardScript):
         effect1.set_effect_name("BT23-052 1 of your opponent's Digimon can't attack players")
         effect1.set_effect_description("[On Play] 1 of your opponent's Digimon can't attack players until their turn ends.")
         effect1.is_on_play = True
+        effect1._is_cannot_attack = True
 
         effect = effect1  # alias for condition closure
         def condition1(context: Dict[str, Any]) -> bool:
@@ -45,6 +46,24 @@ class BT23_052(CardScript):
             return True
 
         effect1.set_can_use_condition(condition1)
+
+        def process1(ctx: Dict[str, Any]):
+            """Action: Gain Keyword Cannot Attack"""
+            player = ctx.get('player')
+            perm = ctx.get('permanent')
+            game = ctx.get('game')
+            if not (player and game):
+                return
+            def target_filter(p):
+                return p.is_digimon
+            def on_grant(target_perm):
+                grants = getattr(target_perm, '_keyword_grants', [])
+                grants.append('_is_cannot_attack')
+                target_perm._keyword_grants = grants
+            game.effect_select_own_permanent(
+                player, on_grant, filter_fn=target_filter, is_optional=False)
+
+        effect1.set_on_process_callback(process1)
         effects.append(effect1)
 
         # Timing: EffectTiming.OnEnterFieldAnyone
@@ -53,6 +72,7 @@ class BT23_052(CardScript):
         effect2.set_effect_name("BT23-052 1 of your opponent's Digimon can't attack players")
         effect2.set_effect_description("[When Digivlving] 1 of your opponent's Digimon can't attack players until their turn ends.")
         effect2.is_when_digivolving = True
+        effect2._is_cannot_attack = True
 
         effect = effect2  # alias for condition closure
         def condition2(context: Dict[str, Any]) -> bool:
@@ -62,6 +82,24 @@ class BT23_052(CardScript):
             return True
 
         effect2.set_can_use_condition(condition2)
+
+        def process2(ctx: Dict[str, Any]):
+            """Action: Gain Keyword Cannot Attack"""
+            player = ctx.get('player')
+            perm = ctx.get('permanent')
+            game = ctx.get('game')
+            if not (player and game):
+                return
+            def target_filter(p):
+                return p.is_digimon
+            def on_grant(target_perm):
+                grants = getattr(target_perm, '_keyword_grants', [])
+                grants.append('_is_cannot_attack')
+                target_perm._keyword_grants = grants
+            game.effect_select_own_permanent(
+                player, on_grant, filter_fn=target_filter, is_optional=False)
+
+        effect2.set_on_process_callback(process2)
         effects.append(effect2)
 
         # Timing: EffectTiming.WhenLinked
@@ -69,6 +107,8 @@ class BT23_052(CardScript):
         effect3 = ICardEffect()
         effect3.set_effect_name("BT23-052 Gain Reboot and Blocker")
         effect3.set_effect_description(" [When Linking] This Digimon gains <Reboot> and <Blocker> until your opponent's turn ends.")
+        effect3._is_blocker = True
+        effect3._is_reboot = True
 
         effect = effect3  # alias for condition closure
         def condition3(context: Dict[str, Any]) -> bool:
@@ -77,6 +117,18 @@ class BT23_052(CardScript):
             return True
 
         effect3.set_can_use_condition(condition3)
+
+        def process3(ctx: Dict[str, Any]):
+            """Action: Gain Keyword Blocker, Gain Keyword Reboot"""
+            player = ctx.get('player')
+            perm = ctx.get('permanent')
+            game = ctx.get('game')
+            # Keyword grant: blocker — flag set on effect object
+            pass
+            # Keyword grant: reboot — flag set on effect object
+            pass
+
+        effect3.set_on_process_callback(process3)
         effects.append(effect3)
 
         # Factory effect: security_play

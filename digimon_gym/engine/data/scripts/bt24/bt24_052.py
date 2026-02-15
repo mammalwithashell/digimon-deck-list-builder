@@ -31,10 +31,10 @@ class BT24_052(CardScript):
         effects.append(effect0)
 
         # Timing: EffectTiming.OnMove
-        # Effect
+        # Play Token
         effect1 = ICardEffect()
-        effect1.set_effect_name("BT24-052 Effect")
-        effect1.set_effect_description("Effect")
+        effect1.set_effect_name("BT24-052 Play Token")
+        effect1.set_effect_description("Play Token")
 
         effect = effect1  # alias for condition closure
         def condition1(context: Dict[str, Any]) -> bool:
@@ -43,13 +43,23 @@ class BT24_052(CardScript):
             return True
 
         effect1.set_can_use_condition(condition1)
+
+        def process1(ctx: Dict[str, Any]):
+            """Action: Play Token"""
+            player = ctx.get('player')
+            perm = ctx.get('permanent')
+            game = ctx.get('game')
+            # Play Diaboromon Token — token play not yet supported in engine
+            pass  # descriptive-tagged: play_token
+
+        effect1.set_on_process_callback(process1)
         effects.append(effect1)
 
         # Timing: EffectTiming.OnEnterFieldAnyone
-        # Effect
+        # Play Token
         effect2 = ICardEffect()
-        effect2.set_effect_name("BT24-052 Effect")
-        effect2.set_effect_description("Effect")
+        effect2.set_effect_name("BT24-052 Play Token")
+        effect2.set_effect_description("Play Token")
         effect2.is_when_digivolving = True
 
         effect = effect2  # alias for condition closure
@@ -60,6 +70,16 @@ class BT24_052(CardScript):
             return True
 
         effect2.set_can_use_condition(condition2)
+
+        def process2(ctx: Dict[str, Any]):
+            """Action: Play Token"""
+            player = ctx.get('player')
+            perm = ctx.get('permanent')
+            game = ctx.get('game')
+            # Play Diaboromon Token — token play not yet supported in engine
+            pass  # descriptive-tagged: play_token
+
+        effect2.set_on_process_callback(process2)
         effects.append(effect2)
 
         # Timing: EffectTiming.WhenRemoveField

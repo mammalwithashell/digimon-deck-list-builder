@@ -8,7 +8,7 @@ if TYPE_CHECKING:
 
 
 class BT23_078(CardScript):
-    """BT23-078"""
+    """BT23-078 Goro Matayoshi"""
 
     def get_card_effects(self, card: 'CardSource') -> List['ICardEffect']:
         effects = []
@@ -32,7 +32,6 @@ class BT23_078(CardScript):
         effect1.set_effect_description("[Your Turn] When your Digimon are played or digivolve, if any of them have [Avian], [Bird], [Beast], [Animal] or [Sovereign] in any of their traits (other than [Sea Animal]) or the [CS] trait, by returning this Tamer to the hand, 1 of your Digimon gets +3000 DP for the turn. Then, 1 of your Digimon may attack.")
         effect1.is_optional = True
         effect1.is_on_play = True
-        effect1.dp_modifier = 3000
 
         effect = effect1  # alias for condition closure
         def condition1(context: Dict[str, Any]) -> bool:
@@ -45,12 +44,14 @@ class BT23_078(CardScript):
         effect1.set_can_use_condition(condition1)
 
         def process1(ctx: Dict[str, Any]):
-            """Action: DP +3000"""
+            """Action: DP +3000, Force Attack"""
             player = ctx.get('player')
             perm = ctx.get('permanent')
             game = ctx.get('game')
             if perm:
                 perm.change_dp(3000)
+            # Force attack — target Digimon may attack (requires engine SelectAttack)
+            pass  # descriptive-tagged: force_attack
 
         effect1.set_on_process_callback(process1)
         effects.append(effect1)

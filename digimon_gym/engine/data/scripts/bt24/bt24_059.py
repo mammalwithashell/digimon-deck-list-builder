@@ -27,10 +27,10 @@ class BT24_059(CardScript):
         effects.append(effect0)
 
         # Timing: EffectTiming.OnEnterFieldAnyone
-        # Effect
+        # De Digivolve
         effect1 = ICardEffect()
-        effect1.set_effect_name("BT24-059 Effect")
-        effect1.set_effect_description("Effect")
+        effect1.set_effect_name("BT24-059 De Digivolve")
+        effect1.set_effect_description("De Digivolve")
         effect1.is_on_play = True
 
         effect = effect1  # alias for condition closure
@@ -41,13 +41,30 @@ class BT24_059(CardScript):
             return True
 
         effect1.set_can_use_condition(condition1)
+
+        def process1(ctx: Dict[str, Any]):
+            """Action: De Digivolve"""
+            player = ctx.get('player')
+            perm = ctx.get('permanent')
+            game = ctx.get('game')
+            if not (player and game):
+                return
+            def on_de_digivolve(target_perm):
+                removed = target_perm.de_digivolve(1)
+                enemy = player.enemy if player else None
+                if enemy:
+                    enemy.trash_cards.extend(removed)
+            game.effect_select_opponent_permanent(
+                player, on_de_digivolve, filter_fn=lambda p: p.is_digimon, is_optional=False)
+
+        effect1.set_on_process_callback(process1)
         effects.append(effect1)
 
         # Timing: EffectTiming.OnEnterFieldAnyone
-        # Effect
+        # De Digivolve
         effect2 = ICardEffect()
-        effect2.set_effect_name("BT24-059 Effect")
-        effect2.set_effect_description("Effect")
+        effect2.set_effect_name("BT24-059 De Digivolve")
+        effect2.set_effect_description("De Digivolve")
         effect2.is_when_digivolving = True
 
         effect = effect2  # alias for condition closure
@@ -58,6 +75,23 @@ class BT24_059(CardScript):
             return True
 
         effect2.set_can_use_condition(condition2)
+
+        def process2(ctx: Dict[str, Any]):
+            """Action: De Digivolve"""
+            player = ctx.get('player')
+            perm = ctx.get('permanent')
+            game = ctx.get('game')
+            if not (player and game):
+                return
+            def on_de_digivolve(target_perm):
+                removed = target_perm.de_digivolve(1)
+                enemy = player.enemy if player else None
+                if enemy:
+                    enemy.trash_cards.extend(removed)
+            game.effect_select_opponent_permanent(
+                player, on_de_digivolve, filter_fn=lambda p: p.is_digimon, is_optional=False)
+
+        effect2.set_on_process_callback(process2)
         effects.append(effect2)
 
         # Timing: EffectTiming.OnDestroyedAnyone

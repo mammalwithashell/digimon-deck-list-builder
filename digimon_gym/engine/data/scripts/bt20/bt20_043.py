@@ -92,7 +92,7 @@ class BT20_043(CardScript):
         effect3.set_can_use_condition(condition3)
 
         def process3(ctx: Dict[str, Any]):
-            """Action: DP +3000, Suspend"""
+            """Action: DP +3000, Suspend, Force Attack"""
             player = ctx.get('player')
             perm = ctx.get('permanent')
             game = ctx.get('game')
@@ -106,6 +106,8 @@ class BT20_043(CardScript):
                 target_perm.suspend()
             game.effect_select_opponent_permanent(
                 player, on_suspend, filter_fn=target_filter, is_optional=False)
+            # Force attack — target Digimon may attack (requires engine SelectAttack)
+            pass  # descriptive-tagged: force_attack
 
         effect3.set_on_process_callback(process3)
         effects.append(effect3)
@@ -127,7 +129,7 @@ class BT20_043(CardScript):
         effect4.set_can_use_condition(condition4)
 
         def process4(ctx: Dict[str, Any]):
-            """Action: DP +3000, Suspend"""
+            """Action: DP +3000, Suspend, Force Attack"""
             player = ctx.get('player')
             perm = ctx.get('permanent')
             game = ctx.get('game')
@@ -141,6 +143,8 @@ class BT20_043(CardScript):
                 target_perm.suspend()
             game.effect_select_opponent_permanent(
                 player, on_suspend, filter_fn=target_filter, is_optional=False)
+            # Force attack — target Digimon may attack (requires engine SelectAttack)
+            pass  # descriptive-tagged: force_attack
 
         effect4.set_on_process_callback(process4)
         effects.append(effect4)
@@ -163,7 +167,7 @@ class BT20_043(CardScript):
         effect5.set_can_use_condition(condition5)
 
         def process5(ctx: Dict[str, Any]):
-            """Action: Play Card, Trash From Hand"""
+            """Action: Play Card, Trash From Hand, Force Attack"""
             player = ctx.get('player')
             perm = ctx.get('permanent')
             game = ctx.get('game')
@@ -187,6 +191,8 @@ class BT20_043(CardScript):
                     player.trash_cards.append(selected)
             game.effect_select_hand_card(
                 player, hand_filter, on_trashed, is_optional=True)
+            # Force attack — target Digimon may attack (requires engine SelectAttack)
+            pass  # descriptive-tagged: force_attack
 
         effect5.set_on_process_callback(process5)
         effects.append(effect5)

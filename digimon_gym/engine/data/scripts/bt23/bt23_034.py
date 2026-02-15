@@ -8,7 +8,7 @@ if TYPE_CHECKING:
 
 
 class BT23_034(CardScript):
-    """BT23-034"""
+    """BT23-034 Sakuyamon | Lv.6"""
 
     def get_card_effects(self, card: 'CardSource') -> List['ICardEffect']:
         effects = []
@@ -89,6 +89,23 @@ class BT23_034(CardScript):
             return True
 
         effect3.set_can_use_condition(condition3)
+
+        def process3(ctx: Dict[str, Any]):
+            """Action: DP -6000, Disable Effect"""
+            player = ctx.get('player')
+            perm = ctx.get('permanent')
+            game = ctx.get('game')
+            # DP change targets opponent digimon
+            enemy = player.enemy if player else None
+            if enemy and enemy.battle_area:
+                dp_targets = [p for p in enemy.battle_area if p.is_digimon and p.dp is not None]
+                if dp_targets:
+                    target = min(dp_targets, key=lambda p: p.dp)
+                    target.change_dp(-6000)
+            # Disable/invalidate effects on target — not yet in engine
+            pass  # descriptive-tagged: disable_effect
+
+        effect3.set_on_process_callback(process3)
         effects.append(effect3)
 
         # Timing: EffectTiming.OnEnterFieldAnyone
@@ -107,6 +124,23 @@ class BT23_034(CardScript):
             return True
 
         effect4.set_can_use_condition(condition4)
+
+        def process4(ctx: Dict[str, Any]):
+            """Action: DP -6000, Disable Effect"""
+            player = ctx.get('player')
+            perm = ctx.get('permanent')
+            game = ctx.get('game')
+            # DP change targets opponent digimon
+            enemy = player.enemy if player else None
+            if enemy and enemy.battle_area:
+                dp_targets = [p for p in enemy.battle_area if p.is_digimon and p.dp is not None]
+                if dp_targets:
+                    target = min(dp_targets, key=lambda p: p.dp)
+                    target.change_dp(-6000)
+            # Disable/invalidate effects on target — not yet in engine
+            pass  # descriptive-tagged: disable_effect
+
+        effect4.set_on_process_callback(process4)
         effects.append(effect4)
 
         # Timing: EffectTiming.OnAllyAttack
@@ -125,6 +159,23 @@ class BT23_034(CardScript):
             return True
 
         effect5.set_can_use_condition(condition5)
+
+        def process5(ctx: Dict[str, Any]):
+            """Action: DP -6000, Disable Effect"""
+            player = ctx.get('player')
+            perm = ctx.get('permanent')
+            game = ctx.get('game')
+            # DP change targets opponent digimon
+            enemy = player.enemy if player else None
+            if enemy and enemy.battle_area:
+                dp_targets = [p for p in enemy.battle_area if p.is_digimon and p.dp is not None]
+                if dp_targets:
+                    target = min(dp_targets, key=lambda p: p.dp)
+                    target.change_dp(-6000)
+            # Disable/invalidate effects on target — not yet in engine
+            pass  # descriptive-tagged: disable_effect
+
+        effect5.set_on_process_callback(process5)
         effects.append(effect5)
 
         # Timing: EffectTiming.OnDestroyedAnyone

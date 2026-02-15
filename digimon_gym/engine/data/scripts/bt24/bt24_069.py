@@ -14,10 +14,10 @@ class BT24_069(CardScript):
         effects = []
 
         # Timing: EffectTiming.OnMove
-        # Effect
+        # Trash From Hand, Mill
         effect0 = ICardEffect()
-        effect0.set_effect_name("BT24-069 Effect")
-        effect0.set_effect_description("Effect")
+        effect0.set_effect_name("BT24-069 Trash From Hand, Mill")
+        effect0.set_effect_description("Trash From Hand, Mill")
 
         effect = effect0  # alias for condition closure
         def condition0(context: Dict[str, Any]) -> bool:
@@ -26,13 +26,38 @@ class BT24_069(CardScript):
             return True
 
         effect0.set_can_use_condition(condition0)
+
+        def process0(ctx: Dict[str, Any]):
+            """Action: Trash From Hand, Mill"""
+            player = ctx.get('player')
+            perm = ctx.get('permanent')
+            game = ctx.get('game')
+            if not (player and game):
+                return
+            def hand_filter(c):
+                return True
+            def on_trashed(selected):
+                if selected in player.hand_cards:
+                    player.hand_cards.remove(selected)
+                    player.trash_cards.append(selected)
+            game.effect_select_hand_card(
+                player, hand_filter, on_trashed, is_optional=False)
+            # Mill 2 cards from opponent's deck
+            enemy = player.enemy if player else None
+            if enemy and enemy.library_cards:
+                mill_count = min(2, len(enemy.library_cards))
+                trashed = enemy.library_cards[:mill_count]
+                enemy.library_cards = enemy.library_cards[mill_count:]
+                enemy.trash_cards.extend(trashed)
+
+        effect0.set_on_process_callback(process0)
         effects.append(effect0)
 
         # Timing: EffectTiming.OnEnterFieldAnyone
-        # Effect
+        # Trash From Hand, Mill
         effect1 = ICardEffect()
-        effect1.set_effect_name("BT24-069 Effect")
-        effect1.set_effect_description("Effect")
+        effect1.set_effect_name("BT24-069 Trash From Hand, Mill")
+        effect1.set_effect_description("Trash From Hand, Mill")
         effect1.is_when_digivolving = True
 
         effect = effect1  # alias for condition closure
@@ -43,6 +68,31 @@ class BT24_069(CardScript):
             return True
 
         effect1.set_can_use_condition(condition1)
+
+        def process1(ctx: Dict[str, Any]):
+            """Action: Trash From Hand, Mill"""
+            player = ctx.get('player')
+            perm = ctx.get('permanent')
+            game = ctx.get('game')
+            if not (player and game):
+                return
+            def hand_filter(c):
+                return True
+            def on_trashed(selected):
+                if selected in player.hand_cards:
+                    player.hand_cards.remove(selected)
+                    player.trash_cards.append(selected)
+            game.effect_select_hand_card(
+                player, hand_filter, on_trashed, is_optional=False)
+            # Mill 2 cards from opponent's deck
+            enemy = player.enemy if player else None
+            if enemy and enemy.library_cards:
+                mill_count = min(2, len(enemy.library_cards))
+                trashed = enemy.library_cards[:mill_count]
+                enemy.library_cards = enemy.library_cards[mill_count:]
+                enemy.trash_cards.extend(trashed)
+
+        effect1.set_on_process_callback(process1)
         effects.append(effect1)
 
         # Factory effect: blocker
@@ -87,6 +137,20 @@ class BT24_069(CardScript):
             return True
 
         effect4.set_can_use_condition(condition4)
+
+        def process4(ctx: Dict[str, Any]):
+            """Action: Mill"""
+            player = ctx.get('player')
+            perm = ctx.get('permanent')
+            game = ctx.get('game')
+            # Mill 1 cards from own deck
+            if player and player.library_cards:
+                mill_count = min(1, len(player.library_cards))
+                trashed = player.library_cards[:mill_count]
+                player.library_cards = player.library_cards[mill_count:]
+                player.trash_cards.extend(trashed)
+
+        effect4.set_on_process_callback(process4)
         effects.append(effect4)
 
         return effects

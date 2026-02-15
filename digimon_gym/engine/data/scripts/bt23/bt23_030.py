@@ -8,7 +8,7 @@ if TYPE_CHECKING:
 
 
 class BT23_030(CardScript):
-    """BT23-030"""
+    """BT23-030 Etemon | Lv.5"""
 
     def get_card_effects(self, card: 'CardSource') -> List['ICardEffect']:
         effects = []
@@ -45,6 +45,8 @@ class BT23_030(CardScript):
         effect2.set_effect_description("[Main] [Once Per Turn] By paying 1 cost, you may play 1 play cost 3 or lower card with [Chuumon] or [Sukamon] in its name or the [CS] trait from your hand without paying the cost. Then, 1 of your level 3 or higher Digimon gains <Reboot> and <Blocker> until your opponent's turn ends.")
         effect2.set_max_count_per_turn(1)
         effect2.set_hash_string("BT23_030_Main")
+        effect2._is_reboot = True
+        effect2._is_blocker = True
 
         effect = effect2  # alias for condition closure
         def condition2(context: Dict[str, Any]) -> bool:
@@ -57,7 +59,7 @@ class BT23_030(CardScript):
         effect2.set_can_use_condition(condition2)
 
         def process2(ctx: Dict[str, Any]):
-            """Action: Play Card, Trash From Hand"""
+            """Action: Play Card, Trash From Hand, Gain Keyword Reboot, Gain Keyword Blocker"""
             player = ctx.get('player')
             perm = ctx.get('permanent')
             game = ctx.get('game')
@@ -85,6 +87,10 @@ class BT23_030(CardScript):
                     player.trash_cards.append(selected)
             game.effect_select_hand_card(
                 player, hand_filter, on_trashed, is_optional=False)
+            # Keyword grant: reboot — flag set on effect object
+            pass
+            # Keyword grant: blocker — flag set on effect object
+            pass
 
         effect2.set_on_process_callback(process2)
         effects.append(effect2)

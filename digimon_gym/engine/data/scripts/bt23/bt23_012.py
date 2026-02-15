@@ -8,7 +8,7 @@ if TYPE_CHECKING:
 
 
 class BT23_012(CardScript):
-    """BT23-012"""
+    """BT23-012 Garudamon | Lv.5"""
 
     def get_card_effects(self, card: 'CardSource') -> List['ICardEffect']:
         effects = []
@@ -32,6 +32,7 @@ class BT23_012(CardScript):
         effect1.set_effect_name("BT23-012 Give 1 digimon Raid")
         effect1.set_effect_description("[On Play] 1 of your Digimon gains <Raid> for the turn.")
         effect1.is_on_play = True
+        effect1._is_raid = True
 
         effect = effect1  # alias for condition closure
         def condition1(context: Dict[str, Any]) -> bool:
@@ -41,6 +42,24 @@ class BT23_012(CardScript):
             return True
 
         effect1.set_can_use_condition(condition1)
+
+        def process1(ctx: Dict[str, Any]):
+            """Action: Gain Keyword Raid"""
+            player = ctx.get('player')
+            perm = ctx.get('permanent')
+            game = ctx.get('game')
+            if not (player and game):
+                return
+            def target_filter(p):
+                return p.is_digimon
+            def on_grant(target_perm):
+                grants = getattr(target_perm, '_keyword_grants', [])
+                grants.append('_is_raid')
+                target_perm._keyword_grants = grants
+            game.effect_select_own_permanent(
+                player, on_grant, filter_fn=target_filter, is_optional=False)
+
+        effect1.set_on_process_callback(process1)
         effects.append(effect1)
 
         # Timing: EffectTiming.OnEnterFieldAnyone
@@ -49,6 +68,7 @@ class BT23_012(CardScript):
         effect2.set_effect_name("BT23-012 Give 1 digimon Raid")
         effect2.set_effect_description("[When Digivolving] 1 of your Digimon gains <Raid> for the turn.")
         effect2.is_when_digivolving = True
+        effect2._is_raid = True
 
         effect = effect2  # alias for condition closure
         def condition2(context: Dict[str, Any]) -> bool:
@@ -58,6 +78,24 @@ class BT23_012(CardScript):
             return True
 
         effect2.set_can_use_condition(condition2)
+
+        def process2(ctx: Dict[str, Any]):
+            """Action: Gain Keyword Raid"""
+            player = ctx.get('player')
+            perm = ctx.get('permanent')
+            game = ctx.get('game')
+            if not (player and game):
+                return
+            def target_filter(p):
+                return p.is_digimon
+            def on_grant(target_perm):
+                grants = getattr(target_perm, '_keyword_grants', [])
+                grants.append('_is_raid')
+                target_perm._keyword_grants = grants
+            game.effect_select_own_permanent(
+                player, on_grant, filter_fn=target_filter, is_optional=False)
+
+        effect2.set_on_process_callback(process2)
         effects.append(effect2)
 
         # Timing: EffectTiming.OnDestroyedAnyone
@@ -73,6 +111,30 @@ class BT23_012(CardScript):
             return True
 
         effect3.set_can_use_condition(condition3)
+
+        def process3(ctx: Dict[str, Any]):
+            """Action: Play Card, Trash From Hand"""
+            player = ctx.get('player')
+            perm = ctx.get('permanent')
+            game = ctx.get('game')
+            if not (player and game):
+                return
+            def play_filter(c):
+                return True
+            game.effect_play_from_zone(
+                player, 'hand', play_filter, free=True, is_optional=True)
+            if not (player and game):
+                return
+            def hand_filter(c):
+                return True
+            def on_trashed(selected):
+                if selected in player.hand_cards:
+                    player.hand_cards.remove(selected)
+                    player.trash_cards.append(selected)
+            game.effect_select_hand_card(
+                player, hand_filter, on_trashed, is_optional=False)
+
+        effect3.set_on_process_callback(process3)
         effects.append(effect3)
 
         # Timing: EffectTiming.OnDestroyedAnyone
@@ -89,6 +151,30 @@ class BT23_012(CardScript):
             return True
 
         effect4.set_can_use_condition(condition4)
+
+        def process4(ctx: Dict[str, Any]):
+            """Action: Play Card, Trash From Hand"""
+            player = ctx.get('player')
+            perm = ctx.get('permanent')
+            game = ctx.get('game')
+            if not (player and game):
+                return
+            def play_filter(c):
+                return True
+            game.effect_play_from_zone(
+                player, 'hand', play_filter, free=True, is_optional=True)
+            if not (player and game):
+                return
+            def hand_filter(c):
+                return True
+            def on_trashed(selected):
+                if selected in player.hand_cards:
+                    player.hand_cards.remove(selected)
+                    player.trash_cards.append(selected)
+            game.effect_select_hand_card(
+                player, hand_filter, on_trashed, is_optional=False)
+
+        effect4.set_on_process_callback(process4)
         effects.append(effect4)
 
         return effects

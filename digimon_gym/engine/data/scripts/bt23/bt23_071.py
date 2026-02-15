@@ -8,7 +8,7 @@ if TYPE_CHECKING:
 
 
 class BT23_071(CardScript):
-    """BT23-071"""
+    """BT23-071 Dullahamon | Lv.7"""
 
     def get_card_effects(self, card: 'CardSource') -> List['ICardEffect']:
         effects = []
@@ -30,36 +30,48 @@ class BT23_071(CardScript):
         effect0.set_can_use_condition(condition0)
         effects.append(effect0)
 
-        # Factory effect: security_attack_plus
-        # Security Attack +1
+        # Factory effect: execute
+        # Execute
         effect1 = ICardEffect()
-        effect1.set_effect_name("BT23-071 Security Attack +1")
-        effect1.set_effect_description("Security Attack +1")
-        effect1._security_attack_modifier = 1
+        effect1.set_effect_name("BT23-071 Execute")
+        effect1.set_effect_description("Execute")
+        effect1._is_execute = True
 
         def condition1(context: Dict[str, Any]) -> bool:
             return True
         effect1.set_can_use_condition(condition1)
         effects.append(effect1)
 
+        # Factory effect: security_attack_plus
+        # Security Attack +1
+        effect2 = ICardEffect()
+        effect2.set_effect_name("BT23-071 Security Attack +1")
+        effect2.set_effect_description("Security Attack +1")
+        effect2._security_attack_modifier = 1
+
+        def condition2(context: Dict[str, Any]) -> bool:
+            return True
+        effect2.set_can_use_condition(condition2)
+        effects.append(effect2)
+
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [When Digivolving] Delete 1 of your opponent's Digimon with the highest level. If this effect didn't delete, this Digimon gets +5000 DP for the turn.
-        effect2 = ICardEffect()
-        effect2.set_effect_name("BT23-071 Delete 1 opponent Digimon with highest level. If not delete, +5000 DP for the turn.")
-        effect2.set_effect_description("[When Digivolving] Delete 1 of your opponent's Digimon with the highest level. If this effect didn't delete, this Digimon gets +5000 DP for the turn.")
-        effect2.is_when_digivolving = True
-        effect2.dp_modifier = 5000
+        effect3 = ICardEffect()
+        effect3.set_effect_name("BT23-071 Delete 1 opponent Digimon with highest level. If not delete, +5000 DP for the turn.")
+        effect3.set_effect_description("[When Digivolving] Delete 1 of your opponent's Digimon with the highest level. If this effect didn't delete, this Digimon gets +5000 DP for the turn.")
+        effect3.is_when_digivolving = True
+        effect3.dp_modifier = 5000
 
-        effect = effect2  # alias for condition closure
-        def condition2(context: Dict[str, Any]) -> bool:
+        effect = effect3  # alias for condition closure
+        def condition3(context: Dict[str, Any]) -> bool:
             if card and card.permanent_of_this_card() is None:
                 return False
             # Triggered when digivolving — validated by engine timing
             return True
 
-        effect2.set_can_use_condition(condition2)
+        effect3.set_can_use_condition(condition3)
 
-        def process2(ctx: Dict[str, Any]):
+        def process3(ctx: Dict[str, Any]):
             """Action: DP +5000"""
             player = ctx.get('player')
             perm = ctx.get('permanent')
@@ -67,24 +79,24 @@ class BT23_071(CardScript):
             if perm:
                 perm.change_dp(5000)
 
-        effect2.set_on_process_callback(process2)
-        effects.append(effect2)
+        effect3.set_on_process_callback(process3)
+        effects.append(effect3)
 
         # Timing: EffectTiming.OnDestroyedAnyone
         # [On Deletion] You may play 1 level 6 or lower Digimon card with the [Ghost] trait from your trash without paying the cost.
-        effect3 = ICardEffect()
-        effect3.set_effect_name("BT23-071 You may play 1 level 6 or lower Ghost Digimon")
-        effect3.set_effect_description("[On Deletion] You may play 1 level 6 or lower Digimon card with the [Ghost] trait from your trash without paying the cost.")
-        effect3.is_on_deletion = True
+        effect4 = ICardEffect()
+        effect4.set_effect_name("BT23-071 You may play 1 level 6 or lower Ghost Digimon")
+        effect4.set_effect_description("[On Deletion] You may play 1 level 6 or lower Digimon card with the [Ghost] trait from your trash without paying the cost.")
+        effect4.is_on_deletion = True
 
-        effect = effect3  # alias for condition closure
-        def condition3(context: Dict[str, Any]) -> bool:
+        effect = effect4  # alias for condition closure
+        def condition4(context: Dict[str, Any]) -> bool:
             # Triggered on deletion — validated by engine timing
             return True
 
-        effect3.set_can_use_condition(condition3)
+        effect4.set_can_use_condition(condition4)
 
-        def process3(ctx: Dict[str, Any]):
+        def process4(ctx: Dict[str, Any]):
             """Action: Play Card"""
             player = ctx.get('player')
             perm = ctx.get('permanent')
@@ -98,7 +110,7 @@ class BT23_071(CardScript):
             game.effect_play_from_zone(
                 player, 'hand', play_filter, free=True, is_optional=True)
 
-        effect3.set_on_process_callback(process3)
-        effects.append(effect3)
+        effect4.set_on_process_callback(process4)
+        effects.append(effect4)
 
         return effects

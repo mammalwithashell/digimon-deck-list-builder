@@ -51,6 +51,7 @@ class BT14_023(CardScript):
         effect1.set_max_count_per_turn(1)
         effect1.set_hash_string("CantAtatck_BT14_023")
         effect1.is_on_attack = True
+        effect1._is_cannot_attack = True
 
         effect = effect1  # alias for condition closure
         def condition1(context: Dict[str, Any]) -> bool:
@@ -60,6 +61,24 @@ class BT14_023(CardScript):
             return True
 
         effect1.set_can_use_condition(condition1)
+
+        def process1(ctx: Dict[str, Any]):
+            """Action: Gain Keyword Cannot Attack"""
+            player = ctx.get('player')
+            perm = ctx.get('permanent')
+            game = ctx.get('game')
+            if not (player and game):
+                return
+            def target_filter(p):
+                return p.is_digimon
+            def on_grant(target_perm):
+                grants = getattr(target_perm, '_keyword_grants', [])
+                grants.append('_is_cannot_attack')
+                target_perm._keyword_grants = grants
+            game.effect_select_own_permanent(
+                player, on_grant, filter_fn=target_filter, is_optional=False)
+
+        effect1.set_on_process_callback(process1)
         effects.append(effect1)
 
         # Timing: EffectTiming.OnAllyAttack
@@ -71,6 +90,7 @@ class BT14_023(CardScript):
         effect2.set_max_count_per_turn(1)
         effect2.set_hash_string("CantAtatck_BT14_023_inherited")
         effect2.is_on_attack = True
+        effect2._is_cannot_attack = True
 
         effect = effect2  # alias for condition closure
         def condition2(context: Dict[str, Any]) -> bool:
@@ -80,6 +100,24 @@ class BT14_023(CardScript):
             return True
 
         effect2.set_can_use_condition(condition2)
+
+        def process2(ctx: Dict[str, Any]):
+            """Action: Gain Keyword Cannot Attack"""
+            player = ctx.get('player')
+            perm = ctx.get('permanent')
+            game = ctx.get('game')
+            if not (player and game):
+                return
+            def target_filter(p):
+                return p.is_digimon
+            def on_grant(target_perm):
+                grants = getattr(target_perm, '_keyword_grants', [])
+                grants.append('_is_cannot_attack')
+                target_perm._keyword_grants = grants
+            game.effect_select_own_permanent(
+                player, on_grant, filter_fn=target_filter, is_optional=False)
+
+        effect2.set_on_process_callback(process2)
         effects.append(effect2)
 
         return effects

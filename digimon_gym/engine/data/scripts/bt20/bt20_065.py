@@ -53,13 +53,23 @@ class BT20_065(CardScript):
         effect1 = ICardEffect()
         effect1.set_effect_name("BT20-065 Memory -1")
         effect1.set_effect_description("[On Deletion] Lose 1 memory.")
-        effect1.is_on_deletion = True
+        effect1.is_on_play = True
 
         effect = effect1  # alias for condition closure
         def condition1(context: Dict[str, Any]) -> bool:
             return True
 
         effect1.set_can_use_condition(condition1)
+
+        def process1(ctx: Dict[str, Any]):
+            """Action: Add Temp Effect"""
+            player = ctx.get('player')
+            perm = ctx.get('permanent')
+            game = ctx.get('game')
+            # Grant temporary effect to target permanent
+            pass  # descriptive-tagged: add_temp_effect
+
+        effect1.set_on_process_callback(process1)
         effects.append(effect1)
 
         # Factory effect: retaliation

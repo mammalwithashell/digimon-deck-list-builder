@@ -26,10 +26,10 @@ class BT24_073(CardScript):
         effects.append(effect0)
 
         # Timing: EffectTiming.OnEnterFieldAnyone
-        # Effect
+        # Play Card, Mill
         effect1 = ICardEffect()
-        effect1.set_effect_name("BT24-073 Effect")
-        effect1.set_effect_description("Effect")
+        effect1.set_effect_name("BT24-073 Play Card, Mill")
+        effect1.set_effect_description("Play Card, Mill")
         effect1.is_when_digivolving = True
 
         effect = effect1  # alias for condition closure
@@ -40,13 +40,35 @@ class BT24_073(CardScript):
             return True
 
         effect1.set_can_use_condition(condition1)
+
+        def process1(ctx: Dict[str, Any]):
+            """Action: Play Card, Mill"""
+            player = ctx.get('player')
+            perm = ctx.get('permanent')
+            game = ctx.get('game')
+            if not (player and game):
+                return
+            def play_filter(c):
+                if getattr(c, 'level', None) is None or c.level > 4:
+                    return False
+                return True
+            game.effect_play_from_zone(
+                player, 'trash', play_filter, free=True, is_optional=True)
+            # Mill 3 cards from own deck
+            if player and player.library_cards:
+                mill_count = min(3, len(player.library_cards))
+                trashed = player.library_cards[:mill_count]
+                player.library_cards = player.library_cards[mill_count:]
+                player.trash_cards.extend(trashed)
+
+        effect1.set_on_process_callback(process1)
         effects.append(effect1)
 
         # Timing: EffectTiming.OnDestroyedAnyone
-        # Effect
+        # Play Card, Mill
         effect2 = ICardEffect()
-        effect2.set_effect_name("BT24-073 Effect")
-        effect2.set_effect_description("Effect")
+        effect2.set_effect_name("BT24-073 Play Card, Mill")
+        effect2.set_effect_description("Play Card, Mill")
         effect2.is_on_deletion = True
 
         effect = effect2  # alias for condition closure
@@ -55,6 +77,28 @@ class BT24_073(CardScript):
             return True
 
         effect2.set_can_use_condition(condition2)
+
+        def process2(ctx: Dict[str, Any]):
+            """Action: Play Card, Mill"""
+            player = ctx.get('player')
+            perm = ctx.get('permanent')
+            game = ctx.get('game')
+            if not (player and game):
+                return
+            def play_filter(c):
+                if getattr(c, 'level', None) is None or c.level > 4:
+                    return False
+                return True
+            game.effect_play_from_zone(
+                player, 'trash', play_filter, free=True, is_optional=True)
+            # Mill 3 cards from own deck
+            if player and player.library_cards:
+                mill_count = min(3, len(player.library_cards))
+                trashed = player.library_cards[:mill_count]
+                player.library_cards = player.library_cards[mill_count:]
+                player.trash_cards.extend(trashed)
+
+        effect2.set_on_process_callback(process2)
         effects.append(effect2)
 
         # Timing: EffectTiming.OnAllyAttack
@@ -75,6 +119,20 @@ class BT24_073(CardScript):
             return True
 
         effect3.set_can_use_condition(condition3)
+
+        def process3(ctx: Dict[str, Any]):
+            """Action: Mill"""
+            player = ctx.get('player')
+            perm = ctx.get('permanent')
+            game = ctx.get('game')
+            # Mill 2 cards from own deck
+            if player and player.library_cards:
+                mill_count = min(2, len(player.library_cards))
+                trashed = player.library_cards[:mill_count]
+                player.library_cards = player.library_cards[mill_count:]
+                player.trash_cards.extend(trashed)
+
+        effect3.set_on_process_callback(process3)
         effects.append(effect3)
 
         return effects

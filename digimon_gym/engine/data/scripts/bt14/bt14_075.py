@@ -28,6 +28,20 @@ class BT14_075(CardScript):
             return True
 
         effect0.set_can_use_condition(condition0)
+
+        def process0(ctx: Dict[str, Any]):
+            """Action: Mill"""
+            player = ctx.get('player')
+            perm = ctx.get('permanent')
+            game = ctx.get('game')
+            # Mill 3 cards from own deck
+            if player and player.library_cards:
+                mill_count = min(3, len(player.library_cards))
+                trashed = player.library_cards[:mill_count]
+                player.library_cards = player.library_cards[mill_count:]
+                player.trash_cards.extend(trashed)
+
+        effect0.set_on_process_callback(process0)
         effects.append(effect0)
 
         # Timing: EffectTiming.OnAllyAttack
@@ -45,6 +59,20 @@ class BT14_075(CardScript):
             return True
 
         effect1.set_can_use_condition(condition1)
+
+        def process1(ctx: Dict[str, Any]):
+            """Action: Mill"""
+            player = ctx.get('player')
+            perm = ctx.get('permanent')
+            game = ctx.get('game')
+            # Mill 3 cards from own deck
+            if player and player.library_cards:
+                mill_count = min(3, len(player.library_cards))
+                trashed = player.library_cards[:mill_count]
+                player.library_cards = player.library_cards[mill_count:]
+                player.trash_cards.extend(trashed)
+
+        effect1.set_on_process_callback(process1)
         effects.append(effect1)
 
         # Factory effect: dp_modifier

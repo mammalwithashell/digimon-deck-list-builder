@@ -36,6 +36,8 @@ class BT20_069(CardScript):
         effect1.set_effect_name("BT20-069 Trash 1 card then, activate effects.")
         effect1.set_effect_description("[On Play] Trash 1 card in your hand. Then, until the end of your opponent's turn, 1 of your Digimon gains <Blocker> and <Retaliation>.")
         effect1.is_on_play = True
+        effect1._is_blocker = True
+        effect1._is_retaliation = True
 
         effect = effect1  # alias for condition closure
         def condition1(context: Dict[str, Any]) -> bool:
@@ -47,7 +49,7 @@ class BT20_069(CardScript):
         effect1.set_can_use_condition(condition1)
 
         def process1(ctx: Dict[str, Any]):
-            """Action: Trash From Hand"""
+            """Action: Trash From Hand, Gain Keyword Blocker, Gain Keyword Retaliation"""
             player = ctx.get('player')
             perm = ctx.get('permanent')
             game = ctx.get('game')
@@ -61,6 +63,10 @@ class BT20_069(CardScript):
                     player.trash_cards.append(selected)
             game.effect_select_hand_card(
                 player, hand_filter, on_trashed, is_optional=False)
+            # Keyword grant: blocker — flag set on effect object
+            pass
+            # Keyword grant: retaliation — flag set on effect object
+            pass
 
         effect1.set_on_process_callback(process1)
         effects.append(effect1)
@@ -71,6 +77,8 @@ class BT20_069(CardScript):
         effect2.set_effect_name("BT20-069 Trash 1 card then, activate effects.")
         effect2.set_effect_description("[When Digivolving] Trash 1 card in your hand. Then, until the end of your opponent's turn, 1 of your Digimon gains <Blocker> and <Retaliation>.")
         effect2.is_when_digivolving = True
+        effect2._is_blocker = True
+        effect2._is_retaliation = True
 
         effect = effect2  # alias for condition closure
         def condition2(context: Dict[str, Any]) -> bool:
@@ -82,7 +90,7 @@ class BT20_069(CardScript):
         effect2.set_can_use_condition(condition2)
 
         def process2(ctx: Dict[str, Any]):
-            """Action: Trash From Hand"""
+            """Action: Trash From Hand, Gain Keyword Blocker, Gain Keyword Retaliation"""
             player = ctx.get('player')
             perm = ctx.get('permanent')
             game = ctx.get('game')
@@ -96,6 +104,10 @@ class BT20_069(CardScript):
                     player.trash_cards.append(selected)
             game.effect_select_hand_card(
                 player, hand_filter, on_trashed, is_optional=False)
+            # Keyword grant: blocker — flag set on effect object
+            pass
+            # Keyword grant: retaliation — flag set on effect object
+            pass
 
         effect2.set_on_process_callback(process2)
         effects.append(effect2)

@@ -36,7 +36,7 @@ class BT20_034(CardScript):
         # Timing: EffectTiming.OnAddDigivolutionCards
         # [All Turns] When Tamer cards are placed in this Digimon's digivolution cards, 1 of your opponent's Digimon can't activate [When Digivolving] effects until the end of their turn.
         effect1 = ICardEffect()
-        effect1.set_effect_name("BT20-034 1 of your opponent's Digimon can't activate [When Digivolving] effects")
+        effect1.set_effect_name("BT20-034 1 of your opponet's Digimon can't activate [When Digivolving] effects")
         effect1.set_effect_description("[All Turns] When Tamer cards are placed in this Digimon's digivolution cards, 1 of your opponent's Digimon can't activate [When Digivolving] effects until the end of their turn.")
 
         effect = effect1  # alias for condition closure
@@ -46,6 +46,16 @@ class BT20_034(CardScript):
             return True
 
         effect1.set_can_use_condition(condition1)
+
+        def process1(ctx: Dict[str, Any]):
+            """Action: Disable Effect"""
+            player = ctx.get('player')
+            perm = ctx.get('permanent')
+            game = ctx.get('game')
+            # Disable/invalidate effects on target — not yet in engine
+            pass  # descriptive-tagged: disable_effect
+
+        effect1.set_on_process_callback(process1)
         effects.append(effect1)
 
         # Timing: EffectTiming.OnEndBattle

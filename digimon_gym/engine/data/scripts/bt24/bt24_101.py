@@ -40,10 +40,10 @@ class BT24_101(CardScript):
         effects.append(effect1)
 
         # Timing: EffectTiming.OnEnterFieldAnyone
-        # Effect
+        # DP -13000, Recovery +2, Destroy Security
         effect2 = ICardEffect()
-        effect2.set_effect_name("BT24-101 Effect")
-        effect2.set_effect_description("Effect")
+        effect2.set_effect_name("BT24-101 DP -13000, Recovery +2, Destroy Security")
+        effect2.set_effect_description("DP -13000, Recovery +2, Destroy Security")
         effect2.is_on_play = True
 
         effect = effect2  # alias for condition closure
@@ -54,13 +54,37 @@ class BT24_101(CardScript):
             return True
 
         effect2.set_can_use_condition(condition2)
+
+        def process2(ctx: Dict[str, Any]):
+            """Action: DP -13000, Recovery +2, Destroy Security"""
+            player = ctx.get('player')
+            perm = ctx.get('permanent')
+            game = ctx.get('game')
+            # DP change targets opponent digimon
+            enemy = player.enemy if player else None
+            if enemy and enemy.battle_area:
+                dp_targets = [p for p in enemy.battle_area if p.is_digimon and p.dp is not None]
+                if dp_targets:
+                    target = min(dp_targets, key=lambda p: p.dp)
+                    target.change_dp(-13000)
+            if player:
+                player.recovery(2)
+            # Trash opponent's top security card(s)
+            enemy = player.enemy if player else None
+            if enemy:
+                for _ in range(1):
+                    if enemy.security_cards:
+                        trashed = enemy.security_cards.pop()
+                        enemy.trash_cards.append(trashed)
+
+        effect2.set_on_process_callback(process2)
         effects.append(effect2)
 
         # Timing: EffectTiming.OnEnterFieldAnyone
-        # Effect
+        # DP -13000, Recovery +2, Destroy Security
         effect3 = ICardEffect()
-        effect3.set_effect_name("BT24-101 Effect")
-        effect3.set_effect_description("Effect")
+        effect3.set_effect_name("BT24-101 DP -13000, Recovery +2, Destroy Security")
+        effect3.set_effect_description("DP -13000, Recovery +2, Destroy Security")
         effect3.is_when_digivolving = True
 
         effect = effect3  # alias for condition closure
@@ -71,6 +95,30 @@ class BT24_101(CardScript):
             return True
 
         effect3.set_can_use_condition(condition3)
+
+        def process3(ctx: Dict[str, Any]):
+            """Action: DP -13000, Recovery +2, Destroy Security"""
+            player = ctx.get('player')
+            perm = ctx.get('permanent')
+            game = ctx.get('game')
+            # DP change targets opponent digimon
+            enemy = player.enemy if player else None
+            if enemy and enemy.battle_area:
+                dp_targets = [p for p in enemy.battle_area if p.is_digimon and p.dp is not None]
+                if dp_targets:
+                    target = min(dp_targets, key=lambda p: p.dp)
+                    target.change_dp(-13000)
+            if player:
+                player.recovery(2)
+            # Trash opponent's top security card(s)
+            enemy = player.enemy if player else None
+            if enemy:
+                for _ in range(1):
+                    if enemy.security_cards:
+                        trashed = enemy.security_cards.pop()
+                        enemy.trash_cards.append(trashed)
+
+        effect3.set_on_process_callback(process3)
         effects.append(effect3)
 
         # Timing: EffectTiming.OnLoseSecurity

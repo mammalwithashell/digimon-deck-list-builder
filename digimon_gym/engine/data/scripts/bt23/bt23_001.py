@@ -29,6 +29,16 @@ class BT23_001(CardScript):
             return True
 
         effect0.set_can_use_condition(condition0)
+
+        def process0(ctx: Dict[str, Any]):
+            """Action: Draw 1"""
+            player = ctx.get('player')
+            perm = ctx.get('permanent')
+            game = ctx.get('game')
+            if player:
+                player.draw_cards(1)
+
+        effect0.set_on_process_callback(process0)
         effects.append(effect0)
 
         return effects

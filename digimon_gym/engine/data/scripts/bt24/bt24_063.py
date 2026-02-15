@@ -27,10 +27,10 @@ class BT24_063(CardScript):
         effects.append(effect0)
 
         # Timing: EffectTiming.OnEnterFieldAnyone
-        # Effect
+        # Play Card, Reveal And Select
         effect1 = ICardEffect()
-        effect1.set_effect_name("BT24-063 Effect")
-        effect1.set_effect_description("Effect")
+        effect1.set_effect_name("BT24-063 Play Card, Reveal And Select")
+        effect1.set_effect_description("Play Card, Reveal And Select")
         effect1.is_on_play = True
 
         effect = effect1  # alias for condition closure
@@ -41,13 +41,37 @@ class BT24_063(CardScript):
             return True
 
         effect1.set_can_use_condition(condition1)
+
+        def process1(ctx: Dict[str, Any]):
+            """Action: Play Card, Reveal And Select"""
+            player = ctx.get('player')
+            perm = ctx.get('permanent')
+            game = ctx.get('game')
+            if not (player and game):
+                return
+            def play_filter(c):
+                return True
+            game.effect_play_from_zone(
+                player, 'hand', play_filter, free=True, is_optional=True)
+            if not (player and game):
+                return
+            def reveal_filter(c):
+                return True
+            def on_revealed(selected, remaining):
+                player.hand_cards.append(selected)
+                for c in remaining:
+                    player.library_cards.append(c)
+            game.effect_reveal_and_select(
+                player, 3, reveal_filter, on_revealed, is_optional=True)
+
+        effect1.set_on_process_callback(process1)
         effects.append(effect1)
 
         # Timing: EffectTiming.OnEnterFieldAnyone
-        # Effect
+        # Play Card, Reveal And Select
         effect2 = ICardEffect()
-        effect2.set_effect_name("BT24-063 Effect")
-        effect2.set_effect_description("Effect")
+        effect2.set_effect_name("BT24-063 Play Card, Reveal And Select")
+        effect2.set_effect_description("Play Card, Reveal And Select")
         effect2.is_when_digivolving = True
 
         effect = effect2  # alias for condition closure
@@ -58,6 +82,30 @@ class BT24_063(CardScript):
             return True
 
         effect2.set_can_use_condition(condition2)
+
+        def process2(ctx: Dict[str, Any]):
+            """Action: Play Card, Reveal And Select"""
+            player = ctx.get('player')
+            perm = ctx.get('permanent')
+            game = ctx.get('game')
+            if not (player and game):
+                return
+            def play_filter(c):
+                return True
+            game.effect_play_from_zone(
+                player, 'hand', play_filter, free=True, is_optional=True)
+            if not (player and game):
+                return
+            def reveal_filter(c):
+                return True
+            def on_revealed(selected, remaining):
+                player.hand_cards.append(selected)
+                for c in remaining:
+                    player.library_cards.append(c)
+            game.effect_reveal_and_select(
+                player, 3, reveal_filter, on_revealed, is_optional=True)
+
+        effect2.set_on_process_callback(process2)
         effects.append(effect2)
 
         return effects

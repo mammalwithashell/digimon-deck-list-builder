@@ -8,7 +8,7 @@ if TYPE_CHECKING:
 
 
 class BT23_046(CardScript):
-    """BT23-046"""
+    """BT23-046 Rosemon | Lv.6"""
 
     def get_card_effects(self, card: 'CardSource') -> List['ICardEffect']:
         effects = []
@@ -27,11 +27,12 @@ class BT23_046(CardScript):
         effects.append(effect0)
 
         # Timing: EffectTiming.OnEnterFieldAnyone
-        # Effect
+        # Suspend, Gain Keyword Cannot Unsuspend
         effect1 = ICardEffect()
         effect1.set_effect_name("BT23-046 By suspending 1 digimon/tamer, 1 can't unsuspend")
-        effect1.set_effect_description("Effect")
+        effect1.set_effect_description("Suspend, Gain Keyword Cannot Unsuspend")
         effect1.is_on_play = True
+        effect1._is_cannot_unsuspend = True
 
         effect = effect1  # alias for condition closure
         def condition1(context: Dict[str, Any]) -> bool:
@@ -41,14 +42,33 @@ class BT23_046(CardScript):
             return True
 
         effect1.set_can_use_condition(condition1)
+
+        def process1(ctx: Dict[str, Any]):
+            """Action: Suspend, Gain Keyword Cannot Unsuspend"""
+            player = ctx.get('player')
+            perm = ctx.get('permanent')
+            game = ctx.get('game')
+            if not (player and game):
+                return
+            def target_filter(p):
+                return True
+            def on_suspend(target_perm):
+                target_perm.suspend()
+            game.effect_select_opponent_permanent(
+                player, on_suspend, filter_fn=target_filter, is_optional=False)
+            # Keyword grant: cannot_unsuspend — flag set on effect object
+            pass
+
+        effect1.set_on_process_callback(process1)
         effects.append(effect1)
 
         # Timing: EffectTiming.OnEnterFieldAnyone
-        # Effect
+        # Suspend, Gain Keyword Cannot Unsuspend
         effect2 = ICardEffect()
         effect2.set_effect_name("BT23-046 By suspending 1 digimon/tamer, 1 can't unsuspend")
-        effect2.set_effect_description("Effect")
+        effect2.set_effect_description("Suspend, Gain Keyword Cannot Unsuspend")
         effect2.is_when_digivolving = True
+        effect2._is_cannot_unsuspend = True
 
         effect = effect2  # alias for condition closure
         def condition2(context: Dict[str, Any]) -> bool:
@@ -58,6 +78,24 @@ class BT23_046(CardScript):
             return True
 
         effect2.set_can_use_condition(condition2)
+
+        def process2(ctx: Dict[str, Any]):
+            """Action: Suspend, Gain Keyword Cannot Unsuspend"""
+            player = ctx.get('player')
+            perm = ctx.get('permanent')
+            game = ctx.get('game')
+            if not (player and game):
+                return
+            def target_filter(p):
+                return True
+            def on_suspend(target_perm):
+                target_perm.suspend()
+            game.effect_select_opponent_permanent(
+                player, on_suspend, filter_fn=target_filter, is_optional=False)
+            # Keyword grant: cannot_unsuspend — flag set on effect object
+            pass
+
+        effect2.set_on_process_callback(process2)
         effects.append(effect2)
 
         # Timing: EffectTiming.OnAllyAttack

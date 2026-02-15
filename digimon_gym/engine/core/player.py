@@ -136,10 +136,13 @@ class Player:
 
     def unsuspend_all(self, skip_reboot: bool = False):
         """Unsuspend all permanents. If skip_reboot=True, skip those with <Reboot>
-        (they unsuspend during the opponent's unsuspend phase instead)."""
+        (they unsuspend during the opponent's unsuspend phase instead).
+        Permanents with <cannot unsuspend> are skipped."""
         for perm in self.battle_area:
             if skip_reboot and perm.has_keyword('_is_reboot'):
                 continue  # <Reboot> permanents unsuspend on opponent's turn
+            if perm.has_keyword('_is_cannot_unsuspend'):
+                continue  # Restriction: cannot unsuspend
             perm.unsuspend()
         if self.breeding_area:
             self.breeding_area.is_suspended = False
@@ -446,6 +449,32 @@ class Player:
             new_permanent._owner_game = self.game
         self.battle_area.append(new_permanent)
         return new_permanent
+
+    def put_permanent_to_security(self, permanent: 'Permanent'):
+        """Move a permanent from the battle area to the security stack.
+        The top card goes to security; digivolution cards under it go to trash."""
+        if permanent not in self.battle_area:
+            return
+        self.battle_area.remove(permanent)
+        if permanent.top_card:
+            self.security_cards.append(permanent.top_card)
+            self._log(f"{permanent.top_card.card_names[0]} placed into security.")
+        # Digivolution cards under top go to trash
+        under_cards = permanent.card_sources[:-1]
+        self._apply_ace_overflow(under_cards)
+        self.trash_cards.extend(under_cards)
+
+    def return_permanent_to_deck_bottom(self, permanent: 'Permanent'):
+        """Return a permanent to the bottom of its owner's deck.
+        Top card goes to deck bottom; digivolution cards under go to trash."""
+        owner = self._find_permanent_owner(permanent)
+        if owner and permanent in owner.battle_area:
+            owner.battle_area.remove(permanent)
+            if permanent.top_card:
+                owner.library_cards.append(permanent.top_card)
+            under_cards = permanent.card_sources[:-1]
+            self._apply_ace_overflow(under_cards)
+            owner.trash_cards.extend(under_cards)
 
     def get_battle_area_digimons(self) -> List['Permanent']:
         """Get all Digimon permanents in battle area."""

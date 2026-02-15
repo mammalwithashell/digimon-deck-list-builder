@@ -19,6 +19,7 @@ class BT20_067(CardScript):
         effect0.set_effect_name("BT20-067 Your 1 Digimon gains <Retaliation>")
         effect0.set_effect_description("[On Play] 1 of your Digimon gains <Retaliation> (When this Digimon is deleted after losing a battle, delete the Digimon it was battling), until the end of your opponent's turn.")
         effect0.is_on_play = True
+        effect0._is_retaliation = True
 
         effect = effect0  # alias for condition closure
         def condition0(context: Dict[str, Any]) -> bool:
@@ -28,6 +29,24 @@ class BT20_067(CardScript):
             return True
 
         effect0.set_can_use_condition(condition0)
+
+        def process0(ctx: Dict[str, Any]):
+            """Action: Gain Keyword Retaliation"""
+            player = ctx.get('player')
+            perm = ctx.get('permanent')
+            game = ctx.get('game')
+            if not (player and game):
+                return
+            def target_filter(p):
+                return p.is_digimon
+            def on_grant(target_perm):
+                grants = getattr(target_perm, '_keyword_grants', [])
+                grants.append('_is_retaliation')
+                target_perm._keyword_grants = grants
+            game.effect_select_own_permanent(
+                player, on_grant, filter_fn=target_filter, is_optional=False)
+
+        effect0.set_on_process_callback(process0)
         effects.append(effect0)
 
         # Timing: EffectTiming.OnEnterFieldAnyone
@@ -36,6 +55,7 @@ class BT20_067(CardScript):
         effect1.set_effect_name("BT20-067 Your 1 Digimon gains <Retaliation>")
         effect1.set_effect_description("[When Digivolving] 1 of your Digimon gains <Retaliation> (When this Digimon is deleted after losing a battle, delete the Digimon it was battling), until the end of your opponent's turn.")
         effect1.is_when_digivolving = True
+        effect1._is_retaliation = True
 
         effect = effect1  # alias for condition closure
         def condition1(context: Dict[str, Any]) -> bool:
@@ -45,6 +65,24 @@ class BT20_067(CardScript):
             return True
 
         effect1.set_can_use_condition(condition1)
+
+        def process1(ctx: Dict[str, Any]):
+            """Action: Gain Keyword Retaliation"""
+            player = ctx.get('player')
+            perm = ctx.get('permanent')
+            game = ctx.get('game')
+            if not (player and game):
+                return
+            def target_filter(p):
+                return p.is_digimon
+            def on_grant(target_perm):
+                grants = getattr(target_perm, '_keyword_grants', [])
+                grants.append('_is_retaliation')
+                target_perm._keyword_grants = grants
+            game.effect_select_own_permanent(
+                player, on_grant, filter_fn=target_filter, is_optional=False)
+
+        effect1.set_on_process_callback(process1)
         effects.append(effect1)
 
         # Timing: EffectTiming.OnDestroyedAnyone

@@ -14,16 +14,26 @@ class BT24_099(CardScript):
         effects = []
 
         # Timing: EffectTiming.None
-        # Effect
+        # Ignore Color Req
         effect0 = ICardEffect()
         effect0.set_effect_name("BT24-099 Ignore color requirements")
-        effect0.set_effect_description("Effect")
+        effect0.set_effect_description("Ignore Color Req")
 
         effect = effect0  # alias for condition closure
         def condition0(context: Dict[str, Any]) -> bool:
             return True
 
         effect0.set_can_use_condition(condition0)
+
+        def process0(ctx: Dict[str, Any]):
+            """Action: Ignore Color Req"""
+            player = ctx.get('player')
+            perm = ctx.get('permanent')
+            game = ctx.get('game')
+            # Ignores color requirement for playing Options — not modeled in engine
+            pass  # descriptive-tagged
+
+        effect0.set_on_process_callback(process0)
         effects.append(effect0)
 
         # Timing: EffectTiming.OptionSkill
@@ -60,37 +70,51 @@ class BT24_099(CardScript):
         effect1.set_on_process_callback(process1)
         effects.append(effect1)
 
-        # Timing: EffectTiming.OnDestroyedAnyone
-        # Effect
+        # Factory effect: delay
+        # Delay
         effect2 = ICardEffect()
-        effect2.set_effect_name("BT24-099 Link 1 [Appmon] from trash")
-        effect2.set_effect_description("Effect")
-        effect2.is_optional = True
-        effect2.is_on_deletion = True
+        effect2.set_effect_name("BT24-099 Delay")
+        effect2.set_effect_description("Delay")
+        effect2._is_delay = True
 
-        effect = effect2  # alias for condition closure
         def condition2(context: Dict[str, Any]) -> bool:
             if card and card.permanent_of_this_card() is None:
                 return False
             return True
-
         effect2.set_can_use_condition(condition2)
         effects.append(effect2)
 
-        # Timing: EffectTiming.SecuritySkill
-        # [Security] place this card in the battle area.
+        # Timing: EffectTiming.OnDestroyedAnyone
+        # Effect
         effect3 = ICardEffect()
-        effect3.set_effect_name("BT24-099 place in battle area")
-        effect3.set_effect_description("[Security] place this card in the battle area.")
-        effect3.is_security_effect = True
-        effect3.is_security_effect = True
+        effect3.set_effect_name("BT24-099 Link 1 [Appmon] from trash")
+        effect3.set_effect_description("Effect")
+        effect3.is_optional = True
+        effect3.is_on_deletion = True
 
         effect = effect3  # alias for condition closure
         def condition3(context: Dict[str, Any]) -> bool:
-            # Security effect — validated by engine timing
+            if card and card.permanent_of_this_card() is None:
+                return False
             return True
 
         effect3.set_can_use_condition(condition3)
         effects.append(effect3)
+
+        # Timing: EffectTiming.SecuritySkill
+        # [Security] place this card in the battle area.
+        effect4 = ICardEffect()
+        effect4.set_effect_name("BT24-099 place in battle area")
+        effect4.set_effect_description("[Security] place this card in the battle area.")
+        effect4.is_security_effect = True
+        effect4.is_security_effect = True
+
+        effect = effect4  # alias for condition closure
+        def condition4(context: Dict[str, Any]) -> bool:
+            # Security effect — validated by engine timing
+            return True
+
+        effect4.set_can_use_condition(condition4)
+        effects.append(effect4)
 
         return effects

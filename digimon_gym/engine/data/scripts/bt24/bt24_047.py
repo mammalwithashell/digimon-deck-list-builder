@@ -14,10 +14,10 @@ class BT24_047(CardScript):
         effects = []
 
         # Timing: EffectTiming.OnEnterFieldAnyone
-        # Effect
+        # Suspend, Unsuspend, Force Attack
         effect0 = ICardEffect()
-        effect0.set_effect_name("BT24-047 Effect")
-        effect0.set_effect_description("Effect")
+        effect0.set_effect_name("BT24-047 Suspend, Unsuspend, Force Attack")
+        effect0.set_effect_description("Suspend, Unsuspend, Force Attack")
         effect0.is_on_play = True
 
         effect = effect0  # alias for condition closure
@@ -28,13 +28,39 @@ class BT24_047(CardScript):
             return True
 
         effect0.set_can_use_condition(condition0)
+
+        def process0(ctx: Dict[str, Any]):
+            """Action: Suspend, Unsuspend, Force Attack"""
+            player = ctx.get('player')
+            perm = ctx.get('permanent')
+            game = ctx.get('game')
+            if not (player and game):
+                return
+            def target_filter(p):
+                return True
+            def on_suspend(target_perm):
+                target_perm.suspend()
+            game.effect_select_opponent_permanent(
+                player, on_suspend, filter_fn=target_filter, is_optional=False)
+            if not (player and game):
+                return
+            def target_filter(p):
+                return True
+            def on_unsuspend(target_perm):
+                target_perm.unsuspend()
+            game.effect_select_own_permanent(
+                player, on_unsuspend, filter_fn=target_filter, is_optional=False)
+            # Force attack — target Digimon may attack (requires engine SelectAttack)
+            pass  # descriptive-tagged: force_attack
+
+        effect0.set_on_process_callback(process0)
         effects.append(effect0)
 
         # Timing: EffectTiming.OnEnterFieldAnyone
-        # Effect
+        # Suspend, Unsuspend, Force Attack
         effect1 = ICardEffect()
-        effect1.set_effect_name("BT24-047 Effect")
-        effect1.set_effect_description("Effect")
+        effect1.set_effect_name("BT24-047 Suspend, Unsuspend, Force Attack")
+        effect1.set_effect_description("Suspend, Unsuspend, Force Attack")
         effect1.is_when_digivolving = True
 
         effect = effect1  # alias for condition closure
@@ -45,6 +71,32 @@ class BT24_047(CardScript):
             return True
 
         effect1.set_can_use_condition(condition1)
+
+        def process1(ctx: Dict[str, Any]):
+            """Action: Suspend, Unsuspend, Force Attack"""
+            player = ctx.get('player')
+            perm = ctx.get('permanent')
+            game = ctx.get('game')
+            if not (player and game):
+                return
+            def target_filter(p):
+                return True
+            def on_suspend(target_perm):
+                target_perm.suspend()
+            game.effect_select_opponent_permanent(
+                player, on_suspend, filter_fn=target_filter, is_optional=False)
+            if not (player and game):
+                return
+            def target_filter(p):
+                return True
+            def on_unsuspend(target_perm):
+                target_perm.unsuspend()
+            game.effect_select_own_permanent(
+                player, on_unsuspend, filter_fn=target_filter, is_optional=False)
+            # Force attack — target Digimon may attack (requires engine SelectAttack)
+            pass  # descriptive-tagged: force_attack
+
+        effect1.set_on_process_callback(process1)
         effects.append(effect1)
 
         # Timing: EffectTiming.OnEndBattle

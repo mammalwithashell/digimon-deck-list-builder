@@ -8,7 +8,7 @@ if TYPE_CHECKING:
 
 
 class BT23_102(CardScript):
-    """BT23-102"""
+    """BT23-102 Mastemon | Lv.6"""
 
     def get_card_effects(self, card: 'CardSource') -> List['ICardEffect']:
         effects = []
@@ -61,23 +61,35 @@ class BT23_102(CardScript):
         effect2.set_can_use_condition(condition2)
         effects.append(effect2)
 
+        # Factory effect: partition
+        # Partition
+        effect3 = ICardEffect()
+        effect3.set_effect_name("BT23-102 Partition")
+        effect3.set_effect_description("Partition")
+        effect3._is_partition = True
+
+        def condition3(context: Dict[str, Any]) -> bool:
+            return True
+        effect3.set_can_use_condition(condition3)
+        effects.append(effect3)
+
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [When Digivolving] You may play 1 level 5 or lower yellow or purple card from your hand or trash without paying the cost. Then, if this Digimon's stack has 2 or more same-level cards, trash the top cards of both players' security stacks so that they have 3 cards left.
-        effect3 = ICardEffect()
-        effect3.set_effect_name("BT23-102 Play 1 level 5 or lower yellow/purple card from hand or trash. then if digimon has 2+ same level cards in stack, trash both security till 3")
-        effect3.set_effect_description("[When Digivolving] You may play 1 level 5 or lower yellow or purple card from your hand or trash without paying the cost. Then, if this Digimon's stack has 2 or more same-level cards, trash the top cards of both players' security stacks so that they have 3 cards left.")
-        effect3.is_when_digivolving = True
+        effect4 = ICardEffect()
+        effect4.set_effect_name("BT23-102 Play 1 level 5 or lower yellow/purple card from hand or trash. then if digimon has 2+ same level cards in stack, trash both security till 3")
+        effect4.set_effect_description("[When Digivolving] You may play 1 level 5 or lower yellow or purple card from your hand or trash without paying the cost. Then, if this Digimon's stack has 2 or more same-level cards, trash the top cards of both players' security stacks so that they have 3 cards left.")
+        effect4.is_when_digivolving = True
 
-        effect = effect3  # alias for condition closure
-        def condition3(context: Dict[str, Any]) -> bool:
+        effect = effect4  # alias for condition closure
+        def condition4(context: Dict[str, Any]) -> bool:
             if card and card.permanent_of_this_card() is None:
                 return False
             # Triggered when digivolving — validated by engine timing
             return True
 
-        effect3.set_can_use_condition(condition3)
+        effect4.set_can_use_condition(condition4)
 
-        def process3(ctx: Dict[str, Any]):
+        def process4(ctx: Dict[str, Any]):
             """Action: Play Card, Trash From Hand"""
             player = ctx.get('player')
             perm = ctx.get('permanent')
@@ -103,25 +115,43 @@ class BT23_102(CardScript):
             game.effect_select_hand_card(
                 player, hand_filter, on_trashed, is_optional=False)
 
-        effect3.set_on_process_callback(process3)
-        effects.append(effect3)
+        effect4.set_on_process_callback(process4)
+        effects.append(effect4)
 
         # Timing: EffectTiming.OnLoseSecurity
         # [All Turns] [Once Per Turn] When security stacks are removed from, you may place 1 Digimon as the bottom security card.
-        effect4 = ICardEffect()
-        effect4.set_effect_name("BT23-102 Place 1 digimon as bottom security")
-        effect4.set_effect_description("[All Turns] [Once Per Turn] When security stacks are removed from, you may place 1 Digimon as the bottom security card.")
-        effect4.is_optional = True
-        effect4.set_max_count_per_turn(1)
-        effect4.set_hash_string("BT23_102_AT")
+        effect5 = ICardEffect()
+        effect5.set_effect_name("BT23-102 Place 1 digimon as bottom security")
+        effect5.set_effect_description("[All Turns] [Once Per Turn] When security stacks are removed from, you may place 1 Digimon as the bottom security card.")
+        effect5.is_optional = True
+        effect5.set_max_count_per_turn(1)
+        effect5.set_hash_string("BT23_102_AT")
 
-        effect = effect4  # alias for condition closure
-        def condition4(context: Dict[str, Any]) -> bool:
+        effect = effect5  # alias for condition closure
+        def condition5(context: Dict[str, Any]) -> bool:
             if card and card.permanent_of_this_card() is None:
                 return False
             return True
 
-        effect4.set_can_use_condition(condition4)
-        effects.append(effect4)
+        effect5.set_can_use_condition(condition5)
+
+        def process5(ctx: Dict[str, Any]):
+            """Action: Put To Security"""
+            player = ctx.get('player')
+            perm = ctx.get('permanent')
+            game = ctx.get('game')
+            # Place a permanent into the security stack
+            if not (player and game):
+                return
+            def target_filter(p):
+                return p.is_digimon
+            def on_put_security(target_perm):
+                if player:
+                    player.put_permanent_to_security(target_perm)
+            game.effect_select_own_permanent(
+                player, on_put_security, filter_fn=target_filter, is_optional=True)
+
+        effect5.set_on_process_callback(process5)
+        effects.append(effect5)
 
         return effects

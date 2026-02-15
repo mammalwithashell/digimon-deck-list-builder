@@ -8,7 +8,7 @@ if TYPE_CHECKING:
 
 
 class BT23_019(CardScript):
-    """BT23-019"""
+    """BT23-019 Gekomon | Lv.4"""
 
     def get_card_effects(self, card: 'CardSource') -> List['ICardEffect']:
         effects = []
@@ -41,6 +41,19 @@ class BT23_019(CardScript):
             return True
 
         effect1.set_can_use_condition(condition1)
+
+        def process1(ctx: Dict[str, Any]):
+            """Action: Trash Digivolution Cards"""
+            player = ctx.get('player')
+            perm = ctx.get('permanent')
+            game = ctx.get('game')
+            # Trash digivolution cards from this permanent
+            if perm and not perm.has_no_digivolution_cards:
+                trashed = perm.trash_digivolution_cards(1)
+                if player:
+                    player.trash_cards.extend(trashed)
+
+        effect1.set_on_process_callback(process1)
         effects.append(effect1)
 
         # Timing: EffectTiming.OnEnterFieldAnyone
@@ -58,6 +71,19 @@ class BT23_019(CardScript):
             return True
 
         effect2.set_can_use_condition(condition2)
+
+        def process2(ctx: Dict[str, Any]):
+            """Action: Trash Digivolution Cards"""
+            player = ctx.get('player')
+            perm = ctx.get('permanent')
+            game = ctx.get('game')
+            # Trash digivolution cards from this permanent
+            if perm and not perm.has_no_digivolution_cards:
+                trashed = perm.trash_digivolution_cards(1)
+                if player:
+                    player.trash_cards.extend(trashed)
+
+        effect2.set_on_process_callback(process2)
         effects.append(effect2)
 
         # Factory effect: blocker

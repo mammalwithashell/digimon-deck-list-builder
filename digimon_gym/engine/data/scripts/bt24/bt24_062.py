@@ -68,10 +68,10 @@ class BT24_062(CardScript):
         effects.append(effect3)
 
         # Timing: EffectTiming.OnEndAttack
-        # Effect
+        # Play Card
         effect4 = ICardEffect()
-        effect4.set_effect_name("BT24-062 Effect")
-        effect4.set_effect_description("Effect")
+        effect4.set_effect_name("BT24-062 Play Card")
+        effect4.set_effect_description("Play Card")
 
         effect = effect4  # alias for condition closure
         def condition4(context: Dict[str, Any]) -> bool:
@@ -81,13 +81,27 @@ class BT24_062(CardScript):
             return True
 
         effect4.set_can_use_condition(condition4)
+
+        def process4(ctx: Dict[str, Any]):
+            """Action: Play Card"""
+            player = ctx.get('player')
+            perm = ctx.get('permanent')
+            game = ctx.get('game')
+            if not (player and game):
+                return
+            def play_filter(c):
+                return True
+            game.effect_play_from_zone(
+                player, 'hand', play_filter, free=True, is_optional=True)
+
+        effect4.set_on_process_callback(process4)
         effects.append(effect4)
 
         # Timing: EffectTiming.OnEndTurn
-        # Effect
+        # Play Card
         effect5 = ICardEffect()
-        effect5.set_effect_name("BT24-062 Effect")
-        effect5.set_effect_description("Effect")
+        effect5.set_effect_name("BT24-062 Play Card")
+        effect5.set_effect_description("Play Card")
 
         effect = effect5  # alias for condition closure
         def condition5(context: Dict[str, Any]) -> bool:
@@ -96,6 +110,20 @@ class BT24_062(CardScript):
             return True
 
         effect5.set_can_use_condition(condition5)
+
+        def process5(ctx: Dict[str, Any]):
+            """Action: Play Card"""
+            player = ctx.get('player')
+            perm = ctx.get('permanent')
+            game = ctx.get('game')
+            if not (player and game):
+                return
+            def play_filter(c):
+                return True
+            game.effect_play_from_zone(
+                player, 'hand', play_filter, free=True, is_optional=True)
+
+        effect5.set_on_process_callback(process5)
         effects.append(effect5)
 
         # Timing: EffectTiming.None

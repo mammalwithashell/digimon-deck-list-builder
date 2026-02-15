@@ -42,7 +42,7 @@ class BT20_016(CardScript):
         effect1.set_effect_name("BT20-016 Piercing and Digivolve into Imperialdramon Dragon Mode")
         effect1.set_effect_description("[On Play] For the turn, 1 of your Digimon gains <Piercing> (When this Digimon attacks and deletes an opponent's Digimon and survives the battle, it performs any security checks it normally would) and gets +4000 DP. Then, this Digimon may attack.")
         effect1.is_on_play = True
-        effect1.dp_modifier = 4000
+        effect1._is_piercing = True
 
         effect = effect1  # alias for condition closure
         def condition1(context: Dict[str, Any]) -> bool:
@@ -54,12 +54,16 @@ class BT20_016(CardScript):
         effect1.set_can_use_condition(condition1)
 
         def process1(ctx: Dict[str, Any]):
-            """Action: DP +4000"""
+            """Action: DP +4000, Gain Keyword Piercing, Force Attack"""
             player = ctx.get('player')
             perm = ctx.get('permanent')
             game = ctx.get('game')
             if perm:
                 perm.change_dp(4000)
+            # Keyword grant: piercing — flag set on effect object
+            pass
+            # Force attack — target Digimon may attack (requires engine SelectAttack)
+            pass  # descriptive-tagged: force_attack
 
         effect1.set_on_process_callback(process1)
         effects.append(effect1)
@@ -70,7 +74,7 @@ class BT20_016(CardScript):
         effect2.set_effect_name("BT20-016 1 Digimon gains Piercing and 4000DP, then this digimon may attack")
         effect2.set_effect_description("[When Digivolving] For the turn, 1 of your Digimon gains <Piercing> (When this Digimon attacks and deletes an opponent's Digimon and survives the battle, it performs any security checks it normally would) and gets +4000 DP. Then, this Digimon may attack.")
         effect2.is_when_digivolving = True
-        effect2.dp_modifier = 4000
+        effect2._is_piercing = True
 
         effect = effect2  # alias for condition closure
         def condition2(context: Dict[str, Any]) -> bool:
@@ -82,12 +86,16 @@ class BT20_016(CardScript):
         effect2.set_can_use_condition(condition2)
 
         def process2(ctx: Dict[str, Any]):
-            """Action: DP +4000"""
+            """Action: DP +4000, Gain Keyword Piercing, Force Attack"""
             player = ctx.get('player')
             perm = ctx.get('permanent')
             game = ctx.get('game')
             if perm:
                 perm.change_dp(4000)
+            # Keyword grant: piercing — flag set on effect object
+            pass
+            # Force attack — target Digimon may attack (requires engine SelectAttack)
+            pass  # descriptive-tagged: force_attack
 
         effect2.set_on_process_callback(process2)
         effects.append(effect2)

@@ -8,7 +8,7 @@ if TYPE_CHECKING:
 
 
 class BT23_036(CardScript):
-    """BT23-036"""
+    """BT23-036 BanchoLeomon | Lv.6"""
 
     def get_card_effects(self, card: 'CardSource') -> List['ICardEffect']:
         effects = []
@@ -86,6 +86,22 @@ class BT23_036(CardScript):
             return True
 
         effect3.set_can_use_condition(condition3)
+
+        def process3(ctx: Dict[str, Any]):
+            """Action: Digivolve"""
+            player = ctx.get('player')
+            perm = ctx.get('permanent')
+            game = ctx.get('game')
+            if not (player and perm and game):
+                return
+            def digi_filter(c):
+                if getattr(c, 'level', None) is None or c.level > 6:
+                    return False
+                return True
+            game.effect_digivolve_from_hand(
+                player, perm, digi_filter, is_optional=True)
+
+        effect3.set_on_process_callback(process3)
         effects.append(effect3)
 
         # Timing: EffectTiming.OnEnterFieldAnyone
@@ -103,6 +119,22 @@ class BT23_036(CardScript):
             return True
 
         effect4.set_can_use_condition(condition4)
+
+        def process4(ctx: Dict[str, Any]):
+            """Action: Digivolve"""
+            player = ctx.get('player')
+            perm = ctx.get('permanent')
+            game = ctx.get('game')
+            if not (player and perm and game):
+                return
+            def digi_filter(c):
+                if getattr(c, 'level', None) is None or c.level > 6:
+                    return False
+                return True
+            game.effect_digivolve_from_hand(
+                player, perm, digi_filter, is_optional=True)
+
+        effect4.set_on_process_callback(process4)
         effects.append(effect4)
 
         # Timing: EffectTiming.OnEndTurn
@@ -112,6 +144,7 @@ class BT23_036(CardScript):
         effect5.set_effect_description("[End of Your Turn] [Once Per Turn] 1 of your Digimon gains <Raid> for the turn, Then that Digimon may attack.")
         effect5.set_max_count_per_turn(1)
         effect5.set_hash_string("BT23_036_EOYT")
+        effect5._is_raid = True
 
         effect = effect5  # alias for condition closure
         def condition5(context: Dict[str, Any]) -> bool:
@@ -122,6 +155,18 @@ class BT23_036(CardScript):
             return True
 
         effect5.set_can_use_condition(condition5)
+
+        def process5(ctx: Dict[str, Any]):
+            """Action: Gain Keyword Raid, Force Attack"""
+            player = ctx.get('player')
+            perm = ctx.get('permanent')
+            game = ctx.get('game')
+            # Keyword grant: raid — flag set on effect object
+            pass
+            # Force attack — target Digimon may attack (requires engine SelectAttack)
+            pass  # descriptive-tagged: force_attack
+
+        effect5.set_on_process_callback(process5)
         effects.append(effect5)
 
         return effects

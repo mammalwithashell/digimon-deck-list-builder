@@ -36,6 +36,7 @@ class BT20_071(CardScript):
         effect1.set_effect_name("BT20-071 Raid, +3000 DP")
         effect1.set_effect_description("[On Play] By trashing 1 card in your hand,for the turn, 1 of your Digimon gains <Raid> and gets +3000 DP.")
         effect1.is_on_play = True
+        effect1._is_raid = True
 
         effect = effect1  # alias for condition closure
         def condition1(context: Dict[str, Any]) -> bool:
@@ -47,7 +48,7 @@ class BT20_071(CardScript):
         effect1.set_can_use_condition(condition1)
 
         def process1(ctx: Dict[str, Any]):
-            """Action: DP +3000, Trash From Hand"""
+            """Action: DP +3000, Trash From Hand, Gain Keyword Raid"""
             player = ctx.get('player')
             perm = ctx.get('permanent')
             game = ctx.get('game')
@@ -63,6 +64,8 @@ class BT20_071(CardScript):
                     player.trash_cards.append(selected)
             game.effect_select_hand_card(
                 player, hand_filter, on_trashed, is_optional=False)
+            # Keyword grant: raid — flag set on effect object
+            pass
 
         effect1.set_on_process_callback(process1)
         effects.append(effect1)
@@ -73,6 +76,7 @@ class BT20_071(CardScript):
         effect2.set_effect_name("BT20-071 Raid, +3000 DP")
         effect2.set_effect_description("[When Digivolving] By trashing 1 card in your hand,for the turn, 1 of your Digimon gains <Raid> and gets +3000 DP.")
         effect2.is_when_digivolving = True
+        effect2._is_raid = True
 
         effect = effect2  # alias for condition closure
         def condition2(context: Dict[str, Any]) -> bool:
@@ -84,7 +88,7 @@ class BT20_071(CardScript):
         effect2.set_can_use_condition(condition2)
 
         def process2(ctx: Dict[str, Any]):
-            """Action: DP +3000, Trash From Hand"""
+            """Action: DP +3000, Trash From Hand, Gain Keyword Raid"""
             player = ctx.get('player')
             perm = ctx.get('permanent')
             game = ctx.get('game')
@@ -100,6 +104,8 @@ class BT20_071(CardScript):
                     player.trash_cards.append(selected)
             game.effect_select_hand_card(
                 player, hand_filter, on_trashed, is_optional=False)
+            # Keyword grant: raid — flag set on effect object
+            pass
 
         effect2.set_on_process_callback(process2)
         effects.append(effect2)
@@ -140,10 +146,10 @@ class BT20_071(CardScript):
         effects.append(effect3)
 
         # Timing: EffectTiming.None
-        # Effect
+        # Disable Effect
         effect4 = ICardEffect()
         effect4.set_effect_name("BT20-071 Ignore Security Effect")
-        effect4.set_effect_description("Effect")
+        effect4.set_effect_description("Disable Effect")
         effect4.is_inherited_effect = True
 
         effect = effect4  # alias for condition closure
@@ -155,6 +161,16 @@ class BT20_071(CardScript):
             return True
 
         effect4.set_can_use_condition(condition4)
+
+        def process4(ctx: Dict[str, Any]):
+            """Action: Disable Effect"""
+            player = ctx.get('player')
+            perm = ctx.get('permanent')
+            game = ctx.get('game')
+            # Disable/invalidate effects on target — not yet in engine
+            pass  # descriptive-tagged: disable_effect
+
+        effect4.set_on_process_callback(process4)
         effects.append(effect4)
 
         return effects

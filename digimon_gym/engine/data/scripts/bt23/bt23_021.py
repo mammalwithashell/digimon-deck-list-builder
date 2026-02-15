@@ -8,16 +8,16 @@ if TYPE_CHECKING:
 
 
 class BT23_021(CardScript):
-    """BT23-021"""
+    """BT23-021 Dosukomon | Lv.4"""
 
     def get_card_effects(self, card: 'CardSource') -> List['ICardEffect']:
         effects = []
 
         # Timing: EffectTiming.None
-        # Effect
+        # App Fusion Condition
         effect0 = ICardEffect()
-        effect0.set_effect_name("BT23-021 Effect")
-        effect0.set_effect_description("Effect")
+        effect0.set_effect_name("BT23-021 App Fusion Condition")
+        effect0.set_effect_description("App Fusion Condition")
 
         effect = effect0  # alias for condition closure
         def condition0(context: Dict[str, Any]) -> bool:
@@ -27,6 +27,16 @@ class BT23_021(CardScript):
             return True
 
         effect0.set_can_use_condition(condition0)
+
+        def process0(ctx: Dict[str, Any]):
+            """Action: App Fusion Condition"""
+            player = ctx.get('player')
+            perm = ctx.get('permanent')
+            game = ctx.get('game')
+            # App Fusion condition — not yet supported
+            pass  # descriptive-tagged
+
+        effect0.set_on_process_callback(process0)
         effects.append(effect0)
 
         # Factory effect: alt_digivolve_req
@@ -58,6 +68,24 @@ class BT23_021(CardScript):
             return True
 
         effect2.set_can_use_condition(condition2)
+
+        def process2(ctx: Dict[str, Any]):
+            """Action: Trash From Hand"""
+            player = ctx.get('player')
+            perm = ctx.get('permanent')
+            game = ctx.get('game')
+            if not (player and game):
+                return
+            def hand_filter(c):
+                return True
+            def on_trashed(selected):
+                if selected in player.hand_cards:
+                    player.hand_cards.remove(selected)
+                    player.trash_cards.append(selected)
+            game.effect_select_hand_card(
+                player, hand_filter, on_trashed, is_optional=False)
+
+        effect2.set_on_process_callback(process2)
         effects.append(effect2)
 
         # Timing: EffectTiming.OnAllyAttack
@@ -76,6 +104,24 @@ class BT23_021(CardScript):
             return True
 
         effect3.set_can_use_condition(condition3)
+
+        def process3(ctx: Dict[str, Any]):
+            """Action: Trash From Hand"""
+            player = ctx.get('player')
+            perm = ctx.get('permanent')
+            game = ctx.get('game')
+            if not (player and game):
+                return
+            def hand_filter(c):
+                return True
+            def on_trashed(selected):
+                if selected in player.hand_cards:
+                    player.hand_cards.remove(selected)
+                    player.trash_cards.append(selected)
+            game.effect_select_hand_card(
+                player, hand_filter, on_trashed, is_optional=False)
+
+        effect3.set_on_process_callback(process3)
         effects.append(effect3)
 
         # Timing: EffectTiming.WhenLinked
@@ -84,6 +130,7 @@ class BT23_021(CardScript):
         effect4.set_effect_name("BT23-021 Gain immunity from battle")
         effect4.set_effect_description("[Your Turn] [Once Per Turn] When this Digimon gets linked, it can't be deleted in battle until your opponent's turn ends.")
         effect4.set_hash_string("BT23_021_WL")
+        effect4._is_cannot_be_deleted_by_battle = True
 
         effect = effect4  # alias for condition closure
         def condition4(context: Dict[str, Any]) -> bool:
@@ -94,6 +141,24 @@ class BT23_021(CardScript):
             return True
 
         effect4.set_can_use_condition(condition4)
+
+        def process4(ctx: Dict[str, Any]):
+            """Action: Gain Keyword Cannot Be Deleted By Battle"""
+            player = ctx.get('player')
+            perm = ctx.get('permanent')
+            game = ctx.get('game')
+            if not (player and game):
+                return
+            def target_filter(p):
+                return p.is_digimon
+            def on_grant(target_perm):
+                grants = getattr(target_perm, '_keyword_grants', [])
+                grants.append('_is_cannot_be_deleted_by_battle')
+                target_perm._keyword_grants = grants
+            game.effect_select_own_permanent(
+                player, on_grant, filter_fn=target_filter, is_optional=False)
+
+        effect4.set_on_process_callback(process4)
         effects.append(effect4)
 
         # Timing: EffectTiming.WhenLinked
@@ -101,6 +166,7 @@ class BT23_021(CardScript):
         effect5 = ICardEffect()
         effect5.set_effect_name("BT23-021 Gain immunity from battle")
         effect5.set_effect_description("[When Linking] This Digimon can't be deleted in battle until your opponent's turn ends.")
+        effect5._is_cannot_be_deleted_by_battle = True
 
         effect = effect5  # alias for condition closure
         def condition5(context: Dict[str, Any]) -> bool:
@@ -109,6 +175,24 @@ class BT23_021(CardScript):
             return True
 
         effect5.set_can_use_condition(condition5)
+
+        def process5(ctx: Dict[str, Any]):
+            """Action: Gain Keyword Cannot Be Deleted By Battle"""
+            player = ctx.get('player')
+            perm = ctx.get('permanent')
+            game = ctx.get('game')
+            if not (player and game):
+                return
+            def target_filter(p):
+                return p.is_digimon
+            def on_grant(target_perm):
+                grants = getattr(target_perm, '_keyword_grants', [])
+                grants.append('_is_cannot_be_deleted_by_battle')
+                target_perm._keyword_grants = grants
+            game.effect_select_own_permanent(
+                player, on_grant, filter_fn=target_filter, is_optional=False)
+
+        effect5.set_on_process_callback(process5)
         effects.append(effect5)
 
         return effects

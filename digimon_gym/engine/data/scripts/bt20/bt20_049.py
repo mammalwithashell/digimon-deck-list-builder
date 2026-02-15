@@ -19,6 +19,7 @@ class BT20_049(CardScript):
         effect0.set_effect_name("BT20-049 1 of your opponent's Digimon can't attack players until the end of their turn")
         effect0.set_effect_description("[On Play] 1 of your opponent's Digimon can't attack players until the end of their turn.")
         effect0.is_on_play = True
+        effect0._is_cannot_attack_player = True
 
         effect = effect0  # alias for condition closure
         def condition0(context: Dict[str, Any]) -> bool:
@@ -30,7 +31,7 @@ class BT20_049(CardScript):
         effect0.set_can_use_condition(condition0)
 
         def process0(ctx: Dict[str, Any]):
-            """Action: Restrict Attack"""
+            """Action: Restrict Attack, Gain Keyword Cannot Attack Player"""
             player = ctx.get('player')
             perm = ctx.get('permanent')
             game = ctx.get('game')
@@ -43,6 +44,8 @@ class BT20_049(CardScript):
                 target_perm.suspend()  # Approximate as suspend
             game.effect_select_opponent_permanent(
                 player, on_restrict, filter_fn=target_filter, is_optional=False)
+            # Keyword grant: cannot_attack_player — flag set on effect object
+            pass
 
         effect0.set_on_process_callback(process0)
         effects.append(effect0)
@@ -53,6 +56,7 @@ class BT20_049(CardScript):
         effect1.set_effect_name("BT20-049 1 of your opponent's Digimon can't attack players until the end of their turn")
         effect1.set_effect_description("[When Digivolving] 1 of your opponent's Digimon can't attack players until the end of their turn.")
         effect1.is_when_digivolving = True
+        effect1._is_cannot_attack_player = True
 
         effect = effect1  # alias for condition closure
         def condition1(context: Dict[str, Any]) -> bool:
@@ -64,7 +68,7 @@ class BT20_049(CardScript):
         effect1.set_can_use_condition(condition1)
 
         def process1(ctx: Dict[str, Any]):
-            """Action: Restrict Attack"""
+            """Action: Restrict Attack, Gain Keyword Cannot Attack Player"""
             player = ctx.get('player')
             perm = ctx.get('permanent')
             game = ctx.get('game')
@@ -77,6 +81,8 @@ class BT20_049(CardScript):
                 target_perm.suspend()  # Approximate as suspend
             game.effect_select_opponent_permanent(
                 player, on_restrict, filter_fn=target_filter, is_optional=False)
+            # Keyword grant: cannot_attack_player — flag set on effect object
+            pass
 
         effect1.set_on_process_callback(process1)
         effects.append(effect1)

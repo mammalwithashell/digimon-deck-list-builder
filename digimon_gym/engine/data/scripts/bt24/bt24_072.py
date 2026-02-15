@@ -31,11 +31,13 @@ class BT24_072(CardScript):
         effects.append(effect0)
 
         # Timing: EffectTiming.OnEnterFieldAnyone
-        # Effect
+        # Trash From Hand, Gain Keyword Blocker, Gain Keyword Retaliation
         effect1 = ICardEffect()
-        effect1.set_effect_name("BT24-072 Effect")
-        effect1.set_effect_description("Effect")
+        effect1.set_effect_name("BT24-072 Trash From Hand, Gain Keyword Blocker, Gain Keyword Retaliation")
+        effect1.set_effect_description("Trash From Hand, Gain Keyword Blocker, Gain Keyword Retaliation")
         effect1.is_on_play = True
+        effect1._is_blocker = True
+        effect1._is_retaliation = True
 
         effect = effect1  # alias for condition closure
         def condition1(context: Dict[str, Any]) -> bool:
@@ -45,14 +47,38 @@ class BT24_072(CardScript):
             return True
 
         effect1.set_can_use_condition(condition1)
+
+        def process1(ctx: Dict[str, Any]):
+            """Action: Trash From Hand, Gain Keyword Blocker, Gain Keyword Retaliation"""
+            player = ctx.get('player')
+            perm = ctx.get('permanent')
+            game = ctx.get('game')
+            if not (player and game):
+                return
+            def hand_filter(c):
+                return True
+            def on_trashed(selected):
+                if selected in player.hand_cards:
+                    player.hand_cards.remove(selected)
+                    player.trash_cards.append(selected)
+            game.effect_select_hand_card(
+                player, hand_filter, on_trashed, is_optional=False)
+            # Keyword grant: blocker — flag set on effect object
+            pass
+            # Keyword grant: retaliation — flag set on effect object
+            pass
+
+        effect1.set_on_process_callback(process1)
         effects.append(effect1)
 
         # Timing: EffectTiming.OnEnterFieldAnyone
-        # Effect
+        # Trash From Hand, Gain Keyword Blocker, Gain Keyword Retaliation
         effect2 = ICardEffect()
-        effect2.set_effect_name("BT24-072 Effect")
-        effect2.set_effect_description("Effect")
+        effect2.set_effect_name("BT24-072 Trash From Hand, Gain Keyword Blocker, Gain Keyword Retaliation")
+        effect2.set_effect_description("Trash From Hand, Gain Keyword Blocker, Gain Keyword Retaliation")
         effect2.is_when_digivolving = True
+        effect2._is_blocker = True
+        effect2._is_retaliation = True
 
         effect = effect2  # alias for condition closure
         def condition2(context: Dict[str, Any]) -> bool:
@@ -62,6 +88,28 @@ class BT24_072(CardScript):
             return True
 
         effect2.set_can_use_condition(condition2)
+
+        def process2(ctx: Dict[str, Any]):
+            """Action: Trash From Hand, Gain Keyword Blocker, Gain Keyword Retaliation"""
+            player = ctx.get('player')
+            perm = ctx.get('permanent')
+            game = ctx.get('game')
+            if not (player and game):
+                return
+            def hand_filter(c):
+                return True
+            def on_trashed(selected):
+                if selected in player.hand_cards:
+                    player.hand_cards.remove(selected)
+                    player.trash_cards.append(selected)
+            game.effect_select_hand_card(
+                player, hand_filter, on_trashed, is_optional=False)
+            # Keyword grant: blocker — flag set on effect object
+            pass
+            # Keyword grant: retaliation — flag set on effect object
+            pass
+
+        effect2.set_on_process_callback(process2)
         effects.append(effect2)
 
         # Timing: EffectTiming.OnDestroyedAnyone

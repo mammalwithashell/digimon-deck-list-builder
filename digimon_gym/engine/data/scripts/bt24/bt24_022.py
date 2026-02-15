@@ -39,10 +39,10 @@ class BT24_022(CardScript):
         effects.append(effect1)
 
         # Timing: EffectTiming.OnEnterFieldAnyone
-        # Effect
+        # Trash Digivolution Cards
         effect2 = ICardEffect()
-        effect2.set_effect_name("BT24-022 Effect")
-        effect2.set_effect_description("Effect")
+        effect2.set_effect_name("BT24-022 Trash Digivolution Cards")
+        effect2.set_effect_description("Trash Digivolution Cards")
         effect2.is_on_play = True
 
         effect = effect2  # alias for condition closure
@@ -53,13 +53,26 @@ class BT24_022(CardScript):
             return True
 
         effect2.set_can_use_condition(condition2)
+
+        def process2(ctx: Dict[str, Any]):
+            """Action: Trash Digivolution Cards"""
+            player = ctx.get('player')
+            perm = ctx.get('permanent')
+            game = ctx.get('game')
+            # Trash digivolution cards from this permanent
+            if perm and not perm.has_no_digivolution_cards:
+                trashed = perm.trash_digivolution_cards(1)
+                if player:
+                    player.trash_cards.extend(trashed)
+
+        effect2.set_on_process_callback(process2)
         effects.append(effect2)
 
         # Timing: EffectTiming.OnEnterFieldAnyone
-        # Effect
+        # Trash Digivolution Cards
         effect3 = ICardEffect()
-        effect3.set_effect_name("BT24-022 Effect")
-        effect3.set_effect_description("Effect")
+        effect3.set_effect_name("BT24-022 Trash Digivolution Cards")
+        effect3.set_effect_description("Trash Digivolution Cards")
         effect3.is_when_digivolving = True
 
         effect = effect3  # alias for condition closure
@@ -70,6 +83,19 @@ class BT24_022(CardScript):
             return True
 
         effect3.set_can_use_condition(condition3)
+
+        def process3(ctx: Dict[str, Any]):
+            """Action: Trash Digivolution Cards"""
+            player = ctx.get('player')
+            perm = ctx.get('permanent')
+            game = ctx.get('game')
+            # Trash digivolution cards from this permanent
+            if perm and not perm.has_no_digivolution_cards:
+                trashed = perm.trash_digivolution_cards(1)
+                if player:
+                    player.trash_cards.extend(trashed)
+
+        effect3.set_on_process_callback(process3)
         effects.append(effect3)
 
         # Timing: EffectTiming.OnUnTappedAnyone

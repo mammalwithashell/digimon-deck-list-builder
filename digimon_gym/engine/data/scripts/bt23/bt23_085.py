@@ -8,7 +8,7 @@ if TYPE_CHECKING:
 
 
 class BT23_085(CardScript):
-    """BT23-085"""
+    """BT23-085 Ryuji Mishima"""
 
     def get_card_effects(self, card: 'CardSource') -> List['ICardEffect']:
         effects = []
@@ -46,6 +46,9 @@ class BT23_085(CardScript):
         effect1.set_effect_name("BT23-085 Opponent's effects can't reduce DP, and gain <Reboot> and <Blocker>")
         effect1.set_effect_description("[On Play] Until your opponent's turn ends, their effects can't reduce the DP of 1 of your [Hudie] trait Digimon, and it gains <Reboot> and <Blocker>.")
         effect1.is_on_play = True
+        effect1._is_immune_dp_minus = True
+        effect1._is_blocker = True
+        effect1._is_reboot = True
 
         effect = effect1  # alias for condition closure
         def condition1(context: Dict[str, Any]) -> bool:
@@ -55,6 +58,20 @@ class BT23_085(CardScript):
             return True
 
         effect1.set_can_use_condition(condition1)
+
+        def process1(ctx: Dict[str, Any]):
+            """Action: Gain Keyword Immune Dp Minus, Gain Keyword Blocker, Gain Keyword Reboot"""
+            player = ctx.get('player')
+            perm = ctx.get('permanent')
+            game = ctx.get('game')
+            # Keyword grant: immune_dp_minus — flag set on effect object
+            pass
+            # Keyword grant: blocker — flag set on effect object
+            pass
+            # Keyword grant: reboot — flag set on effect object
+            pass
+
+        effect1.set_on_process_callback(process1)
         effects.append(effect1)
 
         # Timing: EffectTiming.OnTappedAnyone

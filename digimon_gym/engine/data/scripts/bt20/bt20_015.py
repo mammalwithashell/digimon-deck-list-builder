@@ -51,7 +51,7 @@ class BT20_015(CardScript):
         effect1.set_can_use_condition(condition1)
 
         def process1(ctx: Dict[str, Any]):
-            """Action: DP +5000, Play Card, Trash From Hand"""
+            """Action: DP +5000, Play Card, Trash From Hand, Change Security Attack"""
             player = ctx.get('player')
             perm = ctx.get('permanent')
             game = ctx.get('game')
@@ -73,6 +73,8 @@ class BT20_015(CardScript):
                     player.trash_cards.append(selected)
             game.effect_select_hand_card(
                 player, hand_filter, on_trashed, is_optional=False)
+            # Grant Security Attack modifier to target permanent
+            pass  # descriptive-tagged: change_security_attack
 
         effect1.set_on_process_callback(process1)
         effects.append(effect1)
@@ -94,7 +96,7 @@ class BT20_015(CardScript):
         effect2.set_can_use_condition(condition2)
 
         def process2(ctx: Dict[str, Any]):
-            """Action: DP +5000, Play Card, Trash From Hand"""
+            """Action: DP +5000, Play Card, Trash From Hand, Change Security Attack"""
             player = ctx.get('player')
             perm = ctx.get('permanent')
             game = ctx.get('game')
@@ -116,15 +118,17 @@ class BT20_015(CardScript):
                     player.trash_cards.append(selected)
             game.effect_select_hand_card(
                 player, hand_filter, on_trashed, is_optional=False)
+            # Grant Security Attack modifier to target permanent
+            pass  # descriptive-tagged: change_security_attack
 
         effect2.set_on_process_callback(process2)
         effects.append(effect2)
 
         # Timing: EffectTiming.None
-        # Effect
+        # Disable Effect
         effect3 = ICardEffect()
         effect3.set_effect_name("BT20-015 Ignore Security Effect")
-        effect3.set_effect_description("Effect")
+        effect3.set_effect_description("Disable Effect")
         effect3.is_inherited_effect = True
 
         effect = effect3  # alias for condition closure
@@ -136,6 +140,16 @@ class BT20_015(CardScript):
             return True
 
         effect3.set_can_use_condition(condition3)
+
+        def process3(ctx: Dict[str, Any]):
+            """Action: Disable Effect"""
+            player = ctx.get('player')
+            perm = ctx.get('permanent')
+            game = ctx.get('game')
+            # Disable/invalidate effects on target — not yet in engine
+            pass  # descriptive-tagged: disable_effect
+
+        effect3.set_on_process_callback(process3)
         effects.append(effect3)
 
         return effects

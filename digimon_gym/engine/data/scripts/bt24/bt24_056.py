@@ -39,11 +39,13 @@ class BT24_056(CardScript):
         effects.append(effect1)
 
         # Timing: EffectTiming.OnEnterFieldAnyone
-        # Effect
+        # Gain Keyword Cannot Return To Deck, Gain Keyword Cannot Return To Hand
         effect2 = ICardEffect()
-        effect2.set_effect_name("BT24-056 Effect")
-        effect2.set_effect_description("Effect")
+        effect2.set_effect_name("BT24-056 Gain Keyword Cannot Return To Deck, Gain Keyword Cannot Return To Hand")
+        effect2.set_effect_description("Gain Keyword Cannot Return To Deck, Gain Keyword Cannot Return To Hand")
         effect2.is_on_play = True
+        effect2._is_cannot_return_to_deck = True
+        effect2._is_cannot_return_to_hand = True
 
         effect = effect2  # alias for condition closure
         def condition2(context: Dict[str, Any]) -> bool:
@@ -53,14 +55,28 @@ class BT24_056(CardScript):
             return True
 
         effect2.set_can_use_condition(condition2)
+
+        def process2(ctx: Dict[str, Any]):
+            """Action: Gain Keyword Cannot Return To Deck, Gain Keyword Cannot Return To Hand"""
+            player = ctx.get('player')
+            perm = ctx.get('permanent')
+            game = ctx.get('game')
+            # Keyword grant: cannot_return_to_deck — flag set on effect object
+            pass
+            # Keyword grant: cannot_return_to_hand — flag set on effect object
+            pass
+
+        effect2.set_on_process_callback(process2)
         effects.append(effect2)
 
         # Timing: EffectTiming.OnEnterFieldAnyone
-        # Effect
+        # Gain Keyword Cannot Return To Deck, Gain Keyword Cannot Return To Hand
         effect3 = ICardEffect()
-        effect3.set_effect_name("BT24-056 Effect")
-        effect3.set_effect_description("Effect")
+        effect3.set_effect_name("BT24-056 Gain Keyword Cannot Return To Deck, Gain Keyword Cannot Return To Hand")
+        effect3.set_effect_description("Gain Keyword Cannot Return To Deck, Gain Keyword Cannot Return To Hand")
         effect3.is_when_digivolving = True
+        effect3._is_cannot_return_to_deck = True
+        effect3._is_cannot_return_to_hand = True
 
         effect = effect3  # alias for condition closure
         def condition3(context: Dict[str, Any]) -> bool:
@@ -70,6 +86,18 @@ class BT24_056(CardScript):
             return True
 
         effect3.set_can_use_condition(condition3)
+
+        def process3(ctx: Dict[str, Any]):
+            """Action: Gain Keyword Cannot Return To Deck, Gain Keyword Cannot Return To Hand"""
+            player = ctx.get('player')
+            perm = ctx.get('permanent')
+            game = ctx.get('game')
+            # Keyword grant: cannot_return_to_deck — flag set on effect object
+            pass
+            # Keyword grant: cannot_return_to_hand — flag set on effect object
+            pass
+
+        effect3.set_on_process_callback(process3)
         effects.append(effect3)
 
         # Timing: EffectTiming.WhenLinked

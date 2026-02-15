@@ -1,0 +1,980 @@
+"""C# parsing and effect extraction functions."""
+import os
+import re
+from typing import List, Tuple
+
+from .models import EffectBlock
+from .patterns import (
+    RE_CLASS, RE_TIMING_BLOCK, RE_EFFECT_DESC, RE_SET_INHERITED,
+    RE_HASH_STRING, RE_MAX_COUNT, RE_IS_OPTIONAL, RE_EFFECT_NAME,
+    RE_DRAW, RE_ADD_MEMORY, RE_CHANGE_DP, RE_DELETE, RE_BOUNCE, RE_SUSPEND,
+    RE_RECOVERY, RE_PLAY_CARD, RE_TRASH_HAND, RE_TRASH_DIGI,
+    RE_ADD_TO_HAND, RE_ADD_SECURITY, RE_REVEAL, RE_DEGENERATION,
+    RE_DIGIVOLVE, RE_COST_REDUCTION, RE_MIND_LINK,
+    RE_TARGET_DP_LIMIT, RE_TARGET_DP_MIN, RE_TARGET_LEVEL_LIMIT,
+    RE_TARGET_LEVEL_MIN,
+    RE_REVEAL_COUNT, RE_PLAY_FROM_TRASH, RE_PLAY_FREE,
+    RE_DIGI_COST_FIXED, RE_DIGI_IGNORE_REQS, RE_DEGEN_COUNT,
+    RE_SELECT_PERM_MODE, RE_DESTROY_SECURITY, RE_REDUCE_SECURITY,
+    RE_UNSUSPEND, RE_RESTRICT_ATTACK, RE_TARGET_LOCK, RE_FLIP_SECURITY,
+    RE_RETURN_DECK_BOTTOM, RE_JOGRESS,
+    RE_MILL, RE_IGNORE_COLOR, RE_APP_FUSION, RE_LINK_CONDITION,
+    RE_ALSO_TREATED_AS, RE_CANT_PUT_FIELD,
+    RE_GAIN_KEYWORD, GAIN_KEYWORD_MAP,
+    RE_SHARED_COROUTINE_DELEGATE, RE_COROUTINE_DELEGATE,
+    RE_PLAY_TOKEN, RE_SELECT_ATTACK, RE_CHANGE_SA_TARGET,
+    RE_DISABLE_EFFECT, RE_HAND_BOUNCE_CLASS, RE_ADD_EFFECT_TO_PERM,
+    RE_CHANGE_DP_COMMONS, RE_PUT_SECURITY_PERM,
+    RE_CUSTOM_CALLBACK, RE_AFTER_CUSTOM_CALLBACK,
+    RE_COND_ON_BATTLE, RE_COND_OWNER_TURN, RE_COND_ON_PLAY,
+    RE_COND_ON_ATTACK, RE_COND_ON_DELETION, RE_COND_WHEN_DIGI,
+    RE_COND_SEC_EFFECT, RE_COND_OPTION_MAIN,
+    RE_COND_TRAIT, RE_COND_NAME, RE_COND_COLOR,
+    RE_COND_HAS_TEXT, RE_COND_ROYAL_KNIGHT,
+    RE_FACTORY_COND_DIGI_COUNT, RE_FACTORY_COND_SOURCE_NAME,
+    RE_FACTORY_COND_SOURCE_TRAIT, RE_FACTORY_COND_PERM_NAME,
+    RE_FACTORY_COND_PERM_TRAIT,
+    RE_FACTORY_BLOCKER, RE_FACTORY_JAMMING, RE_FACTORY_RUSH,
+    RE_FACTORY_REBOOT, RE_FACTORY_RAID, RE_FACTORY_ALLIANCE,
+    RE_FACTORY_SEC_PLAY, RE_FACTORY_SA_PLUS, RE_FACTORY_DP,
+    RE_FACTORY_DP_ALL, RE_FACTORY_DP_ALL_VALUE,
+    RE_FACTORY_ARMOR_PURGE, RE_FACTORY_BLAST_DIGI,
+    RE_FACTORY_SET_MEM_3, RE_FACTORY_GAIN_MEM,
+    RE_FACTORY_PIERCING, RE_FACTORY_COLLISION, RE_FACTORY_BLITZ,
+    RE_FACTORY_FORTITUDE, RE_FACTORY_EVADE, RE_FACTORY_BARRIER,
+    RE_FACTORY_DECOY, RE_FACTORY_RETALIATION, RE_FACTORY_SAVE,
+    RE_FACTORY_MATERIAL_SAVE, RE_FACTORY_OVERCLOCK, RE_FACTORY_VORTEX,
+    RE_FACTORY_TRAINING, RE_FACTORY_PROGRESS,
+    RE_FACTORY_DIGISORPTION, RE_FACTORY_DIGIBURST, RE_FACTORY_DELAY,
+    RE_FACTORY_PARTITION, RE_FACTORY_DIGIXROS, RE_FACTORY_SCAPEGOAT,
+    RE_FACTORY_DECODE, RE_FACTORY_ICECLAD, RE_FACTORY_FRAGMENT,
+    RE_FACTORY_EXECUTE,
+    RE_FACTORY_ADD_DIGI_REQ, RE_FACTORY_CHANGE_DIGI_COST,
+    RE_FACTORY_CHANGE_DIGI_COST_VALUE,
+    RE_FACTORY_DIGI_REQ_COST, RE_FACTORY_DIGI_REQ_NAME, RE_FACTORY_DIGI_REQ_TRAIT,
+    RE_FACTORY_DP_VALUE, RE_FACTORY_SA_VALUE,
+)
+
+
+def extract_timing_blocks(source: str) -> List[Tuple[str, str]]:
+    """Extract (timing, block_content) pairs from C# source."""
+    blocks = []
+    # Find each timing check and its associated block
+    for match in RE_TIMING_BLOCK.finditer(source):
+        timing = match.group(1)
+        start = match.end()
+        # Find the matching brace block
+        depth = 0
+        block_start = None
+        for i in range(start, len(source)):
+            if source[i] == '{':
+                if block_start is None:
+                    block_start = i
+                depth += 1
+            elif source[i] == '}':
+                depth -= 1
+                if depth == 0:
+                    blocks.append((f"EffectTiming.{timing}" if not timing.startswith("EffectTiming.") else timing,
+                                   source[block_start:i+1]))
+                    break
+    return blocks
+
+
+def _extract_method_body(full_source: str, method_name: str) -> str:
+    """Extract the body of a named method from the full C# source.
+
+    Uses brace-depth matching (like extract_timing_blocks) to find the
+    complete method body for SharedActivateCoroutine and similar methods.
+    """
+    # Match: IEnumerator MethodName(... or private/public ... MethodName(...
+    pattern = re.compile(
+        rf'(?:IEnumerator|void|private|public)\s+(?:IEnumerator\s+)?{re.escape(method_name)}\s*\(')
+    match = pattern.search(full_source)
+    if not match:
+        return ""
+    start = match.end()
+    # Find the opening brace of the method body
+    depth = 0
+    block_start = None
+    for i in range(start, len(full_source)):
+        if full_source[i] == '{':
+            if block_start is None:
+                block_start = i
+            depth += 1
+        elif full_source[i] == '}':
+            depth -= 1
+            if depth == 0 and block_start is not None:
+                return full_source[block_start:i + 1]
+    return ""
+
+
+def _extract_factory_conditions(block: str, eb: EffectBlock):
+    """Fix 1: Extract condition closure body for factory effects.
+
+    Scans block for CanActivateCondition/Condition closures and extracts
+    checks like IsOwnerTurn, DigivolutionCards.Count, HasText, etc.
+    """
+    if RE_COND_OWNER_TURN.search(block):
+        eb.factory_cond_owner_turn = True
+    if RE_COND_ON_BATTLE.search(block):
+        eb.factory_cond_on_battle = True
+
+    # DigivolutionCards.Count >= N (plain count, no predicate)
+    m = RE_FACTORY_COND_DIGI_COUNT.search(block)
+    if m:
+        eb.factory_cond_digi_count = int(m.group(1))
+
+    # HasText("X") — checks card text field
+    for m in RE_COND_HAS_TEXT.finditer(block):
+        if m.group(1) not in eb.factory_cond_has_text:
+            eb.factory_cond_has_text.append(m.group(1))
+
+    # DigivolutionCards.Count(... EqualsCardName("X") ...) — source name check
+    for m in RE_FACTORY_COND_SOURCE_NAME.finditer(block):
+        if m.group(1) not in eb.factory_cond_source_name:
+            eb.factory_cond_source_name.append(m.group(1))
+
+    # DigivolutionCards.Count(... EqualsTraits("X") ...) — source trait check
+    for m in RE_FACTORY_COND_SOURCE_TRAIT.finditer(block):
+        if m.group(1) not in eb.factory_cond_source_trait:
+            eb.factory_cond_source_trait.append(m.group(1))
+
+    # TopCard.EqualsCardName("X") — permanent name
+    for m in RE_FACTORY_COND_PERM_NAME.finditer(block):
+        if m.group(1) not in eb.factory_cond_perm_name:
+            eb.factory_cond_perm_name.append(m.group(1))
+
+    # TopCard.EqualsTraits("X") — permanent trait
+    for m in RE_FACTORY_COND_PERM_TRAIT.finditer(block):
+        if m.group(1) not in eb.factory_cond_perm_trait:
+            eb.factory_cond_perm_trait.append(m.group(1))
+
+    # HasRoyalKnightTraits (Fix 8)
+    if RE_COND_ROYAL_KNIGHT.search(block):
+        if "Royal Knight" not in eb.factory_cond_perm_trait:
+            eb.factory_cond_perm_trait.append("Royal Knight")
+
+
+def extract_factory_effects(block: str) -> List[EffectBlock]:
+    """Extract factory method calls from a block."""
+    effects = []
+
+    factories = [
+        (RE_FACTORY_BLOCKER, "blocker", "Blocker"),
+        (RE_FACTORY_JAMMING, "jamming", "Jamming"),
+        (RE_FACTORY_RUSH, "rush", "Rush"),
+        (RE_FACTORY_REBOOT, "reboot", "Reboot"),
+        (RE_FACTORY_RAID, "raid", "Raid"),
+        (RE_FACTORY_ALLIANCE, "alliance", "Alliance"),
+        (RE_FACTORY_SEC_PLAY, "security_play", "Security: Play this card"),
+        (RE_FACTORY_SA_PLUS, "security_attack_plus", "Security Attack +1"),
+        (RE_FACTORY_DP, "dp_modifier", "DP modifier"),
+        (RE_FACTORY_ARMOR_PURGE, "armor_purge", "Armor Purge"),
+        (RE_FACTORY_BLAST_DIGI, "blast_digivolve", "Blast Digivolve"),
+        (RE_FACTORY_SET_MEM_3, "set_memory_3", "Set memory to 3"),
+        (RE_FACTORY_GAIN_MEM, "gain_memory_tamer", "Gain 1 memory (Tamer)"),
+        (RE_FACTORY_ADD_DIGI_REQ, "alt_digivolve_req", "Alternate digivolution requirement"),
+        (RE_FACTORY_CHANGE_DIGI_COST, "change_digi_cost", "Change digivolution cost"),
+        # Fix 11: Missing factory keywords
+        (RE_FACTORY_PIERCING, "piercing", "Piercing"),
+        (RE_FACTORY_COLLISION, "collision", "Collision"),
+        (RE_FACTORY_BLITZ, "blitz", "Blitz"),
+        (RE_FACTORY_FORTITUDE, "fortitude", "Fortitude"),
+        (RE_FACTORY_EVADE, "evade", "Evade"),
+        (RE_FACTORY_BARRIER, "barrier", "Barrier"),
+        (RE_FACTORY_DECOY, "decoy", "Decoy"),
+        (RE_FACTORY_RETALIATION, "retaliation", "Retaliation"),
+        (RE_FACTORY_SAVE, "save", "Save"),
+        (RE_FACTORY_MATERIAL_SAVE, "material_save", "Material Save"),
+        (RE_FACTORY_OVERCLOCK, "overclock", "Overclock"),
+        (RE_FACTORY_VORTEX, "vortex", "Vortex"),
+        (RE_FACTORY_TRAINING, "training", "Training"),
+        (RE_FACTORY_PROGRESS, "progress", "Progress"),
+        # Fix 12: Additional keywords from rules evaluation
+        (RE_FACTORY_DIGISORPTION, "digisorption", "Digisorption"),
+        (RE_FACTORY_DIGIBURST, "digiburst", "Digi-Burst"),
+        (RE_FACTORY_DELAY, "delay", "Delay"),
+        (RE_FACTORY_PARTITION, "partition", "Partition"),
+        (RE_FACTORY_DIGIXROS, "digixros", "DigiXros"),
+        (RE_FACTORY_SCAPEGOAT, "scapegoat", "Scapegoat"),
+        (RE_FACTORY_DECODE, "decode", "Decode"),
+        (RE_FACTORY_ICECLAD, "iceclad", "Iceclad"),
+        (RE_FACTORY_FRAGMENT, "fragment", "Fragment"),
+        (RE_FACTORY_EXECUTE, "execute", "Execute"),
+    ]
+
+    for regex, method, desc in factories:
+        if regex.search(block):
+            eb = EffectBlock(
+                is_factory=True,
+                factory_method=method,
+                description=desc,
+            )
+            # Check if inherited
+            inh = RE_SET_INHERITED.search(block)
+            if inh:
+                eb.is_inherited = (inh.group(1) or inh.group(2)) == "true"
+
+            # Fix 1: Extract factory condition closures
+            _extract_factory_conditions(block, eb)
+
+            # Extract DP value for dp_modifier factory
+            if method == "dp_modifier":
+                m_val = RE_FACTORY_DP_VALUE.search(block)
+                if m_val:
+                    eb.factory_dp_value = int(m_val.group(1))
+            # Extract SA value for security_attack_plus factory
+            if method == "security_attack_plus":
+                m_val = RE_FACTORY_SA_VALUE.search(block)
+                if m_val:
+                    eb.factory_sa_value = int(m_val.group(1))
+            # Extract digivolve requirement details
+            if method == "alt_digivolve_req":
+                m_cost = RE_FACTORY_DIGI_REQ_COST.search(block)
+                if m_cost:
+                    eb.digi_cost_override = int(m_cost.group(1))
+                m_name = RE_FACTORY_DIGI_REQ_NAME.search(block)
+                if m_name:
+                    eb.name_checks.append(m_name.group(1))
+                m_trait = RE_FACTORY_DIGI_REQ_TRAIT.search(block)
+                if m_trait:
+                    eb.trait_checks.append(m_trait.group(1))
+            # Extract digivolve cost change value
+            if method == "change_digi_cost":
+                m_val = RE_FACTORY_CHANGE_DIGI_COST_VALUE.search(block)
+                if m_val:
+                    eb.cost_reduction_val = int(m_val.group(1))
+                # Extract trait/name conditions for what this cost change applies to
+                for m_t in RE_COND_TRAIT.finditer(block):
+                    eb.trait_checks.append(m_t.group(1))
+                for m_n in RE_COND_NAME.finditer(block):
+                    eb.name_checks.append(m_n.group(1))
+                eb.trait_checks = list(dict.fromkeys(eb.trait_checks))
+                eb.name_checks = list(dict.fromkeys(eb.name_checks))
+            effects.append(eb)
+
+    # Fix 5: Handle ChangeDPStaticEffect (non-self, applies to all your Digimon)
+    if RE_FACTORY_DP_ALL.search(block) and not RE_FACTORY_DP.search(block):
+        eb = EffectBlock(
+            is_factory=True,
+            factory_method="dp_modifier_all",
+            description="All your Digimon DP modifier",
+            is_dp_all=True,
+        )
+        inh = RE_SET_INHERITED.search(block)
+        if inh:
+            eb.is_inherited = (inh.group(1) or inh.group(2)) == "true"
+        m_val = RE_FACTORY_DP_ALL_VALUE.search(block)
+        if m_val:
+            eb.factory_dp_value = int(m_val.group(1))
+        _extract_factory_conditions(block, eb)
+        effects.append(eb)
+
+    return effects
+
+
+def extract_activate_effects(block: str, full_source: str = "") -> List[EffectBlock]:
+    """Extract ActivateClass-based effects from a block.
+
+    If full_source is provided and a block delegates to a SharedActivateCoroutine,
+    the shared method body is extracted and scanned for actions.
+    """
+    effects = []
+
+    # Split on ActivateClass instantiations
+    activate_splits = re.split(r'(ActivateClass\s+\w+\s*=\s*new\s+ActivateClass\s*\(\s*\)\s*;)', block)
+
+    i = 0
+    while i < len(activate_splits):
+        segment = activate_splits[i]
+        if 'new ActivateClass' in segment and i + 1 < len(activate_splits):
+            # Combine the instantiation line with the following block
+            full_block = segment + activate_splits[i + 1]
+            i += 2
+        else:
+            full_block = segment
+            i += 1
+
+        if 'ActivateClass' not in full_block and 'SetUpICardEffect' not in full_block:
+            continue
+
+        eb = EffectBlock(raw_block=full_block)
+
+        # Extract metadata
+        m = RE_EFFECT_NAME.search(full_block)
+        if m:
+            eb.effect_name = m.group(1)
+
+        descs = RE_EFFECT_DESC.findall(full_block)
+        if descs:
+            eb.description = descs[0]
+
+        m = RE_SET_INHERITED.search(full_block)
+        if m:
+            eb.is_inherited = (m.group(1) or m.group(2)) == "true"
+
+        m = RE_HASH_STRING.search(full_block)
+        if m:
+            eb.hash_string = m.group(1)
+
+        m = RE_MAX_COUNT.search(full_block)
+        if m:
+            eb.max_count_per_turn = int(m.group(1))
+
+        m = RE_IS_OPTIONAL.search(full_block)
+        if m:
+            eb.is_optional = m.group(1) == "true"
+
+        # Extract conditions
+        if RE_COND_ON_BATTLE.search(full_block):
+            eb.conditions.append("on_battle_area")
+        if RE_COND_OWNER_TURN.search(full_block):
+            eb.conditions.append("your_turn")
+        if RE_COND_ON_PLAY.search(full_block):
+            eb.conditions.append("trigger_on_play")
+        if RE_COND_ON_ATTACK.search(full_block):
+            eb.conditions.append("trigger_on_attack")
+        if RE_COND_ON_DELETION.search(full_block):
+            eb.conditions.append("trigger_on_deletion")
+        if RE_COND_WHEN_DIGI.search(full_block):
+            eb.conditions.append("trigger_when_digivolving")
+        if RE_COND_SEC_EFFECT.search(full_block):
+            eb.conditions.append("trigger_security")
+        if RE_COND_OPTION_MAIN.search(full_block):
+            eb.conditions.append("trigger_option_main")
+
+        for m in RE_COND_TRAIT.finditer(full_block):
+            eb.trait_checks.append(m.group(1))
+        for m in RE_COND_NAME.finditer(full_block):
+            eb.name_checks.append(m.group(1))
+        for m in RE_COND_COLOR.finditer(full_block):
+            eb.color_checks.append(m.group(1))
+
+        # Fix 7: HasText checks
+        for m in RE_COND_HAS_TEXT.finditer(full_block):
+            if m.group(1) not in eb.has_text_checks:
+                eb.has_text_checks.append(m.group(1))
+
+        # Fix 8: HasRoyalKnightTraits
+        if RE_COND_ROYAL_KNIGHT.search(full_block):
+            if "Royal Knight" not in eb.trait_checks:
+                eb.trait_checks.append("Royal Knight")
+
+        # Deduplicate
+        eb.trait_checks = list(dict.fromkeys(eb.trait_checks))
+        eb.name_checks = list(dict.fromkeys(eb.name_checks))
+        eb.color_checks = list(dict.fromkeys(eb.color_checks))
+
+        # Extract actions
+        m = RE_DRAW.search(full_block)
+        if m:
+            eb.draw_count = int(m.group(1))
+            eb.actions.append("draw")
+
+        m = RE_ADD_MEMORY.search(full_block)
+        if m:
+            eb.memory_gain = int(m.group(1))
+            eb.actions.append("gain_memory")
+
+        m = RE_CHANGE_DP.search(full_block)
+        if m:
+            eb.dp_change = int(m.group(1))
+            eb.actions.append("change_dp")
+
+        m = RE_RECOVERY.search(full_block)
+        if m:
+            eb.recovery_count = int(m.group(1))
+            eb.actions.append("recovery")
+
+        if RE_DELETE.search(full_block):
+            eb.actions.append("delete")
+        if RE_BOUNCE.search(full_block):
+            eb.actions.append("bounce")
+        if RE_SUSPEND.search(full_block):
+            eb.actions.append("suspend")
+        if RE_PLAY_CARD.search(full_block):
+            eb.actions.append("play_card")
+        if RE_TRASH_HAND.search(full_block):
+            eb.actions.append("trash_from_hand")
+        if RE_TRASH_DIGI.search(full_block):
+            eb.actions.append("trash_digivolution_cards")
+        if RE_ADD_TO_HAND.search(full_block):
+            eb.actions.append("add_to_hand")
+        if RE_ADD_SECURITY.search(full_block):
+            eb.actions.append("add_to_security")
+        if RE_REVEAL.search(full_block):
+            eb.actions.append("reveal_and_select")
+        if RE_DEGENERATION.search(full_block):
+            eb.actions.append("de_digivolve")
+        if RE_DIGIVOLVE.search(full_block):
+            eb.actions.append("digivolve")
+        if RE_COST_REDUCTION.search(full_block):
+            eb.actions.append("cost_reduction")
+            m2 = re.search(r'Cost\s*-=\s*(\d+)', full_block)
+            if m2:
+                eb.cost_reduction_val = int(m2.group(1))
+        if RE_MIND_LINK.search(full_block):
+            eb.actions.append("mind_link")
+
+        # Fix 11: Additional action patterns from ActivateCoroutine bodies
+        # SelectPermanentEffect.Mode.* implies specific actions
+        for m_mode in RE_SELECT_PERM_MODE.finditer(full_block):
+            mode = m_mode.group(1)
+            if mode == "Destroy" and "delete" not in eb.actions:
+                eb.actions.append("delete")
+            elif mode == "Tap" and "suspend" not in eb.actions:
+                eb.actions.append("suspend")
+            elif mode in ("Bounce", "PutLibraryBottom") and "bounce" not in eb.actions:
+                eb.actions.append("bounce")
+            elif mode == "UnTap" and "unsuspend" not in eb.actions:
+                eb.actions.append("unsuspend")
+            elif mode == "Custom":
+                # P6: Mode.Custom — extract nested callback body and scan for actions
+                callback_body = _resolve_custom_callback(full_block, full_block)
+                if callback_body:
+                    _extract_actions_from_block(callback_body, eb)
+
+        # IDestroySecurity — trash opponent security
+        m_ds = RE_DESTROY_SECURITY.search(full_block)
+        if m_ds:
+            eb.actions.append("destroy_security")
+            eb.destroy_security_count = int(m_ds.group(1))
+        elif RE_REDUCE_SECURITY.search(full_block):
+            eb.actions.append("destroy_security")
+
+        # IUnsuspendPermanents
+        if RE_UNSUSPEND.search(full_block) and "unsuspend" not in eb.actions:
+            eb.actions.append("unsuspend")
+
+        # Attack restriction effects
+        if RE_RESTRICT_ATTACK.search(full_block):
+            eb.actions.append("restrict_attack")
+        if RE_TARGET_LOCK.search(full_block):
+            eb.actions.append("target_lock")
+
+        # Security flip
+        if RE_FLIP_SECURITY.search(full_block):
+            eb.actions.append("flip_security")
+
+        # Return to deck bottom
+        if RE_RETURN_DECK_BOTTOM.search(full_block) and "bounce" not in eb.actions:
+            eb.actions.append("return_to_deck")
+
+        # DNA/Jogress digivolution
+        if RE_JOGRESS.search(full_block):
+            eb.actions.append("jogress_condition")
+
+        # CardEffectCommons.Gain*() keyword grants
+        for m_gain in RE_GAIN_KEYWORD.finditer(full_block):
+            keyword_name = m_gain.group(1)
+            mapped = GAIN_KEYWORD_MAP.get(keyword_name)
+            if mapped and f"gain_keyword_{mapped}" not in eb.actions:
+                eb.actions.append(f"gain_keyword_{mapped}")
+                if not hasattr(eb, 'gained_keywords'):
+                    eb.gained_keywords = []
+                eb.gained_keywords.append(mapped)
+
+        # P5: Token play via CardEffectCommons helper methods
+        m_token = RE_PLAY_TOKEN.search(full_block)
+        if m_token and "play_token" not in eb.actions:
+            eb.actions.append("play_token")
+            eb.token_name = m_token.group(1)
+            eb.descriptive_tag = "play_token"
+
+        # P5: SelectAttackEffect — forced attack
+        if RE_SELECT_ATTACK.search(full_block) and "force_attack" not in eb.actions:
+            eb.actions.append("force_attack")
+            eb.descriptive_tag = "force_attack"
+
+        # P5: CardEffectCommons.ChangeDigimonSAttack — SA modifier to target
+        m_sa = RE_CHANGE_SA_TARGET.search(full_block)
+        if m_sa and "change_security_attack" not in eb.actions:
+            eb.actions.append("change_security_attack")
+            eb.descriptive_tag = "change_security_attack"
+
+        # P5: DisableEffectClass — effect invalidation
+        if RE_DISABLE_EFFECT.search(full_block) and "disable_effect" not in eb.actions:
+            eb.actions.append("disable_effect")
+            eb.descriptive_tag = "disable_effect"
+
+        # P5: HandBounceClass — bounce via helper class
+        if RE_HAND_BOUNCE_CLASS.search(full_block) and "bounce" not in eb.actions:
+            eb.actions.append("bounce")
+
+        # P5: CardEffectCommons.ChangeDigimonDP — DP change via helper
+        m_dp_commons = RE_CHANGE_DP_COMMONS.search(full_block)
+        if m_dp_commons and "change_dp" not in eb.actions:
+            eb.dp_change = int(m_dp_commons.group(1))
+            eb.actions.append("change_dp")
+
+        # P5: AddEffectToPermanent — grants temporary effects to targets
+        if RE_ADD_EFFECT_TO_PERM.search(full_block) and "add_temp_effect" not in eb.actions:
+            eb.actions.append("add_temp_effect")
+            eb.descriptive_tag = "add_temp_effect"
+
+        # P5: IPutSecurityPermanent — place permanent into security
+        if RE_PUT_SECURITY_PERM.search(full_block) and "put_to_security" not in eb.actions:
+            eb.actions.append("put_to_security")
+            eb.descriptive_tag = "put_to_security"
+
+        # ── Enhanced extraction for game helper method calls ──
+
+        # Target DP/level limits (for delete, bounce, suspend filters)
+        m = RE_TARGET_DP_LIMIT.search(full_block)
+        if m:
+            eb.target_dp_limit = int(m.group(1))
+        m = RE_TARGET_DP_MIN.search(full_block)
+        if m:
+            eb.target_dp_min = int(m.group(1))
+        m = RE_TARGET_LEVEL_LIMIT.search(full_block)
+        if m:
+            eb.target_level_limit = int(m.group(1))
+        m = RE_TARGET_LEVEL_MIN.search(full_block)
+        if m:
+            eb.target_level_min = int(m.group(1))
+
+        # Reveal count
+        m = RE_REVEAL_COUNT.search(full_block)
+        if m:
+            eb.reveal_count = int(m.group(1) or m.group(2))
+
+        # Play from zone
+        if RE_PLAY_FROM_TRASH.search(full_block):
+            eb.play_from_zone = 'trash'
+        if RE_PLAY_FREE.search(full_block):
+            eb.play_free = True
+
+        # Digivolve details
+        m = RE_DIGI_COST_FIXED.search(full_block)
+        if m:
+            eb.digi_cost_override = int(m.group(1))
+        if RE_DIGI_IGNORE_REQS.search(full_block):
+            eb.digi_ignore_reqs = True
+
+        # Fix 4: De-digivolve count
+        m = RE_DEGEN_COUNT.search(full_block)
+        if m:
+            eb.degen_count = int(m.group(1))
+
+        # Fix 6: Detect trash-as-cost pattern
+        if ("trash_from_hand" in eb.actions and
+                ("draw" in eb.actions or "gain_memory" in eb.actions)):
+            desc_lower = eb.description.lower()
+            if "by trashing" in desc_lower or "by discarding" in desc_lower:
+                eb.is_trash_as_cost = True
+
+        # P2: Mill detection — IAddTrashCardsFromLibraryTop
+        m_mill = RE_MILL.search(full_block)
+        if m_mill:
+            eb.actions.append("mill")
+            count_str = m_mill.group(1)
+            try:
+                eb.mill_count = int(count_str)
+            except ValueError:
+                eb.mill_count = 3  # default fallback for variable counts
+            if "Enemy" in m_mill.group(2):
+                eb.mill_target = "enemy"
+            else:
+                eb.mill_target = "self"
+
+        # P4: Descriptive tagging for non-implementable effects
+        if RE_IGNORE_COLOR.search(full_block):
+            eb.descriptive_tag = "ignore_color_req"
+            if "ignore_color_req" not in eb.actions:
+                eb.actions.append("ignore_color_req")
+        if RE_APP_FUSION.search(full_block):
+            eb.descriptive_tag = "app_fusion_condition"
+            if "app_fusion_condition" not in eb.actions:
+                eb.actions.append("app_fusion_condition")
+        if RE_LINK_CONDITION.search(full_block):
+            eb.descriptive_tag = "link_condition"
+            if "link_condition" not in eb.actions:
+                eb.actions.append("link_condition")
+        if RE_ALSO_TREATED_AS.search(full_block):
+            eb.descriptive_tag = "also_treated_as"
+            if "also_treated_as" not in eb.actions:
+                eb.actions.append("also_treated_as")
+        if RE_CANT_PUT_FIELD.search(full_block):
+            eb.descriptive_tag = "play_restriction"
+            if "play_restriction" not in eb.actions:
+                eb.actions.append("play_restriction")
+
+        # P1: SharedActivateCoroutine resolution
+        # If no actions were found and block delegates to a shared coroutine,
+        # extract the shared body and re-run action detection on it.
+        if not eb.actions and full_source:
+            shared_body = _resolve_shared_coroutine(full_block, full_source)
+            if shared_body:
+                _extract_actions_from_block(shared_body, eb)
+                # Also check shared body for P2 mill
+                m_mill = RE_MILL.search(shared_body)
+                if m_mill and "mill" not in eb.actions:
+                    eb.actions.append("mill")
+                    count_str = m_mill.group(1)
+                    try:
+                        eb.mill_count = int(count_str)
+                    except ValueError:
+                        eb.mill_count = 3
+                    if "Enemy" in m_mill.group(2):
+                        eb.mill_target = "enemy"
+                    else:
+                        eb.mill_target = "self"
+                # P4 descriptive tagging from shared body
+                if not eb.descriptive_tag:
+                    if RE_IGNORE_COLOR.search(shared_body):
+                        eb.descriptive_tag = "ignore_color_req"
+                        if "ignore_color_req" not in eb.actions:
+                            eb.actions.append("ignore_color_req")
+                    if RE_APP_FUSION.search(shared_body):
+                        eb.descriptive_tag = "app_fusion_condition"
+                        if "app_fusion_condition" not in eb.actions:
+                            eb.actions.append("app_fusion_condition")
+                    if RE_CANT_PUT_FIELD.search(shared_body):
+                        eb.descriptive_tag = "play_restriction"
+                        if "play_restriction" not in eb.actions:
+                            eb.actions.append("play_restriction")
+
+        # Fix 10: Extract CanActivateCondition patterns
+        _extract_activate_conditions(full_block, eb)
+
+        effects.append(eb)
+
+    return effects
+
+
+def _resolve_shared_coroutine(block: str, full_source: str) -> str:
+    """P1: Detect delegation to a shared coroutine and extract its body.
+
+    Looks for patterns like:
+      hash => SharedActivateCoroutine(hash, activateClass)
+      hash => WDWASharedActivateCoroutine(hash, activateClass)
+
+    Returns the shared method body or empty string if not found.
+    """
+    # Try the specific shared coroutine regex first
+    m = RE_SHARED_COROUTINE_DELEGATE.search(block)
+    if m:
+        method_name = m.group(1) or m.group(2)
+        if method_name:
+            body = _extract_method_body(full_source, method_name)
+            if body:
+                return body
+
+    # Fallback: try general coroutine delegation (hash => SomeCoroutine(hash, ...))
+    m = RE_COROUTINE_DELEGATE.search(block)
+    if m:
+        method_name = m.group(1)
+        # Only resolve if the method name contains "Coroutine" and isn't
+        # a standard ActivateCoroutine (which is the timing block itself)
+        if method_name and "Activate" not in method_name:
+            body = _extract_method_body(full_source, method_name)
+            if body:
+                return body
+
+    return ""
+
+
+def _resolve_custom_callback(block: str, full_block: str) -> str:
+    """P6: Extract the body of a Mode.Custom selectPermanentCoroutine callback.
+
+    When SelectPermanentEffect.Mode.Custom is used, the actual effect logic
+    lives in a nested local function (the callback). This function finds and
+    returns that callback body so action detection can be re-run on it.
+    """
+    # Try selectPermanentCoroutine parameter first
+    m = RE_CUSTOM_CALLBACK.search(block)
+    if m:
+        callback_name = m.group(1)
+        if callback_name and callback_name != "null":
+            body = _extract_method_body(full_block, callback_name)
+            if body:
+                return body
+
+    # Also try afterSelectPermanentCoroutine
+    m = RE_AFTER_CUSTOM_CALLBACK.search(block)
+    if m:
+        callback_name = m.group(1)
+        if callback_name and callback_name != "null":
+            body = _extract_method_body(full_block, callback_name)
+            if body:
+                return body
+
+    return ""
+
+
+def _extract_actions_from_block(block: str, eb: EffectBlock):
+    """Extract actions from a C# block into an existing EffectBlock.
+
+    Re-runs all action detection regexes against the given block
+    (typically a SharedActivateCoroutine body) and merges results
+    into the existing EffectBlock.
+    """
+    # Draw
+    m = RE_DRAW.search(block)
+    if m and "draw" not in eb.actions:
+        eb.draw_count = int(m.group(1))
+        eb.actions.append("draw")
+
+    # Memory gain
+    m = RE_ADD_MEMORY.search(block)
+    if m and "gain_memory" not in eb.actions:
+        eb.memory_gain = int(m.group(1))
+        eb.actions.append("gain_memory")
+
+    # DP change
+    m = RE_CHANGE_DP.search(block)
+    if m and "change_dp" not in eb.actions:
+        eb.dp_change = int(m.group(1))
+        eb.actions.append("change_dp")
+
+    # Recovery
+    m = RE_RECOVERY.search(block)
+    if m and "recovery" not in eb.actions:
+        eb.recovery_count = int(m.group(1))
+        eb.actions.append("recovery")
+
+    # Simple action patterns
+    if RE_DELETE.search(block) and "delete" not in eb.actions:
+        eb.actions.append("delete")
+    if RE_BOUNCE.search(block) and "bounce" not in eb.actions:
+        eb.actions.append("bounce")
+    if RE_SUSPEND.search(block) and "suspend" not in eb.actions:
+        eb.actions.append("suspend")
+    if RE_PLAY_CARD.search(block) and "play_card" not in eb.actions:
+        eb.actions.append("play_card")
+    if RE_TRASH_HAND.search(block) and "trash_from_hand" not in eb.actions:
+        eb.actions.append("trash_from_hand")
+    if RE_TRASH_DIGI.search(block) and "trash_digivolution_cards" not in eb.actions:
+        eb.actions.append("trash_digivolution_cards")
+    if RE_ADD_TO_HAND.search(block) and "add_to_hand" not in eb.actions:
+        eb.actions.append("add_to_hand")
+    if RE_ADD_SECURITY.search(block) and "add_to_security" not in eb.actions:
+        eb.actions.append("add_to_security")
+    if RE_REVEAL.search(block) and "reveal_and_select" not in eb.actions:
+        eb.actions.append("reveal_and_select")
+    if RE_DEGENERATION.search(block) and "de_digivolve" not in eb.actions:
+        eb.actions.append("de_digivolve")
+    if RE_DIGIVOLVE.search(block) and "digivolve" not in eb.actions:
+        eb.actions.append("digivolve")
+    if RE_COST_REDUCTION.search(block) and "cost_reduction" not in eb.actions:
+        eb.actions.append("cost_reduction")
+        m2 = re.search(r'Cost\s*-=\s*(\d+)', block)
+        if m2:
+            eb.cost_reduction_val = int(m2.group(1))
+    if RE_MIND_LINK.search(block) and "mind_link" not in eb.actions:
+        eb.actions.append("mind_link")
+
+    # SelectPermanentEffect.Mode.* patterns
+    for m_mode in RE_SELECT_PERM_MODE.finditer(block):
+        mode = m_mode.group(1)
+        if mode == "Destroy" and "delete" not in eb.actions:
+            eb.actions.append("delete")
+        elif mode == "Tap" and "suspend" not in eb.actions:
+            eb.actions.append("suspend")
+        elif mode in ("Bounce", "PutLibraryBottom") and "bounce" not in eb.actions:
+            eb.actions.append("bounce")
+        elif mode == "UnTap" and "unsuspend" not in eb.actions:
+            eb.actions.append("unsuspend")
+        elif mode == "Custom":
+            # P6: Mode.Custom — extract nested callback body and scan for actions
+            callback_body = _resolve_custom_callback(block, block)
+            if callback_body:
+                _extract_actions_from_block(callback_body, eb)
+
+    # IDestroySecurity
+    m_ds = RE_DESTROY_SECURITY.search(block)
+    if m_ds and "destroy_security" not in eb.actions:
+        eb.actions.append("destroy_security")
+        eb.destroy_security_count = int(m_ds.group(1))
+    elif RE_REDUCE_SECURITY.search(block) and "destroy_security" not in eb.actions:
+        eb.actions.append("destroy_security")
+
+    # Unsuspend
+    if RE_UNSUSPEND.search(block) and "unsuspend" not in eb.actions:
+        eb.actions.append("unsuspend")
+
+    # Attack restriction
+    if RE_RESTRICT_ATTACK.search(block) and "restrict_attack" not in eb.actions:
+        eb.actions.append("restrict_attack")
+    if RE_TARGET_LOCK.search(block) and "target_lock" not in eb.actions:
+        eb.actions.append("target_lock")
+
+    # Security flip
+    if RE_FLIP_SECURITY.search(block) and "flip_security" not in eb.actions:
+        eb.actions.append("flip_security")
+
+    # Return to deck bottom
+    if RE_RETURN_DECK_BOTTOM.search(block) and "bounce" not in eb.actions and "return_to_deck" not in eb.actions:
+        eb.actions.append("return_to_deck")
+
+    # Jogress
+    if RE_JOGRESS.search(block) and "jogress_condition" not in eb.actions:
+        eb.actions.append("jogress_condition")
+
+    # CardEffectCommons.Gain*() keyword grants
+    for m_gain in RE_GAIN_KEYWORD.finditer(block):
+        keyword_name = m_gain.group(1)
+        mapped = GAIN_KEYWORD_MAP.get(keyword_name)
+        if mapped and f"gain_keyword_{mapped}" not in eb.actions:
+            eb.actions.append(f"gain_keyword_{mapped}")
+            if not hasattr(eb, 'gained_keywords'):
+                eb.gained_keywords = []
+            eb.gained_keywords.append(mapped)
+
+    # P5: Token play via CardEffectCommons helper methods
+    m_token = RE_PLAY_TOKEN.search(block)
+    if m_token and "play_token" not in eb.actions:
+        eb.actions.append("play_token")
+        eb.token_name = m_token.group(1)
+        eb.descriptive_tag = "play_token"
+
+    # P5: SelectAttackEffect — forced attack
+    if RE_SELECT_ATTACK.search(block) and "force_attack" not in eb.actions:
+        eb.actions.append("force_attack")
+        eb.descriptive_tag = "force_attack"
+
+    # P5: CardEffectCommons.ChangeDigimonSAttack — SA modifier to target
+    m_sa = RE_CHANGE_SA_TARGET.search(block)
+    if m_sa and "change_security_attack" not in eb.actions:
+        eb.actions.append("change_security_attack")
+        eb.descriptive_tag = "change_security_attack"
+
+    # P5: DisableEffectClass — effect invalidation
+    if RE_DISABLE_EFFECT.search(block) and "disable_effect" not in eb.actions:
+        eb.actions.append("disable_effect")
+        eb.descriptive_tag = "disable_effect"
+
+    # P5: HandBounceClass — bounce via helper class
+    if RE_HAND_BOUNCE_CLASS.search(block) and "bounce" not in eb.actions:
+        eb.actions.append("bounce")
+
+    # P5: CardEffectCommons.ChangeDigimonDP — DP change via helper
+    m_dp_commons = RE_CHANGE_DP_COMMONS.search(block)
+    if m_dp_commons and "change_dp" not in eb.actions:
+        eb.dp_change = int(m_dp_commons.group(1))
+        eb.actions.append("change_dp")
+
+    # P5: AddEffectToPermanent — grants temporary effects to targets
+    if RE_ADD_EFFECT_TO_PERM.search(block) and "add_temp_effect" not in eb.actions:
+        eb.actions.append("add_temp_effect")
+        eb.descriptive_tag = "add_temp_effect"
+
+    # P5: IPutSecurityPermanent — place permanent into security
+    if RE_PUT_SECURITY_PERM.search(block) and "put_to_security" not in eb.actions:
+        eb.actions.append("put_to_security")
+        eb.descriptive_tag = "put_to_security"
+
+    # CanNotPutFieldClass — play restriction
+    if RE_CANT_PUT_FIELD.search(block) and "play_restriction" not in eb.actions:
+        eb.actions.append("play_restriction")
+        eb.descriptive_tag = "play_restriction"
+
+    # Enhanced extraction: target DP/level limits from shared body
+    if eb.target_dp_limit is None:
+        m = RE_TARGET_DP_LIMIT.search(block)
+        if m:
+            eb.target_dp_limit = int(m.group(1))
+    if eb.target_dp_min is None:
+        m = RE_TARGET_DP_MIN.search(block)
+        if m:
+            eb.target_dp_min = int(m.group(1))
+    if eb.target_level_limit is None:
+        m = RE_TARGET_LEVEL_LIMIT.search(block)
+        if m:
+            eb.target_level_limit = int(m.group(1))
+    if eb.target_level_min is None:
+        m = RE_TARGET_LEVEL_MIN.search(block)
+        if m:
+            eb.target_level_min = int(m.group(1))
+
+    # Reveal count from shared body
+    if eb.reveal_count is None:
+        m = RE_REVEAL_COUNT.search(block)
+        if m:
+            eb.reveal_count = int(m.group(1) or m.group(2))
+
+    # Play from zone from shared body
+    if RE_PLAY_FROM_TRASH.search(block):
+        eb.play_from_zone = 'trash'
+    if RE_PLAY_FREE.search(block):
+        eb.play_free = True
+
+    # Digivolve details from shared body
+    if eb.digi_cost_override is None:
+        m = RE_DIGI_COST_FIXED.search(block)
+        if m:
+            eb.digi_cost_override = int(m.group(1))
+    if RE_DIGI_IGNORE_REQS.search(block):
+        eb.digi_ignore_reqs = True
+
+    # De-digivolve count
+    if eb.degen_count is None:
+        m = RE_DEGEN_COUNT.search(block)
+        if m:
+            eb.degen_count = int(m.group(1))
+
+
+def _extract_activate_conditions(block: str, eb: EffectBlock):
+    """Fix 10: Extract conditions from CanActivateCondition closures."""
+    # DigivolutionCards.Count >= N
+    m = RE_FACTORY_COND_DIGI_COUNT.search(block)
+    if m:
+        eb.activate_cond_digi_count = int(m.group(1))
+
+    # DigivolutionCards.Count(... EqualsCardName("X") ...)
+    for m in RE_FACTORY_COND_SOURCE_NAME.finditer(block):
+        if m.group(1) not in eb.activate_cond_source_name:
+            eb.activate_cond_source_name.append(m.group(1))
+
+    # DigivolutionCards.Count(... EqualsTraits("X") ...)
+    for m in RE_FACTORY_COND_SOURCE_TRAIT.finditer(block):
+        if m.group(1) not in eb.activate_cond_source_trait:
+            eb.activate_cond_source_trait.append(m.group(1))
+
+    # HasText("X")
+    for m in RE_COND_HAS_TEXT.finditer(block):
+        if m.group(1) not in eb.activate_cond_has_text:
+            eb.activate_cond_has_text.append(m.group(1))
+
+    # TopCard.EqualsCardName("X")
+    for m in RE_FACTORY_COND_PERM_NAME.finditer(block):
+        if m.group(1) not in eb.activate_cond_perm_name:
+            eb.activate_cond_perm_name.append(m.group(1))
+
+
+def parse_cs_file(filepath: str) -> Tuple[str, List[EffectBlock]]:
+    """Parse a C# card effect file. Returns (class_name, effects)."""
+    with open(filepath, 'r', encoding='utf-8', errors='replace') as f:
+        source = f.read()
+
+    m = RE_CLASS.search(source)
+    class_name = m.group(1) if m else os.path.basename(filepath).replace('.cs', '')
+
+    all_effects = []
+
+    # Extract timing blocks
+    timing_blocks = extract_timing_blocks(source)
+
+    for timing, block in timing_blocks:
+        # Check for factory effects first
+        factory_effects = extract_factory_effects(block)
+        for fe in factory_effects:
+            fe.timing = timing
+            all_effects.append(fe)
+
+        # Then ActivateClass effects (pass full source for shared coroutine resolution)
+        activate_effects = extract_activate_effects(block, full_source=source)
+        for ae in activate_effects:
+            ae.timing = timing
+            all_effects.append(ae)
+
+    # Also check for effects defined outside timing blocks (top-level)
+    if not timing_blocks:
+        factory_effects = extract_factory_effects(source)
+        activate_effects = extract_activate_effects(source, full_source=source)
+        for fe in factory_effects:
+            all_effects.append(fe)
+        for ae in activate_effects:
+            all_effects.append(ae)
+
+    return class_name, all_effects

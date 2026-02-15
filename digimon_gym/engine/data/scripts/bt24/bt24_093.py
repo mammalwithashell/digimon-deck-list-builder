@@ -48,15 +48,32 @@ class BT24_093(CardScript):
         effect0.set_on_process_callback(process0)
         effects.append(effect0)
 
+        # Factory effect: delay
+        # Delay
+        effect1 = ICardEffect()
+        effect1.set_effect_name("BT24-093 Delay")
+        effect1.set_effect_description("Delay")
+        effect1._is_delay = True
+
+        def condition1(context: Dict[str, Any]) -> bool:
+            if card and card.permanent_of_this_card() is None:
+                return False
+            permanent = card.permanent_of_this_card() if card else None
+            if not (permanent and len(permanent.digivolution_cards) >= 0):
+                return False
+            return True
+        effect1.set_can_use_condition(condition1)
+        effects.append(effect1)
+
         # Timing: EffectTiming.OnLoseSecurity
         # [All Turns] When your security stack is removed, <Delay>.\r\n• You may place the top stacked card of any your Digimon with [Aegiochusmon] or [Jupitermon] in their names as the top security card.
-        effect1 = ICardEffect()
-        effect1.set_effect_name("BT24-093 Place top card [Aegiochusmon] or [Jupitermon] on top sec.")
-        effect1.set_effect_description("[All Turns] When your security stack is removed, <Delay>.\r\n• You may place the top stacked card of any your Digimon with [Aegiochusmon] or [Jupitermon] in their names as the top security card.")
-        effect1.is_optional = True
+        effect2 = ICardEffect()
+        effect2.set_effect_name("BT24-093 Place top card [Aegiochusmon] or [Jupitermon] on top sec.")
+        effect2.set_effect_description("[All Turns] When your security stack is removed, <Delay>.\r\n• You may place the top stacked card of any your Digimon with [Aegiochusmon] or [Jupitermon] in their names as the top security card.")
+        effect2.is_optional = True
 
-        effect = effect1  # alias for condition closure
-        def condition1(context: Dict[str, Any]) -> bool:
+        effect = effect2  # alias for condition closure
+        def condition2(context: Dict[str, Any]) -> bool:
             if card and card.permanent_of_this_card() is None:
                 return False
             permanent = effect.effect_source_permanent if hasattr(effect, 'effect_source_permanent') else None
@@ -64,9 +81,9 @@ class BT24_093(CardScript):
                 return False
             return True
 
-        effect1.set_can_use_condition(condition1)
+        effect2.set_can_use_condition(condition2)
 
-        def process1(ctx: Dict[str, Any]):
+        def process2(ctx: Dict[str, Any]):
             """Action: Add To Security"""
             player = ctx.get('player')
             perm = ctx.get('permanent')
@@ -75,25 +92,25 @@ class BT24_093(CardScript):
             if player:
                 player.recovery(1)
 
-        effect1.set_on_process_callback(process1)
-        effects.append(effect1)
+        effect2.set_on_process_callback(process2)
+        effects.append(effect2)
 
         # Timing: EffectTiming.SecuritySkill
         # [Security] You may play 1 [Aegiomon] or [Elecmon] from your hand or trash without paying the cost.
-        effect2 = ICardEffect()
-        effect2.set_effect_name("BT24-093 Play 1 [Aegiomon]/[Elecmon] from hand or trash.")
-        effect2.set_effect_description("[Security] You may play 1 [Aegiomon] or [Elecmon] from your hand or trash without paying the cost.")
-        effect2.is_security_effect = True
-        effect2.is_security_effect = True
+        effect3 = ICardEffect()
+        effect3.set_effect_name("BT24-093 Play 1 [Aegiomon]/[Elecmon] from hand or trash.")
+        effect3.set_effect_description("[Security] You may play 1 [Aegiomon] or [Elecmon] from your hand or trash without paying the cost.")
+        effect3.is_security_effect = True
+        effect3.is_security_effect = True
 
-        effect = effect2  # alias for condition closure
-        def condition2(context: Dict[str, Any]) -> bool:
+        effect = effect3  # alias for condition closure
+        def condition3(context: Dict[str, Any]) -> bool:
             # Security effect — validated by engine timing
             return True
 
-        effect2.set_can_use_condition(condition2)
+        effect3.set_can_use_condition(condition3)
 
-        def process2(ctx: Dict[str, Any]):
+        def process3(ctx: Dict[str, Any]):
             """Action: Play Card, Trash From Hand"""
             player = ctx.get('player')
             perm = ctx.get('permanent')
@@ -115,7 +132,7 @@ class BT24_093(CardScript):
             game.effect_select_hand_card(
                 player, hand_filter, on_trashed, is_optional=False)
 
-        effect2.set_on_process_callback(process2)
-        effects.append(effect2)
+        effect3.set_on_process_callback(process3)
+        effects.append(effect3)
 
         return effects

@@ -36,6 +36,7 @@ class BT20_022(CardScript):
         effect1.set_effect_name("BT20-022 Select 1 of your Digimon to gain battle protection")
         effect1.set_effect_description("[On Play] 1 of your Digimon can't be deleted in battle until the end of your opponent's turn.")
         effect1.is_on_play = True
+        effect1._is_cannot_be_deleted_by_battle = True
 
         effect = effect1  # alias for condition closure
         def condition1(context: Dict[str, Any]) -> bool:
@@ -45,6 +46,24 @@ class BT20_022(CardScript):
             return True
 
         effect1.set_can_use_condition(condition1)
+
+        def process1(ctx: Dict[str, Any]):
+            """Action: Gain Keyword Cannot Be Deleted By Battle"""
+            player = ctx.get('player')
+            perm = ctx.get('permanent')
+            game = ctx.get('game')
+            if not (player and game):
+                return
+            def target_filter(p):
+                return p.is_digimon
+            def on_grant(target_perm):
+                grants = getattr(target_perm, '_keyword_grants', [])
+                grants.append('_is_cannot_be_deleted_by_battle')
+                target_perm._keyword_grants = grants
+            game.effect_select_own_permanent(
+                player, on_grant, filter_fn=target_filter, is_optional=False)
+
+        effect1.set_on_process_callback(process1)
         effects.append(effect1)
 
         # Timing: EffectTiming.OnEnterFieldAnyone
@@ -53,6 +72,7 @@ class BT20_022(CardScript):
         effect2.set_effect_name("BT20-022 Select 1 of your Digimon to gain battle protection")
         effect2.set_effect_description("[When Digivolving] 1 of your Digimon can't be deleted in battle until the end of your opponent's turn.")
         effect2.is_when_digivolving = True
+        effect2._is_cannot_be_deleted_by_battle = True
 
         effect = effect2  # alias for condition closure
         def condition2(context: Dict[str, Any]) -> bool:
@@ -62,6 +82,24 @@ class BT20_022(CardScript):
             return True
 
         effect2.set_can_use_condition(condition2)
+
+        def process2(ctx: Dict[str, Any]):
+            """Action: Gain Keyword Cannot Be Deleted By Battle"""
+            player = ctx.get('player')
+            perm = ctx.get('permanent')
+            game = ctx.get('game')
+            if not (player and game):
+                return
+            def target_filter(p):
+                return p.is_digimon
+            def on_grant(target_perm):
+                grants = getattr(target_perm, '_keyword_grants', [])
+                grants.append('_is_cannot_be_deleted_by_battle')
+                target_perm._keyword_grants = grants
+            game.effect_select_own_permanent(
+                player, on_grant, filter_fn=target_filter, is_optional=False)
+
+        effect2.set_on_process_callback(process2)
         effects.append(effect2)
 
         # Timing: EffectTiming.OnAllyAttack

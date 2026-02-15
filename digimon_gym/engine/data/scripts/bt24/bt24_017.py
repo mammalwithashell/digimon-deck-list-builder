@@ -26,10 +26,10 @@ class BT24_017(CardScript):
         effects.append(effect0)
 
         # Timing: EffectTiming.OnEnterFieldAnyone
-        # DP +2000, Delete
+        # DP +2000, Delete, Play Token
         effect1 = ICardEffect()
         effect1.set_effect_name("BT24-017 Delete lowest DP Digimon, Return 2 cards from their trash to deck to play 2 Tokens and gain 2k DP per opponent's Digimon.")
-        effect1.set_effect_description("DP +2000, Delete")
+        effect1.set_effect_description("DP +2000, Delete, Play Token")
         effect1.is_when_digivolving = True
 
         effect = effect1  # alias for condition closure
@@ -42,7 +42,7 @@ class BT24_017(CardScript):
         effect1.set_can_use_condition(condition1)
 
         def process1(ctx: Dict[str, Any]):
-            """Action: DP +2000, Delete"""
+            """Action: DP +2000, Delete, Play Token"""
             player = ctx.get('player')
             perm = ctx.get('permanent')
             game = ctx.get('game')
@@ -58,6 +58,8 @@ class BT24_017(CardScript):
                     enemy.delete_permanent(target_perm)
             game.effect_select_opponent_permanent(
                 player, on_delete, filter_fn=target_filter, is_optional=False)
+            # Play Petrification Token — token play not yet supported in engine
+            pass  # descriptive-tagged: play_token
 
         effect1.set_on_process_callback(process1)
         effects.append(effect1)

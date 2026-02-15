@@ -54,11 +54,12 @@ class BT24_045(CardScript):
         effects.append(effect1)
 
         # Timing: EffectTiming.OnEnterFieldAnyone
-        # Effect
+        # Trash From Hand, Suspend, Gain Keyword Cannot Unsuspend
         effect2 = ICardEffect()
-        effect2.set_effect_name("BT24-045 Effect")
-        effect2.set_effect_description("Effect")
+        effect2.set_effect_name("BT24-045 Trash From Hand, Suspend, Gain Keyword Cannot Unsuspend")
+        effect2.set_effect_description("Trash From Hand, Suspend, Gain Keyword Cannot Unsuspend")
         effect2.is_on_play = True
+        effect2._is_cannot_unsuspend = True
 
         effect = effect2  # alias for condition closure
         def condition2(context: Dict[str, Any]) -> bool:
@@ -66,14 +67,43 @@ class BT24_045(CardScript):
             return True
 
         effect2.set_can_use_condition(condition2)
+
+        def process2(ctx: Dict[str, Any]):
+            """Action: Trash From Hand, Suspend, Gain Keyword Cannot Unsuspend"""
+            player = ctx.get('player')
+            perm = ctx.get('permanent')
+            game = ctx.get('game')
+            if not (player and game):
+                return
+            def hand_filter(c):
+                return True
+            def on_trashed(selected):
+                if selected in player.hand_cards:
+                    player.hand_cards.remove(selected)
+                    player.trash_cards.append(selected)
+            game.effect_select_hand_card(
+                player, hand_filter, on_trashed, is_optional=False)
+            if not (player and game):
+                return
+            def target_filter(p):
+                return True
+            def on_suspend(target_perm):
+                target_perm.suspend()
+            game.effect_select_opponent_permanent(
+                player, on_suspend, filter_fn=target_filter, is_optional=False)
+            # Keyword grant: cannot_unsuspend — flag set on effect object
+            pass
+
+        effect2.set_on_process_callback(process2)
         effects.append(effect2)
 
         # Timing: EffectTiming.OnAllyAttack
-        # Effect
+        # Trash From Hand, Suspend, Gain Keyword Cannot Unsuspend
         effect3 = ICardEffect()
-        effect3.set_effect_name("BT24-045 Effect")
-        effect3.set_effect_description("Effect")
+        effect3.set_effect_name("BT24-045 Trash From Hand, Suspend, Gain Keyword Cannot Unsuspend")
+        effect3.set_effect_description("Trash From Hand, Suspend, Gain Keyword Cannot Unsuspend")
         effect3.is_on_attack = True
+        effect3._is_cannot_unsuspend = True
 
         effect = effect3  # alias for condition closure
         def condition3(context: Dict[str, Any]) -> bool:
@@ -81,6 +111,34 @@ class BT24_045(CardScript):
             return True
 
         effect3.set_can_use_condition(condition3)
+
+        def process3(ctx: Dict[str, Any]):
+            """Action: Trash From Hand, Suspend, Gain Keyword Cannot Unsuspend"""
+            player = ctx.get('player')
+            perm = ctx.get('permanent')
+            game = ctx.get('game')
+            if not (player and game):
+                return
+            def hand_filter(c):
+                return True
+            def on_trashed(selected):
+                if selected in player.hand_cards:
+                    player.hand_cards.remove(selected)
+                    player.trash_cards.append(selected)
+            game.effect_select_hand_card(
+                player, hand_filter, on_trashed, is_optional=False)
+            if not (player and game):
+                return
+            def target_filter(p):
+                return True
+            def on_suspend(target_perm):
+                target_perm.suspend()
+            game.effect_select_opponent_permanent(
+                player, on_suspend, filter_fn=target_filter, is_optional=False)
+            # Keyword grant: cannot_unsuspend — flag set on effect object
+            pass
+
+        effect3.set_on_process_callback(process3)
         effects.append(effect3)
 
         # Timing: EffectTiming.OnDiscardHand

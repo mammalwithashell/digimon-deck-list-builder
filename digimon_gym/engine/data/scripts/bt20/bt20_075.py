@@ -36,6 +36,8 @@ class BT20_075(CardScript):
         effect1.set_effect_name("BT20-075 Trash 2 cards then, gain Raid, Piercing, and +4000 DP.")
         effect1.set_effect_description("[On Play] Trash 2 cards in your hand. Then, for the turn, 1 of your Digimon gains <Raid> and <Piercing> and +4000 DP.")
         effect1.is_on_play = True
+        effect1._is_raid = True
+        effect1._is_piercing = True
 
         effect = effect1  # alias for condition closure
         def condition1(context: Dict[str, Any]) -> bool:
@@ -47,7 +49,7 @@ class BT20_075(CardScript):
         effect1.set_can_use_condition(condition1)
 
         def process1(ctx: Dict[str, Any]):
-            """Action: DP +4000, Trash From Hand"""
+            """Action: DP +4000, Trash From Hand, Gain Keyword Raid, Gain Keyword Piercing"""
             player = ctx.get('player')
             perm = ctx.get('permanent')
             game = ctx.get('game')
@@ -63,6 +65,10 @@ class BT20_075(CardScript):
                     player.trash_cards.append(selected)
             game.effect_select_hand_card(
                 player, hand_filter, on_trashed, is_optional=False)
+            # Keyword grant: raid — flag set on effect object
+            pass
+            # Keyword grant: piercing — flag set on effect object
+            pass
 
         effect1.set_on_process_callback(process1)
         effects.append(effect1)
@@ -73,6 +79,8 @@ class BT20_075(CardScript):
         effect2.set_effect_name("BT20-075 Trash 2 cards then, gain Raid, Piercing, and +4000 DP.")
         effect2.set_effect_description("[When Digivolving] Trash 2 cards in your hand. Then, for the turn, 1 of your Digimon gains <Raid> and <Piercing> and +4000 DP.")
         effect2.is_when_digivolving = True
+        effect2._is_raid = True
+        effect2._is_piercing = True
 
         effect = effect2  # alias for condition closure
         def condition2(context: Dict[str, Any]) -> bool:
@@ -84,7 +92,7 @@ class BT20_075(CardScript):
         effect2.set_can_use_condition(condition2)
 
         def process2(ctx: Dict[str, Any]):
-            """Action: DP +4000, Trash From Hand"""
+            """Action: DP +4000, Trash From Hand, Gain Keyword Raid, Gain Keyword Piercing"""
             player = ctx.get('player')
             perm = ctx.get('permanent')
             game = ctx.get('game')
@@ -100,6 +108,10 @@ class BT20_075(CardScript):
                     player.trash_cards.append(selected)
             game.effect_select_hand_card(
                 player, hand_filter, on_trashed, is_optional=False)
+            # Keyword grant: raid — flag set on effect object
+            pass
+            # Keyword grant: piercing — flag set on effect object
+            pass
 
         effect2.set_on_process_callback(process2)
         effects.append(effect2)

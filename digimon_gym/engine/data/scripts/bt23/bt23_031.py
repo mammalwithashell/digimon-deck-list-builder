@@ -8,7 +8,7 @@ if TYPE_CHECKING:
 
 
 class BT23_031(CardScript):
-    """BT23-031"""
+    """BT23-031 Angewomon | Lv.5"""
 
     def get_card_effects(self, card: 'CardSource') -> List['ICardEffect']:
         effects = []
@@ -88,6 +88,27 @@ class BT23_031(CardScript):
             return True
 
         effect3.set_can_use_condition(condition3)
+
+        def process3(ctx: Dict[str, Any]):
+            """Action: Recovery +1, Add To Hand, Destroy Security"""
+            player = ctx.get('player')
+            perm = ctx.get('permanent')
+            game = ctx.get('game')
+            if player:
+                player.recovery(1)
+            # Add card to hand (from trash/reveal)
+            if player and player.trash_cards:
+                card_to_add = player.trash_cards.pop()
+                player.hand_cards.append(card_to_add)
+            # Trash opponent's top security card(s)
+            enemy = player.enemy if player else None
+            if enemy:
+                for _ in range(1):
+                    if enemy.security_cards:
+                        trashed = enemy.security_cards.pop()
+                        enemy.trash_cards.append(trashed)
+
+        effect3.set_on_process_callback(process3)
         effects.append(effect3)
 
         # Timing: EffectTiming.OnEnterFieldAnyone
@@ -105,6 +126,27 @@ class BT23_031(CardScript):
             return True
 
         effect4.set_can_use_condition(condition4)
+
+        def process4(ctx: Dict[str, Any]):
+            """Action: Recovery +1, Add To Hand, Destroy Security"""
+            player = ctx.get('player')
+            perm = ctx.get('permanent')
+            game = ctx.get('game')
+            if player:
+                player.recovery(1)
+            # Add card to hand (from trash/reveal)
+            if player and player.trash_cards:
+                card_to_add = player.trash_cards.pop()
+                player.hand_cards.append(card_to_add)
+            # Trash opponent's top security card(s)
+            enemy = player.enemy if player else None
+            if enemy:
+                for _ in range(1):
+                    if enemy.security_cards:
+                        trashed = enemy.security_cards.pop()
+                        enemy.trash_cards.append(trashed)
+
+        effect4.set_on_process_callback(process4)
         effects.append(effect4)
 
         # Factory effect: alliance

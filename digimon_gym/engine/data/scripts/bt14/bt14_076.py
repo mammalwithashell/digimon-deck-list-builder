@@ -79,6 +79,7 @@ class BT14_076(CardScript):
         effect2.set_effect_description("[On Deletion] You may play 1 [Agumon] from your trash without paying the cost. If you have a Tamer with [Tai Kamiya] in its name, that Digimon gains <Rush> for the turn.")
         effect2.is_optional = True
         effect2.is_on_deletion = True
+        effect2._is_rush = True
 
         effect = effect2  # alias for condition closure
         def condition2(context: Dict[str, Any]) -> bool:
@@ -88,7 +89,7 @@ class BT14_076(CardScript):
         effect2.set_can_use_condition(condition2)
 
         def process2(ctx: Dict[str, Any]):
-            """Action: Play Card"""
+            """Action: Play Card, Gain Keyword Rush"""
             player = ctx.get('player')
             perm = ctx.get('permanent')
             game = ctx.get('game')
@@ -100,6 +101,8 @@ class BT14_076(CardScript):
                 return True
             game.effect_play_from_zone(
                 player, 'trash', play_filter, free=True, is_optional=True)
+            # Keyword grant: rush — flag set on effect object
+            pass
 
         effect2.set_on_process_callback(process2)
         effects.append(effect2)

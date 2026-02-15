@@ -8,7 +8,7 @@ if TYPE_CHECKING:
 
 
 class BT23_016(CardScript):
-    """BT23-016"""
+    """BT23-016 Dokamon | Lv.3"""
 
     def get_card_effects(self, card: 'CardSource') -> List['ICardEffect']:
         effects = []
@@ -83,6 +83,16 @@ class BT23_016(CardScript):
             return True
 
         effect2.set_can_use_condition(condition2)
+
+        def process2(ctx: Dict[str, Any]):
+            """Action: Draw 1"""
+            player = ctx.get('player')
+            perm = ctx.get('permanent')
+            game = ctx.get('game')
+            if player:
+                player.draw_cards(1)
+
+        effect2.set_on_process_callback(process2)
         effects.append(effect2)
 
         return effects

@@ -16,9 +16,8 @@ class BT14_094(CardScript):
         # Timing: EffectTiming.OptionSkill
         # [Main] Activate 1 of the effects below: - 1 of your opponent's Digimon gets -6000 DP for the turn. - By deleting 1 of your [Angemon], place 1 of your opponent's Digimon at the bottom of their security stack.
         effect0 = ICardEffect()
-        effect0.set_effect_name("BT14-094 DP -6000")
+        effect0.set_effect_name("BT14-094 DP -6000, Put To Security")
         effect0.set_effect_description("[Main] Activate 1 of the effects below: - 1 of your opponent's Digimon gets -6000 DP for the turn. - By deleting 1 of your [Angemon], place 1 of your opponent's Digimon at the bottom of their security stack.")
-        effect0.dp_modifier = -6000
 
         effect = effect0  # alias for condition closure
         def condition0(context: Dict[str, Any]) -> bool:
@@ -28,7 +27,7 @@ class BT14_094(CardScript):
         effect0.set_can_use_condition(condition0)
 
         def process0(ctx: Dict[str, Any]):
-            """Action: DP -6000"""
+            """Action: DP -6000, Put To Security"""
             player = ctx.get('player')
             perm = ctx.get('permanent')
             game = ctx.get('game')
@@ -39,6 +38,16 @@ class BT14_094(CardScript):
                 if dp_targets:
                     target = min(dp_targets, key=lambda p: p.dp)
                     target.change_dp(-6000)
+            # Place a permanent into the security stack
+            if not (player and game):
+                return
+            def target_filter(p):
+                return p.is_digimon
+            def on_put_security(target_perm):
+                if player:
+                    player.put_permanent_to_security(target_perm)
+            game.effect_select_own_permanent(
+                player, on_put_security, filter_fn=target_filter, is_optional=False)
 
         effect0.set_on_process_callback(process0)
         effects.append(effect0)

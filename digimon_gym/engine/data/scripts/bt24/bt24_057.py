@@ -43,11 +43,12 @@ class BT24_057(CardScript):
         effects.append(effect1)
 
         # Timing: EffectTiming.OnEnterFieldAnyone
-        # Effect
+        # Gain Keyword Cannot Attack
         effect2 = ICardEffect()
-        effect2.set_effect_name("BT24-057 Effect")
-        effect2.set_effect_description("Effect")
+        effect2.set_effect_name("BT24-057 Gain Keyword Cannot Attack")
+        effect2.set_effect_description("Gain Keyword Cannot Attack")
         effect2.is_on_play = True
+        effect2._is_cannot_attack = True
 
         effect = effect2  # alias for condition closure
         def condition2(context: Dict[str, Any]) -> bool:
@@ -57,14 +58,33 @@ class BT24_057(CardScript):
             return True
 
         effect2.set_can_use_condition(condition2)
+
+        def process2(ctx: Dict[str, Any]):
+            """Action: Gain Keyword Cannot Attack"""
+            player = ctx.get('player')
+            perm = ctx.get('permanent')
+            game = ctx.get('game')
+            if not (player and game):
+                return
+            def target_filter(p):
+                return p.is_digimon
+            def on_grant(target_perm):
+                grants = getattr(target_perm, '_keyword_grants', [])
+                grants.append('_is_cannot_attack')
+                target_perm._keyword_grants = grants
+            game.effect_select_own_permanent(
+                player, on_grant, filter_fn=target_filter, is_optional=False)
+
+        effect2.set_on_process_callback(process2)
         effects.append(effect2)
 
         # Timing: EffectTiming.OnDestroyedAnyone
-        # Effect
+        # Gain Keyword Cannot Attack
         effect3 = ICardEffect()
-        effect3.set_effect_name("BT24-057 Effect")
-        effect3.set_effect_description("Effect")
+        effect3.set_effect_name("BT24-057 Gain Keyword Cannot Attack")
+        effect3.set_effect_description("Gain Keyword Cannot Attack")
         effect3.is_on_deletion = True
+        effect3._is_cannot_attack = True
 
         effect = effect3  # alias for condition closure
         def condition3(context: Dict[str, Any]) -> bool:
@@ -72,6 +92,24 @@ class BT24_057(CardScript):
             return True
 
         effect3.set_can_use_condition(condition3)
+
+        def process3(ctx: Dict[str, Any]):
+            """Action: Gain Keyword Cannot Attack"""
+            player = ctx.get('player')
+            perm = ctx.get('permanent')
+            game = ctx.get('game')
+            if not (player and game):
+                return
+            def target_filter(p):
+                return p.is_digimon
+            def on_grant(target_perm):
+                grants = getattr(target_perm, '_keyword_grants', [])
+                grants.append('_is_cannot_attack')
+                target_perm._keyword_grants = grants
+            game.effect_select_own_permanent(
+                player, on_grant, filter_fn=target_filter, is_optional=False)
+
+        effect3.set_on_process_callback(process3)
         effects.append(effect3)
 
         # Timing: EffectTiming.OnDestroyedAnyone

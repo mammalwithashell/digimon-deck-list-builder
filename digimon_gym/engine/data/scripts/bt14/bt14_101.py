@@ -45,6 +45,7 @@ class BT14_101(CardScript):
         effect2.set_effect_name("BT14-101 This Digimon gains Raid and can attack")
         effect2.set_effect_description("[When Digivolving] This Digimon gains <Raid> for the turn. Then, it may attack.")
         effect2.is_when_digivolving = True
+        effect2._is_raid = True
 
         effect = effect2  # alias for condition closure
         def condition2(context: Dict[str, Any]) -> bool:
@@ -54,14 +55,27 @@ class BT14_101(CardScript):
             return True
 
         effect2.set_can_use_condition(condition2)
+
+        def process2(ctx: Dict[str, Any]):
+            """Action: Gain Keyword Raid, Force Attack"""
+            player = ctx.get('player')
+            perm = ctx.get('permanent')
+            game = ctx.get('game')
+            # Keyword grant: raid — flag set on effect object
+            pass
+            # Force attack — target Digimon may attack (requires engine SelectAttack)
+            pass  # descriptive-tagged: force_attack
+
+        effect2.set_on_process_callback(process2)
         effects.append(effect2)
 
         # Timing: EffectTiming.OnAllyAttack
         # [When Attacking] If you have a Tamer, this Digimon gains ��Security A. +1�� and <Piercing> for the turn.
         effect3 = ICardEffect()
-        effect3.set_effect_name("BT14-101 Effect")
+        effect3.set_effect_name("BT14-101 Gain Keyword Piercing")
         effect3.set_effect_description("[When Attacking] If you have a Tamer, this Digimon gains ��Security A. +1�� and <Piercing> for the turn.")
         effect3.is_on_attack = True
+        effect3._is_piercing = True
 
         effect = effect3  # alias for condition closure
         def condition3(context: Dict[str, Any]) -> bool:
@@ -71,6 +85,24 @@ class BT14_101(CardScript):
             return True
 
         effect3.set_can_use_condition(condition3)
+
+        def process3(ctx: Dict[str, Any]):
+            """Action: Gain Keyword Piercing"""
+            player = ctx.get('player')
+            perm = ctx.get('permanent')
+            game = ctx.get('game')
+            if not (player and game):
+                return
+            def target_filter(p):
+                return p.is_digimon
+            def on_grant(target_perm):
+                grants = getattr(target_perm, '_keyword_grants', [])
+                grants.append('_is_piercing')
+                target_perm._keyword_grants = grants
+            game.effect_select_own_permanent(
+                player, on_grant, filter_fn=target_filter, is_optional=False)
+
+        effect3.set_on_process_callback(process3)
         effects.append(effect3)
 
         return effects

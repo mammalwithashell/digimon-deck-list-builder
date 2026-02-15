@@ -59,7 +59,7 @@ class BT20_020(CardScript):
         effect2.set_can_use_condition(condition2)
 
         def process2(ctx: Dict[str, Any]):
-            """Action: Destroy Security"""
+            """Action: Destroy Security, Play Restriction"""
             player = ctx.get('player')
             perm = ctx.get('permanent')
             game = ctx.get('game')
@@ -70,6 +70,8 @@ class BT20_020(CardScript):
                     if enemy.security_cards:
                         trashed = enemy.security_cards.pop()
                         enemy.trash_cards.append(trashed)
+            # Play restriction (CanNotPutFieldClass) — opponent play restrictions
+            pass  # descriptive-tagged
 
         effect2.set_on_process_callback(process2)
         effects.append(effect2)

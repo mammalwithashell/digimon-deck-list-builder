@@ -164,6 +164,7 @@ class BT20_102(CardScript):
         effect5.is_optional = True
         effect5.set_max_count_per_turn(1)
         effect5.set_hash_string("Rush_BT20_102")
+        effect5._is_rush = True
 
         effect = effect5  # alias for condition closure
         def condition5(context: Dict[str, Any]) -> bool:
@@ -174,6 +175,18 @@ class BT20_102(CardScript):
             return True
 
         effect5.set_can_use_condition(condition5)
+
+        def process5(ctx: Dict[str, Any]):
+            """Action: Gain Keyword Rush, Force Attack"""
+            player = ctx.get('player')
+            perm = ctx.get('permanent')
+            game = ctx.get('game')
+            # Keyword grant: rush — flag set on effect object
+            pass
+            # Force attack — target Digimon may attack (requires engine SelectAttack)
+            pass  # descriptive-tagged: force_attack
+
+        effect5.set_on_process_callback(process5)
         effects.append(effect5)
 
         return effects

@@ -75,10 +75,10 @@ class BT24_041(CardScript):
         effects.append(effect2)
 
         # Timing: EffectTiming.OnEnterFieldAnyone
-        # Effect
+        # Play Card, Trash From Hand, De Digivolve
         effect3 = ICardEffect()
-        effect3.set_effect_name("BT24-041 Effect")
-        effect3.set_effect_description("Effect")
+        effect3.set_effect_name("BT24-041 Play Card, Trash From Hand, De Digivolve")
+        effect3.set_effect_description("Play Card, Trash From Hand, De Digivolve")
         effect3.is_on_play = True
 
         effect = effect3  # alias for condition closure
@@ -89,13 +89,46 @@ class BT24_041(CardScript):
             return True
 
         effect3.set_can_use_condition(condition3)
+
+        def process3(ctx: Dict[str, Any]):
+            """Action: Play Card, Trash From Hand, De Digivolve"""
+            player = ctx.get('player')
+            perm = ctx.get('permanent')
+            game = ctx.get('game')
+            if not (player and game):
+                return
+            def play_filter(c):
+                return True
+            game.effect_play_from_zone(
+                player, 'hand', play_filter, free=True, is_optional=True)
+            if not (player and game):
+                return
+            def hand_filter(c):
+                return True
+            def on_trashed(selected):
+                if selected in player.hand_cards:
+                    player.hand_cards.remove(selected)
+                    player.trash_cards.append(selected)
+            game.effect_select_hand_card(
+                player, hand_filter, on_trashed, is_optional=False)
+            if not (player and game):
+                return
+            def on_de_digivolve(target_perm):
+                removed = target_perm.de_digivolve(1)
+                enemy = player.enemy if player else None
+                if enemy:
+                    enemy.trash_cards.extend(removed)
+            game.effect_select_opponent_permanent(
+                player, on_de_digivolve, filter_fn=lambda p: p.is_digimon, is_optional=False)
+
+        effect3.set_on_process_callback(process3)
         effects.append(effect3)
 
         # Timing: EffectTiming.OnEnterFieldAnyone
-        # Effect
+        # Play Card, Trash From Hand, De Digivolve
         effect4 = ICardEffect()
-        effect4.set_effect_name("BT24-041 Effect")
-        effect4.set_effect_description("Effect")
+        effect4.set_effect_name("BT24-041 Play Card, Trash From Hand, De Digivolve")
+        effect4.set_effect_description("Play Card, Trash From Hand, De Digivolve")
         effect4.is_when_digivolving = True
 
         effect = effect4  # alias for condition closure
@@ -106,13 +139,46 @@ class BT24_041(CardScript):
             return True
 
         effect4.set_can_use_condition(condition4)
+
+        def process4(ctx: Dict[str, Any]):
+            """Action: Play Card, Trash From Hand, De Digivolve"""
+            player = ctx.get('player')
+            perm = ctx.get('permanent')
+            game = ctx.get('game')
+            if not (player and game):
+                return
+            def play_filter(c):
+                return True
+            game.effect_play_from_zone(
+                player, 'hand', play_filter, free=True, is_optional=True)
+            if not (player and game):
+                return
+            def hand_filter(c):
+                return True
+            def on_trashed(selected):
+                if selected in player.hand_cards:
+                    player.hand_cards.remove(selected)
+                    player.trash_cards.append(selected)
+            game.effect_select_hand_card(
+                player, hand_filter, on_trashed, is_optional=False)
+            if not (player and game):
+                return
+            def on_de_digivolve(target_perm):
+                removed = target_perm.de_digivolve(1)
+                enemy = player.enemy if player else None
+                if enemy:
+                    enemy.trash_cards.extend(removed)
+            game.effect_select_opponent_permanent(
+                player, on_de_digivolve, filter_fn=lambda p: p.is_digimon, is_optional=False)
+
+        effect4.set_on_process_callback(process4)
         effects.append(effect4)
 
         # Timing: EffectTiming.OnDestroyedAnyone
-        # Effect
+        # Play Card, Trash From Hand, De Digivolve
         effect5 = ICardEffect()
-        effect5.set_effect_name("BT24-041 Effect")
-        effect5.set_effect_description("Effect")
+        effect5.set_effect_name("BT24-041 Play Card, Trash From Hand, De Digivolve")
+        effect5.set_effect_description("Play Card, Trash From Hand, De Digivolve")
         effect5.is_on_deletion = True
 
         effect = effect5  # alias for condition closure
@@ -121,6 +187,39 @@ class BT24_041(CardScript):
             return True
 
         effect5.set_can_use_condition(condition5)
+
+        def process5(ctx: Dict[str, Any]):
+            """Action: Play Card, Trash From Hand, De Digivolve"""
+            player = ctx.get('player')
+            perm = ctx.get('permanent')
+            game = ctx.get('game')
+            if not (player and game):
+                return
+            def play_filter(c):
+                return True
+            game.effect_play_from_zone(
+                player, 'hand', play_filter, free=True, is_optional=True)
+            if not (player and game):
+                return
+            def hand_filter(c):
+                return True
+            def on_trashed(selected):
+                if selected in player.hand_cards:
+                    player.hand_cards.remove(selected)
+                    player.trash_cards.append(selected)
+            game.effect_select_hand_card(
+                player, hand_filter, on_trashed, is_optional=False)
+            if not (player and game):
+                return
+            def on_de_digivolve(target_perm):
+                removed = target_perm.de_digivolve(1)
+                enemy = player.enemy if player else None
+                if enemy:
+                    enemy.trash_cards.extend(removed)
+            game.effect_select_opponent_permanent(
+                player, on_de_digivolve, filter_fn=lambda p: p.is_digimon, is_optional=False)
+
+        effect5.set_on_process_callback(process5)
         effects.append(effect5)
 
         # Factory effect: blocker

@@ -26,10 +26,10 @@ class BT20_090(CardScript):
         effects.append(effect0)
 
         # Timing: EffectTiming.OnEndTurn
-        # [End of Your Turn] If you have 4 or fewer cards in your hand, by suspending this Tamer, 1 of your [Dark Dragon] or [Evil Dragon] trait Digimon may attack a player.
+        # [End of Your Turn] If you have 4 pr fewer cards in your hand, by suspending this Tamer, 1 of your [Dark Dragon] or [Evil Dragon] trait Digimon may attack a player.
         effect1 = ICardEffect()
         effect1.set_effect_name("BT20-090 1 of your [Dark Dragon] or [Evil Dragon] Digimon may attack a player.")
-        effect1.set_effect_description("[End of Your Turn] If you have 4 or fewer cards in your hand, by suspending this Tamer, 1 of your [Dark Dragon] or [Evil Dragon] trait Digimon may attack a player.")
+        effect1.set_effect_description("[End of Your Turn] If you have 4 pr fewer cards in your hand, by suspending this Tamer, 1 of your [Dark Dragon] or [Evil Dragon] trait Digimon may attack a player.")
         effect1.is_optional = True
 
         effect = effect1  # alias for condition closure
@@ -43,7 +43,7 @@ class BT20_090(CardScript):
         effect1.set_can_use_condition(condition1)
 
         def process1(ctx: Dict[str, Any]):
-            """Action: Suspend"""
+            """Action: Suspend, Force Attack"""
             player = ctx.get('player')
             perm = ctx.get('permanent')
             game = ctx.get('game')
@@ -55,6 +55,8 @@ class BT20_090(CardScript):
                 target_perm.suspend()
             game.effect_select_opponent_permanent(
                 player, on_suspend, filter_fn=target_filter, is_optional=True)
+            # Force attack — target Digimon may attack (requires engine SelectAttack)
+            pass  # descriptive-tagged: force_attack
 
         effect1.set_on_process_callback(process1)
         effects.append(effect1)

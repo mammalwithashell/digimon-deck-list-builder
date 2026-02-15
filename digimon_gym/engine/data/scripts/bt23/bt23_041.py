@@ -8,7 +8,7 @@ if TYPE_CHECKING:
 
 
 class BT23_041(CardScript):
-    """BT23-041"""
+    """BT23-041 Kabuterimon | Lv.4"""
 
     def get_card_effects(self, card: 'CardSource') -> List['ICardEffect']:
         effects = []
@@ -45,7 +45,7 @@ class BT23_041(CardScript):
         effect2.set_effect_description("[All Turns] [Once Per Turn] When this Digimon suspends, 1 of your Digimon gains <Piercing> and +3000 DP for the turn.")
         effect2.set_max_count_per_turn(1)
         effect2.set_hash_string("BT23_041_AT")
-        effect2.dp_modifier = 3000
+        effect2._is_piercing = True
 
         effect = effect2  # alias for condition closure
         def condition2(context: Dict[str, Any]) -> bool:
@@ -56,12 +56,22 @@ class BT23_041(CardScript):
         effect2.set_can_use_condition(condition2)
 
         def process2(ctx: Dict[str, Any]):
-            """Action: DP +3000"""
+            """Action: DP +3000, Gain Keyword Piercing"""
             player = ctx.get('player')
             perm = ctx.get('permanent')
             game = ctx.get('game')
             if perm:
                 perm.change_dp(3000)
+            if not (player and game):
+                return
+            def target_filter(p):
+                return p.is_digimon
+            def on_grant(target_perm):
+                grants = getattr(target_perm, '_keyword_grants', [])
+                grants.append('_is_piercing')
+                target_perm._keyword_grants = grants
+            game.effect_select_own_permanent(
+                player, on_grant, filter_fn=target_filter, is_optional=False)
 
         effect2.set_on_process_callback(process2)
         effects.append(effect2)

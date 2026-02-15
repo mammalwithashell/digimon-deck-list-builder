@@ -18,6 +18,7 @@ class BT14_020(CardScript):
         effect0 = ICardEffect()
         effect0.set_effect_name("BT14-020 Trash digivolution cards and this Digimon gains unblockable")
         effect0.set_effect_description("[Start of Your Main Phase] Trash any 1 digivolution card of 1 of your opponent's Digimon. This Digimon can't be blocked for the turn.")
+        effect0._is_cannot_be_blocked = True
 
         effect = effect0  # alias for condition closure
         def condition0(context: Dict[str, Any]) -> bool:
@@ -30,7 +31,7 @@ class BT14_020(CardScript):
         effect0.set_can_use_condition(condition0)
 
         def process0(ctx: Dict[str, Any]):
-            """Action: Trash Digivolution Cards"""
+            """Action: Trash Digivolution Cards, Gain Keyword Cannot Be Blocked"""
             player = ctx.get('player')
             perm = ctx.get('permanent')
             game = ctx.get('game')
@@ -39,6 +40,8 @@ class BT14_020(CardScript):
                 trashed = perm.trash_digivolution_cards(1)
                 if player:
                     player.trash_cards.extend(trashed)
+            # Keyword grant: cannot_be_blocked — flag set on effect object
+            pass
 
         effect0.set_on_process_callback(process0)
         effects.append(effect0)

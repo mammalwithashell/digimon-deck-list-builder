@@ -8,7 +8,7 @@ if TYPE_CHECKING:
 
 
 class BT23_059(CardScript):
-    """BT23-059"""
+    """BT23-059 Justimon: Blitz Arm | Lv.6"""
 
     def get_card_effects(self, card: 'CardSource') -> List['ICardEffect']:
         effects = []
@@ -56,10 +56,10 @@ class BT23_059(CardScript):
         effects.append(effect2)
 
         # Timing: EffectTiming.OnEnterFieldAnyone
-        # Effect
+        # Delete
         effect3 = ICardEffect()
         effect3.set_effect_name("BT23-059 By trashing 1 option card, delete 1 Digimon")
-        effect3.set_effect_description("Effect")
+        effect3.set_effect_description("Delete")
         effect3.set_hash_string("OPWDWA_BT23-059")
         effect3.is_on_play = True
 
@@ -71,13 +71,31 @@ class BT23_059(CardScript):
             return True
 
         effect3.set_can_use_condition(condition3)
+
+        def process3(ctx: Dict[str, Any]):
+            """Action: Delete"""
+            player = ctx.get('player')
+            perm = ctx.get('permanent')
+            game = ctx.get('game')
+            if not (player and game):
+                return
+            def target_filter(p):
+                return p.is_digimon
+            def on_delete(target_perm):
+                enemy = player.enemy if player else None
+                if enemy:
+                    enemy.delete_permanent(target_perm)
+            game.effect_select_opponent_permanent(
+                player, on_delete, filter_fn=target_filter, is_optional=False)
+
+        effect3.set_on_process_callback(process3)
         effects.append(effect3)
 
         # Timing: EffectTiming.OnEnterFieldAnyone
-        # Effect
+        # Delete
         effect4 = ICardEffect()
         effect4.set_effect_name("BT23-059 By trashing 1 option card, delete 1 Digimon")
-        effect4.set_effect_description("Effect")
+        effect4.set_effect_description("Delete")
         effect4.set_hash_string("OPWDWA_BT23-059")
         effect4.is_when_digivolving = True
 
@@ -89,13 +107,31 @@ class BT23_059(CardScript):
             return True
 
         effect4.set_can_use_condition(condition4)
+
+        def process4(ctx: Dict[str, Any]):
+            """Action: Delete"""
+            player = ctx.get('player')
+            perm = ctx.get('permanent')
+            game = ctx.get('game')
+            if not (player and game):
+                return
+            def target_filter(p):
+                return p.is_digimon
+            def on_delete(target_perm):
+                enemy = player.enemy if player else None
+                if enemy:
+                    enemy.delete_permanent(target_perm)
+            game.effect_select_opponent_permanent(
+                player, on_delete, filter_fn=target_filter, is_optional=False)
+
+        effect4.set_on_process_callback(process4)
         effects.append(effect4)
 
         # Timing: EffectTiming.OnAllyAttack
-        # Effect
+        # Delete
         effect5 = ICardEffect()
         effect5.set_effect_name("BT23-059 By trashing 1 option card, delete 1 Digimon")
-        effect5.set_effect_description("Effect")
+        effect5.set_effect_description("Delete")
         effect5.set_hash_string("OPWDWA_BT23-059")
         effect5.is_on_attack = True
 
@@ -107,6 +143,24 @@ class BT23_059(CardScript):
             return True
 
         effect5.set_can_use_condition(condition5)
+
+        def process5(ctx: Dict[str, Any]):
+            """Action: Delete"""
+            player = ctx.get('player')
+            perm = ctx.get('permanent')
+            game = ctx.get('game')
+            if not (player and game):
+                return
+            def target_filter(p):
+                return p.is_digimon
+            def on_delete(target_perm):
+                enemy = player.enemy if player else None
+                if enemy:
+                    enemy.delete_permanent(target_perm)
+            game.effect_select_opponent_permanent(
+                player, on_delete, filter_fn=target_filter, is_optional=False)
+
+        effect5.set_on_process_callback(process5)
         effects.append(effect5)
 
         # Timing: EffectTiming.OnDestroyedAnyone

@@ -8,7 +8,7 @@ if TYPE_CHECKING:
 
 
 class BT23_035(CardScript):
-    """BT23-035"""
+    """BT23-035 Dynasmon | Lv.6"""
 
     def get_card_effects(self, card: 'CardSource') -> List['ICardEffect']:
         effects = []
@@ -57,6 +57,21 @@ class BT23_035(CardScript):
             return True
 
         effect2.set_can_use_condition(condition2)
+
+        def process2(ctx: Dict[str, Any]):
+            """Action: Destroy Security"""
+            player = ctx.get('player')
+            perm = ctx.get('permanent')
+            game = ctx.get('game')
+            # Trash opponent's top security card(s)
+            enemy = player.enemy if player else None
+            if enemy:
+                for _ in range(1):
+                    if enemy.security_cards:
+                        trashed = enemy.security_cards.pop()
+                        enemy.trash_cards.append(trashed)
+
+        effect2.set_on_process_callback(process2)
         effects.append(effect2)
 
         # Timing: EffectTiming.OnEnterFieldAnyone
@@ -74,6 +89,21 @@ class BT23_035(CardScript):
             return True
 
         effect3.set_can_use_condition(condition3)
+
+        def process3(ctx: Dict[str, Any]):
+            """Action: Destroy Security"""
+            player = ctx.get('player')
+            perm = ctx.get('permanent')
+            game = ctx.get('game')
+            # Trash opponent's top security card(s)
+            enemy = player.enemy if player else None
+            if enemy:
+                for _ in range(1):
+                    if enemy.security_cards:
+                        trashed = enemy.security_cards.pop()
+                        enemy.trash_cards.append(trashed)
+
+        effect3.set_on_process_callback(process3)
         effects.append(effect3)
 
         # Timing: EffectTiming.OnLoseSecurity

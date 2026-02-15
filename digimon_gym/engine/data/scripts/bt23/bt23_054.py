@@ -8,7 +8,7 @@ if TYPE_CHECKING:
 
 
 class BT23_054(CardScript):
-    """BT23-054"""
+    """BT23-054 Magnamon | Lv.4"""
 
     def get_card_effects(self, card: 'CardSource') -> List['ICardEffect']:
         effects = []
@@ -60,6 +60,8 @@ class BT23_054(CardScript):
         effect3.set_effect_name("BT23-054 Draw 1, then give can't be returned to hand/deck")
         effect3.set_effect_description("[On Play] <Draw 1> Then, 1 of your Digimon with the [Royal Knight] or [CS] trait can't be returned to hands or decks by your opponent's effects until their turn ends.")
         effect3.is_on_play = True
+        effect3._is_cannot_return_to_hand = True
+        effect3._is_cannot_return_to_deck = True
 
         effect = effect3  # alias for condition closure
         def condition3(context: Dict[str, Any]) -> bool:
@@ -69,6 +71,20 @@ class BT23_054(CardScript):
             return True
 
         effect3.set_can_use_condition(condition3)
+
+        def process3(ctx: Dict[str, Any]):
+            """Action: Draw 1, Gain Keyword Cannot Return To Hand, Gain Keyword Cannot Return To Deck"""
+            player = ctx.get('player')
+            perm = ctx.get('permanent')
+            game = ctx.get('game')
+            if player:
+                player.draw_cards(1)
+            # Keyword grant: cannot_return_to_hand — flag set on effect object
+            pass
+            # Keyword grant: cannot_return_to_deck — flag set on effect object
+            pass
+
+        effect3.set_on_process_callback(process3)
         effects.append(effect3)
 
         # Timing: EffectTiming.OnEnterFieldAnyone
@@ -77,6 +93,8 @@ class BT23_054(CardScript):
         effect4.set_effect_name("BT23-054 Draw 1, then give can't be returned to hand/deck")
         effect4.set_effect_description("[When Digivolving] <Draw 1> Then, 1 of your Digimon with the [Royal Knight] or [CS] trait can't be returned to hands or decks by your opponent's effects until their turn ends.")
         effect4.is_when_digivolving = True
+        effect4._is_cannot_return_to_hand = True
+        effect4._is_cannot_return_to_deck = True
 
         effect = effect4  # alias for condition closure
         def condition4(context: Dict[str, Any]) -> bool:
@@ -86,6 +104,20 @@ class BT23_054(CardScript):
             return True
 
         effect4.set_can_use_condition(condition4)
+
+        def process4(ctx: Dict[str, Any]):
+            """Action: Draw 1, Gain Keyword Cannot Return To Hand, Gain Keyword Cannot Return To Deck"""
+            player = ctx.get('player')
+            perm = ctx.get('permanent')
+            game = ctx.get('game')
+            if player:
+                player.draw_cards(1)
+            # Keyword grant: cannot_return_to_hand — flag set on effect object
+            pass
+            # Keyword grant: cannot_return_to_deck — flag set on effect object
+            pass
+
+        effect4.set_on_process_callback(process4)
         effects.append(effect4)
 
         return effects

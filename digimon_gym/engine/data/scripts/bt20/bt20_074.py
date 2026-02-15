@@ -95,10 +95,10 @@ class BT20_074(CardScript):
         effects.append(effect2)
 
         # Timing: EffectTiming.None
-        # Effect
+        # Disable Effect
         effect3 = ICardEffect()
         effect3.set_effect_name("BT20-074 Ignore Security Effect")
-        effect3.set_effect_description("Effect")
+        effect3.set_effect_description("Disable Effect")
         effect3.is_inherited_effect = True
 
         effect = effect3  # alias for condition closure
@@ -110,6 +110,16 @@ class BT20_074(CardScript):
             return True
 
         effect3.set_can_use_condition(condition3)
+
+        def process3(ctx: Dict[str, Any]):
+            """Action: Disable Effect"""
+            player = ctx.get('player')
+            perm = ctx.get('permanent')
+            game = ctx.get('game')
+            # Disable/invalidate effects on target — not yet in engine
+            pass  # descriptive-tagged: disable_effect
+
+        effect3.set_on_process_callback(process3)
         effects.append(effect3)
 
         return effects

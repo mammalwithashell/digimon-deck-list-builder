@@ -36,6 +36,7 @@ class BT20_042(CardScript):
         effect1.set_effect_name("BT20-042 Suspend 1 Digimon or Tamer and 1 Digimon or Tamer cannot unsuspend")
         effect1.set_effect_description("[On Play] Suspend 1 of your opponent's Digimon or Tamers. Then, 1 of their Digimon or Tamers can't unsuspend until the end of their turn.")
         effect1.is_on_play = True
+        effect1._is_cannot_unsuspend = True
 
         effect = effect1  # alias for condition closure
         def condition1(context: Dict[str, Any]) -> bool:
@@ -45,7 +46,7 @@ class BT20_042(CardScript):
         effect1.set_can_use_condition(condition1)
 
         def process1(ctx: Dict[str, Any]):
-            """Action: Suspend"""
+            """Action: Suspend, Gain Keyword Cannot Unsuspend"""
             player = ctx.get('player')
             perm = ctx.get('permanent')
             game = ctx.get('game')
@@ -57,6 +58,8 @@ class BT20_042(CardScript):
                 target_perm.suspend()
             game.effect_select_opponent_permanent(
                 player, on_suspend, filter_fn=target_filter, is_optional=False)
+            # Keyword grant: cannot_unsuspend — flag set on effect object
+            pass
 
         effect1.set_on_process_callback(process1)
         effects.append(effect1)
@@ -67,6 +70,7 @@ class BT20_042(CardScript):
         effect2.set_effect_name("BT20-042 Suspend 1 Digimon or Tamer and 1 Digimon or Tamer cannot unsuspend")
         effect2.set_effect_description("[When Digivolving] Suspend 1 of your opponent's Digimon or Tamers. Then, 1 of their Digimon or Tamers can't unsuspend until the end of their turn.")
         effect2.is_when_digivolving = True
+        effect2._is_cannot_unsuspend = True
 
         effect = effect2  # alias for condition closure
         def condition2(context: Dict[str, Any]) -> bool:
@@ -76,7 +80,7 @@ class BT20_042(CardScript):
         effect2.set_can_use_condition(condition2)
 
         def process2(ctx: Dict[str, Any]):
-            """Action: Suspend"""
+            """Action: Suspend, Gain Keyword Cannot Unsuspend"""
             player = ctx.get('player')
             perm = ctx.get('permanent')
             game = ctx.get('game')
@@ -88,6 +92,8 @@ class BT20_042(CardScript):
                 target_perm.suspend()
             game.effect_select_opponent_permanent(
                 player, on_suspend, filter_fn=target_filter, is_optional=False)
+            # Keyword grant: cannot_unsuspend — flag set on effect object
+            pass
 
         effect2.set_on_process_callback(process2)
         effects.append(effect2)

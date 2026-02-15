@@ -26,10 +26,10 @@ class BT14_017(CardScript):
         effects.append(effect0)
 
         # Timing: EffectTiming.None
-        # Effect
+        # Play Restriction
         effect1 = ICardEffect()
         effect1.set_effect_name("BT14-017 Opponent can't play Digimon card with DP 6000 or less")
-        effect1.set_effect_description("Effect")
+        effect1.set_effect_description("Play Restriction")
 
         effect = effect1  # alias for condition closure
         def condition1(context: Dict[str, Any]) -> bool:
@@ -38,6 +38,16 @@ class BT14_017(CardScript):
             return True
 
         effect1.set_can_use_condition(condition1)
+
+        def process1(ctx: Dict[str, Any]):
+            """Action: Play Restriction"""
+            player = ctx.get('player')
+            perm = ctx.get('permanent')
+            game = ctx.get('game')
+            # Play restriction (CanNotPutFieldClass) — opponent play restrictions
+            pass  # descriptive-tagged
+
+        effect1.set_on_process_callback(process1)
         effects.append(effect1)
 
         # Factory effect: dp_modifier

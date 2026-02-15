@@ -8,7 +8,7 @@ if TYPE_CHECKING:
 
 
 class BT23_033(CardScript):
-    """BT23-033"""
+    """BT23-033 Beautymon | Lv.5"""
 
     def get_card_effects(self, card: 'CardSource') -> List['ICardEffect']:
         effects = []
@@ -106,6 +106,8 @@ class BT23_033(CardScript):
         effect5 = ICardEffect()
         effect5.set_effect_name("BT23-033 Gain deck and hand bounce & De-Digivolve immunity")
         effect5.set_effect_description("[When Linking] Until your opponent's turn ends, their effects can't return this Digimon to hands or decks or affect it with <De-Digivolve> effects.")
+        effect5._is_cannot_return_to_deck = True
+        effect5._is_cannot_return_to_hand = True
 
         effect = effect5  # alias for condition closure
         def condition5(context: Dict[str, Any]) -> bool:
@@ -114,6 +116,18 @@ class BT23_033(CardScript):
             return True
 
         effect5.set_can_use_condition(condition5)
+
+        def process5(ctx: Dict[str, Any]):
+            """Action: Gain Keyword Cannot Return To Deck, Gain Keyword Cannot Return To Hand"""
+            player = ctx.get('player')
+            perm = ctx.get('permanent')
+            game = ctx.get('game')
+            # Keyword grant: cannot_return_to_deck — flag set on effect object
+            pass
+            # Keyword grant: cannot_return_to_hand — flag set on effect object
+            pass
+
+        effect5.set_on_process_callback(process5)
         effects.append(effect5)
 
         return effects

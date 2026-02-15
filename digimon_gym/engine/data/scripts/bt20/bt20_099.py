@@ -14,16 +14,26 @@ class BT20_099(CardScript):
         effects = []
 
         # Timing: EffectTiming.None
-        # Effect
+        # Ignore Color Req
         effect0 = ICardEffect()
         effect0.set_effect_name("BT20-099 Ignore color requirements")
-        effect0.set_effect_description("Effect")
+        effect0.set_effect_description("Ignore Color Req")
 
         effect = effect0  # alias for condition closure
         def condition0(context: Dict[str, Any]) -> bool:
             return True
 
         effect0.set_can_use_condition(condition0)
+
+        def process0(ctx: Dict[str, Any]):
+            """Action: Ignore Color Req"""
+            player = ctx.get('player')
+            perm = ctx.get('permanent')
+            game = ctx.get('game')
+            # Ignores color requirement for playing Options — not modeled in engine
+            pass  # descriptive-tagged
+
+        effect0.set_on_process_callback(process0)
         effects.append(effect0)
 
         # Timing: EffectTiming.OptionSkill

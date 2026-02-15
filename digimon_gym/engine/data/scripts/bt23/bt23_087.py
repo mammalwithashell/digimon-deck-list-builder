@@ -8,7 +8,7 @@ if TYPE_CHECKING:
 
 
 class BT23_087(CardScript):
-    """BT23-087"""
+    """BT23-087 Violet Inboots"""
 
     def get_card_effects(self, card: 'CardSource') -> List['ICardEffect']:
         effects = []
@@ -60,6 +60,7 @@ class BT23_087(CardScript):
         effect1.set_effect_description("[Your Turn] When any of your Digimon digivolve into a Digimon with the [Ghost] trait, by suspending this Tamer, that Digimon gains <Rush> for the turn.")
         effect1.is_optional = True
         effect1.is_on_play = True
+        effect1._is_rush = True
 
         effect = effect1  # alias for condition closure
         def condition1(context: Dict[str, Any]) -> bool:
@@ -70,7 +71,7 @@ class BT23_087(CardScript):
         effect1.set_can_use_condition(condition1)
 
         def process1(ctx: Dict[str, Any]):
-            """Action: Suspend"""
+            """Action: Suspend, Gain Keyword Rush"""
             player = ctx.get('player')
             perm = ctx.get('permanent')
             game = ctx.get('game')
@@ -82,6 +83,8 @@ class BT23_087(CardScript):
                 target_perm.suspend()
             game.effect_select_opponent_permanent(
                 player, on_suspend, filter_fn=target_filter, is_optional=True)
+            # Keyword grant: rush — flag set on effect object
+            pass
 
         effect1.set_on_process_callback(process1)
         effects.append(effect1)

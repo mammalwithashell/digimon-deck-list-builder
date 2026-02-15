@@ -70,6 +70,16 @@ class BT14_097(CardScript):
             return True
 
         effect2.set_can_use_condition(condition2)
+
+        def process2(ctx: Dict[str, Any]):
+            """Action: Add Temp Effect"""
+            player = ctx.get('player')
+            perm = ctx.get('permanent')
+            game = ctx.get('game')
+            # Grant temporary effect to target permanent
+            pass  # descriptive-tagged: add_temp_effect
+
+        effect2.set_on_process_callback(process2)
         effects.append(effect2)
 
         return effects

@@ -27,10 +27,10 @@ class BT24_038(CardScript):
         effects.append(effect0)
 
         # Timing: EffectTiming.OnEnterFieldAnyone
-        # Effect
+        # Trash From Hand
         effect1 = ICardEffect()
-        effect1.set_effect_name("BT24-038 Effect")
-        effect1.set_effect_description("Effect")
+        effect1.set_effect_name("BT24-038 Trash From Hand")
+        effect1.set_effect_description("Trash From Hand")
         effect1.is_on_play = True
 
         effect = effect1  # alias for condition closure
@@ -41,13 +41,31 @@ class BT24_038(CardScript):
             return True
 
         effect1.set_can_use_condition(condition1)
+
+        def process1(ctx: Dict[str, Any]):
+            """Action: Trash From Hand"""
+            player = ctx.get('player')
+            perm = ctx.get('permanent')
+            game = ctx.get('game')
+            if not (player and game):
+                return
+            def hand_filter(c):
+                return True
+            def on_trashed(selected):
+                if selected in player.hand_cards:
+                    player.hand_cards.remove(selected)
+                    player.trash_cards.append(selected)
+            game.effect_select_hand_card(
+                player, hand_filter, on_trashed, is_optional=False)
+
+        effect1.set_on_process_callback(process1)
         effects.append(effect1)
 
         # Timing: EffectTiming.OnEnterFieldAnyone
-        # Effect
+        # Trash From Hand
         effect2 = ICardEffect()
-        effect2.set_effect_name("BT24-038 Effect")
-        effect2.set_effect_description("Effect")
+        effect2.set_effect_name("BT24-038 Trash From Hand")
+        effect2.set_effect_description("Trash From Hand")
         effect2.is_when_digivolving = True
 
         effect = effect2  # alias for condition closure
@@ -58,6 +76,24 @@ class BT24_038(CardScript):
             return True
 
         effect2.set_can_use_condition(condition2)
+
+        def process2(ctx: Dict[str, Any]):
+            """Action: Trash From Hand"""
+            player = ctx.get('player')
+            perm = ctx.get('permanent')
+            game = ctx.get('game')
+            if not (player and game):
+                return
+            def hand_filter(c):
+                return True
+            def on_trashed(selected):
+                if selected in player.hand_cards:
+                    player.hand_cards.remove(selected)
+                    player.trash_cards.append(selected)
+            game.effect_select_hand_card(
+                player, hand_filter, on_trashed, is_optional=False)
+
+        effect2.set_on_process_callback(process2)
         effects.append(effect2)
 
         # Timing: EffectTiming.WhenLinked

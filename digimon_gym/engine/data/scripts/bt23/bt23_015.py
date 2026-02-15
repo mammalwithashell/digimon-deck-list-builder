@@ -8,7 +8,7 @@ if TYPE_CHECKING:
 
 
 class BT23_015(CardScript):
-    """BT23-015"""
+    """BT23-015 Phoenixmon | Lv.6"""
 
     def get_card_effects(self, card: 'CardSource') -> List['ICardEffect']:
         effects = []
@@ -89,6 +89,38 @@ class BT23_015(CardScript):
             return True
 
         effect3.set_can_use_condition(condition3)
+
+        def process3(ctx: Dict[str, Any]):
+            """Action: Delete, Return To Deck"""
+            player = ctx.get('player')
+            perm = ctx.get('permanent')
+            game = ctx.get('game')
+            if not (player and game):
+                return
+            def target_filter(p):
+                if p.dp is None or p.dp > 9000:
+                    return False
+                return p.is_digimon
+            def on_delete(target_perm):
+                enemy = player.enemy if player else None
+                if enemy:
+                    enemy.delete_permanent(target_perm)
+            game.effect_select_opponent_permanent(
+                player, on_delete, filter_fn=target_filter, is_optional=False)
+            if not (player and game):
+                return
+            def target_filter(p):
+                if p.dp is None or p.dp > 9000:
+                    return False
+                return True
+            def on_return(target_perm):
+                enemy = player.enemy if player else None
+                if enemy:
+                    enemy.return_permanent_to_deck_bottom(target_perm)
+            game.effect_select_opponent_permanent(
+                player, on_return, filter_fn=target_filter, is_optional=False)
+
+        effect3.set_on_process_callback(process3)
         effects.append(effect3)
 
         # Timing: EffectTiming.OnEnterFieldAnyone
@@ -107,6 +139,38 @@ class BT23_015(CardScript):
             return True
 
         effect4.set_can_use_condition(condition4)
+
+        def process4(ctx: Dict[str, Any]):
+            """Action: Delete, Return To Deck"""
+            player = ctx.get('player')
+            perm = ctx.get('permanent')
+            game = ctx.get('game')
+            if not (player and game):
+                return
+            def target_filter(p):
+                if p.dp is None or p.dp > 9000:
+                    return False
+                return p.is_digimon
+            def on_delete(target_perm):
+                enemy = player.enemy if player else None
+                if enemy:
+                    enemy.delete_permanent(target_perm)
+            game.effect_select_opponent_permanent(
+                player, on_delete, filter_fn=target_filter, is_optional=False)
+            if not (player and game):
+                return
+            def target_filter(p):
+                if p.dp is None or p.dp > 9000:
+                    return False
+                return True
+            def on_return(target_perm):
+                enemy = player.enemy if player else None
+                if enemy:
+                    enemy.return_permanent_to_deck_bottom(target_perm)
+            game.effect_select_opponent_permanent(
+                player, on_return, filter_fn=target_filter, is_optional=False)
+
+        effect4.set_on_process_callback(process4)
         effects.append(effect4)
 
         # Timing: EffectTiming.OnAllyAttack
@@ -125,6 +189,38 @@ class BT23_015(CardScript):
             return True
 
         effect5.set_can_use_condition(condition5)
+
+        def process5(ctx: Dict[str, Any]):
+            """Action: Delete, Return To Deck"""
+            player = ctx.get('player')
+            perm = ctx.get('permanent')
+            game = ctx.get('game')
+            if not (player and game):
+                return
+            def target_filter(p):
+                if p.dp is None or p.dp > 9000:
+                    return False
+                return p.is_digimon
+            def on_delete(target_perm):
+                enemy = player.enemy if player else None
+                if enemy:
+                    enemy.delete_permanent(target_perm)
+            game.effect_select_opponent_permanent(
+                player, on_delete, filter_fn=target_filter, is_optional=False)
+            if not (player and game):
+                return
+            def target_filter(p):
+                if p.dp is None or p.dp > 9000:
+                    return False
+                return True
+            def on_return(target_perm):
+                enemy = player.enemy if player else None
+                if enemy:
+                    enemy.return_permanent_to_deck_bottom(target_perm)
+            game.effect_select_opponent_permanent(
+                player, on_return, filter_fn=target_filter, is_optional=False)
+
+        effect5.set_on_process_callback(process5)
         effects.append(effect5)
 
         # Timing: EffectTiming.OnDestroyedAnyone

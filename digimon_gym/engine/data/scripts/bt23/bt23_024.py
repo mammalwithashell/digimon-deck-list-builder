@@ -8,7 +8,7 @@ if TYPE_CHECKING:
 
 
 class BT23_024(CardScript):
-    """BT23-024"""
+    """BT23-024 Poseidomon | Lv.6"""
 
     def get_card_effects(self, card: 'CardSource') -> List['ICardEffect']:
         effects = []
@@ -27,10 +27,10 @@ class BT23_024(CardScript):
         effects.append(effect0)
 
         # Timing: EffectTiming.None
-        # Effect
+        # App Fusion Condition
         effect1 = ICardEffect()
-        effect1.set_effect_name("BT23-024 Effect")
-        effect1.set_effect_description("Effect")
+        effect1.set_effect_name("BT23-024 App Fusion Condition")
+        effect1.set_effect_description("App Fusion Condition")
 
         effect = effect1  # alias for condition closure
         def condition1(context: Dict[str, Any]) -> bool:
@@ -40,6 +40,16 @@ class BT23_024(CardScript):
             return True
 
         effect1.set_can_use_condition(condition1)
+
+        def process1(ctx: Dict[str, Any]):
+            """Action: App Fusion Condition"""
+            player = ctx.get('player')
+            perm = ctx.get('permanent')
+            game = ctx.get('game')
+            # App Fusion condition — not yet supported
+            pass  # descriptive-tagged
+
+        effect1.set_on_process_callback(process1)
         effects.append(effect1)
 
         # Factory effect: evade
@@ -69,6 +79,24 @@ class BT23_024(CardScript):
             return True
 
         effect3.set_can_use_condition(condition3)
+
+        def process3(ctx: Dict[str, Any]):
+            """Action: Trash From Hand"""
+            player = ctx.get('player')
+            perm = ctx.get('permanent')
+            game = ctx.get('game')
+            if not (player and game):
+                return
+            def hand_filter(c):
+                return True
+            def on_trashed(selected):
+                if selected in player.hand_cards:
+                    player.hand_cards.remove(selected)
+                    player.trash_cards.append(selected)
+            game.effect_select_hand_card(
+                player, hand_filter, on_trashed, is_optional=False)
+
+        effect3.set_on_process_callback(process3)
         effects.append(effect3)
 
         # Timing: EffectTiming.OnAllyAttack
@@ -86,6 +114,24 @@ class BT23_024(CardScript):
             return True
 
         effect4.set_can_use_condition(condition4)
+
+        def process4(ctx: Dict[str, Any]):
+            """Action: Trash From Hand"""
+            player = ctx.get('player')
+            perm = ctx.get('permanent')
+            game = ctx.get('game')
+            if not (player and game):
+                return
+            def hand_filter(c):
+                return True
+            def on_trashed(selected):
+                if selected in player.hand_cards:
+                    player.hand_cards.remove(selected)
+                    player.trash_cards.append(selected)
+            game.effect_select_hand_card(
+                player, hand_filter, on_trashed, is_optional=False)
+
+        effect4.set_on_process_callback(process4)
         effects.append(effect4)
 
         # Timing: EffectTiming.WhenLinked
@@ -96,6 +142,7 @@ class BT23_024(CardScript):
         effect5.is_optional = True
         effect5.set_max_count_per_turn(1)
         effect5.set_hash_string("BT23-024_WL")
+        effect5._is_cannot_suspend_player = True
 
         effect = effect5  # alias for condition closure
         def condition5(context: Dict[str, Any]) -> bool:
@@ -106,7 +153,7 @@ class BT23_024(CardScript):
         effect5.set_can_use_condition(condition5)
 
         def process5(ctx: Dict[str, Any]):
-            """Action: Unsuspend"""
+            """Action: Unsuspend, Gain Keyword Cannot Suspend Player"""
             player = ctx.get('player')
             perm = ctx.get('permanent')
             game = ctx.get('game')
@@ -118,6 +165,8 @@ class BT23_024(CardScript):
                 target_perm.unsuspend()
             game.effect_select_own_permanent(
                 player, on_unsuspend, filter_fn=target_filter, is_optional=True)
+            # Keyword grant: cannot_suspend_player — flag set on effect object
+            pass
 
         effect5.set_on_process_callback(process5)
         effects.append(effect5)

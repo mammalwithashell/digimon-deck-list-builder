@@ -43,10 +43,10 @@ class BT24_034(CardScript):
         effects.append(effect1)
 
         # Timing: EffectTiming.OnMove
-        # Effect
+        # Play Card, Trash From Hand, Add To Hand, Destroy Security
         effect2 = ICardEffect()
-        effect2.set_effect_name("BT24-034 Effect")
-        effect2.set_effect_description("Effect")
+        effect2.set_effect_name("BT24-034 Play Card, Trash From Hand, Add To Hand, Destroy Security")
+        effect2.set_effect_description("Play Card, Trash From Hand, Add To Hand, Destroy Security")
 
         effect = effect2  # alias for condition closure
         def condition2(context: Dict[str, Any]) -> bool:
@@ -55,13 +55,48 @@ class BT24_034(CardScript):
             return True
 
         effect2.set_can_use_condition(condition2)
+
+        def process2(ctx: Dict[str, Any]):
+            """Action: Play Card, Trash From Hand, Add To Hand, Destroy Security"""
+            player = ctx.get('player')
+            perm = ctx.get('permanent')
+            game = ctx.get('game')
+            if not (player and game):
+                return
+            def play_filter(c):
+                return True
+            game.effect_play_from_zone(
+                player, 'hand', play_filter, free=True, is_optional=True)
+            if not (player and game):
+                return
+            def hand_filter(c):
+                return True
+            def on_trashed(selected):
+                if selected in player.hand_cards:
+                    player.hand_cards.remove(selected)
+                    player.trash_cards.append(selected)
+            game.effect_select_hand_card(
+                player, hand_filter, on_trashed, is_optional=False)
+            # Add card to hand (from trash/reveal)
+            if player and player.trash_cards:
+                card_to_add = player.trash_cards.pop()
+                player.hand_cards.append(card_to_add)
+            # Trash opponent's top security card(s)
+            enemy = player.enemy if player else None
+            if enemy:
+                for _ in range(1):
+                    if enemy.security_cards:
+                        trashed = enemy.security_cards.pop()
+                        enemy.trash_cards.append(trashed)
+
+        effect2.set_on_process_callback(process2)
         effects.append(effect2)
 
         # Timing: EffectTiming.OnEnterFieldAnyone
-        # Effect
+        # Play Card, Trash From Hand, Add To Hand, Destroy Security
         effect3 = ICardEffect()
-        effect3.set_effect_name("BT24-034 Effect")
-        effect3.set_effect_description("Effect")
+        effect3.set_effect_name("BT24-034 Play Card, Trash From Hand, Add To Hand, Destroy Security")
+        effect3.set_effect_description("Play Card, Trash From Hand, Add To Hand, Destroy Security")
         effect3.is_on_play = True
 
         effect = effect3  # alias for condition closure
@@ -72,13 +107,48 @@ class BT24_034(CardScript):
             return True
 
         effect3.set_can_use_condition(condition3)
+
+        def process3(ctx: Dict[str, Any]):
+            """Action: Play Card, Trash From Hand, Add To Hand, Destroy Security"""
+            player = ctx.get('player')
+            perm = ctx.get('permanent')
+            game = ctx.get('game')
+            if not (player and game):
+                return
+            def play_filter(c):
+                return True
+            game.effect_play_from_zone(
+                player, 'hand', play_filter, free=True, is_optional=True)
+            if not (player and game):
+                return
+            def hand_filter(c):
+                return True
+            def on_trashed(selected):
+                if selected in player.hand_cards:
+                    player.hand_cards.remove(selected)
+                    player.trash_cards.append(selected)
+            game.effect_select_hand_card(
+                player, hand_filter, on_trashed, is_optional=False)
+            # Add card to hand (from trash/reveal)
+            if player and player.trash_cards:
+                card_to_add = player.trash_cards.pop()
+                player.hand_cards.append(card_to_add)
+            # Trash opponent's top security card(s)
+            enemy = player.enemy if player else None
+            if enemy:
+                for _ in range(1):
+                    if enemy.security_cards:
+                        trashed = enemy.security_cards.pop()
+                        enemy.trash_cards.append(trashed)
+
+        effect3.set_on_process_callback(process3)
         effects.append(effect3)
 
         # Timing: EffectTiming.OnEnterFieldAnyone
-        # Effect
+        # Play Card, Trash From Hand, Add To Hand, Destroy Security
         effect4 = ICardEffect()
-        effect4.set_effect_name("BT24-034 Effect")
-        effect4.set_effect_description("Effect")
+        effect4.set_effect_name("BT24-034 Play Card, Trash From Hand, Add To Hand, Destroy Security")
+        effect4.set_effect_description("Play Card, Trash From Hand, Add To Hand, Destroy Security")
         effect4.is_when_digivolving = True
 
         effect = effect4  # alias for condition closure
@@ -89,6 +159,41 @@ class BT24_034(CardScript):
             return True
 
         effect4.set_can_use_condition(condition4)
+
+        def process4(ctx: Dict[str, Any]):
+            """Action: Play Card, Trash From Hand, Add To Hand, Destroy Security"""
+            player = ctx.get('player')
+            perm = ctx.get('permanent')
+            game = ctx.get('game')
+            if not (player and game):
+                return
+            def play_filter(c):
+                return True
+            game.effect_play_from_zone(
+                player, 'hand', play_filter, free=True, is_optional=True)
+            if not (player and game):
+                return
+            def hand_filter(c):
+                return True
+            def on_trashed(selected):
+                if selected in player.hand_cards:
+                    player.hand_cards.remove(selected)
+                    player.trash_cards.append(selected)
+            game.effect_select_hand_card(
+                player, hand_filter, on_trashed, is_optional=False)
+            # Add card to hand (from trash/reveal)
+            if player and player.trash_cards:
+                card_to_add = player.trash_cards.pop()
+                player.hand_cards.append(card_to_add)
+            # Trash opponent's top security card(s)
+            enemy = player.enemy if player else None
+            if enemy:
+                for _ in range(1):
+                    if enemy.security_cards:
+                        trashed = enemy.security_cards.pop()
+                        enemy.trash_cards.append(trashed)
+
+        effect4.set_on_process_callback(process4)
         effects.append(effect4)
 
         # Factory effect: barrier

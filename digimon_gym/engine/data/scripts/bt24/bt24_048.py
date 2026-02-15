@@ -26,10 +26,10 @@ class BT24_048(CardScript):
         effects.append(effect0)
 
         # Timing: EffectTiming.OnEnterFieldAnyone
-        # Effect
+        # Digivolve
         effect1 = ICardEffect()
-        effect1.set_effect_name("BT24-048 Effect")
-        effect1.set_effect_description("Effect")
+        effect1.set_effect_name("BT24-048 Digivolve")
+        effect1.set_effect_description("Digivolve")
         effect1.is_on_play = True
 
         effect = effect1  # alias for condition closure
@@ -40,13 +40,29 @@ class BT24_048(CardScript):
             return True
 
         effect1.set_can_use_condition(condition1)
+
+        def process1(ctx: Dict[str, Any]):
+            """Action: Digivolve"""
+            player = ctx.get('player')
+            perm = ctx.get('permanent')
+            game = ctx.get('game')
+            if not (player and perm and game):
+                return
+            def digi_filter(c):
+                if getattr(c, 'level', None) is None or c.level > 5:
+                    return False
+                return True
+            game.effect_digivolve_from_hand(
+                player, perm, digi_filter, is_optional=True)
+
+        effect1.set_on_process_callback(process1)
         effects.append(effect1)
 
         # Timing: EffectTiming.OnEnterFieldAnyone
-        # Effect
+        # Digivolve
         effect2 = ICardEffect()
-        effect2.set_effect_name("BT24-048 Effect")
-        effect2.set_effect_description("Effect")
+        effect2.set_effect_name("BT24-048 Digivolve")
+        effect2.set_effect_description("Digivolve")
         effect2.is_when_digivolving = True
 
         effect = effect2  # alias for condition closure
@@ -57,6 +73,22 @@ class BT24_048(CardScript):
             return True
 
         effect2.set_can_use_condition(condition2)
+
+        def process2(ctx: Dict[str, Any]):
+            """Action: Digivolve"""
+            player = ctx.get('player')
+            perm = ctx.get('permanent')
+            game = ctx.get('game')
+            if not (player and perm and game):
+                return
+            def digi_filter(c):
+                if getattr(c, 'level', None) is None or c.level > 5:
+                    return False
+                return True
+            game.effect_digivolve_from_hand(
+                player, perm, digi_filter, is_optional=True)
+
+        effect2.set_on_process_callback(process2)
         effects.append(effect2)
 
         # Timing: EffectTiming.OnDestroyedAnyone

@@ -14,23 +14,33 @@ class BT24_091(CardScript):
         effects = []
 
         # Timing: EffectTiming.None
-        # Effect
+        # Ignore Color Req
         effect0 = ICardEffect()
         effect0.set_effect_name("BT24-091 Ignore color requirements")
-        effect0.set_effect_description("Effect")
+        effect0.set_effect_description("Ignore Color Req")
 
         effect = effect0  # alias for condition closure
         def condition0(context: Dict[str, Any]) -> bool:
             return True
 
         effect0.set_can_use_condition(condition0)
+
+        def process0(ctx: Dict[str, Any]):
+            """Action: Ignore Color Req"""
+            player = ctx.get('player')
+            perm = ctx.get('permanent')
+            game = ctx.get('game')
+            # Ignores color requirement for playing Options — not modeled in engine
+            pass  # descriptive-tagged
+
+        effect0.set_on_process_callback(process0)
         effects.append(effect0)
 
         # Timing: EffectTiming.OptionSkill
-        # Unsuspend
+        # Unsuspend, Bounce
         effect1 = ICardEffect()
         effect1.set_effect_name("BT24-091 Bounce all opponent's lowest level. Unsuspend a Digimon. Then, you may link this card.")
-        effect1.set_effect_description("Unsuspend")
+        effect1.set_effect_description("Unsuspend, Bounce")
 
         effect = effect1  # alias for condition closure
         def condition1(context: Dict[str, Any]) -> bool:
@@ -40,7 +50,7 @@ class BT24_091(CardScript):
         effect1.set_can_use_condition(condition1)
 
         def process1(ctx: Dict[str, Any]):
-            """Action: Unsuspend"""
+            """Action: Unsuspend, Bounce"""
             player = ctx.get('player')
             perm = ctx.get('permanent')
             game = ctx.get('game')
@@ -52,6 +62,16 @@ class BT24_091(CardScript):
                 target_perm.unsuspend()
             game.effect_select_own_permanent(
                 player, on_unsuspend, filter_fn=target_filter, is_optional=False)
+            if not (player and game):
+                return
+            def target_filter(p):
+                return True
+            def on_bounce(target_perm):
+                enemy = player.enemy if player else None
+                if enemy:
+                    enemy.bounce_permanent_to_hand(target_perm)
+            game.effect_select_opponent_permanent(
+                player, on_bounce, filter_fn=target_filter, is_optional=False)
 
         effect1.set_on_process_callback(process1)
         effects.append(effect1)
