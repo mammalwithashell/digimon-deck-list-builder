@@ -1,18 +1,11 @@
-"""HeadlessGame: agent-vs-agent game runner optimized for RL training.
-
-Mirrors C# Digimon.Core.HeadlessGame.
-"""
+"""HeadlessGame: agent-vs-agent game runner optimized for RL training."""
 
 from __future__ import annotations
 from typing import List, Optional, Callable
 import numpy as np
 
-try:
-    from python_impl.engine.runners.base_runner import BaseGameRunner
-    from python_impl.engine.loggers import SilentLogger, VerboseLogger
-except ImportError:
-    from digimon_gym.engine.runners.base_runner import BaseGameRunner
-    from digimon_gym.engine.loggers import SilentLogger, VerboseLogger
+from digimon_gym.engine.runners.base_runner import BaseGameRunner
+from digimon_gym.engine.loggers import SilentLogger, VerboseLogger
 
 
 class HeadlessGame(BaseGameRunner):

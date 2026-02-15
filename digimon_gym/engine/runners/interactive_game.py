@@ -1,20 +1,12 @@
-"""InteractiveGame: mixed human/agent game runner for API-driven play.
-
-Mirrors C# Digimon.Core.InteractiveGame.
-"""
+"""InteractiveGame: mixed human/agent game runner for API-driven play."""
 
 from __future__ import annotations
 from typing import List, Optional, Dict, Any, Callable
 import numpy as np
 
-try:
-    from python_impl.engine.runners.base_runner import BaseGameRunner
-    from python_impl.engine.loggers import VerboseLogger
-    from python_impl.engine.data.enums import PlayerType
-except ImportError:
-    from digimon_gym.engine.runners.base_runner import BaseGameRunner
-    from digimon_gym.engine.loggers import VerboseLogger
-    from digimon_gym.engine.data.enums import PlayerType
+from digimon_gym.engine.runners.base_runner import BaseGameRunner
+from digimon_gym.engine.loggers import VerboseLogger
+from digimon_gym.engine.data.enums import PlayerType
 
 
 class InteractiveGame(BaseGameRunner):

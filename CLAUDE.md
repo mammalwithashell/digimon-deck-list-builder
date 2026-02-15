@@ -2,7 +2,7 @@
 
 ## Project Overview
 
-Digimon Deck List Builder is a **reinforcement learning game engine** for the Digimon Trading Card Game. It simulates games headlessly, trains RL agents (Q-DeckRec) to optimize deck construction, and exposes a FastAPI endpoint for running simulations. The primary implementation is Python; a C# reference implementation exists in `Digimon.Core/` for comparison. The full DCGO Unity project is included as a sparse-checkout submodule in `DCGO/` for reference game logic and card effect scripts.
+Digimon Deck List Builder is a **reinforcement learning game engine** for the Digimon Trading Card Game. It simulates games headlessly, trains RL agents (Q-DeckRec) to optimize deck construction, and exposes a FastAPI endpoint for running simulations. The full DCGO Unity project is included as a sparse-checkout submodule in `DCGO/` for reference game logic and card effect scripts.
 
 **Development stage:** Pre-alpha. Active development on the Python game engine and RL gym.
 
@@ -13,7 +13,6 @@ digimon_gym/                     # PRIMARY CODEBASE
 ├── __init__.py
 ├── api.py                       # FastAPI backend (session-based game management)
 ├── digimon_gym.py               # Gymnasium RL environment (DigimonEnv class)
-├── simple_sim.py                # Basic simulation runner
 ├── agents/
 │   └── pilot_training.py        # MaskablePPO pilot agent training (SB3)
 ├── engine/
@@ -47,8 +46,6 @@ digimon_gym/                     # PRIMARY CODEBASE
 │   ├── loggers.py               # IGameLogger, SilentLogger, VerboseLogger
 │   └── interfaces/
 │       └── card_effect.py       # ICardEffect interface
-├── scraper/
-│   └── scrape_decks.py          # Tournament decklist scraper (Egman Events)
 
 tools/                           # Build & pipeline tools
 ├── transpile_dcgo.py            # CLI entry point (thin wrapper)
@@ -60,10 +57,12 @@ tools/                           # Build & pipeline tools
 │   ├── generators.py            # Python code generation from EffectBlocks (~840 lines)
 │   ├── validation.py            # Cross-validation against digimoncard.io (~50 lines)
 │   └── cli.py                   # main() function: arg parsing, file I/O, reporting (~200 lines)
+├── scraper/
+│   └── scrape_decks.py          # Tournament decklist scraper (Egman Events)
 ├── ingest_cards.py              # Card metadata ingestion from digimoncard.io API
 └── ingest_bt14_cards.py         # BT14-specific card metadata ingestion
 
-tests/                           # Pytest test suite (~1122 tests)
+tests/                           # Pytest test suite
 ├── test_runners.py              # HeadlessGame/InteractiveGame tests (30 tests)
 ├── test_tensor_and_actions.py   # Tensor encoding/action decoding tests (48 tests)
 ├── test_bt14_scripts.py         # BT14 card script validation (200 parametrized tests)
@@ -72,14 +71,12 @@ tests/                           # Pytest test suite (~1122 tests)
 ├── test_bt24_scripts.py         # BT24 card script validation (216 parametrized tests)
 ├── test_digivolve_validation.py # Digivolution rules tests (25 tests)
 ├── test_dna_digivolve.py        # DNA/Jogress mechanics tests (50 tests)
-├── test_phase_decoders.py       # Game phase state tests (33 tests)
-└── test_rl_gym.py               # Legacy RL gym tests (uses old imports)
+└── test_phase_decoders.py       # Game phase state tests (33 tests)
 
 scripts/
 ├── train_smoke_test.py          # SB3 MaskablePPO validation script
 └── fetch_card_effects.py        # Fetch card effect text from digimoncard.io API
 
-Digimon.Core/                    # C# reference implementation (read-only)
 DCGO/                            # Git submodule (sparse checkout): full DCGO Unity project
 ├── Assets/Scripts/CardEffect/   #   Per-card C# effect scripts (BT1-BT24, EX1-EX11, ST1-ST22+)
 ├── Assets/Scripts/Script/       #   Core game logic (CardController, AttackProcess, AutoProcessing, etc.)
@@ -105,8 +102,8 @@ Q-Rec Agent Notes                # Q-DeckRec MDP formulation and hyperparameters
 ## Common Commands
 
 ```bash
-# Run all tests (excludes legacy test_rl_gym.py)
-python -m pytest tests/ --ignore=tests/test_rl_gym.py -v
+# Run all tests
+python -m pytest tests/ -v
 
 # Run runner tests only
 python -m pytest tests/test_runners.py -v
@@ -330,19 +327,18 @@ The engine checks keyword abilities at runtime via the `Permanent.has_keyword()`
 - **Type hints** used throughout; `TYPE_CHECKING` imports for circular dependency avoidance
 - **Enums** for all game constants (`GamePhase`, `CardColor`, `CardKind`, `EffectTiming`, `PendingAction`, `PlayerType`)
 - **Property decorators** for computed values on `Permanent` (level, DP, etc.)
-- **Import duality**: try/except for `python_impl.*` vs `digimon_gym.*` in core files; new code should use `digimon_gym.*`
+- **Imports** use `digimon_gym.*` package prefix throughout
 - **Headless design** — all game logic runs without UI; state serialized to NumPy arrays
 - **Transpiler-first policy** — when card script stubs or missing effects are found, fix the transpiler (`tools/transpile_dcgo.py`) rather than editing individual scripts. This ensures fixes apply to all cards with the same C# pattern and are preserved on re-transpile.
 - **Rules-aware implementation** — when implementing or reviewing card effects (in the transpiler or individual scripts), consult `RULES_CONTEXT.md` for official keyword behavior, effect timing semantics, and processing conditions. Key distinctions: mandatory vs optional processing, persistent vs trigger vs immediate effect types, and turn-player-first simultaneous resolution.
 
 ## Testing Guidelines
 
-- Use **pytest** for all tests (~1122 tests across 10 files)
+- Use **pytest** for all tests
 - Test files go in `tests/` (root level)
-- `test_rl_gym.py` uses legacy `python_impl` imports — excluded via `--ignore`
 - Mock card helpers exist in test files — reuse them for new tests
 - Script validation tests (`test_bt{14,20,23,24}_scripts.py`) are parametrized — 200, 215, 211, and 216 tests respectively verifying transpiled scripts load, produce correct effect counts, and set expected keyword flags
-- Run `python -m pytest tests/ --ignore=tests/test_rl_gym.py -v` for the full suite
+- Run `python -m pytest tests/ -v` for the full suite
 
 ## Card Data API
 
@@ -388,5 +384,4 @@ Remaining stubs are complex multi-step sequences with nested coroutines, `OnAddD
 - EX8 and EX10 script directories are empty placeholders (no scripts transpiled yet)
 - No CI/CD pipeline
 - No frontend implementation yet (React planned)
-- `test_rl_gym.py` uses old `python_impl` imports
 - Q-DeckRec agent not yet implemented (architecture specced in AGENTS.md); pilot agent training exists in `digimon_gym/agents/pilot_training.py`

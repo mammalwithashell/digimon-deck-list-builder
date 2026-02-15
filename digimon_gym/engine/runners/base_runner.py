@@ -1,22 +1,13 @@
-"""BaseGameRunner: shared deck setup and game initialization for all game modes.
-
-Mirrors C# Digimon.Core.BaseGameRunner.
-"""
+"""BaseGameRunner: shared deck setup and game initialization for all game modes."""
 
 from __future__ import annotations
 from abc import ABC
 from typing import List, Optional
 
-try:
-    from python_impl.engine.game import Game
-    from python_impl.engine.loggers import IGameLogger, SilentLogger
-    from python_impl.engine.data.card_database import CardDatabase
-    from python_impl.engine.data.card_registry import CardRegistry
-except ImportError:
-    from digimon_gym.engine.game import Game
-    from digimon_gym.engine.loggers import IGameLogger, SilentLogger
-    from digimon_gym.engine.data.card_database import CardDatabase
-    from digimon_gym.engine.data.card_registry import CardRegistry
+from digimon_gym.engine.game import Game
+from digimon_gym.engine.loggers import IGameLogger, SilentLogger
+from digimon_gym.engine.data.card_database import CardDatabase
+from digimon_gym.engine.data.card_registry import CardRegistry
 
 
 class BaseGameRunner(ABC):

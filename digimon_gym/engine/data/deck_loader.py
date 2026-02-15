@@ -15,12 +15,8 @@ from collections import Counter
 from dataclasses import dataclass, field
 from typing import Dict, List, Optional, Tuple
 
-try:
-    from python_impl.engine.data.card_database import CardDatabase
-    from python_impl.engine.data.enums import CardKind
-except ImportError:
-    from digimon_gym.engine.data.card_database import CardDatabase
-    from digimon_gym.engine.data.enums import CardKind
+from digimon_gym.engine.data.card_database import CardDatabase
+from digimon_gym.engine.data.enums import CardKind
 
 # ─── Card ID Pattern ─────────────────────────────────────────────────
 # Matches standard Digimon TCG card IDs: BT24-017, P-103, LM-027, ST1-01, EX8-037

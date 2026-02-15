@@ -3,27 +3,15 @@ from typing import TYPE_CHECKING, Optional, Union, List, Dict, Any, Callable
 from dataclasses import dataclass, field
 import random
 
-# Support both import prefixes
-try:
-    from python_impl.engine.data.enums import GamePhase, EffectTiming, AttackResolution, PendingAction
-    from python_impl.engine.core.player import Player
-    from python_impl.engine.core.permanent import Permanent
-    from python_impl.engine.data.card_registry import CardRegistry
-    from python_impl.engine.loggers import IGameLogger, SilentLogger
-    from python_impl.engine.validation.digivolve_validator import (
-        can_digivolve, has_valid_dna_targets, get_valid_dna_first_targets,
-        get_valid_dna_second_targets, get_dna_stacking_order,
-    )
-except ImportError:
-    from digimon_gym.engine.data.enums import GamePhase, EffectTiming, AttackResolution, PendingAction
-    from digimon_gym.engine.core.player import Player
-    from digimon_gym.engine.core.permanent import Permanent
-    from digimon_gym.engine.data.card_registry import CardRegistry
-    from digimon_gym.engine.loggers import IGameLogger, SilentLogger
-    from digimon_gym.engine.validation.digivolve_validator import (
-        can_digivolve, has_valid_dna_targets, get_valid_dna_first_targets,
-        get_valid_dna_second_targets, get_dna_stacking_order,
-    )
+from digimon_gym.engine.data.enums import GamePhase, EffectTiming, AttackResolution, PendingAction
+from digimon_gym.engine.core.player import Player
+from digimon_gym.engine.core.permanent import Permanent
+from digimon_gym.engine.data.card_registry import CardRegistry
+from digimon_gym.engine.loggers import IGameLogger, SilentLogger
+from digimon_gym.engine.validation.digivolve_validator import (
+    can_digivolve, has_valid_dna_targets, get_valid_dna_first_targets,
+    get_valid_dna_second_targets, get_dna_stacking_order,
+)
 
 if TYPE_CHECKING:
     from .core.card_source import CardSource

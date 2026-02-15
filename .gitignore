@@ -3,8 +3,6 @@ __pycache__/
 /bin
 /obj
 .gemini/GEMINI.md
-Digimon.Core/bin
-Digimon.Core/obj
 Digimon TCG resources/manual.pdf
 Digimon TCG resources/general_rule.pdf
 Digimon.Shim
@@ -14,4 +12,3 @@ dcgo_build_errors_*
 models/
 runs/
 .claude/settings.local.json
-nul

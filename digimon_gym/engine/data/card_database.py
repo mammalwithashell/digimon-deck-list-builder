@@ -236,32 +236,21 @@ class CardDatabase:
              set_id = parts[0].lower()
              module_name = script_name.lower()
 
-             # Try multiple package prefixes (python_impl and digimon_gym)
-             prefixes = ["python_impl.engine.data.scripts", "digimon_gym.engine.data.scripts"]
-             loaded = False
-
-             for prefix in prefixes:
-                 module_path = f"{prefix}.{set_id}.{module_name}"
+             prefix = "digimon_gym.engine.data.scripts"
+             module_path = f"{prefix}.{set_id}.{module_name}"
+             try:
+                 module = importlib.import_module(module_path)
+                 script_class = getattr(module, script_name)
+                 self.scripts[entity.card_id] = script_class()
+             except (ImportError, AttributeError):
+                 # Try without set folder
                  try:
+                     module_path = f"{prefix}.{module_name}"
                      module = importlib.import_module(module_path)
                      script_class = getattr(module, script_name)
                      self.scripts[entity.card_id] = script_class()
-                     loaded = True
-                     break
                  except (ImportError, AttributeError):
-                     # Try without set folder
-                     try:
-                         module_path = f"{prefix}.{module_name}"
-                         module = importlib.import_module(module_path)
-                         script_class = getattr(module, script_name)
-                         self.scripts[entity.card_id] = script_class()
-                         loaded = True
-                         break
-                     except (ImportError, AttributeError):
-                         continue
-
-             if not loaded:
-                 pass  # No script found for this card (vanilla cards with no effects)
+                     pass  # No script found for this card (vanilla cards with no effects)
 
     def get_card(self, card_id: str) -> Optional[CEntity_Base]:
         return self.cards.get(card_id)
