@@ -1,6 +1,6 @@
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
-from typing import List, Dict, Any, Union
+from typing import List, Dict, Any, Optional, Union
 from uuid import uuid4
 import numpy as np
 import json
@@ -9,6 +9,9 @@ from digimon_gym.digimon_gym import GameState, greedy_policy
 from digimon_gym.engine.runners.headless_game import HeadlessGame
 from digimon_gym.engine.runners.interactive_game import InteractiveGame
 from digimon_gym.engine.data.enums import PlayerType
+from digimon_gym.engine.data.deck_loader import (
+    parse_deck, validate_deck, summarize_deck, DeckValidationResult,
+)
 
 app = FastAPI()
 
@@ -26,10 +29,15 @@ class SimulationRequest(BaseModel):
     num_simulations: int = 100
 
 class CreateGameRequest(BaseModel):
-    deck1: List[str]
-    deck2: List[str]
+    deck1: List[str] = []
+    deck2: List[str] = []
+    deck1_raw: Optional[str] = None  # TTS or text format string
+    deck2_raw: Optional[str] = None  # TTS or text format string
     player1_type: str = "agent"  # "agent" or "human"
     player2_type: str = "agent"
+
+class DeckRequest(BaseModel):
+    deck: str  # Raw deck string (TTS or text format)
 
 class GameActionRequest(BaseModel):
     action: int
@@ -44,9 +52,22 @@ def health_check():
 
 @app.post("/simulate")
 def simulate_game(request: SimulationRequest):
-    """Simulates games between two decks using greedy policy."""
-    deck1_list = request.deck1.split('\n')
-    deck2_list = request.deck2.split('\n')
+    """Simulates games between two decks using greedy policy.
+
+    Deck strings can be in any supported format:
+      - Newline-separated card IDs (legacy)
+      - TTS JSON array
+      - digimoncard.io text format
+    """
+    try:
+        deck1_list = parse_deck(request.deck1)
+    except ValueError:
+        # Fallback to legacy newline-separated format
+        deck1_list = request.deck1.split('\n')
+    try:
+        deck2_list = parse_deck(request.deck2)
+    except ValueError:
+        deck2_list = request.deck2.split('\n')
 
     wins_p1 = 0
     wins_p2 = 0
@@ -87,15 +108,31 @@ def simulate_game(request: SimulationRequest):
 
 @app.post("/game/create")
 def create_game(request: CreateGameRequest):
-    """Create a new game session. Returns game_id and initial state."""
+    """Create a new game session. Returns game_id and initial state.
+
+    Decks can be provided as:
+      - deck1/deck2: List[str] of card IDs (original format)
+      - deck1_raw/deck2_raw: Raw string in TTS or text format (auto-detected)
+    If both are provided, raw format takes precedence.
+    """
+    # Resolve deck lists — raw format takes precedence
+    try:
+        deck1 = parse_deck(request.deck1_raw) if request.deck1_raw else request.deck1
+        deck2 = parse_deck(request.deck2_raw) if request.deck2_raw else request.deck2
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=f"Deck parsing error: {e}")
+
+    if not deck1 or not deck2:
+        raise HTTPException(status_code=400, detail="Both decks must be provided")
+
     game_id = str(uuid4())
     p1_type = PlayerType.Human if request.player1_type.lower() == "human" else PlayerType.Agent
     p2_type = PlayerType.Human if request.player2_type.lower() == "human" else PlayerType.Agent
 
     if p1_type == PlayerType.Agent and p2_type == PlayerType.Agent:
-        runner = HeadlessGame(request.deck1, request.deck2, verbose=True)
+        runner = HeadlessGame(deck1, deck2, verbose=True)
     else:
-        runner = InteractiveGame(request.deck1, request.deck2, p1_type, p2_type)
+        runner = InteractiveGame(deck1, deck2, p1_type, p2_type)
 
     active_games[game_id] = runner
     state = runner.game.to_json()
@@ -217,3 +254,45 @@ def delete_game(game_id: str):
     if game_id in active_games:
         del active_games[game_id]
     return {"status": "deleted"}
+
+# ─── Deck Utility Endpoints ──────────────────────────────────────────
+
+@app.post("/deck/parse")
+def deck_parse(request: DeckRequest):
+    """Parse a deck string (TTS or text format) into a card ID list.
+
+    Returns the parsed card list and a summary with counts.
+    """
+    try:
+        card_ids = parse_deck(request.deck)
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+    summary = summarize_deck(card_ids)
+    return {
+        "card_ids": card_ids,
+        "summary": summary,
+        "total_cards": len(card_ids),
+    }
+
+
+@app.post("/deck/validate")
+def deck_validate(request: DeckRequest):
+    """Parse and validate a deck string against game rules and restricted list.
+
+    Returns validation result with errors and warnings.
+    """
+    try:
+        card_ids = parse_deck(request.deck)
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+    result = validate_deck(card_ids)
+    summary = summarize_deck(card_ids)
+    return {
+        "is_valid": result.is_valid,
+        "errors": result.errors,
+        "warnings": result.warnings,
+        "summary": summary,
+        "total_cards": len(card_ids),
+    }
