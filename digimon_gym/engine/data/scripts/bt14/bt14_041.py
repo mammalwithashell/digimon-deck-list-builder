@@ -8,7 +8,7 @@ if TYPE_CHECKING:
 
 
 class BT14_041(CardScript):
-    """Auto-transpiled from DCGO BT14_041.cs"""
+    """BT14-041 Seraphimon | Lv.6"""
 
     def get_card_effects(self, card: 'CardSource') -> List['ICardEffect']:
         effects = []
@@ -18,8 +18,9 @@ class BT14_041(CardScript):
         effect0 = ICardEffect()
         effect0.set_effect_name("BT14-041 Recovery +1 (Deck)")
         effect0.set_effect_description("[When Digivolving] Trigger <Recovery +1 (Deck)>. (Place the top card of your deck on top of your security stack.)")
-        effect0.is_on_play = True
+        effect0.is_when_digivolving = True
 
+        effect = effect0  # alias for condition closure
         def condition0(context: Dict[str, Any]) -> bool:
             if card and card.permanent_of_this_card() is None:
                 return False
@@ -32,6 +33,7 @@ class BT14_041(CardScript):
             """Action: Recovery +1"""
             player = ctx.get('player')
             perm = ctx.get('permanent')
+            game = ctx.get('game')
             if player:
                 player.recovery(1)
 
@@ -47,6 +49,7 @@ class BT14_041(CardScript):
         effect1.set_hash_string("DP-7000_BT14_041")
         effect1.dp_modifier = -7000
 
+        effect = effect1  # alias for condition closure
         def condition1(context: Dict[str, Any]) -> bool:
             if card and card.permanent_of_this_card() is None:
                 return False
@@ -58,11 +61,14 @@ class BT14_041(CardScript):
             """Action: DP -7000"""
             player = ctx.get('player')
             perm = ctx.get('permanent')
+            game = ctx.get('game')
             # DP change targets opponent digimon
             enemy = player.enemy if player else None
             if enemy and enemy.battle_area:
-                target = min(enemy.battle_area, key=lambda p: p.dp)
-                target.change_dp(-7000)
+                dp_targets = [p for p in enemy.battle_area if p.is_digimon and p.dp is not None]
+                if dp_targets:
+                    target = min(dp_targets, key=lambda p: p.dp)
+                    target.change_dp(-7000)
 
         effect1.set_on_process_callback(process1)
         effects.append(effect1)

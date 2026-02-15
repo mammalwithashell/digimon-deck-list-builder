@@ -8,7 +8,7 @@ if TYPE_CHECKING:
 
 
 class BT14_085(CardScript):
-    """Auto-transpiled from DCGO BT14_085.cs"""
+    """BT14-085 Mimi Tachikawa"""
 
     def get_card_effects(self, card: 'CardSource') -> List['ICardEffect']:
         effects = []
@@ -20,6 +20,7 @@ class BT14_085(CardScript):
         effect0.set_effect_description("[On Play] Reveal the top 3 cards of your deck. Add 1 Digimon card with [Vegetation], [Plant] or [Fairy] in one of its traits among them to the hand. Return the rest to the bottom of the deck.")
         effect0.is_on_play = True
 
+        effect = effect0  # alias for condition closure
         def condition0(context: Dict[str, Any]) -> bool:
             if card and card.permanent_of_this_card() is None:
                 return False
@@ -32,12 +33,21 @@ class BT14_085(CardScript):
             """Action: Add To Hand, Reveal And Select"""
             player = ctx.get('player')
             perm = ctx.get('permanent')
+            game = ctx.get('game')
             # Add card to hand (from trash/reveal)
             if player and player.trash_cards:
                 card_to_add = player.trash_cards.pop()
                 player.hand_cards.append(card_to_add)
-            # Reveal top cards and select
-            pass  # TODO: reveal_and_select needs UI/agent choice
+            if not (player and game):
+                return
+            def reveal_filter(c):
+                return True
+            def on_revealed(selected, remaining):
+                player.hand_cards.append(selected)
+                for c in remaining:
+                    player.library_cards.append(c)
+            game.effect_reveal_and_select(
+                player, 3, reveal_filter, on_revealed, is_optional=True)
 
         effect0.set_on_process_callback(process0)
         effects.append(effect0)
@@ -49,6 +59,7 @@ class BT14_085(CardScript):
         effect1.set_effect_description("[Your Turn] When an effect suspends a Digimon, by suspending this Tamer, gain 1 memory.")
         effect1.is_optional = True
 
+        effect = effect1  # alias for condition closure
         def condition1(context: Dict[str, Any]) -> bool:
             if card and card.permanent_of_this_card() is None:
                 return False
@@ -62,13 +73,17 @@ class BT14_085(CardScript):
             """Action: Gain 1 memory, Suspend"""
             player = ctx.get('player')
             perm = ctx.get('permanent')
+            game = ctx.get('game')
             if player:
                 player.add_memory(1)
-            # Suspend opponent's digimon
-            enemy = player.enemy if player else None
-            if enemy and enemy.battle_area:
-                target = enemy.battle_area[-1]
-                target.suspend()
+            if not (player and game):
+                return
+            def target_filter(p):
+                return True
+            def on_suspend(target_perm):
+                target_perm.suspend()
+            game.effect_select_opponent_permanent(
+                player, on_suspend, filter_fn=target_filter, is_optional=True)
 
         effect1.set_on_process_callback(process1)
         effects.append(effect1)
@@ -79,6 +94,7 @@ class BT14_085(CardScript):
         effect2.set_effect_name("BT14-085 Security: Play this card")
         effect2.set_effect_description("Security: Play this card")
         effect2.is_security_effect = True
+
         def condition2(context: Dict[str, Any]) -> bool:
             return True
         effect2.set_can_use_condition(condition2)

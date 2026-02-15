@@ -8,21 +8,32 @@ if TYPE_CHECKING:
 
 
 class BT14_090(CardScript):
-    """Auto-transpiled from DCGO BT14_090.cs"""
+    """BT14-090 Dragon of Courage"""
 
     def get_card_effects(self, card: 'CardSource') -> List['ICardEffect']:
         effects = []
 
         # Timing: EffectTiming.None
-        # Effect
+        # Ignore Color Req
         effect0 = ICardEffect()
         effect0.set_effect_name("BT14-090 Ignore color requirements")
-        effect0.set_effect_description("Effect")
+        effect0.set_effect_description("Ignore Color Req")
 
+        effect = effect0  # alias for condition closure
         def condition0(context: Dict[str, Any]) -> bool:
             return True
 
         effect0.set_can_use_condition(condition0)
+
+        def process0(ctx: Dict[str, Any]):
+            """Action: Ignore Color Req"""
+            player = ctx.get('player')
+            perm = ctx.get('permanent')
+            game = ctx.get('game')
+            # Ignores color requirement for playing Options — not modeled in engine
+            pass  # descriptive-tagged
+
+        effect0.set_on_process_callback(process0)
         effects.append(effect0)
 
         # Timing: EffectTiming.OptionSkill
@@ -31,6 +42,7 @@ class BT14_090(CardScript):
         effect1.set_effect_name("BT14-090 Digivolve")
         effect1.set_effect_description("[Main] By placing 1 [Greymon] and 1 [MetalGreymon] from your trash as 1 of your [Agumon]'s bottom digivolution cards, that Digimon may digivolve into [WarGreymon] in your hand without paying the cost, ignoring its digivolution requirements.")
 
+        effect = effect1  # alias for condition closure
         def condition1(context: Dict[str, Any]) -> bool:
             # Option main effect — validated by engine timing
             return True
@@ -41,7 +53,13 @@ class BT14_090(CardScript):
             """Action: Digivolve"""
             player = ctx.get('player')
             perm = ctx.get('permanent')
-            pass  # TODO: digivolve effect needs card selection
+            game = ctx.get('game')
+            if not (player and perm and game):
+                return
+            def digi_filter(c):
+                return True
+            game.effect_digivolve_from_hand(
+                player, perm, digi_filter, is_optional=True)
 
         effect1.set_on_process_callback(process1)
         effects.append(effect1)
@@ -54,6 +72,7 @@ class BT14_090(CardScript):
         effect2.is_security_effect = True
         effect2.is_security_effect = True
 
+        effect = effect2  # alias for condition closure
         def condition2(context: Dict[str, Any]) -> bool:
             # Security effect — validated by engine timing
             return True
@@ -64,11 +83,23 @@ class BT14_090(CardScript):
             """Action: Play Card, Trash From Hand, Add To Hand"""
             player = ctx.get('player')
             perm = ctx.get('permanent')
-            # Play a card (from hand/trash/reveal)
-            pass  # TODO: target selection for play_card
-            # Trash from hand (cost/effect)
-            if player and player.hand_cards:
-                player.trash_from_hand([player.hand_cards[-1]])
+            game = ctx.get('game')
+            if not (player and game):
+                return
+            def play_filter(c):
+                return True
+            game.effect_play_from_zone(
+                player, 'hand', play_filter, free=True, is_optional=True)
+            if not (player and game):
+                return
+            def hand_filter(c):
+                return True
+            def on_trashed(selected):
+                if selected in player.hand_cards:
+                    player.hand_cards.remove(selected)
+                    player.trash_cards.append(selected)
+            game.effect_select_hand_card(
+                player, hand_filter, on_trashed, is_optional=False)
             # Add card to hand (from trash/reveal)
             if player and player.trash_cards:
                 card_to_add = player.trash_cards.pop()

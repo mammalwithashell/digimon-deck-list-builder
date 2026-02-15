@@ -8,7 +8,7 @@ if TYPE_CHECKING:
 
 
 class BT14_074(CardScript):
-    """Auto-transpiled from DCGO BT14_074.cs"""
+    """BT14-074 Loogarmon | Lv.4"""
 
     def get_card_effects(self, card: 'CardSource') -> List['ICardEffect']:
         effects = []
@@ -20,6 +20,7 @@ class BT14_074(CardScript):
         effect0.set_effect_description("[When Attacking] By trashing 1 card in your hand, <Draw 1>. If [Eiji Nagasumi] is in this Digimon's digivolution cards, gain 1 memory.")
         effect0.is_on_attack = True
 
+        effect = effect0  # alias for condition closure
         def condition0(context: Dict[str, Any]) -> bool:
             if card and card.permanent_of_this_card() is None:
                 return False
@@ -32,13 +33,21 @@ class BT14_074(CardScript):
             """Action: Draw 1, Gain 1 memory, Trash From Hand"""
             player = ctx.get('player')
             perm = ctx.get('permanent')
+            game = ctx.get('game')
+            if not (player and game):
+                return
+            def hand_filter(c):
+                return True
+            def on_trashed(selected):
+                if selected in player.hand_cards:
+                    player.hand_cards.remove(selected)
+                    player.trash_cards.append(selected)
+            game.effect_select_hand_card(
+                player, hand_filter, on_trashed, is_optional=False)
             if player:
                 player.draw_cards(1)
             if player:
                 player.add_memory(1)
-            # Trash from hand (cost/effect)
-            if player and player.hand_cards:
-                player.trash_from_hand([player.hand_cards[-1]])
 
         effect0.set_on_process_callback(process0)
         effects.append(effect0)
@@ -53,6 +62,7 @@ class BT14_074(CardScript):
         effect1.set_hash_string("Memory+1_BT14_074")
         effect1.is_on_play = True
 
+        effect = effect1  # alias for condition closure
         def condition1(context: Dict[str, Any]) -> bool:
             if card and card.permanent_of_this_card() is None:
                 return False
@@ -66,6 +76,7 @@ class BT14_074(CardScript):
             """Action: Gain 1 memory"""
             player = ctx.get('player')
             perm = ctx.get('permanent')
+            game = ctx.get('game')
             if player:
                 player.add_memory(1)
 

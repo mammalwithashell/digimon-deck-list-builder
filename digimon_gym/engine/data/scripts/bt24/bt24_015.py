@@ -8,7 +8,7 @@ if TYPE_CHECKING:
 
 
 class BT24_015(CardScript):
-    """Auto-transpiled from DCGO BT24_015.cs"""
+    """BT24-015 MetalGreymon | Lv.5"""
 
     def get_card_effects(self, card: 'CardSource') -> List['ICardEffect']:
         effects = []
@@ -19,73 +19,69 @@ class BT24_015(CardScript):
         effect0.set_effect_name("BT24-015 Blocker")
         effect0.set_effect_description("Blocker")
         effect0._is_blocker = True
+
         def condition0(context: Dict[str, Any]) -> bool:
             return True
         effect0.set_can_use_condition(condition0)
         effects.append(effect0)
 
-        # Timing: EffectTiming.SecuritySkill
-        # [Security] If your opponent has a level 6 or higher Digimon, play this card without battling and without paying the cost.
+        # Factory effect: alt_digivolve_req
+        # Alternate digivolution requirement
         effect1 = ICardEffect()
-        effect1.set_effect_name("BT24-015 Play this card without battling")
-        effect1.set_effect_description("[Security] If your opponent has a level 6 or higher Digimon, play this card without battling and without paying the cost.")
-        effect1.is_security_effect = True
-        effect1.is_security_effect = True
+        effect1.set_effect_name("BT24-015 Alternate digivolution requirement")
+        effect1.set_effect_description("Alternate digivolution requirement")
+        # Alternate digivolution: alternate source for cost 3
+        effect1._alt_digi_cost = 3
 
         def condition1(context: Dict[str, Any]) -> bool:
-            # Security effect — validated by engine timing
             return True
-
         effect1.set_can_use_condition(condition1)
-
-        def process1(ctx: Dict[str, Any]):
-            """Action: Play Card"""
-            player = ctx.get('player')
-            perm = ctx.get('permanent')
-            # Play a card (from hand/trash/reveal)
-            pass  # TODO: target selection for play_card
-
-        effect1.set_on_process_callback(process1)
         effects.append(effect1)
 
-        # Timing: EffectTiming.OnAttackTargetChanged
-        # [All Turns] [Once Per Turn] When attack targets change, delete 1 of your opponent's Digimon with the lowest DP.
+        # Timing: EffectTiming.SecuritySkill
+        # [Security] If your opponent has a level 6 or higher Digimon, play this card without battling and without paying the cost.
         effect2 = ICardEffect()
-        effect2.set_effect_name("BT24-015 Delete lowest DP")
-        effect2.set_effect_description("[All Turns] [Once Per Turn] When attack targets change, delete 1 of your opponent's Digimon with the lowest DP.")
-        effect2.set_max_count_per_turn(1)
-        effect2.set_hash_string("AT_BT24-015")
+        effect2.set_effect_name("BT24-015 Play this card without battling")
+        effect2.set_effect_description("[Security] If your opponent has a level 6 or higher Digimon, play this card without battling and without paying the cost.")
+        effect2.is_security_effect = True
+        effect2.is_security_effect = True
 
+        effect = effect2  # alias for condition closure
         def condition2(context: Dict[str, Any]) -> bool:
+            # Security effect — validated by engine timing
             return True
 
         effect2.set_can_use_condition(condition2)
 
         def process2(ctx: Dict[str, Any]):
-            """Action: Delete"""
+            """Action: Play Card"""
             player = ctx.get('player')
             perm = ctx.get('permanent')
-            # Delete: target selection needed for full impl
-            enemy = player.enemy if player else None
-            if enemy and enemy.battle_area:
-                target = min(enemy.battle_area, key=lambda p: p.dp)
-                enemy.delete_permanent(target)
+            game = ctx.get('game')
+            if not (player and game):
+                return
+            def play_filter(c):
+                if getattr(c, 'level', None) is None or c.level < 6:
+                    return False
+                return True
+            game.effect_play_from_zone(
+                player, 'hand', play_filter, free=True, is_optional=True)
 
         effect2.set_on_process_callback(process2)
         effects.append(effect2)
 
-        # Timing: EffectTiming.OnAllyAttack
-        # [When Attacking] [Once Per Turn] Delete 1 of your opponent's Digimon with ＜Blocker＞
+        # Timing: EffectTiming.OnAttackTargetChanged
+        # [All Turns] [Once Per Turn] When attack targets change, delete 1 of your opponent's Digimon with the lowest DP.
         effect3 = ICardEffect()
-        effect3.set_effect_name("BT24-015 Delete 1 <Blocker>")
-        effect3.set_effect_description("[When Attacking] [Once Per Turn] Delete 1 of your opponent's Digimon with ＜Blocker＞")
-        effect3.is_inherited_effect = True
+        effect3.set_effect_name("BT24-015 Delete lowest DP")
+        effect3.set_effect_description("[All Turns] [Once Per Turn] When attack targets change, delete 1 of your opponent's Digimon with the lowest DP.")
         effect3.set_max_count_per_turn(1)
-        effect3.set_hash_string("WAESS_BT24-015")
-        effect3.is_on_attack = True
+        effect3.set_hash_string("AT_BT24-015")
 
+        effect = effect3  # alias for condition closure
         def condition3(context: Dict[str, Any]) -> bool:
-            # Triggered on attack — validated by engine timing
+            if card and card.permanent_of_this_card() is None:
+                return False
             return True
 
         effect3.set_can_use_condition(condition3)
@@ -94,13 +90,57 @@ class BT24_015(CardScript):
             """Action: Delete"""
             player = ctx.get('player')
             perm = ctx.get('permanent')
-            # Delete: target selection needed for full impl
-            enemy = player.enemy if player else None
-            if enemy and enemy.battle_area:
-                target = min(enemy.battle_area, key=lambda p: p.dp)
-                enemy.delete_permanent(target)
+            game = ctx.get('game')
+            if not (player and game):
+                return
+            def target_filter(p):
+                return p.is_digimon
+            def on_delete(target_perm):
+                enemy = player.enemy if player else None
+                if enemy:
+                    enemy.delete_permanent(target_perm)
+            game.effect_select_opponent_permanent(
+                player, on_delete, filter_fn=target_filter, is_optional=False)
 
         effect3.set_on_process_callback(process3)
         effects.append(effect3)
+
+        # Timing: EffectTiming.OnAllyAttack
+        # [When Attacking] [Once Per Turn] Delete 1 of your opponent's Digimon with ＜Blocker＞
+        effect4 = ICardEffect()
+        effect4.set_effect_name("BT24-015 Delete 1 <Blocker>")
+        effect4.set_effect_description("[When Attacking] [Once Per Turn] Delete 1 of your opponent's Digimon with ＜Blocker＞")
+        effect4.is_inherited_effect = True
+        effect4.set_max_count_per_turn(1)
+        effect4.set_hash_string("WAESS_BT24-015")
+        effect4.is_on_attack = True
+
+        effect = effect4  # alias for condition closure
+        def condition4(context: Dict[str, Any]) -> bool:
+            if card and card.permanent_of_this_card() is None:
+                return False
+            # Triggered on attack — validated by engine timing
+            return True
+
+        effect4.set_can_use_condition(condition4)
+
+        def process4(ctx: Dict[str, Any]):
+            """Action: Delete"""
+            player = ctx.get('player')
+            perm = ctx.get('permanent')
+            game = ctx.get('game')
+            if not (player and game):
+                return
+            def target_filter(p):
+                return p.is_digimon
+            def on_delete(target_perm):
+                enemy = player.enemy if player else None
+                if enemy:
+                    enemy.delete_permanent(target_perm)
+            game.effect_select_opponent_permanent(
+                player, on_delete, filter_fn=target_filter, is_optional=False)
+
+        effect4.set_on_process_callback(process4)
+        effects.append(effect4)
 
         return effects

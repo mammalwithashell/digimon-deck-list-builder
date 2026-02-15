@@ -8,48 +8,113 @@ if TYPE_CHECKING:
 
 
 class BT24_058(CardScript):
-    """Auto-transpiled from DCGO BT24_058.cs"""
+    """BT24-058 Blimpmon | Lv.4"""
 
     def get_card_effects(self, card: 'CardSource') -> List['ICardEffect']:
         effects = []
 
-        # Timing: EffectTiming.OnEnterFieldAnyone
-        # Effect
+        # Factory effect: alt_digivolve_req
+        # Alternate digivolution requirement
         effect0 = ICardEffect()
-        effect0.set_effect_name("BT24-058 Effect")
-        effect0.set_effect_description("Effect")
-        effect0.is_on_play = True
+        effect0.set_effect_name("BT24-058 Alternate digivolution requirement")
+        effect0.set_effect_description("Alternate digivolution requirement")
+        # Alternate digivolution: alternate source for cost 2
+        effect0._alt_digi_cost = 2
 
         def condition0(context: Dict[str, Any]) -> bool:
-            # Triggered on play — validated by engine timing
             return True
-
         effect0.set_can_use_condition(condition0)
         effects.append(effect0)
 
         # Timing: EffectTiming.OnEnterFieldAnyone
-        # Effect
+        # Add To Hand, Reveal And Select
         effect1 = ICardEffect()
-        effect1.set_effect_name("BT24-058 Effect")
-        effect1.set_effect_description("Effect")
+        effect1.set_effect_name("BT24-058 Add To Hand, Reveal And Select")
+        effect1.set_effect_description("Add To Hand, Reveal And Select")
         effect1.is_on_play = True
 
+        effect = effect1  # alias for condition closure
         def condition1(context: Dict[str, Any]) -> bool:
-            # Triggered when digivolving — validated by engine timing
+            if card and card.permanent_of_this_card() is None:
+                return False
+            # Triggered on play — validated by engine timing
             return True
 
         effect1.set_can_use_condition(condition1)
+
+        def process1(ctx: Dict[str, Any]):
+            """Action: Add To Hand, Reveal And Select"""
+            player = ctx.get('player')
+            perm = ctx.get('permanent')
+            game = ctx.get('game')
+            # Add card to hand (from trash/reveal)
+            if player and player.trash_cards:
+                card_to_add = player.trash_cards.pop()
+                player.hand_cards.append(card_to_add)
+            if not (player and game):
+                return
+            def reveal_filter(c):
+                return True
+            def on_revealed(selected, remaining):
+                player.hand_cards.append(selected)
+                for c in remaining:
+                    player.library_cards.append(c)
+            game.effect_reveal_and_select(
+                player, 3, reveal_filter, on_revealed, is_optional=True)
+
+        effect1.set_on_process_callback(process1)
         effects.append(effect1)
+
+        # Timing: EffectTiming.OnEnterFieldAnyone
+        # Add To Hand, Reveal And Select
+        effect2 = ICardEffect()
+        effect2.set_effect_name("BT24-058 Add To Hand, Reveal And Select")
+        effect2.set_effect_description("Add To Hand, Reveal And Select")
+        effect2.is_when_digivolving = True
+
+        effect = effect2  # alias for condition closure
+        def condition2(context: Dict[str, Any]) -> bool:
+            if card and card.permanent_of_this_card() is None:
+                return False
+            # Triggered when digivolving — validated by engine timing
+            return True
+
+        effect2.set_can_use_condition(condition2)
+
+        def process2(ctx: Dict[str, Any]):
+            """Action: Add To Hand, Reveal And Select"""
+            player = ctx.get('player')
+            perm = ctx.get('permanent')
+            game = ctx.get('game')
+            # Add card to hand (from trash/reveal)
+            if player and player.trash_cards:
+                card_to_add = player.trash_cards.pop()
+                player.hand_cards.append(card_to_add)
+            if not (player and game):
+                return
+            def reveal_filter(c):
+                return True
+            def on_revealed(selected, remaining):
+                player.hand_cards.append(selected)
+                for c in remaining:
+                    player.library_cards.append(c)
+            game.effect_reveal_and_select(
+                player, 3, reveal_filter, on_revealed, is_optional=True)
+
+        effect2.set_on_process_callback(process2)
+        effects.append(effect2)
 
         # Factory effect: reboot
         # Reboot
-        effect2 = ICardEffect()
-        effect2.set_effect_name("BT24-058 Reboot")
-        effect2.set_effect_description("Reboot")
-        effect2._is_reboot = True
-        def condition2(context: Dict[str, Any]) -> bool:
+        effect3 = ICardEffect()
+        effect3.set_effect_name("BT24-058 Reboot")
+        effect3.set_effect_description("Reboot")
+        effect3.is_inherited_effect = True
+        effect3._is_reboot = True
+
+        def condition3(context: Dict[str, Any]) -> bool:
             return True
-        effect2.set_can_use_condition(condition2)
-        effects.append(effect2)
+        effect3.set_can_use_condition(condition3)
+        effects.append(effect3)
 
         return effects

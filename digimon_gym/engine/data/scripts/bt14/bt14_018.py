@@ -8,7 +8,7 @@ if TYPE_CHECKING:
 
 
 class BT14_018(CardScript):
-    """Auto-transpiled from DCGO BT14_018.cs"""
+    """BT14-018 Goldramon | Lv.6"""
 
     def get_card_effects(self, card: 'CardSource') -> List['ICardEffect']:
         effects = []
@@ -20,6 +20,7 @@ class BT14_018(CardScript):
         effect0.set_effect_description("[On Play] Play 1 [Amon of Crimson Flame] (Digimon/Red/6000 DP/<Rush>) Token and 1 [Umon of Blue Thunder] (Digimon/Yellow/6000 DP/<Blocker>) Token.")
         effect0.is_on_play = True
 
+        effect = effect0  # alias for condition closure
         def condition0(context: Dict[str, Any]) -> bool:
             if card and card.permanent_of_this_card() is None:
                 return False
@@ -27,6 +28,16 @@ class BT14_018(CardScript):
             return True
 
         effect0.set_can_use_condition(condition0)
+
+        def process0(ctx: Dict[str, Any]):
+            """Action: Play Token"""
+            player = ctx.get('player')
+            perm = ctx.get('permanent')
+            game = ctx.get('game')
+            # Play Amon Token — token play not yet supported in engine
+            pass  # descriptive-tagged: play_token
+
+        effect0.set_on_process_callback(process0)
         effects.append(effect0)
 
         # Timing: EffectTiming.OnEnterFieldAnyone
@@ -34,8 +45,9 @@ class BT14_018(CardScript):
         effect1 = ICardEffect()
         effect1.set_effect_name("BT14-018 Play tokens")
         effect1.set_effect_description("[When Digivolving] Play 1 [Amon of Crimson Flame] (Digimon/Red/6000 DP/<Rush>) Token and 1 [Umon of Blue Thunder] (Digimon/Yellow/6000 DP/<Blocker>) Token.")
-        effect1.is_on_play = True
+        effect1.is_when_digivolving = True
 
+        effect = effect1  # alias for condition closure
         def condition1(context: Dict[str, Any]) -> bool:
             if card and card.permanent_of_this_card() is None:
                 return False
@@ -43,6 +55,16 @@ class BT14_018(CardScript):
             return True
 
         effect1.set_can_use_condition(condition1)
+
+        def process1(ctx: Dict[str, Any]):
+            """Action: Play Token"""
+            player = ctx.get('player')
+            perm = ctx.get('permanent')
+            game = ctx.get('game')
+            # Play Amon Token — token play not yet supported in engine
+            pass  # descriptive-tagged: play_token
+
+        effect1.set_on_process_callback(process1)
         effects.append(effect1)
 
         # Timing: EffectTiming.BeforePayCost
@@ -52,6 +74,7 @@ class BT14_018(CardScript):
         effect2.set_effect_description("[All Turns] When this Digimon would digivolve or leave the battle area, delete all of your [Amon of Crimson Flame] and [Umon of Blue Thunder]. If this effect deletes, <Recovery +1 (Deck)>.")
         effect2.set_hash_string("Recovery1_BT14_018")
 
+        effect = effect2  # alias for condition closure
         def condition2(context: Dict[str, Any]) -> bool:
             if card and card.permanent_of_this_card() is None:
                 return False
@@ -63,13 +86,19 @@ class BT14_018(CardScript):
             """Action: Recovery +1, Delete"""
             player = ctx.get('player')
             perm = ctx.get('permanent')
+            game = ctx.get('game')
             if player:
                 player.recovery(1)
-            # Delete: target selection needed for full impl
-            enemy = player.enemy if player else None
-            if enemy and enemy.battle_area:
-                target = min(enemy.battle_area, key=lambda p: p.dp)
-                enemy.delete_permanent(target)
+            if not (player and game):
+                return
+            def target_filter(p):
+                return p.is_digimon
+            def on_delete(target_perm):
+                enemy = player.enemy if player else None
+                if enemy:
+                    enemy.delete_permanent(target_perm)
+            game.effect_select_opponent_permanent(
+                player, on_delete, filter_fn=target_filter, is_optional=False)
 
         effect2.set_on_process_callback(process2)
         effects.append(effect2)
@@ -81,6 +110,7 @@ class BT14_018(CardScript):
         effect3.set_effect_description("[All Turns] When this Digimon would digivolve or leave the battle area, delete all of your [Amon of Crimson Flame] and [Umon of Blue Thunder]. If this effect deletes, <Recovery +1 (Deck)>.")
         effect3.set_hash_string("Recovery1_BT14_018")
 
+        effect = effect3  # alias for condition closure
         def condition3(context: Dict[str, Any]) -> bool:
             if card and card.permanent_of_this_card() is None:
                 return False
@@ -92,13 +122,19 @@ class BT14_018(CardScript):
             """Action: Recovery +1, Delete"""
             player = ctx.get('player')
             perm = ctx.get('permanent')
+            game = ctx.get('game')
             if player:
                 player.recovery(1)
-            # Delete: target selection needed for full impl
-            enemy = player.enemy if player else None
-            if enemy and enemy.battle_area:
-                target = min(enemy.battle_area, key=lambda p: p.dp)
-                enemy.delete_permanent(target)
+            if not (player and game):
+                return
+            def target_filter(p):
+                return p.is_digimon
+            def on_delete(target_perm):
+                enemy = player.enemy if player else None
+                if enemy:
+                    enemy.delete_permanent(target_perm)
+            game.effect_select_opponent_permanent(
+                player, on_delete, filter_fn=target_filter, is_optional=False)
 
         effect3.set_on_process_callback(process3)
         effects.append(effect3)

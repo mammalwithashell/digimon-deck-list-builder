@@ -8,7 +8,7 @@ if TYPE_CHECKING:
 
 
 class BT14_080(CardScript):
-    """Auto-transpiled from DCGO BT14_080.cs"""
+    """BT14-080 Ghoulmon | Lv.6"""
 
     def get_card_effects(self, card: 'CardSource') -> List['ICardEffect']:
         effects = []
@@ -20,8 +20,9 @@ class BT14_080(CardScript):
         effect0.set_effect_description("[When Digivolving][Once Per Turn] For every 10 cards in your trash, trash the top 3 cards of your opponent's deck.")
         effect0.set_max_count_per_turn(1)
         effect0.set_hash_string("TrashDeck_BT14_080")
-        effect0.is_on_play = True
+        effect0.is_when_digivolving = True
 
+        effect = effect0  # alias for condition closure
         def condition0(context: Dict[str, Any]) -> bool:
             if card and card.permanent_of_this_card() is None:
                 return False
@@ -29,6 +30,21 @@ class BT14_080(CardScript):
             return True
 
         effect0.set_can_use_condition(condition0)
+
+        def process0(ctx: Dict[str, Any]):
+            """Action: Mill"""
+            player = ctx.get('player')
+            perm = ctx.get('permanent')
+            game = ctx.get('game')
+            # Mill 3 cards from opponent's deck
+            enemy = player.enemy if player else None
+            if enemy and enemy.library_cards:
+                mill_count = min(3, len(enemy.library_cards))
+                trashed = enemy.library_cards[:mill_count]
+                enemy.library_cards = enemy.library_cards[mill_count:]
+                enemy.trash_cards.extend(trashed)
+
+        effect0.set_on_process_callback(process0)
         effects.append(effect0)
 
         # Timing: EffectTiming.OnAllyAttack
@@ -40,6 +56,7 @@ class BT14_080(CardScript):
         effect1.set_hash_string("TrashDeck_BT14_080")
         effect1.is_on_attack = True
 
+        effect = effect1  # alias for condition closure
         def condition1(context: Dict[str, Any]) -> bool:
             if card and card.permanent_of_this_card() is None:
                 return False
@@ -47,6 +64,21 @@ class BT14_080(CardScript):
             return True
 
         effect1.set_can_use_condition(condition1)
+
+        def process1(ctx: Dict[str, Any]):
+            """Action: Mill"""
+            player = ctx.get('player')
+            perm = ctx.get('permanent')
+            game = ctx.get('game')
+            # Mill 3 cards from opponent's deck
+            enemy = player.enemy if player else None
+            if enemy and enemy.library_cards:
+                mill_count = min(3, len(enemy.library_cards))
+                trashed = enemy.library_cards[:mill_count]
+                enemy.library_cards = enemy.library_cards[mill_count:]
+                enemy.trash_cards.extend(trashed)
+
+        effect1.set_on_process_callback(process1)
         effects.append(effect1)
 
         # Timing: EffectTiming.OnAllyAttack
@@ -58,6 +90,7 @@ class BT14_080(CardScript):
         effect2.set_hash_string("SecurityAttack+1_BT14_080")
         effect2.is_on_attack = True
 
+        effect = effect2  # alias for condition closure
         def condition2(context: Dict[str, Any]) -> bool:
             if card and card.permanent_of_this_card() is None:
                 return False

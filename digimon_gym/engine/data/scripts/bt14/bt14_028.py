@@ -8,7 +8,7 @@ if TYPE_CHECKING:
 
 
 class BT14_028(CardScript):
-    """Auto-transpiled from DCGO BT14_028.cs"""
+    """BT14-028 ShogunGekomon | Lv.5"""
 
     def get_card_effects(self, card: 'CardSource') -> List['ICardEffect']:
         effects = []
@@ -19,6 +19,7 @@ class BT14_028(CardScript):
         effect0.set_effect_name("BT14-028 Blocker")
         effect0.set_effect_description("Blocker")
         effect0._is_blocker = True
+
         def condition0(context: Dict[str, Any]) -> bool:
             return True
         effect0.set_can_use_condition(condition0)
@@ -30,13 +31,33 @@ class BT14_028(CardScript):
         effect1.set_effect_name("BT14-028 This Digimon can't be deleted by battle)")
         effect1.set_effect_description("[All Turns][Once Per Turn] When a digivolution card of an opponent's Digimon is trashed, this Digimon can't be deleted in battle until the end of your opponent's turn.")
         effect1.set_max_count_per_turn(1)
+        effect1._is_cannot_be_deleted_by_battle = True
 
+        effect = effect1  # alias for condition closure
         def condition1(context: Dict[str, Any]) -> bool:
             if card and card.permanent_of_this_card() is None:
                 return False
             return True
 
         effect1.set_can_use_condition(condition1)
+
+        def process1(ctx: Dict[str, Any]):
+            """Action: Gain Keyword Cannot Be Deleted By Battle"""
+            player = ctx.get('player')
+            perm = ctx.get('permanent')
+            game = ctx.get('game')
+            if not (player and game):
+                return
+            def target_filter(p):
+                return p.is_digimon
+            def on_grant(target_perm):
+                grants = getattr(target_perm, '_keyword_grants', [])
+                grants.append('_is_cannot_be_deleted_by_battle')
+                target_perm._keyword_grants = grants
+            game.effect_select_own_permanent(
+                player, on_grant, filter_fn=target_filter, is_optional=False)
+
+        effect1.set_on_process_callback(process1)
         effects.append(effect1)
 
         return effects

@@ -1,7 +1,7 @@
 import re
-from typing import List
+from typing import List, Optional
 from ..data.enums import CardColor, CardKind, Rarity
-from ..data.evo_cost import EvoCost
+from ..data.evo_cost import EvoCost, DnaCost
 
 class CEntity_Base:
     def __init__(self):
@@ -9,7 +9,8 @@ class CEntity_Base:
         self.card_colors: List[CardColor] = []
         self.play_cost: int = 0
         self.evo_costs: List[EvoCost] = []
-        self.level: int = 0
+        self.dna_costs: List[DnaCost] = []
+        self.level: Optional[int] = None  # None for tamers/options and some Digimon (e.g. Eater Bit)
         self.card_name_jpn: str = ""
         self.card_name_eng: str = ""
         self.form_jpn: List[str] = []
@@ -27,7 +28,7 @@ class CEntity_Base:
         self.security_effect_description_jpn: str = ""
         self.security_effect_description_eng: str = ""
         self.card_effect_class_name: str = ""
-        self.dp: int = 0
+        self.dp: Optional[int] = None  # None for eggs/tamers/options; 0+ for digimon
         self.rarity: Rarity = Rarity.C
         self.overflow_memory: int = 0
         self.link_dp: int = 0
@@ -43,6 +44,18 @@ class CEntity_Base:
     @property
     def has_security_effect(self) -> bool:
         return bool(self.security_effect_description_eng)
+
+    @property
+    def card_text(self) -> str:
+        """Combined effect text (effect + inherited + security) for HasText checks."""
+        parts = []
+        if self.effect_description_eng:
+            parts.append(self.effect_description_eng)
+        if self.inherited_effect_description_eng:
+            parts.append(self.inherited_effect_description_eng)
+        if self.security_effect_description_eng:
+            parts.append(self.security_effect_description_eng)
+        return " ".join(parts)
 
     @property
     def is_ace(self) -> bool:
@@ -74,7 +87,7 @@ class CEntity_Base:
 
     @property
     def has_level(self) -> bool:
-        return self.level > 0
+        return self.level is not None and self.level > 0
 
     @property
     def has_play_cost(self) -> bool:

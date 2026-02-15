@@ -8,7 +8,7 @@ if TYPE_CHECKING:
 
 
 class BT14_042(CardScript):
-    """Auto-transpiled from DCGO BT14_042.cs"""
+    """BT14-042 Kunemon | Lv.3"""
 
     def get_card_effects(self, card: 'CardSource') -> List['ICardEffect']:
         effects = []
@@ -21,6 +21,7 @@ class BT14_042(CardScript):
         effect0.is_optional = True
         effect0.is_on_play = True
 
+        effect = effect0  # alias for condition closure
         def condition0(context: Dict[str, Any]) -> bool:
             if card and card.permanent_of_this_card() is None:
                 return False
@@ -33,17 +34,29 @@ class BT14_042(CardScript):
             """Action: Suspend, Add To Hand, Reveal And Select"""
             player = ctx.get('player')
             perm = ctx.get('permanent')
-            # Suspend opponent's digimon
-            enemy = player.enemy if player else None
-            if enemy and enemy.battle_area:
-                target = enemy.battle_area[-1]
-                target.suspend()
+            game = ctx.get('game')
+            if not (player and game):
+                return
+            def target_filter(p):
+                return True
+            def on_suspend(target_perm):
+                target_perm.suspend()
+            game.effect_select_opponent_permanent(
+                player, on_suspend, filter_fn=target_filter, is_optional=True)
             # Add card to hand (from trash/reveal)
             if player and player.trash_cards:
                 card_to_add = player.trash_cards.pop()
                 player.hand_cards.append(card_to_add)
-            # Reveal top cards and select
-            pass  # TODO: reveal_and_select needs UI/agent choice
+            if not (player and game):
+                return
+            def reveal_filter(c):
+                return True
+            def on_revealed(selected, remaining):
+                player.hand_cards.append(selected)
+                for c in remaining:
+                    player.library_cards.append(c)
+            game.effect_reveal_and_select(
+                player, 3, reveal_filter, on_revealed, is_optional=True)
 
         effect0.set_on_process_callback(process0)
         effects.append(effect0)

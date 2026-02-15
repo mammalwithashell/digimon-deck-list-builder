@@ -8,7 +8,7 @@ if TYPE_CHECKING:
 
 
 class BT14_065(CardScript):
-    """Auto-transpiled from DCGO BT14_065.cs"""
+    """BT14-065 Vademon | Lv.5"""
 
     def get_card_effects(self, card: 'CardSource') -> List['ICardEffect']:
         effects = []
@@ -20,6 +20,7 @@ class BT14_065(CardScript):
         effect0.set_effect_description("[On Play] Your opponent reveals the top 3 cards of their deck. <De-Digivolve 1> 1 of your opponent's Digimon for each Digimon card among them. Return the revealed cards to the top or bottom of the deck.")
         effect0.is_on_play = True
 
+        effect = effect0  # alias for condition closure
         def condition0(context: Dict[str, Any]) -> bool:
             if card and card.permanent_of_this_card() is None:
                 return False
@@ -32,14 +33,26 @@ class BT14_065(CardScript):
             """Action: Reveal And Select, De Digivolve"""
             player = ctx.get('player')
             perm = ctx.get('permanent')
-            # Reveal top cards and select
-            pass  # TODO: reveal_and_select needs UI/agent choice
-            # De-digivolve opponent's digimon
-            enemy = player.enemy if player else None
-            if enemy and enemy.battle_area:
-                target = enemy.battle_area[-1]
-                removed = target.de_digivolve(1)
-                enemy.trash_cards.extend(removed)
+            game = ctx.get('game')
+            if not (player and game):
+                return
+            def reveal_filter(c):
+                return True
+            def on_revealed(selected, remaining):
+                player.hand_cards.append(selected)
+                for c in remaining:
+                    player.library_cards.append(c)
+            game.effect_reveal_and_select(
+                player, 4, reveal_filter, on_revealed, is_optional=True)
+            if not (player and game):
+                return
+            def on_de_digivolve(target_perm):
+                removed = target_perm.de_digivolve(1)
+                enemy = player.enemy if player else None
+                if enemy:
+                    enemy.trash_cards.extend(removed)
+            game.effect_select_opponent_permanent(
+                player, on_de_digivolve, filter_fn=lambda p: p.is_digimon, is_optional=False)
 
         effect0.set_on_process_callback(process0)
         effects.append(effect0)
@@ -49,8 +62,9 @@ class BT14_065(CardScript):
         effect1 = ICardEffect()
         effect1.set_effect_name("BT14-065 Reveal the top 3 cards of opponent's deck")
         effect1.set_effect_description("[When Digivolving] Your opponent reveals the top 3 cards of their deck. <De-Digivolve 1> 1 of your opponent's Digimon for each Digimon card among them. Return the revealed cards to the top or bottom of the deck.")
-        effect1.is_on_play = True
+        effect1.is_when_digivolving = True
 
+        effect = effect1  # alias for condition closure
         def condition1(context: Dict[str, Any]) -> bool:
             if card and card.permanent_of_this_card() is None:
                 return False
@@ -63,14 +77,26 @@ class BT14_065(CardScript):
             """Action: Reveal And Select, De Digivolve"""
             player = ctx.get('player')
             perm = ctx.get('permanent')
-            # Reveal top cards and select
-            pass  # TODO: reveal_and_select needs UI/agent choice
-            # De-digivolve opponent's digimon
-            enemy = player.enemy if player else None
-            if enemy and enemy.battle_area:
-                target = enemy.battle_area[-1]
-                removed = target.de_digivolve(1)
-                enemy.trash_cards.extend(removed)
+            game = ctx.get('game')
+            if not (player and game):
+                return
+            def reveal_filter(c):
+                return True
+            def on_revealed(selected, remaining):
+                player.hand_cards.append(selected)
+                for c in remaining:
+                    player.library_cards.append(c)
+            game.effect_reveal_and_select(
+                player, 4, reveal_filter, on_revealed, is_optional=True)
+            if not (player and game):
+                return
+            def on_de_digivolve(target_perm):
+                removed = target_perm.de_digivolve(1)
+                enemy = player.enemy if player else None
+                if enemy:
+                    enemy.trash_cards.extend(removed)
+            game.effect_select_opponent_permanent(
+                player, on_de_digivolve, filter_fn=lambda p: p.is_digimon, is_optional=False)
 
         effect1.set_on_process_callback(process1)
         effects.append(effect1)

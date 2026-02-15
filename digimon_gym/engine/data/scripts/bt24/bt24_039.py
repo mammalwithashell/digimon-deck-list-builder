@@ -8,68 +8,104 @@ if TYPE_CHECKING:
 
 
 class BT24_039(CardScript):
-    """Auto-transpiled from DCGO BT24_039.cs"""
+    """BT24-039 Piximon | Lv.5"""
 
     def get_card_effects(self, card: 'CardSource') -> List['ICardEffect']:
         effects = []
 
-        # Timing: EffectTiming.SecuritySkill
-        # [Security] If your opponent has a level 6 or higher Digimon, play this card without battling and without paying the cost.
+        # Factory effect: alt_digivolve_req
+        # Alternate digivolution requirement
         effect0 = ICardEffect()
-        effect0.set_effect_name("BT24-039 Play this card without battling")
-        effect0.set_effect_description("[Security] If your opponent has a level 6 or higher Digimon, play this card without battling and without paying the cost.")
-        effect0.is_security_effect = True
-        effect0.is_security_effect = True
+        effect0.set_effect_name("BT24-039 Alternate digivolution requirement")
+        effect0.set_effect_description("Alternate digivolution requirement")
+        # Alternate digivolution: alternate source for cost 3
+        effect0._alt_digi_cost = 3
 
         def condition0(context: Dict[str, Any]) -> bool:
+            return True
+        effect0.set_can_use_condition(condition0)
+        effects.append(effect0)
+
+        # Timing: EffectTiming.SecuritySkill
+        # [Security] If your opponent has a level 6 or higher Digimon, play this card without battling and without paying the cost.
+        effect1 = ICardEffect()
+        effect1.set_effect_name("BT24-039 Play this card without battling")
+        effect1.set_effect_description("[Security] If your opponent has a level 6 or higher Digimon, play this card without battling and without paying the cost.")
+        effect1.is_security_effect = True
+        effect1.is_security_effect = True
+
+        effect = effect1  # alias for condition closure
+        def condition1(context: Dict[str, Any]) -> bool:
             # Security effect — validated by engine timing
             return True
 
-        effect0.set_can_use_condition(condition0)
+        effect1.set_can_use_condition(condition1)
 
-        def process0(ctx: Dict[str, Any]):
+        def process1(ctx: Dict[str, Any]):
             """Action: Play Card"""
             player = ctx.get('player')
             perm = ctx.get('permanent')
-            # Play a card (from hand/trash/reveal)
-            pass  # TODO: target selection for play_card
+            game = ctx.get('game')
+            if not (player and game):
+                return
+            def play_filter(c):
+                if getattr(c, 'level', None) is None or c.level < 6:
+                    return False
+                return True
+            game.effect_play_from_zone(
+                player, 'hand', play_filter, free=True, is_optional=True)
 
-        effect0.set_on_process_callback(process0)
-        effects.append(effect0)
+        effect1.set_on_process_callback(process1)
+        effects.append(effect1)
 
         # Factory effect: blocker
         # Blocker
-        effect1 = ICardEffect()
-        effect1.set_effect_name("BT24-039 Blocker")
-        effect1.set_effect_description("Blocker")
-        effect1._is_blocker = True
-        def condition1(context: Dict[str, Any]) -> bool:
+        effect2 = ICardEffect()
+        effect2.set_effect_name("BT24-039 Blocker")
+        effect2.set_effect_description("Blocker")
+        effect2._is_blocker = True
+
+        def condition2(context: Dict[str, Any]) -> bool:
             return True
-        effect1.set_can_use_condition(condition1)
-        effects.append(effect1)
+        effect2.set_can_use_condition(condition2)
+        effects.append(effect2)
+
+        # Factory effect: barrier
+        # Barrier
+        effect3 = ICardEffect()
+        effect3.set_effect_name("BT24-039 Barrier")
+        effect3.set_effect_description("Barrier")
+        effect3._is_barrier = True
+
+        def condition3(context: Dict[str, Any]) -> bool:
+            return True
+        effect3.set_can_use_condition(condition3)
+        effects.append(effect3)
 
         # Timing: EffectTiming.OnDestroyedAnyone
         # [On Deletion] Trigger <Recovery +1 (Deck)>. (Place the top card of your deck on top of your security stack.)
-        effect2 = ICardEffect()
-        effect2.set_effect_name("BT24-039 Recovery +1 (Deck)")
-        effect2.set_effect_description("[On Deletion] Trigger <Recovery +1 (Deck)>. (Place the top card of your deck on top of your security stack.)")
-        effect2.is_inherited_effect = True
-        effect2.is_on_deletion = True
+        effect4 = ICardEffect()
+        effect4.set_effect_name("BT24-039 Recovery +1 (Deck)")
+        effect4.set_effect_description("[On Deletion] Trigger <Recovery +1 (Deck)>. (Place the top card of your deck on top of your security stack.)")
+        effect4.is_inherited_effect = True
+        effect4.is_on_deletion = True
 
-        def condition2(context: Dict[str, Any]) -> bool:
+        effect = effect4  # alias for condition closure
+        def condition4(context: Dict[str, Any]) -> bool:
             # Triggered on deletion — validated by engine timing
             return True
 
-        effect2.set_can_use_condition(condition2)
+        effect4.set_can_use_condition(condition4)
 
-        def process2(ctx: Dict[str, Any]):
+        def process4(ctx: Dict[str, Any]):
             """Action: Recovery +1"""
             player = ctx.get('player')
             perm = ctx.get('permanent')
+            game = ctx.get('game')
             if player:
                 player.recovery(1)
 
-        effect2.set_on_process_callback(process2)
-        effects.append(effect2)
+        effect4.set_on_process_callback(process4)
+        effects.append(effect4)
 
         return effects

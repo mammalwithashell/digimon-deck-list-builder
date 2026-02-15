@@ -8,7 +8,7 @@ if TYPE_CHECKING:
 
 
 class BT14_044(CardScript):
-    """Auto-transpiled from DCGO BT14_044.cs"""
+    """BT14-044 Palmon | Lv.3"""
 
     def get_card_effects(self, card: 'CardSource') -> List['ICardEffect']:
         effects = []
@@ -19,6 +19,7 @@ class BT14_044(CardScript):
         effect0.set_effect_name("BT14-044 Opponent's 1 Digimon gains effect")
         effect0.set_effect_description("Effect")
 
+        effect = effect0  # alias for condition closure
         def condition0(context: Dict[str, Any]) -> bool:
             if card and card.permanent_of_this_card() is None:
                 return False
@@ -35,10 +36,21 @@ class BT14_044(CardScript):
         effect1.set_effect_name("BT14-044 Memory -2")
         effect1.set_effect_description("[All Turns] When this Digimon becomes suspended, lose 2 memory.")
 
+        effect = effect1  # alias for condition closure
         def condition1(context: Dict[str, Any]) -> bool:
             return True
 
         effect1.set_can_use_condition(condition1)
+
+        def process1(ctx: Dict[str, Any]):
+            """Action: Add Temp Effect"""
+            player = ctx.get('player')
+            perm = ctx.get('permanent')
+            game = ctx.get('game')
+            # Grant temporary effect to target permanent
+            pass  # descriptive-tagged: add_temp_effect
+
+        effect1.set_on_process_callback(process1)
         effects.append(effect1)
 
         # Timing: EffectTiming.None
@@ -49,6 +61,7 @@ class BT14_044(CardScript):
         effect2.is_inherited_effect = True
         effect2.cost_reduction = 1
 
+        effect = effect2  # alias for condition closure
         def condition2(context: Dict[str, Any]) -> bool:
             if card and card.permanent_of_this_card() is None:
                 return False
@@ -62,7 +75,9 @@ class BT14_044(CardScript):
             """Action: Cost -1"""
             player = ctx.get('player')
             perm = ctx.get('permanent')
-            # Cost reduction handled via cost_reduction property
+            game = ctx.get('game')
+            # Cost reduction by 1 — handled via cost_reduction property
+            pass  # descriptive-tagged: cost_reduction
 
         effect2.set_on_process_callback(process2)
         effects.append(effect2)

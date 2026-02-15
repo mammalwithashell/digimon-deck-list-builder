@@ -8,7 +8,7 @@ if TYPE_CHECKING:
 
 
 class BT24_005(CardScript):
-    """Auto-transpiled from DCGO BT24_005.cs"""
+    """BT24-005 Kyokyomon | Lv.2"""
 
     def get_card_effects(self, card: 'CardSource') -> List['ICardEffect']:
         effects = []
@@ -22,7 +22,10 @@ class BT24_005(CardScript):
         effect0.set_max_count_per_turn(1)
         effect0.set_hash_string("BT24_005_Reveal")
 
+        effect = effect0  # alias for condition closure
         def condition0(context: Dict[str, Any]) -> bool:
+            if card and card.permanent_of_this_card() is None:
+                return False
             return True
 
         effect0.set_can_use_condition(condition0)
@@ -31,8 +34,17 @@ class BT24_005(CardScript):
             """Action: Reveal And Select"""
             player = ctx.get('player')
             perm = ctx.get('permanent')
-            # Reveal top cards and select
-            pass  # TODO: reveal_and_select needs UI/agent choice
+            game = ctx.get('game')
+            if not (player and game):
+                return
+            def reveal_filter(c):
+                return True
+            def on_revealed(selected, remaining):
+                player.hand_cards.append(selected)
+                for c in remaining:
+                    player.library_cards.append(c)
+            game.effect_reveal_and_select(
+                player, 4, reveal_filter, on_revealed, is_optional=True)
 
         effect0.set_on_process_callback(process0)
         effects.append(effect0)

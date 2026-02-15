@@ -8,7 +8,7 @@ if TYPE_CHECKING:
 
 
 class BT14_037(CardScript):
-    """Auto-transpiled from DCGO BT14_037.cs"""
+    """BT14-037 MagnaAngemon | Lv.5"""
 
     def get_card_effects(self, card: 'CardSource') -> List['ICardEffect']:
         effects = []
@@ -20,6 +20,7 @@ class BT14_037(CardScript):
         effect0.set_effect_description("Blast Digivolve")
         effect0.is_counter_effect = True
         effect0._is_blast_digivolve = True
+
         def condition0(context: Dict[str, Any]) -> bool:
             return True
         effect0.set_can_use_condition(condition0)
@@ -32,6 +33,7 @@ class BT14_037(CardScript):
         effect1.set_effect_description("[On Play] If you have 5 or fewer security cards, <Recovery +1 (Deck)>. Then, for the turn, 1 of your opponent's Digimon gets -1000 DP for each card in your security stack.")
         effect1.is_on_play = True
 
+        effect = effect1  # alias for condition closure
         def condition1(context: Dict[str, Any]) -> bool:
             if card and card.permanent_of_this_card() is None:
                 return False
@@ -44,6 +46,7 @@ class BT14_037(CardScript):
             """Action: Recovery +1"""
             player = ctx.get('player')
             perm = ctx.get('permanent')
+            game = ctx.get('game')
             if player:
                 player.recovery(1)
 
@@ -55,8 +58,9 @@ class BT14_037(CardScript):
         effect2 = ICardEffect()
         effect2.set_effect_name("BT14-037 Recovery +1 and opponent's 1 Digimon reduces DP")
         effect2.set_effect_description("[When Digivolving] If you have 5 or fewer security cards, <Recovery +1 (Deck)>. Then, for the turn, 1 of your opponent's Digimon gets -1000 DP for each card in your security stack.")
-        effect2.is_on_play = True
+        effect2.is_when_digivolving = True
 
+        effect = effect2  # alias for condition closure
         def condition2(context: Dict[str, Any]) -> bool:
             if card and card.permanent_of_this_card() is None:
                 return False
@@ -69,6 +73,7 @@ class BT14_037(CardScript):
             """Action: Recovery +1"""
             player = ctx.get('player')
             perm = ctx.get('permanent')
+            game = ctx.get('game')
             if player:
                 player.recovery(1)
 

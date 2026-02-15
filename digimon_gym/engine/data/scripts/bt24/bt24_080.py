@@ -8,21 +8,32 @@ if TYPE_CHECKING:
 
 
 class BT24_080(CardScript):
-    """Auto-transpiled from DCGO BT24_080.cs"""
+    """BT24-080 Megidramon | Lv.6"""
 
     def get_card_effects(self, card: 'CardSource') -> List['ICardEffect']:
         effects = []
 
         # Timing: EffectTiming.None
-        # Effect
+        # Also Treated As
         effect0 = ICardEffect()
         effect0.set_effect_name("BT24-080 Also treated as [ChaosGallantmon]")
-        effect0.set_effect_description("Effect")
+        effect0.set_effect_description("Also Treated As")
 
+        effect = effect0  # alias for condition closure
         def condition0(context: Dict[str, Any]) -> bool:
             return True
 
         effect0.set_can_use_condition(condition0)
+
+        def process0(ctx: Dict[str, Any]):
+            """Action: Also Treated As"""
+            player = ctx.get('player')
+            perm = ctx.get('permanent')
+            game = ctx.get('game')
+            # Also treated as [Name] — name aliasing not modeled in engine
+            pass  # descriptive-tagged: also_treated_as_name
+
+        effect0.set_on_process_callback(process0)
         effects.append(effect0)
 
         # Timing: EffectTiming.OnEndTurn
@@ -32,6 +43,7 @@ class BT24_080(CardScript):
         effect1.set_effect_description("[Trash] [End of Your Turn] If you have 4 or fewer cards in your hand, 1 of your [Dark Dragon] or [Evil Dragon] trait Digimon may digivolve into this card without paying the cost.")
         effect1.is_optional = True
 
+        effect = effect1  # alias for condition closure
         def condition1(context: Dict[str, Any]) -> bool:
             if not (card and card.owner and card.owner.is_my_turn):
                 return False
@@ -43,7 +55,13 @@ class BT24_080(CardScript):
             """Action: Digivolve"""
             player = ctx.get('player')
             perm = ctx.get('permanent')
-            pass  # TODO: digivolve effect needs card selection
+            game = ctx.get('game')
+            if not (player and perm and game):
+                return
+            def digi_filter(c):
+                return True
+            game.effect_digivolve_from_hand(
+                player, perm, digi_filter, is_optional=True)
 
         effect1.set_on_process_callback(process1)
         effects.append(effect1)
@@ -54,51 +72,113 @@ class BT24_080(CardScript):
         effect2.set_effect_name("BT24-080 Blocker")
         effect2.set_effect_description("Blocker")
         effect2._is_blocker = True
+
         def condition2(context: Dict[str, Any]) -> bool:
             return True
         effect2.set_can_use_condition(condition2)
         effects.append(effect2)
 
         # Timing: EffectTiming.OnEnterFieldAnyone
-        # Effect
+        # Delete
         effect3 = ICardEffect()
-        effect3.set_effect_name("BT24-080 Effect")
-        effect3.set_effect_description("Effect")
+        effect3.set_effect_name("BT24-080 Delete")
+        effect3.set_effect_description("Delete")
         effect3.is_on_play = True
 
+        effect = effect3  # alias for condition closure
         def condition3(context: Dict[str, Any]) -> bool:
+            if card and card.permanent_of_this_card() is None:
+                return False
             # Triggered on play — validated by engine timing
             return True
 
         effect3.set_can_use_condition(condition3)
+
+        def process3(ctx: Dict[str, Any]):
+            """Action: Delete"""
+            player = ctx.get('player')
+            perm = ctx.get('permanent')
+            game = ctx.get('game')
+            if not (player and game):
+                return
+            def target_filter(p):
+                return p.is_digimon
+            def on_delete(target_perm):
+                enemy = player.enemy if player else None
+                if enemy:
+                    enemy.delete_permanent(target_perm)
+            game.effect_select_opponent_permanent(
+                player, on_delete, filter_fn=target_filter, is_optional=False)
+
+        effect3.set_on_process_callback(process3)
         effects.append(effect3)
 
         # Timing: EffectTiming.OnEnterFieldAnyone
-        # Effect
+        # Delete
         effect4 = ICardEffect()
-        effect4.set_effect_name("BT24-080 Effect")
-        effect4.set_effect_description("Effect")
-        effect4.is_on_play = True
+        effect4.set_effect_name("BT24-080 Delete")
+        effect4.set_effect_description("Delete")
+        effect4.is_when_digivolving = True
 
+        effect = effect4  # alias for condition closure
         def condition4(context: Dict[str, Any]) -> bool:
+            if card and card.permanent_of_this_card() is None:
+                return False
             # Triggered when digivolving — validated by engine timing
             return True
 
         effect4.set_can_use_condition(condition4)
+
+        def process4(ctx: Dict[str, Any]):
+            """Action: Delete"""
+            player = ctx.get('player')
+            perm = ctx.get('permanent')
+            game = ctx.get('game')
+            if not (player and game):
+                return
+            def target_filter(p):
+                return p.is_digimon
+            def on_delete(target_perm):
+                enemy = player.enemy if player else None
+                if enemy:
+                    enemy.delete_permanent(target_perm)
+            game.effect_select_opponent_permanent(
+                player, on_delete, filter_fn=target_filter, is_optional=False)
+
+        effect4.set_on_process_callback(process4)
         effects.append(effect4)
 
         # Timing: EffectTiming.OnDestroyedAnyone
-        # Effect
+        # Delete
         effect5 = ICardEffect()
-        effect5.set_effect_name("BT24-080 Effect")
-        effect5.set_effect_description("Effect")
+        effect5.set_effect_name("BT24-080 Delete")
+        effect5.set_effect_description("Delete")
         effect5.is_on_deletion = True
 
+        effect = effect5  # alias for condition closure
         def condition5(context: Dict[str, Any]) -> bool:
             # Triggered on deletion — validated by engine timing
             return True
 
         effect5.set_can_use_condition(condition5)
+
+        def process5(ctx: Dict[str, Any]):
+            """Action: Delete"""
+            player = ctx.get('player')
+            perm = ctx.get('permanent')
+            game = ctx.get('game')
+            if not (player and game):
+                return
+            def target_filter(p):
+                return p.is_digimon
+            def on_delete(target_perm):
+                enemy = player.enemy if player else None
+                if enemy:
+                    enemy.delete_permanent(target_perm)
+            game.effect_select_opponent_permanent(
+                player, on_delete, filter_fn=target_filter, is_optional=False)
+
+        effect5.set_on_process_callback(process5)
         effects.append(effect5)
 
         return effects

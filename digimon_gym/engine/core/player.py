@@ -6,6 +6,7 @@ from ..data.enums import EffectTiming, CardKind, AttackResolution
 
 if TYPE_CHECKING:
     from .card_source import CardSource
+    from ..data.evo_cost import DnaCost
 
 class Player:
     def __init__(self):
@@ -106,12 +107,19 @@ class Player:
 
         # Rule: Must be Level 3 or higher to move?
         # Actually, Level 2 (Digitama) cannot move. Level 3 (Rookie) can.
-        if self.breeding_area.level < 3:
+        if (self.breeding_area.level or 0) < 3:
             self._log("Cannot move: Digimon level too low (must be Level 3+).")
             return
 
         perm = self.breeding_area
         self.breeding_area = None
+        # Entering battle area from breeding — track game ref (not sickness; digimon was hatched earlier)
+        if self.game:
+            perm._owner_game = self.game
+            # Moving from breeding doesn't cause summoning sickness per rules
+            # (the Digimon was hatched on a prior turn)
+            if perm.turn_played < 0:
+                perm.turn_played = -1  # keep -1 = no sickness
         self.battle_area.append(perm)
         self._log(f"{self.player_name} moved {perm.top_card.card_names[0]} from Breeding to Battle Area.")
 
@@ -119,18 +127,33 @@ class Player:
         if card_source in self.hand_cards:
             self.hand_cards.remove(card_source)
             new_permanent = Permanent([card_source])
+            # Track summoning sickness
+            if self.game:
+                new_permanent.turn_played = self.game.turn_count
+                new_permanent._owner_game = self.game
             self.battle_area.append(new_permanent)
             self._log(f"{self.player_name} played {card_source.card_names[0]}.")
 
-    def unsuspend_all(self):
+    def unsuspend_all(self, skip_reboot: bool = False):
+        """Unsuspend all permanents. If skip_reboot=True, skip those with <Reboot>
+        (they unsuspend during the opponent's unsuspend phase instead).
+        Permanents with <cannot unsuspend> are skipped."""
         for perm in self.battle_area:
+            if skip_reboot and perm.has_keyword('_is_reboot'):
+                continue  # <Reboot> permanents unsuspend on opponent's turn
+            if perm.has_keyword('_is_cannot_unsuspend'):
+                continue  # Restriction: cannot unsuspend
             perm.unsuspend()
         if self.breeding_area:
-            perm = self.breeding_area
-            # Breeding area cards don't really suspend/unsuspend in standard play logic usually?
-            # They stay active. But sure.
-            perm.is_suspended = False
-        self._log(f"{self.player_name} unsuspended all permanents.")
+            self.breeding_area.is_suspended = False
+        self._log(f"{self.player_name} unsuspended permanents.")
+
+    def unsuspend_reboot_only(self):
+        """Unsuspend only permanents with <Reboot>. Called during opponent's unsuspend phase."""
+        for perm in self.battle_area:
+            if perm.has_keyword('_is_reboot') and perm.is_suspended:
+                perm.unsuspend()
+                self._log(f"{perm.top_card.card_names[0] if perm.top_card else 'Unknown'} unsuspends (Reboot).")
 
     def digivolve(self, permanent: 'Permanent', card_source: 'CardSource'):
         # 1. Determine Base Cost
@@ -177,12 +200,113 @@ class Player:
 
         return final_cost
 
-    def delete_permanent(self, permanent: 'Permanent'):
-        if permanent in self.battle_area:
-            self.battle_area.remove(permanent)
-            self._apply_ace_overflow(permanent.card_sources)
-            self.trash_cards.extend(permanent.card_sources)
-            self._log(f"{self.player_name}'s permanent {permanent.top_card.card_names[0]} deleted.")
+    def dna_digivolve(self, top_perm: 'Permanent', bottom_perm: 'Permanent',
+                      card_source: 'CardSource', dna_cost: 'DnaCost') -> int:
+        """Execute DNA Digivolution: combine two permanents under a new card.
+
+        Stacking order (bottom to top):
+          bottom_perm's sources → top_perm's sources → card_source
+
+        Rules applied:
+        - Both permanents are removed from battle area
+        - New permanent is placed unsuspended (can attack immediately)
+        - Digivolution bonus: draw 1 card
+        - The result is treated as a new Digimon
+
+        Args:
+            top_perm: The permanent matching requirement1 (sources go on top).
+            bottom_perm: The permanent matching requirement2 (sources go on bottom).
+            card_source: The DNA digivolve card from hand.
+            dna_cost: The DnaCost entry being used.
+
+        Returns:
+            The memory cost paid.
+        """
+        base_cost = dna_cost.memory_cost
+
+        # Remove card from hand
+        if card_source in self.hand_cards:
+            self.hand_cards.remove(card_source)
+
+        # Build combined source stack: bottom sources, then top sources, then DNA card
+        combined_sources = list(bottom_perm.card_sources) + list(top_perm.card_sources)
+        combined_sources.append(card_source)
+
+        # Remove both permanents from battle area
+        if top_perm in self.battle_area:
+            self.battle_area.remove(top_perm)
+        if bottom_perm in self.battle_area:
+            self.battle_area.remove(bottom_perm)
+
+        # Create new permanent with combined stack (unsuspended)
+        new_perm = Permanent(combined_sources)
+        new_perm.is_suspended = False
+        # DNA digivolve creates a new permanent; no summoning sickness per rules
+        if self.game:
+            new_perm._owner_game = self.game
+            new_perm.turn_played = -1  # DNA digivolve doesn't have summoning sickness
+        self.battle_area.append(new_perm)
+
+        self._log(f"{self.player_name} DNA Digivolved into {card_source.card_names[0]}.")
+
+        # Digivolution bonus: draw 1
+        self.draw()
+
+        return base_cost
+
+    def delete_permanent(self, permanent: 'Permanent', is_battle: bool = False) -> bool:
+        """Delete a permanent from the battle area.
+
+        Checks deletion prevention keywords in order:
+        - <Armor Purge>: trash top digivolution card to survive
+        - <Evade>: suspend self (if unsuspended) to survive
+        - <Barrier>: trash top security card (if in battle) to survive
+
+        Args:
+            permanent: The permanent to delete.
+            is_battle: True if deletion is from battle resolution (needed for Barrier).
+
+        Returns:
+            True if the permanent was actually deleted, False if not found or
+            deletion was prevented by a keyword (Armor Purge, Evade, Barrier).
+        """
+        if permanent not in self.battle_area:
+            return False
+
+        perm_name = permanent.top_card.card_names[0] if permanent.top_card else "Unknown"
+
+        # <Armor Purge>: trash top digivolution card to prevent deletion
+        if permanent.has_keyword('_is_armor_purge') and len(permanent.card_sources) > 1:
+            trashed = permanent.trash_digivolution_cards(1, from_top=True)
+            if trashed:
+                self.trash_cards.extend(trashed)
+                self._log(f"{perm_name} activates Armor Purge! Trashed top card to survive.")
+                return False
+
+        # <Evade>: suspend self to prevent deletion (must be unsuspended)
+        if permanent.has_keyword('_is_evade') and not permanent.is_suspended:
+            permanent.suspend()
+            self._log(f"{perm_name} activates Evade! Suspended to survive.")
+            return False
+
+        # <Barrier>: trash top security card to prevent deletion (battle only)
+        if is_battle and permanent.has_keyword('_is_barrier') and len(self.security_cards) > 0:
+            trashed_sec = self.security_cards.pop(0)  # Remove from top (index 0)
+            self.trash_cards.append(trashed_sec)
+            self._log(f"{perm_name} activates Barrier! Trashed top security to survive.")
+            return False
+
+        # No prevention — actually delete
+        self.battle_area.remove(permanent)
+        self._apply_ace_overflow(permanent.card_sources)
+        self.trash_cards.extend(permanent.card_sources)
+        self._log(f"{self.player_name}'s permanent {perm_name} deleted.")
+
+        # Execute On Deletion effects
+        if self.game and hasattr(self.game, 'execute_deletion_effects'):
+            self.game.execute_deletion_effects(permanent, self)
+
+        return True
 
     def security_attack(self, attacker: 'Permanent') -> AttackResolution:
         self._log(f"{self.player_name} receives Security Attack from {attacker.top_card.card_names[0] if attacker.top_card else 'Unknown'}!")
@@ -207,13 +331,16 @@ class Player:
 
         # Battle
         if security_card.is_digimon:
-            self._log(f"Battle: Attacker DP {attacker.dp} vs Security DP {security_card.base_dp}")
-            if attacker.dp < security_card.base_dp:
-                self._log(f"Attacker {attacker.top_card.card_names[0]} is deleted by Security Digimon!")
-                result = AttackResolution.AttackerDeleted
-            elif attacker.dp == security_card.base_dp:
-                self._log(f"Attacker {attacker.top_card.card_names[0]} is deleted by Security Digimon (Equal DP).")
-                result = AttackResolution.AttackerDeleted
+            a_dp = attacker.dp or 0
+            s_dp = security_card.base_dp or 0
+            self._log(f"Battle: Attacker DP {a_dp} vs Security DP {s_dp}")
+            if a_dp < s_dp or a_dp == s_dp:
+                # <Jamming>: Digimon can't be deleted in battles against Security Digimon
+                if attacker.has_keyword('_is_jamming'):
+                    self._log(f"Attacker {attacker.top_card.card_names[0]} survives (Jamming).")
+                else:
+                    self._log(f"Attacker {attacker.top_card.card_names[0]} is deleted by Security Digimon!")
+                    result = AttackResolution.AttackerDeleted
             else:
                 self._log(f"Attacker {attacker.top_card.card_names[0]} survives.")
 
@@ -224,10 +351,15 @@ class Player:
     # ─── Effect Action Methods ───────────────────────────────────────
 
     def draw_cards(self, count: int) -> List['CardSource']:
-        """Draw N cards. Returns the cards drawn."""
+        """Draw N cards. Returns the cards drawn.
+        If deck runs out mid-draw, signals deck-out loss via game."""
         drawn = []
         for _ in range(count):
             if not self.library_cards:
+                # Deck-out: player loses when they must draw but can't
+                if self.game and hasattr(self.game, 'declare_winner'):
+                    opponent = self.game.player2 if self is self.game.player1 else self.game.player1
+                    self.game.declare_winner(opponent)
                 break
             card = self.library_cards.pop(0)
             self.hand_cards.append(card)
@@ -292,6 +424,19 @@ class Player:
             else:
                 self.security_cards.insert(0, card)
 
+    def trash_security_card(self, card: 'CardSource'):
+        """Remove a specific card from the security stack and trash it."""
+        if card in self.security_cards:
+            self.security_cards.remove(card)
+            self.trash_cards.append(card)
+
+    def remove_from_security(self, card: 'CardSource') -> Optional['CardSource']:
+        """Remove a card from the security stack (without trashing). Returns the card."""
+        if card in self.security_cards:
+            self.security_cards.remove(card)
+            return card
+        return None
+
     def reveal_top_cards(self, count: int) -> List['CardSource']:
         """Reveal top N cards of library (peek without removing)."""
         return self.library_cards[:count]
@@ -304,8 +449,38 @@ class Player:
             self.trash_cards.remove(card)
         # Don't remove from library — caller handles reveal placement
         new_permanent = Permanent([card])
+        # Track summoning sickness
+        if self.game:
+            new_permanent.turn_played = self.game.turn_count
+            new_permanent._owner_game = self.game
         self.battle_area.append(new_permanent)
         return new_permanent
+
+    def put_permanent_to_security(self, permanent: 'Permanent'):
+        """Move a permanent from the battle area to the security stack.
+        The top card goes to security; digivolution cards under it go to trash."""
+        if permanent not in self.battle_area:
+            return
+        self.battle_area.remove(permanent)
+        if permanent.top_card:
+            self.security_cards.append(permanent.top_card)
+            self._log(f"{permanent.top_card.card_names[0]} placed into security.")
+        # Digivolution cards under top go to trash
+        under_cards = permanent.card_sources[:-1]
+        self._apply_ace_overflow(under_cards)
+        self.trash_cards.extend(under_cards)
+
+    def return_permanent_to_deck_bottom(self, permanent: 'Permanent'):
+        """Return a permanent to the bottom of its owner's deck.
+        Top card goes to deck bottom; digivolution cards under go to trash."""
+        owner = self._find_permanent_owner(permanent)
+        if owner and permanent in owner.battle_area:
+            owner.battle_area.remove(permanent)
+            if permanent.top_card:
+                owner.library_cards.append(permanent.top_card)
+            under_cards = permanent.card_sources[:-1]
+            self._apply_ace_overflow(under_cards)
+            owner.trash_cards.extend(under_cards)
 
     def get_battle_area_digimons(self) -> List['Permanent']:
         """Get all Digimon permanents in battle area."""

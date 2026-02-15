@@ -8,7 +8,7 @@ if TYPE_CHECKING:
 
 
 class BT14_005(CardScript):
-    """Auto-transpiled from DCGO BT14_005.cs"""
+    """BT14-005 Missimon | Lv.2"""
 
     def get_card_effects(self, card: 'CardSource') -> List['ICardEffect']:
         effects = []
@@ -25,6 +25,7 @@ class BT14_005(CardScript):
         effect0.is_on_attack = True
         effect0.dp_modifier = 2000
 
+        effect = effect0  # alias for condition closure
         def condition0(context: Dict[str, Any]) -> bool:
             if card and card.permanent_of_this_card() is None:
                 return False
@@ -37,6 +38,7 @@ class BT14_005(CardScript):
             """Action: DP +2000"""
             player = ctx.get('player')
             perm = ctx.get('permanent')
+            game = ctx.get('game')
             if perm:
                 perm.change_dp(2000)
 

@@ -8,7 +8,7 @@ if TYPE_CHECKING:
 
 
 class BT14_002(CardScript):
-    """Auto-transpiled from DCGO BT14_002.cs"""
+    """BT14-002 Bukamon | Lv.2"""
 
     def get_card_effects(self, card: 'CardSource') -> List['ICardEffect']:
         effects = []
@@ -18,8 +18,14 @@ class BT14_002(CardScript):
         effect0 = ICardEffect()
         effect0.set_effect_name("BT14-002 Jamming")
         effect0.set_effect_description("Jamming")
+        effect0.is_inherited_effect = True
         effect0._is_jamming = True
+
         def condition0(context: Dict[str, Any]) -> bool:
+            if not (card and card.owner and card.owner.is_my_turn):
+                return False
+            if card and card.permanent_of_this_card() is None:
+                return False
             return True
         effect0.set_can_use_condition(condition0)
         effects.append(effect0)

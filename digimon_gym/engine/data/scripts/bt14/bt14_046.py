@@ -8,7 +8,7 @@ if TYPE_CHECKING:
 
 
 class BT14_046(CardScript):
-    """Auto-transpiled from DCGO BT14_046.cs"""
+    """BT14-046 Togemon | Lv.4"""
 
     def get_card_effects(self, card: 'CardSource') -> List['ICardEffect']:
         effects = []
@@ -20,6 +20,7 @@ class BT14_046(CardScript):
         effect0.set_effect_description("Cost -3")
         effect0.cost_reduction = 3
 
+        effect = effect0  # alias for condition closure
         def condition0(context: Dict[str, Any]) -> bool:
             if card and card.permanent_of_this_card() is None:
                 return False
@@ -33,7 +34,9 @@ class BT14_046(CardScript):
             """Action: Cost -3"""
             player = ctx.get('player')
             perm = ctx.get('permanent')
-            # Cost reduction handled via cost_reduction property
+            game = ctx.get('game')
+            # Cost reduction by 3 — handled via cost_reduction property
+            pass  # descriptive-tagged: cost_reduction
 
         effect0.set_on_process_callback(process0)
         effects.append(effect0)
@@ -46,6 +49,7 @@ class BT14_046(CardScript):
         effect1.is_inherited_effect = True
         effect1.cost_reduction = 1
 
+        effect = effect1  # alias for condition closure
         def condition1(context: Dict[str, Any]) -> bool:
             if card and card.permanent_of_this_card() is None:
                 return False
@@ -59,7 +63,9 @@ class BT14_046(CardScript):
             """Action: Cost -1"""
             player = ctx.get('player')
             perm = ctx.get('permanent')
-            # Cost reduction handled via cost_reduction property
+            game = ctx.get('game')
+            # Cost reduction by 1 — handled via cost_reduction property
+            pass  # descriptive-tagged: cost_reduction
 
         effect1.set_on_process_callback(process1)
         effects.append(effect1)

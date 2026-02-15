@@ -179,9 +179,9 @@ class DigimonEnv(gymnasium.Env):
         sec_delta = len(me.security_cards) - len(opp.security_cards)
         reward += sec_delta * 0.01
 
-        # Board presence (total DP)
-        my_dp = sum(p.dp for p in me.battle_area)
-        opp_dp = sum(p.dp for p in opp.battle_area)
+        # Board presence (total DP — None for tamers/eggs, treat as 0)
+        my_dp = sum((p.dp or 0) for p in me.battle_area)
+        opp_dp = sum((p.dp or 0) for p in opp.battle_area)
         reward += (my_dp - opp_dp) * 0.0001
 
         return reward

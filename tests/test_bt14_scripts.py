@@ -106,6 +106,66 @@ def make_game_context():
         turn_player = p1
         opponent_player = p2
         memory = 3
+
+        class logger:
+            @staticmethod
+            def log(msg):
+                pass
+
+        def effect_select_hand_card(self, player, filter_fn, callback, is_optional=False):
+            """Auto-select first matching hand card."""
+            for c in list(player.hand_cards):
+                if filter_fn(c):
+                    callback(c)
+                    return
+
+        def effect_select_opponent_permanent(self, player, callback, filter_fn=None, is_optional=False):
+            """Auto-select first matching opponent permanent."""
+            enemy = player.enemy if player else None
+            if not enemy:
+                return
+            for p in list(enemy.battle_area):
+                if filter_fn is None or filter_fn(p):
+                    callback(p)
+                    return
+
+        def effect_select_own_permanent(self, player, callback, filter_fn=None, is_optional=False):
+            """Auto-select first matching own permanent."""
+            if not player:
+                return
+            for p in list(player.battle_area):
+                if filter_fn is None or filter_fn(p):
+                    callback(p)
+                    return
+
+        def effect_reveal_and_select(self, player, count, filter_fn, callback, is_optional=False):
+            """Auto-reveal and select first matching card."""
+            if not player or not player.library_cards:
+                return
+            revealed = player.library_cards[:count]
+            player.library_cards = player.library_cards[count:]
+            selected = None
+            remaining = []
+            for c in revealed:
+                if selected is None and filter_fn(c):
+                    selected = c
+                else:
+                    remaining.append(c)
+            if selected:
+                callback(selected, remaining)
+            else:
+                player.library_cards = revealed + player.library_cards
+
+        def effect_play_from_zone(self, player, zone, filter_fn, free=False, is_optional=False):
+            """Auto-play first matching card from zone."""
+            pass
+
+        def effect_link_to_permanent(self, player, card, is_optional=False):
+            pass
+
+        def effect_digivolve_from_hand(self, player, perm, filter_fn, **kwargs):
+            pass
+
     game = FakeGame()
     p1.game = game
     p2.game = game

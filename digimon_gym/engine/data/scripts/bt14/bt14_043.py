@@ -8,7 +8,7 @@ if TYPE_CHECKING:
 
 
 class BT14_043(CardScript):
-    """Auto-transpiled from DCGO BT14_043.cs"""
+    """BT14-043 KoDokugumon | Lv.3"""
 
     def get_card_effects(self, card: 'CardSource') -> List['ICardEffect']:
         effects = []
@@ -21,6 +21,7 @@ class BT14_043(CardScript):
         effect0.is_optional = True
         effect0.is_on_play = True
 
+        effect = effect0  # alias for condition closure
         def condition0(context: Dict[str, Any]) -> bool:
             if card and card.permanent_of_this_card() is None:
                 return False
@@ -33,11 +34,15 @@ class BT14_043(CardScript):
             """Action: Suspend"""
             player = ctx.get('player')
             perm = ctx.get('permanent')
-            # Suspend opponent's digimon
-            enemy = player.enemy if player else None
-            if enemy and enemy.battle_area:
-                target = enemy.battle_area[-1]
-                target.suspend()
+            game = ctx.get('game')
+            if not (player and game):
+                return
+            def target_filter(p):
+                return True
+            def on_suspend(target_perm):
+                target_perm.suspend()
+            game.effect_select_opponent_permanent(
+                player, on_suspend, filter_fn=target_filter, is_optional=True)
 
         effect0.set_on_process_callback(process0)
         effects.append(effect0)

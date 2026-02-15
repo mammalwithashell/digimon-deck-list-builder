@@ -15,11 +15,12 @@ class CardSource:
         self.card_index: int = 0
         # self.c_entity_effect_controller = None # Stub for now
         self.is_flipped: bool = False
-        self.base_dp: int = 0
+        self.base_dp: Optional[int] = None  # None = no DP (egg/tamer/option)
         self.is_token: bool = False
         self.will_be_remove_sources: bool = False
         self.is_being_revealed: bool = False
         self.permanent_just_before_remove_field: Optional['Permanent'] = None
+        self._cached_effects: Optional[List['ICardEffect']] = None
 
     @property
     def can_play_from_hand_during_main_phase(self) -> bool:
@@ -46,8 +47,16 @@ class CardSource:
         return self.base_card_colors
 
     @property
-    def level(self) -> int:
-        return self.c_entity_base.level if self.c_entity_base else 0
+    def level(self) -> Optional[int]:
+        """Card level. None for tamers/options and some Digimon (e.g. Eater Bit)."""
+        if self.c_entity_base:
+            return self.c_entity_base.level
+        return None
+
+    @property
+    def has_dp(self) -> bool:
+        """True if this card has a DP value (Digimon). False for eggs/tamers/options."""
+        return self.c_entity_base.dp is not None if self.c_entity_base else False
 
     @property
     def card_id(self) -> str:
@@ -60,6 +69,11 @@ class CardSource:
     @property
     def card_traits(self) -> List[str]:
         return self.c_entity_base.type_eng if self.c_entity_base else []
+
+    @property
+    def card_text(self) -> str:
+        """Combined effect text for HasText checks."""
+        return self.c_entity_base.card_text if self.c_entity_base else ""
 
     @property
     def is_digimon(self) -> bool:
@@ -120,12 +134,22 @@ class CardSource:
         return False
 
     def effect_list(self, timing: EffectTiming) -> List['ICardEffect']:
-        from ..data.card_database import CardDatabase
-        db = CardDatabase()
-        script = db.get_script(self.card_id)
-        if script:
-            return script.get_card_effects(self)
-        return []
+        """Return cached effects for this card source.
+
+        Effects are created once and cached so that per-turn activation
+        counts (_turn_activate_count) persist across calls.  Without
+        caching, OPT enforcement was broken — every call to
+        get_card_effects() produced fresh objects with count = 0.
+        """
+        if self._cached_effects is None:
+            from ..data.card_database import CardDatabase
+            db = CardDatabase()
+            script = db.get_script(self.card_id)
+            if script:
+                self._cached_effects = script.get_card_effects(self)
+            else:
+                self._cached_effects = []
+        return self._cached_effects
 
     def paying_cost(self, root: object, target_permanents: List['Permanent'], check_availability: bool = False, ignore_level: bool = False, fixed_cost: int = -1) -> int:
         return self.get_cost_itself

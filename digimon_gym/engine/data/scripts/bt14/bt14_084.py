@@ -8,7 +8,7 @@ if TYPE_CHECKING:
 
 
 class BT14_084(CardScript):
-    """Auto-transpiled from DCGO BT14_084.cs"""
+    """BT14-084 T.K. Takaishi"""
 
     def get_card_effects(self, card: 'CardSource') -> List['ICardEffect']:
         effects = []
@@ -21,6 +21,7 @@ class BT14_084(CardScript):
         effect0.is_optional = True
         effect0.is_on_play = True
 
+        effect = effect0  # alias for condition closure
         def condition0(context: Dict[str, Any]) -> bool:
             if card and card.permanent_of_this_card() is None:
                 return False
@@ -30,12 +31,22 @@ class BT14_084(CardScript):
         effect0.set_can_use_condition(condition0)
 
         def process0(ctx: Dict[str, Any]):
-            """Action: Trash From Hand, Add To Hand, Add To Security"""
+            """Action: Trash From Hand, Add To Hand, Add To Security, Destroy Security"""
             player = ctx.get('player')
             perm = ctx.get('permanent')
-            # Trash from hand (cost/effect)
-            if player and player.hand_cards:
-                player.trash_from_hand([player.hand_cards[-1]])
+            game = ctx.get('game')
+            if not (player and game):
+                return
+            def hand_filter(c):
+                if not (any('Vaccine' in _t for _t in (getattr(c, 'card_traits', []) or []))):
+                    return False
+                return True
+            def on_trashed(selected):
+                if selected in player.hand_cards:
+                    player.hand_cards.remove(selected)
+                    player.trash_cards.append(selected)
+            game.effect_select_hand_card(
+                player, hand_filter, on_trashed, is_optional=True)
             # Add card to hand (from trash/reveal)
             if player and player.trash_cards:
                 card_to_add = player.trash_cards.pop()
@@ -43,6 +54,13 @@ class BT14_084(CardScript):
             # Add top card of deck to security
             if player:
                 player.recovery(1)
+            # Trash opponent's top security card(s)
+            enemy = player.enemy if player else None
+            if enemy:
+                for _ in range(1):
+                    if enemy.security_cards:
+                        trashed = enemy.security_cards.pop()
+                        enemy.trash_cards.append(trashed)
 
         effect0.set_on_process_callback(process0)
         effects.append(effect0)
@@ -54,6 +72,7 @@ class BT14_084(CardScript):
         effect1.set_effect_description("[Your Turn] When a card is added to your security stack, by suspending this Tamer, gain 1 memory.")
         effect1.is_optional = True
 
+        effect = effect1  # alias for condition closure
         def condition1(context: Dict[str, Any]) -> bool:
             if card and card.permanent_of_this_card() is None:
                 return False
@@ -67,13 +86,17 @@ class BT14_084(CardScript):
             """Action: Gain 1 memory, Suspend"""
             player = ctx.get('player')
             perm = ctx.get('permanent')
+            game = ctx.get('game')
             if player:
                 player.add_memory(1)
-            # Suspend opponent's digimon
-            enemy = player.enemy if player else None
-            if enemy and enemy.battle_area:
-                target = enemy.battle_area[-1]
-                target.suspend()
+            if not (player and game):
+                return
+            def target_filter(p):
+                return True
+            def on_suspend(target_perm):
+                target_perm.suspend()
+            game.effect_select_opponent_permanent(
+                player, on_suspend, filter_fn=target_filter, is_optional=True)
 
         effect1.set_on_process_callback(process1)
         effects.append(effect1)
@@ -84,6 +107,7 @@ class BT14_084(CardScript):
         effect2.set_effect_name("BT14-084 Security: Play this card")
         effect2.set_effect_description("Security: Play this card")
         effect2.is_security_effect = True
+
         def condition2(context: Dict[str, Any]) -> bool:
             return True
         effect2.set_can_use_condition(condition2)

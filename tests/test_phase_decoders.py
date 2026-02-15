@@ -552,6 +552,7 @@ class TestSelectionFramework:
 
     def test_trash_selection_validates_index(self):
         """Trash selection decoder validates against trash size."""
+        from digimon_gym.engine.game import SEL_TRASH_START
         game = setup_game_at_phase(GamePhase.Main)
         # Add 3 cards to trash
         for i in range(3):
@@ -566,8 +567,8 @@ class TestSelectionFramework:
             callback=lambda idx: callback_called.append(idx),
         )
 
-        # Valid index
-        game.decode_action(1, game.player1.player_id)
+        # Valid index: SEL_TRASH_START + 1 selects trash card at index 1
+        game.decode_action(SEL_TRASH_START + 1, game.player1.player_id)
         assert callback_called == [1]
 
     def test_source_selection_decodes_correctly(self):
