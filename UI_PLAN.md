@@ -6,12 +6,13 @@
 
 ## Overview
 
-Four main surfaces:
+Five main surfaces:
 
 1. **Game UI** — Play interactive games (Human vs Agent, Human vs Human)
 2. **Lobby** — Matchmaking, room codes, game creation
-3. **Replay Viewer** — Play back recorded Agent vs Agent games
-4. **Admin Dashboard** — Manage agents, launch training runs, view metrics
+3. **Deck Builder** — Create, edit, and manage decks with card search and filtering
+4. **Replay Viewer** — Play back recorded Agent vs Agent games
+5. **Admin Dashboard** — Manage agents, launch training runs, view metrics
 
 Tech stack: **React 19 + TypeScript + Vite**, with **Zustand** for state management and **WebSocket** for real-time game communication. The existing **FastAPI** backend is extended with new endpoints.
 
@@ -604,7 +605,275 @@ After a game ends:
 
 ---
 
-## 3. Replay Viewer — Agent vs Agent Playback
+## 3. Deck Builder
+
+### 3.1 Overview
+
+A full deck editor where players create, save, edit, and manage their decks. Decks are stored server-side (per-user, or per-browser via local storage for anonymous users). The deck builder integrates with the lobby — when starting a game, the player selects from their saved decks.
+
+Digimon TCG deck rules:
+- **Main deck**: exactly 50 cards (no more, no less)
+- **Egg deck (Digitama)**: 0-5 Digi-Egg cards (separate from main deck)
+- **Max 4 copies** of any card (by card number, e.g. max 4x BT14-010)
+- **No color restrictions** on deck composition
+
+### 3.2 Deck Builder Layout
+
+```
+┌──────────────────────────────────────────────────────────────────────────┐
+│  DECK BUILDER                                    [My Decks ▼] [+ New]  │
+│  Deck: "Red Greymon Aggro"                       [Save] [Export] [Del] │
+│                                                                         │
+│  ┌─ CARD SEARCH ─────────────────────┐  ┌─ DECK LIST ────────────────┐ │
+│  │                                   │  │                            │ │
+│  │  Search: [________________] [🔍]  │  │  Main Deck (48/50)         │ │
+│  │                                   │  │                            │ │
+│  │  ┌─ Filters ────────────────────┐ │  │  Lv.3 Rookies (12)        │ │
+│  │  │ Color: [All▼] Kind: [All▼]  │ │  │  ┌────┐┌────┐┌────┐      │ │
+│  │  │ Level: [All▼] Set:  [All▼]  │ │  │  │Agum││Agum││Agum│ ...  │ │
+│  │  │ Cost:  [0-20] DP:   [All▼]  │ │  │  │x4  ││x4  ││x4  │      │ │
+│  │  │ Form:  [All▼] Rarity:[All▼] │ │  │  └────┘└────┘└────┘      │ │
+│  │  └──────────────────────────────┘ │  │                            │ │
+│  │                                   │  │  Lv.4 Champions (10)       │ │
+│  │  Showing 47 results               │  │  ┌────┐┌────┐             │ │
+│  │                                   │  │  │Grey││Grey│ ...         │ │
+│  │  ┌────┐ ┌────┐ ┌────┐ ┌────┐    │  │  │x4  ││x2  │             │ │
+│  │  │Card│ │Card│ │Card│ │Card│    │  │  └────┘└────┘             │ │
+│  │  │img │ │img │ │img │ │img │    │  │                            │ │
+│  │  │    │ │    │ │    │ │    │    │  │  Lv.5 Ultimates (8)        │ │
+│  │  └────┘ └────┘ └────┘ └────┘    │  │  ...                       │ │
+│  │  ┌────┐ ┌────┐ ┌────┐ ┌────┐    │  │                            │ │
+│  │  │Card│ │Card│ │Card│ │Card│    │  │  Tamers (4)                │ │
+│  │  │img │ │img │ │img │ │img │    │  │  ...                       │ │
+│  │  │    │ │    │ │    │ │    │    │  │                            │ │
+│  │  └────┘ └────┘ └────┘ └────┘    │  │  Options (6)               │ │
+│  │                                   │  │  ...                       │ │
+│  │  [1] [2] [3] ... [12]  (pages)   │  │                            │ │
+│  └───────────────────────────────────┘  │  ── Egg Deck (4/5) ────── │ │
+│                                         │  ┌────┐┌────┐             │ │
+│  ┌─ CARD DETAIL ───────────────────┐   │  │Koro││Toko│             │ │
+│  │  [CARD IMAGE]  BT14-010         │   │  │x2  ││x2  │             │ │
+│  │                Greymon          │   │  └────┘└────┘             │ │
+│  │  Lv.4 | Champion | Red         │   │                            │ │
+│  │  DP: 6000  Cost: 5             │   │  ── Deck Stats ──────────  │ │
+│  │  Type: Dinosaur                 │   │  Colors: Red (100%)       │ │
+│  │                                 │   │  Avg Cost: 4.2            │ │
+│  │  Evo: Red Lv.3 for 3           │   │  Level curve: ▁▃▇▅▂      │ │
+│  │                                 │   │                            │ │
+│  │  [When Digivolving] Delete 1    │   └────────────────────────────┘ │
+│  │  of your opponent's Digimon...  │                                   │
+│  │                                 │                                   │
+│  │  Inherited: [Your Turn] +2000   │                                   │
+│  │                                 │                                   │
+│  │  [Add to Deck]  (or click card) │                                   │
+│  └─────────────────────────────────┘                                   │
+└──────────────────────────────────────────────────────────────────────────┘
+```
+
+### 3.3 Card Search & Filters
+
+The search panel provides both text search and faceted filters. Filters are applied server-side via `GET /cards`.
+
+#### Text Search
+
+Free-text search matches against:
+- Card name (English)
+- Card ID (e.g. "BT14-010")
+- Effect text (e.g. "SecurityAttack" or "delete")
+- Type/trait text (e.g. "Dragon" or "LIBERATOR")
+
+#### Filter Criteria
+
+| Filter | Type | Values |
+|--------|------|--------|
+| **Color** | Multi-select chips | Red, Blue, Yellow, Green, Black, Purple, White |
+| **Card Kind** | Multi-select chips | Digimon, Tamer, Option, Digi-Egg |
+| **Level** | Multi-select chips | 2, 3, 4, 5, 6, 7 |
+| **Set** | Dropdown with search | 45 sets: BT1-BT24, EX1-EX8, ST1-ST20, P, LM, RB1 |
+| **Play Cost** | Range slider | 0-20 |
+| **DP** | Range slider / presets | 1000-16000 (step 1000) |
+| **Form** | Dropdown | In-Training, Rookie, Champion, Ultimate, Mega, Hybrid, Armor Form, etc. (16 values) |
+| **Attribute** | Dropdown | Vaccine, Data, Virus, Free, Variable, Unknown (+ app types) |
+| **Rarity** | Multi-select chips | C, U, R, SR, SEC, P |
+
+Filters combine with AND logic. Multiple selections within a filter use OR (e.g. Color=Red OR Blue).
+
+#### Search Results Grid
+
+- Cards displayed in a **responsive grid** of card images (4-6 columns depending on screen width)
+- Each card shows: image, name below, and a small count badge if already in deck (e.g. "2/4")
+- **Click** a card in the grid → shows full detail in the Card Detail panel below
+- **Double-click** a card (or click "Add to Deck") → adds one copy to the deck
+- **Pagination**: 24 cards per page, page controls at bottom
+- **Sort**: by card ID (default), name, level, cost, DP
+
+### 3.4 Deck List Panel
+
+The right panel shows the current deck contents, organized by card type and level.
+
+#### Card Grouping
+
+Cards are grouped into sections:
+1. **Digi-Eggs** (Level 2) — separate egg deck section at bottom
+2. **Rookies** (Level 3)
+3. **Champions** (Level 4)
+4. **Ultimates** (Level 5)
+5. **Megas** (Level 6+)
+6. **Tamers**
+7. **Options**
+
+Each group header shows: group name and card count.
+
+#### Deck Card Display
+
+Each card in the deck shows:
+- Small card image thumbnail
+- Card name
+- Copy count (x1, x2, x3, x4)
+- **Click** → highlight in search results + show in detail panel
+- **Right-click / long-press** → remove one copy
+- **+/-** buttons on hover to adjust count
+
+#### Deck Stats
+
+A small stats box at the bottom of the deck panel:
+
+| Stat | Display |
+|------|---------|
+| Main deck count | "48/50" with color (red if not 50) |
+| Egg deck count | "4/5" |
+| Color distribution | Pie chart or bar (% per color) |
+| Average play cost | Number |
+| Level curve | Sparkline histogram (bars for each level) |
+| Unique cards | Count |
+
+### 3.5 Deck Management
+
+#### Saved Decks
+
+```
+┌─ My Decks ───────────────────────────────┐
+│                                          │
+│  Red Greymon Aggro        50 cards  [✏️]  │
+│  Blue Control             50 cards  [✏️]  │
+│  Purple Lilith OTK        48 cards  [✏️]  │
+│  Yellow Hybrid             50 cards  [✏️]  │
+│                                          │
+│  [+ New Deck]                            │
+└──────────────────────────────────────────┘
+```
+
+#### Import / Export
+
+- **Export** → copies deck list to clipboard as text (one card ID per line, e.g. "4 BT14-010\n4 BT14-005\n...")
+- **Import** → paste a text deck list, parser resolves card IDs and populates the deck
+- Format: `{count} {card_id}` per line (matches common community formats)
+
+```
+// Example export format:
+4 BT14-001
+4 BT14-005
+4 BT14-010
+3 BT14-015
+...
+// Egg deck (after separator)
+---
+4 BT14-001
+1 ST1-01
+```
+
+### 3.6 Drag-and-Drop in Deck Builder
+
+The deck builder also uses @dnd-kit for adding/removing/reordering cards:
+
+| Drag Source | Drop Target | Action |
+|-------------|-------------|--------|
+| Search result card | Deck list panel | Add 1 copy to deck |
+| Deck list card | Outside deck panel / trash icon | Remove 1 copy |
+
+Visual feedback: dragging a card from search shows a ghost card following cursor; deck panel highlights as valid drop target with a green border and "Drop to add" text.
+
+### 3.7 Deck Builder State (Zustand)
+
+```typescript
+// stores/deckBuilderStore.ts
+interface DeckBuilderStore {
+  // Current deck being edited
+  currentDeck: DeckData | null;
+  isDirty: boolean;  // unsaved changes
+
+  // Card search
+  searchQuery: string;
+  filters: CardFilters;
+  searchResults: CardSearchResult[];
+  searchPage: number;
+  searchTotal: number;
+  sortBy: 'card_id' | 'name' | 'level' | 'cost' | 'dp';
+
+  // Selected card (for detail panel)
+  selectedCardId: string | null;
+
+  // Saved decks list
+  savedDecks: DeckSummary[];
+
+  // Actions
+  setSearchQuery: (q: string) => void;
+  setFilter: (key: keyof CardFilters, value: any) => void;
+  clearFilters: () => void;
+  setPage: (page: number) => void;
+  setSortBy: (sort: string) => void;
+  selectCard: (cardId: string) => void;
+
+  addCardToDeck: (cardId: string) => void;
+  removeCardFromDeck: (cardId: string) => void;
+  setCardCount: (cardId: string, count: number) => void;
+
+  newDeck: (name: string) => void;
+  saveDeck: () => Promise<void>;
+  loadDeck: (deckId: string) => Promise<void>;
+  deleteDeck: (deckId: string) => Promise<void>;
+  importDeck: (text: string) => void;
+  exportDeck: () => string;
+}
+
+interface DeckData {
+  deck_id: string;
+  name: string;
+  main_deck: { card_id: string; count: number }[];
+  egg_deck: { card_id: string; count: number }[];
+  created_at: string;
+  updated_at: string;
+}
+
+interface CardFilters {
+  colors: number[];        // CardColor enum values
+  kinds: number[];         // CardKind enum values
+  levels: number[];
+  sets: string[];          // "BT14", "ST1", etc.
+  costMin: number | null;
+  costMax: number | null;
+  dpMin: number | null;
+  dpMax: number | null;
+  forms: string[];
+  attributes: string[];
+  rarities: number[];
+}
+
+interface CardSearchResult {
+  card_id: string;
+  card_name: string;
+  level: number | null;
+  cost: number;
+  dp: number | null;
+  colors: number[];
+  kind: number;
+  in_deck_count: number;  // 0-4, how many already in current deck
+}
+```
+
+---
+
+## 4. Replay Viewer — Agent vs Agent Playback
 
 ### 3.1 Concept
 
@@ -702,9 +971,9 @@ interface ReplayStore {
 
 ---
 
-## 4. Admin Dashboard
+## 5. Admin Dashboard
 
-### 4.1 Pages
+### 5.1 Pages
 
 | Page | Purpose |
 |------|---------|
@@ -715,7 +984,7 @@ interface ReplayStore {
 | **Replay Browser** | List and filter recorded replays by agents, date, winner |
 | **Card Database** | Browse the 3,651-card database with set/color/kind filters |
 
-### 4.2 Agent Management
+### 5.2 Agent Management
 
 The backend already has `pilot_training.py` with `OpponentWrapper`, `WinRateCallback`, and CLI args (`--timesteps`, `--opponent`, `--self-play`). The admin UI wraps this.
 
@@ -733,7 +1002,7 @@ Available agent types: `greedy` (built-in), `random` (built-in), `maskable_ppo` 
 +-----------------------------------------------------+
 ```
 
-### 4.3 Training Job Panel
+### 5.3 Training Job Panel
 
 Training launch wraps `pilot_training.py` as a subprocess rather than reimplementing. Metrics come from `WinRateCallback` output.
 
@@ -756,7 +1025,7 @@ Training launch wraps `pilot_training.py` as a subprocess rather than reimplemen
 +-----------------------------------------------------+
 ```
 
-### 4.4 Matchup Matrix
+### 5.4 Matchup Matrix
 
 ```
 +----------------------------------------------+
@@ -774,9 +1043,9 @@ Training launch wraps `pilot_training.py` as a subprocess rather than reimplemen
 
 ---
 
-## 5. API Endpoints
+## 6. API Endpoints
 
-### 5.1 Existing Endpoints (keep as-is)
+### 6.1 Existing Endpoints (keep as-is)
 
 | Method | Path | Purpose |
 |--------|------|---------|
@@ -790,7 +1059,7 @@ Training launch wraps `pilot_training.py` as a subprocess rather than reimplemen
 | GET | `/game/{id}/log` | Get game log |
 | DELETE | `/game/{id}` | Delete session |
 
-### 5.2 New Endpoints — Game UI
+### 6.2 New Endpoints — Game UI
 
 #### WebSocket: `/ws/game/{game_id}`
 
@@ -863,7 +1132,7 @@ GET /cards?set=BT14&color=Red&kind=Digimon&q=Agumon&page=1&limit=50
 
 Return card image. Initially can return a placeholder; later integrate with card image CDN or local assets.
 
-### 5.3 New Endpoints — Lobby & Multiplayer
+### 6.3 New Endpoints — Lobby & Multiplayer
 
 #### `POST /rooms`
 
@@ -967,7 +1236,134 @@ Leave the quickmatch queue.
 
 Persistent lobby connection for real-time room updates and quickmatch notifications. See section 2.8 for the full message protocol.
 
-### 5.4 New Endpoints — Replay System
+### 6.4 New Endpoints — Deck Builder
+
+#### `GET /cards` (enhanced)
+
+Card search with full filtering. All parameters are optional.
+
+```
+GET /cards?q=Greymon&color=0&kind=0&level=4&set=BT14&cost_min=3&cost_max=7&form=Champion&rarity=2&sort=card_id&page=1&limit=24
+```
+
+| Param | Type | Description |
+|-------|------|-------------|
+| `q` | string | Text search (name, ID, effect text, type) |
+| `color` | int[] | CardColor enum values (comma-separated, OR logic) |
+| `kind` | int[] | CardKind enum values |
+| `level` | int[] | Level values |
+| `set` | string[] | Set prefixes (e.g. "BT14,ST1") |
+| `cost_min` / `cost_max` | int | Play cost range |
+| `dp_min` / `dp_max` | int | DP range |
+| `form` | string[] | Form names (e.g. "Champion,Mega") |
+| `attribute` | string[] | Attribute names |
+| `rarity` | int[] | Rarity enum values |
+| `sort` | string | Sort field: card_id, name, level, cost, dp |
+| `page` | int | Page number (1-based) |
+| `limit` | int | Results per page (default 24, max 100) |
+
+```json
+// Response
+{
+  "cards": [
+    {
+      "card_id": "BT14-010",
+      "card_name_eng": "Greymon",
+      "level": 4,
+      "play_cost": 5,
+      "dp": 6000,
+      "card_colors": [0],
+      "card_kind": 0,
+      "rarity": 1,
+      "form_eng": ["Champion"],
+      "type_eng": ["Dinosaur"],
+      "attribute_eng": ["Vaccine"],
+      "effect_description_eng": "[When Digivolving] Delete 1 of your opponent's Digimon with 4000 DP or less.",
+      "inherited_effect_description_eng": "[Your Turn] This Digimon gets +2000 DP.",
+      "evo_costs": [{"card_color": 0, "level": 3, "memory_cost": 3}]
+    }
+  ],
+  "total": 47,
+  "page": 1,
+  "page_size": 24
+}
+```
+
+#### `GET /decks`
+
+List saved decks for the current user/session.
+
+```json
+{
+  "decks": [
+    {
+      "deck_id": "uuid",
+      "name": "Red Greymon Aggro",
+      "main_deck_count": 50,
+      "egg_deck_count": 4,
+      "colors": [0],
+      "updated_at": "2026-02-15T..."
+    }
+  ]
+}
+```
+
+#### `POST /decks`
+
+Create a new deck.
+
+```json
+// Request
+{
+  "name": "Red Greymon Aggro",
+  "main_deck": [
+    {"card_id": "BT14-010", "count": 4},
+    {"card_id": "BT14-005", "count": 4}
+  ],
+  "egg_deck": [
+    {"card_id": "BT14-001", "count": 4}
+  ]
+}
+
+// Response
+{
+  "deck_id": "uuid",
+  "name": "Red Greymon Aggro",
+  "created_at": "2026-02-15T..."
+}
+```
+
+#### `GET /decks/{deck_id}`
+
+Get full deck contents.
+
+#### `PUT /decks/{deck_id}`
+
+Update a deck (name and/or card list).
+
+#### `DELETE /decks/{deck_id}`
+
+Delete a deck.
+
+#### `POST /decks/{deck_id}/validate`
+
+Validate a deck against Digimon TCG rules.
+
+```json
+// Response
+{
+  "valid": false,
+  "errors": [
+    "Main deck has 48 cards (must be exactly 50)",
+    "Card BT14-010 has 5 copies (max 4)"
+  ],
+  "warnings": [
+    "Egg deck has 0 cards (recommend 1-5)"
+  ]
+}
+```
+
+### 6.5 New Endpoints — Replay System
 
 #### `POST /replay/record`
 
@@ -1037,7 +1433,7 @@ Get full replay data (metadata + all frames).
 
 Delete a replay.
 
-### 5.5 New Endpoints — Admin / Agent Management
+### 6.6 New Endpoints — Admin / Agent Management
 
 #### `GET /agents`
 
@@ -1198,9 +1594,9 @@ Get matchup results.
 
 ---
 
-## 6. Frontend Architecture
+## 7. Frontend Architecture
 
-### 6.1 Directory Structure
+### 7.1 Directory Structure
 
 ```
 frontend/
@@ -1216,7 +1612,8 @@ frontend/
 │   ├── api/
 │   │   ├── client.ts            # Axios instance, base URL config
 │   │   ├── gameApi.ts           # REST endpoints for game
-│   │   ├── cardApi.ts           # Card database with pagination
+│   │   ├── cardApi.ts           # Card search with filtering and pagination
+│   │   ├── deckApi.ts           # Deck CRUD (create, save, load, delete, validate)
 │   │   ├── replayApi.ts         # Replay CRUD
 │   │   ├── agentApi.ts          # Agent management
 │   │   └── trainingApi.ts       # Training jobs
@@ -1226,13 +1623,16 @@ frontend/
 │   ├── stores/
 │   │   ├── gameStore.ts         # Interactive game state (Zustand)
 │   │   ├── lobbyStore.ts        # Room list, queue status, current room
+│   │   ├── deckBuilderStore.ts  # Deck editor, card search, filters, saved decks
 │   │   ├── replayStore.ts       # Replay playback state
 │   │   ├── uiStore.ts           # UI state (selected cards, modals)
 │   │   └── adminStore.ts        # Agent/training state
 │   ├── pages/
-│   │   ├── HomePage.tsx         # Landing: new game / play online / replays / admin
+│   │   ├── HomePage.tsx         # Landing: new game / play online / decks / replays / admin
 │   │   ├── LobbyPage.tsx        # Room creation, join, quickmatch, active rooms
 │   │   ├── WaitingRoomPage.tsx  # Pre-game room (deck select, ready up)
+│   │   ├── DeckBuilderPage.tsx  # Full deck builder with search + editor
+│   │   ├── DeckListPage.tsx     # Browse saved decks
 │   │   ├── GamePage.tsx         # Interactive game board (PvA and PvP)
 │   │   ├── ReplayPage.tsx       # Replay viewer
 │   │   ├── ReplayListPage.tsx   # Browse/filter replays
@@ -1254,6 +1654,15 @@ frontend/
 │   │   │   ├── RevealedCardsZone.tsx  # Face-up revealed cards row
 │   │   │   ├── LinkedCards.tsx         # Sideways option cards on permanent
 │   │   │   └── KeywordBadges.tsx      # Keyword icons on permanents
+│   │   ├── deckbuilder/
+│   │   │   ├── CardSearchPanel.tsx  # Text search + filter controls + result grid
+│   │   │   ├── FilterBar.tsx        # Color/kind/level/set/cost/dp/form/rarity filters
+│   │   │   ├── CardGrid.tsx         # Paginated card image grid
+│   │   │   ├── DeckListPanel.tsx    # Right panel: deck contents grouped by level
+│   │   │   ├── DeckCardEntry.tsx    # Single card row in deck list (thumbnail + count)
+│   │   │   ├── DeckStats.tsx        # Deck statistics (color dist, cost curve, counts)
+│   │   │   ├── DeckSelector.tsx     # Dropdown to switch between saved decks
+│   │   │   └── ImportExport.tsx     # Import/export deck list text
 │   │   ├── lobby/
 │   │   │   ├── CreateRoom.tsx   # Create private room form
 │   │   │   ├── JoinRoom.tsx     # Join by code input
@@ -1304,7 +1713,7 @@ frontend/
 │       └── admin.ts            # Agent, TrainingJob, Matchup
 ```
 
-### 6.2 Key Libraries
+### 7.2 Key Libraries
 
 | Library | Purpose |
 |---------|---------|
@@ -1319,7 +1728,7 @@ frontend/
 | Recharts or Chart.js | Training metrics charts |
 | Tailwind CSS | Styling (utility-first, fast iteration) |
 
-### 6.3 Card Image Pipeline
+### 7.3 Card Image Pipeline
 
 Card images are sourced from the **digimoncard.io CDN** using a deterministic URL pattern:
 
@@ -1435,7 +1844,7 @@ GET /cards/{card_id}/image
 
 This is optional — direct CDN access should work for most cases since image CDNs typically allow cross-origin requests.
 
-### 6.4 Drag-and-Drop Architecture
+### 7.4 Drag-and-Drop Architecture
 
 #### DnD Provider Setup
 
@@ -1541,7 +1950,7 @@ The `delay: 150` on touch prevents accidental drags when scrolling.
 
 ---
 
-## 7. Implementation Phases
+## 8. Implementation Phases
 
 ### Phase 1: Foundation
 - Set up React + Vite + TypeScript project in `frontend/`
@@ -1556,7 +1965,20 @@ The `delay: 150` on touch prevents accidental drags when scrolling.
 - Build `CardTooltip` (hover → large card image)
 - Reference `TENSOR_SPEC.md` and `ACTION_SPEC.md` for all mappings
 
-### Phase 2: Interactive Game (Human vs Agent)
+### Phase 2: Deck Builder
+- Enhance `GET /cards` with full filter support (color, kind, level, set, cost, DP, form, attribute, rarity, text search)
+- Add `CardDatabase.search()` method with query building
+- Implement `/decks` CRUD endpoints with file-based storage
+- Implement `POST /decks/{id}/validate` for rule checking
+- Build `CardSearchPanel` with `FilterBar` (multi-select chips, range sliders, dropdowns)
+- Build `CardGrid` with paginated card images and "in deck" count badges
+- Build `DeckListPanel` with level-grouped cards, count controls, and drag-to-add
+- Build `DeckStats` (color distribution, cost curve, card counts)
+- Build import/export (text format: "4 BT14-010" per line)
+- Build `DeckSelector` dropdown for switching between saved decks
+- Integrate deck selection into lobby (pick from saved decks when creating/joining games)
+
+### Phase 3: Interactive Game (Human vs Agent)
 - Implement WebSocket endpoint `/ws/game/{game_id}`
 - Build `useGameSocket` hook
 - Implement drag-and-drop: hand → field (play), hand → permanent (digivolve)
@@ -1572,7 +1994,7 @@ The `delay: 150` on touch prevents accidental drags when scrolling.
 - Preload card images for both decks on game start
 - Connect `GamePage` end-to-end: create game -> play -> game over
 
-### Phase 3: Multiplayer (PvP)
+### Phase 4: Multiplayer (PvP)
 - Implement `/rooms` CRUD endpoints and room code generation
 - Implement `/ws/lobby` WebSocket for real-time room updates
 - Add `to_player_json(player_id)` to `Game` for player-specific state filtering
@@ -1583,14 +2005,14 @@ The `delay: 150` on touch prevents accidental drags when scrolling.
 - Add spectator mode (read-only WebSocket connection)
 - Add rematch flow
 
-### Phase 4: Replay System
+### Phase 5: Replay System
 - Implement replay recording in backend (wrap HeadlessGame, use `to_ui_json()`)
 - Implement `/replays` CRUD endpoints
 - Build `PlaybackControls` + `Timeline` components
 - Build `ReplayPage` reusing `GameBoard` in read-only mode
 - Build `ReplayListPage` with filtering
 
-### Phase 5: Admin Dashboard
+### Phase 6: Admin Dashboard
 - Implement `/agents` CRUD endpoints
 - Implement `/training/start` wrapping `pilot_training.py` as subprocess
 - Expose `WinRateCallback` metrics via `/training/jobs/{id}/metrics`
@@ -1600,7 +2022,7 @@ The `delay: 150` on touch prevents accidental drags when scrolling.
 - Implement `/matchup` endpoints
 - Build matchup matrix view
 
-### Phase 6: Polish
+### Phase 7: Polish
 - Backend image proxy (`GET /cards/{id}/image`) for CORS/offline fallback
 - Attack arrows (SVG overlay with pulsing animation)
 - Suspend/unsuspend animations
@@ -1611,7 +2033,7 @@ The `delay: 150` on touch prevents accidental drags when scrolling.
 
 ---
 
-## 8. Backend Changes Summary
+## 9. Backend Changes Summary
 
 ### New `to_ui_json()` method on `Game`
 
@@ -1650,6 +2072,7 @@ Same as `to_ui_json()` but filters hidden information:
 | `digimon_gym/replay.py` | Replay recording and storage |
 | `digimon_gym/agents/registry.py` | Agent registration (wraps pilot_training.py) |
 | `digimon_gym/training/manager.py` | Training job lifecycle (subprocess wrapper) |
+| `digimon_gym/decks.py` | Deck CRUD operations, validation (50 main + 0-5 eggs, max 4 copies) |
 | `digimon_gym/training/metrics.py` | Metrics collection from WinRateCallback |
 
 ### Modifications to existing files:
@@ -1659,11 +2082,12 @@ Same as `to_ui_json()` but filters hidden information:
 | `digimon_gym/api.py` | Add card (paginated), room, replay, agent, training, matchup endpoints; mount WebSockets; add CORS middleware |
 | `digimon_gym/engine/game.py` | Add `to_ui_json()`, `to_player_json(player_id)`, `action_description(action_id)` |
 | `digimon_gym/engine/runners/headless_game.py` | Add replay recording hooks |
-| `digimon_gym/engine/data/card_database.py` | Add `to_dict()`, `search(set, color, kind, query)` for card API |
+| `digimon_gym/engine/data/card_database.py` | Add `to_dict()`, `search(set, color, kind, level, cost, dp, form, attribute, rarity, query)` for card API with full filter support |
 
 ### Data storage:
 
 For the pre-alpha stage, use **file-based storage** (JSON files):
+- `data/decks/` — One JSON file per saved deck (`{deck_id}.json`)
 - `data/replays/` — One JSON file per replay
 - `data/agents.json` — Agent registry
 - `data/training_jobs.json` — Training job history
@@ -1673,7 +2097,7 @@ Migrate to SQLite or PostgreSQL when needed.
 
 ---
 
-## 9. Action Mask -> UI Mapping
+## 10. Action Mask -> UI Mapping
 
 The 2120-element action mask needs to be translated into UI-friendly actions. The `useActionMask` hook does this, referencing `ACTION_SPEC.md`:
 
