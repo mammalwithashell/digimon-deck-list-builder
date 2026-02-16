@@ -46,16 +46,8 @@ class BT14_028(CardScript):
             player = ctx.get('player')
             perm = ctx.get('permanent')
             game = ctx.get('game')
-            if not (player and game):
-                return
-            def target_filter(p):
-                return p.is_digimon
-            def on_grant(target_perm):
-                grants = getattr(target_perm, '_keyword_grants', [])
-                grants.append('_is_cannot_be_deleted_by_battle')
-                target_perm._keyword_grants = grants
-            game.effect_select_own_permanent(
-                player, on_grant, filter_fn=target_filter, is_optional=False)
+            if perm:
+                perm.grant_keyword('_is_cannot_be_deleted_by_battle')
 
         effect1.set_on_process_callback(process1)
         effects.append(effect1)

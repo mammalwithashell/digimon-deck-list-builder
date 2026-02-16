@@ -467,29 +467,67 @@ def _emit_action(eb: EffectBlock, action: str, lines: List[str], indent: str):
         lines.append(f"{indent}# DNA/Jogress digivolution condition — handled by engine")
         lines.append(f"{indent}pass")
     elif action.startswith("gain_keyword_"):
-        # P3: Keyword grant with target selection
-        keyword = action[len("gain_keyword_"):]
-        # If gain_keyword is the ONLY substantive action, it grants to another perm
-        other_actions = [a for a in eb.actions if a != action and a not in (
-            "draw", "gain_memory", "change_dp", "recovery", "cost_reduction")]
-        if not other_actions:
-            lines.append(f"{indent}if not (player and game):")
-            lines.append(f"{indent}    return")
-            target_filter = _build_target_filter_code(eb, indent)
-            lines.append(f"{indent}def target_filter(p):")
-            if target_filter:
-                lines.extend(target_filter)
-                lines.append(f"{indent}    return p.is_digimon")
-            else:
-                lines.append(f"{indent}    return p.is_digimon")
-            lines.append(f"{indent}def on_grant(target_perm):")
-            lines.append(f"{indent}    grants = getattr(target_perm, '_keyword_grants', [])")
-            lines.append(f"{indent}    grants.append('_is_{keyword}')")
-            lines.append(f"{indent}    target_perm._keyword_grants = grants")
-            lines.append(f"{indent}game.effect_select_own_permanent(")
-            lines.append(f"{indent}    player, on_grant, filter_fn=target_filter, is_optional={eb.is_optional})")
+        # Keyword grant — collect ALL gain_keyword_* actions for this effect
+        all_grant_keywords = [a[len("gain_keyword_"):] for a in eb.actions if a.startswith("gain_keyword_")]
+        # Only emit once (for the first gain_keyword_* action encountered)
+        first_grant_action = f"gain_keyword_{all_grant_keywords[0]}" if all_grant_keywords else action
+        if action != first_grant_action:
+            pass  # Skip — already emitted by the first gain_keyword_* action
         else:
-            lines.append(f"{indent}# Keyword grant: {keyword} — flag set on effect object")
+            # Check if gain_keyword is the ONLY substantive action (targets another perm)
+            other_actions = [a for a in eb.actions
+                            if not a.startswith("gain_keyword_") and a not in (
+                                "draw", "gain_memory", "change_dp", "recovery", "cost_reduction")]
+            if not other_actions and eb.grant_is_self:
+                # Self-grant path: no selection needed, grant to own permanent
+                lines.append(f"{indent}if perm:")
+                for kw in all_grant_keywords:
+                    lines.append(f"{indent}    perm.grant_keyword('_is_{kw}')")
+            elif not other_actions:
+                # Target-grant path: grant keyword(s) to a selected permanent
+                lines.append(f"{indent}if not (player and game):")
+                lines.append(f"{indent}    return")
+
+                if eb.grant_has_reference_selection:
+                    # Two-step selection: choose reference perm first, then filter targets
+                    lines.append(f"{indent}def on_select_reference(ref_perm):")
+                    lines.append(f"{indent}    ref_digi_count = len(ref_perm.digivolution_cards)")
+                    target_filter = _build_target_filter_code(eb, indent + "    ")
+                    lines.append(f"{indent}    def target_filter(p):")
+                    if target_filter:
+                        lines.extend(target_filter)
+                    if eb.grant_reference_filter == "digi_count_lte":
+                        lines.append(f"{indent}        if len(p.digivolution_cards) > ref_digi_count:")
+                        lines.append(f"{indent}            return False")
+                    lines.append(f"{indent}        return p.is_digimon")
+                    lines.append(f"{indent}    def on_grant(target_perm):")
+                    for kw in all_grant_keywords:
+                        lines.append(f"{indent}        target_perm.grant_keyword('_is_{kw}')")
+                    select_method = "effect_select_opponent_permanent" if eb.grant_target_is_opponent else "effect_select_own_permanent"
+                    lines.append(f"{indent}    game.{select_method}(")
+                    lines.append(f"{indent}        player, on_grant, filter_fn=target_filter, is_optional={eb.is_optional})")
+                    lines.append(f"{indent}game.effect_select_own_permanent(")
+                    lines.append(f"{indent}    player, on_select_reference, filter_fn=lambda p: p.is_digimon, is_optional=False)")
+                else:
+                    # Standard single-step target selection
+                    target_filter = _build_target_filter_code(eb, indent)
+                    lines.append(f"{indent}def target_filter(p):")
+                    if target_filter:
+                        lines.extend(target_filter)
+                        lines.append(f"{indent}    return p.is_digimon")
+                    else:
+                        lines.append(f"{indent}    return p.is_digimon")
+                    lines.append(f"{indent}def on_grant(target_perm):")
+                    for kw in all_grant_keywords:
+                        lines.append(f"{indent}    target_perm.grant_keyword('_is_{kw}')")
+                    select_method = "effect_select_opponent_permanent" if eb.grant_target_is_opponent else "effect_select_own_permanent"
+                    lines.append(f"{indent}game.{select_method}(")
+                    lines.append(f"{indent}    player, on_grant, filter_fn=target_filter, is_optional={eb.is_optional})")
+            else:
+                # Self-grant path: keyword applies to this permanent via callback
+                lines.append(f"{indent}if perm:")
+                for kw in all_grant_keywords:
+                    lines.append(f"{indent}    perm.grant_keyword('_is_{kw}')")
     elif action == "mill":
         # P2: Mill — trash cards from top of deck
         count = eb.mill_count or 3
@@ -835,7 +873,11 @@ def generate_activate_effect(eb: EffectBlock, card_id: str, idx: int) -> str:
     lines.append(f"        {var}.set_can_use_condition(condition{idx})")
 
     # Callback for actions
-    if eb.actions:
+    # Phase 1: Skip callback entirely if jogress_condition is the only substantive action
+    substantive_actions = [a for a in eb.actions if a not in (
+        "jogress_condition", "draw", "gain_memory", "change_dp", "recovery")]
+    has_non_jogress_actions = bool(substantive_actions) or eb.draw_count or eb.memory_gain or eb.dp_change or eb.recovery_count
+    if eb.actions and has_non_jogress_actions:
         lines.append(f"")
         lines.append(f"        def process{idx}(ctx: Dict[str, Any]):")
         lines.append(f"            \"\"\"Action: {action_desc}\"\"\"")

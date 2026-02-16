@@ -72,10 +72,8 @@ class BT14_023(CardScript):
             def target_filter(p):
                 return p.is_digimon
             def on_grant(target_perm):
-                grants = getattr(target_perm, '_keyword_grants', [])
-                grants.append('_is_cannot_attack')
-                target_perm._keyword_grants = grants
-            game.effect_select_own_permanent(
+                target_perm.grant_keyword('_is_cannot_attack')
+            game.effect_select_opponent_permanent(
                 player, on_grant, filter_fn=target_filter, is_optional=False)
 
         effect1.set_on_process_callback(process1)
@@ -111,10 +109,8 @@ class BT14_023(CardScript):
             def target_filter(p):
                 return p.is_digimon
             def on_grant(target_perm):
-                grants = getattr(target_perm, '_keyword_grants', [])
-                grants.append('_is_cannot_attack')
-                target_perm._keyword_grants = grants
-            game.effect_select_own_permanent(
+                target_perm.grant_keyword('_is_cannot_attack')
+            game.effect_select_opponent_permanent(
                 player, on_grant, filter_fn=target_filter, is_optional=False)
 
         effect2.set_on_process_callback(process2)

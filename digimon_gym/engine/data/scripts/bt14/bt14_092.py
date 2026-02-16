@@ -33,9 +33,21 @@ class BT14_092(CardScript):
             player = ctx.get('player')
             perm = ctx.get('permanent')
             game = ctx.get('game')
-            # Keyword grant: cannot_attack — flag set on effect object
-            # Keyword grant: cannot_block — flag set on effect object
-            pass
+            if not (player and game):
+                return
+            def on_select_reference(ref_perm):
+                ref_digi_count = len(ref_perm.digivolution_cards)
+                def target_filter(p):
+                    if len(p.digivolution_cards) > ref_digi_count:
+                        return False
+                    return p.is_digimon
+                def on_grant(target_perm):
+                    target_perm.grant_keyword('_is_cannot_attack')
+                    target_perm.grant_keyword('_is_cannot_block')
+                game.effect_select_opponent_permanent(
+                    player, on_grant, filter_fn=target_filter, is_optional=False)
+            game.effect_select_own_permanent(
+                player, on_select_reference, filter_fn=lambda p: p.is_digimon, is_optional=False)
 
         effect0.set_on_process_callback(process0)
         effects.append(effect0)
@@ -65,7 +77,8 @@ class BT14_092(CardScript):
             if player and player.trash_cards:
                 card_to_add = player.trash_cards.pop()
                 player.hand_cards.append(card_to_add)
-            # Keyword grant: cannot_attack — flag set on effect object
+            if perm:
+                perm.grant_keyword('_is_cannot_attack')
 
         effect1.set_on_process_callback(process1)
         effects.append(effect1)

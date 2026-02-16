@@ -41,6 +41,8 @@ class GamePhase(Enum):
     SelectReveal = 12      # Select from revealed cards (reveal-and-pick)
     SelectEffectChoice = 13  # Choose between multiple effect branches
     SelectSecurity = 14      # Select from own or opponent's security stack
+    EndOfTurnAction = 15     # Parking phase for Vortex/Overclock end-of-turn keyword actions
+    AllianceTiming = 16      # Interrupt phase during attack for Alliance target selection
 
 class PendingAction(Enum):
     NO_ACTION = 0

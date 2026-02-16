@@ -87,7 +87,8 @@ class BT24_027(CardScript):
                     player.trash_cards.append(selected)
             game.effect_select_hand_card(
                 player, hand_filter, on_trashed, is_optional=False)
-            # Keyword grant: cannot_be_deleted_by_battle — flag set on effect object
+            if perm:
+                perm.grant_keyword('_is_cannot_be_deleted_by_battle')
 
         effect3.set_on_process_callback(process3)
         effects.append(effect3)
@@ -124,7 +125,8 @@ class BT24_027(CardScript):
                     player.trash_cards.append(selected)
             game.effect_select_hand_card(
                 player, hand_filter, on_trashed, is_optional=False)
-            # Keyword grant: cannot_be_deleted_by_battle — flag set on effect object
+            if perm:
+                perm.grant_keyword('_is_cannot_be_deleted_by_battle')
 
         effect4.set_on_process_callback(process4)
         effects.append(effect4)

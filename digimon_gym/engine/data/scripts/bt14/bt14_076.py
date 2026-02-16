@@ -101,7 +101,8 @@ class BT14_076(CardScript):
                 return True
             game.effect_play_from_zone(
                 player, 'trash', play_filter, free=True, is_optional=True)
-            # Keyword grant: rush — flag set on effect object
+            if perm:
+                perm.grant_keyword('_is_rush')
 
         effect2.set_on_process_callback(process2)
         effects.append(effect2)

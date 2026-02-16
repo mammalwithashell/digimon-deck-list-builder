@@ -45,18 +45,6 @@ class BT20_050(CardScript):
             return True
 
         effect1.set_can_use_condition(condition1)
-
-        def process1(ctx: Dict[str, Any]):
-            """Action: Flip Security"""
-            player = ctx.get('player')
-            perm = ctx.get('permanent')
-            game = ctx.get('game')
-            # Flip opponent's top face-down security card face up
-            enemy = player.enemy if player else None
-            if enemy and enemy.security_cards:
-                pass  # Security flip — engine handles face-up/face-down state
-
-        effect1.set_on_process_callback(process1)
         effects.append(effect1)
 
         # Timing: EffectTiming.OnEndAttack

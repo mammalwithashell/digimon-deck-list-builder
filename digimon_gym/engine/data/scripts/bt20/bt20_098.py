@@ -49,8 +49,9 @@ class BT20_098(CardScript):
                     enemy.return_permanent_to_deck_bottom(target_perm)
             game.effect_select_opponent_permanent(
                 player, on_return, filter_fn=target_filter, is_optional=False)
-            # Keyword grant: rush — flag set on effect object
-            # Keyword grant: blocker — flag set on effect object
+            if perm:
+                perm.grant_keyword('_is_rush')
+                perm.grant_keyword('_is_blocker')
 
         effect0.set_on_process_callback(process0)
         effects.append(effect0)

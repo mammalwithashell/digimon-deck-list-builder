@@ -287,6 +287,11 @@ RE_FACTORY_COND_PERM_NAME = re.compile(r'TopCard\.EqualsCardName\s*\(\s*"([^"]+)
 RE_FACTORY_COND_PERM_TRAIT = re.compile(r'TopCard\.EqualsTraits\s*\(\s*"([^"]+)"\s*\)')
 # Fix 5: permanentCondition for ChangeDPStaticEffect (non-self)
 RE_PERM_COND_OWNER_AREA = re.compile(r'IsPermanentExistsOnOwnerBattleAreaDigimon')
+# Keyword grant targeting patterns
+RE_PERM_COND_OPPONENT_AREA = re.compile(r'IsPermanentExistsOnOpponentBattleAreaDigimon')
+RE_GRANT_MAX_COUNT = re.compile(r'maxCount\s*=\s*Math\.Min\(\s*(\d+)')
+RE_SELECTED_PERMANENT_REF = re.compile(r'selectedPermanent\s*=\s*permanent')
+RE_DIGI_COUNT_COMPARE = re.compile(r'DigivolutionCards\.Count\s*<=\s*selectedPermanent\.DigivolutionCards\.Count')
 
 # Regex to detect delegation to a shared coroutine from a timing block
 RE_SHARED_COROUTINE_DELEGATE = re.compile(

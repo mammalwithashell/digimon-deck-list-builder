@@ -99,7 +99,8 @@ class BT24_040(CardScript):
                 trashed = perm.trash_digivolution_cards(1)
                 if player:
                     player.trash_cards.extend(trashed)
-            # Keyword grant: cannot_suspend_player — flag set on effect object
+            if perm:
+                perm.grant_keyword('_is_cannot_suspend_player')
             # Disable/invalidate effects on target — not yet in engine
             pass  # descriptive-tagged: disable_effect
 
@@ -133,7 +134,8 @@ class BT24_040(CardScript):
                 trashed = perm.trash_digivolution_cards(1)
                 if player:
                     player.trash_cards.extend(trashed)
-            # Keyword grant: cannot_suspend_player — flag set on effect object
+            if perm:
+                perm.grant_keyword('_is_cannot_suspend_player')
             # Disable/invalidate effects on target — not yet in engine
             pass  # descriptive-tagged: disable_effect
 

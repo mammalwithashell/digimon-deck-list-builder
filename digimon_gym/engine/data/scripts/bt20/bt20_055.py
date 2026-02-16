@@ -105,7 +105,7 @@ class BT20_055(CardScript):
         effect2.set_can_use_condition(condition2)
 
         def process2(ctx: Dict[str, Any]):
-            """Action: Delete, De Digivolve, Flip Security"""
+            """Action: Delete, De Digivolve"""
             player = ctx.get('player')
             perm = ctx.get('permanent')
             game = ctx.get('game')
@@ -128,10 +128,6 @@ class BT20_055(CardScript):
                     enemy.trash_cards.extend(removed)
             game.effect_select_opponent_permanent(
                 player, on_de_digivolve, filter_fn=lambda p: p.is_digimon, is_optional=False)
-            # Flip opponent's top face-down security card face up
-            enemy = player.enemy if player else None
-            if enemy and enemy.security_cards:
-                pass  # Security flip — engine handles face-up/face-down state
 
         effect2.set_on_process_callback(process2)
         effects.append(effect2)

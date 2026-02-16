@@ -24,16 +24,6 @@ class BT20_037(CardScript):
             return True
 
         effect0.set_can_use_condition(condition0)
-
-        def process0(ctx: Dict[str, Any]):
-            """Action: Jogress Condition"""
-            player = ctx.get('player')
-            perm = ctx.get('permanent')
-            game = ctx.get('game')
-            # DNA/Jogress digivolution condition — handled by engine
-            pass
-
-        effect0.set_on_process_callback(process0)
         effects.append(effect0)
 
         # Factory effect: partition
@@ -90,7 +80,8 @@ class BT20_037(CardScript):
                 target_perm.suspend()
             game.effect_select_opponent_permanent(
                 player, on_suspend, filter_fn=target_filter, is_optional=False)
-            # Keyword grant: cannot_unsuspend_player — flag set on effect object
+            if perm:
+                perm.grant_keyword('_is_cannot_unsuspend_player')
             # Disable/invalidate effects on target — not yet in engine
             pass  # descriptive-tagged: disable_effect
 

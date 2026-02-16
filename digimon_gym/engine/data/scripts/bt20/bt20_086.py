@@ -41,7 +41,7 @@ class BT20_086(CardScript):
         effect1.set_can_use_condition(condition1)
 
         def process1(ctx: Dict[str, Any]):
-            """Action: Trash From Hand, Flip Security"""
+            """Action: Trash From Hand"""
             player = ctx.get('player')
             perm = ctx.get('permanent')
             game = ctx.get('game')
@@ -55,10 +55,6 @@ class BT20_086(CardScript):
                     player.trash_cards.append(selected)
             game.effect_select_hand_card(
                 player, hand_filter, on_trashed, is_optional=True)
-            # Flip opponent's top face-down security card face up
-            enemy = player.enemy if player else None
-            if enemy and enemy.security_cards:
-                pass  # Security flip — engine handles face-up/face-down state
 
         effect1.set_on_process_callback(process1)
         effects.append(effect1)

@@ -69,9 +69,7 @@ class BT24_057(CardScript):
             def target_filter(p):
                 return p.is_digimon
             def on_grant(target_perm):
-                grants = getattr(target_perm, '_keyword_grants', [])
-                grants.append('_is_cannot_attack')
-                target_perm._keyword_grants = grants
+                target_perm.grant_keyword('_is_cannot_attack')
             game.effect_select_own_permanent(
                 player, on_grant, filter_fn=target_filter, is_optional=False)
 
@@ -103,9 +101,7 @@ class BT24_057(CardScript):
             def target_filter(p):
                 return p.is_digimon
             def on_grant(target_perm):
-                grants = getattr(target_perm, '_keyword_grants', [])
-                grants.append('_is_cannot_attack')
-                target_perm._keyword_grants = grants
+                target_perm.grant_keyword('_is_cannot_attack')
             game.effect_select_own_permanent(
                 player, on_grant, filter_fn=target_filter, is_optional=False)
 

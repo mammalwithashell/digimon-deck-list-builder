@@ -65,8 +65,9 @@ class BT20_075(CardScript):
                     player.trash_cards.append(selected)
             game.effect_select_hand_card(
                 player, hand_filter, on_trashed, is_optional=False)
-            # Keyword grant: raid — flag set on effect object
-            # Keyword grant: piercing — flag set on effect object
+            if perm:
+                perm.grant_keyword('_is_raid')
+                perm.grant_keyword('_is_piercing')
 
         effect1.set_on_process_callback(process1)
         effects.append(effect1)
@@ -106,8 +107,9 @@ class BT20_075(CardScript):
                     player.trash_cards.append(selected)
             game.effect_select_hand_card(
                 player, hand_filter, on_trashed, is_optional=False)
-            # Keyword grant: raid — flag set on effect object
-            # Keyword grant: piercing — flag set on effect object
+            if perm:
+                perm.grant_keyword('_is_raid')
+                perm.grant_keyword('_is_piercing')
 
         effect2.set_on_process_callback(process2)
         effects.append(effect2)

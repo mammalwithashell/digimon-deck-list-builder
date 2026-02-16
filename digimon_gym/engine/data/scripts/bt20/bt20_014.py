@@ -88,10 +88,10 @@ class BT20_014(CardScript):
         effects.append(effect1)
 
         # Timing: EffectTiming.OnEndTurn
-        # [End of Your Turn] By suspending 1 of your other Digimon, this Digiomon may digivolve into a Digimon card with [Jesmon] in its name in the hand without paying the cost.
+        # [End of Your Turn] By suspending 1 of your other Digimon, this Digimon may digivolve into a Digimon card with [Jesmon] in its name in the hand without paying the cost.
         effect2 = ICardEffect()
         effect2.set_effect_name("BT20-014 By suspending a Digimon, this Digimon may digivolve into a Digimon card with [Jesmon] in its name")
-        effect2.set_effect_description("[End of Your Turn] By suspending 1 of your other Digimon, this Digiomon may digivolve into a Digimon card with [Jesmon] in its name in the hand without paying the cost.")
+        effect2.set_effect_description("[End of Your Turn] By suspending 1 of your other Digimon, this Digimon may digivolve into a Digimon card with [Jesmon] in its name in the hand without paying the cost.")
         effect2.is_optional = True
 
         effect = effect2  # alias for condition closure

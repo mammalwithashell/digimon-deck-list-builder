@@ -165,7 +165,8 @@ class BT23_036(CardScript):
             player = ctx.get('player')
             perm = ctx.get('permanent')
             game = ctx.get('game')
-            # Keyword grant: raid — flag set on effect object
+            if perm:
+                perm.grant_keyword('_is_raid')
             # Force attack — target Digimon may attack (requires engine SelectAttack)
             pass  # descriptive-tagged: force_attack
 

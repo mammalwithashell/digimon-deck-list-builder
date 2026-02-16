@@ -106,8 +106,9 @@ class BT23_044(CardScript):
                 target_perm.suspend()
             game.effect_select_opponent_permanent(
                 player, on_suspend, filter_fn=target_filter, is_optional=False)
-            # Keyword grant: cannot_return_to_hand — flag set on effect object
-            # Keyword grant: cannot_return_to_deck — flag set on effect object
+            if perm:
+                perm.grant_keyword('_is_cannot_return_to_hand')
+                perm.grant_keyword('_is_cannot_return_to_deck')
 
         effect3.set_on_process_callback(process3)
         effects.append(effect3)
@@ -143,8 +144,9 @@ class BT23_044(CardScript):
                 target_perm.suspend()
             game.effect_select_opponent_permanent(
                 player, on_suspend, filter_fn=target_filter, is_optional=False)
-            # Keyword grant: cannot_return_to_hand — flag set on effect object
-            # Keyword grant: cannot_return_to_deck — flag set on effect object
+            if perm:
+                perm.grant_keyword('_is_cannot_return_to_hand')
+                perm.grant_keyword('_is_cannot_return_to_deck')
 
         effect4.set_on_process_callback(process4)
         effects.append(effect4)

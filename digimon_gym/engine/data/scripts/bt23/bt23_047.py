@@ -37,16 +37,6 @@ class BT23_047(CardScript):
             return True
 
         effect1.set_can_use_condition(condition1)
-
-        def process1(ctx: Dict[str, Any]):
-            """Action: Jogress Condition"""
-            player = ctx.get('player')
-            perm = ctx.get('permanent')
-            game = ctx.get('game')
-            # DNA/Jogress digivolution condition — handled by engine
-            pass
-
-        effect1.set_on_process_callback(process1)
         effects.append(effect1)
 
         # Factory effect: security_attack_plus
@@ -103,7 +93,8 @@ class BT23_047(CardScript):
                 target_perm.suspend()
             game.effect_select_opponent_permanent(
                 player, on_suspend, filter_fn=target_filter, is_optional=False)
-            # Keyword grant: cannot_unsuspend_player — flag set on effect object
+            if perm:
+                perm.grant_keyword('_is_cannot_unsuspend_player')
             # Force attack — target Digimon may attack (requires engine SelectAttack)
             pass  # descriptive-tagged: force_attack
 
@@ -140,7 +131,8 @@ class BT23_047(CardScript):
                 target_perm.suspend()
             game.effect_select_opponent_permanent(
                 player, on_suspend, filter_fn=target_filter, is_optional=False)
-            # Keyword grant: cannot_unsuspend_player — flag set on effect object
+            if perm:
+                perm.grant_keyword('_is_cannot_unsuspend_player')
             # Force attack — target Digimon may attack (requires engine SelectAttack)
             pass  # descriptive-tagged: force_attack
 

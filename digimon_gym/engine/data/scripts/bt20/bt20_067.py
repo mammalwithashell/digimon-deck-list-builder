@@ -40,9 +40,7 @@ class BT20_067(CardScript):
             def target_filter(p):
                 return p.is_digimon
             def on_grant(target_perm):
-                grants = getattr(target_perm, '_keyword_grants', [])
-                grants.append('_is_retaliation')
-                target_perm._keyword_grants = grants
+                target_perm.grant_keyword('_is_retaliation')
             game.effect_select_own_permanent(
                 player, on_grant, filter_fn=target_filter, is_optional=False)
 
@@ -76,9 +74,7 @@ class BT20_067(CardScript):
             def target_filter(p):
                 return p.is_digimon
             def on_grant(target_perm):
-                grants = getattr(target_perm, '_keyword_grants', [])
-                grants.append('_is_retaliation')
-                target_perm._keyword_grants = grants
+                target_perm.grant_keyword('_is_retaliation')
             game.effect_select_own_permanent(
                 player, on_grant, filter_fn=target_filter, is_optional=False)
 

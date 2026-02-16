@@ -254,26 +254,73 @@ class Player:
 
         return base_cost
 
-    def delete_permanent(self, permanent: 'Permanent', is_battle: bool = False) -> bool:
+    def delete_permanent(self, permanent: 'Permanent', is_battle: bool = False,
+                         is_opponent_effect: bool = False) -> bool:
         """Delete a permanent from the battle area.
 
         Checks deletion prevention keywords in order:
+        - <Progress>: immune to opponent effects while attacking
+        - <Decoy>: substitute another Digimon to prevent deletion (opponent effect only)
+        - <Material Save>: save digi source cards under a Tamer before deletion
         - <Armor Purge>: trash top digivolution card to survive
         - <Evade>: suspend self (if unsuspended) to survive
         - <Barrier>: trash top security card (if in battle) to survive
+        Post-deletion:
+        - <Fortitude>: replay from trash if had digi cards (mandatory)
+        - <Save>: place under a Tamer (optional)
 
         Args:
             permanent: The permanent to delete.
             is_battle: True if deletion is from battle resolution (needed for Barrier).
+            is_opponent_effect: True if deletion is caused by an opponent's effect.
 
         Returns:
             True if the permanent was actually deleted, False if not found or
-            deletion was prevented by a keyword (Armor Purge, Evade, Barrier).
+            deletion was prevented by a keyword.
         """
         if permanent not in self.battle_area:
             return False
 
         perm_name = permanent.top_card.card_names[0] if permanent.top_card else "Unknown"
+
+        # <Progress>: immune to opponent effects while attacking
+        # This blocks opponent effects even during battle (e.g. Retaliation)
+        if is_opponent_effect and permanent.is_immune_to_opponent_effects:
+            self._log(f"{perm_name} is protected by Progress while attacking!")
+            return False
+
+        # <Decoy>: another Digimon with Decoy can be deleted instead (opponent effect only)
+        if is_opponent_effect and not is_battle:
+            decoy_candidates = [
+                p for p in self.battle_area
+                if p is not permanent and p.has_keyword('_is_decoy') and p.is_digimon
+            ]
+            if decoy_candidates and self.game:
+                # For RL simplicity, auto-activate the first Decoy candidate
+                # (a full implementation would park for selection, but Decoy is rare
+                # and the transpiler doesn't extract color, so we use the first match)
+                decoy = decoy_candidates[0]
+                decoy_name = decoy.top_card.card_names[0] if decoy.top_card else "Unknown"
+                self._log(f"[Decoy] {decoy_name} sacrificed to save {perm_name}!")
+                # Delete the Decoy instead (not opponent effect, to avoid recursion)
+                self.battle_area.remove(decoy)
+                self._apply_ace_overflow(decoy.card_sources)
+                self.trash_cards.extend(decoy.card_sources)
+                if self.game and hasattr(self.game, 'execute_deletion_effects'):
+                    self.game.execute_deletion_effects(decoy, self)
+                return False
+
+        # <Material Save>: save digi source cards under a Tamer before deletion
+        if permanent.has_keyword('_is_material_save') and len(permanent.card_sources) > 1:
+            tamers = [p for p in self.battle_area if p.is_tamer and p is not permanent]
+            if tamers:
+                # Save 1 card from digi sources to the first available Tamer
+                saved_card = permanent.card_sources[0]  # Bottom of digi stack
+                permanent.card_sources.remove(saved_card)
+                tamers[0].add_card_source_bottom(saved_card)
+                tamer_name = tamers[0].top_card.card_names[0] if tamers[0].top_card else "Unknown"
+                saved_name = saved_card.card_names[0] if saved_card.card_names else "Unknown"
+                self._log(f"[Material Save] {saved_name} placed under {tamer_name}")
 
         # <Armor Purge>: trash top digivolution card to prevent deletion
         if permanent.has_keyword('_is_armor_purge') and len(permanent.card_sources) > 1:
@@ -297,6 +344,12 @@ class Player:
             return False
 
         # No prevention — actually delete
+        # Capture state before deletion for Fortitude check
+        had_digi_cards = len(permanent.card_sources) > 1
+        has_fortitude = permanent.has_keyword('_is_fortitude')
+        has_save = permanent.has_keyword('_is_save')
+        top_card = permanent.top_card
+
         self.battle_area.remove(permanent)
         self._apply_ace_overflow(permanent.card_sources)
         self.trash_cards.extend(permanent.card_sources)
@@ -305,6 +358,25 @@ class Player:
         # Execute On Deletion effects
         if self.game and hasattr(self.game, 'execute_deletion_effects'):
             self.game.execute_deletion_effects(permanent, self)
+
+        # <Fortitude>: mandatory — replay from trash if had digi cards
+        if has_fortitude and had_digi_cards and top_card and top_card in self.trash_cards:
+            self.trash_cards.remove(top_card)
+            new_perm = self.play_card_from_source(top_card, pay_cost=False)
+            self._log(f"[Fortitude] {perm_name} replays from trash!")
+            if self.game and hasattr(self.game, 'execute_effects'):
+                self.game.execute_effects(EffectTiming.OnEnterFieldAnyone, {"played_card": top_card})
+
+        # <Save>: optional — place under a Tamer
+        elif has_save and top_card and top_card in self.trash_cards:
+            tamers = [p for p in self.battle_area if p.is_tamer]
+            if tamers:
+                # Auto-select first Tamer for RL simplicity
+                tamer = tamers[0]
+                self.trash_cards.remove(top_card)
+                tamer.add_card_source_bottom(top_card)
+                tamer_name = tamer.top_card.card_names[0] if tamer.top_card else "Unknown"
+                self._log(f"[Save] {perm_name} placed under {tamer_name}")
 
         return True
 
@@ -320,12 +392,16 @@ class Player:
         self._log(f"Security Check: Revealed {security_card.card_names[0]}")
 
         # Execute Security Effects
-        security_effects = security_card.effect_list(EffectTiming.SecuritySkill)
-        for effect in security_effects:
-            if effect.is_security_effect:
-                self._log(f"Activating Security Effect: {effect.effect_name}")
-                if effect.on_process_callback:
-                    effect.on_process_callback()
+        # <Progress>: attacker is immune to opponent's effects (including security) while attacking
+        if attacker.is_immune_to_opponent_effects:
+            self._log(f"Security effects blocked — attacker has Progress!")
+        else:
+            security_effects = security_card.effect_list(EffectTiming.SecuritySkill)
+            for effect in security_effects:
+                if effect.is_security_effect:
+                    self._log(f"Activating Security Effect: {effect.effect_name}")
+                    if effect.on_process_callback:
+                        effect.on_process_callback()
 
         result = AttackResolution.Survivor
 
@@ -387,6 +463,11 @@ class Player:
 
     def bounce_permanent_to_hand(self, permanent: 'Permanent'):
         """Return a permanent from battle area to its owner's hand (top card only, rest to trash)."""
+        # Restriction: cannot return to hand
+        if permanent.has_keyword('_is_cannot_return_to_hand'):
+            perm_name = permanent.top_card.card_names[0] if permanent.top_card and permanent.top_card.card_names else 'Permanent'
+            self._log(f"{perm_name} cannot be returned to hand!")
+            return
         owner = self._find_permanent_owner(permanent)
         if owner and permanent in owner.battle_area:
             owner.battle_area.remove(permanent)
@@ -473,6 +554,11 @@ class Player:
     def return_permanent_to_deck_bottom(self, permanent: 'Permanent'):
         """Return a permanent to the bottom of its owner's deck.
         Top card goes to deck bottom; digivolution cards under go to trash."""
+        # Restriction: cannot return to deck
+        if permanent.has_keyword('_is_cannot_return_to_deck'):
+            perm_name = permanent.top_card.card_names[0] if permanent.top_card and permanent.top_card.card_names else 'Permanent'
+            self._log(f"{perm_name} cannot be returned to deck!")
+            return
         owner = self._find_permanent_owner(permanent)
         if owner and permanent in owner.battle_area:
             owner.battle_area.remove(permanent)

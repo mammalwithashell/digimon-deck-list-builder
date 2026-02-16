@@ -40,7 +40,8 @@ class BT14_020(CardScript):
                 trashed = perm.trash_digivolution_cards(1)
                 if player:
                     player.trash_cards.extend(trashed)
-            # Keyword grant: cannot_be_blocked — flag set on effect object
+            if perm:
+                perm.grant_keyword('_is_cannot_be_blocked')
 
         effect0.set_on_process_callback(process0)
         effects.append(effect0)

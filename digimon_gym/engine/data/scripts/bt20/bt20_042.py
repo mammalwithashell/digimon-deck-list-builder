@@ -58,7 +58,8 @@ class BT20_042(CardScript):
                 target_perm.suspend()
             game.effect_select_opponent_permanent(
                 player, on_suspend, filter_fn=target_filter, is_optional=False)
-            # Keyword grant: cannot_unsuspend — flag set on effect object
+            if perm:
+                perm.grant_keyword('_is_cannot_unsuspend')
 
         effect1.set_on_process_callback(process1)
         effects.append(effect1)
@@ -91,7 +92,8 @@ class BT20_042(CardScript):
                 target_perm.suspend()
             game.effect_select_opponent_permanent(
                 player, on_suspend, filter_fn=target_filter, is_optional=False)
-            # Keyword grant: cannot_unsuspend — flag set on effect object
+            if perm:
+                perm.grant_keyword('_is_cannot_unsuspend')
 
         effect2.set_on_process_callback(process2)
         effects.append(effect2)

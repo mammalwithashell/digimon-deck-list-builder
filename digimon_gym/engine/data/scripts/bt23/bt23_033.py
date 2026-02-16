@@ -122,9 +122,9 @@ class BT23_033(CardScript):
             player = ctx.get('player')
             perm = ctx.get('permanent')
             game = ctx.get('game')
-            # Keyword grant: cannot_return_to_deck — flag set on effect object
-            # Keyword grant: cannot_return_to_hand — flag set on effect object
-            pass
+            if perm:
+                perm.grant_keyword('_is_cannot_return_to_deck')
+                perm.grant_keyword('_is_cannot_return_to_hand')
 
         effect5.set_on_process_callback(process5)
         effects.append(effect5)

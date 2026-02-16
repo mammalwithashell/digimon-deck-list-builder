@@ -70,3 +70,10 @@ class EffectBlock:
     activate_cond_perm_name: List[str] = field(default_factory=list)
     # P5: Token play name
     token_name: str = ""
+    # Keyword grant targeting fields
+    _has_select_permanent: bool = False  # Set True when any SelectPermanentEffect found in block
+    grant_is_self: bool = False  # True when keyword grant targets self (no SelectPermanentEffect)
+    grant_target_is_opponent: bool = False  # True when keyword grant targets opponent's permanents
+    grant_max_targets: int = 1  # Number of targets for keyword grant selection
+    grant_has_reference_selection: bool = False  # True when grant needs a reference perm first
+    grant_reference_filter: str = ""  # e.g., "digi_count_lte" for DigivolutionCards.Count comparison

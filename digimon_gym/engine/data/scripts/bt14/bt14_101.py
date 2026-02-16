@@ -61,7 +61,8 @@ class BT14_101(CardScript):
             player = ctx.get('player')
             perm = ctx.get('permanent')
             game = ctx.get('game')
-            # Keyword grant: raid — flag set on effect object
+            if perm:
+                perm.grant_keyword('_is_raid')
             # Force attack — target Digimon may attack (requires engine SelectAttack)
             pass  # descriptive-tagged: force_attack
 
@@ -90,16 +91,8 @@ class BT14_101(CardScript):
             player = ctx.get('player')
             perm = ctx.get('permanent')
             game = ctx.get('game')
-            if not (player and game):
-                return
-            def target_filter(p):
-                return p.is_digimon
-            def on_grant(target_perm):
-                grants = getattr(target_perm, '_keyword_grants', [])
-                grants.append('_is_piercing')
-                target_perm._keyword_grants = grants
-            game.effect_select_own_permanent(
-                player, on_grant, filter_fn=target_filter, is_optional=False)
+            if perm:
+                perm.grant_keyword('_is_piercing')
 
         effect3.set_on_process_callback(process3)
         effects.append(effect3)

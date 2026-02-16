@@ -59,6 +59,9 @@ from .patterns import (
     RE_ADD_SKILL_CLASS,
     RE_ADD_JOGRESS_LEVELS, RE_CHANGE_CARD_NAMES, RE_CAN_ATTACK_TARGET,
     RE_CAN_NOT_AFFECTED,
+    # Keyword grant targeting patterns
+    RE_PERM_COND_OPPONENT_AREA, RE_GRANT_MAX_COUNT,
+    RE_SELECTED_PERMANENT_REF, RE_DIGI_COUNT_COMPARE,
 )
 
 
@@ -527,6 +530,7 @@ def _scan_actions(block: str, eb: EffectBlock):
 
     # ── SelectPermanentEffect.Mode.* patterns ──
     for m_mode in RE_SELECT_PERM_MODE.finditer(block):
+        eb._has_select_permanent = True  # Track that selection exists (for grant targeting)
         mode = m_mode.group(1)
         if mode == "Destroy" and "delete" not in eb.actions:
             eb.actions.append("delete")
@@ -581,6 +585,34 @@ def _scan_actions(block: str, eb: EffectBlock):
             if not hasattr(eb, 'gained_keywords'):
                 eb.gained_keywords = []
             eb.gained_keywords.append(mapped)
+
+    # ── Keyword grant targeting context ──
+    # Use _has_select_permanent flag (accumulated across all _scan_actions passes,
+    # including shared coroutine resolution) to determine if grant targets a selection
+    # vs self. Also search both block and raw_block for opponent/count patterns.
+    has_gain_keywords = any(a.startswith("gain_keyword_") for a in eb.actions)
+    if has_gain_keywords:
+        # Combine raw_block and current block for pattern searches
+        combined = (eb.raw_block or "") + "\n" + block
+        # Detect self-grant: no SelectPermanentEffect found in any scan pass
+        if not eb._has_select_permanent:
+            eb.grant_is_self = True
+        else:
+            eb.grant_is_self = False
+        # Detect if grant targets opponent's permanents
+        if RE_PERM_COND_OPPONENT_AREA.search(combined):
+            eb.grant_target_is_opponent = True
+        # Detect multi-target count (Math.Min(N, ...))
+        max_count_matches = list(RE_GRANT_MAX_COUNT.finditer(combined))
+        if max_count_matches:
+            last_count = int(max_count_matches[-1].group(1))
+            if last_count > 1:
+                eb.grant_max_targets = last_count
+        # Detect two-step reference selection: requires BOTH selectedPermanent
+        # assignment AND a filter using selectedPermanent's properties (e.g. digi count)
+        if RE_SELECTED_PERMANENT_REF.search(combined) and RE_DIGI_COUNT_COMPARE.search(combined):
+            eb.grant_has_reference_selection = True
+            eb.grant_reference_filter = "digi_count_lte"
 
     # ── P5: Token play ──
     m_token = RE_PLAY_TOKEN.search(block)

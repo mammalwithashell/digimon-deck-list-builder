@@ -37,16 +37,6 @@ class BT24_037(CardScript):
             return True
 
         effect1.set_can_use_condition(condition1)
-
-        def process1(ctx: Dict[str, Any]):
-            """Action: Jogress Condition"""
-            player = ctx.get('player')
-            perm = ctx.get('permanent')
-            game = ctx.get('game')
-            # DNA/Jogress digivolution condition — handled by engine
-            pass
-
-        effect1.set_on_process_callback(process1)
         effects.append(effect1)
 
         # Timing: EffectTiming.OnEnterFieldAnyone

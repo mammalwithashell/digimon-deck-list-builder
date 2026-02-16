@@ -2,7 +2,9 @@
 
 Sources:
 - Comprehensive Rules Manual Ver.3.6 (2025/12/25) — `Digimon TCG resources/general_rule.pdf`
+  - Web: https://world.digimoncard.com/rule/pdf/general_rule.pdf?20251225
 - Official Rule Manual for Web Ver.5.0 — `Digimon TCG resources/manual.pdf`
+  - Web: https://world.digimoncard.com/rule/pdf/manual.pdf?20250711
 
 Rule numbers (e.g. 16-3) reference the Comprehensive Rules Manual sections.
 

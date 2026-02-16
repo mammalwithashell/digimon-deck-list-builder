@@ -65,12 +65,14 @@ tools/                           # Build & pipeline tools
 tests/                           # Pytest test suite
 ├── test_runners.py              # HeadlessGame/InteractiveGame tests (30 tests)
 ├── test_tensor_and_actions.py   # Tensor encoding/action decoding tests (48 tests)
+├── test_keyword_mechanics.py    # Engine keyword mechanics tests (75 tests)
 ├── test_bt14_scripts.py         # BT14 card script validation (200 parametrized tests)
 ├── test_bt20_scripts.py         # BT20 card script validation (215 parametrized tests)
 ├── test_bt23_scripts.py         # BT23 card script validation (211 parametrized tests)
 ├── test_bt24_scripts.py         # BT24 card script validation (216 parametrized tests)
 ├── test_digivolve_validation.py # Digivolution rules tests (25 tests)
 ├── test_dna_digivolve.py        # DNA/Jogress mechanics tests (50 tests)
+├── test_deck_loader.py          # Deck loading tests
 └── test_phase_decoders.py       # Game phase state tests (33 tests)
 
 scripts/
@@ -303,13 +305,35 @@ The engine checks keyword abilities at runtime via the `Permanent.has_keyword()`
 - `has_keyword()` checks granted keywords before scanning card effects
 
 **Deletion prevention** (`player.delete_permanent()`), checked in order:
-1. **Armor Purge** — trash top digivolution source to survive
-2. **Evade** — suspend self (if unsuspended) to survive
-3. **Barrier** — trash top security card (battle only) to survive
+1. **Decoy** — another Digimon with Decoy is deleted instead (opponent effects only, not battle)
+2. **Progress** — immune to opponent effects while attacking (blocks deletion from opponent effects)
+3. **Material Save** — place 1 digivolution source under a Tamer before deletion (does not prevent deletion)
+4. **Armor Purge** — trash top digivolution source to survive
+5. **Evade** — suspend self (if unsuspended) to survive
+6. **Barrier** — trash top security card (battle only) to survive
+7. **Fortitude** — after deletion, replay top card as new permanent if had digivolution cards
+8. **Save** — after deletion, place top card under a Tamer (if no Fortitude)
+
+**Progress immunity** (`permanent.is_immune_to_opponent_effects`):
+- Blocks opponent effect deletion (including Retaliation) while attacking
+- Blocks security effect callbacks during security checks
+- Ignores negative DP modifiers (both pre-existing and newly applied) while attacking
+- DP debuffs re-apply after attack ends (`clear_attack_state()`)
+- Does NOT prevent normal DP-comparison battle/security deletion (game rules, not effects)
 
 **Phase mechanics:**
 - **Reboot** — during opponent's unsuspend phase, Reboot permanents unsuspend; during own unsuspend phase, they are skipped
 - **Raid** — action mask allows attacking the unsuspended highest-DP opponent Digimon
+- **Training** — in Main phase, unsuspended Digimon with Training can activate via effect action: suspends self, places top deck card at bottom of digivolution stack
+
+**End-of-turn keywords** (checked in `phase_end()` → `EndOfTurnAction` phase):
+- **Vortex** — can attack opponent Digimon (only) after turn would normally end; bypasses summoning sickness
+- **Overclock** — can sacrifice another Digimon to unsuspend and attack after turn end; requires a sacrifice target
+
+**Alliance** (`resolve_attack()` → `AllianceTiming` phase):
+- When an attacker with Alliance declares attack, game parks at `AllianceTiming`
+- Player can select unsuspended allies to suspend for DP + SA+1 bonus per ally
+- Declining (action 62) or no more allies proceeds to blocker check
 
 **Play restrictions:**
 - **Option color requirement** — action mask enforces that Options can only be played when the player has a matching-color Digimon or Tamer on the field
@@ -364,24 +388,57 @@ https://digimoncard.io/index.php/api-public/search?pack=BT-20:%20Booster%20Over%
 
 ### Engine Keywords Not Yet Runtime-Checked
 The transpiler emits flags for these keywords, but the engine does not yet act on them:
-Alliance, Fortitude, Decoy, Save, Material Save, Overclock, Vortex, Training, Progress
 
-**Recently implemented (Tiers 0-1):** Blitz, Collision, restriction keywords (cannot_attack, cannot_attack_player, cannot_block, cannot_be_blocked, cannot_unsuspend), granted keyword mechanism, option color requirement.
+| Keyword | Flag | Scripts using it | Notes |
+|---------|------|:---:|-------|
+| Delay | `_is_delay` | 19 | Option cards with delayed effects |
+| Execute | `_is_execute` | 5 | Trigger effect when placed in trash from hand |
+| Cannot Be Deleted By Battle | `_is_cannot_be_deleted_by_battle` | 5 | Restriction keyword |
+| Cannot Return To Hand | `_is_cannot_return_to_hand` | 4 | Restriction keyword |
+| Cannot Return To Deck | `_is_cannot_return_to_deck` | 4 | Restriction keyword |
+| Decode | `_is_decode` | 3 | Alternative digivolution from deck |
+| Partition | `_is_partition` | 3 | Split into component Digimon on deletion |
+| Scapegoat | `_is_scapegoat` | 3 | Redirect deletion to another target |
+| Cannot Suspend | `_is_cannot_suspend` | 3 | Restriction keyword |
+| Cannot Unsuspend (opponent) | `_is_cannot_unsuspend_player` | 3 | Restrict opponent unsuspend |
+| Cannot Suspend (opponent) | `_is_cannot_suspend_player` | 2 | Restrict opponent suspend |
+| Immune to DP Minus | `_is_immune_dp_minus` | 1 | Ignore DP reduction effects |
+
+**All runtime-implemented keywords:** Rush, Blocker, Piercing, Jamming, Retaliation, Collision, Blitz, Raid, Reboot, Blast Digivolve, Alliance, Training, Progress, Fortitude, Save, Decoy, Material Save, Vortex, Overclock, Security Attack +/-, Armor Purge, Evade, Barrier, and restriction keywords (cannot_attack, cannot_attack_player, cannot_block, cannot_be_blocked, cannot_unsuspend), plus the granted keyword mechanism and option color requirement.
+
+### Descriptive-Tagged Effects (Pending Engine Features)
+~182 effect callbacks across 4 sets are recognized by the transpiler but emit `pass # descriptive-tagged` because the engine lacks support. These represent the largest category of incomplete card functionality:
+
+| Tag | Count | Engine feature needed |
+|-----|:-----:|----------------------|
+| cost_reduction | 44 | Dynamic play/digivolve cost modification |
+| force_attack | 40 | Force an opponent's Digimon to attack |
+| disable_effect | 17 | Invalidate/nullify effects on a target |
+| play_token | 11 | Token Digimon creation and placement |
+| change_security_attack | 11 | Dynamic SA+/- modification via effects |
+| also_treated_as_name | 11 | Treat card as having additional names |
+| redirect_attack | 5 | Change attack target mid-combat (SwitchDefender) |
+| effect_immunity | 5 | Grant immunity to opponent effects (CanNotAffectedClass) |
+| grant_skill | 5 | Grant keywords to other permanents (AddSkillClass) |
+| add_temp_effect | 4 | Temporarily add effects to permanents |
+| also_treated_as_level | 2 | Treat card as having additional levels |
+| attack_unsuspended | 2 | Allow attacking unsuspended Digimon |
+
+| Set | No-action stubs | Descriptive-tagged files |
+|-----|:--------------:|:-----------------------:|
+| BT14 | 1 | 13 |
+| BT20 | 8 | 34 |
+| BT23 | 7 | 36 |
+| BT24 | 3 | 24 |
 
 ### Transpiler Stub Summary
-19 effect callbacks across 4 sets still produce no-action stubs (down from 116 after P7 stub reduction: widened `_extract_method_body()` regex, ChangeCostClass value extraction, Mode.Custom helper class scanning (IDegeneration, SwitchDefender, PlayPermanentCards, DigivolveIntoHandOrTrashCard, CanNotAffectedClass), AddSkillClass detection, metadata class detection (AddJogressLevelsClass, ChangeCardNamesClass, CanAttackTargetDefendingPermanentClass), and orphan pass elimination). Additionally, ~180 effects are descriptive-tagged: cost reduction, redirect attack, effect immunity, grant skill, attack unsuspended, also treated as level/name, token play, forced attack, SA modifier, effect disable, temp effect grant, plus prior color ignore, app fusion, link conditions, play restrictions.
-
-| Set | No-action stubs | Descriptive-tagged |
-|-----|----------------|--------------------|
-| BT14 | 1 | ~18 |
-| BT20 | 8 | ~61 |
-| BT23 | 7 | ~60 |
-| BT24 | 3 | ~41 |
+19 effect callbacks across 4 sets still produce no-action stubs (down from 116 after P7 stub reduction: widened `_extract_method_body()` regex, ChangeCostClass value extraction, Mode.Custom helper class scanning (IDegeneration, SwitchDefender, PlayPermanentCards, DigivolveIntoHandOrTrashCard, CanNotAffectedClass), AddSkillClass detection, metadata class detection (AddJogressLevelsClass, ChangeCardNamesClass, CanAttackTargetDefendingPermanentClass), and orphan pass elimination).
 
 Remaining stubs are complex multi-step sequences with nested coroutines, `OnAddDigivolutionCards` timing blocks, and effects requiring engine features not yet supported.
 
 ### Other Gaps
 - EX8 and EX10 script directories are empty placeholders (no scripts transpiled yet)
+- ST1 scripts (10 files) have no dedicated test coverage
 - No CI/CD pipeline
 - No frontend implementation yet (React planned)
 - Q-DeckRec agent not yet implemented (architecture specced in AGENTS.md); pilot agent training exists in `digimon_gym/agents/pilot_training.py`

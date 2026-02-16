@@ -165,7 +165,8 @@ class BT23_024(CardScript):
                 target_perm.unsuspend()
             game.effect_select_own_permanent(
                 player, on_unsuspend, filter_fn=target_filter, is_optional=True)
-            # Keyword grant: cannot_suspend_player — flag set on effect object
+            if perm:
+                perm.grant_keyword('_is_cannot_suspend_player')
 
         effect5.set_on_process_callback(process5)
         effects.append(effect5)

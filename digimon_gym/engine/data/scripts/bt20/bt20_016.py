@@ -24,16 +24,6 @@ class BT20_016(CardScript):
             return True
 
         effect0.set_can_use_condition(condition0)
-
-        def process0(ctx: Dict[str, Any]):
-            """Action: Jogress Condition"""
-            player = ctx.get('player')
-            perm = ctx.get('permanent')
-            game = ctx.get('game')
-            # DNA/Jogress digivolution condition — handled by engine
-            pass
-
-        effect0.set_on_process_callback(process0)
         effects.append(effect0)
 
         # Timing: EffectTiming.OnEnterFieldAnyone
@@ -60,7 +50,8 @@ class BT20_016(CardScript):
             game = ctx.get('game')
             if perm:
                 perm.change_dp(4000)
-            # Keyword grant: piercing — flag set on effect object
+            if perm:
+                perm.grant_keyword('_is_piercing')
             # Force attack — target Digimon may attack (requires engine SelectAttack)
             pass  # descriptive-tagged: force_attack
 
@@ -91,7 +82,8 @@ class BT20_016(CardScript):
             game = ctx.get('game')
             if perm:
                 perm.change_dp(4000)
-            # Keyword grant: piercing — flag set on effect object
+            if perm:
+                perm.grant_keyword('_is_piercing')
             # Force attack — target Digimon may attack (requires engine SelectAttack)
             pass  # descriptive-tagged: force_attack
 

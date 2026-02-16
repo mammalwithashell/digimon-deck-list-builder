@@ -60,10 +60,8 @@ class BT23_092(CardScript):
             def target_filter(p):
                 return p.is_digimon
             def on_grant(target_perm):
-                grants = getattr(target_perm, '_keyword_grants', [])
-                grants.append('_is_cannot_suspend')
-                target_perm._keyword_grants = grants
-            game.effect_select_own_permanent(
+                target_perm.grant_keyword('_is_cannot_suspend')
+            game.effect_select_opponent_permanent(
                 player, on_grant, filter_fn=target_filter, is_optional=False)
 
         effect1.set_on_process_callback(process1)
@@ -114,10 +112,8 @@ class BT23_092(CardScript):
             def target_filter(p):
                 return p.is_digimon
             def on_grant(target_perm):
-                grants = getattr(target_perm, '_keyword_grants', [])
-                grants.append('_is_cannot_suspend')
-                target_perm._keyword_grants = grants
-            game.effect_select_own_permanent(
+                target_perm.grant_keyword('_is_cannot_suspend')
+            game.effect_select_opponent_permanent(
                 player, on_grant, filter_fn=target_filter, is_optional=True)
 
         effect3.set_on_process_callback(process3)
@@ -149,10 +145,8 @@ class BT23_092(CardScript):
             def target_filter(p):
                 return p.is_digimon
             def on_grant(target_perm):
-                grants = getattr(target_perm, '_keyword_grants', [])
-                grants.append('_is_cannot_suspend')
-                target_perm._keyword_grants = grants
-            game.effect_select_own_permanent(
+                target_perm.grant_keyword('_is_cannot_suspend')
+            game.effect_select_opponent_permanent(
                 player, on_grant, filter_fn=target_filter, is_optional=False)
 
         effect4.set_on_process_callback(process4)

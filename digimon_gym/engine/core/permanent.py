@@ -16,6 +16,8 @@ class Permanent:
         self.turn_digivolved: int = -1  # Turn this permanent last digivolved (-1 = never)
         self._owner_game: Optional[object] = None  # Back-reference to Game for turn tracking
         self._granted_keywords: dict = {}  # keyword_attr -> expiry_turn (or -1 for permanent)
+        self.is_attacking: bool = False  # True while this permanent is the attacker in combat
+        self._temp_sa_modifier: int = 0  # Temporary Security Attack modifier (e.g. from Alliance)
 
     @property
     def digivolution_cards(self) -> List['CardSource']:
@@ -66,13 +68,21 @@ class Permanent:
     def dp(self) -> Optional[int]:
         """DP of this permanent. None if the top card has no DP (egg/tamer/option).
         For Digimon, returns base DP + effect modifiers (minimum 0).
-        Cards like Lucemon: Larva have 0 DP (a real value, not None)."""
+        Cards like Lucemon: Larva have 0 DP (a real value, not None).
+
+        <Progress> immunity: while attacking with Progress, negative DP modifiers
+        from opponent effects are ignored (both pre-existing and newly applied).
+        """
         if not self.top_card or self.top_card.base_dp is None:
             return None
         base = self.top_card.base_dp
         active_effects = self.get_active_effects()
         modifier = sum(effect.dp_modifier for effect in active_effects)
-        temp_modifier = sum(self._dp_modifiers)
+        if self.is_immune_to_opponent_effects:
+            # Progress: ignore all negative temp DP modifiers while attacking
+            temp_modifier = sum(m for m in self._dp_modifiers if m >= 0)
+        else:
+            temp_modifier = sum(self._dp_modifiers)
         return max(0, base + modifier + temp_modifier)
 
     def get_active_effects(self) -> List['ICardEffect']:
@@ -171,6 +181,8 @@ class Permanent:
             for effect in effects:
                 if not effect.is_inherited_effect:
                     total += getattr(effect, '_security_attack_modifier', 0)
+        # Temporary modifier (e.g. from Alliance)
+        total += self._temp_sa_modifier
         return total
 
     def can_attack(self, card_effect: Optional['ICardEffect'] = None, without_tap: bool = False, is_vortex: bool = False) -> bool:
@@ -182,9 +194,9 @@ class Permanent:
         if self.has_keyword('_is_cannot_attack'):
             return False
         # Restriction: cannot attack player (partial — checked separately for target filtering)
-        # Summoning sickness: can't attack the turn played, unless has <Rush>
+        # Summoning sickness: can't attack the turn played, unless has <Rush> or <Vortex>
         if self.turn_played >= 0 and self._owner_game is not None:
-            if self.turn_played == self._owner_game.turn_count and not self.has_keyword('_is_rush'):
+            if self.turn_played == self._owner_game.turn_count and not self.has_keyword('_is_rush') and not is_vortex:
                 return False
         return True
 
@@ -252,7 +264,13 @@ class Permanent:
     # ─── Effect Action Methods ───────────────────────────────────────
 
     def change_dp(self, amount: int):
-        """Apply a temporary DP modifier (lasts until end of turn)."""
+        """Apply a temporary DP modifier (lasts until end of turn).
+
+        <Progress> immunity: negative DP modifiers from opponent effects are
+        blocked entirely while this permanent is attacking with Progress.
+        """
+        if amount < 0 and self.is_immune_to_opponent_effects:
+            return  # Progress blocks opponent DP debuffs while attacking
         self._dp_modifiers.append(amount)
 
     def clear_temp_dp(self):
@@ -385,3 +403,13 @@ class Permanent:
 
     def unsuspend(self):
         self.is_suspended = False
+
+    def clear_attack_state(self):
+        """Clear temporary attack state (is_attacking flag and temp SA modifier)."""
+        self.is_attacking = False
+        self._temp_sa_modifier = 0
+
+    @property
+    def is_immune_to_opponent_effects(self) -> bool:
+        """True if this permanent has <Progress> and is currently attacking."""
+        return self.is_attacking and self.has_keyword('_is_progress')

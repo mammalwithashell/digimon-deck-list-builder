@@ -61,9 +61,15 @@ class BT24_056(CardScript):
             player = ctx.get('player')
             perm = ctx.get('permanent')
             game = ctx.get('game')
-            # Keyword grant: cannot_return_to_deck — flag set on effect object
-            # Keyword grant: cannot_return_to_hand — flag set on effect object
-            pass
+            if not (player and game):
+                return
+            def target_filter(p):
+                return p.is_digimon
+            def on_grant(target_perm):
+                target_perm.grant_keyword('_is_cannot_return_to_deck')
+                target_perm.grant_keyword('_is_cannot_return_to_hand')
+            game.effect_select_own_permanent(
+                player, on_grant, filter_fn=target_filter, is_optional=False)
 
         effect2.set_on_process_callback(process2)
         effects.append(effect2)
@@ -91,9 +97,15 @@ class BT24_056(CardScript):
             player = ctx.get('player')
             perm = ctx.get('permanent')
             game = ctx.get('game')
-            # Keyword grant: cannot_return_to_deck — flag set on effect object
-            # Keyword grant: cannot_return_to_hand — flag set on effect object
-            pass
+            if not (player and game):
+                return
+            def target_filter(p):
+                return p.is_digimon
+            def on_grant(target_perm):
+                target_perm.grant_keyword('_is_cannot_return_to_deck')
+                target_perm.grant_keyword('_is_cannot_return_to_hand')
+            game.effect_select_own_permanent(
+                player, on_grant, filter_fn=target_filter, is_optional=False)
 
         effect3.set_on_process_callback(process3)
         effects.append(effect3)

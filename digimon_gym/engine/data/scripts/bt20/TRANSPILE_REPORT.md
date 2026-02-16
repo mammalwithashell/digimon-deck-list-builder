@@ -30,7 +30,7 @@ BT20_049: 3 effects
   [factory] reboot
 BT20_050: 4 effects
   [factory] alt_digivolve_req
-  [EffectTiming.OnEnterFieldAnyone] flip_security
+  [EffectTiming.OnEnterFieldAnyone] no-action
   [EffectTiming.OnEndAttack] draw (1/turn)
   [factory] dp_modifier
 BT20_051: 3 effects
@@ -40,7 +40,7 @@ BT20_051: 3 effects
 BT20_052: 5 effects
   [factory] alt_digivolve_req
   [EffectTiming.OnEndTurn] play_card
-  [EffectTiming.OnEnterFieldAnyone] flip_security
+  [EffectTiming.OnEnterFieldAnyone] no-action
   [EffectTiming.OnSecurityCheck] add_to_security
   [EffectTiming.None] target_lock (inherited)
 BT20_053: 4 effects
@@ -55,7 +55,7 @@ BT20_054: 3 effects
 BT20_055: 4 effects
   [EffectTiming.OnEndTurn] play_card
   [EffectTiming.OnEnterFieldAnyone] delete, de_digivolve, flip_security
-  [EffectTiming.OnEnterFieldAnyone] delete, de_digivolve, flip_security
+  [EffectTiming.OnEnterFieldAnyone] delete, de_digivolve
   [EffectTiming.OnSecurityCheck] add_to_security
 BT20_056: 5 effects
   [factory] barrier
@@ -89,7 +89,7 @@ BT20_060: 4 effects
   [EffectTiming.OnLoseSecurity] gain_memory (1/turn)
 BT20_086: 3 effects
   [factory] set_memory_3
-  [EffectTiming.OnStartMainPhase] trash_from_hand, flip_security
+  [EffectTiming.OnStartMainPhase] trash_from_hand
   [factory] security_play
 BT20_087: 4 effects
   [EffectTiming.None] also_treated_as (descriptive-tagged)

@@ -64,10 +64,16 @@ class BT23_085(CardScript):
             player = ctx.get('player')
             perm = ctx.get('permanent')
             game = ctx.get('game')
-            # Keyword grant: immune_dp_minus — flag set on effect object
-            # Keyword grant: blocker — flag set on effect object
-            # Keyword grant: reboot — flag set on effect object
-            pass
+            if not (player and game):
+                return
+            def target_filter(p):
+                return p.is_digimon
+            def on_grant(target_perm):
+                target_perm.grant_keyword('_is_immune_dp_minus')
+                target_perm.grant_keyword('_is_blocker')
+                target_perm.grant_keyword('_is_reboot')
+            game.effect_select_own_permanent(
+                player, on_grant, filter_fn=target_filter, is_optional=False)
 
         effect1.set_on_process_callback(process1)
         effects.append(effect1)

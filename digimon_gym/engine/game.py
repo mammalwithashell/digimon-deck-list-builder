@@ -57,6 +57,9 @@ class PendingAttack:
     effective_target: Union[Permanent, Player]  # changes if blocked
     is_blocked: bool = False
     blocker: Optional[Permanent] = None
+    without_suspend: bool = False  # Overclock: attack without suspending
+    is_vortex: bool = False  # Vortex: end-of-turn Digimon-only attack
+    return_phase: Optional[GamePhase] = None  # Phase to return to after resolution (e.g. EndOfTurnAction)
 
 
 @dataclass
@@ -153,6 +156,11 @@ class Game:
         elif self.current_phase == GamePhase.End:
             self.switch_turn()
             self.phase_start()
+        elif self.current_phase == GamePhase.EndOfTurnAction:
+            # After end-of-turn keywords resolve, proceed to switch turn
+            self.current_phase = GamePhase.End
+            self.switch_turn()
+            self.phase_start()
 
     def phase_start(self):
         self.current_phase = GamePhase.Start
@@ -192,7 +200,28 @@ class Game:
 
     def phase_end(self):
         self.execute_effects(EffectTiming.OnEndTurn)
+        # Check for end-of-turn keyword actions (Vortex, Overclock)
+        if self._has_end_of_turn_keywords():
+            self.current_phase = GamePhase.EndOfTurnAction
+            return  # Park for agent decision
         self.next_phase()
+
+    def _has_end_of_turn_keywords(self) -> bool:
+        """Check if the turn player has any Digimon with Vortex or Overclock."""
+        for perm in self.turn_player.battle_area:
+            if not perm.is_digimon:
+                continue
+            if perm.has_keyword('_is_vortex') and perm.can_attack(is_vortex=True):
+                return True
+            if perm.has_keyword('_is_overclock'):
+                # Overclock needs a sacrifice target (Token or other Digimon)
+                has_sacrifice = any(
+                    p is not perm and (p.is_token or p.is_digimon)
+                    for p in self.turn_player.battle_area
+                )
+                if has_sacrifice:
+                    return True
+        return False
 
     def switch_turn(self):
         self.turn_player, self.opponent_player = self.opponent_player, self.turn_player
@@ -347,23 +376,30 @@ class Game:
             "Player2": player_data(self.player2),
         }
 
-    def resolve_attack(self, attacker: Permanent, target: Union[Permanent, Player]):
-        """Begin an attack sequence. May pause for BlockTiming/CounterTiming.
+    def resolve_attack(self, attacker: Permanent, target: Union[Permanent, Player],
+                       without_suspend: bool = False, is_vortex: bool = False,
+                       return_phase: Optional[GamePhase] = None):
+        """Begin an attack sequence. May pause for BlockTiming/CounterTiming/AllianceTiming.
 
-        When blockers or counter options exist, the game transitions to
+        When blockers, counters, or Alliance options exist, the game transitions to
         interrupt phases and returns control to the game loop. The decoders
         for those phases resume the attack flow.
 
         When no interrupts are available, the entire attack resolves
         synchronously in a single call (backward compatible).
         """
-        if not attacker.can_attack():
+        if not attacker.can_attack(without_tap=without_suspend, is_vortex=is_vortex):
             return
 
         target_name = target.player_name if isinstance(target, Player) else (target.top_card.card_names[0] if target.top_card else "Unknown")
         attacker_name = attacker.top_card.card_names[0] if attacker.top_card else "Unknown"
         self.logger.log(f"[Attack] {attacker_name} attacks {target_name}")
-        attacker.suspend()
+
+        # <Progress>: mark attacker as attacking (for effect immunity)
+        attacker.is_attacking = True
+
+        if not without_suspend:
+            attacker.suspend()
 
         # Trigger When Attacking (OnAllyAttack for the attacker's effects)
         self.execute_effects(EffectTiming.OnAllyAttack, {"attacker": attacker})
@@ -373,15 +409,35 @@ class Game:
             attacker=attacker,
             original_target=target,
             effective_target=target,
+            without_suspend=without_suspend,
+            is_vortex=is_vortex,
+            return_phase=return_phase,
         )
 
-        # Check if opponent has any potential blockers
+        # <Alliance>: check if attacker has Alliance and suspendable allies exist
+        if attacker.has_keyword('_is_alliance'):
+            has_alliance_targets = any(
+                perm is not attacker and perm.is_digimon and not perm.is_suspended
+                for perm in self.turn_player.battle_area
+            )
+            if has_alliance_targets:
+                self.current_phase = GamePhase.AllianceTiming
+                return  # Park for Alliance decision
+
+        # No Alliance — check blockers
+        self._check_blockers_or_continue()
+
+    def _check_blockers_or_continue(self):
+        """Check for blockers after Alliance decisions, then continue attack flow."""
+        pa = self.pending_attack
+        if pa is None:
+            return
+
         has_blockers = any(
-            perm.can_block(attacker) for perm in self.opponent_player.battle_area
+            perm.can_block(pa.attacker) for perm in self.opponent_player.battle_area
         )
 
         if has_blockers:
-            # Transition to BlockTiming — opponent decides
             self.current_phase = GamePhase.BlockTiming
             self.active_player = self.opponent_player
             return  # Park here; _decode_block() will resume
@@ -454,9 +510,10 @@ class Game:
         target = pa.effective_target
 
         # Clear interrupt state — back to turn_player control
+        return_phase = pa.return_phase or GamePhase.Main
         self.active_player = None
         self.pending_attack = None
-        self.current_phase = GamePhase.Main
+        self.current_phase = return_phase
 
         if isinstance(target, Player):
             self._execute_security_checks(attacker, target)
@@ -473,7 +530,8 @@ class Game:
                 was_deleted = self.opponent_player.delete_permanent(target, is_battle=True)
                 if has_retaliation and was_deleted:
                     self.logger.log(f"[Retaliation] {target.top_card.card_names[0] if target.top_card else 'Unknown'} retaliates!")
-                    self.turn_player.delete_permanent(attacker, is_battle=True)
+                    # Retaliation is an opponent's effect — Progress blocks this
+                    self.turn_player.delete_permanent(attacker, is_battle=True, is_opponent_effect=True)
                 # <Piercing>: after winning battle vs Digimon, check security
                 # Only triggers when the target was actually deleted (not prevented)
                 elif was_deleted and attacker.has_keyword('_is_piercing') and attacker in self.turn_player.battle_area:
@@ -485,13 +543,26 @@ class Game:
                 was_deleted = self.turn_player.delete_permanent(attacker, is_battle=True)
                 if has_retaliation and was_deleted:
                     self.logger.log(f"[Retaliation] {attacker.top_card.card_names[0] if attacker.top_card else 'Unknown'} retaliates!")
-                    self.opponent_player.delete_permanent(target, is_battle=True)
+                    # Retaliation is an opponent's effect — Progress blocks this
+                    self.opponent_player.delete_permanent(target, is_battle=True, is_opponent_effect=True)
             else:
                 # Tie: both deleted (Retaliation doesn't trigger since neither "wins")
                 self.opponent_player.delete_permanent(target, is_battle=True)
                 self.turn_player.delete_permanent(attacker, is_battle=True)
 
+        # Clear attacker state before end-of-attack effects
+        attacker.clear_attack_state()
+
         self.execute_effects(EffectTiming.OnEndAttack)
+
+        # If we returned to EndOfTurnAction (from Vortex/Overclock attack), check for more
+        if self.current_phase == GamePhase.EndOfTurnAction:
+            if not self._has_end_of_turn_keywords():
+                # No more end-of-turn keywords — proceed to switch turn
+                self.next_phase()
+            # Otherwise stay parked in EndOfTurnAction for next agent decision
+            return
+
         self.check_turn_end()
 
     def action_play_card(self, card_index: int):
@@ -823,6 +894,13 @@ class Game:
                 if has_valid_dna_targets(card, me.battle_area):
                     mask[63 + h] = 1.0
 
+            # <Training>: suspend to place top deck card at bottom of digi stack (1000-1999)
+            for i in range(min(len(me.battle_area), FIELD_SLOTS)):
+                perm = me.battle_area[i]
+                if (perm.is_digimon and not perm.is_suspended
+                        and perm.has_keyword('_is_training') and me.library_cards):
+                    mask[1000 + i * 10] = 1.0
+
             # Pass (62) - always valid in main
             mask[62] = 1.0
 
@@ -833,6 +911,12 @@ class Game:
             # Move (61)
             if me.breeding_area is not None and (me.breeding_area.level or 0) >= 3:
                 mask[61] = 1.0
+            # <Training> in breeding area
+            ba = me.breeding_area
+            if (ba is not None and ba.is_digimon and not ba.is_suspended
+                    and ba.has_keyword('_is_training') and me.library_cards):
+                # Use a special action index for breeding training: 1000 + 12*10 (virtual slot 12)
+                mask[1000 + 12 * 10] = 1.0
             # Pass (62)
             mask[62] = 1.0
 
@@ -868,6 +952,42 @@ class Game:
                     base_perm = me.battle_area[f]
                     if can_digivolve(card, base_perm):
                         mask[400 + h * 15 + f] = 1.0
+
+        elif phase == GamePhase.EndOfTurnAction:
+            # End-of-turn keyword actions: Vortex attacks and Overclock activations
+            mask[62] = 1.0  # Can always decline / end turn
+
+            for i in range(min(len(me.battle_area), FIELD_SLOTS)):
+                perm = me.battle_area[i]
+                if not perm.is_digimon:
+                    continue
+
+                # <Vortex>: attack opponent Digimon at end of turn
+                if perm.has_keyword('_is_vortex') and perm.can_attack(is_vortex=True):
+                    for j in range(min(len(opp.battle_area), FIELD_SLOTS)):
+                        target = opp.battle_area[j]
+                        if target.is_digimon:
+                            mask[100 + i * 15 + j] = 1.0
+
+                # <Overclock>: activate to sacrifice + attack player
+                if perm.has_keyword('_is_overclock'):
+                    has_sacrifice = any(
+                        p is not perm and (p.is_token or p.is_digimon)
+                        for p in me.battle_area
+                    )
+                    if has_sacrifice:
+                        # Expose via effect activation range (1000 + slot * 10 + 0)
+                        mask[1000 + i * 10] = 1.0
+
+        elif phase == GamePhase.AllianceTiming:
+            # Alliance: select an unsuspended ally to suspend for DP + SA+1 bonus
+            mask[62] = 1.0  # Can always decline Alliance
+            pa = self.pending_attack
+            if pa:
+                for i in range(min(len(me.battle_area), FIELD_SLOTS)):
+                    perm = me.battle_area[i]
+                    if perm is not pa.attacker and perm.is_digimon and not perm.is_suspended:
+                        mask[100 + i] = 1.0
 
         elif phase == GamePhase.SelectTrash:
             max_trash_sel = SEL_TRASH_END - SEL_TRASH_START + 1  # 50 slots
@@ -921,6 +1041,10 @@ class Game:
             self._decode_trash_selection(action_id)
         elif phase == GamePhase.SelectSource:
             self._decode_source_selection(action_id)
+        elif phase == GamePhase.EndOfTurnAction:
+            self._decode_end_of_turn_action(action_id)
+        elif phase == GamePhase.AllianceTiming:
+            self._decode_alliance(action_id)
 
     def _decode_main(self, action_id: int):
         if 0 <= action_id <= 29:
@@ -943,6 +1067,14 @@ class Game:
             hand_idx = normalized // 15
             field_idx = normalized % 15
             self.action_digivolve(field_idx, hand_idx)
+        elif 1000 <= action_id <= 1999:
+            # Effect activation (Training in main phase)
+            normalized = action_id - 1000
+            perm_idx = normalized // 10
+            if perm_idx < len(self.turn_player.battle_area):
+                perm = self.turn_player.battle_area[perm_idx]
+                if perm.has_keyword('_is_training'):
+                    self._execute_training(perm, self.turn_player)
 
     def _decode_breeding(self, action_id: int):
         if action_id == 60:
@@ -951,6 +1083,14 @@ class Game:
             self.action_move_from_breeding()
         elif action_id == 62:
             self.action_breeding_pass()
+        elif 1000 <= action_id <= 1999:
+            # Training in breeding area (virtual slot 12 = 1000 + 120)
+            normalized = action_id - 1000
+            perm_idx = normalized // 10
+            if perm_idx == 12 and self.turn_player.breeding_area:
+                perm = self.turn_player.breeding_area
+                if perm.has_keyword('_is_training'):
+                    self._execute_training(perm, self.turn_player)
 
     def _decode_selection(self, action_id: int):
         """Handle target or material selection from an effect callback."""
@@ -1104,6 +1244,103 @@ class Game:
                     self.current_phase = prev_phase
                     self.active_player = None
                     callback(action_id)
+
+    def _execute_training(self, perm: Permanent, owner: Player):
+        """Execute <Training>: suspend this Digimon and place top deck card at bottom of digi stack."""
+        if not owner.library_cards:
+            return
+        perm.suspend()
+        top_card = owner.library_cards.pop(0)
+        perm.add_card_source_bottom(top_card)
+        card_name = top_card.card_names[0] if top_card.card_names else "Unknown"
+        perm_name = perm.top_card.card_names[0] if perm.top_card else "Unknown"
+        self.logger.log(f"[Training] {perm_name} trains: placed {card_name} at bottom of digi stack")
+
+    def _decode_end_of_turn_action(self, action_id: int):
+        """Handle end-of-turn keyword actions (Vortex, Overclock)."""
+        if action_id == 62:
+            # Decline — end the turn
+            self.next_phase()
+            return
+
+        if 100 <= action_id <= 399:
+            # Vortex attack against opponent Digimon
+            normalized = action_id - 100
+            attacker_idx = normalized // 15
+            target_idx = normalized % 15
+            if attacker_idx < len(self.turn_player.battle_area) and target_idx < len(self.opponent_player.battle_area):
+                attacker = self.turn_player.battle_area[attacker_idx]
+                target = self.opponent_player.battle_area[target_idx]
+                self.logger.log(f"[Vortex] End-of-turn attack!")
+                self.resolve_attack(attacker, target, is_vortex=True,
+                                    return_phase=GamePhase.EndOfTurnAction)
+
+        elif 1000 <= action_id <= 1999:
+            # Overclock activation: select sacrifice target, then attack player
+            normalized = action_id - 1000
+            perm_idx = normalized // 10
+            if perm_idx < len(self.turn_player.battle_area):
+                overclock_perm = self.turn_player.battle_area[perm_idx]
+                self._initiate_overclock(overclock_perm)
+
+    def _initiate_overclock(self, overclock_perm: Permanent):
+        """Overclock step 1: select a Token or other Digimon to sacrifice."""
+        valid = []
+        for i, perm in enumerate(self.turn_player.battle_area):
+            if perm is not overclock_perm and (perm.is_token or perm.is_digimon):
+                valid.append(SEL_MY_FIELD_START + i)
+        if not valid:
+            return
+
+        def on_sacrifice_selected(action_id: int):
+            idx = action_id - SEL_MY_FIELD_START
+            if 0 <= idx < len(self.turn_player.battle_area):
+                sacrifice = self.turn_player.battle_area[idx]
+                sacrifice_name = sacrifice.top_card.card_names[0] if sacrifice.top_card else "Unknown"
+                self.logger.log(f"[Overclock] Sacrificed {sacrifice_name}")
+                self.turn_player.delete_permanent(sacrifice)
+                # Attack player without suspending
+                self.logger.log(f"[Overclock] End-of-turn attack on player!")
+                self.resolve_attack(overclock_perm, self.opponent_player, without_suspend=True,
+                                    return_phase=GamePhase.EndOfTurnAction)
+
+        self.request_selection(
+            GamePhase.SelectTarget, self.turn_player, on_sacrifice_selected,
+            valid, is_optional=True)
+
+    def _decode_alliance(self, action_id: int):
+        """Handle Alliance target selection during attack."""
+        pa = self.pending_attack
+        if pa is None:
+            return
+
+        if action_id == 62:
+            # Decline Alliance — proceed to blocker check
+            self._check_blockers_or_continue()
+            return
+
+        if 100 <= action_id <= 111:
+            ally_idx = action_id - 100
+            if ally_idx < len(self.turn_player.battle_area):
+                ally = self.turn_player.battle_area[ally_idx]
+                if ally is not pa.attacker and ally.is_digimon and not ally.is_suspended:
+                    ally_name = ally.top_card.card_names[0] if ally.top_card else "Unknown"
+                    ally_dp = ally.dp or 0
+                    ally.suspend()
+                    pa.attacker.change_dp(ally_dp)
+                    pa.attacker._temp_sa_modifier += 1
+                    self.logger.log(f"[Alliance] Suspended {ally_name}, adding {ally_dp} DP and SA+1")
+
+                    # Check for more Alliance-eligible allies
+                    has_more = any(
+                        perm is not pa.attacker and perm.is_digimon and not perm.is_suspended
+                        for perm in self.turn_player.battle_area
+                    )
+                    if has_more:
+                        return  # Stay in AllianceTiming for another choice
+
+            # No more allies or invalid — proceed to blocker check
+            self._check_blockers_or_continue()
 
     # ─── Selection Request Helper ─────────────────────────────────
 
