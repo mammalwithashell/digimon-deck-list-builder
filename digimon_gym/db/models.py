@@ -247,6 +247,47 @@ class GameParticipant(Base):
     game_session = relationship("GameSession", back_populates="participants")
 
 
+# ── Game Recordings ────────────────────────────────────────────────
+
+class GameRecording(Base):
+    """Server-side recording of a headless (agent-vs-agent) game."""
+    __tablename__ = "game_recordings"
+    __table_args__ = (
+        Index("idx_game_recordings_created", "created_at"),
+    )
+
+    id = Column(String, primary_key=True, default=_new_uuid)
+    game_session_id = Column(
+        String, ForeignKey("game_sessions.id", ondelete="SET NULL"), nullable=True
+    )
+    game_mode = Column(String, nullable=False, default="headless")
+    recording_json = Column(Text, nullable=False)  # Full JSON: initial_state + actions + tensors
+    total_steps = Column(Integer, nullable=False, default=0)
+    has_tensors = Column(Integer, default=0, nullable=False)  # 1 if tensor snapshots included
+    created_at = Column(DateTime(timezone=True), default=_utcnow, nullable=False)
+
+    game_session = relationship("GameSession", backref="recording")
+
+
+class GameRecordingReport(Base):
+    """Client-submitted bug report with attached game recording from interactive play."""
+    __tablename__ = "game_recording_reports"
+    __table_args__ = (
+        Index("idx_recording_reports_created", "created_at"),
+        Index("idx_recording_reports_user", "user_id"),
+    )
+
+    id = Column(String, primary_key=True, default=_new_uuid)
+    user_id = Column(
+        String, ForeignKey("users.id", ondelete="SET NULL"), nullable=True
+    )
+    description = Column(Text, default="")
+    recording_json = Column(Text, nullable=False)  # Full client recording bundle
+    created_at = Column(DateTime(timezone=True), default=_utcnow, nullable=False)
+
+    user = relationship("User")
+
+
 # ── Refresh Tokens ──────────────────────────────────────────────────────
 
 class RefreshToken(Base):

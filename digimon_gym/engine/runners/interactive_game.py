@@ -7,6 +7,7 @@ import numpy as np
 from digimon_gym.engine.runners.base_runner import BaseGameRunner
 from digimon_gym.engine.loggers import VerboseLogger
 from digimon_gym.engine.data.enums import PlayerType
+from digimon_gym.engine.recording import GameRecorder
 
 
 class InteractiveGame(BaseGameRunner):
@@ -15,13 +16,18 @@ class InteractiveGame(BaseGameRunner):
     Always uses VerboseLogger. Supports step-pause semantics:
     run_step() advances the game but pauses when it's a human
     player's turn, returning state for the UI to render.
+
+    Automatically captures initial state (post-shuffle zones, first player)
+    so the API can return recording metadata for client-side recording.
     """
 
     def __init__(self, deck1_ids: List[str], deck2_ids: List[str],
                  player1_type: PlayerType = PlayerType.Agent,
                  player2_type: PlayerType = PlayerType.Agent):
         self._verbose_logger = VerboseLogger()
-        super().__init__(deck1_ids, deck2_ids, self._verbose_logger)
+        # Create a lightweight recorder just for initial state capture
+        recorder = GameRecorder(record_tensors=False)
+        super().__init__(deck1_ids, deck2_ids, self._verbose_logger, recorder=recorder)
         self.player1_type = player1_type
         self.player2_type = player2_type
 
@@ -83,3 +89,14 @@ class InteractiveGame(BaseGameRunner):
     def clear_log(self) -> None:
         """Clear the log buffer."""
         self._verbose_logger.clear()
+
+    def get_initial_state_dict(self) -> Dict[str, Any]:
+        """Return initial state metadata for client-side recording.
+
+        Contains deck lists, post-shuffle zone orders, first player, and timestamp.
+        The client stores this on game creation and accumulates action responses
+        to build a complete replay log in localStorage/IndexedDB.
+        """
+        if self.recorder and self.recorder.initial_state:
+            return self.recorder.to_dict()["initial_state"]
+        return {}

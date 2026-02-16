@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from datetime import datetime
-from typing import List, Optional
+from typing import Any, Dict, List, Optional
 
 from pydantic import BaseModel, EmailStr, Field
 
@@ -180,3 +180,69 @@ class GameParticipantResponse(BaseModel):
     result: Optional[str] = None
 
     model_config = {"from_attributes": True}
+
+
+# ── Game Recording ─────────────────────────────────────────────────
+
+class BugReportRequest(BaseModel):
+    """Client uploads a game recording bundle for bug reporting."""
+    description: str = ""
+    recording: Dict[str, Any]  # Full client-side recording bundle
+
+
+class BugReportResponse(BaseModel):
+    report_id: str
+    status: str = "submitted"
+
+
+class RecordingResponse(BaseModel):
+    """Summary of a saved headless game recording."""
+    id: str
+    game_mode: str
+    total_steps: int
+    has_tensors: bool
+    created_at: datetime
+
+    model_config = {"from_attributes": True}
+
+
+class RecordingSaveResponse(BaseModel):
+    recording_id: str
+    status: str = "saved"
+
+
+# ── Replay ───────────────────────────────────────────────────────────────
+
+class ReplayRequest(BaseModel):
+    """Create a replay session from a recording dict."""
+    recording: Dict[str, Any]
+    verify: bool = False
+
+
+class SeekRequest(BaseModel):
+    """Jump to a specific step in a replay session."""
+    step: int
+
+
+class ReplayCreateResponse(BaseModel):
+    """Response from creating a replay session."""
+    replay_id: str
+    total_steps: int
+    initial_state: Dict[str, Any]
+
+
+class ReplayStepResponse(BaseModel):
+    """Response from a replay step or seek."""
+    step_number: int
+    action_id: int
+    player_id: int
+    phase_before: str
+    phase_after: str
+    memory_before: int
+    memory_after: int
+    turn_number: int
+    is_game_over: bool
+    winner_id: Optional[int] = None
+    state: Dict[str, Any]
+    verification_ok: Optional[bool] = None
+    verification_errors: List[str] = []

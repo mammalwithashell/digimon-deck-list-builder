@@ -2,21 +2,28 @@
 
 from __future__ import annotations
 from abc import ABC
-from typing import List, Optional
+from typing import TYPE_CHECKING, List, Optional
 
 from digimon_gym.engine.game import Game
 from digimon_gym.engine.loggers import IGameLogger, SilentLogger
 from digimon_gym.engine.data.card_database import CardDatabase
 from digimon_gym.engine.data.card_registry import CardRegistry
 
+if TYPE_CHECKING:
+    from digimon_gym.engine.recording import GameRecorder
+
 
 class BaseGameRunner(ABC):
     """Abstract base for game runners. Handles deck setup and game creation."""
 
     def __init__(self, deck1_ids: List[str], deck2_ids: List[str],
-                 logger: Optional[IGameLogger] = None):
+                 logger: Optional[IGameLogger] = None,
+                 recorder: Optional[GameRecorder] = None):
         self.logger: IGameLogger = logger if logger is not None else SilentLogger()
         self.game = Game(self.logger)
+        self._deck1_ids = list(deck1_ids)  # Preserve original deck lists
+        self._deck2_ids = list(deck2_ids)
+        self.recorder = recorder
 
         # Ensure card registry is initialized
         CardRegistry.ensure_initialized()
@@ -27,6 +34,12 @@ class BaseGameRunner(ABC):
 
         # Start the game (shuffles, draws security + hand, parks at Breeding)
         self.game.start_game()
+
+        # Capture initial state if recording
+        if self.recorder:
+            self.recorder.capture_initial_state(self.game)
+            self.recorder.initial_state.player1.deck_list = self._deck1_ids
+            self.recorder.initial_state.player2.deck_list = self._deck2_ids
 
     @staticmethod
     def _setup_deck(player, card_ids: List[str]):
