@@ -1,3 +1,5 @@
+from contextlib import asynccontextmanager
+
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
 from typing import List, Dict, Any, Optional, Union
@@ -12,8 +14,28 @@ from digimon_gym.engine.data.enums import PlayerType
 from digimon_gym.engine.data.deck_loader import (
     parse_deck, validate_deck, summarize_deck, DeckValidationResult,
 )
+from digimon_gym.db.database import init_db
+from digimon_gym.db.routers import auth as auth_router
+from digimon_gym.db.routers import users as users_router
+from digimon_gym.db.routers import decks as decks_router
+from digimon_gym.db.routers import friends as friends_router
+from digimon_gym.db.routers import assets as assets_router
 
-app = FastAPI()
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    await init_db()
+    yield
+
+
+app = FastAPI(lifespan=lifespan)
+
+# ─── Database-backed API routers ─────────────────────────────────────────
+app.include_router(auth_router.router)
+app.include_router(users_router.router)
+app.include_router(decks_router.router)
+app.include_router(friends_router.router)
+app.include_router(assets_router.router)
 
 # ─── Game Session Storage ─────────────────────────────────────────────
 active_games: Dict[str, Union[HeadlessGame, InteractiveGame]] = {}

@@ -118,3 +118,9 @@ class AttackResolution(Enum):
 class PlayerType(Enum):
     Agent = 0
     Human = 1
+
+class GameMode(Enum):
+    Standard = "standard"
+    EDHCommander = "edh_commander"
+    Titan = "titan"
+    NoRestriction = "no_restriction"

@@ -24,6 +24,7 @@ dev = [
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 addopts = "--ignore=tests/test_rl_gym.py -v"
+asyncio_mode = "auto"
 
 [build-system]
 requires = ["setuptools>=68.0"]

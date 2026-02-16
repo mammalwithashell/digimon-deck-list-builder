@@ -1,0 +1,307 @@
+"""Deck CRUD router with per-game-mode validation."""
+
+from __future__ import annotations
+
+import json
+from typing import List, Optional
+
+from fastapi import APIRouter, Depends, HTTPException, Query, status
+from sqlalchemy import func, select
+from sqlalchemy.ext.asyncio import AsyncSession
+
+from digimon_gym.db.auth import get_current_user
+from digimon_gym.db.database import get_db
+from digimon_gym.db.models import Deck, DeckVersion, User
+from digimon_gym.db.schemas import (
+    CreateDeckRequest,
+    DeckResponse,
+    DeckSummary,
+    UpdateDeckRequest,
+)
+from digimon_gym.engine.data.deck_loader import validate_deck, RESTRICTED_LIST, CardRestriction
+
+router = APIRouter(prefix="/decks", tags=["decks"])
+
+
+def _validate_for_mode(card_ids: list[str], game_mode: str, titan_role: str | None) -> tuple[bool, list[str]]:
+    """Run deck validation with mode-specific rules.
+
+    Returns (is_valid, error_list).
+    """
+    if game_mode == "no_restriction":
+        # Only check deck size and card existence — no restricted list
+        result = validate_deck(card_ids, restricted_list=CardRestriction())
+        return result.is_valid, result.errors
+
+    if game_mode == "titan":
+        expected_main = 80 if titan_role == "titan" else 50
+        # Use standard restricted list but override size check via post-validation
+        result = validate_deck(card_ids)
+        # Filter out size errors and re-check with titan size
+        errors = [e for e in result.errors if "Main deck must be exactly" not in e]
+        # Count main deck cards (non-egg)
+        from digimon_gym.engine.data.card_database import CardDatabase
+        from digimon_gym.engine.data.enums import CardKind
+        db = CardDatabase()
+        main_count = sum(
+            1 for cid in card_ids
+            if (entity := db.get_card(cid)) is None or entity.card_kind != CardKind.DigiEgg
+        )
+        if main_count != expected_main:
+            errors.append(f"Titan {titan_role} main deck must be exactly {expected_main} cards (got {main_count})")
+        return len(errors) == 0, errors
+
+    if game_mode == "edh_commander":
+        # Singleton rule: no more than 1 copy of any card (except basic eggs)
+        from collections import Counter
+        counts = Counter(card_ids)
+        errors = []
+        for card_id, count in counts.items():
+            if count > 1:
+                errors.append(f"{card_id}: {count} copies (EDH Commander is singleton — max 1)")
+        # Size: 70 main deck cards
+        from digimon_gym.engine.data.card_database import CardDatabase
+        from digimon_gym.engine.data.enums import CardKind
+        db = CardDatabase()
+        main_count = sum(
+            1 for cid in card_ids
+            if (entity := db.get_card(cid)) is None or entity.card_kind != CardKind.DigiEgg
+        )
+        egg_count = len(card_ids) - main_count
+        if main_count != 70:
+            errors.append(f"EDH Commander main deck must be exactly 70 cards (got {main_count})")
+        if egg_count > 5:
+            errors.append(f"Digi-Egg deck must be 0-5 cards (got {egg_count})")
+        return len(errors) == 0, errors
+
+    # Standard mode — use full validation
+    result = validate_deck(card_ids)
+    return result.is_valid, result.errors
+
+
+def _deck_to_response(deck: Deck) -> DeckResponse:
+    return DeckResponse(
+        id=deck.id,
+        owner_id=deck.owner_id,
+        name=deck.name,
+        description=deck.description or "",
+        game_mode=deck.game_mode,
+        titan_role=deck.titan_role,
+        main_deck=json.loads(deck.main_deck),
+        egg_deck=json.loads(deck.egg_deck) if deck.egg_deck else [],
+        commander_id=deck.commander_id,
+        is_valid=bool(deck.is_valid),
+        validation_errors=json.loads(deck.validation_errors) if deck.validation_errors else [],
+        is_public=bool(deck.is_public),
+        tags=json.loads(deck.tags) if deck.tags else [],
+        created_at=deck.created_at,
+        updated_at=deck.updated_at,
+    )
+
+
+@router.post("", response_model=DeckResponse, status_code=status.HTTP_201_CREATED)
+async def create_deck(
+    request: CreateDeckRequest,
+    user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    # Validate mode-specific constraints on request
+    if request.game_mode == "edh_commander" and not request.commander_id:
+        raise HTTPException(status_code=400, detail="EDH Commander mode requires a commander_id")
+    if request.game_mode == "titan" and not request.titan_role:
+        raise HTTPException(status_code=400, detail="Titan mode requires a titan_role (titan or team)")
+    if request.game_mode != "edh_commander" and request.commander_id:
+        raise HTTPException(status_code=400, detail="commander_id only valid for edh_commander mode")
+    if request.game_mode != "titan" and request.titan_role:
+        raise HTTPException(status_code=400, detail="titan_role only valid for titan mode")
+
+    # Run validation
+    all_cards = request.main_deck + request.egg_deck
+    is_valid, errors = _validate_for_mode(all_cards, request.game_mode, request.titan_role)
+
+    deck = Deck(
+        owner_id=user.id,
+        name=request.name,
+        description=request.description,
+        game_mode=request.game_mode,
+        titan_role=request.titan_role,
+        main_deck=json.dumps(request.main_deck),
+        egg_deck=json.dumps(request.egg_deck),
+        commander_id=request.commander_id,
+        is_valid=1 if is_valid else 0,
+        validation_errors=json.dumps(errors),
+        is_public=1 if request.is_public else 0,
+        tags=json.dumps(request.tags),
+    )
+    db.add(deck)
+    await db.commit()
+    await db.refresh(deck)
+    return _deck_to_response(deck)
+
+
+@router.get("", response_model=List[DeckSummary])
+async def list_my_decks(
+    game_mode: Optional[str] = Query(None, pattern=r"^(standard|edh_commander|titan|no_restriction)$"),
+    user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    query = select(Deck).where(Deck.owner_id == user.id)
+    if game_mode:
+        query = query.where(Deck.game_mode == game_mode)
+    query = query.order_by(Deck.updated_at.desc())
+
+    result = await db.execute(query)
+    decks = result.scalars().all()
+    return [
+        DeckSummary(
+            id=d.id,
+            name=d.name,
+            game_mode=d.game_mode,
+            is_valid=bool(d.is_valid),
+            is_public=bool(d.is_public),
+            card_count=len(json.loads(d.main_deck)) + len(json.loads(d.egg_deck) if d.egg_deck else []),
+            created_at=d.created_at,
+            updated_at=d.updated_at,
+        )
+        for d in decks
+    ]
+
+
+@router.get("/public", response_model=List[DeckSummary])
+async def list_public_decks(
+    game_mode: Optional[str] = Query(None, pattern=r"^(standard|edh_commander|titan|no_restriction)$"),
+    db: AsyncSession = Depends(get_db),
+):
+    query = select(Deck).where(Deck.is_public == 1)
+    if game_mode:
+        query = query.where(Deck.game_mode == game_mode)
+    query = query.order_by(Deck.updated_at.desc()).limit(50)
+
+    result = await db.execute(query)
+    decks = result.scalars().all()
+    return [
+        DeckSummary(
+            id=d.id,
+            name=d.name,
+            game_mode=d.game_mode,
+            is_valid=bool(d.is_valid),
+            is_public=True,
+            card_count=len(json.loads(d.main_deck)) + len(json.loads(d.egg_deck) if d.egg_deck else []),
+            created_at=d.created_at,
+            updated_at=d.updated_at,
+        )
+        for d in decks
+    ]
+
+
+@router.get("/{deck_id}", response_model=DeckResponse)
+async def get_deck(
+    deck_id: str,
+    user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    result = await db.execute(select(Deck).where(Deck.id == deck_id))
+    deck = result.scalar_one_or_none()
+    if not deck:
+        raise HTTPException(status_code=404, detail="Deck not found")
+    # Allow access if owner or public
+    if deck.owner_id != user.id and not deck.is_public:
+        raise HTTPException(status_code=403, detail="Access denied")
+    return _deck_to_response(deck)
+
+
+@router.put("/{deck_id}", response_model=DeckResponse)
+async def update_deck(
+    deck_id: str,
+    request: UpdateDeckRequest,
+    user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    result = await db.execute(select(Deck).where(Deck.id == deck_id))
+    deck = result.scalar_one_or_none()
+    if not deck:
+        raise HTTPException(status_code=404, detail="Deck not found")
+    if deck.owner_id != user.id:
+        raise HTTPException(status_code=403, detail="Access denied")
+
+    # Apply updates
+    if request.name is not None:
+        deck.name = request.name
+    if request.description is not None:
+        deck.description = request.description
+    if request.main_deck is not None:
+        deck.main_deck = json.dumps(request.main_deck)
+    if request.egg_deck is not None:
+        deck.egg_deck = json.dumps(request.egg_deck)
+    if request.commander_id is not None:
+        deck.commander_id = request.commander_id
+    if request.is_public is not None:
+        deck.is_public = 1 if request.is_public else 0
+    if request.tags is not None:
+        deck.tags = json.dumps(request.tags)
+
+    # Re-validate
+    all_cards = json.loads(deck.main_deck) + json.loads(deck.egg_deck or "[]")
+    is_valid, errors = _validate_for_mode(all_cards, deck.game_mode, deck.titan_role)
+    deck.is_valid = 1 if is_valid else 0
+    deck.validation_errors = json.dumps(errors)
+
+    # Save version snapshot if card list changed
+    if request.main_deck is not None or request.egg_deck is not None:
+        # Get next version number
+        max_ver = await db.execute(
+            select(func.max(DeckVersion.version_number)).where(DeckVersion.deck_id == deck_id)
+        )
+        current_max = max_ver.scalar() or 0
+        version = DeckVersion(
+            deck_id=deck_id,
+            version_number=current_max + 1,
+            main_deck=deck.main_deck,
+            egg_deck=deck.egg_deck or "[]",
+            commander_id=deck.commander_id,
+            change_note=request.change_note,
+        )
+        db.add(version)
+
+    await db.commit()
+    await db.refresh(deck)
+    return _deck_to_response(deck)
+
+
+@router.delete("/{deck_id}")
+async def delete_deck(
+    deck_id: str,
+    user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    result = await db.execute(select(Deck).where(Deck.id == deck_id))
+    deck = result.scalar_one_or_none()
+    if not deck:
+        raise HTTPException(status_code=404, detail="Deck not found")
+    if deck.owner_id != user.id:
+        raise HTTPException(status_code=403, detail="Access denied")
+    await db.delete(deck)
+    await db.commit()
+    return {"status": "deleted"}
+
+
+@router.post("/{deck_id}/validate", response_model=DeckResponse)
+async def validate_existing_deck(
+    deck_id: str,
+    user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    result = await db.execute(select(Deck).where(Deck.id == deck_id))
+    deck = result.scalar_one_or_none()
+    if not deck:
+        raise HTTPException(status_code=404, detail="Deck not found")
+    if deck.owner_id != user.id:
+        raise HTTPException(status_code=403, detail="Access denied")
+
+    all_cards = json.loads(deck.main_deck) + json.loads(deck.egg_deck or "[]")
+    is_valid, errors = _validate_for_mode(all_cards, deck.game_mode, deck.titan_role)
+    deck.is_valid = 1 if is_valid else 0
+    deck.validation_errors = json.dumps(errors)
+    await db.commit()
+    await db.refresh(deck)
+    return _deck_to_response(deck)

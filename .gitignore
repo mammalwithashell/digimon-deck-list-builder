@@ -12,3 +12,4 @@ dcgo_build_errors_*
 models/
 runs/
 .claude/settings.local.json
+nul
