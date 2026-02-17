@@ -18,6 +18,7 @@ class Permanent:
         self._granted_keywords: dict = {}  # keyword_attr -> expiry_turn (or -1 for permanent)
         self.is_attacking: bool = False  # True while this permanent is the attacker in combat
         self._temp_sa_modifier: int = 0  # Temporary Security Attack modifier (e.g. from Alliance)
+        self._ctx = {"permanent": self}  # Reusable context for effects
 
     @property
     def digivolution_cards(self) -> List['CardSource']:
@@ -93,8 +94,7 @@ class Permanent:
             effects = source.effect_list(EffectTiming.NoTiming)
             for effect in effects:
                 if effect.is_inherited_effect:
-                    ctx = {"permanent": self}
-                    if effect.can_use_condition and effect.can_use_condition(ctx):
+                    if effect.can_use_condition and effect.can_use_condition(self._ctx):
                         active.append(effect)
 
         # Effects from Top Card (not inherited)
@@ -103,8 +103,7 @@ class Permanent:
             for effect in effects:
                 if not effect.is_inherited_effect:
                     if effect.dp_modifier != 0:
-                        ctx = {"permanent": self}
-                        if effect.can_use_condition and effect.can_use_condition(ctx):
+                        if effect.can_use_condition and effect.can_use_condition(self._ctx):
                             active.append(effect)
 
         return active
@@ -377,14 +376,13 @@ class Permanent:
         """
         is_under = source is not self.top_card
         total_dp = 0
-        ctx = {"permanent": self}
         for effect in source.effect_list(EffectTiming.NoTiming):
             if is_under and not effect.is_inherited_effect:
                 continue
             if not is_under and effect.is_inherited_effect:
                 continue
             if effect.dp_modifier != 0:
-                if effect.can_use_condition and effect.can_use_condition(ctx):
+                if effect.can_use_condition and effect.can_use_condition(self._ctx):
                     total_dp += effect.dp_modifier
         return float(total_dp)
 
