@@ -8,6 +8,8 @@ This project utilizes two distinct types of AI agents to solve the Digimon TCG D
 2. The Pilot (Battle Agent): Agents that play the actual matches to generate win-rate data, ranging from Greedy Heuristics to MCTS and PPO.
 --------------------------------------------------------------------------------
 1. The Architect (Deck Builder Agent)
+**Status:** Specced, not yet implemented.
+
 Algorithm: Deep Q-Network (DQN) / Q-DeckRec Implementation. Goal: Maximize the cumulative exponential win rate of a deck against a specific meta-opponent.
 Markov Decision Process (MDP) Definition
 • State Space (S): A concatenation of three vectors:
@@ -29,6 +31,7 @@ Implementation Details
 --------------------------------------------------------------------------------
 2. The Pilot (Battle Agent)
 Goal: Play Digimon TCG matches competently to provide a ground-truth "Win Rate" for the Architect.
+
 A. Agent Types
 The simulator supports swappable agent "brains" to trade off speed vs. skill.
 1. Greedy Agent (Baseline)
@@ -40,29 +43,50 @@ The simulator supports swappable agent "brains" to trade off speed vs. skill.
     ◦ Phases: Selection (UCB1) -> Expansion -> Simulation -> Backpropagation.
     ◦ Speed: Slow (~1-5s per move depending on iteration count).
     ◦ Use Case: Late-stage validation; testing against "Smart" opponents.
-3. RL Pilot (PPO)
-    ◦ Logic: Proximal Policy Optimization. Trains a neural network to mimic the MCTS agent but runs instantly.
+3. RL Pilot (MaskablePPO)
+    ◦ Logic: Proximal Policy Optimization with action masking (MaskablePPO from sb3-contrib).
+    ◦ Implementation: `digimon_gym/agents/pilot_training.py`
     ◦ Use Case: The final production agent for high-speed optimization.
+
 B. State Representation (Gymnasium)
-The game board is converted into a numeric vector (Observation Space) for the Pilot:
-• Global Info: [TurnCount, MyMemory, OpponentMemory, MySecurityCount, OppSecurityCount]
-• Battle Area: One-Hot encoded vectors for every card on the board (ID, DP, DigivolutionSources).
-• Hand: One-Hot encoded vector of cards in hand.
-C. Action Masking (Critical)
-To prevent illegal moves (hallucinations), the environment provides an action_mask:
-• Mask: A boolean array matching the size of the Action Space.
-• Logic:
-    ◦ If Phase == Main: Actions 0-9 (Play Card) are True only if memory is sufficient.
-    ◦ If Effect == TrashCard: Actions 10-19 (Trash Index) are True only for cards existing in hand.
-    ◦ Instruction: The Agent must apply this mask to the logits before softmax selection.
+The game board is converted into a **981-float tensor** (Observation Space) for the Pilot.
+See `TENSOR_SPEC.md` for the full layout.
+
+• Global Info: [TurnCount, Phase, Memory, ...] (indices 0-9)
+• Battle Area: 12 slots per player, 31 floats per slot (indices 10-753)
+• Hand, Trash, Security: Lists of normalized card IDs (indices 754-903)
+• Breeding Area: 1 slot per player (indices 904-965)
+• Revealed Cards: List of card IDs (indices 966-975)
+• Selection Context: (indices 976-980)
+
+C. Action Space & Masking
+To prevent illegal moves (hallucinations), the environment provides an action_mask.
+The action space consists of **2120 discrete actions**:
+
+| Range | Action |
+|-------|--------|
+| 0-29 | Play card from hand (index) |
+| 30-59 | Trash card from hand (index) |
+| 60 | Hatch from egg deck |
+| 61 | Move from breeding area |
+| 62 | Pass turn / breeding pass / decline optional |
+| 63-92 | DNA Digivolve (hand index) |
+| 100-399 | Attack with permanent (slot x target) |
+| 400-999 | Digivolve (hand x field) |
+| 1000-1999 | Effect activation (source x effectIdx) |
+| 2000-2119 | Source selection (field x sourceIdx) |
+
+• Mask: A boolean array matching the size of the Action Space (2120).
+• Instruction: The Agent must apply this mask to the logits before softmax selection.
+
 D. Reward Shaping (Tactical Choices)
-To teach tactics (e.g., "Trash the weak card, not the Boss Monster"), we use Dense Rewards:
-Rtotal​=Rterminal​+∑Rtactical​
+To teach tactics, we use Dense Rewards:
+Rtotal = Rterminal + ∑Rtactical
+
 1. Terminal Reward: +1.0 (Win), -1.0 (Loss).
 2. Tactical "Minties" (Intermediate Rewards):
-    ◦ Security Delta: (MySec - OppSec) * 0.5
-    ◦ Board Presence: (MyTotalDP - OppTotalDP) * 0.001
-    ◦ Evolution Bonus: +0.2 for successfully Digivolving (encourages building stacks).
+    ◦ Security Delta: (MySec - OppSec) * 0.01
+    ◦ Board Presence: (MyTotalDP - OppTotalDP) * 0.0001
 --------------------------------------------------------------------------------
 3. Data Collection Pipeline
 • Gauntlet: A collection of Meta Decks (scraped from Egman Events/DigimonMeta).
