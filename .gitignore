@@ -13,3 +13,5 @@ models/
 runs/
 .claude/settings.local.json
 nul
+frontend/dist/
+frontend/node_modules/
