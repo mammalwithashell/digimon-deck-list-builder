@@ -972,8 +972,8 @@ class Game:
             if i < len(permanents):
                 perm = permanents[i]
                 top = perm.top_card
-                # +0: top card internal ID
-                tensor.append(float(CardRegistry.get_id(top.card_id) if top else 0))
+                # +0: top card normalized ID
+                tensor.append(CardRegistry.get_norm_id(top.card_id) if top else 0.0)
                 # +1: current DP (None for eggs/tamers → 0.0)
                 tensor.append(float(perm.dp or 0))
                 # +2: suspended
@@ -990,7 +990,7 @@ class Game:
                 for j in range(MAX_SOURCES):
                     if j < len(perm.card_sources):
                         src = perm.card_sources[j]
-                        tensor.append(float(CardRegistry.get_id(src.card_id)))
+                        tensor.append(CardRegistry.get_norm_id(src.card_id))
                         tensor.append(perm.source_opt_state(src))
                         tensor.append(perm.source_dp_contribution(src))
                     else:
@@ -1003,7 +1003,7 @@ class Game:
         """Append card ID list padded to limit."""
         for i in range(limit):
             if i < len(cards):
-                tensor.append(float(CardRegistry.get_id(cards[i].card_id)))
+                tensor.append(CardRegistry.get_norm_id(cards[i].card_id))
             else:
                 tensor.append(0.0)
 

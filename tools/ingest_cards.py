@@ -126,16 +126,23 @@ def convert_card(api_card):
 
 
 def load_cards_json():
-    """Load existing cards.json, returning (list, abs_path)."""
+    """Load existing cards.json as a dict keyed by card_id, returning (dict, abs_path).
+
+    Supports both new dict format and legacy array format.
+    """
     cards_path = os.path.abspath(CARDS_JSON)
     if os.path.exists(cards_path):
         with open(cards_path, "r", encoding="utf-8") as f:
-            return json.load(f), cards_path
-    return [], cards_path
+            data = json.load(f)
+        if isinstance(data, dict):
+            return data, cards_path
+        # Legacy array format: convert to dict
+        return {c["card_id"]: c for c in data}, cards_path
+    return {}, cards_path
 
 
 def save_cards_json(cards, cards_path):
-    """Write cards list to cards.json."""
+    """Write cards dict to cards.json."""
     with open(cards_path, "w", encoding="utf-8") as f:
         json.dump(cards, f, indent=2, ensure_ascii=False)
 
@@ -143,8 +150,7 @@ def save_cards_json(cards, cards_path):
 def get_existing_set_ids(cards):
     """Return set of set IDs already in cards.json (e.g. {'BT14', 'BT20', 'P'})."""
     set_ids = set()
-    for c in cards:
-        cid = c["card_id"]
+    for cid in cards.keys():
         # Extract set ID: BT14-001 -> BT14, EX8-001 -> EX8, P-001 -> P, ST1-01 -> ST1
         m = re.match(r'^([A-Z]+\d*)-', cid)
         if m:
@@ -212,10 +218,16 @@ def read_priority_sets():
 
 
 def merge_set_into_cards(existing, new_cards, set_id):
-    """Remove old cards for this set and add new ones."""
+    """Remove old cards for this set and add new ones.
+
+    existing: dict keyed by card_id
+    new_cards: list of card dicts from convert_card()
+    """
     prefix = set_id + "-"
-    filtered = [c for c in existing if not c["card_id"].startswith(prefix)]
-    return filtered + new_cards
+    filtered = {cid: c for cid, c in existing.items() if not cid.startswith(prefix)}
+    for card in new_cards:
+        filtered[card["card_id"]] = card
+    return filtered
 
 
 def ingest_single_set(set_id, existing, cards_path):
@@ -268,8 +280,8 @@ def bulk_ingest():
 
     # Summary
     set_counts = {}
-    for c in existing:
-        m = re.match(r'^([A-Z]+\d*)-', c["card_id"])
+    for cid in existing:
+        m = re.match(r'^([A-Z]+\d*)-', cid)
         if m:
             sid = m.group(1)
             set_counts[sid] = set_counts.get(sid, 0) + 1
@@ -291,8 +303,8 @@ def main():
         save_cards_json(existing, cards_path)
 
         set_counts = {}
-        for c in existing:
-            m = re.match(r'^([A-Z]+\d*)-', c["card_id"])
+        for cid in existing:
+            m = re.match(r'^([A-Z]+\d*)-', cid)
             if m:
                 sid = m.group(1)
                 set_counts[sid] = set_counts.get(sid, 0) + 1
@@ -341,14 +353,14 @@ def main():
 
     # Load existing cards.json
     existing, cards_path = load_cards_json()
-    # Remove any existing cards from this set
-    existing = [c for c in existing if not c["card_id"].startswith(api_set_id)]
-
-    # Merge
-    merged = existing + new_cards
+    # Remove any existing cards from this set and add new ones
+    merged = {cid: c for cid, c in existing.items() if not cid.startswith(api_set_id)}
+    for card in new_cards:
+        merged[card["card_id"]] = card
     save_cards_json(merged, cards_path)
 
-    print(f"Wrote {len(merged)} total cards ({len(existing)} existing + {len(new_cards)} {set_id}) to {cards_path}")
+    prev_count = len(existing) - (len(existing) - len(merged) + len(new_cards))
+    print(f"Wrote {len(merged)} total cards ({len(new_cards)} {set_id}) to {cards_path}")
 
 
 if __name__ == "__main__":

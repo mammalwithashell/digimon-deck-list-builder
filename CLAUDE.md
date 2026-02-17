@@ -24,10 +24,10 @@ digimon_gym/                     # PRIMARY CODEBASE
 │   │   ├── permanent.py         # Permanent — digimon/tamer on field
 │   │   └── card_script.py       # CardScript base class
 │   ├── data/
-│   │   ├── cards.json           # Card database (3,651 cards across 45 sets)
+│   │   ├── cards.json           # Card database (3,921 cards across 61 sets, dict format)
 │   │   ├── enums.py             # CardColor, CardKind, GamePhase, PlayerType, etc.
 │   │   ├── card_database.py     # Singleton card loader
-│   │   ├── card_registry.py     # Card ID ↔ integer mapping
+│   │   ├── card_registry.py     # Card ID ↔ integer/norm_id mapping (REGISTRY_CAPACITY=20,000)
 │   │   ├── evo_cost.py          # EvoCost, DnaCost, DnaRequirement dataclasses
 │   │   └── scripts/             # Per-card effect implementations (639 scripts)
 │   │       ├── st1/             # Starter Set 1 (10 scripts)
@@ -49,6 +49,7 @@ digimon_gym/                     # PRIMARY CODEBASE
 │       └── card_effect.py       # ICardEffect interface
 
 tools/                           # Build & pipeline tools
+├── build_registry.py            # Future-proof card registry builder (API fetch, append-only indices)
 ├── transpile_dcgo.py            # CLI entry point (thin wrapper)
 ├── transpiler/                  # C# → Python card script transpiler package
 │   ├── __init__.py              # Public API: parse_cs_file, generate_python_script, main
@@ -74,6 +75,7 @@ tests/                           # Pytest test suite
 ├── test_bt24_scripts.py         # BT24 card script validation (216 parametrized tests)
 ├── test_digivolve_validation.py # Digivolution rules tests (25 tests)
 ├── test_dna_digivolve.py        # DNA/Jogress mechanics tests (50 tests)
+├── test_build_registry.py       # Card registry builder tests (21 tests)
 ├── test_deck_loader.py          # Deck loading tests
 └── test_phase_decoders.py       # Game phase state tests (33 tests)
 
@@ -101,7 +103,7 @@ Q-Rec Agent Notes                # Q-DeckRec MDP formulation and hyperparameters
 | RL framework | Gymnasium, PyTorch, Stable-Baselines3, sb3-contrib |
 | API | FastAPI + Uvicorn |
 | Testing | pytest |
-| Data | JSON card database (3,651 cards across 45 sets) |
+| Data | JSON card database (3,921 cards across 61 sets, dict format with stable indices) |
 
 ## Common Commands
 
@@ -126,6 +128,14 @@ cd digimon_gym && uvicorn api:app --reload
 
 # Fetch card effect text from API (saves to card_effects_api.json)
 python scripts/fetch_card_effects.py
+
+# --- Card Registry ---
+
+# Build/rebuild card registry from DigimonCard.io API (append-only, stable indices)
+python tools/build_registry.py                     # Full build from API
+python tools/build_registry.py --dry-run           # Fetch + stats, no write
+python tools/build_registry.py --offline           # Rebuild norm_ids from existing data
+python tools/build_registry.py --sets BT25 EX12    # Only fetch specific sets
 
 # --- Transpiler Pipeline ---
 
@@ -221,7 +231,7 @@ Action masking via `get_action_mask()` / `action_mask()` enforces legal moves.
 
 ### Core Classes
 
-- **`Game`** (`engine/game.py`) — Orchestrates turns, phases, combat resolution. 981-element tensor (966 board + 10 revealed + 5 selection context), 2120 action space.
+- **`Game`** (`engine/game.py`) — Orchestrates turns, phases, combat resolution. 981-element tensor (966 board + 10 revealed + 5 selection context), 2120 action space. Card identities encoded as `norm_id` floats (index / 20000) for stable RL training.
 - **`Player`** (`engine/core/player.py`) — Manages board zones: `hand_cards`, `library_cards`, `security_cards`, `trash_cards`, `breeding_area`, `battle_area`, `digitama_library_cards`. Handles security battles (Jamming), deletion prevention (Armor Purge/Evade/Barrier), deck-out loss.
 - **`CardSource`** (`engine/core/card_source.py`) — Runtime card instance wrapping `CEntity_Base`
 - **`Permanent`** (`engine/core/permanent.py`) — A digimon/tamer on the field with digivolution stack. Key methods: `has_keyword(attr)` (generic keyword scanner + granted keywords), `security_attack_modifier()`, `can_attack()` (summoning sickness, Rush, restrictions), `can_attack_player()` (cannot_attack_player check), `can_block()` (Blocker, Collision, restrictions). Supports `linked_cards` (option sideways attach), `opt_total`/`opt_used` (once-per-turn effect tracking), `grant_keyword(attr, duration)` for runtime keyword grants.
@@ -237,6 +247,38 @@ Card abilities are implemented as per-card scripts:
 2. `CardDatabase` dynamically loads `digimon_gym/engine/data/scripts/{set}/{card_id}.py`
 3. Each script subclasses `CardScript` and returns `ICardEffect` instances
 4. Effects define timing, conditions, and modifiers (DP, security, etc.)
+
+### Card Registry & cards.json Format
+
+`cards.json` is a **JSON dict** keyed by card_id (e.g. `"BT14-001"`). Each entry contains card metadata plus stable registry fields:
+
+```json
+{
+  "BT14-001": {
+    "index": 1479,
+    "norm_id": 0.07395,
+    "card_id": "BT14-001",
+    "card_name_eng": "Koromon",
+    ...
+  }
+}
+```
+
+- **`index`** — Stable integer (1-based, 0 reserved for padding). Once assigned, never changes.
+- **`norm_id`** — `index / REGISTRY_CAPACITY` (= `index / 20000`). Float in `(0, 1]` used in tensor encoding.
+- **Append-only** — When new sets are added, existing cards keep their indices. New cards get indices after the current max. This prevents catastrophic forgetting in trained RL agents.
+- **Natural sort** — Cards are sorted by `(prefix_letters, set_number, card_number)` for the initial index assignment. E.g., BT1 < BT2 < BT10, not alphabetical BT1 < BT10 < BT2.
+
+**Card ID patterns** — Set prefixes use non-zero-padded numbers: `BT1` (not `BT01`), `EX8` (not `EX08`). Known set types: BT1-BT26, EX1-EX13, ST1-ST24, AD1, RB1, LM, P.
+
+**`CardRegistry`** (`card_registry.py`) provides:
+- `get_id(card_id) -> int` — raw integer index
+- `get_norm_id(card_id) -> float` — normalized float for tensor encoding (0.0 for unknown)
+- `get_string_id(int_id) -> str` — reverse lookup
+- `CAPACITY = 20_000` — registry ceiling
+- Supports both dict format (reads `index`/`norm_id` fields) and legacy array format (sorts alphabetically)
+
+**`build_registry.py`** (`tools/`) fetches all cards from DigimonCard.io API, builds the append-only registry, and writes the dict-format `cards.json`. Run it when new card sets are released.
 
 ### Transpiler Pipeline (`tools/transpiler/`)
 
@@ -346,7 +388,7 @@ The engine checks keyword abilities at runtime via the `Permanent.has_keyword()`
 ### Singleton Pattern
 
 `CardDatabase` is a lazy-loaded singleton — access via `CardDatabase()`.
-`CardRegistry` maps card IDs to integers — call `ensure_initialized()` before use.
+`CardRegistry` maps card IDs to integers and normalized floats — call `ensure_initialized()` before use. Use `get_norm_id()` for tensor encoding.
 
 ## Code Conventions
 
@@ -364,7 +406,8 @@ The engine checks keyword abilities at runtime via the `Permanent.has_keyword()`
 - Test files go in `tests/` (root level)
 - Mock card helpers exist in test files — reuse them for new tests
 - Script validation tests (`test_p_scripts.py`, `test_bt{14,20,23,24}_scripts.py`) are parametrized — 463, 200, 215, 211, and 216 tests respectively verifying transpiled scripts load, produce correct effect counts, and set expected keyword flags
-- Run `python -m pytest tests/ -v` for the full suite
+- `test_build_registry.py` — 21 tests for natural sort key parsing, append-only index preservation, capacity validation, determinism, and deduplication
+- Run `python -m pytest tests/ -v` for the full suite (1784 tests)
 
 ## Card Data API
 
@@ -381,7 +424,7 @@ https://digimoncard.io/index.php/api-public/search?pack=BT-20:%20Booster%20Over%
 ## Key Documentation
 
 - **ACTION_SPEC.md** — Full action space specification (2120 discrete actions, selection phases, attack flow)
-- **TENSOR_SPEC.md** — Board state tensor layout (981-float tensor, slot encoding, global data)
+- **TENSOR_SPEC.md** — Board state tensor layout (981-float tensor, slot encoding, norm_id card encoding, global data)
 - **AGENTS.md** — RL agent specs, MDP formulation, pilot agent types
 - **RULES_CONTEXT.md** — Comprehensive Digimon TCG rules reference derived from the official Comprehensive Rules Manual (Ver.3.6) and Official Rule Manual (Ver.5.0). Consult this when implementing card effects, especially for keyword mechanics, effect timing/triggering rules, and processing conditions.
 - **Q-Rec Agent Notes** — Q-DeckRec network architecture, hyperparameters, training loop

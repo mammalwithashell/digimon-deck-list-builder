@@ -157,7 +157,8 @@ class CardDatabase:
         with open(json_path, 'r', encoding='utf-8') as f:
             data = json.load(f)
 
-        for entry in data:
+        entries = data.values() if isinstance(data, dict) else data
+        for entry in entries:
             entity = CEntity_Base()
             entity.card_id = entry.get('card_id', '')
             entity.card_index = entry.get('card_index', 0)

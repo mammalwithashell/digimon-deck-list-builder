@@ -58,7 +58,10 @@ def test_bt24_cards_in_database():
     cards_path = os.path.join(os.path.dirname(__file__), "..", "digimon_gym", "engine", "data", "cards.json")
     with open(cards_path, encoding="utf-8") as f:
         cards = json.load(f)
-    bt24_cards = [c for c in cards if c["card_id"].startswith("BT24")]
+    if isinstance(cards, dict):
+        bt24_cards = [c for cid, c in cards.items() if cid.startswith("BT24")]
+    else:
+        bt24_cards = [c for c in cards if c["card_id"].startswith("BT24")]
     assert len(bt24_cards) == 102, f"Expected 102 BT24 cards in database, found {len(bt24_cards)}"
 
 

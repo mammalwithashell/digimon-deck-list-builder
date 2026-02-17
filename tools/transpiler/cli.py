@@ -75,7 +75,11 @@ def main():
         card_db: Dict[str, dict] = {}
         if os.path.exists(cards_json_path):
             with open(cards_json_path, encoding="utf-8") as f:
-                for c in json.load(f):
+                data = json.load(f)
+            if isinstance(data, dict):
+                card_db = data
+            else:
+                for c in data:
                     card_db[c["card_id"]] = c
         print(f"Card database: {len(card_db)} cards")
         _run_scan_api(scan_api_arg, card_db)
@@ -117,13 +121,15 @@ def main():
     all_traits: set = set()
     if os.path.exists(cards_json_path):
         with open(cards_json_path, encoding="utf-8") as f:
-            for c in json.load(f):
-                card_db[c["card_id"]] = c
-                if c.get("card_name_eng"):
-                    all_card_names.add(c["card_name_eng"])
-                for t in (c.get("type_eng") or []):
-                    if t:
-                        all_traits.add(t)
+            data = json.load(f)
+        entries = data.values() if isinstance(data, dict) else data
+        for c in entries:
+            card_db[c.get("card_id", "")] = c
+            if c.get("card_name_eng"):
+                all_card_names.add(c["card_name_eng"])
+            for t in (c.get("type_eng") or []):
+                if t:
+                    all_traits.add(t)
 
     if all_card_names:
         print(f"Card database: {len(card_db)} cards, {len(all_card_names)} unique names, {len(all_traits)} unique traits")

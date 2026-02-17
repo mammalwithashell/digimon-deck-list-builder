@@ -114,22 +114,27 @@ def main():
     for cid in sorted(seen.keys()):
         bt14_cards.append(convert_card(seen[cid]))
 
-    # Load existing cards.json
+    # Load existing cards.json (supports both dict and legacy array format)
     cards_path = os.path.abspath(CARDS_JSON)
     if os.path.exists(cards_path):
         with open(cards_path, "r", encoding="utf-8") as f:
-            existing = json.load(f)
+            data = json.load(f)
+        if isinstance(data, dict):
+            existing = data
+        else:
+            existing = {c["card_id"]: c for c in data}
         # Remove any existing BT14 cards
-        existing = [c for c in existing if not c["card_id"].startswith("BT14")]
+        existing = {cid: c for cid, c in existing.items() if not cid.startswith("BT14")}
     else:
-        existing = []
+        existing = {}
 
     # Merge
-    merged = existing + bt14_cards
+    for card in bt14_cards:
+        existing[card["card_id"]] = card
     with open(cards_path, "w", encoding="utf-8") as f:
-        json.dump(merged, f, indent=2, ensure_ascii=False)
+        json.dump(existing, f, indent=2, ensure_ascii=False)
 
-    print(f"Wrote {len(merged)} total cards ({len(existing)} existing + {len(bt14_cards)} BT14) to {cards_path}")
+    print(f"Wrote {len(existing)} total cards ({len(bt14_cards)} BT14) to {cards_path}")
 
 
 if __name__ == "__main__":

@@ -58,7 +58,10 @@ def test_p_cards_in_database():
     cards_path = os.path.join(os.path.dirname(__file__), "..", "digimon_gym", "engine", "data", "cards.json")
     with open(cards_path, encoding="utf-8") as f:
         cards = json.load(f)
-    p_cards = [c for c in cards if c["card_id"].startswith("P-")]
+    if isinstance(cards, dict):
+        p_cards = [c for cid, c in cards.items() if cid.startswith("P-")]
+    else:
+        p_cards = [c for c in cards if c["card_id"].startswith("P-")]
     assert len(p_cards) == 231, f"Expected 231 P cards in database, found {len(p_cards)}"
 
 

@@ -70,7 +70,7 @@ Each permanent on the field, in the breeding area, or in an opponent's zone is e
 
 | Offset | Field | Description |
 |--------|-------|-------------|
-| +0 | Card ID | Internal registry ID of top card (0 = empty) |
+| +0 | Card ID | Normalized registry ID of top card (`norm_id = index / 20000`, 0.0 = empty) |
 | +1 | DP | Current DP including all active modifiers (base + inherited + temporary) |
 | +2 | Suspended | 1.0 if suspended (tapped), 0.0 if active |
 | +3 | OPT total | Count of all once-per-turn effects on this permanent (inherited + top card + linked) |
@@ -84,7 +84,7 @@ Starting at offset +7, each of the 8 source slots encodes 3 floats. Sources are 
 
 | Offset | Field | Description |
 |--------|-------|-------------|
-| +0 | Card ID | Internal registry ID of the source card (0 = empty) |
+| +0 | Card ID | Normalized registry ID of the source card (`norm_id`, 0.0 = empty) |
 | +1 | OPT state | Once-per-turn availability for this source (see below) |
 | +2 | DP contribution | DP modifier this source currently provides (see below) |
 
@@ -112,18 +112,26 @@ The `dp_contribution` float shows the DP modifier this specific source card curr
 
 This allows the agent to see exactly which cards in a digivolution stack are contributing DP and whether those contributions are turn-dependent.
 
+## Card ID Encoding
+
+All card identity values in the tensor use **normalized IDs** (`norm_id`): a float in `[0, 1]` computed as `index / REGISTRY_CAPACITY` where `REGISTRY_CAPACITY = 20,000`. This keeps card identity values in the same scale as other tensor features, avoiding the need for per-feature normalization.
+
+- `0.0` = padding (no card)
+- Small positive floats (e.g., `0.00085` for BT1-001) identify specific cards
+- Indices are **append-only**: once assigned, a card's `norm_id` never changes, even when new sets are added. This prevents catastrophic forgetting in trained RL agents.
+
+The registry is built by `tools/build_registry.py` and stored in `cards.json` (dict format, keyed by card_id, each entry has `index` and `norm_id` fields).
+
 ## Card ID Zones
 
-Hand, trash, security, and revealed card zones are encoded as flat lists of internal card registry IDs, padded with 0.0.
+Hand, trash, security, and revealed card zones are encoded as flat lists of normalized card IDs (`norm_id`), padded with 0.0.
 
 | Zone | Max Size | Encoding |
 |------|----------|----------|
-| Hand | 20 | Card registry IDs, 0-padded |
-| Trash | 45 | Card registry IDs, 0-padded |
-| Security | 10 | Card registry IDs, 0-padded |
-| Revealed | 10 | Card registry IDs, 0-padded |
-
-Card IDs are integers assigned by `CardRegistry`. ID 0 is the padding value (no card). IDs are assigned alphabetically for determinism.
+| Hand | 20 | Normalized card IDs, 0-padded |
+| Trash | 45 | Normalized card IDs, 0-padded |
+| Security | 10 | Normalized card IDs, 0-padded |
+| Revealed | 10 | Normalized card IDs, 0-padded |
 
 ## Selection Context (indices 976-980)
 
@@ -149,17 +157,17 @@ The tensor is always built from one player's perspective:
 A Digimon with BT14-003 (Rookie, 3000 DP) digivolved into BT14-010 (Champion, 6000 DP), where BT14-003 has an inherited `[Your Turn] +2000 DP` effect. On **your turn**, the slot encodes:
 
 ```
-+0:  card_id(BT14-010)    # top card
++0:  0.0741               # norm_id of BT14-010 (top card)
 +1:  8000.0               # 6000 base + 2000 inherited
 +2:  0.0                  # not suspended
 +3:  1.0                  # 1 OPT effect (the inherited one)
 +4:  0.0                  # not yet used
 +5:  0.0                  # no linked cards
 +6:  2.0                  # 2 sources in stack
-+7:  card_id(BT14-003)    # source[0] = base card
++7:  0.07405              # norm_id of BT14-003 (source[0] = base card)
 +8:  1.0                  # source[0] OPT available
 +9:  2000.0               # source[0] contributing +2000 DP
-+10: card_id(BT14-010)    # source[1] = top card
++10: 0.0741               # norm_id of BT14-010 (source[1] = top card)
 +11: -1.0                 # source[1] no OPT effects
 +12: 0.0                  # source[1] no DP modifier
 +13..+30: 0.0             # remaining source slots empty
