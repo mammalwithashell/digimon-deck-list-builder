@@ -1,7 +1,7 @@
 """C# parsing and effect extraction functions."""
 import os
 import re
-from typing import List, Tuple
+from typing import List, Optional, Tuple
 
 from .models import EffectBlock
 from .patterns import (
@@ -62,6 +62,18 @@ from .patterns import (
     # Keyword grant targeting patterns
     RE_PERM_COND_OPPONENT_AREA, RE_GRANT_MAX_COUNT,
     RE_SELECTED_PERMANENT_REF, RE_DIGI_COUNT_COMPARE,
+    # Card selection filter patterns (CanSelectCardCondition body)
+    RE_CF_EQUALS_TRAITS, RE_CF_CONTAINS_TRAITS,
+    RE_CF_EQUALS_NAME, RE_CF_CONTAINS_NAME,
+    RE_CF_COST_MAX, RE_CF_COST_MIN,
+    RE_CF_LEVEL_MAX, RE_CF_LEVEL_MIN, RE_CF_IS_LEVEL,
+    RE_CF_COLOR,
+    RE_CF_IS_DIGIMON, RE_CF_IS_TAMER, RE_CF_IS_OPTION,
+    RE_CF_NOT_DIGI_EGG, RE_CF_HAS_PLAY_COST,
+    RE_CF_HAS_TRAITS, HAS_TRAITS_MAP,
+    RE_CS_LAMBDA, RE_REVEAL_PASS_ENTRY,
+    # Hand-or-trash zone choice
+    RE_PLAY_HAND_OR_TRASH,
 )
 
 
@@ -398,6 +410,9 @@ def extract_activate_effects(block: str, full_source: str = "") -> List[EffectBl
 
         # Fix 10: Extract CanActivateCondition patterns
         _extract_activate_conditions(full_block, eb)
+
+        # Extract card selection filter (CanSelectCardCondition lambda)
+        _extract_card_filter_conditions(full_block, full_source, eb)
 
         effects.append(eb)
 
@@ -752,7 +767,12 @@ def _scan_actions(block: str, eb: EffectBlock):
             eb.reveal_count = int(m.group(1) or m.group(2))
 
     # ── Play from zone ──
-    if RE_PLAY_FROM_TRASH.search(block):
+    if RE_PLAY_HAND_OR_TRASH.search(block):
+        eb.play_from_zone = 'hand_or_trash'
+        # Remove false trash_from_hand (SelectHandEffect used for play, not trash)
+        if "trash_from_hand" in eb.actions and "play_card" in eb.actions:
+            eb.actions.remove("trash_from_hand")
+    elif RE_PLAY_FROM_TRASH.search(block):
         eb.play_from_zone = 'trash'
     if RE_PLAY_FREE.search(block):
         eb.play_free = True
@@ -812,6 +832,277 @@ def _extract_activate_conditions(block: str, eb: EffectBlock):
     for m in RE_FACTORY_COND_PERM_NAME.finditer(block):
         if m.group(1) not in eb.activate_cond_perm_name:
             eb.activate_cond_perm_name.append(m.group(1))
+
+
+def _merge_kinds(a: Optional[str], b: Optional[str]) -> Optional[str]:
+    """Merge two card kind constraints with OR semantics.
+
+    None means unconstrained. If either side is None, result is None.
+    Otherwise, union the kinds.
+    """
+    if a is None or b is None:
+        return None
+    if a == b:
+        return a
+    kinds = set()
+    for k in (a, b):
+        if "_or_" in k:
+            kinds.update(k.split("_or_"))
+        else:
+            kinds.add(k)
+    return "_or_".join(sorted(kinds))
+
+
+def _parse_filter_body_to_dict(body: str) -> dict:
+    """Parse a condition function body into a dict of filter values.
+
+    Returns dict with keys: traits, names, cost_max, cost_min, level_max,
+    level_min, colors, kind, exclude_digi_egg, has_play_cost.
+    """
+    traits: List[str] = []
+    for m in RE_CF_EQUALS_TRAITS.finditer(body):
+        if m.group(1) not in traits:
+            traits.append(m.group(1))
+    for m in RE_CF_CONTAINS_TRAITS.finditer(body):
+        if m.group(1) not in traits:
+            traits.append(m.group(1))
+    for m in RE_CF_HAS_TRAITS.finditer(body):
+        prop_name = m.group(1)
+        trait_str = HAS_TRAITS_MAP.get(prop_name)
+        if trait_str and trait_str not in traits:
+            traits.append(trait_str)
+
+    names: List[str] = []
+    for m in RE_CF_EQUALS_NAME.finditer(body):
+        if m.group(1) not in names:
+            names.append(m.group(1))
+    for m in RE_CF_CONTAINS_NAME.finditer(body):
+        if m.group(1) not in names:
+            names.append(m.group(1))
+
+    cost_max: Optional[int] = None
+    m = RE_CF_COST_MAX.search(body)
+    if m:
+        cost_max = int(m.group(1))
+
+    cost_min: Optional[int] = None
+    m = RE_CF_COST_MIN.search(body)
+    if m:
+        cost_min = int(m.group(1))
+
+    level_max: Optional[int] = None
+    m = RE_CF_LEVEL_MAX.search(body)
+    if m:
+        level_max = int(m.group(1))
+
+    level_min: Optional[int] = None
+    m = RE_CF_LEVEL_MIN.search(body)
+    if m:
+        level_min = int(m.group(1))
+
+    for m in RE_CF_IS_LEVEL.finditer(body):
+        level_val = int(m.group(1))
+        if level_max is None:
+            level_max = level_val
+        if level_min is None:
+            level_min = level_val
+
+    colors: List[str] = []
+    for m in RE_CF_COLOR.finditer(body):
+        if m.group(1) not in colors:
+            colors.append(m.group(1))
+
+    # Strip C# lambda expressions before kind-checking to avoid false positives
+    kind_body = RE_CS_LAMBDA.sub("", body)
+    kind: Optional[str] = None
+    if RE_CF_IS_DIGIMON.search(kind_body):
+        kind = "Digimon"
+    if RE_CF_IS_TAMER.search(kind_body):
+        if kind == "Digimon":
+            kind = "Digimon_or_Tamer"
+        elif kind is None:
+            kind = "Tamer"
+    if RE_CF_IS_OPTION.search(kind_body):
+        if kind is None:
+            kind = "Option"
+
+    return {
+        "traits": traits,
+        "names": names,
+        "cost_max": cost_max,
+        "cost_min": cost_min,
+        "level_max": level_max,
+        "level_min": level_min,
+        "colors": colors,
+        "kind": kind,
+        "exclude_digi_egg": bool(RE_CF_NOT_DIGI_EGG.search(body)),
+        "has_play_cost": bool(RE_CF_HAS_PLAY_COST.search(body)),
+    }
+
+
+def _parse_filter_body(body: str, eb: EffectBlock, is_first: bool):
+    """Parse a single condition function body and merge into eb.card_filter_* fields.
+
+    For the first body, sets values directly. For subsequent bodies, applies
+    OR-merge semantics (widen ranges, union sets).
+    """
+    d = _parse_filter_body_to_dict(body)
+
+    local_traits = d["traits"]
+    local_names = d["names"]
+    local_cost_max = d["cost_max"]
+    local_cost_min = d["cost_min"]
+    local_level_max = d["level_max"]
+    local_level_min = d["level_min"]
+    local_colors = d["colors"]
+    local_kind = d["kind"]
+    local_exclude_digi_egg = d["exclude_digi_egg"]
+    local_has_play_cost = d["has_play_cost"]
+
+    # ── Merge into EffectBlock ──
+    if is_first:
+        eb.card_filter_traits = local_traits
+        eb.card_filter_names = local_names
+        eb.card_filter_cost_max = local_cost_max
+        eb.card_filter_cost_min = local_cost_min
+        eb.card_filter_level_max = local_level_max
+        eb.card_filter_level_min = local_level_min
+        eb.card_filter_colors = local_colors
+        eb.card_filter_kind = local_kind
+        eb.card_filter_exclude_digi_egg = local_exclude_digi_egg
+        eb.card_filter_has_play_cost = local_has_play_cost
+    else:
+        # OR-merge: union sets
+        for t in local_traits:
+            if t not in eb.card_filter_traits:
+                eb.card_filter_traits.append(t)
+        for n in local_names:
+            if n not in eb.card_filter_names:
+                eb.card_filter_names.append(n)
+        for c in local_colors:
+            if c not in eb.card_filter_colors:
+                eb.card_filter_colors.append(c)
+
+        # OR-merge cost/level: if any body is unconstrained, result is unconstrained
+        if local_cost_max is None:
+            eb.card_filter_cost_max = None
+        elif eb.card_filter_cost_max is not None:
+            eb.card_filter_cost_max = max(eb.card_filter_cost_max, local_cost_max)
+
+        if local_cost_min is None:
+            eb.card_filter_cost_min = None
+        elif eb.card_filter_cost_min is not None:
+            eb.card_filter_cost_min = min(eb.card_filter_cost_min, local_cost_min)
+
+        if local_level_max is None:
+            eb.card_filter_level_max = None
+        elif eb.card_filter_level_max is not None:
+            eb.card_filter_level_max = max(eb.card_filter_level_max, local_level_max)
+
+        if local_level_min is None:
+            eb.card_filter_level_min = None
+        elif eb.card_filter_level_min is not None:
+            eb.card_filter_level_min = min(eb.card_filter_level_min, local_level_min)
+
+        # OR-merge kind
+        eb.card_filter_kind = _merge_kinds(eb.card_filter_kind, local_kind)
+
+        # OR-merge booleans: if any body doesn't require it, don't require it
+        if not local_exclude_digi_egg:
+            eb.card_filter_exclude_digi_egg = False
+        if not local_has_play_cost:
+            eb.card_filter_has_play_cost = False
+
+
+def _extract_card_filter_conditions(block: str, full_source: str, eb: EffectBlock):
+    """Extract card selection filter from CanSelectCardCondition lambda body.
+
+    Searches for CanSelectCardCondition/CardCondition/SelectDigimonCondition
+    definitions in the block and full source. Also finds numbered variants
+    (CanSelectCardCondition1, 2, ...) used in multi-pass reveal operations.
+    Parses all found bodies with OR-merge semantics into eb.card_filter_* fields.
+    """
+    filter_actions = {"play_card", "reveal_and_select", "add_to_hand", "digivolve"}
+    if not any(a in filter_actions for a in eb.actions):
+        return
+
+    # Priority order: specific names first, generic CardCondition last
+    # (CardCondition is also used for IgnoreColorConditionClass and similar,
+    #  so it can produce false positives if checked too early)
+    base_names = ("CanSelectCardCondition", "CanSelectDNACardCondition",
+                  "SelectDigimonCondition", "CardCondition")
+
+    # Collect all condition bodies (base + numbered variants)
+    all_bodies: List[str] = []
+    for func_name in base_names:
+        body = _extract_method_body(block, func_name)
+        found_in_block = bool(body)
+        if not body and full_source and full_source != block:
+            body = _extract_method_body(full_source, func_name)
+        if not body:
+            continue
+
+        # For generic "CardCondition", skip if the body is trivially
+        # just an identity check (e.g., "cardSource == card") with no
+        # card filter patterns.
+        if func_name == "CardCondition":
+            has_filter_pattern = any(p.search(body) for p in (
+                RE_CF_IS_DIGIMON, RE_CF_IS_TAMER, RE_CF_IS_OPTION,
+                RE_CF_COST_MAX, RE_CF_COST_MIN,
+                RE_CF_LEVEL_MAX, RE_CF_LEVEL_MIN, RE_CF_IS_LEVEL,
+                RE_CF_EQUALS_TRAITS, RE_CF_CONTAINS_TRAITS, RE_CF_HAS_TRAITS,
+                RE_CF_EQUALS_NAME, RE_CF_CONTAINS_NAME,
+                RE_CF_HAS_PLAY_COST, RE_CF_NOT_DIGI_EGG, RE_CF_COLOR))
+            if not has_filter_pattern:
+                continue
+
+        all_bodies.append(body)
+        # Search for numbered variants (CanSelectCardCondition1, 2, ...)
+        # Only search in the same scope where the base name was found
+        # to avoid picking up variants from other timing blocks.
+        if func_name == "CanSelectCardCondition":
+            search_scope = block if found_in_block else full_source
+            for suffix in range(1, 10):
+                variant_name = f"{func_name}{suffix}"
+                variant_body = _extract_method_body(search_scope, variant_name)
+                if variant_body:
+                    all_bodies.append(variant_body)
+                else:
+                    break
+        break  # Found a usable base name, don't try others
+
+    if not all_bodies:
+        return
+
+    # Parse each body and merge results into card_filter_* (OR-merge)
+    for i, body in enumerate(all_bodies):
+        _parse_filter_body(body, eb, is_first=(i == 0))
+
+    # For multi-pass reveals, also populate per-pass filter data
+    if len(all_bodies) > 1 and "reveal_and_select" in eb.actions:
+        # Extract per-pass modes from SimplifiedSelectCardConditionClass array
+        search_src = block if "SimplifiedSelectCardConditionClass" in block else full_source
+        pass_entries = RE_REVEAL_PASS_ENTRY.findall(search_src)
+        mode_map = {name: mode for name, mode in pass_entries}
+
+        for idx, body in enumerate(all_bodies):
+            pass_data = _parse_filter_body_to_dict(body)
+            # Determine the condition name for this body to look up its mode
+            if idx == 0:
+                cond_name = "CanSelectCardCondition"
+            else:
+                cond_name = f"CanSelectCardCondition{idx}"
+            mode = mode_map.get(cond_name, "AddHand")
+            # Map C# modes to engine placement strings
+            if mode == "AddHand":
+                pass_data["placement"] = "hand"
+            elif mode == "Custom":
+                pass_data["placement"] = "hand"  # Custom typically plays, default to hand
+            elif mode == "Discard":
+                pass_data["placement"] = "trash"
+            else:
+                pass_data["placement"] = "hand"
+            eb.card_filter_passes.append(pass_data)
 
 
 def parse_cs_file(filepath: str) -> Tuple[str, List[EffectBlock]]:

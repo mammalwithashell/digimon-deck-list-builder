@@ -54,6 +54,12 @@ class BT24_066(CardScript):
             if not (player and game):
                 return
             def hand_filter(c):
+                if not getattr(c, 'is_tamer', False):
+                    return False
+                if not ('Purple' in [col.name for col in getattr(c, 'card_colors', [])]):
+                    return False
+                if not (any('Evil' in _t or 'Dark Dragon' in _t or 'Evil Dragon' in _t or 'Dark Knight' in _t for _t in (getattr(c, 'card_traits', []) or []))):
+                    return False
                 return True
             def on_trashed(selected):
                 if selected in player.hand_cards:
@@ -68,6 +74,12 @@ class BT24_066(CardScript):
             if not (player and game):
                 return
             def reveal_filter(c):
+                if not getattr(c, 'is_tamer', False):
+                    return False
+                if not ('Purple' in [col.name for col in getattr(c, 'card_colors', [])]):
+                    return False
+                if not (any('Evil' in _t or 'Dark Dragon' in _t or 'Evil Dragon' in _t or 'Dark Knight' in _t for _t in (getattr(c, 'card_traits', []) or []))):
+                    return False
                 return True
             def on_revealed(selected, remaining):
                 player.hand_cards.append(selected)

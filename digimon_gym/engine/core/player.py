@@ -401,7 +401,15 @@ class Player:
                 if effect.is_security_effect:
                     self._log(f"Activating Security Effect: {effect.effect_name}")
                     if effect.on_process_callback:
-                        effect.on_process_callback()
+                        context = {
+                            "game": self.game,
+                            "player": self,
+                            "permanent": None,  # Security card isn't on a permanent
+                            "card": security_card,
+                            "turn_player": self.game.turn_player if self.game else None,
+                            "opponent_player": self.game.opponent_player if self.game else None,
+                        }
+                        effect.on_process_callback(context)
 
         result = AttackResolution.Survivor
 

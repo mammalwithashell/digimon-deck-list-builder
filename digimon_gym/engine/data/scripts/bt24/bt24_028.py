@@ -134,6 +134,8 @@ class BT24_028(CardScript):
             if not (player and perm and game):
                 return
             def digi_filter(c):
+                if not (any('Neptunemon' in _n for _n in getattr(c, 'card_names', []))):
+                    return False
                 return True
             game.effect_digivolve_from_hand(
                 player, perm, digi_filter, is_optional=True)
@@ -169,7 +171,7 @@ class BT24_028(CardScript):
             if not (player and game):
                 return
             def play_filter(c):
-                if getattr(c, 'level', None) is None or c.level > 4:
+                if not (any('Neptunemon' in _n for _n in getattr(c, 'card_names', []))):
                     return False
                 return True
             game.effect_play_from_zone(

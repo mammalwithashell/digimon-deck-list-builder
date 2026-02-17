@@ -54,6 +54,8 @@ class BT20_070(CardScript):
             if not (player and game):
                 return
             def hand_filter(c):
+                if not (any('SEEKERS' in _t for _t in (getattr(c, 'card_traits', []) or []))):
+                    return False
                 return True
             def on_trashed(selected):
                 if selected in player.hand_cards:
@@ -93,6 +95,8 @@ class BT20_070(CardScript):
             if not (player and game):
                 return
             def hand_filter(c):
+                if not (any('SEEKERS' in _t for _t in (getattr(c, 'card_traits', []) or []))):
+                    return False
                 return True
             def on_trashed(selected):
                 if selected in player.hand_cards:

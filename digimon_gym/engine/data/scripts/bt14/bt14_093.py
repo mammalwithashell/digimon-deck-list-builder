@@ -36,9 +36,11 @@ class BT14_093(CardScript):
             if not (player and game):
                 return
             def play_filter(c):
-                if not (any('T.K. Takaishi' in _n for _n in getattr(c, 'card_names', [])) or any('Vaccine' in _t for _t in (getattr(c, 'card_traits', []) or []))):
+                if not getattr(c, 'is_digimon', False):
                     return False
                 if getattr(c, 'level', None) is None or c.level > 6:
+                    return False
+                if not ('Yellow' in [col.name for col in getattr(c, 'card_colors', [])]):
                     return False
                 return True
             game.effect_play_from_zone(

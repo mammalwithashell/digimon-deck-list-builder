@@ -57,6 +57,8 @@ class BT14_097(CardScript):
             if not (player and perm and game):
                 return
             def digi_filter(c):
+                if not getattr(c, 'is_digimon', False):
+                    return False
                 if not (any('Sukamon' in _n for _n in getattr(c, 'card_names', []))):
                     return False
                 return True

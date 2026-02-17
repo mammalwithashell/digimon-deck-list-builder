@@ -29,8 +29,9 @@ digimon_gym/                     # PRIMARY CODEBASE
 │   │   ├── card_database.py     # Singleton card loader
 │   │   ├── card_registry.py     # Card ID ↔ integer mapping
 │   │   ├── evo_cost.py          # EvoCost, DnaCost, DnaRequirement dataclasses
-│   │   └── scripts/             # Per-card effect implementations (412 scripts)
+│   │   └── scripts/             # Per-card effect implementations (639 scripts)
 │   │       ├── st1/             # Starter Set 1 (10 scripts)
+│   │       ├── p/               # Promo Set (227 scripts)
 │   │       ├── bt14/            # Booster Set 14 (94 scripts)
 │   │       ├── bt20/            # Booster Set 20 (103 scripts)
 │   │       ├── bt23/            # Booster Set 23 (103 scripts)
@@ -66,6 +67,7 @@ tests/                           # Pytest test suite
 ├── test_runners.py              # HeadlessGame/InteractiveGame tests (30 tests)
 ├── test_tensor_and_actions.py   # Tensor encoding/action decoding tests (48 tests)
 ├── test_keyword_mechanics.py    # Engine keyword mechanics tests (75 tests)
+├── test_p_scripts.py            # P (Promo) card script validation (463 parametrized tests)
 ├── test_bt14_scripts.py         # BT14 card script validation (200 parametrized tests)
 ├── test_bt20_scripts.py         # BT20 card script validation (215 parametrized tests)
 ├── test_bt23_scripts.py         # BT23 card script validation (211 parametrized tests)
@@ -361,7 +363,7 @@ The engine checks keyword abilities at runtime via the `Permanent.has_keyword()`
 - Use **pytest** for all tests
 - Test files go in `tests/` (root level)
 - Mock card helpers exist in test files — reuse them for new tests
-- Script validation tests (`test_bt{14,20,23,24}_scripts.py`) are parametrized — 200, 215, 211, and 216 tests respectively verifying transpiled scripts load, produce correct effect counts, and set expected keyword flags
+- Script validation tests (`test_p_scripts.py`, `test_bt{14,20,23,24}_scripts.py`) are parametrized — 463, 200, 215, 211, and 216 tests respectively verifying transpiled scripts load, produce correct effect counts, and set expected keyword flags
 - Run `python -m pytest tests/ -v` for the full suite
 
 ## Card Data API
@@ -426,13 +428,14 @@ The transpiler emits flags for these keywords, but the engine does not yet act o
 
 | Set | No-action stubs | Descriptive-tagged files |
 |-----|:--------------:|:-----------------------:|
+| P | 34 | 26 |
 | BT14 | 1 | 13 |
 | BT20 | 8 | 34 |
 | BT23 | 7 | 36 |
 | BT24 | 3 | 24 |
 
 ### Transpiler Stub Summary
-19 effect callbacks across 4 sets still produce no-action stubs (down from 116 after P7 stub reduction: widened `_extract_method_body()` regex, ChangeCostClass value extraction, Mode.Custom helper class scanning (IDegeneration, SwitchDefender, PlayPermanentCards, DigivolveIntoHandOrTrashCard, CanNotAffectedClass), AddSkillClass detection, metadata class detection (AddJogressLevelsClass, ChangeCardNamesClass, CanAttackTargetDefendingPermanentClass), and orphan pass elimination).
+53 effect callbacks across 5 sets still produce no-action stubs (19 across BT14/20/23/24, plus 34 in the P promo set). The BT set stubs were reduced from 116 after P7 stub reduction: widened `_extract_method_body()` regex, ChangeCostClass value extraction, Mode.Custom helper class scanning (IDegeneration, SwitchDefender, PlayPermanentCards, DigivolveIntoHandOrTrashCard, CanNotAffectedClass), AddSkillClass detection, metadata class detection (AddJogressLevelsClass, ChangeCardNamesClass, CanAttackTargetDefendingPermanentClass), and orphan pass elimination.
 
 Remaining stubs are complex multi-step sequences with nested coroutines, `OnAddDigivolutionCards` timing blocks, and effects requiring engine features not yet supported.
 

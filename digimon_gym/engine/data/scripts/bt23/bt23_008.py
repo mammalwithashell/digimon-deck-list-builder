@@ -64,12 +64,20 @@ class BT23_008(CardScript):
             if not (player and game):
                 return
             def play_filter(c):
+                if not (getattr(c, 'is_digimon', False) or getattr(c, 'is_tamer', False)):
+                    return False
+                if not (any('Gabumon' in _n or 'Nokia Shiramine' in _n for _n in getattr(c, 'card_names', []))):
+                    return False
                 return True
             game.effect_play_from_zone(
                 player, 'hand', play_filter, free=True, is_optional=True)
             if not (player and game):
                 return
             def hand_filter(c):
+                if not (getattr(c, 'is_digimon', False) or getattr(c, 'is_tamer', False)):
+                    return False
+                if not (any('Gabumon' in _n or 'Nokia Shiramine' in _n for _n in getattr(c, 'card_names', []))):
+                    return False
                 return True
             def on_trashed(selected):
                 if selected in player.hand_cards:

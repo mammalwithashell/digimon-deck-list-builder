@@ -80,7 +80,7 @@ class BT23_102(CardScript):
         effect4.set_can_use_condition(condition4)
 
         def process4(ctx: Dict[str, Any]):
-            """Action: Play Card, Trash From Hand"""
+            """Action: Play Card"""
             player = ctx.get('player')
             perm = ctx.get('permanent')
             game = ctx.get('game')
@@ -91,19 +91,7 @@ class BT23_102(CardScript):
                     return False
                 return True
             game.effect_play_from_zone(
-                player, 'hand', play_filter, free=True, is_optional=True)
-            if not (player and game):
-                return
-            def hand_filter(c):
-                if getattr(c, 'level', None) is None or c.level > 5:
-                    return False
-                return True
-            def on_trashed(selected):
-                if selected in player.hand_cards:
-                    player.hand_cards.remove(selected)
-                    player.trash_cards.append(selected)
-            game.effect_select_hand_card(
-                player, hand_filter, on_trashed, is_optional=False)
+                player, 'hand_or_trash', play_filter, free=True, is_optional=True)
 
         effect4.set_on_process_callback(process4)
         effects.append(effect4)

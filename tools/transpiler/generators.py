@@ -122,20 +122,105 @@ def _build_target_filter_code(eb: EffectBlock, indent: str = "            ") -> 
     return parts
 
 
+def _build_filter_from_dict(d: dict, indent: str = "            ") -> List[str]:
+    """Build filter condition lines from a pass data dict.
+
+    Used for multi-pass reveal where each pass has its own filter dict.
+    """
+    parts = []
+    kind = d.get("kind")
+    if kind:
+        if kind == "Digimon_or_Tamer":
+            parts.append(f"{indent}    if not (getattr(c, 'is_digimon', False) or getattr(c, 'is_tamer', False)):")
+            parts.append(f"{indent}        return False")
+        else:
+            kind_lower = kind.lower()
+            parts.append(f"{indent}    if not getattr(c, 'is_{kind_lower}', False):")
+            parts.append(f"{indent}        return False")
+    if d.get("exclude_digi_egg"):
+        parts.append(f"{indent}    if getattr(c, 'is_digi_egg', False):")
+        parts.append(f"{indent}        return False")
+    if d.get("has_play_cost"):
+        parts.append(f"{indent}    if not getattr(c, 'has_play_cost', False):")
+        parts.append(f"{indent}        return False")
+    if d.get("cost_max") is not None:
+        parts.append(f"{indent}    if getattr(c, 'get_cost_itself', 0) > {d['cost_max']}:")
+        parts.append(f"{indent}        return False")
+    if d.get("cost_min") is not None:
+        parts.append(f"{indent}    if getattr(c, 'get_cost_itself', 0) < {d['cost_min']}:")
+        parts.append(f"{indent}        return False")
+    if d.get("level_max") is not None:
+        parts.append(f"{indent}    if getattr(c, 'level', None) is None or c.level > {d['level_max']}:")
+        parts.append(f"{indent}        return False")
+    if d.get("level_min") is not None:
+        parts.append(f"{indent}    if getattr(c, 'level', None) is None or c.level < {d['level_min']}:")
+        parts.append(f"{indent}        return False")
+    colors = d.get("colors", [])
+    if colors:
+        color_checks = " or ".join(
+            f"'{col}' in [col.name for col in getattr(c, 'card_colors', [])]"
+            for col in colors)
+        parts.append(f"{indent}    if not ({color_checks}):")
+        parts.append(f"{indent}        return False")
+    or_clauses = []
+    names = d.get("names", [])
+    traits = d.get("traits", [])
+    if names:
+        name_ors = " or ".join(f"'{n}' in _n" for n in names)
+        or_clauses.append(f"any({name_ors} for _n in getattr(c, 'card_names', []))")
+    if traits:
+        trait_ors = " or ".join(f"'{t}' in _t" for t in traits)
+        or_clauses.append(f"any({trait_ors} for _t in (getattr(c, 'card_traits', []) or []))")
+    if or_clauses:
+        combined = " or ".join(or_clauses)
+        parts.append(f"{indent}    if not ({combined}):")
+        parts.append(f"{indent}        return False")
+    return parts
+
+
 def _build_card_filter_code(eb: EffectBlock, indent: str = "            ") -> List[str]:
     """Build filter condition lines for card selection (hand/reveal/trash).
 
-    Fix 2: Uses OR logic for name/trait checks instead of AND.
+    Prefers card_filter_* fields (from CanSelectCardCondition extraction)
+    over trait_checks/name_checks (from whole-block scanning).
     """
     parts = []
-    if eb.name_checks or eb.trait_checks:
-        parts.extend(_build_or_filter_card(eb.name_checks, eb.trait_checks, indent))
-    if eb.target_level_limit is not None:
-        parts.append(f"{indent}    if getattr(c, 'level', None) is None or c.level > {eb.target_level_limit}:")
-        parts.append(f"{indent}        return False")
-    if eb.target_level_min is not None:
-        parts.append(f"{indent}    if getattr(c, 'level', None) is None or c.level < {eb.target_level_min}:")
-        parts.append(f"{indent}        return False")
+
+    has_card_filter = (eb.card_filter_traits or eb.card_filter_names or
+                       eb.card_filter_cost_max is not None or
+                       eb.card_filter_cost_min is not None or
+                       eb.card_filter_level_max is not None or
+                       eb.card_filter_level_min is not None or
+                       eb.card_filter_colors or eb.card_filter_kind or
+                       eb.card_filter_exclude_digi_egg or
+                       eb.card_filter_has_play_cost)
+
+    if has_card_filter:
+        # Delegate to _build_filter_from_dict using the EB's merged fields
+        d = {
+            "kind": eb.card_filter_kind,
+            "exclude_digi_egg": eb.card_filter_exclude_digi_egg,
+            "has_play_cost": eb.card_filter_has_play_cost,
+            "cost_max": eb.card_filter_cost_max,
+            "cost_min": eb.card_filter_cost_min,
+            "level_max": eb.card_filter_level_max,
+            "level_min": eb.card_filter_level_min,
+            "colors": eb.card_filter_colors,
+            "names": eb.card_filter_names,
+            "traits": eb.card_filter_traits,
+        }
+        parts = _build_filter_from_dict(d, indent)
+    else:
+        # Fallback: use whole-block trait_checks/name_checks (backward compat)
+        if eb.name_checks or eb.trait_checks:
+            parts.extend(_build_or_filter_card(eb.name_checks, eb.trait_checks, indent))
+        if eb.target_level_limit is not None:
+            parts.append(f"{indent}    if getattr(c, 'level', None) is None or c.level > {eb.target_level_limit}:")
+            parts.append(f"{indent}        return False")
+        if eb.target_level_min is not None:
+            parts.append(f"{indent}    if getattr(c, 'level', None) is None or c.level < {eb.target_level_min}:")
+            parts.append(f"{indent}        return False")
+
     return parts
 
 
@@ -355,19 +440,38 @@ def _emit_action(eb: EffectBlock, action: str, lines: List[str], indent: str):
         count = eb.reveal_count or 4
         lines.append(f"{indent}if not (player and game):")
         lines.append(f"{indent}    return")
-        card_filter = _build_card_filter_code(eb, indent)
-        lines.append(f"{indent}def reveal_filter(c):")
-        if card_filter:
-            lines.extend(card_filter)
-            lines.append(f"{indent}    return True")
+        if len(eb.card_filter_passes) > 1:
+            # Multi-pass reveal: emit per-pass filter functions
+            for pidx, pdata in enumerate(eb.card_filter_passes):
+                lines.append(f"{indent}def reveal_filter_{pidx}(c):")
+                pfilter = _build_filter_from_dict(pdata, indent)
+                if pfilter:
+                    lines.extend(pfilter)
+                    lines.append(f"{indent}    return True")
+                else:
+                    lines.append(f"{indent}    return True")
+            passes_items = ", ".join(
+                f"(reveal_filter_{pidx}, '{pdata.get('placement', 'hand')}')"
+                for pidx, pdata in enumerate(eb.card_filter_passes)
+            )
+            lines.append(f"{indent}game.effect_reveal_and_select_multi(")
+            lines.append(f"{indent}    player, {count}, [{passes_items}],")
+            lines.append(f"{indent}    remaining_placement='deck_bottom', is_optional=True)")
         else:
-            lines.append(f"{indent}    return True")
-        lines.append(f"{indent}def on_revealed(selected, remaining):")
-        lines.append(f"{indent}    player.hand_cards.append(selected)")
-        lines.append(f"{indent}    for c in remaining:")
-        lines.append(f"{indent}        player.library_cards.append(c)")
-        lines.append(f"{indent}game.effect_reveal_and_select(")
-        lines.append(f"{indent}    player, {count}, reveal_filter, on_revealed, is_optional=True)")
+            # Single-pass reveal (original behavior)
+            card_filter = _build_card_filter_code(eb, indent)
+            lines.append(f"{indent}def reveal_filter(c):")
+            if card_filter:
+                lines.extend(card_filter)
+                lines.append(f"{indent}    return True")
+            else:
+                lines.append(f"{indent}    return True")
+            lines.append(f"{indent}def on_revealed(selected, remaining):")
+            lines.append(f"{indent}    player.hand_cards.append(selected)")
+            lines.append(f"{indent}    for c in remaining:")
+            lines.append(f"{indent}        player.library_cards.append(c)")
+            lines.append(f"{indent}game.effect_reveal_and_select(")
+            lines.append(f"{indent}    player, {count}, reveal_filter, on_revealed, is_optional=True)")
     elif action == "de_digivolve":
         # Fix 4: Use extracted degen count instead of hardcoded 1
         count = eb.degen_count if eb.degen_count is not None else 1

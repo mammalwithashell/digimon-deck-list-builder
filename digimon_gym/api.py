@@ -183,6 +183,7 @@ def create_game(request: CreateGameRequest):
         "game_id": game_id,
         "state": state,
         "action_mask": mask,
+        "action_descriptions": runner.game.describe_actions(runner.game.current_player_id),
     }
 
     # Include recording metadata for client-side recording (interactive games)
@@ -214,6 +215,7 @@ def game_action(game_id: str, request: GameActionRequest):
     result = {
         "state": state,
         "action_mask": mask,
+        "action_descriptions": runner.game.describe_actions(runner.game.current_player_id),
         "is_game_over": runner.is_game_over,
         # Action context for client-side recording
         "action_context": {
@@ -255,6 +257,7 @@ def game_step(game_id: str):
     return {
         "state": state,
         "action_mask": mask,
+        "action_descriptions": runner.game.describe_actions(runner.game.current_player_id),
         "logs": logs,
         "is_human_turn": runner.is_current_player_human(),
         "is_game_over": runner.is_game_over,
@@ -275,6 +278,21 @@ def game_mask(game_id: str):
     if not runner:
         raise HTTPException(status_code=404, detail="Game not found")
     return {"action_mask": runner.get_action_mask().tolist()}
+
+@app.get("/game/{game_id}/actions")
+def game_actions(game_id: str):
+    """Get human-readable descriptions of all currently valid actions.
+
+    Returns a mapping of action_id (int) → description (str) for each
+    action where the mask is 1.0. Useful for rendering tooltips, effect
+    activation labels, and contextual menus in the frontend.
+    """
+    runner = active_games.get(game_id)
+    if not runner:
+        raise HTTPException(status_code=404, detail="Game not found")
+    return {
+        "actions": runner.game.describe_actions(runner.game.current_player_id),
+    }
 
 @app.get("/game/{game_id}/log")
 def game_log(game_id: str):

@@ -47,6 +47,8 @@ class BT14_067(CardScript):
             if not (player and game):
                 return
             def reveal_filter(c):
+                if not getattr(c, 'is_digimon', False):
+                    return False
                 return True
             def on_revealed(selected, remaining):
                 player.hand_cards.append(selected)
@@ -92,6 +94,8 @@ class BT14_067(CardScript):
             if not (player and game):
                 return
             def reveal_filter(c):
+                if not getattr(c, 'is_digimon', False):
+                    return False
                 return True
             def on_revealed(selected, remaining):
                 player.hand_cards.append(selected)

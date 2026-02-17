@@ -51,6 +51,10 @@ class BT24_025(CardScript):
             if not (player and perm and game):
                 return
             def digi_filter(c):
+                if not getattr(c, 'is_digimon', False):
+                    return False
+                if not (any('Venusmon' in _n for _n in getattr(c, 'card_names', []))):
+                    return False
                 return True
             game.effect_digivolve_from_hand(
                 player, perm, digi_filter, is_optional=True)

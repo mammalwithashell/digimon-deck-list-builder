@@ -129,9 +129,11 @@ class BT14_066(CardScript):
             if not (player and game):
                 return
             def play_filter(c):
-                if not (any('Numemon' in _n or 'Monzaemon' in _n for _n in getattr(c, 'card_names', []))):
+                if not getattr(c, 'is_digimon', False):
                     return False
                 if getattr(c, 'level', None) is None or c.level > 5:
+                    return False
+                if not (any('Numemon' in _n or 'Monzaemon' in _n for _n in getattr(c, 'card_names', []))):
                     return False
                 return True
             game.effect_play_from_zone(
@@ -139,9 +141,11 @@ class BT14_066(CardScript):
             if not (player and game):
                 return
             def hand_filter(c):
-                if not (any('Numemon' in _n or 'Monzaemon' in _n for _n in getattr(c, 'card_names', []))):
+                if not getattr(c, 'is_digimon', False):
                     return False
                 if getattr(c, 'level', None) is None or c.level > 5:
+                    return False
+                if not (any('Numemon' in _n or 'Monzaemon' in _n for _n in getattr(c, 'card_names', []))):
                     return False
                 return True
             def on_trashed(selected):

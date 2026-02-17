@@ -34,9 +34,11 @@ class BT20_097(CardScript):
             if not (player and perm and game):
                 return
             def digi_filter(c):
-                if not (any('Dex' in _n or 'DeathX' in _n for _n in getattr(c, 'card_names', []))):
+                if not getattr(c, 'is_digimon', False):
                     return False
                 if getattr(c, 'level', None) is None or c.level > 6:
+                    return False
+                if not (any('Dex' in _n or 'DeathX' in _n for _n in getattr(c, 'card_names', []))):
                     return False
                 return True
             game.effect_digivolve_from_hand(
@@ -84,6 +86,12 @@ class BT20_097(CardScript):
             if not (player and game):
                 return
             def play_filter(c):
+                if not getattr(c, 'is_digimon', False):
+                    return False
+                if getattr(c, 'level', None) is None or c.level > 6:
+                    return False
+                if not (any('Dex' in _n or 'DeathX' in _n for _n in getattr(c, 'card_names', []))):
+                    return False
                 return True
             game.effect_play_from_zone(
                 player, 'hand', play_filter, free=True, is_optional=True)
@@ -98,7 +106,7 @@ class BT20_097(CardScript):
         # Timing: EffectTiming.SecuritySkill
         # [Security] You may play 1 [Dorumon] from your hand or trash without paying the cost. Then, place this card in the battle area.
         effect3 = ICardEffect()
-        effect3.set_effect_name("BT20-097 Play Card, Trash From Hand, Add To Hand")
+        effect3.set_effect_name("BT20-097 Play Card, Add To Hand")
         effect3.set_effect_description("[Security] You may play 1 [Dorumon] from your hand or trash without paying the cost. Then, place this card in the battle area.")
         effect3.is_security_effect = True
         effect3.is_security_effect = True
@@ -111,26 +119,18 @@ class BT20_097(CardScript):
         effect3.set_can_use_condition(condition3)
 
         def process3(ctx: Dict[str, Any]):
-            """Action: Play Card, Trash From Hand, Add To Hand"""
+            """Action: Play Card, Add To Hand"""
             player = ctx.get('player')
             perm = ctx.get('permanent')
             game = ctx.get('game')
             if not (player and game):
                 return
             def play_filter(c):
+                if not (any('Dorumon' in _n for _n in getattr(c, 'card_names', []))):
+                    return False
                 return True
             game.effect_play_from_zone(
-                player, 'hand', play_filter, free=True, is_optional=True)
-            if not (player and game):
-                return
-            def hand_filter(c):
-                return True
-            def on_trashed(selected):
-                if selected in player.hand_cards:
-                    player.hand_cards.remove(selected)
-                    player.trash_cards.append(selected)
-            game.effect_select_hand_card(
-                player, hand_filter, on_trashed, is_optional=False)
+                player, 'hand_or_trash', play_filter, free=True, is_optional=True)
             # Add card to hand (from trash/reveal)
             if player and player.trash_cards:
                 card_to_add = player.trash_cards.pop()

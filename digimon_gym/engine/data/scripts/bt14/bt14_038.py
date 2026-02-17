@@ -49,7 +49,9 @@ class BT14_038(CardScript):
             if not (player and game):
                 return
             def play_filter(c):
-                if not (any('Etemon' in _n or 'Sukamon' in _n for _n in getattr(c, 'card_names', []))):
+                if not getattr(c, 'is_digimon', False):
+                    return False
+                if not (any('Etemon' in _n for _n in getattr(c, 'card_names', []))):
                     return False
                 return True
             game.effect_play_from_zone(
@@ -57,7 +59,9 @@ class BT14_038(CardScript):
             if not (player and game):
                 return
             def hand_filter(c):
-                if not (any('Etemon' in _n or 'Sukamon' in _n for _n in getattr(c, 'card_names', []))):
+                if not getattr(c, 'is_digimon', False):
+                    return False
+                if not (any('Etemon' in _n for _n in getattr(c, 'card_names', []))):
                     return False
                 return True
             def on_trashed(selected):

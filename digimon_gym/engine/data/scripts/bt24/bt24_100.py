@@ -61,6 +61,8 @@ class BT24_100(CardScript):
             if not (player and game):
                 return
             def reveal_filter(c):
+                if not (any('TS' in _t for _t in (getattr(c, 'card_traits', []) or []))):
+                    return False
                 return True
             def on_revealed(selected, remaining):
                 player.hand_cards.append(selected)

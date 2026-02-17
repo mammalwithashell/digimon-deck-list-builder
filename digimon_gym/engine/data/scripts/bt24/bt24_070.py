@@ -37,6 +37,12 @@ class BT24_070(CardScript):
             if not (player and game):
                 return
             def play_filter(c):
+                if not getattr(c, 'is_tamer', False):
+                    return False
+                if getattr(c, 'get_cost_itself', 0) > 4:
+                    return False
+                if not ('Purple' in [col.name for col in getattr(c, 'card_colors', [])]):
+                    return False
                 return True
             game.effect_play_from_zone(
                 player, 'trash', play_filter, free=True, is_optional=True)
@@ -68,6 +74,12 @@ class BT24_070(CardScript):
             if not (player and game):
                 return
             def play_filter(c):
+                if not getattr(c, 'is_tamer', False):
+                    return False
+                if getattr(c, 'get_cost_itself', 0) > 4:
+                    return False
+                if not ('Purple' in [col.name for col in getattr(c, 'card_colors', [])]):
+                    return False
                 return True
             game.effect_play_from_zone(
                 player, 'trash', play_filter, free=True, is_optional=True)

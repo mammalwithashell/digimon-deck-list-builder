@@ -47,6 +47,12 @@ class BT20_054(CardScript):
             if not (player and game):
                 return
             def play_filter(c):
+                if not getattr(c, 'is_digimon', False):
+                    return False
+                if not getattr(c, 'has_play_cost', False):
+                    return False
+                if getattr(c, 'get_cost_itself', 0) > 4:
+                    return False
                 return True
             game.effect_play_from_zone(
                 player, 'hand', play_filter, free=True, is_optional=True)

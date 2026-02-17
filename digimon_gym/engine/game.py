@@ -337,9 +337,97 @@ class Game:
             self.revealed_cards.clear()
         self.logger.log(f"Game Over! Winner: {winner.player_name}")
 
+    # ─── Keyword display mapping ────────────────────────────────────────
+    # Maps internal _is_{flag} attribute names to human-readable UI labels.
+    _KEYWORD_DISPLAY_MAP = [
+        ("_is_rush", "Rush"),
+        ("_is_blocker", "Blocker"),
+        ("_is_piercing", "Piercing"),
+        ("_is_jamming", "Jamming"),
+        ("_is_retaliation", "Retaliation"),
+        ("_is_collision", "Collision"),
+        ("_is_blitz", "Blitz"),
+        ("_is_raid", "Raid"),
+        ("_is_reboot", "Reboot"),
+        ("_is_blast_digivolve", "Blast Digivolve"),
+        ("_is_alliance", "Alliance"),
+        ("_is_training", "Training"),
+        ("_is_progress", "Progress"),
+        ("_is_fortitude", "Fortitude"),
+        ("_is_save", "Save"),
+        ("_is_decoy", "Decoy"),
+        ("_is_material_save", "Material Save"),
+        ("_is_vortex", "Vortex"),
+        ("_is_overclock", "Overclock"),
+        ("_is_armor_purge", "Armor Purge"),
+        ("_is_evade", "Evade"),
+        ("_is_barrier", "Barrier"),
+        ("_is_delay", "Delay"),
+        ("_is_cannot_attack", "Cannot Attack"),
+        ("_is_cannot_attack_player", "Cannot Attack Player"),
+        ("_is_cannot_block", "Cannot Block"),
+        ("_is_cannot_be_blocked", "Cannot Be Blocked"),
+        ("_is_cannot_unsuspend", "Cannot Unsuspend"),
+    ]
+
+    def _get_perm_keywords(self, perm: Permanent) -> List[str]:
+        """Return list of active keyword display names for a permanent."""
+        keywords = []
+        for attr, label in self._KEYWORD_DISPLAY_MAP:
+            if perm.has_keyword(attr):
+                keywords.append(label)
+        # Security Attack modifier (special: includes value)
+        sa_mod = perm.security_attack_modifier()
+        if sa_mod > 0:
+            keywords.append(f"Security Attack +{sa_mod}")
+        elif sa_mod < 0:
+            keywords.append(f"Security Attack {sa_mod}")
+        return keywords
+
+    def _get_activatable_effects(self, perm: Permanent, slot_idx: int) -> List[Dict[str, Any]]:
+        """Return list of activatable effect descriptions for a permanent in a given slot."""
+        effects = []
+        # Training (effectIdx=0): unsuspended Digimon with Training and deck cards
+        owner = self._find_owner(perm)
+        if (perm.is_digimon and not perm.is_suspended
+                and perm.has_keyword('_is_training') and owner.library_cards):
+            effects.append({
+                "effectIdx": 0,
+                "actionId": 1000 + slot_idx * 10,
+                "name": "Training",
+                "description": "Suspend to place top deck card at bottom of digi stack",
+            })
+        # Delay (effectIdx=1): card with _is_delay that wasn't placed this turn
+        if (self._has_delay_effect(perm)
+                and perm.turn_played < self.turn_count):
+            perm_name = perm.top_card.card_names[0] if perm.top_card and perm.top_card.card_names else "this card"
+            effects.append({
+                "effectIdx": 1,
+                "actionId": 1000 + slot_idx * 10 + 1,
+                "name": "Delay",
+                "description": f"Trash {perm_name} to activate delayed effect",
+            })
+        return effects
+
+    def _serialize_perm(self, perm: Permanent, slot_idx: int) -> Dict[str, Any]:
+        """Serialize a single permanent for to_json(), including keywords and effects."""
+        return {
+            "TopCardId": perm.top_card.card_id if perm.top_card else None,
+            "TopCardName": perm.top_card.card_names[0] if perm.top_card and perm.top_card.card_names else None,
+            "DP": perm.dp,
+            "Level": perm.level,
+            "IsSuspended": perm.is_suspended,
+            "SourceCount": len(perm.card_sources),
+            "CardKind": perm.top_card.c_entity_base.card_kind.name if perm.top_card and perm.top_card.c_entity_base and perm.top_card.c_entity_base.card_kind else None,
+            "TurnPlayed": perm.turn_played,
+            "Keywords": self._get_perm_keywords(perm),
+            "ActivatableEffects": self._get_activatable_effects(perm, slot_idx),
+        }
+
     def to_json(self) -> Dict[str, Any]:
         """Serialize game state to a dictionary (mirrors C# Game.ToJson)."""
         def player_data(p: Player) -> Dict[str, Any]:
+            ba = p.breeding_area
             return {
                 "Id": p.player_id,
                 "Memory": self._get_memory_for(p),
@@ -349,20 +437,16 @@ class Game:
                 "DeckCount": len(p.library_cards),
                 "BattleAreaCount": len(p.battle_area),
                 "BattleArea": [
-                    {
-                        "TopCardId": perm.top_card.card_id if perm.top_card else None,
-                        "TopCardName": perm.top_card.card_names[0] if perm.top_card and perm.top_card.card_names else None,
-                        "DP": perm.dp,
-                        "Level": perm.level,
-                        "IsSuspended": perm.is_suspended,
-                        "SourceCount": len(perm.card_sources),
-                    }
-                    for perm in p.battle_area
+                    self._serialize_perm(perm, idx)
+                    for idx, perm in enumerate(p.battle_area)
                 ],
                 "BreedingArea": {
-                    "TopCardId": p.breeding_area.top_card.card_id if p.breeding_area and p.breeding_area.top_card else None,
-                    "Level": p.breeding_area.level if p.breeding_area else None,
-                } if p.breeding_area else None,
+                    "TopCardId": ba.top_card.card_id if ba and ba.top_card else None,
+                    "TopCardName": ba.top_card.card_names[0] if ba and ba.top_card and ba.top_card.card_names else None,
+                    "Level": ba.level if ba else None,
+                    "Keywords": self._get_perm_keywords(ba) if ba else [],
+                    "TurnPlayed": ba.turn_played if ba else None,
+                } if ba else None,
             }
 
         return {
@@ -901,6 +985,13 @@ class Game:
                         and perm.has_keyword('_is_training') and me.library_cards):
                     mask[1000 + i * 10] = 1.0
 
+            # <Delay>: trash Option card in battle area to activate delayed effect (effectIdx=1)
+            for i in range(min(len(me.battle_area), FIELD_SLOTS)):
+                perm = me.battle_area[i]
+                if (self._has_delay_effect(perm)
+                        and perm.turn_played < self.turn_count):  # Not same turn placed
+                    mask[1000 + i * 10 + 1] = 1.0
+
             # Pass (62) - always valid in main
             mask[62] = 1.0
 
@@ -1016,6 +1107,219 @@ class Game:
 
         return mask
 
+    def describe_actions(self, player_id: int) -> Dict[int, str]:
+        """Return human-readable descriptions for all currently valid actions.
+
+        Only includes actions where the mask is 1.0, so the frontend can
+        render contextual tooltips and effect activation labels.
+        """
+        mask = self.get_action_mask(player_id)
+        me = self.player1 if player_id == 1 else self.player2
+        opp = self.player2 if player_id == 1 else self.player1
+        descriptions: Dict[int, str] = {}
+
+        for action_id in range(len(mask)):
+            if mask[action_id] != 1.0:
+                continue
+
+            desc = self._describe_single_action(action_id, me, opp)
+            if desc:
+                descriptions[action_id] = desc
+
+        return descriptions
+
+    def _describe_single_action(self, action_id: int, me: Player, opp: Player) -> Optional[str]:
+        """Return a human-readable description for a single action ID."""
+        # Play card from hand (0-29)
+        if 0 <= action_id <= 29:
+            idx = action_id
+            if idx < len(me.hand_cards):
+                card = me.hand_cards[idx]
+                name = card.card_names[0] if card.card_names else card.card_id
+                return f"Play {name} from hand"
+            return f"Play hand[{idx}]"
+
+        # Trash from hand (30-59)
+        if 30 <= action_id <= 59:
+            idx = action_id - 30
+            if idx < len(me.hand_cards):
+                card = me.hand_cards[idx]
+                name = card.card_names[0] if card.card_names else card.card_id
+                return f"Trash {name} from hand"
+            return f"Trash hand[{idx}]"
+
+        # Hatch (60)
+        if action_id == 60:
+            return "Hatch from egg deck"
+
+        # Move from breeding (61)
+        if action_id == 61:
+            if me.breeding_area and me.breeding_area.top_card:
+                name = me.breeding_area.top_card.card_names[0] if me.breeding_area.top_card.card_names else "Digimon"
+                return f"Move {name} from breeding area"
+            return "Move from breeding area"
+
+        # Pass / decline (62)
+        if action_id == 62:
+            phase = self.current_phase
+            if phase == GamePhase.Main:
+                return "Pass turn"
+            elif phase == GamePhase.Breeding:
+                return "Pass breeding"
+            elif phase == GamePhase.BlockTiming:
+                return "Decline to block"
+            elif phase == GamePhase.AllianceTiming:
+                return "Done selecting allies"
+            elif phase == GamePhase.EndOfTurnAction:
+                return "End turn"
+            return "Decline / Pass"
+
+        # DNA Digivolve (63-92)
+        if 63 <= action_id <= 92:
+            idx = action_id - 63
+            if idx < len(me.hand_cards):
+                card = me.hand_cards[idx]
+                name = card.card_names[0] if card.card_names else card.card_id
+                return f"DNA Digivolve with {name}"
+            return f"DNA Digivolve hand[{idx}]"
+
+        # Attack (100-399)
+        if 100 <= action_id <= 399:
+            normalized = action_id - 100
+            attacker_idx = normalized // 15
+            target_idx = normalized % 15
+            attacker_name = "?"
+            if attacker_idx < len(me.battle_area):
+                a = me.battle_area[attacker_idx]
+                attacker_name = a.top_card.card_names[0] if a.top_card and a.top_card.card_names else "Digimon"
+            if target_idx == 12:
+                return f"Attack player with {attacker_name}"
+            elif target_idx < len(opp.battle_area):
+                t = opp.battle_area[target_idx]
+                target_name = t.top_card.card_names[0] if t.top_card and t.top_card.card_names else "Digimon"
+                return f"Attack {target_name} with {attacker_name}"
+            return f"Attack target[{target_idx}] with {attacker_name}"
+
+        # Digivolve (400-999)
+        if 400 <= action_id <= 999:
+            normalized = action_id - 400
+            hand_idx = normalized // 15
+            field_idx = normalized % 15
+            hand_name = "?"
+            field_name = "?"
+            if hand_idx < len(me.hand_cards):
+                c = me.hand_cards[hand_idx]
+                hand_name = c.card_names[0] if c.card_names else c.card_id
+            if field_idx < len(me.battle_area):
+                p = me.battle_area[field_idx]
+                field_name = p.top_card.card_names[0] if p.top_card and p.top_card.card_names else "Digimon"
+            return f"Digivolve {hand_name} onto {field_name}"
+
+        # Effect activation (1000-1999): Training=0, Delay=1
+        if 1000 <= action_id <= 1999:
+            normalized = action_id - 1000
+            perm_idx = normalized // 10
+            effect_idx = normalized % 10
+            perm_name = "?"
+            if perm_idx < len(me.battle_area):
+                p = me.battle_area[perm_idx]
+                perm_name = p.top_card.card_names[0] if p.top_card and p.top_card.card_names else "Permanent"
+            elif perm_idx == 12 and me.breeding_area:
+                p = me.breeding_area
+                perm_name = p.top_card.card_names[0] if p.top_card and p.top_card.card_names else "Breeding"
+            if effect_idx == 0:
+                return f"Training: {perm_name}"
+            elif effect_idx == 1:
+                return f"Delay: {perm_name}"
+            return f"Activate effect {effect_idx} on {perm_name}"
+
+        # Source selection (2000-2119)
+        if 2000 <= action_id <= 2119:
+            normalized = action_id - 2000
+            field_idx = normalized // 10
+            source_idx = normalized % 10
+            return f"Select source[{source_idx}] from slot[{field_idx}]"
+
+        # Selection phases use shared action space
+        phase = self.current_phase
+        if phase in (GamePhase.SelectTarget, GamePhase.SelectMaterial,
+                     GamePhase.SelectHand, GamePhase.SelectReveal,
+                     GamePhase.SelectTrash, GamePhase.SelectSecurity):
+            return self._describe_selection_action(action_id, me, opp)
+
+        return f"Action {action_id}"
+
+    def _describe_selection_action(self, action_id: int, me: Player, opp: Player) -> str:
+        """Describe a selection-phase action."""
+        # Hand card selection (0-29)
+        if 0 <= action_id <= 29:
+            if action_id < len(me.hand_cards):
+                c = me.hand_cards[action_id]
+                name = c.card_names[0] if c.card_names else c.card_id
+                return f"Select {name} from hand"
+            return f"Select hand[{action_id}]"
+
+        # Revealed cards (30-39)
+        if 30 <= action_id <= 39:
+            idx = action_id - 30
+            if idx < len(self.revealed_cards):
+                c = self.revealed_cards[idx]
+                name = c.card_names[0] if c.card_names else c.card_id
+                return f"Select {name} from revealed"
+            return f"Select revealed[{idx}]"
+
+        # Own security (40-49)
+        if 40 <= action_id <= 49:
+            return f"Select security[{action_id - 40}]"
+
+        # Opponent security (50-59)
+        if 50 <= action_id <= 59:
+            return f"Select opponent security[{action_id - 50}]"
+
+        # Decline (62)
+        if action_id == 62:
+            return "Decline selection"
+
+        # Breeding area (99)
+        if action_id == 99:
+            if me.breeding_area and me.breeding_area.top_card:
+                name = me.breeding_area.top_card.card_names[0] if me.breeding_area.top_card.card_names else "Breeding"
+                return f"Select {name} from breeding"
+            return "Select breeding area"
+
+        # Own battle area (100-111)
+        if 100 <= action_id <= 111:
+            idx = action_id - 100
+            if idx < len(me.battle_area):
+                p = me.battle_area[idx]
+                name = p.top_card.card_names[0] if p.top_card and p.top_card.card_names else "Permanent"
+                return f"Select own {name}"
+            return f"Select own slot[{idx}]"
+
+        # Opponent battle area (112-123)
+        if 112 <= action_id <= 123:
+            idx = action_id - 112
+            if idx < len(opp.battle_area):
+                p = opp.battle_area[idx]
+                name = p.top_card.card_names[0] if p.top_card and p.top_card.card_names else "Permanent"
+                return f"Select opponent {name}"
+            return f"Select opponent slot[{idx}]"
+
+        # Trash selection (130-179)
+        if 130 <= action_id <= 179:
+            idx = action_id - 130
+            if idx < len(me.trash_cards):
+                c = me.trash_cards[idx]
+                name = c.card_names[0] if c.card_names else c.card_id
+                return f"Select {name} from trash"
+            return f"Select trash[{idx}]"
+
+        # Effect branch choice (1000-1009)
+        if 1000 <= action_id <= 1009:
+            return f"Choose effect option {action_id - 1000 + 1}"
+
+        return f"Select action {action_id}"
+
     # ─── Action Decoder ──────────────────────────────────────────────
 
     def decode_action(self, action_id: int, player_id: int):
@@ -1068,13 +1372,16 @@ class Game:
             field_idx = normalized % 15
             self.action_digivolve(field_idx, hand_idx)
         elif 1000 <= action_id <= 1999:
-            # Effect activation (Training in main phase)
+            # Effect activation (Training=0, Delay=1 in main phase)
             normalized = action_id - 1000
             perm_idx = normalized // 10
+            effect_idx = normalized % 10
             if perm_idx < len(self.turn_player.battle_area):
                 perm = self.turn_player.battle_area[perm_idx]
-                if perm.has_keyword('_is_training'):
+                if effect_idx == 0 and perm.has_keyword('_is_training'):
                     self._execute_training(perm, self.turn_player)
+                elif effect_idx == 1 and self._has_delay_effect(perm):
+                    self._execute_delay(perm, self.turn_player)
 
     def _decode_breeding(self, action_id: int):
         if action_id == 60:
@@ -1255,6 +1562,57 @@ class Game:
         card_name = top_card.card_names[0] if top_card.card_names else "Unknown"
         perm_name = perm.top_card.card_names[0] if perm.top_card else "Unknown"
         self.logger.log(f"[Training] {perm_name} trains: placed {card_name} at bottom of digi stack")
+
+    def _has_delay_effect(self, perm: Permanent) -> bool:
+        """Check if a permanent has a <Delay> effect that can be activated."""
+        for source in perm.card_sources:
+            # effect_list returns all cached effects (no timing filter on CardSource)
+            all_effects = source.effect_list(EffectTiming.NoTiming)
+            for effect in all_effects:
+                if getattr(effect, '_is_delay', False):
+                    return True
+        return False
+
+    def _get_delay_callback(self, perm: Permanent):
+        """Find the delayed effect callback — the effect immediately after the _is_delay marker."""
+        for source in perm.card_sources:
+            effects = source.effect_list(EffectTiming.NoTiming)
+            for idx, effect in enumerate(effects):
+                if getattr(effect, '_is_delay', False):
+                    # The delayed effect is the next effect after the marker
+                    if idx + 1 < len(effects):
+                        next_effect = effects[idx + 1]
+                        if next_effect.on_process_callback:
+                            return next_effect
+        return None
+
+    def _execute_delay(self, perm: Permanent, owner: Player):
+        """Execute <Delay>: trash this card from battle area and activate the delayed effect."""
+        delay_effect = self._get_delay_callback(perm)
+        perm_name = perm.top_card.card_names[0] if perm.top_card else "Unknown"
+
+        # Trash the card from battle area
+        if perm in owner.battle_area:
+            owner.battle_area.remove(perm)
+        for source in perm.card_sources:
+            owner.trash_cards.append(source)
+
+        self.logger.log(f"[Delay] {perm_name} trashed from battle area to activate delayed effect")
+
+        # Execute the delayed effect callback
+        if delay_effect and delay_effect.on_process_callback:
+            context = {
+                "game": self,
+                "player": owner,
+                "permanent": perm,
+                "card": delay_effect.effect_source_card,
+                "turn_player": self.turn_player,
+                "opponent_player": self.opponent_player,
+            }
+            # Check can_use_condition if present
+            if delay_effect.can_use_condition is None or delay_effect.can_use_condition(context):
+                delay_effect.record_activation()
+                delay_effect.on_process_callback(context)
 
     def _decode_end_of_turn_action(self, action_id: int):
         """Handle end-of-turn keyword actions (Vortex, Overclock)."""
@@ -1489,6 +1847,75 @@ class Game:
         self.request_selection(
             GamePhase.SelectReveal, player, on_select, valid, is_optional)
 
+    def effect_reveal_and_select_multi(
+        self, player: Player, count: int,
+        passes: list,
+        remaining_placement: str = 'deck_bottom',
+        is_optional: bool = False,
+    ):
+        """Reveal top N cards, then run multiple sequential selection passes.
+
+        Args:
+            player: The player revealing cards.
+            count: Number of cards to reveal from deck top.
+            passes: List of (filter_fn, placement) tuples. Each pass selects
+                    1 card matching filter_fn from the remaining pool.
+                    placement: 'hand' or 'trash'.
+            remaining_placement: Where unselected cards go after all passes.
+            is_optional: If True, player can decline each pass.
+        """
+        revealed = player.library_cards[:count]
+        if not revealed:
+            return
+
+        # Remove from library immediately
+        for c in revealed:
+            player.library_cards.remove(c)
+
+        pool = list(revealed)
+
+        def run_pass(pass_idx: int):
+            if pass_idx >= len(passes) or not pool:
+                # All passes done — place remaining
+                self.revealed_cards = []
+                for c in pool:
+                    if remaining_placement == 'deck_bottom':
+                        player.library_cards.append(c)
+                    elif remaining_placement == 'hand':
+                        player.hand_cards.append(c)
+                    elif remaining_placement == 'trash':
+                        player.trash_cards.append(c)
+                return
+
+            filter_fn, placement = passes[pass_idx]
+            self.revealed_cards = list(pool)
+
+            valid = []
+            for i, card in enumerate(pool):
+                if filter_fn(card):
+                    valid.append(SEL_REVEALED_START + i)
+
+            if not valid:
+                # No valid picks for this pass — skip to next
+                run_pass(pass_idx + 1)
+                return
+
+            def on_select(action_id: int):
+                idx = action_id - SEL_REVEALED_START
+                if 0 <= idx < len(pool):
+                    selected = pool.pop(idx)
+                    if placement == 'hand':
+                        player.hand_cards.append(selected)
+                    elif placement == 'trash':
+                        player.trash_cards.append(selected)
+                self.revealed_cards = []
+                run_pass(pass_idx + 1)
+
+            self.request_selection(
+                GamePhase.SelectReveal, player, on_select, valid, is_optional)
+
+        run_pass(0)
+
     def effect_play_from_zone(
         self, player: Player,
         zone: str,
@@ -1502,11 +1929,44 @@ class Game:
 
         Args:
             player: The player whose effect triggers.
-            zone: 'hand', 'trash', or 'revealed' (which zone to pick from).
+            zone: 'hand', 'trash', 'revealed', or 'hand_or_trash'.
             filter_fn: Which cards in the zone are valid.
             free: If True, play without paying cost.
             is_optional: If True, player can decline.
         """
+        if zone == 'hand_or_trash':
+            # Combine valid cards from both hand and trash into one selection
+            valid = []
+            for i, card in enumerate(player.hand_cards):
+                if filter_fn(card) and (SEL_HAND_START + i) < ACTION_SPACE_SIZE:
+                    valid.append(SEL_HAND_START + i)
+            for i, card in enumerate(player.trash_cards):
+                if filter_fn(card) and (SEL_TRASH_START + i) < ACTION_SPACE_SIZE:
+                    valid.append(SEL_TRASH_START + i)
+            if not valid:
+                return
+
+            def on_select_hot(action_id: int):
+                if SEL_TRASH_START <= action_id:
+                    idx = action_id - SEL_TRASH_START
+                    source = player.trash_cards
+                    src_name = 'trash'
+                else:
+                    idx = action_id - SEL_HAND_START
+                    source = player.hand_cards
+                    src_name = 'hand'
+                if 0 <= idx < len(source):
+                    card = source[idx]
+                    player.play_card_from_source(card, pay_cost=not free)
+                    self.logger.log(f"[Effect] {player.player_name} played "
+                                    f"{card.card_names[0]} from {src_name}")
+                    self.execute_effects(EffectTiming.OnEnterFieldAnyone,
+                                         {"played_card": card})
+
+            self.request_selection(GamePhase.SelectTarget, player,
+                                   on_select_hot, valid, is_optional)
+            return
+
         if zone == 'hand':
             source_list = player.hand_cards
             offset = SEL_HAND_START

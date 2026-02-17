@@ -76,7 +76,7 @@ class BT23_088(CardScript):
             if not (player and perm and game):
                 return
             def digi_filter(c):
-                if getattr(c, 'level', None) is None or c.level > 5:
+                if not (any('Undead' in _t or 'CS' in _t for _t in (getattr(c, 'card_traits', []) or []))):
                     return False
                 return True
             game.effect_digivolve_from_hand(

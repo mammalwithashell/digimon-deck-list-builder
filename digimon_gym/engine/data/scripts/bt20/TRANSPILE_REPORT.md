@@ -100,7 +100,7 @@ BT20_095: 4 effects
   [EffectTiming.OptionSkill] add_to_hand, reveal_and_select
   [factory] delay
   [EffectTiming.OnDestroyedAnyone] digivolve
-  [EffectTiming.SecuritySkill] play_card, trash_from_hand
+  [EffectTiming.SecuritySkill] play_card
 BT20_002: 1 effects
   [EffectTiming.OnAllyAttack] draw (inherited) (1/turn)
 BT20_022: 4 effects
@@ -200,7 +200,7 @@ BT20_045: 6 effects
   [EffectTiming.OnEnterFieldAnyone] no-action
   [EffectTiming.OnTappedAnyone] unsuspend (1/turn)
 BT20_085: 3 effects
-  [EffectTiming.OnStartMainPhase] play_card, trash_from_hand
+  [EffectTiming.OnStartMainPhase] play_card
   [EffectTiming.OnEndTurn] change_dp, suspend
   [factory] security_play
 BT20_101: 7 effects
@@ -340,7 +340,7 @@ BT20_097: 4 effects
   [EffectTiming.OptionSkill] digivolve
   [factory] delay
   [EffectTiming.WhenRemoveField] play_card, add_to_hand
-  [EffectTiming.SecuritySkill] play_card, trash_from_hand, add_to_hand
+  [EffectTiming.SecuritySkill] play_card, add_to_hand
 BT20_098: 2 effects
   [EffectTiming.OptionSkill] play_card, return_to_deck, gain_keyword_rush, gain_keyword_blocker
   [EffectTiming.SecuritySkill] play_card
@@ -423,7 +423,7 @@ BT20_093: 4 effects
   [EffectTiming.OptionSkill] play_card, trash_from_hand, cost_reduction
   [factory] delay
   [EffectTiming.WhenRemoveField] play_card, trash_from_hand
-  [EffectTiming.SecuritySkill] play_card, trash_from_hand
+  [EffectTiming.SecuritySkill] play_card
 BT20_094: 4 effects
   [EffectTiming.OptionSkill] play_card, cost_reduction
   [factory] delay
@@ -459,7 +459,7 @@ BT20_100: 4 effects
   [EffectTiming.OptionSkill] add_to_hand, reveal_and_select
   [factory] delay
   [EffectTiming.WhenRemoveField] no-action
-  [EffectTiming.SecuritySkill] play_card, trash_from_hand
+  [EffectTiming.SecuritySkill] play_card
 BT20_003: 1 effects
   [EffectTiming.OnEndTurn] no-action (inherited) (1/turn)
 BT20_029: 3 effects

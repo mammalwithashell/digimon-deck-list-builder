@@ -38,7 +38,11 @@ class BT14_079(CardScript):
             if not (player and game):
                 return
             def play_filter(c):
-                if not (any('Dark Animal' in _t or 'DarkAnimal' in _t or 'SoC' in _t for _t in (getattr(c, 'card_traits', []) or []))):
+                if getattr(c, 'is_digi_egg', False):
+                    return False
+                if getattr(c, 'level', None) is None or c.level > 2:
+                    return False
+                if getattr(c, 'level', None) is None or c.level < 2:
                     return False
                 return True
             game.effect_play_from_zone(

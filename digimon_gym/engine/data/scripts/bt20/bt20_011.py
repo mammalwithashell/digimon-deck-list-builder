@@ -53,7 +53,9 @@ class BT20_011(CardScript):
             if not (player and game):
                 return
             def play_filter(c):
-                if not (any('Imperialdramon' in _n for _n in getattr(c, 'card_names', [])) or any('Free' in _t for _t in (getattr(c, 'card_traits', []) or []))):
+                if not getattr(c, 'is_digimon', False):
+                    return False
+                if not (any('Imperialdramon' in _n for _n in getattr(c, 'card_names', []))):
                     return False
                 return True
             game.effect_play_from_zone(
@@ -61,7 +63,9 @@ class BT20_011(CardScript):
             if not (player and game):
                 return
             def hand_filter(c):
-                if not (any('Imperialdramon' in _n for _n in getattr(c, 'card_names', [])) or any('Free' in _t for _t in (getattr(c, 'card_traits', []) or []))):
+                if not getattr(c, 'is_digimon', False):
+                    return False
+                if not (any('Imperialdramon' in _n for _n in getattr(c, 'card_names', []))):
                     return False
                 return True
             def on_trashed(selected):
@@ -114,7 +118,9 @@ class BT20_011(CardScript):
             if not (player and game):
                 return
             def play_filter(c):
-                if not (any('Imperialdramon' in _n for _n in getattr(c, 'card_names', [])) or any('Free' in _t for _t in (getattr(c, 'card_traits', []) or []))):
+                if not getattr(c, 'is_digimon', False):
+                    return False
+                if not (any('Imperialdramon' in _n for _n in getattr(c, 'card_names', []))):
                     return False
                 return True
             game.effect_play_from_zone(
@@ -122,7 +128,9 @@ class BT20_011(CardScript):
             if not (player and game):
                 return
             def hand_filter(c):
-                if not (any('Imperialdramon' in _n for _n in getattr(c, 'card_names', [])) or any('Free' in _t for _t in (getattr(c, 'card_traits', []) or []))):
+                if not getattr(c, 'is_digimon', False):
+                    return False
+                if not (any('Imperialdramon' in _n for _n in getattr(c, 'card_names', []))):
                     return False
                 return True
             def on_trashed(selected):

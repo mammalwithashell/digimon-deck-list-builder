@@ -54,6 +54,8 @@ class BT24_021(CardScript):
             if not (player and game):
                 return
             def hand_filter(c):
+                if not (any('Demon' in _t or 'Shaman' in _t or 'Titan' in _t for _t in (getattr(c, 'card_traits', []) or []))):
+                    return False
                 return True
             def on_trashed(selected):
                 if selected in player.hand_cards:
@@ -67,14 +69,19 @@ class BT24_021(CardScript):
                 player.hand_cards.append(card_to_add)
             if not (player and game):
                 return
-            def reveal_filter(c):
+            def reveal_filter_0(c):
+                if not getattr(c, 'is_digimon', False):
+                    return False
+                if not (any('Demon' in _t or 'Shaman' in _t for _t in (getattr(c, 'card_traits', []) or []))):
+                    return False
                 return True
-            def on_revealed(selected, remaining):
-                player.hand_cards.append(selected)
-                for c in remaining:
-                    player.library_cards.append(c)
-            game.effect_reveal_and_select(
-                player, 3, reveal_filter, on_revealed, is_optional=True)
+            def reveal_filter_1(c):
+                if not (any('Titan' in _t for _t in (getattr(c, 'card_traits', []) or []))):
+                    return False
+                return True
+            game.effect_reveal_and_select_multi(
+                player, 3, [(reveal_filter_0, 'hand'), (reveal_filter_1, 'hand')],
+                remaining_placement='deck_bottom', is_optional=True)
 
         effect1.set_on_process_callback(process1)
         effects.append(effect1)
@@ -107,6 +114,10 @@ class BT24_021(CardScript):
             if not (player and perm and game):
                 return
             def digi_filter(c):
+                if not getattr(c, 'is_digimon', False):
+                    return False
+                if not (any('Titamon' in _n for _n in getattr(c, 'card_names', [])) or any('Titan' in _t for _t in (getattr(c, 'card_traits', []) or []))):
+                    return False
                 return True
             game.effect_digivolve_from_hand(
                 player, perm, digi_filter, is_optional=True)

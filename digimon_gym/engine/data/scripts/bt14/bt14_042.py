@@ -50,6 +50,8 @@ class BT14_042(CardScript):
             if not (player and game):
                 return
             def reveal_filter(c):
+                if not ('Green' in [col.name for col in getattr(c, 'card_colors', [])]):
+                    return False
                 return True
             def on_revealed(selected, remaining):
                 player.hand_cards.append(selected)

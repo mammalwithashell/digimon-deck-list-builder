@@ -59,16 +59,19 @@ class BT14_063(CardScript):
                 player.hand_cards.append(card_to_add)
             if not (player and game):
                 return
-            def reveal_filter(c):
-                if not (any('Monzaemon' in _n or 'Numemon' in _n for _n in getattr(c, 'card_names', []))):
+            def reveal_filter_0(c):
+                if not (any('Monzaemon' in _n for _n in getattr(c, 'card_names', []))):
                     return False
                 return True
-            def on_revealed(selected, remaining):
-                player.hand_cards.append(selected)
-                for c in remaining:
-                    player.library_cards.append(c)
-            game.effect_reveal_and_select(
-                player, 3, reveal_filter, on_revealed, is_optional=True)
+            def reveal_filter_1(c):
+                if not getattr(c, 'is_digimon', False):
+                    return False
+                if not (any('Numemon' in _n for _n in getattr(c, 'card_names', []))):
+                    return False
+                return True
+            game.effect_reveal_and_select_multi(
+                player, 3, [(reveal_filter_0, 'hand'), (reveal_filter_1, 'hand')],
+                remaining_placement='deck_bottom', is_optional=True)
 
         effect1.set_on_process_callback(process1)
         effects.append(effect1)

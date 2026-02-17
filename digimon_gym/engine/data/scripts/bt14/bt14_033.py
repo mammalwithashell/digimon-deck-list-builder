@@ -37,7 +37,7 @@ class BT14_033(CardScript):
             if not (player and game):
                 return
             def play_filter(c):
-                if not (any('Vaccine' in _t for _t in (getattr(c, 'card_traits', []) or []))):
+                if not ('Yellow' in [col.name for col in getattr(c, 'card_colors', [])]):
                     return False
                 return True
             game.effect_play_from_zone(
@@ -45,7 +45,7 @@ class BT14_033(CardScript):
             if not (player and game):
                 return
             def hand_filter(c):
-                if not (any('Vaccine' in _t for _t in (getattr(c, 'card_traits', []) or []))):
+                if not ('Yellow' in [col.name for col in getattr(c, 'card_colors', [])]):
                     return False
                 return True
             def on_trashed(selected):

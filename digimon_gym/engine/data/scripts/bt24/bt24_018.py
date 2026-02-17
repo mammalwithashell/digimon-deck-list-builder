@@ -30,47 +30,59 @@ class BT24_018(CardScript):
         effect0.set_can_use_condition(condition0)
         effects.append(effect0)
 
-        # Factory effect: blocker
-        # Blocker
+        # Factory effect: progress
+        # Progress
         effect1 = ICardEffect()
-        effect1.set_effect_name("BT24-018 Blocker")
-        effect1.set_effect_description("Blocker")
-        effect1._is_blocker = True
+        effect1.set_effect_name("BT24-018 Progress")
+        effect1.set_effect_description("Progress")
+        effect1._is_progress = True
 
         def condition1(context: Dict[str, Any]) -> bool:
             return True
         effect1.set_can_use_condition(condition1)
         effects.append(effect1)
 
-        # Factory effect: armor_purge
-        # Armor Purge
+        # Factory effect: blocker
+        # Blocker
         effect2 = ICardEffect()
-        effect2.set_effect_name("BT24-018 Armor Purge")
-        effect2.set_effect_description("Armor Purge")
-        effect2._is_armor_purge = True
+        effect2.set_effect_name("BT24-018 Blocker")
+        effect2.set_effect_description("Blocker")
+        effect2._is_blocker = True
 
         def condition2(context: Dict[str, Any]) -> bool:
             return True
         effect2.set_can_use_condition(condition2)
         effects.append(effect2)
 
+        # Factory effect: armor_purge
+        # Armor Purge
+        effect3 = ICardEffect()
+        effect3.set_effect_name("BT24-018 Armor Purge")
+        effect3.set_effect_description("Armor Purge")
+        effect3._is_armor_purge = True
+
+        def condition3(context: Dict[str, Any]) -> bool:
+            return True
+        effect3.set_can_use_condition(condition3)
+        effects.append(effect3)
+
         # Timing: EffectTiming.OnEnterFieldAnyone
         # Destroy Security, Unsuspend
-        effect3 = ICardEffect()
-        effect3.set_effect_name("BT24-018 May trash 1 opponent's security. Then, this may unsuspend.")
-        effect3.set_effect_description("Destroy Security, Unsuspend")
-        effect3.is_when_digivolving = True
+        effect4 = ICardEffect()
+        effect4.set_effect_name("BT24-018 May trash 1 opponent's security. Then, this may unsuspend.")
+        effect4.set_effect_description("Destroy Security, Unsuspend")
+        effect4.is_when_digivolving = True
 
-        effect = effect3  # alias for condition closure
-        def condition3(context: Dict[str, Any]) -> bool:
+        effect = effect4  # alias for condition closure
+        def condition4(context: Dict[str, Any]) -> bool:
             if card and card.permanent_of_this_card() is None:
                 return False
             # Triggered when digivolving — validated by engine timing
             return True
 
-        effect3.set_can_use_condition(condition3)
+        effect4.set_can_use_condition(condition4)
 
-        def process3(ctx: Dict[str, Any]):
+        def process4(ctx: Dict[str, Any]):
             """Action: Destroy Security, Unsuspend"""
             player = ctx.get('player')
             perm = ctx.get('permanent')
@@ -91,27 +103,27 @@ class BT24_018(CardScript):
             game.effect_select_own_permanent(
                 player, on_unsuspend, filter_fn=target_filter, is_optional=False)
 
-        effect3.set_on_process_callback(process3)
-        effects.append(effect3)
+        effect4.set_on_process_callback(process4)
+        effects.append(effect4)
 
         # Timing: EffectTiming.OnLoseSecurity
         # Delete
-        effect4 = ICardEffect()
-        effect4.set_effect_name("BT24-018 Delete 1 of your opponent's Digimon?")
-        effect4.set_effect_description("Delete")
-        effect4.is_optional = True
-        effect4.set_max_count_per_turn(1)
-        effect4.set_hash_string("BT24_18_AT_Sec_Removed")
+        effect5 = ICardEffect()
+        effect5.set_effect_name("BT24-018 Delete 1 of your opponent's Digimon?")
+        effect5.set_effect_description("Delete")
+        effect5.is_optional = True
+        effect5.set_max_count_per_turn(1)
+        effect5.set_hash_string("BT24_18_AT_Sec_Removed")
 
-        effect = effect4  # alias for condition closure
-        def condition4(context: Dict[str, Any]) -> bool:
+        effect = effect5  # alias for condition closure
+        def condition5(context: Dict[str, Any]) -> bool:
             if card and card.permanent_of_this_card() is None:
                 return False
             return True
 
-        effect4.set_can_use_condition(condition4)
+        effect5.set_can_use_condition(condition5)
 
-        def process4(ctx: Dict[str, Any]):
+        def process5(ctx: Dict[str, Any]):
             """Action: Delete"""
             player = ctx.get('player')
             perm = ctx.get('permanent')
@@ -127,25 +139,25 @@ class BT24_018(CardScript):
             game.effect_select_opponent_permanent(
                 player, on_delete, filter_fn=target_filter, is_optional=True)
 
-        effect4.set_on_process_callback(process4)
-        effects.append(effect4)
+        effect5.set_on_process_callback(process5)
+        effects.append(effect5)
 
         # Timing: EffectTiming.WhenRemoveField
         # Effect
-        effect5 = ICardEffect()
-        effect5.set_effect_name("BT24-018 Delte an opponent's Digimon, to prevent [Reptile] or [Dragonkin] trait digimon from leaving the battle area")
-        effect5.set_effect_description("Effect")
-        effect5.is_optional = True
-        effect5.set_max_count_per_turn(1)
-        effect5.set_hash_string("BT24_018_AT_Prevent_Deletion")
+        effect6 = ICardEffect()
+        effect6.set_effect_name("BT24-018 Delte an opponent's Digimon, to prevent [Reptile] or [Dragonkin] trait digimon from leaving the battle area")
+        effect6.set_effect_description("Effect")
+        effect6.is_optional = True
+        effect6.set_max_count_per_turn(1)
+        effect6.set_hash_string("BT24_018_AT_Prevent_Deletion")
 
-        effect = effect5  # alias for condition closure
-        def condition5(context: Dict[str, Any]) -> bool:
+        effect = effect6  # alias for condition closure
+        def condition6(context: Dict[str, Any]) -> bool:
             if card and card.permanent_of_this_card() is None:
                 return False
             return True
 
-        effect5.set_can_use_condition(condition5)
-        effects.append(effect5)
+        effect6.set_can_use_condition(condition6)
+        effects.append(effect6)
 
         return effects

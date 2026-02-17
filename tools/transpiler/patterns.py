@@ -122,6 +122,11 @@ RE_REVEAL_COUNT = re.compile(
 # Play from zone detection
 RE_PLAY_FROM_TRASH = re.compile(r'TrashCards|PlayFromTrash|trashCards')
 RE_PLAY_FREE = re.compile(r'ignoreCost\s*[:=]\s*true|noCost|withoutPayingCost', re.IGNORECASE)
+# Hand-or-trash zone choice pattern (play from either zone)
+RE_PLAY_HAND_OR_TRASH = re.compile(
+    r'HasMatchConditionOwnersHand.*HasMatchConditionOwnersCardInTrash'
+    r'|HasMatchConditionOwnersCardInTrash.*HasMatchConditionOwnersHand',
+    re.DOTALL)
 
 # Digivolve details extraction
 RE_DIGI_COST_FIXED = re.compile(r'digivolutionCost\s*[:=]\s*(\d+)')
@@ -236,7 +241,7 @@ RE_FACTORY_MATERIAL_SAVE = re.compile(r'MaterialSave(?:Self)?Effect')
 RE_FACTORY_OVERCLOCK = re.compile(r'Overclock(?:Self)?Effect')
 RE_FACTORY_VORTEX = re.compile(r'Vortex(?:Self)?Effect')
 RE_FACTORY_TRAINING = re.compile(r'Training(?:Self)?Effect')
-RE_FACTORY_PROGRESS = re.compile(r'Progress(?:Self)?Effect')
+RE_FACTORY_PROGRESS = re.compile(r'Progress(?:Self)?(?:Static)?Effect')
 # Fix 12: Additional missing keywords found via rules evaluation
 RE_FACTORY_DIGISORPTION = re.compile(r'Digisorption(?:Self)?Effect')
 RE_FACTORY_DIGIBURST = re.compile(r'DigiBurst(?:Self)?Effect|DigiBurstEffect')
@@ -354,3 +359,59 @@ RE_ADD_JOGRESS_LEVELS = re.compile(r'AddJogressLevelsClass|SetUpAddJogressLevels
 RE_CHANGE_CARD_NAMES = re.compile(r'ChangeCardNamesClass|SetUpChangeCardNamesClass')
 RE_CAN_ATTACK_TARGET = re.compile(r'CanAttackTargetDefendingPermanentClass')
 RE_CAN_NOT_AFFECTED = re.compile(r'CanNotAffectedClass')
+
+# ─── Card selection filter patterns (CanSelectCardCondition body) ─────
+
+RE_CF_EQUALS_TRAITS = re.compile(r'\.EqualsTraits\s*\(\s*"([^"]+)"\s*\)')
+RE_CF_CONTAINS_TRAITS = re.compile(r'\.ContainsTraits\s*\(\s*"([^"]+)"\s*\)')
+RE_CF_EQUALS_NAME = re.compile(r'\.EqualsCardName\s*\(\s*"([^"]+)"\s*\)')
+RE_CF_CONTAINS_NAME = re.compile(r'\.ContainsCardName\s*\(\s*"([^"]+)"\s*\)')
+RE_CF_COST_MAX = re.compile(r'(?:\.GetCostItself|\.BasePlayCostFromEntity)\s*<=?\s*(\d+)')
+RE_CF_COST_MIN = re.compile(r'(?:\.GetCostItself|\.BasePlayCostFromEntity)\s*>=?\s*(\d+)')
+RE_CF_LEVEL_MAX = re.compile(r'\.Level\s*<=?\s*(\d+)')
+RE_CF_LEVEL_MIN = re.compile(r'\.Level\s*>=?\s*(\d+)')
+RE_CF_IS_LEVEL = re.compile(r'\.IsLevel(\d+)')
+RE_CF_COLOR = re.compile(r'CardColors\.Contains\s*\(\s*CardColor\.(\w+)\s*\)')
+RE_CF_IS_DIGIMON = re.compile(r'\.\s*IsDigimon(?:\s|[&|;)\r\n])')
+RE_CF_IS_TAMER = re.compile(r'\.\s*IsTamer(?:\s|[&|;)\r\n])')
+RE_CF_IS_OPTION = re.compile(r'\.\s*IsOption(?:\s|[&|;)\r\n])')
+# Pattern to strip C# lambda expressions (e.g., "x => x.IsDigimon") before
+# kind-checking, to avoid false positives from nested Filter/Where lambdas
+RE_CS_LAMBDA = re.compile(r'\w+\s*=>\s*\w+\.\w+')
+RE_CF_NOT_DIGI_EGG = re.compile(r'!\s*\w+\.IsDigiEgg')
+RE_CF_HAS_PLAY_COST = re.compile(r'\.HasPlayCost')
+RE_CF_HAS_TRAITS = re.compile(r'\.\s*Has(\w+)Traits(?:\s|[&|;)\r\n])')
+# Multi-pass reveal: extract (conditionName, mode) from SimplifiedSelectCardConditionClass entries
+RE_REVEAL_PASS_ENTRY = re.compile(
+    r'SimplifiedSelectCardConditionClass\s*\('
+    r'[^)]*canTargetCondition\s*:\s*(\w+)'
+    r'[^)]*mode\s*:\s*SelectCardEffect\.Mode\.(\w+)',
+    re.DOTALL
+)
+
+# Maps C# Has*Traits property names to the trait strings they check.
+HAS_TRAITS_MAP = {
+    "CS": "CS",
+    "TS": "TS",
+    "Appmon": "Appmon",
+    "Seekers": "SEEKERS",
+    "RoyalKnight": "Royal Knight",
+    "RoyalBase": "Royal Base",
+    "SoC": "SoC",
+    "Undead": "Undead",
+    "Hudie": "Hudie",
+    "Eater": "Eater",
+    "SeaBeast": "Sea Beast",
+    "Plant": "Plant",
+    "Beast": "Beast",
+    "Dragon": "Dragon",
+    "Fairy": "Fairy",
+    "Aqua": "Aqua",
+    "DigiPolice": "DigiPolice",
+    "Liberator": "LIBERATOR",
+    "BanchoGang": "Bancho Gang",
+    "Xros": "Xros Heart",
+    "BlueFlare": "Blue Flare",
+    "Twilight": "Twilight",
+    "BaggaMilitia": "Bagra Army",
+}

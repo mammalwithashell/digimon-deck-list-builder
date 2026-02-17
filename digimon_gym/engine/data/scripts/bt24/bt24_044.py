@@ -52,18 +52,17 @@ class BT24_044(CardScript):
                 player.hand_cards.append(card_to_add)
             if not (player and game):
                 return
-            def reveal_filter(c):
+            def reveal_filter_0(c):
                 if not (any('Shoto Kazama' in _n for _n in getattr(c, 'card_names', []))):
                     return False
-                if getattr(c, 'level', None) is None or c.level > 6:
+                return True
+            def reveal_filter_1(c):
+                if not (any('Vortex Warriors' in _t for _t in (getattr(c, 'card_traits', []) or []))):
                     return False
                 return True
-            def on_revealed(selected, remaining):
-                player.hand_cards.append(selected)
-                for c in remaining:
-                    player.library_cards.append(c)
-            game.effect_reveal_and_select(
-                player, 3, reveal_filter, on_revealed, is_optional=True)
+            game.effect_reveal_and_select_multi(
+                player, 3, [(reveal_filter_0, 'hand'), (reveal_filter_1, 'hand')],
+                remaining_placement='deck_bottom', is_optional=True)
 
         effect0.set_on_process_callback(process0)
         effects.append(effect0)

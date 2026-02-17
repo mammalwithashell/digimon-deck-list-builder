@@ -37,7 +37,9 @@ class BT14_064(CardScript):
             if not (player and game):
                 return
             def play_filter(c):
-                if not (any('D-Brigade' in _t or 'DigiPolice' in _t for _t in (getattr(c, 'card_traits', []) or []))):
+                if not getattr(c, 'has_play_cost', False):
+                    return False
+                if getattr(c, 'get_cost_itself', 0) > 4:
                     return False
                 return True
             game.effect_play_from_zone(
@@ -45,7 +47,9 @@ class BT14_064(CardScript):
             if not (player and game):
                 return
             def reveal_filter(c):
-                if not (any('D-Brigade' in _t or 'DigiPolice' in _t for _t in (getattr(c, 'card_traits', []) or []))):
+                if not getattr(c, 'has_play_cost', False):
+                    return False
+                if getattr(c, 'get_cost_itself', 0) > 4:
                     return False
                 return True
             def on_revealed(selected, remaining):
@@ -82,7 +86,9 @@ class BT14_064(CardScript):
             if not (player and game):
                 return
             def play_filter(c):
-                if not (any('D-Brigade' in _t or 'DigiPolice' in _t for _t in (getattr(c, 'card_traits', []) or []))):
+                if not getattr(c, 'has_play_cost', False):
+                    return False
+                if getattr(c, 'get_cost_itself', 0) > 4:
                     return False
                 return True
             game.effect_play_from_zone(
@@ -90,7 +96,9 @@ class BT14_064(CardScript):
             if not (player and game):
                 return
             def reveal_filter(c):
-                if not (any('D-Brigade' in _t or 'DigiPolice' in _t for _t in (getattr(c, 'card_traits', []) or []))):
+                if not getattr(c, 'has_play_cost', False):
+                    return False
+                if getattr(c, 'get_cost_itself', 0) > 4:
                     return False
                 return True
             def on_revealed(selected, remaining):

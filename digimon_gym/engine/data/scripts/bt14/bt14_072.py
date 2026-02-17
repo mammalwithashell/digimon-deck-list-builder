@@ -37,7 +37,9 @@ class BT14_072(CardScript):
             if not (player and game):
                 return
             def hand_filter(c):
-                if not (any('Dark Animal' in _t or 'DarkAnimal' in _t for _t in (getattr(c, 'card_traits', []) or []))):
+                if not getattr(c, 'is_digimon', False):
+                    return False
+                if not ('Purple' in [col.name for col in getattr(c, 'card_colors', [])]):
                     return False
                 return True
             def on_trashed(selected):
@@ -78,7 +80,9 @@ class BT14_072(CardScript):
             if not (player and game):
                 return
             def hand_filter(c):
-                if not (any('Dark Animal' in _t or 'DarkAnimal' in _t for _t in (getattr(c, 'card_traits', []) or []))):
+                if not getattr(c, 'is_digimon', False):
+                    return False
+                if not ('Purple' in [col.name for col in getattr(c, 'card_colors', [])]):
                     return False
                 return True
             def on_trashed(selected):

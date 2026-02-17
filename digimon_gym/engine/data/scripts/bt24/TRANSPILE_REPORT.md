@@ -4,8 +4,8 @@ Generated from DCGO C# card scripts.
 
 - Total scripts: 102
 - Scripts with effects: 102
-- Total effects: 412
-- Factory effects: 141
+- Total effects: 414
+- Factory effects: 143
 - Activate effects: 271
 
 ## Per-Card Breakdown
@@ -172,7 +172,7 @@ BT24_090: 6 effects
   [factory] alliance
   [EffectTiming.None] grant_skill
   [EffectTiming.OptionSkill] play_card, trash_from_hand, cost_reduction
-  [EffectTiming.SecuritySkill] play_card, trash_from_hand
+  [EffectTiming.SecuritySkill] play_card
 BT24_091: 3 effects
   [EffectTiming.None] ignore_color_req (descriptive-tagged)
   [EffectTiming.OptionSkill] unsuspend, bounce
@@ -241,7 +241,7 @@ BT24_094: 6 effects
   [factory] dp_modifier_all
   [EffectTiming.None] grant_skill
   [EffectTiming.OptionSkill] play_card, trash_from_hand, cost_reduction
-  [EffectTiming.SecuritySkill] play_card, trash_from_hand
+  [EffectTiming.SecuritySkill] play_card
 BT24_095: 3 effects
   [EffectTiming.None] ignore_color_req (descriptive-tagged)
   [EffectTiming.OptionSkill] suspend, gain_keyword_cannot_unsuspend
@@ -354,7 +354,7 @@ BT24_098: 4 effects
   [EffectTiming.OptionSkill] draw, trash_from_hand
   [factory] delay
   [EffectTiming.OnEnterFieldAnyone] play_card
-  [EffectTiming.SecuritySkill] play_card, trash_from_hand, add_to_hand
+  [EffectTiming.SecuritySkill] play_card, add_to_hand
 BT24_099: 5 effects
   [EffectTiming.None] ignore_color_req (descriptive-tagged)
   [EffectTiming.OptionSkill] draw, trash_from_hand
@@ -406,18 +406,20 @@ BT24_016: 4 effects
   [EffectTiming.OnAllyAttack] trash_from_hand, add_to_security, destroy_security
   [EffectTiming.OnEnterFieldAnyone] trash_from_hand, add_to_security, destroy_security
   [EffectTiming.OnLoseSecurity] play_card, trash_from_hand (inherited) (1/turn)
-BT24_017: 2 effects
+BT24_017: 3 effects
   [factory] raid
+  [factory] progress
   [EffectTiming.OnEnterFieldAnyone] change_dp, delete, play_token
-BT24_018: 6 effects
+BT24_018: 7 effects
   [factory] alt_digivolve_req
+  [factory] progress
   [factory] blocker
   [factory] armor_purge
   [EffectTiming.OnEnterFieldAnyone] destroy_security, unsuspend
   [EffectTiming.OnLoseSecurity] delete (1/turn)
   [EffectTiming.WhenRemoveField] no-action (1/turn)
 BT24_082: 3 effects
-  [EffectTiming.OnStartMainPhase] play_card, trash_from_hand
+  [EffectTiming.OnStartMainPhase] play_card
   [EffectTiming.OnEnterFieldAnyone] change_dp, suspend, force_attack
   [factory] security_play
 BT24_083: 3 effects
@@ -425,7 +427,7 @@ BT24_083: 3 effects
   [EffectTiming.OnEnterFieldAnyone] add_to_hand, reveal_and_select
   [factory] security_play
 BT24_089: 3 effects
-  [EffectTiming.OptionSkill] play_card, trash_from_hand
+  [EffectTiming.OptionSkill] play_card
   [factory] delay
   [EffectTiming.OnTappedAnyone] digivolve
 BT24_100: 3 effects
@@ -517,7 +519,7 @@ BT24_093: 4 effects
   [EffectTiming.OptionSkill] recovery, add_to_hand, destroy_security
   [factory] delay
   [EffectTiming.OnLoseSecurity] add_to_security
-  [EffectTiming.SecuritySkill] play_card, trash_from_hand
+  [EffectTiming.SecuritySkill] play_card
 BT24_101: 6 effects
   [factory] alt_digivolve_req
   [factory] alt_digivolve_req

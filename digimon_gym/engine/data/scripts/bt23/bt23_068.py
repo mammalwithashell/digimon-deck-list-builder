@@ -50,6 +50,12 @@ class BT23_068(CardScript):
             if not (player and perm and game):
                 return
             def digi_filter(c):
+                if not getattr(c, 'is_digimon', False):
+                    return False
+                if getattr(c, 'level', None) is None or c.level > 4:
+                    return False
+                if not ('Purple' in [col.name for col in getattr(c, 'card_colors', [])]):
+                    return False
                 return True
             game.effect_digivolve_from_hand(
                 player, perm, digi_filter, is_optional=True)
@@ -79,6 +85,12 @@ class BT23_068(CardScript):
             if not (player and perm and game):
                 return
             def digi_filter(c):
+                if not getattr(c, 'is_digimon', False):
+                    return False
+                if getattr(c, 'level', None) is None or c.level > 4:
+                    return False
+                if not ('Purple' in [col.name for col in getattr(c, 'card_colors', [])]):
+                    return False
                 return True
             game.effect_digivolve_from_hand(
                 player, perm, digi_filter, is_optional=True)
@@ -111,7 +123,11 @@ class BT23_068(CardScript):
             if not (player and game):
                 return
             def play_filter(c):
+                if not getattr(c, 'is_digimon', False):
+                    return False
                 if getattr(c, 'level', None) is None or c.level > 4:
+                    return False
+                if not ('Purple' in [col.name for col in getattr(c, 'card_colors', [])]):
                     return False
                 return True
             game.effect_play_from_zone(

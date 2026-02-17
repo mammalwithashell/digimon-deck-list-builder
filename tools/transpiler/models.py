@@ -1,6 +1,6 @@
 """EffectBlock dataclass — core data structure for extracted card effects."""
 from dataclasses import dataclass, field
-from typing import List, Optional
+from typing import Any, Dict, List, Optional
 
 
 @dataclass
@@ -77,3 +77,16 @@ class EffectBlock:
     grant_max_targets: int = 1  # Number of targets for keyword grant selection
     grant_has_reference_selection: bool = False  # True when grant needs a reference perm first
     grant_reference_filter: str = ""  # e.g., "digi_count_lte" for DigivolutionCards.Count comparison
+    # Card selection filter fields (from CanSelectCardCondition lambda)
+    card_filter_traits: List[str] = field(default_factory=list)
+    card_filter_names: List[str] = field(default_factory=list)
+    card_filter_cost_max: Optional[int] = None
+    card_filter_cost_min: Optional[int] = None
+    card_filter_level_max: Optional[int] = None
+    card_filter_level_min: Optional[int] = None
+    card_filter_colors: List[str] = field(default_factory=list)
+    card_filter_kind: Optional[str] = None
+    card_filter_exclude_digi_egg: bool = False
+    card_filter_has_play_cost: bool = False
+    # Multi-pass reveal filter data (one dict per pass when >1 condition body found)
+    card_filter_passes: List[Dict[str, Any]] = field(default_factory=list)

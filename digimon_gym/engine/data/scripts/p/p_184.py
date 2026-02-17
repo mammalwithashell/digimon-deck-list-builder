@@ -1,0 +1,80 @@
+from __future__ import annotations
+from typing import TYPE_CHECKING, List, Dict, Any
+from ....core.card_script import CardScript
+from ....interfaces.card_effect import ICardEffect
+
+if TYPE_CHECKING:
+    from ....core.card_source import CardSource
+
+
+class P_184(CardScript):
+    """P-184 Dorugoramon | Lv.6"""
+
+    def get_card_effects(self, card: 'CardSource') -> List['ICardEffect']:
+        effects = []
+
+        # Factory effect: alt_digivolve_req
+        # Alternate digivolution requirement
+        effect0 = ICardEffect()
+        effect0.set_effect_name("P-184 Alternate digivolution requirement")
+        effect0.set_effect_description("Alternate digivolution requirement")
+        # Alternate digivolution: with [SoC] trait for cost 3
+        effect0._alt_digi_cost = 3
+        effect0._alt_digi_trait = "SoC"
+
+        def condition0(context: Dict[str, Any]) -> bool:
+            permanent = card.permanent_of_this_card() if card else None
+            if not (permanent and permanent.top_card and (any('SoC' in tr for tr in (getattr(permanent.top_card, 'card_traits', []) or [])))):
+                return False
+            return True
+        effect0.set_can_use_condition(condition0)
+        effects.append(effect0)
+
+        # Factory effect: security_attack_plus
+        # Security Attack +1
+        effect1 = ICardEffect()
+        effect1.set_effect_name("P-184 Security Attack +1")
+        effect1.set_effect_description("Security Attack +1")
+        effect1._security_attack_modifier = 1
+
+        def condition1(context: Dict[str, Any]) -> bool:
+            return True
+        effect1.set_can_use_condition(condition1)
+        effects.append(effect1)
+
+        # Timing: EffectTiming.OnEnterFieldAnyone
+        # [When Digivolving] This Digimon gets +3000 DP until your opponent's turn ends. Then, if [Kosuke Kisakata] is in this Digimon's digivolution cards, all of your Digimon with the [SoC] trait unsuspend.
+        effect2 = ICardEffect()
+        effect2.set_effect_name("P-184 Gain 3k DP")
+        effect2.set_effect_description("[When Digivolving] This Digimon gets +3000 DP until your opponent's turn ends. Then, if [Kosuke Kisakata] is in this Digimon's digivolution cards, all of your Digimon with the [SoC] trait unsuspend.")
+        effect2.is_when_digivolving = True
+
+        effect = effect2  # alias for condition closure
+        def condition2(context: Dict[str, Any]) -> bool:
+            if card and card.permanent_of_this_card() is None:
+                return False
+            # Triggered when digivolving — validated by engine timing
+            return True
+
+        effect2.set_can_use_condition(condition2)
+
+        def process2(ctx: Dict[str, Any]):
+            """Action: DP +3000, Unsuspend"""
+            player = ctx.get('player')
+            perm = ctx.get('permanent')
+            game = ctx.get('game')
+            if perm:
+                perm.change_dp(3000)
+            if not (player and game):
+                return
+            def target_filter(p):
+                return True
+            def on_unsuspend(target_perm):
+                target_perm.unsuspend()
+            game.effect_select_own_permanent(
+                player, on_unsuspend, filter_fn=target_filter, is_optional=False)
+
+        effect2.set_on_process_callback(process2)
+        effects.append(effect2)
+
+        return effects

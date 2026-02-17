@@ -178,6 +178,8 @@ class BT20_043(CardScript):
             if not (player and game):
                 return
             def play_filter(c):
+                if not getattr(c, 'is_digimon', False):
+                    return False
                 if not (any('Chaosmon' in _n for _n in getattr(c, 'card_names', []))):
                     return False
                 return True
@@ -186,6 +188,8 @@ class BT20_043(CardScript):
             if not (player and game):
                 return
             def hand_filter(c):
+                if not getattr(c, 'is_digimon', False):
+                    return False
                 if not (any('Chaosmon' in _n for _n in getattr(c, 'card_names', []))):
                     return False
                 return True

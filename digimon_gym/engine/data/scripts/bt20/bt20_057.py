@@ -110,9 +110,11 @@ class BT20_057(CardScript):
             if not (player and perm and game):
                 return
             def digi_filter(c):
-                if not (any('Huckmon' in _n for _n in getattr(c, 'card_names', [])) or any('Royal Knight' in _t for _t in (getattr(c, 'card_traits', []) or []))):
+                if not getattr(c, 'is_digimon', False):
                     return False
                 if getattr(c, 'level', None) is None or c.level > 6:
+                    return False
+                if not (any('Huckmon' in _n for _n in getattr(c, 'card_names', [])) or any('Royal Knight' in _t for _t in (getattr(c, 'card_traits', []) or []))):
                     return False
                 return True
             game.effect_digivolve_from_hand(
@@ -145,9 +147,11 @@ class BT20_057(CardScript):
             if not (player and perm and game):
                 return
             def digi_filter(c):
-                if not (any('Huckmon' in _n for _n in getattr(c, 'card_names', [])) or any('Royal Knight' in _t for _t in (getattr(c, 'card_traits', []) or []))):
+                if not getattr(c, 'is_digimon', False):
                     return False
                 if getattr(c, 'level', None) is None or c.level > 6:
+                    return False
+                if not (any('Huckmon' in _n for _n in getattr(c, 'card_names', [])) or any('Royal Knight' in _t for _t in (getattr(c, 'card_traits', []) or []))):
                     return False
                 return True
             game.effect_digivolve_from_hand(

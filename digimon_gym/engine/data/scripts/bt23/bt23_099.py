@@ -102,7 +102,7 @@ class BT23_099(CardScript):
             if not (player and game):
                 return
             def play_filter(c):
-                if not (any('Huckmon' in _n or 'Jesmon' in _n or 'Sistermon' in _n for _n in getattr(c, 'card_names', []))):
+                if not (any('Sistermon' in _n for _n in getattr(c, 'card_names', []))):
                     return False
                 return True
             game.effect_play_from_zone(
@@ -110,7 +110,7 @@ class BT23_099(CardScript):
             if not (player and game):
                 return
             def hand_filter(c):
-                if not (any('Huckmon' in _n or 'Jesmon' in _n or 'Sistermon' in _n for _n in getattr(c, 'card_names', []))):
+                if not (any('Sistermon' in _n for _n in getattr(c, 'card_names', []))):
                     return False
                 return True
             def on_trashed(selected):

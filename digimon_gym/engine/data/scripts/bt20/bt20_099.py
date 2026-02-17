@@ -58,12 +58,20 @@ class BT20_099(CardScript):
             if not (player and game):
                 return
             def play_filter(c):
+                if not getattr(c, 'is_digimon', False):
+                    return False
+                if not (any('ACCEL' in _t for _t in (getattr(c, 'card_traits', []) or []))):
+                    return False
                 return True
             game.effect_play_from_zone(
                 player, 'hand', play_filter, free=True, is_optional=True)
             if not (player and game):
                 return
             def hand_filter(c):
+                if not getattr(c, 'is_digimon', False):
+                    return False
+                if not (any('ACCEL' in _t for _t in (getattr(c, 'card_traits', []) or []))):
+                    return False
                 return True
             def on_trashed(selected):
                 if selected in player.hand_cards:
