@@ -376,6 +376,125 @@ class Game:
             "Player2": player_data(self.player2),
         }
 
+    # ─── Keywords scanned by to_ui_json ──────────────────────────────
+    _UI_KEYWORDS = [
+        '_is_blocker', '_is_piercing', '_is_jamming', '_is_retaliation',
+        '_is_rush', '_is_reboot', '_is_raid', '_is_blitz', '_is_alliance',
+        '_is_collision', '_is_training', '_is_progress', '_is_fortitude',
+        '_is_save', '_is_decoy', '_is_material_save', '_is_vortex',
+        '_is_overclock', '_is_armor_purge', '_is_evade', '_is_barrier',
+        '_is_cannot_attack', '_is_cannot_attack_player', '_is_cannot_block',
+        '_is_cannot_be_blocked', '_is_cannot_unsuspend',
+    ]
+
+    def to_ui_json(self) -> Dict[str, Any]:
+        """Extended game state for the UI frontend.
+
+        Includes keywords, digivolution stack details, trash, security IDs,
+        revealed cards, and pending selection/attack context.
+        """
+        def perm_data(perm: Permanent) -> Dict[str, Any]:
+            keywords = [
+                kw.replace('_is_', '')
+                for kw in self._UI_KEYWORDS
+                if perm.has_keyword(kw)
+            ]
+            sources = []
+            for src in perm.card_sources:
+                sources.append({
+                    "cardId": src.card_id,
+                    "optState": getattr(src, 'opt_state', 0),
+                    "dpContribution": getattr(src, 'dp', 0) or 0,
+                })
+            colors = []
+            if perm.top_card:
+                colors = [c.value for c in getattr(perm.top_card, 'card_colors', [])]
+            return {
+                "topCardId": perm.top_card.card_id if perm.top_card else None,
+                "topCardName": perm.top_card.card_names[0] if perm.top_card and perm.top_card.card_names else None,
+                "dp": perm.dp,
+                "level": perm.level,
+                "isSuspended": perm.is_suspended,
+                "sourceCount": len(perm.card_sources),
+                "keywords": keywords,
+                "securityAttackModifier": perm.security_attack_modifier(),
+                "linkedCardIds": [lc.card_id for lc in perm.linked_cards],
+                "sources": sources,
+                "turnPlayed": perm.turn_played,
+                "colors": colors,
+            }
+
+        def player_ui_data(p: Player) -> Dict[str, Any]:
+            breeding = None
+            if p.breeding_area:
+                breeding = perm_data(p.breeding_area)
+            return {
+                "id": p.player_id,
+                "memory": self._get_memory_for(p),
+                "handCount": len(p.hand_cards),
+                "handIds": [c.card_id for c in p.hand_cards],
+                "securityCount": len(p.security_cards),
+                "securityIds": [c.card_id for c in p.security_cards],
+                "deckCount": len(p.library_cards),
+                "eggDeckCount": len(p.digitama_library_cards),
+                "battleAreaCount": len(p.battle_area),
+                "battleArea": [perm_data(perm) for perm in p.battle_area],
+                "breedingArea": breeding,
+                "trashIds": [c.card_id for c in p.trash_cards],
+            }
+
+        revealed = [
+            {"cardId": c.card_id, "owner": c.owner.player_id if c.owner else 0}
+            for c in self.revealed_cards
+        ]
+
+        pending_sel = None
+        if self.pending_selection:
+            ps = self.pending_selection
+            pending_sel = {
+                "phase": self.current_phase.value,
+                "validIndices": ps.valid_indices,
+                "isOptional": ps.is_optional,
+                "prompt": "",
+                "selectingPlayer": ps.selecting_player.player_id,
+            }
+
+        pending_atk = None
+        if self.pending_attack:
+            pa = self.pending_attack
+            attacker_slot = -1
+            for i, perm in enumerate(self.turn_player.battle_area):
+                if perm is pa.attacker:
+                    attacker_slot = i
+                    break
+            target_slot = -1
+            if isinstance(pa.effective_target, Permanent):
+                enemy = self.turn_player.enemy
+                for i, perm in enumerate(enemy.battle_area):
+                    if perm is pa.effective_target:
+                        target_slot = i
+                        break
+            else:
+                target_slot = 12  # security attack
+            pending_atk = {
+                "attackerSlot": attacker_slot,
+                "targetSlot": target_slot,
+            }
+
+        return {
+            "turnCount": self.turn_count,
+            "currentPhase": self.current_phase.value,
+            "currentPlayer": self.current_player_id,
+            "memoryGauge": self.memory,
+            "isGameOver": self.game_over,
+            "winner": self.winner.player_id if self.winner else None,
+            "player1": player_ui_data(self.player1),
+            "player2": player_ui_data(self.player2),
+            "revealedCards": revealed,
+            "pendingSelection": pending_sel,
+            "pendingAttack": pending_atk,
+        }
+
     def resolve_attack(self, attacker: Permanent, target: Union[Permanent, Player],
                        without_suspend: bool = False, is_vortex: bool = False,
                        return_phase: Optional[GamePhase] = None):

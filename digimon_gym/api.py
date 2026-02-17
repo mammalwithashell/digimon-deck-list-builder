@@ -1,6 +1,7 @@
 from contextlib import asynccontextmanager
 
 from fastapi import Depends, FastAPI, HTTPException
+from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from typing import List, Dict, Any, Optional, Union
 from uuid import uuid4
@@ -11,7 +12,8 @@ from digimon_gym.digimon_gym import GameState, greedy_policy
 from digimon_gym.engine.runners.headless_game import HeadlessGame
 from digimon_gym.engine.runners.interactive_game import InteractiveGame
 from digimon_gym.engine.runners.replay_runner import ReplayRunner
-from digimon_gym.engine.data.enums import PlayerType
+from digimon_gym.engine.data.enums import CardKind, PlayerType
+from digimon_gym.engine.data.card_database import CardDatabase
 from digimon_gym.engine.data.deck_loader import (
     parse_deck, validate_deck, summarize_deck, DeckValidationResult,
 )
@@ -37,6 +39,15 @@ async def lifespan(app: FastAPI):
 
 
 app = FastAPI(lifespan=lifespan)
+
+# ─── CORS ────────────────────────────────────────────────────────────────
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["http://localhost:5173"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 # ─── Database-backed API routers ─────────────────────────────────────────
 app.include_router(auth_router.router)
@@ -176,7 +187,7 @@ def create_game(request: CreateGameRequest):
         runner = InteractiveGame(deck1, deck2, p1_type, p2_type)
 
     active_games[game_id] = runner
-    state = runner.game.to_json()
+    state = runner.game.to_ui_json()
     mask = runner.get_action_mask().tolist()
 
     result = {
@@ -208,7 +219,7 @@ def game_action(game_id: str, request: GameActionRequest):
     turn_before = runner.game.turn_count
 
     runner.step(request.action)
-    state = runner.game.to_json()
+    state = runner.game.to_ui_json()
     mask = runner.get_action_mask().tolist()
 
     result = {
@@ -266,7 +277,7 @@ def game_state(game_id: str):
     runner = active_games.get(game_id)
     if not runner:
         raise HTTPException(status_code=404, detail="Game not found")
-    return runner.game.to_json()
+    return runner.game.to_ui_json()
 
 @app.get("/game/{game_id}/mask")
 def game_mask(game_id: str):
@@ -540,20 +551,37 @@ async def get_recording_state_at_step(
 
 @app.post("/deck/parse")
 def deck_parse(request: DeckRequest):
-    """Parse a deck string (TTS or text format) into a card ID list.
+    """Parse a deck string (TTS or text format) and classify into main/egg deck.
 
-    Returns the parsed card list and a summary with counts.
+    Returns main_deck, egg_deck lists and any warnings for unknown cards.
     """
     try:
         card_ids = parse_deck(request.deck)
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
 
-    summary = summarize_deck(card_ids)
+    db = CardDatabase()
+    main_deck: list[str] = []
+    egg_deck: list[str] = []
+    warnings: list[str] = []
+    seen_unknown: set[str] = set()
+
+    for card_id in card_ids:
+        entity = db.get_card(card_id)
+        if entity is None:
+            main_deck.append(card_id)  # default unknown to main deck
+            if card_id not in seen_unknown:
+                warnings.append(f"Unknown card: {card_id} (not in card database)")
+                seen_unknown.add(card_id)
+        elif entity.card_kind == CardKind.DigiEgg:
+            egg_deck.append(card_id)
+        else:
+            main_deck.append(card_id)
+
     return {
-        "card_ids": card_ids,
-        "summary": summary,
-        "total_cards": len(card_ids),
+        "main_deck": main_deck,
+        "egg_deck": egg_deck,
+        "warnings": warnings,
     }
 
 
