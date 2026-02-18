@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, Optional, Union, List, Dict, Any, Callable
 from dataclasses import dataclass, field
 import random
+import numpy as np
 
 from digimon_gym.engine.data.enums import GamePhase, EffectTiming, AttackResolution, PendingAction
 from digimon_gym.engine.core.player import Player
@@ -106,6 +107,9 @@ class Game:
 
         # Revealed cards zone (for reveal-and-select effects)
         self.revealed_cards: List['CardSource'] = []
+
+        # Optimization: Pre-allocated buffer for action mask
+        self._action_mask_buffer = np.zeros(ACTION_SPACE_SIZE, dtype=np.float32)
 
     @property
     def current_player_id(self) -> int:
@@ -1009,8 +1013,10 @@ class Game:
 
     # ─── Action Mask ─────────────────────────────────────────────────
 
-    def get_action_mask(self, player_id: int) -> List[float]:
+    def get_action_mask(self, player_id: int) -> np.ndarray:
         """Build a 2120-float mask (1.0 = valid, 0.0 = invalid).
+
+        Returns a reusable numpy buffer for performance. Do not modify in place without copying.
 
         Ranges match C# Digimon.Core.ActionDecoder:
           0-29:      Play card from hand
@@ -1023,7 +1029,9 @@ class Game:
           1000-1999: Activate effect (1000 + source*10 + effectIdx)
           2000-2119: Source selection (2000 + field*10 + sourceIdx)
         """
-        mask = [0.0] * ACTION_SPACE_SIZE
+        # Reuse pre-allocated buffer to avoid list creation overhead
+        self._action_mask_buffer.fill(0.0)
+        mask = self._action_mask_buffer
         me = self.player1 if player_id == 1 else self.player2
         opp = self.player2 if player_id == 1 else self.player1
 
