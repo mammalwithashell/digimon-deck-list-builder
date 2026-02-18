@@ -2118,6 +2118,58 @@ class Game:
         phase = GamePhase.SelectReveal if zone == 'revealed' else GamePhase.SelectTarget
         self.request_selection(phase, player, on_select, valid, is_optional)
 
+    def effect_play_from_sources(
+        self, player: Player,
+        filter_fn: Callable[['CardSource'], bool],
+        source_permanent: Optional['Permanent'] = None,
+        free: bool = True,
+        is_optional: bool = True,
+    ):
+        """Let agent pick a card from digivolution sources to play onto the field.
+
+        Args:
+            player: The player whose effect triggers.
+            filter_fn: Which source cards are valid.
+            source_permanent: If provided, only check sources of this permanent.
+            free: If True, play without paying cost.
+            is_optional: If True, player can decline.
+        """
+        valid = []
+        # Source selection range: 2000-2119 (field*10 + sourceIdx)
+        for i, perm in enumerate(player.battle_area):
+            if source_permanent is not None and perm is not source_permanent:
+                continue
+            if i >= FIELD_SLOTS:
+                continue
+            for j, card in enumerate(perm.card_sources):
+                if filter_fn(card):
+                    valid.append(2000 + i * 10 + j)
+
+        if not valid:
+            return
+
+        def on_select(action_id: int):
+            normalized = action_id - 2000
+            field_idx = normalized // 10
+            source_idx = normalized % 10
+            if 0 <= field_idx < len(player.battle_area):
+                perm = player.battle_area[field_idx]
+                if 0 <= source_idx < len(perm.card_sources):
+                    card = perm.card_sources[source_idx]
+                    # Remove from sources
+                    perm.card_sources.remove(card)
+                    # Play it (usually as a new Digimon)
+                    # Note: play_card_from_source creates a new permanent
+                    player.play_card_from_source(card, pay_cost=not free)
+                    self.logger.log(f"[Effect] {player.player_name} played "
+                                    f"{card.card_names[0]} from sources of "
+                                    f"{perm.top_card.card_names[0] if perm.top_card else 'Unknown'}")
+                    self.execute_effects(EffectTiming.OnEnterFieldAnyone,
+                                         {"played_card": card})
+
+        self.request_selection(
+            GamePhase.SelectSource, player, on_select, valid, is_optional)
+
     def effect_digivolve_from_hand(
         self, player: Player, permanent: 'Permanent',
         filter_fn: Callable[['CardSource'], bool],

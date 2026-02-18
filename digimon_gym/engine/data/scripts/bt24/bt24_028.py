@@ -171,11 +171,18 @@ class BT24_028(CardScript):
             if not (player and game):
                 return
             def play_filter(c):
-                if not (any('Neptunemon' in _n for _n in getattr(c, 'card_names', []))):
+                # Level 4 or lower
+                if getattr(c, 'level', 99) > 4:
+                    return False
+                # Blue
+                if not any(col.name == 'Blue' for col in getattr(c, 'card_colors', [])):
+                    return False
+                # [TS] trait
+                if not any('TS' in t for t in getattr(c, 'card_traits', [])):
                     return False
                 return True
-            game.effect_play_from_zone(
-                player, 'hand', play_filter, free=True, is_optional=True)
+            game.effect_play_from_sources(
+                player, play_filter, source_permanent=perm, free=True, is_optional=True)
 
         effect4.set_on_process_callback(process4)
         effects.append(effect4)

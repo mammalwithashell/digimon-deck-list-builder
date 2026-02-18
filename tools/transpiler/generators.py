@@ -434,8 +434,12 @@ def _emit_action(eb: EffectBlock, action: str, lines: List[str], indent: str):
             lines.append(f"{indent}    return True")
         else:
             lines.append(f"{indent}    return True")
-        lines.append(f"{indent}game.effect_play_from_zone(")
-        lines.append(f"{indent}    player, '{zone}', play_filter, free=True, is_optional=True)")
+        if zone == 'sources':
+            lines.append(f"{indent}game.effect_play_from_sources(")
+            lines.append(f"{indent}    player, play_filter, source_permanent=perm, free=True, is_optional=True)")
+        else:
+            lines.append(f"{indent}game.effect_play_from_zone(")
+            lines.append(f"{indent}    player, '{zone}', play_filter, free=True, is_optional=True)")
     elif action == "reveal_and_select":
         count = eb.reveal_count or 4
         lines.append(f"{indent}if not (player and game):")
