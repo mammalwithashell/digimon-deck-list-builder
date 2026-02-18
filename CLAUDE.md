@@ -29,11 +29,12 @@ digimon_gym/                     # PRIMARY CODEBASE
 │   │   ├── card_database.py     # Singleton card loader
 │   │   ├── card_registry.py     # Card ID ↔ integer/norm_id mapping (REGISTRY_CAPACITY=20,000)
 │   │   ├── evo_cost.py          # EvoCost, DnaCost, DnaRequirement dataclasses
-│   │   └── scripts/             # Per-card effect implementations (639 scripts)
+│   │   └── scripts/             # Per-card effect implementations (742 scripts)
 │   │       ├── st1/             # Starter Set 1 (10 scripts)
 │   │       ├── p/               # Promo Set (227 scripts)
 │   │       ├── bt14/            # Booster Set 14 (94 scripts)
 │   │       ├── bt20/            # Booster Set 20 (103 scripts)
+│   │       ├── bt21/            # Booster Set 21 (103 scripts)
 │   │       ├── bt23/            # Booster Set 23 (103 scripts)
 │   │       ├── bt24/            # Booster Set 24 (102 scripts)
 │   │       ├── ex8/             # EX Set 8 (placeholder, 0 scripts)
@@ -71,6 +72,7 @@ tests/                           # Pytest test suite
 ├── test_p_scripts.py            # P (Promo) card script validation (463 parametrized tests)
 ├── test_bt14_scripts.py         # BT14 card script validation (200 parametrized tests)
 ├── test_bt20_scripts.py         # BT20 card script validation (215 parametrized tests)
+├── test_bt21_scripts.py         # BT21 card script validation (216 parametrized tests)
 ├── test_bt23_scripts.py         # BT23 card script validation (211 parametrized tests)
 ├── test_bt24_scripts.py         # BT24 card script validation (216 parametrized tests)
 ├── test_digivolve_validation.py # Digivolution rules tests (25 tests)
@@ -405,9 +407,9 @@ The engine checks keyword abilities at runtime via the `Permanent.has_keyword()`
 - Use **pytest** for all tests
 - Test files go in `tests/` (root level)
 - Mock card helpers exist in test files — reuse them for new tests
-- Script validation tests (`test_p_scripts.py`, `test_bt{14,20,23,24}_scripts.py`) are parametrized — 463, 200, 215, 211, and 216 tests respectively verifying transpiled scripts load, produce correct effect counts, and set expected keyword flags
+- Script validation tests (`test_p_scripts.py`, `test_bt{14,20,21,23,24}_scripts.py`) are parametrized — 463, 200, 215, 216, 211, and 216 tests respectively verifying transpiled scripts load, produce correct effect counts, and set expected keyword flags
 - `test_build_registry.py` — 21 tests for natural sort key parsing, append-only index preservation, capacity validation, determinism, and deduplication
-- Run `python -m pytest tests/ -v` for the full suite (1784 tests)
+- Run `python -m pytest tests/ -v` for the full suite (1963 tests, excluding numpy-dependent tests)
 
 ## Card Data API
 
@@ -452,7 +454,7 @@ The transpiler emits flags for these keywords, but the engine does not yet act o
 **All runtime-implemented keywords:** Rush, Blocker, Piercing, Jamming, Retaliation, Collision, Blitz, Raid, Reboot, Blast Digivolve, Alliance, Training, Progress, Fortitude, Save, Decoy, Material Save, Vortex, Overclock, Security Attack +/-, Armor Purge, Evade, Barrier, and restriction keywords (cannot_attack, cannot_attack_player, cannot_block, cannot_be_blocked, cannot_unsuspend), plus the granted keyword mechanism and option color requirement.
 
 ### Descriptive-Tagged Effects (Pending Engine Features)
-~182 effect callbacks across 4 sets are recognized by the transpiler but emit `pass # descriptive-tagged` because the engine lacks support. These represent the largest category of incomplete card functionality:
+~201 effect callbacks across 5 sets are recognized by the transpiler but emit `pass # descriptive-tagged` because the engine lacks support. These represent the largest category of incomplete card functionality:
 
 | Tag | Count | Engine feature needed |
 |-----|:-----:|----------------------|
@@ -474,11 +476,12 @@ The transpiler emits flags for these keywords, but the engine does not yet act o
 | P | 34 | 26 |
 | BT14 | 1 | 13 |
 | BT20 | 8 | 34 |
+| BT21 | 31 | 15 |
 | BT23 | 7 | 36 |
 | BT24 | 3 | 24 |
 
 ### Transpiler Stub Summary
-53 effect callbacks across 5 sets still produce no-action stubs (19 across BT14/20/23/24, plus 34 in the P promo set). The BT set stubs were reduced from 116 after P7 stub reduction: widened `_extract_method_body()` regex, ChangeCostClass value extraction, Mode.Custom helper class scanning (IDegeneration, SwitchDefender, PlayPermanentCards, DigivolveIntoHandOrTrashCard, CanNotAffectedClass), AddSkillClass detection, metadata class detection (AddJogressLevelsClass, ChangeCardNamesClass, CanAttackTargetDefendingPermanentClass), and orphan pass elimination.
+84 effect callbacks across 6 sets still produce no-action stubs (50 across BT14/20/21/23/24, plus 34 in the P promo set). The BT set stubs were reduced from 116 after P7 stub reduction: widened `_extract_method_body()` regex, ChangeCostClass value extraction, Mode.Custom helper class scanning (IDegeneration, SwitchDefender, PlayPermanentCards, DigivolveIntoHandOrTrashCard, CanNotAffectedClass), AddSkillClass detection, metadata class detection (AddJogressLevelsClass, ChangeCardNamesClass, CanAttackTargetDefendingPermanentClass), and orphan pass elimination. BT21 transpilation introduced additional pattern fixes: `RushSelfStaticEffect` and `CollisionSelfStaticEffect` recognition, hashtable lambda delegate resolution for shared `ActivateCoroutine`, and narrowed `RE_TRASH_HAND` to only match explicit `Mode.Discard` (preventing false positives from `SelectHandEffect` in custom mode).
 
 Remaining stubs are complex multi-step sequences with nested coroutines, `OnAddDigivolutionCards` timing blocks, and effects requiring engine features not yet supported.
 

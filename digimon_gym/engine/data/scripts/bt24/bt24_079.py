@@ -39,10 +39,10 @@ class BT24_079(CardScript):
         effects.append(effect1)
 
         # Timing: EffectTiming.None
-        # Play Card, Trash From Hand
+        # Play Card
         effect2 = ICardEffect()
         effect2.set_effect_name("BT24-079 Play a lvl 4- from trash. Add new link to a digimon")
-        effect2.set_effect_description("Play Card, Trash From Hand")
+        effect2.set_effect_description("Play Card")
 
         effect = effect2  # alias for condition closure
         def condition2(context: Dict[str, Any]) -> bool:
@@ -54,7 +54,7 @@ class BT24_079(CardScript):
         effect2.set_can_use_condition(condition2)
 
         def process2(ctx: Dict[str, Any]):
-            """Action: Play Card, Trash From Hand"""
+            """Action: Play Card"""
             player = ctx.get('player')
             perm = ctx.get('permanent')
             game = ctx.get('game')
@@ -66,27 +66,15 @@ class BT24_079(CardScript):
                 return True
             game.effect_play_from_zone(
                 player, 'trash', play_filter, free=True, is_optional=True)
-            if not (player and game):
-                return
-            def hand_filter(c):
-                if getattr(c, 'level', None) is None or c.level > 4:
-                    return False
-                return True
-            def on_trashed(selected):
-                if selected in player.hand_cards:
-                    player.hand_cards.remove(selected)
-                    player.trash_cards.append(selected)
-            game.effect_select_hand_card(
-                player, hand_filter, on_trashed, is_optional=False)
 
         effect2.set_on_process_callback(process2)
         effects.append(effect2)
 
         # Timing: EffectTiming.OnEnterFieldAnyone
-        # Play Card, Trash From Hand
+        # Play Card
         effect3 = ICardEffect()
         effect3.set_effect_name("BT24-079 Play a lvl 4- from trash. Add new link to a digimon")
-        effect3.set_effect_description("Play Card, Trash From Hand")
+        effect3.set_effect_description("Play Card")
         effect3.is_when_digivolving = True
 
         effect = effect3  # alias for condition closure
@@ -99,7 +87,7 @@ class BT24_079(CardScript):
         effect3.set_can_use_condition(condition3)
 
         def process3(ctx: Dict[str, Any]):
-            """Action: Play Card, Trash From Hand"""
+            """Action: Play Card"""
             player = ctx.get('player')
             perm = ctx.get('permanent')
             game = ctx.get('game')
@@ -111,18 +99,6 @@ class BT24_079(CardScript):
                 return True
             game.effect_play_from_zone(
                 player, 'trash', play_filter, free=True, is_optional=True)
-            if not (player and game):
-                return
-            def hand_filter(c):
-                if getattr(c, 'level', None) is None or c.level > 4:
-                    return False
-                return True
-            def on_trashed(selected):
-                if selected in player.hand_cards:
-                    player.hand_cards.remove(selected)
-                    player.trash_cards.append(selected)
-            game.effect_select_hand_card(
-                player, hand_filter, on_trashed, is_optional=False)
 
         effect3.set_on_process_callback(process3)
         effects.append(effect3)

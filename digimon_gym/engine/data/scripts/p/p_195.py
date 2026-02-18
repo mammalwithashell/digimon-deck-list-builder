@@ -57,7 +57,7 @@ class P_195(CardScript):
         effect1.set_can_use_condition(condition1)
 
         def process1(ctx: Dict[str, Any]):
-            """Action: Play Card, Trash From Hand, Digivolve"""
+            """Action: Play Card, Digivolve"""
             player = ctx.get('player')
             perm = ctx.get('permanent')
             game = ctx.get('game')
@@ -67,16 +67,6 @@ class P_195(CardScript):
                 return True
             game.effect_play_from_zone(
                 player, 'hand', play_filter, free=True, is_optional=True)
-            if not (player and game):
-                return
-            def hand_filter(c):
-                return True
-            def on_trashed(selected):
-                if selected in player.hand_cards:
-                    player.hand_cards.remove(selected)
-                    player.trash_cards.append(selected)
-            game.effect_select_hand_card(
-                player, hand_filter, on_trashed, is_optional=False)
             if not (player and perm and game):
                 return
             def digi_filter(c):

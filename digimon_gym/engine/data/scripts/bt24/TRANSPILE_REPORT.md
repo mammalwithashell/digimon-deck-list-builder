@@ -4,8 +4,8 @@ Generated from DCGO C# card scripts.
 
 - Total scripts: 102
 - Scripts with effects: 102
-- Total effects: 414
-- Factory effects: 143
+- Total effects: 419
+- Factory effects: 148
 - Activate effects: 271
 
 ## Per-Card Breakdown
@@ -29,8 +29,8 @@ BT24_054: 3 effects
 BT24_055: 5 effects
   [factory] alt_digivolve_req
   [factory] blocker
-  [EffectTiming.OnEnterFieldAnyone] trash_from_hand
-  [EffectTiming.OnEnterFieldAnyone] trash_from_hand
+  [EffectTiming.OnEnterFieldAnyone] no-action
+  [EffectTiming.OnEnterFieldAnyone] no-action
   [EffectTiming.OnTappedAnyone] suspend (inherited) (1/turn)
 BT24_056: 5 effects
   [factory] alt_digivolve_req
@@ -73,10 +73,12 @@ BT24_062: 7 effects
   [EffectTiming.OnEndAttack] play_card
   [EffectTiming.OnEndTurn] play_card
   [EffectTiming.None] target_lock (inherited)
-BT24_063: 3 effects
+BT24_063: 5 effects
   [factory] alt_digivolve_req
+  [factory] collision
   [EffectTiming.OnEnterFieldAnyone] play_card, reveal_and_select
   [EffectTiming.OnEnterFieldAnyone] play_card, reveal_and_select
+  [factory] collision
 BT24_064: 4 effects
   [factory] alt_digivolve_req
   [factory] blocker
@@ -87,7 +89,7 @@ BT24_065: 5 effects
   [factory] overclock
   [factory] blocker
   [EffectTiming.OnEnterFieldAnyone] delete, de_digivolve
-  [EffectTiming.WhenRemoveField] play_card, trash_from_hand (1/turn)
+  [EffectTiming.WhenRemoveField] play_card (1/turn)
 BT24_086: 7 effects
   [EffectTiming.None] also_treated_as (descriptive-tagged)
   [factory] security_play
@@ -127,7 +129,7 @@ BT24_023: 7 effects
 BT24_024: 3 effects
   [factory] alt_digivolve_req
   [factory] armor_purge
-  [EffectTiming.OnAllyAttack] play_card, trash_from_hand, cost_reduction (1/turn)
+  [EffectTiming.OnAllyAttack] play_card, cost_reduction (1/turn)
 BT24_025: 4 effects
   [factory] alt_digivolve_req
   [EffectTiming.OnUnTappedAnyone] digivolve
@@ -143,19 +145,19 @@ BT24_027: 6 effects
   [factory] alt_digivolve_req
   [factory] alt_digivolve_req
   [factory] decode
-  [EffectTiming.OnEnterFieldAnyone] trash_from_hand, gain_keyword_cannot_be_deleted_by_battle
-  [EffectTiming.OnEnterFieldAnyone] trash_from_hand, gain_keyword_cannot_be_deleted_by_battle
+  [EffectTiming.OnEnterFieldAnyone] gain_keyword_cannot_be_deleted_by_battle
+  [EffectTiming.OnEnterFieldAnyone] gain_keyword_cannot_be_deleted_by_battle
   [EffectTiming.OnAllyAttack] draw (inherited) (1/turn)
 BT24_028: 5 effects
   [factory] alt_digivolve_req
-  [EffectTiming.OnEnterFieldAnyone] trash_from_hand, gain_keyword_blocker, gain_keyword_cannot_be_deleted_by_battle
-  [EffectTiming.OnEnterFieldAnyone] trash_from_hand, gain_keyword_blocker, gain_keyword_cannot_be_deleted_by_battle
+  [EffectTiming.OnEnterFieldAnyone] gain_keyword_blocker, gain_keyword_cannot_be_deleted_by_battle
+  [EffectTiming.OnEnterFieldAnyone] gain_keyword_blocker, gain_keyword_cannot_be_deleted_by_battle
   [EffectTiming.OnUnTappedAnyone] digivolve
   [EffectTiming.OnAllyAttack] play_card (inherited) (1/turn)
 BT24_029: 5 effects
   [factory] alt_digivolve_req
-  [EffectTiming.OnEnterFieldAnyone] trash_from_hand
-  [EffectTiming.OnEnterFieldAnyone] trash_from_hand
+  [EffectTiming.OnEnterFieldAnyone] no-action
+  [EffectTiming.OnEnterFieldAnyone] no-action
   [EffectTiming.OnEndAttack] play_card (1/turn)
   [EffectTiming.OnAllyAttack] play_card (inherited) (1/turn)
 BT24_030: 7 effects
@@ -171,7 +173,7 @@ BT24_090: 6 effects
   [factory] blocker
   [factory] alliance
   [EffectTiming.None] grant_skill
-  [EffectTiming.OptionSkill] play_card, trash_from_hand, cost_reduction
+  [EffectTiming.OptionSkill] play_card, cost_reduction
   [EffectTiming.SecuritySkill] play_card
 BT24_091: 3 effects
   [EffectTiming.None] ignore_color_req (descriptive-tagged)
@@ -221,8 +223,8 @@ BT24_050: 5 effects
   [factory] evade
   [EffectTiming.OnEnterFieldAnyone] unsuspend
   [EffectTiming.OnEnterFieldAnyone] unsuspend
-  [EffectTiming.OnAllyAttack] play_card, trash_from_hand (inherited) (1/turn)
-BT24_051: 8 effects
+  [EffectTiming.OnAllyAttack] play_card (inherited) (1/turn)
+BT24_051: 9 effects
   [factory] alt_digivolve_req
   [EffectTiming.BeforePayCost] cost_reduction
   [EffectTiming.None] cost_reduction
@@ -230,17 +232,18 @@ BT24_051: 8 effects
   [EffectTiming.OnEnterFieldAnyone] change_dp, suspend, force_attack
   [EffectTiming.OnEnterFieldAnyone] unsuspend
   [EffectTiming.OnAllyAttack] unsuspend
+  [factory] rush
   [EffectTiming.None] grant_skill
 BT24_085: 3 effects
   [EffectTiming.OnStartMainPhase] gain_memory
-  [EffectTiming.OnEndTurn] suspend, trash_from_hand, force_attack
+  [EffectTiming.OnEndTurn] suspend, force_attack
   [factory] security_play
 BT24_094: 6 effects
   [EffectTiming.None] ignore_color_req (descriptive-tagged)
   [factory] alliance
   [factory] dp_modifier_all
   [EffectTiming.None] grant_skill
-  [EffectTiming.OptionSkill] play_card, trash_from_hand, cost_reduction
+  [EffectTiming.OptionSkill] play_card, cost_reduction
   [EffectTiming.SecuritySkill] play_card
 BT24_095: 3 effects
   [EffectTiming.None] ignore_color_req (descriptive-tagged)
@@ -256,7 +259,7 @@ BT24_066: 3 effects
   [EffectTiming.OnAllyAttack] delete (inherited) (1/turn)
 BT24_067: 3 effects
   [factory] alt_digivolve_req
-  [EffectTiming.WhenLinked] play_card, trash_from_hand (1/turn)
+  [EffectTiming.WhenLinked] play_card (1/turn)
   [factory] retaliation
 BT24_068: 2 effects
   [EffectTiming.OnEnterFieldAnyone] trash_from_hand, add_to_hand, reveal_and_select
@@ -318,8 +321,8 @@ BT24_078: 3 effects
 BT24_079: 5 effects
   [factory] alt_digivolve_req
   [factory] overclock
-  [EffectTiming.None] play_card, trash_from_hand
-  [EffectTiming.OnEnterFieldAnyone] play_card, trash_from_hand
+  [EffectTiming.None] play_card
+  [EffectTiming.OnEnterFieldAnyone] play_card
   [EffectTiming.OnDestroyedAnyone] no-action (1/turn)
 BT24_080: 6 effects
   [EffectTiming.None] also_treated_as (descriptive-tagged)
@@ -328,8 +331,9 @@ BT24_080: 6 effects
   [EffectTiming.OnEnterFieldAnyone] delete
   [EffectTiming.OnEnterFieldAnyone] delete
   [EffectTiming.OnDestroyedAnyone] delete
-BT24_081: 6 effects
+BT24_081: 7 effects
   [factory] execute
+  [factory] rush
   [EffectTiming.None] no-action
   [EffectTiming.OnEnterFieldAnyone] delete, trash_from_hand
   [EffectTiming.OnEnterFieldAnyone] delete, trash_from_hand
@@ -375,8 +379,9 @@ BT24_010: 4 effects
   [factory] blocker
   [EffectTiming.OnDestroyedAnyone] de_digivolve
   [factory] raid
-BT24_011: 3 effects
+BT24_011: 4 effects
   [factory] alt_digivolve_req
+  [factory] rush
   [factory] raid
   [factory] raid
 BT24_012: 3 effects
@@ -403,9 +408,9 @@ BT24_015: 5 effects
   [EffectTiming.OnAllyAttack] delete (inherited) (1/turn)
 BT24_016: 4 effects
   [EffectTiming.OnDeclaration] digivolve
-  [EffectTiming.OnAllyAttack] trash_from_hand, add_to_security, destroy_security
-  [EffectTiming.OnEnterFieldAnyone] trash_from_hand, add_to_security, destroy_security
-  [EffectTiming.OnLoseSecurity] play_card, trash_from_hand (inherited) (1/turn)
+  [EffectTiming.OnAllyAttack] add_to_security, destroy_security
+  [EffectTiming.OnEnterFieldAnyone] add_to_security, destroy_security
+  [EffectTiming.OnLoseSecurity] play_card (inherited) (1/turn)
 BT24_017: 3 effects
   [factory] raid
   [factory] progress
@@ -423,7 +428,7 @@ BT24_082: 3 effects
   [EffectTiming.OnEnterFieldAnyone] change_dp, suspend, force_attack
   [factory] security_play
 BT24_083: 3 effects
-  [EffectTiming.OnStartTurn] play_card, trash_from_hand
+  [EffectTiming.OnStartTurn] play_card
   [EffectTiming.OnEnterFieldAnyone] add_to_hand, reveal_and_select
   [factory] security_play
 BT24_089: 3 effects
@@ -456,14 +461,14 @@ BT24_033: 3 effects
 BT24_034: 6 effects
   [factory] alt_digivolve_req
   [factory] barrier
-  [EffectTiming.OnMove] play_card, trash_from_hand, add_to_hand, destroy_security
-  [EffectTiming.OnEnterFieldAnyone] play_card, trash_from_hand, add_to_hand, destroy_security
-  [EffectTiming.OnEnterFieldAnyone] play_card, trash_from_hand, add_to_hand, destroy_security
+  [EffectTiming.OnMove] play_card, add_to_hand, destroy_security
+  [EffectTiming.OnEnterFieldAnyone] play_card, add_to_hand, destroy_security
+  [EffectTiming.OnEnterFieldAnyone] play_card, add_to_hand, destroy_security
   [factory] barrier
 BT24_035: 4 effects
   [factory] alt_digivolve_req
-  [EffectTiming.OnEnterFieldAnyone] change_dp, play_card, trash_from_hand
-  [EffectTiming.OnEnterFieldAnyone] change_dp, play_card, trash_from_hand
+  [EffectTiming.OnEnterFieldAnyone] change_dp, play_card
+  [EffectTiming.OnEnterFieldAnyone] change_dp, play_card
   [factory] barrier
 BT24_036: 5 effects
   [factory] alt_digivolve_req
@@ -480,8 +485,8 @@ BT24_037: 6 effects
   [EffectTiming.WhenRemoveField] play_card (inherited) (1/turn)
 BT24_038: 5 effects
   [factory] alt_digivolve_req
-  [EffectTiming.OnEnterFieldAnyone] trash_from_hand
-  [EffectTiming.OnEnterFieldAnyone] trash_from_hand
+  [EffectTiming.OnEnterFieldAnyone] no-action
+  [EffectTiming.OnEnterFieldAnyone] no-action
   [EffectTiming.WhenLinked] change_dp (1/turn)
   [EffectTiming.WhenLinked] change_dp
 BT24_039: 6 effects
@@ -502,9 +507,9 @@ BT24_041: 8 effects
   [factory] alt_digivolve_req
   [EffectTiming.BeforePayCost] cost_reduction
   [EffectTiming.None] cost_reduction
-  [EffectTiming.OnEnterFieldAnyone] play_card, trash_from_hand, de_digivolve
-  [EffectTiming.OnEnterFieldAnyone] play_card, trash_from_hand, de_digivolve
-  [EffectTiming.OnDestroyedAnyone] play_card, trash_from_hand, de_digivolve
+  [EffectTiming.OnEnterFieldAnyone] play_card, de_digivolve
+  [EffectTiming.OnEnterFieldAnyone] play_card, de_digivolve
+  [EffectTiming.OnDestroyedAnyone] play_card, de_digivolve
   [factory] blocker
   [factory] reboot
 BT24_084: 3 effects

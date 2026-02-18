@@ -42,23 +42,35 @@ class P_184(CardScript):
         effect1.set_can_use_condition(condition1)
         effects.append(effect1)
 
+        # Factory effect: collision
+        # Collision
+        effect2 = ICardEffect()
+        effect2.set_effect_name("P-184 Collision")
+        effect2.set_effect_description("Collision")
+        effect2._is_collision = True
+
+        def condition2(context: Dict[str, Any]) -> bool:
+            return True
+        effect2.set_can_use_condition(condition2)
+        effects.append(effect2)
+
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [When Digivolving] This Digimon gets +3000 DP until your opponent's turn ends. Then, if [Kosuke Kisakata] is in this Digimon's digivolution cards, all of your Digimon with the [SoC] trait unsuspend.
-        effect2 = ICardEffect()
-        effect2.set_effect_name("P-184 Gain 3k DP")
-        effect2.set_effect_description("[When Digivolving] This Digimon gets +3000 DP until your opponent's turn ends. Then, if [Kosuke Kisakata] is in this Digimon's digivolution cards, all of your Digimon with the [SoC] trait unsuspend.")
-        effect2.is_when_digivolving = True
+        effect3 = ICardEffect()
+        effect3.set_effect_name("P-184 Gain 3k DP")
+        effect3.set_effect_description("[When Digivolving] This Digimon gets +3000 DP until your opponent's turn ends. Then, if [Kosuke Kisakata] is in this Digimon's digivolution cards, all of your Digimon with the [SoC] trait unsuspend.")
+        effect3.is_when_digivolving = True
 
-        effect = effect2  # alias for condition closure
-        def condition2(context: Dict[str, Any]) -> bool:
+        effect = effect3  # alias for condition closure
+        def condition3(context: Dict[str, Any]) -> bool:
             if card and card.permanent_of_this_card() is None:
                 return False
             # Triggered when digivolving — validated by engine timing
             return True
 
-        effect2.set_can_use_condition(condition2)
+        effect3.set_can_use_condition(condition3)
 
-        def process2(ctx: Dict[str, Any]):
+        def process3(ctx: Dict[str, Any]):
             """Action: DP +3000, Unsuspend"""
             player = ctx.get('player')
             perm = ctx.get('permanent')
@@ -74,7 +86,7 @@ class P_184(CardScript):
             game.effect_select_own_permanent(
                 player, on_unsuspend, filter_fn=target_filter, is_optional=False)
 
-        effect2.set_on_process_callback(process2)
-        effects.append(effect2)
+        effect3.set_on_process_callback(process3)
+        effects.append(effect3)
 
         return effects

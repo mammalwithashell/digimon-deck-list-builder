@@ -96,7 +96,7 @@ RE_BOUNCE = re.compile(r'Mode\.Bounce')
 RE_SUSPEND = re.compile(r'SuspendPermanentsClass|\.Tap\(\)')
 RE_RECOVERY = re.compile(r'new IRecovery\s*\([^,]+,\s*(\d+)')
 RE_PLAY_CARD = re.compile(r'PlayPermanentCards|PlayCardClass')
-RE_TRASH_HAND = re.compile(r'Mode\.Discard|SelectHandEffect')
+RE_TRASH_HAND = re.compile(r'Mode\.Discard')
 RE_TRASH_DIGI = re.compile(r'TrashDigivolutionCards|SelectTrashDigivolutionCards')
 RE_ADD_TO_HAND = re.compile(r'Mode\.AddHand|AddHandCards|AddThisCardToHand')
 RE_ADD_SECURITY = re.compile(r'AddSecurityCard')
@@ -214,7 +214,7 @@ RE_FACTORY_SA_VALUE = re.compile(r'ChangeSelfSAttackStaticEffect\s*\(\s*(?:chang
 # Factory method patterns
 RE_FACTORY_BLOCKER = re.compile(r'Blocker(?:Self)?StaticEffect')
 RE_FACTORY_JAMMING = re.compile(r'Jamming(?:Self)?StaticEffect')
-RE_FACTORY_RUSH = re.compile(r'Rush(?:Self)?Effect')
+RE_FACTORY_RUSH = re.compile(r'Rush(?:Self)?(?:Static)?Effect')
 RE_FACTORY_REBOOT = re.compile(r'Reboot(?:Self)?StaticEffect')
 RE_FACTORY_RAID = re.compile(r'Raid(?:Self)?Effect')
 RE_FACTORY_ALLIANCE = re.compile(r'Alliance(?:Self)?Effect')
@@ -229,7 +229,13 @@ RE_FACTORY_SET_MEM_3 = re.compile(r'SetMemoryTo3TamerEffect')
 RE_FACTORY_GAIN_MEM = re.compile(r'Gain1MemoryTamerOpponentDigimonEffect')
 # Fix 11: Missing factory keywords
 RE_FACTORY_PIERCING = re.compile(r'Piercing(?:Self)?StaticEffect')
-RE_FACTORY_COLLISION = re.compile(r'Collision(?:Self)?Effect')
+# Matches CollisionSelfEffect/CollisionEffect but for CollisionSelfStaticEffect only
+# when the card argument is 'card' (not 'cardSource') to avoid false positives in
+# grant_skill coroutines that call CollisionSelfStaticEffect(false, cardSource, ...).
+RE_FACTORY_COLLISION = re.compile(
+    r'Collision(?:Self)?Effect'
+    r'|CollisionSelfStaticEffect\s*\([^)]*\bcard\b[^S]'
+)
 RE_FACTORY_BLITZ = re.compile(r'Blitz(?:Self)?Effect')
 RE_FACTORY_FORTITUDE = re.compile(r'Fortitude(?:Self)?StaticEffect')
 RE_FACTORY_EVADE = re.compile(r'Evade(?:Self)?Effect')
@@ -304,7 +310,10 @@ RE_SHARED_COROUTINE_DELEGATE = re.compile(
     r'|yield\s+return\s+.*?Start[Cc]oroutine\s*\(\s*(\w*[Ss]hared\w*Coroutine\w*)\s*\(')
 # Also catch general coroutine delegation like: hash => SomeNameCoroutine(hash, activateClass)
 RE_COROUTINE_DELEGATE = re.compile(
-    r'hash\s*=>\s*(\w+Coroutine)\s*\(')
+    r'(?:hash|hashtable|_hashtable|_ht|ht)\s*=>\s*(\w+Coroutine)\s*\(')
+# Catch ActivateCoroutine lambda delegate (outer-scoped shared: hashtable => ActivateCoroutine(...))
+RE_ACTIVATE_COROUTINE_LAMBDA = re.compile(
+    r'(?:hash|hashtable|_hashtable|_ht|ht)\s*=>\s*(ActivateCoroutine)\s*\(')
 
 # ─── P5: New action patterns for stub reduction ──────────────────────
 

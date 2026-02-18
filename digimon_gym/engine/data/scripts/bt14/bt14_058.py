@@ -32,22 +32,18 @@ class BT14_058(CardScript):
         effect0.set_can_use_condition(condition0)
 
         def process0(ctx: Dict[str, Any]):
-            """Action: Trash From Hand, Gain Keyword Rush"""
+            """Action: Gain Keyword Rush"""
             player = ctx.get('player')
             perm = ctx.get('permanent')
             game = ctx.get('game')
             if not (player and game):
                 return
-            def hand_filter(c):
-                return True
-            def on_trashed(selected):
-                if selected in player.hand_cards:
-                    player.hand_cards.remove(selected)
-                    player.trash_cards.append(selected)
-            game.effect_select_hand_card(
-                player, hand_filter, on_trashed, is_optional=True)
-            if perm:
-                perm.grant_keyword('_is_rush')
+            def target_filter(p):
+                return p.is_digimon
+            def on_grant(target_perm):
+                target_perm.grant_keyword('_is_rush')
+            game.effect_select_own_permanent(
+                player, on_grant, filter_fn=target_filter, is_optional=True)
 
         effect0.set_on_process_callback(process0)
         effects.append(effect0)
@@ -71,22 +67,18 @@ class BT14_058(CardScript):
         effect1.set_can_use_condition(condition1)
 
         def process1(ctx: Dict[str, Any]):
-            """Action: Trash From Hand, Gain Keyword Rush"""
+            """Action: Gain Keyword Rush"""
             player = ctx.get('player')
             perm = ctx.get('permanent')
             game = ctx.get('game')
             if not (player and game):
                 return
-            def hand_filter(c):
-                return True
-            def on_trashed(selected):
-                if selected in player.hand_cards:
-                    player.hand_cards.remove(selected)
-                    player.trash_cards.append(selected)
-            game.effect_select_hand_card(
-                player, hand_filter, on_trashed, is_optional=True)
-            if perm:
-                perm.grant_keyword('_is_rush')
+            def target_filter(p):
+                return p.is_digimon
+            def on_grant(target_perm):
+                target_perm.grant_keyword('_is_rush')
+            game.effect_select_own_permanent(
+                player, on_grant, filter_fn=target_filter, is_optional=True)
 
         effect1.set_on_process_callback(process1)
         effects.append(effect1)

@@ -31,7 +31,7 @@ class BT23_084(CardScript):
         effect0.set_can_use_condition(condition0)
 
         def process0(ctx: Dict[str, Any]):
-            """Action: Suspend, Play Card, Trash From Hand"""
+            """Action: Suspend, Play Card"""
             player = ctx.get('player')
             perm = ctx.get('permanent')
             game = ctx.get('game')
@@ -57,24 +57,6 @@ class BT23_084(CardScript):
                 return True
             game.effect_play_from_zone(
                 player, 'hand', play_filter, free=True, is_optional=True)
-            if not (player and game):
-                return
-            def hand_filter(c):
-                if not getattr(c, 'is_digimon', False):
-                    return False
-                if getattr(c, 'level', None) is None or c.level > 3:
-                    return False
-                if getattr(c, 'level', None) is None or c.level < 3:
-                    return False
-                if not (any('CS' in _t for _t in (getattr(c, 'card_traits', []) or []))):
-                    return False
-                return True
-            def on_trashed(selected):
-                if selected in player.hand_cards:
-                    player.hand_cards.remove(selected)
-                    player.trash_cards.append(selected)
-            game.effect_select_hand_card(
-                player, hand_filter, on_trashed, is_optional=True)
 
         effect0.set_on_process_callback(process0)
         effects.append(effect0)

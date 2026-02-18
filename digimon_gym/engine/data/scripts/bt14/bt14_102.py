@@ -112,22 +112,10 @@ class BT14_102(CardScript):
         effect3.set_can_use_condition(condition3)
 
         def process3(ctx: Dict[str, Any]):
-            """Action: Trash From Hand, Add To Security"""
+            """Action: Add To Security"""
             player = ctx.get('player')
             perm = ctx.get('permanent')
             game = ctx.get('game')
-            if not (player and game):
-                return
-            def hand_filter(c):
-                if not (any('Vaccine' in _t for _t in (getattr(c, 'card_traits', []) or []))):
-                    return False
-                return True
-            def on_trashed(selected):
-                if selected in player.hand_cards:
-                    player.hand_cards.remove(selected)
-                    player.trash_cards.append(selected)
-            game.effect_select_hand_card(
-                player, hand_filter, on_trashed, is_optional=True)
             # Add top card of deck to security
             if player:
                 player.recovery(1)

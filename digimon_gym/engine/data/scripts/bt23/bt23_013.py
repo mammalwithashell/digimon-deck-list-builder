@@ -47,63 +47,42 @@ class BT23_013(CardScript):
         effect1.set_can_use_condition(condition1)
         effects.append(effect1)
 
-        # Factory effect: alliance
-        # Alliance
+        # Factory effect: rush
+        # Rush
         effect2 = ICardEffect()
-        effect2.set_effect_name("BT23-013 Alliance")
-        effect2.set_effect_description("Alliance")
-        effect2._is_alliance = True
+        effect2.set_effect_name("BT23-013 Rush")
+        effect2.set_effect_description("Rush")
+        effect2._is_rush = True
 
         def condition2(context: Dict[str, Any]) -> bool:
             return True
         effect2.set_can_use_condition(condition2)
         effects.append(effect2)
 
-        # Timing: EffectTiming.OnEnterFieldAnyone
-        # [When Digivolving] You may play 1 [Atho, Ren� & Por] Token or, from your hand or trash, 1 Digimon card with [Sistermon] in its name without paying the cost. This effect can't play cards with the same names as any of your Digimon.
+        # Factory effect: alliance
+        # Alliance
         effect3 = ICardEffect()
-        effect3.set_effect_name("BT23-013 Play 1 [Atho, Ren� & Por] token or 1 [Sistermon] in name digimon from hand or trash")
-        effect3.set_effect_description("[When Digivolving] You may play 1 [Atho, Ren� & Por] Token or, from your hand or trash, 1 Digimon card with [Sistermon] in its name without paying the cost. This effect can't play cards with the same names as any of your Digimon.")
-        effect3.is_when_digivolving = True
+        effect3.set_effect_name("BT23-013 Alliance")
+        effect3.set_effect_description("Alliance")
+        effect3._is_alliance = True
 
-        effect = effect3  # alias for condition closure
         def condition3(context: Dict[str, Any]) -> bool:
-            if card and card.permanent_of_this_card() is None:
-                return False
-            # Triggered when digivolving — validated by engine timing
             return True
-
         effect3.set_can_use_condition(condition3)
-
-        def process3(ctx: Dict[str, Any]):
-            """Action: Play Card, Play Token"""
-            player = ctx.get('player')
-            perm = ctx.get('permanent')
-            game = ctx.get('game')
-            if not (player and game):
-                return
-            def play_filter(c):
-                return True
-            game.effect_play_from_zone(
-                player, 'hand_or_trash', play_filter, free=True, is_optional=True)
-            # Play AthoRenePor Token — token play not yet supported in engine
-            pass  # descriptive-tagged: play_token
-
-        effect3.set_on_process_callback(process3)
         effects.append(effect3)
 
-        # Timing: EffectTiming.OnAllyAttack
-        # [When Attacking] You may play 1 [Atho, Ren� & Por] Token or, from your hand or trash, 1 Digimon card with [Sistermon] in its name without paying the cost. This effect can't play cards with the same names as any of your Digimon.
+        # Timing: EffectTiming.OnEnterFieldAnyone
+        # [When Digivolving] You may play 1 [Atho, Ren� & Por] Token or, from your hand or trash, 1 Digimon card with [Sistermon] in its name without paying the cost. This effect can't play cards with the same names as any of your Digimon.
         effect4 = ICardEffect()
         effect4.set_effect_name("BT23-013 Play 1 [Atho, Ren� & Por] token or 1 [Sistermon] in name digimon from hand or trash")
-        effect4.set_effect_description("[When Attacking] You may play 1 [Atho, Ren� & Por] Token or, from your hand or trash, 1 Digimon card with [Sistermon] in its name without paying the cost. This effect can't play cards with the same names as any of your Digimon.")
-        effect4.is_on_attack = True
+        effect4.set_effect_description("[When Digivolving] You may play 1 [Atho, Ren� & Por] Token or, from your hand or trash, 1 Digimon card with [Sistermon] in its name without paying the cost. This effect can't play cards with the same names as any of your Digimon.")
+        effect4.is_when_digivolving = True
 
         effect = effect4  # alias for condition closure
         def condition4(context: Dict[str, Any]) -> bool:
             if card and card.permanent_of_this_card() is None:
                 return False
-            # Triggered on attack — validated by engine timing
+            # Triggered when digivolving — validated by engine timing
             return True
 
         effect4.set_can_use_condition(condition4)
@@ -125,27 +104,60 @@ class BT23_013(CardScript):
         effect4.set_on_process_callback(process4)
         effects.append(effect4)
 
-        # Timing: EffectTiming.OnEnterFieldAnyone
-        # [Your Turn] [Once Per Turn] When any of your other Digimon are played, this Digimon may attack.
+        # Timing: EffectTiming.OnAllyAttack
+        # [When Attacking] You may play 1 [Atho, Ren� & Por] Token or, from your hand or trash, 1 Digimon card with [Sistermon] in its name without paying the cost. This effect can't play cards with the same names as any of your Digimon.
         effect5 = ICardEffect()
-        effect5.set_effect_name("BT23-013 This digimon may attack")
-        effect5.set_effect_description("[Your Turn] [Once Per Turn] When any of your other Digimon are played, this Digimon may attack.")
-        effect5.is_optional = True
-        effect5.set_max_count_per_turn(1)
-        effect5.set_hash_string("BT23_013_YT")
-        effect5.is_on_play = True
+        effect5.set_effect_name("BT23-013 Play 1 [Atho, Ren� & Por] token or 1 [Sistermon] in name digimon from hand or trash")
+        effect5.set_effect_description("[When Attacking] You may play 1 [Atho, Ren� & Por] Token or, from your hand or trash, 1 Digimon card with [Sistermon] in its name without paying the cost. This effect can't play cards with the same names as any of your Digimon.")
+        effect5.is_on_attack = True
 
         effect = effect5  # alias for condition closure
         def condition5(context: Dict[str, Any]) -> bool:
+            if card and card.permanent_of_this_card() is None:
+                return False
+            # Triggered on attack — validated by engine timing
+            return True
+
+        effect5.set_can_use_condition(condition5)
+
+        def process5(ctx: Dict[str, Any]):
+            """Action: Play Card, Play Token"""
+            player = ctx.get('player')
+            perm = ctx.get('permanent')
+            game = ctx.get('game')
+            if not (player and game):
+                return
+            def play_filter(c):
+                return True
+            game.effect_play_from_zone(
+                player, 'hand_or_trash', play_filter, free=True, is_optional=True)
+            # Play AthoRenePor Token — token play not yet supported in engine
+            pass  # descriptive-tagged: play_token
+
+        effect5.set_on_process_callback(process5)
+        effects.append(effect5)
+
+        # Timing: EffectTiming.OnEnterFieldAnyone
+        # [Your Turn] [Once Per Turn] When any of your other Digimon are played, this Digimon may attack.
+        effect6 = ICardEffect()
+        effect6.set_effect_name("BT23-013 This digimon may attack")
+        effect6.set_effect_description("[Your Turn] [Once Per Turn] When any of your other Digimon are played, this Digimon may attack.")
+        effect6.is_optional = True
+        effect6.set_max_count_per_turn(1)
+        effect6.set_hash_string("BT23_013_YT")
+        effect6.is_on_play = True
+
+        effect = effect6  # alias for condition closure
+        def condition6(context: Dict[str, Any]) -> bool:
             if card and card.permanent_of_this_card() is None:
                 return False
             if not (card and card.owner and card.owner.is_my_turn):
                 return False
             return True
 
-        effect5.set_can_use_condition(condition5)
+        effect6.set_can_use_condition(condition6)
 
-        def process5(ctx: Dict[str, Any]):
+        def process6(ctx: Dict[str, Any]):
             """Action: Force Attack"""
             player = ctx.get('player')
             perm = ctx.get('permanent')
@@ -153,7 +165,7 @@ class BT23_013(CardScript):
             # Force attack — target Digimon may attack (requires engine SelectAttack)
             pass  # descriptive-tagged: force_attack
 
-        effect5.set_on_process_callback(process5)
-        effects.append(effect5)
+        effect6.set_on_process_callback(process6)
+        effects.append(effect6)
 
         return effects

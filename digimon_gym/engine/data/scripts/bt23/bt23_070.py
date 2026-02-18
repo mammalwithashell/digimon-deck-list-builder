@@ -26,23 +26,35 @@ class BT23_070(CardScript):
         effect0.set_can_use_condition(condition0)
         effects.append(effect0)
 
+        # Factory effect: rush
+        # Rush
+        effect1 = ICardEffect()
+        effect1.set_effect_name("BT23-070 Rush")
+        effect1.set_effect_description("Rush")
+        effect1._is_rush = True
+
+        def condition1(context: Dict[str, Any]) -> bool:
+            return True
+        effect1.set_can_use_condition(condition1)
+        effects.append(effect1)
+
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [When Digivolving] Delete all of your opponent's Digimon with the highest level. Then, if a card with [Belphemon] in its name is in this Digimon's digivolution cards, this Digimon attacks without suspending.
-        effect1 = ICardEffect()
-        effect1.set_effect_name("BT23-070 Delete all highest level digimon, then if with [Belphemon] in name is in sources, atttack without suspending")
-        effect1.set_effect_description("[When Digivolving] Delete all of your opponent's Digimon with the highest level. Then, if a card with [Belphemon] in its name is in this Digimon's digivolution cards, this Digimon attacks without suspending.")
-        effect1.is_when_digivolving = True
+        effect2 = ICardEffect()
+        effect2.set_effect_name("BT23-070 Delete all highest level digimon, then if with [Belphemon] in name is in sources, atttack without suspending")
+        effect2.set_effect_description("[When Digivolving] Delete all of your opponent's Digimon with the highest level. Then, if a card with [Belphemon] in its name is in this Digimon's digivolution cards, this Digimon attacks without suspending.")
+        effect2.is_when_digivolving = True
 
-        effect = effect1  # alias for condition closure
-        def condition1(context: Dict[str, Any]) -> bool:
+        effect = effect2  # alias for condition closure
+        def condition2(context: Dict[str, Any]) -> bool:
             if card and card.permanent_of_this_card() is None:
                 return False
             # Triggered when digivolving — validated by engine timing
             return True
 
-        effect1.set_can_use_condition(condition1)
+        effect2.set_can_use_condition(condition2)
 
-        def process1(ctx: Dict[str, Any]):
+        def process2(ctx: Dict[str, Any]):
             """Action: Force Attack"""
             player = ctx.get('player')
             perm = ctx.get('permanent')
@@ -50,25 +62,25 @@ class BT23_070(CardScript):
             # Force attack — target Digimon may attack (requires engine SelectAttack)
             pass  # descriptive-tagged: force_attack
 
-        effect1.set_on_process_callback(process1)
-        effects.append(effect1)
+        effect2.set_on_process_callback(process2)
+        effects.append(effect2)
 
         # Timing: EffectTiming.OnEndAttack
         # [End of Attack] This Digimon may digivolve into [Belphemon: Sleep Mode] in the trash, ignoring digivolution requirements and without paying the cost.
-        effect2 = ICardEffect()
-        effect2.set_effect_name("BT23-070 Digivolve into [Belphemon: Sleep Mode] in trash")
-        effect2.set_effect_description("[End of Attack] This Digimon may digivolve into [Belphemon: Sleep Mode] in the trash, ignoring digivolution requirements and without paying the cost.")
-        effect2.is_optional = True
+        effect3 = ICardEffect()
+        effect3.set_effect_name("BT23-070 Digivolve into [Belphemon: Sleep Mode] in trash")
+        effect3.set_effect_description("[End of Attack] This Digimon may digivolve into [Belphemon: Sleep Mode] in the trash, ignoring digivolution requirements and without paying the cost.")
+        effect3.is_optional = True
 
-        effect = effect2  # alias for condition closure
-        def condition2(context: Dict[str, Any]) -> bool:
+        effect = effect3  # alias for condition closure
+        def condition3(context: Dict[str, Any]) -> bool:
             if card and card.permanent_of_this_card() is None:
                 return False
             return True
 
-        effect2.set_can_use_condition(condition2)
+        effect3.set_can_use_condition(condition3)
 
-        def process2(ctx: Dict[str, Any]):
+        def process3(ctx: Dict[str, Any]):
             """Action: Digivolve"""
             player = ctx.get('player')
             perm = ctx.get('permanent')
@@ -80,7 +92,7 @@ class BT23_070(CardScript):
             game.effect_digivolve_from_hand(
                 player, perm, digi_filter, is_optional=True)
 
-        effect2.set_on_process_callback(process2)
-        effects.append(effect2)
+        effect3.set_on_process_callback(process3)
+        effects.append(effect3)
 
         return effects

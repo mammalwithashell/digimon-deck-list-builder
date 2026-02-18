@@ -43,22 +43,12 @@ class BT20_092(CardScript):
         effect1.set_can_use_condition(condition1)
 
         def process1(ctx: Dict[str, Any]):
-            """Action: Draw 1, Trash From Hand"""
+            """Action: Draw 1"""
             player = ctx.get('player')
             perm = ctx.get('permanent')
             game = ctx.get('game')
             if player:
                 player.draw_cards(1)
-            if not (player and game):
-                return
-            def hand_filter(c):
-                return True
-            def on_trashed(selected):
-                if selected in player.hand_cards:
-                    player.hand_cards.remove(selected)
-                    player.trash_cards.append(selected)
-            game.effect_select_hand_card(
-                player, hand_filter, on_trashed, is_optional=True)
 
         effect1.set_on_process_callback(process1)
         effects.append(effect1)

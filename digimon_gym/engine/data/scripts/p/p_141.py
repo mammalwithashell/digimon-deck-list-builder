@@ -61,38 +61,16 @@ class P_141(CardScript):
         effect2.set_can_use_condition(condition2)
         effects.append(effect2)
 
-        # Timing: EffectTiming.OnTappedAnyone
-        # [All Turns] [Once Per Turn] When an opponent's Digimon becomes suspended, you may unsuspend this Digimon.
+        # Factory effect: collision
+        # Collision
         effect3 = ICardEffect()
-        effect3.set_effect_name("P-141 Unsuspend this Digimon")
-        effect3.set_effect_description("[All Turns] [Once Per Turn] When an opponent's Digimon becomes suspended, you may unsuspend this Digimon.")
-        effect3.is_optional = True
-        effect3.set_max_count_per_turn(1)
-        effect3.set_hash_string("Unsuspend_P_141")
+        effect3.set_effect_name("P-141 Collision")
+        effect3.set_effect_description("Collision")
+        effect3._is_collision = True
 
-        effect = effect3  # alias for condition closure
         def condition3(context: Dict[str, Any]) -> bool:
-            if card and card.permanent_of_this_card() is None:
-                return False
             return True
-
         effect3.set_can_use_condition(condition3)
-
-        def process3(ctx: Dict[str, Any]):
-            """Action: Unsuspend"""
-            player = ctx.get('player')
-            perm = ctx.get('permanent')
-            game = ctx.get('game')
-            if not (player and game):
-                return
-            def target_filter(p):
-                return True
-            def on_unsuspend(target_perm):
-                target_perm.unsuspend()
-            game.effect_select_own_permanent(
-                player, on_unsuspend, filter_fn=target_filter, is_optional=True)
-
-        effect3.set_on_process_callback(process3)
         effects.append(effect3)
 
         # Timing: EffectTiming.OnTappedAnyone
@@ -100,10 +78,9 @@ class P_141(CardScript):
         effect4 = ICardEffect()
         effect4.set_effect_name("P-141 Unsuspend this Digimon")
         effect4.set_effect_description("[All Turns] [Once Per Turn] When an opponent's Digimon becomes suspended, you may unsuspend this Digimon.")
-        effect4.is_inherited_effect = True
         effect4.is_optional = True
         effect4.set_max_count_per_turn(1)
-        effect4.set_hash_string("UnsuspendESS_P_141")
+        effect4.set_hash_string("Unsuspend_P_141")
 
         effect = effect4  # alias for condition closure
         def condition4(context: Dict[str, Any]) -> bool:
@@ -129,5 +106,40 @@ class P_141(CardScript):
 
         effect4.set_on_process_callback(process4)
         effects.append(effect4)
+
+        # Timing: EffectTiming.OnTappedAnyone
+        # [All Turns] [Once Per Turn] When an opponent's Digimon becomes suspended, you may unsuspend this Digimon.
+        effect5 = ICardEffect()
+        effect5.set_effect_name("P-141 Unsuspend this Digimon")
+        effect5.set_effect_description("[All Turns] [Once Per Turn] When an opponent's Digimon becomes suspended, you may unsuspend this Digimon.")
+        effect5.is_inherited_effect = True
+        effect5.is_optional = True
+        effect5.set_max_count_per_turn(1)
+        effect5.set_hash_string("UnsuspendESS_P_141")
+
+        effect = effect5  # alias for condition closure
+        def condition5(context: Dict[str, Any]) -> bool:
+            if card and card.permanent_of_this_card() is None:
+                return False
+            return True
+
+        effect5.set_can_use_condition(condition5)
+
+        def process5(ctx: Dict[str, Any]):
+            """Action: Unsuspend"""
+            player = ctx.get('player')
+            perm = ctx.get('permanent')
+            game = ctx.get('game')
+            if not (player and game):
+                return
+            def target_filter(p):
+                return True
+            def on_unsuspend(target_perm):
+                target_perm.unsuspend()
+            game.effect_select_own_permanent(
+                player, on_unsuspend, filter_fn=target_filter, is_optional=True)
+
+        effect5.set_on_process_callback(process5)
+        effects.append(effect5)
 
         return effects

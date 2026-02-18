@@ -31,22 +31,12 @@ class BT14_071(CardScript):
         effect0.set_can_use_condition(condition0)
 
         def process0(ctx: Dict[str, Any]):
-            """Action: Gain 1 memory, Trash From Hand"""
+            """Action: Gain 1 memory"""
             player = ctx.get('player')
             perm = ctx.get('permanent')
             game = ctx.get('game')
             if player:
                 player.add_memory(1)
-            if not (player and game):
-                return
-            def hand_filter(c):
-                return True
-            def on_trashed(selected):
-                if selected in player.hand_cards:
-                    player.hand_cards.remove(selected)
-                    player.trash_cards.append(selected)
-            game.effect_select_hand_card(
-                player, hand_filter, on_trashed, is_optional=True)
 
         effect0.set_on_process_callback(process0)
         effects.append(effect0)

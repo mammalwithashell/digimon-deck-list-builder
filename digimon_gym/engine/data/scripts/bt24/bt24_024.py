@@ -43,10 +43,10 @@ class BT24_024(CardScript):
         effects.append(effect1)
 
         # Timing: EffectTiming.OnAllyAttack
-        # Cost -2, Play Card, Trash From Hand
+        # Cost -2, Play Card
         effect2 = ICardEffect()
         effect2.set_effect_name("BT24-024 Play one [Ts] Tamer for cost reduced by 2.")
-        effect2.set_effect_description("Cost -2, Play Card, Trash From Hand")
+        effect2.set_effect_description("Cost -2, Play Card")
         effect2.is_optional = True
         effect2.set_max_count_per_turn(1)
         effect2.set_hash_string("BT24_024_WA_Play_Tamer")
@@ -63,7 +63,7 @@ class BT24_024(CardScript):
         effect2.set_can_use_condition(condition2)
 
         def process2(ctx: Dict[str, Any]):
-            """Action: Cost -2, Play Card, Trash From Hand"""
+            """Action: Cost -2, Play Card"""
             player = ctx.get('player')
             perm = ctx.get('permanent')
             game = ctx.get('game')
@@ -73,16 +73,6 @@ class BT24_024(CardScript):
                 return True
             game.effect_play_from_zone(
                 player, 'hand', play_filter, free=True, is_optional=True)
-            if not (player and game):
-                return
-            def hand_filter(c):
-                return True
-            def on_trashed(selected):
-                if selected in player.hand_cards:
-                    player.hand_cards.remove(selected)
-                    player.trash_cards.append(selected)
-            game.effect_select_hand_card(
-                player, hand_filter, on_trashed, is_optional=True)
             # Cost reduction by 2 — handled via cost_reduction property
             pass  # descriptive-tagged: cost_reduction
 

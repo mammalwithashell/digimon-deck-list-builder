@@ -16,7 +16,7 @@ class P_022(CardScript):
         # Timing: EffectTiming.OptionSkill
         # [Main] If you have [Davis Motomiya] and [Ken Ichijoji] in play, you may place 1 [ExVeemon] and 1 [Stingmon] from your hand at the bottom of your deck in any order to play 1 [Paildramon] from your hand without paying its memory cost.
         effect0 = ICardEffect()
-        effect0.set_effect_name("P-022 Play Card, Trash From Hand, Return To Deck")
+        effect0.set_effect_name("P-022 Play Card, Return To Deck")
         effect0.set_effect_description("[Main] If you have [Davis Motomiya] and [Ken Ichijoji] in play, you may place 1 [ExVeemon] and 1 [Stingmon] from your hand at the bottom of your deck in any order to play 1 [Paildramon] from your hand without paying its memory cost.")
 
         effect = effect0  # alias for condition closure
@@ -27,7 +27,7 @@ class P_022(CardScript):
         effect0.set_can_use_condition(condition0)
 
         def process0(ctx: Dict[str, Any]):
-            """Action: Play Card, Trash From Hand, Return To Deck"""
+            """Action: Play Card, Return To Deck"""
             player = ctx.get('player')
             perm = ctx.get('permanent')
             game = ctx.get('game')
@@ -37,16 +37,6 @@ class P_022(CardScript):
                 return True
             game.effect_play_from_zone(
                 player, 'hand', play_filter, free=True, is_optional=True)
-            if not (player and game):
-                return
-            def hand_filter(c):
-                return True
-            def on_trashed(selected):
-                if selected in player.hand_cards:
-                    player.hand_cards.remove(selected)
-                    player.trash_cards.append(selected)
-            game.effect_select_hand_card(
-                player, hand_filter, on_trashed, is_optional=False)
             if not (player and game):
                 return
             def target_filter(p):
