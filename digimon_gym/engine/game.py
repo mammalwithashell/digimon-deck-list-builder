@@ -1013,8 +1013,10 @@ class Game:
 
     # ─── Action Mask ─────────────────────────────────────────────────
 
-    def get_action_mask(self, player_id: int) -> Union[List[float], np.ndarray]:
+    def get_action_mask(self, player_id: int) -> np.ndarray:
         """Build a 2120-float mask (1.0 = valid, 0.0 = invalid).
+
+        Returns a reusable numpy buffer for performance. Do not modify in place without copying.
 
         Ranges match C# Digimon.Core.ActionDecoder:
           0-29:      Play card from hand

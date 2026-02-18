@@ -75,8 +75,9 @@ class InteractiveGame(BaseGameRunner):
 
     def get_action_mask(self) -> np.ndarray:
         """Return action mask for the current player."""
-        mask_list = self.game.get_action_mask(self.game.current_player_id)
-        return np.array(mask_list, dtype=np.float32)
+        mask = self.game.get_action_mask(self.game.current_player_id)
+        # Create a copy to prevent accidental modification of the internal buffer
+        return np.array(mask, dtype=np.float32)
 
     def get_state(self) -> Dict[str, Any]:
         """Return current game state as dictionary."""
