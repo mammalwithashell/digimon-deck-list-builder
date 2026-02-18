@@ -121,6 +121,7 @@ RE_REVEAL_COUNT = re.compile(
 
 # Play from zone detection
 RE_PLAY_FROM_TRASH = re.compile(r'TrashCards|PlayFromTrash|trashCards')
+RE_PLAY_FROM_SOURCES = re.compile(r'SelectCardEffect\.Root\.DigivolutionCards')
 RE_PLAY_FREE = re.compile(r'ignoreCost\s*[:=]\s*true|noCost|withoutPayingCost', re.IGNORECASE)
 # Hand-or-trash zone choice pattern (play from either zone)
 RE_PLAY_HAND_OR_TRASH = re.compile(

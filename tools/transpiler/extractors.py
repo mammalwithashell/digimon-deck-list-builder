@@ -13,7 +13,7 @@ from .patterns import (
     RE_DIGIVOLVE, RE_COST_REDUCTION, RE_MIND_LINK,
     RE_TARGET_DP_LIMIT, RE_TARGET_DP_MIN, RE_TARGET_LEVEL_LIMIT,
     RE_TARGET_LEVEL_MIN,
-    RE_REVEAL_COUNT, RE_PLAY_FROM_TRASH, RE_PLAY_FREE,
+    RE_REVEAL_COUNT, RE_PLAY_FROM_TRASH, RE_PLAY_FROM_SOURCES, RE_PLAY_FREE,
     RE_DIGI_COST_FIXED, RE_DIGI_IGNORE_REQS, RE_DEGEN_COUNT,
     RE_SELECT_PERM_MODE, RE_DESTROY_SECURITY, RE_REDUCE_SECURITY,
     RE_UNSUSPEND, RE_RESTRICT_ATTACK, RE_TARGET_LOCK, RE_FLIP_SECURITY,
@@ -774,6 +774,8 @@ def _scan_actions(block: str, eb: EffectBlock):
             eb.actions.remove("trash_from_hand")
     elif RE_PLAY_FROM_TRASH.search(block):
         eb.play_from_zone = 'trash'
+    elif RE_PLAY_FROM_SOURCES.search(block):
+        eb.play_from_zone = 'sources'
     if RE_PLAY_FREE.search(block):
         eb.play_free = True
 

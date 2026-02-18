@@ -71,11 +71,11 @@ from digimon_gym.engine.core.player import Player
 from digimon_gym.engine.core.permanent import Permanent
 from digimon_gym.engine.core.card_source import CardSource
 from digimon_gym.engine.core.entity_base import CEntity_Base
-from digimon_gym.engine.data.enums import CardKind, CardColor
+from digimon_gym.engine.data.enums import CardKind, CardColor, GamePhase
 
 
 def make_card(card_id="TEST-001", name="TestDigimon", kind=CardKind.Digimon,
-              dp=5000, level=4, play_cost=5, traits=None, owner=None):
+              dp=5000, level=4, play_cost=5, traits=None, colors=None, owner=None):
     """Helper to create a CardSource with minimal setup."""
     entity = CEntity_Base()
     entity.card_id = card_id
@@ -85,7 +85,7 @@ def make_card(card_id="TEST-001", name="TestDigimon", kind=CardKind.Digimon,
     entity.level = level
     entity.play_cost = play_cost
     entity.type_eng = traits or []
-    entity.card_colors = [CardColor.Red]
+    entity.card_colors = colors or [CardColor.Red]
     cs = CardSource()
     cs.set_base_data(entity, owner)
     return cs
@@ -379,3 +379,65 @@ class TestBT24EffectsExecute:
             effects = instance.get_card_effects(None)
             total_effects += len(effects)
         assert total_effects == 414, f"Expected 414 total effects, got {total_effects}"
+
+    def test_bt24_028_play_from_sources(self):
+        """BT24-028 Divermon: inherited effect plays a card from sources."""
+        from digimon_gym.engine.data.scripts.bt24.bt24_028 import BT24_028
+        from digimon_gym.engine.game import Game
+
+        # Setup real Game to use real effect_play_from_sources
+        game = Game()
+        game.start_game()
+        p1 = game.player1
+
+        # Create Divermon card (BT24-028)
+        divermon = make_card("BT24-028", "Divermon", level=5, owner=p1)
+
+        # Create the source to be played (Level 4, Blue, [TS])
+        source_card = make_card("SOURCE-001", "SourceMon", level=4,
+                                traits=["TS", "Sea Beast"], colors=[CardColor.Blue], owner=p1)
+
+        # Create a permanent with Divermon on top and source under it
+        # Inherited effect comes from Divermon source
+        top_card = make_card("TOP-001", "MegaMon", level=6, owner=p1)
+
+        # Stack: SourceMon (0) -> Divermon (1) -> TopCard (2)
+        # Note: inherited effects are active from sources (indices 0..len-2)
+        perm = Permanent([source_card, divermon, top_card])
+        p1.battle_area.append(perm)
+        perm._owner_game = game  # Link to game
+
+        # Get the script and inherited effect
+        script = BT24_028()
+        effects = script.get_card_effects(divermon)
+        # The inherited effect is checking for is_inherited_effect and is_on_attack
+        inherited_effect = next(e for e in effects if e.is_inherited_effect and e.is_on_attack)
+
+        # Execute the effect
+        # Context
+        ctx = {"game": game, "player": p1, "permanent": perm, "card": divermon}
+
+        # Run the callback
+        inherited_effect.on_process_callback(ctx)
+
+        # Verify game state transition to SelectSource
+        assert game.current_phase == GamePhase.SelectSource
+        assert game.pending_selection is not None
+
+        # There should be 1 valid index (the source card at index 0)
+        expected_idx = 2000 + 0 * 10 + 0
+        assert expected_idx in game.pending_selection.valid_indices
+        assert len(game.pending_selection.valid_indices) == 1
+
+        # Execute the selection
+        game.decode_action(expected_idx, p1.player_id)
+
+        # Verify source_card is now played as a new permanent
+        # Battle area should have 2 permanents (original + new)
+        assert len(p1.battle_area) == 2
+        new_perm = p1.battle_area[1]
+        assert new_perm.top_card is source_card
+
+        # Verify source_card removed from original perm
+        assert source_card not in perm.card_sources
+        assert len(perm.card_sources) == 2  # Divermon and TopCard remain
