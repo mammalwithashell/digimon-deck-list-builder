@@ -59,6 +59,8 @@ from .patterns import (
     RE_ADD_SKILL_CLASS,
     RE_ADD_JOGRESS_LEVELS, RE_CHANGE_CARD_NAMES, RE_CAN_ATTACK_TARGET,
     RE_CAN_NOT_AFFECTED,
+    # Complex Flow patterns
+    RE_DELETE_AND_PROCESS,
     # Keyword grant targeting patterns
     RE_PERM_COND_OPPONENT_AREA, RE_GRANT_MAX_COUNT,
     RE_SELECTED_PERMANENT_REF, RE_DIGI_COUNT_COMPARE,
@@ -308,6 +310,25 @@ def extract_activate_effects(block: str, full_source: str = "") -> List[EffectBl
     # Split on ActivateClass instantiations
     activate_splits = re.split(r'(ActivateClass\s+\w+\s*=\s*new\s+ActivateClass\s*\(\s*\)\s*;)', block)
 
+    # Also handle ChangeCostClass separately (it doesn't use ActivateClass pattern usually)
+    # But it appears in timing blocks.
+    if "ChangeCostClass" in block and "ActivateClass" not in block:
+        # Treat as a special effect block if not mixed with ActivateClass
+        eb = EffectBlock(raw_block=block)
+        eb.effect_name = "Cost Reduction"
+        _scan_actions(block, eb)
+        # Extract conditions specifically for cost reduction
+        if "cost_reduction" in eb.actions:
+             # Try to find 'count()' method or logic for variable cost
+             # Look for `int count()` or similar inside the block
+             count_match = re.search(r'int\s+count\s*\(\s*\)\s*{([^}]+)}', block)
+             if count_match:
+                 # Extract logic from count() body? Too complex for regex.
+                 # Just mark it as variable cost reduction.
+                 pass
+        effects.append(eb)
+        return effects
+
     i = 0
     while i < len(activate_splits):
         segment = activate_splits[i]
@@ -320,6 +341,13 @@ def extract_activate_effects(block: str, full_source: str = "") -> List[EffectBl
             i += 1
 
         if 'ActivateClass' not in full_block and 'SetUpICardEffect' not in full_block:
+            # Check for ChangeCostClass mixed in
+            if 'ChangeCostClass' in full_block:
+                 eb = EffectBlock(raw_block=full_block)
+                 eb.effect_name = "Cost Reduction"
+                 _scan_actions(full_block, eb)
+                 if "cost_reduction" in eb.actions:
+                     effects.append(eb)
             continue
 
         eb = EffectBlock(raw_block=full_block)
@@ -510,6 +538,11 @@ def _scan_actions(block: str, eb: EffectBlock):
     # ── Simple boolean action patterns ──
     if RE_DELETE.search(block) and "delete" not in eb.actions:
         eb.actions.append("delete")
+    # BT13-111 Logic: DeletePeremanentAndProcessAccordingToResult
+    if RE_DELETE_AND_PROCESS.search(block) and "delete_and_process" not in eb.actions:
+        eb.actions.append("delete_and_process")
+        eb.descriptive_tag = "delete_and_process"
+
     if RE_BOUNCE.search(block) and "bounce" not in eb.actions:
         eb.actions.append("bounce")
     if RE_SUSPEND.search(block) and "suspend" not in eb.actions:
@@ -540,6 +573,13 @@ def _scan_actions(block: str, eb: EffectBlock):
             m3 = RE_CHANGE_COST_VALUE.search(block)
             if m3:
                 eb.cost_reduction_val = int(m3.group(1))
+
+        # Check for complex cost reduction logic (BT13-111 style)
+        # Look for "int count()" definition which implies variable cost
+        if "int count()" in block:
+            # Variable cost logic detected
+            pass
+
     if RE_MIND_LINK.search(block) and "mind_link" not in eb.actions:
         eb.actions.append("mind_link")
 
@@ -687,457 +727,380 @@ def _scan_actions(block: str, eb: EffectBlock):
     if RE_LINK_CONDITION.search(block) and "link_condition" not in eb.actions:
         eb.descriptive_tag = "link_condition"
         eb.actions.append("link_condition")
-    if RE_ALSO_TREATED_AS.search(block) and "also_treated_as" not in eb.actions:
-        eb.descriptive_tag = "also_treated_as"
-        eb.actions.append("also_treated_as")
-
-    # ── P7 WI 3: Helper classes inside Mode.Custom callbacks ──
-    # IDegeneration — de-digivolve via helper class (catches inline use in callbacks)
-    m_idegen = RE_IDEGENERATION.search(block)
-    if m_idegen and "de_digivolve" not in eb.actions:
-        eb.actions.append("de_digivolve")
-        eb.degen_count = int(m_idegen.group(1))
-    # SwitchDefender — redirect attack target
-    if RE_SWITCH_DEFENDER.search(block) and "redirect_attack" not in eb.actions:
-        eb.actions.append("redirect_attack")
-        eb.descriptive_tag = "redirect_attack"
-    # PlayPermanentCards — play card via helper
-    if RE_PLAY_PERMANENT_CARDS.search(block) and "play_card" not in eb.actions:
-        eb.actions.append("play_card")
-    # DigivolveIntoHandOrTrashCard — digivolve from hand or trash
-    if RE_DIGIVOLVE_INTO.search(block) and "digivolve" not in eb.actions:
-        eb.actions.append("digivolve")
-    # CanNotAffectedClass — effect immunity grant
-    if RE_CAN_NOT_AFFECTED.search(block) and "effect_immunity" not in eb.actions:
-        eb.actions.append("effect_immunity")
-        eb.descriptive_tag = "effect_immunity"
-
-    # ── P7 WI 4: AddSkillClass — grants keywords to other permanents ──
-    if RE_ADD_SKILL_CLASS.search(block) and "grant_skill" not in eb.actions:
-        eb.actions.append("grant_skill")
-        eb.descriptive_tag = "grant_skill"
-
-    # ── P7 WI 5: Metadata-only classes ──
-    if RE_ADD_JOGRESS_LEVELS.search(block) and "also_treated_as" not in eb.actions:
-        eb.actions.append("also_treated_as")
-        eb.descriptive_tag = "also_treated_as_level"
-    if RE_CHANGE_CARD_NAMES.search(block) and "also_treated_as" not in eb.actions:
-        eb.actions.append("also_treated_as")
-        eb.descriptive_tag = "also_treated_as_name"
-    if RE_CAN_ATTACK_TARGET.search(block) and "attack_unsuspended" not in eb.actions:
-        eb.actions.append("attack_unsuspended")
-        eb.descriptive_tag = "attack_unsuspended"
-
-    # ── P2: Mill detection — IAddTrashCardsFromLibraryTop ──
-    m_mill = RE_MILL.search(block)
-    if m_mill and "mill" not in eb.actions:
-        eb.actions.append("mill")
-        count_str = m_mill.group(1)
-        try:
-            eb.mill_count = int(count_str)
-        except ValueError:
-            eb.mill_count = 3  # default fallback for variable counts
-        if "Enemy" in m_mill.group(2):
-            eb.mill_target = "enemy"
+    elif action == "also_treated_as":
+        tag = getattr(eb, 'descriptive_tag', 'also_treated_as') or 'also_treated_as'
+        if tag == "also_treated_as_level":
+            lines.append(f"{indent}# Also treated as additional levels — metadata not modeled in engine")
+        elif tag == "also_treated_as_name":
+            lines.append(f"{indent}# Also treated as [Name] — name aliasing not modeled in engine")
         else:
-            eb.mill_target = "self"
+            lines.append(f"{indent}# Also treated as [Name/Level] — metadata not modeled in engine")
+        lines.append(f"{indent}pass  # descriptive-tagged: {tag}")
+    elif action == "redirect_attack":
+        lines.append(f"{indent}# Redirect attack target (SwitchDefender) — not yet in engine")
+        lines.append(f"{indent}pass  # descriptive-tagged: redirect_attack")
+    elif action == "effect_immunity":
+        lines.append(f"{indent}# Grant effect immunity (CanNotAffectedClass) — not yet in engine")
+        lines.append(f"{indent}pass  # descriptive-tagged: effect_immunity")
+    elif action == "grant_skill":
+        lines.append(f"{indent}# Grant keyword to other permanents (AddSkillClass) — not yet in engine")
+        lines.append(f"{indent}pass  # descriptive-tagged: grant_skill")
+    elif action == "attack_unsuspended":
+        lines.append(f"{indent}# Can attack unsuspended Digimon (CanAttackTargetDefendingPermanentClass) — not yet in engine")
+        lines.append(f"{indent}pass  # descriptive-tagged: attack_unsuspended")
+    elif action == "play_restriction":
+        lines.append(f"{indent}# Play restriction (CanNotPutFieldClass) — opponent play restrictions")
+        lines.append(f"{indent}pass  # descriptive-tagged")
 
-    # ── Target extraction: DP/level limits ──
-    if eb.target_dp_limit is None:
-        m = RE_TARGET_DP_LIMIT.search(block)
-        if m:
-            eb.target_dp_limit = int(m.group(1))
-    if eb.target_dp_min is None:
-        m = RE_TARGET_DP_MIN.search(block)
-        if m:
-            eb.target_dp_min = int(m.group(1))
-    if eb.target_level_limit is None:
-        m = RE_TARGET_LEVEL_LIMIT.search(block)
-        if m:
-            eb.target_level_limit = int(m.group(1))
-    if eb.target_level_min is None:
-        m = RE_TARGET_LEVEL_MIN.search(block)
-        if m:
-            eb.target_level_min = int(m.group(1))
-
-    # ── Reveal count ──
-    if eb.reveal_count is None:
-        m = RE_REVEAL_COUNT.search(block)
-        if m:
-            eb.reveal_count = int(m.group(1) or m.group(2))
-
-    # ── Play from zone ──
-    if RE_PLAY_HAND_OR_TRASH.search(block):
-        eb.play_from_zone = 'hand_or_trash'
-        # Remove false trash_from_hand (SelectHandEffect used for play, not trash)
-        if "trash_from_hand" in eb.actions and "play_card" in eb.actions:
-            eb.actions.remove("trash_from_hand")
-    elif RE_PLAY_FROM_TRASH.search(block):
-        eb.play_from_zone = 'trash'
-    if RE_PLAY_FREE.search(block):
-        eb.play_free = True
-
-    # ── Digivolve details ──
-    if eb.digi_cost_override is None:
-        m = RE_DIGI_COST_FIXED.search(block)
-        if m:
-            eb.digi_cost_override = int(m.group(1))
-    if RE_DIGI_IGNORE_REQS.search(block):
-        eb.digi_ignore_reqs = True
-
-    # ── De-digivolve count ──
-    m = RE_DEGEN_COUNT.search(block)
-    if m and eb.degen_count is None:
-        eb.degen_count = int(m.group(1))
+    # P5: New descriptive-tagged action types
+    elif action == "play_token":
+        token = eb.token_name or "Unknown"
+        lines.append(f"{indent}# Play {token} Token — token play not yet supported in engine")
+        lines.append(f"{indent}pass  # descriptive-tagged: play_token")
+    elif action == "force_attack":
+        lines.append(f"{indent}# Force attack — target Digimon may attack (requires engine SelectAttack)")
+        lines.append(f"{indent}pass  # descriptive-tagged: force_attack")
+    elif action == "change_security_attack":
+        lines.append(f"{indent}# Grant Security Attack modifier to target permanent")
+        lines.append(f"{indent}pass  # descriptive-tagged: change_security_attack")
+    elif action == "disable_effect":
+        lines.append(f"{indent}# Disable/invalidate effects on target — not yet in engine")
+        lines.append(f"{indent}pass  # descriptive-tagged: disable_effect")
+    elif action == "add_temp_effect":
+        lines.append(f"{indent}# Grant temporary effect to target permanent")
+        lines.append(f"{indent}pass  # descriptive-tagged: add_temp_effect")
+    elif action == "put_to_security":
+        lines.append(f"{indent}# Place a permanent into the security stack")
+        lines.append(f"{indent}if not (player and game):")
+        lines.append(f"{indent}    return")
+        lines.append(f"{indent}def target_filter(p):")
+        lines.append(f"{indent}    return p.is_digimon")
+        lines.append(f"{indent}def on_put_security(target_perm):")
+        lines.append(f"{indent}    if player:")
+        lines.append(f"{indent}        player.put_permanent_to_security(target_perm)")
+        lines.append(f"{indent}game.effect_select_own_permanent(")
+        lines.append(f"{indent}    player, on_put_security, filter_fn=target_filter, is_optional={eb.is_optional})")
 
 
-def _extract_actions_from_block(block: str, eb: EffectBlock):
-    """Extract actions from a C# block into an existing EffectBlock.
+def _generate_factory_condition_code(eb: EffectBlock, idx: int, indent: str = "        ") -> str:
+    """Fix 1: Generate condition code for factory effects using extracted closure data."""
+    checks = []
+    inner = indent + "    "
 
-    Thin wrapper around _scan_actions() for backward compatibility.
-    Called from SharedActivateCoroutine resolution and Mode.Custom callback.
-    """
-    _scan_actions(block, eb)
+    if eb.factory_cond_owner_turn:
+        checks.append(f"{inner}if not (card and card.owner and card.owner.is_my_turn):")
+        checks.append(f"{inner}    return False")
 
-    # De-digivolve count
-    if eb.degen_count is None:
-        m = RE_DEGEN_COUNT.search(block)
-        if m:
-            eb.degen_count = int(m.group(1))
+    if eb.factory_cond_on_battle:
+        checks.append(f"{inner}if card and card.permanent_of_this_card() is None:")
+        checks.append(f"{inner}    return False")
 
+    if eb.factory_cond_digi_count is not None:
+        checks.append(f"{inner}permanent = card.permanent_of_this_card() if card else None")
+        checks.append(f"{inner}if not (permanent and len(permanent.digivolution_cards) >= {eb.factory_cond_digi_count}):")
+        checks.append(f"{inner}    return False")
 
-def _extract_activate_conditions(block: str, eb: EffectBlock):
-    """Fix 10: Extract conditions from CanActivateCondition closures."""
-    # DigivolutionCards.Count >= N
-    m = RE_FACTORY_COND_DIGI_COUNT.search(block)
-    if m:
-        eb.activate_cond_digi_count = int(m.group(1))
+    if eb.factory_cond_has_text:
+        or_parts = " or ".join(f"'{t}' in text" for t in eb.factory_cond_has_text)
+        checks.append(f"{inner}permanent = card.permanent_of_this_card() if card else None")
+        checks.append(f"{inner}if permanent and permanent.top_card:")
+        checks.append(f"{inner}    text = permanent.top_card.card_text")
+        checks.append(f"{inner}    if not ({or_parts}):")
+        checks.append(f"{inner}        return False")
+        checks.append(f"{inner}else:")
+        checks.append(f"{inner}    return False")
 
-    # DigivolutionCards.Count(... EqualsCardName("X") ...)
-    for m in RE_FACTORY_COND_SOURCE_NAME.finditer(block):
-        if m.group(1) not in eb.activate_cond_source_name:
-            eb.activate_cond_source_name.append(m.group(1))
+    if eb.factory_cond_source_name:
+        or_parts = " or ".join(
+            f"src.contains_card_name('{n}')" for n in eb.factory_cond_source_name)
+        checks.append(f"{inner}permanent = card.permanent_of_this_card() if card else None")
+        checks.append(f"{inner}if not (permanent and any({or_parts} for src in permanent.digivolution_cards)):")
+        checks.append(f"{inner}    return False")
 
-    # DigivolutionCards.Count(... EqualsTraits("X") ...)
-    for m in RE_FACTORY_COND_SOURCE_TRAIT.finditer(block):
-        if m.group(1) not in eb.activate_cond_source_trait:
-            eb.activate_cond_source_trait.append(m.group(1))
+    if eb.factory_cond_source_trait:
+        or_parts = " or ".join(
+            f"any('{t}' in tr for tr in (getattr(src, 'card_traits', []) or []))"
+            for t in eb.factory_cond_source_trait)
+        checks.append(f"{inner}permanent = card.permanent_of_this_card() if card else None")
+        checks.append(f"{inner}if not (permanent and any({or_parts} for src in permanent.digivolution_cards)):")
+        checks.append(f"{inner}    return False")
 
-    # HasText("X")
-    for m in RE_COND_HAS_TEXT.finditer(block):
-        if m.group(1) not in eb.activate_cond_has_text:
-            eb.activate_cond_has_text.append(m.group(1))
+    if eb.factory_cond_perm_name:
+        or_parts = " or ".join(
+            f"permanent.contains_card_name('{n}')" for n in eb.factory_cond_perm_name)
+        checks.append(f"{inner}permanent = card.permanent_of_this_card() if card else None")
+        checks.append(f"{inner}if not (permanent and ({or_parts})):")
+        checks.append(f"{inner}    return False")
 
-    # TopCard.EqualsCardName("X")
-    for m in RE_FACTORY_COND_PERM_NAME.finditer(block):
-        if m.group(1) not in eb.activate_cond_perm_name:
-            eb.activate_cond_perm_name.append(m.group(1))
+    if eb.factory_cond_perm_trait:
+        or_parts = " or ".join(
+            f"any('{t}' in tr for tr in (getattr(permanent.top_card, 'card_traits', []) or []))"
+            for t in eb.factory_cond_perm_trait)
+        checks.append(f"{inner}permanent = card.permanent_of_this_card() if card else None")
+        checks.append(f"{inner}if not (permanent and permanent.top_card and ({or_parts})):")
+        checks.append(f"{inner}    return False")
 
-
-def _merge_kinds(a: Optional[str], b: Optional[str]) -> Optional[str]:
-    """Merge two card kind constraints with OR semantics.
-
-    None means unconstrained. If either side is None, result is None.
-    Otherwise, union the kinds.
-    """
-    if a is None or b is None:
-        return None
-    if a == b:
-        return a
-    kinds = set()
-    for k in (a, b):
-        if "_or_" in k:
-            kinds.update(k.split("_or_"))
-        else:
-            kinds.add(k)
-    return "_or_".join(sorted(kinds))
-
-
-def _parse_filter_body_to_dict(body: str) -> dict:
-    """Parse a condition function body into a dict of filter values.
-
-    Returns dict with keys: traits, names, cost_max, cost_min, level_max,
-    level_min, colors, kind, exclude_digi_egg, has_play_cost.
-    """
-    traits: List[str] = []
-    for m in RE_CF_EQUALS_TRAITS.finditer(body):
-        if m.group(1) not in traits:
-            traits.append(m.group(1))
-    for m in RE_CF_CONTAINS_TRAITS.finditer(body):
-        if m.group(1) not in traits:
-            traits.append(m.group(1))
-    for m in RE_CF_HAS_TRAITS.finditer(body):
-        prop_name = m.group(1)
-        trait_str = HAS_TRAITS_MAP.get(prop_name)
-        if trait_str and trait_str not in traits:
-            traits.append(trait_str)
-
-    names: List[str] = []
-    for m in RE_CF_EQUALS_NAME.finditer(body):
-        if m.group(1) not in names:
-            names.append(m.group(1))
-    for m in RE_CF_CONTAINS_NAME.finditer(body):
-        if m.group(1) not in names:
-            names.append(m.group(1))
-
-    cost_max: Optional[int] = None
-    m = RE_CF_COST_MAX.search(body)
-    if m:
-        cost_max = int(m.group(1))
-
-    cost_min: Optional[int] = None
-    m = RE_CF_COST_MIN.search(body)
-    if m:
-        cost_min = int(m.group(1))
-
-    level_max: Optional[int] = None
-    m = RE_CF_LEVEL_MAX.search(body)
-    if m:
-        level_max = int(m.group(1))
-
-    level_min: Optional[int] = None
-    m = RE_CF_LEVEL_MIN.search(body)
-    if m:
-        level_min = int(m.group(1))
-
-    for m in RE_CF_IS_LEVEL.finditer(body):
-        level_val = int(m.group(1))
-        if level_max is None:
-            level_max = level_val
-        if level_min is None:
-            level_min = level_val
-
-    colors: List[str] = []
-    for m in RE_CF_COLOR.finditer(body):
-        if m.group(1) not in colors:
-            colors.append(m.group(1))
-
-    # Strip C# lambda expressions before kind-checking to avoid false positives
-    kind_body = RE_CS_LAMBDA.sub("", body)
-    kind: Optional[str] = None
-    if RE_CF_IS_DIGIMON.search(kind_body):
-        kind = "Digimon"
-    if RE_CF_IS_TAMER.search(kind_body):
-        if kind == "Digimon":
-            kind = "Digimon_or_Tamer"
-        elif kind is None:
-            kind = "Tamer"
-    if RE_CF_IS_OPTION.search(kind_body):
-        if kind is None:
-            kind = "Option"
-
-    return {
-        "traits": traits,
-        "names": names,
-        "cost_max": cost_max,
-        "cost_min": cost_min,
-        "level_max": level_max,
-        "level_min": level_min,
-        "colors": colors,
-        "kind": kind,
-        "exclude_digi_egg": bool(RE_CF_NOT_DIGI_EGG.search(body)),
-        "has_play_cost": bool(RE_CF_HAS_PLAY_COST.search(body)),
-    }
-
-
-def _parse_filter_body(body: str, eb: EffectBlock, is_first: bool):
-    """Parse a single condition function body and merge into eb.card_filter_* fields.
-
-    For the first body, sets values directly. For subsequent bodies, applies
-    OR-merge semantics (widen ranges, union sets).
-    """
-    d = _parse_filter_body_to_dict(body)
-
-    local_traits = d["traits"]
-    local_names = d["names"]
-    local_cost_max = d["cost_max"]
-    local_cost_min = d["cost_min"]
-    local_level_max = d["level_max"]
-    local_level_min = d["level_min"]
-    local_colors = d["colors"]
-    local_kind = d["kind"]
-    local_exclude_digi_egg = d["exclude_digi_egg"]
-    local_has_play_cost = d["has_play_cost"]
-
-    # ── Merge into EffectBlock ──
-    if is_first:
-        eb.card_filter_traits = local_traits
-        eb.card_filter_names = local_names
-        eb.card_filter_cost_max = local_cost_max
-        eb.card_filter_cost_min = local_cost_min
-        eb.card_filter_level_max = local_level_max
-        eb.card_filter_level_min = local_level_min
-        eb.card_filter_colors = local_colors
-        eb.card_filter_kind = local_kind
-        eb.card_filter_exclude_digi_egg = local_exclude_digi_egg
-        eb.card_filter_has_play_cost = local_has_play_cost
+    lines = [f"{indent}def condition{idx}(context: Dict[str, Any]) -> bool:"]
+    if checks:
+        lines.extend(checks)
+        lines.append(f"{inner}return True")
     else:
-        # OR-merge: union sets
-        for t in local_traits:
-            if t not in eb.card_filter_traits:
-                eb.card_filter_traits.append(t)
-        for n in local_names:
-            if n not in eb.card_filter_names:
-                eb.card_filter_names.append(n)
-        for c in local_colors:
-            if c not in eb.card_filter_colors:
-                eb.card_filter_colors.append(c)
-
-        # OR-merge cost/level: if any body is unconstrained, result is unconstrained
-        if local_cost_max is None:
-            eb.card_filter_cost_max = None
-        elif eb.card_filter_cost_max is not None:
-            eb.card_filter_cost_max = max(eb.card_filter_cost_max, local_cost_max)
-
-        if local_cost_min is None:
-            eb.card_filter_cost_min = None
-        elif eb.card_filter_cost_min is not None:
-            eb.card_filter_cost_min = min(eb.card_filter_cost_min, local_cost_min)
-
-        if local_level_max is None:
-            eb.card_filter_level_max = None
-        elif eb.card_filter_level_max is not None:
-            eb.card_filter_level_max = max(eb.card_filter_level_max, local_level_max)
-
-        if local_level_min is None:
-            eb.card_filter_level_min = None
-        elif eb.card_filter_level_min is not None:
-            eb.card_filter_level_min = min(eb.card_filter_level_min, local_level_min)
-
-        # OR-merge kind
-        eb.card_filter_kind = _merge_kinds(eb.card_filter_kind, local_kind)
-
-        # OR-merge booleans: if any body doesn't require it, don't require it
-        if not local_exclude_digi_egg:
-            eb.card_filter_exclude_digi_egg = False
-        if not local_has_play_cost:
-            eb.card_filter_has_play_cost = False
+        lines.append(f"{inner}return True")
+    return "\n".join(lines)
 
 
-def _extract_card_filter_conditions(block: str, full_source: str, eb: EffectBlock):
-    """Extract card selection filter from CanSelectCardCondition lambda body.
+def generate_factory_effect(eb: EffectBlock, card_id: str, idx: int) -> str:
+    """Generate Python code for a factory-based effect."""
+    lines = []
+    var = f"effect{idx}"
+    lines.append(f"        # Factory effect: {eb.factory_method}")
+    lines.append(f"        # {eb.description}")
+    lines.append(f"        {var} = ICardEffect()")
+    lines.append(f'        {var}.set_effect_name("{card_id} {eb.description}")')
+    lines.append(f'        {var}.set_effect_description("{eb.description}")')
 
-    Searches for CanSelectCardCondition/CardCondition/SelectDigimonCondition
-    definitions in the block and full source. Also finds numbered variants
-    (CanSelectCardCondition1, 2, ...) used in multi-pass reveal operations.
-    Parses all found bodies with OR-merge semantics into eb.card_filter_* fields.
-    """
-    filter_actions = {"play_card", "reveal_and_select", "add_to_hand", "digivolve"}
-    if not any(a in filter_actions for a in eb.actions):
-        return
+    if eb.is_inherited:
+        lines.append(f"        {var}.is_inherited_effect = True")
 
-    # Priority order: specific names first, generic CardCondition last
-    # (CardCondition is also used for IgnoreColorConditionClass and similar,
-    #  so it can produce false positives if checked too early)
-    base_names = ("CanSelectCardCondition", "CanSelectDNACardCondition",
-                  "SelectDigimonCondition", "CardCondition")
+    if eb.factory_method == "blocker":
+        lines.append(f"        {var}._is_blocker = True")
+    elif eb.factory_method == "jamming":
+        lines.append(f"        {var}._is_jamming = True")
+    elif eb.factory_method == "rush":
+        lines.append(f"        {var}._is_rush = True")
+    elif eb.factory_method == "reboot":
+        lines.append(f"        {var}._is_reboot = True")
+    elif eb.factory_method == "raid":
+        lines.append(f"        {var}._is_raid = True")
+    elif eb.factory_method == "alliance":
+        lines.append(f"        {var}._is_alliance = True")
+    elif eb.factory_method == "security_play":
+        lines.append(f"        {var}.is_security_effect = True")
+    elif eb.factory_method == "security_attack_plus":
+        sa_val = eb.factory_sa_value if eb.factory_sa_value is not None else 1
+        lines.append(f"        {var}._security_attack_modifier = {sa_val}")
+    elif eb.factory_method == "dp_modifier":
+        dp_val = eb.factory_dp_value if eb.factory_dp_value is not None else 0
+        lines.append(f"        {var}.dp_modifier = {dp_val}")
+    elif eb.factory_method == "dp_modifier_all":
+        # Fix 5: Non-self DP modifier (all your Digimon)
+        dp_val = eb.factory_dp_value if eb.factory_dp_value is not None else 0
+        lines.append(f"        {var}.dp_modifier = {dp_val}")
+        lines.append(f"        {var}._applies_to_all_own_digimon = True")
+    elif eb.factory_method == "armor_purge":
+        lines.append(f"        {var}._is_armor_purge = True")
+    elif eb.factory_method == "blast_digivolve":
+        lines.append(f"        {var}.is_counter_effect = True")
+        lines.append(f"        {var}._is_blast_digivolve = True")
+    # Fix 11: New factory keywords
+    elif eb.factory_method == "piercing":
+        lines.append(f"        {var}._is_piercing = True")
+    elif eb.factory_method == "collision":
+        lines.append(f"        {var}._is_collision = True")
+    elif eb.factory_method == "blitz":
+        lines.append(f"        {var}._is_blitz = True")
+    elif eb.factory_method == "fortitude":
+        lines.append(f"        {var}._is_fortitude = True")
+    elif eb.factory_method == "evade":
+        lines.append(f"        {var}._is_evade = True")
+    elif eb.factory_method == "barrier":
+        lines.append(f"        {var}._is_barrier = True")
+    elif eb.factory_method == "decoy":
+        lines.append(f"        {var}._is_decoy = True")
+    elif eb.factory_method == "retaliation":
+        lines.append(f"        {var}._is_retaliation = True")
+    elif eb.factory_method == "save":
+        lines.append(f"        {var}._is_save = True")
+    elif eb.factory_method == "material_save":
+        lines.append(f"        {var}._is_material_save = True")
+    elif eb.factory_method == "overclock":
+        lines.append(f"        {var}._is_overclock = True")
+    elif eb.factory_method == "vortex":
+        lines.append(f"        {var}._is_vortex = True")
+    elif eb.factory_method == "training":
+        lines.append(f"        {var}._is_training = True")
+    elif eb.factory_method == "progress":
+        lines.append(f"        {var}._is_progress = True")
+    # Fix 12: New keywords from rules evaluation
+    elif eb.factory_method == "digisorption":
+        lines.append(f"        {var}._is_digisorption = True")
+    elif eb.factory_method == "digiburst":
+        lines.append(f"        {var}._is_digiburst = True")
+    elif eb.factory_method == "delay":
+        lines.append(f"        {var}._is_delay = True")
+    elif eb.factory_method == "partition":
+        lines.append(f"        {var}._is_partition = True")
+    elif eb.factory_method == "digixros":
+        lines.append(f"        {var}._is_digixros = True")
+    elif eb.factory_method == "scapegoat":
+        lines.append(f"        {var}._is_scapegoat = True")
+    elif eb.factory_method == "decode":
+        lines.append(f"        {var}._is_decode = True")
+    elif eb.factory_method == "iceclad":
+        lines.append(f"        {var}._is_iceclad = True")
+    elif eb.factory_method == "fragment":
+        lines.append(f"        {var}._is_fragment = True")
+    elif eb.factory_method == "execute":
+        lines.append(f"        {var}._is_execute = True")
+    elif eb.factory_method == "set_memory_3":
+        lines.append(f"        # [Start of Your Turn] Set memory to 3 if <= 2")
+    elif eb.factory_method == "gain_memory_tamer":
+        lines.append(f"        # [Start of Main] Gain 1 memory if opponent has Digimon")
+    elif eb.factory_method == "alt_digivolve_req":
+        cost = eb.digi_cost_override if eb.digi_cost_override is not None else 0
+        names = eb.name_checks
+        traits = eb.trait_checks
+        desc_parts = []
+        if names:
+            desc_parts.append(f"from [{names[0]}]")
+        if traits:
+            desc_parts.append(f"with [{traits[0]}] trait")
+        desc_str = " ".join(desc_parts) if desc_parts else "alternate source"
+        lines.append(f"        # Alternate digivolution: {desc_str} for cost {cost}")
+        lines.append(f"        {var}._alt_digi_cost = {cost}")
+        if names:
+            lines.append(f"        {var}._alt_digi_name = \"{names[0]}\"")
+        if traits:
+            lines.append(f"        {var}._alt_digi_trait = \"{traits[0]}\"")
+    elif eb.factory_method == "change_digi_cost":
+        cost_val = eb.cost_reduction_val if eb.cost_reduction_val is not None else -1
+        traits = eb.trait_checks
+        names = eb.name_checks
+        desc_parts = []
+        if traits:
+            desc_parts.append(f"[{'/'.join(traits)}] trait")
+        if names:
+            desc_parts.append(f"[{'/'.join(names)}] name")
+        desc_str = " ".join(desc_parts) if desc_parts else "matching"
+        lines.append(f"        # Reduce digivolution cost by {abs(cost_val)} for {desc_str}")
+        lines.append(f"        {var}.cost_reduction = {abs(cost_val)}")
 
-    # Collect all condition bodies (base + numbered variants)
-    all_bodies: List[str] = []
-    for func_name in base_names:
-        body = _extract_method_body(block, func_name)
-        found_in_block = bool(body)
-        if not body and full_source and full_source != block:
-            body = _extract_method_body(full_source, func_name)
-        if not body:
-            continue
-
-        # For generic "CardCondition", skip if the body is trivially
-        # just an identity check (e.g., "cardSource == card") with no
-        # card filter patterns.
-        if func_name == "CardCondition":
-            has_filter_pattern = any(p.search(body) for p in (
-                RE_CF_IS_DIGIMON, RE_CF_IS_TAMER, RE_CF_IS_OPTION,
-                RE_CF_COST_MAX, RE_CF_COST_MIN,
-                RE_CF_LEVEL_MAX, RE_CF_LEVEL_MIN, RE_CF_IS_LEVEL,
-                RE_CF_EQUALS_TRAITS, RE_CF_CONTAINS_TRAITS, RE_CF_HAS_TRAITS,
-                RE_CF_EQUALS_NAME, RE_CF_CONTAINS_NAME,
-                RE_CF_HAS_PLAY_COST, RE_CF_NOT_DIGI_EGG, RE_CF_COLOR))
-            if not has_filter_pattern:
-                continue
-
-        all_bodies.append(body)
-        # Search for numbered variants (CanSelectCardCondition1, 2, ...)
-        # Only search in the same scope where the base name was found
-        # to avoid picking up variants from other timing blocks.
-        if func_name == "CanSelectCardCondition":
-            search_scope = block if found_in_block else full_source
-            for suffix in range(1, 10):
-                variant_name = f"{func_name}{suffix}"
-                variant_body = _extract_method_body(search_scope, variant_name)
-                if variant_body:
-                    all_bodies.append(variant_body)
-                else:
-                    break
-        break  # Found a usable base name, don't try others
-
-    if not all_bodies:
-        return
-
-    # Parse each body and merge results into card_filter_* (OR-merge)
-    for i, body in enumerate(all_bodies):
-        _parse_filter_body(body, eb, is_first=(i == 0))
-
-    # For multi-pass reveals, also populate per-pass filter data
-    if len(all_bodies) > 1 and "reveal_and_select" in eb.actions:
-        # Extract per-pass modes from SimplifiedSelectCardConditionClass array
-        search_src = block if "SimplifiedSelectCardConditionClass" in block else full_source
-        pass_entries = RE_REVEAL_PASS_ENTRY.findall(search_src)
-        mode_map = {name: mode for name, mode in pass_entries}
-
-        for idx, body in enumerate(all_bodies):
-            pass_data = _parse_filter_body_to_dict(body)
-            # Determine the condition name for this body to look up its mode
-            if idx == 0:
-                cond_name = "CanSelectCardCondition"
-            else:
-                cond_name = f"CanSelectCardCondition{idx}"
-            mode = mode_map.get(cond_name, "AddHand")
-            # Map C# modes to engine placement strings
-            if mode == "AddHand":
-                pass_data["placement"] = "hand"
-            elif mode == "Custom":
-                pass_data["placement"] = "hand"  # Custom typically plays, default to hand
-            elif mode == "Discard":
-                pass_data["placement"] = "trash"
-            else:
-                pass_data["placement"] = "hand"
-            eb.card_filter_passes.append(pass_data)
+    # Fix 1: Generate real condition code from extracted closure data
+    lines.append(f"")
+    lines.append(_generate_factory_condition_code(eb, idx, "        "))
+    lines.append(f"        {var}.set_can_use_condition(condition{idx})")
+    lines.append(f"        effects.append({var})")
+    return "\n".join(lines)
 
 
-def parse_cs_file(filepath: str) -> Tuple[str, List[EffectBlock]]:
-    """Parse a C# card effect file. Returns (class_name, effects)."""
-    with open(filepath, 'r', encoding='utf-8', errors='replace') as f:
-        source = f.read()
+def generate_activate_effect(eb: EffectBlock, card_id: str, idx: int) -> str:
+    """Generate Python code for an ActivateClass-based effect."""
+    lines = []
+    var = f"effect{idx}"
+    action_desc = generate_action_comment(eb)
+    desc = eb.description or action_desc
 
-    m = RE_CLASS.search(source)
-    class_name = m.group(1) if m else os.path.basename(filepath).replace('.cs', '')
+    lines.append(f"        # Timing: {eb.timing}")
+    lines.append(f"        # {desc}")
+    lines.append(f"        {var} = ICardEffect()")
+    lines.append(f'        {var}.set_effect_name("{card_id} {eb.effect_name or action_desc}")')
+    lines.append(f'        {var}.set_effect_description("{desc}")')
 
-    all_effects = []
+    if eb.is_inherited:
+        lines.append(f"        {var}.is_inherited_effect = True")
 
-    # Extract timing blocks
-    timing_blocks = extract_timing_blocks(source)
+    if eb.is_optional:
+        lines.append(f"        {var}.is_optional = True")
 
-    for timing, block in timing_blocks:
-        # Check for factory effects first
-        factory_effects = extract_factory_effects(block)
-        for fe in factory_effects:
-            fe.timing = timing
-            all_effects.append(fe)
+    if eb.max_count_per_turn > 0:
+        lines.append(f"        {var}.set_max_count_per_turn({eb.max_count_per_turn})")
 
-        # Then ActivateClass effects (pass full source for shared coroutine resolution)
-        activate_effects = extract_activate_effects(block, full_source=source)
-        for ae in activate_effects:
-            ae.timing = timing
-            all_effects.append(ae)
+    if eb.hash_string:
+        lines.append(f'        {var}.set_hash_string("{eb.hash_string}")')
 
-    # Also check for effects defined outside timing blocks (top-level)
-    if not timing_blocks:
-        factory_effects = extract_factory_effects(source)
-        activate_effects = extract_activate_effects(source, full_source=source)
-        for fe in factory_effects:
-            all_effects.append(fe)
-        for ae in activate_effects:
-            all_effects.append(ae)
+    # Fix 9: Separate is_on_play vs is_when_digivolving
+    prop = TIMING_TO_PROPERTY.get(eb.timing)
+    if prop:
+        if prop == "is_on_play" and "trigger_when_digivolving" in eb.conditions:
+            # This is a When Digivolving effect, not On Play
+            lines.append(f"        {var}.is_when_digivolving = True")
+        else:
+            lines.append(f"        {var}.{prop} = True")
 
-    return class_name, all_effects
+    if eb.timing == "EffectTiming.SecuritySkill":
+        lines.append(f"        {var}.is_security_effect = True")
+
+    # DP modifier
+    if eb.dp_change and not any(a for a in eb.actions if a not in ("change_dp",)):
+        lines.append(f"        {var}.dp_modifier = {eb.dp_change}")
+
+    # Cost reduction
+    if eb.cost_reduction_val and "cost_reduction" in eb.actions:
+        lines.append(f"        {var}.cost_reduction = {eb.cost_reduction_val}")
+
+    # Keyword grants from CardEffectCommons.Gain*()
+    gained = getattr(eb, 'gained_keywords', [])
+    for kw in gained:
+        flag_name = f"_is_{kw}"
+        lines.append(f"        {var}.{flag_name} = True")
+
+    # Condition — pass `effect` variable name for condition closures
+    # We need the effect var name for accessing effect_source_permanent
+    lines.append(f"")
+    lines.append(f"        effect = {var}  # alias for condition closure")
+    lines.append(f"        def condition{idx}(context: Dict[str, Any]) -> bool:")
+    lines.append(generate_condition_code(eb, "            "))
+    lines.append(f"")
+    lines.append(f"        {var}.set_can_use_condition(condition{idx})")
+
+    # Callback for actions
+    # Phase 1: Skip callback entirely if jogress_condition is the only substantive action
+    substantive_actions = [a for a in eb.actions if a not in (
+        "jogress_condition", "draw", "gain_memory", "change_dp", "recovery")]
+    has_non_jogress_actions = bool(substantive_actions) or eb.draw_count or eb.memory_gain or eb.dp_change or eb.recovery_count
+    if eb.actions and has_non_jogress_actions:
+        lines.append(f"")
+        lines.append(f"        def process{idx}(ctx: Dict[str, Any]):")
+        lines.append(f"            \"\"\"Action: {action_desc}\"\"\"")
+        lines.append(generate_callback_code(eb, "            "))
+        lines.append(f"")
+        lines.append(f"        {var}.set_on_process_callback(process{idx})")
+
+    lines.append(f"        effects.append({var})")
+    return "\n".join(lines)
+
+
+def generate_python_script(class_name: str, card_id: str, effects: List[EffectBlock],
+                           card_db: Optional[Dict[str, dict]] = None) -> str:
+    """Generate a complete Python CardScript file."""
+    lines = []
+
+    # Look up card metadata from cards.json
+    card_meta = (card_db or {}).get(card_id, {})
+    card_name = card_meta.get("card_name_eng", "")
+    card_level = card_meta.get("level", 0)
+
+    lines.append("from __future__ import annotations")
+    lines.append("from typing import TYPE_CHECKING, List, Dict, Any")
+    lines.append("from ....core.card_script import CardScript")
+    lines.append("from ....interfaces.card_effect import ICardEffect")
+    lines.append("")
+    lines.append("if TYPE_CHECKING:")
+    lines.append("    from ....core.card_source import CardSource")
+    lines.append("")
+    lines.append("")
+    # Include card name and level as comment/docstring
+    doc_parts = [f"{card_id} {card_name}" if card_name else card_id]
+    if card_level:
+        doc_parts.append(f"Lv.{card_level}")
+    lines.append(f"class {class_name}(CardScript):")
+    lines.append(f'    """{" | ".join(doc_parts)}"""')
+    lines.append("")
+    lines.append(f"    def get_card_effects(self, card: 'CardSource') -> List['ICardEffect']:")
+    lines.append(f"        effects = []")
+
+    if not effects:
+        lines.append(f"        # No effects found in DCGO source")
+        lines.append(f"        return effects")
+        return "\n".join(lines) + "\n"
+
+    for idx, eb in enumerate(effects):
+        lines.append("")
+        if eb.is_factory:
+            lines.append(generate_factory_effect(eb, card_id, idx))
+        else:
+            lines.append(generate_activate_effect(eb, card_id, idx))
+
+    lines.append("")
+    lines.append("        return effects")
+    return "\n".join(lines) + "\n"

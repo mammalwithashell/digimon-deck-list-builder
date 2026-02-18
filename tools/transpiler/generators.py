@@ -35,6 +35,30 @@ def generate_condition_code(eb: EffectBlock, indent: str = "            ") -> st
     if "trigger_option_main" in eb.conditions:
         checks.append(f"{indent}# Option main effect — validated by engine timing")
 
+    # Fix 13: Triggers checking event source (suspended permanent)
+    if "EffectTiming.OnTappedAnyone" in eb.timing:
+        # Check color conditions against suspended permanent
+        if eb.color_checks:
+            or_parts = " or ".join(f"CardColor.{c} in suspended.top_card.card_colors" for c in eb.color_checks)
+            checks.append(f"{indent}suspended = context.get('suspended_permanent')")
+            checks.append(f"{indent}if suspended:")
+            checks.append(f"{indent}    if not ({or_parts}):")
+            checks.append(f"{indent}        return False")
+
+        # Check trait/name conditions against suspended permanent?
+        # Typically "One of your [Trait] becomes suspended"
+        if eb.trait_checks:
+             # Need to distinguish if traits apply to self or the event source.
+             # If "Anyone", usually implies context check.
+             # Simplification: if inherited, maybe check self?
+             # But "When one of your ... becomes suspended" means event source.
+             # We'll apply traits to suspended permanent if present.
+             or_parts = " or ".join(f"'{t}' in suspended.top_card.card_traits" for t in eb.trait_checks)
+             checks.append(f"{indent}suspended = context.get('suspended_permanent')")
+             checks.append(f"{indent}if suspended:")
+             checks.append(f"{indent}    if not ({or_parts}):")
+             checks.append(f"{indent}        return False")
+
     # Fix 10: Activate condition checks from CanActivateCondition
     if eb.activate_cond_has_text:
         or_parts = " or ".join(f"'{t}' in text" for t in eb.activate_cond_has_text)
@@ -376,6 +400,28 @@ def _emit_action(eb: EffectBlock, action: str, lines: List[str], indent: str):
         lines.append(f"{indent}        enemy.delete_permanent(target_perm)")
         lines.append(f"{indent}game.effect_select_opponent_permanent(")
         lines.append(f"{indent}    player, on_delete, filter_fn=target_filter, is_optional={eb.is_optional})")
+    elif action == "delete_and_process":
+        # Complex conditional deletion logic
+        lines.append(f"{indent}# Complex conditional deletion (BT13-111 style)")
+        lines.append(f"{indent}enemy = player.enemy if player else None")
+        lines.append(f"{indent}if enemy:")
+        lines.append(f"{indent}    # Attempt first deletion condition")
+        lines.append(f"{indent}    def first_filter(p):")
+        if eb.target_dp_limit:
+            lines.append(f"{indent}        return p.dp is not None and p.dp <= {eb.target_dp_limit}")
+        else:
+            lines.append(f"{indent}        return False # Fallback if no condition extracted")
+        lines.append(f"{indent}    ")
+        lines.append(f"{indent}    def on_first_delete(target):")
+        lines.append(f"{indent}        deleted = enemy.delete_permanent(target)")
+        lines.append(f"{indent}        if not deleted:")
+        lines.append(f"{indent}            # If failure (not deleted), trigger secondary logic")
+        lines.append(f"{indent}            # TODO: Extract secondary logic from FailureProcess")
+        lines.append(f"{indent}            pass")
+        lines.append(f"{indent}    ")
+        lines.append(f"{indent}    # Simplified implementation: Check if any match, then ask selection")
+        lines.append(f"{indent}    game.effect_select_opponent_permanent(player, on_first_delete, filter_fn=first_filter, is_optional={eb.is_optional})")
+        lines.append(f"{indent}pass  # descriptive-tagged: delete_and_process")
     elif action == "bounce":
         lines.append(f"{indent}if not (player and game):")
         lines.append(f"{indent}    return")
@@ -1007,6 +1053,7 @@ def generate_python_script(class_name: str, card_id: str, effects: List[EffectBl
     lines.append("from typing import TYPE_CHECKING, List, Dict, Any")
     lines.append("from ....core.card_script import CardScript")
     lines.append("from ....interfaces.card_effect import ICardEffect")
+    lines.append("from ....data.enums import CardColor")
     lines.append("")
     lines.append("if TYPE_CHECKING:")
     lines.append("    from ....core.card_source import CardSource")
