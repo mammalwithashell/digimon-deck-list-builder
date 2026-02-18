@@ -97,7 +97,7 @@ class BT20_094(CardScript):
         # Timing: EffectTiming.SecuritySkill
         # [Security] You may play 1 level 3 Digimon card with the [Free] trait from your hand or trash without paying the cost. Then, add this card to the hand.
         effect3 = ICardEffect()
-        effect3.set_effect_name("BT20-094 Play Card, Trash From Hand, Add To Hand")
+        effect3.set_effect_name("BT20-094 Play Card, Add To Hand")
         effect3.set_effect_description("[Security] You may play 1 level 3 Digimon card with the [Free] trait from your hand or trash without paying the cost. Then, add this card to the hand.")
         effect3.is_security_effect = True
         effect3.is_security_effect = True
@@ -110,7 +110,7 @@ class BT20_094(CardScript):
         effect3.set_can_use_condition(condition3)
 
         def process3(ctx: Dict[str, Any]):
-            """Action: Play Card, Trash From Hand, Add To Hand"""
+            """Action: Play Card, Add To Hand"""
             player = ctx.get('player')
             perm = ctx.get('permanent')
             game = ctx.get('game')
@@ -122,18 +122,6 @@ class BT20_094(CardScript):
                 return True
             game.effect_play_from_zone(
                 player, 'hand', play_filter, free=True, is_optional=True)
-            if not (player and game):
-                return
-            def hand_filter(c):
-                if not getattr(c, 'is_digimon', False):
-                    return False
-                return True
-            def on_trashed(selected):
-                if selected in player.hand_cards:
-                    player.hand_cards.remove(selected)
-                    player.trash_cards.append(selected)
-            game.effect_select_hand_card(
-                player, hand_filter, on_trashed, is_optional=False)
             # Add card to hand (from trash/reveal)
             if player and player.trash_cards:
                 card_to_add = player.trash_cards.pop()

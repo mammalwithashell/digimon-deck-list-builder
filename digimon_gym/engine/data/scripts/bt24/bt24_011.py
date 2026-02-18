@@ -26,12 +26,12 @@ class BT24_011(CardScript):
         effect0.set_can_use_condition(condition0)
         effects.append(effect0)
 
-        # Factory effect: raid
-        # Raid
+        # Factory effect: rush
+        # Rush
         effect1 = ICardEffect()
-        effect1.set_effect_name("BT24-011 Raid")
-        effect1.set_effect_description("Raid")
-        effect1._is_raid = True
+        effect1.set_effect_name("BT24-011 Rush")
+        effect1.set_effect_description("Rush")
+        effect1._is_rush = True
 
         def condition1(context: Dict[str, Any]) -> bool:
             return True
@@ -43,12 +43,24 @@ class BT24_011(CardScript):
         effect2 = ICardEffect()
         effect2.set_effect_name("BT24-011 Raid")
         effect2.set_effect_description("Raid")
-        effect2.is_inherited_effect = True
         effect2._is_raid = True
 
         def condition2(context: Dict[str, Any]) -> bool:
             return True
         effect2.set_can_use_condition(condition2)
         effects.append(effect2)
+
+        # Factory effect: raid
+        # Raid
+        effect3 = ICardEffect()
+        effect3.set_effect_name("BT24-011 Raid")
+        effect3.set_effect_description("Raid")
+        effect3.is_inherited_effect = True
+        effect3._is_raid = True
+
+        def condition3(context: Dict[str, Any]) -> bool:
+            return True
+        effect3.set_can_use_condition(condition3)
+        effects.append(effect3)
 
         return effects

@@ -4,8 +4,8 @@ Generated from DCGO C# card scripts.
 
 - Total scripts: 103
 - Scripts with effects: 103
-- Total effects: 391
-- Factory effects: 138
+- Total effects: 393
+- Factory effects: 140
 - Activate effects: 253
 
 ## Per-Card Breakdown
@@ -35,7 +35,7 @@ BT20_050: 4 effects
   [factory] dp_modifier
 BT20_051: 3 effects
   [factory] alt_digivolve_req
-  [EffectTiming.OnEnterFieldAnyone] play_card, trash_from_hand
+  [EffectTiming.OnEnterFieldAnyone] play_card
   [factory] dp_modifier
 BT20_052: 5 effects
   [factory] alt_digivolve_req
@@ -45,8 +45,8 @@ BT20_052: 5 effects
   [EffectTiming.None] target_lock (inherited)
 BT20_053: 4 effects
   [factory] alt_digivolve_req
-  [EffectTiming.OnEnterFieldAnyone] change_dp, play_card, trash_from_hand, effect_immunity
-  [EffectTiming.OnEnterFieldAnyone] change_dp, play_card, trash_from_hand, effect_immunity
+  [EffectTiming.OnEnterFieldAnyone] change_dp, play_card, effect_immunity
+  [EffectTiming.OnEnterFieldAnyone] change_dp, play_card, effect_immunity
   [EffectTiming.OnAllyAttack] redirect_attack (inherited) (1/turn)
 BT20_054: 3 effects
   [factory] blocker
@@ -89,7 +89,7 @@ BT20_060: 4 effects
   [EffectTiming.OnLoseSecurity] gain_memory (1/turn)
 BT20_086: 3 effects
   [factory] set_memory_3
-  [EffectTiming.OnStartMainPhase] trash_from_hand
+  [EffectTiming.OnStartMainPhase] no-action
   [factory] security_play
 BT20_087: 4 effects
   [EffectTiming.None] also_treated_as (descriptive-tagged)
@@ -183,7 +183,7 @@ BT20_043: 7 effects
   [EffectTiming.None] cost_reduction
   [EffectTiming.OnEnterFieldAnyone] change_dp, suspend, force_attack
   [EffectTiming.OnEnterFieldAnyone] change_dp, suspend, force_attack
-  [EffectTiming.OnEndTurn] play_card, trash_from_hand, force_attack
+  [EffectTiming.OnEndTurn] play_card, force_attack
   [EffectTiming.OnAllyAttack] change_dp (inherited) (1/turn)
 BT20_044: 6 effects
   [factory] alt_digivolve_req
@@ -232,15 +232,15 @@ BT20_065: 3 effects
   [EffectTiming.OnEnterFieldAnyone] add_temp_effect (descriptive-tagged)
   [factory] retaliation
 BT20_066: 3 effects
-  [EffectTiming.OnEnterFieldAnyone] delete, play_card, trash_from_hand
-  [EffectTiming.OnEnterFieldAnyone] delete, play_card, trash_from_hand
+  [EffectTiming.OnEnterFieldAnyone] delete, play_card
+  [EffectTiming.OnEnterFieldAnyone] delete, play_card
   [factory] retaliation
 BT20_067: 3 effects
   [EffectTiming.OnEnterFieldAnyone] gain_keyword_retaliation
   [EffectTiming.OnEnterFieldAnyone] gain_keyword_retaliation
   [EffectTiming.OnDestroyedAnyone] delete, trash_from_hand (inherited)
 BT20_068: 2 effects
-  [EffectTiming.OnEnterFieldAnyone] play_card, trash_from_hand
+  [EffectTiming.OnEnterFieldAnyone] play_card
   [EffectTiming.OnDestroyedAnyone] gain_memory (inherited)
 BT20_069: 4 effects
   [factory] alt_digivolve_req
@@ -281,14 +281,16 @@ BT20_076: 3 effects
   [EffectTiming.None] jogress_condition
   [EffectTiming.OnEnterFieldAnyone] delete, digivolve
   [EffectTiming.OnEnterFieldAnyone] delete, digivolve
-BT20_077: 6 effects
+BT20_077: 7 effects
   [factory] blast_digivolve
   [factory] alt_digivolve_req
   [EffectTiming.OnEnterFieldAnyone] play_card, trash_from_hand
   [EffectTiming.OnEnterFieldAnyone] play_card, trash_from_hand
   [factory] blocker
+  [factory] rush
   [factory] dp_modifier_all
-BT20_078: 3 effects
+BT20_078: 4 effects
+  [factory] collision
   [factory] blocker
   [EffectTiming.OnEnterFieldAnyone] de_digivolve (1/turn)
   [EffectTiming.OnDestroyedAnyone] delete
@@ -361,15 +363,15 @@ BT20_010: 3 effects
   [factory] change_digi_cost
   [factory] dp_modifier
 BT20_011: 3 effects
-  [EffectTiming.OnEnterFieldAnyone] delete, play_card, trash_from_hand
-  [EffectTiming.OnEnterFieldAnyone] delete, play_card, trash_from_hand
+  [EffectTiming.OnEnterFieldAnyone] delete, play_card
+  [EffectTiming.OnEnterFieldAnyone] delete, play_card
   [factory] dp_modifier
 BT20_012: 3 effects
   [factory] alt_digivolve_req
   [EffectTiming.OnAllyAttack] digivolve
   [factory] dp_modifier
 BT20_013: 2 effects
-  [EffectTiming.OnDeclaration] play_card, trash_from_hand, cost_reduction (1/turn)
+  [EffectTiming.OnDeclaration] play_card, cost_reduction (1/turn)
   [factory] dp_modifier_all
 BT20_014: 4 effects
   [EffectTiming.OnEnterFieldAnyone] delete
@@ -378,14 +380,14 @@ BT20_014: 4 effects
   [factory] alliance
 BT20_015: 4 effects
   [factory] alt_digivolve_req
-  [EffectTiming.OnEnterFieldAnyone] change_dp, play_card, trash_from_hand, change_security_attack
-  [EffectTiming.OnEnterFieldAnyone] change_dp, play_card, trash_from_hand, change_security_attack
+  [EffectTiming.OnEnterFieldAnyone] change_dp, play_card, change_security_attack
+  [EffectTiming.OnEnterFieldAnyone] change_dp, play_card, change_security_attack
   [EffectTiming.None] disable_effect (descriptive-tagged) (inherited)
 BT20_016: 5 effects
   [EffectTiming.None] jogress_condition
   [EffectTiming.OnEnterFieldAnyone] change_dp, gain_keyword_piercing, force_attack
   [EffectTiming.OnEnterFieldAnyone] change_dp, gain_keyword_piercing, force_attack
-  [EffectTiming.WhenPermanentWouldBeDeleted] play_card, trash_from_hand
+  [EffectTiming.WhenPermanentWouldBeDeleted] play_card
   [factory] security_attack_plus
 BT20_017: 3 effects
   [EffectTiming.OnEnterFieldAnyone] play_token (descriptive-tagged)
@@ -415,20 +417,20 @@ BT20_020: 4 effects
 BT20_021: 6 effects
   [EffectTiming.None] jogress_condition
   [factory] blast_digivolve
-  [EffectTiming.OnEnterFieldAnyone] trash_from_hand (1/turn)
-  [EffectTiming.OnEnterFieldAnyone] trash_from_hand (1/turn)
-  [EffectTiming.OnAllyAttack] trash_from_hand (1/turn)
+  [EffectTiming.OnEnterFieldAnyone] no-action (1/turn)
+  [EffectTiming.OnEnterFieldAnyone] no-action (1/turn)
+  [EffectTiming.OnAllyAttack] no-action (1/turn)
   [EffectTiming.OnAllyAttack] unsuspend (1/turn)
 BT20_093: 4 effects
-  [EffectTiming.OptionSkill] play_card, trash_from_hand, cost_reduction
+  [EffectTiming.OptionSkill] play_card, cost_reduction
   [factory] delay
-  [EffectTiming.WhenRemoveField] play_card, trash_from_hand
+  [EffectTiming.WhenRemoveField] play_card
   [EffectTiming.SecuritySkill] play_card
 BT20_094: 4 effects
   [EffectTiming.OptionSkill] play_card, cost_reduction
   [factory] delay
   [EffectTiming.OnLoseSecurity] play_card
-  [EffectTiming.SecuritySkill] play_card, trash_from_hand, add_to_hand
+  [EffectTiming.SecuritySkill] play_card, add_to_hand
 BT20_083: 5 effects
   [EffectTiming.None] also_treated_as (descriptive-tagged)
   [factory] blocker
@@ -443,16 +445,16 @@ BT20_084: 5 effects
   [EffectTiming.OnEndTurn] add_to_security
 BT20_091: 3 effects
   [EffectTiming.OnEnterFieldAnyone] draw, gain_memory, suspend
-  [EffectTiming.WhenRemoveField] play_card, trash_from_hand (1/turn)
+  [EffectTiming.WhenRemoveField] play_card (1/turn)
   [factory] security_play
 BT20_092: 4 effects
   [factory] set_memory_3
-  [EffectTiming.OnEnterFieldAnyone] draw, trash_from_hand
+  [EffectTiming.OnEnterFieldAnyone] draw
   [EffectTiming.OnStartMainPhase] delete, play_card
   [factory] security_play
 BT20_099: 4 effects
   [EffectTiming.None] ignore_color_req (descriptive-tagged)
-  [EffectTiming.OptionSkill] play_card, trash_from_hand, cost_reduction
+  [EffectTiming.OptionSkill] play_card, cost_reduction
   [EffectTiming.SecuritySkill] gain_memory, add_to_hand
   [EffectTiming.OnEndTurn] change_dp, destroy_security (inherited)
 BT20_100: 4 effects
@@ -498,7 +500,7 @@ BT20_036: 7 effects
   [EffectTiming.None] cost_reduction
   [EffectTiming.OnEnterFieldAnyone] change_dp, de_digivolve
   [EffectTiming.OnEnterFieldAnyone] change_dp, de_digivolve
-  [EffectTiming.OnEndTurn] play_card, trash_from_hand, force_attack
+  [EffectTiming.OnEndTurn] play_card, force_attack
   [EffectTiming.OnAllyAttack] redirect_attack (inherited) (1/turn)
 BT20_037: 4 effects
   [EffectTiming.None] jogress_condition

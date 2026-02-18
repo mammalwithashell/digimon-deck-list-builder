@@ -31,7 +31,7 @@ class BT20_013(CardScript):
         effect0.set_can_use_condition(condition0)
 
         def process0(ctx: Dict[str, Any]):
-            """Action: Cost -2, Play Card, Trash From Hand"""
+            """Action: Cost -2, Play Card"""
             player = ctx.get('player')
             perm = ctx.get('permanent')
             game = ctx.get('game')
@@ -43,18 +43,6 @@ class BT20_013(CardScript):
                 return True
             game.effect_play_from_zone(
                 player, 'hand', play_filter, free=True, is_optional=True)
-            if not (player and game):
-                return
-            def hand_filter(c):
-                if not (any('Sistermon' in _n or 'Gankoomon' in _n for _n in getattr(c, 'card_names', []))):
-                    return False
-                return True
-            def on_trashed(selected):
-                if selected in player.hand_cards:
-                    player.hand_cards.remove(selected)
-                    player.trash_cards.append(selected)
-            game.effect_select_hand_card(
-                player, hand_filter, on_trashed, is_optional=False)
             # Cost reduction by 2 — handled via cost_reduction property
             pass  # descriptive-tagged: cost_reduction
 

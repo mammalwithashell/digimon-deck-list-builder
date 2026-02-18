@@ -16,7 +16,7 @@ class P_021(CardScript):
         # Timing: EffectTiming.OptionSkill
         # [Main] If you have [Mimi Tachikawa] in play, you may play a [Palmon] from your hand without paying its memory cost to return 1 of your [Mimi Tachikawa] cards to its owner's hand.
         effect0 = ICardEffect()
-        effect0.set_effect_name("P-021 Bounce, Play Card, Trash From Hand")
+        effect0.set_effect_name("P-021 Bounce, Play Card")
         effect0.set_effect_description("[Main] If you have [Mimi Tachikawa] in play, you may play a [Palmon] from your hand without paying its memory cost to return 1 of your [Mimi Tachikawa] cards to its owner's hand.")
 
         effect = effect0  # alias for condition closure
@@ -27,7 +27,7 @@ class P_021(CardScript):
         effect0.set_can_use_condition(condition0)
 
         def process0(ctx: Dict[str, Any]):
-            """Action: Bounce, Play Card, Trash From Hand"""
+            """Action: Bounce, Play Card"""
             player = ctx.get('player')
             perm = ctx.get('permanent')
             game = ctx.get('game')
@@ -47,16 +47,6 @@ class P_021(CardScript):
                 return True
             game.effect_play_from_zone(
                 player, 'hand', play_filter, free=True, is_optional=True)
-            if not (player and game):
-                return
-            def hand_filter(c):
-                return True
-            def on_trashed(selected):
-                if selected in player.hand_cards:
-                    player.hand_cards.remove(selected)
-                    player.trash_cards.append(selected)
-            game.effect_select_hand_card(
-                player, hand_filter, on_trashed, is_optional=False)
 
         effect0.set_on_process_callback(process0)
         effects.append(effect0)

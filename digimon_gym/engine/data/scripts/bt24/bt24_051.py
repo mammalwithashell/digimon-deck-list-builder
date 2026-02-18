@@ -218,23 +218,42 @@ class BT24_051(CardScript):
         effect6.set_on_process_callback(process6)
         effects.append(effect6)
 
+        # Factory effect: rush
+        # Rush
+        effect7 = ICardEffect()
+        effect7.set_effect_name("BT24-051 Rush")
+        effect7.set_effect_description("Rush")
+        effect7._is_rush = True
+
+        def condition7(context: Dict[str, Any]) -> bool:
+            if not (card and card.owner and card.owner.is_my_turn):
+                return False
+            if card and card.permanent_of_this_card() is None:
+                return False
+            permanent = card.permanent_of_this_card() if card else None
+            if not (permanent and permanent.top_card and (any('Iliad' in tr for tr in (getattr(permanent.top_card, 'card_traits', []) or [])))):
+                return False
+            return True
+        effect7.set_can_use_condition(condition7)
+        effects.append(effect7)
+
         # Timing: EffectTiming.None
         # Grant Skill
-        effect7 = ICardEffect()
-        effect7.set_effect_name("BT24-051 [Your Turn] All of your [Iliad] trait Digimon gain <Rush> and <Piercing>.")
-        effect7.set_effect_description("Grant Skill")
+        effect8 = ICardEffect()
+        effect8.set_effect_name("BT24-051 [Your Turn] All of your [Iliad] trait Digimon gain <Rush> and <Piercing>.")
+        effect8.set_effect_description("Grant Skill")
 
-        effect = effect7  # alias for condition closure
-        def condition7(context: Dict[str, Any]) -> bool:
+        effect = effect8  # alias for condition closure
+        def condition8(context: Dict[str, Any]) -> bool:
             if card and card.permanent_of_this_card() is None:
                 return False
             if not (card and card.owner and card.owner.is_my_turn):
                 return False
             return True
 
-        effect7.set_can_use_condition(condition7)
+        effect8.set_can_use_condition(condition8)
 
-        def process7(ctx: Dict[str, Any]):
+        def process8(ctx: Dict[str, Any]):
             """Action: Grant Skill"""
             player = ctx.get('player')
             perm = ctx.get('permanent')
@@ -242,7 +261,7 @@ class BT24_051(CardScript):
             # Grant keyword to other permanents (AddSkillClass) — not yet in engine
             pass  # descriptive-tagged: grant_skill
 
-        effect7.set_on_process_callback(process7)
-        effects.append(effect7)
+        effect8.set_on_process_callback(process8)
+        effects.append(effect8)
 
         return effects

@@ -61,7 +61,7 @@ def test_bt23_total_effects():
         script_class = getattr(module, class_name)
         effects = script_class().get_card_effects(None)
         total += len(effects)
-    assert total == 428, f"Expected 428 total BT23 effects, found {total}"
+    assert total == 430, f"Expected 430 total BT23 effects, found {total}"
 
 
 # ─── Integration Tests: Effects Execute Against Game State ──────────

@@ -31,10 +31,10 @@ class P_215(CardScript):
         effects.append(effect0)
 
         # Timing: EffectTiming.OnMove
-        # Trash From Hand, Gain Keyword Cannot Return To Hand, Gain Keyword Cannot Return To Deck
+        # Gain Keyword Cannot Return To Hand, Gain Keyword Cannot Return To Deck
         effect1 = ICardEffect()
-        effect1.set_effect_name("P-215 Trash From Hand, Gain Keyword Cannot Return To Hand, Gain Keyword Cannot Return To Deck")
-        effect1.set_effect_description("Trash From Hand, Gain Keyword Cannot Return To Hand, Gain Keyword Cannot Return To Deck")
+        effect1.set_effect_name("P-215 Gain Keyword Cannot Return To Hand, Gain Keyword Cannot Return To Deck")
+        effect1.set_effect_description("Gain Keyword Cannot Return To Hand, Gain Keyword Cannot Return To Deck")
         effect1._is_cannot_return_to_hand = True
         effect1._is_cannot_return_to_deck = True
 
@@ -47,32 +47,28 @@ class P_215(CardScript):
         effect1.set_can_use_condition(condition1)
 
         def process1(ctx: Dict[str, Any]):
-            """Action: Trash From Hand, Gain Keyword Cannot Return To Hand, Gain Keyword Cannot Return To Deck"""
+            """Action: Gain Keyword Cannot Return To Hand, Gain Keyword Cannot Return To Deck"""
             player = ctx.get('player')
             perm = ctx.get('permanent')
             game = ctx.get('game')
             if not (player and game):
                 return
-            def hand_filter(c):
-                return True
-            def on_trashed(selected):
-                if selected in player.hand_cards:
-                    player.hand_cards.remove(selected)
-                    player.trash_cards.append(selected)
-            game.effect_select_hand_card(
-                player, hand_filter, on_trashed, is_optional=False)
-            if perm:
-                perm.grant_keyword('_is_cannot_return_to_hand')
-                perm.grant_keyword('_is_cannot_return_to_deck')
+            def target_filter(p):
+                return p.is_digimon
+            def on_grant(target_perm):
+                target_perm.grant_keyword('_is_cannot_return_to_hand')
+                target_perm.grant_keyword('_is_cannot_return_to_deck')
+            game.effect_select_own_permanent(
+                player, on_grant, filter_fn=target_filter, is_optional=False)
 
         effect1.set_on_process_callback(process1)
         effects.append(effect1)
 
         # Timing: EffectTiming.OnEnterFieldAnyone
-        # Trash From Hand, Gain Keyword Cannot Return To Hand, Gain Keyword Cannot Return To Deck
+        # Gain Keyword Cannot Return To Hand, Gain Keyword Cannot Return To Deck
         effect2 = ICardEffect()
-        effect2.set_effect_name("P-215 Trash From Hand, Gain Keyword Cannot Return To Hand, Gain Keyword Cannot Return To Deck")
-        effect2.set_effect_description("Trash From Hand, Gain Keyword Cannot Return To Hand, Gain Keyword Cannot Return To Deck")
+        effect2.set_effect_name("P-215 Gain Keyword Cannot Return To Hand, Gain Keyword Cannot Return To Deck")
+        effect2.set_effect_description("Gain Keyword Cannot Return To Hand, Gain Keyword Cannot Return To Deck")
         effect2.is_on_play = True
         effect2._is_cannot_return_to_hand = True
         effect2._is_cannot_return_to_deck = True
@@ -85,32 +81,28 @@ class P_215(CardScript):
         effect2.set_can_use_condition(condition2)
 
         def process2(ctx: Dict[str, Any]):
-            """Action: Trash From Hand, Gain Keyword Cannot Return To Hand, Gain Keyword Cannot Return To Deck"""
+            """Action: Gain Keyword Cannot Return To Hand, Gain Keyword Cannot Return To Deck"""
             player = ctx.get('player')
             perm = ctx.get('permanent')
             game = ctx.get('game')
             if not (player and game):
                 return
-            def hand_filter(c):
-                return True
-            def on_trashed(selected):
-                if selected in player.hand_cards:
-                    player.hand_cards.remove(selected)
-                    player.trash_cards.append(selected)
-            game.effect_select_hand_card(
-                player, hand_filter, on_trashed, is_optional=False)
-            if perm:
-                perm.grant_keyword('_is_cannot_return_to_hand')
-                perm.grant_keyword('_is_cannot_return_to_deck')
+            def target_filter(p):
+                return p.is_digimon
+            def on_grant(target_perm):
+                target_perm.grant_keyword('_is_cannot_return_to_hand')
+                target_perm.grant_keyword('_is_cannot_return_to_deck')
+            game.effect_select_own_permanent(
+                player, on_grant, filter_fn=target_filter, is_optional=False)
 
         effect2.set_on_process_callback(process2)
         effects.append(effect2)
 
         # Timing: EffectTiming.OnEnterFieldAnyone
-        # Trash From Hand, Gain Keyword Cannot Return To Hand, Gain Keyword Cannot Return To Deck
+        # Gain Keyword Cannot Return To Hand, Gain Keyword Cannot Return To Deck
         effect3 = ICardEffect()
-        effect3.set_effect_name("P-215 Trash From Hand, Gain Keyword Cannot Return To Hand, Gain Keyword Cannot Return To Deck")
-        effect3.set_effect_description("Trash From Hand, Gain Keyword Cannot Return To Hand, Gain Keyword Cannot Return To Deck")
+        effect3.set_effect_name("P-215 Gain Keyword Cannot Return To Hand, Gain Keyword Cannot Return To Deck")
+        effect3.set_effect_description("Gain Keyword Cannot Return To Hand, Gain Keyword Cannot Return To Deck")
         effect3.is_when_digivolving = True
         effect3._is_cannot_return_to_hand = True
         effect3._is_cannot_return_to_deck = True
@@ -123,23 +115,19 @@ class P_215(CardScript):
         effect3.set_can_use_condition(condition3)
 
         def process3(ctx: Dict[str, Any]):
-            """Action: Trash From Hand, Gain Keyword Cannot Return To Hand, Gain Keyword Cannot Return To Deck"""
+            """Action: Gain Keyword Cannot Return To Hand, Gain Keyword Cannot Return To Deck"""
             player = ctx.get('player')
             perm = ctx.get('permanent')
             game = ctx.get('game')
             if not (player and game):
                 return
-            def hand_filter(c):
-                return True
-            def on_trashed(selected):
-                if selected in player.hand_cards:
-                    player.hand_cards.remove(selected)
-                    player.trash_cards.append(selected)
-            game.effect_select_hand_card(
-                player, hand_filter, on_trashed, is_optional=False)
-            if perm:
-                perm.grant_keyword('_is_cannot_return_to_hand')
-                perm.grant_keyword('_is_cannot_return_to_deck')
+            def target_filter(p):
+                return p.is_digimon
+            def on_grant(target_perm):
+                target_perm.grant_keyword('_is_cannot_return_to_hand')
+                target_perm.grant_keyword('_is_cannot_return_to_deck')
+            game.effect_select_own_permanent(
+                player, on_grant, filter_fn=target_filter, is_optional=False)
 
         effect3.set_on_process_callback(process3)
         effects.append(effect3)

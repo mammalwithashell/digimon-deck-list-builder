@@ -41,10 +41,10 @@ class BT24_085(CardScript):
         effects.append(effect0)
 
         # Timing: EffectTiming.OnEndTurn
-        # Suspend, Trash From Hand, Force Attack
+        # Suspend, Force Attack
         effect1 = ICardEffect()
         effect1.set_effect_name("BT24-085 Use a [TS] Option that costs less than your opponent's memory, 1 [TS] Digimon may attack")
-        effect1.set_effect_description("Suspend, Trash From Hand, Force Attack")
+        effect1.set_effect_description("Suspend, Force Attack")
         effect1.is_optional = True
 
         effect = effect1  # alias for condition closure
@@ -58,7 +58,7 @@ class BT24_085(CardScript):
         effect1.set_can_use_condition(condition1)
 
         def process1(ctx: Dict[str, Any]):
-            """Action: Suspend, Trash From Hand, Force Attack"""
+            """Action: Suspend, Force Attack"""
             player = ctx.get('player')
             perm = ctx.get('permanent')
             game = ctx.get('game')
@@ -70,16 +70,6 @@ class BT24_085(CardScript):
                 target_perm.suspend()
             game.effect_select_opponent_permanent(
                 player, on_suspend, filter_fn=target_filter, is_optional=True)
-            if not (player and game):
-                return
-            def hand_filter(c):
-                return True
-            def on_trashed(selected):
-                if selected in player.hand_cards:
-                    player.hand_cards.remove(selected)
-                    player.trash_cards.append(selected)
-            game.effect_select_hand_card(
-                player, hand_filter, on_trashed, is_optional=True)
             # Force attack — target Digimon may attack (requires engine SelectAttack)
             pass  # descriptive-tagged: force_attack
 

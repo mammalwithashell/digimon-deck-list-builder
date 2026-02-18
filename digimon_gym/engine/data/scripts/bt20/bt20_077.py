@@ -142,13 +142,12 @@ class BT20_077(CardScript):
         effect4.set_can_use_condition(condition4)
         effects.append(effect4)
 
-        # Factory effect: dp_modifier_all
-        # All your Digimon DP modifier
+        # Factory effect: rush
+        # Rush
         effect5 = ICardEffect()
-        effect5.set_effect_name("BT20-077 All your Digimon DP modifier")
-        effect5.set_effect_description("All your Digimon DP modifier")
-        effect5.dp_modifier = 2000
-        effect5._applies_to_all_own_digimon = True
+        effect5.set_effect_name("BT20-077 Rush")
+        effect5.set_effect_description("Rush")
+        effect5._is_rush = True
 
         def condition5(context: Dict[str, Any]) -> bool:
             if card and card.permanent_of_this_card() is None:
@@ -159,5 +158,23 @@ class BT20_077(CardScript):
             return True
         effect5.set_can_use_condition(condition5)
         effects.append(effect5)
+
+        # Factory effect: dp_modifier_all
+        # All your Digimon DP modifier
+        effect6 = ICardEffect()
+        effect6.set_effect_name("BT20-077 All your Digimon DP modifier")
+        effect6.set_effect_description("All your Digimon DP modifier")
+        effect6.dp_modifier = 2000
+        effect6._applies_to_all_own_digimon = True
+
+        def condition6(context: Dict[str, Any]) -> bool:
+            if card and card.permanent_of_this_card() is None:
+                return False
+            permanent = card.permanent_of_this_card() if card else None
+            if not (permanent and permanent.top_card and (any('Dark Dragon' in tr for tr in (getattr(permanent.top_card, 'card_traits', []) or [])) or any('Evil Dragon' in tr for tr in (getattr(permanent.top_card, 'card_traits', []) or [])))):
+                return False
+            return True
+        effect6.set_can_use_condition(condition6)
+        effects.append(effect6)
 
         return effects

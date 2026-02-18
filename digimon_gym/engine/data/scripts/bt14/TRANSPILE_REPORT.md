@@ -20,8 +20,8 @@ BT14_057: 2 effects
   [factory] save
   [factory] blocker
 BT14_058: 3 effects
-  [EffectTiming.OnEnterFieldAnyone] trash_from_hand, gain_keyword_rush
-  [EffectTiming.OnEnterFieldAnyone] trash_from_hand, gain_keyword_rush
+  [EffectTiming.OnEnterFieldAnyone] gain_keyword_rush
+  [EffectTiming.OnEnterFieldAnyone] gain_keyword_rush
   [factory] blocker
 BT14_059: 3 effects
   [factory] retaliation
@@ -50,7 +50,7 @@ BT14_066: 4 effects
   [factory] alt_digivolve_req
   [EffectTiming.OnEnterFieldAnyone] gain_memory, trash_from_hand
   [EffectTiming.OnEnterFieldAnyone] gain_memory, trash_from_hand
-  [EffectTiming.OnDestroyedAnyone] play_card, trash_from_hand
+  [EffectTiming.OnDestroyedAnyone] play_card
 BT14_067: 2 effects
   [EffectTiming.OnEnterFieldAnyone] delete, reveal_and_select
   [EffectTiming.OnEnterFieldAnyone] delete, reveal_and_select
@@ -165,7 +165,7 @@ BT14_006: 1 effects
 BT14_070: 1 effects
   [EffectTiming.OnDiscardHand] gain_memory (inherited) (1/turn)
 BT14_071: 2 effects
-  [EffectTiming.OnStartMainPhase] gain_memory, trash_from_hand
+  [EffectTiming.OnStartMainPhase] gain_memory
   [EffectTiming.OnEnterFieldAnyone] gain_memory (inherited) (1/turn)
 BT14_072: 2 effects
   [EffectTiming.OnEnterFieldAnyone] trash_from_hand, add_to_hand
@@ -259,7 +259,7 @@ BT14_089: 1 effects
 BT14_090: 3 effects
   [EffectTiming.None] ignore_color_req (descriptive-tagged)
   [EffectTiming.OptionSkill] digivolve
-  [EffectTiming.SecuritySkill] play_card, trash_from_hand, add_to_hand
+  [EffectTiming.SecuritySkill] play_card, add_to_hand
 BT14_101: 4 effects
   [factory] alt_digivolve_req
   [factory] alt_digivolve_req
@@ -274,10 +274,10 @@ BT14_003: 1 effects
 BT14_031: 1 effects
   [EffectTiming.OnAllyAttack] change_dp (inherited) (1/turn)
 BT14_032: 2 effects
-  [EffectTiming.OnEnterFieldAnyone] trash_from_hand, add_to_hand, add_to_security, destroy_security
+  [EffectTiming.OnEnterFieldAnyone] add_to_hand, add_to_security, destroy_security
   [EffectTiming.OnDestroyedAnyone] change_dp (inherited)
 BT14_033: 2 effects
-  [EffectTiming.OnStartMainPhase] play_card, trash_from_hand, add_to_security
+  [EffectTiming.OnStartMainPhase] play_card, add_to_security
   [EffectTiming.OnAddSecurity] gain_memory (inherited) (1/turn)
 BT14_034: 2 effects
   [factory] security_play
@@ -293,7 +293,7 @@ BT14_037: 3 effects
   [EffectTiming.OnEnterFieldAnyone] recovery
 BT14_038: 4 effects
   [factory] alt_digivolve_req
-  [EffectTiming.SecuritySkill] play_card, trash_from_hand
+  [EffectTiming.SecuritySkill] play_card
   [EffectTiming.OnDestroyedAnyone] add_to_security
   [EffectTiming.OnDestroyedAnyone] add_to_security (inherited)
 BT14_039: 4 effects
@@ -302,24 +302,24 @@ BT14_039: 4 effects
   [EffectTiming.OnEnterFieldAnyone] gain_memory
   [factory] security_attack_plus
 BT14_040: 3 effects
-  [EffectTiming.OnEnterFieldAnyone] trash_from_hand, add_to_security
-  [EffectTiming.OnEnterFieldAnyone] trash_from_hand, add_to_security
-  [EffectTiming.OnEnterFieldAnyone] play_card, trash_from_hand (1/turn)
+  [EffectTiming.OnEnterFieldAnyone] add_to_security
+  [EffectTiming.OnEnterFieldAnyone] add_to_security
+  [EffectTiming.OnEnterFieldAnyone] play_card (1/turn)
 BT14_041: 2 effects
   [EffectTiming.OnEnterFieldAnyone] recovery
   [EffectTiming.OnAddSecurity] change_dp (1/turn)
 BT14_084: 3 effects
-  [EffectTiming.OnEnterFieldAnyone] trash_from_hand, add_to_hand, add_to_security, destroy_security
+  [EffectTiming.OnEnterFieldAnyone] add_to_hand, add_to_security, destroy_security
   [EffectTiming.OnAddSecurity] gain_memory, suspend
   [factory] security_play
 BT14_093: 2 effects
   [EffectTiming.OptionSkill] recovery, play_card
-  [EffectTiming.SecuritySkill] play_card, trash_from_hand, add_to_hand
+  [EffectTiming.SecuritySkill] play_card, add_to_hand
 BT14_094: 1 effects
   [EffectTiming.OptionSkill] change_dp, put_to_security
 BT14_102: 4 effects
   [factory] alt_digivolve_req
   [EffectTiming.OnAllyAttack] change_dp, put_to_security
   [EffectTiming.OnDestroyedAnyone] add_to_security
-  [EffectTiming.OnDestroyedAnyone] trash_from_hand, add_to_security (inherited)
+  [EffectTiming.OnDestroyedAnyone] add_to_security (inherited)
 ```

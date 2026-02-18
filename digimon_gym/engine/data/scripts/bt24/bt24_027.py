@@ -56,10 +56,10 @@ class BT24_027(CardScript):
         effects.append(effect2)
 
         # Timing: EffectTiming.OnEnterFieldAnyone
-        # Trash From Hand, Gain Keyword Cannot Be Deleted By Battle
+        # Gain Keyword Cannot Be Deleted By Battle
         effect3 = ICardEffect()
         effect3.set_effect_name("BT24-027 By tucking, 1 digimon can't be deleted by battle")
-        effect3.set_effect_description("Trash From Hand, Gain Keyword Cannot Be Deleted By Battle")
+        effect3.set_effect_description("Gain Keyword Cannot Be Deleted By Battle")
         effect3.is_on_play = True
         effect3._is_cannot_be_deleted_by_battle = True
 
@@ -73,31 +73,27 @@ class BT24_027(CardScript):
         effect3.set_can_use_condition(condition3)
 
         def process3(ctx: Dict[str, Any]):
-            """Action: Trash From Hand, Gain Keyword Cannot Be Deleted By Battle"""
+            """Action: Gain Keyword Cannot Be Deleted By Battle"""
             player = ctx.get('player')
             perm = ctx.get('permanent')
             game = ctx.get('game')
             if not (player and game):
                 return
-            def hand_filter(c):
-                return True
-            def on_trashed(selected):
-                if selected in player.hand_cards:
-                    player.hand_cards.remove(selected)
-                    player.trash_cards.append(selected)
-            game.effect_select_hand_card(
-                player, hand_filter, on_trashed, is_optional=False)
-            if perm:
-                perm.grant_keyword('_is_cannot_be_deleted_by_battle')
+            def target_filter(p):
+                return p.is_digimon
+            def on_grant(target_perm):
+                target_perm.grant_keyword('_is_cannot_be_deleted_by_battle')
+            game.effect_select_own_permanent(
+                player, on_grant, filter_fn=target_filter, is_optional=False)
 
         effect3.set_on_process_callback(process3)
         effects.append(effect3)
 
         # Timing: EffectTiming.OnEnterFieldAnyone
-        # Trash From Hand, Gain Keyword Cannot Be Deleted By Battle
+        # Gain Keyword Cannot Be Deleted By Battle
         effect4 = ICardEffect()
         effect4.set_effect_name("BT24-027 By tucking, 1 digimon can't be deleted by battle")
-        effect4.set_effect_description("Trash From Hand, Gain Keyword Cannot Be Deleted By Battle")
+        effect4.set_effect_description("Gain Keyword Cannot Be Deleted By Battle")
         effect4.is_when_digivolving = True
         effect4._is_cannot_be_deleted_by_battle = True
 
@@ -111,22 +107,18 @@ class BT24_027(CardScript):
         effect4.set_can_use_condition(condition4)
 
         def process4(ctx: Dict[str, Any]):
-            """Action: Trash From Hand, Gain Keyword Cannot Be Deleted By Battle"""
+            """Action: Gain Keyword Cannot Be Deleted By Battle"""
             player = ctx.get('player')
             perm = ctx.get('permanent')
             game = ctx.get('game')
             if not (player and game):
                 return
-            def hand_filter(c):
-                return True
-            def on_trashed(selected):
-                if selected in player.hand_cards:
-                    player.hand_cards.remove(selected)
-                    player.trash_cards.append(selected)
-            game.effect_select_hand_card(
-                player, hand_filter, on_trashed, is_optional=False)
-            if perm:
-                perm.grant_keyword('_is_cannot_be_deleted_by_battle')
+            def target_filter(p):
+                return p.is_digimon
+            def on_grant(target_perm):
+                target_perm.grant_keyword('_is_cannot_be_deleted_by_battle')
+            game.effect_select_own_permanent(
+                player, on_grant, filter_fn=target_filter, is_optional=False)
 
         effect4.set_on_process_callback(process4)
         effects.append(effect4)

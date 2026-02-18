@@ -13,36 +13,48 @@ class BT20_078(CardScript):
     def get_card_effects(self, card: 'CardSource') -> List['ICardEffect']:
         effects = []
 
-        # Factory effect: blocker
-        # Blocker
+        # Factory effect: collision
+        # Collision
         effect0 = ICardEffect()
-        effect0.set_effect_name("BT20-078 Blocker")
-        effect0.set_effect_description("Blocker")
-        effect0._is_blocker = True
+        effect0.set_effect_name("BT20-078 Collision")
+        effect0.set_effect_description("Collision")
+        effect0._is_collision = True
 
         def condition0(context: Dict[str, Any]) -> bool:
             return True
         effect0.set_can_use_condition(condition0)
         effects.append(effect0)
 
+        # Factory effect: blocker
+        # Blocker
+        effect1 = ICardEffect()
+        effect1.set_effect_name("BT20-078 Blocker")
+        effect1.set_effect_description("Blocker")
+        effect1._is_blocker = True
+
+        def condition1(context: Dict[str, Any]) -> bool:
+            return True
+        effect1.set_can_use_condition(condition1)
+        effects.append(effect1)
+
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [All Turns] [Once Per Turn] When effects digivolve your opponent's Digimon, <De-Digivolve 1> 1 of your opponent's Digimon.
-        effect1 = ICardEffect()
-        effect1.set_effect_name("BT20-078 <De-Digivolve 1> 1 your opponent's Digimon")
-        effect1.set_effect_description("[All Turns] [Once Per Turn] When effects digivolve your opponent's Digimon, <De-Digivolve 1> 1 of your opponent's Digimon.")
-        effect1.set_max_count_per_turn(1)
-        effect1.set_hash_string("AllTurn_BT20-078")
-        effect1.is_on_play = True
+        effect2 = ICardEffect()
+        effect2.set_effect_name("BT20-078 <De-Digivolve 1> 1 your opponent's Digimon")
+        effect2.set_effect_description("[All Turns] [Once Per Turn] When effects digivolve your opponent's Digimon, <De-Digivolve 1> 1 of your opponent's Digimon.")
+        effect2.set_max_count_per_turn(1)
+        effect2.set_hash_string("AllTurn_BT20-078")
+        effect2.is_on_play = True
 
-        effect = effect1  # alias for condition closure
-        def condition1(context: Dict[str, Any]) -> bool:
+        effect = effect2  # alias for condition closure
+        def condition2(context: Dict[str, Any]) -> bool:
             if card and card.permanent_of_this_card() is None:
                 return False
             return True
 
-        effect1.set_can_use_condition(condition1)
+        effect2.set_can_use_condition(condition2)
 
-        def process1(ctx: Dict[str, Any]):
+        def process2(ctx: Dict[str, Any]):
             """Action: De Digivolve"""
             player = ctx.get('player')
             perm = ctx.get('permanent')
@@ -57,24 +69,24 @@ class BT20_078(CardScript):
             game.effect_select_opponent_permanent(
                 player, on_de_digivolve, filter_fn=lambda p: p.is_digimon, is_optional=False)
 
-        effect1.set_on_process_callback(process1)
-        effects.append(effect1)
+        effect2.set_on_process_callback(process2)
+        effects.append(effect2)
 
         # Timing: EffectTiming.OnDestroyedAnyone
         # [On Deletion] Delete 1 of your opponent's play cost 4 or lower Digimon or Tamers.
-        effect2 = ICardEffect()
-        effect2.set_effect_name("BT20-078 Delete 1 of your opponent's Digimon or Tamers.")
-        effect2.set_effect_description("[On Deletion] Delete 1 of your opponent's play cost 4 or lower Digimon or Tamers.")
-        effect2.is_on_deletion = True
+        effect3 = ICardEffect()
+        effect3.set_effect_name("BT20-078 Delete 1 of your opponent's Digimon or Tamers.")
+        effect3.set_effect_description("[On Deletion] Delete 1 of your opponent's play cost 4 or lower Digimon or Tamers.")
+        effect3.is_on_deletion = True
 
-        effect = effect2  # alias for condition closure
-        def condition2(context: Dict[str, Any]) -> bool:
+        effect = effect3  # alias for condition closure
+        def condition3(context: Dict[str, Any]) -> bool:
             # Triggered on deletion — validated by engine timing
             return True
 
-        effect2.set_can_use_condition(condition2)
+        effect3.set_can_use_condition(condition3)
 
-        def process2(ctx: Dict[str, Any]):
+        def process3(ctx: Dict[str, Any]):
             """Action: Delete"""
             player = ctx.get('player')
             perm = ctx.get('permanent')
@@ -90,7 +102,7 @@ class BT20_078(CardScript):
             game.effect_select_opponent_permanent(
                 player, on_delete, filter_fn=target_filter, is_optional=False)
 
-        effect2.set_on_process_callback(process2)
-        effects.append(effect2)
+        effect3.set_on_process_callback(process3)
+        effects.append(effect3)
 
         return effects

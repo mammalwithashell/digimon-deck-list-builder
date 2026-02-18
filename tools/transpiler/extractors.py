@@ -74,6 +74,8 @@ from .patterns import (
     RE_CS_LAMBDA, RE_REVEAL_PASS_ENTRY,
     # Hand-or-trash zone choice
     RE_PLAY_HAND_OR_TRASH,
+    # ActivateCoroutine lambda delegate (Fix 13)
+    RE_ACTIVATE_COROUTINE_LAMBDA,
 )
 
 
@@ -436,6 +438,17 @@ def _resolve_shared_coroutine(block: str, full_source: str) -> str:
             body = _extract_method_body(full_source, method_name)
             if body:
                 return body
+
+    # Fix 13: Handle ActivateCoroutine referenced via hashtable lambda delegate.
+    # Pattern: hashtable => ActivateCoroutine(hashtable, activateClass)
+    # Distinct from a timing block's local ActivateCoroutine (which is passed directly,
+    # not wrapped in a lambda). When wrapped in a lambda, the method is outer-scoped
+    # and shared across multiple timing blocks.
+    m = RE_ACTIVATE_COROUTINE_LAMBDA.search(block)
+    if m:
+        body = _extract_method_body(full_source, "ActivateCoroutine")
+        if body:
+            return body
 
     # Fallback: try general coroutine delegation (hash => SomeCoroutine(hash, ...))
     m = RE_COROUTINE_DELEGATE.search(block)

@@ -26,35 +26,47 @@ class P_173(CardScript):
         effect0.set_can_use_condition(condition0)
         effects.append(effect0)
 
-        # Factory effect: blocker
-        # Blocker
+        # Factory effect: collision
+        # Collision
         effect1 = ICardEffect()
-        effect1.set_effect_name("P-173 Blocker")
-        effect1.set_effect_description("Blocker")
-        effect1._is_blocker = True
+        effect1.set_effect_name("P-173 Collision")
+        effect1.set_effect_description("Collision")
+        effect1._is_collision = True
 
         def condition1(context: Dict[str, Any]) -> bool:
             return True
         effect1.set_can_use_condition(condition1)
         effects.append(effect1)
 
+        # Factory effect: blocker
+        # Blocker
+        effect2 = ICardEffect()
+        effect2.set_effect_name("P-173 Blocker")
+        effect2.set_effect_description("Blocker")
+        effect2._is_blocker = True
+
+        def condition2(context: Dict[str, Any]) -> bool:
+            return True
+        effect2.set_can_use_condition(condition2)
+        effects.append(effect2)
+
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [When Digivolving] <De-Digivolve 4> 1 of your opponent's Digimon.
-        effect2 = ICardEffect()
-        effect2.set_effect_name("P-173 <De-Digivolve 4>")
-        effect2.set_effect_description("[When Digivolving] <De-Digivolve 4> 1 of your opponent's Digimon.")
-        effect2.is_when_digivolving = True
+        effect3 = ICardEffect()
+        effect3.set_effect_name("P-173 <De-Digivolve 4>")
+        effect3.set_effect_description("[When Digivolving] <De-Digivolve 4> 1 of your opponent's Digimon.")
+        effect3.is_when_digivolving = True
 
-        effect = effect2  # alias for condition closure
-        def condition2(context: Dict[str, Any]) -> bool:
+        effect = effect3  # alias for condition closure
+        def condition3(context: Dict[str, Any]) -> bool:
             if card and card.permanent_of_this_card() is None:
                 return False
             # Triggered when digivolving — validated by engine timing
             return True
 
-        effect2.set_can_use_condition(condition2)
+        effect3.set_can_use_condition(condition3)
 
-        def process2(ctx: Dict[str, Any]):
+        def process3(ctx: Dict[str, Any]):
             """Action: De Digivolve"""
             player = ctx.get('player')
             perm = ctx.get('permanent')
@@ -69,28 +81,28 @@ class P_173(CardScript):
             game.effect_select_opponent_permanent(
                 player, on_de_digivolve, filter_fn=lambda p: p.is_digimon, is_optional=False)
 
-        effect2.set_on_process_callback(process2)
-        effects.append(effect2)
+        effect3.set_on_process_callback(process3)
+        effects.append(effect3)
 
         # Timing: EffectTiming.OnDestroyedAnyone
         # [All Turns] [Once Per Turn] When any of your opponent's Digimon are deleted in battle, this Digimon may unsuspend.
-        effect3 = ICardEffect()
-        effect3.set_effect_name("P-173 Unsuspend")
-        effect3.set_effect_description("[All Turns] [Once Per Turn] When any of your opponent's Digimon are deleted in battle, this Digimon may unsuspend.")
-        effect3.is_optional = True
-        effect3.set_max_count_per_turn(1)
-        effect3.set_hash_string("Unsuspend_P-173")
-        effect3.is_on_deletion = True
+        effect4 = ICardEffect()
+        effect4.set_effect_name("P-173 Unsuspend")
+        effect4.set_effect_description("[All Turns] [Once Per Turn] When any of your opponent's Digimon are deleted in battle, this Digimon may unsuspend.")
+        effect4.is_optional = True
+        effect4.set_max_count_per_turn(1)
+        effect4.set_hash_string("Unsuspend_P-173")
+        effect4.is_on_deletion = True
 
-        effect = effect3  # alias for condition closure
-        def condition3(context: Dict[str, Any]) -> bool:
+        effect = effect4  # alias for condition closure
+        def condition4(context: Dict[str, Any]) -> bool:
             if card and card.permanent_of_this_card() is None:
                 return False
             return True
 
-        effect3.set_can_use_condition(condition3)
+        effect4.set_can_use_condition(condition4)
 
-        def process3(ctx: Dict[str, Any]):
+        def process4(ctx: Dict[str, Any]):
             """Action: Unsuspend"""
             player = ctx.get('player')
             perm = ctx.get('permanent')
@@ -104,7 +116,7 @@ class P_173(CardScript):
             game.effect_select_own_permanent(
                 player, on_unsuspend, filter_fn=target_filter, is_optional=True)
 
-        effect3.set_on_process_callback(process3)
-        effects.append(effect3)
+        effect4.set_on_process_callback(process4)
+        effects.append(effect4)
 
         return effects

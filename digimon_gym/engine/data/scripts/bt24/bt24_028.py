@@ -45,22 +45,10 @@ class BT24_028(CardScript):
         effect1.set_can_use_condition(condition1)
 
         def process1(ctx: Dict[str, Any]):
-            """Action: Trash From Hand, Gain Keyword Blocker, Gain Keyword Cannot Be Deleted By Battle"""
+            """Action: Gain Keyword Blocker, Gain Keyword Cannot Be Deleted By Battle"""
             player = ctx.get('player')
             perm = ctx.get('permanent')
             game = ctx.get('game')
-            if not (player and game):
-                return
-            def hand_filter(c):
-                if getattr(c, 'level', None) is None or c.level > 5:
-                    return False
-                return True
-            def on_trashed(selected):
-                if selected in player.hand_cards:
-                    player.hand_cards.remove(selected)
-                    player.trash_cards.append(selected)
-            game.effect_select_hand_card(
-                player, hand_filter, on_trashed, is_optional=False)
             if perm:
                 perm.grant_keyword('_is_blocker')
                 perm.grant_keyword('_is_cannot_be_deleted_by_battle')
@@ -87,22 +75,10 @@ class BT24_028(CardScript):
         effect2.set_can_use_condition(condition2)
 
         def process2(ctx: Dict[str, Any]):
-            """Action: Trash From Hand, Gain Keyword Blocker, Gain Keyword Cannot Be Deleted By Battle"""
+            """Action: Gain Keyword Blocker, Gain Keyword Cannot Be Deleted By Battle"""
             player = ctx.get('player')
             perm = ctx.get('permanent')
             game = ctx.get('game')
-            if not (player and game):
-                return
-            def hand_filter(c):
-                if getattr(c, 'level', None) is None or c.level > 5:
-                    return False
-                return True
-            def on_trashed(selected):
-                if selected in player.hand_cards:
-                    player.hand_cards.remove(selected)
-                    player.trash_cards.append(selected)
-            game.effect_select_hand_card(
-                player, hand_filter, on_trashed, is_optional=False)
             if perm:
                 perm.grant_keyword('_is_blocker')
                 perm.grant_keyword('_is_cannot_be_deleted_by_battle')

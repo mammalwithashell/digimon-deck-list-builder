@@ -48,12 +48,13 @@ class P_179(CardScript):
         effects.append(effect1)
 
         # Timing: EffectTiming.OnEnterFieldAnyone
-        # DP +3000, Trash From Hand
+        # DP +3000
         effect2 = ICardEffect()
         effect2.set_effect_name("P-179 Place [Device] option from hand or trash")
-        effect2.set_effect_description("DP +3000, Trash From Hand")
+        effect2.set_effect_description("DP +3000")
         effect2.is_optional = True
         effect2.is_when_digivolving = True
+        effect2.dp_modifier = 3000
 
         effect = effect2  # alias for condition closure
         def condition2(context: Dict[str, Any]) -> bool:
@@ -65,22 +66,12 @@ class P_179(CardScript):
         effect2.set_can_use_condition(condition2)
 
         def process2(ctx: Dict[str, Any]):
-            """Action: DP +3000, Trash From Hand"""
+            """Action: DP +3000"""
             player = ctx.get('player')
             perm = ctx.get('permanent')
             game = ctx.get('game')
             if perm:
                 perm.change_dp(3000)
-            if not (player and game):
-                return
-            def hand_filter(c):
-                return True
-            def on_trashed(selected):
-                if selected in player.hand_cards:
-                    player.hand_cards.remove(selected)
-                    player.trash_cards.append(selected)
-            game.effect_select_hand_card(
-                player, hand_filter, on_trashed, is_optional=True)
 
         effect2.set_on_process_callback(process2)
         effects.append(effect2)
