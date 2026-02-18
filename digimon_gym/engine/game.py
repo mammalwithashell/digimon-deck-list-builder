@@ -970,64 +970,44 @@ class Game:
           +7..+30: 8 source entries × 3 floats each:
                    [card_id, opt_state, dp_contribution]
         """
-        curr = start_idx
-        for i in range(slots):
-            if i < len(permanents):
-                perm = permanents[i]
-                top = perm.top_card
+        for i, perm in enumerate(permanents[:slots]):
+            base = start_idx + i * SLOT_SIZE
+            top = perm.top_card
 
-                # +0: top card normalized ID
-                tensor[curr] = CardRegistry.get_norm_id(top.card_id) if top else 0.0
-                curr += 1
+            # +0: top card normalized ID
+            tensor[base] = CardRegistry.get_norm_id(top.card_id) if top else 0.0
 
-                # +1: current DP (None for eggs/tamers → 0.0)
-                tensor[curr] = float(perm.dp or 0)
-                curr += 1
+            # +1: current DP (None for eggs/tamers → 0.0)
+            tensor[base + 1] = float(perm.dp or 0)
 
-                # +2: suspended
-                tensor[curr] = 1.0 if perm.is_suspended else 0.0
-                curr += 1
+            # +2: suspended
+            tensor[base + 2] = 1.0 if perm.is_suspended else 0.0
 
-                # +3: OPT total
-                tensor[curr] = float(perm.opt_total)
-                curr += 1
+            # +3: OPT total
+            tensor[base + 3] = float(perm.opt_total)
 
-                # +4: OPT used
-                tensor[curr] = float(perm.opt_used)
-                curr += 1
+            # +4: OPT used
+            tensor[base + 4] = float(perm.opt_used)
 
-                # +5: linked card count
-                tensor[curr] = float(len(perm.linked_cards))
-                curr += 1
+            # +5: linked card count
+            tensor[base + 5] = float(len(perm.linked_cards))
 
-                # +6: source count
-                tensor[curr] = float(len(perm.card_sources))
-                curr += 1
+            # +6: source count
+            tensor[base + 6] = float(len(perm.card_sources))
 
-                # +7..+30: source entries [card_id, opt_state, dp_contribution] × 8
-                for j in range(MAX_SOURCES):
-                    if j < len(perm.card_sources):
-                        src = perm.card_sources[j]
-                        tensor[curr] = CardRegistry.get_norm_id(src.card_id)
-                        curr += 1
-                        tensor[curr] = perm.source_opt_state(src)
-                        curr += 1
-                        tensor[curr] = perm.source_dp_contribution(src)
-                        curr += 1
-                    else:
-                        # Skip empty sources (already 0.0)
-                        curr += 3
-            else:
-                # Skip empty slot (already 0.0)
-                curr += SLOT_SIZE
+            # +7..+30: source entries [card_id, opt_state, dp_contribution] × 8
+            src_base = base + 7
+            for j, src in enumerate(perm.card_sources[:MAX_SOURCES]):
+                off = src_base + j * 3
+                tensor[off] = CardRegistry.get_norm_id(src.card_id)
+                tensor[off + 1] = perm.source_opt_state(src)
+                tensor[off + 2] = perm.source_dp_contribution(src)
 
     @staticmethod
     def _write_card_ids(tensor: List[float], start_idx: int, cards: list, limit: int):
         """Write card ID list into tensor starting at start_idx."""
-        for i in range(limit):
-            if i < len(cards):
-                tensor[start_idx + i] = CardRegistry.get_norm_id(cards[i].card_id)
-            # else: remaining slots are already 0.0
+        for i, card in enumerate(cards[:limit]):
+            tensor[start_idx + i] = CardRegistry.get_norm_id(card.card_id)
 
     # ─── Action Mask ─────────────────────────────────────────────────
 
