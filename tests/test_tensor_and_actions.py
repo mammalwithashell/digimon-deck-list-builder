@@ -431,8 +431,10 @@ class TestActionMask:
         # Player 2 has a hand card, player 1 does not
         game.player2.hand_cards.append(make_card("BT14-001", play_cost=3, owner=game.player2))
 
-        mask1 = game.get_action_mask(1)
-        mask2 = game.get_action_mask(2)
+        # IMPORTANT: get_action_mask returns a reusable buffer for performance.
+        # We must copy it if we want to store multiple masks for comparison.
+        mask1 = game.get_action_mask(1).copy()
+        mask2 = game.get_action_mask(2).copy()
 
         assert mask1[0] == 0.0  # P1 has no hand cards
         assert mask2[0] == 1.0  # P2 has an affordable card
