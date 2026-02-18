@@ -278,6 +278,10 @@ def main():
         "--sets", nargs="+", default=None,
         help="Override KNOWN_SETS with specific set IDs to fetch",
     )
+    parser.add_argument(
+        "--force", action="store_true",
+        help="Override reindex safety check (use only if you intend to reassign indices)",
+    )
     args = parser.parse_args()
 
     capacity = args.capacity
@@ -326,6 +330,25 @@ def main():
     print(f"  Preserved: {len(existing_mappings)}")
     print(f"  New: {new_count}")
     print(f"  Capacity used: {len(registry)}/{capacity} ({100*len(registry)/capacity:.1f}%)")
+
+    # Safety check: detect cards that were in cards.json with an index but
+    # are about to receive a DIFFERENT index (indicates index was stripped
+    # by a prior ingest run and is being silently reassigned).
+    reindexed = []
+    for card_id, old_entry in existing_card_data.items():
+        old_idx = old_entry.get("index")
+        if old_idx is not None and card_id in registry and registry[card_id] != old_idx:
+            reindexed.append((card_id, old_idx, registry[card_id]))
+    if reindexed:
+        print(f"\nERROR: {len(reindexed)} cards would be reindexed (breaks RL agent weights):")
+        for cid, old_idx, new_idx in sorted(reindexed)[:20]:
+            print(f"  {cid}: {old_idx} -> {new_idx}")
+        if len(reindexed) > 20:
+            print(f"  ... and {len(reindexed) - 20} more")
+        print("\nThis likely means `ingest_cards.py` stripped index fields from these cards.")
+        print("Fix the source data and re-run, or use --force to override this check.")
+        if not getattr(args, 'force', False):
+            sys.exit(1)
 
     # Step 4: Convert all cards to output format
     output = {}

@@ -222,11 +222,39 @@ def merge_set_into_cards(existing, new_cards, set_id):
 
     existing: dict keyed by card_id
     new_cards: list of card dicts from convert_card()
+
+    Preserves ``index`` and ``norm_id`` from the old entry when a card is
+    being re-fetched (so that stable tensor encoding is not corrupted).
+    Genuinely new cards will lack these fields until ``build_registry.py``
+    is run to assign indices.
     """
     prefix = set_id + "-"
+    # Save old entries so we can carry over index/norm_id
+    old_entries = {cid: c for cid, c in existing.items() if cid.startswith(prefix)}
     filtered = {cid: c for cid, c in existing.items() if not cid.startswith(prefix)}
+    new_ids = set()
     for card in new_cards:
-        filtered[card["card_id"]] = card
+        cid = card["card_id"]
+        new_ids.add(cid)
+        old = old_entries.get(cid, {})
+        if "index" in old:
+            card["index"] = old["index"]
+        if "norm_id" in old:
+            card["norm_id"] = old["norm_id"]
+        filtered[cid] = card
+
+    # Safety check: warn about cards that had indices but are missing from
+    # the API response (would lose their index on save)
+    dropped = [cid for cid in old_entries if cid not in new_ids and "index" in old_entries[cid]]
+    if dropped:
+        print(f"  WARNING: {len(dropped)} cards with stable indices missing from API response:")
+        for cid in sorted(dropped)[:10]:
+            print(f"    {cid} (index={old_entries[cid]['index']})")
+        if len(dropped) > 10:
+            print(f"    ... and {len(dropped) - 10} more")
+        print("  These cards will be REMOVED from cards.json.")
+        print("  If this is unexpected, the API may be incomplete. Consider aborting.")
+
     return filtered
 
 
@@ -288,6 +316,12 @@ def bulk_ingest():
     print(f"\nDone. {len(existing)} total cards across {len(set_counts)} sets.")
     print(f"Added {total_new} new cards.")
 
+    # Warn about missing indices for new cards
+    missing_indices = sum(1 for v in existing.values() if "index" not in v)
+    if missing_indices:
+        print(f"\nWARNING: {missing_indices} cards are missing index/norm_id fields.")
+        print("Run `python tools/build_registry.py` to assign stable indices.")
+
 
 def main():
     # --bulk mode: ingest all priority sets
@@ -309,6 +343,11 @@ def main():
                 sid = m.group(1)
                 set_counts[sid] = set_counts.get(sid, 0) + 1
         print(f"Wrote {len(existing)} total cards across {len(set_counts)} sets to {cards_path}")
+
+        missing_indices = sum(1 for v in existing.values() if "index" not in v)
+        if missing_indices:
+            print(f"\nWARNING: {missing_indices} cards are missing index/norm_id fields.")
+            print("Run `python tools/build_registry.py` to assign stable indices.")
         return
 
     # Legacy positional args mode: SET_ID SET_NAME
@@ -351,16 +390,17 @@ def main():
     for cid in sorted(seen.keys()):
         new_cards.append(convert_card(seen[cid]))
 
-    # Load existing cards.json
+    # Load existing cards.json and merge (preserving index/norm_id)
     existing, cards_path = load_cards_json()
-    # Remove any existing cards from this set and add new ones
-    merged = {cid: c for cid, c in existing.items() if not cid.startswith(api_set_id)}
-    for card in new_cards:
-        merged[card["card_id"]] = card
+    merged = merge_set_into_cards(existing, new_cards, set_id)
     save_cards_json(merged, cards_path)
 
-    prev_count = len(existing) - (len(existing) - len(merged) + len(new_cards))
     print(f"Wrote {len(merged)} total cards ({len(new_cards)} {set_id}) to {cards_path}")
+
+    missing_indices = sum(1 for v in merged.values() if "index" not in v)
+    if missing_indices:
+        print(f"\nWARNING: {missing_indices} cards are missing index/norm_id fields.")
+        print("Run `python tools/build_registry.py` to assign stable indices.")
 
 
 if __name__ == "__main__":
