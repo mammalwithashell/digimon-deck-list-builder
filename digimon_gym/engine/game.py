@@ -887,60 +887,65 @@ class Game:
         me = self.player1 if player_id == 1 else self.player2
         opp = self.player2 if player_id == 1 else self.player1
 
-        t: List[float] = []
+        # Pre-allocate tensor with zeros (faster than repeated appending)
+        t = [0.0] * TENSOR_SIZE
 
         # --- Global [0-9] ---
-        t.append(float(self.turn_count))                            # 0
-        t.append(float(self.current_phase.value))                   # 1
-        t.append(float(self._get_memory_for(me)))                   # 2
-        t.extend([0.0] * 7)                                        # 3-9 reserved
+        t[0] = float(self.turn_count)
+        t[1] = float(self.current_phase.value)
+        t[2] = float(self._get_memory_for(me))
+        # [3-9] are reserved (already 0.0)
 
         # --- My field [10-381] ---
-        self._append_field(t, me.battle_area, FIELD_SLOTS)
+        self._write_field(t, 10, me.battle_area, FIELD_SLOTS)
 
         # --- Opp field [382-753] ---
-        self._append_field(t, opp.battle_area, FIELD_SLOTS)
+        self._write_field(t, 382, opp.battle_area, FIELD_SLOTS)
 
         # --- My hand [754-773] ---
-        self._append_card_ids(t, me.hand_cards, MAX_HAND)
+        self._write_card_ids(t, 754, me.hand_cards, MAX_HAND)
 
         # --- Opp hand [774-793] ---
-        self._append_card_ids(t, opp.hand_cards, MAX_HAND)
+        self._write_card_ids(t, 774, opp.hand_cards, MAX_HAND)
 
         # --- My trash [794-838] ---
-        self._append_card_ids(t, me.trash_cards, MAX_TRASH)
+        self._write_card_ids(t, 794, me.trash_cards, MAX_TRASH)
 
         # --- Opp trash [839-883] ---
-        self._append_card_ids(t, opp.trash_cards, MAX_TRASH)
+        self._write_card_ids(t, 839, opp.trash_cards, MAX_TRASH)
 
         # --- My security [884-893] ---
-        self._append_card_ids(t, me.security_cards, MAX_SECURITY)
+        self._write_card_ids(t, 884, me.security_cards, MAX_SECURITY)
 
         # --- Opp security [894-903] ---
-        self._append_card_ids(t, opp.security_cards, MAX_SECURITY)
+        self._write_card_ids(t, 894, opp.security_cards, MAX_SECURITY)
 
         # --- My breeding [904-934] ---
         breeding_list = [me.breeding_area] if me.breeding_area else []
-        self._append_field(t, breeding_list, 1)
+        self._write_field(t, 904, breeding_list, 1)
 
         # --- Opp breeding [935-965] ---
         opp_breeding_list = [opp.breeding_area] if opp.breeding_area else []
-        self._append_field(t, opp_breeding_list, 1)
+        self._write_field(t, 935, opp_breeding_list, 1)
 
         # --- Revealed cards [966-975] ---
-        self._append_card_ids(t, self.revealed_cards, MAX_REVEALED)
+        self._write_card_ids(t, 966, self.revealed_cards, MAX_REVEALED)
 
         # --- Selection context [976-980] ---
         ps = self.pending_selection
-        t.append(float(self.current_phase.value) if self.current_phase in (
+        if self.current_phase in (
             GamePhase.SelectTarget, GamePhase.SelectMaterial,
             GamePhase.SelectTrash, GamePhase.SelectSource,
             GamePhase.SelectHand, GamePhase.SelectReveal,
             GamePhase.SelectEffectChoice, GamePhase.SelectSecurity,
-        ) else 0.0)
-        t.append(float(len(ps.valid_indices)) if ps else 0.0)
-        t.append(float(ps.selecting_player.player_id) if ps else 0.0)
-        t.extend([0.0, 0.0])  # reserved
+        ):
+            t[976] = float(self.current_phase.value)
+
+        if ps:
+            t[977] = float(len(ps.valid_indices))
+            t[978] = float(ps.selecting_player.player_id)
+
+        # [979-980] are reserved (already 0.0)
 
         return t
 
@@ -951,10 +956,10 @@ class Game:
         return -self.memory
 
     @staticmethod
-    def _append_field(tensor: List[float], permanents: List[Permanent], slots: int):
-        """Append field slot data: per slot 31 floats.
+    def _write_field(tensor: List[float], start_idx: int, permanents: List[Permanent], slots: int):
+        """Write field slot data into tensor starting at start_idx.
 
-        Layout per slot:
+        Layout per slot (31 floats):
           +0:  top card internal ID
           +1:  current DP
           +2:  suspended (0/1)
@@ -964,48 +969,65 @@ class Game:
           +6:  source count
           +7..+30: 8 source entries × 3 floats each:
                    [card_id, opt_state, dp_contribution]
-                   opt_state: -1.0 = no OPT, 0.0 = exhausted, 1.0 = available
-                   dp_contribution: DP modifier this source currently provides
-                     (reflects turn-specific conditions, e.g. [Your Turn] +2000)
         """
+        curr = start_idx
         for i in range(slots):
             if i < len(permanents):
                 perm = permanents[i]
                 top = perm.top_card
+
                 # +0: top card normalized ID
-                tensor.append(CardRegistry.get_norm_id(top.card_id) if top else 0.0)
+                tensor[curr] = CardRegistry.get_norm_id(top.card_id) if top else 0.0
+                curr += 1
+
                 # +1: current DP (None for eggs/tamers → 0.0)
-                tensor.append(float(perm.dp or 0))
+                tensor[curr] = float(perm.dp or 0)
+                curr += 1
+
                 # +2: suspended
-                tensor.append(1.0 if perm.is_suspended else 0.0)
-                # +3: OPT total (count of once-per-turn effects, incl. inherited)
-                tensor.append(float(perm.opt_total))
-                # +4: OPT used (aggregate count of OPT effects activated this turn)
-                tensor.append(float(perm.opt_used))
-                # +5: linked card count (option cards attached sideways, e.g. [TS])
-                tensor.append(float(len(perm.linked_cards)))
+                tensor[curr] = 1.0 if perm.is_suspended else 0.0
+                curr += 1
+
+                # +3: OPT total
+                tensor[curr] = float(perm.opt_total)
+                curr += 1
+
+                # +4: OPT used
+                tensor[curr] = float(perm.opt_used)
+                curr += 1
+
+                # +5: linked card count
+                tensor[curr] = float(len(perm.linked_cards))
+                curr += 1
+
                 # +6: source count
-                tensor.append(float(len(perm.card_sources)))
+                tensor[curr] = float(len(perm.card_sources))
+                curr += 1
+
                 # +7..+30: source entries [card_id, opt_state, dp_contribution] × 8
                 for j in range(MAX_SOURCES):
                     if j < len(perm.card_sources):
                         src = perm.card_sources[j]
-                        tensor.append(CardRegistry.get_norm_id(src.card_id))
-                        tensor.append(perm.source_opt_state(src))
-                        tensor.append(perm.source_dp_contribution(src))
+                        tensor[curr] = CardRegistry.get_norm_id(src.card_id)
+                        curr += 1
+                        tensor[curr] = perm.source_opt_state(src)
+                        curr += 1
+                        tensor[curr] = perm.source_dp_contribution(src)
+                        curr += 1
                     else:
-                        tensor.extend([0.0, 0.0, 0.0])
+                        # Skip empty sources (already 0.0)
+                        curr += 3
             else:
-                tensor.extend([0.0] * SLOT_SIZE)
+                # Skip empty slot (already 0.0)
+                curr += SLOT_SIZE
 
     @staticmethod
-    def _append_card_ids(tensor: List[float], cards: list, limit: int):
-        """Append card ID list padded to limit."""
+    def _write_card_ids(tensor: List[float], start_idx: int, cards: list, limit: int):
+        """Write card ID list into tensor starting at start_idx."""
         for i in range(limit):
             if i < len(cards):
-                tensor.append(CardRegistry.get_norm_id(cards[i].card_id))
-            else:
-                tensor.append(0.0)
+                tensor[start_idx + i] = CardRegistry.get_norm_id(cards[i].card_id)
+            # else: remaining slots are already 0.0
 
     # ─── Action Mask ─────────────────────────────────────────────────
 
