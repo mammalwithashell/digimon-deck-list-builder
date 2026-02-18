@@ -2,7 +2,6 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
-from ....data.enums import CardColor
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -34,47 +33,14 @@ class BT13_008(CardScript):
         effect1.set_effect_description("[Main][Once Per Turn] For the turn, 1 of your [Marcus Damon]s is also treated as a 3000 DP Digimon and can't digivolve.")
         effect1.set_max_count_per_turn(1)
         effect1.set_hash_string("BecomeDigimon_BT13_008")
-        effect1.is_declarative = True # Main phase effect
 
         effect = effect1  # alias for condition closure
         def condition1(context: Dict[str, Any]) -> bool:
             if card and card.permanent_of_this_card() is None:
                 return False
-            # Check if player has a Marcus Damon
-            player = context.get('player')
-            if not player:
-                return False
-            has_marcus = any(p.is_tamer and p.contains_card_name("Marcus Damon") for p in player.battle_area)
-            return has_marcus
+            return True
 
         effect1.set_can_use_condition(condition1)
-
-        def process1(ctx: Dict[str, Any]):
-            """Action: Treat Tamer as Digimon"""
-            player = ctx.get('player')
-            game = ctx.get('game')
-            if not (player and game):
-                return
-
-            def filter_marcus(p):
-                return p.is_tamer and p.contains_card_name("Marcus Damon")
-
-            def on_select(target_perm):
-                # Apply effect: Treat as 3000 DP Digimon, Can't digivolve
-                # Note: Engine support for type change is pending.
-                # We apply flags that might be supported or just log it.
-                # Setting DP is possible.
-                target_perm.change_dp(3000) # This adds +3000, doesn't set base.
-                # If base is None (Tamer), dp property might handle it if we set something?
-                # Currently Permanent.dp returns 0 if base is None.
-                # If we assume engine will be updated to handle "Treat as Digimon", we mark it.
-                # For now, we stub it.
-                game.logger.log(f"[BT13-008] {target_perm.top_card.card_names[0]} treated as Digimon (Simulated)")
-
-            game.effect_select_own_permanent(
-                player, on_select, filter_fn=filter_marcus, is_optional=False)
-
-        effect1.set_on_process_callback(process1)
         effects.append(effect1)
 
         # Timing: EffectTiming.OnTappedAnyone
@@ -93,28 +59,6 @@ class BT13_008(CardScript):
                 return False
             if not (card and card.owner and card.owner.is_my_turn):
                 return False
-
-            # Check if the suspended card was a Red or Yellow Tamer owned by player
-            # Context key 'suspended_permanent' assumed for OnTappedAnyone
-            suspended = context.get('suspended_permanent')
-            if not suspended:
-                # Fallback: if engine doesn't provide specific context, we might return False
-                # to avoid false positives.
-                return False
-
-            if not suspended.is_tamer:
-                return False
-
-            player = context.get('player')
-            if suspended not in player.battle_area:
-                return False
-
-            # Check colors
-            # suspended.top_card.card_colors returns List[CardColor]
-            colors = suspended.top_card.card_colors
-            if not (CardColor.Red in colors or CardColor.Yellow in colors):
-                return False
-
             return True
 
         effect2.set_can_use_condition(condition2)

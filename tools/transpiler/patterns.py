@@ -91,7 +91,7 @@ RE_EFFECT_NAME = re.compile(r'SetUpICardEffect\s*\(\s*"([^"]+)"')
 RE_DRAW = re.compile(r'new DrawClass\s*\([^)]*?(?:drawCount:\s*)?(\d+)', re.DOTALL)
 RE_ADD_MEMORY = re.compile(r'\.AddMemory\s*\(\s*(\d+)')
 RE_CHANGE_DP = re.compile(r'ChangeDigimonDP\s*\([^,]*,\s*changeValue:\s*(-?\d+)')
-RE_DELETE = re.compile(r'Mode\.Destroy|DestroyPermanentsClass')
+RE_DELETE = re.compile(r'Mode\.Destroy|DestroyPermanentsClass|DeletePeremanentAndProcessAccordingToResult')
 RE_BOUNCE = re.compile(r'Mode\.Bounce')
 RE_SUSPEND = re.compile(r'SuspendPermanentsClass|\.Tap\(\)')
 RE_RECOVERY = re.compile(r'new IRecovery\s*\([^,]+,\s*(\d+)')
@@ -242,7 +242,7 @@ RE_FACTORY_OVERCLOCK = re.compile(r'Overclock(?:Self)?Effect')
 RE_FACTORY_VORTEX = re.compile(r'Vortex(?:Self)?Effect')
 RE_FACTORY_TRAINING = re.compile(r'Training(?:Self)?Effect')
 RE_FACTORY_PROGRESS = re.compile(r'Progress(?:Self)?(?:Static)?Effect')
-# Fix 12: Additional missing keywords found via rules evaluation
+# Fix 12: New keywords from rules evaluation
 RE_FACTORY_DIGISORPTION = re.compile(r'Digisorption(?:Self)?Effect')
 RE_FACTORY_DIGIBURST = re.compile(r'DigiBurst(?:Self)?Effect|DigiBurstEffect')
 RE_FACTORY_DELAY = re.compile(r'Delay(?:Self)?Effect')
@@ -359,6 +359,10 @@ RE_ADD_JOGRESS_LEVELS = re.compile(r'AddJogressLevelsClass|SetUpAddJogressLevels
 RE_CHANGE_CARD_NAMES = re.compile(r'ChangeCardNamesClass|SetUpChangeCardNamesClass')
 RE_CAN_ATTACK_TARGET = re.compile(r'CanAttackTargetDefendingPermanentClass')
 RE_CAN_NOT_AFFECTED = re.compile(r'CanNotAffectedClass')
+
+# ─── Complex Effect Logic ──────────────────────────────────────────
+# BT13-111: DeletePeremanentAndProcessAccordingToResult
+RE_DELETE_AND_PROCESS = re.compile(r'DeletePeremanentAndProcessAccordingToResult')
 
 # ─── Card selection filter patterns (CanSelectCardCondition body) ─────
 
