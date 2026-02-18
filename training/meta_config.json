@@ -1,0 +1,61 @@
+{
+  "_comment": "BT24 meta distribution sourced from digimoncard.io/tier-list (67 events). Replace with your local DigiLab stats.",
+  "archetypes": {
+    "Hudiemon": {
+      "meta_share": 0.1151,
+      "win_rate": 0.50
+    },
+    "Omnimon": {
+      "meta_share": 0.0774,
+      "win_rate": 0.52
+    },
+    "Medusamon": {
+      "meta_share": 0.0774,
+      "win_rate": 0.48
+    },
+    "Mastemon": {
+      "meta_share": 0.0675,
+      "win_rate": 0.51
+    },
+    "Jesmon": {
+      "meta_share": 0.0595,
+      "win_rate": 0.49
+    },
+    "Magneticdramon": {
+      "meta_share": 0.0536,
+      "win_rate": 0.51
+    },
+    "Millenniummon": {
+      "meta_share": 0.0476,
+      "win_rate": 0.52
+    },
+    "Gallantmon": {
+      "meta_share": 0.0397,
+      "win_rate": 0.53
+    },
+    "Creepymon": {
+      "meta_share": 0.0397,
+      "win_rate": 0.48
+    },
+    "Pyramidimon": {
+      "meta_share": 0.0317,
+      "win_rate": 0.49
+    },
+    "Minervamon": {
+      "meta_share": 0.0317,
+      "win_rate": 0.50
+    },
+    "Jupitermon": {
+      "meta_share": 0.0317,
+      "win_rate": 0.50
+    },
+    "Kaguyamon": {
+      "meta_share": 0.0317,
+      "win_rate": 0.50
+    },
+    "Rogue": {
+      "meta_share": 0.1957,
+      "win_rate": 0.42
+    }
+  }
+}
