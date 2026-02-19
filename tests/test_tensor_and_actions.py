@@ -275,15 +275,19 @@ class TestActionMask:
         # No hand cards -> play actions 0-29 all invalid
         assert all(mask[i] == 0.0 for i in range(30))
 
-    def test_main_phase_play_card_affordable(self):
+    def test_main_phase_play_card_gauge_limit(self):
         game = setup_game_at_phase(GamePhase.Main, memory=5)
         p1 = game.player1
         p1.hand_cards.append(make_card("BT14-001", play_cost=3, owner=p1))
         p1.hand_cards.append(make_card("BT14-002", play_cost=8, owner=p1))
+        p1.hand_cards.append(make_card("BT14-003", play_cost=16, owner=p1))
 
         mask = game.get_action_mask(1)
-        assert mask[0] == 1.0  # cost 3 <= 5 memory
-        assert mask[1] == 0.0  # cost 8 > 5 memory
+        # Cards are playable as long as cost doesn't exceed memory + 10
+        # (gauge caps at -10, so cost must be <= current_memory + 10)
+        assert mask[0] == 1.0  # cost 3: 5-3 = 2, fine
+        assert mask[1] == 1.0  # cost 8: 5-8 = -3, fine (within gauge)
+        assert mask[2] == 0.0  # cost 16: 5-16 = -11, exceeds gauge max of -10
 
     def test_main_phase_attack_security(self):
         game = setup_game_at_phase(GamePhase.Main)

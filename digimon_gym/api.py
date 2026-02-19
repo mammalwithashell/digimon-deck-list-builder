@@ -187,14 +187,26 @@ def create_game(request: CreateGameRequest):
         runner = InteractiveGame(deck1, deck2, p1_type, p2_type)
 
     active_games[game_id] = runner
+
+    # Clear startup log noise (10x "drew a card" messages from initial hand setup)
+    if isinstance(runner, InteractiveGame):
+        runner.clear_log()
+
     state = runner.game.to_ui_json()
     mask = runner.get_action_mask().tolist()
+
+    # Build player labels for the UI
+    player_labels = {
+        1: "You" if p1_type == PlayerType.Human else "Agent",
+        2: "You" if p2_type == PlayerType.Human else "Agent",
+    }
 
     result = {
         "game_id": game_id,
         "state": state,
         "action_mask": mask,
         "action_descriptions": runner.game.describe_actions(runner.game.current_player_id),
+        "player_labels": player_labels,
     }
 
     # Include recording metadata for client-side recording (interactive games)

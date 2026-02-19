@@ -71,6 +71,7 @@ export function GamePage() {
       store.setGameId(result.game_id);
       store.setGameState(result.state);
       store.setActionMask(result.action_mask);
+      if (result.player_labels) store.setPlayerLabels(result.player_labels);
       store.clearLogs();
 
       // Step once to handle initial agent turn if agent goes first
@@ -316,6 +317,7 @@ export function GamePage() {
             currentPlayer={store.currentPlayer}
             isGameOver={store.isGameOver}
             winner={store.winner}
+            playerLabels={store.playerLabels}
           />
           {store.selectedAttacker !== null && parsedMask.canAttackSecurity.get(store.selectedAttacker) && (
             <button

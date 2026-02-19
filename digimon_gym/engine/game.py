@@ -107,6 +107,10 @@ class Game:
         # Revealed cards zone (for reveal-and-select effects)
         self.revealed_cards: List['CardSource'] = []
 
+        # Deferred turn-end: set when memory crosses 0 during a pending selection.
+        # The turn ends after the selection resolves, not immediately.
+        self._turn_end_deferred: bool = False
+
     @property
     def current_player_id(self) -> int:
         """Return the player_id of the active player.
@@ -173,9 +177,6 @@ class Game:
         self._clear_temp_dp()
         self.execute_effects(EffectTiming.OnStartTurn)
 
-        if self.memory <= 0:
-            self.memory = 3
-
         self.next_phase()
 
     def phase_draw(self):
@@ -229,6 +230,7 @@ class Game:
         self.memory = -self.memory
         self.turn_player.is_my_turn = True
         self.opponent_player.is_my_turn = False
+        self._turn_end_deferred = False
 
     def pass_turn(self):
         if self.memory >= 0:
@@ -238,8 +240,19 @@ class Game:
 
     def check_turn_end(self):
         if self.memory < 0:
+            if self.pending_selection is not None:
+                # An effect triggered a selection — defer the turn end until
+                # the selection resolves so the effect finishes executing.
+                self._turn_end_deferred = True
+                return
             self.current_phase = GamePhase.End
             self.next_phase()
+
+    def _check_deferred_turn_end(self):
+        """End the turn if it was deferred while waiting for a selection."""
+        if self._turn_end_deferred and self.pending_selection is None:
+            self._turn_end_deferred = False
+            self.check_turn_end()
 
     # ─── Effect Execution ────────────────────────────────────────────
 
@@ -1033,7 +1046,7 @@ class Game:
             # Play cards (0-29)
             for i in range(min(len(me.hand_cards), 30)):
                 card = me.hand_cards[i]
-                if card.get_cost_itself <= self.memory:
+                if self.memory >= 0 and card.get_cost_itself <= self.memory + 10:
                     # Option color requirement: must have a matching-color
                     # Digimon or Tamer on the field to play an Option card
                     if card.is_option:
@@ -1531,6 +1544,7 @@ class Game:
             self.revealed_cards = []  # clear any revealed cards
             self.current_phase = prev_phase
             self.active_player = None
+            self._check_deferred_turn_end()
             return
 
         if ps.valid_indices and action_id not in ps.valid_indices:
@@ -1542,6 +1556,7 @@ class Game:
         self.current_phase = prev_phase
         self.active_player = None
         callback(action_id)
+        self._check_deferred_turn_end()
 
     def _decode_block(self, action_id: int):
         """Handle the defender's blocking decision during an attack."""
@@ -1648,6 +1663,7 @@ class Game:
                 self.current_phase = prev_phase
                 self.active_player = None
                 callback(idx)
+                self._check_deferred_turn_end()
 
     def _decode_source_selection(self, action_id: int):
         """Handle digivolution source selection from an effect callback."""
@@ -1670,6 +1686,7 @@ class Game:
                     self.current_phase = prev_phase
                     self.active_player = None
                     callback(action_id)
+                    self._check_deferred_turn_end()
 
     def _execute_training(self, perm: Permanent, owner: Player):
         """Execute <Training>: suspend this Digimon and place top deck card at bottom of digi stack."""

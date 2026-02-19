@@ -69,6 +69,7 @@ export function Card({
         ${dimmed ? 'opacity-30' : ''}
         ${borderClass} ${className}`}
       style={{ width, height }}
+      title={faceDown ? undefined : cardId}
       onClick={onClick}
       onMouseEnter={onMouseEnter}
       onMouseLeave={onMouseLeave}

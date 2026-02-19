@@ -15,6 +15,7 @@ interface CreateGameResponse {
   state: GameState;
   action_mask: number[];
   recording_metadata?: Record<string, unknown>;
+  player_labels?: Record<number, string>;
 }
 
 interface ActionResponse {

@@ -40,7 +40,7 @@ function ToggleChip({
 }
 
 export function FilterBar() {
-  const { filters, setFilters, resetFilters } = useDeckBuilderStore();
+  const { filters, setFilters, resetFilters, searchQuery } = useDeckBuilderStore();
 
   const toggleColor = (color: string) => {
     const current = filters.color;
@@ -66,56 +66,76 @@ export function FilterBar() {
     setFilters({ level: next });
   };
 
+  const hasActiveFilters =
+    filters.color.length > 0 ||
+    filters.type.length > 0 ||
+    filters.level.length > 0 ||
+    filters.set !== '' ||
+    searchQuery !== '';
+
   return (
-    <div className="flex flex-wrap items-center gap-2 p-2 bg-gray-800/50 rounded">
-      {/* Color filters */}
-      <div className="flex gap-1">
-        {COLORS.map((color) => (
-          <ToggleChip
-            key={color}
-            label={color}
-            active={filters.color.includes(color)}
-            onClick={() => toggleColor(color)}
-            colorClass={filters.color.includes(color) ? COLOR_CHIPS[color] : undefined}
-          />
-        ))}
+    <div className="flex flex-col gap-2 p-2 bg-gray-800/50 rounded">
+      <div className="flex flex-wrap items-center gap-2">
+        {/* Color filters */}
+        <div className="flex gap-1">
+          {COLORS.map((color) => (
+            <ToggleChip
+              key={color}
+              label={color}
+              active={filters.color.includes(color)}
+              onClick={() => toggleColor(color)}
+              colorClass={filters.color.includes(color) ? COLOR_CHIPS[color] : undefined}
+            />
+          ))}
+        </div>
+
+        <div className="w-px h-5 bg-gray-600" />
+
+        {/* Type filters */}
+        <div className="flex gap-1">
+          {TYPES.map((type) => (
+            <ToggleChip
+              key={type}
+              label={type}
+              active={filters.type.includes(type)}
+              onClick={() => toggleType(type)}
+            />
+          ))}
+        </div>
+
+        <div className="w-px h-5 bg-gray-600" />
+
+        {/* Level filters */}
+        <div className="flex gap-1">
+          {LEVELS.map((level) => (
+            <ToggleChip
+              key={level}
+              label={`Lv.${level}`}
+              active={filters.level.includes(level)}
+              onClick={() => toggleLevel(level)}
+            />
+          ))}
+        </div>
       </div>
 
-      <div className="w-px h-5 bg-gray-600" />
-
-      {/* Type filters */}
-      <div className="flex gap-1">
-        {TYPES.map((type) => (
-          <ToggleChip
-            key={type}
-            label={type}
-            active={filters.type.includes(type)}
-            onClick={() => toggleType(type)}
-          />
-        ))}
+      {/* Set search + Clear button row */}
+      <div className="flex items-center gap-2">
+        <input
+          type="text"
+          placeholder="Set ID (e.g. BT20, EX8, ST1)"
+          value={filters.set}
+          onChange={(e) => setFilters({ set: e.target.value.trim() })}
+          className="w-40 px-2 py-1 bg-gray-700 border border-gray-600 rounded text-xs text-gray-200 placeholder-gray-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+        />
+        {hasActiveFilters && (
+          <button
+            onClick={resetFilters}
+            className="px-3 py-1 bg-red-600/80 hover:bg-red-500 text-white text-xs font-medium rounded transition-colors"
+          >
+            Clear All Filters
+          </button>
+        )}
       </div>
-
-      <div className="w-px h-5 bg-gray-600" />
-
-      {/* Level filters */}
-      <div className="flex gap-1">
-        {LEVELS.map((level) => (
-          <ToggleChip
-            key={level}
-            label={`Lv.${level}`}
-            active={filters.level.includes(level)}
-            onClick={() => toggleLevel(level)}
-          />
-        ))}
-      </div>
-
-      {/* Clear */}
-      <button
-        onClick={resetFilters}
-        className="ml-auto text-xs text-gray-500 hover:text-gray-300"
-      >
-        Clear
-      </button>
     </div>
   );
 }

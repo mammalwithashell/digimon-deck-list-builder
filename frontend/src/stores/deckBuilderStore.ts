@@ -63,7 +63,7 @@ export const useDeckBuilderStore = create<DeckBuilderStore>((set) => ({
   setSearchQuery: (q) => set({ searchQuery: q, searchPage: 0 }),
   setFilters: (filters) =>
     set((s) => ({ filters: { ...s.filters, ...filters }, searchPage: 0 })),
-  resetFilters: () => set({ filters: { ...DEFAULT_FILTERS }, searchPage: 0 }),
+  resetFilters: () => set({ filters: { ...DEFAULT_FILTERS }, searchQuery: '', searchPage: 0 }),
   setSearchResults: (results) => set({ searchResults: results }),
   setSearchPage: (page) => set({ searchPage: page }),
   setIsSearching: (loading) => set({ isSearching: loading }),

@@ -49,14 +49,14 @@ class InteractiveGame(BaseGameRunner):
                              If None, agent always passes.
 
         Returns:
-            Game state dictionary (from game.to_json()).
+            Game state dictionary (from game.to_ui_json()).
         """
         if self.game.game_over:
-            return self.game.to_json()
+            return self.game.to_ui_json()
 
         if self.is_current_player_human():
             # Pause: return state for UI rendering
-            return self.game.to_json()
+            return self.game.to_ui_json()
         else:
             # Agent turn: execute action
             if agent_policy_fn:
@@ -65,7 +65,7 @@ class InteractiveGame(BaseGameRunner):
             else:
                 action = 62  # pass
             self.step(action)
-            return self.game.to_json()
+            return self.game.to_ui_json()
 
     def step(self, action_id: int) -> None:
         """Execute a single action (from human or agent)."""

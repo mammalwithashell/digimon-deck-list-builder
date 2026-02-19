@@ -196,8 +196,8 @@ class TestInteractiveGame:
         game.game.opponent_player = game.game.player2
 
         state = game.run_step()
-        # Should return state without advancing (paused for human)
-        assert "CurrentPhase" in state
+        # Should return UI state without advancing (paused for human)
+        assert "currentPhase" in state
         assert game.is_current_player_human() is True
 
     def test_run_step_agent_auto_plays(self):
@@ -206,7 +206,7 @@ class TestInteractiveGame:
         phase_before = game.game.current_phase
         state = game.run_step()
         # Agent should have taken an action (default: pass)
-        assert "CurrentPhase" in state
+        assert "currentPhase" in state
 
     def test_step_executes_action(self):
         deck = make_test_deck()
@@ -268,8 +268,8 @@ class TestInteractiveGame:
         game = InteractiveGame(deck, deck, PlayerType.Human, PlayerType.Agent)
         game.game.declare_winner(game.game.player1)
         state = game.run_step()
-        assert state["IsGameOver"] is True
-        assert state["Winner"] == game.game.player1.player_id
+        assert state["isGameOver"] is True
+        assert state["winner"] == game.game.player1.player_id
 
     def test_step_on_game_over_is_noop(self):
         deck = make_test_deck()

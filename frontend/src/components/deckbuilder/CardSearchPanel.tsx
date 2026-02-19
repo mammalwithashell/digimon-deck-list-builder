@@ -24,6 +24,9 @@ export function CardSearchPanel() {
       if (filters.color.length === 1) params.color = filters.color[0]!;
       if (filters.type.length === 1) params.type = filters.type[0]!;
 
+      // Set filter: use API's `card` param with set prefix (e.g. "BT20")
+      if (filters.set) params.card = filters.set;
+
       // Only search if we have at least one param
       if (Object.keys(params).length === 0) {
         setSearchResults([]);
@@ -52,6 +55,15 @@ export function CardSearchPanel() {
         if (filters.level.length > 0) {
           results = results.filter((c) =>
             filters.level.includes(c.level),
+          );
+        }
+
+        // When using set filter, filter to exact prefix match
+        // (API may return partial matches like BT2 matching BT20)
+        if (filters.set) {
+          const prefix = filters.set.toUpperCase() + '-';
+          results = results.filter((c) =>
+            c.cardnumber.toUpperCase().startsWith(prefix),
           );
         }
 

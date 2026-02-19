@@ -7,6 +7,7 @@ interface PhaseIndicatorProps {
   currentPlayer: number;
   isGameOver: boolean;
   winner: number | null;
+  playerLabels: Record<number, string>;
 }
 
 export function PhaseIndicator({
@@ -15,12 +16,15 @@ export function PhaseIndicator({
   currentPlayer,
   isGameOver,
   winner,
+  playerLabels,
 }: PhaseIndicatorProps) {
+  const getLabel = (playerId: number) => playerLabels[playerId] ?? `Player ${playerId}`;
+
   if (isGameOver) {
     return (
       <div className="flex items-center gap-3 px-3 py-1.5 bg-yellow-900/30 border border-yellow-700/50 rounded">
         <span className="text-sm font-bold text-yellow-300">
-          Game Over — Player {winner} wins!
+          Game Over — {getLabel(winner!)} wins!
         </span>
       </div>
     );
@@ -30,7 +34,7 @@ export function PhaseIndicator({
     <div className="flex items-center gap-3 px-3 py-1.5 bg-gray-800/50 rounded">
       <span className="text-xs text-gray-500">Turn {turnCount}</span>
       <span className="text-xs text-gray-400">
-        Player {currentPlayer}'s turn
+        {getLabel(currentPlayer)}'s turn
       </span>
       <span className="text-xs font-medium text-blue-400">
         {PHASE_NAMES[phase] ?? `Phase ${phase}`}

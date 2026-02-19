@@ -29,11 +29,13 @@ interface GameStore {
   selectedAttacker: number | null;
   hoveredCard: string | null;
   logs: string[];
+  playerLabels: Record<number, string>;
 
   // Actions
   setGameId: (id: string | null) => void;
   setGameState: (state: GameState) => void;
   setActionMask: (mask: number[]) => void;
+  setPlayerLabels: (labels: Record<number, string>) => void;
   selectAttacker: (slot: number | null) => void;
   setHoveredCard: (cardId: string | null) => void;
   appendLogs: (newLogs: string[]) => void;
@@ -58,6 +60,7 @@ const initialState = {
   selectedAttacker: null,
   hoveredCard: null,
   logs: [],
+  playerLabels: { 1: 'Player 1', 2: 'Player 2' },
 };
 
 export const useGameStore = create<GameStore>((set) => ({
@@ -81,6 +84,7 @@ export const useGameStore = create<GameStore>((set) => ({
     }),
 
   setActionMask: (mask) => set({ actionMask: mask }),
+  setPlayerLabels: (labels) => set({ playerLabels: labels }),
   selectAttacker: (slot) => set({ selectedAttacker: slot }),
   setHoveredCard: (cardId) => set({ hoveredCard: cardId }),
   appendLogs: (newLogs) =>
