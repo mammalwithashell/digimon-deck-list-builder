@@ -131,6 +131,8 @@ RE_PLAY_HAND_OR_TRASH = re.compile(
 # Digivolve details extraction
 RE_DIGI_COST_FIXED = re.compile(r'digivolutionCost\s*[:=]\s*(\d+)')
 RE_DIGI_IGNORE_REQS = re.compile(r'ignoreDigivolutionRequirement\s*[:=]\s*true')
+RE_DIGI_TRASH_COND = re.compile(r'HasMatchConditionOwnersCardInTrash')
+RE_DIGI_HAND_COND = re.compile(r'HasMatchConditionOwnersHand')
 
 # Multi-choice / branch detection
 RE_MULTI_CHOICE = re.compile(r'EffectChooseClass|ChooseEffect|MultiEffectClass')

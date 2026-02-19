@@ -2137,6 +2137,120 @@ class Game:
         phase = GamePhase.SelectReveal if zone == 'revealed' else GamePhase.SelectTarget
         self.request_selection(phase, player, on_select, valid, is_optional)
 
+    def effect_digivolve_from_zone(
+        self, player: Player, permanent: 'Permanent',
+        zone: str,
+        filter_fn: Callable[['CardSource'], bool],
+        cost_override: Optional[int] = None,
+        cost_reduction: int = 0,
+        ignore_requirements: bool = False,
+        is_optional: bool = True,
+    ):
+        """Let agent pick a card from a zone to digivolve a permanent into via effect.
+
+        Covers: digivolve_into (52 cards), and from trash (BT24).
+
+        Args:
+            player: The card owner.
+            permanent: The permanent to digivolve.
+            zone: 'hand', 'trash', or 'hand_or_trash'.
+            filter_fn: Which cards in the zone are valid digivolution targets.
+            cost_override: Fixed cost (None = use card's evo cost).
+            cost_reduction: Reduce normal evo cost by this amount.
+            ignore_requirements: If True, skip level/color requirements.
+            is_optional: If True, player can decline.
+        """
+        if zone not in ('hand', 'trash', 'hand_or_trash'):
+            self.logger.log(f"[Error] effect_digivolve_from_zone: Invalid zone '{zone}'")
+            return
+
+        if zone == 'hand_or_trash':
+            # Combine valid cards from both hand and trash into one selection
+            valid = []
+            for i, card in enumerate(player.hand_cards):
+                if filter_fn(card) and (SEL_HAND_START + i) < ACTION_SPACE_SIZE:
+                    valid.append(SEL_HAND_START + i)
+            for i, card in enumerate(player.trash_cards):
+                if filter_fn(card) and (SEL_TRASH_START + i) < ACTION_SPACE_SIZE:
+                    valid.append(SEL_TRASH_START + i)
+            if not valid:
+                return
+
+            def on_select_hot(action_id: int):
+                if SEL_TRASH_START <= action_id:
+                    idx = action_id - SEL_TRASH_START
+                    source_list = player.trash_cards
+                    src_name = 'trash'
+                else:
+                    idx = action_id - SEL_HAND_START
+                    source_list = player.hand_cards
+                    src_name = 'hand'
+
+                if 0 <= idx < len(source_list):
+                    self._execute_digivolve_effect(
+                        player, permanent, source_list, idx, src_name,
+                        cost_override, cost_reduction, ignore_requirements)
+
+            self.request_selection(GamePhase.SelectTarget, player,
+                                   on_select_hot, valid, is_optional)
+            return
+
+        # Single zone
+        if zone == 'hand':
+            source_list = player.hand_cards
+            offset = SEL_HAND_START
+        elif zone == 'trash':
+            source_list = player.trash_cards
+            offset = SEL_TRASH_START
+        else:
+            return
+
+        valid = []
+        for i, card in enumerate(source_list):
+            if filter_fn(card) and (offset + i) < ACTION_SPACE_SIZE:
+                valid.append(offset + i)
+        if not valid:
+            return
+
+        def on_select(action_id: int):
+            idx = action_id - offset
+            if 0 <= idx < len(source_list):
+                self._execute_digivolve_effect(
+                    player, permanent, source_list, idx, zone,
+                    cost_override, cost_reduction, ignore_requirements)
+
+        self.request_selection(
+            GamePhase.SelectTarget, player, on_select, valid, is_optional)
+
+    def _execute_digivolve_effect(
+        self, player: Player, permanent: 'Permanent',
+        source_list: List['CardSource'], idx: int, src_name: str,
+        cost_override: Optional[int], cost_reduction: int, ignore_requirements: bool
+    ):
+        card = source_list[idx]
+        if cost_override is not None:
+            cost = cost_override
+        else:
+            base = card.get_cost_itself
+            cost = max(0, base - cost_reduction)
+
+        # Move card
+        source_list.remove(card)
+        permanent.add_card_source(card)
+        permanent.turn_digivolved = self.turn_count  # Track for <Blitz>
+        self.memory -= cost
+        self.logger.log(
+            f"[Effect Digivolve] {card.card_names[0]} onto "
+            f"{permanent.top_card.card_names[0] if permanent.top_card else 'Unknown'} "
+            f"from {src_name} (cost: {cost})")
+
+        # Draw 1 (digivolution bonus)
+        player.draw()
+        self.execute_effects(EffectTiming.WhenDigivolving,
+                             {"digivolved_permanent": permanent})
+        self.execute_effects(EffectTiming.OnEnterFieldAnyone,
+                             {"played_card": card})
+
     def effect_digivolve_from_hand(
         self, player: Player, permanent: 'Permanent',
         filter_fn: Callable[['CardSource'], bool],
@@ -2145,53 +2259,10 @@ class Game:
         ignore_requirements: bool = False,
         is_optional: bool = True,
     ):
-        """Let agent pick a hand card to digivolve a permanent into via effect.
-
-        Covers: digivolve_into (52 cards).
-
-        Args:
-            player: The card owner.
-            permanent: The permanent to digivolve.
-            filter_fn: Which hand cards are valid digivolution targets.
-            cost_override: Fixed cost (None = use card's evo cost).
-            cost_reduction: Reduce normal evo cost by this amount.
-            ignore_requirements: If True, skip level/color requirements.
-            is_optional: If True, player can decline.
-        """
-        valid = []
-        for i, card in enumerate(player.hand_cards):
-            if filter_fn(card):
-                valid.append(SEL_HAND_START + i)
-        if not valid:
-            return
-
-        def on_select(action_id: int):
-            idx = action_id - SEL_HAND_START
-            if 0 <= idx < len(player.hand_cards):
-                card = player.hand_cards[idx]
-                if cost_override is not None:
-                    cost = cost_override
-                else:
-                    base = card.get_cost_itself
-                    cost = max(0, base - cost_reduction)
-                # Stack card onto permanent
-                player.hand_cards.remove(card)
-                permanent.add_card_source(card)
-                permanent.turn_digivolved = self.turn_count  # Track for <Blitz>
-                self.memory -= cost
-                self.logger.log(
-                    f"[Effect Digivolve] {card.card_names[0]} onto "
-                    f"{permanent.top_card.card_names[0] if permanent.top_card else 'Unknown'} "
-                    f"(cost: {cost})")
-                # Draw 1 (digivolution bonus)
-                player.draw()
-                self.execute_effects(EffectTiming.WhenDigivolving,
-                                     {"digivolved_permanent": permanent})
-                self.execute_effects(EffectTiming.OnEnterFieldAnyone,
-                                     {"played_card": card})
-
-        self.request_selection(
-            GamePhase.SelectTarget, player, on_select, valid, is_optional)
+        """Wrapper for effect_digivolve_from_zone(..., 'hand', ...)."""
+        self.effect_digivolve_from_zone(
+            player, permanent, 'hand', filter_fn,
+            cost_override, cost_reduction, ignore_requirements, is_optional)
 
     def effect_select_hand_card(
         self, player: Player,
