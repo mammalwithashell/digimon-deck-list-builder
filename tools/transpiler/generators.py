@@ -501,8 +501,9 @@ def _emit_action(eb: EffectBlock, action: str, lines: List[str], indent: str):
             kwargs.append("ignore_requirements=True")
         kwargs.append("is_optional=True")
         kwargs_str = ", ".join(kwargs)
-        lines.append(f"{indent}game.effect_digivolve_from_hand(")
-        lines.append(f"{indent}    player, perm, digi_filter, {kwargs_str})")
+        zone = eb.digi_from_zone or 'hand'
+        lines.append(f"{indent}game.effect_digivolve_from_zone(")
+        lines.append(f"{indent}    player, perm, '{zone}', digi_filter, {kwargs_str})")
     elif action == "cost_reduction":
         val = eb.cost_reduction_val
         if val:

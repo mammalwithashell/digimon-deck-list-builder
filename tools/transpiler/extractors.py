@@ -15,6 +15,7 @@ from .patterns import (
     RE_TARGET_LEVEL_MIN,
     RE_REVEAL_COUNT, RE_PLAY_FROM_TRASH, RE_PLAY_FREE,
     RE_DIGI_COST_FIXED, RE_DIGI_IGNORE_REQS, RE_DEGEN_COUNT,
+    RE_DIGI_TRASH_COND, RE_DIGI_HAND_COND,
     RE_SELECT_PERM_MODE, RE_DESTROY_SECURITY, RE_REDUCE_SECURITY,
     RE_UNSUSPEND, RE_RESTRICT_ATTACK, RE_TARGET_LOCK, RE_FLIP_SECURITY,
     RE_RETURN_DECK_BOTTOM, RE_JOGRESS,
@@ -543,6 +544,15 @@ def _scan_actions(block: str, eb: EffectBlock):
         eb.actions.append("de_digivolve")
     if RE_DIGIVOLVE.search(block) and "digivolve" not in eb.actions:
         eb.actions.append("digivolve")
+        has_trash = bool(RE_DIGI_TRASH_COND.search(block))
+        has_hand = bool(RE_DIGI_HAND_COND.search(block))
+        if has_trash and has_hand:
+            eb.digi_from_zone = "hand_or_trash"
+        elif has_trash:
+            eb.digi_from_zone = "trash"
+        elif has_hand:
+            eb.digi_from_zone = "hand"
+
     if RE_COST_REDUCTION.search(block) and "cost_reduction" not in eb.actions:
         eb.actions.append("cost_reduction")
         m2 = re.search(r'Cost\s*-=\s*(\d+)', block)
@@ -720,6 +730,15 @@ def _scan_actions(block: str, eb: EffectBlock):
     # DigivolveIntoHandOrTrashCard — digivolve from hand or trash
     if RE_DIGIVOLVE_INTO.search(block) and "digivolve" not in eb.actions:
         eb.actions.append("digivolve")
+        has_trash = bool(RE_DIGI_TRASH_COND.search(block))
+        has_hand = bool(RE_DIGI_HAND_COND.search(block))
+        if has_trash and has_hand:
+            eb.digi_from_zone = "hand_or_trash"
+        elif has_trash:
+            eb.digi_from_zone = "trash"
+        elif has_hand:
+            eb.digi_from_zone = "hand"
+
     # CanNotAffectedClass — effect immunity grant
     if RE_CAN_NOT_AFFECTED.search(block) and "effect_immunity" not in eb.actions:
         eb.actions.append("effect_immunity")

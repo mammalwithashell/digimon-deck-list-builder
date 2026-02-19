@@ -36,6 +36,7 @@ class EffectBlock:
     play_free: bool = False
     digi_cost_override: Optional[int] = None
     digi_ignore_reqs: bool = False
+    digi_from_zone: Optional[str] = None
     factory_dp_value: Optional[int] = None
     factory_sa_value: Optional[int] = None
     # Fix 4: De-digivolve count
