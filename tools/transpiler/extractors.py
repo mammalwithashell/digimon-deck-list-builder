@@ -493,6 +493,19 @@ def _resolve_custom_callback(block: str, full_block: str) -> str:
     return ""
 
 
+def _detect_digi_zone(block: str) -> Optional[str]:
+    """Determine digivolution source zone from condition checks."""
+    has_trash = bool(RE_DIGI_TRASH_COND.search(block))
+    has_hand = bool(RE_DIGI_HAND_COND.search(block))
+    if has_trash and has_hand:
+        return "hand_or_trash"
+    elif has_trash:
+        return "trash"
+    elif has_hand:
+        return "hand"
+    return None
+
+
 def _scan_actions(block: str, eb: EffectBlock):
     """Scan a C# code block for action patterns and merge into an EffectBlock.
 
@@ -544,14 +557,7 @@ def _scan_actions(block: str, eb: EffectBlock):
         eb.actions.append("de_digivolve")
     if RE_DIGIVOLVE.search(block) and "digivolve" not in eb.actions:
         eb.actions.append("digivolve")
-        has_trash = bool(RE_DIGI_TRASH_COND.search(block))
-        has_hand = bool(RE_DIGI_HAND_COND.search(block))
-        if has_trash and has_hand:
-            eb.digi_from_zone = "hand_or_trash"
-        elif has_trash:
-            eb.digi_from_zone = "trash"
-        elif has_hand:
-            eb.digi_from_zone = "hand"
+        eb.digi_from_zone = _detect_digi_zone(block)
 
     if RE_COST_REDUCTION.search(block) and "cost_reduction" not in eb.actions:
         eb.actions.append("cost_reduction")
@@ -730,14 +736,7 @@ def _scan_actions(block: str, eb: EffectBlock):
     # DigivolveIntoHandOrTrashCard — digivolve from hand or trash
     if RE_DIGIVOLVE_INTO.search(block) and "digivolve" not in eb.actions:
         eb.actions.append("digivolve")
-        has_trash = bool(RE_DIGI_TRASH_COND.search(block))
-        has_hand = bool(RE_DIGI_HAND_COND.search(block))
-        if has_trash and has_hand:
-            eb.digi_from_zone = "hand_or_trash"
-        elif has_trash:
-            eb.digi_from_zone = "trash"
-        elif has_hand:
-            eb.digi_from_zone = "hand"
+        eb.digi_from_zone = _detect_digi_zone(block)
 
     # CanNotAffectedClass — effect immunity grant
     if RE_CAN_NOT_AFFECTED.search(block) and "effect_immunity" not in eb.actions:

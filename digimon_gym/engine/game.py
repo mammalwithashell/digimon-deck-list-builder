@@ -2158,6 +2158,10 @@ class Game:
             ignore_requirements: If True, skip level/color requirements.
             is_optional: If True, player can decline.
         """
+        if zone not in ('hand', 'trash', 'hand_or_trash'):
+            self.logger.log(f"[Error] effect_digivolve_from_zone: Invalid zone '{zone}'")
+            return
+
         if zone == 'hand_or_trash':
             # Combine valid cards from both hand and trash into one selection
             valid = []
