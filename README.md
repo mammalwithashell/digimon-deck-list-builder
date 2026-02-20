@@ -21,8 +21,8 @@ A custom Python implementation of the Digimon TCG rules, built to the **Gymnasiu
 
 Card abilities are implemented via a **transpiler pipeline** that converts C# scripts from the [DCGO](https://github.com/DCGO2/DCGO) Unity project into Python:
 
-- **3,651 cards** across 45 sets in the card database (`cards.json`)
-- **412 transpiled scripts** across 5 sets (ST1, BT14, BT20, BT23, BT24) with keyword flags, effect timing, and action callbacks
+- **3,921 cards** across 61 sets in the card database (`cards.json`)
+- **749 transpiled scripts** across 7 sets (ST1, P, BT14, BT20, BT21, BT23, BT24) with keyword flags, effect timing, and action callbacks
 - **27+ keyword mechanics** — Blocker, Rush, Piercing, Jamming, Retaliation, Blitz, Collision, Raid, Reboot, Armor Purge, Evade, Barrier, and more
 - **Transpiler** (`tools/transpiler/`) — regex-based C# to Python converter with 52 factory patterns, 32 action types, and 59 timing mappings
 
@@ -45,8 +45,18 @@ mask = env.action_mask()                    # (2,120) int8 for MaskablePPO
 
 | Agent | Role | Status |
 |-------|------|--------|
-| **Pilot (PPO)** | Plays games during simulation | Training pipeline implemented (`agents/pilot_training.py`) |
+| **Pilot (MLP)** | Plays games with feedforward policy | Training pipeline implemented (`agents/pilot_training.py`) |
+| **Pilot (LSTM)** | Plays games with recurrent memory | Implemented (`agents/maskable_recurrent/`, `--lstm` flag) |
 | **Q-DeckRec** | Optimizes deck construction | Architecture specced ([AGENTS.md](AGENTS.md)), not yet implemented |
+
+### MetaGauntlet (`digimon_gym/agents/gauntlet.py`)
+
+Tournament meta-aware opponent sampling for RL training:
+
+- **Threat Index** weighting from DigiLab tournament data (full field participation)
+- **Deck library** (`engine/data/deck_library.json`) — tournament-scraped decklists with archetype metadata
+- **GauntletWrapper** — Gymnasium wrapper injecting meta-weighted opponent decks and bounty rewards
+- **Deck pipeline** (`tools/meta_loader.py`) — scrapes DigimonMeta, Egman Events, and DigimonCard.io for decklists and meta stats
 
 ### DCGO Reference (`DCGO/`)
 
@@ -91,10 +101,10 @@ cd DCGO && git sparse-checkout set Assets/Scripts Assets/CardBaseEntity && cd ..
 # Verify the Gymnasium environment
 python -c "from digimon_gym.digimon_gym import DigimonEnv; env = DigimonEnv(); obs, info = env.reset(); print(obs.shape, info['action_mask'].shape)"
 
-# Run the full test suite (1,122 tests)
-python -m pytest tests/ --ignore=tests/test_rl_gym.py -v
+# Run the full test suite (2,077 tests)
+python -m pytest tests/ -v
 
-# Run the SB3 smoke test
+# Run the SB3 smoke test (MaskablePPO + MaskableRecurrentPPO)
 python scripts/train_smoke_test.py
 ```
 
@@ -118,6 +128,19 @@ python tools/transpile_dcgo.py DCGO/Assets/Scripts/CardEffect/BT20 digimon_gym/e
 python tools/transpile_dcgo.py --scan-api BT22
 ```
 
+### Pilot Agent Training
+
+```bash
+# Train with MLP policy (default)
+python -m digimon_gym.agents.pilot_training --timesteps 500000
+
+# Train with LSTM policy (recurrent memory)
+python -m digimon_gym.agents.pilot_training --lstm --timesteps 500000
+
+# Train with self-play
+python -m digimon_gym.agents.pilot_training --self-play --timesteps 1000000
+```
+
 ### API Server
 
 ```bash
@@ -131,8 +154,8 @@ Session-based game management supporting human-vs-agent and agent-vs-agent modes
 ## Testing
 
 ```bash
-# Full suite
-python -m pytest tests/ --ignore=tests/test_rl_gym.py -v
+# Full suite (2,077 tests)
+python -m pytest tests/ -v
 
 # By category
 python -m pytest tests/test_runners.py -v              # Game runner tests (30)
@@ -140,6 +163,8 @@ python -m pytest tests/test_tensor_and_actions.py -v    # Tensor/action tests (4
 python -m pytest tests/test_bt24_scripts.py -v          # BT24 script validation (216)
 python -m pytest tests/test_digivolve_validation.py -v  # Digivolution rules (25)
 python -m pytest tests/test_dna_digivolve.py -v         # DNA/Jogress mechanics (50)
+python -m pytest tests/test_maskable_recurrent.py -v    # LSTM+mask agent tests (16)
+python -m pytest tests/test_gauntlet.py -v              # MetaGauntlet tests
 ```
 
 ---

@@ -1,12 +1,16 @@
-"""Pilot Agent training with MaskablePPO and action masking.
+"""Pilot Agent training with MaskablePPO / MaskableRecurrentPPO.
 
 Trains a PPO-based pilot agent to play Digimon TCG matches.
 The agent controls Player 1 while an opponent policy (greedy by default)
 controls Player 2. Action masking prevents illegal moves.
 
+Supports two modes:
+- MLP (default): MaskablePPO with standard feedforward policy
+- LSTM (--lstm): MaskableRecurrentPPO with LSTM memory for partial observability
+
 Usage:
     python -m digimon_gym.agents.pilot_training
-    python -m digimon_gym.agents.pilot_training --timesteps 500000 --opponent random
+    python -m digimon_gym.agents.pilot_training --lstm --timesteps 500000
     python -m digimon_gym.agents.pilot_training --self-play --timesteps 1000000
 
 Requires: pip install stable-baselines3 sb3-contrib tensorboard
@@ -16,7 +20,7 @@ import os
 import argparse
 import time
 from datetime import datetime
-from typing import Callable, Optional, List
+from typing import Callable, Optional, List, Union
 
 import numpy as np
 import gymnasium
@@ -28,6 +32,10 @@ from stable_baselines3.common.callbacks import BaseCallback
 from digimon_gym.digimon_gym import DigimonEnv, greedy_policy, ACTION_PASS_TURN
 from digimon_gym.engine.game import ACTION_SPACE_SIZE
 from digimon_gym.agents.gauntlet import MetaGauntlet, GauntletWrapper
+from digimon_gym.agents.maskable_recurrent import (
+    MaskableRecurrentPPO,
+    MaskableMlpLstmPolicy,
+)
 
 
 # ─── Helpers ─────────────────────────────────────────────────────────
@@ -208,17 +216,26 @@ class WinRateCallback(BaseCallback):
             steps = 0
             done = False
 
+            # LSTM state management (None for MLP, threaded for LSTM)
+            state = None
+            episode_start = np.array([True])
+
             while not done:
-                # Derive mask via the same ActionMasker path used in training
                 if eval_env is None:
                     break
-                action, _ = self.model.predict(obs, deterministic=True)
+                # Get action masks for both MLP and LSTM models
+                action_masks = _unwrap_to_digimon_env(eval_env).action_mask()
+                action, state = self.model.predict(
+                    obs, state=state, episode_start=episode_start,
+                    deterministic=True, action_masks=action_masks,
+                )
                 obs, reward, terminated, truncated, _ = eval_env.step(
                     int(action)
                 )
                 episode_reward += float(reward)
                 steps += 1
                 done = terminated or truncated
+                episode_start = np.array([False])
 
             total_reward += episode_reward
             total_steps += steps
@@ -312,7 +329,8 @@ def make_env(opponent: str = "greedy",
     return ActionMasker(env, mask_fn)
 
 
-def save_model(model: MaskablePPO, models_dir: str = "models") -> str:
+def save_model(model: Union[MaskablePPO, MaskableRecurrentPPO],
+               models_dir: str = "models") -> str:
     """Save trained model with timestamp.
 
     Returns:
@@ -340,8 +358,11 @@ def train(total_timesteps: int = 100_000,
           gauntlet: Optional[MetaGauntlet] = None,
           deck1: Optional[List[str]] = None,
           bounty_threshold: float = 0.15,
-          bounty_bonus: float = 0.5) -> MaskablePPO:
-    """Train a Pilot Agent using MaskablePPO.
+          bounty_bonus: float = 0.5,
+          use_lstm: bool = False,
+          lstm_hidden_size: int = 256,
+          ) -> Union[MaskablePPO, MaskableRecurrentPPO]:
+    """Train a Pilot Agent using MaskablePPO or MaskableRecurrentPPO.
 
     Args:
         total_timesteps: Total environment steps to train for.
@@ -360,15 +381,20 @@ def train(total_timesteps: int = 100_000,
         deck1: Player 1 deck (card IDs). Defaults to ST1 starter.
         bounty_threshold: TI threshold for bounty bonus.
         bounty_bonus: Bonus reward for beating high-TI opponents.
+        use_lstm: Use LSTM policy (MaskableRecurrentPPO) instead of MLP.
+        lstm_hidden_size: LSTM hidden units per layer (default: 256).
 
     Returns:
-        Trained MaskablePPO model.
+        Trained model (MaskablePPO or MaskableRecurrentPPO).
     """
+    algorithm_name = "MaskableRecurrentPPO" if use_lstm else "MaskablePPO"
     if verbose:
         print("=" * 60)
         print("Digimon TCG Pilot Agent Training")
         print("=" * 60)
-        print(f"  Algorithm:      MaskablePPO")
+        print(f"  Algorithm:      {algorithm_name}")
+        if use_lstm:
+            print(f"  LSTM hidden:    {lstm_hidden_size}")
         print(f"  Opponent:       {opponent}")
         print(f"  Total steps:    {total_timesteps:,}")
         print(f"  Learning rate:  {learning_rate}")
@@ -392,17 +418,36 @@ def train(total_timesteps: int = 100_000,
     )
 
     # Create model
-    model = MaskablePPO(
-        "MlpPolicy",
-        env,
-        learning_rate=learning_rate,
-        n_steps=n_steps,
-        batch_size=batch_size,
-        n_epochs=n_epochs,
-        gamma=gamma,
-        tensorboard_log=tensorboard_log,
-        verbose=0,
-    )
+    if use_lstm:
+        model = MaskableRecurrentPPO(
+            MaskableMlpLstmPolicy,
+            env,
+            learning_rate=learning_rate,
+            n_steps=n_steps,
+            batch_size=n_steps,  # RecurrentPPO requires batch_size == n_steps
+            n_epochs=n_epochs,
+            gamma=gamma,
+            tensorboard_log=tensorboard_log,
+            verbose=0,
+            policy_kwargs=dict(
+                lstm_hidden_size=lstm_hidden_size,
+                n_lstm_layers=1,
+                enable_critic_lstm=True,
+                net_arch=dict(pi=[64], vf=[64]),
+            ),
+        )
+    else:
+        model = MaskablePPO(
+            "MlpPolicy",
+            env,
+            learning_rate=learning_rate,
+            n_steps=n_steps,
+            batch_size=batch_size,
+            n_epochs=n_epochs,
+            gamma=gamma,
+            tensorboard_log=tensorboard_log,
+            verbose=0,
+        )
 
     # Create evaluation callback
     eval_env_fn = lambda: make_env(
@@ -445,7 +490,7 @@ def train(total_timesteps: int = 100_000,
 
 def main():
     parser = argparse.ArgumentParser(
-        description="Train Digimon TCG Pilot Agent (MaskablePPO)"
+        description="Train Digimon TCG Pilot Agent (MaskablePPO / MaskableRecurrentPPO)"
     )
     parser.add_argument(
         "--timesteps", type=int, default=100_000,
@@ -505,6 +550,14 @@ def main():
         "--bounty-bonus", type=float, default=0.5,
         help="Bonus reward for beating high-TI opponents (default: 0.5)"
     )
+    parser.add_argument(
+        "--lstm", action="store_true",
+        help="Use LSTM policy (MaskableRecurrentPPO) instead of MLP"
+    )
+    parser.add_argument(
+        "--lstm-hidden-size", type=int, default=256,
+        help="LSTM hidden units per layer (default: 256)"
+    )
 
     args = parser.parse_args()
 
@@ -545,6 +598,8 @@ def main():
         deck1=deck1,
         bounty_threshold=args.bounty_threshold,
         bounty_bonus=args.bounty_bonus,
+        use_lstm=args.lstm,
+        lstm_hidden_size=args.lstm_hidden_size,
     )
 
 

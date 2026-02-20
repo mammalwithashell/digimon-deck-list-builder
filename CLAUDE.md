@@ -14,7 +14,13 @@ digimon_gym/                     # PRIMARY CODEBASE
 ├── api.py                       # FastAPI backend (session-based game management)
 ├── digimon_gym.py               # Gymnasium RL environment (DigimonEnv class)
 ├── agents/
-│   └── pilot_training.py        # MaskablePPO pilot agent training (SB3)
+│   ├── pilot_training.py        # Pilot agent training (MaskablePPO / MaskableRecurrentPPO)
+│   ├── gauntlet.py              # MetaGauntlet — meta-weighted opponent deck sampling
+│   └── maskable_recurrent/      # LSTM + action masking (custom SB3 extension)
+│       ├── __init__.py           # Package exports
+│       ├── buffers.py            # MaskableRecurrentRolloutBuffer
+│       ├── policies.py           # MaskableRecurrentActorCriticPolicy / MaskableMlpLstmPolicy
+│       └── maskable_recurrent_ppo.py  # MaskableRecurrentPPO algorithm
 ├── engine/
 │   ├── game.py                  # Game class — turn management, phases, combat
 │   ├── core/
@@ -29,14 +35,15 @@ digimon_gym/                     # PRIMARY CODEBASE
 │   │   ├── card_database.py     # Singleton card loader
 │   │   ├── card_registry.py     # Card ID ↔ integer/norm_id mapping (REGISTRY_CAPACITY=20,000)
 │   │   ├── evo_cost.py          # EvoCost, DnaCost, DnaRequirement dataclasses
-│   │   └── scripts/             # Per-card effect implementations (742 scripts)
-│   │       ├── st1/             # Starter Set 1 (10 scripts)
-│   │       ├── p/               # Promo Set (227 scripts)
-│   │       ├── bt14/            # Booster Set 14 (94 scripts)
-│   │       ├── bt20/            # Booster Set 20 (103 scripts)
-│   │       ├── bt21/            # Booster Set 21 (103 scripts)
-│   │       ├── bt23/            # Booster Set 23 (103 scripts)
-│   │       ├── bt24/            # Booster Set 24 (102 scripts)
+│   │   ├── deck_library.json    # Tournament-scraped decklists with meta weights
+│   │   └── scripts/             # Per-card effect implementations (749 scripts)
+│   │       ├── st1/             # Starter Set 1 (11 scripts)
+│   │       ├── p/               # Promo Set (228 scripts)
+│   │       ├── bt14/            # Booster Set 14 (95 scripts)
+│   │       ├── bt20/            # Booster Set 20 (104 scripts)
+│   │       ├── bt21/            # Booster Set 21 (104 scripts)
+│   │       ├── bt23/            # Booster Set 23 (104 scripts)
+│   │       ├── bt24/            # Booster Set 24 (103 scripts)
 │   │       ├── ex8/             # EX Set 8 (placeholder, 0 scripts)
 │   │       └── ex10/            # EX Set 10 (placeholder, 0 scripts)
 │   ├── runners/
@@ -48,6 +55,18 @@ digimon_gym/                     # PRIMARY CODEBASE
 │   ├── loggers.py               # IGameLogger, SilentLogger, VerboseLogger
 │   └── interfaces/
 │       └── card_effect.py       # ICardEffect interface
+├── db/                          # Database & API layer
+│   ├── __init__.py
+│   ├── auth.py                  # Authentication utilities
+│   ├── database.py              # Database connection setup
+│   ├── models.py                # SQLAlchemy ORM models (User, Deck, GameRecord, etc.)
+│   ├── schemas.py               # Pydantic request/response schemas
+│   └── routers/                 # FastAPI route modules
+│       ├── auth.py              # Authentication endpoints
+│       ├── users.py             # User management
+│       ├── decks.py             # Deck CRUD operations
+│       ├── friends.py           # Friend/social features
+│       └── assets.py            # Card asset serving
 
 tools/                           # Build & pipeline tools
 ├── build_registry.py            # Future-proof card registry builder (API fetch, append-only indices)
@@ -60,6 +79,7 @@ tools/                           # Build & pipeline tools
 │   ├── generators.py            # Python code generation from EffectBlocks (~840 lines)
 │   ├── validation.py            # Cross-validation against digimoncard.io (~50 lines)
 │   └── cli.py                   # main() function: arg parsing, file I/O, reporting (~200 lines)
+├── meta_loader.py               # Deck library builder (DigimonMeta, Egman, DigiLab scraping)
 ├── scraper/
 │   └── scrape_decks.py          # Tournament decklist scraper (Egman Events)
 ├── ingest_cards.py              # Card metadata ingestion from digimoncard.io API
@@ -79,10 +99,17 @@ tests/                           # Pytest test suite
 ├── test_dna_digivolve.py        # DNA/Jogress mechanics tests (50 tests)
 ├── test_build_registry.py       # Card registry builder tests (21 tests)
 ├── test_deck_loader.py          # Deck loading tests
-└── test_phase_decoders.py       # Game phase state tests (33 tests)
+├── test_phase_decoders.py       # Game phase state tests (33 tests)
+├── test_maskable_recurrent.py   # MaskableRecurrentPPO LSTM+mask tests (16 tests)
+├── test_gauntlet.py             # MetaGauntlet opponent sampling tests
+├── test_meta_loader.py          # Deck library pipeline tests
+├── test_db.py                   # Database integration tests
+├── test_delay_mechanics.py      # Delay keyword mechanics tests
+├── test_recording.py            # Game recording tests
+└── test_replay.py               # Game replay tests
 
 scripts/
-├── train_smoke_test.py          # SB3 MaskablePPO validation script
+├── train_smoke_test.py          # SB3 MaskablePPO + MaskableRecurrentPPO validation
 └── fetch_card_effects.py        # Fetch card effect text from digimoncard.io API
 
 DCGO/                            # Git submodule (sparse checkout): full DCGO Unity project
@@ -119,8 +146,13 @@ python -m pytest tests/test_runners.py -v
 # Run tensor/action tests only
 python -m pytest tests/test_tensor_and_actions.py -v
 
-# Run smoke test (validates Gymnasium env + SB3 integration)
+# Run smoke test (validates Gymnasium env + SB3 MaskablePPO + MaskableRecurrentPPO)
 python scripts/train_smoke_test.py
+
+# Train pilot agent (MLP default, or LSTM with --lstm)
+python -m digimon_gym.agents.pilot_training --timesteps 500000
+python -m digimon_gym.agents.pilot_training --lstm --timesteps 500000
+python -m digimon_gym.agents.pilot_training --self-play --timesteps 1000000
 
 # Quick env validation
 python -c "from digimon_gym.digimon_gym import DigimonEnv; env = DigimonEnv(); obs, info = env.reset(); print(obs.shape, info['action_mask'].shape)"
@@ -409,7 +441,10 @@ The engine checks keyword abilities at runtime via the `Permanent.has_keyword()`
 - Mock card helpers exist in test files — reuse them for new tests
 - Script validation tests (`test_p_scripts.py`, `test_bt{14,20,21,23,24}_scripts.py`) are parametrized — 463, 200, 215, 216, 211, and 216 tests respectively verifying transpiled scripts load, produce correct effect counts, and set expected keyword flags
 - `test_build_registry.py` — 21 tests for natural sort key parsing, append-only index preservation, capacity validation, determinism, and deduplication
-- Run `python -m pytest tests/ -v` for the full suite (1963 tests, excluding numpy-dependent tests)
+- `test_maskable_recurrent.py` — 16 tests for LSTM+mask buffer, policy, and algorithm integration
+- `test_gauntlet.py` — MetaGauntlet opponent sampling and GauntletWrapper tests
+- `test_meta_loader.py` — Deck library pipeline tests
+- Run `python -m pytest tests/ -v` for the full suite (2,077 tests)
 
 ## Card Data API
 
@@ -487,7 +522,7 @@ Remaining stubs are complex multi-step sequences with nested coroutines, `OnAddD
 
 ### Other Gaps
 - EX8 and EX10 script directories are empty placeholders (no scripts transpiled yet)
-- ST1 scripts (10 files) have no dedicated test coverage
+- ST1 scripts (11 files) have no dedicated test coverage
 - No CI/CD pipeline
 - No frontend implementation yet (React planned)
 - Q-DeckRec agent not yet implemented (architecture specced in AGENTS.md); pilot agent training exists in `digimon_gym/agents/pilot_training.py`

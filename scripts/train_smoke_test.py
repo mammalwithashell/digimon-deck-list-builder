@@ -94,10 +94,70 @@ def test_sb3_maskable_ppo():
     print("  MaskablePPO training (1000 steps): PASSED!")
 
 
+def test_sb3_maskable_recurrent_ppo():
+    """Validate MaskableRecurrentPPO (LSTM + action masking) on DigimonEnv."""
+    print()
+    print("=" * 60)
+    print("Test 4: MaskableRecurrentPPO Training (256 steps)")
+    print("=" * 60)
+
+    try:
+        from sb3_contrib.common.wrappers import ActionMasker
+        from digimon_gym.agents.maskable_recurrent import (
+            MaskableRecurrentPPO,
+            MaskableMlpLstmPolicy,
+        )
+    except ImportError:
+        print("  SKIPPED: sb3-contrib or maskable_recurrent not available.")
+        return
+
+    def mask_fn(env):
+        return env.action_mask()
+
+    env = ActionMasker(DigimonEnv(), mask_fn)
+    model = MaskableRecurrentPPO(
+        MaskableMlpLstmPolicy,
+        env,
+        verbose=0,
+        n_steps=128,
+        batch_size=128,  # RecurrentPPO requires batch_size == n_steps
+        policy_kwargs=dict(
+            lstm_hidden_size=64,
+            n_lstm_layers=1,
+            enable_critic_lstm=True,
+            net_arch=dict(pi=[64], vf=[64]),
+        ),
+    )
+    model.learn(total_timesteps=256)
+    print("  MaskableRecurrentPPO training (256 steps): PASSED!")
+
+    # Run 1 evaluation episode with manual LSTM state threading
+    print("  Running evaluation episode with LSTM state threading...")
+    obs, info = env.reset()
+    state = None
+    episode_start = np.array([True])
+    steps = 0
+    done = False
+
+    while not done:
+        action_masks = env.unwrapped.action_mask()
+        action, state = model.predict(
+            obs, state=state, episode_start=episode_start,
+            deterministic=True, action_masks=action_masks,
+        )
+        obs, reward, terminated, truncated, info = env.step(int(action))
+        episode_start = np.array([False])
+        steps += 1
+        done = terminated or truncated
+
+    print(f"  Evaluation episode: {steps} steps. PASSED!")
+
+
 if __name__ == "__main__":
     test_manual_loop()
     test_gymnasium_env_checker()
     test_sb3_maskable_ppo()
+    test_sb3_maskable_recurrent_ppo()
     print()
     print("=" * 60)
     print("ALL SMOKE TESTS PASSED!")
