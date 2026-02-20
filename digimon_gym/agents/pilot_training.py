@@ -27,6 +27,7 @@ from stable_baselines3.common.callbacks import BaseCallback
 
 from digimon_gym.digimon_gym import DigimonEnv, greedy_policy, ACTION_PASS_TURN
 from digimon_gym.engine.game import ACTION_SPACE_SIZE
+from digimon_gym.agents.gauntlet import MetaGauntlet, GauntletWrapper
 
 
 # ─── Helpers ─────────────────────────────────────────────────────────
@@ -38,7 +39,7 @@ def _unwrap_to_digimon_env(env: gymnasium.Env) -> DigimonEnv:
     """
     unwrapped = env
     while not isinstance(unwrapped, DigimonEnv):
-        if hasattr(unwrapped, 'env'):
+        if isinstance(unwrapped, gymnasium.Wrapper):
             unwrapped = unwrapped.env
         else:
             raise RuntimeError(
@@ -97,7 +98,7 @@ class OpponentWrapper(gymnasium.Wrapper):
         obs, info, terminal_reward, terminated, truncated = (
             self._play_opponent(obs, info)
         )
-        reward += terminal_reward
+        reward = float(reward) + float(terminal_reward)
 
         return obs, reward, terminated, truncated, info
 
@@ -192,6 +193,10 @@ class WinRateCallback(BaseCallback):
         if self._eval_env is None:
             self._eval_env = self._eval_env_fn()
         eval_env = self._eval_env
+        if eval_env is None:
+            if self.verbose:
+                print("  [Eval] Failed to create evaluation environment.")
+            return
         wins = 0
         draws = 0
         total_reward = 0.0
@@ -205,15 +210,13 @@ class WinRateCallback(BaseCallback):
 
             while not done:
                 # Derive mask via the same ActionMasker path used in training
-                mask = eval_env.action_masks()
-                action, _ = self.model.predict(
-                    obs, deterministic=True,
-                    action_masks=mask
-                )
+                if eval_env is None:
+                    break
+                action, _ = self.model.predict(obs, deterministic=True)
                 obs, reward, terminated, truncated, _ = eval_env.step(
                     int(action)
                 )
-                episode_reward += reward
+                episode_reward += float(reward)
                 steps += 1
                 done = terminated or truncated
 
@@ -221,7 +224,9 @@ class WinRateCallback(BaseCallback):
             total_steps += steps
 
             # Use the actual game outcome instead of reward as a proxy
-            game = _unwrap_to_digimon_env(eval_env).game
+            game = None
+            if eval_env is not None:
+                game = _unwrap_to_digimon_env(eval_env).game
             if game is not None and game.winner is not None:
                 if game.winner.player_id == 1:
                     wins += 1
@@ -253,7 +258,10 @@ class WinRateCallback(BaseCallback):
 
 def make_env(opponent: str = "greedy",
              deck1: Optional[List[str]] = None,
-             deck2: Optional[List[str]] = None) -> gymnasium.Env:
+             deck2: Optional[List[str]] = None,
+             gauntlet: Optional[MetaGauntlet] = None,
+             bounty_threshold: float = 0.15,
+             bounty_bonus: float = 0.5) -> gymnasium.Env:
     """Create a wrapped DigimonEnv for single-agent RL training.
 
     Args:
@@ -261,6 +269,10 @@ def make_env(opponent: str = "greedy",
                   "self-play" skips the opponent wrapper (agent plays both sides).
         deck1: Player 1 deck (card IDs). Defaults to ST1 starter.
         deck2: Player 2 deck (card IDs). Defaults to ST1 starter.
+        gauntlet: MetaGauntlet instance for opponent sampling. When provided,
+                  opponent decks are sampled per-episode from the deck library.
+        bounty_threshold: Threat index above which bounty bonus applies.
+        bounty_bonus: Bonus reward for beating high-TI opponents.
 
     Returns:
         ActionMasker-wrapped environment ready for MaskablePPO.
@@ -283,6 +295,16 @@ def make_env(opponent: str = "greedy",
                 f"Expected one of {valid_opponents}."
             )
         env = OpponentWrapper(base_env, opponent_fn=opponent_fn)
+
+    # Gauntlet wrapper for meta-weighted opponent sampling
+    if gauntlet is not None and gauntlet.deck_count > 0:
+        player_deck = deck1 if deck1 else base_env._deck1
+        env = GauntletWrapper(
+            env, gauntlet,
+            player_deck=player_deck,
+            bounty_threshold=bounty_threshold,
+            bounty_bonus=bounty_bonus,
+        )
 
     def mask_fn(env):
         return _unwrap_to_digimon_env(env).action_mask()
@@ -314,7 +336,11 @@ def train(total_timesteps: int = 100_000,
           gamma: float = 0.99,
           tensorboard_log: str = "runs/pilot_ppo",
           verbose: int = 1,
-          save_dir: str = "models") -> MaskablePPO:
+          save_dir: str = "models",
+          gauntlet: Optional[MetaGauntlet] = None,
+          deck1: Optional[List[str]] = None,
+          bounty_threshold: float = 0.15,
+          bounty_bonus: float = 0.5) -> MaskablePPO:
     """Train a Pilot Agent using MaskablePPO.
 
     Args:
@@ -330,6 +356,10 @@ def train(total_timesteps: int = 100_000,
         tensorboard_log: TensorBoard log directory.
         verbose: Verbosity level (0=silent, 1=info).
         save_dir: Directory for saving model checkpoints.
+        gauntlet: MetaGauntlet for meta-weighted opponent sampling.
+        deck1: Player 1 deck (card IDs). Defaults to ST1 starter.
+        bounty_threshold: TI threshold for bounty bonus.
+        bounty_bonus: Bonus reward for beating high-TI opponents.
 
     Returns:
         Trained MaskablePPO model.
@@ -346,10 +376,20 @@ def train(total_timesteps: int = 100_000,
         print(f"  Rollout steps:  {n_steps}")
         print(f"  Eval freq:      every {eval_freq:,} steps")
         print(f"  TensorBoard:    {tensorboard_log}")
+        if gauntlet and gauntlet.deck_count > 0:
+            print(f"  Gauntlet:       {gauntlet.archetype_count} archetypes, "
+                  f"{gauntlet.deck_count} decks")
+            print(f"  Bounty:         +{bounty_bonus} if TI > {bounty_threshold}")
         print("=" * 60)
 
     # Create training environment
-    env = make_env(opponent=opponent)
+    env = make_env(
+        opponent=opponent,
+        deck1=deck1,
+        gauntlet=gauntlet,
+        bounty_threshold=bounty_threshold,
+        bounty_bonus=bounty_bonus,
+    )
 
     # Create model
     model = MaskablePPO(
@@ -361,12 +401,15 @@ def train(total_timesteps: int = 100_000,
         n_epochs=n_epochs,
         gamma=gamma,
         tensorboard_log=tensorboard_log,
-        verbose=verbose,
         verbose=0,
     )
 
     # Create evaluation callback
-    eval_env_fn = lambda: make_env(opponent=opponent)
+    eval_env_fn = lambda: make_env(
+        opponent=opponent, deck1=deck1,
+        gauntlet=gauntlet, bounty_threshold=bounty_threshold,
+        bounty_bonus=bounty_bonus,
+    )
     win_rate_cb = WinRateCallback(
         eval_env_fn=eval_env_fn,
         eval_freq=eval_freq,
@@ -446,10 +489,47 @@ def main():
         "--save-dir", type=str, default="models",
         help="Model save directory (default: models)"
     )
+    parser.add_argument(
+        "--gauntlet", action="store_true",
+        help="Enable MetaGauntlet opponent sampling from deck_library.json"
+    )
+    parser.add_argument(
+        "--deck1", type=str, default=None,
+        help="Path to player 1 deck file (TTS/text format)"
+    )
+    parser.add_argument(
+        "--bounty-threshold", type=float, default=0.15,
+        help="Threat index above which bounty bonus applies (default: 0.15)"
+    )
+    parser.add_argument(
+        "--bounty-bonus", type=float, default=0.5,
+        help="Bonus reward for beating high-TI opponents (default: 0.5)"
+    )
 
     args = parser.parse_args()
 
     opponent = "self-play" if args.self_play else args.opponent
+
+    # Load gauntlet if requested
+    gauntlet = None
+    if args.gauntlet:
+        gauntlet = MetaGauntlet()
+        try:
+            gauntlet.load()
+            print(f"  MetaGauntlet: {gauntlet.archetype_count} archetypes, "
+                  f"{gauntlet.deck_count} decks loaded")
+        except FileNotFoundError:
+            print("  WARNING: deck_library.json not found. "
+                  "Run tools/meta_loader.py --build first.")
+            gauntlet = None
+
+    # Load player deck if specified
+    deck1 = None
+    if args.deck1:
+        from digimon_gym.engine.data.deck_loader import parse_deck
+        with open(args.deck1, "r") as f:
+            deck1 = parse_deck(f.read())
+        print(f"  Player deck: {len(deck1)} cards from {args.deck1}")
 
     train(
         total_timesteps=args.timesteps,
@@ -461,6 +541,10 @@ def main():
         batch_size=args.batch_size,
         tensorboard_log=args.log_dir,
         save_dir=args.save_dir,
+        gauntlet=gauntlet,
+        deck1=deck1,
+        bounty_threshold=args.bounty_threshold,
+        bounty_bonus=args.bounty_bonus,
     )
 
 
