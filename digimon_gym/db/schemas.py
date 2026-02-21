@@ -32,6 +32,11 @@ class RefreshRequest(BaseModel):
     refresh_token: str
 
 
+class ChangePasswordRequest(BaseModel):
+    current_password: str
+    new_password: str = Field(..., min_length=8, max_length=128)
+
+
 # ── Users ───────────────────────────────────────────────────────────────
 
 class UserPublic(BaseModel):
@@ -54,6 +59,10 @@ class UserProfile(UserPublic):
 class UpdateProfileRequest(BaseModel):
     display_name: Optional[str] = None
     avatar_url: Optional[str] = None
+
+
+class DeactivateAccountRequest(BaseModel):
+    password: str  # Require password confirmation to deactivate
 
 
 # ── Decks ───────────────────────────────────────────────────────────────

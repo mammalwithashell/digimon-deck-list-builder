@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import hashlib
+import os
 import secrets
 from datetime import datetime, timedelta, timezone
 from typing import Optional
@@ -19,10 +20,10 @@ from digimon_gym.db.models import RefreshToken, User
 
 # ── Configuration ───────────────────────────────────────────────────────
 
-SECRET_KEY = "CHANGE-ME-IN-PRODUCTION"  # Override via environment variable
+SECRET_KEY = os.environ.get("DIGIMON_SECRET_KEY", "CHANGE-ME-IN-PRODUCTION")
 ALGORITHM = "HS256"
-ACCESS_TOKEN_EXPIRE_MINUTES = 30
-REFRESH_TOKEN_EXPIRE_DAYS = 30
+ACCESS_TOKEN_EXPIRE_MINUTES = int(os.environ.get("DIGIMON_ACCESS_TOKEN_EXPIRE_MINUTES", "30"))
+REFRESH_TOKEN_EXPIRE_DAYS = int(os.environ.get("DIGIMON_REFRESH_TOKEN_EXPIRE_DAYS", "30"))
 
 # ── Password Hashing ───────────────────────────────────────────────────
 
@@ -70,6 +71,7 @@ def decode_access_token(token: str) -> dict:
 # ── FastAPI Dependency ──────────────────────────────────────────────────
 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/auth/login")
+oauth2_scheme_optional = OAuth2PasswordBearer(tokenUrl="/auth/login", auto_error=False)
 
 
 async def get_current_user(
@@ -98,7 +100,7 @@ async def get_current_user(
 
 
 async def get_optional_user(
-    token: Optional[str] = Depends(oauth2_scheme),
+    token: Optional[str] = Depends(oauth2_scheme_optional),
     db: AsyncSession = Depends(get_db),
 ) -> Optional[User]:
     """Like get_current_user but returns None instead of raising for unauthenticated requests."""

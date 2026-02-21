@@ -1,4 +1,4 @@
-"""Users router: profile view, update, search."""
+"""Users router: profile view, update, search, deactivation."""
 
 from __future__ import annotations
 
@@ -8,10 +8,10 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from digimon_gym.db.auth import get_current_user
+from digimon_gym.db.auth import get_current_user, verify_password
 from digimon_gym.db.database import get_db
-from digimon_gym.db.models import User
-from digimon_gym.db.schemas import UpdateProfileRequest, UserProfile, UserPublic
+from digimon_gym.db.models import RefreshToken, User
+from digimon_gym.db.schemas import DeactivateAccountRequest, UpdateProfileRequest, UserProfile, UserPublic
 
 router = APIRouter(prefix="/users", tags=["users"])
 
@@ -34,6 +34,32 @@ async def update_my_profile(
     await db.commit()
     await db.refresh(user)
     return user
+
+
+@router.delete("/me")
+async def deactivate_account(
+    request: DeactivateAccountRequest,
+    user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """Soft-deactivate the current user account. Requires password confirmation."""
+    if not verify_password(request.password, user.password_hash):
+        raise HTTPException(status_code=400, detail="Password is incorrect")
+
+    user.is_active = 0
+
+    # Revoke all refresh tokens
+    result = await db.execute(
+        select(RefreshToken).where(
+            RefreshToken.user_id == user.id,
+            RefreshToken.revoked == 0,
+        )
+    )
+    for token in result.scalars().all():
+        token.revoked = 1
+
+    await db.commit()
+    return {"status": "account_deactivated"}
 
 
 @router.get("/search", response_model=List[UserPublic])

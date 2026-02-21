@@ -18,7 +18,8 @@ from digimon_gym.engine.data.deck_loader import (
     parse_deck, validate_deck, summarize_deck, DeckValidationResult,
 )
 from digimon_gym.db.database import get_db, init_db
-from digimon_gym.db.models import GameRecording, GameRecordingReport
+from digimon_gym.db.auth import get_optional_user
+from digimon_gym.db.models import GameParticipant, GameRecording, GameRecordingReport, GameSession, User
 from digimon_gym.db.schemas import (
     BugReportRequest, BugReportResponse, RecordingResponse, RecordingSaveResponse,
     ReplayRequest, SeekRequest, ReplayCreateResponse, ReplayStepResponse,
@@ -28,6 +29,7 @@ from digimon_gym.db.routers import users as users_router
 from digimon_gym.db.routers import decks as decks_router
 from digimon_gym.db.routers import friends as friends_router
 from digimon_gym.db.routers import assets as assets_router
+from digimon_gym.db.routers import games as games_router
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 
@@ -55,6 +57,7 @@ app.include_router(users_router.router)
 app.include_router(decks_router.router)
 app.include_router(friends_router.router)
 app.include_router(assets_router.router)
+app.include_router(games_router.router)
 
 # ─── Game Session Storage ─────────────────────────────────────────────
 active_games: Dict[str, Union[HeadlessGame, InteractiveGame]] = {}
@@ -74,6 +77,7 @@ class CreateGameRequest(BaseModel):
     deck2_raw: Optional[str] = None  # TTS or text format string
     player1_type: str = "agent"  # "agent" or "human"
     player2_type: str = "agent"
+    game_mode: str = "standard"  # For tracking in game history
     # Recording options (headless only)
     record_actions: bool = False
     record_tensors: bool = False
@@ -149,7 +153,11 @@ def simulate_game(request: SimulationRequest):
 # ─── Game Session Endpoints ──────────────────────────────────────────
 
 @app.post("/game/create")
-def create_game(request: CreateGameRequest):
+async def create_game(
+    request: CreateGameRequest,
+    user: Optional[User] = Depends(get_optional_user),
+    db: AsyncSession = Depends(get_db),
+):
     """Create a new game session. Returns game_id and initial state.
 
     Decks can be provided as:
@@ -162,6 +170,9 @@ def create_game(request: CreateGameRequest):
 
     For interactive games, recording metadata (deck lists, zone orders, first player)
     is automatically included in the response for client-side recording.
+
+    If an authenticated user creates the game, a GameSession record is persisted
+    for game history tracking.
     """
     # Resolve deck lists — raw format takes precedence
     try:
@@ -201,7 +212,7 @@ def create_game(request: CreateGameRequest):
         2: "You" if p2_type == PlayerType.Human else "Agent",
     }
 
-    result = {
+    result: Dict[str, Any] = {
         "game_id": game_id,
         "state": state,
         "action_mask": mask,
@@ -212,6 +223,30 @@ def create_game(request: CreateGameRequest):
     # Include recording metadata for client-side recording (interactive games)
     if isinstance(runner, InteractiveGame):
         result["recording_metadata"] = runner.get_initial_state_dict()
+
+    # Persist game session for authenticated users
+    if user:
+        session = GameSession(id=game_id, game_mode=request.game_mode)
+        db.add(session)
+        await db.flush()
+
+        p1 = GameParticipant(
+            game_id=game_id,
+            player_slot=0,
+            user_id=user.id if p1_type == PlayerType.Human else None,
+            player_type="human" if p1_type == PlayerType.Human else "agent",
+            deck_snapshot=json.dumps(deck1),
+        )
+        p2 = GameParticipant(
+            game_id=game_id,
+            player_slot=1,
+            user_id=user.id if p2_type == PlayerType.Human and p1_type != PlayerType.Human else None,
+            player_type="human" if p2_type == PlayerType.Human else "agent",
+            deck_snapshot=json.dumps(deck2),
+        )
+        db.add_all([p1, p2])
+        await db.commit()
+        result["session_id"] = game_id
 
     return result
 

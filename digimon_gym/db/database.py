@@ -2,11 +2,13 @@
 
 from __future__ import annotations
 
+import os
+
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 
 from digimon_gym.db.models import Base
 
-DATABASE_URL = "sqlite+aiosqlite:///./data/app.db"
+DATABASE_URL = os.environ.get("DIGIMON_DATABASE_URL", "sqlite+aiosqlite:///./data/app.db")
 
 engine = create_async_engine(
     DATABASE_URL,

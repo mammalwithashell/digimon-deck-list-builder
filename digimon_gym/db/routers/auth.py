@@ -21,6 +21,7 @@ from digimon_gym.db.auth import (
 from digimon_gym.db.database import get_db
 from digimon_gym.db.models import RefreshToken, User, UserPreferences
 from digimon_gym.db.schemas import (
+    ChangePasswordRequest,
     LoginRequest,
     RefreshRequest,
     RegisterRequest,
@@ -140,6 +141,31 @@ async def refresh_tokens(request: RefreshRequest, db: AsyncSession = Depends(get
         access_token=access_token,
         refresh_token=new_refresh_value,
     )
+
+
+@router.post("/change-password")
+async def change_password(
+    request: ChangePasswordRequest,
+    user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    if not verify_password(request.current_password, user.password_hash):
+        raise HTTPException(status_code=400, detail="Current password is incorrect")
+
+    user.password_hash = hash_password(request.new_password)
+
+    # Revoke all existing refresh tokens so other sessions must re-authenticate
+    result = await db.execute(
+        select(RefreshToken).where(
+            RefreshToken.user_id == user.id,
+            RefreshToken.revoked == 0,
+        )
+    )
+    for token in result.scalars().all():
+        token.revoked = 1
+
+    await db.commit()
+    return {"status": "password_changed"}
 
 
 @router.post("/logout")

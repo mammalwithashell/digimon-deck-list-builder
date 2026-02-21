@@ -21,6 +21,8 @@ from digimon_gym.db.models import (
     Base,
     Deck,
     Friendship,
+    GameParticipant,
+    GameSession,
     RefreshToken,
     User,
     UserAsset,
@@ -451,6 +453,333 @@ class TestFriendEndpoints:
         # B cannot send request to A
         resp = await client.post(f"/friends/request/{id_a}", headers={"Authorization": f"Bearer {token_b}"})
         assert resp.status_code == 403
+
+
+class TestChangePassword:
+    async def _register_and_login(self, client: AsyncClient, username: str = "pwuser"):
+        await client.post("/auth/register", json={
+            "username": username,
+            "email": f"{username}@example.com",
+            "password": "old-password-123",
+        })
+        resp = await client.post("/auth/login", json={
+            "username": username,
+            "password": "old-password-123",
+        })
+        return resp.json()
+
+    async def test_change_password_success(self, client: AsyncClient):
+        tokens = await self._register_and_login(client, "changepw1")
+        headers = {"Authorization": f"Bearer {tokens['access_token']}"}
+
+        resp = await client.post("/auth/change-password", json={
+            "current_password": "old-password-123",
+            "new_password": "new-password-456",
+        }, headers=headers)
+        assert resp.status_code == 200
+        assert resp.json()["status"] == "password_changed"
+
+        # Old password no longer works
+        resp = await client.post("/auth/login", json={
+            "username": "changepw1",
+            "password": "old-password-123",
+        })
+        assert resp.status_code == 401
+
+        # New password works
+        resp = await client.post("/auth/login", json={
+            "username": "changepw1",
+            "password": "new-password-456",
+        })
+        assert resp.status_code == 200
+
+    async def test_change_password_wrong_current(self, client: AsyncClient):
+        tokens = await self._register_and_login(client, "changepw2")
+        headers = {"Authorization": f"Bearer {tokens['access_token']}"}
+
+        resp = await client.post("/auth/change-password", json={
+            "current_password": "wrong-password-999",
+            "new_password": "new-password-456",
+        }, headers=headers)
+        assert resp.status_code == 400
+        assert "incorrect" in resp.json()["detail"].lower()
+
+    async def test_change_password_revokes_refresh_tokens(self, client: AsyncClient):
+        tokens = await self._register_and_login(client, "changepw3")
+        headers = {"Authorization": f"Bearer {tokens['access_token']}"}
+
+        # Change password
+        await client.post("/auth/change-password", json={
+            "current_password": "old-password-123",
+            "new_password": "new-password-456",
+        }, headers=headers)
+
+        # Old refresh token should be revoked
+        resp = await client.post("/auth/refresh", json={
+            "refresh_token": tokens["refresh_token"],
+        })
+        assert resp.status_code == 401
+
+    async def test_change_password_requires_auth(self, client: AsyncClient):
+        resp = await client.post("/auth/change-password", json={
+            "current_password": "old-password-123",
+            "new_password": "new-password-456",
+        })
+        assert resp.status_code == 401
+
+    async def test_change_password_too_short(self, client: AsyncClient):
+        tokens = await self._register_and_login(client, "changepw4")
+        headers = {"Authorization": f"Bearer {tokens['access_token']}"}
+
+        resp = await client.post("/auth/change-password", json={
+            "current_password": "old-password-123",
+            "new_password": "short",
+        }, headers=headers)
+        assert resp.status_code == 422  # Pydantic validation error
+
+
+class TestAccountDeactivation:
+    async def _register_and_login(self, client: AsyncClient, username: str):
+        await client.post("/auth/register", json={
+            "username": username,
+            "email": f"{username}@example.com",
+            "password": "secure-password-123",
+        })
+        resp = await client.post("/auth/login", json={
+            "username": username,
+            "password": "secure-password-123",
+        })
+        return resp.json()
+
+    async def test_deactivate_account(self, client: AsyncClient):
+        tokens = await self._register_and_login(client, "deactivate1")
+        headers = {"Authorization": f"Bearer {tokens['access_token']}"}
+
+        resp = await client.request("DELETE", "/users/me", json={
+            "password": "secure-password-123",
+        }, headers=headers)
+        assert resp.status_code == 200
+        assert resp.json()["status"] == "account_deactivated"
+
+        # Can no longer login
+        resp = await client.post("/auth/login", json={
+            "username": "deactivate1",
+            "password": "secure-password-123",
+        })
+        # Login succeeds but account is disabled
+        assert resp.status_code == 403
+
+    async def test_deactivate_wrong_password(self, client: AsyncClient):
+        tokens = await self._register_and_login(client, "deactivate2")
+        headers = {"Authorization": f"Bearer {tokens['access_token']}"}
+
+        resp = await client.request("DELETE", "/users/me", json={
+            "password": "wrong-password",
+        }, headers=headers)
+        assert resp.status_code == 400
+
+    async def test_deactivated_user_not_in_search(self, client: AsyncClient):
+        tokens = await self._register_and_login(client, "deactivate3")
+        headers = {"Authorization": f"Bearer {tokens['access_token']}"}
+
+        # Deactivate
+        await client.request("DELETE", "/users/me", json={
+            "password": "secure-password-123",
+        }, headers=headers)
+
+        # Search should not find deactivated user
+        resp = await client.get("/users/search?q=deactivate3")
+        assert resp.status_code == 200
+        assert len(resp.json()) == 0
+
+    async def test_deactivate_revokes_refresh_tokens(self, client: AsyncClient):
+        tokens = await self._register_and_login(client, "deactivate4")
+        headers = {"Authorization": f"Bearer {tokens['access_token']}"}
+
+        await client.request("DELETE", "/users/me", json={
+            "password": "secure-password-123",
+        }, headers=headers)
+
+        # Refresh token should be revoked
+        resp = await client.post("/auth/refresh", json={
+            "refresh_token": tokens["refresh_token"],
+        })
+        assert resp.status_code == 401
+
+
+class TestGameSessionModel:
+    async def test_create_game_session(self, db_session: AsyncSession):
+        user = User(username="gamer", email="gamer@test.com", password_hash="hash")
+        db_session.add(user)
+        await db_session.commit()
+
+        session = GameSession(game_mode="standard")
+        db_session.add(session)
+        await db_session.flush()
+
+        p1 = GameParticipant(
+            game_id=session.id, player_slot=0, user_id=user.id, player_type="human"
+        )
+        p2 = GameParticipant(
+            game_id=session.id, player_slot=1, player_type="agent"
+        )
+        db_session.add_all([p1, p2])
+        await db_session.commit()
+
+        assert session.id is not None
+        assert session.game_mode == "standard"
+
+
+class TestGameHistoryEndpoints:
+    async def _register_and_login(self, client: AsyncClient, username: str):
+        await client.post("/auth/register", json={
+            "username": username,
+            "email": f"{username}@example.com",
+            "password": "secure-password-123",
+        })
+        resp = await client.post("/auth/login", json={
+            "username": username,
+            "password": "secure-password-123",
+        })
+        return resp.json()["access_token"]
+
+    async def _get_user_id(self, client: AsyncClient, token: str) -> str:
+        resp = await client.get("/users/me", headers={"Authorization": f"Bearer {token}"})
+        return resp.json()["id"]
+
+    async def test_create_game_session(self, client: AsyncClient):
+        token = await self._register_and_login(client, "gamesession1")
+        headers = {"Authorization": f"Bearer {token}"}
+
+        resp = await client.post("/games/sessions?game_mode=standard", headers=headers)
+        assert resp.status_code == 201
+        data = resp.json()
+        assert data["game_mode"] == "standard"
+        assert len(data["participants"]) == 1
+        assert data["participants"][0]["player_type"] == "human"
+
+    async def test_complete_game_session(self, client: AsyncClient):
+        token = await self._register_and_login(client, "gamesession2")
+        headers = {"Authorization": f"Bearer {token}"}
+
+        # Create session
+        resp = await client.post("/games/sessions?game_mode=standard", headers=headers)
+        session_id = resp.json()["id"]
+
+        # Complete it
+        resp = await client.post(
+            f"/games/sessions/{session_id}/complete?result_type=completed&winner_slot=0&total_turns=15",
+            headers=headers,
+        )
+        assert resp.status_code == 200
+        assert resp.json()["status"] == "completed"
+
+    async def test_complete_already_completed(self, client: AsyncClient):
+        token = await self._register_and_login(client, "gamesession3")
+        headers = {"Authorization": f"Bearer {token}"}
+
+        resp = await client.post("/games/sessions?game_mode=standard", headers=headers)
+        session_id = resp.json()["id"]
+
+        # Complete once
+        await client.post(
+            f"/games/sessions/{session_id}/complete?result_type=completed&winner_slot=0",
+            headers=headers,
+        )
+
+        # Try to complete again
+        resp = await client.post(
+            f"/games/sessions/{session_id}/complete?result_type=completed&winner_slot=0",
+            headers=headers,
+        )
+        assert resp.status_code == 400
+
+    async def test_get_game_session_detail(self, client: AsyncClient):
+        token = await self._register_and_login(client, "gamesession4")
+        headers = {"Authorization": f"Bearer {token}"}
+
+        resp = await client.post("/games/sessions?game_mode=standard", headers=headers)
+        session_id = resp.json()["id"]
+
+        resp = await client.get(f"/games/sessions/{session_id}", headers=headers)
+        assert resp.status_code == 200
+        assert resp.json()["id"] == session_id
+
+    async def test_get_session_not_participant(self, client: AsyncClient):
+        token_a = await self._register_and_login(client, "gamesession5a")
+        token_b = await self._register_and_login(client, "gamesession5b")
+        headers_a = {"Authorization": f"Bearer {token_a}"}
+        headers_b = {"Authorization": f"Bearer {token_b}"}
+
+        # A creates a session
+        resp = await client.post("/games/sessions?game_mode=standard", headers=headers_a)
+        session_id = resp.json()["id"]
+
+        # B tries to view it
+        resp = await client.get(f"/games/sessions/{session_id}", headers=headers_b)
+        assert resp.status_code == 403
+
+    async def test_game_history_empty(self, client: AsyncClient):
+        token = await self._register_and_login(client, "gamesession6")
+        headers = {"Authorization": f"Bearer {token}"}
+
+        resp = await client.get("/games/history", headers=headers)
+        assert resp.status_code == 200
+        assert resp.json() == []
+
+    async def test_game_history_with_sessions(self, client: AsyncClient):
+        token = await self._register_and_login(client, "gamesession7")
+        headers = {"Authorization": f"Bearer {token}"}
+
+        # Create 3 sessions
+        for _ in range(3):
+            await client.post("/games/sessions?game_mode=standard", headers=headers)
+
+        resp = await client.get("/games/history", headers=headers)
+        assert resp.status_code == 200
+        assert len(resp.json()) == 3
+
+    async def test_game_stats_empty(self, client: AsyncClient):
+        token = await self._register_and_login(client, "gamesession8")
+        headers = {"Authorization": f"Bearer {token}"}
+
+        resp = await client.get("/games/history/stats", headers=headers)
+        assert resp.status_code == 200
+        data = resp.json()
+        assert data["total_games"] == 0
+        assert data["win_rate"] == 0.0
+
+    async def test_game_stats_with_results(self, client: AsyncClient):
+        token = await self._register_and_login(client, "gamesession9")
+        headers = {"Authorization": f"Bearer {token}"}
+
+        # Create and complete sessions with different results
+        for i in range(3):
+            resp = await client.post("/games/sessions?game_mode=standard", headers=headers)
+            session_id = resp.json()["id"]
+            winner = 0 if i < 2 else None  # 2 wins, 1 draw
+            result_type = "completed" if i < 2 else "abandoned"
+            params = f"result_type={result_type}"
+            if winner is not None:
+                params += f"&winner_slot={winner}"
+            await client.post(
+                f"/games/sessions/{session_id}/complete?{params}",
+                headers=headers,
+            )
+
+        resp = await client.get("/games/history/stats", headers=headers)
+        assert resp.status_code == 200
+        data = resp.json()
+        assert data["wins"] == 2
+        assert data["total_games"] >= 2
+
+    async def test_game_history_requires_auth(self, client: AsyncClient):
+        resp = await client.get("/games/history")
+        assert resp.status_code == 401
+
+    async def test_game_stats_requires_auth(self, client: AsyncClient):
+        resp = await client.get("/games/history/stats")
+        assert resp.status_code == 401
 
 
 class TestExistingEndpointsStillWork:
