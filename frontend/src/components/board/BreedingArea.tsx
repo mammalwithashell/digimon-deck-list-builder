@@ -7,6 +7,7 @@ interface BreedingAreaProps {
   permanent: PermanentInfo | null;
   canMove?: boolean;
   canDigivolveDrop?: boolean;
+  highlighted?: boolean;
   dropId?: string;
   onClick?: () => void;
 }
@@ -15,6 +16,7 @@ export function BreedingArea({
   permanent,
   canMove = false,
   canDigivolveDrop = false,
+  highlighted = false,
   dropId = 'breeding-slot',
   onClick,
 }: BreedingAreaProps) {
@@ -42,7 +44,7 @@ export function BreedingArea({
           }}
           {...listeners}
           {...attributes}
-          className={`${canMove ? 'ring-1 ring-green-400/50 rounded cursor-grab' : ''} ${showDropHighlight ? 'ring-2 ring-green-400' : ''} ${isDragging ? 'opacity-30' : ''}`}
+          className={`${canMove ? 'ring-1 ring-green-400/50 rounded cursor-grab' : ''} ${showDropHighlight || highlighted ? 'ring-2 ring-purple-400 cursor-pointer' : ''} ${isDragging ? 'opacity-30' : ''}`}
           onClick={onClick}
         >
           <PermanentSlot

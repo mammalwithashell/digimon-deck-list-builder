@@ -18,8 +18,9 @@ class BT20_071(CardScript):
         effect0 = ICardEffect()
         effect0.set_effect_name("BT20-071 Alternate digivolution requirement")
         effect0.set_effect_description("Alternate digivolution requirement")
-        # Alternate digivolution: from [Loogarmon] for cost 3
+        # Alternate digivolution: Lv.4 from [Loogarmon] for cost 3
         effect0._alt_digi_cost = 3
+        effect0._alt_digi_level = 4
         effect0._alt_digi_name = "Loogarmon"
 
         def condition0(context: Dict[str, Any]) -> bool:

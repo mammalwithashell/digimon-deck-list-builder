@@ -275,13 +275,25 @@ class Game:
     # ─── Effect Execution ────────────────────────────────────────────
 
     def execute_effects(self, timing: EffectTiming, extra_context: Optional[dict] = None):
-        """Execute all effects matching the given timing across all permanents."""
+        """Execute all effects matching the given timing across all permanents.
+
+        Since effect_list() returns ALL cached effects (timing-agnostic),
+        we filter by the effect's timing flags (is_on_play, is_when_digivolving,
+        is_on_attack, is_on_deletion) to prevent wrong-timing execution.
+        """
         all_perms: List[Permanent] = list(self.turn_player.battle_area) + list(self.opponent_player.battle_area)
+
+        played_card = extra_context.get('played_card') if extra_context else None
+        digivolved_perm = extra_context.get('digivolved_permanent') if extra_context else None
 
         for perm in all_perms:
             effects = perm.effect_list(timing)
             for effect in effects:
+                if not effect.on_process_callback:
+                    continue
                 if not effect.can_activate_this_turn():
+                    continue
+                if not self._effect_matches_timing(effect, timing, perm, played_card, digivolved_perm):
                     continue
 
                 owner = self._find_owner(perm)
@@ -298,8 +310,54 @@ class Game:
 
                 if effect.can_use_condition is None or effect.can_use_condition(context):
                     effect.record_activation()
-                    if effect.on_process_callback:
-                        effect.on_process_callback(context)
+                    effect.on_process_callback(context)
+
+    @staticmethod
+    def _effect_matches_timing(
+        effect, timing: 'EffectTiming', perm: 'Permanent',
+        played_card, digivolved_perm,
+    ) -> bool:
+        """Check whether an effect should fire for the given timing.
+
+        Effects carry timing flags (is_on_play, is_when_digivolving, etc.)
+        set by the transpiler.  If an effect has ANY flag set, it must match
+        the requested timing; otherwise it is skipped.  Effects with no
+        timing flags are considered reactive and always pass.
+        """
+        has_flag = (effect.is_on_play or effect.is_when_digivolving
+                    or effect.is_on_attack or effect.is_on_deletion)
+
+        if not has_flag:
+            # No timing flag — could be a generic reactive effect.
+            # Only allow it from the affected permanent to prevent cross-fire.
+            if timing == EffectTiming.OnEnterFieldAnyone:
+                return played_card is not None and perm.top_card is played_card
+            # Phase-transition timings auto-advance; unflagged effects with
+            # callbacks that create selections would break the flow.
+            if timing in (EffectTiming.OnStartTurn, EffectTiming.OnDraw,
+                          EffectTiming.OnStartMainPhase, EffectTiming.OnEndTurn):
+                return False
+            return True
+
+        if timing == EffectTiming.OnEnterFieldAnyone:
+            if effect.is_on_play:
+                return played_card is not None and perm.top_card is played_card
+            if effect.is_when_digivolving:
+                return played_card is not None and perm.top_card is played_card
+            return False
+
+        if timing == EffectTiming.WhenDigivolving:
+            return effect.is_when_digivolving
+
+        if timing in (EffectTiming.OnAllyAttack,):
+            return effect.is_on_attack
+
+        if timing == EffectTiming.OnDestroyedAnyone:
+            return effect.is_on_deletion
+
+        # Other engine-level timings (OnStartTurn, OnDraw, etc.)
+        # Flagged effects must NOT fire on unrelated timings.
+        return False
 
     def execute_deletion_effects(self, deleted_permanent: Permanent, owner: Player):
         """Execute OnDeletion effects for a permanent that was just deleted."""
@@ -1281,12 +1339,20 @@ class Game:
                        GamePhase.SelectEffectChoice, GamePhase.SelectSecurity):
             # Generic selection: use valid_indices from pending selection
             ps = self.pending_selection
-            if ps and ps.valid_indices:
+            if ps is None:
+                # Defensive recovery: selection phase with no pending selection
+                # (can happen when chained effects overwrite selections).
+                # Recover to Main if it's our turn, else allow pass.
+                self.logger.log(f"[Recovery] Selection phase {phase} with no pending selection — recovering")
+                self.current_phase = GamePhase.Main
+                self.active_player = None
+                return self.get_action_mask(player_id)
+            if ps.valid_indices:
                 for idx in ps.valid_indices:
                     if 0 <= idx < ACTION_SPACE_SIZE:
                         mask[idx] = 1.0
             # Optional selections allow declining (pass)
-            if ps and getattr(ps, 'is_optional', False):
+            if getattr(ps, 'is_optional', False):
                 mask[62] = 1.0
 
         return mask

@@ -68,7 +68,7 @@ class BT20_020(CardScript):
             if enemy:
                 for _ in range(1):
                     if enemy.security_cards:
-                        trashed = enemy.security_cards.pop()
+                        trashed = enemy.security_cards.pop(0)
                         enemy.trash_cards.append(trashed)
             # Play restriction (CanNotPutFieldClass) — opponent play restrictions
             pass  # descriptive-tagged

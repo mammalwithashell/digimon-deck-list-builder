@@ -269,6 +269,8 @@ RE_FACTORY_DIGI_REQ_NAME = re.compile(
     r'EqualsCardName\s*\(\s*"([^"]+)"\s*\)')
 RE_FACTORY_DIGI_REQ_TRAIT = re.compile(
     r'EqualsTraits\s*\(\s*"([^"]+)"\s*\)')
+RE_FACTORY_DIGI_REQ_HAS_TS = re.compile(r'\.HasTSTraits')
+RE_FACTORY_DIGI_REQ_HAS_APPMON = re.compile(r'\.HasAppmonTraits')
 
 # Condition patterns
 RE_COND_ON_BATTLE = re.compile(r'IsExistOnBattleArea\w*\s*\(\s*card\s*\)')

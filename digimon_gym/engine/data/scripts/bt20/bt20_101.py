@@ -18,8 +18,9 @@ class BT20_101(CardScript):
         effect0 = ICardEffect()
         effect0.set_effect_name("BT20-101 Alternate digivolution requirement")
         effect0.set_effect_description("Alternate digivolution requirement")
-        # Alternate digivolution: with [Vortex Warriors] trait for cost 1
+        # Alternate digivolution: Lv.6 with [Vortex Warriors] trait for cost 1
         effect0._alt_digi_cost = 1
+        effect0._alt_digi_level = 6
         effect0._alt_digi_trait = "Vortex Warriors"
 
         def condition0(context: Dict[str, Any]) -> bool:

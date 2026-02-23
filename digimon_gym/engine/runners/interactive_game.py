@@ -60,7 +60,8 @@ class InteractiveGame(BaseGameRunner):
         return int(valid[0])
 
     def _select_agent_action(self, mask: np.ndarray) -> int:
-        policy_name = self.player1_policy if self.game.turn_player is self.game.player1 else self.player2_policy
+        # Use current_player_id to pick the right policy (respects active_player during selections)
+        policy_name = self.player1_policy if self.game.current_player_id == self.game.player1.player_id else self.player2_policy
 
         if policy_name == "random":
             action = self._random_policy(mask)
@@ -80,8 +81,12 @@ class InteractiveGame(BaseGameRunner):
         return self._sanitize_action(mask, int(action))
 
     def is_current_player_human(self) -> bool:
-        """Check if the current turn player is human."""
-        if self.game.turn_player is self.game.player1:
+        """Check if the player who must act now is human.
+
+        Uses game.current_player_id which respects active_player
+        (set during selection phases when a non-turn player must respond).
+        """
+        if self.game.current_player_id == self.game.player1.player_id:
             return self.player1_type == PlayerType.Human
         else:
             return self.player2_type == PlayerType.Human

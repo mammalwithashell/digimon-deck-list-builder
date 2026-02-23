@@ -160,6 +160,10 @@ class Player:
         base_cost = 0
         if card_source.c_entity_base and card_source.c_entity_base.evo_costs and len(card_source.c_entity_base.evo_costs) > 0:
              base_cost = card_source.c_entity_base.evo_costs[0].memory_cost
+        else:
+             # Alt digi: get cost from card script effects
+             from ..validation.digivolve_validator import get_alt_digi_cost
+             base_cost = get_alt_digi_cost(card_source, permanent)
 
         # 2. Trigger WhenWouldDigivolve
         reduction = 0

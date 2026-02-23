@@ -24,6 +24,7 @@ import * as deckApiMod from '@/api/deckApi';
 import {
   ACTION,
   ATTACK_TARGETS_PER_SLOT,
+  DIGIVOLVE_FIELDS_PER_HAND,
   SELECTION,
 } from '@/utils/constants';
 import { GamePhase, type PermanentInfo } from '@/types/game';
@@ -40,7 +41,17 @@ export function GamePage() {
   const [starting, setStarting] = useState(false);
   const [inspectedPerm, setInspectedPerm] = useState<PermanentInfo | null>(null);
   const [draggedCardId, setDraggedCardId] = useState<string | null>(null);
+  const [draggedHandIndex, setDraggedHandIndex] = useState<number | null>(null);
   const [isOverValid, setIsOverValid] = useState(false);
+  // Action choice dialog: shown when hand card can both play and digivolve
+  const [actionChoice, setActionChoice] = useState<{
+    handIndex: number;
+    canPlay: boolean;
+    digivolveTargets: Set<number>; // field slot indices
+    canDigivolveBreeding: boolean;
+  } | null>(null);
+  // When set, slot clicks are interpreted as digivolve targets
+  const [digivolvingHandIndex, setDigivolvingHandIndex] = useState<number | null>(null);
 
   // Load saved decks on first render
   useState(() => {
@@ -96,16 +107,82 @@ export function GamePage() {
 
   const handlePlayCard = useCallback(
     (handIndex: number) => {
-      if (parsedMask.canPlayFromHand.has(handIndex)) {
+      const canPlay = parsedMask.canPlayFromHand.has(handIndex);
+      const fieldTargets = parsedMask.canDigivolve.get(handIndex);
+      const canBreeding = parsedMask.canDigivolveBreeding.has(handIndex);
+      const canDigi = (fieldTargets && fieldTargets.size > 0) || canBreeding;
+
+      if (canPlay && canDigi) {
+        // Show choice dialog
+        setActionChoice({
+          handIndex,
+          canPlay: true,
+          digivolveTargets: fieldTargets ?? new Set(),
+          canDigivolveBreeding: canBreeding,
+        });
+        return;
+      }
+
+      if (canPlay) {
         handleAction(handIndex);
+        return;
+      }
+
+      if (canDigi) {
+        // Only digivolve available — resolve target
+        const allTargets = new Set(fieldTargets ?? []);
+        if (canBreeding) allTargets.add(12);
+        if (allTargets.size === 1) {
+          const target = allTargets.values().next().value!;
+          handleAction(ACTION.DIGIVOLVE_START + handIndex * DIGIVOLVE_FIELDS_PER_HAND + target);
+        } else {
+          // Multiple targets — enter digivolve target mode
+          setDigivolvingHandIndex(handIndex);
+        }
       }
     },
     [parsedMask, handleAction],
   );
 
+  const handleActionChoicePlay = useCallback(() => {
+    if (actionChoice) {
+      handleAction(actionChoice.handIndex);
+      setActionChoice(null);
+    }
+  }, [actionChoice, handleAction]);
+
+  const handleActionChoiceDigivolve = useCallback(() => {
+    if (!actionChoice) return;
+    const { handIndex, digivolveTargets, canDigivolveBreeding: canBreeding } = actionChoice;
+    const allTargets = new Set(digivolveTargets);
+    if (canBreeding) allTargets.add(12);
+    setActionChoice(null);
+    if (allTargets.size === 1) {
+      const target = allTargets.values().next().value!;
+      handleAction(ACTION.DIGIVOLVE_START + handIndex * DIGIVOLVE_FIELDS_PER_HAND + target);
+    } else {
+      // Multiple targets — enter digivolve target selection mode
+      setDigivolvingHandIndex(handIndex);
+    }
+  }, [actionChoice, handleAction]);
+
   const handleSlotClick = useCallback(
     (isOpponent: boolean, slotIndex: number) => {
       const phase = store.currentPhase;
+
+      // Digivolve target selection mode
+      if (digivolvingHandIndex !== null && !isOpponent) {
+        const fieldTargets = parsedMask.canDigivolve.get(digivolvingHandIndex);
+        if (fieldTargets?.has(slotIndex)) {
+          const actionId = ACTION.DIGIVOLVE_START + digivolvingHandIndex * DIGIVOLVE_FIELDS_PER_HAND + slotIndex;
+          handleAction(actionId);
+          setDigivolvingHandIndex(null);
+          return;
+        }
+        // Cancel digivolve selection on invalid click
+        setDigivolvingHandIndex(null);
+        return;
+      }
 
       // During selection phases, map to selection actions
       if (phase >= GamePhase.SelectTarget && phase <= GamePhase.SelectSecurity) {
@@ -155,7 +232,7 @@ export function GamePage() {
         setInspectedPerm(player.battleArea[slotIndex] ?? null);
       }
     },
-    [store, parsedMask, handleAction],
+    [store, parsedMask, handleAction, digivolvingHandIndex],
   );
 
   const handleRevealedClick = useCallback(
@@ -182,16 +259,19 @@ export function GamePage() {
   // Drag-and-drop handlers
   const handleDragStart = useCallback((event: DragStartEvent) => {
     const data = event.active.data.current as DragData | undefined;
-    if (data?.cardId) {
-      setDraggedCardId(data.cardId);
+    if (data?.type === 'hand-card') {
+      setDraggedHandIndex(data.handIndex ?? null);
+      if (data.cardId) setDraggedCardId(data.cardId);
     } else if (data?.type === 'breeding-perm' && store.player1?.breedingArea) {
       setDraggedCardId(store.player1.breedingArea.topCardId);
+      setDraggedHandIndex(null);
     }
   }, [store.player1]);
 
   const handleDragEnd = useCallback(
     (event: DragEndEvent) => {
       setDraggedCardId(null);
+      setDraggedHandIndex(null);
       setIsOverValid(false);
 
       const { active, over } = event;
@@ -282,6 +362,14 @@ export function GamePage() {
     highlightedOwnSlots.add(slot);
   }
 
+  // Highlight digivolve target slots when in digivolve target mode
+  if (digivolvingHandIndex !== null) {
+    const targets = parsedMask.canDigivolve.get(digivolvingHandIndex);
+    if (targets) {
+      for (const slot of targets) highlightedOwnSlots.add(slot);
+    }
+  }
+
   // If attacker selected, show valid targets
   const targetedSlots = new Set<number>();
   if (store.selectedAttacker !== null) {
@@ -309,6 +397,25 @@ export function GamePage() {
 
   // Merge playable + digivolve highlights for hand
   const highlightedHand = new Set([...parsedMask.canPlayFromHand, ...digivolveHandIndices]);
+
+  // Compute valid drop slots while dragging a hand card
+  const dragValidDropSlots = new Set<number>();
+  let dragCanBreeding = false;
+  if (draggedHandIndex !== null) {
+    // Empty slots are valid for play
+    if (parsedMask.canPlayFromHand.has(draggedHandIndex)) {
+      // All empty field slots are valid play targets (marked as 'empty-field-slot')
+      // The actual play action just uses handIndex, so all empties work
+    }
+    // Occupied slots valid for digivolve
+    const digiTargets = parsedMask.canDigivolve.get(draggedHandIndex);
+    if (digiTargets) {
+      for (const slot of digiTargets) dragValidDropSlots.add(slot);
+    }
+    if (parsedMask.canDigivolveBreeding.has(draggedHandIndex)) {
+      dragCanBreeding = true;
+    }
+  }
 
   return (
     <div className="h-[calc(100vh-56px)] flex">
@@ -345,19 +452,74 @@ export function GamePage() {
               onSlotClick={handleSlotClick}
               onHatch={() => handleAction(ACTION.HATCH)}
               onMove={() => handleAction(ACTION.MOVE)}
+              onBreedingClick={
+                digivolvingHandIndex !== null && parsedMask.canDigivolveBreeding.has(digivolvingHandIndex)
+                  ? () => {
+                      handleAction(ACTION.DIGIVOLVE_START + digivolvingHandIndex * DIGIVOLVE_FIELDS_PER_HAND + 12);
+                      setDigivolvingHandIndex(null);
+                    }
+                  : parsedMask.canMove
+                    ? () => handleAction(ACTION.MOVE)
+                    : undefined
+              }
               onRevealedClick={handleRevealedClick}
               canHatch={parsedMask.canHatch}
               canMove={parsedMask.canMove}
               canDigivolveBreeding={parsedMask.canDigivolveBreeding.size > 0}
+              highlightBreeding={
+                (digivolvingHandIndex !== null && parsedMask.canDigivolveBreeding.has(digivolvingHandIndex))
+                || dragCanBreeding
+              }
               playableHandIndices={highlightedHand}
               highlightedOwnSlots={highlightedOwnSlots}
               highlightedEnemySlots={highlightedEnemySlots}
               targetedSlots={targetedSlots}
               validRevealedIndices={validRevealedIndices}
+              dragValidDropSlots={draggedHandIndex !== null ? dragValidDropSlots : undefined}
+              isDraggingHandCard={draggedHandIndex !== null}
+              canPlayDragged={draggedHandIndex !== null && parsedMask.canPlayFromHand.has(draggedHandIndex)}
             />
             <DragOverlayCard cardId={draggedCardId} isOverValid={isOverValid} />
           </DndContext>
         </div>
+
+        {/* Action choice dialog (Play vs Digivolve) */}
+        {actionChoice && (
+          <div className="flex items-center justify-center gap-3 py-2 bg-gray-800 border-t border-gray-600">
+            <span className="text-sm text-gray-300">Choose action:</span>
+            <button
+              onClick={handleActionChoicePlay}
+              className="px-4 py-1.5 bg-blue-600 hover:bg-blue-500 text-white text-sm font-medium rounded"
+            >
+              Play
+            </button>
+            <button
+              onClick={handleActionChoiceDigivolve}
+              className="px-4 py-1.5 bg-purple-600 hover:bg-purple-500 text-white text-sm font-medium rounded"
+            >
+              Digivolve
+            </button>
+            <button
+              onClick={() => setActionChoice(null)}
+              className="px-3 py-1.5 bg-gray-600 hover:bg-gray-500 text-white text-sm rounded"
+            >
+              Cancel
+            </button>
+          </div>
+        )}
+
+        {/* Digivolve target mode indicator */}
+        {digivolvingHandIndex !== null && (
+          <div className="flex items-center justify-center gap-3 py-2 bg-purple-900/50 border-t border-purple-600">
+            <span className="text-sm text-purple-200">Select a digivolve target on the field</span>
+            <button
+              onClick={() => setDigivolvingHandIndex(null)}
+              className="px-3 py-1.5 bg-gray-600 hover:bg-gray-500 text-white text-sm rounded"
+            >
+              Cancel
+            </button>
+          </div>
+        )}
 
         <ActionBar
           phase={store.currentPhase}

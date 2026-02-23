@@ -14,11 +14,16 @@ interface PlayerHalfProps {
   canHatch?: boolean;
   canMove?: boolean;
   canDigivolveBreeding?: boolean;
+  highlightBreeding?: boolean;
   onSlotClick?: (slotIndex: number) => void;
   onSlotHover?: (slotIndex: number | null) => void;
   onHatch?: () => void;
   onMove?: () => void;
+  onBreedingClick?: () => void;
   onTrashClick?: () => void;
+  dragValidDropSlots?: Set<number>;
+  isDraggingHandCard?: boolean;
+  canPlayDragged?: boolean;
 }
 
 export function PlayerHalf({
@@ -29,11 +34,16 @@ export function PlayerHalf({
   canHatch = false,
   canMove = false,
   canDigivolveBreeding = false,
+  highlightBreeding = false,
   onSlotClick,
   onSlotHover,
   onHatch,
   onMove,
+  onBreedingClick,
   onTrashClick,
+  dragValidDropSlots,
+  isDraggingHandCard = false,
+  canPlayDragged = false,
 }: PlayerHalfProps) {
   return (
     <div className={`flex items-center gap-3 px-2 ${isOpponent ? 'flex-row-reverse' : ''}`}>
@@ -48,8 +58,9 @@ export function PlayerHalf({
           permanent={player.breedingArea}
           canMove={canMove && !isOpponent}
           canDigivolveDrop={canDigivolveBreeding && !isOpponent}
+          highlighted={highlightBreeding && !isOpponent}
           dropId={isOpponent ? 'breeding-slot-opponent' : 'breeding-slot'}
-          onClick={onMove}
+          onClick={onBreedingClick ?? onMove}
         />
       </div>
 
@@ -62,6 +73,9 @@ export function PlayerHalf({
           targetedSlots={targetedSlots}
           onSlotClick={onSlotClick}
           onSlotHover={onSlotHover}
+          dragValidDropSlots={dragValidDropSlots}
+          isDraggingHandCard={isDraggingHandCard}
+          canPlayDragged={canPlayDragged}
         />
       </div>
 

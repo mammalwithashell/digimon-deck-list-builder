@@ -18,8 +18,9 @@ class BT20_080(CardScript):
         effect0 = ICardEffect()
         effect0.set_effect_name("BT20-080 Alternate digivolution requirement")
         effect0.set_effect_description("Alternate digivolution requirement")
-        # Alternate digivolution: from [Soloogarmon] for cost 3
+        # Alternate digivolution: Lv.5 from [Soloogarmon] for cost 3
         effect0._alt_digi_cost = 3
+        effect0._alt_digi_level = 5
         effect0._alt_digi_name = "Soloogarmon"
 
         def condition0(context: Dict[str, Any]) -> bool:
@@ -128,7 +129,7 @@ class BT20_080(CardScript):
             if enemy:
                 for _ in range(1):
                     if enemy.security_cards:
-                        trashed = enemy.security_cards.pop()
+                        trashed = enemy.security_cards.pop(0)
                         enemy.trash_cards.append(trashed)
 
         effect4.set_on_process_callback(process4)

@@ -18,8 +18,9 @@ class BT20_015(CardScript):
         effect0 = ICardEffect()
         effect0.set_effect_name("BT20-015 Alternate digivolution requirement")
         effect0.set_effect_description("Alternate digivolution requirement")
-        # Alternate digivolution: from [Ginryumon] with [Chronicle] trait for cost 3
+        # Alternate digivolution: Lv.4 from [Ginryumon] with [Chronicle] trait for cost 3
         effect0._alt_digi_cost = 3
+        effect0._alt_digi_level = 4
         effect0._alt_digi_name = "Ginryumon"
         effect0._alt_digi_trait = "Chronicle"
 

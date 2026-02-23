@@ -35,6 +35,7 @@ class EffectBlock:
     play_from_zone: Optional[str] = None
     play_free: bool = False
     digi_cost_override: Optional[int] = None
+    digi_level: Optional[int] = None  # alt digi: required base level (from IsLevel\d)
     digi_ignore_reqs: bool = False
     factory_dp_value: Optional[int] = None
     factory_sa_value: Optional[int] = None

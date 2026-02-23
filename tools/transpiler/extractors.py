@@ -52,6 +52,7 @@ from .patterns import (
     RE_FACTORY_ADD_DIGI_REQ, RE_FACTORY_CHANGE_DIGI_COST,
     RE_FACTORY_CHANGE_DIGI_COST_VALUE,
     RE_FACTORY_DIGI_REQ_COST, RE_FACTORY_DIGI_REQ_NAME, RE_FACTORY_DIGI_REQ_TRAIT,
+    RE_FACTORY_DIGI_REQ_HAS_TS, RE_FACTORY_DIGI_REQ_HAS_APPMON,
     RE_FACTORY_DP_VALUE, RE_FACTORY_SA_VALUE,
     # P7: Stub reduction patterns
     RE_CHANGE_COST_VALUE,
@@ -265,6 +266,15 @@ def extract_factory_effects(block: str) -> List[EffectBlock]:
                 m_trait = RE_FACTORY_DIGI_REQ_TRAIT.search(block)
                 if m_trait:
                     eb.trait_checks.append(m_trait.group(1))
+                # Shorthand trait properties (HasTSTraits, HasAppmonTraits)
+                if RE_FACTORY_DIGI_REQ_HAS_TS.search(block) and "TS" not in eb.trait_checks:
+                    eb.trait_checks.append("TS")
+                if RE_FACTORY_DIGI_REQ_HAS_APPMON.search(block) and "Appmon" not in eb.trait_checks:
+                    eb.trait_checks.append("Appmon")
+                # Extract required base level (IsLevel2, IsLevel3, etc.)
+                m_level = RE_CF_IS_LEVEL.search(block)
+                if m_level:
+                    eb.digi_level = int(m_level.group(1))
             # Extract digivolve cost change value
             if method == "change_digi_cost":
                 m_val = RE_FACTORY_CHANGE_DIGI_COST_VALUE.search(block)

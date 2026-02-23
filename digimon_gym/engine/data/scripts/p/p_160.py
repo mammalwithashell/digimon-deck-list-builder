@@ -18,8 +18,9 @@ class P_160(CardScript):
         effect0 = ICardEffect()
         effect0.set_effect_name("P-160 Alternate digivolution requirement")
         effect0.set_effect_description("Alternate digivolution requirement")
-        # Alternate digivolution: with [X Antibody] trait for cost 0
+        # Alternate digivolution: Lv.4 with [X Antibody] trait for cost 0
         effect0._alt_digi_cost = 0
+        effect0._alt_digi_level = 4
         effect0._alt_digi_trait = "X Antibody"
 
         def condition0(context: Dict[str, Any]) -> bool:

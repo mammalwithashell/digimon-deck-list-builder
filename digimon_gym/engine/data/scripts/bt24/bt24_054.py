@@ -18,8 +18,9 @@ class BT24_054(CardScript):
         effect0 = ICardEffect()
         effect0.set_effect_name("BT24-054 Alternate digivolution requirement")
         effect0.set_effect_description("Alternate digivolution requirement")
-        # Alternate digivolution: from [Kyokyomon] with [DigiPolice] trait for cost 0
+        # Alternate digivolution: Lv.2 from [Kyokyomon] with [DigiPolice] trait for cost 0
         effect0._alt_digi_cost = 0
+        effect0._alt_digi_level = 2
         effect0._alt_digi_name = "Kyokyomon"
         effect0._alt_digi_trait = "DigiPolice"
 

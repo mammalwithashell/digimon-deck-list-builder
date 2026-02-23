@@ -6,24 +6,35 @@ import { MAX_BATTLE_AREA_SLOTS } from '@/utils/constants';
 interface DroppableSlotProps {
   slotIndex: number;
   isEmpty: boolean;
-  isValidTarget: boolean;
+  /** This slot is a valid drop target for the currently dragged card */
+  isValidDrop: boolean;
+  /** This slot should glow to indicate it's a valid digivolve target */
+  isDigivolveTarget: boolean;
   children: React.ReactNode;
   onClick?: () => void;
 }
 
-function DroppableSlot({ slotIndex, isEmpty, isValidTarget, children, onClick }: DroppableSlotProps) {
+function DroppableSlot({ slotIndex, isEmpty, isValidDrop, isDigivolveTarget, children, onClick }: DroppableSlotProps) {
   const dropType = isEmpty ? 'empty-field-slot' : 'occupied-field-slot';
   const { isOver, setNodeRef } = useDroppable({
     id: `field-slot-${slotIndex}`,
     data: { type: dropType, slotIndex },
   });
 
-  const showDropHighlight = isOver && isValidTarget;
+  const showDropHighlight = isOver && isValidDrop;
 
   return (
     <div
       ref={setNodeRef}
-      className={showDropHighlight ? 'ring-2 ring-green-400 rounded' : ''}
+      className={`rounded ${
+        showDropHighlight
+          ? isEmpty
+            ? 'ring-2 ring-green-400'
+            : 'ring-2 ring-purple-400'
+          : isDigivolveTarget
+            ? 'ring-2 ring-purple-400/60'
+            : ''
+      }`}
       onClick={onClick}
     >
       {children}
@@ -38,6 +49,12 @@ interface BattleAreaProps {
   targetedSlots?: Set<number>;
   onSlotClick?: (slotIndex: number) => void;
   onSlotHover?: (slotIndex: number | null) => void;
+  /** Field slots where dragged hand card can digivolve */
+  dragValidDropSlots?: Set<number>;
+  /** Whether a hand card is being dragged */
+  isDraggingHandCard?: boolean;
+  /** Whether the dragged hand card can be played (to empty slots) */
+  canPlayDragged?: boolean;
 }
 
 export function BattleArea({
@@ -47,6 +64,9 @@ export function BattleArea({
   targetedSlots,
   onSlotClick,
   onSlotHover,
+  dragValidDropSlots,
+  isDraggingHandCard = false,
+  canPlayDragged = false,
 }: BattleAreaProps) {
   const slots = Array.from({ length: MAX_BATTLE_AREA_SLOTS }, (_, i) => i);
 
@@ -61,7 +81,16 @@ export function BattleArea({
             key={i}
             slotIndex={i}
             isEmpty={isEmpty}
-            isValidTarget={!isOpponent}
+            isValidDrop={
+              !isOpponent && isDraggingHandCard
+                ? isEmpty
+                  ? canPlayDragged
+                  : (dragValidDropSlots?.has(i) ?? false)
+                : !isOpponent
+            }
+            isDigivolveTarget={
+              !isOpponent && isDraggingHandCard && !isEmpty && (dragValidDropSlots?.has(i) ?? false)
+            }
             onClick={() => onSlotClick?.(i)}
           >
             {isEmpty ? (

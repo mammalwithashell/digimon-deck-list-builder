@@ -17,13 +17,11 @@ if TYPE_CHECKING:
 
 
 def can_digivolve(evo_card: 'CardSource', base_perm: 'Permanent') -> bool:
-    """Check if evo_card can legally digivolve onto base_perm using evo_costs.
+    """Check if evo_card can legally digivolve onto base_perm.
 
-    Rules:
-    1. evo_card must be a Digimon with non-empty evo_costs
-    2. At least one evo_cost entry must match:
-       - evo_cost.level == base_perm.level (base must be at the required level)
-       - evo_cost.card_color in base_perm.top_card.card_colors (base must have the required color)
+    Checks two sources of digivolution requirements:
+    1. Standard evo_costs from card metadata (level + color match)
+    2. Alternate digivolution from card script effects (_alt_digi_* fields)
 
     Note: Memory cost is NOT checked here. Digivolution can send memory
     negative (triggering a turn switch), unlike playing cards.
@@ -33,25 +31,83 @@ def can_digivolve(evo_card: 'CardSource', base_perm: 'Permanent') -> bool:
         base_perm: The permanent on the field being digivolved onto.
 
     Returns:
-        True if at least one evo_cost requirement is satisfied.
+        True if at least one evo requirement (standard or alt) is satisfied.
     """
     if not evo_card.is_digimon:
-        return False
-
-    if not evo_card.c_entity_base or not evo_card.c_entity_base.evo_costs:
         return False
 
     if not base_perm.top_card:
         return False
 
-    base_colors = set(base_perm.top_card.card_colors)
-    base_level = base_perm.level
+    # 1. Standard evo_costs check
+    if evo_card.c_entity_base and evo_card.c_entity_base.evo_costs:
+        base_colors = set(base_perm.top_card.card_colors)
+        base_level = base_perm.level
+        for evo_cost in evo_card.c_entity_base.evo_costs:
+            if evo_cost.level == base_level and evo_cost.card_color in base_colors:
+                return True
 
-    for evo_cost in evo_card.c_entity_base.evo_costs:
-        if evo_cost.level == base_level and evo_cost.card_color in base_colors:
-            return True
+    # 2. Alternate digivolution check (from card script effects)
+    if _check_alt_digivolve(evo_card, base_perm):
+        return True
 
     return False
+
+
+def _check_alt_digivolve(evo_card: 'CardSource', base_perm: 'Permanent') -> bool:
+    """Check if evo_card has alt digi effects matching base_perm.
+
+    Scans the evo_card's NoTiming effects for _alt_digi_* fields
+    (set by the transpiler from AddSelfDigivolutionRequirementStaticEffect).
+    """
+    from ..data.enums import EffectTiming
+    effects = evo_card.effect_list(EffectTiming.NoTiming)
+    for effect in effects:
+        cost = getattr(effect, '_alt_digi_cost', None)
+        if cost is None:
+            continue
+        # Level check
+        req_level = getattr(effect, '_alt_digi_level', None)
+        if req_level is not None and base_perm.level != req_level:
+            continue
+        # Trait check
+        req_trait = getattr(effect, '_alt_digi_trait', None)
+        if req_trait is not None:
+            traits = getattr(base_perm.top_card, 'card_traits', []) or []
+            if not any(req_trait in t for t in traits):
+                continue
+        # Name check
+        req_name = getattr(effect, '_alt_digi_name', None)
+        if req_name is not None:
+            if not base_perm.contains_card_name(req_name):
+                continue
+        return True
+    return False
+
+
+def get_alt_digi_cost(evo_card: 'CardSource', base_perm: 'Permanent') -> int:
+    """Return the memory cost of the matching alt digi requirement, or 0."""
+    from ..data.enums import EffectTiming
+
+    effects = evo_card.effect_list(EffectTiming.NoTiming)
+    for effect in effects:
+        cost = getattr(effect, '_alt_digi_cost', None)
+        if cost is None:
+            continue
+        req_level = getattr(effect, '_alt_digi_level', None)
+        if req_level is not None and base_perm.level != req_level:
+            continue
+        req_trait = getattr(effect, '_alt_digi_trait', None)
+        if req_trait is not None:
+            traits = getattr(base_perm.top_card, 'card_traits', []) or []
+            if not any(req_trait in t for t in traits):
+                continue
+        req_name = getattr(effect, '_alt_digi_name', None)
+        if req_name is not None:
+            if not base_perm.contains_card_name(req_name):
+                continue
+        return cost
+    return 0
 
 
 # ─── DNA Digivolution Validation ──────────────────────────────────────

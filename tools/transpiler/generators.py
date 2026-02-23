@@ -531,7 +531,7 @@ def _emit_action(eb: EffectBlock, action: str, lines: List[str], indent: str):
         lines.append(f"{indent}if enemy:")
         lines.append(f"{indent}    for _ in range({count}):")
         lines.append(f"{indent}        if enemy.security_cards:")
-        lines.append(f"{indent}            trashed = enemy.security_cards.pop()")
+        lines.append(f"{indent}            trashed = enemy.security_cards.pop(0)")
         lines.append(f"{indent}            enemy.trash_cards.append(trashed)")
     elif action == "restrict_attack":
         lines.append(f"{indent}# Attack restriction — select opponent permanent to restrict")
@@ -883,7 +883,10 @@ def generate_factory_effect(eb: EffectBlock, card_id: str, idx: int) -> str:
         cost = eb.digi_cost_override if eb.digi_cost_override is not None else 0
         names = eb.name_checks
         traits = eb.trait_checks
+        level = eb.digi_level
         desc_parts = []
+        if level is not None:
+            desc_parts.append(f"Lv.{level}")
         if names:
             desc_parts.append(f"from [{names[0]}]")
         if traits:
@@ -891,6 +894,8 @@ def generate_factory_effect(eb: EffectBlock, card_id: str, idx: int) -> str:
         desc_str = " ".join(desc_parts) if desc_parts else "alternate source"
         lines.append(f"        # Alternate digivolution: {desc_str} for cost {cost}")
         lines.append(f"        {var}._alt_digi_cost = {cost}")
+        if level is not None:
+            lines.append(f"        {var}._alt_digi_level = {level}")
         if names:
             lines.append(f"        {var}._alt_digi_name = \"{names[0]}\"")
         if traits:

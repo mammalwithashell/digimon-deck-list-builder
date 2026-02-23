@@ -10,15 +10,23 @@ interface GameBoardProps {
   onSlotClick?: (isOpponent: boolean, slotIndex: number) => void;
   onHatch?: () => void;
   onMove?: () => void;
+  onBreedingClick?: () => void;
   onRevealedClick?: (index: number) => void;
   canHatch?: boolean;
   canMove?: boolean;
   canDigivolveBreeding?: boolean;
+  highlightBreeding?: boolean;
   playableHandIndices?: Set<number>;
   highlightedOwnSlots?: Set<number>;
   highlightedEnemySlots?: Set<number>;
   targetedSlots?: Set<number>;
   validRevealedIndices?: Set<number>;
+  /** Field slot indices where dragged hand card can digivolve */
+  dragValidDropSlots?: Set<number>;
+  /** Whether a hand card is currently being dragged */
+  isDraggingHandCard?: boolean;
+  /** Whether the dragged hand card can be played (to empty slots) */
+  canPlayDragged?: boolean;
 }
 
 export function GameBoard({
@@ -26,15 +34,20 @@ export function GameBoard({
   onSlotClick,
   onHatch,
   onMove,
+  onBreedingClick,
   onRevealedClick,
   canHatch = false,
   canMove = false,
   canDigivolveBreeding = false,
+  highlightBreeding = false,
   playableHandIndices,
   highlightedOwnSlots,
   highlightedEnemySlots,
   targetedSlots,
   validRevealedIndices,
+  dragValidDropSlots,
+  isDraggingHandCard = false,
+  canPlayDragged = false,
 }: GameBoardProps) {
   const {
     player1,
@@ -97,9 +110,14 @@ export function GameBoard({
           canHatch={canHatch}
           canMove={canMove}
           canDigivolveBreeding={canDigivolveBreeding}
+          highlightBreeding={highlightBreeding}
           onSlotClick={(i) => onSlotClick?.(false, i)}
           onHatch={onHatch}
           onMove={onMove}
+          onBreedingClick={onBreedingClick}
+          dragValidDropSlots={dragValidDropSlots}
+          isDraggingHandCard={isDraggingHandCard}
+          canPlayDragged={canPlayDragged}
         />
       </div>
 
