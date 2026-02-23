@@ -106,7 +106,7 @@ def main():
     project_root = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
     output_dir = args[1] if len(args) > 1 else os.path.join(
-        project_root, "digimon_gym", "engine", "data", "scripts", set_id
+        project_root, "digimon_gym", "engine", "data", "scripts", "generated", set_id
     )
 
     output_dir = os.path.abspath(output_dir)

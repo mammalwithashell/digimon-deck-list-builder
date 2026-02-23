@@ -8,7 +8,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from digimon_gym.db.auth import get_current_user
+from digimon_gym.db.auth import get_current_user, get_user_role_names
 from digimon_gym.db.database import get_db
 from digimon_gym.db.models import User
 from digimon_gym.db.schemas import UpdateProfileRequest, UserProfile, UserPublic
@@ -17,8 +17,21 @@ router = APIRouter(prefix="/users", tags=["users"])
 
 
 @router.get("/me", response_model=UserProfile)
-async def get_my_profile(user: User = Depends(get_current_user)):
-    return user
+async def get_my_profile(
+    user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    roles = sorted(await get_user_role_names(user.id, db))
+    return UserProfile(
+        id=user.id,
+        username=user.username,
+        email=user.email,
+        display_name=user.display_name,
+        avatar_url=user.avatar_url,
+        roles=roles,
+        created_at=user.created_at,
+        last_login_at=user.last_login_at,
+    )
 
 
 @router.patch("/me", response_model=UserProfile)
@@ -33,7 +46,17 @@ async def update_my_profile(
         user.avatar_url = request.avatar_url
     await db.commit()
     await db.refresh(user)
-    return user
+    roles = sorted(await get_user_role_names(user.id, db))
+    return UserProfile(
+        id=user.id,
+        username=user.username,
+        email=user.email,
+        display_name=user.display_name,
+        avatar_url=user.avatar_url,
+        roles=roles,
+        created_at=user.created_at,
+        last_login_at=user.last_login_at,
+    )
 
 
 @router.get("/search", response_model=List[UserPublic])

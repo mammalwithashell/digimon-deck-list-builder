@@ -28,3 +28,8 @@ export async function refresh(refreshToken: string): Promise<TokenResponse> {
 export async function logout(refreshToken: string): Promise<void> {
   await client.post('/auth/logout', { refresh_token: refreshToken });
 }
+
+export async function getMe(): Promise<User> {
+  const { data } = await client.get<User>('/users/me');
+  return data;
+}

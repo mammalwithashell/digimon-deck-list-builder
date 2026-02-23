@@ -1,0 +1,3292 @@
+{
+  "sets": [
+    "EX10",
+    "BT13",
+    "EX11",
+    "BT23",
+    "BT21",
+    "BT24"
+  ],
+  "missing_sets": [
+    "BT13",
+    "EX10",
+    "EX11"
+  ],
+  "batch_size": 5,
+  "summary": {
+    "total_candidates": 260,
+    "total_batches": 52,
+    "per_set": {
+      "EX10": {
+        "mode": "full",
+        "cards_in_db": 74,
+        "candidates": 74,
+        "token_candidates": 0,
+        "missing_generated": 0
+      },
+      "BT13": {
+        "mode": "full",
+        "cards_in_db": 112,
+        "candidates": 112,
+        "token_candidates": 0,
+        "missing_generated": 0
+      },
+      "EX11": {
+        "mode": "full",
+        "cards_in_db": 74,
+        "candidates": 74,
+        "token_candidates": 0,
+        "missing_generated": 0
+      },
+      "BT23": {
+        "mode": "diff_only",
+        "cards_in_db": 102,
+        "candidates": 0,
+        "token_candidates": 0,
+        "missing_generated": 0
+      },
+      "BT21": {
+        "mode": "diff_only",
+        "cards_in_db": 102,
+        "candidates": 0,
+        "token_candidates": 0,
+        "missing_generated": 0
+      },
+      "BT24": {
+        "mode": "diff_only",
+        "cards_in_db": 102,
+        "candidates": 0,
+        "token_candidates": 0,
+        "missing_generated": 0
+      }
+    }
+  },
+  "candidates": [
+    {
+      "card_id": "EX10-001",
+      "set_id": "ex10",
+      "module_name": "ex10_001",
+      "reason": "full_set"
+    },
+    {
+      "card_id": "EX10-002",
+      "set_id": "ex10",
+      "module_name": "ex10_002",
+      "reason": "full_set"
+    },
+    {
+      "card_id": "EX10-003",
+      "set_id": "ex10",
+      "module_name": "ex10_003",
+      "reason": "full_set"
+    },
+    {
+      "card_id": "EX10-004",
+      "set_id": "ex10",
+      "module_name": "ex10_004",
+      "reason": "full_set"
+    },
+    {
+      "card_id": "EX10-005",
+      "set_id": "ex10",
+      "module_name": "ex10_005",
+      "reason": "full_set"
+    },
+    {
+      "card_id": "EX10-006",
+      "set_id": "ex10",
+      "module_name": "ex10_006",
+      "reason": "full_set"
+    },
+    {
+      "card_id": "EX10-007",
+      "set_id": "ex10",
+      "module_name": "ex10_007",
+      "reason": "full_set"
+    },
+    {
+      "card_id": "EX10-008",
+      "set_id": "ex10",
+      "module_name": "ex10_008",
+      "reason": "full_set"
+    },
+    {
+      "card_id": "EX10-009",
+      "set_id": "ex10",
+      "module_name": "ex10_009",
+      "reason": "full_set"
+    },
+    {
+      "card_id": "EX10-010",
+      "set_id": "ex10",
+      "module_name": "ex10_010",
+      "reason": "full_set"
+    },
+    {
+      "card_id": "EX10-011",
+      "set_id": "ex10",
+      "module_name": "ex10_011",
+      "reason": "full_set"
+    },
+    {
+      "card_id": "EX10-012",
+      "set_id": "ex10",
+      "module_name": "ex10_012",
+      "reason": "full_set"
+    },
+    {
+      "card_id": "EX10-013",
+      "set_id": "ex10",
+      "module_name": "ex10_013",
+      "reason": "full_set"
+    },
+    {
+      "card_id": "EX10-014",
+      "set_id": "ex10",
+      "module_name": "ex10_014",
+      "reason": "full_set"
+    },
+    {
+      "card_id": "EX10-015",
+      "set_id": "ex10",
+      "module_name": "ex10_015",
+      "reason": "full_set"
+    },
+    {
+      "card_id": "EX10-016",
+      "set_id": "ex10",
+      "module_name": "ex10_016",
+      "reason": "full_set"
+    },
+    {
+      "card_id": "EX10-017",
+      "set_id": "ex10",
+      "module_name": "ex10_017",
+      "reason": "full_set"
+    },
+    {
+      "card_id": "EX10-018",
+      "set_id": "ex10",
+      "module_name": "ex10_018",
+      "reason": "full_set"
+    },
+    {
+      "card_id": "EX10-019",
+      "set_id": "ex10",
+      "module_name": "ex10_019",
+      "reason": "full_set"
+    },
+    {
+      "card_id": "EX10-020",
+      "set_id": "ex10",
+      "module_name": "ex10_020",
+      "reason": "full_set"
+    },
+    {
+      "card_id": "EX10-021",
+      "set_id": "ex10",
+      "module_name": "ex10_021",
+      "reason": "full_set"
+    },
+    {
+      "card_id": "EX10-022",
+      "set_id": "ex10",
+      "module_name": "ex10_022",
+      "reason": "full_set"
+    },
+    {
+      "card_id": "EX10-023",
+      "set_id": "ex10",
+      "module_name": "ex10_023",
+      "reason": "full_set"
+    },
+    {
+      "card_id": "EX10-024",
+      "set_id": "ex10",
+      "module_name": "ex10_024",
+      "reason": "full_set"
+    },
+    {
+      "card_id": "EX10-025",
+      "set_id": "ex10",
+      "module_name": "ex10_025",
+      "reason": "full_set"
+    },
+    {
+      "card_id": "EX10-026",
+      "set_id": "ex10",
+      "module_name": "ex10_026",
+      "reason": "full_set"
+    },
+    {
+      "card_id": "EX10-027",
+      "set_id": "ex10",
+      "module_name": "ex10_027",
+      "reason": "full_set"
+    },
+    {
+      "card_id": "EX10-028",
+      "set_id": "ex10",
+      "module_name": "ex10_028",
+      "reason": "full_set"
+    },
+    {
+      "card_id": "EX10-029",
+      "set_id": "ex10",
+      "module_name": "ex10_029",
+      "reason": "full_set"
+    },
+    {
+      "card_id": "EX10-030",
+      "set_id": "ex10",
+      "module_name": "ex10_030",
+      "reason": "full_set"
+    },
+    {
+      "card_id": "EX10-031",
+      "set_id": "ex10",
+      "module_name": "ex10_031",
+      "reason": "full_set"
+    },
+    {
+      "card_id": "EX10-032",
+      "set_id": "ex10",
+      "module_name": "ex10_032",
+      "reason": "full_set"
+    },
+    {
+      "card_id": "EX10-033",
+      "set_id": "ex10",
+      "module_name": "ex10_033",
+      "reason": "full_set"
+    },
+    {
+      "card_id": "EX10-034",
+      "set_id": "ex10",
+      "module_name": "ex10_034",
+      "reason": "full_set"
+    },
+    {
+      "card_id": "EX10-035",
+      "set_id": "ex10",
+      "module_name": "ex10_035",
+      "reason": "full_set"
+    },
+    {
+      "card_id": "EX10-036",
+      "set_id": "ex10",
+      "module_name": "ex10_036",
+      "reason": "full_set"
+    },
+    {
+      "card_id": "EX10-037",
+      "set_id": "ex10",
+      "module_name": "ex10_037",
+      "reason": "full_set"
+    },
+    {
+      "card_id": "EX10-038",
+      "set_id": "ex10",
+      "module_name": "ex10_038",
+      "reason": "full_set"
+    },
+    {
+      "card_id": "EX10-039",
+      "set_id": "ex10",
+      "module_name": "ex10_039",
+      "reason": "full_set"
+    },
+    {
+      "card_id": "EX10-040",
+      "set_id": "ex10",
+      "module_name": "ex10_040",
+      "reason": "full_set"
+    },
+    {
+      "card_id": "EX10-041",
+      "set_id": "ex10",
+      "module_name": "ex10_041",
+      "reason": "full_set"
+    },
+    {
+      "card_id": "EX10-042",
+      "set_id": "ex10",
+      "module_name": "ex10_042",
+      "reason": "full_set"
+    },
+    {
+      "card_id": "EX10-043",
+      "set_id": "ex10",
+      "module_name": "ex10_043",
+      "reason": "full_set"
+    },
+    {
+      "card_id": "EX10-044",
+      "set_id": "ex10",
+      "module_name": "ex10_044",
+      "reason": "full_set"
+    },
+    {
+      "card_id": "EX10-045",
+      "set_id": "ex10",
+      "module_name": "ex10_045",
+      "reason": "full_set"
+    },
+    {
+      "card_id": "EX10-046",
+      "set_id": "ex10",
+      "module_name": "ex10_046",
+      "reason": "full_set"
+    },
+    {
+      "card_id": "EX10-047",
+      "set_id": "ex10",
+      "module_name": "ex10_047",
+      "reason": "full_set"
+    },
+    {
+      "card_id": "EX10-048",
+      "set_id": "ex10",
+      "module_name": "ex10_048",
+      "reason": "full_set"
+    },
+    {
+      "card_id": "EX10-049",
+      "set_id": "ex10",
+      "module_name": "ex10_049",
+      "reason": "full_set"
+    },
+    {
+      "card_id": "EX10-050",
+      "set_id": "ex10",
+      "module_name": "ex10_050",
+      "reason": "full_set"
+    },
+    {
+      "card_id": "EX10-051",
+      "set_id": "ex10",
+      "module_name": "ex10_051",
+      "reason": "full_set"
+    },
+    {
+      "card_id": "EX10-052",
+      "set_id": "ex10",
+      "module_name": "ex10_052",
+      "reason": "full_set"
+    },
+    {
+      "card_id": "EX10-053",
+      "set_id": "ex10",
+      "module_name": "ex10_053",
+      "reason": "full_set"
+    },
+    {
+      "card_id": "EX10-054",
+      "set_id": "ex10",
+      "module_name": "ex10_054",
+      "reason": "full_set"
+    },
+    {
+      "card_id": "EX10-055",
+      "set_id": "ex10",
+      "module_name": "ex10_055",
+      "reason": "full_set"
+    },
+    {
+      "card_id": "EX10-056",
+      "set_id": "ex10",
+      "module_name": "ex10_056",
+      "reason": "full_set"
+    },
+    {
+      "card_id": "EX10-057",
+      "set_id": "ex10",
+      "module_name": "ex10_057",
+      "reason": "full_set"
+    },
+    {
+      "card_id": "EX10-058",
+      "set_id": "ex10",
+      "module_name": "ex10_058",
+      "reason": "full_set"
+    },
+    {
+      "card_id": "EX10-059",
+      "set_id": "ex10",
+      "module_name": "ex10_059",
+      "reason": "full_set"
+    },
+    {
+      "card_id": "EX10-060",
+      "set_id": "ex10",
+      "module_name": "ex10_060",
+      "reason": "full_set"
+    },
+    {
+      "card_id": "EX10-061",
+      "set_id": "ex10",
+      "module_name": "ex10_061",
+      "reason": "full_set"
+    },
+    {
+      "card_id": "EX10-062",
+      "set_id": "ex10",
+      "module_name": "ex10_062",
+      "reason": "full_set"
+    },
+    {
+      "card_id": "EX10-063",
+      "set_id": "ex10",
+      "module_name": "ex10_063",
+      "reason": "full_set"
+    },
+    {
+      "card_id": "EX10-064",
+      "set_id": "ex10",
+      "module_name": "ex10_064",
+      "reason": "full_set"
+    },
+    {
+      "card_id": "EX10-065",
+      "set_id": "ex10",
+      "module_name": "ex10_065",
+      "reason": "full_set"
+    },
+    {
+      "card_id": "EX10-066",
+      "set_id": "ex10",
+      "module_name": "ex10_066",
+      "reason": "full_set"
+    },
+    {
+      "card_id": "EX10-067",
+      "set_id": "ex10",
+      "module_name": "ex10_067",
+      "reason": "full_set"
+    },
+    {
+      "card_id": "EX10-068",
+      "set_id": "ex10",
+      "module_name": "ex10_068",
+      "reason": "full_set"
+    },
+    {
+      "card_id": "EX10-069",
+      "set_id": "ex10",
+      "module_name": "ex10_069",
+      "reason": "full_set"
+    },
+    {
+      "card_id": "EX10-070",
+      "set_id": "ex10",
+      "module_name": "ex10_070",
+      "reason": "full_set"
+    },
+    {
+      "card_id": "EX10-071",
+      "set_id": "ex10",
+      "module_name": "ex10_071",
+      "reason": "full_set"
+    },
+    {
+      "card_id": "EX10-072",
+      "set_id": "ex10",
+      "module_name": "ex10_072",
+      "reason": "full_set"
+    },
+    {
+      "card_id": "EX10-073",
+      "set_id": "ex10",
+      "module_name": "ex10_073",
+      "reason": "full_set"
+    },
+    {
+      "card_id": "EX10-074",
+      "set_id": "ex10",
+      "module_name": "ex10_074",
+      "reason": "full_set"
+    },
+    {
+      "card_id": "BT13-001",
+      "set_id": "bt13",
+      "module_name": "bt13_001",
+      "reason": "full_set"
+    },
+    {
+      "card_id": "BT13-002",
+      "set_id": "bt13",
+      "module_name": "bt13_002",
+      "reason": "full_set"
+    },
+    {
+      "card_id": "BT13-003",
+      "set_id": "bt13",
+      "module_name": "bt13_003",
+      "reason": "full_set"
+    },
+    {
+      "card_id": "BT13-004",
+      "set_id": "bt13",
+      "module_name": "bt13_004",
+      "reason": "full_set"
+    },
+    {
+      "card_id": "BT13-005",
+      "set_id": "bt13",
+      "module_name": "bt13_005",
+      "reason": "full_set"
+    },
+    {
+      "card_id": "BT13-006",
+      "set_id": "bt13",
+      "module_name": "bt13_006",
+      "reason": "full_set"
+    },
+    {
+      "card_id": "BT13-007",
+      "set_id": "bt13",
+      "module_name": "bt13_007",
+      "reason": "full_set"
+    },
+    {
+      "card_id": "BT13-008",
+      "set_id": "bt13",
+      "module_name": "bt13_008",
+      "reason": "full_set"
+    },
+    {
+      "card_id": "BT13-009",
+      "set_id": "bt13",
+      "module_name": "bt13_009",
+      "reason": "full_set"
+    },
+    {
+      "card_id": "BT13-010",
+      "set_id": "bt13",
+      "module_name": "bt13_010",
+      "reason": "full_set"
+    },
+    {
+      "card_id": "BT13-011",
+      "set_id": "bt13",
+      "module_name": "bt13_011",
+      "reason": "full_set"
+    },
+    {
+      "card_id": "BT13-012",
+      "set_id": "bt13",
+      "module_name": "bt13_012",
+      "reason": "full_set"
+    },
+    {
+      "card_id": "BT13-013",
+      "set_id": "bt13",
+      "module_name": "bt13_013",
+      "reason": "full_set"
+    },
+    {
+      "card_id": "BT13-014",
+      "set_id": "bt13",
+      "module_name": "bt13_014",
+      "reason": "full_set"
+    },
+    {
+      "card_id": "BT13-015",
+      "set_id": "bt13",
+      "module_name": "bt13_015",
+      "reason": "full_set"
+    },
+    {
+      "card_id": "BT13-016",
+      "set_id": "bt13",
+      "module_name": "bt13_016",
+      "reason": "full_set"
+    },
+    {
+      "card_id": "BT13-017",
+      "set_id": "bt13",
+      "module_name": "bt13_017",
+      "reason": "full_set"
+    },
+    {
+      "card_id": "BT13-018",
+      "set_id": "bt13",
+      "module_name": "bt13_018",
+      "reason": "full_set"
+    },
+    {
+      "card_id": "BT13-019",
+      "set_id": "bt13",
+      "module_name": "bt13_019",
+      "reason": "full_set"
+    },
+    {
+      "card_id": "BT13-020",
+      "set_id": "bt13",
+      "module_name": "bt13_020",
+      "reason": "full_set"
+    },
+    {
+      "card_id": "BT13-021",
+      "set_id": "bt13",
+      "module_name": "bt13_021",
+      "reason": "full_set"
+    },
+    {
+      "card_id": "BT13-022",
+      "set_id": "bt13",
+      "module_name": "bt13_022",
+      "reason": "full_set"
+    },
+    {
+      "card_id": "BT13-023",
+      "set_id": "bt13",
+      "module_name": "bt13_023",
+      "reason": "full_set"
+    },
+    {
+      "card_id": "BT13-024",
+      "set_id": "bt13",
+      "module_name": "bt13_024",
+      "reason": "full_set"
+    },
+    {
+      "card_id": "BT13-025",
+      "set_id": "bt13",
+      "module_name": "bt13_025",
+      "reason": "full_set"
+    },
+    {
+      "card_id": "BT13-026",
+      "set_id": "bt13",
+      "module_name": "bt13_026",
+      "reason": "full_set"
+    },
+    {
+      "card_id": "BT13-027",
+      "set_id": "bt13",
+      "module_name": "bt13_027",
+      "reason": "full_set"
+    },
+    {
+      "card_id": "BT13-028",
+      "set_id": "bt13",
+      "module_name": "bt13_028",
+      "reason": "full_set"
+    },
+    {
+      "card_id": "BT13-029",
+      "set_id": "bt13",
+      "module_name": "bt13_029",
+      "reason": "full_set"
+    },
+    {
+      "card_id": "BT13-030",
+      "set_id": "bt13",
+      "module_name": "bt13_030",
+      "reason": "full_set"
+    },
+    {
+      "card_id": "BT13-031",
+      "set_id": "bt13",
+      "module_name": "bt13_031",
+      "reason": "full_set"
+    },
+    {
+      "card_id": "BT13-032",
+      "set_id": "bt13",
+      "module_name": "bt13_032",
+      "reason": "full_set"
+    },
+    {
+      "card_id": "BT13-033",
+      "set_id": "bt13",
+      "module_name": "bt13_033",
+      "reason": "full_set"
+    },
+    {
+      "card_id": "BT13-034",
+      "set_id": "bt13",
+      "module_name": "bt13_034",
+      "reason": "full_set"
+    },
+    {
+      "card_id": "BT13-035",
+      "set_id": "bt13",
+      "module_name": "bt13_035",
+      "reason": "full_set"
+    },
+    {
+      "card_id": "BT13-036",
+      "set_id": "bt13",
+      "module_name": "bt13_036",
+      "reason": "full_set"
+    },
+    {
+      "card_id": "BT13-037",
+      "set_id": "bt13",
+      "module_name": "bt13_037",
+      "reason": "full_set"
+    },
+    {
+      "card_id": "BT13-038",
+      "set_id": "bt13",
+      "module_name": "bt13_038",
+      "reason": "full_set"
+    },
+    {
+      "card_id": "BT13-039",
+      "set_id": "bt13",
+      "module_name": "bt13_039",
+      "reason": "full_set"
+    },
+    {
+      "card_id": "BT13-040",
+      "set_id": "bt13",
+      "module_name": "bt13_040",
+      "reason": "full_set"
+    },
+    {
+      "card_id": "BT13-041",
+      "set_id": "bt13",
+      "module_name": "bt13_041",
+      "reason": "full_set"
+    },
+    {
+      "card_id": "BT13-042",
+      "set_id": "bt13",
+      "module_name": "bt13_042",
+      "reason": "full_set"
+    },
+    {
+      "card_id": "BT13-043",
+      "set_id": "bt13",
+      "module_name": "bt13_043",
+      "reason": "full_set"
+    },
+    {
+      "card_id": "BT13-044",
+      "set_id": "bt13",
+      "module_name": "bt13_044",
+      "reason": "full_set"
+    },
+    {
+      "card_id": "BT13-045",
+      "set_id": "bt13",
+      "module_name": "bt13_045",
+      "reason": "full_set"
+    },
+    {
+      "card_id": "BT13-046",
+      "set_id": "bt13",
+      "module_name": "bt13_046",
+      "reason": "full_set"
+    },
+    {
+      "card_id": "BT13-047",
+      "set_id": "bt13",
+      "module_name": "bt13_047",
+      "reason": "full_set"
+    },
+    {
+      "card_id": "BT13-048",
+      "set_id": "bt13",
+      "module_name": "bt13_048",
+      "reason": "full_set"
+    },
+    {
+      "card_id": "BT13-049",
+      "set_id": "bt13",
+      "module_name": "bt13_049",
+      "reason": "full_set"
+    },
+    {
+      "card_id": "BT13-050",
+      "set_id": "bt13",
+      "module_name": "bt13_050",
+      "reason": "full_set"
+    },
+    {
+      "card_id": "BT13-051",
+      "set_id": "bt13",
+      "module_name": "bt13_051",
+      "reason": "full_set"
+    },
+    {
+      "card_id": "BT13-052",
+      "set_id": "bt13",
+      "module_name": "bt13_052",
+      "reason": "full_set"
+    },
+    {
+      "card_id": "BT13-053",
+      "set_id": "bt13",
+      "module_name": "bt13_053",
+      "reason": "full_set"
+    },
+    {
+      "card_id": "BT13-054",
+      "set_id": "bt13",
+      "module_name": "bt13_054",
+      "reason": "full_set"
+    },
+    {
+      "card_id": "BT13-055",
+      "set_id": "bt13",
+      "module_name": "bt13_055",
+      "reason": "full_set"
+    },
+    {
+      "card_id": "BT13-056",
+      "set_id": "bt13",
+      "module_name": "bt13_056",
+      "reason": "full_set"
+    },
+    {
+      "card_id": "BT13-057",
+      "set_id": "bt13",
+      "module_name": "bt13_057",
+      "reason": "full_set"
+    },
+    {
+      "card_id": "BT13-058",
+      "set_id": "bt13",
+      "module_name": "bt13_058",
+      "reason": "full_set"
+    },
+    {
+      "card_id": "BT13-059",
+      "set_id": "bt13",
+      "module_name": "bt13_059",
+      "reason": "full_set"
+    },
+    {
+      "card_id": "BT13-060",
+      "set_id": "bt13",
+      "module_name": "bt13_060",
+      "reason": "full_set"
+    },
+    {
+      "card_id": "BT13-061",
+      "set_id": "bt13",
+      "module_name": "bt13_061",
+      "reason": "full_set"
+    },
+    {
+      "card_id": "BT13-062",
+      "set_id": "bt13",
+      "module_name": "bt13_062",
+      "reason": "full_set"
+    },
+    {
+      "card_id": "BT13-063",
+      "set_id": "bt13",
+      "module_name": "bt13_063",
+      "reason": "full_set"
+    },
+    {
+      "card_id": "BT13-064",
+      "set_id": "bt13",
+      "module_name": "bt13_064",
+      "reason": "full_set"
+    },
+    {
+      "card_id": "BT13-065",
+      "set_id": "bt13",
+      "module_name": "bt13_065",
+      "reason": "full_set"
+    },
+    {
+      "card_id": "BT13-066",
+      "set_id": "bt13",
+      "module_name": "bt13_066",
+      "reason": "full_set"
+    },
+    {
+      "card_id": "BT13-067",
+      "set_id": "bt13",
+      "module_name": "bt13_067",
+      "reason": "full_set"
+    },
+    {
+      "card_id": "BT13-068",
+      "set_id": "bt13",
+      "module_name": "bt13_068",
+      "reason": "full_set"
+    },
+    {
+      "card_id": "BT13-069",
+      "set_id": "bt13",
+      "module_name": "bt13_069",
+      "reason": "full_set"
+    },
+    {
+      "card_id": "BT13-070",
+      "set_id": "bt13",
+      "module_name": "bt13_070",
+      "reason": "full_set"
+    },
+    {
+      "card_id": "BT13-071",
+      "set_id": "bt13",
+      "module_name": "bt13_071",
+      "reason": "full_set"
+    },
+    {
+      "card_id": "BT13-072",
+      "set_id": "bt13",
+      "module_name": "bt13_072",
+      "reason": "full_set"
+    },
+    {
+      "card_id": "BT13-073",
+      "set_id": "bt13",
+      "module_name": "bt13_073",
+      "reason": "full_set"
+    },
+    {
+      "card_id": "BT13-074",
+      "set_id": "bt13",
+      "module_name": "bt13_074",
+      "reason": "full_set"
+    },
+    {
+      "card_id": "BT13-075",
+      "set_id": "bt13",
+      "module_name": "bt13_075",
+      "reason": "full_set"
+    },
+    {
+      "card_id": "BT13-076",
+      "set_id": "bt13",
+      "module_name": "bt13_076",
+      "reason": "full_set"
+    },
+    {
+      "card_id": "BT13-077",
+      "set_id": "bt13",
+      "module_name": "bt13_077",
+      "reason": "full_set"
+    },
+    {
+      "card_id": "BT13-078",
+      "set_id": "bt13",
+      "module_name": "bt13_078",
+      "reason": "full_set"
+    },
+    {
+      "card_id": "BT13-079",
+      "set_id": "bt13",
+      "module_name": "bt13_079",
+      "reason": "full_set"
+    },
+    {
+      "card_id": "BT13-080",
+      "set_id": "bt13",
+      "module_name": "bt13_080",
+      "reason": "full_set"
+    },
+    {
+      "card_id": "BT13-081",
+      "set_id": "bt13",
+      "module_name": "bt13_081",
+      "reason": "full_set"
+    },
+    {
+      "card_id": "BT13-082",
+      "set_id": "bt13",
+      "module_name": "bt13_082",
+      "reason": "full_set"
+    },
+    {
+      "card_id": "BT13-083",
+      "set_id": "bt13",
+      "module_name": "bt13_083",
+      "reason": "full_set"
+    },
+    {
+      "card_id": "BT13-084",
+      "set_id": "bt13",
+      "module_name": "bt13_084",
+      "reason": "full_set"
+    },
+    {
+      "card_id": "BT13-085",
+      "set_id": "bt13",
+      "module_name": "bt13_085",
+      "reason": "full_set"
+    },
+    {
+      "card_id": "BT13-086",
+      "set_id": "bt13",
+      "module_name": "bt13_086",
+      "reason": "full_set"
+    },
+    {
+      "card_id": "BT13-087",
+      "set_id": "bt13",
+      "module_name": "bt13_087",
+      "reason": "full_set"
+    },
+    {
+      "card_id": "BT13-088",
+      "set_id": "bt13",
+      "module_name": "bt13_088",
+      "reason": "full_set"
+    },
+    {
+      "card_id": "BT13-089",
+      "set_id": "bt13",
+      "module_name": "bt13_089",
+      "reason": "full_set"
+    },
+    {
+      "card_id": "BT13-090",
+      "set_id": "bt13",
+      "module_name": "bt13_090",
+      "reason": "full_set"
+    },
+    {
+      "card_id": "BT13-091",
+      "set_id": "bt13",
+      "module_name": "bt13_091",
+      "reason": "full_set"
+    },
+    {
+      "card_id": "BT13-092",
+      "set_id": "bt13",
+      "module_name": "bt13_092",
+      "reason": "full_set"
+    },
+    {
+      "card_id": "BT13-093",
+      "set_id": "bt13",
+      "module_name": "bt13_093",
+      "reason": "full_set"
+    },
+    {
+      "card_id": "BT13-094",
+      "set_id": "bt13",
+      "module_name": "bt13_094",
+      "reason": "full_set"
+    },
+    {
+      "card_id": "BT13-095",
+      "set_id": "bt13",
+      "module_name": "bt13_095",
+      "reason": "full_set"
+    },
+    {
+      "card_id": "BT13-096",
+      "set_id": "bt13",
+      "module_name": "bt13_096",
+      "reason": "full_set"
+    },
+    {
+      "card_id": "BT13-097",
+      "set_id": "bt13",
+      "module_name": "bt13_097",
+      "reason": "full_set"
+    },
+    {
+      "card_id": "BT13-098",
+      "set_id": "bt13",
+      "module_name": "bt13_098",
+      "reason": "full_set"
+    },
+    {
+      "card_id": "BT13-099",
+      "set_id": "bt13",
+      "module_name": "bt13_099",
+      "reason": "full_set"
+    },
+    {
+      "card_id": "BT13-100",
+      "set_id": "bt13",
+      "module_name": "bt13_100",
+      "reason": "full_set"
+    },
+    {
+      "card_id": "BT13-101",
+      "set_id": "bt13",
+      "module_name": "bt13_101",
+      "reason": "full_set"
+    },
+    {
+      "card_id": "BT13-102",
+      "set_id": "bt13",
+      "module_name": "bt13_102",
+      "reason": "full_set"
+    },
+    {
+      "card_id": "BT13-103",
+      "set_id": "bt13",
+      "module_name": "bt13_103",
+      "reason": "full_set"
+    },
+    {
+      "card_id": "BT13-104",
+      "set_id": "bt13",
+      "module_name": "bt13_104",
+      "reason": "full_set"
+    },
+    {
+      "card_id": "BT13-105",
+      "set_id": "bt13",
+      "module_name": "bt13_105",
+      "reason": "full_set"
+    },
+    {
+      "card_id": "BT13-106",
+      "set_id": "bt13",
+      "module_name": "bt13_106",
+      "reason": "full_set"
+    },
+    {
+      "card_id": "BT13-107",
+      "set_id": "bt13",
+      "module_name": "bt13_107",
+      "reason": "full_set"
+    },
+    {
+      "card_id": "BT13-108",
+      "set_id": "bt13",
+      "module_name": "bt13_108",
+      "reason": "full_set"
+    },
+    {
+      "card_id": "BT13-109",
+      "set_id": "bt13",
+      "module_name": "bt13_109",
+      "reason": "full_set"
+    },
+    {
+      "card_id": "BT13-110",
+      "set_id": "bt13",
+      "module_name": "bt13_110",
+      "reason": "full_set"
+    },
+    {
+      "card_id": "BT13-111",
+      "set_id": "bt13",
+      "module_name": "bt13_111",
+      "reason": "full_set"
+    },
+    {
+      "card_id": "BT13-112",
+      "set_id": "bt13",
+      "module_name": "bt13_112",
+      "reason": "full_set"
+    },
+    {
+      "card_id": "EX11-001",
+      "set_id": "ex11",
+      "module_name": "ex11_001",
+      "reason": "full_set"
+    },
+    {
+      "card_id": "EX11-002",
+      "set_id": "ex11",
+      "module_name": "ex11_002",
+      "reason": "full_set"
+    },
+    {
+      "card_id": "EX11-003",
+      "set_id": "ex11",
+      "module_name": "ex11_003",
+      "reason": "full_set"
+    },
+    {
+      "card_id": "EX11-004",
+      "set_id": "ex11",
+      "module_name": "ex11_004",
+      "reason": "full_set"
+    },
+    {
+      "card_id": "EX11-005",
+      "set_id": "ex11",
+      "module_name": "ex11_005",
+      "reason": "full_set"
+    },
+    {
+      "card_id": "EX11-006",
+      "set_id": "ex11",
+      "module_name": "ex11_006",
+      "reason": "full_set"
+    },
+    {
+      "card_id": "EX11-007",
+      "set_id": "ex11",
+      "module_name": "ex11_007",
+      "reason": "full_set"
+    },
+    {
+      "card_id": "EX11-008",
+      "set_id": "ex11",
+      "module_name": "ex11_008",
+      "reason": "full_set"
+    },
+    {
+      "card_id": "EX11-009",
+      "set_id": "ex11",
+      "module_name": "ex11_009",
+      "reason": "full_set"
+    },
+    {
+      "card_id": "EX11-010",
+      "set_id": "ex11",
+      "module_name": "ex11_010",
+      "reason": "full_set"
+    },
+    {
+      "card_id": "EX11-011",
+      "set_id": "ex11",
+      "module_name": "ex11_011",
+      "reason": "full_set"
+    },
+    {
+      "card_id": "EX11-012",
+      "set_id": "ex11",
+      "module_name": "ex11_012",
+      "reason": "full_set"
+    },
+    {
+      "card_id": "EX11-013",
+      "set_id": "ex11",
+      "module_name": "ex11_013",
+      "reason": "full_set"
+    },
+    {
+      "card_id": "EX11-014",
+      "set_id": "ex11",
+      "module_name": "ex11_014",
+      "reason": "full_set"
+    },
+    {
+      "card_id": "EX11-015",
+      "set_id": "ex11",
+      "module_name": "ex11_015",
+      "reason": "full_set"
+    },
+    {
+      "card_id": "EX11-016",
+      "set_id": "ex11",
+      "module_name": "ex11_016",
+      "reason": "full_set"
+    },
+    {
+      "card_id": "EX11-017",
+      "set_id": "ex11",
+      "module_name": "ex11_017",
+      "reason": "full_set"
+    },
+    {
+      "card_id": "EX11-018",
+      "set_id": "ex11",
+      "module_name": "ex11_018",
+      "reason": "full_set"
+    },
+    {
+      "card_id": "EX11-019",
+      "set_id": "ex11",
+      "module_name": "ex11_019",
+      "reason": "full_set"
+    },
+    {
+      "card_id": "EX11-020",
+      "set_id": "ex11",
+      "module_name": "ex11_020",
+      "reason": "full_set"
+    },
+    {
+      "card_id": "EX11-021",
+      "set_id": "ex11",
+      "module_name": "ex11_021",
+      "reason": "full_set"
+    },
+    {
+      "card_id": "EX11-022",
+      "set_id": "ex11",
+      "module_name": "ex11_022",
+      "reason": "full_set"
+    },
+    {
+      "card_id": "EX11-023",
+      "set_id": "ex11",
+      "module_name": "ex11_023",
+      "reason": "full_set"
+    },
+    {
+      "card_id": "EX11-024",
+      "set_id": "ex11",
+      "module_name": "ex11_024",
+      "reason": "full_set"
+    },
+    {
+      "card_id": "EX11-025",
+      "set_id": "ex11",
+      "module_name": "ex11_025",
+      "reason": "full_set"
+    },
+    {
+      "card_id": "EX11-026",
+      "set_id": "ex11",
+      "module_name": "ex11_026",
+      "reason": "full_set"
+    },
+    {
+      "card_id": "EX11-027",
+      "set_id": "ex11",
+      "module_name": "ex11_027",
+      "reason": "full_set"
+    },
+    {
+      "card_id": "EX11-028",
+      "set_id": "ex11",
+      "module_name": "ex11_028",
+      "reason": "full_set"
+    },
+    {
+      "card_id": "EX11-029",
+      "set_id": "ex11",
+      "module_name": "ex11_029",
+      "reason": "full_set"
+    },
+    {
+      "card_id": "EX11-030",
+      "set_id": "ex11",
+      "module_name": "ex11_030",
+      "reason": "full_set"
+    },
+    {
+      "card_id": "EX11-031",
+      "set_id": "ex11",
+      "module_name": "ex11_031",
+      "reason": "full_set"
+    },
+    {
+      "card_id": "EX11-032",
+      "set_id": "ex11",
+      "module_name": "ex11_032",
+      "reason": "full_set"
+    },
+    {
+      "card_id": "EX11-033",
+      "set_id": "ex11",
+      "module_name": "ex11_033",
+      "reason": "full_set"
+    },
+    {
+      "card_id": "EX11-034",
+      "set_id": "ex11",
+      "module_name": "ex11_034",
+      "reason": "full_set"
+    },
+    {
+      "card_id": "EX11-035",
+      "set_id": "ex11",
+      "module_name": "ex11_035",
+      "reason": "full_set"
+    },
+    {
+      "card_id": "EX11-036",
+      "set_id": "ex11",
+      "module_name": "ex11_036",
+      "reason": "full_set"
+    },
+    {
+      "card_id": "EX11-037",
+      "set_id": "ex11",
+      "module_name": "ex11_037",
+      "reason": "full_set"
+    },
+    {
+      "card_id": "EX11-038",
+      "set_id": "ex11",
+      "module_name": "ex11_038",
+      "reason": "full_set"
+    },
+    {
+      "card_id": "EX11-039",
+      "set_id": "ex11",
+      "module_name": "ex11_039",
+      "reason": "full_set"
+    },
+    {
+      "card_id": "EX11-040",
+      "set_id": "ex11",
+      "module_name": "ex11_040",
+      "reason": "full_set"
+    },
+    {
+      "card_id": "EX11-041",
+      "set_id": "ex11",
+      "module_name": "ex11_041",
+      "reason": "full_set"
+    },
+    {
+      "card_id": "EX11-042",
+      "set_id": "ex11",
+      "module_name": "ex11_042",
+      "reason": "full_set"
+    },
+    {
+      "card_id": "EX11-043",
+      "set_id": "ex11",
+      "module_name": "ex11_043",
+      "reason": "full_set"
+    },
+    {
+      "card_id": "EX11-044",
+      "set_id": "ex11",
+      "module_name": "ex11_044",
+      "reason": "full_set"
+    },
+    {
+      "card_id": "EX11-045",
+      "set_id": "ex11",
+      "module_name": "ex11_045",
+      "reason": "full_set"
+    },
+    {
+      "card_id": "EX11-046",
+      "set_id": "ex11",
+      "module_name": "ex11_046",
+      "reason": "full_set"
+    },
+    {
+      "card_id": "EX11-047",
+      "set_id": "ex11",
+      "module_name": "ex11_047",
+      "reason": "full_set"
+    },
+    {
+      "card_id": "EX11-048",
+      "set_id": "ex11",
+      "module_name": "ex11_048",
+      "reason": "full_set"
+    },
+    {
+      "card_id": "EX11-049",
+      "set_id": "ex11",
+      "module_name": "ex11_049",
+      "reason": "full_set"
+    },
+    {
+      "card_id": "EX11-050",
+      "set_id": "ex11",
+      "module_name": "ex11_050",
+      "reason": "full_set"
+    },
+    {
+      "card_id": "EX11-051",
+      "set_id": "ex11",
+      "module_name": "ex11_051",
+      "reason": "full_set"
+    },
+    {
+      "card_id": "EX11-052",
+      "set_id": "ex11",
+      "module_name": "ex11_052",
+      "reason": "full_set"
+    },
+    {
+      "card_id": "EX11-053",
+      "set_id": "ex11",
+      "module_name": "ex11_053",
+      "reason": "full_set"
+    },
+    {
+      "card_id": "EX11-054",
+      "set_id": "ex11",
+      "module_name": "ex11_054",
+      "reason": "full_set"
+    },
+    {
+      "card_id": "EX11-055",
+      "set_id": "ex11",
+      "module_name": "ex11_055",
+      "reason": "full_set"
+    },
+    {
+      "card_id": "EX11-056",
+      "set_id": "ex11",
+      "module_name": "ex11_056",
+      "reason": "full_set"
+    },
+    {
+      "card_id": "EX11-057",
+      "set_id": "ex11",
+      "module_name": "ex11_057",
+      "reason": "full_set"
+    },
+    {
+      "card_id": "EX11-058",
+      "set_id": "ex11",
+      "module_name": "ex11_058",
+      "reason": "full_set"
+    },
+    {
+      "card_id": "EX11-059",
+      "set_id": "ex11",
+      "module_name": "ex11_059",
+      "reason": "full_set"
+    },
+    {
+      "card_id": "EX11-060",
+      "set_id": "ex11",
+      "module_name": "ex11_060",
+      "reason": "full_set"
+    },
+    {
+      "card_id": "EX11-061",
+      "set_id": "ex11",
+      "module_name": "ex11_061",
+      "reason": "full_set"
+    },
+    {
+      "card_id": "EX11-062",
+      "set_id": "ex11",
+      "module_name": "ex11_062",
+      "reason": "full_set"
+    },
+    {
+      "card_id": "EX11-063",
+      "set_id": "ex11",
+      "module_name": "ex11_063",
+      "reason": "full_set"
+    },
+    {
+      "card_id": "EX11-064",
+      "set_id": "ex11",
+      "module_name": "ex11_064",
+      "reason": "full_set"
+    },
+    {
+      "card_id": "EX11-065",
+      "set_id": "ex11",
+      "module_name": "ex11_065",
+      "reason": "full_set"
+    },
+    {
+      "card_id": "EX11-066",
+      "set_id": "ex11",
+      "module_name": "ex11_066",
+      "reason": "full_set"
+    },
+    {
+      "card_id": "EX11-067",
+      "set_id": "ex11",
+      "module_name": "ex11_067",
+      "reason": "full_set"
+    },
+    {
+      "card_id": "EX11-068",
+      "set_id": "ex11",
+      "module_name": "ex11_068",
+      "reason": "full_set"
+    },
+    {
+      "card_id": "EX11-069",
+      "set_id": "ex11",
+      "module_name": "ex11_069",
+      "reason": "full_set"
+    },
+    {
+      "card_id": "EX11-070",
+      "set_id": "ex11",
+      "module_name": "ex11_070",
+      "reason": "full_set"
+    },
+    {
+      "card_id": "EX11-071",
+      "set_id": "ex11",
+      "module_name": "ex11_071",
+      "reason": "full_set"
+    },
+    {
+      "card_id": "EX11-072",
+      "set_id": "ex11",
+      "module_name": "ex11_072",
+      "reason": "full_set"
+    },
+    {
+      "card_id": "EX11-073",
+      "set_id": "ex11",
+      "module_name": "ex11_073",
+      "reason": "full_set"
+    },
+    {
+      "card_id": "EX11-074",
+      "set_id": "ex11",
+      "module_name": "ex11_074",
+      "reason": "full_set"
+    }
+  ],
+  "batches": [
+    [
+      {
+        "card_id": "EX10-001",
+        "set_id": "ex10",
+        "module_name": "ex10_001",
+        "reason": "full_set"
+      },
+      {
+        "card_id": "EX10-002",
+        "set_id": "ex10",
+        "module_name": "ex10_002",
+        "reason": "full_set"
+      },
+      {
+        "card_id": "EX10-003",
+        "set_id": "ex10",
+        "module_name": "ex10_003",
+        "reason": "full_set"
+      },
+      {
+        "card_id": "EX10-004",
+        "set_id": "ex10",
+        "module_name": "ex10_004",
+        "reason": "full_set"
+      },
+      {
+        "card_id": "EX10-005",
+        "set_id": "ex10",
+        "module_name": "ex10_005",
+        "reason": "full_set"
+      }
+    ],
+    [
+      {
+        "card_id": "EX10-006",
+        "set_id": "ex10",
+        "module_name": "ex10_006",
+        "reason": "full_set"
+      },
+      {
+        "card_id": "EX10-007",
+        "set_id": "ex10",
+        "module_name": "ex10_007",
+        "reason": "full_set"
+      },
+      {
+        "card_id": "EX10-008",
+        "set_id": "ex10",
+        "module_name": "ex10_008",
+        "reason": "full_set"
+      },
+      {
+        "card_id": "EX10-009",
+        "set_id": "ex10",
+        "module_name": "ex10_009",
+        "reason": "full_set"
+      },
+      {
+        "card_id": "EX10-010",
+        "set_id": "ex10",
+        "module_name": "ex10_010",
+        "reason": "full_set"
+      }
+    ],
+    [
+      {
+        "card_id": "EX10-011",
+        "set_id": "ex10",
+        "module_name": "ex10_011",
+        "reason": "full_set"
+      },
+      {
+        "card_id": "EX10-012",
+        "set_id": "ex10",
+        "module_name": "ex10_012",
+        "reason": "full_set"
+      },
+      {
+        "card_id": "EX10-013",
+        "set_id": "ex10",
+        "module_name": "ex10_013",
+        "reason": "full_set"
+      },
+      {
+        "card_id": "EX10-014",
+        "set_id": "ex10",
+        "module_name": "ex10_014",
+        "reason": "full_set"
+      },
+      {
+        "card_id": "EX10-015",
+        "set_id": "ex10",
+        "module_name": "ex10_015",
+        "reason": "full_set"
+      }
+    ],
+    [
+      {
+        "card_id": "EX10-016",
+        "set_id": "ex10",
+        "module_name": "ex10_016",
+        "reason": "full_set"
+      },
+      {
+        "card_id": "EX10-017",
+        "set_id": "ex10",
+        "module_name": "ex10_017",
+        "reason": "full_set"
+      },
+      {
+        "card_id": "EX10-018",
+        "set_id": "ex10",
+        "module_name": "ex10_018",
+        "reason": "full_set"
+      },
+      {
+        "card_id": "EX10-019",
+        "set_id": "ex10",
+        "module_name": "ex10_019",
+        "reason": "full_set"
+      },
+      {
+        "card_id": "EX10-020",
+        "set_id": "ex10",
+        "module_name": "ex10_020",
+        "reason": "full_set"
+      }
+    ],
+    [
+      {
+        "card_id": "EX10-021",
+        "set_id": "ex10",
+        "module_name": "ex10_021",
+        "reason": "full_set"
+      },
+      {
+        "card_id": "EX10-022",
+        "set_id": "ex10",
+        "module_name": "ex10_022",
+        "reason": "full_set"
+      },
+      {
+        "card_id": "EX10-023",
+        "set_id": "ex10",
+        "module_name": "ex10_023",
+        "reason": "full_set"
+      },
+      {
+        "card_id": "EX10-024",
+        "set_id": "ex10",
+        "module_name": "ex10_024",
+        "reason": "full_set"
+      },
+      {
+        "card_id": "EX10-025",
+        "set_id": "ex10",
+        "module_name": "ex10_025",
+        "reason": "full_set"
+      }
+    ],
+    [
+      {
+        "card_id": "EX10-026",
+        "set_id": "ex10",
+        "module_name": "ex10_026",
+        "reason": "full_set"
+      },
+      {
+        "card_id": "EX10-027",
+        "set_id": "ex10",
+        "module_name": "ex10_027",
+        "reason": "full_set"
+      },
+      {
+        "card_id": "EX10-028",
+        "set_id": "ex10",
+        "module_name": "ex10_028",
+        "reason": "full_set"
+      },
+      {
+        "card_id": "EX10-029",
+        "set_id": "ex10",
+        "module_name": "ex10_029",
+        "reason": "full_set"
+      },
+      {
+        "card_id": "EX10-030",
+        "set_id": "ex10",
+        "module_name": "ex10_030",
+        "reason": "full_set"
+      }
+    ],
+    [
+      {
+        "card_id": "EX10-031",
+        "set_id": "ex10",
+        "module_name": "ex10_031",
+        "reason": "full_set"
+      },
+      {
+        "card_id": "EX10-032",
+        "set_id": "ex10",
+        "module_name": "ex10_032",
+        "reason": "full_set"
+      },
+      {
+        "card_id": "EX10-033",
+        "set_id": "ex10",
+        "module_name": "ex10_033",
+        "reason": "full_set"
+      },
+      {
+        "card_id": "EX10-034",
+        "set_id": "ex10",
+        "module_name": "ex10_034",
+        "reason": "full_set"
+      },
+      {
+        "card_id": "EX10-035",
+        "set_id": "ex10",
+        "module_name": "ex10_035",
+        "reason": "full_set"
+      }
+    ],
+    [
+      {
+        "card_id": "EX10-036",
+        "set_id": "ex10",
+        "module_name": "ex10_036",
+        "reason": "full_set"
+      },
+      {
+        "card_id": "EX10-037",
+        "set_id": "ex10",
+        "module_name": "ex10_037",
+        "reason": "full_set"
+      },
+      {
+        "card_id": "EX10-038",
+        "set_id": "ex10",
+        "module_name": "ex10_038",
+        "reason": "full_set"
+      },
+      {
+        "card_id": "EX10-039",
+        "set_id": "ex10",
+        "module_name": "ex10_039",
+        "reason": "full_set"
+      },
+      {
+        "card_id": "EX10-040",
+        "set_id": "ex10",
+        "module_name": "ex10_040",
+        "reason": "full_set"
+      }
+    ],
+    [
+      {
+        "card_id": "EX10-041",
+        "set_id": "ex10",
+        "module_name": "ex10_041",
+        "reason": "full_set"
+      },
+      {
+        "card_id": "EX10-042",
+        "set_id": "ex10",
+        "module_name": "ex10_042",
+        "reason": "full_set"
+      },
+      {
+        "card_id": "EX10-043",
+        "set_id": "ex10",
+        "module_name": "ex10_043",
+        "reason": "full_set"
+      },
+      {
+        "card_id": "EX10-044",
+        "set_id": "ex10",
+        "module_name": "ex10_044",
+        "reason": "full_set"
+      },
+      {
+        "card_id": "EX10-045",
+        "set_id": "ex10",
+        "module_name": "ex10_045",
+        "reason": "full_set"
+      }
+    ],
+    [
+      {
+        "card_id": "EX10-046",
+        "set_id": "ex10",
+        "module_name": "ex10_046",
+        "reason": "full_set"
+      },
+      {
+        "card_id": "EX10-047",
+        "set_id": "ex10",
+        "module_name": "ex10_047",
+        "reason": "full_set"
+      },
+      {
+        "card_id": "EX10-048",
+        "set_id": "ex10",
+        "module_name": "ex10_048",
+        "reason": "full_set"
+      },
+      {
+        "card_id": "EX10-049",
+        "set_id": "ex10",
+        "module_name": "ex10_049",
+        "reason": "full_set"
+      },
+      {
+        "card_id": "EX10-050",
+        "set_id": "ex10",
+        "module_name": "ex10_050",
+        "reason": "full_set"
+      }
+    ],
+    [
+      {
+        "card_id": "EX10-051",
+        "set_id": "ex10",
+        "module_name": "ex10_051",
+        "reason": "full_set"
+      },
+      {
+        "card_id": "EX10-052",
+        "set_id": "ex10",
+        "module_name": "ex10_052",
+        "reason": "full_set"
+      },
+      {
+        "card_id": "EX10-053",
+        "set_id": "ex10",
+        "module_name": "ex10_053",
+        "reason": "full_set"
+      },
+      {
+        "card_id": "EX10-054",
+        "set_id": "ex10",
+        "module_name": "ex10_054",
+        "reason": "full_set"
+      },
+      {
+        "card_id": "EX10-055",
+        "set_id": "ex10",
+        "module_name": "ex10_055",
+        "reason": "full_set"
+      }
+    ],
+    [
+      {
+        "card_id": "EX10-056",
+        "set_id": "ex10",
+        "module_name": "ex10_056",
+        "reason": "full_set"
+      },
+      {
+        "card_id": "EX10-057",
+        "set_id": "ex10",
+        "module_name": "ex10_057",
+        "reason": "full_set"
+      },
+      {
+        "card_id": "EX10-058",
+        "set_id": "ex10",
+        "module_name": "ex10_058",
+        "reason": "full_set"
+      },
+      {
+        "card_id": "EX10-059",
+        "set_id": "ex10",
+        "module_name": "ex10_059",
+        "reason": "full_set"
+      },
+      {
+        "card_id": "EX10-060",
+        "set_id": "ex10",
+        "module_name": "ex10_060",
+        "reason": "full_set"
+      }
+    ],
+    [
+      {
+        "card_id": "EX10-061",
+        "set_id": "ex10",
+        "module_name": "ex10_061",
+        "reason": "full_set"
+      },
+      {
+        "card_id": "EX10-062",
+        "set_id": "ex10",
+        "module_name": "ex10_062",
+        "reason": "full_set"
+      },
+      {
+        "card_id": "EX10-063",
+        "set_id": "ex10",
+        "module_name": "ex10_063",
+        "reason": "full_set"
+      },
+      {
+        "card_id": "EX10-064",
+        "set_id": "ex10",
+        "module_name": "ex10_064",
+        "reason": "full_set"
+      },
+      {
+        "card_id": "EX10-065",
+        "set_id": "ex10",
+        "module_name": "ex10_065",
+        "reason": "full_set"
+      }
+    ],
+    [
+      {
+        "card_id": "EX10-066",
+        "set_id": "ex10",
+        "module_name": "ex10_066",
+        "reason": "full_set"
+      },
+      {
+        "card_id": "EX10-067",
+        "set_id": "ex10",
+        "module_name": "ex10_067",
+        "reason": "full_set"
+      },
+      {
+        "card_id": "EX10-068",
+        "set_id": "ex10",
+        "module_name": "ex10_068",
+        "reason": "full_set"
+      },
+      {
+        "card_id": "EX10-069",
+        "set_id": "ex10",
+        "module_name": "ex10_069",
+        "reason": "full_set"
+      },
+      {
+        "card_id": "EX10-070",
+        "set_id": "ex10",
+        "module_name": "ex10_070",
+        "reason": "full_set"
+      }
+    ],
+    [
+      {
+        "card_id": "EX10-071",
+        "set_id": "ex10",
+        "module_name": "ex10_071",
+        "reason": "full_set"
+      },
+      {
+        "card_id": "EX10-072",
+        "set_id": "ex10",
+        "module_name": "ex10_072",
+        "reason": "full_set"
+      },
+      {
+        "card_id": "EX10-073",
+        "set_id": "ex10",
+        "module_name": "ex10_073",
+        "reason": "full_set"
+      },
+      {
+        "card_id": "EX10-074",
+        "set_id": "ex10",
+        "module_name": "ex10_074",
+        "reason": "full_set"
+      },
+      {
+        "card_id": "BT13-001",
+        "set_id": "bt13",
+        "module_name": "bt13_001",
+        "reason": "full_set"
+      }
+    ],
+    [
+      {
+        "card_id": "BT13-002",
+        "set_id": "bt13",
+        "module_name": "bt13_002",
+        "reason": "full_set"
+      },
+      {
+        "card_id": "BT13-003",
+        "set_id": "bt13",
+        "module_name": "bt13_003",
+        "reason": "full_set"
+      },
+      {
+        "card_id": "BT13-004",
+        "set_id": "bt13",
+        "module_name": "bt13_004",
+        "reason": "full_set"
+      },
+      {
+        "card_id": "BT13-005",
+        "set_id": "bt13",
+        "module_name": "bt13_005",
+        "reason": "full_set"
+      },
+      {
+        "card_id": "BT13-006",
+        "set_id": "bt13",
+        "module_name": "bt13_006",
+        "reason": "full_set"
+      }
+    ],
+    [
+      {
+        "card_id": "BT13-007",
+        "set_id": "bt13",
+        "module_name": "bt13_007",
+        "reason": "full_set"
+      },
+      {
+        "card_id": "BT13-008",
+        "set_id": "bt13",
+        "module_name": "bt13_008",
+        "reason": "full_set"
+      },
+      {
+        "card_id": "BT13-009",
+        "set_id": "bt13",
+        "module_name": "bt13_009",
+        "reason": "full_set"
+      },
+      {
+        "card_id": "BT13-010",
+        "set_id": "bt13",
+        "module_name": "bt13_010",
+        "reason": "full_set"
+      },
+      {
+        "card_id": "BT13-011",
+        "set_id": "bt13",
+        "module_name": "bt13_011",
+        "reason": "full_set"
+      }
+    ],
+    [
+      {
+        "card_id": "BT13-012",
+        "set_id": "bt13",
+        "module_name": "bt13_012",
+        "reason": "full_set"
+      },
+      {
+        "card_id": "BT13-013",
+        "set_id": "bt13",
+        "module_name": "bt13_013",
+        "reason": "full_set"
+      },
+      {
+        "card_id": "BT13-014",
+        "set_id": "bt13",
+        "module_name": "bt13_014",
+        "reason": "full_set"
+      },
+      {
+        "card_id": "BT13-015",
+        "set_id": "bt13",
+        "module_name": "bt13_015",
+        "reason": "full_set"
+      },
+      {
+        "card_id": "BT13-016",
+        "set_id": "bt13",
+        "module_name": "bt13_016",
+        "reason": "full_set"
+      }
+    ],
+    [
+      {
+        "card_id": "BT13-017",
+        "set_id": "bt13",
+        "module_name": "bt13_017",
+        "reason": "full_set"
+      },
+      {
+        "card_id": "BT13-018",
+        "set_id": "bt13",
+        "module_name": "bt13_018",
+        "reason": "full_set"
+      },
+      {
+        "card_id": "BT13-019",
+        "set_id": "bt13",
+        "module_name": "bt13_019",
+        "reason": "full_set"
+      },
+      {
+        "card_id": "BT13-020",
+        "set_id": "bt13",
+        "module_name": "bt13_020",
+        "reason": "full_set"
+      },
+      {
+        "card_id": "BT13-021",
+        "set_id": "bt13",
+        "module_name": "bt13_021",
+        "reason": "full_set"
+      }
+    ],
+    [
+      {
+        "card_id": "BT13-022",
+        "set_id": "bt13",
+        "module_name": "bt13_022",
+        "reason": "full_set"
+      },
+      {
+        "card_id": "BT13-023",
+        "set_id": "bt13",
+        "module_name": "bt13_023",
+        "reason": "full_set"
+      },
+      {
+        "card_id": "BT13-024",
+        "set_id": "bt13",
+        "module_name": "bt13_024",
+        "reason": "full_set"
+      },
+      {
+        "card_id": "BT13-025",
+        "set_id": "bt13",
+        "module_name": "bt13_025",
+        "reason": "full_set"
+      },
+      {
+        "card_id": "BT13-026",
+        "set_id": "bt13",
+        "module_name": "bt13_026",
+        "reason": "full_set"
+      }
+    ],
+    [
+      {
+        "card_id": "BT13-027",
+        "set_id": "bt13",
+        "module_name": "bt13_027",
+        "reason": "full_set"
+      },
+      {
+        "card_id": "BT13-028",
+        "set_id": "bt13",
+        "module_name": "bt13_028",
+        "reason": "full_set"
+      },
+      {
+        "card_id": "BT13-029",
+        "set_id": "bt13",
+        "module_name": "bt13_029",
+        "reason": "full_set"
+      },
+      {
+        "card_id": "BT13-030",
+        "set_id": "bt13",
+        "module_name": "bt13_030",
+        "reason": "full_set"
+      },
+      {
+        "card_id": "BT13-031",
+        "set_id": "bt13",
+        "module_name": "bt13_031",
+        "reason": "full_set"
+      }
+    ],
+    [
+      {
+        "card_id": "BT13-032",
+        "set_id": "bt13",
+        "module_name": "bt13_032",
+        "reason": "full_set"
+      },
+      {
+        "card_id": "BT13-033",
+        "set_id": "bt13",
+        "module_name": "bt13_033",
+        "reason": "full_set"
+      },
+      {
+        "card_id": "BT13-034",
+        "set_id": "bt13",
+        "module_name": "bt13_034",
+        "reason": "full_set"
+      },
+      {
+        "card_id": "BT13-035",
+        "set_id": "bt13",
+        "module_name": "bt13_035",
+        "reason": "full_set"
+      },
+      {
+        "card_id": "BT13-036",
+        "set_id": "bt13",
+        "module_name": "bt13_036",
+        "reason": "full_set"
+      }
+    ],
+    [
+      {
+        "card_id": "BT13-037",
+        "set_id": "bt13",
+        "module_name": "bt13_037",
+        "reason": "full_set"
+      },
+      {
+        "card_id": "BT13-038",
+        "set_id": "bt13",
+        "module_name": "bt13_038",
+        "reason": "full_set"
+      },
+      {
+        "card_id": "BT13-039",
+        "set_id": "bt13",
+        "module_name": "bt13_039",
+        "reason": "full_set"
+      },
+      {
+        "card_id": "BT13-040",
+        "set_id": "bt13",
+        "module_name": "bt13_040",
+        "reason": "full_set"
+      },
+      {
+        "card_id": "BT13-041",
+        "set_id": "bt13",
+        "module_name": "bt13_041",
+        "reason": "full_set"
+      }
+    ],
+    [
+      {
+        "card_id": "BT13-042",
+        "set_id": "bt13",
+        "module_name": "bt13_042",
+        "reason": "full_set"
+      },
+      {
+        "card_id": "BT13-043",
+        "set_id": "bt13",
+        "module_name": "bt13_043",
+        "reason": "full_set"
+      },
+      {
+        "card_id": "BT13-044",
+        "set_id": "bt13",
+        "module_name": "bt13_044",
+        "reason": "full_set"
+      },
+      {
+        "card_id": "BT13-045",
+        "set_id": "bt13",
+        "module_name": "bt13_045",
+        "reason": "full_set"
+      },
+      {
+        "card_id": "BT13-046",
+        "set_id": "bt13",
+        "module_name": "bt13_046",
+        "reason": "full_set"
+      }
+    ],
+    [
+      {
+        "card_id": "BT13-047",
+        "set_id": "bt13",
+        "module_name": "bt13_047",
+        "reason": "full_set"
+      },
+      {
+        "card_id": "BT13-048",
+        "set_id": "bt13",
+        "module_name": "bt13_048",
+        "reason": "full_set"
+      },
+      {
+        "card_id": "BT13-049",
+        "set_id": "bt13",
+        "module_name": "bt13_049",
+        "reason": "full_set"
+      },
+      {
+        "card_id": "BT13-050",
+        "set_id": "bt13",
+        "module_name": "bt13_050",
+        "reason": "full_set"
+      },
+      {
+        "card_id": "BT13-051",
+        "set_id": "bt13",
+        "module_name": "bt13_051",
+        "reason": "full_set"
+      }
+    ],
+    [
+      {
+        "card_id": "BT13-052",
+        "set_id": "bt13",
+        "module_name": "bt13_052",
+        "reason": "full_set"
+      },
+      {
+        "card_id": "BT13-053",
+        "set_id": "bt13",
+        "module_name": "bt13_053",
+        "reason": "full_set"
+      },
+      {
+        "card_id": "BT13-054",
+        "set_id": "bt13",
+        "module_name": "bt13_054",
+        "reason": "full_set"
+      },
+      {
+        "card_id": "BT13-055",
+        "set_id": "bt13",
+        "module_name": "bt13_055",
+        "reason": "full_set"
+      },
+      {
+        "card_id": "BT13-056",
+        "set_id": "bt13",
+        "module_name": "bt13_056",
+        "reason": "full_set"
+      }
+    ],
+    [
+      {
+        "card_id": "BT13-057",
+        "set_id": "bt13",
+        "module_name": "bt13_057",
+        "reason": "full_set"
+      },
+      {
+        "card_id": "BT13-058",
+        "set_id": "bt13",
+        "module_name": "bt13_058",
+        "reason": "full_set"
+      },
+      {
+        "card_id": "BT13-059",
+        "set_id": "bt13",
+        "module_name": "bt13_059",
+        "reason": "full_set"
+      },
+      {
+        "card_id": "BT13-060",
+        "set_id": "bt13",
+        "module_name": "bt13_060",
+        "reason": "full_set"
+      },
+      {
+        "card_id": "BT13-061",
+        "set_id": "bt13",
+        "module_name": "bt13_061",
+        "reason": "full_set"
+      }
+    ],
+    [
+      {
+        "card_id": "BT13-062",
+        "set_id": "bt13",
+        "module_name": "bt13_062",
+        "reason": "full_set"
+      },
+      {
+        "card_id": "BT13-063",
+        "set_id": "bt13",
+        "module_name": "bt13_063",
+        "reason": "full_set"
+      },
+      {
+        "card_id": "BT13-064",
+        "set_id": "bt13",
+        "module_name": "bt13_064",
+        "reason": "full_set"
+      },
+      {
+        "card_id": "BT13-065",
+        "set_id": "bt13",
+        "module_name": "bt13_065",
+        "reason": "full_set"
+      },
+      {
+        "card_id": "BT13-066",
+        "set_id": "bt13",
+        "module_name": "bt13_066",
+        "reason": "full_set"
+      }
+    ],
+    [
+      {
+        "card_id": "BT13-067",
+        "set_id": "bt13",
+        "module_name": "bt13_067",
+        "reason": "full_set"
+      },
+      {
+        "card_id": "BT13-068",
+        "set_id": "bt13",
+        "module_name": "bt13_068",
+        "reason": "full_set"
+      },
+      {
+        "card_id": "BT13-069",
+        "set_id": "bt13",
+        "module_name": "bt13_069",
+        "reason": "full_set"
+      },
+      {
+        "card_id": "BT13-070",
+        "set_id": "bt13",
+        "module_name": "bt13_070",
+        "reason": "full_set"
+      },
+      {
+        "card_id": "BT13-071",
+        "set_id": "bt13",
+        "module_name": "bt13_071",
+        "reason": "full_set"
+      }
+    ],
+    [
+      {
+        "card_id": "BT13-072",
+        "set_id": "bt13",
+        "module_name": "bt13_072",
+        "reason": "full_set"
+      },
+      {
+        "card_id": "BT13-073",
+        "set_id": "bt13",
+        "module_name": "bt13_073",
+        "reason": "full_set"
+      },
+      {
+        "card_id": "BT13-074",
+        "set_id": "bt13",
+        "module_name": "bt13_074",
+        "reason": "full_set"
+      },
+      {
+        "card_id": "BT13-075",
+        "set_id": "bt13",
+        "module_name": "bt13_075",
+        "reason": "full_set"
+      },
+      {
+        "card_id": "BT13-076",
+        "set_id": "bt13",
+        "module_name": "bt13_076",
+        "reason": "full_set"
+      }
+    ],
+    [
+      {
+        "card_id": "BT13-077",
+        "set_id": "bt13",
+        "module_name": "bt13_077",
+        "reason": "full_set"
+      },
+      {
+        "card_id": "BT13-078",
+        "set_id": "bt13",
+        "module_name": "bt13_078",
+        "reason": "full_set"
+      },
+      {
+        "card_id": "BT13-079",
+        "set_id": "bt13",
+        "module_name": "bt13_079",
+        "reason": "full_set"
+      },
+      {
+        "card_id": "BT13-080",
+        "set_id": "bt13",
+        "module_name": "bt13_080",
+        "reason": "full_set"
+      },
+      {
+        "card_id": "BT13-081",
+        "set_id": "bt13",
+        "module_name": "bt13_081",
+        "reason": "full_set"
+      }
+    ],
+    [
+      {
+        "card_id": "BT13-082",
+        "set_id": "bt13",
+        "module_name": "bt13_082",
+        "reason": "full_set"
+      },
+      {
+        "card_id": "BT13-083",
+        "set_id": "bt13",
+        "module_name": "bt13_083",
+        "reason": "full_set"
+      },
+      {
+        "card_id": "BT13-084",
+        "set_id": "bt13",
+        "module_name": "bt13_084",
+        "reason": "full_set"
+      },
+      {
+        "card_id": "BT13-085",
+        "set_id": "bt13",
+        "module_name": "bt13_085",
+        "reason": "full_set"
+      },
+      {
+        "card_id": "BT13-086",
+        "set_id": "bt13",
+        "module_name": "bt13_086",
+        "reason": "full_set"
+      }
+    ],
+    [
+      {
+        "card_id": "BT13-087",
+        "set_id": "bt13",
+        "module_name": "bt13_087",
+        "reason": "full_set"
+      },
+      {
+        "card_id": "BT13-088",
+        "set_id": "bt13",
+        "module_name": "bt13_088",
+        "reason": "full_set"
+      },
+      {
+        "card_id": "BT13-089",
+        "set_id": "bt13",
+        "module_name": "bt13_089",
+        "reason": "full_set"
+      },
+      {
+        "card_id": "BT13-090",
+        "set_id": "bt13",
+        "module_name": "bt13_090",
+        "reason": "full_set"
+      },
+      {
+        "card_id": "BT13-091",
+        "set_id": "bt13",
+        "module_name": "bt13_091",
+        "reason": "full_set"
+      }
+    ],
+    [
+      {
+        "card_id": "BT13-092",
+        "set_id": "bt13",
+        "module_name": "bt13_092",
+        "reason": "full_set"
+      },
+      {
+        "card_id": "BT13-093",
+        "set_id": "bt13",
+        "module_name": "bt13_093",
+        "reason": "full_set"
+      },
+      {
+        "card_id": "BT13-094",
+        "set_id": "bt13",
+        "module_name": "bt13_094",
+        "reason": "full_set"
+      },
+      {
+        "card_id": "BT13-095",
+        "set_id": "bt13",
+        "module_name": "bt13_095",
+        "reason": "full_set"
+      },
+      {
+        "card_id": "BT13-096",
+        "set_id": "bt13",
+        "module_name": "bt13_096",
+        "reason": "full_set"
+      }
+    ],
+    [
+      {
+        "card_id": "BT13-097",
+        "set_id": "bt13",
+        "module_name": "bt13_097",
+        "reason": "full_set"
+      },
+      {
+        "card_id": "BT13-098",
+        "set_id": "bt13",
+        "module_name": "bt13_098",
+        "reason": "full_set"
+      },
+      {
+        "card_id": "BT13-099",
+        "set_id": "bt13",
+        "module_name": "bt13_099",
+        "reason": "full_set"
+      },
+      {
+        "card_id": "BT13-100",
+        "set_id": "bt13",
+        "module_name": "bt13_100",
+        "reason": "full_set"
+      },
+      {
+        "card_id": "BT13-101",
+        "set_id": "bt13",
+        "module_name": "bt13_101",
+        "reason": "full_set"
+      }
+    ],
+    [
+      {
+        "card_id": "BT13-102",
+        "set_id": "bt13",
+        "module_name": "bt13_102",
+        "reason": "full_set"
+      },
+      {
+        "card_id": "BT13-103",
+        "set_id": "bt13",
+        "module_name": "bt13_103",
+        "reason": "full_set"
+      },
+      {
+        "card_id": "BT13-104",
+        "set_id": "bt13",
+        "module_name": "bt13_104",
+        "reason": "full_set"
+      },
+      {
+        "card_id": "BT13-105",
+        "set_id": "bt13",
+        "module_name": "bt13_105",
+        "reason": "full_set"
+      },
+      {
+        "card_id": "BT13-106",
+        "set_id": "bt13",
+        "module_name": "bt13_106",
+        "reason": "full_set"
+      }
+    ],
+    [
+      {
+        "card_id": "BT13-107",
+        "set_id": "bt13",
+        "module_name": "bt13_107",
+        "reason": "full_set"
+      },
+      {
+        "card_id": "BT13-108",
+        "set_id": "bt13",
+        "module_name": "bt13_108",
+        "reason": "full_set"
+      },
+      {
+        "card_id": "BT13-109",
+        "set_id": "bt13",
+        "module_name": "bt13_109",
+        "reason": "full_set"
+      },
+      {
+        "card_id": "BT13-110",
+        "set_id": "bt13",
+        "module_name": "bt13_110",
+        "reason": "full_set"
+      },
+      {
+        "card_id": "BT13-111",
+        "set_id": "bt13",
+        "module_name": "bt13_111",
+        "reason": "full_set"
+      }
+    ],
+    [
+      {
+        "card_id": "BT13-112",
+        "set_id": "bt13",
+        "module_name": "bt13_112",
+        "reason": "full_set"
+      },
+      {
+        "card_id": "EX11-001",
+        "set_id": "ex11",
+        "module_name": "ex11_001",
+        "reason": "full_set"
+      },
+      {
+        "card_id": "EX11-002",
+        "set_id": "ex11",
+        "module_name": "ex11_002",
+        "reason": "full_set"
+      },
+      {
+        "card_id": "EX11-003",
+        "set_id": "ex11",
+        "module_name": "ex11_003",
+        "reason": "full_set"
+      },
+      {
+        "card_id": "EX11-004",
+        "set_id": "ex11",
+        "module_name": "ex11_004",
+        "reason": "full_set"
+      }
+    ],
+    [
+      {
+        "card_id": "EX11-005",
+        "set_id": "ex11",
+        "module_name": "ex11_005",
+        "reason": "full_set"
+      },
+      {
+        "card_id": "EX11-006",
+        "set_id": "ex11",
+        "module_name": "ex11_006",
+        "reason": "full_set"
+      },
+      {
+        "card_id": "EX11-007",
+        "set_id": "ex11",
+        "module_name": "ex11_007",
+        "reason": "full_set"
+      },
+      {
+        "card_id": "EX11-008",
+        "set_id": "ex11",
+        "module_name": "ex11_008",
+        "reason": "full_set"
+      },
+      {
+        "card_id": "EX11-009",
+        "set_id": "ex11",
+        "module_name": "ex11_009",
+        "reason": "full_set"
+      }
+    ],
+    [
+      {
+        "card_id": "EX11-010",
+        "set_id": "ex11",
+        "module_name": "ex11_010",
+        "reason": "full_set"
+      },
+      {
+        "card_id": "EX11-011",
+        "set_id": "ex11",
+        "module_name": "ex11_011",
+        "reason": "full_set"
+      },
+      {
+        "card_id": "EX11-012",
+        "set_id": "ex11",
+        "module_name": "ex11_012",
+        "reason": "full_set"
+      },
+      {
+        "card_id": "EX11-013",
+        "set_id": "ex11",
+        "module_name": "ex11_013",
+        "reason": "full_set"
+      },
+      {
+        "card_id": "EX11-014",
+        "set_id": "ex11",
+        "module_name": "ex11_014",
+        "reason": "full_set"
+      }
+    ],
+    [
+      {
+        "card_id": "EX11-015",
+        "set_id": "ex11",
+        "module_name": "ex11_015",
+        "reason": "full_set"
+      },
+      {
+        "card_id": "EX11-016",
+        "set_id": "ex11",
+        "module_name": "ex11_016",
+        "reason": "full_set"
+      },
+      {
+        "card_id": "EX11-017",
+        "set_id": "ex11",
+        "module_name": "ex11_017",
+        "reason": "full_set"
+      },
+      {
+        "card_id": "EX11-018",
+        "set_id": "ex11",
+        "module_name": "ex11_018",
+        "reason": "full_set"
+      },
+      {
+        "card_id": "EX11-019",
+        "set_id": "ex11",
+        "module_name": "ex11_019",
+        "reason": "full_set"
+      }
+    ],
+    [
+      {
+        "card_id": "EX11-020",
+        "set_id": "ex11",
+        "module_name": "ex11_020",
+        "reason": "full_set"
+      },
+      {
+        "card_id": "EX11-021",
+        "set_id": "ex11",
+        "module_name": "ex11_021",
+        "reason": "full_set"
+      },
+      {
+        "card_id": "EX11-022",
+        "set_id": "ex11",
+        "module_name": "ex11_022",
+        "reason": "full_set"
+      },
+      {
+        "card_id": "EX11-023",
+        "set_id": "ex11",
+        "module_name": "ex11_023",
+        "reason": "full_set"
+      },
+      {
+        "card_id": "EX11-024",
+        "set_id": "ex11",
+        "module_name": "ex11_024",
+        "reason": "full_set"
+      }
+    ],
+    [
+      {
+        "card_id": "EX11-025",
+        "set_id": "ex11",
+        "module_name": "ex11_025",
+        "reason": "full_set"
+      },
+      {
+        "card_id": "EX11-026",
+        "set_id": "ex11",
+        "module_name": "ex11_026",
+        "reason": "full_set"
+      },
+      {
+        "card_id": "EX11-027",
+        "set_id": "ex11",
+        "module_name": "ex11_027",
+        "reason": "full_set"
+      },
+      {
+        "card_id": "EX11-028",
+        "set_id": "ex11",
+        "module_name": "ex11_028",
+        "reason": "full_set"
+      },
+      {
+        "card_id": "EX11-029",
+        "set_id": "ex11",
+        "module_name": "ex11_029",
+        "reason": "full_set"
+      }
+    ],
+    [
+      {
+        "card_id": "EX11-030",
+        "set_id": "ex11",
+        "module_name": "ex11_030",
+        "reason": "full_set"
+      },
+      {
+        "card_id": "EX11-031",
+        "set_id": "ex11",
+        "module_name": "ex11_031",
+        "reason": "full_set"
+      },
+      {
+        "card_id": "EX11-032",
+        "set_id": "ex11",
+        "module_name": "ex11_032",
+        "reason": "full_set"
+      },
+      {
+        "card_id": "EX11-033",
+        "set_id": "ex11",
+        "module_name": "ex11_033",
+        "reason": "full_set"
+      },
+      {
+        "card_id": "EX11-034",
+        "set_id": "ex11",
+        "module_name": "ex11_034",
+        "reason": "full_set"
+      }
+    ],
+    [
+      {
+        "card_id": "EX11-035",
+        "set_id": "ex11",
+        "module_name": "ex11_035",
+        "reason": "full_set"
+      },
+      {
+        "card_id": "EX11-036",
+        "set_id": "ex11",
+        "module_name": "ex11_036",
+        "reason": "full_set"
+      },
+      {
+        "card_id": "EX11-037",
+        "set_id": "ex11",
+        "module_name": "ex11_037",
+        "reason": "full_set"
+      },
+      {
+        "card_id": "EX11-038",
+        "set_id": "ex11",
+        "module_name": "ex11_038",
+        "reason": "full_set"
+      },
+      {
+        "card_id": "EX11-039",
+        "set_id": "ex11",
+        "module_name": "ex11_039",
+        "reason": "full_set"
+      }
+    ],
+    [
+      {
+        "card_id": "EX11-040",
+        "set_id": "ex11",
+        "module_name": "ex11_040",
+        "reason": "full_set"
+      },
+      {
+        "card_id": "EX11-041",
+        "set_id": "ex11",
+        "module_name": "ex11_041",
+        "reason": "full_set"
+      },
+      {
+        "card_id": "EX11-042",
+        "set_id": "ex11",
+        "module_name": "ex11_042",
+        "reason": "full_set"
+      },
+      {
+        "card_id": "EX11-043",
+        "set_id": "ex11",
+        "module_name": "ex11_043",
+        "reason": "full_set"
+      },
+      {
+        "card_id": "EX11-044",
+        "set_id": "ex11",
+        "module_name": "ex11_044",
+        "reason": "full_set"
+      }
+    ],
+    [
+      {
+        "card_id": "EX11-045",
+        "set_id": "ex11",
+        "module_name": "ex11_045",
+        "reason": "full_set"
+      },
+      {
+        "card_id": "EX11-046",
+        "set_id": "ex11",
+        "module_name": "ex11_046",
+        "reason": "full_set"
+      },
+      {
+        "card_id": "EX11-047",
+        "set_id": "ex11",
+        "module_name": "ex11_047",
+        "reason": "full_set"
+      },
+      {
+        "card_id": "EX11-048",
+        "set_id": "ex11",
+        "module_name": "ex11_048",
+        "reason": "full_set"
+      },
+      {
+        "card_id": "EX11-049",
+        "set_id": "ex11",
+        "module_name": "ex11_049",
+        "reason": "full_set"
+      }
+    ],
+    [
+      {
+        "card_id": "EX11-050",
+        "set_id": "ex11",
+        "module_name": "ex11_050",
+        "reason": "full_set"
+      },
+      {
+        "card_id": "EX11-051",
+        "set_id": "ex11",
+        "module_name": "ex11_051",
+        "reason": "full_set"
+      },
+      {
+        "card_id": "EX11-052",
+        "set_id": "ex11",
+        "module_name": "ex11_052",
+        "reason": "full_set"
+      },
+      {
+        "card_id": "EX11-053",
+        "set_id": "ex11",
+        "module_name": "ex11_053",
+        "reason": "full_set"
+      },
+      {
+        "card_id": "EX11-054",
+        "set_id": "ex11",
+        "module_name": "ex11_054",
+        "reason": "full_set"
+      }
+    ],
+    [
+      {
+        "card_id": "EX11-055",
+        "set_id": "ex11",
+        "module_name": "ex11_055",
+        "reason": "full_set"
+      },
+      {
+        "card_id": "EX11-056",
+        "set_id": "ex11",
+        "module_name": "ex11_056",
+        "reason": "full_set"
+      },
+      {
+        "card_id": "EX11-057",
+        "set_id": "ex11",
+        "module_name": "ex11_057",
+        "reason": "full_set"
+      },
+      {
+        "card_id": "EX11-058",
+        "set_id": "ex11",
+        "module_name": "ex11_058",
+        "reason": "full_set"
+      },
+      {
+        "card_id": "EX11-059",
+        "set_id": "ex11",
+        "module_name": "ex11_059",
+        "reason": "full_set"
+      }
+    ],
+    [
+      {
+        "card_id": "EX11-060",
+        "set_id": "ex11",
+        "module_name": "ex11_060",
+        "reason": "full_set"
+      },
+      {
+        "card_id": "EX11-061",
+        "set_id": "ex11",
+        "module_name": "ex11_061",
+        "reason": "full_set"
+      },
+      {
+        "card_id": "EX11-062",
+        "set_id": "ex11",
+        "module_name": "ex11_062",
+        "reason": "full_set"
+      },
+      {
+        "card_id": "EX11-063",
+        "set_id": "ex11",
+        "module_name": "ex11_063",
+        "reason": "full_set"
+      },
+      {
+        "card_id": "EX11-064",
+        "set_id": "ex11",
+        "module_name": "ex11_064",
+        "reason": "full_set"
+      }
+    ],
+    [
+      {
+        "card_id": "EX11-065",
+        "set_id": "ex11",
+        "module_name": "ex11_065",
+        "reason": "full_set"
+      },
+      {
+        "card_id": "EX11-066",
+        "set_id": "ex11",
+        "module_name": "ex11_066",
+        "reason": "full_set"
+      },
+      {
+        "card_id": "EX11-067",
+        "set_id": "ex11",
+        "module_name": "ex11_067",
+        "reason": "full_set"
+      },
+      {
+        "card_id": "EX11-068",
+        "set_id": "ex11",
+        "module_name": "ex11_068",
+        "reason": "full_set"
+      },
+      {
+        "card_id": "EX11-069",
+        "set_id": "ex11",
+        "module_name": "ex11_069",
+        "reason": "full_set"
+      }
+    ],
+    [
+      {
+        "card_id": "EX11-070",
+        "set_id": "ex11",
+        "module_name": "ex11_070",
+        "reason": "full_set"
+      },
+      {
+        "card_id": "EX11-071",
+        "set_id": "ex11",
+        "module_name": "ex11_071",
+        "reason": "full_set"
+      },
+      {
+        "card_id": "EX11-072",
+        "set_id": "ex11",
+        "module_name": "ex11_072",
+        "reason": "full_set"
+      },
+      {
+        "card_id": "EX11-073",
+        "set_id": "ex11",
+        "module_name": "ex11_073",
+        "reason": "full_set"
+      },
+      {
+        "card_id": "EX11-074",
+        "set_id": "ex11",
+        "module_name": "ex11_074",
+        "reason": "full_set"
+      }
+    ]
+  ]
+}

@@ -1,7 +1,10 @@
 export interface User {
-  id: number;
+  id: string;
   username: string;
   email: string;
+  display_name?: string | null;
+  avatar_url?: string | null;
+  roles: string[];
 }
 
 export interface TokenResponse {

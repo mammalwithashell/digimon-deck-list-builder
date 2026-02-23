@@ -5,7 +5,7 @@ from __future__ import annotations
 import hashlib
 import secrets
 from datetime import datetime, timedelta, timezone
-from typing import Optional
+from typing import Optional, Sequence, Set
 
 from fastapi import Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordBearer
@@ -15,7 +15,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from digimon_gym.db.database import get_db
-from digimon_gym.db.models import RefreshToken, User
+from digimon_gym.db.models import RefreshToken, Role, User, UserRole
 
 # ── Configuration ───────────────────────────────────────────────────────
 
@@ -23,6 +23,16 @@ SECRET_KEY = "CHANGE-ME-IN-PRODUCTION"  # Override via environment variable
 ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = 30
 REFRESH_TOKEN_EXPIRE_DAYS = 30
+
+ROLE_ADMIN = "admin"
+ROLE_JUDGE = "judge"
+ROLE_PLAYER = "player"
+DEFAULT_ROLES: tuple[str, ...] = (ROLE_ADMIN, ROLE_JUDGE, ROLE_PLAYER)
+DEFAULT_ROLE_DESCRIPTIONS: dict[str, str] = {
+    ROLE_ADMIN: "Full administrative access for AI tasks and promotions.",
+    ROLE_JUDGE: "Review/triage access for issue validation.",
+    ROLE_PLAYER: "Gameplay and bug report submission access.",
+}
 
 # ── Password Hashing ───────────────────────────────────────────────────
 
@@ -38,11 +48,12 @@ def verify_password(plain_password: str, hashed_password: str) -> bool:
 
 # ── JWT Tokens ──────────────────────────────────────────────────────────
 
-def create_access_token(user_id: str, username: str) -> str:
+def create_access_token(user_id: str, username: str, roles: Sequence[str] | None = None) -> str:
     expire = datetime.now(timezone.utc) + timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
     payload = {
         "sub": user_id,
         "username": username,
+        "roles": list(roles or []),
         "exp": expire,
         "type": "access",
     }
@@ -70,6 +81,64 @@ def decode_access_token(token: str) -> dict:
 # ── FastAPI Dependency ──────────────────────────────────────────────────
 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/auth/login")
+
+
+async def ensure_role_exists(
+    db: AsyncSession,
+    role_name: str,
+    description: str = "",
+) -> Role:
+    result = await db.execute(select(Role).where(Role.name == role_name))
+    role = result.scalar_one_or_none()
+    if role:
+        return role
+
+    role = Role(name=role_name, description=description or DEFAULT_ROLE_DESCRIPTIONS.get(role_name, ""))
+    db.add(role)
+    await db.flush()
+    return role
+
+
+async def assign_role_to_user(db: AsyncSession, user_id: str, role_name: str) -> None:
+    role = await ensure_role_exists(db, role_name)
+    existing = await db.execute(
+        select(UserRole).where(
+            UserRole.user_id == user_id,
+            UserRole.role_id == role.id,
+        )
+    )
+    if existing.scalar_one_or_none():
+        return
+
+    db.add(UserRole(user_id=user_id, role_id=role.id))
+
+
+async def get_user_role_names(user_id: str, db: AsyncSession) -> Set[str]:
+    result = await db.execute(
+        select(Role.name)
+        .join(UserRole, UserRole.role_id == Role.id)
+        .where(UserRole.user_id == user_id)
+    )
+    return {row[0] for row in result.all()}
+
+
+async def user_has_any_role(user_id: str, db: AsyncSession, required: Sequence[str]) -> bool:
+    if not required:
+        return True
+    names = await get_user_role_names(user_id, db)
+    return bool(names.intersection(required))
+
+
+def require_roles(*required_roles: str):
+    async def _require(
+        user: User = Depends(get_current_user),
+        db: AsyncSession = Depends(get_db),
+    ) -> User:
+        if not await user_has_any_role(user.id, db, required_roles):
+            raise HTTPException(status_code=403, detail="Insufficient role permissions")
+        return user
+
+    return _require
 
 
 async def get_current_user(

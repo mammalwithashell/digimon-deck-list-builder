@@ -1,4 +1,10 @@
 from contextlib import asynccontextmanager
+import os
+
+from digimon_gym.env import load_project_env
+
+# Load .env before importing modules that read environment variables at import/init time.
+load_project_env()
 
 from fastapi import Depends, FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
@@ -28,6 +34,9 @@ from digimon_gym.db.routers import users as users_router
 from digimon_gym.db.routers import decks as decks_router
 from digimon_gym.db.routers import friends as friends_router
 from digimon_gym.db.routers import assets as assets_router
+from digimon_gym.db.routers import issues as issues_router
+from digimon_gym.db.routers import admin_ai as admin_ai_router
+from digimon_gym.ai.worker import ai_task_worker
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 
@@ -35,7 +44,12 @@ from sqlalchemy import select
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     await init_db()
+    worker_enabled = os.getenv("AI_WORKER_DISABLED", "0") != "1"
+    if worker_enabled:
+        await ai_task_worker.start()
     yield
+    if worker_enabled:
+        await ai_task_worker.stop()
 
 
 app = FastAPI(lifespan=lifespan)
@@ -55,6 +69,8 @@ app.include_router(users_router.router)
 app.include_router(decks_router.router)
 app.include_router(friends_router.router)
 app.include_router(assets_router.router)
+app.include_router(issues_router.router)
+app.include_router(admin_ai_router.router)
 
 # ─── Game Session Storage ─────────────────────────────────────────────
 active_games: Dict[str, Union[HeadlessGame, InteractiveGame]] = {}

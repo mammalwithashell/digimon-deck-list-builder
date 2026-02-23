@@ -1,5 +1,6 @@
 import { Link, useLocation } from 'react-router-dom';
 import { UserMenu } from '@/components/auth/UserMenu';
+import { useAuthStore } from '@/stores/authStore';
 
 const NAV_LINKS = [
   { to: '/', label: 'Home' },
@@ -7,8 +8,16 @@ const NAV_LINKS = [
   { to: '/game', label: 'Play' },
 ];
 
+const ADMIN_LINKS = [
+  { to: '/admin/issues', label: 'Issues' },
+  { to: '/admin/tasks', label: 'AI Tasks' },
+  { to: '/admin/promotions', label: 'Promotions' },
+];
+
 export function NavBar() {
   const location = useLocation();
+  const isAdmin = useAuthStore((s) => s.user?.roles?.includes('admin') ?? false);
+  const links = isAdmin ? [...NAV_LINKS, ...ADMIN_LINKS] : NAV_LINKS;
 
   return (
     <nav className="bg-gray-800 border-b border-gray-700 px-4 py-3 flex items-center justify-between">
@@ -17,7 +26,7 @@ export function NavBar() {
           Digimon TCG
         </Link>
         <div className="flex gap-4">
-          {NAV_LINKS.map((link) => (
+          {links.map((link) => (
             <Link
               key={link.to}
               to={link.to}

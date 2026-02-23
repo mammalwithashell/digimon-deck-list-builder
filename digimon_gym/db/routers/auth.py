@@ -11,9 +11,12 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from digimon_gym.db.auth import (
     ACCESS_TOKEN_EXPIRE_MINUTES,
     REFRESH_TOKEN_EXPIRE_DAYS,
+    ROLE_PLAYER,
+    assign_role_to_user,
     create_access_token,
     create_refresh_token_value,
     get_current_user,
+    get_user_role_names,
     hash_password,
     hash_token,
     verify_password,
@@ -29,6 +32,19 @@ from digimon_gym.db.schemas import (
 )
 
 router = APIRouter(prefix="/auth", tags=["auth"])
+
+
+def _to_user_profile(user: User, roles: list[str]) -> UserProfile:
+    return UserProfile(
+        id=user.id,
+        username=user.username,
+        email=user.email,
+        display_name=user.display_name,
+        avatar_url=user.avatar_url,
+        roles=roles,
+        created_at=user.created_at,
+        last_login_at=user.last_login_at,
+    )
 
 
 @router.post("/register", response_model=UserProfile, status_code=status.HTTP_201_CREATED)
@@ -55,10 +71,12 @@ async def register(request: RegisterRequest, db: AsyncSession = Depends(get_db))
     # Create default preferences row
     prefs = UserPreferences(user_id=user.id)
     db.add(prefs)
+    await assign_role_to_user(db, user.id, ROLE_PLAYER)
 
     await db.commit()
     await db.refresh(user)
-    return user
+    roles = sorted(await get_user_role_names(user.id, db))
+    return _to_user_profile(user, roles)
 
 
 @router.post("/login", response_model=TokenResponse)
@@ -79,7 +97,8 @@ async def login(request: LoginRequest, db: AsyncSession = Depends(get_db)):
     user.last_login_at = datetime.now(timezone.utc)
 
     # Create tokens
-    access_token = create_access_token(user.id, user.username)
+    roles = sorted(await get_user_role_names(user.id, db))
+    access_token = create_access_token(user.id, user.username, roles=roles)
     refresh_value = create_refresh_token_value()
 
     refresh_record = RefreshToken(
@@ -125,7 +144,8 @@ async def refresh_tokens(request: RefreshRequest, db: AsyncSession = Depends(get
         raise HTTPException(status_code=401, detail="User not found or disabled")
 
     # Issue new pair
-    access_token = create_access_token(user.id, user.username)
+    roles = sorted(await get_user_role_names(user.id, db))
+    access_token = create_access_token(user.id, user.username, roles=roles)
     new_refresh_value = create_refresh_token_value()
 
     new_record = RefreshToken(

@@ -10,6 +10,9 @@ dependencies = [
     "fastapi>=0.100",
     "httpx>=0.24",
     "uvicorn>=0.20",
+    "openai>=1.40",
+    "python-dotenv>=1.0",
+    "pypdf>=4.2",
 ]
 
 [project.optional-dependencies]
