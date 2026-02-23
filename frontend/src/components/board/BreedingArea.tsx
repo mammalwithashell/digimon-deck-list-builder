@@ -1,4 +1,4 @@
-import { useDraggable } from '@dnd-kit/core';
+import { useDraggable, useDroppable } from '@dnd-kit/core';
 import { PermanentSlot } from './PermanentSlot';
 import type { PermanentInfo } from '@/types/game';
 import type { DragData } from '@/hooks/useDropZone';
@@ -6,25 +6,43 @@ import type { DragData } from '@/hooks/useDropZone';
 interface BreedingAreaProps {
   permanent: PermanentInfo | null;
   canMove?: boolean;
+  canDigivolveDrop?: boolean;
+  dropId?: string;
   onClick?: () => void;
 }
 
-export function BreedingArea({ permanent, canMove = false, onClick }: BreedingAreaProps) {
+export function BreedingArea({
+  permanent,
+  canMove = false,
+  canDigivolveDrop = false,
+  dropId = 'breeding-slot',
+  onClick,
+}: BreedingAreaProps) {
   const dragData: DragData = { type: 'breeding-perm' };
   const { attributes, listeners, setNodeRef, isDragging } = useDraggable({
     id: 'breeding-perm',
     data: dragData,
     disabled: !canMove,
   });
+  const { isOver, setNodeRef: setDropNodeRef } = useDroppable({
+    id: dropId,
+    data: { type: 'breeding-slot', slotIndex: 12 },
+    disabled: !canDigivolveDrop,
+  });
+
+  const showDropHighlight = isOver && canDigivolveDrop;
 
   return (
     <div className="flex flex-col items-center gap-1">
       {permanent ? (
         <div
-          ref={setNodeRef}
+          ref={(node) => {
+            setNodeRef(node);
+            setDropNodeRef(node);
+          }}
           {...listeners}
           {...attributes}
-          className={`${canMove ? 'ring-1 ring-green-400/50 rounded cursor-grab' : ''} ${isDragging ? 'opacity-30' : ''}`}
+          className={`${canMove ? 'ring-1 ring-green-400/50 rounded cursor-grab' : ''} ${showDropHighlight ? 'ring-2 ring-green-400' : ''} ${isDragging ? 'opacity-30' : ''}`}
           onClick={onClick}
         >
           <PermanentSlot
@@ -34,7 +52,12 @@ export function BreedingArea({ permanent, canMove = false, onClick }: BreedingAr
           />
         </div>
       ) : (
-        <div className="w-[80px] h-[112px] border border-dashed border-gray-700/50 rounded flex items-center justify-center">
+        <div
+          ref={setDropNodeRef}
+          className={`w-[80px] h-[112px] border border-dashed rounded flex items-center justify-center ${
+            showDropHighlight ? 'border-green-400 ring-2 ring-green-400/80' : 'border-gray-700/50'
+          }`}
+        >
           <span className="text-[9px] text-gray-600">Breeding</span>
         </div>
       )}

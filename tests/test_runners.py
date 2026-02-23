@@ -7,11 +7,17 @@ import numpy as np
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 
+from digimon_gym.digimon_gym import greedy_policy
 from digimon_gym.engine.runners.headless_game import HeadlessGame
 from digimon_gym.engine.runners.interactive_game import InteractiveGame
-from digimon_gym.engine.data.enums import GamePhase, PlayerType
+from digimon_gym.engine.data.enums import GamePhase, PlayerType, CardKind, CardColor
 from digimon_gym.engine.data.card_registry import CardRegistry
+from digimon_gym.engine.data.evo_cost import EvoCost
+from digimon_gym.engine.core.card_source import CardSource
+from digimon_gym.engine.core.entity_base import CEntity_Base
+from digimon_gym.engine.core.permanent import Permanent
 from digimon_gym.engine.game import ACTION_SPACE_SIZE, TENSOR_SIZE
+from digimon_gym.engine.game import Game
 
 
 # ─── Helpers ─────────────────────────────────────────────────────────
@@ -19,6 +25,56 @@ from digimon_gym.engine.game import ACTION_SPACE_SIZE, TENSOR_SIZE
 def make_test_deck():
     """Return a valid deck of card IDs for testing."""
     return ["ST1-01"] * 5 + ["ST1-03"] * 45
+
+
+def make_card(
+    card_id: str,
+    name: str,
+    owner,
+    *,
+    kind: CardKind = CardKind.Digimon,
+    level: int = 3,
+    dp: int = 3000,
+    play_cost: int = 3,
+    colors=None,
+    evo_costs=None,
+):
+    entity = CEntity_Base()
+    entity.card_id = card_id
+    entity.card_name_eng = name
+    entity.card_kind = kind
+    entity.level = level
+    entity.dp = dp
+    entity.play_cost = play_cost
+    entity.card_colors = colors or [CardColor.Red]
+    if evo_costs is not None:
+        entity.evo_costs = evo_costs
+    card = CardSource()
+    card.set_base_data(entity, owner)
+    return card
+
+
+def setup_policy_game(phase: GamePhase, memory: int = 3) -> Game:
+    game = Game()
+    game.current_phase = phase
+    game.memory = memory
+    game.turn_count = 2
+    game.turn_player = game.player1
+    game.opponent_player = game.player2
+    game.player1.is_my_turn = True
+    game.player2.is_my_turn = False
+    return game
+
+
+class PolicyEnv:
+    def __init__(self, game: Game):
+        self.game = game
+
+    def get_action_mask(self):
+        return np.array(
+            self.game.get_action_mask(self.game.current_player_id),
+            dtype=np.float32,
+        )
 
 
 @pytest.fixture(autouse=True)
@@ -162,6 +218,114 @@ class TestHeadlessGame:
 
 # ─── InteractiveGame Tests ──────────────────────────────────────────
 
+class TestGreedyPolicy:
+    def test_prefers_keep_turn_digivolve_over_play(self):
+        game = setup_policy_game(GamePhase.Main, memory=3)
+        p1 = game.player1
+
+        base = make_card("BASE-001", "Base", p1, level=3, dp=3000)
+        p1.battle_area.append(Permanent([base]))
+
+        evo = make_card(
+            "EVO-001",
+            "Evo",
+            p1,
+            level=4,
+            dp=6000,
+            play_cost=4,
+            evo_costs=[EvoCost(card_color=CardColor.Red, level=3, memory_cost=2)],
+        )
+        p1.hand_cards.append(evo)
+
+        action = greedy_policy(PolicyEnv(game))
+        assert action == 400  # Digivolve hand[0] -> field[0]
+
+    def test_prefers_keep_turn_digivolve_over_pass_turn_digivolve(self):
+        game = setup_policy_game(GamePhase.Main, memory=3)
+        p1 = game.player1
+
+        base_a = make_card("BASE-001", "BaseA", p1, level=3, dp=3000)
+        base_b = make_card("BASE-002", "BaseB", p1, level=3, dp=3000)
+        p1.battle_area.extend([Permanent([base_a]), Permanent([base_b])])
+
+        keep_turn_evo = make_card(
+            "EVO-KEEP",
+            "KeepTurnEvo",
+            p1,
+            level=4,
+            dp=5000,
+            play_cost=4,
+            evo_costs=[EvoCost(card_color=CardColor.Red, level=3, memory_cost=2)],
+        )
+        pass_turn_evo = make_card(
+            "EVO-PASS",
+            "PassTurnEvo",
+            p1,
+            level=5,
+            dp=7000,
+            play_cost=7,
+            evo_costs=[EvoCost(card_color=CardColor.Red, level=3, memory_cost=4)],
+        )
+        p1.hand_cards.extend([keep_turn_evo, pass_turn_evo])
+
+        action = greedy_policy(PolicyEnv(game))
+        assert action == 400  # Keep-turn option hand[0] -> field[0]
+
+    def test_no_keep_turn_digivolve_attacks_before_play(self):
+        game = setup_policy_game(GamePhase.Main, memory=1)
+        p1 = game.player1
+        p2 = game.player2
+
+        base = make_card("BASE-001", "AttackerBase", p1, level=3, dp=4000)
+        p1.battle_area.append(Permanent([base]))
+
+        evo = make_card(
+            "EVO-001",
+            "PassTurnEvoOnly",
+            p1,
+            level=4,
+            dp=6000,
+            play_cost=4,
+            evo_costs=[EvoCost(card_color=CardColor.Red, level=3, memory_cost=2)],
+        )
+        play_card = make_card(
+            "PLAY-001",
+            "Playable",
+            p1,
+            kind=CardKind.Tamer,
+            level=0,
+            dp=0,
+            play_cost=1,
+            colors=[CardColor.Red],
+        )
+        p1.hand_cards.extend([evo, play_card])
+
+        # Prevent lethal categorization while keeping security attack legal.
+        p2.security_cards.append(make_card("SEC-001", "Sec", p2))
+
+        action = greedy_policy(PolicyEnv(game))
+        assert action == 112  # Attack with slot 0 at security target 12
+
+    def test_breeding_prefers_hatch_when_available(self):
+        game = setup_policy_game(GamePhase.Breeding, memory=0)
+        p1 = game.player1
+
+        egg = make_card(
+            "EGG-001",
+            "Digitama",
+            p1,
+            kind=CardKind.DigiEgg,
+            level=2,
+            dp=0,
+            play_cost=0,
+            colors=[CardColor.Red],
+        )
+        p1.digitama_library_cards.append(egg)
+
+        action = greedy_policy(PolicyEnv(game))
+        assert action == 60
+
+
 class TestInteractiveGame:
     def test_construction_human_vs_agent(self):
         deck = make_test_deck()
@@ -207,6 +371,24 @@ class TestInteractiveGame:
         state = game.run_step()
         # Agent should have taken an action (default: pass)
         assert "currentPhase" in state
+
+    def test_run_step_advances_until_human_turn(self):
+        deck = make_test_deck()
+        game = InteractiveGame(deck, deck, PlayerType.Human, PlayerType.Agent, player2_policy="greedy")
+
+        # Force agent to act with only pass-like progression available.
+        game.game.turn_player = game.game.player2
+        game.game.opponent_player = game.game.player1
+        game.game.player1.is_my_turn = False
+        game.game.player2.is_my_turn = True
+        game.game.current_phase = GamePhase.Main
+        game.game.memory = -1
+        game.game.player2.hand_cards = []
+        game.game.player2.battle_area = []
+
+        state = game.run_step()
+        assert "currentPhase" in state
+        assert game.is_current_player_human() is True
 
     def test_step_executes_action(self):
         deck = make_test_deck()

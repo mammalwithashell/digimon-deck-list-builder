@@ -19,7 +19,7 @@ export function useDropZone(parsedMask: ParsedMask) {
   const getDropAction = useCallback(
     (
       dragData: DragData,
-      dropZone: { type: 'empty-field-slot' | 'occupied-field-slot'; slotIndex: number },
+      dropZone: { type: 'empty-field-slot' | 'occupied-field-slot' | 'breeding-slot'; slotIndex: number },
     ): number | null => {
       if (dragData.type === 'hand-card' && dragData.handIndex !== undefined) {
         const handIdx = dragData.handIndex;
@@ -36,6 +36,12 @@ export function useDropZone(parsedMask: ParsedMask) {
           const fieldSlots = parsedMask.canDigivolve.get(handIdx);
           if (fieldSlots?.has(dropZone.slotIndex)) {
             return ACTION.DIGIVOLVE_START + handIdx * DIGIVOLVE_FIELDS_PER_HAND + dropZone.slotIndex;
+          }
+        }
+
+        if (dropZone.type === 'breeding-slot') {
+          if (parsedMask.canDigivolveBreeding.has(handIdx)) {
+            return ACTION.DIGIVOLVE_START + handIdx * DIGIVOLVE_FIELDS_PER_HAND + 12;
           }
         }
       }
@@ -56,7 +62,7 @@ export function useDropZone(parsedMask: ParsedMask) {
 
   const isValidDrop = useCallback(
     (dragData: DragData, dropZone: { type: string; slotIndex: number }): boolean => {
-      return getDropAction(dragData, dropZone as { type: 'empty-field-slot' | 'occupied-field-slot'; slotIndex: number }) !== null;
+      return getDropAction(dragData, dropZone as { type: 'empty-field-slot' | 'occupied-field-slot' | 'breeding-slot'; slotIndex: number }) !== null;
     },
     [getDropAction],
   );

@@ -13,6 +13,7 @@ interface PlayerHalfProps {
   targetedSlots?: Set<number>;
   canHatch?: boolean;
   canMove?: boolean;
+  canDigivolveBreeding?: boolean;
   onSlotClick?: (slotIndex: number) => void;
   onSlotHover?: (slotIndex: number | null) => void;
   onHatch?: () => void;
@@ -27,6 +28,7 @@ export function PlayerHalf({
   targetedSlots,
   canHatch = false,
   canMove = false,
+  canDigivolveBreeding = false,
   onSlotClick,
   onSlotHover,
   onHatch,
@@ -45,6 +47,8 @@ export function PlayerHalf({
         <BreedingArea
           permanent={player.breedingArea}
           canMove={canMove && !isOpponent}
+          canDigivolveDrop={canDigivolveBreeding && !isOpponent}
+          dropId={isOpponent ? 'breeding-slot-opponent' : 'breeding-slot'}
           onClick={onMove}
         />
       </div>

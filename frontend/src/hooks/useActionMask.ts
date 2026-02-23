@@ -19,6 +19,8 @@ export interface ParsedMask {
   canAttack: Map<number, Set<number>>;
   /** Map<handIndex, Set<fieldSlot>> */
   canDigivolve: Map<number, Set<number>>;
+  /** Hand indices that can digivolve onto breeding area (virtual slot 12). */
+  canDigivolveBreeding: Set<number>;
   /** Map<sourceSlot, Set<effectIdx>> */
   canActivateEffect: Map<number, Set<number>>;
   /** Valid selection indices for selection phases */
@@ -35,6 +37,7 @@ export function useActionMask(mask: number[]): ParsedMask {
     const canAttack = new Map<number, Set<number>>();
     const canAttackSecurity = new Map<number, boolean>();
     const canDigivolve = new Map<number, Set<number>>();
+    const canDigivolveBreeding = new Set<number>();
     const canActivateEffect = new Map<number, Set<number>>();
     const validSelections = new Set<number>();
 
@@ -48,6 +51,7 @@ export function useActionMask(mask: number[]): ParsedMask {
         canDnaDigivolve,
         canAttack,
         canDigivolve,
+        canDigivolveBreeding,
         canActivateEffect,
         validSelections,
         canAttackSecurity,
@@ -88,6 +92,10 @@ export function useActionMask(mask: number[]): ParsedMask {
       const offset = i - ACTION.DIGIVOLVE_START;
       const hand = Math.floor(offset / DIGIVOLVE_FIELDS_PER_HAND);
       const field = offset % DIGIVOLVE_FIELDS_PER_HAND;
+      if (field === 12) {
+        canDigivolveBreeding.add(hand);
+        continue;
+      }
       if (field >= MAX_BATTLE_AREA_SLOTS) continue;
       if (!canDigivolve.has(hand)) canDigivolve.set(hand, new Set());
       canDigivolve.get(hand)!.add(field);
@@ -146,6 +154,7 @@ export function useActionMask(mask: number[]): ParsedMask {
       canDnaDigivolve,
       canAttack,
       canDigivolve,
+      canDigivolveBreeding,
       canActivateEffect,
       validSelections,
       canAttackSecurity,

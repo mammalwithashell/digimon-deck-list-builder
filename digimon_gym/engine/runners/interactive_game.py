@@ -9,6 +9,8 @@ from digimon_gym.engine.loggers import VerboseLogger
 from digimon_gym.engine.data.enums import PlayerType
 from digimon_gym.engine.recording import GameRecorder
 
+ACTION_PASS_TURN = 62
+
 
 class InteractiveGame(BaseGameRunner):
     """Mixed human/agent game runner for interactive play.
@@ -23,13 +25,59 @@ class InteractiveGame(BaseGameRunner):
 
     def __init__(self, deck1_ids: List[str], deck2_ids: List[str],
                  player1_type: PlayerType = PlayerType.Agent,
-                 player2_type: PlayerType = PlayerType.Agent):
+                 player2_type: PlayerType = PlayerType.Agent,
+                 player1_policy: str = "greedy",
+                 player2_policy: str = "greedy"):
         self._verbose_logger = VerboseLogger()
         # Create a lightweight recorder just for initial state capture
         recorder = GameRecorder(record_tensors=False)
         super().__init__(deck1_ids, deck2_ids, self._verbose_logger, recorder=recorder)
         self.player1_type = player1_type
         self.player2_type = player2_type
+        self.player1_policy = player1_policy.lower()
+        self.player2_policy = player2_policy.lower()
+
+    @staticmethod
+    def _random_policy(mask: np.ndarray) -> int:
+        valid = np.where(mask > 0.5)[0]
+        if len(valid) == 0:
+            return ACTION_PASS_TURN
+        return int(np.random.choice(valid))
+
+    @staticmethod
+    def _sanitize_action(mask: np.ndarray, action: int) -> int:
+        valid = np.where(mask > 0.5)[0]
+        if len(valid) == 0:
+            return ACTION_PASS_TURN
+        valid_set = set(int(v) for v in valid)
+        if action in valid_set:
+            return action
+
+        # Prefer a non-pass fallback so the agent keeps progressing.
+        for candidate in valid:
+            if int(candidate) != ACTION_PASS_TURN:
+                return int(candidate)
+        return int(valid[0])
+
+    def _select_agent_action(self, mask: np.ndarray) -> int:
+        policy_name = self.player1_policy if self.game.turn_player is self.game.player1 else self.player2_policy
+
+        if policy_name == "random":
+            action = self._random_policy(mask)
+        else:
+            from digimon_gym.digimon_gym import greedy_policy
+
+            class _PolicyEnv:
+                def __init__(self, game_ref, mask_ref):
+                    self.game = game_ref
+                    self._mask = mask_ref
+
+                def get_action_mask(self):
+                    return self._mask
+
+            action = int(greedy_policy(_PolicyEnv(self.game, mask)))
+
+        return self._sanitize_action(mask, int(action))
 
     def is_current_player_human(self) -> bool:
         """Check if the current turn player is human."""
@@ -42,11 +90,12 @@ class InteractiveGame(BaseGameRunner):
         """Advance the game by one logical step.
 
         - If current player is Human: returns state immediately (pauses).
-        - If current player is Agent: executes agent turn, returns new state.
+        - If current player is Agent: executes agent actions until a human turn
+          begins or the game ends.
 
         Args:
             agent_policy_fn: Callable(game, mask) -> int for agent decisions.
-                             If None, agent always passes.
+                             If None, uses per-player configured policies.
 
         Returns:
             Game state dictionary (from game.to_ui_json()).
@@ -57,15 +106,28 @@ class InteractiveGame(BaseGameRunner):
         if self.is_current_player_human():
             # Pause: return state for UI rendering
             return self.game.to_ui_json()
-        else:
-            # Agent turn: execute action
+
+        # Agent loop: continue until human turn or game over.
+        max_agent_actions = 512
+        if self.player1_type == PlayerType.Agent and self.player2_type == PlayerType.Agent:
+            max_agent_actions = 1
+        actions_taken = 0
+
+        while (not self.game.game_over
+               and not self.is_current_player_human()
+               and actions_taken < max_agent_actions):
+            mask = self.get_action_mask()
+
             if agent_policy_fn:
-                mask = self.get_action_mask()
-                action = agent_policy_fn(self.game, mask)
+                chosen = int(agent_policy_fn(self.game, mask))
+                action = self._sanitize_action(mask, chosen)
             else:
-                action = 62  # pass
+                action = self._select_agent_action(mask)
+
             self.step(action)
-            return self.game.to_ui_json()
+            actions_taken += 1
+
+        return self.game.to_ui_json()
 
     def step(self, action_id: int) -> None:
         """Execute a single action (from human or agent)."""

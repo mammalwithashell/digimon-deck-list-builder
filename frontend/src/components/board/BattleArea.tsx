@@ -51,7 +51,7 @@ export function BattleArea({
   const slots = Array.from({ length: MAX_BATTLE_AREA_SLOTS }, (_, i) => i);
 
   return (
-    <div className="flex gap-1 flex-wrap justify-center min-h-[120px]">
+    <div className="grid grid-cols-6 gap-1 justify-center min-h-[232px] w-fit mx-auto">
       {slots.map((i) => {
         const perm = permanents[i];
         const isEmpty = !perm;

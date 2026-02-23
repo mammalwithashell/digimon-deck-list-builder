@@ -14,7 +14,7 @@ import gymnasium
 from gymnasium import spaces
 from digimon_gym.engine.runners.headless_game import HeadlessGame
 from digimon_gym.engine.game import TENSOR_SIZE, ACTION_SPACE_SIZE
-from digimon_gym.engine.data.enums import PendingAction
+from digimon_gym.engine.data.enums import PendingAction, GamePhase
 
 # Action Space Constants (re-exported for backward compatibility)
 ACTION_PLAY_CARD_START = 0
@@ -269,71 +269,197 @@ class GameState:
 # ─── Policies ─────────────────────────────────────────────────────────
 
 def greedy_policy(env) -> int:
-    """Selects an action based on a simple heuristic.
+    """Heuristic opponent policy for training/simulation.
 
-    Works with both DigimonEnv and GameState.
+    Main phase priority:
+      1) Digivolve while keeping turn.
+      2) Attack.
+      3) Play.
+      4) Pass.
+
+    Breeding priority:
+      1) Hatch.
+      2) Move.
+      3) Pass.
     """
     if isinstance(env, DigimonEnv):
-        mask = env.get_action_mask()
+        mask = np.asarray(env.get_action_mask())
         game = env.game
     else:
-        mask = env.get_action_mask()
+        mask = np.asarray(env.get_action_mask())
         game = env.game
 
-    valid_actions = np.where(mask)[0]
+    valid_actions = np.where(mask > 0)[0].astype(int)
 
-    if len(valid_actions) == 0:
+    if game is None or len(valid_actions) == 0:
         return ACTION_PASS_TURN
 
     player = game.turn_player
+    opponent = game.opponent_player
 
-    # Helper to score a card
-    def get_card_score(card):
-        if card.is_digimon:
-            return 10
-        elif card.is_option:
-            return 5
-        return 1
-
-    # 1. TRASH DECISION
-    if game.pending_action == PendingAction.TRASH_CARD:
-        best_action = -1
-        min_score = 999
-
+    def _first_non_pass() -> int:
         for action in valid_actions:
-            if ACTION_TRASH_CARD_START <= action <= ACTION_TRASH_CARD_END:
-                idx = action - ACTION_TRASH_CARD_START
-                if idx < len(player.hand_cards):
-                    score = get_card_score(player.hand_cards[idx])
-                    if score < min_score:
-                        min_score = score
-                        best_action = action
-        return best_action if best_action != -1 else valid_actions[0]
-
-    # 2. MAIN PHASE
-    # Priority: Hatch > Play High Score > Attack > Pass
-
-    # Hatch?
-    if ACTION_HATCH in valid_actions:
-        return ACTION_HATCH
-
-    # Play Card?
-    best_play_action = -1
-    max_play_score = -1
-    for action in valid_actions:
-        if ACTION_PLAY_CARD_START <= action <= ACTION_PLAY_CARD_END:
-            idx = action - ACTION_PLAY_CARD_START
-            if idx < len(player.hand_cards):
-                score = get_card_score(player.hand_cards[idx])
-                if score > max_play_score:
-                    max_play_score = score
-                    best_play_action = action
-
-    if best_play_action != -1:
-        return best_play_action
-
-    # Pass if nothing else
-    if ACTION_PASS_TURN in valid_actions:
+            if action != ACTION_PASS_TURN:
+                return int(action)
         return ACTION_PASS_TURN
 
-    return valid_actions[0]
+    def _relative_memory() -> int:
+        # Convert gauge to active-player-relative memory.
+        return int(game.memory) if game.turn_player is game.player1 else int(-game.memory)
+
+    def _estimate_digivolve_cost(card, base_perm) -> int:
+        if not card.c_entity_base or not card.c_entity_base.evo_costs:
+            return int(card.get_cost_itself)
+        if not base_perm.top_card:
+            return int(card.get_cost_itself)
+
+        base_level = base_perm.level
+        base_colors = set(base_perm.top_card.card_colors)
+        matching_costs = []
+        for evo_cost in card.c_entity_base.evo_costs:
+            if evo_cost.level == base_level and evo_cost.card_color in base_colors:
+                matching_costs.append(int(evo_cost.memory_cost))
+        if not matching_costs:
+            return int(card.get_cost_itself)
+        return min(matching_costs)
+
+    def _best_keep_turn_digivolve() -> Optional[int]:
+        rel_memory = _relative_memory()
+        keep_turn = []
+
+        for action in valid_actions:
+            if not (ACTION_DIGIVOLVE_START <= action <= ACTION_DIGIVOLVE_END):
+                continue
+            offset = int(action - ACTION_DIGIVOLVE_START)
+            hand_idx = offset // 15
+            field_idx = offset % 15
+
+            if hand_idx >= len(player.hand_cards):
+                continue
+            card = player.hand_cards[hand_idx]
+
+            if field_idx < len(player.battle_area):
+                base_perm = player.battle_area[field_idx]
+            elif field_idx == 12 and player.breeding_area is not None:
+                base_perm = player.breeding_area
+            else:
+                continue
+
+            cost = _estimate_digivolve_cost(card, base_perm)
+            if rel_memory - cost < 0:
+                continue
+
+            # Deterministic tie-breaks: level, DP, then lower cost.
+            score = (
+                int(card.level or 0),
+                int(card.base_dp or 0),
+                -cost,
+                -hand_idx,
+                -field_idx,
+            )
+            keep_turn.append((score, int(action)))
+
+        if not keep_turn:
+            return None
+        keep_turn.sort(reverse=True)
+        return keep_turn[0][1]
+
+    def _best_attack() -> Optional[int]:
+        attacks = []
+        for action in valid_actions:
+            if not (ACTION_ATTACK_START <= action <= ACTION_ATTACK_END):
+                continue
+            offset = int(action - ACTION_ATTACK_START)
+            attacker_idx = offset // 15
+            target_idx = offset % 15
+
+            if attacker_idx >= len(player.battle_area):
+                continue
+            attacker = player.battle_area[attacker_idx]
+            attacker_dp = int(attacker.dp or 0)
+
+            if target_idx == 12:
+                is_lethal = len(opponent.security_cards) == 0
+                priority = 3 if is_lethal else 1
+                score = (priority, attacker_dp, -attacker_idx)
+                attacks.append((score, int(action)))
+                continue
+
+            if target_idx >= len(opponent.battle_area):
+                continue
+            target = opponent.battle_area[target_idx]
+            target_dp = int(target.dp or 0)
+            favorable = attacker_dp > target_dp
+            priority = 2 if favorable else 0
+            score = (priority, attacker_dp - target_dp, -attacker_idx, -target_idx)
+            attacks.append((score, int(action)))
+
+        if not attacks:
+            return None
+        attacks.sort(reverse=True)
+        return attacks[0][1]
+
+    def _best_play() -> Optional[int]:
+        plays = []
+        for action in valid_actions:
+            if not (ACTION_PLAY_CARD_START <= action <= ACTION_PLAY_CARD_END):
+                continue
+            hand_idx = int(action - ACTION_PLAY_CARD_START)
+            if hand_idx >= len(player.hand_cards):
+                continue
+            card = player.hand_cards[hand_idx]
+            kind_score = 2 if card.is_digimon else (1 if card.is_option else 0)
+            score = (int(card.get_cost_itself), kind_score, -hand_idx)
+            plays.append((score, int(action)))
+        if not plays:
+            return None
+        plays.sort(reverse=True)
+        return plays[0][1]
+
+    # Selection-time hand trashing: dump lowest-value card first.
+    if game.pending_action == PendingAction.TRASH_CARD:
+        trash_choices = []
+        for action in valid_actions:
+            if not (ACTION_TRASH_CARD_START <= action <= ACTION_TRASH_CARD_END):
+                continue
+            hand_idx = int(action - ACTION_TRASH_CARD_START)
+            if hand_idx >= len(player.hand_cards):
+                continue
+            card = player.hand_cards[hand_idx]
+            kind_score = 2 if card.is_digimon else (1 if card.is_option else 0)
+            score = (kind_score, int(card.get_cost_itself), hand_idx)
+            trash_choices.append((score, int(action)))
+        if trash_choices:
+            trash_choices.sort()
+            return trash_choices[0][1]
+        return _first_non_pass()
+
+    if game.current_phase == GamePhase.Breeding:
+        if ACTION_HATCH in valid_actions:
+            return ACTION_HATCH
+        if ACTION_MOVE in valid_actions:
+            return ACTION_MOVE
+        if ACTION_PASS_TURN in valid_actions:
+            return ACTION_PASS_TURN
+        return _first_non_pass()
+
+    if game.current_phase == GamePhase.Main:
+        best_keep_turn_digivolve = _best_keep_turn_digivolve()
+        if best_keep_turn_digivolve is not None:
+            return best_keep_turn_digivolve
+
+        best_attack = _best_attack()
+        if best_attack is not None:
+            return best_attack
+
+        best_play = _best_play()
+        if best_play is not None:
+            return best_play
+
+        if ACTION_PASS_TURN in valid_actions:
+            return ACTION_PASS_TURN
+        return _first_non_pass()
+
+    if ACTION_PASS_TURN in valid_actions:
+        return ACTION_PASS_TURN
+    return _first_non_pass()

@@ -16,3 +16,5 @@ nul
 frontend/dist/
 frontend/node_modules/
 .env
+data/app.db
+frontend/tsconfig.tsbuildinfo

@@ -8,6 +8,8 @@ interface CreateGameParams {
   deck2_raw?: string;
   player1_type?: string;
   player2_type?: string;
+  player1_policy?: string;
+  player2_policy?: string;
 }
 
 interface CreateGameResponse {
@@ -35,35 +37,35 @@ interface StepResponse {
 }
 
 export async function createGame(params: CreateGameParams): Promise<CreateGameResponse> {
-  const { data } = await client.post<CreateGameResponse>('/game/create', params);
+  const { data } = await client.post<CreateGameResponse>('/games', params);
   return data;
 }
 
 export async function sendAction(gameId: string, action: number): Promise<ActionResponse> {
-  const { data } = await client.post<ActionResponse>(`/game/${gameId}/action`, { action });
+  const { data } = await client.post<ActionResponse>(`/games/${gameId}/actions`, { action });
   return data;
 }
 
 export async function stepGame(gameId: string): Promise<StepResponse> {
-  const { data } = await client.post<StepResponse>(`/game/${gameId}/step`);
+  const { data } = await client.post<StepResponse>(`/games/${gameId}/steps`);
   return data;
 }
 
 export async function getState(gameId: string): Promise<GameState> {
-  const { data } = await client.get<GameState>(`/game/${gameId}/state`);
+  const { data } = await client.get<GameState>(`/games/${gameId}/state`);
   return data;
 }
 
 export async function getMask(gameId: string): Promise<number[]> {
-  const { data } = await client.get<{ action_mask: number[] }>(`/game/${gameId}/mask`);
+  const { data } = await client.get<{ action_mask: number[] }>(`/games/${gameId}/action-mask`);
   return data.action_mask;
 }
 
 export async function getLog(gameId: string): Promise<string[]> {
-  const { data } = await client.get<{ logs: string[] }>(`/game/${gameId}/log`);
+  const { data } = await client.get<{ logs: string[] }>(`/games/${gameId}/logs`);
   return data.logs;
 }
 
 export async function deleteGame(gameId: string): Promise<void> {
-  await client.delete(`/game/${gameId}`);
+  await client.delete(`/games/${gameId}`);
 }

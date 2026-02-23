@@ -255,6 +255,19 @@ class TestBoardStateTensor:
         assert tensor[904] == CardRegistry.get_norm_id("BT14-001")
         assert tensor[910] == 1.0  # source count
 
+    def test_ui_memory_gauge_is_player1_oriented(self):
+        game = setup_game_at_phase(GamePhase.Main, memory=2)
+        # Make player2 the active turn player with +2 relative memory.
+        game.turn_player = game.player2
+        game.opponent_player = game.player1
+        game.player1.is_my_turn = False
+        game.player2.is_my_turn = True
+
+        ui = game.to_ui_json()
+        assert ui["memoryGauge"] == -2
+        assert ui["player1"]["memory"] == -2
+        assert ui["player2"]["memory"] == 2
+
 
 # ─── Action Mask Tests ───────────────────────────────────────────────
 
@@ -399,6 +412,28 @@ class TestActionMask:
         mask = game.get_action_mask(1)
         assert mask[400] == 0.0
 
+    def test_main_phase_digivolve_breeding_valid(self):
+        game = setup_game_at_phase(GamePhase.Main, memory=5)
+        p1 = game.player1
+
+        # Breeding base: Lv2 red egg
+        egg = make_card("BT14-001", kind=CardKind.DigiEgg, level=2, colors=[CardColor.Red], owner=p1)
+        p1.breeding_area = Permanent([egg])
+
+        # Hand card: Lv3 with evo requirement from red Lv2
+        evo = make_card(
+            "BT14-003",
+            level=3,
+            colors=[CardColor.Red],
+            owner=p1,
+            evo_costs=[EvoCost(CardColor.Red, 2, 0)],
+        )
+        p1.hand_cards.append(evo)
+
+        mask = game.get_action_mask(1)
+        # 400 + hand[0]*15 + breeding_slot[12]
+        assert mask[412] == 1.0
+
     def test_breeding_phase_hatch(self):
         game = setup_game_at_phase(GamePhase.Breeding)
         p1 = game.player1
@@ -428,6 +463,16 @@ class TestActionMask:
 
         mask = game.get_action_mask(1)
         assert mask[61] == 0.0  # can't move (level < 3)
+
+    def test_breeding_phase_auto_skips_when_only_pass_exists(self):
+        game = setup_game_at_phase(GamePhase.Breeding)
+        p1 = game.player1
+        # No hatch (empty egg deck), no move (Lv2), no training keyword.
+        p1.breeding_area = Permanent([make_card("BT14-001", kind=CardKind.DigiEgg, level=2, owner=p1)])
+        p1.digitama_library_cards = []
+
+        game.phase_breeding()
+        assert game.current_phase == GamePhase.Main
 
     def test_mask_player_perspective(self):
         """Mask should be from the requesting player's perspective."""
@@ -517,6 +562,27 @@ class TestActionDecoder:
         assert len(p1.battle_area) == 1
         assert p1.battle_area[0].level == 4
         assert len(p1.battle_area[0].card_sources) == 2
+
+    def test_decode_digivolve_breeding(self):
+        game = setup_game_at_phase(GamePhase.Main, memory=10)
+        p1 = game.player1
+
+        egg = make_card("BT14-001", "Egg", kind=CardKind.DigiEgg, level=2,
+                        colors=[CardColor.Red], owner=p1)
+        p1.breeding_area = Permanent([egg])
+
+        evo = make_card("BT14-003", "Rookie", dp=3000, level=3,
+                        colors=[CardColor.Red], owner=p1,
+                        evo_costs=[EvoCost(CardColor.Red, 2, 0)])
+        p1.hand_cards.append(evo)
+
+        # 400 + hand[0]*15 + breeding[12]
+        game.decode_action(412, 1)
+
+        assert p1.breeding_area is not None
+        assert p1.breeding_area.level == 3
+        assert len(p1.hand_cards) == 0
+        assert len(p1.breeding_area.card_sources) == 2
 
     def test_decode_hatch(self):
         game = setup_game_at_phase(GamePhase.Breeding, memory=5)

@@ -38,6 +38,9 @@ export function decodeAction(id: number): string {
     const offset = id - ACTION.DIGIVOLVE_START;
     const hand = Math.floor(offset / DIGIVOLVE_FIELDS_PER_HAND);
     const field = offset % DIGIVOLVE_FIELDS_PER_HAND;
+    if (field === 12) {
+      return `Digivolve hand ${hand} onto breeding area`;
+    }
     return `Digivolve hand ${hand} onto slot ${field}`;
   }
 

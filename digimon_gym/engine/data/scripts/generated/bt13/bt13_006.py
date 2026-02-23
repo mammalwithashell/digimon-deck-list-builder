@@ -22,7 +22,6 @@ class BT13_006(CardScript):
         effect0.is_optional = True
         effect0.is_on_deletion = True
 
-        effect = effect0  # alias for condition closure
         def condition0(context: Dict[str, Any]) -> bool:
             # Triggered on deletion — validated by engine timing
             return True
@@ -30,30 +29,40 @@ class BT13_006(CardScript):
         effect0.set_can_use_condition(condition0)
 
         def process0(ctx: Dict[str, Any]):
-            """Action: Delete, Trash From Hand"""
+            """Action: Trash 1 from hand (mandatory) to delete 1 opponent level 3 Digimon (mandatory, if possible)"""
             player = ctx.get('player')
-            perm = ctx.get('permanent')
             game = ctx.get('game')
             if not (player and game):
                 return
-            def target_filter(p):
-                return p.is_digimon
-            def on_delete(target_perm):
-                enemy = player.enemy if player else None
-                if enemy:
-                    enemy.delete_permanent(target_perm)
-            game.effect_select_opponent_permanent(
-                player, on_delete, filter_fn=target_filter, is_optional=True)
-            if not (player and game):
+
+            # Only offer effect if player has card in hand and opponent has level 3 Digimon
+            enemy = player.enemy if player else None
+            if not enemy:
                 return
-            def hand_filter(c):
-                return True
-            def on_trashed(selected):
+            level3_targets = [p for p in enemy.permanents if getattr(p, 'is_digimon', False) and getattr(p, 'get_level', lambda: 0)() == 3]
+            if not player.hand_cards or not level3_targets:
+                # If either mandatory component is missing, do nothing
+                return
+
+            # Ask player if they want to activate the effect (optional effect)
+            # If user proceeds, require trash, then deletion
+            def on_trash(selected):
                 if selected in player.hand_cards:
                     player.hand_cards.remove(selected)
                     player.trash_cards.append(selected)
-            game.effect_select_hand_card(
-                player, hand_filter, on_trashed, is_optional=True)
+                    # Now select enemy's level 3 Digimon to delete (mandatory)
+                    def target_filter(p):
+                        return getattr(p, 'is_digimon', False) and getattr(p, 'get_level', lambda: 0)() == 3
+                    def on_delete(target_perm):
+                        if target_perm in enemy.permanents:
+                            enemy.delete_permanent(target_perm)
+                    game.effect_select_opponent_permanent(
+                        player, on_delete, filter_fn=target_filter, is_optional=False
+                    )
+            # Trash a hand card—mandatory if effect is activated
+            hand_filter = lambda c: True  # Can choose any card
+            # Present only one selection, mandatory if effect is used
+            game.effect_select_hand_card(player, hand_filter, on_trash, is_optional=False)
 
         effect0.set_on_process_callback(process0)
         effects.append(effect0)

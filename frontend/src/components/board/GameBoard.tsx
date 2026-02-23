@@ -13,6 +13,7 @@ interface GameBoardProps {
   onRevealedClick?: (index: number) => void;
   canHatch?: boolean;
   canMove?: boolean;
+  canDigivolveBreeding?: boolean;
   playableHandIndices?: Set<number>;
   highlightedOwnSlots?: Set<number>;
   highlightedEnemySlots?: Set<number>;
@@ -28,6 +29,7 @@ export function GameBoard({
   onRevealedClick,
   canHatch = false,
   canMove = false,
+  canDigivolveBreeding = false,
   playableHandIndices,
   highlightedOwnSlots,
   highlightedEnemySlots,
@@ -94,6 +96,7 @@ export function GameBoard({
           highlightedSlots={ownSlots}
           canHatch={canHatch}
           canMove={canMove}
+          canDigivolveBreeding={canDigivolveBreeding}
           onSlotClick={(i) => onSlotClick?.(false, i)}
           onHatch={onHatch}
           onMove={onMove}

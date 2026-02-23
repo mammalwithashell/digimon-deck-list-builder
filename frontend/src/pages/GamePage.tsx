@@ -66,6 +66,7 @@ export function GamePage() {
         deck2: [...eggIds, ...deckIds], // Agent uses same deck for now
         player1_type: 'human',
         player2_type: 'agent',
+        player2_policy: agentType,
       });
 
       store.setGameId(result.game_id);
@@ -197,7 +198,7 @@ export function GamePage() {
       if (!over) return;
 
       const dragData = active.data.current as DragData;
-      const dropZone = over.data.current as { type: 'empty-field-slot' | 'occupied-field-slot'; slotIndex: number };
+      const dropZone = over.data.current as { type: 'empty-field-slot' | 'occupied-field-slot' | 'breeding-slot'; slotIndex: number };
 
       if (!dragData || !dropZone) return;
 
@@ -216,7 +217,7 @@ export function GamePage() {
         return;
       }
       const dragData = event.active.data.current as DragData;
-      const dropZone = event.over.data.current as { type: 'empty-field-slot' | 'occupied-field-slot'; slotIndex: number };
+      const dropZone = event.over.data.current as { type: 'empty-field-slot' | 'occupied-field-slot' | 'breeding-slot'; slotIndex: number };
       if (!dragData || !dropZone) {
         setIsOverValid(false);
         return;
@@ -301,7 +302,10 @@ export function GamePage() {
   }
 
   // Digivolve: highlight hand cards that can digivolve
-  const digivolveHandIndices = new Set(parsedMask.canDigivolve.keys());
+  const digivolveHandIndices = new Set([
+    ...parsedMask.canDigivolve.keys(),
+    ...parsedMask.canDigivolveBreeding,
+  ]);
 
   // Merge playable + digivolve highlights for hand
   const highlightedHand = new Set([...parsedMask.canPlayFromHand, ...digivolveHandIndices]);
@@ -344,6 +348,7 @@ export function GamePage() {
               onRevealedClick={handleRevealedClick}
               canHatch={parsedMask.canHatch}
               canMove={parsedMask.canMove}
+              canDigivolveBreeding={parsedMask.canDigivolveBreeding.size > 0}
               playableHandIndices={highlightedHand}
               highlightedOwnSlots={highlightedOwnSlots}
               highlightedEnemySlots={highlightedEnemySlots}

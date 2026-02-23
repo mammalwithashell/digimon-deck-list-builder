@@ -192,6 +192,24 @@ class Game:
 
     def phase_breeding(self):
         self.logger.log_verbose("Phase: Breeding")
+        me = self.turn_player
+
+        can_hatch = me.breeding_area is None and bool(me.digitama_library_cards)
+        can_move = me.breeding_area is not None and (me.breeding_area.level or 0) >= 3
+        can_training = (
+            me.breeding_area is not None
+            and me.breeding_area.is_digimon
+            and not me.breeding_area.is_suspended
+            and me.breeding_area.has_keyword('_is_training')
+            and bool(me.library_cards)
+        )
+
+        # If the only legal action is pass, auto-advance to Main.
+        if not (can_hatch or can_move or can_training):
+            self.logger.log_verbose("No actionable breeding options; auto-skipping to Main.")
+            self.action_breeding_pass()
+            return
+
         pass  # Waiting for agent action
 
     def phase_main(self):
@@ -582,7 +600,7 @@ class Game:
             "turnCount": self.turn_count,
             "currentPhase": self.current_phase.value,
             "currentPlayer": self.current_player_id,
-            "memoryGauge": self.memory,
+            "memoryGauge": self._get_memory_for(self.player1),
             "isGameOver": self.game_over,
             "winner": self.winner.player_id if self.winner else None,
             "player1": player_ui_data(self.player1),
@@ -794,7 +812,7 @@ class Game:
 
         self.logger.log(f"[Play] {self.turn_player.player_name} plays {card.card_names[0]} (cost: {cost})")
         self.turn_player.play_card(card)
-        self.memory -= cost
+        self.turn_player.lose_memory(cost)
 
         self.execute_effects(EffectTiming.OnEnterFieldAnyone, {"played_card": card})
         self.check_turn_end()
@@ -814,9 +832,33 @@ class Game:
         card = self.turn_player.hand_cards[card_index]
 
         cost = self.turn_player.digivolve(perm, card)
-        self.memory -= cost
+        self.turn_player.lose_memory(cost)
 
         # Track digivolution turn for <Blitz> checks
+        perm.turn_digivolved = self.turn_count
+
+        self.execute_effects(EffectTiming.WhenDigivolving, {"digivolved_permanent": perm})
+        self.execute_effects(EffectTiming.OnEnterFieldAnyone, {"played_card": card})
+        self.check_turn_end()
+
+    def action_digivolve_breeding(self, card_index: int):
+        """Digivolve a hand card onto the breeding area Digimon."""
+        if self.current_phase != GamePhase.Main:
+            self.logger.log(f"[Rejected] action_digivolve_breeding: not in Main phase (phase={self.current_phase})")
+            return
+        if self.turn_player.breeding_area is None:
+            self.logger.log("[Rejected] action_digivolve_breeding: breeding area is empty")
+            return
+        if card_index < 0 or card_index >= len(self.turn_player.hand_cards):
+            self.logger.log(f"[Rejected] action_digivolve_breeding: card index {card_index} out of range (hand size={len(self.turn_player.hand_cards)})")
+            return
+
+        perm = self.turn_player.breeding_area
+        card = self.turn_player.hand_cards[card_index]
+
+        cost = self.turn_player.digivolve(perm, card)
+        self.turn_player.lose_memory(cost)
+
         perm.turn_digivolved = self.turn_count
 
         self.execute_effects(EffectTiming.WhenDigivolving, {"digivolved_permanent": perm})
@@ -964,7 +1006,7 @@ class Game:
 
     def _get_memory_for(self, player: Player) -> int:
         """Memory relative to player (positive = their favour)."""
-        if player is self.player1:
+        if player is self.turn_player:
             return self.memory
         return -self.memory
 
@@ -1058,6 +1100,11 @@ class Game:
                             for p in me.battle_area
                             if p.top_card and (p.is_digimon or p.is_tamer)
                         )
+                        if (not has_color_match and me.breeding_area and me.breeding_area.top_card
+                                and me.breeding_area.is_digimon):
+                            has_color_match = bool(
+                                option_colors & set(me.breeding_area.top_card.card_colors)
+                            )
                         if not has_color_match:
                             continue
                     mask[i] = 1.0
@@ -1103,6 +1150,9 @@ class Game:
                     base_perm = me.battle_area[f]
                     if can_digivolve(card, base_perm):
                         mask[400 + h * 15 + f] = 1.0
+                # Virtual field index 12 = breeding area digivolve.
+                if me.breeding_area and can_digivolve(card, me.breeding_area):
+                    mask[400 + h * 15 + 12] = 1.0
 
             # DNA Digivolve (63-92): 63 + hand_idx
             for h in range(min(len(me.hand_cards), 30)):
@@ -1347,6 +1397,9 @@ class Game:
             if field_idx < len(me.battle_area):
                 p = me.battle_area[field_idx]
                 field_name = p.top_card.card_names[0] if p.top_card and p.top_card.card_names else "Digimon"
+            elif field_idx == 12 and me.breeding_area is not None:
+                p = me.breeding_area
+                field_name = p.top_card.card_names[0] if p.top_card and p.top_card.card_names else "Breeding Digimon"
             return f"Digivolve {hand_name} onto {field_name}"
 
         # Effect activation (1000-1999): Training=0, Delay=1
@@ -1504,7 +1557,10 @@ class Game:
             normalized = action_id - 400
             hand_idx = normalized // 15
             field_idx = normalized % 15
-            self.action_digivolve(field_idx, hand_idx)
+            if field_idx == 12:
+                self.action_digivolve_breeding(hand_idx)
+            else:
+                self.action_digivolve(field_idx, hand_idx)
         elif 1000 <= action_id <= 1999:
             # Effect activation (Training=0, Delay=1 in main phase)
             normalized = action_id - 1000
@@ -2178,7 +2234,7 @@ class Game:
                 player.hand_cards.remove(card)
                 permanent.add_card_source(card)
                 permanent.turn_digivolved = self.turn_count  # Track for <Blitz>
-                self.memory -= cost
+                player.lose_memory(cost)
                 self.logger.log(
                     f"[Effect Digivolve] {card.card_names[0]} onto "
                     f"{permanent.top_card.card_names[0] if permanent.top_card else 'Unknown'} "
@@ -2449,7 +2505,7 @@ class Game:
         )
 
         cost = player.dna_digivolve(top_perm, bottom_perm, card, dna_cost)
-        self.memory -= cost
+        player.lose_memory(cost)
 
         # Find the new permanent (last in battle area after dna_digivolve)
         new_perm = player.battle_area[-1] if player.battle_area else None

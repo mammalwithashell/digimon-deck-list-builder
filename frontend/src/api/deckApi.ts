@@ -40,6 +40,12 @@ interface ValidateDeckResponse {
   warnings: { field: string; message: string }[];
 }
 
+interface BackendValidateDeckResponse {
+  is_valid: boolean;
+  errors: string[];
+  warnings: string[];
+}
+
 export async function createDeck(params: CreateDeckParams): Promise<DeckResponse> {
   const { data } = await client.post<DeckResponse>('/decks', params);
   return data;
@@ -74,7 +80,7 @@ export async function validateDeck(deckId: string): Promise<DeckResponse> {
 }
 
 export async function parseDeck(deckString: string): Promise<ParseDeckResponse> {
-  const { data } = await client.post<ParseDeckResponse>('/deck/parse', { deck: deckString });
+  const { data } = await client.post<ParseDeckResponse>('/decks/parse', { deck: deckString });
   return data;
 }
 
@@ -83,10 +89,15 @@ export async function validateDeckRaw(
   eggDeck: string[],
   gameMode?: string,
 ): Promise<ValidateDeckResponse> {
-  const { data } = await client.post<ValidateDeckResponse>('/deck/validate', {
+  const { data } = await client.post<BackendValidateDeckResponse>('/decks/validate', {
     main_deck: mainDeck,
     egg_deck: eggDeck,
     game_mode: gameMode ?? 'standard',
   });
-  return data;
+
+  return {
+    valid: data.is_valid,
+    errors: data.errors.map((message) => ({ field: 'deck', message })),
+    warnings: data.warnings.map((message) => ({ field: 'deck', message })),
+  };
 }
