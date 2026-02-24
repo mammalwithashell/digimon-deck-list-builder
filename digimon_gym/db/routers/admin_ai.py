@@ -537,7 +537,7 @@ async def promote_task_card(
             select(AIFixApplyAudit).where(
                 AIFixApplyAudit.ai_task_id == task.id,
                 AIFixApplyAudit.status == "applied",
-            )
+            ).limit(1)
         )
         if audit_result.scalar_one_or_none() is None:
             raise HTTPException(
