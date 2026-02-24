@@ -36,6 +36,20 @@ SCOPE_VALUES = {
     SCOPE_SCRIPT_ENGINE_TRANSPILER,
 }
 
+# Curated engine files loaded for script_engine (and wider) scopes.
+ENGINE_CORE_FILES = [
+    "digimon_gym/engine/core/card_script.py",
+    "digimon_gym/engine/core/permanent.py",
+    "digimon_gym/engine/interfaces/card_effect.py",
+]
+
+# Additional transpiler files loaded for script_engine_transpiler scope.
+TRANSPILER_FILES = [
+    "tools/transpiler/generators.py",
+    "tools/transpiler/extractors.py",
+    "tools/transpiler/patterns.py",
+]
+
 
 class ApplyValidationError(RuntimeError):
     """Raised when fix output violates scope/hash safety rules."""
@@ -110,6 +124,12 @@ def get_primary_script_path(set_id: str, module_name: str) -> str:
 
 def build_file_context_for_task(*, set_id: str, module_name: str, scope_profile: str) -> list[dict[str, str]]:
     paths = [get_primary_script_path(set_id, module_name)]
+
+    if scope_profile in {SCOPE_SCRIPT_ENGINE, SCOPE_SCRIPT_ENGINE_TRANSPILER}:
+        paths.extend(ENGINE_CORE_FILES)
+    if scope_profile == SCOPE_SCRIPT_ENGINE_TRANSPILER:
+        paths.extend(TRANSPILER_FILES)
+
     contexts: list[dict[str, str]] = []
     for rel in paths:
         path = PROJECT_ROOT / rel
