@@ -20,6 +20,24 @@ load_project_env()
 
 logger = logging.getLogger(__name__)
 
+_RETRYABLE_ERROR_NAMES = frozenset({
+    "RateLimitError",
+    "APITimeoutError",
+    "InternalServerError",
+    "APIConnectionError",
+})
+
+
+def _is_retryable_error(exc: Exception) -> bool:
+    """Return True for transient LLM API errors that may succeed on retry.
+
+    Uses string-based type checking to avoid a hard import dependency on the
+    openai package.
+    """
+    if isinstance(exc, (ConnectionError, TimeoutError)):
+        return True
+    return type(exc).__name__ in _RETRYABLE_ERROR_NAMES
+
 
 class AITaskWorker:
     def __init__(self) -> None:
@@ -140,14 +158,26 @@ class AITaskWorker:
                 task.completed_at = datetime.now(timezone.utc)
                 task.error_text = None
             except Exception as exc:
-                task.status = "failed"
-                task.error_text = str(exc)
-                task.completed_at = datetime.now(timezone.utc)
+                max_att = int(task.max_attempts or 3)
+                if _is_retryable_error(exc) and int(task.attempts or 0) < max_att:
+                    logger.warning(
+                        "Retryable error on task %s (attempt %s/%s): %s",
+                        task.id, task.attempts, max_att, exc,
+                    )
+                    task.status = "queued"
+                    task.error_text = f"Retry {task.attempts}/{max_att}: {exc}"
+                    task.started_at = None
+                    task.completed_at = None
+                else:
+                    task.status = "failed"
+                    task.error_text = str(exc)
+                    task.completed_at = datetime.now(timezone.utc)
             await db.commit()
-            try:
-                await batch_orchestrator.on_task_finished(task.id)
-            except Exception:
-                logger.exception("Batch hook failed on task finish %s", task.id)
+            if task.status in ("completed", "failed"):
+                try:
+                    await batch_orchestrator.on_task_finished(task.id)
+                except Exception:
+                    logger.exception("Batch hook failed on task finish %s", task.id)
             return True
 
 
