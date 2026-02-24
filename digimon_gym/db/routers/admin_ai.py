@@ -520,6 +520,31 @@ async def promote_task_card(
 
     card_id = request.card_id.strip().upper()
 
+    # --- Quality Gate 1: review_batch must find card faithful to card text ---
+    if task.task_type == "review_batch":
+        result_data = _load_json(task.result_json, {})
+        cards_results = result_data.get("cards", {}) if isinstance(result_data, dict) else {}
+        card_review = cards_results.get(card_id, {}) if isinstance(cards_results, dict) else {}
+        if not card_review.get("faithful_to_card_text", False):
+            raise HTTPException(
+                status_code=409,
+                detail=f"Cannot promote: review found card {card_id} is not faithful to card text",
+            )
+
+    # --- Quality Gate 2: script_autofix must have a successful apply audit ---
+    if task.task_type == "script_autofix":
+        audit_result = await db.execute(
+            select(AIFixApplyAudit).where(
+                AIFixApplyAudit.ai_task_id == task.id,
+                AIFixApplyAudit.status == "applied",
+            )
+        )
+        if audit_result.scalar_one_or_none() is None:
+            raise HTTPException(
+                status_code=409,
+                detail=f"Cannot promote: no successful apply audit found for task {task_id}",
+            )
+
     sanitized = _load_json(task.sanitized_input_json, {})
     payload = _load_json(task.payload_json, {})
     cards = sanitized.get("cards", []) if isinstance(sanitized, dict) else []
