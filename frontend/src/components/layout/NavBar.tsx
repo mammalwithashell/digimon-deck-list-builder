@@ -12,6 +12,9 @@ const ADMIN_LINKS = [
   { to: '/admin/issues', label: 'Issues' },
   { to: '/admin/tasks', label: 'AI Tasks' },
   { to: '/admin/promotions', label: 'Promotions' },
+  { to: '/admin/barracks', label: 'Barracks' },
+  { to: '/admin/arena', label: 'Arena' },
+  { to: '/admin/gauntlet', label: 'Gauntlet' },
 ];
 
 export function NavBar() {

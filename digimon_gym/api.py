@@ -9,9 +9,11 @@ load_project_env()
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
+from digimon_gym.agents.training_worker import training_job_worker
 from digimon_gym.ai.worker import ai_task_worker
 from digimon_gym.db.database import init_db
 from digimon_gym.db.routers import admin_ai as admin_ai_router
+from digimon_gym.db.routers import training as training_router
 from digimon_gym.db.routers import assets as assets_router
 from digimon_gym.db.routers import auth as auth_router
 from digimon_gym.db.routers import decks as decks_router
@@ -32,7 +34,12 @@ async def lifespan(app: FastAPI):
     worker_enabled = os.getenv("AI_WORKER_DISABLED", "0") != "1"
     if worker_enabled:
         await ai_task_worker.start()
+    training_enabled = os.getenv("TRAINING_WORKER_DISABLED", "0") != "1"
+    if training_enabled:
+        await training_job_worker.start()
     yield
+    if training_enabled:
+        await training_job_worker.stop()
     if worker_enabled:
         await ai_task_worker.stop()
 
@@ -55,6 +62,7 @@ app.include_router(friends_router.router)
 app.include_router(assets_router.router)
 app.include_router(issues_router.router)
 app.include_router(admin_ai_router.router)
+app.include_router(training_router.router)
 
 # Domain routers (REST-first, with legacy aliases inside each module)
 app.include_router(health.router)

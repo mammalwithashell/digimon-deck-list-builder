@@ -564,6 +564,174 @@ class AIFixApplyAudit(Base):
     creator = relationship("User")
 
 
+# ── Agent Training ─────────────────────────────────────────────────────
+
+class Agent(Base):
+    __tablename__ = "agents"
+    __table_args__ = (
+        CheckConstraint(
+            "algorithm IN ('mlp', 'lstm')",
+            name="ck_agents_algorithm",
+        ),
+        Index("idx_agents_owner_id", "owner_id"),
+        Index("idx_agents_archetype", "archetype"),
+    )
+
+    id = Column(String, primary_key=True, default=_new_uuid)
+    name = Column(String, nullable=False)
+    archetype = Column(String, nullable=False)
+    algorithm = Column(String, nullable=False, default="mlp")
+    weights_path = Column(String, nullable=False, default="")
+    deck_json = Column(Text, nullable=False, default="[]")
+    deck_source = Column(String, nullable=True)
+    total_games = Column(Integer, nullable=False, default=0)
+    total_wins = Column(Integer, nullable=False, default=0)
+    total_losses = Column(Integer, nullable=False, default=0)
+    total_draws = Column(Integer, nullable=False, default=0)
+    win_rate = Column(Float, nullable=False, default=0.0)
+    total_timesteps_trained = Column(Integer, nullable=False, default=0)
+    owner_id = Column(String, ForeignKey("users.id", ondelete="SET NULL"), nullable=True)
+    created_at = Column(DateTime(timezone=True), default=_utcnow, nullable=False)
+    updated_at = Column(DateTime(timezone=True), default=_utcnow, onupdate=_utcnow, nullable=False)
+
+    owner = relationship("User")
+
+
+class Gauntlet(Base):
+    __tablename__ = "gauntlets"
+    __table_args__ = (
+        CheckConstraint(
+            "status IN ('configuring', 'stage_1', 'stage_2', 'stage_3', 'completed', 'failed', 'canceled')",
+            name="ck_gauntlets_status",
+        ),
+        Index("idx_gauntlets_status", "status"),
+        Index("idx_gauntlets_created_at", "created_at"),
+    )
+
+    id = Column(String, primary_key=True, default=_new_uuid)
+    name = Column(String, nullable=False)
+    status = Column(String, nullable=False, default="configuring")
+    current_stage = Column(Integer, nullable=False, default=0)
+    stage1_games = Column(Integer, nullable=False, default=1000)
+    stage2_games = Column(Integer, nullable=False, default=5000)
+    stage3_games_per_matchup = Column(Integer, nullable=False, default=100)
+    config_json = Column(Text, nullable=False, default="{}")
+    matchup_matrix_json = Column(Text, nullable=True)
+    tournament_rankings_json = Column(Text, nullable=True)
+    error_text = Column(Text, nullable=True)
+    created_by = Column(String, ForeignKey("users.id", ondelete="SET NULL"), nullable=True)
+    started_at = Column(DateTime(timezone=True), nullable=True)
+    completed_at = Column(DateTime(timezone=True), nullable=True)
+    created_at = Column(DateTime(timezone=True), default=_utcnow, nullable=False)
+    updated_at = Column(DateTime(timezone=True), default=_utcnow, onupdate=_utcnow, nullable=False)
+
+    creator = relationship("User")
+    participants = relationship("GauntletParticipant", back_populates="gauntlet", cascade="all, delete-orphan")
+    jobs = relationship("TrainingJob", back_populates="gauntlet")
+
+
+class TrainingJob(Base):
+    __tablename__ = "training_jobs"
+    __table_args__ = (
+        CheckConstraint(
+            "job_type IN ('train_vs_greedy', 'train_vs_random', 'train_vs_agent', 'evaluate')",
+            name="ck_training_jobs_type",
+        ),
+        CheckConstraint(
+            "status IN ('queued', 'running', 'completed', 'failed', 'canceled')",
+            name="ck_training_jobs_status",
+        ),
+        Index("idx_training_jobs_status", "status"),
+        Index("idx_training_jobs_gauntlet_id", "gauntlet_id"),
+        Index("idx_training_jobs_agent_id", "agent_id"),
+        Index("idx_training_jobs_created_at", "created_at"),
+    )
+
+    id = Column(String, primary_key=True, default=_new_uuid)
+    job_type = Column(String, nullable=False)
+    status = Column(String, nullable=False, default="queued")
+    agent_id = Column(String, ForeignKey("agents.id", ondelete="SET NULL"), nullable=True)
+    opponent_agent_id = Column(String, ForeignKey("agents.id", ondelete="SET NULL"), nullable=True)
+    opponent_type = Column(String, nullable=True)
+    gauntlet_id = Column(String, ForeignKey("gauntlets.id", ondelete="SET NULL"), nullable=True)
+    gauntlet_stage = Column(Integer, nullable=True)
+    total_games = Column(Integer, nullable=False, default=0)
+    total_timesteps = Column(Integer, nullable=False, default=0)
+    completed_games = Column(Integer, nullable=False, default=0)
+    wins = Column(Integer, nullable=False, default=0)
+    losses = Column(Integer, nullable=False, default=0)
+    draws = Column(Integer, nullable=False, default=0)
+    win_rate = Column(Float, nullable=True)
+    config_json = Column(Text, nullable=False, default="{}")
+    result_json = Column(Text, nullable=True)
+    error_text = Column(Text, nullable=True)
+    created_by = Column(String, ForeignKey("users.id", ondelete="SET NULL"), nullable=True)
+    started_at = Column(DateTime(timezone=True), nullable=True)
+    completed_at = Column(DateTime(timezone=True), nullable=True)
+    created_at = Column(DateTime(timezone=True), default=_utcnow, nullable=False)
+    updated_at = Column(DateTime(timezone=True), default=_utcnow, onupdate=_utcnow, nullable=False)
+
+    agent = relationship("Agent", foreign_keys=[agent_id])
+    opponent_agent = relationship("Agent", foreign_keys=[opponent_agent_id])
+    gauntlet = relationship("Gauntlet", back_populates="jobs")
+    creator = relationship("User")
+
+
+class GauntletParticipant(Base):
+    __tablename__ = "gauntlet_participants"
+    __table_args__ = (
+        CheckConstraint(
+            "role IN ('core', 'exploiter')",
+            name="ck_gauntlet_participants_role",
+        ),
+        UniqueConstraint("gauntlet_id", "slot", name="uq_gauntlet_participant_slot"),
+        Index("idx_gauntlet_participants_gauntlet", "gauntlet_id"),
+        Index("idx_gauntlet_participants_agent", "agent_id"),
+    )
+
+    id = Column(String, primary_key=True, default=_new_uuid)
+    gauntlet_id = Column(String, ForeignKey("gauntlets.id", ondelete="CASCADE"), nullable=False)
+    slot = Column(Integer, nullable=False)
+    role = Column(String, nullable=False)
+    agent_id = Column(String, ForeignKey("agents.id", ondelete="SET NULL"), nullable=True)
+    archetype_name = Column(String, nullable=False)
+    deck_json = Column(Text, nullable=False, default="[]")
+    deck_source = Column(String, nullable=True)
+    meta_share = Column(Float, nullable=False, default=0.0)
+    threat_index = Column(Float, nullable=False, default=0.0)
+    tournament_win_rate = Column(Float, nullable=True)
+    expected_meta_win_rate = Column(Float, nullable=True)
+    created_at = Column(DateTime(timezone=True), default=_utcnow, nullable=False)
+
+    gauntlet = relationship("Gauntlet", back_populates="participants")
+    agent = relationship("Agent")
+
+
+class MatchupResult(Base):
+    __tablename__ = "matchup_results"
+    __table_args__ = (
+        Index("idx_matchup_results_gauntlet", "gauntlet_id"),
+        Index("idx_matchup_results_agents", "agent_a_id", "agent_b_id"),
+    )
+
+    id = Column(String, primary_key=True, default=_new_uuid)
+    gauntlet_id = Column(String, ForeignKey("gauntlets.id", ondelete="CASCADE"), nullable=False)
+    agent_a_id = Column(String, ForeignKey("agents.id", ondelete="SET NULL"), nullable=True)
+    agent_b_id = Column(String, ForeignKey("agents.id", ondelete="SET NULL"), nullable=True)
+    games_played = Column(Integer, nullable=False, default=0)
+    a_wins = Column(Integer, nullable=False, default=0)
+    b_wins = Column(Integer, nullable=False, default=0)
+    draws = Column(Integer, nullable=False, default=0)
+    a_win_rate = Column(Float, nullable=False, default=0.0)
+    job_id = Column(String, ForeignKey("training_jobs.id", ondelete="SET NULL"), nullable=True)
+    created_at = Column(DateTime(timezone=True), default=_utcnow, nullable=False)
+
+    gauntlet = relationship("Gauntlet")
+    agent_a = relationship("Agent", foreign_keys=[agent_a_id])
+    agent_b = relationship("Agent", foreign_keys=[agent_b_id])
+    job = relationship("TrainingJob")
+
+
 class RefreshToken(Base):
     __tablename__ = "refresh_tokens"
     __table_args__ = (

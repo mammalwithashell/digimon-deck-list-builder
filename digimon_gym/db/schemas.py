@@ -447,3 +447,148 @@ class ReplayStepResponse(BaseModel):
     state: Dict[str, Any]
     verification_ok: Optional[bool] = None
     verification_errors: List[str] = []
+
+
+# ── Agent Training ─────────────────────────────────────────────────────
+
+class AgentCreateRequest(BaseModel):
+    name: str = Field(..., min_length=1, max_length=100)
+    archetype: str = Field(..., min_length=1, max_length=100)
+    algorithm: Literal["mlp", "lstm"] = "mlp"
+    deck: List[str]
+    deck_source: Optional[str] = None
+
+
+class AgentUpdateRequest(BaseModel):
+    name: Optional[str] = Field(None, min_length=1, max_length=100)
+    archetype: Optional[str] = Field(None, min_length=1, max_length=100)
+
+
+class AgentResponse(BaseModel):
+    id: str
+    name: str
+    archetype: str
+    algorithm: str
+    weights_path: str
+    deck_source: Optional[str] = None
+    total_games: int
+    total_wins: int
+    total_losses: int
+    total_draws: int
+    win_rate: float
+    total_timesteps_trained: int
+    owner_id: Optional[str] = None
+    created_at: datetime
+    updated_at: datetime
+
+
+class TrainingJobCreateRequest(BaseModel):
+    job_type: Literal["train_vs_greedy", "train_vs_random", "train_vs_agent", "evaluate"]
+    agent_id: str
+    opponent_agent_id: Optional[str] = None
+    total_timesteps: int = Field(100_000, ge=1000, le=10_000_000)
+    total_games: int = Field(0, ge=0, le=100_000)
+    config: Dict[str, Any] = Field(default_factory=dict)
+
+
+class TrainingJobResponse(BaseModel):
+    id: str
+    job_type: str
+    status: str
+    agent_id: Optional[str] = None
+    opponent_agent_id: Optional[str] = None
+    opponent_type: Optional[str] = None
+    gauntlet_id: Optional[str] = None
+    gauntlet_stage: Optional[int] = None
+    total_games: int
+    total_timesteps: int
+    completed_games: int
+    wins: int
+    losses: int
+    draws: int
+    win_rate: Optional[float] = None
+    config: Dict[str, Any] = Field(default_factory=dict)
+    result: Optional[Dict[str, Any]] = None
+    error_text: Optional[str] = None
+    created_by: Optional[str] = None
+    started_at: Optional[datetime] = None
+    completed_at: Optional[datetime] = None
+    created_at: datetime
+    updated_at: datetime
+
+
+class GauntletParticipantInput(BaseModel):
+    archetype_name: str = Field(..., min_length=1, max_length=100)
+    deck: List[str]
+    deck_source: Optional[str] = None
+    role: Literal["core", "exploiter"] = "core"
+    meta_share: float = Field(0.0, ge=0.0, le=1.0)
+    threat_index: float = Field(0.0, ge=0.0)
+
+
+class GauntletCreateRequest(BaseModel):
+    name: str = Field(..., min_length=1, max_length=100)
+    participants: List[GauntletParticipantInput] = Field(..., min_length=2, max_length=12)
+    stage1_games: int = Field(1000, ge=100, le=100_000)
+    stage2_games: int = Field(5000, ge=100, le=100_000)
+    stage3_games_per_matchup: int = Field(100, ge=10, le=10_000)
+    config: Dict[str, Any] = Field(default_factory=dict)
+
+
+class GauntletParticipantResponse(BaseModel):
+    id: str
+    slot: int
+    role: str
+    agent_id: Optional[str] = None
+    archetype_name: str
+    deck_source: Optional[str] = None
+    meta_share: float
+    threat_index: float
+    tournament_win_rate: Optional[float] = None
+    expected_meta_win_rate: Optional[float] = None
+
+
+class GauntletResponse(BaseModel):
+    id: str
+    name: str
+    status: str
+    current_stage: int
+    stage1_games: int
+    stage2_games: int
+    stage3_games_per_matchup: int
+    participants: List[GauntletParticipantResponse] = Field(default_factory=list)
+    error_text: Optional[str] = None
+    created_by: Optional[str] = None
+    started_at: Optional[datetime] = None
+    completed_at: Optional[datetime] = None
+    created_at: datetime
+    updated_at: datetime
+
+
+class GauntletDetailResponse(BaseModel):
+    gauntlet: GauntletResponse
+    jobs: List[TrainingJobResponse] = Field(default_factory=list)
+    matchup_matrix: Optional[Dict[str, Dict[str, float]]] = None
+    tournament_rankings: Optional[List[Dict[str, Any]]] = None
+
+
+class MatchupResultResponse(BaseModel):
+    id: str
+    gauntlet_id: str
+    agent_a_id: Optional[str] = None
+    agent_b_id: Optional[str] = None
+    games_played: int
+    a_wins: int
+    b_wins: int
+    draws: int
+    a_win_rate: float
+
+
+class ArchetypeInfoResponse(BaseModel):
+    name: str
+    display_card_id: Optional[str] = None
+    primary_color: Optional[str] = None
+    meta_share: float = 0.0
+    threat_index: float = 0.0
+    decklists_count: int = 0
+    sample_decklist: List[str] = Field(default_factory=list)

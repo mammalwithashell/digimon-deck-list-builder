@@ -68,6 +68,55 @@ def random_policy(env: DigimonEnv) -> int:
     return int(np.random.choice(valid))
 
 
+def make_agent_opponent_fn(
+    weights_path: str,
+    algorithm: str = "mlp",
+    lstm_hidden_size: int = 256,
+) -> Callable[[DigimonEnv], int]:
+    """Load a saved model and return an opponent policy function.
+
+    Creates a closure that loads MLP or LSTM weights once and returns
+    a function compatible with OpponentWrapper's ``opponent_fn`` signature.
+
+    Args:
+        weights_path: Path to the saved SB3 model (without ``.zip`` extension).
+        algorithm: ``"mlp"`` for MaskablePPO, ``"lstm"`` for MaskableRecurrentPPO.
+        lstm_hidden_size: LSTM hidden units (only used when algorithm is ``"lstm"``).
+
+    Returns:
+        A callable ``(DigimonEnv) -> int`` that predicts Player 2 actions.
+    """
+    if algorithm == "lstm":
+        model = MaskableRecurrentPPO.load(weights_path)
+        # LSTM state must persist across steps within a single episode.
+        lstm_states: list = [None]  # mutable container for closure
+
+        def _lstm_policy(env: DigimonEnv) -> int:
+            mask = env.action_mask()
+            obs = env.runner.get_board_tensor(2)
+            action, lstm_states[0] = model.predict(
+                obs,
+                state=lstm_states[0],
+                action_masks=mask,
+                deterministic=True,
+            )
+            return int(action)
+
+        # Attach a reset hook so callers can clear LSTM state between episodes.
+        _lstm_policy.reset_state = lambda: lstm_states.__setitem__(0, None)  # type: ignore[attr-defined]
+        return _lstm_policy
+    else:
+        model = MaskablePPO.load(weights_path)
+
+        def _mlp_policy(env: DigimonEnv) -> int:
+            mask = env.action_mask()
+            obs = env.runner.get_board_tensor(2)
+            action, _ = model.predict(obs, action_masks=mask, deterministic=True)
+            return int(action)
+
+        return _mlp_policy
+
+
 # ─── Opponent Wrapper ────────────────────────────────────────────────
 
 class OpponentWrapper(gymnasium.Wrapper):

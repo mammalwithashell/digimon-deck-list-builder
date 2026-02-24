@@ -11,6 +11,9 @@ import { DeckBuilderPage } from '@/pages/DeckBuilderPage';
 import { AdminIssuesPage } from '@/pages/AdminIssuesPage';
 import { AdminTasksPage } from '@/pages/AdminTasksPage';
 import { AdminPromotionsPage } from '@/pages/AdminPromotionsPage';
+import { BarracksPage } from '@/pages/BarracksPage';
+import { ArenaPage } from '@/pages/ArenaPage';
+import { GauntletPage } from '@/pages/GauntletPage';
 import { useAuthStore } from '@/stores/authStore';
 
 export function App() {
@@ -35,6 +38,10 @@ export function App() {
             <Route path="/admin/issues" element={<AdminIssuesPage />} />
             <Route path="/admin/tasks" element={<AdminTasksPage />} />
             <Route path="/admin/promotions" element={<AdminPromotionsPage />} />
+            <Route path="/admin/barracks" element={<BarracksPage />} />
+            <Route path="/admin/arena" element={<ArenaPage />} />
+            <Route path="/admin/gauntlet" element={<GauntletPage />} />
+            <Route path="/admin/gauntlet/:id" element={<GauntletPage />} />
           </Route>
         </Route>
       </Routes>
