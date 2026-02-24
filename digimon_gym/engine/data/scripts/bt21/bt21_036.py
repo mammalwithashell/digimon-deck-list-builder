@@ -18,9 +18,8 @@ class BT21_036(CardScript):
         effect0 = ICardEffect()
         effect0.set_effect_name("BT21-036 Alternate digivolution requirement")
         effect0.set_effect_description("Alternate digivolution requirement")
-        # Alternate digivolution: Lv.3 from [Veemon] with [Hero] trait for cost 3
+        # Alternate digivolution: from [Veemon] with [Hero] trait for cost 3
         effect0._alt_digi_cost = 3
-        effect0._alt_digi_level = 3
         effect0._alt_digi_name = "Veemon"
         effect0._alt_digi_trait = "Hero"
 

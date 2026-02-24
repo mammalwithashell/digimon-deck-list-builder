@@ -132,3 +132,48 @@ This means Pilot outputs now feed both RL workflows and operational review/fix w
 3. Legal action masking must be maintained for every decision step.
 4. Recurrent evaluation loops must thread `(state, episode_start)` correctly.
 5. Keep tensor and action contracts synchronized with `TENSOR_SPEC.md` and `ACTION_SPEC.md`.
+
+---
+
+# 6. Generated Script Promotion Workflow
+
+Use this workflow to promote generated scripts into frozen production lanes.
+
+## Source/Target Layout
+
+- Generated source: `digimon_gym/engine/data/scripts/generated/<set_id>/<module_name>.py`
+- Frozen target: `digimon_gym/engine/data/scripts/<set_id>/<module_name>.py`
+- Manifest: `digimon_gym/engine/data/scripts/_frozen_manifest.json`
+
+## Promotion Contract
+
+- Promotions must go through `promote_script_from_generated` (`digimon_gym/engine/data/script_promotion.py`).
+- Promotion is hash-guarded using `expected_generated_hash` (sha256 of generated file).
+- Successful promotion:
+  - copies generated file to frozen lane
+  - updates the card record in `_frozen_manifest.json`
+  - increments manifest version
+
+## Single-Card Promotion
+
+Use the CLI helper:
+
+`python tools/promote_script.py --card-id BT24-001 --set-id bt24 --module-name bt24_001 --expected-generated-hash <sha256>`
+
+## Bulk Promotion (Current Generated Scripts)
+
+Definition of pending:
+
+- any generated script whose frozen counterpart is missing, or
+- frozen counterpart exists but hash differs from generated.
+
+Bulk run steps:
+
+1. Scan `scripts/generated/**.py` (excluding `__init__.py`) for pending entries.
+2. For each pending entry, compute generated sha256 and call `promote_script_from_generated(...)`.
+3. Re-scan and confirm pending count is `0`.
+
+## Post-Promotion Checks
+
+- `git status --short` should show frozen lane script updates/additions plus manifest update.
+- Pending re-scan must return `0`.

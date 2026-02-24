@@ -18,9 +18,8 @@ class BT23_068(CardScript):
         effect0 = ICardEffect()
         effect0.set_effect_name("BT23-068 Alternate digivolution requirement")
         effect0.set_effect_description("Alternate digivolution requirement")
-        # Alternate digivolution: Lv.5 for cost 4
+        # Alternate digivolution: alternate source for cost 4
         effect0._alt_digi_cost = 4
-        effect0._alt_digi_level = 5
 
         def condition0(context: Dict[str, Any]) -> bool:
             return True

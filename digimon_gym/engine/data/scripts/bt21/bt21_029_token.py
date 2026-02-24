@@ -39,7 +39,7 @@ class BT21_029_token(CardScript):
             if enemy:
                 for _ in range(1):
                     if enemy.security_cards:
-                        trashed = enemy.security_cards.pop(0)
+                        trashed = enemy.security_cards.pop()
                         enemy.trash_cards.append(trashed)
 
         effect0.set_on_process_callback(process0)

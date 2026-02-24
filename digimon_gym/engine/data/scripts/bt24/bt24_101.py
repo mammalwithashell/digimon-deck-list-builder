@@ -18,10 +18,8 @@ class BT24_101(CardScript):
         effect0 = ICardEffect()
         effect0.set_effect_name("BT24-101 Alternate digivolution requirement")
         effect0.set_effect_description("Alternate digivolution requirement")
-        # Alternate digivolution: Lv.5 with [TS] trait for cost 5
+        # Alternate digivolution: alternate source for cost 5
         effect0._alt_digi_cost = 5
-        effect0._alt_digi_level = 5
-        effect0._alt_digi_trait = "TS"
 
         def condition0(context: Dict[str, Any]) -> bool:
             return True
@@ -33,9 +31,8 @@ class BT24_101(CardScript):
         effect1 = ICardEffect()
         effect1.set_effect_name("BT24-101 Alternate digivolution requirement")
         effect1.set_effect_description("Alternate digivolution requirement")
-        # Alternate digivolution: Lv.5 for cost 5
+        # Alternate digivolution: alternate source for cost 5
         effect1._alt_digi_cost = 5
-        effect1._alt_digi_level = 5
 
         def condition1(context: Dict[str, Any]) -> bool:
             return True
@@ -77,7 +74,7 @@ class BT24_101(CardScript):
             if enemy:
                 for _ in range(1):
                     if enemy.security_cards:
-                        trashed = enemy.security_cards.pop(0)
+                        trashed = enemy.security_cards.pop()
                         enemy.trash_cards.append(trashed)
 
         effect2.set_on_process_callback(process2)
@@ -118,7 +115,7 @@ class BT24_101(CardScript):
             if enemy:
                 for _ in range(1):
                     if enemy.security_cards:
-                        trashed = enemy.security_cards.pop(0)
+                        trashed = enemy.security_cards.pop()
                         enemy.trash_cards.append(trashed)
 
         effect3.set_on_process_callback(process3)
@@ -150,7 +147,7 @@ class BT24_101(CardScript):
             if enemy:
                 for _ in range(1):
                     if enemy.security_cards:
-                        trashed = enemy.security_cards.pop(0)
+                        trashed = enemy.security_cards.pop()
                         enemy.trash_cards.append(trashed)
 
         effect4.set_on_process_callback(process4)
@@ -183,7 +180,7 @@ class BT24_101(CardScript):
             if enemy:
                 for _ in range(1):
                     if enemy.security_cards:
-                        trashed = enemy.security_cards.pop(0)
+                        trashed = enemy.security_cards.pop()
                         enemy.trash_cards.append(trashed)
 
         effect5.set_on_process_callback(process5)

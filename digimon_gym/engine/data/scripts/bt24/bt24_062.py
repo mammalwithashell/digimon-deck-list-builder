@@ -18,9 +18,8 @@ class BT24_062(CardScript):
         effect0 = ICardEffect()
         effect0.set_effect_name("BT24-062 Alternate digivolution requirement")
         effect0.set_effect_description("Alternate digivolution requirement")
-        # Alternate digivolution: Lv.4 with [Machine] trait for cost 0
+        # Alternate digivolution: with [Machine] trait for cost 0
         effect0._alt_digi_cost = 0
-        effect0._alt_digi_level = 4
         effect0._alt_digi_trait = "Machine"
 
         def condition0(context: Dict[str, Any]) -> bool:
