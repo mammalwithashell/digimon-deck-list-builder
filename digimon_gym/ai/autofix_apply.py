@@ -275,10 +275,9 @@ def run_profile_checks(*, repo_root: Path, scope_profile: str, applied_files: li
 
     outputs.append(_run_check_command(["python", "scripts/check_frozen_integrity.py"], cwd=repo_root))
 
-    if scope_profile in {SCOPE_SCRIPT_ENGINE, SCOPE_SCRIPT_ENGINE_TRANSPILER}:
-        tests = derive_targeted_tests(applied_files)
-        if tests:
-            outputs.append(_run_check_command(["pytest", "-q", *tests], cwd=repo_root))
+    tests = derive_targeted_tests(applied_files)
+    if tests:
+        outputs.append(_run_check_command(["pytest", "-q", *tests], cwd=repo_root))
 
     return outputs
 
