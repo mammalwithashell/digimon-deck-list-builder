@@ -370,7 +370,7 @@ class AIFixBatchOrchestrator:
                 status="queued",
                 model_name=batch.model_name,
                 cost_estimate_usd=estimate,
-                max_attempts=1,
+                max_attempts=3,
                 created_by=batch.created_by,
                 batch_id=batch.id,
                 run_mode=batch.run_mode,
