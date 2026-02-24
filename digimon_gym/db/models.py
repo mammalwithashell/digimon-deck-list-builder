@@ -554,6 +554,7 @@ class AIFixApplyAudit(Base):
     applied_files_json = Column(Text, nullable=False, default="[]")
     check_outputs_json = Column(Text, nullable=False, default="[]")
     commit_sha = Column(String, nullable=True)
+    pr_url = Column(String, nullable=True)
     status = Column(String, nullable=False, default="applied")
     error_text = Column(Text, nullable=True)
     created_by = Column(String, ForeignKey("users.id", ondelete="SET NULL"), nullable=True)

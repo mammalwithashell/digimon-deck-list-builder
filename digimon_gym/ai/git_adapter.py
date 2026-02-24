@@ -1,4 +1,4 @@
-"""Constrained git/gh command adapter for AI batch apply flows."""
+"""Constrained git/gh command adapter for AI batch and manual apply flows."""
 
 from __future__ import annotations
 
@@ -81,6 +81,44 @@ class GitAdapter:
             cwd=self.repo_root,
         )
         return WorktreeContext(worktree_path=wt, branch_name=DEFAULT_BRANCH)
+
+    # ── Task-oriented helpers (single manual apply-fix) ──────────────
+
+    def branch_name_for_task(self, *, task_id: str) -> str:
+        prefix = task_id.split("-", 1)[0]
+        return f"ai/fix-manual-{prefix}"
+
+    def worktree_path_for_task(self, *, task_id: str) -> Path:
+        return self.repo_root / "data" / "run" / "ai_worktrees" / f"task-{task_id}"
+
+    def prepare_worktree_for_task(
+        self, *, task_id: str, run_mode: str
+    ) -> WorktreeContext:
+        wt = self.worktree_path_for_task(task_id=task_id)
+        wt.parent.mkdir(parents=True, exist_ok=True)
+        branch = self.branch_name_for_task(task_id=task_id)
+
+        if wt.exists() and (wt / ".git").exists():
+            return WorktreeContext(
+                worktree_path=wt,
+                branch_name=branch if run_mode == "pr" else DEFAULT_BRANCH,
+            )
+
+        _run(["git", "fetch", "origin", DEFAULT_BRANCH], cwd=self.repo_root)
+        if run_mode == "pr":
+            _run(
+                ["git", "worktree", "add", "-B", branch, str(wt), f"origin/{DEFAULT_BRANCH}"],
+                cwd=self.repo_root,
+            )
+            return WorktreeContext(worktree_path=wt, branch_name=branch)
+
+        _run(
+            ["git", "worktree", "add", str(wt), f"origin/{DEFAULT_BRANCH}"],
+            cwd=self.repo_root,
+        )
+        return WorktreeContext(worktree_path=wt, branch_name=DEFAULT_BRANCH)
+
+    # ── Shared git operations ──────────────────────────────────────
 
     def commit_files(self, *, worktree_path: Path, files: list[str], message: str) -> str | None:
         if not files:

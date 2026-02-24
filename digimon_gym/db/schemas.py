@@ -138,6 +138,23 @@ class AITaskApplyFixResponse(BaseModel):
     status: str
     applied_files: List[str] = Field(default_factory=list)
     commit_sha: Optional[str] = None
+    pr_url: Optional[str] = None
+
+
+class AIFixApplyAuditResponse(BaseModel):
+    id: str
+    ai_task_id: Optional[str] = None
+    batch_id: Optional[str] = None
+    card_id: str
+    scope_profile: str
+    run_mode: str
+    applied_files: List[str] = Field(default_factory=list)
+    commit_sha: Optional[str] = None
+    pr_url: Optional[str] = None
+    status: str
+    error_text: Optional[str] = None
+    created_by: Optional[str] = None
+    created_at: datetime
 
 
 class TaskPromotionRequest(BaseModel):

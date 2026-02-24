@@ -109,6 +109,22 @@ export interface AIFixBatchDetailResponse {
   items: AIFixBatchItem[];
 }
 
+export interface AppliedCardItem {
+  id: string;
+  ai_task_id?: string | null;
+  batch_id?: string | null;
+  card_id: string;
+  scope_profile: string;
+  run_mode: string;
+  applied_files: string[];
+  commit_sha?: string | null;
+  pr_url?: string | null;
+  status: 'applied' | 'failed';
+  error_text?: string | null;
+  created_by?: string | null;
+  created_at: string;
+}
+
 export interface AITaskQueryParams {
   status?: 'queued' | 'running' | 'completed' | 'failed';
   task_type?: 'review_batch' | 'qa_analysis' | 'engine_audit' | 'script_autofix';
@@ -162,10 +178,14 @@ export async function retryAITask(taskId: string): Promise<{ task_id: string; st
 
 export async function applyAITaskFix(
   taskId: string,
-): Promise<{ task_id: string; status: string; applied_files: string[]; commit_sha?: string | null }> {
-  const { data } = await client.post<{ task_id: string; status: string; applied_files: string[]; commit_sha?: string | null }>(
-    `/admin/ai-tasks/${taskId}/apply-fix`,
-  );
+): Promise<{ task_id: string; status: string; applied_files: string[]; commit_sha?: string | null; pr_url?: string | null }> {
+  const { data } = await client.post<{
+    task_id: string;
+    status: string;
+    applied_files: string[];
+    commit_sha?: string | null;
+    pr_url?: string | null;
+  }>(`/admin/ai-tasks/${taskId}/apply-fix`);
   return data;
 }
 
@@ -219,6 +239,15 @@ export async function getAIFixBatch(batchId: string): Promise<AIFixBatchDetailRe
 
 export async function cancelAIFixBatch(batchId: string): Promise<{ batch_id: string; status: string }> {
   const { data } = await client.post<{ batch_id: string; status: string }>(`/admin/ai-batches/${batchId}/cancel`);
+  return data;
+}
+
+export async function getAppliedCards(params?: {
+  status?: 'applied' | 'failed';
+  set_id?: string;
+  limit?: number;
+}): Promise<AppliedCardItem[]> {
+  const { data } = await client.get<AppliedCardItem[]>('/admin/applied-cards', { params });
   return data;
 }
 

@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import asyncio
 import hashlib
 import json
 import os
@@ -22,6 +23,7 @@ from digimon_gym.ai.batch_orchestrator import (
     batch_orchestrator,
 )
 from digimon_gym.ai.dispatcher import TaskDispatcher
+from digimon_gym.ai.git_adapter import GitAdapter, GitCommandError
 from digimon_gym.db.auth import ROLE_ADMIN, require_roles
 from digimon_gym.db.database import get_db
 from digimon_gym.db.models import (
@@ -35,6 +37,7 @@ from digimon_gym.db.models import (
     User,
 )
 from digimon_gym.db.schemas import (
+    AIFixApplyAuditResponse,
     AIFixBatchCancelResponse,
     AIFixBatchCreateRequest,
     AIFixBatchCreateResponse,
@@ -59,6 +62,7 @@ from digimon_gym.engine.data.script_promotion import (
 
 router = APIRouter(prefix="/admin", tags=["admin"])
 dispatcher = TaskDispatcher()
+_git = GitAdapter()
 MAX_TASK_COST_USD = float(os.getenv("AI_TASK_MAX_COST_USD", "5.0"))
 PROJECT_ROOT = Path(__file__).resolve().parents[3]
 
@@ -428,6 +432,48 @@ async def retry_ai_task(
     return AITaskRetryResponse(task_id=task.id, status=task.status)
 
 
+def _apply_and_commit_single_task(
+    *,
+    task_id: str,
+    card_id: str,
+    set_id: str,
+    module_name: str,
+    scope_profile: str,
+    edits: list[dict],
+) -> dict[str, Any]:
+    """Blocking helper: apply edits in a worktree, commit, and open a draft PR.
+
+    Returns dict with keys: applied_files, check_outputs, commit_sha, pr_url.
+    """
+    _git.preflight(run_mode="pr")
+    ctx = _git.prepare_worktree_for_task(task_id=task_id, run_mode="pr")
+    applied_files = apply_validated_edits(repo_root=ctx.worktree_path, edits=edits)
+    check_outputs = run_profile_checks(
+        repo_root=ctx.worktree_path,
+        scope_profile=scope_profile,
+        applied_files=applied_files,
+    )
+    commit_sha = _git.commit_files(
+        worktree_path=ctx.worktree_path,
+        files=applied_files,
+        message=f"AI autofix {card_id}",
+    )
+    if commit_sha is None:
+        raise RuntimeError("No diff produced after apply — nothing to commit")
+    pr_url = _git.push_pr_branch_and_open_draft_pr(
+        worktree_path=ctx.worktree_path,
+        branch_name=ctx.branch_name,
+        title=f"AI autofix {card_id}",
+        body=f"Automated fix for **{card_id}** (`{set_id}/{module_name}`).\n\nTask: `{task_id}`",
+    )
+    return {
+        "applied_files": applied_files,
+        "check_outputs": check_outputs,
+        "commit_sha": commit_sha,
+        "pr_url": pr_url,
+    }
+
+
 @router.post("/ai-tasks/{task_id}/apply-fix", response_model=AITaskApplyFixResponse)
 async def apply_task_fix(
     task_id: str,
@@ -459,6 +505,63 @@ async def apply_task_fix(
             set_id=set_id,
             module_name=module_name,
         )
+    except Exception as exc:
+        db.add(
+            AIFixApplyAudit(
+                ai_task_id=task.id, batch_id=task.batch_id, card_id=card_id,
+                scope_profile=scope_profile, run_mode=run_mode,
+                applied_files_json="[]", check_outputs_json=json.dumps([]),
+                commit_sha=None, pr_url=None, status="failed",
+                error_text=str(exc), created_by=user.id,
+            )
+        )
+        await db.commit()
+        raise HTTPException(status_code=400, detail=str(exc))
+
+    if run_mode == "pr":
+        # ── PR mode: worktree → commit → draft PR ──────────────────
+        try:
+            info = await asyncio.to_thread(
+                _apply_and_commit_single_task,
+                task_id=task.id,
+                card_id=card_id,
+                set_id=set_id,
+                module_name=module_name,
+                scope_profile=scope_profile,
+                edits=edits,
+            )
+        except (GitCommandError, Exception) as exc:
+            db.add(
+                AIFixApplyAudit(
+                    ai_task_id=task.id, batch_id=task.batch_id, card_id=card_id,
+                    scope_profile=scope_profile, run_mode=run_mode,
+                    applied_files_json="[]", check_outputs_json=json.dumps([]),
+                    commit_sha=None, pr_url=None, status="failed",
+                    error_text=str(exc), created_by=user.id,
+                )
+            )
+            await db.commit()
+            raise HTTPException(status_code=400, detail=str(exc))
+
+        db.add(
+            AIFixApplyAudit(
+                ai_task_id=task.id, batch_id=task.batch_id, card_id=card_id,
+                scope_profile=scope_profile, run_mode=run_mode,
+                applied_files_json=json.dumps(info["applied_files"]),
+                check_outputs_json=json.dumps(info["check_outputs"]),
+                commit_sha=info["commit_sha"], pr_url=info["pr_url"],
+                status="applied", created_by=user.id,
+            )
+        )
+        await db.commit()
+        return AITaskApplyFixResponse(
+            task_id=task.id, status="applied",
+            applied_files=info["applied_files"],
+            commit_sha=info["commit_sha"], pr_url=info["pr_url"],
+        )
+
+    # ── Main mode: direct disk write (existing behaviour) ───────
+    try:
         applied_files = apply_validated_edits(repo_root=PROJECT_ROOT, edits=edits)
         check_outputs = run_profile_checks(
             repo_root=PROJECT_ROOT,
@@ -468,17 +571,11 @@ async def apply_task_fix(
     except Exception as exc:
         db.add(
             AIFixApplyAudit(
-                ai_task_id=task.id,
-                batch_id=task.batch_id,
-                card_id=card_id,
-                scope_profile=scope_profile,
-                run_mode=run_mode,
-                applied_files_json="[]",
-                check_outputs_json=json.dumps([]),
-                commit_sha=None,
-                status="failed",
-                error_text=str(exc),
-                created_by=user.id,
+                ai_task_id=task.id, batch_id=task.batch_id, card_id=card_id,
+                scope_profile=scope_profile, run_mode=run_mode,
+                applied_files_json="[]", check_outputs_json=json.dumps([]),
+                commit_sha=None, pr_url=None, status="failed",
+                error_text=str(exc), created_by=user.id,
             )
         )
         await db.commit()
@@ -486,20 +583,66 @@ async def apply_task_fix(
 
     db.add(
         AIFixApplyAudit(
-            ai_task_id=task.id,
-            batch_id=task.batch_id,
-            card_id=card_id,
-            scope_profile=scope_profile,
-            run_mode=run_mode,
+            ai_task_id=task.id, batch_id=task.batch_id, card_id=card_id,
+            scope_profile=scope_profile, run_mode=run_mode,
             applied_files_json=json.dumps(applied_files),
             check_outputs_json=json.dumps(check_outputs),
-            commit_sha=None,
-            status="applied",
+            commit_sha=None, pr_url=None, status="applied",
             created_by=user.id,
         )
     )
     await db.commit()
-    return AITaskApplyFixResponse(task_id=task.id, status="applied", applied_files=applied_files, commit_sha=None)
+    return AITaskApplyFixResponse(
+        task_id=task.id, status="applied",
+        applied_files=applied_files, commit_sha=None, pr_url=None,
+    )
+
+
+@router.get("/applied-cards", response_model=List[AIFixApplyAuditResponse])
+async def list_applied_cards(
+    status_filter: Optional[str] = Query(None, alias="status", pattern=r"^(applied|failed)$"),
+    set_id: Optional[str] = Query(None, min_length=1, max_length=32),
+    limit: int = Query(100, ge=1, le=500),
+    _user: User = Depends(require_roles(ROLE_ADMIN)),
+    db: AsyncSession = Depends(get_db),
+):
+    query = select(AIFixApplyAudit).order_by(AIFixApplyAudit.created_at.desc())
+    if status_filter:
+        query = query.where(AIFixApplyAudit.status == status_filter)
+    if set_id:
+        prefix = f"{set_id.strip().upper()}-"
+        query = query.where(AIFixApplyAudit.card_id.like(prefix + "%"))
+    query = query.limit(limit)
+    audits = (await db.execute(query)).scalars().all()
+
+    # For batch-originated audits missing pr_url, fall back to batch.pr_url
+    batch_ids = {a.batch_id for a in audits if a.batch_id and not a.pr_url}
+    batch_pr_map: Dict[str, str] = {}
+    if batch_ids:
+        batches = (await db.execute(
+            select(AIFixBatch).where(AIFixBatch.id.in_(batch_ids))
+        )).scalars().all()
+        batch_pr_map = {b.id: b.pr_url for b in batches if b.pr_url}
+
+    results: List[AIFixApplyAuditResponse] = []
+    for a in audits:
+        pr_url = a.pr_url or (batch_pr_map.get(a.batch_id) if a.batch_id else None)
+        results.append(AIFixApplyAuditResponse(
+            id=a.id,
+            ai_task_id=a.ai_task_id,
+            batch_id=a.batch_id,
+            card_id=a.card_id,
+            scope_profile=a.scope_profile,
+            run_mode=a.run_mode,
+            applied_files=_load_json(a.applied_files_json, []),
+            commit_sha=a.commit_sha,
+            pr_url=pr_url,
+            status=a.status,
+            error_text=a.error_text,
+            created_by=a.created_by,
+            created_at=a.created_at,
+        ))
+    return results
 
 
 @router.post("/ai-tasks/{task_id}/promote", response_model=PromotionResponse, status_code=status.HTTP_201_CREATED)
