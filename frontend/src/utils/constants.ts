@@ -1,6 +1,8 @@
 // ─── Action Space Ranges (2120 discrete actions) ───────────────────
 
 export const ACTION = {
+  MULLIGAN_KEEP: 0,
+  MULLIGAN_REDRAW: 1,
   PLAY_START: 0,
   PLAY_END: 29,
   TRASH_START: 30,
@@ -76,6 +78,7 @@ export const PHASE_NAMES: Record<number, string> = {
   14: 'Select Security',
   15: 'End of Turn Action',
   16: 'Alliance Timing',
+  17: 'Mulligan',
 };
 
 // ─── Card Color Hex Values ─────────────────────────────────────────

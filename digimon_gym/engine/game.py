@@ -111,6 +111,11 @@ class Game:
         # The turn ends after the selection resolves, not immediately.
         self._turn_end_deferred: bool = False
 
+        # Opening mulligan state (set during start_game()).
+        self._mulligan_order: List[Player] = []
+        self._mulligan_index: int = 0
+        self._mulligan_used: Dict[int, bool] = {}
+
     @property
     def current_player_id(self) -> int:
         """Return the player_id of the active player.
@@ -130,16 +135,87 @@ class Game:
             self.turn_player = self.player2
             self.opponent_player = self.player1
 
-        self.player1.setup_game()
-        self.player2.setup_game()
+        # Opening setup: shuffle and draw opening hand for both players.
+        # Security is set after mulligan declarations.
+        for player in (self.player1, self.player2):
+            player.shuffle_for_game_start()
+            player.draw_opening_hand(5)
 
         self.turn_count = 1
-        self.current_phase = GamePhase.Start
         self.memory = 0
         self.turn_player.is_my_turn = True
         self.opponent_player.is_my_turn = False
+        self.pending_attack = None
+        self.pending_selection = None
+        self.revealed_cards = []
 
+        # Mulligan order starts with the first player.
+        self._mulligan_order = [self.turn_player, self.opponent_player]
+        self._mulligan_index = 0
+        self._mulligan_used = {
+            self.player1.player_id: False,
+            self.player2.player_id: False,
+        }
+        self.current_phase = GamePhase.Mulligan
+        self.active_player = self._mulligan_order[0]
+
+        self.logger.log("[Setup] Opening hands drawn. Mulligan phase begins.")
+
+    def _advance_mulligan(self):
+        """Advance mulligan priority to the next player or finalize setup."""
+        self._mulligan_index += 1
+        if self._mulligan_index >= len(self._mulligan_order):
+            self._finalize_opening_setup()
+            return
+
+        self.current_phase = GamePhase.Mulligan
+        self.active_player = self._mulligan_order[self._mulligan_index]
+
+    def _finalize_opening_setup(self):
+        """Set security stacks and begin the first turn after mulligans."""
+        for player in (self.player1, self.player2):
+            player.setup_security_stack(5)
+
+        self.active_player = None
+        self.current_phase = GamePhase.Start
+        self.logger.log("[Setup] Security stacks set. Starting turn 1.")
         self.phase_start()
+
+    def action_keep_opening_hand(self):
+        """Mulligan decision: keep current opening hand."""
+        if self.current_phase != GamePhase.Mulligan:
+            self.logger.log(f"[Rejected] keep hand: not in Mulligan phase (phase={self.current_phase})")
+            return
+        if self.active_player is None:
+            return
+
+        player = self.active_player
+        self.logger.log(f"[Mulligan] {player.player_name} keeps opening hand")
+        self._advance_mulligan()
+
+    def action_mulligan_opening_hand(self):
+        """Mulligan decision: return hand to deck, shuffle, draw 5 new cards."""
+        if self.current_phase != GamePhase.Mulligan:
+            self.logger.log(f"[Rejected] mulligan: not in Mulligan phase (phase={self.current_phase})")
+            return
+        if self.active_player is None:
+            return
+
+        player = self.active_player
+        pid = player.player_id
+        if self._mulligan_used.get(pid, False):
+            self.logger.log(f"[Mulligan] {player.player_name} already used mulligan; keeping hand")
+            self._advance_mulligan()
+            return
+
+        hand_size = len(player.hand_cards)
+        player.library_cards.extend(player.hand_cards)
+        player.hand_cards.clear()
+        random.shuffle(player.library_cards)
+        player.draw_opening_hand(5)
+        self._mulligan_used[pid] = True
+        self.logger.log(f"[Mulligan] {player.player_name} redraws opening hand ({hand_size} -> {len(player.hand_cards)})")
+        self._advance_mulligan()
 
     def next_phase(self):
         if self.game_over:
@@ -272,6 +348,27 @@ class Game:
             self._turn_end_deferred = False
             self.check_turn_end()
 
+    @staticmethod
+    def _effect_source_name(effect) -> str:
+        src = getattr(effect, "effect_source_card", None)
+        if src and src.card_names:
+            return src.card_names[0]
+        return "Unknown"
+
+    @staticmethod
+    def _effect_text_for_log(effect) -> str:
+        text = (effect.effect_description or "").strip()
+        if not text:
+            text = (effect.effect_name or "").strip()
+        if not text:
+            text = "<no effect text>"
+        return " ".join(text.replace("\r", "\n").split())
+
+    def _log_effect_activation(self, effect, timing: EffectTiming) -> None:
+        source_name = self._effect_source_name(effect)
+        effect_text = self._effect_text_for_log(effect)
+        self.logger.log(f"[Effect] {timing.name} | {source_name}: {effect_text}")
+
     # ─── Effect Execution ────────────────────────────────────────────
 
     def execute_effects(self, timing: EffectTiming, extra_context: Optional[dict] = None):
@@ -309,6 +406,7 @@ class Game:
                     context.update(extra_context)
 
                 if effect.can_use_condition is None or effect.can_use_condition(context):
+                    self._log_effect_activation(effect, timing)
                     effect.record_activation()
                     effect.on_process_callback(context)
 
@@ -331,7 +429,13 @@ class Game:
             # No timing flag — could be a generic reactive effect.
             # Only allow it from the affected permanent to prevent cross-fire.
             if timing == EffectTiming.OnEnterFieldAnyone:
-                return played_card is not None and perm.top_card is played_card
+                return (
+                    played_card is not None
+                    and perm.top_card is played_card
+                    and (effect.effect_source_card is None or effect.effect_source_card is perm.top_card)
+                )
+            if timing == EffectTiming.WhenDigivolving:
+                return False
             # Phase-transition timings auto-advance; unflagged effects with
             # callbacks that create selections would break the flow.
             if timing in (EffectTiming.OnStartTurn, EffectTiming.OnDraw,
@@ -340,14 +444,21 @@ class Game:
             return True
 
         if timing == EffectTiming.OnEnterFieldAnyone:
-            if effect.is_on_play:
-                return played_card is not None and perm.top_card is played_card
-            if effect.is_when_digivolving:
-                return played_card is not None and perm.top_card is played_card
-            return False
+            return (
+                effect.is_on_play
+                and played_card is not None
+                and perm.top_card is played_card
+                and (effect.effect_source_card is None or effect.effect_source_card is perm.top_card)
+            )
 
         if timing == EffectTiming.WhenDigivolving:
-            return effect.is_when_digivolving
+            return (
+                effect.is_when_digivolving
+                and digivolved_perm is not None
+                and perm is digivolved_perm
+                and perm.top_card is not None
+                and (effect.effect_source_card is None or effect.effect_source_card is perm.top_card)
+            )
 
         if timing in (EffectTiming.OnAllyAttack,):
             return effect.is_on_attack
@@ -377,6 +488,7 @@ class Game:
                     "deleted_permanent": deleted_permanent,
                 }
                 if effect.can_use_condition is None or effect.can_use_condition(context):
+                    self._log_effect_activation(effect, EffectTiming.OnDestroyedAnyone)
                     effect.record_activation()
                     if effect.on_process_callback:
                         effect.on_process_callback(context)
@@ -566,19 +678,76 @@ class Game:
         Includes keywords, digivolution stack details, trash, security IDs,
         revealed cards, and pending selection/attack context.
         """
+        def clean_text(text: Optional[str]) -> str:
+            return (text or "").replace("\r\n", "\n").strip()
+
         def perm_data(perm: Permanent) -> Dict[str, Any]:
             keywords = [
                 kw.replace('_is_', '')
                 for kw in self._UI_KEYWORDS
                 if perm.has_keyword(kw)
             ]
+
+            keyword_innate: List[str] = []
+            keyword_gained: List[str] = []
+            grants = getattr(perm, "_granted_keywords", {})
+            for kw in self._UI_KEYWORDS:
+                if not perm.has_keyword(kw):
+                    continue
+                key = kw.replace('_is_', '')
+                expiry = grants.get(kw)
+                is_gained = (
+                    expiry is not None
+                    and (expiry == -1 or self.turn_count <= expiry)
+                )
+                if is_gained:
+                    keyword_gained.append(key)
+                else:
+                    keyword_innate.append(key)
+
             sources = []
             for src in perm.card_sources:
+                entity = getattr(src, "c_entity_base", None)
                 sources.append({
                     "cardId": src.card_id,
-                    "optState": getattr(src, 'opt_state', 0),
-                    "dpContribution": getattr(src, 'dp', 0) or 0,
+                    "cardName": src.card_names[0] if src.card_names else None,
+                    "isTop": src is perm.top_card,
+                    "optState": perm.source_opt_state(src),
+                    "dpContribution": perm.source_dp_contribution(src),
+                    "mainEffectText": clean_text(entity.effect_description_eng if entity else ""),
+                    "inheritedEffectText": clean_text(entity.inherited_effect_description_eng if entity else ""),
                 })
+
+            inherited_effects = []
+            for idx, src in enumerate(perm.card_sources[:-1]):
+                entity = getattr(src, "c_entity_base", None)
+                inherited_text = clean_text(entity.inherited_effect_description_eng if entity else "")
+                if inherited_text:
+                    inherited_effects.append({
+                        "sourceIndex": idx,
+                        "cardId": src.card_id,
+                        "cardName": src.card_names[0] if src.card_names else None,
+                        "text": inherited_text,
+                    })
+
+            top_entity = perm.top_card.c_entity_base if perm.top_card else None
+            main_effect_text = clean_text(top_entity.effect_description_eng if top_entity else "")
+
+            dp_base = perm.top_card.base_dp if perm.top_card and perm.top_card.base_dp is not None else None
+            dp_sources = [
+                {
+                    "cardId": src.card_id,
+                    "cardName": src.card_names[0] if src.card_names else None,
+                    "value": perm.source_dp_contribution(src),
+                }
+                for src in perm.card_sources
+            ]
+            temp_mods = getattr(perm, "_dp_modifiers", [])
+            if perm.is_immune_to_opponent_effects:
+                dp_temporary = float(sum(m for m in temp_mods if m >= 0))
+            else:
+                dp_temporary = float(sum(temp_mods))
+
             colors = []
             if perm.top_card:
                 colors = [c.value for c in getattr(perm.top_card, 'card_colors', [])]
@@ -590,9 +759,21 @@ class Game:
                 "isSuspended": perm.is_suspended,
                 "sourceCount": len(perm.card_sources),
                 "keywords": keywords,
+                "keywordBreakdown": {
+                    "innate": keyword_innate,
+                    "gained": keyword_gained,
+                },
                 "securityAttackModifier": perm.security_attack_modifier(),
                 "linkedCardIds": [lc.card_id for lc in perm.linked_cards],
                 "sources": sources,
+                "mainEffectText": main_effect_text,
+                "inheritedEffects": inherited_effects,
+                "dpBreakdown": {
+                    "base": dp_base,
+                    "sources": dp_sources,
+                    "temporary": dp_temporary,
+                    "total": perm.dp,
+                },
                 "turnPlayed": perm.turn_played,
                 "colors": colors,
             }
@@ -896,7 +1077,6 @@ class Game:
         perm.turn_digivolved = self.turn_count
 
         self.execute_effects(EffectTiming.WhenDigivolving, {"digivolved_permanent": perm})
-        self.execute_effects(EffectTiming.OnEnterFieldAnyone, {"played_card": card})
         self.check_turn_end()
 
     def action_digivolve_breeding(self, card_index: int):
@@ -919,8 +1099,8 @@ class Game:
 
         perm.turn_digivolved = self.turn_count
 
-        self.execute_effects(EffectTiming.WhenDigivolving, {"digivolved_permanent": perm})
-        self.execute_effects(EffectTiming.OnEnterFieldAnyone, {"played_card": card})
+        # Breeding area effects do not trigger normal timing windows
+        # unless explicitly scoped to breeding by card text/rules.
         self.check_turn_end()
 
     def action_attack_player(self, attacker_index: int):
@@ -954,7 +1134,17 @@ class Game:
             self.logger.log(f"[Rejected] action_hatch: not in Breeding phase (phase={self.current_phase})")
             return
         self.logger.log(f"[Hatch] {self.turn_player.player_name} hatches from egg deck")
+        before_breeding = self.turn_player.breeding_area
+        before_egg_count = len(self.turn_player.digitama_library_cards)
         self.turn_player.hatch()
+        hatched = (
+            before_breeding is None
+            and self.turn_player.breeding_area is not None
+            and len(self.turn_player.digitama_library_cards) < before_egg_count
+        )
+        if hatched:
+            self.current_phase = GamePhase.Main
+            self.phase_main()
 
     def action_move_from_breeding(self):
         """Move breeding area digimon to battle area."""
@@ -962,7 +1152,17 @@ class Game:
             self.logger.log(f"[Rejected] action_move_from_breeding: not in Breeding phase (phase={self.current_phase})")
             return
         self.logger.log(f"[Move] {self.turn_player.player_name} moves from breeding to battle area")
+        before_breeding = self.turn_player.breeding_area
+        before_battle_count = len(self.turn_player.battle_area)
         self.turn_player.move_from_breeding()
+        moved = (
+            before_breeding is not None
+            and self.turn_player.breeding_area is None
+            and len(self.turn_player.battle_area) > before_battle_count
+        )
+        if moved:
+            self.current_phase = GamePhase.Main
+            self.phase_main()
 
     def action_breeding_pass(self):
         """Skip breeding phase and advance to main."""
@@ -1144,7 +1344,15 @@ class Game:
 
         phase = self.current_phase
 
-        if phase == GamePhase.Main:
+        if phase == GamePhase.Mulligan:
+            if self.active_player is not None and player_id == self.active_player.player_id:
+                # Opening mulligan actions:
+                #   0 = keep hand, 1 = mulligan (redraw 5)
+                mask[0] = 1.0
+                if not self._mulligan_used.get(player_id, False):
+                    mask[1] = 1.0
+
+        elif phase == GamePhase.Main:
             # Play cards (0-29)
             for i in range(min(len(me.hand_cards), 30)):
                 card = me.hand_cards[i]
@@ -1380,6 +1588,12 @@ class Game:
 
     def _describe_single_action(self, action_id: int, me: Player, opp: Player) -> Optional[str]:
         """Return a human-readable description for a single action ID."""
+        if self.current_phase == GamePhase.Mulligan:
+            if action_id == 0:
+                return "Keep opening hand"
+            if action_id == 1:
+                return "Mulligan (redraw 5)"
+
         # Play card from hand (0-29)
         if 0 <= action_id <= 29:
             idx = action_id
@@ -1582,7 +1796,9 @@ class Game:
         """
         phase = self.current_phase
 
-        if phase == GamePhase.Main:
+        if phase == GamePhase.Mulligan:
+            self._decode_mulligan(action_id)
+        elif phase == GamePhase.Main:
             self._decode_main(action_id)
         elif phase == GamePhase.Breeding:
             self._decode_breeding(action_id)
@@ -1602,6 +1818,13 @@ class Game:
             self._decode_end_of_turn_action(action_id)
         elif phase == GamePhase.AllianceTiming:
             self._decode_alliance(action_id)
+
+    def _decode_mulligan(self, action_id: int):
+        # 0 = keep hand, 1 = mulligan/redraw hand
+        if action_id == 0:
+            self.action_keep_opening_hand()
+        elif action_id == 1:
+            self.action_mulligan_opening_hand()
 
     def _decode_main(self, action_id: int):
         if 0 <= action_id <= 29:
@@ -1766,7 +1989,6 @@ class Game:
             # Fire digivolution-related effects
             self.execute_effects(EffectTiming.OnCounterTiming, {"counter_card": card, "counter_permanent": perm})
             self.execute_effects(EffectTiming.WhenDigivolving, {"digivolved_permanent": perm})
-            self.execute_effects(EffectTiming.OnEnterFieldAnyone, {"played_card": card})
 
             # Resolve battle (DP has changed due to digivolution)
             self._resolve_battle()
@@ -1871,6 +2093,7 @@ class Game:
             }
             # Check can_use_condition if present
             if delay_effect.can_use_condition is None or delay_effect.can_use_condition(context):
+                self._log_effect_activation(delay_effect, EffectTiming.AfterEffectsActivate)
                 delay_effect.record_activation()
                 delay_effect.on_process_callback(context)
 
@@ -2309,8 +2532,6 @@ class Game:
                 player.draw()
                 self.execute_effects(EffectTiming.WhenDigivolving,
                                      {"digivolved_permanent": permanent})
-                self.execute_effects(EffectTiming.OnEnterFieldAnyone,
-                                     {"played_card": card})
 
         self.request_selection(
             GamePhase.SelectTarget, player, on_select, valid, is_optional)
@@ -2577,5 +2798,4 @@ class Game:
         new_perm = player.battle_area[-1] if player.battle_area else None
 
         self.execute_effects(EffectTiming.WhenDigivolving, {"digivolved_permanent": new_perm})
-        self.execute_effects(EffectTiming.OnEnterFieldAnyone, {"played_card": card})
         self.check_turn_end()

@@ -63,18 +63,27 @@ class Player:
         return False
 
     def setup_game(self):
-        # Shuffle decks
+        """Legacy setup helper: shuffle, set security, draw opening hand.
+
+        New game flow uses explicit mulligan-aware steps in Game.start_game().
+        This method is retained for compatibility in tests/utilities.
+        """
+        self.shuffle_for_game_start()
+        self.setup_security_stack(5)
+        self.draw_opening_hand(5)
+
+    def shuffle_for_game_start(self):
         random.shuffle(self.library_cards)
         random.shuffle(self.digitama_library_cards)
 
-        # Set Security (top 5 cards of library)
-        for _ in range(5):
+    def draw_opening_hand(self, count: int = 5):
+        for _ in range(count):
+            self.draw()
+
+    def setup_security_stack(self, count: int = 5):
+        for _ in range(count):
             if self.library_cards:
                 self.security_cards.append(self.library_cards.pop(0))
-
-        # Draw initial hand (5 cards)
-        for _ in range(5):
-            self.draw()
 
     def draw(self) -> bool:
         if not self.library_cards:

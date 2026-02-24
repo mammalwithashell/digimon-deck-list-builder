@@ -22,6 +22,7 @@ class CreateGameRequest(BaseModel):
     player2_type: str = "agent"  # "agent" or "human"
     player1_policy: str = "greedy"  # "greedy" or "random"
     player2_policy: str = "greedy"  # "greedy" or "random"
+    agent_action_delay_ms: int = Field(350, ge=0, le=3000)
     record_actions: bool = False
     record_tensors: bool = False
 

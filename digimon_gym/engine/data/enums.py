@@ -43,6 +43,7 @@ class GamePhase(Enum):
     SelectSecurity = 14      # Select from own or opponent's security stack
     EndOfTurnAction = 15     # Parking phase for Vortex/Overclock end-of-turn keyword actions
     AllianceTiming = 16      # Interrupt phase during attack for Alliance target selection
+    Mulligan = 17            # Opening hand mulligan before security setup
 
 class PendingAction(Enum):
     NO_ACTION = 0

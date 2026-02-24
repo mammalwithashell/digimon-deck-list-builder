@@ -29,6 +29,7 @@ from digimon_gym.engine.core.permanent import Permanent
 from digimon_gym.engine.core.card_source import CardSource
 from digimon_gym.engine.core.entity_base import CEntity_Base
 from digimon_gym.engine.interfaces.card_effect import ICardEffect
+from digimon_gym.engine.loggers import VerboseLogger
 
 
 # ─── Helpers ─────────────────────────────────────────────────────────
@@ -66,6 +67,20 @@ class BlastDigivolveEffect(ICardEffect):
         self.is_counter_effect = True
         self.is_inherited_effect = False
         self.timing = EffectTiming.NoTiming
+
+
+class TriggerEffect(ICardEffect):
+    """Mock effect used to assert exact timing and source restrictions."""
+
+    def __init__(self, *, on_play=False, when_digivolving=False,
+                 inherited=False, description="Effect", callback=None):
+        super().__init__()
+        self.is_on_play = on_play
+        self.is_when_digivolving = when_digivolving
+        self.is_inherited_effect = inherited
+        self.set_effect_description(description)
+        self.set_can_use_condition(lambda ctx: True)
+        self.set_on_process_callback(callback or (lambda ctx: None))
 
 
 class MockCardSourceWithEffects(CardSource):
@@ -112,6 +127,25 @@ def make_blast_digivolve_card(card_id="BLAST-001", name="BlastMon", dp=8000,
     cs = MockCardSourceWithEffects()
     cs.set_base_data(entity, owner)
     cs._mock_effects = [BlastDigivolveEffect()]
+    return cs
+
+
+def make_card_with_effects(card_id="TEST-001", name="TestDigimon", kind=CardKind.Digimon,
+                           dp=5000, level=4, play_cost=5, colors=None, owner=None,
+                           effects=None):
+    entity = CEntity_Base()
+    entity.card_id = card_id
+    entity.card_name_eng = name
+    entity.card_kind = kind
+    entity.dp = dp
+    entity.level = level
+    entity.play_cost = play_cost
+    entity.card_colors = colors or [CardColor.Red]
+    cs = MockCardSourceWithEffects()
+    cs.set_base_data(entity, owner)
+    cs._mock_effects = effects or []
+    for eff in cs._mock_effects:
+        eff.effect_source_card = cs
     return cs
 
 
@@ -688,3 +722,135 @@ class TestIntegration:
 
         # Should have resolved
         assert game.pending_attack is None
+
+
+# ═══════════════════════════════════════════════════════════════════════
+# G. Effect Timing Guard Tests
+# ═══════════════════════════════════════════════════════════════════════
+
+class TestEffectTimingGuards:
+    def test_digivolve_does_not_trigger_on_play_effect(self):
+        game = setup_game_at_phase(GamePhase.Main)
+        p1 = game.player1
+
+        base = make_card(card_id="TEST-001", name="Base", level=3, owner=p1)
+        p1.battle_area.append(Permanent([base]))
+
+        on_play_hits = []
+        evo = make_card_with_effects(
+            card_id="TEST-001",
+            name="Evo",
+            level=4,
+            owner=p1,
+            effects=[
+                TriggerEffect(
+                    on_play=True,
+                    description="[On Play] gain 1 memory.",
+                    callback=lambda ctx: on_play_hits.append("hit"),
+                )
+            ],
+        )
+        p1.hand_cards.append(evo)
+
+        game.action_digivolve(0, 0)
+        assert on_play_hits == []
+
+    def test_breeding_digivolve_triggers_no_normal_timings(self):
+        game = setup_game_at_phase(GamePhase.Main)
+        p1 = game.player1
+
+        egg = make_card(card_id="TEST-001", name="Egg", kind=CardKind.DigiEgg, level=2, owner=p1)
+        p1.breeding_area = Permanent([egg])
+
+        on_play_hits = []
+        when_digi_hits = []
+        evo = make_card_with_effects(
+            card_id="TEST-001",
+            name="Breeding Evo",
+            level=3,
+            owner=p1,
+            effects=[
+                TriggerEffect(on_play=True, callback=lambda ctx: on_play_hits.append("on_play")),
+                TriggerEffect(when_digivolving=True, callback=lambda ctx: when_digi_hits.append("when_digi")),
+            ],
+        )
+        p1.hand_cards.append(evo)
+
+        game.action_digivolve_breeding(0)
+        assert p1.breeding_area is not None
+        assert p1.breeding_area.level == 3
+        assert on_play_hits == []
+        assert when_digi_hits == []
+
+    def test_when_digivolving_only_top_source_fires(self):
+        game = setup_game_at_phase(GamePhase.Main)
+        p1 = game.player1
+
+        inherited_hits = []
+        top_hits = []
+
+        under_source = make_card_with_effects(
+            card_id="TEST-001",
+            name="UnderSource",
+            level=2,
+            owner=p1,
+            effects=[
+                TriggerEffect(
+                    when_digivolving=True,
+                    inherited=True,
+                    callback=lambda ctx: inherited_hits.append("under"),
+                )
+            ],
+        )
+        base_top = make_card(card_id="TEST-001", name="BaseTop", level=3, owner=p1)
+        p1.battle_area.append(Permanent([under_source, base_top]))
+
+        evo = make_card_with_effects(
+            card_id="TEST-001",
+            name="EvoTop",
+            level=4,
+            owner=p1,
+            effects=[
+                TriggerEffect(
+                    when_digivolving=True,
+                    callback=lambda ctx: top_hits.append("top"),
+                )
+            ],
+        )
+        p1.hand_cards.append(evo)
+
+        game.action_digivolve(0, 0)
+        assert inherited_hits == []
+        assert top_hits == ["top"]
+
+    def test_effect_log_includes_effect_text(self):
+        logger = VerboseLogger()
+        game = Game(logger=logger)
+        game.current_phase = GamePhase.Main
+        game.turn_player = game.player1
+        game.opponent_player = game.player2
+        game.player1.is_my_turn = True
+        game.memory = 5
+
+        played_hits = []
+        on_play = TriggerEffect(
+            on_play=True,
+            description="[On Play] Gain 1 memory.",
+            callback=lambda ctx: played_hits.append("played"),
+        )
+        card = make_card_with_effects(
+            card_id="TEST-001",
+            name="LoggerMon",
+            owner=game.player1,
+            effects=[on_play],
+        )
+        game.player1.hand_cards.append(card)
+
+        game.action_play_card(0)
+        logs = logger.get_logs()
+
+        assert played_hits == ["played"]
+        assert any(
+            "[Effect] OnEnterFieldAnyone" in line and "[On Play] Gain 1 memory." in line
+            for line in logs
+        )

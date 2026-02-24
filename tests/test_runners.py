@@ -27,6 +27,17 @@ def make_test_deck():
     return ["ST1-01"] * 5 + ["ST1-03"] * 45
 
 
+def resolve_opening_mulligan(runner) -> None:
+    """Advance through opening mulligan decisions by keeping hand."""
+    guard = 0
+    while runner.game.current_phase == GamePhase.Mulligan and guard < 4:
+        mask = runner.get_action_mask()
+        valid = np.where(mask > 0.5)[0]
+        action = int(valid[0]) if len(valid) else 0
+        runner.step(action)
+        guard += 1
+
+
 def make_card(
     card_id: str,
     name: str,
@@ -94,10 +105,10 @@ class TestHeadlessGame:
         assert not game.is_game_over
         assert game.winner_id is None
 
-    def test_starts_at_breeding(self):
+    def test_starts_at_mulligan(self):
         deck = make_test_deck()
         game = HeadlessGame(deck, deck)
-        assert game.game.current_phase == GamePhase.Breeding
+        assert game.game.current_phase == GamePhase.Mulligan
 
     def test_action_mask_shape(self):
         deck = make_test_deck()
@@ -124,6 +135,7 @@ class TestHeadlessGame:
     def test_step_breeding_pass(self):
         deck = make_test_deck()
         game = HeadlessGame(deck, deck)
+        resolve_opening_mulligan(game)
         assert game.game.current_phase == GamePhase.Breeding
         game.step(62)  # pass breeding
         assert game.game.current_phase == GamePhase.Main
@@ -131,6 +143,7 @@ class TestHeadlessGame:
     def test_step_hatch(self):
         deck = make_test_deck()
         game = HeadlessGame(deck, deck)
+        resolve_opening_mulligan(game)
         # Should be in breeding phase
         assert game.game.current_phase == GamePhase.Breeding
         # Check that hatch is valid (action 60)
@@ -138,10 +151,12 @@ class TestHeadlessGame:
         if mask[60] > 0.5:
             game.step(60)  # hatch
             assert game.game.turn_player.breeding_area is not None
+            assert game.game.current_phase == GamePhase.Main
 
     def test_step_pass_turn(self):
         deck = make_test_deck()
         game = HeadlessGame(deck, deck)
+        resolve_opening_mulligan(game)
         # Pass breeding
         game.step(62)
         assert game.game.current_phase == GamePhase.Main
@@ -186,6 +201,7 @@ class TestHeadlessGame:
     def test_verbose_mode_captures_logs(self):
         deck = make_test_deck()
         game = HeadlessGame(deck, deck, verbose=True)
+        resolve_opening_mulligan(game)
         game.step(62)  # breeding pass
         game.step(62)  # pass turn
         logs = game.get_last_log()
@@ -194,6 +210,7 @@ class TestHeadlessGame:
     def test_silent_mode_no_logs(self):
         deck = make_test_deck()
         game = HeadlessGame(deck, deck, verbose=False)
+        resolve_opening_mulligan(game)
         game.step(62)
         game.step(62)
         logs = game.get_last_log()
@@ -202,6 +219,7 @@ class TestHeadlessGame:
     def test_mask_valid_actions_in_breeding(self):
         deck = make_test_deck()
         game = HeadlessGame(deck, deck)
+        resolve_opening_mulligan(game)
         mask = game.get_action_mask()
         # Pass (62) should always be valid in breeding
         assert mask[62] == 1.0
@@ -219,6 +237,24 @@ class TestHeadlessGame:
 # ─── InteractiveGame Tests ──────────────────────────────────────────
 
 class TestGreedyPolicy:
+    def test_mulligan_prefers_redraw_without_level3(self):
+        game = setup_policy_game(GamePhase.Mulligan, memory=0)
+        p1 = game.player1
+        game.active_player = p1
+        game._mulligan_order = [game.player1, game.player2]
+        game._mulligan_used = {1: False, 2: False}
+
+        p1.hand_cards.extend([
+            make_card("A-001", "Lv4", p1, level=4),
+            make_card("A-002", "Lv5", p1, level=5),
+            make_card("A-003", "Lv6", p1, level=6),
+            make_card("A-004", "Tamer", p1, kind=CardKind.Tamer, level=0, dp=0),
+            make_card("A-005", "Option", p1, kind=CardKind.Option, level=0, dp=0),
+        ])
+
+        action = greedy_policy(PolicyEnv(game))
+        assert action == 1
+
     def test_prefers_keep_turn_digivolve_over_play(self):
         game = setup_policy_game(GamePhase.Main, memory=3)
         p1 = game.player1
@@ -372,9 +408,29 @@ class TestInteractiveGame:
         # Agent should have taken an action (default: pass)
         assert "currentPhase" in state
 
+    def test_run_step_applies_agent_action_delay(self, monkeypatch):
+        deck = make_test_deck()
+        game = InteractiveGame(
+            deck,
+            deck,
+            PlayerType.Agent,
+            PlayerType.Agent,
+            agent_action_delay_ms=250,
+        )
+
+        sleep_calls = []
+        monkeypatch.setattr(
+            "digimon_gym.engine.runners.interactive_game.time.sleep",
+            lambda seconds: sleep_calls.append(seconds),
+        )
+
+        game.run_step()
+        assert sleep_calls == [0.25]
+
     def test_run_step_advances_until_human_turn(self):
         deck = make_test_deck()
         game = InteractiveGame(deck, deck, PlayerType.Human, PlayerType.Agent, player2_policy="greedy")
+        resolve_opening_mulligan(game)
 
         # Force agent to act with only pass-like progression available.
         game.game.turn_player = game.game.player2
@@ -393,6 +449,7 @@ class TestInteractiveGame:
     def test_step_executes_action(self):
         deck = make_test_deck()
         game = InteractiveGame(deck, deck, PlayerType.Human, PlayerType.Human)
+        resolve_opening_mulligan(game)
         assert game.game.current_phase == GamePhase.Breeding
         game.step(62)  # pass breeding
         assert game.game.current_phase == GamePhase.Main
@@ -417,6 +474,7 @@ class TestInteractiveGame:
     def test_log_capture_and_clear(self):
         deck = make_test_deck()
         game = InteractiveGame(deck, deck, PlayerType.Human, PlayerType.Human)
+        resolve_opening_mulligan(game)
         game.step(62)  # breeding pass
         logs = game.get_last_log()
         assert len(logs) > 0  # VerboseLogger should have captured something
@@ -426,6 +484,7 @@ class TestInteractiveGame:
     def test_human_vs_human_full_turn(self):
         deck = make_test_deck()
         game = InteractiveGame(deck, deck, PlayerType.Human, PlayerType.Human)
+        resolve_opening_mulligan(game)
 
         # P1 breeding pass
         game.step(62)
@@ -503,8 +562,8 @@ class TestGameToJson:
         assert state["TurnCount"] == 1
         assert state["IsGameOver"] is False
         assert state["Winner"] is None
-        # Each player should have 5 hand cards and 5 security after setup
+        # At mulligan: 5 hand cards, security not set yet.
         for key in ["Player1", "Player2"]:
             p = state[key]
             assert p["HandCount"] == 5
-            assert p["SecurityCount"] == 5
+            assert p["SecurityCount"] == 0

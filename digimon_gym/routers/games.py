@@ -63,6 +63,7 @@ def create_game(request: CreateGameRequest):
             p2_type,
             player1_policy=p1_policy,
             player2_policy=p2_policy,
+            agent_action_delay_ms=request.agent_action_delay_ms,
         )
 
     active_games[game_id] = runner

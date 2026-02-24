@@ -10,6 +10,7 @@ interface CreateGameParams {
   player2_type?: string;
   player1_policy?: string;
   player2_policy?: string;
+  agent_action_delay_ms?: number;
 }
 
 interface CreateGameResponse {

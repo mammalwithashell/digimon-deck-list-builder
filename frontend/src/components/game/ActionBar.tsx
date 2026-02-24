@@ -1,5 +1,5 @@
 import { ACTION, PHASE_NAMES } from '@/utils/constants';
-import type { GamePhase } from '@/types/game';
+import { GamePhase } from '@/types/game';
 
 interface ActionBarProps {
   phase: GamePhase;
@@ -14,6 +14,8 @@ export function ActionBar({ phase, actionMask, onAction, isGameOver }: ActionBar
   const canPass = actionMask[ACTION.PASS] === 1;
   const canHatch = actionMask[ACTION.HATCH] === 1;
   const canMove = actionMask[ACTION.MOVE] === 1;
+  const canKeepHand = actionMask[ACTION.MULLIGAN_KEEP] === 1;
+  const canMulligan = actionMask[ACTION.MULLIGAN_REDRAW] === 1;
 
   const phaseName = PHASE_NAMES[phase] ?? 'Unknown';
 
@@ -21,8 +23,29 @@ export function ActionBar({ phase, actionMask, onAction, isGameOver }: ActionBar
     <div className="flex items-center gap-2 px-3 py-2 bg-gray-800 border-t border-gray-700">
       <span className="text-xs text-gray-500">{phaseName}:</span>
 
+      {phase === GamePhase.Mulligan && canKeepHand && (
+        <button
+          data-testid="action-keep-hand"
+          onClick={() => onAction(ACTION.MULLIGAN_KEEP)}
+          className="px-3 py-1 bg-blue-600 hover:bg-blue-500 text-white text-sm rounded"
+        >
+          Keep Hand
+        </button>
+      )}
+
+      {phase === GamePhase.Mulligan && canMulligan && (
+        <button
+          data-testid="action-mulligan"
+          onClick={() => onAction(ACTION.MULLIGAN_REDRAW)}
+          className="px-3 py-1 bg-orange-600 hover:bg-orange-500 text-white text-sm rounded"
+        >
+          Mulligan
+        </button>
+      )}
+
       {canHatch && (
         <button
+          data-testid="action-hatch"
           onClick={() => onAction(ACTION.HATCH)}
           className="px-3 py-1 bg-yellow-600 hover:bg-yellow-500 text-white text-sm rounded"
         >
@@ -32,6 +55,7 @@ export function ActionBar({ phase, actionMask, onAction, isGameOver }: ActionBar
 
       {canMove && (
         <button
+          data-testid="action-move"
           onClick={() => onAction(ACTION.MOVE)}
           className="px-3 py-1 bg-green-600 hover:bg-green-500 text-white text-sm rounded"
         >
@@ -41,6 +65,7 @@ export function ActionBar({ phase, actionMask, onAction, isGameOver }: ActionBar
 
       {canPass && (
         <button
+          data-testid="action-pass"
           onClick={() => onAction(ACTION.PASS)}
           className="px-3 py-1 bg-gray-600 hover:bg-gray-500 text-white text-sm rounded"
         >

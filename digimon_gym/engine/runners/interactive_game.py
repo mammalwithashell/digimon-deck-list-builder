@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 from typing import List, Optional, Dict, Any, Callable
+import time
 import numpy as np
 
 from digimon_gym.engine.runners.base_runner import BaseGameRunner
@@ -27,7 +28,8 @@ class InteractiveGame(BaseGameRunner):
                  player1_type: PlayerType = PlayerType.Agent,
                  player2_type: PlayerType = PlayerType.Agent,
                  player1_policy: str = "greedy",
-                 player2_policy: str = "greedy"):
+                 player2_policy: str = "greedy",
+                 agent_action_delay_ms: int = 350):
         self._verbose_logger = VerboseLogger()
         # Create a lightweight recorder just for initial state capture
         recorder = GameRecorder(record_tensors=False)
@@ -36,6 +38,7 @@ class InteractiveGame(BaseGameRunner):
         self.player2_type = player2_type
         self.player1_policy = player1_policy.lower()
         self.player2_policy = player2_policy.lower()
+        self.agent_action_delay_ms = max(0, int(agent_action_delay_ms))
 
     @staticmethod
     def _random_policy(mask: np.ndarray) -> int:
@@ -121,6 +124,8 @@ class InteractiveGame(BaseGameRunner):
         while (not self.game.game_over
                and not self.is_current_player_human()
                and actions_taken < max_agent_actions):
+            if self.agent_action_delay_ms > 0:
+                time.sleep(self.agent_action_delay_ms / 1000.0)
             mask = self.get_action_mask()
 
             if agent_policy_fn:

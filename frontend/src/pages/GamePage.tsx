@@ -107,6 +107,9 @@ export function GamePage() {
 
   const handlePlayCard = useCallback(
     (handIndex: number) => {
+      if (store.currentPhase === GamePhase.Mulligan) {
+        return;
+      }
       const canPlay = parsedMask.canPlayFromHand.has(handIndex);
       const fieldTargets = parsedMask.canDigivolve.get(handIndex);
       const canBreeding = parsedMask.canDigivolveBreeding.has(handIndex);
@@ -141,7 +144,7 @@ export function GamePage() {
         }
       }
     },
-    [parsedMask, handleAction],
+    [parsedMask, handleAction, store.currentPhase],
   );
 
   const handleActionChoicePlay = useCallback(() => {
@@ -396,7 +399,9 @@ export function GamePage() {
   ]);
 
   // Merge playable + digivolve highlights for hand
-  const highlightedHand = new Set([...parsedMask.canPlayFromHand, ...digivolveHandIndices]);
+  const highlightedHand = store.currentPhase === GamePhase.Mulligan
+    ? new Set<number>()
+    : new Set([...parsedMask.canPlayFromHand, ...digivolveHandIndices]);
 
   // Compute valid drop slots while dragging a hand card
   const dragValidDropSlots = new Set<number>();
@@ -439,6 +444,11 @@ export function GamePage() {
             </button>
           )}
         </div>
+        {store.currentPhase === GamePhase.Mulligan && (
+          <div className="px-3 pb-1 text-xs text-amber-300" data-testid="mulligan-banner">
+            Opening Mulligan: choose <span className="font-semibold">Keep Hand</span> or <span className="font-semibold">Mulligan</span>.
+          </div>
+        )}
 
         <div className="flex-1 overflow-hidden">
           <DndContext

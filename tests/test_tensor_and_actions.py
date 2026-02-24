@@ -17,6 +17,7 @@ from digimon_gym.engine.core.player import Player
 from digimon_gym.engine.core.permanent import Permanent
 from digimon_gym.engine.core.card_source import CardSource
 from digimon_gym.engine.core.entity_base import CEntity_Base
+from digimon_gym.engine.interfaces.card_effect import ICardEffect
 
 
 # ─── Helpers ─────────────────────────────────────────────────────────
@@ -36,6 +37,36 @@ def make_card(card_id="BT14-001", name="TestDigimon", kind=CardKind.Digimon,
         entity.evo_costs = evo_costs
     cs = CardSource()
     cs.set_base_data(entity, owner)
+    return cs
+
+
+class MockCardSourceWithEffects(CardSource):
+    """CardSource that returns custom effects instead of querying CardDatabase."""
+
+    def __init__(self):
+        super().__init__()
+        self._mock_effects = []
+
+    def effect_list(self, timing):
+        return self._mock_effects
+
+
+def make_card_with_effects(card_id="BT14-001", name="TestDigimon", kind=CardKind.Digimon,
+                           dp=5000, level=4, play_cost=5, colors=None, owner=None,
+                           effects=None):
+    entity = CEntity_Base()
+    entity.card_id = card_id
+    entity.card_name_eng = name
+    entity.card_kind = kind
+    entity.dp = dp
+    entity.level = level
+    entity.play_cost = play_cost
+    entity.card_colors = colors or [CardColor.Red]
+    cs = MockCardSourceWithEffects()
+    cs.set_base_data(entity, owner)
+    cs._mock_effects = effects or []
+    for eff in cs._mock_effects:
+        eff.effect_source_card = cs
     return cs
 
 
@@ -267,6 +298,127 @@ class TestBoardStateTensor:
         assert ui["memoryGauge"] == -2
         assert ui["player1"]["memory"] == -2
         assert ui["player2"]["memory"] == 2
+
+    def test_ui_json_includes_stack_inspector_breakdowns(self):
+        game = setup_game_at_phase(GamePhase.Main, memory=3)
+        p1 = game.player1
+
+        inherited_effect = ICardEffect()
+        inherited_effect.is_inherited_effect = True
+        inherited_effect.dp_modifier = 1000
+        inherited_effect._is_blocker = True
+        inherited_effect.set_can_use_condition(lambda ctx: True)
+
+        top_effect = ICardEffect()
+        top_effect.is_inherited_effect = False
+        top_effect.dp_modifier = 500
+        top_effect.set_can_use_condition(lambda ctx: True)
+
+        base = make_card_with_effects(
+            card_id="BT14-001",
+            name="Base",
+            level=3,
+            dp=1000,
+            owner=p1,
+            effects=[inherited_effect],
+        )
+        base.c_entity_base.inherited_effect_description_eng = "[Inherited] Gain +1000 DP."
+
+        top = make_card_with_effects(
+            card_id="BT14-010",
+            name="Top",
+            level=4,
+            dp=5000,
+            owner=p1,
+            effects=[top_effect],
+        )
+        top.c_entity_base.effect_description_eng = "[Your Turn] This Digimon gets +500 DP."
+
+        perm = Permanent([base, top])
+        perm._owner_game = game
+        perm.grant_keyword("_is_rush", duration=-1)
+        perm.change_dp(300)
+        p1.battle_area.append(perm)
+
+        ui = game.to_ui_json()
+        battle_perm = ui["player1"]["battleArea"][0]
+
+        assert battle_perm["mainEffectText"] == "[Your Turn] This Digimon gets +500 DP."
+        assert battle_perm["inheritedEffects"][0]["cardId"] == "BT14-001"
+        assert battle_perm["inheritedEffects"][0]["text"] == "[Inherited] Gain +1000 DP."
+        assert "blocker" in battle_perm["keywordBreakdown"]["innate"]
+        assert "rush" in battle_perm["keywordBreakdown"]["gained"]
+        assert battle_perm["sources"][0]["dpContribution"] == 1000.0
+        assert battle_perm["sources"][1]["dpContribution"] == 500.0
+        assert battle_perm["dpBreakdown"]["base"] == 5000
+        assert battle_perm["dpBreakdown"]["temporary"] == 300.0
+        assert battle_perm["dpBreakdown"]["total"] == 6800
+
+
+# ─── Mulligan Setup Tests ─────────────────────────────────────────────
+
+class TestMulliganSetup:
+    @staticmethod
+    def _seed_decks(game: Game):
+        seeded_ids = [
+            "BT14-001", "BT14-002", "BT14-003", "BT14-010",
+            "BT14-020", "BT14-030", "BT14-050", "BT14-074",
+            "BT14-090", "BT14-100",
+        ]
+        for player in (game.player1, game.player2):
+            player.library_cards = [
+                make_card(seeded_ids[i % len(seeded_ids)], owner=player)
+                for i in range(50)
+            ]
+            player.digitama_library_cards = [
+                make_card("BT14-001", kind=CardKind.DigiEgg, level=2, owner=player)
+                for _ in range(4)
+            ]
+
+    def test_start_game_enters_mulligan_with_no_security(self):
+        game = Game()
+        self._seed_decks(game)
+
+        game.start_game()
+
+        assert game.current_phase == GamePhase.Mulligan
+        assert len(game.player1.hand_cards) == 5
+        assert len(game.player2.hand_cards) == 5
+        assert len(game.player1.security_cards) == 0
+        assert len(game.player2.security_cards) == 0
+
+    def test_mulligan_mask_uses_action_zero_and_one_only(self):
+        game = Game()
+        self._seed_decks(game)
+        game.start_game()
+
+        mask = game.get_action_mask(game.current_player_id)
+        assert mask[0] == 1.0
+        assert mask[1] == 1.0
+        assert mask[62] == 0.0
+        assert sum(1 for v in mask if v == 1.0) == 2
+
+    def test_keep_then_keep_completes_setup_and_enters_breeding(self):
+        game = Game()
+        self._seed_decks(game)
+        game.start_game()
+
+        game.decode_action(0, game.current_player_id)  # first player keeps
+        assert game.current_phase == GamePhase.Mulligan
+        game.decode_action(0, game.current_player_id)  # second player keeps
+
+        assert game.current_phase == GamePhase.Breeding
+        assert len(game.player1.security_cards) == 5
+        assert len(game.player2.security_cards) == 5
+
+    def test_mulligan_tensor_has_opening_hand_and_empty_security(self):
+        game = Game()
+        self._seed_decks(game)
+        game.start_game()
+
+        tensor = game.get_board_state_tensor(1)
+        assert any(v != 0.0 for v in tensor[754:759])  # opening hand cards
+        assert all(v == 0.0 for v in tensor[884:894])  # security not set yet
 
 
 # ─── Action Mask Tests ───────────────────────────────────────────────
@@ -593,6 +745,7 @@ class TestActionDecoder:
 
         game.decode_action(60, 1)
         assert p1.breeding_area is not None
+        assert game.current_phase == GamePhase.Main
 
     def test_decode_move(self):
         game = setup_game_at_phase(GamePhase.Breeding, memory=5)
@@ -604,6 +757,24 @@ class TestActionDecoder:
         game.decode_action(61, 1)
         assert p1.breeding_area is None
         assert len(p1.battle_area) == 1
+        assert game.current_phase == GamePhase.Main
+
+    def test_decode_move_then_hatch_is_not_allowed_same_turn(self):
+        game = setup_game_at_phase(GamePhase.Breeding, memory=5)
+        p1 = game.player1
+        p1.digitama_library_cards.append(
+            make_card("BT14-001", "Egg", kind=CardKind.DigiEgg, level=2, owner=p1)
+        )
+        p1.breeding_area = Permanent([make_card("BT14-003", "Rookie", level=3, owner=p1)])
+
+        game.decode_action(61, 1)
+        egg_count_after_move = len(p1.digitama_library_cards)
+        game.decode_action(60, 1)
+
+        assert game.current_phase == GamePhase.Main
+        assert p1.breeding_area is None
+        assert len(p1.battle_area) == 1
+        assert len(p1.digitama_library_cards) == egg_count_after_move
 
     def test_decode_breeding_pass(self):
         game = setup_game_at_phase(GamePhase.Breeding, memory=5)

@@ -6,6 +6,7 @@ import numpy as np
 
 from digimon_gym.engine.runners.base_runner import BaseGameRunner
 from digimon_gym.engine.loggers import SilentLogger, VerboseLogger
+from digimon_gym.engine.data.enums import GamePhase
 
 
 class HeadlessGame(BaseGameRunner):
@@ -102,4 +103,6 @@ class HeadlessGame(BaseGameRunner):
 
     def _default_action(self) -> int:
         """Fallback policy: always pass."""
+        if self.game.current_phase == GamePhase.Mulligan:
+            return 0  # Keep hand
         return 62  # ACTION_PASS_TURN

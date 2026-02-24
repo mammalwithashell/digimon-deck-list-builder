@@ -32,7 +32,7 @@ class BaseGameRunner(ABC):
         self._setup_deck(self.game.player1, deck1_ids)
         self._setup_deck(self.game.player2, deck2_ids)
 
-        # Start the game (shuffles, draws security + hand, parks at Breeding)
+        # Start the game (opening setup + mulligan phase)
         self.game.start_game()
 
         # Capture initial state if recording

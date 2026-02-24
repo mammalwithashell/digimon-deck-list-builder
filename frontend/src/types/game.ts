@@ -16,12 +16,42 @@ export enum GamePhase {
   SelectSecurity = 14,
   EndOfTurnAction = 15,
   AllianceTiming = 16,
+  Mulligan = 17,
 }
 
 export interface SourceInfo {
   cardId: string;
+  cardName: string | null;
+  isTop: boolean;
   optState: number;
   dpContribution: number;
+  mainEffectText: string;
+  inheritedEffectText: string;
+}
+
+export interface InheritedEffectInfo {
+  sourceIndex: number;
+  cardId: string;
+  cardName: string | null;
+  text: string;
+}
+
+export interface KeywordBreakdown {
+  innate: string[];
+  gained: string[];
+}
+
+export interface DpSourceContribution {
+  cardId: string;
+  cardName: string | null;
+  value: number;
+}
+
+export interface DpBreakdown {
+  base: number | null;
+  sources: DpSourceContribution[];
+  temporary: number;
+  total: number | null;
 }
 
 export interface PermanentInfo {
@@ -32,9 +62,13 @@ export interface PermanentInfo {
   isSuspended: boolean;
   sourceCount: number;
   keywords: string[];
+  keywordBreakdown: KeywordBreakdown;
   securityAttackModifier: number;
   linkedCardIds: string[];
   sources: SourceInfo[];
+  mainEffectText: string;
+  inheritedEffects: InheritedEffectInfo[];
+  dpBreakdown: DpBreakdown;
   turnPlayed: number;
   colors: number[];
 }

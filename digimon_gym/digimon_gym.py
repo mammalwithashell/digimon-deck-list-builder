@@ -303,6 +303,19 @@ def greedy_policy(env) -> int:
                 return int(action)
         return ACTION_PASS_TURN
 
+    if game.current_phase == GamePhase.Mulligan:
+        acting = game.player1 if game.current_player_id == game.player1.player_id else game.player2
+        has_level3 = any(
+            card.is_digimon and (card.level or 0) == 3
+            for card in acting.hand_cards
+        )
+        valid_set = set(int(a) for a in valid_actions)
+        if not has_level3 and 1 in valid_set:
+            return 1
+        if 0 in valid_set:
+            return 0
+        return int(valid_actions[0])
+
     def _relative_memory() -> int:
         # Convert gauge to active-player-relative memory.
         return int(game.memory) if game.turn_player is game.player1 else int(-game.memory)
