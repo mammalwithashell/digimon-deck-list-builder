@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import re
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
@@ -78,6 +79,82 @@ def _card_text_from_meta(meta: dict) -> str:
     ).strip()
 
 
+_ENGINE_CALL_RE = re.compile(
+    r"(?:game|player|perm|permanent|ctx\.get\(['\"]game['\"]\))\.([a-z_][a-z0-9_]*)\s*\("
+)
+
+
+def extract_engine_calls(script_text: str) -> list[str]:
+    """Extract deduplicated engine/player method names from a card script.
+
+    Looks for patterns like ``game.effect_digivolve_from_hand(...)``,
+    ``player.draw_cards(...)``, ``perm.grant_keyword(...)``, etc.
+
+    Returns a deduplicated list of method names preserving first-seen order.
+    """
+    seen: dict[str, None] = {}
+    for match in _ENGINE_CALL_RE.finditer(script_text):
+        name = match.group(1)
+        if name not in seen:
+            seen[name] = None
+    return list(seen)
+
+
+def lookup_pinned_engine_methods(
+    rag_index: LocalRAGIndex,
+    method_names: list[str],
+) -> list[dict]:
+    """Look up engine API chunks for each method name.
+
+    Strategy:
+    1. Try an O(1) scan of ``rag_index.chunks`` for an exact ``function_name`` match.
+    2. Fall back to a small retrieval query (k=1) with ``source_types=["engine_api"]``.
+
+    Returns a deduplicated list of chunk dicts with ``text``, ``source``,
+    and ``function_name`` keys.
+    """
+    rag_index.ensure_loaded()
+
+    # Build a quick lookup: function_name -> first matching chunk
+    fn_lookup: dict[str, dict] = {}
+    for chunk in rag_index.chunks:
+        fn = chunk.get("function_name")
+        if fn and fn not in fn_lookup:
+            fn_lookup[fn] = chunk
+
+    seen_ids: set[str] = set()
+    results: list[dict] = []
+
+    for name in method_names:
+        # 1) Exact match
+        exact = fn_lookup.get(name)
+        if exact:
+            cid = exact.get("chunk_id", name)
+            if cid not in seen_ids:
+                seen_ids.add(cid)
+                results.append({
+                    "text": exact.get("text", ""),
+                    "source": exact.get("source", ""),
+                    "function_name": name,
+                })
+            continue
+
+        # 2) Retrieval fallback
+        hits = rag_index.retrieve(name, k=1, source_types=["engine_api"])
+        if hits:
+            hit = hits[0]
+            cid = hit.get("chunk_id", name)
+            if cid not in seen_ids:
+                seen_ids.add(cid)
+                results.append({
+                    "text": hit.get("text", ""),
+                    "source": hit.get("source", ""),
+                    "function_name": hit.get("function_name") or name,
+                })
+
+    return results
+
+
 class TaskDispatcher:
     def __init__(self, *, rag_index: LocalRAGIndex | None = None, client: LLMClient | None = None):
         self.rag_index = rag_index or LocalRAGIndex()
@@ -128,7 +205,7 @@ class TaskDispatcher:
             card_text = _card_text_from_meta(card_meta)
             generated_script = _read_generated_script(set_id, module_name)
             query = f"{card_id} {card_meta.get('card_name_eng', '')} {card_text[:350]}"
-            context = self.rag_index.retrieve(query, k=6)
+            context = self.rag_index.retrieve(query, k=6, source_types=["rules", "card_metadata"])
             retrieval_refs.extend(
                 {
                     "card_id": card_id,
@@ -182,7 +259,7 @@ class TaskDispatcher:
         script_text = str(payload.get("script_text", "")).strip()
         engine_version = str(payload.get("engine_version", "unknown"))
         query = f"{card_id} {report_text[:300]}"
-        context = self.rag_index.retrieve(query, k=3)
+        context = self.rag_index.retrieve(query, k=3, source_types=["rules", "engine_api"])
         system_prompt, user_prompt = build_qa_triage_messages(
             report_text=report_text,
             card_text=card_text,
@@ -223,7 +300,7 @@ class TaskDispatcher:
             mechanic_text = str(mechanic).strip()
             if not mechanic_text:
                 continue
-            context = self.rag_index.retrieve(mechanic_text, k=5)
+            context = self.rag_index.retrieve(mechanic_text, k=5, source_types=["engine_api", "rules"])
             system_prompt, user_prompt = build_engine_capability_messages(
                 mechanic=mechanic_text,
                 context_chunks=context,
@@ -273,8 +350,13 @@ class TaskDispatcher:
         if primary_path not in allowed_paths:
             allowed_paths.insert(0, primary_path)
 
+        # Load the generated script and extract engine method calls
+        generated_script = _read_generated_script(set_id, module_name)
+        engine_method_names = extract_engine_calls(generated_script) if generated_script else []
+        pinned_chunks = lookup_pinned_engine_methods(self.rag_index, engine_method_names) if engine_method_names else []
+
         query = f"{card_id} {issue_description} {card_text[:300]}"
-        context = self.rag_index.retrieve(query, k=6)
+        context = self.rag_index.retrieve(query, k=6, source_types=["engine_api", "rules", "transpiler"])
         system_prompt, user_prompt = build_script_autofix_messages(
             card_id=card_id,
             issue_description=issue_description or "No issue description supplied.",
@@ -282,6 +364,7 @@ class TaskDispatcher:
             allowed_paths=allowed_paths,
             file_contexts=file_contexts,
             context_chunks=context,
+            pinned_engine_chunks=pinned_chunks or None,
         )
         run = self.client.run_structured(
             task_type="script_autofix",
