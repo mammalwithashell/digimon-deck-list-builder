@@ -42,6 +42,40 @@ class TrainingJobWorker:
         self._task: asyncio.Task | None = None
         self._stop = asyncio.Event()
         self._running_tasks: set[asyncio.Task] = set()
+        self._devices: list[str] = self._discover_devices()
+        self._device_index: int = 0
+
+    # ── Device management ─────────────────────────────────────────────
+
+    def _discover_devices(self) -> list[str]:
+        """Discover available training devices.
+
+        Checks (in order):
+        1. ``TRAINING_WORKER_DEVICES`` env var (comma-separated, e.g. ``cuda:0,cuda:1``)
+        2. Auto-detect CUDA GPUs via ``torch.cuda``
+        3. Fall back to ``["cpu"]``
+        """
+        env_devices = os.getenv("TRAINING_WORKER_DEVICES", "").strip()
+        if env_devices:
+            return [d.strip() for d in env_devices.split(",") if d.strip()]
+
+        try:
+            import torch
+
+            if torch.cuda.is_available():
+                count = torch.cuda.device_count()
+                if count > 0:
+                    return [f"cuda:{i}" for i in range(count)]
+        except ImportError:
+            pass
+
+        return ["cpu"]
+
+    def _assign_device(self) -> str:
+        """Round-robin assignment across discovered devices."""
+        device = self._devices[self._device_index % len(self._devices)]
+        self._device_index += 1
+        return device
 
     # ── Lifecycle ────────────────────────────────────────────────────
 
@@ -51,9 +85,10 @@ class TrainingJobWorker:
         self._stop.clear()
         self._task = asyncio.create_task(self._loop(), name="training-job-worker")
         logger.info(
-            "Training job worker started (id=%s, max_concurrent=%d)",
+            "Training job worker started (id=%s, max_concurrent=%d, devices=%s)",
             self._worker_id,
             self.max_concurrent,
+            self._devices,
         )
 
     async def stop(self) -> None:
@@ -211,9 +246,7 @@ class TrainingJobWorker:
 
     async def _run_job(self, job_id: str, job_type: str) -> None:
         """Execute a single training job."""
-        # Record device assignment (placeholder "cpu" for now,
-        # device management comes in a later step)
-        device = "cpu"
+        device = self._assign_device()
         async with async_session() as db:
             await db.execute(
                 update(TrainingJob)

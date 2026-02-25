@@ -379,15 +379,23 @@ def make_env(opponent: str = "greedy",
 
 
 def save_model(model: Union[MaskablePPO, MaskableRecurrentPPO],
-               models_dir: str = "models") -> str:
-    """Save trained model with timestamp.
+               models_dir: str = "models",
+               job_id: Optional[str] = None) -> str:
+    """Save trained model with a unique filename.
+
+    When ``job_id`` is provided (worker-dispatched jobs), the UUID is used
+    as the filename suffix for guaranteed uniqueness across parallel runs.
+    Otherwise falls back to a timestamp (CLI usage).
 
     Returns:
         Path to the saved model file.
     """
     os.makedirs(models_dir, exist_ok=True)
-    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-    path = os.path.join(models_dir, f"pilot_ppo_{timestamp}")
+    if job_id is not None:
+        suffix = job_id
+    else:
+        suffix = datetime.now().strftime("%Y%m%d_%H%M%S")
+    path = os.path.join(models_dir, f"pilot_ppo_{suffix}")
     model.save(path)
     return path
 
@@ -410,6 +418,8 @@ def train(total_timesteps: int = 100_000,
           bounty_bonus: float = 0.5,
           use_lstm: bool = False,
           lstm_hidden_size: int = 256,
+          device: str = "auto",
+          job_id: Optional[str] = None,
           ) -> Union[MaskablePPO, MaskableRecurrentPPO]:
     """Train a Pilot Agent using MaskablePPO or MaskableRecurrentPPO.
 
@@ -432,6 +442,8 @@ def train(total_timesteps: int = 100_000,
         bounty_bonus: Bonus reward for beating high-TI opponents.
         use_lstm: Use LSTM policy (MaskableRecurrentPPO) instead of MLP.
         lstm_hidden_size: LSTM hidden units per layer (default: 256).
+        device: PyTorch device for training (default: "auto" lets SB3 choose).
+        job_id: Optional job UUID for unique checkpoint filenames.
 
     Returns:
         Trained model (MaskablePPO or MaskableRecurrentPPO).
@@ -478,6 +490,7 @@ def train(total_timesteps: int = 100_000,
             gamma=gamma,
             tensorboard_log=tensorboard_log,
             verbose=0,
+            device=device,
             policy_kwargs=dict(
                 lstm_hidden_size=lstm_hidden_size,
                 n_lstm_layers=1,
@@ -496,6 +509,7 @@ def train(total_timesteps: int = 100_000,
             gamma=gamma,
             tensorboard_log=tensorboard_log,
             verbose=0,
+            device=device,
         )
 
     # Create evaluation callback
@@ -528,7 +542,7 @@ def train(total_timesteps: int = 100_000,
         print(f"  Steps/sec: {total_timesteps / elapsed:,.0f}")
 
     # Save model
-    model_path = save_model(model, save_dir)
+    model_path = save_model(model, save_dir, job_id=job_id)
     if verbose:
         print(f"  Model saved to: {model_path}")
 
