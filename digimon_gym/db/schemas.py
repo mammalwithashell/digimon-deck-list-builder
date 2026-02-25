@@ -559,6 +559,7 @@ class AgentCreateRequest(BaseModel):
     algorithm: Literal["mlp", "lstm"] = "mlp"
     deck: List[str]
     deck_source: Optional[str] = None
+    deck_pool_id: Optional[str] = None
 
 
 class AgentUpdateRequest(BaseModel):
@@ -573,6 +574,7 @@ class AgentResponse(BaseModel):
     algorithm: str
     weights_path: str
     deck_source: Optional[str] = None
+    deck_pool_id: Optional[str] = None
     total_games: int
     total_wins: int
     total_losses: int
@@ -623,6 +625,7 @@ class GauntletParticipantInput(BaseModel):
     archetype_name: str = Field(..., min_length=1, max_length=100)
     deck: List[str]
     deck_source: Optional[str] = None
+    deck_pool_id: Optional[str] = None
     role: Literal["core", "exploiter"] = "core"
     meta_share: float = Field(0.0, ge=0.0, le=1.0)
     threat_index: float = Field(0.0, ge=0.0)
@@ -644,6 +647,7 @@ class GauntletParticipantResponse(BaseModel):
     agent_id: Optional[str] = None
     archetype_name: str
     deck_source: Optional[str] = None
+    deck_pool_id: Optional[str] = None
     meta_share: float
     threat_index: float
     tournament_win_rate: Optional[float] = None
@@ -684,6 +688,77 @@ class MatchupResultResponse(BaseModel):
     b_wins: int
     draws: int
     a_win_rate: float
+
+
+# ── Deck Pools ─────────────────────────────────────────────────────────
+
+class DeckPoolCreateRequest(BaseModel):
+    name: str = Field(..., min_length=1, max_length=100)
+    archetype: str = Field(..., min_length=1, max_length=100)
+    base_deck: List[str]
+    egg_deck: List[str] = Field(default_factory=list)
+    vary_eggs: bool = False
+    side_cards: List[str] = Field(default_factory=list)
+    core_overrides: Dict[str, bool] = Field(default_factory=dict)
+    generation_mode: Literal["eager", "hybrid"] = "eager"
+    target_variant_count: int = Field(4, ge=1, le=50)
+    seed: Optional[int] = None
+    hybrid_max_dynamic: int = Field(10, ge=0, le=100)
+
+
+class DeckPoolUpdateRequest(BaseModel):
+    name: Optional[str] = Field(None, min_length=1, max_length=100)
+    archetype: Optional[str] = Field(None, min_length=1, max_length=100)
+    side_cards: Optional[List[str]] = None
+    core_overrides: Optional[Dict[str, bool]] = None
+    generation_mode: Optional[Literal["eager", "hybrid"]] = None
+    target_variant_count: Optional[int] = Field(None, ge=1, le=50)
+    seed: Optional[int] = None
+    vary_eggs: Optional[bool] = None
+    hybrid_max_dynamic: Optional[int] = Field(None, ge=0, le=100)
+
+
+class CoreAnalysisResponse(BaseModel):
+    core_cards: Dict[str, int]
+    flex_cards: Dict[str, int]
+    total_main: int
+    total_egg: int
+
+
+class DeckPoolVariantResponse(BaseModel):
+    index: int
+    deck: List[str]
+    changes_from_base: Dict[str, int]
+
+
+class DeckPoolResponse(BaseModel):
+    id: str
+    name: str
+    archetype: str
+    base_deck: List[str]
+    egg_deck: List[str]
+    vary_eggs: bool
+    core_overrides: Dict[str, bool]
+    side_cards: List[str]
+    generation_mode: str
+    target_variant_count: int
+    seed: Optional[int] = None
+    variant_count: int
+    hybrid_max_dynamic: int
+    owner_id: Optional[str] = None
+    created_at: datetime
+    updated_at: datetime
+
+
+class DeckPoolDetailResponse(BaseModel):
+    pool: DeckPoolResponse
+    core_analysis: CoreAnalysisResponse
+    variants: List[DeckPoolVariantResponse] = Field(default_factory=list)
+
+
+class DeckPoolGenerateRequest(BaseModel):
+    count: Optional[int] = None
+    seed: Optional[int] = None
 
 
 class ArchetypeInfoResponse(BaseModel):
