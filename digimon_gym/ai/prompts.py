@@ -48,6 +48,16 @@ def build_script_fidelity_messages(
     return system, user
 
 
+def _join_pinned_engine_chunks(chunks: list[dict]) -> str:
+    """Format pinned engine API method chunks for insertion into prompts."""
+    lines = []
+    for idx, chunk in enumerate(chunks, start=1):
+        fn_name = chunk.get("function_name", "unknown")
+        text = chunk.get("text", "")
+        lines.append(f"[Method {idx}] {fn_name}\n{text}")
+    return "\n\n".join(lines)
+
+
 def build_script_autofix_messages(
     *,
     card_id: str,
@@ -56,6 +66,7 @@ def build_script_autofix_messages(
     allowed_paths: list[str],
     file_contexts: list[dict[str, str]],
     context_chunks: list[dict],
+    pinned_engine_chunks: list[dict] | None = None,
 ) -> tuple[str, str]:
     system = dedent(
         """
@@ -86,6 +97,11 @@ def build_script_autofix_messages(
     files_text = "\n\n".join(file_blocks) if file_blocks else "No file context available."
     allowed_text = "\n".join(f"- {path}" for path in allowed_paths) if allowed_paths else "- (none)"
 
+    pinned_section = ""
+    if pinned_engine_chunks:
+        pinned_text = _join_pinned_engine_chunks(pinned_engine_chunks)
+        pinned_section = f"\n\nEngine API methods used by this script:\n{pinned_text}\n"
+
     user = dedent(
         f"""
         Card ID: {card_id}
@@ -99,7 +115,7 @@ def build_script_autofix_messages(
 
         Current file context:
         {files_text}
-
+        {pinned_section}
         Retrieved rules/engine context:
         {_join_context_chunks(context_chunks)}
         """
