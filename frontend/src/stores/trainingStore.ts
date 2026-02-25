@@ -5,11 +5,15 @@ import {
   type GauntletItem,
   type GauntletDetailItem,
   type ArchetypeInfo,
+  type DeckPoolItem,
+  type DeckPoolDetail,
   getAgents,
   getJobs,
   getGauntlets,
   getGauntletDetail,
   getDeckLibraryArchetypes,
+  getDeckPools,
+  getDeckPoolDetail,
 } from '@/api/trainingApi';
 
 interface TrainingState {
@@ -18,6 +22,8 @@ interface TrainingState {
   gauntlets: GauntletItem[];
   selectedGauntlet: GauntletDetailItem | null;
   deckLibraryArchetypes: ArchetypeInfo[];
+  deckPools: DeckPoolItem[];
+  selectedDeckPool: DeckPoolDetail | null;
   isLoading: boolean;
   error: string | null;
 
@@ -26,6 +32,8 @@ interface TrainingState {
   fetchGauntlets: () => Promise<void>;
   fetchGauntletDetail: (id: string) => Promise<void>;
   fetchDeckLibrary: () => Promise<void>;
+  fetchDeckPools: (params?: { archetype?: string }) => Promise<void>;
+  fetchDeckPoolDetail: (id: string) => Promise<void>;
   clearError: () => void;
 }
 
@@ -35,6 +43,8 @@ export const useTrainingStore = create<TrainingState>((set) => ({
   gauntlets: [],
   selectedGauntlet: null,
   deckLibraryArchetypes: [],
+  deckPools: [],
+  selectedDeckPool: null,
   isLoading: false,
   error: null,
 
@@ -85,6 +95,26 @@ export const useTrainingStore = create<TrainingState>((set) => ({
       set({ deckLibraryArchetypes: archetypes, isLoading: false });
     } catch (e) {
       set({ error: e instanceof Error ? e.message : 'Failed to fetch deck library', isLoading: false });
+    }
+  },
+
+  fetchDeckPools: async (params) => {
+    set({ isLoading: true, error: null });
+    try {
+      const deckPools = await getDeckPools(params);
+      set({ deckPools, isLoading: false });
+    } catch (e) {
+      set({ error: e instanceof Error ? e.message : 'Failed to fetch deck pools', isLoading: false });
+    }
+  },
+
+  fetchDeckPoolDetail: async (id) => {
+    set({ isLoading: true, error: null });
+    try {
+      const detail = await getDeckPoolDetail(id);
+      set({ selectedDeckPool: detail, isLoading: false });
+    } catch (e) {
+      set({ error: e instanceof Error ? e.message : 'Failed to fetch deck pool detail', isLoading: false });
     }
   },
 

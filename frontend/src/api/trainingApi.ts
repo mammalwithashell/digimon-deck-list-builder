@@ -9,6 +9,7 @@ export interface AgentItem {
   algorithm: 'mlp' | 'lstm';
   weights_path: string;
   deck_source?: string | null;
+  deck_pool_id?: string | null;
   total_games: number;
   total_wins: number;
   total_losses: number;
@@ -53,6 +54,7 @@ export interface GauntletParticipantItem {
   agent_id?: string | null;
   archetype_name: string;
   deck_source?: string | null;
+  deck_pool_id?: string | null;
   meta_share: number;
   threat_index: number;
   tournament_win_rate?: number | null;
@@ -103,6 +105,44 @@ export interface ArchetypeInfo {
   threat_index: number;
   decklists_count: number;
   sample_decklist: string[];
+}
+
+export interface DeckPoolItem {
+  id: string;
+  name: string;
+  archetype: string;
+  base_deck: string[];
+  egg_deck: string[];
+  vary_eggs: boolean;
+  core_overrides: Record<string, boolean>;
+  side_cards: string[];
+  generation_mode: 'eager' | 'hybrid';
+  target_variant_count: number;
+  seed?: number | null;
+  variant_count: number;
+  hybrid_max_dynamic: number;
+  owner_id?: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface CoreAnalysis {
+  core_cards: Record<string, number>;
+  flex_cards: Record<string, number>;
+  total_main: number;
+  total_egg: number;
+}
+
+export interface DeckPoolVariant {
+  index: number;
+  deck: string[];
+  changes_from_base: Record<string, number>;
+}
+
+export interface DeckPoolDetail {
+  pool: DeckPoolItem;
+  core_analysis: CoreAnalysis;
+  variants: DeckPoolVariant[];
 }
 
 // ── Agents ─────────────────────────────────────────────────────────
@@ -183,6 +223,7 @@ export async function createGauntlet(payload: {
     archetype_name: string;
     deck: string[];
     deck_source?: string;
+    deck_pool_id?: string;
     role: 'core' | 'exploiter';
     meta_share: number;
     threat_index: number;
@@ -225,5 +266,69 @@ export async function getMatchups(gauntletId: string): Promise<MatchupResultItem
 
 export async function getDeckLibraryArchetypes(): Promise<ArchetypeInfo[]> {
   const { data } = await client.get<ArchetypeInfo[]>('/admin/training/deck-library/archetypes');
+  return data;
+}
+
+// ── Deck Pools ────────────────────────────────────────────────────
+
+export async function getDeckPools(params?: { archetype?: string; limit?: number }): Promise<DeckPoolItem[]> {
+  const { data } = await client.get<DeckPoolItem[]>('/admin/training/deck-pools', { params });
+  return data;
+}
+
+export async function getDeckPoolDetail(poolId: string): Promise<DeckPoolDetail> {
+  const { data } = await client.get<DeckPoolDetail>(`/admin/training/deck-pools/${poolId}`);
+  return data;
+}
+
+export async function createDeckPool(payload: {
+  name: string;
+  archetype: string;
+  base_deck: string[];
+  egg_deck?: string[];
+  vary_eggs?: boolean;
+  side_cards?: string[];
+  core_overrides?: Record<string, boolean>;
+  generation_mode?: 'eager' | 'hybrid';
+  target_variant_count?: number;
+  seed?: number | null;
+  hybrid_max_dynamic?: number;
+}): Promise<DeckPoolItem> {
+  const { data } = await client.post<DeckPoolItem>('/admin/training/deck-pools', payload);
+  return data;
+}
+
+export async function updateDeckPool(
+  poolId: string,
+  updates: {
+    name?: string;
+    archetype?: string;
+    side_cards?: string[];
+    core_overrides?: Record<string, boolean>;
+    generation_mode?: 'eager' | 'hybrid';
+    target_variant_count?: number;
+    seed?: number | null;
+    vary_eggs?: boolean;
+    hybrid_max_dynamic?: number;
+  },
+): Promise<DeckPoolItem> {
+  const { data } = await client.patch<DeckPoolItem>(`/admin/training/deck-pools/${poolId}`, updates);
+  return data;
+}
+
+export async function deleteDeckPool(poolId: string): Promise<void> {
+  await client.delete(`/admin/training/deck-pools/${poolId}`);
+}
+
+export async function generateDeckPoolVariants(
+  poolId: string,
+  opts?: { count?: number; seed?: number | null },
+): Promise<DeckPoolDetail> {
+  const { data } = await client.post<DeckPoolDetail>(`/admin/training/deck-pools/${poolId}/generate`, opts ?? {});
+  return data;
+}
+
+export async function analyzeDeckPoolCore(poolId: string): Promise<CoreAnalysis> {
+  const { data } = await client.post<CoreAnalysis>(`/admin/training/deck-pools/${poolId}/analyze-core`);
   return data;
 }
