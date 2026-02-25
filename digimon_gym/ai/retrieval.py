@@ -10,7 +10,7 @@ import os
 import re
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Iterable, List
+from typing import Iterable
 
 from rank_bm25 import BM25Okapi
 
@@ -502,10 +502,6 @@ def _cosine(a: list[float], b: list[float]) -> float:
     return dot / (na * nb)
 
 
-def _tokenize(text: str) -> set[str]:
-    return set(re.findall(r"[a-z0-9_]{2,}", text.lower()))
-
-
 class LocalRAGIndex:
     def __init__(self, path: Path = DEFAULT_INDEX_PATH) -> None:
         self.path = path
@@ -637,7 +633,7 @@ class LocalRAGIndex:
         merged: dict[str, tuple[float, dict]] = {}
 
         for rank, chunk in bm25_ranks:
-            cid = chunk.get("chunk_id", id(chunk))
+            cid = chunk["chunk_id"]
             score = 1.0 / (k_param + rank)
             if cid in merged:
                 prev_score, _ = merged[cid]
@@ -646,7 +642,7 @@ class LocalRAGIndex:
                 merged[cid] = (score, chunk)
 
         for rank, chunk in vector_ranks:
-            cid = chunk.get("chunk_id", id(chunk))
+            cid = chunk["chunk_id"]
             score = 1.0 / (k_param + rank)
             if cid in merged:
                 prev_score, _ = merged[cid]
@@ -668,8 +664,9 @@ class LocalRAGIndex:
 
         # Filter chunks by source_type if specified
         if source_types:
-            candidates = [c for c in self.chunks if c.get("source_type") in source_types]
-            candidate_indices = [i for i, c in enumerate(self.chunks) if c.get("source_type") in source_types]
+            type_set = set(source_types)
+            candidates = [c for c in self.chunks if c.get("source_type") in type_set]
+            candidate_indices = [i for i, c in enumerate(self.chunks) if c.get("source_type") in type_set]
         else:
             candidates = self.chunks
             candidate_indices = list(range(len(self.chunks)))
