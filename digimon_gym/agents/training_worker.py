@@ -359,7 +359,7 @@ class TrainingJobWorker:
 
         if values:
             await db.execute(
-                update(Agent).where(Agent.id == job.agent_id).values(**values)
+                update(Agent).where(Agent.id == job.agent_id).values(values)
             )
 
         # Recompute win_rate atomically from the freshly-incremented columns
