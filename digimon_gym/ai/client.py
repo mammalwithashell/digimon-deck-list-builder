@@ -36,6 +36,13 @@ MODEL_PRICING = {
     ),
 }
 
+TASK_MAX_OUTPUT_TOKENS = {
+    "review_batch": int(os.getenv("OPENAI_MAX_OUTPUT_TOKENS_REVIEW", "1200")),
+    "qa_analysis": int(os.getenv("OPENAI_MAX_OUTPUT_TOKENS_QA", "800")),
+    "engine_audit": int(os.getenv("OPENAI_MAX_OUTPUT_TOKENS_ENGINE", "800")),
+    "script_autofix": int(os.getenv("OPENAI_MAX_OUTPUT_TOKENS_AUTOFIX", "6000")),
+}
+
 
 @dataclass
 class StructuredRunResult:
@@ -96,10 +103,12 @@ class OpenAIResponsesClient:
         user_prompt: str,
         schema_model: Type[BaseModel],
         model_name: str | None = None,
+        max_output_tokens: int | None = None,
     ) -> StructuredRunResult:
         client = self._get_client()
         model = self.resolve_model(task_type, model_name)
         schema = self._to_openai_strict_json_schema(schema_model.model_json_schema())
+        response_max_output_tokens = max_output_tokens or TASK_MAX_OUTPUT_TOKENS.get(task_type, 1200)
 
         response = client.responses.create(
             model=model,
@@ -121,6 +130,7 @@ class OpenAIResponsesClient:
                     "strict": True,
                 }
             },
+            max_output_tokens=response_max_output_tokens,
         )
 
         raw_text = getattr(response, "output_text", None)

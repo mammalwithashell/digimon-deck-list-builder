@@ -10,12 +10,14 @@ from httpx import ASGITransport, AsyncClient
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 
+import digimon_gym.ai.set_run_orchestrator as set_run_module
 from digimon_gym.ai import retrieval as retrieval_module
 from digimon_gym.ai.batch_orchestrator import batch_orchestrator
 from digimon_gym.ai.client import OpenAIResponsesClient
 from digimon_gym.ai.dispatcher import DispatchOutcome
 from digimon_gym.ai.contracts import EngineCapabilityOutput, QATriageOutput, ScriptFidelityOutput
 from digimon_gym.ai.retrieval import LocalRAGIndex, build_local_index, discover_source_files
+from digimon_gym.ai.set_run_orchestrator import set_run_orchestrator
 from digimon_gym.ai.worker import AITaskWorker
 from digimon_gym.db.auth import (
     ROLE_ADMIN,
@@ -24,7 +26,16 @@ from digimon_gym.db.auth import (
     get_user_role_names,
 )
 from digimon_gym.db.database import get_db
-from digimon_gym.db.models import AIFixBatch, AIFixBatchItem, AITask, Base, Issue, ScriptPromotionAudit, User
+from digimon_gym.db.models import (
+    AIFixBatch,
+    AIFixBatchItem,
+    AITask,
+    AISetRunItem,
+    Base,
+    Issue,
+    ScriptPromotionAudit,
+    User,
+)
 from digimon_gym.engine.data import script_promotion
 
 
@@ -246,6 +257,68 @@ class TestAITasks:
             assert task.result_json is not None
             assert task.input_tokens == 100
             assert task.output_tokens == 40
+
+    async def test_worker_downgrades_model_on_tpm_overflow(self, session_factory, monkeypatch):
+        from digimon_gym.ai import worker as worker_module
+
+        monkeypatch.setattr(worker_module, "async_session", session_factory)
+        worker = AITaskWorker()
+
+        async with session_factory() as db:
+            task = AITask(
+                task_type="script_autofix",
+                payload_json=json.dumps(
+                    {
+                        "card_id": "EX10-028",
+                        "set_id": "ex10",
+                        "module_name": "ex10_028",
+                        "scope_profile": "script",
+                    }
+                ),
+                status="queued",
+                model_name="gpt-4.1",
+                cost_estimate_usd=0.01,
+                max_attempts=3,
+            )
+            db.add(task)
+            await db.commit()
+            await db.refresh(task)
+            task_id = task.id
+
+        calls = {"n": 0}
+
+        def fake_dispatch(task_type, payload, model_name):
+            calls["n"] += 1
+            if calls["n"] == 1:
+                raise RuntimeError(
+                    "Error code: 429 - {'error': {'message': 'Request too large for gpt-4.1 on tokens per min (TPM): Limit 30000, Requested 40884', 'code': 'rate_limit_exceeded'}}"
+                )
+            assert model_name == "gpt-4.1-mini"
+            return DispatchOutcome(
+                model_name="gpt-4.1-mini",
+                result={"summary": "ok", "edits": []},
+                sanitized_input={"ok": True},
+                retrieval_refs=[],
+                input_tokens=10,
+                output_tokens=5,
+                cost_actual=0.00001,
+            )
+
+        monkeypatch.setattr(worker.dispatcher, "run", fake_dispatch)
+
+        processed = await worker._process_one_task()
+        assert processed is True
+        async with session_factory() as db:
+            task = (await db.execute(select(AITask).where(AITask.id == task_id))).scalar_one()
+            assert task.status == "queued"
+            assert task.model_name == "gpt-4.1-mini"
+
+        processed = await worker._process_one_task()
+        assert processed is True
+        async with session_factory() as db:
+            task = (await db.execute(select(AITask).where(AITask.id == task_id))).scalar_one()
+            assert task.status == "completed"
+            assert task.model_name == "gpt-4.1-mini"
 
     async def test_admin_engine_backlog_endpoints(self, client: AsyncClient, session_factory):
         admin_tokens = await _register_and_login(client, "adminbacklog")
@@ -524,6 +597,201 @@ class TestAIFixBatches:
         async with session_factory() as db:
             batch = (await db.execute(select(AIFixBatch).where(AIFixBatch.id == batch_id))).scalar_one()
             assert batch.status in {"canceled", "failed_no_changes"}
+
+
+class TestSetRuns:
+    async def test_approve_set_endpoint_bulk_approves_new(self, client: AsyncClient, session_factory):
+        admin_tokens = await _register_and_login(client, "adminapproveset")
+        await _grant_roles(session_factory, "adminapproveset", ROLE_ADMIN)
+        judge_tokens = await _register_and_login(client, "approvesetjudge")
+        await _grant_roles(session_factory, "approvesetjudge", ROLE_JUDGE)
+
+        issue_ids: list[str] = []
+        for card_id in ["BT13-001", "BT13-002", "BT21-001"]:
+            create = await client.post(
+                "/issues",
+                headers={"Authorization": f"Bearer {judge_tokens['access_token']}"},
+                json={
+                    "card_id": card_id,
+                    "description": f"Issue for {card_id}",
+                    "source": "judge",
+                    "severity": "medium",
+                },
+            )
+            assert create.status_code == 201
+            issue_ids.append(create.json()["id"])
+
+        reject = await client.patch(
+            f"/issues/{issue_ids[1]}",
+            headers={"Authorization": f"Bearer {judge_tokens['access_token']}"},
+            json={"status": "rejected"},
+        )
+        assert reject.status_code == 200
+
+        resp = await client.post(
+            "/admin/issues/approve-set",
+            headers={"Authorization": f"Bearer {admin_tokens['access_token']}"},
+            json={"set_id": "bt13", "status_filter": "new"},
+        )
+        assert resp.status_code == 200
+        payload = resp.json()
+        assert payload["set_id"] == "bt13"
+        assert payload["matched_count"] == 1
+        assert payload["approved_count"] == 1
+        assert payload["skipped_count"] == 0
+
+    def test_discover_set_card_counts_bt13_bt21(self):
+        bt13 = set_run_orchestrator.discover_set_cards(set_id="bt13")
+        bt21 = set_run_orchestrator.discover_set_cards(set_id="bt21")
+        assert len(bt13) == 112
+        assert len(bt21) == 103
+
+    async def test_create_set_run_and_progress_to_applied_fix(
+        self, client: AsyncClient, session_factory, monkeypatch
+    ):
+        monkeypatch.setattr(set_run_module, "async_session", session_factory)
+        admin_tokens = await _register_and_login(client, "adminsetrun")
+        await _grant_roles(session_factory, "adminsetrun", ROLE_ADMIN)
+        judge_tokens = await _register_and_login(client, "setrunjudge")
+        await _grant_roles(session_factory, "setrunjudge", ROLE_JUDGE)
+
+        issue = await client.post(
+            "/issues",
+            headers={"Authorization": f"Bearer {judge_tokens['access_token']}"},
+            json={
+                "card_id": "BT13-001",
+                "description": "QA report: effect text mismatch.",
+                "source": "judge",
+                "severity": "high",
+            },
+        )
+        assert issue.status_code == 201
+
+        create = await client.post(
+            "/admin/set-runs",
+            headers={"Authorization": f"Bearer {admin_tokens['access_token']}"},
+            json={
+                "set_id": "bt13",
+                "run_mode": "pr",
+                "scope_profile": "script",
+                "max_fix_tasks": 1,
+            },
+        )
+        assert create.status_code == 201
+        set_run_id = create.json()["id"]
+
+        detail = await client.get(
+            f"/admin/set-runs/{set_run_id}",
+            headers={"Authorization": f"Bearer {admin_tokens['access_token']}"},
+        )
+        assert detail.status_code == 200
+        assert len(detail.json()["items"]) == 112
+
+        async with session_factory() as db:
+            qa_task = (
+                await db.execute(
+                    select(AITask).where(
+                        AITask.set_run_id == set_run_id,
+                        AITask.task_type == "qa_analysis",
+                    )
+                )
+            ).scalar_one()
+            qa_task.status = "completed"
+            qa_task.result_json = json.dumps({"classification": "script"})
+            await db.commit()
+            qa_task_id = qa_task.id
+
+        await set_run_orchestrator.on_task_finished(qa_task_id)
+
+        async with session_factory() as db:
+            review_task = (
+                await db.execute(
+                    select(AITask).where(
+                        AITask.set_run_id == set_run_id,
+                        AITask.task_type == "review_batch",
+                    )
+                )
+            ).scalar_one()
+
+            items = (
+                await db.execute(select(AISetRunItem).where(AISetRunItem.set_run_id == set_run_id))
+            ).scalars().all()
+
+            cards_result = {}
+            for item in items:
+                cards_result[item.card_id] = {
+                    "faithful_to_card_text": item.card_id != "BT13-001",
+                    "engine_supported": True,
+                    "issues": [] if item.card_id != "BT13-001" else ["Mismatch"],
+                    "suggested_fixes": [],
+                    "engine_requests": [],
+                }
+            review_task.status = "completed"
+            review_task.result_json = json.dumps({"cards": cards_result})
+            await db.commit()
+            review_task_id = review_task.id
+
+        monkeypatch.setattr(
+            set_run_orchestrator,
+            "_apply_fix_task_pr_mode",
+            lambda **_: {
+                "applied_files": ["digimon_gym/engine/data/scripts/generated/bt13/bt13_001.py"],
+                "check_outputs": [],
+                "commit_sha": "abc123",
+                "pr_url": "https://example.test/pr/1",
+            },
+        )
+
+        await set_run_orchestrator.on_task_finished(review_task_id)
+
+        async with session_factory() as db:
+            fix_task = (
+                await db.execute(
+                    select(AITask).where(
+                        AITask.set_run_id == set_run_id,
+                        AITask.task_type == "script_autofix",
+                    )
+                )
+            ).scalar_one()
+            fix_task.status = "completed"
+            fix_task.result_json = json.dumps({"summary": "ok", "edits": []})
+            await db.commit()
+            fix_task_id = fix_task.id
+
+        await set_run_orchestrator.on_task_finished(fix_task_id)
+
+        detail_after = await client.get(
+            f"/admin/set-runs/{set_run_id}",
+            headers={"Authorization": f"Bearer {admin_tokens['access_token']}"},
+        )
+        assert detail_after.status_code == 200
+        payload = detail_after.json()
+        assert payload["run"]["status"] == "completed"
+        assert any(item["card_id"] == "BT13-001" and item["pr_url"] for item in payload["items"])
+
+    async def test_create_set_run_bt21_has_103_items(self, client: AsyncClient, session_factory):
+        admin_tokens = await _register_and_login(client, "adminsetrunbt21")
+        await _grant_roles(session_factory, "adminsetrunbt21", ROLE_ADMIN)
+
+        create = await client.post(
+            "/admin/set-runs",
+            headers={"Authorization": f"Bearer {admin_tokens['access_token']}"},
+            json={
+                "set_id": "bt21",
+                "run_mode": "pr",
+                "scope_profile": "script",
+                "max_fix_tasks": 0,
+            },
+        )
+        assert create.status_code == 201
+        set_run_id = create.json()["id"]
+
+        detail = await client.get(
+            f"/admin/set-runs/{set_run_id}",
+            headers={"Authorization": f"Bearer {admin_tokens['access_token']}"},
+        )
+        assert detail.status_code == 200
+        assert len(detail.json()["items"]) == 103
 
 
 class TestPromotionAndRetrieval:

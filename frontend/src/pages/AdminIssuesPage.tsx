@@ -1,12 +1,19 @@
 import { useEffect, useMemo, useState } from 'react';
 import {
+  approveSetIssues,
   cancelAIFixBatch,
+  cancelSetRun,
   createAIFixBatch,
+  createSetRun,
   getAIFixBatch,
   getAIFixBatches,
+  getSetRun,
+  getSetRuns,
   getIssues,
   previewAIFixBatch,
   queueIssueFix,
+  type AISetRun,
+  type AISetRunDetailResponse,
   type AIFixBatch,
   type AIFixBatchDetailResponse,
   type AIFixBatchCreateResponse,
@@ -14,14 +21,20 @@ import {
   updateIssue,
 } from '@/api/adminApi';
 
+const AVAILABLE_MODEL_OPTIONS = ['gpt-4.1', 'gpt-4.1-mini'] as const;
+
 export function AdminIssuesPage() {
   const [issues, setIssues] = useState<IssueItem[]>([]);
   const [batches, setBatches] = useState<AIFixBatch[]>([]);
   const [selectedBatchId, setSelectedBatchId] = useState<string>('');
   const [selectedBatch, setSelectedBatch] = useState<AIFixBatchDetailResponse | null>(null);
+  const [setRuns, setSetRuns] = useState<AISetRun[]>([]);
+  const [selectedSetRunId, setSelectedSetRunId] = useState<string>('');
+  const [selectedSetRun, setSelectedSetRun] = useState<AISetRunDetailResponse | null>(null);
   const [preview, setPreview] = useState<AIFixBatchCreateResponse | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [actionMessage, setActionMessage] = useState<string | null>(null);
   const [setId, setSetId] = useState('bt24');
   const [runMode, setRunMode] = useState<'pr' | 'main'>('pr');
   const [scopeProfile, setScopeProfile] = useState<'script' | 'script_engine' | 'script_engine_transpiler'>('script');
@@ -58,12 +71,17 @@ export function AdminIssuesPage() {
     setLoading(true);
     setError(null);
     try {
-      const [issueData, batchData] = await Promise.all([getIssues(), getAIFixBatches()]);
+      const [issueData, batchData, setRunData] = await Promise.all([getIssues(), getAIFixBatches(), getSetRuns({ limit: 50 })]);
       setIssues(issueData);
       setBatches(batchData);
+      setSetRuns(setRunData);
       const firstBatch = batchData[0];
       if (!selectedBatchId && firstBatch) {
         setSelectedBatchId(firstBatch.id);
+      }
+      const firstSetRun = setRunData[0];
+      if (!selectedSetRunId && firstSetRun) {
+        setSelectedSetRunId(firstSetRun.id);
       }
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Failed to load admin data';
@@ -101,6 +119,31 @@ export function AdminIssuesPage() {
       ignore = true;
     };
   }, [selectedBatchId]);
+
+  useEffect(() => {
+    if (!selectedSetRunId) {
+      setSelectedSetRun(null);
+      return;
+    }
+    let ignore = false;
+    const load = async () => {
+      try {
+        const detail = await getSetRun(selectedSetRunId);
+        if (!ignore) {
+          setSelectedSetRun(detail);
+        }
+      } catch (err) {
+        if (!ignore) {
+          const message = err instanceof Error ? err.message : 'Failed to load set run detail';
+          setError(message);
+        }
+      }
+    };
+    void load();
+    return () => {
+      ignore = true;
+    };
+  }, [selectedSetRunId]);
 
   const setIssueStatus = async (issue: IssueItem, status: IssueItem['status']) => {
     try {
@@ -159,6 +202,42 @@ export function AdminIssuesPage() {
     }
   };
 
+  const onApproveSet = async () => {
+    try {
+      const result = await approveSetIssues({
+        set_id: setId,
+        status_filter: 'new',
+      });
+      setActionMessage(
+        `Approved ${result.approved_count}/${result.matched_count} issues for ${result.set_id.toUpperCase()} (skipped ${result.skipped_count}).`,
+      );
+      await refresh();
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Failed to approve set issues';
+      setError(message);
+    }
+  };
+
+  const onCreateSetRun = async () => {
+    try {
+      const run = await createSetRun({
+        set_id: setId,
+        run_mode: runMode,
+        scope_profile: scopeProfile,
+        model_name: modelName || undefined,
+        max_total_cost_usd: Number(maxTotalCostUsd) || 5.0,
+        failure_rate_stop: Number(failureRateStop) || 0.3,
+        max_fix_tasks: Number(maxTasks) || 0,
+      });
+      setActionMessage(`Started set run ${run.id} for ${run.set_id.toUpperCase()}.`);
+      await refresh();
+      setSelectedSetRunId(run.id);
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Failed to start set run';
+      setError(message);
+    }
+  };
+
   const onCancelBatch = async (batchId: string) => {
     try {
       await cancelAIFixBatch(batchId);
@@ -169,6 +248,20 @@ export function AdminIssuesPage() {
       }
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Failed to cancel batch';
+      setError(message);
+    }
+  };
+
+  const onCancelSetRun = async (setRunId: string) => {
+    try {
+      await cancelSetRun(setRunId);
+      await refresh();
+      if (selectedSetRunId === setRunId) {
+        const detail = await getSetRun(setRunId);
+        setSelectedSetRun(detail);
+      }
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Failed to cancel set run';
       setError(message);
     }
   };
@@ -186,6 +279,7 @@ export function AdminIssuesPage() {
       </div>
 
       {error ? <div className="text-red-400 text-sm">{error}</div> : null}
+      {actionMessage ? <div className="text-emerald-300 text-sm">{actionMessage}</div> : null}
       {loading ? <div className="text-gray-300">Loading...</div> : null}
 
       <div className="border border-gray-700 rounded p-4 bg-gray-900 space-y-3">
@@ -214,12 +308,18 @@ export function AdminIssuesPage() {
             <option value="script_engine">Script + Engine</option>
             <option value="script_engine_transpiler">Script + Engine + Transpiler</option>
           </select>
-          <input
+          <select
             value={modelName}
             onChange={(e) => setModelName(e.target.value)}
-            placeholder="model override (optional)"
             className="bg-gray-800 border border-gray-700 rounded px-2 py-2 text-sm text-white"
-          />
+          >
+            <option value="">Model: use backend defaults</option>
+            {AVAILABLE_MODEL_OPTIONS.map((model) => (
+              <option key={model} value={model}>
+                {model}
+              </option>
+            ))}
+          </select>
           <input
             value={concurrency}
             onChange={(e) => setConcurrency(e.target.value)}
@@ -250,6 +350,18 @@ export function AdminIssuesPage() {
           </label>
         </div>
         <div className="flex gap-2">
+          <button
+            onClick={() => void onApproveSet()}
+            className="px-3 py-1.5 rounded bg-emerald-700 hover:bg-emerald-600 text-white text-sm"
+          >
+            Approve Set For AI
+          </button>
+          <button
+            onClick={() => void onCreateSetRun()}
+            className="px-3 py-1.5 rounded bg-fuchsia-700 hover:bg-fuchsia-600 text-white text-sm"
+          >
+            Run Set End-to-End
+          </button>
           <button
             onClick={() => void onPreviewBatch()}
             className="px-3 py-1.5 rounded bg-slate-700 hover:bg-slate-600 text-white text-sm"
@@ -307,6 +419,59 @@ export function AdminIssuesPage() {
                 <div key={item.id} className="text-[11px] text-gray-300 py-0.5">
                   {item.card_id} status={item.status} task={item.task_id ?? 'n/a'} commit={item.commit_sha ?? 'n/a'}
                   {item.error_text ? ` error=${item.error_text}` : ''}
+                </div>
+              ))}
+            </div>
+          </div>
+        ) : null}
+      </div>
+
+      <div className="border border-gray-700 rounded p-4 bg-gray-900 space-y-3">
+        <div className="text-sm text-gray-300 font-medium">Set Run Report</div>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+          <select
+            value={selectedSetRunId}
+            onChange={(e) => setSelectedSetRunId(e.target.value)}
+            className="bg-gray-800 border border-gray-700 rounded px-2 py-2 text-sm text-white"
+          >
+            <option value="">Select set run</option>
+            {setRuns.map((run) => (
+              <option key={run.id} value={run.id}>
+                {run.set_id} {run.stage} ({run.status})
+              </option>
+            ))}
+          </select>
+          {selectedSetRun ? (
+            <button
+              onClick={() => void onCancelSetRun(selectedSetRun.run.id)}
+              className="px-3 py-1.5 rounded bg-amber-700 hover:bg-amber-600 text-white text-sm w-fit"
+            >
+              Cancel Set Run
+            </button>
+          ) : null}
+        </div>
+        {selectedSetRun ? (
+          <div className="text-xs text-gray-300 space-y-1">
+            <div>
+              {selectedSetRun.run.id} stage={selectedSetRun.run.stage} status={selectedSetRun.run.status}
+            </div>
+            <div>
+              qa={selectedSetRun.run.qa_completed}/{selectedSetRun.run.qa_total} review={selectedSetRun.run.review_completed}/{selectedSetRun.run.review_total} fix_applied={selectedSetRun.run.fix_applied}/{selectedSetRun.run.fix_total}
+            </div>
+            <div>stop_reason={selectedSetRun.run.stopped_reason ?? '(none)'}</div>
+            <div className="max-h-40 overflow-auto border border-gray-800 rounded p-2 bg-gray-950">
+              {selectedSetRun.items.map((item) => (
+                <div key={item.id} className="text-[11px] text-gray-300 py-0.5">
+                  {item.card_id} faithful={String(item.review_faithful)} apply={item.fix_apply_status} pr={item.pr_url ?? 'n/a'}
+                  {item.error_text ? ` error=${item.error_text}` : ''}
+                </div>
+              ))}
+            </div>
+            <div className="max-h-32 overflow-auto border border-gray-800 rounded p-2 bg-gray-950">
+              <div className="text-[11px] text-gray-400">PR queue</div>
+              {selectedSetRun.pr_queue.map((item) => (
+                <div key={`${item.id}-pr`} className="text-[11px] text-gray-300 py-0.5">
+                  {item.card_id} {'->'} {item.pr_url}
                 </div>
               ))}
             </div>

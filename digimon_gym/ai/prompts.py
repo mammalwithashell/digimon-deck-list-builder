@@ -71,11 +71,13 @@ def build_script_autofix_messages(
 
     file_blocks = []
     for idx, file_ctx in enumerate(file_contexts, start=1):
+        truncated = file_ctx.get("content_truncated", "false")
         file_blocks.append(
             dedent(
                 f"""
                 [File {idx}] path={file_ctx.get("path", "")}
                 sha256={file_ctx.get("hash", "")}
+                truncated={truncated}
                 ----
                 {file_ctx.get("content", "")}
                 """

@@ -73,6 +73,19 @@ class IssueUpdateRequest(BaseModel):
     resolution_notes: Optional[str] = None
 
 
+class ApproveSetIssuesRequest(BaseModel):
+    set_id: str = Field(..., min_length=1, max_length=32)
+    status_filter: str = Field("new", pattern=r"^(new|approved_for_ai|rejected|resolved)$")
+
+
+class ApproveSetIssuesResponse(BaseModel):
+    set_id: str
+    matched_count: int
+    approved_count: int
+    skipped_count: int
+    issue_ids: List[str] = Field(default_factory=list)
+
+
 class IssueResponse(BaseModel):
     id: str
     card_id: str
@@ -252,6 +265,78 @@ class AIFixBatchDetailResponse(BaseModel):
 
 class AIFixBatchCancelResponse(BaseModel):
     batch_id: str
+    status: str
+
+
+class AISetRunCreateRequest(BaseModel):
+    set_id: str = Field(..., min_length=1, max_length=32)
+    run_mode: Literal["pr", "main"] = "pr"
+    scope_profile: Literal["script", "script_engine", "script_engine_transpiler"] = "script"
+    model_name: Optional[str] = None
+    max_total_cost_usd: float = Field(5.0, ge=0.0)
+    failure_rate_stop: float = Field(0.3, ge=0.0, le=1.0)
+    max_fix_tasks: int = Field(0, ge=0, le=5000)
+
+
+class AISetRunItemResponse(BaseModel):
+    id: str
+    set_run_id: str
+    card_id: str
+    set_id: str
+    module_name: str
+    review_faithful: Optional[bool] = None
+    issue_id: Optional[str] = None
+    qa_task_id: Optional[str] = None
+    review_task_id: Optional[str] = None
+    fix_task_id: Optional[str] = None
+    fix_apply_status: str
+    commit_sha: Optional[str] = None
+    pr_url: Optional[str] = None
+    error_text: Optional[str] = None
+    created_at: datetime
+    updated_at: datetime
+
+    model_config = {"from_attributes": True}
+
+
+class AISetRunResponse(BaseModel):
+    id: str
+    set_id: str
+    status: str
+    stage: str
+    run_mode: str
+    scope_profile: str
+    model_name: Optional[str] = None
+    created_by: Optional[str] = None
+    max_total_cost_usd: float
+    failure_rate_stop: float
+    max_fix_tasks: int
+    qa_total: int
+    qa_completed: int
+    qa_failed: int
+    review_total: int
+    review_completed: int
+    review_failed: int
+    fix_total: int
+    fix_completed: int
+    fix_failed: int
+    fix_applied: int
+    stopped_reason: Optional[str] = None
+    created_at: datetime
+    updated_at: datetime
+    completed_at: Optional[datetime] = None
+
+    model_config = {"from_attributes": True}
+
+
+class AISetRunDetailResponse(BaseModel):
+    run: AISetRunResponse
+    items: List[AISetRunItemResponse] = Field(default_factory=list)
+    pr_queue: List[AISetRunItemResponse] = Field(default_factory=list)
+
+
+class AISetRunCancelResponse(BaseModel):
+    set_run_id: str
     status: str
 
 

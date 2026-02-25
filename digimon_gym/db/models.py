@@ -381,6 +381,7 @@ class AITask(Base):
         Index("idx_ai_tasks_status", "status"),
         Index("idx_ai_tasks_task_type", "task_type"),
         Index("idx_ai_tasks_batch_id", "batch_id"),
+        Index("idx_ai_tasks_set_run_id", "set_run_id"),
         Index("idx_ai_tasks_created_at", "created_at"),
     )
 
@@ -401,6 +402,7 @@ class AITask(Base):
     max_attempts = Column(Integer, nullable=False, default=3)
     created_by = Column(String, ForeignKey("users.id", ondelete="SET NULL"), nullable=True)
     batch_id = Column(String, ForeignKey("ai_fix_batches.id", ondelete="SET NULL"), nullable=True)
+    set_run_id = Column(String, ForeignKey("ai_set_runs.id", ondelete="SET NULL"), nullable=True)
     run_mode = Column(String, nullable=True)
     scope_profile = Column(String, nullable=True)
     started_at = Column(DateTime(timezone=True), nullable=True)
@@ -410,6 +412,98 @@ class AITask(Base):
 
     creator = relationship("User")
     batch = relationship("AIFixBatch", back_populates="tasks")
+    set_run = relationship("AISetRun", back_populates="tasks")
+
+
+class AISetRun(Base):
+    __tablename__ = "ai_set_runs"
+    __table_args__ = (
+        CheckConstraint(
+            "run_mode IN ('pr', 'main')",
+            name="ck_ai_set_runs_run_mode",
+        ),
+        CheckConstraint(
+            "scope_profile IN ('script', 'script_engine', 'script_engine_transpiler')",
+            name="ck_ai_set_runs_scope_profile",
+        ),
+        CheckConstraint(
+            "status IN ('running', 'completed', 'failed', 'canceled')",
+            name="ck_ai_set_runs_status",
+        ),
+        CheckConstraint(
+            "stage IN ('qa', 'review', 'fix', 'completed', 'canceled')",
+            name="ck_ai_set_runs_stage",
+        ),
+        Index("idx_ai_set_runs_set_id", "set_id"),
+        Index("idx_ai_set_runs_status", "status"),
+        Index("idx_ai_set_runs_created_at", "created_at"),
+    )
+
+    id = Column(String, primary_key=True, default=_new_uuid)
+    set_id = Column(String, nullable=False)
+    status = Column(String, nullable=False, default="running")
+    stage = Column(String, nullable=False, default="qa")
+    run_mode = Column(String, nullable=False, default="pr")
+    scope_profile = Column(String, nullable=False, default="script")
+    model_name = Column(String, nullable=True)
+    created_by = Column(String, ForeignKey("users.id", ondelete="SET NULL"), nullable=True)
+    max_total_cost_usd = Column(Float, nullable=False, default=5.0)
+    failure_rate_stop = Column(Float, nullable=False, default=0.3)
+    max_fix_tasks = Column(Integer, nullable=False, default=0)
+    qa_total = Column(Integer, nullable=False, default=0)
+    qa_completed = Column(Integer, nullable=False, default=0)
+    qa_failed = Column(Integer, nullable=False, default=0)
+    review_total = Column(Integer, nullable=False, default=0)
+    review_completed = Column(Integer, nullable=False, default=0)
+    review_failed = Column(Integer, nullable=False, default=0)
+    fix_total = Column(Integer, nullable=False, default=0)
+    fix_completed = Column(Integer, nullable=False, default=0)
+    fix_failed = Column(Integer, nullable=False, default=0)
+    fix_applied = Column(Integer, nullable=False, default=0)
+    stopped_reason = Column(Text, nullable=True)
+    created_at = Column(DateTime(timezone=True), default=_utcnow, nullable=False)
+    updated_at = Column(DateTime(timezone=True), default=_utcnow, onupdate=_utcnow, nullable=False)
+    completed_at = Column(DateTime(timezone=True), nullable=True)
+
+    creator = relationship("User")
+    tasks = relationship("AITask", back_populates="set_run")
+    items = relationship("AISetRunItem", back_populates="set_run", cascade="all, delete-orphan")
+
+
+class AISetRunItem(Base):
+    __tablename__ = "ai_set_run_items"
+    __table_args__ = (
+        CheckConstraint(
+            "fix_apply_status IN ('pending', 'applied', 'failed', 'skipped')",
+            name="ck_ai_set_run_items_fix_apply_status",
+        ),
+        Index("idx_ai_set_run_items_set_run_id", "set_run_id"),
+        Index("idx_ai_set_run_items_card_id", "card_id"),
+        Index("idx_ai_set_run_items_fix_apply_status", "fix_apply_status"),
+    )
+
+    id = Column(String, primary_key=True, default=_new_uuid)
+    set_run_id = Column(String, ForeignKey("ai_set_runs.id", ondelete="CASCADE"), nullable=False)
+    card_id = Column(String, nullable=False)
+    set_id = Column(String, nullable=False)
+    module_name = Column(String, nullable=False)
+    review_faithful = Column(Integer, nullable=True)
+    issue_id = Column(String, ForeignKey("issues.id", ondelete="SET NULL"), nullable=True)
+    qa_task_id = Column(String, ForeignKey("ai_tasks.id", ondelete="SET NULL"), nullable=True)
+    review_task_id = Column(String, ForeignKey("ai_tasks.id", ondelete="SET NULL"), nullable=True)
+    fix_task_id = Column(String, ForeignKey("ai_tasks.id", ondelete="SET NULL"), nullable=True)
+    fix_apply_status = Column(String, nullable=False, default="pending")
+    commit_sha = Column(String, nullable=True)
+    pr_url = Column(String, nullable=True)
+    error_text = Column(Text, nullable=True)
+    created_at = Column(DateTime(timezone=True), default=_utcnow, nullable=False)
+    updated_at = Column(DateTime(timezone=True), default=_utcnow, onupdate=_utcnow, nullable=False)
+
+    set_run = relationship("AISetRun", back_populates="items")
+    issue = relationship("Issue", foreign_keys=[issue_id])
+    qa_task = relationship("AITask", foreign_keys=[qa_task_id])
+    review_task = relationship("AITask", foreign_keys=[review_task_id])
+    fix_task = relationship("AITask", foreign_keys=[fix_task_id])
 
 
 class AIFixBatch(Base):

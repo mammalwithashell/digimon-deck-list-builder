@@ -16,6 +16,14 @@ export interface IssueItem {
   resolved_at?: string | null;
 }
 
+export interface ApproveSetIssuesResponse {
+  set_id: string;
+  matched_count: number;
+  approved_count: number;
+  skipped_count: number;
+  issue_ids: string[];
+}
+
 export interface AITaskItem {
   id: string;
   task_type: 'review_batch' | 'qa_analysis' | 'engine_audit' | 'script_autofix';
@@ -109,6 +117,59 @@ export interface AIFixBatchDetailResponse {
   items: AIFixBatchItem[];
 }
 
+export interface AISetRunItem {
+  id: string;
+  set_run_id: string;
+  card_id: string;
+  set_id: string;
+  module_name: string;
+  review_faithful?: boolean | null;
+  issue_id?: string | null;
+  qa_task_id?: string | null;
+  review_task_id?: string | null;
+  fix_task_id?: string | null;
+  fix_apply_status: 'pending' | 'applied' | 'failed' | 'skipped';
+  commit_sha?: string | null;
+  pr_url?: string | null;
+  error_text?: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface AISetRun {
+  id: string;
+  set_id: string;
+  status: 'running' | 'completed' | 'failed' | 'canceled';
+  stage: 'qa' | 'review' | 'fix' | 'completed' | 'canceled';
+  run_mode: 'pr' | 'main';
+  scope_profile: 'script' | 'script_engine' | 'script_engine_transpiler';
+  model_name?: string | null;
+  created_by?: string | null;
+  max_total_cost_usd: number;
+  failure_rate_stop: number;
+  max_fix_tasks: number;
+  qa_total: number;
+  qa_completed: number;
+  qa_failed: number;
+  review_total: number;
+  review_completed: number;
+  review_failed: number;
+  fix_total: number;
+  fix_completed: number;
+  fix_failed: number;
+  fix_applied: number;
+  stopped_reason?: string | null;
+  created_at: string;
+  updated_at: string;
+  completed_at?: string | null;
+}
+
+export interface AISetRunDetailResponse {
+  run: AISetRun;
+  items: AISetRunItem[];
+  pr_queue: AISetRunItem[];
+}
+
 export interface AppliedCardItem {
   id: string;
   ai_task_id?: string | null;
@@ -144,6 +205,14 @@ export async function updateIssue(
   updates: Partial<Pick<IssueItem, 'status' | 'severity' | 'triage_notes' | 'resolution_notes'>>,
 ): Promise<IssueItem> {
   const { data } = await client.patch<IssueItem>(`/issues/${issueId}`, updates);
+  return data;
+}
+
+export async function approveSetIssues(payload: {
+  set_id: string;
+  status_filter?: 'new' | 'approved_for_ai' | 'rejected' | 'resolved';
+}): Promise<ApproveSetIssuesResponse> {
+  const { data } = await client.post<ApproveSetIssuesResponse>('/admin/issues/approve-set', payload);
   return data;
 }
 
@@ -239,6 +308,38 @@ export async function getAIFixBatch(batchId: string): Promise<AIFixBatchDetailRe
 
 export async function cancelAIFixBatch(batchId: string): Promise<{ batch_id: string; status: string }> {
   const { data } = await client.post<{ batch_id: string; status: string }>(`/admin/ai-batches/${batchId}/cancel`);
+  return data;
+}
+
+export async function createSetRun(payload: {
+  set_id: string;
+  run_mode: 'pr' | 'main';
+  scope_profile: 'script' | 'script_engine' | 'script_engine_transpiler';
+  model_name?: string;
+  max_total_cost_usd?: number;
+  failure_rate_stop?: number;
+  max_fix_tasks?: number;
+}): Promise<AISetRun> {
+  const { data } = await client.post<AISetRun>('/admin/set-runs', payload);
+  return data;
+}
+
+export async function getSetRuns(params?: {
+  set_id?: string;
+  status?: 'running' | 'completed' | 'failed' | 'canceled';
+  limit?: number;
+}): Promise<AISetRun[]> {
+  const { data } = await client.get<AISetRun[]>('/admin/set-runs', { params });
+  return data;
+}
+
+export async function getSetRun(setRunId: string): Promise<AISetRunDetailResponse> {
+  const { data } = await client.get<AISetRunDetailResponse>(`/admin/set-runs/${setRunId}`);
+  return data;
+}
+
+export async function cancelSetRun(setRunId: string): Promise<{ set_run_id: string; status: string }> {
+  const { data } = await client.post<{ set_run_id: string; status: string }>(`/admin/set-runs/${setRunId}/cancel`);
   return data;
 }
 

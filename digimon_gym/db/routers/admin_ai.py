@@ -24,12 +24,15 @@ from digimon_gym.ai.batch_orchestrator import (
 )
 from digimon_gym.ai.dispatcher import TaskDispatcher
 from digimon_gym.ai.git_adapter import GitAdapter, GitCommandError
+from digimon_gym.ai.set_run_orchestrator import SetRunOrchestrationError, set_run_orchestrator
 from digimon_gym.db.auth import ROLE_ADMIN, require_roles
 from digimon_gym.db.database import get_db
 from digimon_gym.db.models import (
     AIFixBatch,
     AIFixBatchItem,
     AIFixApplyAudit,
+    AISetRun,
+    AISetRunItem,
     AITask,
     EngineBacklogItem,
     Issue,
@@ -44,10 +47,17 @@ from digimon_gym.db.schemas import (
     AIFixBatchDetailResponse,
     AIFixBatchItemResponse,
     AIFixBatchResponse,
+    AISetRunCancelResponse,
+    AISetRunCreateRequest,
+    AISetRunDetailResponse,
+    AISetRunItemResponse,
+    AISetRunResponse,
     AITaskApplyFixResponse,
     AITaskCreateRequest,
     AITaskResponse,
     AITaskRetryResponse,
+    ApproveSetIssuesRequest,
+    ApproveSetIssuesResponse,
     EngineBacklogCreateRequest,
     EngineBacklogResponse,
     PromotionRequest,
@@ -177,6 +187,57 @@ def _batch_item_to_response(item: AIFixBatchItem) -> AIFixBatchItemResponse:
     )
 
 
+def _set_run_to_response(run: AISetRun) -> AISetRunResponse:
+    return AISetRunResponse(
+        id=run.id,
+        set_id=run.set_id,
+        status=run.status,
+        stage=run.stage,
+        run_mode=run.run_mode,
+        scope_profile=run.scope_profile,
+        model_name=run.model_name,
+        created_by=run.created_by,
+        max_total_cost_usd=float(run.max_total_cost_usd or 0.0),
+        failure_rate_stop=float(run.failure_rate_stop or 0.0),
+        max_fix_tasks=int(run.max_fix_tasks or 0),
+        qa_total=int(run.qa_total or 0),
+        qa_completed=int(run.qa_completed or 0),
+        qa_failed=int(run.qa_failed or 0),
+        review_total=int(run.review_total or 0),
+        review_completed=int(run.review_completed or 0),
+        review_failed=int(run.review_failed or 0),
+        fix_total=int(run.fix_total or 0),
+        fix_completed=int(run.fix_completed or 0),
+        fix_failed=int(run.fix_failed or 0),
+        fix_applied=int(run.fix_applied or 0),
+        stopped_reason=run.stopped_reason,
+        created_at=run.created_at,
+        updated_at=run.updated_at,
+        completed_at=run.completed_at,
+    )
+
+
+def _set_run_item_to_response(item: AISetRunItem) -> AISetRunItemResponse:
+    return AISetRunItemResponse(
+        id=item.id,
+        set_run_id=item.set_run_id,
+        card_id=item.card_id,
+        set_id=item.set_id,
+        module_name=item.module_name,
+        review_faithful=(None if item.review_faithful is None else bool(item.review_faithful)),
+        issue_id=item.issue_id,
+        qa_task_id=item.qa_task_id,
+        review_task_id=item.review_task_id,
+        fix_task_id=item.fix_task_id,
+        fix_apply_status=item.fix_apply_status,
+        commit_sha=item.commit_sha,
+        pr_url=item.pr_url,
+        error_text=item.error_text,
+        created_at=item.created_at,
+        updated_at=item.updated_at,
+    )
+
+
 def _sha256(path: str) -> str:
     h = hashlib.sha256()
     with open(path, "rb") as f:
@@ -189,6 +250,43 @@ def _card_to_set_module(card_id: str) -> tuple[str, str]:
     module = card_id.strip().replace("-", "_").lower()
     set_id = module.split("_", 1)[0]
     return set_id, module
+
+
+@router.post("/issues/approve-set", response_model=ApproveSetIssuesResponse)
+async def approve_set_issues(
+    request: ApproveSetIssuesRequest,
+    user: User = Depends(require_roles(ROLE_ADMIN)),
+    db: AsyncSession = Depends(get_db),
+):
+    set_id = request.set_id.strip().upper()
+    status_filter = request.status_filter.strip().lower()
+    matched = (
+        await db.execute(
+            select(Issue)
+            .where(
+                Issue.card_id.like(f"{set_id}-%"),
+                Issue.status == status_filter,
+            )
+            .order_by(Issue.created_at.asc())
+        )
+    ).scalars().all()
+
+    approved_ids: list[str] = []
+    for issue in matched:
+        if issue.status != "new":
+            continue
+        issue.status = "approved_for_ai"
+        issue.approved_by = user.id
+        approved_ids.append(issue.id)
+
+    await db.commit()
+    return ApproveSetIssuesResponse(
+        set_id=request.set_id.strip().lower(),
+        matched_count=len(matched),
+        approved_count=len(approved_ids),
+        skipped_count=max(0, len(matched) - len(approved_ids)),
+        issue_ids=approved_ids,
+    )
 
 
 @router.post("/issues/{issue_id}/queue-fix", response_model=AITaskResponse, status_code=status.HTTP_201_CREATED)
@@ -234,6 +332,78 @@ async def queue_single_issue_fix(
     await db.commit()
     await db.refresh(task)
     return _task_to_response(task)
+
+
+@router.post("/set-runs", response_model=AISetRunResponse, status_code=status.HTTP_201_CREATED)
+async def create_set_run(
+    request: AISetRunCreateRequest,
+    user: User = Depends(require_roles(ROLE_ADMIN)),
+    db: AsyncSession = Depends(get_db),
+):
+    try:
+        run = await set_run_orchestrator.create_set_run(
+            db,
+            created_by=user.id,
+            set_id=request.set_id,
+            run_mode=request.run_mode,
+            scope_profile=request.scope_profile,
+            model_name=request.model_name,
+            max_total_cost_usd=request.max_total_cost_usd,
+            failure_rate_stop=request.failure_rate_stop,
+            max_fix_tasks=request.max_fix_tasks,
+        )
+    except SetRunOrchestrationError as exc:
+        raise HTTPException(status_code=400, detail=str(exc))
+    return _set_run_to_response(run)
+
+
+@router.get("/set-runs", response_model=List[AISetRunResponse])
+async def list_set_runs(
+    set_id: Optional[str] = Query(None, min_length=1, max_length=32),
+    status_filter: Optional[str] = Query(None, alias="status", pattern=r"^(running|completed|failed|canceled)$"),
+    limit: int = Query(100, ge=1, le=500),
+    _: User = Depends(require_roles(ROLE_ADMIN)),
+    db: AsyncSession = Depends(get_db),
+):
+    rows = await set_run_orchestrator.list_set_runs(
+        db,
+        set_id=set_id,
+        status_filter=status_filter,
+        limit=limit,
+    )
+    return [_set_run_to_response(row) for row in rows]
+
+
+@router.get("/set-runs/{set_run_id}", response_model=AISetRunDetailResponse)
+async def get_set_run(
+    set_run_id: str,
+    _: User = Depends(require_roles(ROLE_ADMIN)),
+    db: AsyncSession = Depends(get_db),
+):
+    run = await set_run_orchestrator.get_set_run(db, set_run_id=set_run_id)
+    if run is None:
+        raise HTTPException(status_code=404, detail="Set run not found")
+    items = await set_run_orchestrator.list_set_run_items(db, set_run_id=set_run_id)
+    responses = [_set_run_item_to_response(item) for item in items]
+    pr_queue = [item for item in responses if item.pr_url]
+    pr_queue.sort(key=lambda item: item.card_id)
+    return AISetRunDetailResponse(
+        run=_set_run_to_response(run),
+        items=responses,
+        pr_queue=pr_queue,
+    )
+
+
+@router.post("/set-runs/{set_run_id}/cancel", response_model=AISetRunCancelResponse)
+async def cancel_set_run(
+    set_run_id: str,
+    _: User = Depends(require_roles(ROLE_ADMIN)),
+    db: AsyncSession = Depends(get_db),
+):
+    run = await set_run_orchestrator.cancel_set_run(db, set_run_id=set_run_id)
+    if run is None:
+        raise HTTPException(status_code=404, detail="Set run not found")
+    return AISetRunCancelResponse(set_run_id=run.id, status=run.status)
 
 
 @router.post("/ai-batches", response_model=AIFixBatchCreateResponse, status_code=status.HTTP_201_CREATED)

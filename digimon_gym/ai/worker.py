@@ -12,6 +12,7 @@ from sqlalchemy import select
 
 from digimon_gym.ai.batch_orchestrator import batch_orchestrator
 from digimon_gym.ai.dispatcher import TaskDispatcher
+from digimon_gym.ai.set_run_orchestrator import set_run_orchestrator
 from digimon_gym.db.database import async_session
 from digimon_gym.db.models import AITask
 from digimon_gym.env import load_project_env
@@ -26,6 +27,15 @@ _RETRYABLE_ERROR_NAMES = frozenset({
     "InternalServerError",
     "APIConnectionError",
 })
+
+
+def _is_tpm_request_too_large_error(exc: Exception) -> bool:
+    text = str(exc).lower()
+    return (
+        "request too large" in text
+        and "tokens per min" in text
+        and "rate_limit_exceeded" in text
+    )
 
 
 def _is_retryable_error(exc: Exception) -> bool:
@@ -129,6 +139,10 @@ class AITaskWorker:
                 await batch_orchestrator.on_task_started(task.id)
             except Exception:
                 logger.exception("Batch hook failed on task start %s", task.id)
+            try:
+                await set_run_orchestrator.on_task_started(task.id)
+            except Exception:
+                logger.exception("Set-run hook failed on task start %s", task.id)
 
             payload = {}
             try:
@@ -159,7 +173,22 @@ class AITaskWorker:
                 task.error_text = None
             except Exception as exc:
                 max_att = int(task.max_attempts or 3)
-                if _is_retryable_error(exc) and int(task.attempts or 0) < max_att:
+                # If gpt-4.1 request size exceeds org TPM budget, retry once on gpt-4.1-mini.
+                if (
+                    _is_tpm_request_too_large_error(exc)
+                    and str(task.model_name or "").strip() in {"", "gpt-4.1"}
+                    and int(task.attempts or 0) < max_att
+                ):
+                    task.status = "queued"
+                    task.model_name = "gpt-4.1-mini"
+                    task.error_text = f"Downgraded model due to TPM overflow: {exc}"
+                    task.started_at = None
+                    task.completed_at = None
+                    logger.warning(
+                        "TPM overflow on task %s, retrying on gpt-4.1-mini (attempt %s/%s)",
+                        task.id, task.attempts, max_att,
+                    )
+                elif _is_retryable_error(exc) and int(task.attempts or 0) < max_att:
                     logger.warning(
                         "Retryable error on task %s (attempt %s/%s): %s",
                         task.id, task.attempts, max_att, exc,
@@ -178,6 +207,10 @@ class AITaskWorker:
                     await batch_orchestrator.on_task_finished(task.id)
                 except Exception:
                     logger.exception("Batch hook failed on task finish %s", task.id)
+                try:
+                    await set_run_orchestrator.on_task_finished(task.id)
+                except Exception:
+                    logger.exception("Set-run hook failed on task finish %s", task.id)
             return True
 
 

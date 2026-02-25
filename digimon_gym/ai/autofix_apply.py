@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+import os
 import subprocess
 from dataclasses import dataclass
 from pathlib import Path
@@ -11,6 +12,8 @@ from typing import Any
 
 
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
+MAX_CONTEXT_CHARS_PER_FILE = int(os.environ.get("AI_AUTOFIX_CONTEXT_CHARS_PER_FILE", "8000"))
+MAX_CONTEXT_CHARS_TOTAL = int(os.environ.get("AI_AUTOFIX_CONTEXT_CHARS_TOTAL", "16000"))
 
 DENY_PREFIXES = (
     ".github/",
@@ -122,6 +125,15 @@ def get_primary_script_path(set_id: str, module_name: str) -> str:
     return f"digimon_gym/engine/data/scripts/generated/{set_id}/{module_name}.py"
 
 
+def _read_text_with_cap(path: Path, max_chars: int) -> tuple[str, bool]:
+    raw = path.read_text(encoding="utf-8")
+    if max_chars <= 0 or len(raw) <= max_chars:
+        return raw, False
+    clipped = raw[:max_chars]
+    suffix = f"\n# [context truncated: showing first {max_chars} chars]\n"
+    return clipped + suffix, True
+
+
 def build_file_context_for_task(*, set_id: str, module_name: str, scope_profile: str) -> list[dict[str, str]]:
     paths = [get_primary_script_path(set_id, module_name)]
 
@@ -131,17 +143,24 @@ def build_file_context_for_task(*, set_id: str, module_name: str, scope_profile:
         paths.extend(TRANSPILER_FILES)
 
     contexts: list[dict[str, str]] = []
+    remaining_chars = MAX_CONTEXT_CHARS_TOTAL
     for rel in paths:
+        if remaining_chars <= 0:
+            break
         path = PROJECT_ROOT / rel
         if not path.exists():
             continue
+        per_file_budget = min(MAX_CONTEXT_CHARS_PER_FILE, remaining_chars)
+        content, truncated = _read_text_with_cap(path, per_file_budget)
         contexts.append(
             {
                 "path": rel,
                 "hash": _sha256(path),
-                "content": path.read_text(encoding="utf-8"),
+                "content": content,
+                "content_truncated": "true" if truncated else "false",
             }
         )
+        remaining_chars -= len(content)
     return contexts
 
 

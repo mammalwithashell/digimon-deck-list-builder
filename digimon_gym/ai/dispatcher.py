@@ -182,7 +182,7 @@ class TaskDispatcher:
         script_text = str(payload.get("script_text", "")).strip()
         engine_version = str(payload.get("engine_version", "unknown"))
         query = f"{card_id} {report_text[:300]}"
-        context = self.rag_index.retrieve(query, k=6)
+        context = self.rag_index.retrieve(query, k=3)
         system_prompt, user_prompt = build_qa_triage_messages(
             report_text=report_text,
             card_text=card_text,
