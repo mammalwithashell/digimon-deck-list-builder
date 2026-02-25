@@ -17,7 +17,7 @@ import os
 from datetime import datetime, timedelta, timezone
 from uuid import uuid4
 
-from sqlalchemy import select, update
+from sqlalchemy import case, cast, select, update, Float as SAFloat
 
 from digimon_gym.db.database import async_session
 from digimon_gym.db.models import Agent, TrainingJob
@@ -332,33 +332,49 @@ class TrainingJobWorker:
     async def _update_agent_stats(
         self, db, job: TrainingJob, result_data: dict  # noqa: ANN001
     ) -> None:
-        """Push training/eval results back to the Agent row."""
+        """Push training/eval results back to the Agent row using atomic SQL increments.
+
+        Uses SQL-level ``col = col + N`` expressions so concurrent jobs
+        finishing for the same agent do not suffer lost-update anomalies.
+        """
         if not job.agent_id:
             return
 
-        agent_result = await db.execute(
-            select(Agent).where(Agent.id == job.agent_id)
-        )
-        agent = agent_result.scalar_one_or_none()
-        if agent is None:
-            return
-
+        # Build atomic increment values
+        values: dict = {}
         if "total_games" in result_data:
-            agent.total_games += int(result_data["total_games"])
+            values[Agent.total_games] = Agent.total_games + int(result_data["total_games"])
         if "wins" in result_data:
-            agent.total_wins += int(result_data["wins"])
+            values[Agent.total_wins] = Agent.total_wins + int(result_data["wins"])
         if "losses" in result_data:
-            agent.total_losses += int(result_data["losses"])
+            values[Agent.total_losses] = Agent.total_losses + int(result_data["losses"])
         if "draws" in result_data:
-            agent.total_draws += int(result_data["draws"])
-
-        total = agent.total_wins + agent.total_losses + agent.total_draws
-        agent.win_rate = agent.total_wins / total if total > 0 else 0.0
-
-        if "weights_path" in result_data:
-            agent.weights_path = result_data["weights_path"]
+            values[Agent.total_draws] = Agent.total_draws + int(result_data["draws"])
         if "total_timesteps" in result_data:
-            agent.total_timesteps_trained += int(result_data["total_timesteps"])
+            values[Agent.total_timesteps_trained] = (
+                Agent.total_timesteps_trained + int(result_data["total_timesteps"])
+            )
+        if "weights_path" in result_data:
+            values[Agent.weights_path] = result_data["weights_path"]
+
+        if values:
+            await db.execute(
+                update(Agent).where(Agent.id == job.agent_id).values(**values)
+            )
+
+        # Recompute win_rate atomically from the freshly-incremented columns
+        if any(k in result_data for k in ("wins", "losses", "draws")):
+            total_expr = Agent.total_wins + Agent.total_losses + Agent.total_draws
+            await db.execute(
+                update(Agent)
+                .where(Agent.id == job.agent_id)
+                .values(
+                    win_rate=case(
+                        (total_expr > 0, cast(Agent.total_wins, SAFloat) / cast(total_expr, SAFloat)),
+                        else_=0.0,
+                    )
+                )
+            )
 
     # ── Gauntlet hook ────────────────────────────────────────────────
 
