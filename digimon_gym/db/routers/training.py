@@ -14,6 +14,7 @@ from digimon_gym.db.auth import ROLE_ADMIN, require_roles
 from digimon_gym.db.database import get_db
 from digimon_gym.db.models import (
     Agent,
+    DeckPool,
     Gauntlet,
     GauntletParticipant,
     MatchupResult,
@@ -25,6 +26,13 @@ from digimon_gym.db.schemas import (
     AgentResponse,
     AgentUpdateRequest,
     ArchetypeInfoResponse,
+    CoreAnalysisResponse,
+    DeckPoolCreateRequest,
+    DeckPoolDetailResponse,
+    DeckPoolGenerateRequest,
+    DeckPoolResponse,
+    DeckPoolUpdateRequest,
+    DeckPoolVariantResponse,
     GauntletCreateRequest,
     GauntletDetailResponse,
     GauntletParticipantResponse,
@@ -33,6 +41,8 @@ from digimon_gym.db.schemas import (
     TrainingJobCreateRequest,
     TrainingJobResponse,
 )
+from digimon_gym.agents.deck_pool import analyze_core, generate_variants
+from digimon_gym.engine.data.deck_loader import summarize_deck
 
 router = APIRouter(prefix="/admin/training", tags=["training"])
 
@@ -57,6 +67,7 @@ def _agent_to_response(agent: Agent) -> AgentResponse:
         algorithm=agent.algorithm,
         weights_path=agent.weights_path,
         deck_source=agent.deck_source,
+        deck_pool_id=agent.deck_pool_id,
         total_games=int(agent.total_games or 0),
         total_wins=int(agent.total_wins or 0),
         total_losses=int(agent.total_losses or 0),
@@ -105,6 +116,7 @@ def _participant_to_response(p: GauntletParticipant) -> GauntletParticipantRespo
         agent_id=p.agent_id,
         archetype_name=p.archetype_name,
         deck_source=p.deck_source,
+        deck_pool_id=p.deck_pool_id,
         meta_share=float(p.meta_share or 0.0),
         threat_index=float(p.threat_index or 0.0),
         tournament_win_rate=float(p.tournament_win_rate) if p.tournament_win_rate is not None else None,
@@ -550,3 +562,282 @@ async def list_deck_library_archetypes(
             )
         )
     return responses
+
+
+# ── Deck Pools ─────────────────────────────────────────────────────────
+
+
+def _deck_pool_to_response(pool: DeckPool) -> DeckPoolResponse:
+    return DeckPoolResponse(
+        id=pool.id,
+        name=pool.name,
+        archetype=pool.archetype,
+        base_deck=_load_json(pool.base_deck_json, []),
+        egg_deck=_load_json(pool.egg_deck_json, []),
+        vary_eggs=bool(pool.vary_eggs),
+        core_overrides=_load_json(pool.core_overrides_json, {}),
+        side_cards=_load_json(pool.side_cards_json, []),
+        generation_mode=pool.generation_mode,
+        target_variant_count=int(pool.target_variant_count or 4),
+        seed=pool.seed,
+        variant_count=int(pool.variant_count or 0),
+        hybrid_max_dynamic=int(pool.hybrid_max_dynamic or 10),
+        owner_id=pool.owner_id,
+        created_at=pool.created_at,
+        updated_at=pool.updated_at,
+    )
+
+
+@router.post("/deck-pools", response_model=DeckPoolResponse, status_code=status.HTTP_201_CREATED)
+async def create_deck_pool(
+    request: DeckPoolCreateRequest,
+    user: User = Depends(require_roles(ROLE_ADMIN)),
+    db: AsyncSession = Depends(get_db),
+):
+    """Create a new deck pool. Auto-generates variants if mode is eager."""
+    # 1. Run analyze_core on base_deck with core_overrides
+    core_cards, flex_cards = analyze_core(request.base_deck, request.core_overrides)
+
+    # 2. Create the DeckPool row
+    pool = DeckPool(
+        name=request.name,
+        archetype=request.archetype,
+        base_deck_json=json.dumps(request.base_deck),
+        egg_deck_json=json.dumps(request.egg_deck),
+        vary_eggs=int(request.vary_eggs),
+        core_overrides_json=json.dumps(request.core_overrides),
+        side_cards_json=json.dumps(request.side_cards),
+        generation_mode=request.generation_mode,
+        target_variant_count=request.target_variant_count,
+        seed=request.seed,
+        hybrid_max_dynamic=request.hybrid_max_dynamic,
+        owner_id=user.id,
+    )
+
+    # 3. If eager mode, generate variants immediately
+    if request.generation_mode == "eager":
+        variants = generate_variants(
+            base_deck=request.base_deck,
+            core_cards=core_cards,
+            flex_cards=flex_cards,
+            side_cards=request.side_cards,
+            count=request.target_variant_count,
+            seed=request.seed,
+        )
+        pool.variants_json = json.dumps(variants)
+        pool.variant_count = len(variants)
+
+    db.add(pool)
+    await db.commit()
+    await db.refresh(pool)
+    return _deck_pool_to_response(pool)
+
+
+@router.get("/deck-pools", response_model=List[DeckPoolResponse])
+async def list_deck_pools(
+    archetype: Optional[str] = Query(None),
+    limit: int = Query(100, ge=1, le=500),
+    user: User = Depends(require_roles(ROLE_ADMIN)),
+    db: AsyncSession = Depends(get_db),
+):
+    """List all deck pools, optionally filtered by archetype."""
+    stmt = select(DeckPool).order_by(DeckPool.created_at.desc()).limit(limit)
+    if archetype:
+        stmt = stmt.where(DeckPool.archetype == archetype)
+    result = await db.execute(stmt)
+    pools = result.scalars().all()
+    return [_deck_pool_to_response(p) for p in pools]
+
+
+@router.get("/deck-pools/{pool_id}", response_model=DeckPoolDetailResponse)
+async def get_deck_pool_detail(
+    pool_id: str,
+    user: User = Depends(require_roles(ROLE_ADMIN)),
+    db: AsyncSession = Depends(get_db),
+):
+    """Get deck pool with core analysis and all variants."""
+    pool = await db.get(DeckPool, pool_id)
+    if pool is None:
+        raise HTTPException(status_code=404, detail="Deck pool not found")
+
+    base_deck = _load_json(pool.base_deck_json, [])
+    core_overrides = _load_json(pool.core_overrides_json, {})
+    core_cards, flex_cards = analyze_core(base_deck, core_overrides)
+
+    # Count egg cards
+    egg_deck = _load_json(pool.egg_deck_json, [])
+    total_egg = len(egg_deck)
+    total_main = len([c for c in base_deck])  # base_deck should be just main cards but count all non-egg
+
+    core_analysis = CoreAnalysisResponse(
+        core_cards=core_cards,
+        flex_cards=flex_cards,
+        total_main=total_main,
+        total_egg=total_egg,
+    )
+
+    # Build variant responses with diffs
+    variants_raw = _load_json(pool.variants_json, [])
+    base_summary = summarize_deck(base_deck)
+    variant_responses = []
+    for i, variant_deck in enumerate(variants_raw):
+        variant_summary = summarize_deck(variant_deck)
+        changes = {}
+        all_cards = set(list(base_summary.keys()) + list(variant_summary.keys()))
+        for card_id in all_cards:
+            delta = variant_summary.get(card_id, 0) - base_summary.get(card_id, 0)
+            if delta != 0:
+                changes[card_id] = delta
+        variant_responses.append(DeckPoolVariantResponse(
+            index=i,
+            deck=variant_deck,
+            changes_from_base=changes,
+        ))
+
+    return DeckPoolDetailResponse(
+        pool=_deck_pool_to_response(pool),
+        core_analysis=core_analysis,
+        variants=variant_responses,
+    )
+
+
+@router.patch("/deck-pools/{pool_id}", response_model=DeckPoolResponse)
+async def update_deck_pool(
+    pool_id: str,
+    request: DeckPoolUpdateRequest,
+    user: User = Depends(require_roles(ROLE_ADMIN)),
+    db: AsyncSession = Depends(get_db),
+):
+    """Update deck pool settings. Does NOT auto-regenerate variants."""
+    pool = await db.get(DeckPool, pool_id)
+    if pool is None:
+        raise HTTPException(status_code=404, detail="Deck pool not found")
+
+    if request.name is not None:
+        pool.name = request.name
+    if request.archetype is not None:
+        pool.archetype = request.archetype
+    if request.side_cards is not None:
+        pool.side_cards_json = json.dumps(request.side_cards)
+    if request.core_overrides is not None:
+        pool.core_overrides_json = json.dumps(request.core_overrides)
+    if request.generation_mode is not None:
+        pool.generation_mode = request.generation_mode
+    if request.target_variant_count is not None:
+        pool.target_variant_count = request.target_variant_count
+    if request.seed is not None:
+        pool.seed = request.seed
+    if request.vary_eggs is not None:
+        pool.vary_eggs = int(request.vary_eggs)
+    if request.hybrid_max_dynamic is not None:
+        pool.hybrid_max_dynamic = request.hybrid_max_dynamic
+
+    await db.commit()
+    await db.refresh(pool)
+    return _deck_pool_to_response(pool)
+
+
+@router.delete("/deck-pools/{pool_id}", status_code=status.HTTP_204_NO_CONTENT)
+async def delete_deck_pool(
+    pool_id: str,
+    user: User = Depends(require_roles(ROLE_ADMIN)),
+    db: AsyncSession = Depends(get_db),
+):
+    """Delete a deck pool."""
+    pool = await db.get(DeckPool, pool_id)
+    if pool is None:
+        raise HTTPException(status_code=404, detail="Deck pool not found")
+    await db.delete(pool)
+    await db.commit()
+
+
+@router.post("/deck-pools/{pool_id}/generate", response_model=DeckPoolDetailResponse)
+async def generate_deck_pool_variants(
+    pool_id: str,
+    request: DeckPoolGenerateRequest,
+    user: User = Depends(require_roles(ROLE_ADMIN)),
+    db: AsyncSession = Depends(get_db),
+):
+    """(Re)generate variants for a deck pool. Replaces existing variants."""
+    pool = await db.get(DeckPool, pool_id)
+    if pool is None:
+        raise HTTPException(status_code=404, detail="Deck pool not found")
+
+    base_deck = _load_json(pool.base_deck_json, [])
+    core_overrides = _load_json(pool.core_overrides_json, {})
+    side_cards = _load_json(pool.side_cards_json, [])
+
+    core_cards, flex_cards = analyze_core(base_deck, core_overrides)
+
+    count = request.count if request.count is not None else pool.target_variant_count
+    seed = request.seed if request.seed is not None else pool.seed
+
+    variants = generate_variants(
+        base_deck=base_deck,
+        core_cards=core_cards,
+        flex_cards=flex_cards,
+        side_cards=side_cards,
+        count=count,
+        seed=seed,
+    )
+
+    pool.variants_json = json.dumps(variants)
+    pool.variant_count = len(variants)
+    await db.commit()
+    await db.refresh(pool)
+
+    # Return detail response (reuse logic from get_deck_pool_detail)
+    egg_deck = _load_json(pool.egg_deck_json, [])
+    core_analysis = CoreAnalysisResponse(
+        core_cards=core_cards,
+        flex_cards=flex_cards,
+        total_main=len(base_deck),
+        total_egg=len(egg_deck),
+    )
+
+    base_summary = summarize_deck(base_deck)
+    variant_responses = []
+    for i, variant_deck in enumerate(variants):
+        variant_summary = summarize_deck(variant_deck)
+        changes = {}
+        all_cards = set(list(base_summary.keys()) + list(variant_summary.keys()))
+        for card_id in all_cards:
+            delta = variant_summary.get(card_id, 0) - base_summary.get(card_id, 0)
+            if delta != 0:
+                changes[card_id] = delta
+        variant_responses.append(DeckPoolVariantResponse(
+            index=i,
+            deck=variant_deck,
+            changes_from_base=changes,
+        ))
+
+    return DeckPoolDetailResponse(
+        pool=_deck_pool_to_response(pool),
+        core_analysis=core_analysis,
+        variants=variant_responses,
+    )
+
+
+@router.post("/deck-pools/{pool_id}/analyze-core", response_model=CoreAnalysisResponse)
+async def analyze_deck_pool_core(
+    pool_id: str,
+    user: User = Depends(require_roles(ROLE_ADMIN)),
+    db: AsyncSession = Depends(get_db),
+):
+    """Analyze core/flex cards for a deck pool (read-only)."""
+    pool = await db.get(DeckPool, pool_id)
+    if pool is None:
+        raise HTTPException(status_code=404, detail="Deck pool not found")
+
+    base_deck = _load_json(pool.base_deck_json, [])
+    egg_deck = _load_json(pool.egg_deck_json, [])
+    core_overrides = _load_json(pool.core_overrides_json, {})
+
+    core_cards, flex_cards = analyze_core(base_deck, core_overrides)
+
+    return CoreAnalysisResponse(
+        core_cards=core_cards,
+        flex_cards=flex_cards,
+        total_main=len(base_deck),
+        total_egg=len(egg_deck),
+    )
