@@ -2,7 +2,7 @@
 
 Polls for queued TrainingJob rows and dispatches training/evaluation
 jobs to background threads.  Supports concurrent execution bounded by
-a semaphore (controlled via ``TRAINING_WORKER_MAX_CONCURRENT``).
+a capacity check (controlled via ``TRAINING_WORKER_MAX_CONCURRENT``).
 
 Follows the same lifecycle pattern as
 ``digimon_gym.ai.worker.AITaskWorker``.
@@ -41,7 +41,6 @@ class TrainingJobWorker:
         self._worker_id = f"worker-{uuid4().hex[:8]}"
         self._task: asyncio.Task | None = None
         self._stop = asyncio.Event()
-        self._semaphore: asyncio.Semaphore | None = None
         self._running_tasks: set[asyncio.Task] = set()
 
     # ── Lifecycle ────────────────────────────────────────────────────
@@ -64,7 +63,14 @@ class TrainingJobWorker:
                 "Waiting for %d running training tasks to finish...",
                 len(self._running_tasks),
             )
-            await asyncio.wait(self._running_tasks, timeout=30)
+            done, pending = await asyncio.wait(self._running_tasks, timeout=30)
+            if pending:
+                logger.warning(
+                    "%d training tasks did not finish within shutdown timeout, cancelling",
+                    len(pending),
+                )
+                for t in pending:
+                    t.cancel()
         if self._task:
             await asyncio.wait([self._task], timeout=5)
         logger.info("Training job worker stopped (id=%s)", self._worker_id)
@@ -72,7 +78,6 @@ class TrainingJobWorker:
     # ── Main loop ────────────────────────────────────────────────────
 
     async def _loop(self) -> None:
-        self._semaphore = asyncio.Semaphore(self.max_concurrent)
         while not self._stop.is_set():
             try:
                 await self._recover_stale()
@@ -80,8 +85,9 @@ class TrainingJobWorker:
                 # Clean up finished tasks
                 done_tasks = {t for t in self._running_tasks if t.done()}
                 for t in done_tasks:
-                    # Retrieve and discard exceptions to avoid "exception was never retrieved"
-                    if t.exception() is not None:
+                    if t.cancelled():
+                        logger.warning("Training task %s was cancelled", t.get_name())
+                    elif t.exception() is not None:
                         logger.error(
                             "Training task %s raised: %s", t.get_name(), t.exception()
                         )
@@ -153,20 +159,22 @@ class TrainingJobWorker:
     async def _claim_jobs(self, n: int) -> list[tuple[str, str]]:
         """Claim up to n queued jobs atomically. Returns [(job_id, job_type), ...]."""
         claimed: list[tuple[str, str]] = []
-        now = datetime.now(timezone.utc)
 
         for _ in range(n):
+            now = datetime.now(timezone.utc)
             async with async_session() as db:
-                # Find the oldest queued job
+                # Find the oldest queued job (fetch id and job_type together)
                 oldest = await db.execute(
-                    select(TrainingJob.id)
+                    select(TrainingJob.id, TrainingJob.job_type)
                     .where(TrainingJob.status == "queued")
                     .order_by(TrainingJob.created_at.asc())
                     .limit(1)
                 )
-                job_id = oldest.scalar_one_or_none()
-                if job_id is None:
+                row = oldest.one_or_none()
+                if row is None:
                     break  # No more queued jobs
+
+                job_id, job_type = row[0], row[1]
 
                 # Atomic UPDATE: only claim if still queued
                 result = await db.execute(
@@ -189,23 +197,11 @@ class TrainingJobWorker:
 
                 await db.commit()
 
-                # SELECT back the claimed job to get its type
-                job_result = await db.execute(
-                    select(TrainingJob.id, TrainingJob.job_type).where(
-                        TrainingJob.id == job_id,
-                        TrainingJob.worker_id == self._worker_id,
-                    )
-                )
-                row = job_result.one_or_none()
-                if row is None:
-                    # Should not happen, but be defensive
-                    continue
-
-                claimed.append((row[0], row[1]))
+                claimed.append((job_id, job_type))
                 logger.info(
                     "Claimed training job %s (type=%s, worker=%s)",
-                    row[0],
-                    row[1],
+                    job_id,
+                    job_type,
                     self._worker_id,
                 )
 
@@ -214,53 +210,51 @@ class TrainingJobWorker:
     # ── Job execution ────────────────────────────────────────────────
 
     async def _run_job(self, job_id: str, job_type: str) -> None:
-        """Execute a single training job, bounded by the semaphore."""
-        assert self._semaphore is not None  # noqa: S101
-        async with self._semaphore:
-            # Record device assignment (placeholder "cpu" for now,
-            # device management comes in a later step)
-            device = "cpu"
-            async with async_session() as db:
-                await db.execute(
-                    update(TrainingJob)
-                    .where(TrainingJob.id == job_id)
-                    .values(device=device)
-                )
-                await db.commit()
-
-            logger.info(
-                "Running training job %s (type=%s, device=%s, worker=%s)",
-                job_id,
-                job_type,
-                device,
-                self._worker_id,
+        """Execute a single training job."""
+        # Record device assignment (placeholder "cpu" for now,
+        # device management comes in a later step)
+        device = "cpu"
+        async with async_session() as db:
+            await db.execute(
+                update(TrainingJob)
+                .where(TrainingJob.id == job_id)
+                .values(device=device)
             )
+            await db.commit()
 
-            # Execute in thread
-            result_data: dict | None = None
-            error_text = ""
-            try:
-                if job_type in ("train_vs_greedy", "train_vs_random"):
-                    result_data = await asyncio.to_thread(
-                        self._run_heuristic_training, job_id
-                    )
-                elif job_type == "train_vs_agent":
-                    result_data = await asyncio.to_thread(
-                        self._run_agent_training, job_id
-                    )
-                elif job_type == "evaluate":
-                    result_data = await asyncio.to_thread(
-                        self._run_evaluation, job_id
-                    )
-                else:
-                    result_data = {"error": f"Unknown job type: {job_type}"}
-            except Exception as exc:
-                logger.exception("Training job %s failed", job_id)
-                result_data = None
-                error_text = str(exc)
+        logger.info(
+            "Running training job %s (type=%s, device=%s, worker=%s)",
+            job_id,
+            job_type,
+            device,
+            self._worker_id,
+        )
 
-            # Persist outcome
-            await self._persist_outcome(job_id, result_data, error_text)
+        # Execute in thread
+        result_data: dict | None = None
+        error_text = ""
+        try:
+            if job_type in ("train_vs_greedy", "train_vs_random"):
+                result_data = await asyncio.to_thread(
+                    self._run_heuristic_training, job_id
+                )
+            elif job_type == "train_vs_agent":
+                result_data = await asyncio.to_thread(
+                    self._run_agent_training, job_id
+                )
+            elif job_type == "evaluate":
+                result_data = await asyncio.to_thread(
+                    self._run_evaluation, job_id
+                )
+            else:
+                result_data = {"error": f"Unknown job type: {job_type}"}
+        except Exception as exc:
+            logger.exception("Training job %s failed", job_id)
+            result_data = None
+            error_text = str(exc)
+
+        # Persist outcome
+        await self._persist_outcome(job_id, result_data, error_text)
 
     # ── Persist outcome ──────────────────────────────────────────────
 
