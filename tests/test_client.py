@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import logging
 from types import SimpleNamespace
 from typing import Any
 from unittest.mock import MagicMock, patch
@@ -525,9 +526,12 @@ class TestCreateLLMClient:
             client = create_llm_client("openai")
             assert isinstance(client, OpenAIClient)
 
-    def test_unknown_provider_defaults_to_openai(self):
-        client = create_llm_client("gcp-vertex")
+    def test_unknown_provider_defaults_to_openai_with_warning(self, caplog):
+        with caplog.at_level(logging.WARNING, logger="digimon_gym.ai.client"):
+            client = create_llm_client("gcp-vertex")
         assert isinstance(client, OpenAIClient)
+        assert "Unknown AI provider" in caplog.text
+        assert "gcp-vertex" in caplog.text
 
 
 # ---------------------------------------------------------------------------
@@ -558,11 +562,52 @@ class TestDispatcherUsesFactory:
         dispatcher = TaskDispatcher(client=custom_client)
         assert dispatcher.client is custom_client
 
-    def test_dispatcher_still_imports_openai_responses_client(self):
-        """Backward compat: OpenAIResponsesClient should still be importable from dispatcher's imports."""
-        from digimon_gym.ai.dispatcher import OpenAIResponsesClient as ImportedAlias
+    def test_dispatcher_no_longer_imports_openai_responses_client(self):
+        """OpenAIResponsesClient was removed from dispatcher imports (unused after refactor)."""
+        import digimon_gym.ai.dispatcher as dispatcher_mod
 
-        assert ImportedAlias is OpenAIClient
+        # The name should NOT be in the dispatcher module's own namespace.
+        assert "OpenAIResponsesClient" not in vars(dispatcher_mod)
+
+
+# ---------------------------------------------------------------------------
+# Dispatcher _cost_from_usage chained pricing
+# ---------------------------------------------------------------------------
+
+class TestDispatcherCostFromUsage:
+    """Verify _cost_from_usage chains OpenAI and Anthropic pricing lookups."""
+
+    def test_openai_model_uses_openai_pricing(self):
+        from digimon_gym.ai.dispatcher import TaskDispatcher
+
+        cost = TaskDispatcher._cost_from_usage("gpt-4.1", 1_000_000, 1_000_000)
+        in_price, out_price = MODEL_PRICING["gpt-4.1"]
+        expected = in_price + out_price
+        assert cost == pytest.approx(expected)
+
+    def test_anthropic_model_uses_anthropic_pricing(self):
+        from digimon_gym.ai.dispatcher import TaskDispatcher
+
+        cost = TaskDispatcher._cost_from_usage("claude-sonnet-4-6", 1_000_000, 1_000_000)
+        in_price, out_price = ANTHROPIC_PRICING["claude-sonnet-4-6"]
+        expected = in_price + out_price
+        assert cost == pytest.approx(expected)
+
+    def test_unknown_model_uses_fallback_pricing(self):
+        from digimon_gym.ai.dispatcher import TaskDispatcher
+
+        cost = TaskDispatcher._cost_from_usage("unknown-model-xyz", 1_000_000, 1_000_000)
+        # Fallback is (1.0, 4.0)
+        expected = 1.0 + 4.0
+        assert cost == pytest.approx(expected)
+
+    def test_anthropic_opus_pricing(self):
+        from digimon_gym.ai.dispatcher import TaskDispatcher
+
+        cost = TaskDispatcher._cost_from_usage("claude-opus-4-6", 1_000_000, 1_000_000)
+        in_price, out_price = ANTHROPIC_PRICING["claude-opus-4-6"]
+        expected = in_price + out_price
+        assert cost == pytest.approx(expected)
 
 
 # ---------------------------------------------------------------------------

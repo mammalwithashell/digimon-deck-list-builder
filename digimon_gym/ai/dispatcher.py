@@ -12,7 +12,7 @@ from digimon_gym.ai.autofix_apply import (
     get_allowed_roots_for_scope,
     get_primary_script_path,
 )
-from digimon_gym.ai.client import MODEL_PRICING, LLMClient, OpenAIResponsesClient, create_llm_client
+from digimon_gym.ai.client import ANTHROPIC_PRICING, MODEL_PRICING, LLMClient, create_llm_client
 from digimon_gym.ai.contracts import (
     EngineCapabilityOutput,
     QATriageOutput,
@@ -308,7 +308,7 @@ class TaskDispatcher:
 
     @staticmethod
     def _cost_from_usage(model_name: str, input_tokens: int, output_tokens: int) -> float:
-        in_price, out_price = MODEL_PRICING.get(model_name, (1.0, 4.0))
+        in_price, out_price = MODEL_PRICING.get(model_name) or ANTHROPIC_PRICING.get(model_name, (1.0, 4.0))
         return (
             (input_tokens / 1_000_000.0) * in_price
             + (output_tokens / 1_000_000.0) * out_price

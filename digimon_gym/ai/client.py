@@ -7,6 +7,7 @@ through an abstract ``LLMClient`` interface.
 from __future__ import annotations
 
 import json
+import logging
 import math
 import os
 from abc import ABC, abstractmethod
@@ -17,6 +18,7 @@ from typing import Any, Type
 from pydantic import BaseModel
 from digimon_gym.env import load_project_env
 
+logger = logging.getLogger(__name__)
 
 # Ensure .env values are available when MODEL_DEFAULTS / MODEL_PRICING are defined.
 load_project_env()
@@ -432,4 +434,8 @@ def create_llm_client(provider: str | None = None) -> LLMClient:
     provider = provider or os.getenv("AI_PROVIDER", "openai")
     if provider == "anthropic":
         return AnthropicClient()
+    if provider != "openai":
+        logger.warning(
+            "Unknown AI provider %r, falling back to OpenAI client", provider
+        )
     return OpenAIClient()
