@@ -375,7 +375,8 @@ class GauntletWrapper(gymnasium.Wrapper):
         self._current_opponent = self.gauntlet.sample_opponent()
 
         options = kwargs.get("options") or {}
-        options["deck1"] = self.player_deck
+        if "deck1" not in options:
+            options["deck1"] = self.player_deck
         options["deck2"] = self._current_opponent.card_ids
         kwargs["options"] = options
 

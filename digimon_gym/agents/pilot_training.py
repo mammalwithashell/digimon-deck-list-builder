@@ -20,7 +20,7 @@ import os
 import argparse
 import time
 from datetime import datetime
-from typing import Callable, Optional, List, Union
+from typing import Callable, Dict, Optional, List, Union
 
 import numpy as np
 import gymnasium
@@ -327,7 +327,14 @@ def make_env(opponent: str = "greedy",
              deck2: Optional[List[str]] = None,
              gauntlet: Optional[MetaGauntlet] = None,
              bounty_threshold: float = 0.15,
-             bounty_bonus: float = 0.5) -> gymnasium.Env:
+             bounty_bonus: float = 0.5,
+             deck_pool_variants: Optional[List[List[str]]] = None,
+             deck_pool_egg: Optional[List[str]] = None,
+             deck_pool_mode: str = "eager",
+             deck_pool_generate_fn: Optional[Callable] = None,
+             deck_pool_generate_kwargs: Optional[Dict] = None,
+             deck_pool_seed: Optional[int] = None,
+             deck_pool_hybrid_max: int = 10) -> gymnasium.Env:
     """Create a wrapped DigimonEnv for single-agent RL training.
 
     Args:
@@ -339,9 +346,20 @@ def make_env(opponent: str = "greedy",
                   opponent decks are sampled per-episode from the deck library.
         bounty_threshold: Threat index above which bounty bonus applies.
         bounty_bonus: Bonus reward for beating high-TI opponents.
+        deck_pool_variants: Pre-generated deck variants for DeckPoolWrapper.
+                            When provided (non-empty), wraps env in DeckPoolWrapper.
+        deck_pool_egg: Egg deck for DeckPoolWrapper (reserved for future use).
+        deck_pool_mode: Generation mode for DeckPoolWrapper ("eager" or "hybrid").
+        deck_pool_generate_fn: On-the-fly variant generation function (hybrid mode).
+        deck_pool_generate_kwargs: Keyword arguments for generate_fn.
+        deck_pool_seed: RNG seed for DeckPoolWrapper reproducibility.
+        deck_pool_hybrid_max: Max dynamic variants in hybrid mode (default: 10).
 
     Returns:
         ActionMasker-wrapped environment ready for MaskablePPO.
+
+    Wrapper chain:
+        DigimonEnv -> OpponentWrapper -> DeckPoolWrapper -> GauntletWrapper -> ActionMasker
     """
     base_env = DigimonEnv(deck1=deck1, deck2=deck2)
 
@@ -361,6 +379,20 @@ def make_env(opponent: str = "greedy",
                 f"Expected one of {valid_opponents}."
             )
         env = OpponentWrapper(base_env, opponent_fn=opponent_fn)
+
+    # Deck pool wrapper for agent deck variation
+    if deck_pool_variants and len(deck_pool_variants) > 0:
+        from digimon_gym.agents.deck_pool import DeckPoolWrapper
+        env = DeckPoolWrapper(
+            env,
+            variants=deck_pool_variants,
+            egg_deck=deck_pool_egg,
+            generation_mode=deck_pool_mode,
+            generate_fn=deck_pool_generate_fn,
+            generate_kwargs=deck_pool_generate_kwargs or {},
+            hybrid_max_dynamic=deck_pool_hybrid_max,
+            seed=deck_pool_seed,
+        )
 
     # Gauntlet wrapper for meta-weighted opponent sampling
     if gauntlet is not None and gauntlet.deck_count > 0:
@@ -410,6 +442,10 @@ def train(total_timesteps: int = 100_000,
           bounty_bonus: float = 0.5,
           use_lstm: bool = False,
           lstm_hidden_size: int = 256,
+          deck_pool_variants: Optional[List[List[str]]] = None,
+          deck_pool_mode: str = "eager",
+          deck_pool_seed: Optional[int] = None,
+          deck_pool_hybrid_max: int = 10,
           ) -> Union[MaskablePPO, MaskableRecurrentPPO]:
     """Train a Pilot Agent using MaskablePPO or MaskableRecurrentPPO.
 
@@ -432,6 +468,10 @@ def train(total_timesteps: int = 100_000,
         bounty_bonus: Bonus reward for beating high-TI opponents.
         use_lstm: Use LSTM policy (MaskableRecurrentPPO) instead of MLP.
         lstm_hidden_size: LSTM hidden units per layer (default: 256).
+        deck_pool_variants: Pre-generated deck variants for DeckPoolWrapper.
+        deck_pool_mode: Generation mode ("eager" or "hybrid").
+        deck_pool_seed: RNG seed for DeckPoolWrapper reproducibility.
+        deck_pool_hybrid_max: Max dynamic variants in hybrid mode (default: 10).
 
     Returns:
         Trained model (MaskablePPO or MaskableRecurrentPPO).
@@ -464,6 +504,10 @@ def train(total_timesteps: int = 100_000,
         gauntlet=gauntlet,
         bounty_threshold=bounty_threshold,
         bounty_bonus=bounty_bonus,
+        deck_pool_variants=deck_pool_variants,
+        deck_pool_mode=deck_pool_mode,
+        deck_pool_seed=deck_pool_seed,
+        deck_pool_hybrid_max=deck_pool_hybrid_max,
     )
 
     # Create model
@@ -503,6 +547,10 @@ def train(total_timesteps: int = 100_000,
         opponent=opponent, deck1=deck1,
         gauntlet=gauntlet, bounty_threshold=bounty_threshold,
         bounty_bonus=bounty_bonus,
+        deck_pool_variants=deck_pool_variants,
+        deck_pool_mode=deck_pool_mode,
+        deck_pool_seed=deck_pool_seed,
+        deck_pool_hybrid_max=deck_pool_hybrid_max,
     )
     win_rate_cb = WinRateCallback(
         eval_env_fn=eval_env_fn,
