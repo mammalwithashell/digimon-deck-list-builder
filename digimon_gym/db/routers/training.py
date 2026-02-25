@@ -567,6 +567,29 @@ async def list_deck_library_archetypes(
 # ── Deck Pools ─────────────────────────────────────────────────────────
 
 
+def _build_variant_responses(
+    base_deck: List[str],
+    variants: List[List[str]],
+) -> List[DeckPoolVariantResponse]:
+    """Build variant response objects with diffs from a base deck."""
+    base_summary = summarize_deck(base_deck)
+    responses = []
+    for i, variant_deck in enumerate(variants):
+        variant_summary = summarize_deck(variant_deck)
+        changes: Dict[str, int] = {}
+        all_cards = set(list(base_summary.keys()) + list(variant_summary.keys()))
+        for card_id in all_cards:
+            delta = variant_summary.get(card_id, 0) - base_summary.get(card_id, 0)
+            if delta != 0:
+                changes[card_id] = delta
+        responses.append(DeckPoolVariantResponse(
+            index=i,
+            deck=variant_deck,
+            changes_from_base=changes,
+        ))
+    return responses
+
+
 def _deck_pool_to_response(pool: DeckPool) -> DeckPoolResponse:
     return DeckPoolResponse(
         id=pool.id,
@@ -664,40 +687,19 @@ async def get_deck_pool_detail(
     core_overrides = _load_json(pool.core_overrides_json, {})
     core_cards, flex_cards = analyze_core(base_deck, core_overrides)
 
-    # Count egg cards
     egg_deck = _load_json(pool.egg_deck_json, [])
-    total_egg = len(egg_deck)
-    total_main = len([c for c in base_deck])  # base_deck should be just main cards but count all non-egg
-
     core_analysis = CoreAnalysisResponse(
         core_cards=core_cards,
         flex_cards=flex_cards,
-        total_main=total_main,
-        total_egg=total_egg,
+        total_main=sum(core_cards.values()) + sum(flex_cards.values()),
+        total_egg=len(egg_deck),
     )
 
-    # Build variant responses with diffs
     variants_raw = _load_json(pool.variants_json, [])
-    base_summary = summarize_deck(base_deck)
-    variant_responses = []
-    for i, variant_deck in enumerate(variants_raw):
-        variant_summary = summarize_deck(variant_deck)
-        changes = {}
-        all_cards = set(list(base_summary.keys()) + list(variant_summary.keys()))
-        for card_id in all_cards:
-            delta = variant_summary.get(card_id, 0) - base_summary.get(card_id, 0)
-            if delta != 0:
-                changes[card_id] = delta
-        variant_responses.append(DeckPoolVariantResponse(
-            index=i,
-            deck=variant_deck,
-            changes_from_base=changes,
-        ))
-
     return DeckPoolDetailResponse(
         pool=_deck_pool_to_response(pool),
         core_analysis=core_analysis,
-        variants=variant_responses,
+        variants=_build_variant_responses(base_deck, variants_raw),
     )
 
 
@@ -786,35 +788,18 @@ async def generate_deck_pool_variants(
     await db.commit()
     await db.refresh(pool)
 
-    # Return detail response (reuse logic from get_deck_pool_detail)
     egg_deck = _load_json(pool.egg_deck_json, [])
     core_analysis = CoreAnalysisResponse(
         core_cards=core_cards,
         flex_cards=flex_cards,
-        total_main=len(base_deck),
+        total_main=sum(core_cards.values()) + sum(flex_cards.values()),
         total_egg=len(egg_deck),
     )
-
-    base_summary = summarize_deck(base_deck)
-    variant_responses = []
-    for i, variant_deck in enumerate(variants):
-        variant_summary = summarize_deck(variant_deck)
-        changes = {}
-        all_cards = set(list(base_summary.keys()) + list(variant_summary.keys()))
-        for card_id in all_cards:
-            delta = variant_summary.get(card_id, 0) - base_summary.get(card_id, 0)
-            if delta != 0:
-                changes[card_id] = delta
-        variant_responses.append(DeckPoolVariantResponse(
-            index=i,
-            deck=variant_deck,
-            changes_from_base=changes,
-        ))
 
     return DeckPoolDetailResponse(
         pool=_deck_pool_to_response(pool),
         core_analysis=core_analysis,
-        variants=variant_responses,
+        variants=_build_variant_responses(base_deck, variants),
     )
 
 
@@ -838,6 +823,6 @@ async def analyze_deck_pool_core(
     return CoreAnalysisResponse(
         core_cards=core_cards,
         flex_cards=flex_cards,
-        total_main=len(base_deck),
+        total_main=sum(core_cards.values()) + sum(flex_cards.values()),
         total_egg=len(egg_deck),
     )
