@@ -612,6 +612,8 @@ class TrainingJobResponse(BaseModel):
     config: Dict[str, Any] = Field(default_factory=dict)
     result: Optional[Dict[str, Any]] = None
     error_text: Optional[str] = None
+    worker_id: Optional[str] = None
+    device: Optional[str] = None
     created_by: Optional[str] = None
     started_at: Optional[datetime] = None
     completed_at: Optional[datetime] = None

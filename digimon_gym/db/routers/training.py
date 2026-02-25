@@ -89,6 +89,8 @@ def _job_to_response(job: TrainingJob) -> TrainingJobResponse:
         config=_load_json(job.config_json, {}),
         result=_load_json(job.result_json, None),
         error_text=job.error_text,
+        worker_id=job.worker_id,
+        device=job.device,
         created_by=job.created_by,
         started_at=job.started_at,
         completed_at=job.completed_at,

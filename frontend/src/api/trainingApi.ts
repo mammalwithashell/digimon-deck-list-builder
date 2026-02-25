@@ -39,6 +39,8 @@ export interface TrainingJobItem {
   config: Record<string, unknown>;
   result?: Record<string, unknown> | null;
   error_text?: string | null;
+  worker_id?: string | null;
+  device?: string | null;
   created_by?: string | null;
   started_at?: string | null;
   completed_at?: string | null;
