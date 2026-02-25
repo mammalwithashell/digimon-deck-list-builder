@@ -89,6 +89,12 @@ class GauntletOrchestrator:
                 await db.commit()
                 return
 
+            # Optimistic locking guard: prevent double stage transitions from parallel jobs
+            original_stage = gauntlet.current_stage
+            await db.refresh(gauntlet)
+            if gauntlet.current_stage != original_stage:
+                return
+
             # Transition to next stage
             if gauntlet.current_stage == 1:
                 gauntlet.current_stage = 2
