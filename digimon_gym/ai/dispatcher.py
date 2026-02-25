@@ -12,7 +12,7 @@ from digimon_gym.ai.autofix_apply import (
     get_allowed_roots_for_scope,
     get_primary_script_path,
 )
-from digimon_gym.ai.client import MODEL_PRICING, OpenAIResponsesClient
+from digimon_gym.ai.client import MODEL_PRICING, LLMClient, OpenAIResponsesClient, create_llm_client
 from digimon_gym.ai.contracts import (
     EngineCapabilityOutput,
     QATriageOutput,
@@ -79,9 +79,9 @@ def _card_text_from_meta(meta: dict) -> str:
 
 
 class TaskDispatcher:
-    def __init__(self, *, rag_index: LocalRAGIndex | None = None, client: OpenAIResponsesClient | None = None):
+    def __init__(self, *, rag_index: LocalRAGIndex | None = None, client: LLMClient | None = None):
         self.rag_index = rag_index or LocalRAGIndex()
-        self.client = client or OpenAIResponsesClient()
+        self.client = client or create_llm_client()
         self.cards_index = _load_cards_index()
 
     def estimate_cost(self, task_type: str, payload: dict[str, Any], model_name: str | None = None) -> float:
