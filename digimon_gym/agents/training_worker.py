@@ -1,7 +1,10 @@
 """In-process training job worker with DB-backed queue semantics.
 
 Polls for queued TrainingJob rows and dispatches training/evaluation
-jobs to background threads.  Follows the same lifecycle pattern as
+jobs to background threads.  Supports concurrent execution bounded by
+a semaphore (controlled via ``TRAINING_WORKER_MAX_CONCURRENT``).
+
+Follows the same lifecycle pattern as
 ``digimon_gym.ai.worker.AITaskWorker``.
 """
 
@@ -12,8 +15,9 @@ import json
 import logging
 import os
 from datetime import datetime, timedelta, timezone
+from uuid import uuid4
 
-from sqlalchemy import select
+from sqlalchemy import select, update
 
 from digimon_gym.db.database import async_session
 from digimon_gym.db.models import Agent, TrainingJob
@@ -31,8 +35,14 @@ class TrainingJobWorker:
         self.stale_after_seconds = int(
             os.getenv("TRAINING_WORKER_STALE_SECONDS", "7200")
         )
+        self.max_concurrent = int(
+            os.getenv("TRAINING_WORKER_MAX_CONCURRENT", "1")
+        )
+        self._worker_id = f"worker-{uuid4().hex[:8]}"
         self._task: asyncio.Task | None = None
         self._stop = asyncio.Event()
+        self._semaphore: asyncio.Semaphore | None = None
+        self._running_tasks: set[asyncio.Task] = set()
 
     # ── Lifecycle ────────────────────────────────────────────────────
 
@@ -41,23 +51,63 @@ class TrainingJobWorker:
             return
         self._stop.clear()
         self._task = asyncio.create_task(self._loop(), name="training-job-worker")
-        logger.info("Training job worker started")
+        logger.info(
+            "Training job worker started (id=%s, max_concurrent=%d)",
+            self._worker_id,
+            self.max_concurrent,
+        )
 
     async def stop(self) -> None:
         self._stop.set()
+        if self._running_tasks:
+            logger.info(
+                "Waiting for %d running training tasks to finish...",
+                len(self._running_tasks),
+            )
+            await asyncio.wait(self._running_tasks, timeout=30)
         if self._task:
             await asyncio.wait([self._task], timeout=5)
-        logger.info("Training job worker stopped")
+        logger.info("Training job worker stopped (id=%s)", self._worker_id)
 
     # ── Main loop ────────────────────────────────────────────────────
 
     async def _loop(self) -> None:
+        self._semaphore = asyncio.Semaphore(self.max_concurrent)
         while not self._stop.is_set():
             try:
                 await self._recover_stale()
-                processed = await self._process_one_job()
-                if not processed:
+
+                # Clean up finished tasks
+                done_tasks = {t for t in self._running_tasks if t.done()}
+                for t in done_tasks:
+                    # Retrieve and discard exceptions to avoid "exception was never retrieved"
+                    if t.exception() is not None:
+                        logger.error(
+                            "Training task %s raised: %s", t.get_name(), t.exception()
+                        )
+                self._running_tasks -= done_tasks
+
+                # Check if we have capacity for more jobs
+                capacity = self.max_concurrent - len(self._running_tasks)
+                if capacity <= 0:
                     await asyncio.sleep(self.poll_interval_seconds)
+                    continue
+
+                # Try to claim jobs up to available capacity
+                claimed = await self._claim_jobs(capacity)
+                if not claimed:
+                    await asyncio.sleep(self.poll_interval_seconds)
+                    continue
+
+                # Dispatch each claimed job as a concurrent task
+                for job_id, job_type in claimed:
+                    task = asyncio.create_task(
+                        self._run_job(job_id, job_type),
+                        name=f"training-{job_id[:8]}",
+                    )
+                    self._running_tasks.add(task)
+
+                # Continue immediately to potentially claim more if capacity remains
             except Exception:
                 logger.exception("Unexpected training worker loop failure")
                 await asyncio.sleep(self.poll_interval_seconds)
@@ -65,7 +115,11 @@ class TrainingJobWorker:
     # ── Stale recovery ───────────────────────────────────────────────
 
     async def _recover_stale(self) -> None:
-        """Mark long-running jobs as failed so they don't block the queue."""
+        """Mark long-running jobs as failed so they don't block the queue.
+
+        Only recovers jobs belonging to other workers (or with no worker_id)
+        to avoid recovering our own legitimately-running parallel jobs.
+        """
         stale_before = datetime.now(timezone.utc) - timedelta(
             seconds=self.stale_after_seconds
         )
@@ -76,6 +130,9 @@ class TrainingJobWorker:
                     TrainingJob.started_at.is_not(None),
                     TrainingJob.started_at < stale_before,
                     TrainingJob.completed_at.is_(None),
+                    # Only recover jobs from other workers or with no worker_id
+                    (TrainingJob.worker_id != self._worker_id)
+                    | TrainingJob.worker_id.is_(None),
                 )
             )
             stale_jobs = result.scalars().all()
@@ -91,58 +148,129 @@ class TrainingJobWorker:
                 logger.warning("Recovered stale training job %s", job.id)
                 await self._gauntlet_hook(job)
 
-    # ── Job processing ───────────────────────────────────────────────
+    # ── Atomic job claiming ──────────────────────────────────────────
 
-    async def _process_one_job(self) -> bool:
-        """Claim the oldest queued job, run it, and update results.
+    async def _claim_jobs(self, n: int) -> list[tuple[str, str]]:
+        """Claim up to n queued jobs atomically. Returns [(job_id, job_type), ...]."""
+        claimed: list[tuple[str, str]] = []
+        now = datetime.now(timezone.utc)
 
-        Returns True if a job was processed (success or failure),
-        False if the queue was empty.
-        """
-        # --- Claim ---
-        async with async_session() as db:
-            result = await db.execute(
-                select(TrainingJob)
-                .where(TrainingJob.status == "queued")
-                .order_by(TrainingJob.created_at.asc())
-                .limit(1)
+        for _ in range(n):
+            async with async_session() as db:
+                # Find the oldest queued job
+                oldest = await db.execute(
+                    select(TrainingJob.id)
+                    .where(TrainingJob.status == "queued")
+                    .order_by(TrainingJob.created_at.asc())
+                    .limit(1)
+                )
+                job_id = oldest.scalar_one_or_none()
+                if job_id is None:
+                    break  # No more queued jobs
+
+                # Atomic UPDATE: only claim if still queued
+                result = await db.execute(
+                    update(TrainingJob)
+                    .where(
+                        TrainingJob.id == job_id,
+                        TrainingJob.status == "queued",
+                    )
+                    .values(
+                        status="running",
+                        worker_id=self._worker_id,
+                        started_at=now,
+                        claimed_at=now,
+                    )
+                )
+                if result.rowcount == 0:  # type: ignore[union-attr]
+                    # Another worker got it first, try next
+                    await db.commit()
+                    continue
+
+                await db.commit()
+
+                # SELECT back the claimed job to get its type
+                job_result = await db.execute(
+                    select(TrainingJob.id, TrainingJob.job_type).where(
+                        TrainingJob.id == job_id,
+                        TrainingJob.worker_id == self._worker_id,
+                    )
+                )
+                row = job_result.one_or_none()
+                if row is None:
+                    # Should not happen, but be defensive
+                    continue
+
+                claimed.append((row[0], row[1]))
+                logger.info(
+                    "Claimed training job %s (type=%s, worker=%s)",
+                    row[0],
+                    row[1],
+                    self._worker_id,
+                )
+
+        return claimed
+
+    # ── Job execution ────────────────────────────────────────────────
+
+    async def _run_job(self, job_id: str, job_type: str) -> None:
+        """Execute a single training job, bounded by the semaphore."""
+        assert self._semaphore is not None  # noqa: S101
+        async with self._semaphore:
+            # Record device assignment (placeholder "cpu" for now,
+            # device management comes in a later step)
+            device = "cpu"
+            async with async_session() as db:
+                await db.execute(
+                    update(TrainingJob)
+                    .where(TrainingJob.id == job_id)
+                    .values(device=device)
+                )
+                await db.commit()
+
+            logger.info(
+                "Running training job %s (type=%s, device=%s, worker=%s)",
+                job_id,
+                job_type,
+                device,
+                self._worker_id,
             )
-            job = result.scalar_one_or_none()
-            if job is None:
-                return False
 
-            job.status = "running"
-            job.started_at = datetime.now(timezone.utc)
-            await db.commit()
-            job_id = job.id
-            job_type = job.job_type
+            # Execute in thread
+            result_data: dict | None = None
+            error_text = ""
+            try:
+                if job_type in ("train_vs_greedy", "train_vs_random"):
+                    result_data = await asyncio.to_thread(
+                        self._run_heuristic_training, job_id
+                    )
+                elif job_type == "train_vs_agent":
+                    result_data = await asyncio.to_thread(
+                        self._run_agent_training, job_id
+                    )
+                elif job_type == "evaluate":
+                    result_data = await asyncio.to_thread(
+                        self._run_evaluation, job_id
+                    )
+                else:
+                    result_data = {"error": f"Unknown job type: {job_type}"}
+            except Exception as exc:
+                logger.exception("Training job %s failed", job_id)
+                result_data = None
+                error_text = str(exc)
 
-        logger.info("Claimed training job %s (type=%s)", job_id, job_type)
+            # Persist outcome
+            await self._persist_outcome(job_id, result_data, error_text)
 
-        # --- Execute in thread ---
-        result_data: dict | None = None
-        error_text = ""
-        try:
-            if job_type in ("train_vs_greedy", "train_vs_random"):
-                result_data = await asyncio.to_thread(
-                    self._run_heuristic_training, job_id
-                )
-            elif job_type == "train_vs_agent":
-                result_data = await asyncio.to_thread(
-                    self._run_agent_training, job_id
-                )
-            elif job_type == "evaluate":
-                result_data = await asyncio.to_thread(
-                    self._run_evaluation, job_id
-                )
-            else:
-                result_data = {"error": f"Unknown job type: {job_type}"}
-        except Exception as exc:
-            logger.exception("Training job %s failed", job_id)
-            result_data = None
-            error_text = str(exc)
+    # ── Persist outcome ──────────────────────────────────────────────
 
-        # --- Persist outcome ---
+    async def _persist_outcome(
+        self,
+        job_id: str,
+        result_data: dict | None,
+        error_text: str,
+    ) -> None:
+        """Write training result or error back to the TrainingJob row."""
         async with async_session() as db:
             result = await db.execute(
                 select(TrainingJob).where(TrainingJob.id == job_id)
@@ -150,7 +278,7 @@ class TrainingJobWorker:
             job = result.scalar_one_or_none()
             if job is None:
                 logger.error("Training job %s vanished after execution", job_id)
-                return True
+                return
 
             now = datetime.now(timezone.utc)
             if result_data is not None:
@@ -171,8 +299,6 @@ class TrainingJobWorker:
             )
 
             await self._gauntlet_hook(job)
-
-        return True
 
     # ── Agent stats update ───────────────────────────────────────────
 
