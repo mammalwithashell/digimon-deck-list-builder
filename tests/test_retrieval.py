@@ -23,6 +23,38 @@ from digimon_gym.ai.retrieval import (
 
 
 # ---------------------------------------------------------------------------
+# _cosine helper tests
+# ---------------------------------------------------------------------------
+
+
+class TestCosineHelper:
+    def test_identical_vectors(self):
+        a = [1.0, 2.0, 3.0]
+        assert _cosine(a, a) == pytest.approx(1.0)
+
+    def test_orthogonal_vectors(self):
+        a = [1.0, 0.0]
+        b = [0.0, 1.0]
+        assert _cosine(a, b) == pytest.approx(0.0)
+
+    def test_symmetry(self):
+        a = [1.0, 2.0, 3.0]
+        b = [4.0, 5.0, 6.0]
+        assert _cosine(a, b) == pytest.approx(_cosine(b, a))
+
+    def test_zero_vector(self):
+        a = [0.0, 0.0, 0.0]
+        b = [1.0, 2.0, 3.0]
+        assert _cosine(a, b) == pytest.approx(0.0)
+        assert _cosine(b, a) == pytest.approx(0.0)
+
+    def test_different_lengths(self):
+        a = [1.0, 2.0]
+        b = [1.0, 2.0, 3.0]
+        assert _cosine(a, b) == 0.0
+
+
+# ---------------------------------------------------------------------------
 # Chunk dataclass tests
 # ---------------------------------------------------------------------------
 
@@ -612,7 +644,7 @@ class TestRetrieveSourceTypesFilter:
         assert len(source_types) >= 2  # both types returned
 
     def test_retrieve_returns_source_type_field(self, tmp_path: Path):
-        """retrieve() results should include source_type."""
+        """retrieve() results should include source_type and function_name."""
         index_file = tmp_path / "index.json"
         v2_data = {
             "version": 2,
@@ -623,6 +655,7 @@ class TestRetrieveSourceTypesFilter:
                     "chunk_id": "game.py:run",
                     "source": "game.py",
                     "source_type": "engine_api",
+                    "function_name": "run",
                     "text": "run the game engine",
                     "embedding": None,
                 },
@@ -636,6 +669,7 @@ class TestRetrieveSourceTypesFilter:
         results = idx.retrieve("run game")
         assert len(results) == 1
         assert results[0]["source_type"] == "engine_api"
+        assert results[0]["function_name"] == "run"
 
 
 # ---------------------------------------------------------------------------

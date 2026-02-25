@@ -162,7 +162,7 @@ def chunk_python_by_ast(
     chunks: list[dict] = []
 
     for node in ast.iter_child_nodes(tree):
-        if isinstance(node, ast.FunctionDef | ast.AsyncFunctionDef):
+        if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)):
             text = _get_source_segment(source_text, node)
             chunks.append(
                 {
@@ -174,7 +174,7 @@ def chunk_python_by_ast(
             )
         elif isinstance(node, ast.ClassDef):
             for item in ast.iter_child_nodes(node):
-                if isinstance(item, ast.FunctionDef | ast.AsyncFunctionDef):
+                if isinstance(item, (ast.FunctionDef, ast.AsyncFunctionDef)):
                     text = _get_source_segment(source_text, item)
                     chunks.append(
                         {
