@@ -16,6 +16,7 @@ from digimon_gym.ai.retrieval import (
     chunk_python_by_ast,
     chunk_text,
     _infer_python_source_type,
+    _is_cards_json,
 )
 
 
@@ -30,6 +31,8 @@ class TestChunkDataclass:
         assert c.source_type == "rules"
         assert c.function_name is None
         assert c.class_name is None
+        assert c.section_title is None
+        assert c.card_id is None
 
     def test_as_dict_minimal(self):
         c = Chunk(chunk_id="test:0", source="test.py", text="hello", embedding=None)
@@ -37,6 +40,8 @@ class TestChunkDataclass:
         assert d["source_type"] == "rules"
         assert "function_name" not in d
         assert "class_name" not in d
+        assert "section_title" not in d
+        assert "card_id" not in d
 
     def test_as_dict_with_function(self):
         c = Chunk(
@@ -66,6 +71,32 @@ class TestChunkDataclass:
         d = c.as_dict()
         assert d["function_name"] == "helper"
         assert "class_name" not in d
+
+    def test_as_dict_with_section_title(self):
+        c = Chunk(
+            chunk_id="RULES.md:Overview:0",
+            source="RULES.md",
+            text="Some rules text",
+            embedding=None,
+            source_type="rules",
+            section_title="Overview",
+        )
+        d = c.as_dict()
+        assert d["section_title"] == "Overview"
+        assert "card_id" not in d
+
+    def test_as_dict_with_card_id(self):
+        c = Chunk(
+            chunk_id="cards.json:BT1-001",
+            source="cards.json",
+            text='{"name": "Agumon"}',
+            embedding=None,
+            source_type="card_metadata",
+            card_id="BT1-001",
+        )
+        d = c.as_dict()
+        assert d["card_id"] == "BT1-001"
+        assert "section_title" not in d
 
 
 # ---------------------------------------------------------------------------
@@ -153,6 +184,35 @@ class TestChunkPythonByAst:
         assert ("run", "Engine") in names
         assert ("stop", "Engine") in names
 
+    def test_decorated_function_includes_decorator(self):
+        source = textwrap.dedent("""\
+            class MyClass:
+                @property
+                def value(self):
+                    return self._value
+
+                @staticmethod
+                def create():
+                    return MyClass()
+        """)
+        chunks = chunk_python_by_ast(source, "digimon_gym/engine/game.py")
+        assert len(chunks) == 2
+        value_chunk = [c for c in chunks if c["function_name"] == "value"][0]
+        assert "@property" in value_chunk["text"]
+        create_chunk = [c for c in chunks if c["function_name"] == "create"][0]
+        assert "@staticmethod" in create_chunk["text"]
+
+    def test_decorated_top_level_function(self):
+        source = textwrap.dedent("""\
+            @some_decorator
+            def my_func():
+                pass
+        """)
+        chunks = chunk_python_by_ast(source, "digimon_gym/engine/game.py")
+        assert len(chunks) == 1
+        assert "@some_decorator" in chunks[0]["text"]
+        assert "def my_func" in chunks[0]["text"]
+
 
 # ---------------------------------------------------------------------------
 # chunk_markdown_by_section tests
@@ -209,6 +269,30 @@ class TestChunkMarkdownBySection:
         # Should produce one chunk with empty title
         assert len(chunks) == 1
         assert chunks[0]["section_title"] == ""
+
+
+# ---------------------------------------------------------------------------
+# _is_cards_json tests
+# ---------------------------------------------------------------------------
+
+
+class TestIsCardsJson:
+    def test_correct_path(self):
+        p = Path("some/root/digimon_gym/engine/data/cards.json")
+        assert _is_cards_json(p) is True
+
+    def test_wrong_filename(self):
+        p = Path("digimon_gym/engine/data/other.json")
+        assert _is_cards_json(p) is False
+
+    def test_cards_json_in_wrong_location(self):
+        """cards.json that is NOT under digimon_gym/engine/data/ should not match."""
+        p = Path("some/other/cards.json")
+        assert _is_cards_json(p) is False
+
+    def test_windows_backslash(self):
+        p = Path("C:\\repo\\digimon_gym\\engine\\data\\cards.json")
+        assert _is_cards_json(p) is True
 
 
 # ---------------------------------------------------------------------------
@@ -293,7 +377,7 @@ class TestBuildLocalIndex:
         """Build an index from minimal synthetic sources and verify v2 format."""
         from digimon_gym.ai.retrieval import build_local_index
 
-        # Create a small Python file
+        # Create a small Python file under the engine path
         engine_dir = tmp_path / "digimon_gym" / "engine"
         engine_dir.mkdir(parents=True)
         py_file = engine_dir / "sample.py"
@@ -303,8 +387,10 @@ class TestBuildLocalIndex:
         md_file = tmp_path / "RULES.md"
         md_file.write_text("## Overview\n\nSome rules.\n", encoding="utf-8")
 
-        # Create a small cards.json
-        cards_file = tmp_path / "cards.json"
+        # Create a small cards.json at the correct path
+        data_dir = tmp_path / "digimon_gym" / "engine" / "data"
+        data_dir.mkdir(parents=True, exist_ok=True)
+        cards_file = data_dir / "cards.json"
         cards_file.write_text(
             json.dumps({"C-001": {"card_id": "C-001", "name": "TestCard"}}),
             encoding="utf-8",
@@ -329,14 +415,46 @@ class TestBuildLocalIndex:
         py_chunks = [c for c in result["chunks"] if c["source_type"] == "engine_api"]
         assert any(c.get("function_name") == "decode" for c in py_chunks)
 
-        # Verify card chunk has correct card_id in chunk_id
+        # Verify card chunk has card_id in both chunk_id and as a field
         card_chunks = [c for c in result["chunks"] if c["source_type"] == "card_metadata"]
         assert any("C-001" in c["chunk_id"] for c in card_chunks)
+        assert any(c.get("card_id") == "C-001" for c in card_chunks)
+
+        # Verify markdown chunk has section_title
+        md_chunks = [c for c in result["chunks"] if c["source_type"] == "rules"]
+        assert any(c.get("section_title") == "Overview" for c in md_chunks)
+
+        # Verify markdown chunk_ids include index for uniqueness
+        md_chunk_ids = [c["chunk_id"] for c in md_chunks]
+        for cid in md_chunk_ids:
+            # Format is "RULES.md:Overview:0" or "RULES.md:0"
+            parts = cid.split(":")
+            assert len(parts) >= 2
 
         # Verify file was written
         assert output.exists()
         written = json.loads(output.read_text(encoding="utf-8"))
         assert written["version"] == 2
+
+    def test_duplicate_section_headers_unique_ids(self, tmp_path: Path):
+        """Two sections with the same ## header should get distinct chunk_ids."""
+        from digimon_gym.ai.retrieval import build_local_index
+
+        md_file = tmp_path / "SPEC.md"
+        md_file.write_text(
+            "## Notes\n\nFirst notes.\n\n## Notes\n\nSecond notes.\n",
+            encoding="utf-8",
+        )
+
+        output = tmp_path / "index.json"
+        result = build_local_index(
+            output_path=output,
+            source_paths=[md_file],
+        )
+
+        chunk_ids = [c["chunk_id"] for c in result["chunks"]]
+        # All chunk_ids must be unique
+        assert len(chunk_ids) == len(set(chunk_ids)), f"Duplicate chunk_ids: {chunk_ids}"
 
 
 # ---------------------------------------------------------------------------
@@ -370,6 +488,8 @@ class TestLocalRAGIndexLoad:
         assert idx.chunks[0]["source_type"] == "rules"
         assert idx.chunks[0]["function_name"] is None
         assert idx.chunks[0]["class_name"] is None
+        assert idx.chunks[0]["section_title"] is None
+        assert idx.chunks[0]["card_id"] is None
 
     def test_load_v2_preserves_fields(self, tmp_path: Path):
         """Loading a v2 index should preserve all new fields."""

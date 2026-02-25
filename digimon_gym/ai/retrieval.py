@@ -54,6 +54,8 @@ class Chunk:
     source_type: str = "rules"
     function_name: str | None = None
     class_name: str | None = None
+    section_title: str | None = None
+    card_id: str | None = None
 
     def as_dict(self) -> dict:
         d = {
@@ -67,6 +69,10 @@ class Chunk:
             d["function_name"] = self.function_name
         if self.class_name is not None:
             d["class_name"] = self.class_name
+        if self.section_title is not None:
+            d["section_title"] = self.section_title
+        if self.card_id is not None:
+            d["card_id"] = self.card_id
         return d
 
 
@@ -111,9 +117,17 @@ def _infer_python_source_type(file_path: str) -> str:
 
 
 def _get_source_segment(source_text: str, node: ast.AST) -> str:
-    """Extract source text for an AST node using line numbers."""
+    """Extract source text for an AST node using line numbers.
+
+    When the node has decorators, start from the first decorator line
+    so that ``@property``, ``@staticmethod``, etc. are included.
+    """
     lines = source_text.splitlines(keepends=True)
-    start = node.lineno - 1  # 0-indexed
+    # Use decorator start line when present
+    if hasattr(node, "decorator_list") and node.decorator_list:
+        start = node.decorator_list[0].lineno - 1  # 0-indexed
+    else:
+        start = node.lineno - 1
     end = node.end_lineno if node.end_lineno is not None else start + 1
     return "".join(lines[start:end])
 
@@ -359,8 +373,9 @@ def _is_transpiler_python(path: Path) -> bool:
 
 
 def _is_cards_json(path: Path) -> bool:
-    """Check if a file is cards.json."""
-    return path.name == "cards.json"
+    """Check if a file is specifically digimon_gym/engine/data/cards.json."""
+    normalized = str(path).replace("\\", "/")
+    return normalized.endswith("digimon_gym/engine/data/cards.json")
 
 
 def build_local_index(
@@ -410,7 +425,7 @@ def build_local_index(
             for idx, cd in enumerate(raw_chunks):
                 section = cd.get("section_title", "")
                 if section:
-                    chunk_id = f"{source_file.name}:{section}"
+                    chunk_id = f"{source_file.name}:{section}:{idx}"
                 else:
                     chunk_id = f"{source_file.name}:{idx}"
                 chunk_records.append(
@@ -420,6 +435,7 @@ def build_local_index(
                         text=cd["text"],
                         embedding=None,
                         source_type=cd["source_type"],
+                        section_title=section or None,
                     )
                 )
                 texts_for_embeddings.append(cd["text"])
@@ -437,6 +453,7 @@ def build_local_index(
                         text=cd["text"],
                         embedding=None,
                         source_type=cd["source_type"],
+                        card_id=card_id,
                     )
                 )
                 texts_for_embeddings.append(cd["text"])
@@ -501,15 +518,16 @@ class LocalRAGIndex:
             self._has_embeddings = False
             return
         data = json.loads(self.path.read_text(encoding="utf-8"))
-        version = data.get("version", 1)
         self.chunks = data.get("chunks", [])
         # Backward compatibility: v1 chunks lack source_type; default to "rules"
         for chunk in self.chunks:
             if "source_type" not in chunk:
                 chunk["source_type"] = "rules"
-            # Ensure function_name and class_name exist for uniform access
+            # Ensure optional fields exist for uniform access
             chunk.setdefault("function_name", None)
             chunk.setdefault("class_name", None)
+            chunk.setdefault("section_title", None)
+            chunk.setdefault("card_id", None)
         self._has_embeddings = any(chunk.get("embedding") for chunk in self.chunks)
         self.loaded = True
 
