@@ -679,6 +679,7 @@ class Agent(Base):
     weights_path = Column(String, nullable=False, default="")
     deck_json = Column(Text, nullable=False, default="[]")
     deck_source = Column(String, nullable=True)
+    deck_pool_id = Column(String, ForeignKey("deck_pools.id", ondelete="SET NULL"), nullable=True)
     total_games = Column(Integer, nullable=False, default=0)
     total_wins = Column(Integer, nullable=False, default=0)
     total_losses = Column(Integer, nullable=False, default=0)
@@ -690,6 +691,7 @@ class Agent(Base):
     updated_at = Column(DateTime(timezone=True), default=_utcnow, onupdate=_utcnow, nullable=False)
 
     owner = relationship("User")
+    deck_pool = relationship("DeckPool")
 
 
 class Gauntlet(Base):
@@ -796,6 +798,7 @@ class GauntletParticipant(Base):
     archetype_name = Column(String, nullable=False)
     deck_json = Column(Text, nullable=False, default="[]")
     deck_source = Column(String, nullable=True)
+    deck_pool_id = Column(String, ForeignKey("deck_pools.id", ondelete="SET NULL"), nullable=True)
     meta_share = Column(Float, nullable=False, default=0.0)
     threat_index = Column(Float, nullable=False, default=0.0)
     tournament_win_rate = Column(Float, nullable=True)
@@ -804,6 +807,7 @@ class GauntletParticipant(Base):
 
     gauntlet = relationship("Gauntlet", back_populates="participants")
     agent = relationship("Agent")
+    deck_pool = relationship("DeckPool")
 
 
 class MatchupResult(Base):
@@ -829,6 +833,41 @@ class MatchupResult(Base):
     agent_a = relationship("Agent", foreign_keys=[agent_a_id])
     agent_b = relationship("Agent", foreign_keys=[agent_b_id])
     job = relationship("TrainingJob")
+
+
+# ── Deck Pools ─────────────────────────────────────────────────────────
+
+class DeckPool(Base):
+    __tablename__ = "deck_pools"
+    __table_args__ = (
+        CheckConstraint(
+            "generation_mode IN ('eager', 'hybrid')",
+            name="ck_deck_pools_generation_mode",
+        ),
+        Index("idx_deck_pools_archetype", "archetype"),
+        Index("idx_deck_pools_owner_id", "owner_id"),
+        Index("idx_deck_pools_created_at", "created_at"),
+    )
+
+    id = Column(String, primary_key=True, default=_new_uuid)
+    name = Column(String, nullable=False)
+    archetype = Column(String, nullable=False)
+    base_deck_json = Column(Text, nullable=False, default="[]")
+    egg_deck_json = Column(Text, nullable=False, default="[]")
+    vary_eggs = Column(Integer, nullable=False, default=0)
+    core_overrides_json = Column(Text, nullable=False, default="{}")
+    side_cards_json = Column(Text, nullable=False, default="[]")
+    generation_mode = Column(String, nullable=False, default="eager")
+    target_variant_count = Column(Integer, nullable=False, default=4)
+    seed = Column(Integer, nullable=True)
+    variants_json = Column(Text, nullable=False, default="[]")
+    variant_count = Column(Integer, nullable=False, default=0)
+    hybrid_max_dynamic = Column(Integer, nullable=False, default=10)
+    owner_id = Column(String, ForeignKey("users.id", ondelete="SET NULL"), nullable=True)
+    created_at = Column(DateTime(timezone=True), default=_utcnow, nullable=False)
+    updated_at = Column(DateTime(timezone=True), default=_utcnow, onupdate=_utcnow, nullable=False)
+
+    owner = relationship("User")
 
 
 class RefreshToken(Base):

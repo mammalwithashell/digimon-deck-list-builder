@@ -14,6 +14,7 @@ import { AdminPromotionsPage } from '@/pages/AdminPromotionsPage';
 import { BarracksPage } from '@/pages/BarracksPage';
 import { ArenaPage } from '@/pages/ArenaPage';
 import { GauntletPage } from '@/pages/GauntletPage';
+import { DeckPoolPage } from '@/pages/DeckPoolPage';
 import { useAuthStore } from '@/stores/authStore';
 
 export function App() {
@@ -42,6 +43,8 @@ export function App() {
             <Route path="/admin/arena" element={<ArenaPage />} />
             <Route path="/admin/gauntlet" element={<GauntletPage />} />
             <Route path="/admin/gauntlet/:id" element={<GauntletPage />} />
+            <Route path="/admin/deck-pools" element={<DeckPoolPage />} />
+            <Route path="/admin/deck-pools/:id" element={<DeckPoolPage />} />
           </Route>
         </Route>
       </Routes>

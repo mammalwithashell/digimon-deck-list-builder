@@ -5,12 +5,14 @@ import {
   createGauntlet,
   startGauntlet,
   cancelGauntlet,
+  getDeckPools,
 } from '@/api/trainingApi';
 import type {
   GauntletItem,
   GauntletDetailItem,
   ArchetypeInfo,
   GauntletParticipantItem,
+  DeckPoolItem,
 } from '@/api/trainingApi';
 
 // ── Types ──────────────────────────────────────────────────────────
@@ -22,6 +24,7 @@ interface DeckSlot {
   threatIndex: number;
   deckSource: string;
   deck: string[];
+  deckPoolId?: string | null;
 }
 
 type WizardStep = 1 | 2;
@@ -112,6 +115,12 @@ function CreateWizardModal({
   const [importText, setImportText] = useState('');
   const [creating, setCreating] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [deckPools, setDeckPools] = useState<DeckPoolItem[]>([]);
+
+  // Fetch available deck pools on mount
+  useEffect(() => {
+    void getDeckPools().then(setDeckPools).catch(() => {});
+  }, []);
 
   // Sort archetypes by threat_index descending for auto-suggestions
   const sortedArchetypes = [...archetypes].sort((a, b) => b.threat_index - a.threat_index);
@@ -157,6 +166,12 @@ function CreateWizardModal({
     }));
   };
 
+  const updateSlotDeckPool = (index: number, poolId: string | null) => {
+    setSlots(prev => prev.map((slot, i) =>
+      i === index ? { ...slot, deckPoolId: poolId } : slot
+    ));
+  };
+
   const finishImport = (slotIndex: number) => {
     const cardIds = importText
       .split(/[\n,]+/)
@@ -192,6 +207,7 @@ function CreateWizardModal({
           archetype_name: slot.archetypeName,
           deck: slot.deck,
           deck_source: slot.deckSource,
+          deck_pool_id: slot.deckPoolId ?? undefined,
           role: slot.role,
           meta_share: slot.metaShare,
           threat_index: slot.threatIndex,
@@ -327,7 +343,9 @@ function CreateWizardModal({
                       slot={slot}
                       index={index}
                       archetypes={archetypes}
+                      deckPools={deckPools}
                       onUpdateArchetype={updateSlotArchetype}
+                      onUpdateDeckPool={updateSlotDeckPool}
                       onRemove={removeSlot}
                       isImporting={importingSlot === index}
                       onStartImport={() => setImportingSlot(index)}
@@ -355,7 +373,9 @@ function CreateWizardModal({
                       slot={slot}
                       index={index}
                       archetypes={archetypes}
+                      deckPools={deckPools}
                       onUpdateArchetype={updateSlotArchetype}
+                      onUpdateDeckPool={updateSlotDeckPool}
                       onRemove={removeSlot}
                       isImporting={importingSlot === index}
                       onStartImport={() => setImportingSlot(index)}
@@ -445,7 +465,9 @@ function SlotCard({
   slot,
   index,
   archetypes,
+  deckPools,
   onUpdateArchetype,
+  onUpdateDeckPool,
   onRemove,
   isImporting,
   onStartImport,
@@ -457,7 +479,9 @@ function SlotCard({
   slot: DeckSlot;
   index: number;
   archetypes: ArchetypeInfo[];
+  deckPools: DeckPoolItem[];
   onUpdateArchetype: (index: number, value: string) => void;
+  onUpdateDeckPool: (index: number, poolId: string | null) => void;
   onRemove: (index: number) => void;
   isImporting: boolean;
   onStartImport: () => void;
@@ -469,7 +493,13 @@ function SlotCard({
   const sourceLabel =
     slot.deckSource === 'library' ? 'Library'
       : slot.deckSource === 'import' ? 'Imported'
-        : 'Custom';
+        : slot.deckPoolId ? 'Pool'
+          : 'Custom';
+
+  // Filter pools matching the slot archetype (or show all if no archetype selected)
+  const matchingPools = slot.archetypeName
+    ? deckPools.filter(p => p.archetype === slot.archetypeName)
+    : deckPools;
 
   return (
     <div className="border border-gray-700 rounded p-3 bg-gray-800 space-y-2">
@@ -508,6 +538,29 @@ function SlotCard({
           Remove
         </button>
       </div>
+      {/* Deck Pool selector */}
+      {deckPools.length > 0 && (
+        <div className="flex items-center gap-2">
+          <label className="text-xs text-gray-500 whitespace-nowrap">Deck Pool:</label>
+          <select
+            value={slot.deckPoolId ?? ''}
+            onChange={e => onUpdateDeckPool(index, e.target.value || null)}
+            className="flex-1 bg-gray-900 border border-gray-700 rounded px-2 py-1 text-xs text-white"
+          >
+            <option value="">None</option>
+            {(matchingPools.length > 0 ? matchingPools : deckPools).map(pool => (
+              <option key={pool.id} value={pool.id}>
+                {pool.name} ({pool.variant_count} variants)
+              </option>
+            ))}
+          </select>
+          {slot.deckPoolId && (
+            <span className="inline-block px-1.5 py-0.5 rounded bg-purple-900/40 text-[10px] text-purple-300">
+              pool
+            </span>
+          )}
+        </div>
+      )}
       {slot.deck.length > 0 && (
         <div className="text-xs text-gray-500">
           {slot.deck.length} card{slot.deck.length !== 1 ? 's' : ''} loaded

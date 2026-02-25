@@ -179,7 +179,7 @@ class TestConcurrentCapacity:
 
         original_run_heuristic = worker._run_heuristic_training
 
-        def slow_heuristic(job_id: str) -> dict:
+        def slow_heuristic(job_id: str, config: dict = None) -> dict:
             nonlocal active_count, max_concurrent_observed
             # We need to track concurrency. Since this runs in a thread,
             # we use a simple integer counter (GIL protects simple ops).

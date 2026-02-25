@@ -12,7 +12,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from digimon_gym.db.database import async_session
 from digimon_gym.db.models import (
-    Agent, Gauntlet, GauntletParticipant, MatchupResult, TrainingJob,
+    Agent, DeckPool, Gauntlet, GauntletParticipant, MatchupResult, TrainingJob,
 )
 
 logger = logging.getLogger(__name__)
@@ -111,6 +111,36 @@ class GauntletOrchestrator:
 
             await db.commit()
 
+    async def _load_deck_pool_config(
+        self, db: AsyncSession, participant: GauntletParticipant
+    ) -> dict:
+        """Load DeckPool data for a participant and return config dict entries.
+
+        Returns an empty dict when the participant has no deck_pool_id, so the
+        result can always be spread into the job config safely.
+        """
+        if not participant.deck_pool_id:
+            return {}
+
+        result = await db.execute(
+            select(DeckPool).where(DeckPool.id == participant.deck_pool_id)
+        )
+        pool = result.scalar_one_or_none()
+        if pool is None:
+            logger.warning(
+                "DeckPool %s referenced by participant %s not found; skipping",
+                participant.deck_pool_id,
+                participant.id,
+            )
+            return {}
+
+        return {
+            "deck_pool_variants": json.loads(pool.variants_json) if pool.variants_json else [],
+            "deck_pool_mode": pool.generation_mode,
+            "deck_pool_seed": pool.seed,
+            "deck_pool_hybrid_max": pool.hybrid_max_dynamic,
+        }
+
     async def _schedule_stage1_jobs(self, db: AsyncSession, gauntlet: Gauntlet) -> None:
         """For each participant: create Agent + TrainingJob(train_vs_greedy)."""
         result = await db.execute(
@@ -141,6 +171,13 @@ class GauntletOrchestrator:
 
             # Create training job
             total_timesteps = gauntlet.stage1_games * STEPS_PER_GAME_ESTIMATE
+            job_config = {**config.get("training_params", {})}
+
+            # Merge deck pool config when participant has a deck_pool_id
+            deck_pool_config = await self._load_deck_pool_config(db, p)
+            if deck_pool_config:
+                job_config.update(deck_pool_config)
+
             job = TrainingJob(
                 job_type="train_vs_greedy",
                 status="queued",
@@ -150,7 +187,7 @@ class GauntletOrchestrator:
                 gauntlet_stage=1,
                 total_timesteps=total_timesteps,
                 total_games=gauntlet.stage1_games,
-                config_json=json.dumps(config.get("training_params", {})),
+                config_json=json.dumps(job_config),
                 created_by=gauntlet.created_by,
             )
             db.add(job)
@@ -209,6 +246,11 @@ class GauntletOrchestrator:
                     "opponent_pool": core_agents,
                     **config.get("training_params", {}),
                 }
+
+            # Merge deck pool config when participant has a deck_pool_id
+            deck_pool_config = await self._load_deck_pool_config(db, p)
+            if deck_pool_config:
+                job_config.update(deck_pool_config)
 
             job = TrainingJob(
                 job_type="train_vs_agent",
