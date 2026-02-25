@@ -116,6 +116,7 @@ class TrainingJobWorker:
             await db.commit()
             job_id = job.id
             job_type = job.job_type
+            job_config = json.loads(job.config_json) if job.config_json else {}
 
         logger.info("Claimed training job %s (type=%s)", job_id, job_type)
 
@@ -125,15 +126,15 @@ class TrainingJobWorker:
         try:
             if job_type in ("train_vs_greedy", "train_vs_random"):
                 result_data = await asyncio.to_thread(
-                    self._run_heuristic_training, job_id
+                    self._run_heuristic_training, job_id, job_config
                 )
             elif job_type == "train_vs_agent":
                 result_data = await asyncio.to_thread(
-                    self._run_agent_training, job_id
+                    self._run_agent_training, job_id, job_config
                 )
             elif job_type == "evaluate":
                 result_data = await asyncio.to_thread(
-                    self._run_evaluation, job_id
+                    self._run_evaluation, job_id, job_config
                 )
             else:
                 result_data = {"error": f"Unknown job type: {job_type}"}
@@ -222,24 +223,65 @@ class TrainingJobWorker:
         except Exception:
             logger.exception("Gauntlet hook failed for job %s", job.id)
 
+    # ── Deck pool config extraction ─────────────────────────────────
+
+    @staticmethod
+    def _extract_deck_pool_params(config: dict) -> dict:
+        """Extract deck pool parameters from job config for ``make_env()``.
+
+        Returns a dict of keyword arguments that can be spread into
+        ``make_env()`` when deck pool keys are present.  Returns an empty
+        dict when no deck pool data exists in *config*.
+        """
+        variants = config.get("deck_pool_variants")
+        if not variants:
+            return {}
+        return {
+            "deck_pool_variants": variants,
+            "deck_pool_mode": config.get("deck_pool_mode", "eager"),
+            "deck_pool_seed": config.get("deck_pool_seed"),
+            "deck_pool_hybrid_max": config.get("deck_pool_hybrid_max", 10),
+        }
+
     # ── Training dispatch (placeholders) ─────────────────────────────
 
-    def _run_heuristic_training(self, job_id: str) -> dict:
+    def _run_heuristic_training(self, job_id: str, config: dict) -> dict:
         """Train agent vs greedy/random heuristic. Placeholder for now."""
         # TODO: Reuse pilot_training.train() with agent's deck and weights
-        logger.info("Would run heuristic training for job %s", job_id)
+        deck_pool_kwargs = self._extract_deck_pool_params(config)
+        logger.info(
+            "Would run heuristic training for job %s (deck_pool=%s)",
+            job_id,
+            bool(deck_pool_kwargs),
+        )
+        # When implemented, pass deck_pool_kwargs into make_env():
+        #   env = make_env(..., **deck_pool_kwargs)
         return {"status": "completed", "note": "placeholder"}
 
-    def _run_agent_training(self, job_id: str) -> dict:
+    def _run_agent_training(self, job_id: str, config: dict) -> dict:
         """Train agent vs another agent. Placeholder for now."""
         # TODO: Set up two-agent training loop
-        logger.info("Would run agent-vs-agent training for job %s", job_id)
+        deck_pool_kwargs = self._extract_deck_pool_params(config)
+        logger.info(
+            "Would run agent-vs-agent training for job %s (deck_pool=%s)",
+            job_id,
+            bool(deck_pool_kwargs),
+        )
+        # When implemented, pass deck_pool_kwargs into make_env():
+        #   env = make_env(..., **deck_pool_kwargs)
         return {"status": "completed", "note": "placeholder"}
 
-    def _run_evaluation(self, job_id: str) -> dict:
+    def _run_evaluation(self, job_id: str, config: dict) -> dict:
         """Evaluate two agents head-to-head. Placeholder for now."""
         # TODO: Run N games and return win/loss/draw counts
-        logger.info("Would run evaluation for job %s", job_id)
+        deck_pool_kwargs = self._extract_deck_pool_params(config)
+        logger.info(
+            "Would run evaluation for job %s (deck_pool=%s)",
+            job_id,
+            bool(deck_pool_kwargs),
+        )
+        # When implemented, pass deck_pool_kwargs into make_env():
+        #   env = make_env(..., **deck_pool_kwargs)
         return {"status": "completed", "note": "placeholder"}
 
 
