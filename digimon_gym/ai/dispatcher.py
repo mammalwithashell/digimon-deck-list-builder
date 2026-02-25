@@ -373,6 +373,18 @@ class TaskDispatcher:
             schema_model=ScriptAutofixOutput,
             model_name=model_name,
         )
+        all_refs: list[dict[str, Any]] = list(context)
+        if pinned_chunks:
+            all_refs.extend(
+                {
+                    "chunk_id": c.get("function_name", ""),
+                    "source": c.get("source", ""),
+                    "text": c.get("text", ""),
+                    "pinned": True,
+                }
+                for c in pinned_chunks
+            )
+
         return DispatchOutcome(
             model_name=run.model_name,
             result=run.output,
@@ -383,7 +395,7 @@ class TaskDispatcher:
                 "scope_profile": scope_profile,
                 "allowed_roots": allowed_roots,
             },
-            retrieval_refs=context,
+            retrieval_refs=all_refs,
             input_tokens=run.input_tokens,
             output_tokens=run.output_tokens,
             cost_actual=self._cost_from_usage(run.model_name, run.input_tokens, run.output_tokens),

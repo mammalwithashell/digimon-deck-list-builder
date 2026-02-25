@@ -691,6 +691,7 @@ class LocalRAGIndex:
                 "chunk_id": chunk.get("chunk_id"),
                 "source": chunk.get("source"),
                 "source_type": chunk.get("source_type", "rules"),
+                "function_name": chunk.get("function_name"),
                 "text": chunk.get("text"),
                 "score": float(score),
             }
