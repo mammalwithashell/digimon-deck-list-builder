@@ -740,6 +740,7 @@ class TrainingJob(Base):
         Index("idx_training_jobs_gauntlet_id", "gauntlet_id"),
         Index("idx_training_jobs_agent_id", "agent_id"),
         Index("idx_training_jobs_created_at", "created_at"),
+        Index("idx_training_jobs_status_created", "status", "created_at"),
     )
 
     id = Column(String, primary_key=True, default=_new_uuid)
@@ -761,6 +762,9 @@ class TrainingJob(Base):
     result_json = Column(Text, nullable=True)
     error_text = Column(Text, nullable=True)
     created_by = Column(String, ForeignKey("users.id", ondelete="SET NULL"), nullable=True)
+    worker_id = Column(String, nullable=True, index=True)
+    claimed_at = Column(DateTime(timezone=True), nullable=True)
+    device = Column(String, nullable=True)
     started_at = Column(DateTime(timezone=True), nullable=True)
     completed_at = Column(DateTime(timezone=True), nullable=True)
     created_at = Column(DateTime(timezone=True), default=_utcnow, nullable=False)
