@@ -12,6 +12,8 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Iterable, List
 
+from rank_bm25 import BM25Okapi
+
 from digimon_gym.env import load_project_env
 
 load_project_env()
@@ -510,12 +512,20 @@ class LocalRAGIndex:
         self.loaded = False
         self.chunks: list[dict] = []
         self._has_embeddings = False
+        self._bm25: BM25Okapi | None = None
+
+    @staticmethod
+    def _tokenize_for_bm25(text: str) -> list[str]:
+        """Tokenize text for BM25: lowercase, split on whitespace/punctuation,
+        keep tokens of 2+ chars. Returns a list (preserving frequency)."""
+        return re.findall(r"[a-z0-9_]{2,}", text.lower())
 
     def load(self) -> None:
         if not self.path.exists():
             self.loaded = False
             self.chunks = []
             self._has_embeddings = False
+            self._bm25 = None
             return
         data = json.loads(self.path.read_text(encoding="utf-8"))
         self.chunks = data.get("chunks", [])
@@ -529,6 +539,14 @@ class LocalRAGIndex:
             chunk.setdefault("section_title", None)
             chunk.setdefault("card_id", None)
         self._has_embeddings = any(chunk.get("embedding") for chunk in self.chunks)
+
+        # Build BM25 index over all chunks
+        if self.chunks:
+            tokenized = [self._tokenize_for_bm25(c.get("text", "")) for c in self.chunks]
+            self._bm25 = BM25Okapi(tokenized)
+        else:
+            self._bm25 = None
+
         self.loaded = True
 
     def ensure_loaded(self) -> None:
@@ -550,6 +568,94 @@ class LocalRAGIndex:
         except Exception:
             return None
 
+    def _bm25_rank(
+        self,
+        query: str,
+        candidates: list[dict],
+        candidate_indices: list[int],
+    ) -> list[tuple[int, dict]]:
+        """Return (rank_position, chunk) tuples sorted by BM25 score descending.
+
+        The BM25 index is built over ALL chunks. When source_types filtering is
+        active we only look at the scores for *candidate_indices*.
+        """
+        if self._bm25 is None or not candidates:
+            return []
+
+        query_tokens = self._tokenize_for_bm25(query)
+        if not query_tokens:
+            return []
+
+        all_scores = self._bm25.get_scores(query_tokens)
+
+        # Pair each candidate with its BM25 score from the full index
+        scored = [(all_scores[idx], chunk) for idx, chunk in zip(candidate_indices, candidates)]
+        scored.sort(key=lambda x: x[0], reverse=True)
+
+        # Convert to (rank_position, chunk) -- 1-based ranks
+        return [(rank + 1, chunk) for rank, (_score, chunk) in enumerate(scored)]
+
+    def _vector_rank(
+        self,
+        query: str,
+        candidates: list[dict],
+    ) -> list[tuple[int, dict]]:
+        """Return (rank_position, chunk) tuples sorted by cosine similarity descending.
+
+        If no query embedding is available, returns an empty list (BM25-only fallback).
+        """
+        query_embedding = self._embed_query(query)
+        if not query_embedding:
+            return []
+
+        scored = []
+        for chunk in candidates:
+            emb = chunk.get("embedding")
+            if not emb:
+                continue
+            sim = _cosine(query_embedding, emb)
+            scored.append((sim, chunk))
+
+        scored.sort(key=lambda x: x[0], reverse=True)
+
+        return [(rank + 1, chunk) for rank, (_sim, chunk) in enumerate(scored)]
+
+    @staticmethod
+    def _rrf_merge(
+        bm25_ranks: list[tuple[int, dict]],
+        vector_ranks: list[tuple[int, dict]],
+        k_param: int = 60,
+    ) -> list[tuple[float, dict]]:
+        """Reciprocal Rank Fusion of two ranked lists.
+
+        For each unique chunk: rrf_score = 1/(k_param + bm25_rank) + 1/(k_param + vector_rank).
+        If a chunk only appears in one list, only that term contributes.
+
+        Returns list of (rrf_score, chunk) tuples.
+        """
+        # Use chunk_id as the merge key; map to (rrf_score_so_far, chunk_ref)
+        merged: dict[str, tuple[float, dict]] = {}
+
+        for rank, chunk in bm25_ranks:
+            cid = chunk.get("chunk_id", id(chunk))
+            score = 1.0 / (k_param + rank)
+            if cid in merged:
+                prev_score, _ = merged[cid]
+                merged[cid] = (prev_score + score, chunk)
+            else:
+                merged[cid] = (score, chunk)
+
+        for rank, chunk in vector_ranks:
+            cid = chunk.get("chunk_id", id(chunk))
+            score = 1.0 / (k_param + rank)
+            if cid in merged:
+                prev_score, _ = merged[cid]
+                merged[cid] = (prev_score + score, chunk)
+            else:
+                merged[cid] = (score, chunk)
+
+        return [(score, chunk) for score, chunk in merged.values()]
+
     def retrieve(
         self,
         query: str,
@@ -560,52 +666,36 @@ class LocalRAGIndex:
         if not self.chunks or not query.strip():
             return []
 
-        # Apply source_types filter
-        if source_types is not None:
+        # Filter chunks by source_type if specified
+        if source_types:
             candidates = [c for c in self.chunks if c.get("source_type") in source_types]
+            candidate_indices = [i for i, c in enumerate(self.chunks) if c.get("source_type") in source_types]
         else:
             candidates = self.chunks
+            candidate_indices = list(range(len(self.chunks)))
 
-        query_embedding = self._embed_query(query)
-        if query_embedding:
-            scored = []
-            for chunk in candidates:
-                emb = chunk.get("embedding")
-                if not emb:
-                    continue
-                score = _cosine(query_embedding, emb)
-                scored.append((score, chunk))
-            scored.sort(key=lambda row: row[0], reverse=True)
-            return [
-                {
-                    "chunk_id": row[1].get("chunk_id"),
-                    "source": row[1].get("source"),
-                    "source_type": row[1].get("source_type", "rules"),
-                    "text": row[1].get("text"),
-                    "score": float(row[0]),
-                }
-                for row in scored[:k]
-            ]
+        if not candidates:
+            return []
 
-        query_tokens = _tokenize(query)
-        scored = []
-        for chunk in candidates:
-            tokens = _tokenize(chunk.get("text", ""))
-            if not tokens:
-                continue
-            overlap = len(query_tokens.intersection(tokens))
-            if overlap == 0:
-                continue
-            score = overlap / max(1, len(query_tokens))
-            scored.append((score, chunk))
-        scored.sort(key=lambda row: row[0], reverse=True)
+        # Stage 1a: BM25 scores
+        bm25_ranks = self._bm25_rank(query, candidates, candidate_indices)
+
+        # Stage 1b: Vector scores
+        vector_ranks = self._vector_rank(query, candidates)
+
+        # Reciprocal Rank Fusion
+        rrf_scores = self._rrf_merge(bm25_ranks, vector_ranks, k_param=60)
+
+        # Stage 2: Take top k
+        top_k = sorted(rrf_scores, key=lambda x: x[0], reverse=True)[:k]
+
         return [
             {
-                "chunk_id": row[1].get("chunk_id"),
-                "source": row[1].get("source"),
-                "source_type": row[1].get("source_type", "rules"),
-                "text": row[1].get("text"),
-                "score": float(row[0]),
+                "chunk_id": chunk.get("chunk_id"),
+                "source": chunk.get("source"),
+                "source_type": chunk.get("source_type", "rules"),
+                "text": chunk.get("text"),
+                "score": float(score),
             }
-            for row in scored[:k]
+            for score, chunk in top_k
         ]

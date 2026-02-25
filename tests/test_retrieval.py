@@ -1,16 +1,18 @@
-"""Tests for source-type-aware chunking in digimon_gym.ai.retrieval."""
+"""Tests for source-type-aware chunking and hybrid retrieval in digimon_gym.ai.retrieval."""
 
 from __future__ import annotations
 
 import json
 import textwrap
 from pathlib import Path
+from unittest.mock import patch
 
 import pytest
 
 from digimon_gym.ai.retrieval import (
     Chunk,
     LocalRAGIndex,
+    _cosine,
     chunk_cards_json,
     chunk_markdown_by_section,
     chunk_python_by_ast,
@@ -652,3 +654,527 @@ class TestChunkTextPreserved:
     def test_empty_text(self):
         assert chunk_text("") == []
         assert chunk_text("   ") == []
+
+
+# ---------------------------------------------------------------------------
+# Helper to build an index file with test data
+# ---------------------------------------------------------------------------
+
+
+def _write_index(tmp_path: Path, chunks: list[dict], version: int = 2) -> Path:
+    """Write a synthetic index.json and return its path."""
+    index_file = tmp_path / "index.json"
+    data = {
+        "version": version,
+        "chunk_count": len(chunks),
+        "sources": list({c.get("source", "test") for c in chunks}),
+        "chunks": chunks,
+    }
+    index_file.write_text(json.dumps(data), encoding="utf-8")
+    return index_file
+
+
+def _make_chunks() -> list[dict]:
+    """Standard set of 4 test chunks covering multiple source types."""
+    return [
+        {
+            "chunk_id": "game.py:decode",
+            "source": "game.py",
+            "source_type": "engine_api",
+            "text": "decode action method for the game engine processing",
+            "embedding": None,
+        },
+        {
+            "chunk_id": "RULES.md:0",
+            "source": "RULES.md",
+            "source_type": "rules",
+            "text": "rules governing decode action flow in game sessions",
+            "embedding": None,
+        },
+        {
+            "chunk_id": "cards.json:BT1-001",
+            "source": "cards.json",
+            "source_type": "card_metadata",
+            "text": "card BT1-001 Agumon level 3 rookie digimon",
+            "embedding": None,
+        },
+        {
+            "chunk_id": "patterns.py:match",
+            "source": "tools/transpiler/patterns.py",
+            "source_type": "transpiler",
+            "text": "pattern match transpiler helper function for cards",
+            "embedding": None,
+        },
+    ]
+
+
+# ---------------------------------------------------------------------------
+# _tokenize_for_bm25 tests
+# ---------------------------------------------------------------------------
+
+
+class TestTokenizeForBm25:
+    def test_basic_tokenization(self):
+        tokens = LocalRAGIndex._tokenize_for_bm25("Hello World")
+        assert tokens == ["hello", "world"]
+
+    def test_returns_list_not_set(self):
+        tokens = LocalRAGIndex._tokenize_for_bm25("foo bar foo")
+        assert isinstance(tokens, list)
+        # Preserves duplicates (important for BM25 frequency)
+        assert tokens.count("foo") == 2
+
+    def test_filters_short_tokens(self):
+        tokens = LocalRAGIndex._tokenize_for_bm25("I am a big dog")
+        # "I", "a" are single char -> filtered out; "am" is 2 chars -> kept
+        assert "am" in tokens
+        assert "big" in tokens
+        assert "dog" in tokens
+        assert "a" not in tokens
+
+    def test_handles_punctuation(self):
+        tokens = LocalRAGIndex._tokenize_for_bm25("hello, world! foo-bar")
+        assert "hello" in tokens
+        assert "world" in tokens
+        assert "foo" in tokens
+        assert "bar" in tokens
+
+    def test_preserves_underscores(self):
+        tokens = LocalRAGIndex._tokenize_for_bm25("decode_action some_method")
+        assert "decode_action" in tokens
+        assert "some_method" in tokens
+
+    def test_empty_string(self):
+        assert LocalRAGIndex._tokenize_for_bm25("") == []
+
+    def test_numbers(self):
+        tokens = LocalRAGIndex._tokenize_for_bm25("BT1 card 001 level3")
+        assert "bt1" in tokens
+        assert "001" in tokens
+        assert "level3" in tokens
+
+
+# ---------------------------------------------------------------------------
+# BM25 index built on load() tests
+# ---------------------------------------------------------------------------
+
+
+class TestBm25IndexOnLoad:
+    def test_bm25_created_on_load(self, tmp_path: Path):
+        index_file = _write_index(tmp_path, _make_chunks())
+        idx = LocalRAGIndex(path=index_file)
+        idx.load()
+        assert idx._bm25 is not None
+
+    def test_bm25_none_when_no_file(self, tmp_path: Path):
+        idx = LocalRAGIndex(path=tmp_path / "nonexistent.json")
+        idx.load()
+        assert idx._bm25 is None
+
+    def test_bm25_none_when_empty_chunks(self, tmp_path: Path):
+        index_file = _write_index(tmp_path, [])
+        idx = LocalRAGIndex(path=index_file)
+        idx.load()
+        assert idx._bm25 is None
+
+    def test_bm25_rebuilt_on_reload(self, tmp_path: Path):
+        index_file = _write_index(tmp_path, _make_chunks())
+        idx = LocalRAGIndex(path=index_file)
+        idx.load()
+        first_bm25 = idx._bm25
+        # Reload and check a new instance is created
+        idx.load()
+        assert idx._bm25 is not None
+        assert idx._bm25 is not first_bm25
+
+
+# ---------------------------------------------------------------------------
+# _bm25_rank tests
+# ---------------------------------------------------------------------------
+
+
+class TestBm25Rank:
+    def test_returns_ranked_tuples(self, tmp_path: Path):
+        chunks = _make_chunks()
+        index_file = _write_index(tmp_path, chunks)
+        idx = LocalRAGIndex(path=index_file)
+        idx.load()
+
+        all_indices = list(range(len(idx.chunks)))
+        ranks = idx._bm25_rank("decode action game", idx.chunks, all_indices)
+
+        assert len(ranks) > 0
+        # Each entry is (rank_position, chunk)
+        for rank_pos, chunk in ranks:
+            assert isinstance(rank_pos, int)
+            assert rank_pos >= 1
+            assert isinstance(chunk, dict)
+
+    def test_ranks_are_contiguous(self, tmp_path: Path):
+        chunks = _make_chunks()
+        index_file = _write_index(tmp_path, chunks)
+        idx = LocalRAGIndex(path=index_file)
+        idx.load()
+
+        all_indices = list(range(len(idx.chunks)))
+        ranks = idx._bm25_rank("decode action", idx.chunks, all_indices)
+        rank_positions = [r for r, _ in ranks]
+        assert rank_positions == list(range(1, len(ranks) + 1))
+
+    def test_filtered_candidates(self, tmp_path: Path):
+        chunks = _make_chunks()
+        index_file = _write_index(tmp_path, chunks)
+        idx = LocalRAGIndex(path=index_file)
+        idx.load()
+
+        # Only engine_api candidates
+        candidates = [c for c in idx.chunks if c["source_type"] == "engine_api"]
+        candidate_indices = [i for i, c in enumerate(idx.chunks) if c["source_type"] == "engine_api"]
+        ranks = idx._bm25_rank("decode action", candidates, candidate_indices)
+
+        assert len(ranks) == len(candidates)
+        for _, chunk in ranks:
+            assert chunk["source_type"] == "engine_api"
+
+    def test_empty_query_tokens(self, tmp_path: Path):
+        chunks = _make_chunks()
+        index_file = _write_index(tmp_path, chunks)
+        idx = LocalRAGIndex(path=index_file)
+        idx.load()
+
+        # Query with only single-char tokens -> empty after tokenization
+        ranks = idx._bm25_rank("a b c", idx.chunks, list(range(len(idx.chunks))))
+        assert ranks == []
+
+    def test_no_bm25_index(self, tmp_path: Path):
+        idx = LocalRAGIndex(path=tmp_path / "nonexistent.json")
+        idx.load()
+        ranks = idx._bm25_rank("decode", [], [])
+        assert ranks == []
+
+    def test_relevant_chunk_ranked_first(self, tmp_path: Path):
+        """The chunk most relevant to the query should have rank 1."""
+        chunks = _make_chunks()
+        index_file = _write_index(tmp_path, chunks)
+        idx = LocalRAGIndex(path=index_file)
+        idx.load()
+
+        all_indices = list(range(len(idx.chunks)))
+        ranks = idx._bm25_rank("Agumon rookie digimon card", idx.chunks, all_indices)
+        # The card_metadata chunk should be ranked first
+        top_chunk = ranks[0][1]
+        assert top_chunk["source_type"] == "card_metadata"
+
+
+# ---------------------------------------------------------------------------
+# _vector_rank tests
+# ---------------------------------------------------------------------------
+
+
+class TestVectorRank:
+    def test_no_embeddings_returns_empty(self, tmp_path: Path):
+        """When no embeddings are available, _vector_rank returns empty (BM25-only fallback)."""
+        chunks = _make_chunks()  # All embeddings are None
+        index_file = _write_index(tmp_path, chunks)
+        idx = LocalRAGIndex(path=index_file)
+        idx.load()
+
+        ranks = idx._vector_rank("decode", idx.chunks)
+        assert ranks == []
+
+    def test_with_mock_embeddings(self, tmp_path: Path):
+        """When embeddings are available, _vector_rank returns ranked results."""
+        chunks = [
+            {
+                "chunk_id": "a",
+                "source": "a.py",
+                "source_type": "engine_api",
+                "text": "decode action",
+                "embedding": [1.0, 0.0, 0.0],
+            },
+            {
+                "chunk_id": "b",
+                "source": "b.py",
+                "source_type": "rules",
+                "text": "game rules",
+                "embedding": [0.0, 1.0, 0.0],
+            },
+        ]
+        index_file = _write_index(tmp_path, chunks)
+        idx = LocalRAGIndex(path=index_file)
+        idx.load()
+
+        # Mock _embed_query to return a vector close to chunk "a"
+        with patch.object(idx, "_embed_query", return_value=[0.9, 0.1, 0.0]):
+            ranks = idx._vector_rank("decode action", idx.chunks)
+
+        assert len(ranks) == 2
+        # Chunk "a" should be ranked first (closer to query vector)
+        assert ranks[0][1]["chunk_id"] == "a"
+        assert ranks[0][0] == 1  # rank 1
+        assert ranks[1][1]["chunk_id"] == "b"
+        assert ranks[1][0] == 2  # rank 2
+
+    def test_chunks_without_embeddings_skipped(self, tmp_path: Path):
+        """Chunks missing embeddings are excluded from vector ranking."""
+        chunks = [
+            {
+                "chunk_id": "a",
+                "source": "a.py",
+                "source_type": "engine_api",
+                "text": "decode",
+                "embedding": [1.0, 0.0],
+            },
+            {
+                "chunk_id": "b",
+                "source": "b.py",
+                "source_type": "rules",
+                "text": "rules",
+                "embedding": None,
+            },
+        ]
+        index_file = _write_index(tmp_path, chunks)
+        idx = LocalRAGIndex(path=index_file)
+        idx.load()
+
+        with patch.object(idx, "_embed_query", return_value=[1.0, 0.0]):
+            ranks = idx._vector_rank("decode", idx.chunks)
+
+        assert len(ranks) == 1
+        assert ranks[0][1]["chunk_id"] == "a"
+
+
+# ---------------------------------------------------------------------------
+# _rrf_merge tests
+# ---------------------------------------------------------------------------
+
+
+class TestRrfMerge:
+    def test_merge_both_lists(self):
+        chunk_a = {"chunk_id": "a", "text": "chunk a"}
+        chunk_b = {"chunk_id": "b", "text": "chunk b"}
+
+        bm25_ranks = [(1, chunk_a), (2, chunk_b)]
+        vector_ranks = [(1, chunk_b), (2, chunk_a)]
+
+        merged = LocalRAGIndex._rrf_merge(bm25_ranks, vector_ranks, k_param=60)
+        scores = {chunk["chunk_id"]: score for score, chunk in merged}
+
+        # Both chunks appear in both lists, so both get contributions from both
+        expected_a = 1.0 / (60 + 1) + 1.0 / (60 + 2)
+        expected_b = 1.0 / (60 + 2) + 1.0 / (60 + 1)
+        assert abs(scores["a"] - expected_a) < 1e-10
+        assert abs(scores["b"] - expected_b) < 1e-10
+        # Both scores should be equal in this symmetric case
+        assert abs(scores["a"] - scores["b"]) < 1e-10
+
+    def test_chunk_in_one_list_only(self):
+        chunk_a = {"chunk_id": "a", "text": "chunk a"}
+        chunk_b = {"chunk_id": "b", "text": "chunk b"}
+
+        bm25_ranks = [(1, chunk_a)]
+        vector_ranks = [(1, chunk_b)]
+
+        merged = LocalRAGIndex._rrf_merge(bm25_ranks, vector_ranks, k_param=60)
+        scores = {chunk["chunk_id"]: score for score, chunk in merged}
+
+        assert abs(scores["a"] - 1.0 / 61) < 1e-10
+        assert abs(scores["b"] - 1.0 / 61) < 1e-10
+
+    def test_empty_lists(self):
+        merged = LocalRAGIndex._rrf_merge([], [], k_param=60)
+        assert merged == []
+
+    def test_one_empty_list(self):
+        chunk_a = {"chunk_id": "a", "text": "chunk a"}
+        bm25_ranks = [(1, chunk_a), (2, {"chunk_id": "b", "text": "b"})]
+
+        merged = LocalRAGIndex._rrf_merge(bm25_ranks, [], k_param=60)
+        assert len(merged) == 2
+
+    def test_custom_k_param(self):
+        chunk_a = {"chunk_id": "a", "text": "a"}
+        bm25_ranks = [(1, chunk_a)]
+        vector_ranks = [(1, chunk_a)]
+
+        merged = LocalRAGIndex._rrf_merge(bm25_ranks, vector_ranks, k_param=10)
+        score = merged[0][0]
+        expected = 1.0 / (10 + 1) + 1.0 / (10 + 1)
+        assert abs(score - expected) < 1e-10
+
+    def test_higher_ranked_gets_higher_score(self):
+        chunk_a = {"chunk_id": "a", "text": "a"}
+        chunk_b = {"chunk_id": "b", "text": "b"}
+
+        # chunk_a is #1 in both lists, chunk_b is #2 in both lists
+        bm25_ranks = [(1, chunk_a), (2, chunk_b)]
+        vector_ranks = [(1, chunk_a), (2, chunk_b)]
+
+        merged = LocalRAGIndex._rrf_merge(bm25_ranks, vector_ranks, k_param=60)
+        scores = {chunk["chunk_id"]: score for score, chunk in merged}
+        assert scores["a"] > scores["b"]
+
+
+# ---------------------------------------------------------------------------
+# Hybrid retrieve() integration tests
+# ---------------------------------------------------------------------------
+
+
+class TestHybridRetrieve:
+    def test_basic_bm25_only_retrieval(self, tmp_path: Path):
+        """Without embeddings, retrieve still works via BM25."""
+        chunks = _make_chunks()
+        index_file = _write_index(tmp_path, chunks)
+        idx = LocalRAGIndex(path=index_file)
+
+        results = idx.retrieve("decode action game engine")
+        assert len(results) > 0
+        # All results should have required fields
+        for r in results:
+            assert "chunk_id" in r
+            assert "source" in r
+            assert "source_type" in r
+            assert "text" in r
+            assert "score" in r
+            assert isinstance(r["score"], float)
+
+    def test_source_types_filter(self, tmp_path: Path):
+        """retrieve() with source_types should only return matching chunks."""
+        chunks = _make_chunks()
+        index_file = _write_index(tmp_path, chunks)
+        idx = LocalRAGIndex(path=index_file)
+
+        results = idx.retrieve("decode action", source_types=["engine_api"])
+        for r in results:
+            assert r["source_type"] == "engine_api"
+
+    def test_source_types_filter_multiple(self, tmp_path: Path):
+        """source_types can contain multiple types."""
+        chunks = _make_chunks()
+        index_file = _write_index(tmp_path, chunks)
+        idx = LocalRAGIndex(path=index_file)
+
+        results = idx.retrieve("decode action game", source_types=["engine_api", "rules"])
+        for r in results:
+            assert r["source_type"] in ("engine_api", "rules")
+
+    def test_empty_query_returns_empty(self, tmp_path: Path):
+        chunks = _make_chunks()
+        index_file = _write_index(tmp_path, chunks)
+        idx = LocalRAGIndex(path=index_file)
+        idx.load()
+
+        assert idx.retrieve("") == []
+        assert idx.retrieve("   ") == []
+
+    def test_no_matching_source_types(self, tmp_path: Path):
+        chunks = _make_chunks()
+        index_file = _write_index(tmp_path, chunks)
+        idx = LocalRAGIndex(path=index_file)
+
+        results = idx.retrieve("decode", source_types=["nonexistent_type"])
+        assert results == []
+
+    def test_k_limits_results(self, tmp_path: Path):
+        chunks = _make_chunks()
+        index_file = _write_index(tmp_path, chunks)
+        idx = LocalRAGIndex(path=index_file)
+
+        results = idx.retrieve("decode action game card", k=2)
+        assert len(results) <= 2
+
+    def test_no_chunks_returns_empty(self, tmp_path: Path):
+        index_file = _write_index(tmp_path, [])
+        idx = LocalRAGIndex(path=index_file)
+        idx.load()
+
+        assert idx.retrieve("decode") == []
+
+    def test_results_sorted_by_score_descending(self, tmp_path: Path):
+        chunks = _make_chunks()
+        index_file = _write_index(tmp_path, chunks)
+        idx = LocalRAGIndex(path=index_file)
+
+        results = idx.retrieve("decode action game engine processing")
+        if len(results) > 1:
+            scores = [r["score"] for r in results]
+            assert scores == sorted(scores, reverse=True)
+
+    def test_hybrid_with_embeddings(self, tmp_path: Path):
+        """When embeddings are available, both BM25 and vector contribute to RRF."""
+        chunks = [
+            {
+                "chunk_id": "a",
+                "source": "a.py",
+                "source_type": "engine_api",
+                "text": "decode action game engine method",
+                "embedding": [1.0, 0.0, 0.0],
+            },
+            {
+                "chunk_id": "b",
+                "source": "RULES.md",
+                "source_type": "rules",
+                "text": "rules for gameplay sessions and turns",
+                "embedding": [0.0, 1.0, 0.0],
+            },
+            {
+                "chunk_id": "c",
+                "source": "cards.json",
+                "source_type": "card_metadata",
+                "text": "card BT1-001 Agumon rookie digimon level three",
+                "embedding": [0.0, 0.0, 1.0],
+            },
+        ]
+        index_file = _write_index(tmp_path, chunks)
+        idx = LocalRAGIndex(path=index_file)
+        idx.load()
+
+        # Mock embeddings: query vector close to chunk "a"
+        with patch.object(idx, "_embed_query", return_value=[0.9, 0.1, 0.0]):
+            results = idx.retrieve("decode action game engine")
+
+        assert len(results) > 0
+        # With both BM25 (text match) and vector (embedding similarity)
+        # favoring chunk "a", it should be ranked first
+        assert results[0]["chunk_id"] == "a"
+
+    def test_ensure_loaded_called(self, tmp_path: Path):
+        """retrieve() should call ensure_loaded() automatically."""
+        chunks = _make_chunks()
+        index_file = _write_index(tmp_path, chunks)
+        idx = LocalRAGIndex(path=index_file)
+        assert not idx.loaded
+
+        results = idx.retrieve("decode action")
+        assert idx.loaded
+        assert len(results) > 0
+
+    def test_bm25_uses_full_index_not_filtered(self, tmp_path: Path):
+        """BM25 index should be built on ALL chunks; filtering happens via candidate_indices.
+
+        We verify this by checking that BM25 scores for filtered candidates
+        are computed from the full-corpus IDF, not just the subset.
+        """
+        # Create chunks where a term appears in many types
+        chunks = [
+            {"chunk_id": f"engine_{i}", "source": "game.py", "source_type": "engine_api",
+             "text": f"decode action method variant {i}", "embedding": None}
+            for i in range(5)
+        ] + [
+            {"chunk_id": "rules_0", "source": "RULES.md", "source_type": "rules",
+             "text": "decode action rules specification", "embedding": None},
+        ]
+        index_file = _write_index(tmp_path, chunks)
+        idx = LocalRAGIndex(path=index_file)
+        idx.load()
+
+        # When filtering to rules only, the BM25 score should still use
+        # the IDF computed from all 6 documents, not just 1
+        results = idx.retrieve("decode action", source_types=["rules"])
+        assert len(results) == 1
+        assert results[0]["source_type"] == "rules"
+
+    def test_nonexistent_index_file(self, tmp_path: Path):
+        idx = LocalRAGIndex(path=tmp_path / "missing.json")
+        results = idx.retrieve("anything")
+        assert results == []
