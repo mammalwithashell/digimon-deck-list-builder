@@ -48,3 +48,15 @@ class QATriageOutput(BaseModel):
     reproducibility: Literal["low", "medium", "high"]
     classification: Literal["engine", "script", "invalid_report", "unknown"]
     suggested_debugging_area: str
+
+
+class LLMTranspileOutput(BaseModel):
+    """Output from LLM-based retranspilation of a card script."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    script_content: str
+    effects_implemented: list[str]
+    effects_skipped: list[str]
+    engine_gaps: list[str]
+    reasoning: str
