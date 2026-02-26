@@ -31,11 +31,10 @@ def frozen_manifest_path() -> Path:
 
 
 def _sha256(path: Path) -> str:
-    h = hashlib.sha256()
-    with path.open("rb") as f:
-        for chunk in iter(lambda: f.read(1024 * 1024), b""):
-            h.update(chunk)
-    return h.hexdigest()
+    # Normalize CRLF -> LF so hashes match across platforms (consistent
+    # with check_frozen_integrity.py).
+    content = path.read_bytes().replace(b"\r\n", b"\n")
+    return hashlib.sha256(content).hexdigest()
 
 
 def _ensure_manifest_shape(raw: dict | None) -> dict:

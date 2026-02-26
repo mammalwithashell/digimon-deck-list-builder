@@ -22,9 +22,31 @@ class BT13_002(CardScript):
         effect0.dp_modifier = 1000
 
         def condition0(context: Dict[str, Any]) -> bool:
-            if card and card.permanent_of_this_card() is None:
+            if not card:
                 return False
-            return True
+
+            permanent = card.permanent_of_this_card()
+            if permanent is None:
+                return False
+
+            game = context.get("game")
+            if game is None:
+                return False
+
+            # [Opponent's Turn]
+            if getattr(game, "turn_player", None) == permanent.owner:
+                return False
+
+            # "while you have another Digimon in play"
+            owner = permanent.owner
+            digimon_count = 0
+            for p in getattr(owner, "battle_area", []) or []:
+                if getattr(p, "is_digimon", lambda: False)() and p is not permanent:
+                    digimon_count += 1
+                    if digimon_count >= 1:
+                        return True
+            return False
+
         effect0.set_can_use_condition(condition0)
         effects.append(effect0)
 
