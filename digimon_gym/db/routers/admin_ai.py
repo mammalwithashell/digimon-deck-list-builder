@@ -34,6 +34,7 @@ from digimon_gym.db.models import (
     AISetRun,
     AISetRunItem,
     AITask,
+    AITranspilerLearnRun,
     EngineBacklogItem,
     Issue,
     ScriptPromotionAudit,
@@ -56,6 +57,8 @@ from digimon_gym.db.schemas import (
     AITaskCreateRequest,
     AITaskResponse,
     AITaskRetryResponse,
+    AITranspilerLearnCreateRequest,
+    AITranspilerLearnResponse,
     ApproveSetIssuesRequest,
     ApproveSetIssuesResponse,
     EngineBacklogCreateRequest,
@@ -210,6 +213,10 @@ def _set_run_to_response(run: AISetRun) -> AISetRunResponse:
         fix_completed=int(run.fix_completed or 0),
         fix_failed=int(run.fix_failed or 0),
         fix_applied=int(run.fix_applied or 0),
+        score_threshold=run.score_threshold,
+        retranspile_total=int(run.retranspile_total or 0),
+        retranspile_completed=int(run.retranspile_completed or 0),
+        retranspile_failed=int(run.retranspile_failed or 0),
         stopped_reason=run.stopped_reason,
         created_at=run.created_at,
         updated_at=run.updated_at,
@@ -230,11 +237,26 @@ def _set_run_item_to_response(item: AISetRunItem) -> AISetRunItemResponse:
         review_task_id=item.review_task_id,
         fix_task_id=item.fix_task_id,
         fix_apply_status=item.fix_apply_status,
+        transpile_score=item.transpile_score,
+        retranspile_task_id=item.retranspile_task_id,
         commit_sha=item.commit_sha,
         pr_url=item.pr_url,
         error_text=item.error_text,
         created_at=item.created_at,
         updated_at=item.updated_at,
+    )
+
+
+def _learn_run_to_response(run: AITranspilerLearnRun) -> AITranspilerLearnResponse:
+    return AITranspilerLearnResponse(
+        id=run.id,
+        source_set_run_id=run.source_set_run_id,
+        status=run.status,
+        clusters_found=int(run.clusters_found or 0),
+        patches_proposed=int(run.patches_proposed or 0),
+        pr_url=run.pr_url,
+        created_at=run.created_at,
+        completed_at=run.completed_at,
     )
 
 
@@ -351,6 +373,7 @@ async def create_set_run(
             max_total_cost_usd=request.max_total_cost_usd,
             failure_rate_stop=request.failure_rate_stop,
             max_fix_tasks=request.max_fix_tasks,
+            score_threshold=request.score_threshold,
         )
     except SetRunOrchestrationError as exc:
         raise HTTPException(status_code=400, detail=str(exc))
@@ -1023,3 +1046,32 @@ async def list_engine_backlog_items(
     query = query.limit(limit)
     result = await db.execute(query)
     return [_backlog_to_response(item) for item in result.scalars().all()]
+
+
+@router.post("/transpiler-learn", response_model=AITranspilerLearnResponse, status_code=status.HTTP_201_CREATED)
+async def create_transpiler_learn_run(
+    req: AITranspilerLearnCreateRequest,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(require_roles(ROLE_ADMIN)),
+):
+    """Trigger pattern learning from a completed set run's autofixes."""
+    from digimon_gym.ai.pattern_learner import create_learn_run
+    learn_run = await create_learn_run(
+        db,
+        source_set_run_id=req.source_set_run_id,
+        min_cluster_size=req.min_cluster_size,
+    )
+    return _learn_run_to_response(learn_run)
+
+
+@router.get("/transpiler-learn/{learn_run_id}", response_model=AITranspilerLearnResponse)
+async def get_transpiler_learn_run(
+    learn_run_id: str,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(require_roles(ROLE_ADMIN)),
+):
+    """Get transpiler learn run status."""
+    run = await db.get(AITranspilerLearnRun, learn_run_id)
+    if not run:
+        raise HTTPException(404, "Learn run not found")
+    return _learn_run_to_response(run)
