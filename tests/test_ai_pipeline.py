@@ -2,8 +2,12 @@
 
 from __future__ import annotations
 
+import asyncio
 import hashlib
 import json
+import threading
+import time
+from datetime import datetime, timedelta, timezone
 
 import pytest
 from httpx import ASGITransport, AsyncClient
@@ -12,6 +16,7 @@ from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_asyn
 
 import digimon_gym.ai.set_run_orchestrator as set_run_module
 from digimon_gym.ai import retrieval as retrieval_module
+from digimon_gym.ai.autofix_apply import ApplyValidationError, HashMismatchError, apply_validated_edits
 from digimon_gym.ai.batch_orchestrator import batch_orchestrator
 from digimon_gym.ai.client import OpenAIResponsesClient
 from digimon_gym.ai.dispatcher import DispatchOutcome
@@ -29,6 +34,7 @@ from digimon_gym.db.database import get_db
 from digimon_gym.db.models import (
     AIFixBatch,
     AIFixBatchItem,
+    AISetRun,
     AITask,
     AISetRunItem,
     Base,
@@ -195,7 +201,13 @@ class TestAITasks:
             headers={"Authorization": f"Bearer {admin_tokens['access_token']}"},
         )
         assert list_resp.status_code == 200
-        assert any(task["id"] == task_id for task in list_resp.json())
+        listed = list_resp.json()
+        assert any(task["id"] == task_id for task in listed)
+        task_row = next(task for task in listed if task["id"] == task_id)
+        assert task_row["set_run_id"] is None
+        assert task_row["set_id"] is None
+        assert task_row["work_id"] == task_id
+        assert task_row["work_type"] == "task"
 
         retry_before_fail = await client.post(
             f"/admin/ai-tasks/{task_id}/retry",
@@ -215,6 +227,364 @@ class TestAITasks:
         )
         assert retry_resp.status_code == 200
         assert retry_resp.json()["status"] == "queued"
+
+    async def test_task_list_filters_include_work_metadata(self, client: AsyncClient, session_factory):
+        admin_tokens = await _register_and_login(client, "admintaskfilters")
+        await _grant_roles(session_factory, "admintaskfilters", ROLE_ADMIN)
+
+        create_bt24 = await client.post(
+            "/admin/ai-tasks",
+            headers={"Authorization": f"Bearer {admin_tokens['access_token']}"},
+            json={
+                "task_type": "review_batch",
+                "payload": {
+                    "cards": [
+                        {"card_id": "BT24-001", "set_id": "bt24", "module_name": "bt24_001"},
+                    ]
+                },
+                "cost_estimate": 0.1,
+            },
+        )
+        assert create_bt24.status_code == 201
+        bt24_task = create_bt24.json()
+
+        create_bt21 = await client.post(
+            "/admin/ai-tasks",
+            headers={"Authorization": f"Bearer {admin_tokens['access_token']}"},
+            json={
+                "task_type": "review_batch",
+                "payload": {
+                    "cards": [
+                        {"card_id": "BT21-001", "set_id": "bt21", "module_name": "bt21_001"},
+                    ]
+                },
+                "cost_estimate": 0.1,
+            },
+        )
+        assert create_bt21.status_code == 201
+        bt21_task = create_bt21.json()
+
+        list_bt24 = await client.get(
+            "/admin/ai-tasks",
+            headers={"Authorization": f"Bearer {admin_tokens['access_token']}"},
+            params={"set_id": "bt24"},
+        )
+        assert list_bt24.status_code == 200
+        bt24_rows = list_bt24.json()
+        assert len(bt24_rows) == 1
+        assert bt24_rows[0]["id"] == bt24_task["id"]
+        assert bt24_rows[0]["set_id"] == "bt24"
+        assert bt24_rows[0]["work_type"] == "task"
+        assert bt24_rows[0]["work_id"] == bt24_task["id"]
+
+        list_by_work = await client.get(
+            "/admin/ai-tasks",
+            headers={"Authorization": f"Bearer {admin_tokens['access_token']}"},
+            params={"work_id": bt24_task["id"]},
+        )
+        assert list_by_work.status_code == 200
+        work_rows = list_by_work.json()
+        assert len(work_rows) == 1
+        assert work_rows[0]["id"] == bt24_task["id"]
+
+        list_bt21 = await client.get(
+            "/admin/ai-tasks",
+            headers={"Authorization": f"Bearer {admin_tokens['access_token']}"},
+            params={"set_id": "bt21"},
+        )
+        assert list_bt21.status_code == 200
+        bt21_rows = list_bt21.json()
+        assert len(bt21_rows) == 1
+        assert bt21_rows[0]["id"] == bt21_task["id"]
+
+    async def test_apply_fix_stale_hash_returns_conflict(self, client: AsyncClient, session_factory, monkeypatch):
+        from digimon_gym.db.routers import admin_ai as admin_ai_router
+
+        admin_tokens = await _register_and_login(client, "adminapplystale")
+        await _grant_roles(session_factory, "adminapplystale", ROLE_ADMIN)
+
+        async with session_factory() as db:
+            task = AITask(
+                task_type="script_autofix",
+                payload_json=json.dumps(
+                    {
+                        "card_id": "BT13-006",
+                        "set_id": "bt13",
+                        "module_name": "bt13_006",
+                        "scope_profile": "script",
+                    }
+                ),
+                result_json=json.dumps(
+                    {
+                        "summary": "fix",
+                        "edits": [
+                            {
+                                "path": "digimon_gym/engine/data/scripts/generated/bt13/bt13_006.py",
+                                "expected_hash": "a" * 64,
+                                "new_content": "# test\n",
+                            }
+                        ],
+                    }
+                ),
+                status="completed",
+                run_mode="main",
+                scope_profile="script",
+                cost_estimate_usd=0.01,
+            )
+            db.add(task)
+            await db.commit()
+            await db.refresh(task)
+            task_id = task.id
+
+        def _raise_stale(**_kwargs):
+            raise HashMismatchError(
+                path="digimon_gym/engine/data/scripts/generated/bt13/bt13_006.py",
+                expected_hash="f1d736",
+                current_hash="14b303",
+                can_force_apply=True,
+            )
+
+        monkeypatch.setattr(admin_ai_router, "apply_validated_edits", _raise_stale)
+
+        resp = await client.post(
+            f"/admin/ai-tasks/{task_id}/apply-fix",
+            headers={"Authorization": f"Bearer {admin_tokens['access_token']}"},
+            json={"force": False},
+        )
+        assert resp.status_code == 409
+        detail = resp.json()["detail"]
+        assert detail["code"] == "stale_expected_hash"
+        assert detail["can_force_apply"] is True
+        assert detail["path"].endswith("bt13_006.py")
+
+    async def test_apply_fix_force_true_succeeds_and_resolves_card_issues(
+        self, client: AsyncClient, session_factory, monkeypatch
+    ):
+        from digimon_gym.db.routers import admin_ai as admin_ai_router
+
+        admin_tokens = await _register_and_login(client, "adminapplyforce")
+        await _grant_roles(session_factory, "adminapplyforce", ROLE_ADMIN)
+        judge_tokens = await _register_and_login(client, "judgeapplyforce")
+        await _grant_roles(session_factory, "judgeapplyforce", ROLE_JUDGE)
+
+        issue_ids: list[str] = []
+        for idx in range(2):
+            create = await client.post(
+                "/issues",
+                headers={"Authorization": f"Bearer {judge_tokens['access_token']}"},
+                json={
+                    "card_id": "BT13-006",
+                    "description": f"Issue {idx}",
+                    "source": "judge",
+                    "severity": "medium",
+                },
+            )
+            assert create.status_code == 201
+            issue_ids.append(create.json()["id"])
+            if idx == 1:
+                approve = await client.patch(
+                    f"/issues/{issue_ids[-1]}",
+                    headers={"Authorization": f"Bearer {judge_tokens['access_token']}"},
+                    json={"status": "approved_for_ai"},
+                )
+                assert approve.status_code == 200
+
+        async with session_factory() as db:
+            task = AITask(
+                task_type="script_autofix",
+                payload_json=json.dumps(
+                    {
+                        "card_id": "BT13-006",
+                        "set_id": "bt13",
+                        "module_name": "bt13_006",
+                        "scope_profile": "script",
+                    }
+                ),
+                result_json=json.dumps(
+                    {
+                        "summary": "fix",
+                        "edits": [
+                            {
+                                "path": "digimon_gym/engine/data/scripts/generated/bt13/bt13_006.py",
+                                "expected_hash": "b" * 64,
+                                "new_content": "# force apply\n",
+                            }
+                        ],
+                    }
+                ),
+                status="completed",
+                run_mode="main",
+                scope_profile="script",
+                cost_estimate_usd=0.01,
+            )
+            db.add(task)
+            await db.commit()
+            await db.refresh(task)
+            task_id = task.id
+
+        monkeypatch.setattr(
+            admin_ai_router,
+            "apply_validated_edits",
+            lambda **_kwargs: ["digimon_gym/engine/data/scripts/generated/bt13/bt13_006.py"],
+        )
+        monkeypatch.setattr(admin_ai_router, "run_profile_checks", lambda **_kwargs: [])
+
+        resp = await client.post(
+            f"/admin/ai-tasks/{task_id}/apply-fix",
+            headers={"Authorization": f"Bearer {admin_tokens['access_token']}"},
+            json={"force": True},
+        )
+        assert resp.status_code == 200
+        body = resp.json()
+        assert body["status"] == "applied"
+        assert body["force_applied"] is True
+
+        async with session_factory() as db:
+            issues = (
+                await db.execute(select(Issue).where(Issue.card_id == "BT13-006").order_by(Issue.created_at.asc()))
+            ).scalars().all()
+            assert len(issues) == 2
+            assert all(issue.status == "resolved" for issue in issues)
+            assert all(issue.resolved_at is not None for issue in issues)
+            assert all("auto-resolved" in (issue.resolution_notes or "") for issue in issues)
+
+    async def test_apply_fix_force_still_conflicts_when_not_forceable(
+        self, client: AsyncClient, session_factory, monkeypatch
+    ):
+        from digimon_gym.db.routers import admin_ai as admin_ai_router
+
+        admin_tokens = await _register_and_login(client, "adminapplynotforceable")
+        await _grant_roles(session_factory, "adminapplynotforceable", ROLE_ADMIN)
+
+        async with session_factory() as db:
+            task = AITask(
+                task_type="script_autofix",
+                payload_json=json.dumps(
+                    {
+                        "card_id": "BT13-006",
+                        "set_id": "bt13",
+                        "module_name": "bt13_006",
+                        "scope_profile": "script",
+                    }
+                ),
+                result_json=json.dumps(
+                    {
+                        "summary": "fix",
+                        "edits": [
+                            {
+                                "path": "digimon_gym/engine/data/scripts/generated/bt13/bt13_006.py",
+                                "expected_hash": "c" * 64,
+                                "new_content": "# test\n",
+                            }
+                        ],
+                    }
+                ),
+                status="completed",
+                run_mode="main",
+                scope_profile="script",
+                cost_estimate_usd=0.01,
+            )
+            db.add(task)
+            await db.commit()
+            await db.refresh(task)
+            task_id = task.id
+
+        def _raise_not_forceable(**_kwargs):
+            raise HashMismatchError(
+                path="digimon_gym/engine/core/card_script.py",
+                expected_hash="x",
+                current_hash="y",
+                can_force_apply=False,
+            )
+
+        monkeypatch.setattr(admin_ai_router, "apply_validated_edits", _raise_not_forceable)
+
+        resp = await client.post(
+            f"/admin/ai-tasks/{task_id}/apply-fix",
+            headers={"Authorization": f"Bearer {admin_tokens['access_token']}"},
+            json={"force": True},
+        )
+        assert resp.status_code == 409
+        detail = resp.json()["detail"]
+        assert detail["code"] == "stale_expected_hash"
+        assert detail["can_force_apply"] is False
+
+    async def test_queue_set_fixes_respects_mode_and_dedupe(self, client: AsyncClient, session_factory):
+        admin_tokens = await _register_and_login(client, "adminqueuesetfix")
+        await _grant_roles(session_factory, "adminqueuesetfix", ROLE_ADMIN)
+        judge_tokens = await _register_and_login(client, "judgequeuesetfix")
+        await _grant_roles(session_factory, "judgequeuesetfix", ROLE_JUDGE)
+
+        created_issue_ids: list[str] = []
+        for card_id, status_value in [
+            ("BT24-001", "approved_for_ai"),
+            ("BT24-001", "approved_for_ai"),  # duplicate card in same request set
+            ("BT24-002", "new"),
+            ("BT24-003", "approved_for_ai"),
+        ]:
+            create = await client.post(
+                "/issues",
+                headers={"Authorization": f"Bearer {judge_tokens['access_token']}"},
+                json={
+                    "card_id": card_id,
+                    "description": f"Issue for {card_id}",
+                    "source": "judge",
+                    "severity": "medium",
+                },
+            )
+            assert create.status_code == 201
+            issue_id = create.json()["id"]
+            created_issue_ids.append(issue_id)
+            if status_value != "new":
+                update = await client.patch(
+                    f"/issues/{issue_id}",
+                    headers={"Authorization": f"Bearer {judge_tokens['access_token']}"},
+                    json={"status": status_value},
+                )
+                assert update.status_code == 200
+
+        async with session_factory() as db:
+            blocked_task = AITask(
+                task_type="script_autofix",
+                payload_json=json.dumps(
+                    {
+                        "card_id": "BT24-003",
+                        "set_id": "bt24",
+                        "module_name": "bt24_003",
+                    }
+                ),
+                status="completed",
+                cost_estimate_usd=0.01,
+            )
+            db.add(blocked_task)
+            await db.commit()
+
+        approved_only = await client.post(
+            "/admin/issues/queue-fixes-set",
+            headers={"Authorization": f"Bearer {admin_tokens['access_token']}"},
+            json={"set_id": "bt24", "queue_mode": "approved_only"},
+        )
+        assert approved_only.status_code == 200
+        body = approved_only.json()
+        assert body["queue_mode"] == "approved_only"
+        assert body["queued_tasks"] == 1
+        assert body["queued_card_ids"] == ["BT24-001"]
+        assert body["skipped_duplicate_cards"] >= 1
+        assert body["skipped_existing_task_cards"] >= 1
+
+        new_and_approved = await client.post(
+            "/admin/issues/queue-fixes-set",
+            headers={"Authorization": f"Bearer {admin_tokens['access_token']}"},
+            json={"set_id": "bt24", "queue_mode": "new_and_approved"},
+        )
+        assert new_and_approved.status_code == 200
+        body2 = new_and_approved.json()
+        assert body2["queue_mode"] == "new_and_approved"
+        assert "BT24-002" in body2["queued_card_ids"]
+
+        async with session_factory() as db:
+            new_issue = (await db.execute(select(Issue).where(Issue.card_id == "BT24-002"))).scalar_one()
+            assert new_issue.status == "approved_for_ai"
 
     async def test_worker_processes_one_task(self, session_factory, monkeypatch):
         # Point the worker module at the test DB sessionmaker.
@@ -320,6 +690,226 @@ class TestAITasks:
             assert task.status == "completed"
             assert task.model_name == "gpt-4.1-mini"
 
+    def test_worker_defaults_to_single_concurrency(self, monkeypatch):
+        monkeypatch.delenv("AI_WORKER_MAX_CONCURRENT", raising=False)
+        worker = AITaskWorker()
+        assert worker.max_concurrent == 1
+
+    async def test_worker_claims_are_atomic_between_workers(self, session_factory, monkeypatch):
+        from digimon_gym.ai import worker as worker_module
+
+        monkeypatch.setattr(worker_module, "async_session", session_factory)
+        worker_a = AITaskWorker()
+        worker_b = AITaskWorker()
+
+        async with session_factory() as db:
+            for n in range(5):
+                db.add(
+                    AITask(
+                        task_type="engine_audit",
+                        payload_json=json.dumps({"mechanics": [f"m-{n}"]}),
+                        status="queued",
+                        cost_estimate_usd=0.01,
+                    )
+                )
+            await db.commit()
+
+        claimed_a, claimed_b = await asyncio.gather(
+            worker_a._claim_tasks(5),
+            worker_b._claim_tasks(5),
+        )
+        all_claimed = claimed_a + claimed_b
+        assert len(all_claimed) == 5
+        assert len(set(all_claimed)) == 5
+
+        async with session_factory() as db:
+            rows = (await db.execute(select(AITask).where(AITask.id.in_(all_claimed)))).scalars().all()
+            assert len(rows) == 5
+            assert all(row.status == "running" for row in rows)
+            assert all(row.worker_id in {worker_a._worker_id, worker_b._worker_id} for row in rows)
+
+    async def test_worker_runs_tasks_in_parallel_up_to_capacity(self, session_factory, monkeypatch):
+        from digimon_gym.ai import worker as worker_module
+
+        monkeypatch.setattr(worker_module, "async_session", session_factory)
+        monkeypatch.setenv("AI_WORKER_MAX_CONCURRENT", "3")
+        monkeypatch.setenv("AI_WORKER_POLL_SECONDS", "0.01")
+        worker = AITaskWorker()
+
+        async def _noop(_: str) -> None:
+            return None
+
+        monkeypatch.setattr(worker, "_notify_task_started", _noop)
+        monkeypatch.setattr(worker, "_notify_task_finished", _noop)
+
+        async with session_factory() as db:
+            for n in range(6):
+                db.add(
+                    AITask(
+                        task_type="script_autofix",
+                        payload_json=json.dumps(
+                            {
+                                "card_id": f"BT24-{n+1:03d}",
+                                "set_id": "bt24",
+                                "module_name": f"bt24_{n+1:03d}",
+                            }
+                        ),
+                        status="queued",
+                        cost_estimate_usd=0.01,
+                    )
+                )
+            await db.commit()
+
+        lock = threading.Lock()
+        stats: dict[str, int] = {"active": 0, "max_active": 0, "calls": 0}
+
+        def fake_dispatch(task_type, payload, model_name):
+            assert task_type == "script_autofix"
+            with lock:
+                stats["active"] += 1
+                stats["calls"] += 1
+                stats["max_active"] = max(stats["max_active"], stats["active"])
+            time.sleep(0.05)
+            with lock:
+                stats["active"] -= 1
+            return DispatchOutcome(
+                model_name="gpt-4.1-mini",
+                result={"summary": "ok", "edits": []},
+                sanitized_input={"ok": True},
+                retrieval_refs=[],
+                input_tokens=1,
+                output_tokens=1,
+                cost_actual=0.00001,
+            )
+
+        monkeypatch.setattr(worker.dispatcher, "run", fake_dispatch)
+
+        first_claim = await worker._claim_tasks(worker.max_concurrent)
+        assert len(first_claim) == 3
+        await asyncio.gather(*(worker._run_task(task_id) for task_id in first_claim))
+
+        second_claim = await worker._claim_tasks(worker.max_concurrent)
+        assert len(second_claim) == 3
+        await asyncio.gather(*(worker._run_task(task_id) for task_id in second_claim))
+
+        assert stats["calls"] == 6
+        assert stats["max_active"] <= 3
+        assert stats["max_active"] >= 2
+
+        async with session_factory() as db:
+            rows = (await db.execute(select(AITask))).scalars().all()
+            assert len(rows) == 6
+            assert all(row.status == "completed" for row in rows)
+            assert all(row.worker_id is None for row in rows)
+
+    async def test_retry_requeues_task_and_clears_ownership(self, session_factory, monkeypatch):
+        from digimon_gym.ai import worker as worker_module
+
+        monkeypatch.setattr(worker_module, "async_session", session_factory)
+        worker = AITaskWorker()
+
+        async with session_factory() as db:
+            task = AITask(
+                task_type="engine_audit",
+                payload_json=json.dumps({"mechanics": ["transient-failure"]}),
+                status="queued",
+                cost_estimate_usd=0.01,
+                max_attempts=3,
+            )
+            db.add(task)
+            await db.commit()
+            await db.refresh(task)
+            task_id = task.id
+
+        def fake_dispatch(task_type, payload, model_name):
+            raise TimeoutError("network timeout")
+
+        monkeypatch.setattr(worker.dispatcher, "run", fake_dispatch)
+
+        processed = await worker._process_one_task()
+        assert processed is True
+
+        async with session_factory() as db:
+            task = (await db.execute(select(AITask).where(AITask.id == task_id))).scalar_one()
+            assert task.status == "queued"
+            assert task.started_at is None
+            assert task.completed_at is None
+            assert task.worker_id is None
+            assert task.claimed_at is None
+            assert "Retry" in str(task.error_text or "")
+
+    async def test_stale_recovery_skips_current_worker_tasks(self, session_factory, monkeypatch):
+        from digimon_gym.ai import worker as worker_module
+
+        monkeypatch.setattr(worker_module, "async_session", session_factory)
+        worker = AITaskWorker()
+        worker.stale_after_seconds = 5
+
+        async def _noop(_: str) -> None:
+            return None
+
+        monkeypatch.setattr(worker, "_notify_task_finished", _noop)
+
+        old_time = datetime.now(timezone.utc) - timedelta(minutes=30)
+        fresh_time = datetime.now(timezone.utc)
+
+        async with session_factory() as db:
+            mine = AITask(
+                task_type="engine_audit",
+                payload_json="{}",
+                status="running",
+                started_at=old_time,
+                worker_id=worker._worker_id,
+            )
+            other = AITask(
+                task_type="engine_audit",
+                payload_json="{}",
+                status="running",
+                started_at=old_time,
+                worker_id="ai-worker-other",
+            )
+            unowned = AITask(
+                task_type="engine_audit",
+                payload_json="{}",
+                status="running",
+                started_at=old_time,
+                worker_id=None,
+            )
+            fresh = AITask(
+                task_type="engine_audit",
+                payload_json="{}",
+                status="running",
+                started_at=fresh_time,
+                worker_id="ai-worker-other",
+            )
+            db.add_all([mine, other, unowned, fresh])
+            await db.commit()
+            await db.refresh(mine)
+            await db.refresh(other)
+            await db.refresh(unowned)
+            await db.refresh(fresh)
+            ids = {
+                "mine": mine.id,
+                "other": other.id,
+                "unowned": unowned.id,
+                "fresh": fresh.id,
+            }
+
+        await worker._recover_stale_running_tasks()
+
+        async with session_factory() as db:
+            mine = (await db.execute(select(AITask).where(AITask.id == ids["mine"]))).scalar_one()
+            other = (await db.execute(select(AITask).where(AITask.id == ids["other"]))).scalar_one()
+            unowned = (await db.execute(select(AITask).where(AITask.id == ids["unowned"]))).scalar_one()
+            fresh = (await db.execute(select(AITask).where(AITask.id == ids["fresh"]))).scalar_one()
+
+            assert mine.status == "running"
+            assert other.status == "failed"
+            assert unowned.status == "failed"
+            assert fresh.status == "running"
+            assert other.worker_id is None
+            assert unowned.worker_id is None
+
     async def test_admin_engine_backlog_endpoints(self, client: AsyncClient, session_factory):
         admin_tokens = await _register_and_login(client, "adminbacklog")
         await _grant_roles(session_factory, "adminbacklog", ROLE_ADMIN)
@@ -413,12 +1003,48 @@ class TestAITasks:
         assert body["card_id"] == "BT24-001"
         assert body["ai_task_id"] == task_id
         assert body["manifest_version"] == 42
+        assert body["work_type"] == "task"
+        assert body["work_id"] == task_id
 
         async with session_factory() as db:
             rows = (await db.execute(select(ScriptPromotionAudit))).scalars().all()
             assert len(rows) == 1
             assert rows[0].card_id == "BT24-001"
             assert rows[0].ai_task_id == task_id
+
+            db.add(
+                ScriptPromotionAudit(
+                    card_id="BT21-001",
+                    set_id="bt21",
+                    module_name="bt21_001",
+                    generated_hash="g21",
+                    frozen_hash="f21",
+                    manifest_version=1,
+                    ai_task_id=None,
+                    notes="manual",
+                )
+            )
+            await db.commit()
+
+        list_by_set = await client.get(
+            "/admin/promotions",
+            headers={"Authorization": f"Bearer {admin_tokens['access_token']}"},
+            params={"set_id": "bt24"},
+        )
+        assert list_by_set.status_code == 200
+        set_rows = list_by_set.json()
+        assert len(set_rows) == 1
+        assert set_rows[0]["card_id"] == "BT24-001"
+
+        list_by_work = await client.get(
+            "/admin/promotions",
+            headers={"Authorization": f"Bearer {admin_tokens['access_token']}"},
+            params={"work_id": task_id},
+        )
+        assert list_by_work.status_code == 200
+        work_rows = list_by_work.json()
+        assert len(work_rows) == 1
+        assert work_rows[0]["work_id"] == task_id
 
 
 class TestAIFixBatches:
@@ -523,6 +1149,86 @@ class TestAIFixBatches:
             assert len(items) == 3
             queued_or_pending = {item.status for item in items}
             assert queued_or_pending.issubset({"queued", "pending"})
+
+    async def test_batch_apply_success_auto_resolves_open_card_issues(
+        self, client: AsyncClient, session_factory, monkeypatch
+    ):
+        import digimon_gym.ai.batch_orchestrator as batch_module
+
+        monkeypatch.setattr(batch_module, "async_session", session_factory)
+        monkeypatch.setattr(batch_orchestrator.git, "preflight", lambda **_: None)
+
+        admin_tokens = await _register_and_login(client, "adminbatchresolve")
+        await _grant_roles(session_factory, "adminbatchresolve", ROLE_ADMIN)
+        judge_tokens = await _register_and_login(client, "batchresolvejudge")
+        await _grant_roles(session_factory, "batchresolvejudge", ROLE_JUDGE)
+
+        issue = await client.post(
+            "/issues",
+            headers={"Authorization": f"Bearer {judge_tokens['access_token']}"},
+            json={
+                "card_id": "BT24-099",
+                "description": "Issue for BT24-099",
+                "source": "judge",
+                "severity": "high",
+            },
+        )
+        assert issue.status_code == 201
+        issue_id = issue.json()["id"]
+        approve = await client.patch(
+            f"/issues/{issue_id}",
+            headers={"Authorization": f"Bearer {judge_tokens['access_token']}"},
+            json={"status": "approved_for_ai"},
+        )
+        assert approve.status_code == 200
+
+        created = await client.post(
+            "/admin/ai-batches",
+            headers={"Authorization": f"Bearer {admin_tokens['access_token']}"},
+            json={
+                "set_id": "bt24",
+                "run_mode": "pr",
+                "scope_profile": "script",
+                "concurrency": 1,
+                "max_total_cost_usd": 5.0,
+                "failure_rate_stop": 0.3,
+                "max_tasks": 1,
+                "dry_run": False,
+            },
+        )
+        assert created.status_code == 201
+        batch_id = created.json()["batch"]["id"]
+
+        async with session_factory() as db:
+            task = (
+                await db.execute(
+                    select(AITask).where(
+                        AITask.batch_id == batch_id,
+                        AITask.task_type == "script_autofix",
+                    )
+                )
+            ).scalar_one()
+            task.status = "completed"
+            task.result_json = json.dumps({"summary": "ok", "edits": []})
+            await db.commit()
+            task_id = task.id
+
+        monkeypatch.setattr(
+            batch_orchestrator,
+            "_apply_and_commit_task",
+            lambda **_: {
+                "applied_files": ["digimon_gym/engine/data/scripts/generated/bt24/bt24_099.py"],
+                "check_outputs": [],
+                "commit_sha": "deadbeef",
+            },
+        )
+
+        await batch_orchestrator.on_task_finished(task_id)
+
+        async with session_factory() as db:
+            resolved_issue = (await db.execute(select(Issue).where(Issue.id == issue_id))).scalar_one()
+            assert resolved_issue.status == "resolved"
+            assert resolved_issue.resolved_at is not None
 
     async def test_main_mode_blocked_without_env_flag(self, client: AsyncClient, session_factory, monkeypatch):
         admin_tokens = await _register_and_login(client, "adminbatchmain")
@@ -704,14 +1410,15 @@ class TestSetRuns:
         await set_run_orchestrator.on_task_finished(qa_task_id)
 
         async with session_factory() as db:
-            review_task = (
+            review_tasks = (
                 await db.execute(
                     select(AITask).where(
                         AITask.set_run_id == set_run_id,
                         AITask.task_type == "review_batch",
                     )
                 )
-            ).scalar_one()
+            ).scalars().all()
+            assert len(review_tasks) >= 1  # chunked into multiple tasks
 
             items = (
                 await db.execute(select(AISetRunItem).where(AISetRunItem.set_run_id == set_run_id))
@@ -726,10 +1433,12 @@ class TestSetRuns:
                     "suggested_fixes": [],
                     "engine_requests": [],
                 }
-            review_task.status = "completed"
-            review_task.result_json = json.dumps({"cards": cards_result})
+            # Complete all review tasks with their chunk's results
+            for rt in review_tasks:
+                rt.status = "completed"
+                rt.result_json = json.dumps({"cards": cards_result})
             await db.commit()
-            review_task_id = review_task.id
+            review_task_ids = [rt.id for rt in review_tasks]
 
         monkeypatch.setattr(
             set_run_orchestrator,
@@ -742,7 +1451,9 @@ class TestSetRuns:
             },
         )
 
-        await set_run_orchestrator.on_task_finished(review_task_id)
+        # Signal each review task as finished; fix tasks created after last one
+        for rtid in review_task_ids:
+            await set_run_orchestrator.on_task_finished(rtid)
 
         async with session_factory() as db:
             fix_task = (
@@ -769,6 +1480,15 @@ class TestSetRuns:
         assert payload["run"]["status"] == "completed"
         assert any(item["card_id"] == "BT13-001" and item["pr_url"] for item in payload["items"])
 
+        async with session_factory() as db:
+            resolved_issue = (
+                await db.execute(
+                    select(Issue).where(Issue.card_id == "BT13-001").order_by(Issue.created_at.asc())
+                )
+            ).scalar_one()
+            assert resolved_issue.status == "resolved"
+            assert resolved_issue.resolved_at is not None
+
     async def test_create_set_run_bt21_has_103_items(self, client: AsyncClient, session_factory):
         admin_tokens = await _register_and_login(client, "adminsetrunbt21")
         await _grant_roles(session_factory, "adminsetrunbt21", ROLE_ADMIN)
@@ -792,6 +1512,64 @@ class TestSetRuns:
         )
         assert detail.status_code == 200
         assert len(detail.json()["items"]) == 103
+
+    async def test_review_chunking_produces_expected_task_count(
+        self, client: AsyncClient, session_factory, monkeypatch
+    ):
+        """Sets with >3 cards should produce multiple review_batch tasks (~3 chunks)."""
+        import math
+
+        monkeypatch.setattr(set_run_module, "async_session", session_factory)
+        admin_tokens = await _register_and_login(client, "adminchunk")
+        await _grant_roles(session_factory, "adminchunk", ROLE_ADMIN)
+
+        create = await client.post(
+            "/admin/set-runs",
+            headers={"Authorization": f"Bearer {admin_tokens['access_token']}"},
+            json={
+                "set_id": "bt13",
+                "run_mode": "pr",
+                "scope_profile": "script",
+                "max_fix_tasks": 0,
+            },
+        )
+        assert create.status_code == 201
+        set_run_id = create.json()["id"]
+
+        # BT13 has 112 cards, 0 QA issues → goes straight to review
+        async with session_factory() as db:
+            review_tasks = (
+                await db.execute(
+                    select(AITask).where(
+                        AITask.set_run_id == set_run_id,
+                        AITask.task_type == "review_batch",
+                    )
+                )
+            ).scalars().all()
+            assert len(review_tasks) == 3  # ceil(112/3)=38 per chunk → 3 chunks
+
+            run = (
+                await db.execute(select(AISetRun).where(AISetRun.id == set_run_id))
+            ).scalar_one()
+            assert run.review_total == 3
+
+            # Verify each chunk has cards and max_attempts=3
+            total_cards = 0
+            for rt in review_tasks:
+                payload = json.loads(rt.payload_json)
+                total_cards += len(payload["cards"])
+                assert rt.max_attempts == 3
+            assert total_cards == 112
+
+            # Verify every item has a review_task_id pointing to one of the chunks
+            items = (
+                await db.execute(
+                    select(AISetRunItem).where(AISetRunItem.set_run_id == set_run_id)
+                )
+            ).scalars().all()
+            review_task_ids = {rt.id for rt in review_tasks}
+            for item in items:
+                assert item.review_task_id in review_task_ids
 
 
 class TestPromotionAndRetrieval:
@@ -855,6 +1633,34 @@ class TestPromotionAndRetrieval:
         idx = LocalRAGIndex(index_path)
         hits = idx.retrieve("Delay triggers from trash", k=3)
         assert any(str(hit["source"]).endswith("general_rule.pdf") for hit in hits)
+
+
+class TestApplyValidation:
+    def test_force_apply_rejects_multi_file_edits(self, tmp_path):
+        file_a = tmp_path / "a.py"
+        file_b = tmp_path / "b.py"
+        file_a.write_text("a=1\n", encoding="utf-8")
+        file_b.write_text("b=1\n", encoding="utf-8")
+        edits = [
+            {
+                "path": "a.py",
+                "expected_hash": "0" * 64,
+                "new_content": "a=2\n",
+            },
+            {
+                "path": "b.py",
+                "expected_hash": "0" * 64,
+                "new_content": "b=2\n",
+            },
+        ]
+
+        with pytest.raises(ApplyValidationError, match="single-file"):
+            apply_validated_edits(
+                repo_root=tmp_path,
+                edits=edits,
+                force=True,
+                force_allowed_path="a.py",
+            )
 
 
 class TestStructuredContracts:

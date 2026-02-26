@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
+import axios from 'axios';
 import {
   applyAITaskFix,
   createAITask,
@@ -14,6 +15,7 @@ import {
 } from '@/api/adminApi';
 import { StatusBadge } from '@/components/admin/StatusBadge';
 import { CommitLink, PrLink } from '@/components/admin/GitLinks';
+import { parseDeck } from '@/api/deckApi';
 
 const DEFAULT_PAYLOAD = JSON.stringify(
   {
@@ -34,7 +36,138 @@ type TaskStatusFilter = 'all' | 'queued' | 'running' | 'completed' | 'failed';
 type RunModeFilter = 'all' | 'pr' | 'main' | 'n/a';
 type ScopeFilter = 'all' | 'script' | 'script_engine' | 'script_engine_transpiler' | 'n/a';
 type ActiveTab = 'tasks' | 'applied';
+type ApplyStatusFilter = 'all' | 'applicable' | 'stale' | 'invalid';
 type AppliedStatusFilter = 'all' | 'applied' | 'failed';
+type TaskRunMode = 'pr' | 'main';
+type TaskScopeProfile = 'script' | 'script_engine' | 'script_engine_transpiler';
+
+type GroupStatus = 'queued' | 'running' | 'completed' | 'failed';
+
+type TaskGroup = {
+  workId: string;
+  workType: AITaskItem['work_type'];
+  setLabel: string;
+  taskCount: number;
+  cardCount: number;
+  aggregateStatus: GroupStatus;
+  tasks: AITaskItem[];
+};
+
+const STATUS_PRIORITY: Record<GroupStatus, number> = {
+  failed: 4,
+  running: 3,
+  queued: 2,
+  completed: 1,
+};
+
+function setLabelForGroup(tasks: AITaskItem[]): string {
+  const values = new Set<string>();
+  for (const task of tasks) {
+    const value = task.set_id?.trim().toLowerCase();
+    if (value) values.add(value);
+  }
+  if (values.size === 0) return 'n/a';
+  if (values.size === 1) return Array.from(values)[0]!;
+  return 'mixed';
+}
+
+function aggregateStatusForGroup(tasks: AITaskItem[]): GroupStatus {
+  let selected: GroupStatus = 'completed';
+  for (const task of tasks) {
+    if (STATUS_PRIORITY[task.status] > STATUS_PRIORITY[selected]) {
+      selected = task.status;
+    }
+  }
+  return selected;
+}
+
+type ScriptAutofixCardPayload = {
+  card_id: string;
+  set_id: string;
+  module_name: string;
+};
+
+type StaleApplyConflict = {
+  code: string;
+  message: string;
+  path: string;
+  expected_hash: string;
+  current_hash: string;
+  can_force_apply: boolean;
+};
+
+function parseErrorMessage(err: unknown): string {
+  if (axios.isAxiosError(err)) {
+    const detail = err.response?.data?.detail;
+    if (typeof detail === 'string' && detail.trim()) {
+      return detail;
+    }
+    if (detail && typeof detail === 'object') {
+      const message = (detail as { message?: unknown }).message;
+      if (typeof message === 'string' && message.trim()) {
+        return message;
+      }
+    }
+    if (typeof err.message === 'string' && err.message.trim()) {
+      return err.message;
+    }
+  }
+  if (err instanceof Error) {
+    return err.message;
+  }
+  return 'Request failed';
+}
+
+function extractStaleApplyConflict(err: unknown): StaleApplyConflict | null {
+  if (!axios.isAxiosError(err)) {
+    return null;
+  }
+  const detail = err.response?.data?.detail;
+  if (!detail || typeof detail !== 'object') {
+    return null;
+  }
+  const typed = detail as Partial<StaleApplyConflict>;
+  if (
+    typed.code !== 'stale_expected_hash' ||
+    typeof typed.message !== 'string' ||
+    typeof typed.path !== 'string' ||
+    typeof typed.expected_hash !== 'string' ||
+    typeof typed.current_hash !== 'string'
+  ) {
+    return null;
+  }
+  return {
+    code: typed.code,
+    message: typed.message,
+    path: typed.path,
+    expected_hash: typed.expected_hash,
+    current_hash: typed.current_hash,
+    can_force_apply: typed.can_force_apply === true,
+  };
+}
+
+function toScriptAutofixCardPayload(cardId: string): ScriptAutofixCardPayload | null {
+  const normalized = cardId.trim().toUpperCase();
+  if (!normalized) {
+    return null;
+  }
+  const splitIndex = normalized.indexOf('-');
+  if (splitIndex <= 0 || splitIndex >= normalized.length - 1) {
+    return null;
+  }
+
+  const setId = normalized.slice(0, splitIndex).toLowerCase();
+  const rawSuffix = normalized.slice(splitIndex + 1).trim();
+  const suffix = rawSuffix.replace(/[^A-Z0-9]+/gi, '_').replace(/^_+|_+$/g, '').toLowerCase();
+  if (!setId || !suffix) {
+    return null;
+  }
+  return {
+    card_id: normalized,
+    set_id: setId,
+    module_name: `${setId}_${suffix}`,
+  };
+}
 
 export function AdminTasksPage() {
   const [tasks, setTasks] = useState<AITaskItem[]>([]);
@@ -44,6 +177,7 @@ export function AdminTasksPage() {
   const [taskDetails, setTaskDetails] = useState<Record<string, AITaskItem>>({});
   const [batchDetails, setBatchDetails] = useState<Record<string, AIFixBatchDetailResponse>>({});
   const [loadingBatchIds, setLoadingBatchIds] = useState<Record<string, boolean>>({});
+  const [collapsedGroups, setCollapsedGroups] = useState<Record<string, boolean>>({});
   const [promotingKeys, setPromotingKeys] = useState<Record<string, boolean>>({});
   const [promotedKeys, setPromotedKeys] = useState<Record<string, boolean>>({});
   const [applyingTaskIds, setApplyingTaskIds] = useState<Record<string, boolean>>({});
@@ -59,9 +193,20 @@ export function AdminTasksPage() {
   const [taskTypeFilter, setTaskTypeFilter] = useState<TaskTypeFilter>('all');
   const [runModeFilter, setRunModeFilter] = useState<RunModeFilter>('all');
   const [scopeFilter, setScopeFilter] = useState<ScopeFilter>('all');
-  const [batchOnlyFilter, setBatchOnlyFilter] = useState(false);
-  const [batchIdFilter, setBatchIdFilter] = useState('');
+  const [applyStatusFilter, setApplyStatusFilter] = useState<ApplyStatusFilter>('all');
+  const [setIdFilter, setSetIdFilter] = useState('');
+  const [workIdFilter, setWorkIdFilter] = useState('');
   const [limitFilter, setLimitFilter] = useState('250');
+  const [deckListText, setDeckListText] = useState('');
+  const [deckRunMode, setDeckRunMode] = useState<TaskRunMode>('pr');
+  const [deckScopeProfile, setDeckScopeProfile] = useState<TaskScopeProfile>('script');
+  const [deckQueueLimit, setDeckQueueLimit] = useState('60');
+  const [deckQueueing, setDeckQueueing] = useState(false);
+  const [deckQueueSummary, setDeckQueueSummary] = useState<string | null>(null);
+  const [deckParseWarnings, setDeckParseWarnings] = useState<string[]>([]);
+  const [createTaskAccordionOpen, setCreateTaskAccordionOpen] = useState(true);
+  const [taskFiltersAccordionOpen, setTaskFiltersAccordionOpen] = useState(true);
+  const [deckQueueAccordionOpen, setDeckQueueAccordionOpen] = useState(false);
 
   // Applied Cards tab state
   const [activeTab, setActiveTab] = useState<ActiveTab>('tasks');
@@ -72,6 +217,7 @@ export function AdminTasksPage() {
 
   // Store apply-fix results for showing git links
   const [applyResults, setApplyResults] = useState<Record<string, { commit_sha?: string | null; pr_url?: string | null }>>({});
+  const [staleApplyConflicts, setStaleApplyConflicts] = useState<Record<string, StaleApplyConflict>>({});
 
   const refresh = async () => {
     setLoading(true);
@@ -83,6 +229,8 @@ export function AdminTasksPage() {
         task_type?: 'review_batch' | 'qa_analysis' | 'engine_audit' | 'script_autofix' | 'llm_transpile' | 'transpiler_learn';
         run_mode?: 'pr' | 'main';
         scope_profile?: 'script' | 'script_engine' | 'script_engine_transpiler';
+        set_id?: string;
+        work_id?: string;
         limit: number;
       } = { limit };
       if (statusFilter !== 'all') {
@@ -96,6 +244,12 @@ export function AdminTasksPage() {
       }
       if (scopeFilter !== 'all' && scopeFilter !== 'n/a') {
         params.scope_profile = scopeFilter;
+      }
+      if (setIdFilter.trim()) {
+        params.set_id = setIdFilter.trim();
+      }
+      if (workIdFilter.trim()) {
+        params.work_id = workIdFilter.trim();
       }
       const data = await getAITasks(params);
       setTasks(data);
@@ -140,7 +294,8 @@ export function AdminTasksPage() {
   );
 
   const filteredTasks = useMemo(() => {
-    const normalizedBatchQuery = batchIdFilter.trim().toLowerCase();
+    const normalizedSetId = setIdFilter.trim().toLowerCase();
+    const normalizedWorkId = workIdFilter.trim().toLowerCase();
     return tasks.filter((task) => {
       if (statusFilter !== 'all' && task.status !== statusFilter) {
         return false;
@@ -159,23 +314,76 @@ export function AdminTasksPage() {
       if (scopeFilter === 'n/a' && task.scope_profile) {
         return false;
       }
-      if (scopeFilter !== 'all' && scopeFilter !== 'n/a') {
-        if (task.scope_profile !== scopeFilter) {
+      if (scopeFilter !== 'all' && scopeFilter !== 'n/a' && task.scope_profile !== scopeFilter) {
+        return false;
+      }
+      if (normalizedSetId) {
+        const value = task.set_id?.toLowerCase();
+        if (!value || value !== normalizedSetId) {
           return false;
         }
       }
-      if (batchOnlyFilter && !task.batch_id) {
-        return false;
+      if (normalizedWorkId) {
+        const value = String(task.work_id ?? '').toLowerCase();
+        if (!value.includes(normalizedWorkId)) {
+          return false;
+        }
       }
-      if (normalizedBatchQuery) {
-        const value = String(task.batch_id ?? '').toLowerCase();
-        if (!value.includes(normalizedBatchQuery)) {
+      if (applyStatusFilter !== 'all') {
+        const taskApplyStatus = task.apply_status ?? null;
+        if (taskApplyStatus !== applyStatusFilter) {
           return false;
         }
       }
       return true;
     });
-  }, [tasks, statusFilter, taskTypeFilter, runModeFilter, scopeFilter, batchOnlyFilter, batchIdFilter]);
+  }, [tasks, statusFilter, taskTypeFilter, runModeFilter, scopeFilter, setIdFilter, workIdFilter, applyStatusFilter]);
+
+  const groupedTasks = useMemo(() => {
+    const groups: Record<string, AITaskItem[]> = {};
+    for (const task of filteredTasks) {
+      const workId = task.work_id || task.id;
+      if (!groups[workId]) {
+        groups[workId] = [];
+      }
+      groups[workId].push(task);
+    }
+    const result: TaskGroup[] = Object.entries(groups).map(([workId, groupItems]) => {
+      const cards = new Set<string>();
+      for (const task of groupItems) {
+        for (const card of getTaskCards(task)) {
+          cards.add(card.card_id);
+        }
+      }
+      return {
+        workId,
+        workType: groupItems[0]?.work_type ?? 'task',
+        setLabel: setLabelForGroup(groupItems),
+        taskCount: groupItems.length,
+        cardCount: cards.size,
+        aggregateStatus: aggregateStatusForGroup(groupItems),
+        tasks: groupItems,
+      };
+    });
+    result.sort((a, b) => {
+      const left = Math.max(...a.tasks.map((t) => new Date(t.created_at).getTime()));
+      const right = Math.max(...b.tasks.map((t) => new Date(t.created_at).getTime()));
+      return right - left;
+    });
+    return result;
+  }, [filteredTasks]);
+
+  useEffect(() => {
+    setCollapsedGroups((prev) => {
+      const next = { ...prev };
+      for (const group of groupedTasks) {
+        if (!(group.workId in next)) {
+          next[group.workId] = false;
+        }
+      }
+      return next;
+    });
+  }, [groupedTasks]);
 
   // Group applied cards by set_id
   const groupedApplied = useMemo(() => {
@@ -209,25 +417,39 @@ export function AdminTasksPage() {
   const onRetryTask = async (taskId: string) => {
     try {
       await retryAITask(taskId);
+      setStaleApplyConflicts((prev) => {
+        const next = { ...prev };
+        delete next[taskId];
+        return next;
+      });
       await refresh();
     } catch (err) {
-      const message = err instanceof Error ? err.message : 'Failed to retry task';
+      const message = parseErrorMessage(err);
       setError(message);
     }
   };
 
-  const onApplyFix = async (taskId: string) => {
+  const onApplyFix = async (taskId: string, force = false) => {
     setApplyingTaskIds((prev) => ({ ...prev, [taskId]: true }));
     try {
-      const result = await applyAITaskFix(taskId);
+      const result = await applyAITaskFix(taskId, { force });
       setApplyResults((prev) => ({
         ...prev,
         [taskId]: { commit_sha: result.commit_sha, pr_url: result.pr_url },
       }));
+      setStaleApplyConflicts((prev) => {
+        const next = { ...prev };
+        delete next[taskId];
+        return next;
+      });
       await loadTaskDetail(taskId);
       await refresh();
     } catch (err) {
-      const message = err instanceof Error ? err.message : 'Failed to apply fix';
+      const stale = extractStaleApplyConflict(err);
+      if (stale) {
+        setStaleApplyConflicts((prev) => ({ ...prev, [taskId]: stale }));
+      }
+      const message = stale?.message ?? parseErrorMessage(err);
       setError(message);
     } finally {
       setApplyingTaskIds((prev) => ({ ...prev, [taskId]: false }));
@@ -277,7 +499,7 @@ export function AdminTasksPage() {
     }
   };
 
-  const getTaskCards = (task: AITaskItem): Array<{ card_id: string; set_id?: string; module_name?: string }> => {
+  function getTaskCards(task: AITaskItem): Array<{ card_id: string; set_id?: string; module_name?: string }> {
     const fromSanitized = (task.sanitized_input as { cards?: unknown })?.cards;
     if (Array.isArray(fromSanitized)) {
       const cards = fromSanitized.filter((entry): entry is Record<string, unknown> => typeof entry === 'object' && entry !== null);
@@ -291,7 +513,20 @@ export function AdminTasksPage() {
     }
     const fromPayload = (task.payload as { cards?: unknown })?.cards;
     if (!Array.isArray(fromPayload)) {
-      return [];
+      const fallbackCardId = (task.payload as { card_id?: unknown }).card_id;
+      if (typeof fallbackCardId !== 'string' || !fallbackCardId.trim()) {
+        return [];
+      }
+      return [
+        {
+          card_id: fallbackCardId.trim().toUpperCase(),
+          set_id: task.set_id ?? undefined,
+          module_name:
+            typeof (task.payload as { module_name?: unknown }).module_name === 'string'
+              ? String((task.payload as { module_name?: unknown }).module_name)
+              : undefined,
+        },
+      ];
     }
     return fromPayload
       .filter((entry): entry is Record<string, unknown> => typeof entry === 'object' && entry !== null)
@@ -318,6 +553,297 @@ export function AdminTasksPage() {
       setError(message);
     } finally {
       setPromotingKeys((prev) => ({ ...prev, [key]: false }));
+    }
+  }
+
+  const renderTaskCard = (task: AITaskItem) => {
+    const detail = taskDetails[task.id];
+    const batchDetail = task.batch_id ? batchDetails[task.batch_id] : null;
+    const loadingBatch = task.batch_id ? loadingBatchIds[task.batch_id] === true : false;
+    const workedItems = batchDetail?.items.filter((item) => item.status === 'applied') ?? [];
+    const failedItems = batchDetail?.items.filter((item) => item.status === 'failed') ?? [];
+    const applyResult = applyResults[task.id];
+    const staleConflict = staleApplyConflicts[task.id];
+
+    return (
+      <div key={task.id} className="border border-gray-700 rounded p-4 bg-gray-900">
+        <div className="flex justify-between items-center text-sm">
+          <div className="text-white">
+            {task.task_type} <span className="text-gray-400">({task.id})</span>
+          </div>
+          <StatusBadge status={task.status} />
+        </div>
+        <div className="text-xs text-gray-500 mt-1">
+          scope={task.scope_profile ?? 'n/a'} run_mode={task.run_mode ?? 'n/a'} batch={task.batch_id ?? 'n/a'} set_run=
+          {task.set_run_id ?? 'n/a'} set={task.set_id ?? 'n/a'}
+        </div>
+        <div className="text-xs text-gray-500 mt-1">
+          est=${Number(task.cost_estimate || 0).toFixed(4)} actual=${Number(task.cost_actual || 0).toFixed(4)} in=
+          {task.input_tokens} out={task.output_tokens}
+        </div>
+        {batchDetail ? (
+          <div className="text-xs text-sky-300 mt-1">
+            batch_status={batchDetail.batch.status} worked={workedItems.length} failed={failedItems.length} commits=
+            {batchDetail.batch.commit_count}
+          </div>
+        ) : null}
+        {applyResult?.commit_sha || applyResult?.pr_url ? (
+          <div className="flex items-center gap-3 text-xs mt-1">
+            <span className="text-gray-400">Applied:</span>
+            <CommitLink sha={applyResult.commit_sha} />
+            <PrLink url={applyResult.pr_url} />
+          </div>
+        ) : null}
+        {task.error_text ? <div className="text-xs text-red-400 mt-2">{task.error_text}</div> : null}
+        <div className="flex gap-2 mt-3">
+          <button
+            onClick={() => void onRetryTask(task.id)}
+            className="px-2 py-1 rounded bg-slate-700 hover:bg-slate-600 text-xs text-white"
+          >
+            Retry
+          </button>
+          <button
+            onClick={() => void onToggleReview(task)}
+            className="px-2 py-1 rounded bg-indigo-700 hover:bg-indigo-600 text-xs text-white"
+          >
+            {expandedTaskId === task.id ? 'Hide Review' : 'Review Result'}
+          </button>
+          {task.task_type === 'script_autofix' && task.apply_status === 'stale' ? (
+            <span className="px-2 py-1 rounded bg-amber-800/60 text-amber-300 text-xs font-medium">Stale</span>
+          ) : null}
+          {task.task_type === 'script_autofix' && task.apply_status === 'invalid' ? (
+            <span className="px-2 py-1 rounded bg-red-800/60 text-red-300 text-xs font-medium">Invalid</span>
+          ) : null}
+          {task.task_type === 'script_autofix' && task.apply_status !== 'invalid' ? (
+            <button
+              onClick={() => void onApplyFix(task.id)}
+              disabled={applyingTaskIds[task.id] === true}
+              className="px-2 py-1 rounded bg-emerald-700 hover:bg-emerald-600 disabled:bg-gray-700 text-xs text-white"
+            >
+              {applyingTaskIds[task.id] === true ? 'Applying...' : 'Apply Fix'}
+            </button>
+          ) : null}
+          {task.task_type === 'script_autofix' && (task.apply_status === 'stale' || staleConflict?.can_force_apply) ? (
+            <button
+              onClick={() => void onApplyFix(task.id, true)}
+              disabled={applyingTaskIds[task.id] === true}
+              className="px-2 py-1 rounded bg-amber-700 hover:bg-amber-600 disabled:bg-gray-700 text-xs text-white"
+            >
+              {applyingTaskIds[task.id] === true ? 'Applying...' : 'Force Apply'}
+            </button>
+          ) : null}
+        </div>
+        {staleConflict ? (
+          <div className="mt-2 border border-amber-700/60 rounded p-2 bg-amber-950/20 text-[11px] text-amber-200 space-y-1">
+            <div>{staleConflict.message}</div>
+            <div>path={staleConflict.path}</div>
+            <div>expected={staleConflict.expected_hash}</div>
+            <div>current={staleConflict.current_hash}</div>
+            {!staleConflict.can_force_apply ? <div>Force apply is unavailable for this mismatch.</div> : null}
+          </div>
+        ) : null}
+
+        {expandedTaskId === task.id ? (
+          <div className="mt-4 border border-gray-700 rounded p-3 bg-gray-950 space-y-3">
+            {detailLoadingTaskId === task.id && !detail ? (
+              <div className="text-xs text-gray-400">Loading task detail...</div>
+            ) : null}
+            {detail ? (
+              <>
+                <div className="text-xs text-gray-400">Stored Result JSON</div>
+                <pre className="text-xs text-gray-200 bg-gray-900 border border-gray-800 rounded p-3 overflow-auto max-h-56">
+                  {JSON.stringify(detail.result ?? {}, null, 2)}
+                </pre>
+
+                {task.batch_id ? (
+                  <div className="border border-gray-800 rounded p-3 bg-gray-900 space-y-2">
+                    <div className="text-xs text-gray-300">Batch Execution Detail</div>
+                    {loadingBatch ? <div className="text-xs text-gray-400">Loading batch detail...</div> : null}
+                    {batchDetail ? (
+                      <>
+                        <div className="text-[11px] text-gray-300">
+                          batch={batchDetail.batch.id} set={batchDetail.batch.set_id} status={batchDetail.batch.status}{' '}
+                          run_mode={batchDetail.batch.run_mode} scope={batchDetail.batch.scope_profile}
+                        </div>
+                        <div className="text-[11px] text-gray-400">
+                          applied={batchDetail.batch.applied_count} failed={batchDetail.batch.failed_count} commits=
+                          {batchDetail.batch.commit_count} stop_reason={batchDetail.batch.stopped_reason ?? 'n/a'}
+                        </div>
+                        <div className="text-[11px] text-gray-400 flex items-center gap-2">
+                          pr=<PrLink url={batchDetail.batch.pr_url} />
+                          {!batchDetail.batch.pr_url ? <span>n/a</span> : null}
+                        </div>
+                        <div className="text-[11px] text-emerald-300">
+                          worked_cards ({workedItems.length}):{' '}
+                          {workedItems.length > 0
+                            ? workedItems.map((item) => (
+                                <span key={item.id} className="inline-flex items-center gap-1 mr-2">
+                                  {item.card_id}
+                                  <CommitLink sha={item.commit_sha} />
+                                </span>
+                              ))
+                            : 'none'}
+                        </div>
+                        <div className="space-y-1">
+                          <div className="text-[11px] text-red-300">failed_cards ({failedItems.length})</div>
+                          {failedItems.length === 0 ? (
+                            <div className="text-[11px] text-gray-500">none</div>
+                          ) : (
+                            failedItems.map((item) => (
+                              <div key={item.id} className="text-[11px] text-red-200">
+                                {item.card_id}: {item.error_text ?? 'no error text'}
+                              </div>
+                            ))
+                          )}
+                        </div>
+                      </>
+                    ) : null}
+                  </div>
+                ) : null}
+
+                {detail.task_type === 'review_batch' ? (
+                  <>
+                    <div className="text-xs text-gray-400">Promotion Note (optional)</div>
+                    <input
+                      value={promotionNotes[task.id] ?? ''}
+                      onChange={(e) => setPromotionNotes((prev) => ({ ...prev, [task.id]: e.target.value }))}
+                      placeholder="e.g. faithful + engine-supported; approved"
+                      className="w-full bg-gray-900 border border-gray-700 rounded px-2 py-1.5 text-xs text-white"
+                    />
+                    <div className="space-y-2">
+                      {getTaskCards(detail).map((card) => {
+                        const resultCards = (detail.result as { cards?: Record<string, Record<string, unknown>> } | null)?.cards ?? {};
+                        const review = resultCards[card.card_id] ?? {};
+                        const faithful = review.faithful_to_card_text === true;
+                        const engineSupported = review.engine_supported === true;
+                        const issues = Array.isArray(review.issues) ? review.issues.map((issue) => String(issue)) : [];
+                        const key = `${task.id}:${card.card_id}`;
+                        const promoting = promotingKeys[key] === true;
+                        const promoted = promotedKeys[key] === true;
+
+                        return (
+                          <div key={key} className="border border-gray-800 rounded p-2 bg-gray-900">
+                            <div className="flex items-center justify-between gap-2">
+                              <div className="text-xs text-white">
+                                {card.card_id}
+                                <span className="text-gray-400"> ({card.module_name ?? 'unknown module'})</span>
+                              </div>
+                              <button
+                                onClick={() => void onPromoteFromTask(task.id, card.card_id)}
+                                disabled={promoting || promoted}
+                                className="px-2 py-1 rounded bg-emerald-700 hover:bg-emerald-600 disabled:bg-gray-700 text-xs text-white"
+                              >
+                                {promoted ? 'Promoted' : promoting ? 'Promoting...' : 'Promote'}
+                              </button>
+                            </div>
+                            <div className="text-[11px] text-gray-400 mt-1">
+                              faithful={String(faithful)} engine_supported={String(engineSupported)}
+                            </div>
+                            {issues.length > 0 ? (
+                              <div className="text-[11px] text-amber-300 mt-1">issues: {issues.join(' | ')}</div>
+                            ) : null}
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </>
+                ) : null}
+              </>
+            ) : null}
+          </div>
+        ) : null}
+      </div>
+    );
+  };
+
+  const onQueueDeckImplementationTasks = async () => {
+    if (!deckListText.trim()) {
+      setError('Paste a deck list first.');
+      return;
+    }
+
+    setDeckQueueing(true);
+    setDeckQueueSummary(null);
+    setDeckParseWarnings([]);
+    setError(null);
+
+    try {
+      const parsed = await parseDeck(deckListText);
+      setDeckParseWarnings(parsed.warnings ?? []);
+
+      const uniqueCards = Array.from(
+        new Set(
+          [...parsed.main_deck, ...parsed.egg_deck]
+            .map((cardId) => cardId.trim().toUpperCase())
+            .filter((cardId) => cardId.length > 0),
+        ),
+      );
+
+      const limit = Math.min(500, Math.max(1, Number(deckQueueLimit) || 60));
+      const cardsToQueue = uniqueCards.slice(0, limit);
+      const queueable: Array<{ cardId: string; payload: ScriptAutofixCardPayload }> = [];
+      const skipped: string[] = [];
+      for (const cardId of cardsToQueue) {
+        const payload = toScriptAutofixCardPayload(cardId);
+        if (!payload) {
+          skipped.push(cardId);
+          continue;
+        }
+        queueable.push({ cardId, payload });
+      }
+
+      if (queueable.length === 0) {
+        throw new Error('No recognizable card IDs found in the parsed deck list.');
+      }
+
+      const estimate = Number(costEstimate) || 0;
+      let created = 0;
+      const failed: string[] = [];
+      let firstError: string | null = null;
+      for (const entry of queueable) {
+        try {
+          await createAITask({
+            task_type: 'script_autofix',
+            payload: {
+              ...entry.payload,
+              scope_profile: deckScopeProfile,
+              issue_description: `Implement card script for ${entry.cardId} from submitted deck list.`,
+            },
+            model_name: modelName || undefined,
+            cost_estimate: estimate,
+            run_mode: deckRunMode,
+            scope_profile: deckScopeProfile,
+          });
+          created += 1;
+        } catch (err) {
+          failed.push(entry.cardId);
+          if (!firstError) {
+            firstError = err instanceof Error ? err.message : 'Failed to queue some deck cards.';
+          }
+        }
+      }
+
+      await refresh();
+      const summaryParts = [
+        `Queued ${created} script_autofix task${created === 1 ? '' : 's'}`,
+        `from ${cardsToQueue.length} unique deck cards`,
+      ];
+      if (skipped.length > 0) {
+        summaryParts.push(`(${skipped.length} skipped: unsupported id format)`);
+      }
+      if (failed.length > 0) {
+        summaryParts.push(`(${failed.length} failed to queue)`);
+      }
+      const summary = `${summaryParts.join(' ')}.`;
+      setDeckQueueSummary(summary);
+      if (firstError && created === 0) {
+        setError(firstError);
+      }
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Failed to parse deck list and queue tasks';
+      setError(message);
+    } finally {
+      setDeckQueueing(false);
     }
   };
 
@@ -353,303 +879,252 @@ export function AdminTasksPage() {
         </button>
       </div>
 
-      {/* ── Tasks Tab ─────────────────────────────────────────────── */}
+      {/* -- Tasks Tab ----------------------------------------------- */}
       {activeTab === 'tasks' && (
         <>
-          <div className="border border-gray-700 rounded p-4 bg-gray-900 space-y-3">
-            <div className="text-sm text-gray-300 font-medium">Create Task</div>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-              <select
-                value={taskType}
-                onChange={(e) => setTaskType(e.target.value as typeof taskType)}
-                className="bg-gray-800 border border-gray-700 rounded px-2 py-2 text-sm text-white"
-              >
-                <option value="review_batch">review_batch</option>
-                <option value="qa_analysis">qa_analysis</option>
-                <option value="engine_audit">engine_audit</option>
-                <option value="script_autofix">script_autofix</option>
-                <option value="llm_transpile">llm_transpile</option>
-                <option value="transpiler_learn">transpiler_learn</option>
-              </select>
-              <input
-                value={modelName}
-                onChange={(e) => setModelName(e.target.value)}
-                placeholder="model override (optional)"
-                className="bg-gray-800 border border-gray-700 rounded px-2 py-2 text-sm text-white"
-              />
-              <input
-                value={costEstimate}
-                onChange={(e) => setCostEstimate(e.target.value)}
-                placeholder="cost estimate USD"
-                className="bg-gray-800 border border-gray-700 rounded px-2 py-2 text-sm text-white"
-              />
-            </div>
-            <textarea
-              value={payloadText}
-              onChange={(e) => setPayloadText(e.target.value)}
-              rows={10}
-              className="w-full bg-gray-800 border border-gray-700 rounded px-2 py-2 text-sm text-white font-mono"
-            />
+          <div className="border border-gray-700 rounded bg-gray-900">
             <button
-              onClick={() => void onCreateTask()}
-              className="px-3 py-1.5 rounded bg-blue-600 hover:bg-blue-500 text-white text-sm"
+              onClick={() => setCreateTaskAccordionOpen((prev) => !prev)}
+              className="w-full px-4 py-3 flex items-center justify-between text-left hover:bg-gray-800/40"
             >
-              Queue Task
+              <span className="text-sm text-gray-300 font-medium">Create Task</span>
+              <span className="text-xs text-gray-400">{createTaskAccordionOpen ? 'Hide' : 'Show'}</span>
             </button>
+            {createTaskAccordionOpen ? (
+              <div className="px-4 pb-4 space-y-3 border-t border-gray-800">
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                  <select
+                    value={taskType}
+                    onChange={(e) => setTaskType(e.target.value as typeof taskType)}
+                    className="bg-gray-800 border border-gray-700 rounded px-2 py-2 text-sm text-white"
+                  >
+                    <option value="review_batch">review_batch</option>
+                    <option value="qa_analysis">qa_analysis</option>
+                    <option value="engine_audit">engine_audit</option>
+                    <option value="script_autofix">script_autofix</option>
+                    <option value="llm_transpile">llm_transpile</option>
+                    <option value="transpiler_learn">transpiler_learn</option>
+                  </select>
+                  <input
+                    value={modelName}
+                    onChange={(e) => setModelName(e.target.value)}
+                    placeholder="model override (optional)"
+                    className="bg-gray-800 border border-gray-700 rounded px-2 py-2 text-sm text-white"
+                  />
+                  <input
+                    value={costEstimate}
+                    onChange={(e) => setCostEstimate(e.target.value)}
+                    placeholder="cost estimate USD"
+                    className="bg-gray-800 border border-gray-700 rounded px-2 py-2 text-sm text-white"
+                  />
+                </div>
+                <textarea
+                  value={payloadText}
+                  onChange={(e) => setPayloadText(e.target.value)}
+                  rows={10}
+                  className="w-full bg-gray-800 border border-gray-700 rounded px-2 py-2 text-sm text-white font-mono"
+                />
+                <button
+                  onClick={() => void onCreateTask()}
+                  className="px-3 py-1.5 rounded bg-blue-600 hover:bg-blue-500 text-white text-sm"
+                >
+                  Queue Task
+                </button>
+              </div>
+            ) : null}
           </div>
 
-          <div className="border border-gray-700 rounded p-4 bg-gray-900 space-y-3">
-            <div className="text-sm text-gray-300 font-medium">Task Filters</div>
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
-              <select
-                value={statusFilter}
-                onChange={(e) => setStatusFilter(e.target.value as TaskStatusFilter)}
-                className="bg-gray-800 border border-gray-700 rounded px-2 py-2 text-sm text-white"
-              >
-                <option value="all">All statuses</option>
-                <option value="queued">queued</option>
-                <option value="running">running</option>
-                <option value="completed">completed</option>
-                <option value="failed">failed</option>
-              </select>
-              <select
-                value={taskTypeFilter}
-                onChange={(e) => setTaskTypeFilter(e.target.value as TaskTypeFilter)}
-                className="bg-gray-800 border border-gray-700 rounded px-2 py-2 text-sm text-white"
-              >
-                <option value="all">All task types</option>
-                <option value="review_batch">review_batch</option>
-                <option value="qa_analysis">qa_analysis</option>
-                <option value="engine_audit">engine_audit</option>
-                <option value="script_autofix">script_autofix</option>
-                <option value="llm_transpile">llm_transpile</option>
-                <option value="transpiler_learn">transpiler_learn</option>
-              </select>
-              <select
-                value={runModeFilter}
-                onChange={(e) => setRunModeFilter(e.target.value as RunModeFilter)}
-                className="bg-gray-800 border border-gray-700 rounded px-2 py-2 text-sm text-white"
-              >
-                <option value="all">All run modes</option>
-                <option value="pr">pr</option>
-                <option value="main">main</option>
-                <option value="n/a">n/a</option>
-              </select>
-              <select
-                value={scopeFilter}
-                onChange={(e) => setScopeFilter(e.target.value as ScopeFilter)}
-                className="bg-gray-800 border border-gray-700 rounded px-2 py-2 text-sm text-white"
-              >
-                <option value="all">All scopes</option>
-                <option value="script">script</option>
-                <option value="script_engine">script_engine</option>
-                <option value="script_engine_transpiler">script_engine_transpiler</option>
-                <option value="n/a">n/a</option>
-              </select>
-              <input
-                value={batchIdFilter}
-                onChange={(e) => setBatchIdFilter(e.target.value)}
-                placeholder="batch id contains..."
-                className="bg-gray-800 border border-gray-700 rounded px-2 py-2 text-sm text-white"
-              />
-              <input
-                value={limitFilter}
-                onChange={(e) => setLimitFilter(e.target.value)}
-                placeholder="fetch limit (1-500)"
-                className="bg-gray-800 border border-gray-700 rounded px-2 py-2 text-sm text-white"
-              />
-              <label className="text-sm text-gray-300 flex items-center gap-2">
-                <input type="checkbox" checked={batchOnlyFilter} onChange={(e) => setBatchOnlyFilter(e.target.checked)} />
-                batch tasks only
-              </label>
-              <div className="text-sm text-gray-400 flex items-center">
-                showing {filteredTasks.length} of {tasks.length}
+          <div className="border border-gray-700 rounded bg-gray-900">
+            <button
+              onClick={() => setDeckQueueAccordionOpen((prev) => !prev)}
+              className="w-full px-4 py-3 flex items-center justify-between text-left hover:bg-gray-800/40"
+            >
+              <span className="text-sm text-gray-300 font-medium">Deck List to Implementation Tasks</span>
+              <span className="text-xs text-gray-400">{deckQueueAccordionOpen ? 'Hide' : 'Show'}</span>
+            </button>
+            {deckQueueAccordionOpen ? (
+              <div className="px-4 pb-4 space-y-3 border-t border-gray-800">
+                <textarea
+                  value={deckListText}
+                  onChange={(e) => setDeckListText(e.target.value)}
+                  rows={8}
+                  placeholder="Paste deck list text (digimoncard.io export or card-id list)"
+                  className="w-full bg-gray-800 border border-gray-700 rounded px-2 py-2 text-sm text-white font-mono"
+                />
+                <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
+                  <select
+                    value={deckRunMode}
+                    onChange={(e) => setDeckRunMode(e.target.value as TaskRunMode)}
+                    className="bg-gray-800 border border-gray-700 rounded px-2 py-2 text-sm text-white"
+                  >
+                    <option value="pr">run_mode: pr</option>
+                    <option value="main">run_mode: main</option>
+                  </select>
+                  <select
+                    value={deckScopeProfile}
+                    onChange={(e) => setDeckScopeProfile(e.target.value as TaskScopeProfile)}
+                    className="bg-gray-800 border border-gray-700 rounded px-2 py-2 text-sm text-white"
+                  >
+                    <option value="script">scope: script</option>
+                    <option value="script_engine">scope: script_engine</option>
+                    <option value="script_engine_transpiler">scope: script_engine_transpiler</option>
+                  </select>
+                  <input
+                    value={deckQueueLimit}
+                    onChange={(e) => setDeckQueueLimit(e.target.value)}
+                    placeholder="max unique cards (1-500)"
+                    className="bg-gray-800 border border-gray-700 rounded px-2 py-2 text-sm text-white"
+                  />
+                  <button
+                    onClick={() => void onQueueDeckImplementationTasks()}
+                    disabled={deckQueueing}
+                    className="px-3 py-1.5 rounded bg-emerald-700 hover:bg-emerald-600 disabled:bg-gray-700 text-white text-sm"
+                  >
+                    {deckQueueing ? 'Queueing...' : 'Queue Deck Implementation'}
+                  </button>
+                </div>
+                {deckQueueSummary ? <div className="text-xs text-emerald-300">{deckQueueSummary}</div> : null}
+                {deckParseWarnings.length > 0 ? (
+                  <div className="text-xs text-amber-300">
+                    Parser warnings: {deckParseWarnings.slice(0, 3).join(' | ')}
+                    {deckParseWarnings.length > 3 ? ` | +${deckParseWarnings.length - 3} more` : ''}
+                  </div>
+                ) : null}
               </div>
-            </div>
-            <div className="flex gap-2">
-              <button
-                onClick={() => void refresh()}
-                className="px-3 py-1.5 rounded bg-blue-600 hover:bg-blue-500 text-white text-sm"
-              >
-                Apply / Refresh
-              </button>
-            </div>
+            ) : null}
+          </div>
+
+          <div className="border border-gray-700 rounded bg-gray-900">
+            <button
+              onClick={() => setTaskFiltersAccordionOpen((prev) => !prev)}
+              className="w-full px-4 py-3 flex items-center justify-between text-left hover:bg-gray-800/40"
+            >
+              <span className="text-sm text-gray-300 font-medium">Task Filters</span>
+              <span className="text-xs text-gray-400">{taskFiltersAccordionOpen ? 'Hide' : 'Show'}</span>
+            </button>
+            {taskFiltersAccordionOpen ? (
+              <div className="px-4 pb-4 space-y-3 border-t border-gray-800">
+                <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
+                  <select
+                    value={statusFilter}
+                    onChange={(e) => setStatusFilter(e.target.value as TaskStatusFilter)}
+                    className="bg-gray-800 border border-gray-700 rounded px-2 py-2 text-sm text-white"
+                  >
+                    <option value="all">All statuses</option>
+                    <option value="queued">queued</option>
+                    <option value="running">running</option>
+                    <option value="completed">completed</option>
+                    <option value="failed">failed</option>
+                  </select>
+                  <select
+                    value={taskTypeFilter}
+                    onChange={(e) => setTaskTypeFilter(e.target.value as TaskTypeFilter)}
+                    className="bg-gray-800 border border-gray-700 rounded px-2 py-2 text-sm text-white"
+                  >
+                    <option value="all">All task types</option>
+                    <option value="review_batch">review_batch</option>
+                    <option value="qa_analysis">qa_analysis</option>
+                    <option value="engine_audit">engine_audit</option>
+                    <option value="script_autofix">script_autofix</option>
+                    <option value="llm_transpile">llm_transpile</option>
+                    <option value="transpiler_learn">transpiler_learn</option>
+                  </select>
+                  <select
+                    value={runModeFilter}
+                    onChange={(e) => setRunModeFilter(e.target.value as RunModeFilter)}
+                    className="bg-gray-800 border border-gray-700 rounded px-2 py-2 text-sm text-white"
+                  >
+                    <option value="all">All run modes</option>
+                    <option value="pr">pr</option>
+                    <option value="main">main</option>
+                    <option value="n/a">n/a</option>
+                  </select>
+                  <select
+                    value={scopeFilter}
+                    onChange={(e) => setScopeFilter(e.target.value as ScopeFilter)}
+                    className="bg-gray-800 border border-gray-700 rounded px-2 py-2 text-sm text-white"
+                  >
+                    <option value="all">All scopes</option>
+                    <option value="script">script</option>
+                    <option value="script_engine">script_engine</option>
+                    <option value="script_engine_transpiler">script_engine_transpiler</option>
+                    <option value="n/a">n/a</option>
+                  </select>
+                  <select
+                    value={applyStatusFilter}
+                    onChange={(e) => setApplyStatusFilter(e.target.value as ApplyStatusFilter)}
+                    className="bg-gray-800 border border-gray-700 rounded px-2 py-2 text-sm text-white"
+                  >
+                    <option value="all">All apply statuses</option>
+                    <option value="applicable">applicable</option>
+                    <option value="stale">stale</option>
+                    <option value="invalid">invalid</option>
+                  </select>
+                  <input
+                    value={setIdFilter}
+                    onChange={(e) => setSetIdFilter(e.target.value)}
+                    placeholder="set id (e.g. bt24)"
+                    className="bg-gray-800 border border-gray-700 rounded px-2 py-2 text-sm text-white"
+                  />
+                  <input
+                    value={workIdFilter}
+                    onChange={(e) => setWorkIdFilter(e.target.value)}
+                    placeholder="work id"
+                    className="bg-gray-800 border border-gray-700 rounded px-2 py-2 text-sm text-white"
+                  />
+                  <input
+                    value={limitFilter}
+                    onChange={(e) => setLimitFilter(e.target.value)}
+                    placeholder="fetch limit (1-500)"
+                    className="bg-gray-800 border border-gray-700 rounded px-2 py-2 text-sm text-white"
+                  />
+                  <div className="text-sm text-gray-400 flex items-center">
+                    showing {groupedTasks.length} groups / {filteredTasks.length} tasks
+                  </div>
+                </div>
+                <div className="flex gap-2">
+                  <button
+                    onClick={() => void refresh()}
+                    className="px-3 py-1.5 rounded bg-blue-600 hover:bg-blue-500 text-white text-sm"
+                  >
+                    Apply / Refresh
+                  </button>
+                </div>
+              </div>
+            ) : null}
           </div>
 
           <div className="text-xs text-gray-400">Total estimated spend: ${totalEstimated.toFixed(4)}</div>
 
           <div className="space-y-3">
             {loading ? <div className="text-gray-300">Loading...</div> : null}
-            {filteredTasks.map((task) => {
-              const detail = taskDetails[task.id];
-              const batchDetail = task.batch_id ? batchDetails[task.batch_id] : null;
-              const loadingBatch = task.batch_id ? loadingBatchIds[task.batch_id] === true : false;
-              const workedItems = batchDetail?.items.filter((item) => item.status === 'applied') ?? [];
-              const failedItems = batchDetail?.items.filter((item) => item.status === 'failed') ?? [];
-              const applyResult = applyResults[task.id];
-
+            {!loading && groupedTasks.length === 0 ? <div className="text-sm text-gray-400">No tasks found.</div> : null}
+            {groupedTasks.map((group) => {
+              const isCollapsed = collapsedGroups[group.workId] === true;
               return (
-                <div key={task.id} className="border border-gray-700 rounded p-4 bg-gray-900">
-                  <div className="flex justify-between items-center text-sm">
-                    <div className="text-white">
-                      {task.task_type} <span className="text-gray-400">({task.id})</span>
+                <div key={group.workId} className="border border-gray-700 rounded bg-gray-900">
+                  <button
+                    onClick={() => setCollapsedGroups((prev) => ({ ...prev, [group.workId]: !isCollapsed }))}
+                    className="w-full px-4 py-3 flex items-center justify-between gap-3 text-left hover:bg-gray-800/40"
+                  >
+                    <div className="space-y-1">
+                      <div className="text-sm text-white font-medium flex items-center gap-2">
+                        <span>Work ID:</span>
+                        <span className="font-mono">{group.workId}</span>
+                      </div>
+                      <div className="text-xs text-gray-400 flex items-center gap-2 flex-wrap">
+                        <span className="px-1.5 py-0.5 rounded bg-slate-700 text-gray-100">{group.workType}</span>
+                        <span className="px-1.5 py-0.5 rounded bg-slate-800 text-gray-200">set {group.setLabel}</span>
+                        <span>{group.taskCount} tasks</span>
+                        <span>{group.cardCount} cards</span>
+                      </div>
                     </div>
-                    <StatusBadge status={task.status} />
-                  </div>
-                  <div className="text-xs text-gray-500 mt-1">
-                    scope={task.scope_profile ?? 'n/a'} run_mode={task.run_mode ?? 'n/a'} batch={task.batch_id ?? 'n/a'}
-                  </div>
-                  <div className="text-xs text-gray-500 mt-1">
-                    est=${Number(task.cost_estimate || 0).toFixed(4)} actual=${Number(task.cost_actual || 0).toFixed(4)}{' '}
-                    in={task.input_tokens} out={task.output_tokens}
-                  </div>
-                  {batchDetail ? (
-                    <div className="text-xs text-sky-300 mt-1">
-                      batch_status={batchDetail.batch.status} worked={workedItems.length} failed={failedItems.length} commits=
-                      {batchDetail.batch.commit_count}
+                    <div className="flex items-center gap-3">
+                      <StatusBadge status={group.aggregateStatus} />
+                      <span className="text-xs text-gray-300">{isCollapsed ? 'Expand' : 'Collapse'}</span>
                     </div>
-                  ) : null}
-                  {applyResult?.commit_sha || applyResult?.pr_url ? (
-                    <div className="flex items-center gap-3 text-xs mt-1">
-                      <span className="text-gray-400">Applied:</span>
-                      <CommitLink sha={applyResult.commit_sha} />
-                      <PrLink url={applyResult.pr_url} />
-                    </div>
-                  ) : null}
-                  {task.error_text ? <div className="text-xs text-red-400 mt-2">{task.error_text}</div> : null}
-                  <div className="flex gap-2 mt-3">
-                    <button
-                      onClick={() => void onRetryTask(task.id)}
-                      className="px-2 py-1 rounded bg-slate-700 hover:bg-slate-600 text-xs text-white"
-                    >
-                      Retry
-                    </button>
-                    <button
-                      onClick={() => void onToggleReview(task)}
-                      className="px-2 py-1 rounded bg-indigo-700 hover:bg-indigo-600 text-xs text-white"
-                    >
-                      {expandedTaskId === task.id ? 'Hide Review' : 'Review Result'}
-                    </button>
-                    {task.task_type === 'script_autofix' ? (
-                      <button
-                        onClick={() => void onApplyFix(task.id)}
-                        disabled={applyingTaskIds[task.id] === true}
-                        className="px-2 py-1 rounded bg-emerald-700 hover:bg-emerald-600 disabled:bg-gray-700 text-xs text-white"
-                      >
-                        {applyingTaskIds[task.id] === true ? 'Applying...' : 'Apply Fix'}
-                      </button>
-                    ) : null}
-                  </div>
-
-                  {expandedTaskId === task.id ? (
-                    <div className="mt-4 border border-gray-700 rounded p-3 bg-gray-950 space-y-3">
-                      {detailLoadingTaskId === task.id && !detail ? (
-                        <div className="text-xs text-gray-400">Loading task detail...</div>
-                      ) : null}
-                      {detail ? (
-                        <>
-                          <div className="text-xs text-gray-400">Stored Result JSON</div>
-                          <pre className="text-xs text-gray-200 bg-gray-900 border border-gray-800 rounded p-3 overflow-auto max-h-56">
-                            {JSON.stringify(detail.result ?? {}, null, 2)}
-                          </pre>
-
-                          {task.batch_id ? (
-                            <div className="border border-gray-800 rounded p-3 bg-gray-900 space-y-2">
-                              <div className="text-xs text-gray-300">Batch Execution Detail</div>
-                              {loadingBatch ? <div className="text-xs text-gray-400">Loading batch detail...</div> : null}
-                              {batchDetail ? (
-                                <>
-                                  <div className="text-[11px] text-gray-300">
-                                    batch={batchDetail.batch.id} set={batchDetail.batch.set_id} status={batchDetail.batch.status}{' '}
-                                    run_mode={batchDetail.batch.run_mode} scope={batchDetail.batch.scope_profile}
-                                  </div>
-                                  <div className="text-[11px] text-gray-400">
-                                    applied={batchDetail.batch.applied_count} failed={batchDetail.batch.failed_count} commits=
-                                    {batchDetail.batch.commit_count} stop_reason={batchDetail.batch.stopped_reason ?? 'n/a'}
-                                  </div>
-                                  <div className="text-[11px] text-gray-400 flex items-center gap-2">
-                                    pr=<PrLink url={batchDetail.batch.pr_url} />
-                                    {!batchDetail.batch.pr_url ? <span>n/a</span> : null}
-                                  </div>
-                                  <div className="text-[11px] text-emerald-300">
-                                    worked_cards ({workedItems.length}):{' '}
-                                    {workedItems.length > 0
-                                      ? workedItems.map((item) => (
-                                          <span key={item.id} className="inline-flex items-center gap-1 mr-2">
-                                            {item.card_id}
-                                            <CommitLink sha={item.commit_sha} />
-                                          </span>
-                                        ))
-                                      : 'none'}
-                                  </div>
-                                  <div className="space-y-1">
-                                    <div className="text-[11px] text-red-300">failed_cards ({failedItems.length})</div>
-                                    {failedItems.length === 0 ? (
-                                      <div className="text-[11px] text-gray-500">none</div>
-                                    ) : (
-                                      failedItems.map((item) => (
-                                        <div key={item.id} className="text-[11px] text-red-200">
-                                          {item.card_id}: {item.error_text ?? 'no error text'}
-                                        </div>
-                                      ))
-                                    )}
-                                  </div>
-                                </>
-                              ) : null}
-                            </div>
-                          ) : null}
-
-                          {detail.task_type === 'review_batch' ? (
-                            <>
-                              <div className="text-xs text-gray-400">Promotion Note (optional)</div>
-                              <input
-                                value={promotionNotes[task.id] ?? ''}
-                                onChange={(e) => setPromotionNotes((prev) => ({ ...prev, [task.id]: e.target.value }))}
-                                placeholder="e.g. faithful + engine-supported; approved"
-                                className="w-full bg-gray-900 border border-gray-700 rounded px-2 py-1.5 text-xs text-white"
-                              />
-                              <div className="space-y-2">
-                                {getTaskCards(detail).map((card) => {
-                                  const resultCards = (detail.result as { cards?: Record<string, Record<string, unknown>> } | null)?.cards ?? {};
-                                  const review = resultCards[card.card_id] ?? {};
-                                  const faithful = review.faithful_to_card_text === true;
-                                  const engineSupported = review.engine_supported === true;
-                                  const issues = Array.isArray(review.issues) ? review.issues.map((issue) => String(issue)) : [];
-                                  const key = `${task.id}:${card.card_id}`;
-                                  const promoting = promotingKeys[key] === true;
-                                  const promoted = promotedKeys[key] === true;
-
-                                  return (
-                                    <div key={key} className="border border-gray-800 rounded p-2 bg-gray-900">
-                                      <div className="flex items-center justify-between gap-2">
-                                        <div className="text-xs text-white">
-                                          {card.card_id}
-                                          <span className="text-gray-400"> ({card.module_name ?? 'unknown module'})</span>
-                                        </div>
-                                        <button
-                                          onClick={() => void onPromoteFromTask(task.id, card.card_id)}
-                                          disabled={promoting || promoted}
-                                          className="px-2 py-1 rounded bg-emerald-700 hover:bg-emerald-600 disabled:bg-gray-700 text-xs text-white"
-                                        >
-                                          {promoted ? 'Promoted' : promoting ? 'Promoting...' : 'Promote'}
-                                        </button>
-                                      </div>
-                                      <div className="text-[11px] text-gray-400 mt-1">
-                                        faithful={String(faithful)} engine_supported={String(engineSupported)}
-                                      </div>
-                                      {issues.length > 0 ? (
-                                        <div className="text-[11px] text-amber-300 mt-1">issues: {issues.join(' | ')}</div>
-                                      ) : null}
-                                    </div>
-                                  );
-                                })}
-                              </div>
-                            </>
-                          ) : null}
-                        </>
-                      ) : null}
-                    </div>
-                  ) : null}
+                  </button>
+                  {!isCollapsed ? <div className="px-4 pb-4 space-y-3">{group.tasks.map((task) => renderTaskCard(task))}</div> : null}
                 </div>
               );
             })}
@@ -657,7 +1132,7 @@ export function AdminTasksPage() {
         </>
       )}
 
-      {/* ── Applied Cards Tab ─────────────────────────────────────── */}
+      {/* -- Applied Cards Tab --------------------------------------- */}
       {activeTab === 'applied' && (
         <>
           <div className="border border-gray-700 rounded p-4 bg-gray-900 space-y-3">
@@ -748,3 +1223,4 @@ export function AdminTasksPage() {
     </div>
   );
 }
+

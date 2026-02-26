@@ -9,12 +9,15 @@ import os
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
-from fastapi import APIRouter, Depends, HTTPException, Query, status
-from sqlalchemy import select
+from fastapi import APIRouter, Body, Depends, HTTPException, Query, status
+from sqlalchemy import func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from digimon_gym.ai.autofix_apply import (
+    HashMismatchError,
     apply_validated_edits,
+    check_edit_applicability,
+    get_primary_script_path,
     run_profile_checks,
     validate_edit_payload,
 )
@@ -24,6 +27,10 @@ from digimon_gym.ai.batch_orchestrator import (
 )
 from digimon_gym.ai.dispatcher import TaskDispatcher
 from digimon_gym.ai.git_adapter import GitAdapter, GitCommandError
+from digimon_gym.ai.issue_resolution import (
+    build_apply_resolution_note,
+    resolve_open_issues_for_card,
+)
 from digimon_gym.ai.set_run_orchestrator import SetRunOrchestrationError, set_run_orchestrator
 from digimon_gym.db.auth import ROLE_ADMIN, require_roles
 from digimon_gym.db.database import get_db
@@ -54,6 +61,7 @@ from digimon_gym.db.schemas import (
     AISetRunItemResponse,
     AISetRunResponse,
     AITaskApplyFixResponse,
+    AITaskApplyFixRequest,
     AITaskCreateRequest,
     AITaskResponse,
     AITaskRetryResponse,
@@ -65,6 +73,8 @@ from digimon_gym.db.schemas import (
     EngineBacklogResponse,
     PromotionRequest,
     PromotionResponse,
+    QueueSetIssueFixesRequest,
+    QueueSetIssueFixesResponse,
     TaskPromotionRequest,
 )
 from digimon_gym.engine.data.script_promotion import (
@@ -89,11 +99,103 @@ def _load_json(raw: str | None, fallback: Any) -> Any:
         return fallback
 
 
-def _task_to_response(task: AITask) -> AITaskResponse:
+def _set_id_from_card_id(card_id: object) -> str | None:
+    if not isinstance(card_id, str):
+        return None
+    value = card_id.strip().upper()
+    if not value:
+        return None
+    if "-" in value:
+        return value.split("-", 1)[0].lower()
+    if "_" in value:
+        return value.split("_", 1)[0].lower()
+    return None
+
+
+def _extract_set_id_from_payload(payload: Any) -> str | None:
+    if not isinstance(payload, dict):
+        return None
+
+    direct = payload.get("set_id")
+    if isinstance(direct, str) and direct.strip():
+        return direct.strip().lower()
+
+    card_level = _set_id_from_card_id(payload.get("card_id"))
+    if card_level:
+        return card_level
+
+    cards = payload.get("cards")
+    if not isinstance(cards, list):
+        return None
+
+    explicit: set[str] = set()
+    parsed: set[str] = set()
+    for entry in cards:
+        if not isinstance(entry, dict):
+            continue
+        raw_set_id = entry.get("set_id")
+        if isinstance(raw_set_id, str) and raw_set_id.strip():
+            explicit.add(raw_set_id.strip().lower())
+        parsed_set_id = _set_id_from_card_id(entry.get("card_id"))
+        if parsed_set_id:
+            parsed.add(parsed_set_id)
+
+    if len(explicit) == 1:
+        return next(iter(explicit))
+    if len(explicit) == 0 and len(parsed) == 1:
+        return next(iter(parsed))
+    return None
+
+
+def _task_work(task: AITask) -> tuple[str, str]:
+    if task.set_run_id:
+        return task.set_run_id, "set_run"
+    if task.batch_id:
+        return task.batch_id, "batch"
+    return task.id, "task"
+
+
+def _compute_apply_status(task: AITask) -> str | None:
+    """Compute apply_status for completed script_autofix tasks."""
+    if task.task_type != "script_autofix" or task.status != "completed":
+        return None
+    result_payload = _load_json(task.result_json, None)
+    if not result_payload or not isinstance(result_payload, dict):
+        return None
+    payload = _load_json(task.payload_json, {})
+    scope_profile = task.scope_profile or "script"
+    set_id = task.set_id or _extract_set_id_from_payload(payload)
+    # Extract module_name from payload cards list
+    module_name: str | None = None
+    cards = payload.get("cards") if isinstance(payload, dict) else None
+    if isinstance(cards, list) and len(cards) > 0:
+        first = cards[0]
+        if isinstance(first, dict):
+            module_name = first.get("module_name")
+    if not set_id or not module_name:
+        return None
+    return check_edit_applicability(
+        result_payload=result_payload,
+        scope_profile=scope_profile,
+        set_id=set_id,
+        module_name=module_name,
+    )
+
+
+def _task_to_response(
+    task: AITask,
+    *,
+    apply_status: str | None = None,
+) -> AITaskResponse:
+    payload = _load_json(task.payload_json, {})
+    work_id, work_type = _task_work(task)
+    set_id = task.set_id or _extract_set_id_from_payload(payload)
+    if set_id:
+        set_id = set_id.lower()
     return AITaskResponse(
         id=task.id,
         task_type=task.task_type,
-        payload=_load_json(task.payload_json, {}),
+        payload=payload,
         status=task.status,
         result=_load_json(task.result_json, None),
         sanitized_input=_load_json(task.sanitized_input_json, {}),
@@ -108,16 +210,32 @@ def _task_to_response(task: AITask) -> AITaskResponse:
         max_attempts=int(task.max_attempts or 0),
         created_by=task.created_by,
         batch_id=task.batch_id,
+        set_run_id=task.set_run_id,
+        set_id=set_id,
+        work_id=work_id,
+        work_type=work_type,
         run_mode=task.run_mode,
         scope_profile=task.scope_profile,
         started_at=task.started_at,
         completed_at=task.completed_at,
         created_at=task.created_at,
         updated_at=task.updated_at,
+        apply_status=apply_status,
     )
 
 
-def _promotion_to_response(p: ScriptPromotionAudit, *, batch_id: str | None = None) -> PromotionResponse:
+def _promotion_to_response(
+    p: ScriptPromotionAudit,
+    *,
+    task: AITask | None = None,
+) -> PromotionResponse:
+    batch_id = task.batch_id if task else None
+    set_run_id = task.set_run_id if task else None
+    if task is not None:
+        work_id, work_type = _task_work(task)
+    else:
+        work_id = None
+        work_type = None
     return PromotionResponse(
         id=p.id,
         card_id=p.card_id,
@@ -129,6 +247,9 @@ def _promotion_to_response(p: ScriptPromotionAudit, *, batch_id: str | None = No
         promoted_by=p.promoted_by,
         ai_task_id=p.ai_task_id,
         batch_id=batch_id,
+        set_run_id=set_run_id,
+        work_id=work_id,
+        work_type=work_type,
         notes=p.notes or "",
         created_at=p.created_at,
     )
@@ -274,6 +395,56 @@ def _card_to_set_module(card_id: str) -> tuple[str, str]:
     return set_id, module
 
 
+def _script_autofix_task_card_id(task: AITask) -> str | None:
+    payload = _load_json(task.payload_json, {})
+    if not isinstance(payload, dict):
+        return None
+    raw = payload.get("card_id")
+    if not isinstance(raw, str):
+        return None
+    card_id = raw.strip().upper()
+    return card_id or None
+
+
+async def _create_script_autofix_task_for_issue(
+    *,
+    db: AsyncSession,
+    issue: Issue,
+    created_by: str | None,
+) -> AITask:
+    set_id, module_name = _card_to_set_module(issue.card_id)
+    payload = {
+        "card_id": issue.card_id,
+        "set_id": set_id,
+        "module_name": module_name,
+        "issue_id": issue.id,
+        "issue_description": issue.description,
+        "scope_profile": "script",
+    }
+    estimate = dispatcher.estimate_cost("script_autofix", payload)
+    if estimate > MAX_TASK_COST_USD:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Estimated cost ${estimate:.4f} exceeds cap ${MAX_TASK_COST_USD:.4f}",
+        )
+
+    task = AITask(
+        task_type="script_autofix",
+        payload_json=json.dumps(payload),
+        status="queued",
+        model_name=None,
+        cost_estimate_usd=estimate,
+        max_attempts=1,
+        created_by=created_by,
+        set_id=set_id,
+        run_mode="pr",
+        scope_profile="script",
+    )
+    db.add(task)
+    await db.flush()
+    return task
+
+
 @router.post("/issues/approve-set", response_model=ApproveSetIssuesResponse)
 async def approve_set_issues(
     request: ApproveSetIssuesRequest,
@@ -323,37 +494,98 @@ async def queue_single_issue_fix(
     if issue.status != "approved_for_ai":
         raise HTTPException(status_code=400, detail="Issue must be approved_for_ai")
 
-    set_id, module_name = _card_to_set_module(issue.card_id)
-    payload = {
-        "card_id": issue.card_id,
-        "set_id": set_id,
-        "module_name": module_name,
-        "issue_id": issue.id,
-        "issue_description": issue.description,
-        "scope_profile": "script",
-    }
-    estimate = dispatcher.estimate_cost("script_autofix", payload)
-    if estimate > MAX_TASK_COST_USD:
-        raise HTTPException(
-            status_code=400,
-            detail=f"Estimated cost ${estimate:.4f} exceeds cap ${MAX_TASK_COST_USD:.4f}",
-        )
-
-    task = AITask(
-        task_type="script_autofix",
-        payload_json=json.dumps(payload),
-        status="queued",
-        model_name=None,
-        cost_estimate_usd=estimate,
-        max_attempts=1,
+    task = await _create_script_autofix_task_for_issue(
+        db=db,
+        issue=issue,
         created_by=user.id,
-        run_mode="pr",
-        scope_profile="script",
     )
-    db.add(task)
     await db.commit()
     await db.refresh(task)
     return _task_to_response(task)
+
+
+@router.post("/issues/queue-fixes-set", response_model=QueueSetIssueFixesResponse)
+async def queue_set_issue_fixes(
+    request: QueueSetIssueFixesRequest,
+    user: User = Depends(require_roles(ROLE_ADMIN)),
+    db: AsyncSession = Depends(get_db),
+):
+    normalized_set = request.set_id.strip().upper()
+    queue_mode = request.queue_mode
+    allowed_statuses = ["approved_for_ai"]
+    if queue_mode == "new_and_approved":
+        allowed_statuses = ["new", "approved_for_ai"]
+
+    issues = (
+        await db.execute(
+            select(Issue)
+            .where(
+                Issue.card_id.like(f"{normalized_set}-%"),
+                Issue.status.in_(allowed_statuses),
+            )
+            .order_by(Issue.created_at.asc())
+        )
+    ).scalars().all()
+
+    blocking_tasks = (
+        await db.execute(
+            select(AITask).where(
+                AITask.task_type == "script_autofix",
+                AITask.status.in_(["queued", "running", "completed"]),
+            )
+        )
+    ).scalars().all()
+    blocked_cards = {
+        card_id
+        for card_id in (_script_autofix_task_card_id(task) for task in blocking_tasks)
+        if card_id
+    }
+
+    seen_cards: set[str] = set()
+    skipped_cards: set[str] = set()
+    queued_task_ids: list[str] = []
+    queued_card_ids: list[str] = []
+    skipped_duplicate_cards = 0
+    skipped_existing_task_cards = 0
+
+    for issue in issues:
+        card_id = issue.card_id.strip().upper()
+        if card_id in seen_cards:
+            skipped_duplicate_cards += 1
+            skipped_cards.add(card_id)
+            continue
+        seen_cards.add(card_id)
+
+        if card_id in blocked_cards:
+            skipped_existing_task_cards += 1
+            skipped_cards.add(card_id)
+            continue
+
+        if queue_mode == "new_and_approved" and issue.status == "new":
+            issue.status = "approved_for_ai"
+            issue.approved_by = user.id
+
+        task = await _create_script_autofix_task_for_issue(
+            db=db,
+            issue=issue,
+            created_by=user.id,
+        )
+        blocked_cards.add(card_id)
+        queued_task_ids.append(task.id)
+        queued_card_ids.append(card_id)
+
+    await db.commit()
+    return QueueSetIssueFixesResponse(
+        set_id=request.set_id.strip().lower(),
+        queue_mode=queue_mode,
+        matched_issues=len(issues),
+        queued_tasks=len(queued_task_ids),
+        skipped_duplicate_cards=skipped_duplicate_cards,
+        skipped_existing_task_cards=skipped_existing_task_cards,
+        queued_task_ids=queued_task_ids,
+        queued_card_ids=queued_card_ids,
+        skipped_cards=sorted(skipped_cards),
+    )
 
 
 @router.post("/set-runs", response_model=AISetRunResponse, status_code=status.HTTP_201_CREATED)
@@ -550,6 +782,7 @@ async def create_ai_task(
         max_attempts=request.max_attempts,
         created_by=user.id,
         batch_id=request.batch_id,
+        set_id=_extract_set_id_from_payload(request.payload),
         run_mode=request.run_mode,
         scope_profile=request.scope_profile,
     )
@@ -566,6 +799,8 @@ async def list_ai_tasks(
     run_mode: Optional[str] = Query(None, pattern=r"^(pr|main)$"),
     scope_profile: Optional[str] = Query(None, pattern=r"^(script|script_engine|script_engine_transpiler)$"),
     batch_id: Optional[str] = Query(None, min_length=1, max_length=128),
+    set_id: Optional[str] = Query(None, min_length=1, max_length=32),
+    work_id: Optional[str] = Query(None, min_length=1, max_length=128),
     limit: int = Query(100, ge=1, le=500),
     _: User = Depends(require_roles(ROLE_ADMIN)),
     db: AsyncSession = Depends(get_db),
@@ -581,10 +816,26 @@ async def list_ai_tasks(
         query = query.where(AITask.scope_profile == scope_profile)
     if batch_id:
         query = query.where(AITask.batch_id == batch_id)
+    if set_id:
+        query = query.where(func.lower(AITask.set_id) == set_id.strip().lower())
+    if work_id:
+        normalized_work_id = work_id.strip()
+        query = query.where(
+            or_(
+                AITask.set_run_id == normalized_work_id,
+                AITask.batch_id == normalized_work_id,
+                AITask.id == normalized_work_id,
+            )
+        )
     query = query.limit(limit)
 
     result = await db.execute(query)
-    return [_task_to_response(task) for task in result.scalars().all()]
+    tasks = result.scalars().all()
+    responses = []
+    for task in tasks:
+        status = _compute_apply_status(task)
+        responses.append(_task_to_response(task, apply_status=status))
+    return responses
 
 
 @router.get("/ai-tasks/{task_id}", response_model=AITaskResponse)
@@ -597,7 +848,7 @@ async def get_ai_task(
     task = result.scalar_one_or_none()
     if task is None:
         raise HTTPException(status_code=404, detail="AI task not found")
-    return _task_to_response(task)
+    return _task_to_response(task, apply_status=_compute_apply_status(task))
 
 
 @router.post("/ai-tasks/{task_id}/retry", response_model=AITaskRetryResponse)
@@ -633,6 +884,7 @@ def _apply_and_commit_single_task(
     module_name: str,
     scope_profile: str,
     edits: list[dict],
+    force: bool,
 ) -> dict[str, Any]:
     """Blocking helper: apply edits in a worktree, commit, and open a draft PR.
 
@@ -640,36 +892,79 @@ def _apply_and_commit_single_task(
     """
     _git.preflight(run_mode="pr")
     ctx = _git.prepare_worktree_for_task(task_id=task_id, run_mode="pr")
-    applied_files = apply_validated_edits(repo_root=ctx.worktree_path, edits=edits)
-    check_outputs = run_profile_checks(
-        repo_root=ctx.worktree_path,
-        scope_profile=scope_profile,
-        applied_files=applied_files,
-    )
-    commit_sha = _git.commit_files(
-        worktree_path=ctx.worktree_path,
-        files=applied_files,
-        message=f"AI autofix {card_id}",
-    )
-    if commit_sha is None:
-        raise RuntimeError("No diff produced after apply — nothing to commit")
-    pr_url = _git.push_pr_branch_and_open_draft_pr(
-        worktree_path=ctx.worktree_path,
-        branch_name=ctx.branch_name,
-        title=f"AI autofix {card_id}",
-        body=f"Automated fix for **{card_id}** (`{set_id}/{module_name}`).\n\nTask: `{task_id}`",
-    )
+    applied_files: list[str] = []
+    primary_path = get_primary_script_path(set_id, module_name)
+    try:
+        applied_files = apply_validated_edits(
+            repo_root=ctx.worktree_path,
+            edits=edits,
+            force=force,
+            force_allowed_path=primary_path,
+        )
+        check_outputs = run_profile_checks(
+            repo_root=ctx.worktree_path,
+            scope_profile=scope_profile,
+            applied_files=applied_files,
+        )
+        commit_sha = _git.commit_files(
+            worktree_path=ctx.worktree_path,
+            files=applied_files,
+            message=f"AI autofix {card_id}",
+        )
+        if commit_sha is None:
+            raise RuntimeError("No diff produced after apply - nothing to commit")
+        pr_url = _git.push_pr_branch_and_open_draft_pr(
+            worktree_path=ctx.worktree_path,
+            branch_name=ctx.branch_name,
+            title=f"AI autofix {card_id}",
+            body=f"Automated fix for **{card_id}** (`{set_id}/{module_name}`).\n\nTask: `{task_id}`",
+        )
+        return {
+            "applied_files": applied_files,
+            "check_outputs": check_outputs,
+            "commit_sha": commit_sha,
+            "pr_url": pr_url,
+            "force_applied": force,
+        }
+    except Exception as exc:
+        if applied_files:
+            try:
+                _git.restore_worktree_to_head(worktree_path=ctx.worktree_path)
+            except Exception as cleanup_exc:
+                raise RuntimeError(
+                    f"{exc} | cleanup failed after apply: {cleanup_exc}"
+                ) from exc
+
+            message = str(exc)
+            if "scripts/check_frozen_integrity.py" in message:
+                raise RuntimeError(
+                    "Integrity check failed after applying edits. "
+                    "Reverted worktree changes so retry stays hash-safe. "
+                    f"Details: {message}"
+                ) from exc
+
+            raise RuntimeError(
+                "Apply failed after writing edits. Reverted worktree changes so retry stays hash-safe. "
+                f"Details: {message}"
+            ) from exc
+        raise
+
+
+def _stale_hash_conflict_detail(exc: HashMismatchError) -> dict[str, Any]:
     return {
-        "applied_files": applied_files,
-        "check_outputs": check_outputs,
-        "commit_sha": commit_sha,
-        "pr_url": pr_url,
+        "code": "stale_expected_hash",
+        "message": str(exc),
+        "path": exc.path,
+        "expected_hash": exc.expected_hash,
+        "current_hash": exc.current_hash,
+        "can_force_apply": exc.can_force_apply,
     }
 
 
 @router.post("/ai-tasks/{task_id}/apply-fix", response_model=AITaskApplyFixResponse)
 async def apply_task_fix(
     task_id: str,
+    request: AITaskApplyFixRequest | None = Body(default=None),
     user: User = Depends(require_roles(ROLE_ADMIN)),
     db: AsyncSession = Depends(get_db),
 ):
@@ -688,6 +983,7 @@ async def apply_task_fix(
     card_id = str(payload.get("card_id", "")).strip().upper()
     scope_profile = str(task.scope_profile or payload.get("scope_profile") or "script")
     run_mode = str(task.run_mode or "main")
+    force_apply = bool(request.force) if request else False
     if not card_id or not set_id or not module_name:
         raise HTTPException(status_code=400, detail="Task payload missing card_id/set_id/module_name")
 
@@ -712,7 +1008,7 @@ async def apply_task_fix(
         raise HTTPException(status_code=400, detail=str(exc))
 
     if run_mode == "pr":
-        # ── PR mode: worktree → commit → draft PR ──────────────────
+        # â”€â”€ PR mode: worktree â†’ commit â†’ draft PR â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
         try:
             info = await asyncio.to_thread(
                 _apply_and_commit_single_task,
@@ -722,7 +1018,20 @@ async def apply_task_fix(
                 module_name=module_name,
                 scope_profile=scope_profile,
                 edits=edits,
+                force=force_apply,
             )
+        except HashMismatchError as exc:
+            db.add(
+                AIFixApplyAudit(
+                    ai_task_id=task.id, batch_id=task.batch_id, card_id=card_id,
+                    scope_profile=scope_profile, run_mode=run_mode,
+                    applied_files_json="[]", check_outputs_json=json.dumps([]),
+                    commit_sha=None, pr_url=None, status="failed",
+                    error_text=str(exc), created_by=user.id,
+                )
+            )
+            await db.commit()
+            raise HTTPException(status_code=409, detail=_stale_hash_conflict_detail(exc))
         except (GitCommandError, Exception) as exc:
             db.add(
                 AIFixApplyAudit(
@@ -746,21 +1055,51 @@ async def apply_task_fix(
                 status="applied", created_by=user.id,
             )
         )
+        resolution_note = build_apply_resolution_note(
+            task_id=task.id,
+            card_id=card_id,
+            run_mode=run_mode,
+            commit_sha=info.get("commit_sha"),
+            pr_url=info.get("pr_url"),
+        )
+        await resolve_open_issues_for_card(
+            db,
+            card_id=card_id,
+            resolution_note=resolution_note,
+        )
         await db.commit()
         return AITaskApplyFixResponse(
             task_id=task.id, status="applied",
             applied_files=info["applied_files"],
             commit_sha=info["commit_sha"], pr_url=info["pr_url"],
+            force_applied=bool(info.get("force_applied")),
         )
 
-    # ── Main mode: direct disk write (existing behaviour) ───────
+    # â”€â”€ Main mode: direct disk write (existing behaviour) â”€â”€â”€â”€â”€â”€â”€
     try:
-        applied_files = apply_validated_edits(repo_root=PROJECT_ROOT, edits=edits)
+        applied_files = apply_validated_edits(
+            repo_root=PROJECT_ROOT,
+            edits=edits,
+            force=force_apply,
+            force_allowed_path=get_primary_script_path(set_id, module_name),
+        )
         check_outputs = run_profile_checks(
             repo_root=PROJECT_ROOT,
             scope_profile=scope_profile,
             applied_files=applied_files,
         )
+    except HashMismatchError as exc:
+        db.add(
+            AIFixApplyAudit(
+                ai_task_id=task.id, batch_id=task.batch_id, card_id=card_id,
+                scope_profile=scope_profile, run_mode=run_mode,
+                applied_files_json="[]", check_outputs_json=json.dumps([]),
+                commit_sha=None, pr_url=None, status="failed",
+                error_text=str(exc), created_by=user.id,
+            )
+        )
+        await db.commit()
+        raise HTTPException(status_code=409, detail=_stale_hash_conflict_detail(exc))
     except Exception as exc:
         db.add(
             AIFixApplyAudit(
@@ -784,10 +1123,21 @@ async def apply_task_fix(
             created_by=user.id,
         )
     )
+    resolution_note = build_apply_resolution_note(
+        task_id=task.id,
+        card_id=card_id,
+        run_mode=run_mode,
+    )
+    await resolve_open_issues_for_card(
+        db,
+        card_id=card_id,
+        resolution_note=resolution_note,
+    )
     await db.commit()
     return AITaskApplyFixResponse(
         task_id=task.id, status="applied",
         applied_files=applied_files, commit_sha=None, pr_url=None,
+        force_applied=force_apply,
     )
 
 
@@ -941,7 +1291,7 @@ async def promote_task_card(
     db.add(audit)
     await db.commit()
     await db.refresh(audit)
-    return _promotion_to_response(audit, batch_id=task.batch_id)
+    return _promotion_to_response(audit, task=task)
 
 
 @router.post("/promotions", response_model=PromotionResponse, status_code=status.HTTP_201_CREATED)
@@ -960,13 +1310,11 @@ async def promote_script(
     except ScriptPromotionError as exc:
         raise HTTPException(status_code=400, detail=str(exc))
 
-    batch_id = None
+    linked_task: AITask | None = None
     if request.ai_task_id:
-        task = (
+        linked_task = (
             await db.execute(select(AITask).where(AITask.id == request.ai_task_id))
         ).scalar_one_or_none()
-        if task is not None:
-            batch_id = task.batch_id
 
     audit = ScriptPromotionAudit(
         card_id=request.card_id,
@@ -982,35 +1330,37 @@ async def promote_script(
     db.add(audit)
     await db.commit()
     await db.refresh(audit)
-    return _promotion_to_response(audit, batch_id=batch_id)
+    return _promotion_to_response(audit, task=linked_task)
 
 
 @router.get("/promotions", response_model=List[PromotionResponse])
 async def list_promotions(
+    set_id: Optional[str] = Query(None, min_length=1, max_length=32),
+    work_id: Optional[str] = Query(None, min_length=1, max_length=128),
     limit: int = Query(100, ge=1, le=500),
     _: User = Depends(require_roles(ROLE_ADMIN)),
     db: AsyncSession = Depends(get_db),
 ):
-    promotions = (
-        await db.execute(
-            select(ScriptPromotionAudit)
-            .order_by(ScriptPromotionAudit.created_at.desc())
-            .limit(limit)
+    query = (
+        select(ScriptPromotionAudit, AITask)
+        .outerjoin(AITask, AITask.id == ScriptPromotionAudit.ai_task_id)
+        .order_by(ScriptPromotionAudit.created_at.desc())
+    )
+    if set_id:
+        query = query.where(func.lower(ScriptPromotionAudit.set_id) == set_id.strip().lower())
+    if work_id:
+        normalized_work_id = work_id.strip()
+        query = query.where(
+            or_(
+                AITask.set_run_id == normalized_work_id,
+                AITask.batch_id == normalized_work_id,
+                AITask.id == normalized_work_id,
+            )
         )
-    ).scalars().all()
+    query = query.limit(limit)
 
-    task_ids = [p.ai_task_id for p in promotions if p.ai_task_id]
-    task_map: dict[str, str | None] = {}
-    if task_ids:
-        tasks = (
-            await db.execute(select(AITask).where(AITask.id.in_(task_ids)))
-        ).scalars().all()
-        task_map = {task.id: task.batch_id for task in tasks}
-
-    return [
-        _promotion_to_response(p, batch_id=task_map.get(p.ai_task_id) if p.ai_task_id else None)
-        for p in promotions
-    ]
+    rows = (await db.execute(query)).all()
+    return [_promotion_to_response(promotion, task=task) for promotion, task in rows]
 
 
 @router.post("/engine-backlog", response_model=EngineBacklogResponse, status_code=status.HTTP_201_CREATED)

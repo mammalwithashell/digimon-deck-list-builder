@@ -56,7 +56,7 @@ pip install -r requirements.txt
 ### 2) Run Backend
 
 ```bash
-python -m uvicorn digimon_gym.api:app --reload
+python -m uvicorn digimon_gym.api:app --reload --reload-dir digimon_gym
 ```
 
 ### 3) Run Frontend

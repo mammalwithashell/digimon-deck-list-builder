@@ -162,7 +162,7 @@ Run from repo root unless noted.
 pip install -r requirements.txt
 
 # Backend API
-python -m uvicorn digimon_gym.api:app --reload
+python -m uvicorn digimon_gym.api:app --reload --reload-dir digimon_gym
 
 # Frontend
 cd frontend

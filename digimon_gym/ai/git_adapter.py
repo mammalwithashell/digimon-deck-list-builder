@@ -99,9 +99,19 @@ class GitAdapter:
         branch = self.branch_name_for_task(task_id=task_id)
 
         if wt.exists() and (wt / ".git").exists():
+            target_branch = branch if run_mode == "pr" else DEFAULT_BRANCH
+            try:
+                _run(["git", "checkout", target_branch], cwd=wt)
+            except GitCommandError:
+                _run(["git", "fetch", "origin", DEFAULT_BRANCH], cwd=self.repo_root)
+                _run(
+                    ["git", "checkout", "-B", target_branch, f"origin/{DEFAULT_BRANCH}"],
+                    cwd=wt,
+                )
+            self.restore_worktree_to_head(worktree_path=wt)
             return WorktreeContext(
                 worktree_path=wt,
-                branch_name=branch if run_mode == "pr" else DEFAULT_BRANCH,
+                branch_name=target_branch,
             )
 
         _run(["git", "fetch", "origin", DEFAULT_BRANCH], cwd=self.repo_root)
@@ -117,6 +127,10 @@ class GitAdapter:
             cwd=self.repo_root,
         )
         return WorktreeContext(worktree_path=wt, branch_name=DEFAULT_BRANCH)
+
+    def restore_worktree_to_head(self, *, worktree_path: Path) -> None:
+        _run(["git", "reset", "--hard", "HEAD"], cwd=worktree_path)
+        _run(["git", "clean", "-fd"], cwd=worktree_path)
 
     # ── Shared git operations ──────────────────────────────────────
 

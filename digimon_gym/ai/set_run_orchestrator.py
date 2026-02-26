@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import asyncio
 import json
+import math
 import os
 from datetime import datetime, timezone
 from pathlib import Path
@@ -20,6 +21,10 @@ from digimon_gym.ai.autofix_apply import (
 )
 from digimon_gym.ai.dispatcher import TaskDispatcher
 from digimon_gym.ai.git_adapter import GitAdapter
+from digimon_gym.ai.issue_resolution import (
+    build_apply_resolution_note,
+    resolve_open_issues_for_card,
+)
 from digimon_gym.db.database import async_session
 from digimon_gym.db.models import (
     AIFixApplyAudit,
@@ -157,6 +162,8 @@ class AISetRunOrchestrator:
                 continue
             payload = {
                 "card_id": item.card_id,
+                "set_id": item.set_id,
+                "module_name": item.module_name,
                 "report_text": issue.description,
                 "engine_version": "unknown",
                 "script_text": "",
@@ -171,6 +178,7 @@ class AISetRunOrchestrator:
                 max_attempts=3,
                 created_by=created_by,
                 set_run_id=run.id,
+                set_id=run.set_id,
             )
             db.add(task)
             await db.flush()
@@ -319,10 +327,10 @@ class AISetRunOrchestrator:
                     AITask.task_type == "review_batch",
                 )
             )
-        ).scalar_one_or_none()
-        if existing is not None:
+        ).scalars().all()
+        if existing:
             run.stage = "review"
-            run.review_total = 1
+            run.review_total = len(existing)
             return
 
         items = await self.list_set_run_items(db, set_run_id=run.id)
@@ -334,59 +342,106 @@ class AISetRunOrchestrator:
             }
             for item in items
         ]
-        payload = {"cards": payload_cards}
-        estimate = self.dispatcher.estimate_cost("review_batch", payload, model_name=run.model_name)
-        task = AITask(
-            task_type="review_batch",
-            payload_json=json.dumps(payload),
-            status="queued",
-            model_name=run.model_name,
-            cost_estimate_usd=estimate,
-            max_attempts=1,
-            created_by=run.created_by,
-            set_run_id=run.id,
-        )
-        db.add(task)
-        await db.flush()
-        for item in items:
-            item.review_task_id = task.id
+
+        # Split into ~3 chunks to stay under rate limits
+        chunk_size = max(1, math.ceil(len(payload_cards) / 3))
+        chunks = [
+            payload_cards[i : i + chunk_size]
+            for i in range(0, len(payload_cards), chunk_size)
+        ]
+
+        item_by_card = {item.card_id: item for item in items}
+        for chunk in chunks:
+            payload = {"cards": chunk}
+            estimate = self.dispatcher.estimate_cost("review_batch", payload, model_name=run.model_name)
+            task = AITask(
+                task_type="review_batch",
+                payload_json=json.dumps(payload),
+                status="queued",
+                model_name=run.model_name,
+                cost_estimate_usd=estimate,
+                max_attempts=3,
+                created_by=run.created_by,
+                set_run_id=run.id,
+                set_id=run.set_id,
+            )
+            db.add(task)
+            await db.flush()
+            for card in chunk:
+                item = item_by_card.get(card["card_id"])
+                if item is not None:
+                    item.review_task_id = task.id
+
         run.stage = "review"
-        run.review_total = 1
+        run.review_total = len(chunks)
 
     async def _handle_review_task_finished(self, db: AsyncSession, *, run: AISetRun, task: AITask) -> None:
-        if task.status != "completed":
+        # Process results from this individual review chunk
+        if task.status == "completed":
+            result_data = _load_json(task.result_json, {})
+            cards_results = result_data.get("cards", {}) if isinstance(result_data, dict) else {}
+            # Only update items that belong to this chunk
+            chunk_items = (
+                await db.execute(
+                    select(AISetRunItem).where(
+                        AISetRunItem.set_run_id == run.id,
+                        AISetRunItem.review_task_id == task.id,
+                    )
+                )
+            ).scalars().all()
+            for item in chunk_items:
+                review = cards_results.get(item.card_id, {}) if isinstance(cards_results, dict) else {}
+                faithful = bool(review.get("faithful_to_card_text", False))
+                item.review_faithful = 1 if faithful else 0
+                if faithful:
+                    item.fix_apply_status = "skipped"
+
+        # Guard: if we already advanced past review, don't re-process
+        if run.stage == "fix":
+            return
+
+        # Check if ALL review tasks are now done
+        all_review_tasks = (
+            await db.execute(
+                select(AITask).where(
+                    AITask.set_run_id == run.id,
+                    AITask.task_type == "review_batch",
+                )
+            )
+        ).scalars().all()
+        if not all(t.status in {"completed", "failed"} for t in all_review_tasks):
+            return  # Still waiting on other chunks
+
+        # All review tasks finished — check if ALL failed
+        if all(t.status == "failed" for t in all_review_tasks):
+            error_msgs = [t.error_text or "Review task failed." for t in all_review_tasks]
             run.status = "failed"
-            run.stopped_reason = task.error_text or "Review task failed."
-            run.review_failed = 1
+            run.stopped_reason = "; ".join(error_msgs)
             run.completed_at = _utcnow()
             return
 
-        result_data = _load_json(task.result_json, {})
-        cards_results = result_data.get("cards", {}) if isinstance(result_data, dict) else {}
+        # At least some succeeded — advance to fix stage with partial results
         items = await self.list_set_run_items(db, set_run_id=run.id)
 
         non_faithful: list[AISetRunItem] = []
         for item in items:
-            review = cards_results.get(item.card_id, {}) if isinstance(cards_results, dict) else {}
-            faithful = bool(review.get("faithful_to_card_text", False))
-            item.review_faithful = 1 if faithful else 0
-            if faithful:
+            # Items from failed chunks haven't been reviewed; skip them
+            if item.review_faithful is None:
                 item.fix_apply_status = "skipped"
                 continue
-
+            if item.review_faithful == 1:
+                continue  # already marked skipped during chunk processing
             non_faithful.append(item)
             issue = await self._upsert_non_faithful_issue(
                 db,
                 run=run,
                 item=item,
-                review_payload=review,
+                review_payload={},
             )
             item.issue_id = issue.id
             item.fix_apply_status = "pending"
 
         run.stage = "fix"
-        run.review_completed = 1
-        run.review_failed = 0
 
         max_fix = int(run.max_fix_tasks or 0)
         candidates = non_faithful if max_fix <= 0 else non_faithful[:max_fix]
@@ -421,6 +476,7 @@ class AISetRunOrchestrator:
                 run_mode="pr",
                 scope_profile=run.scope_profile,
                 set_run_id=run.id,
+                set_id=item.set_id,
             )
             db.add(fix_task)
             await db.flush()
@@ -521,6 +577,18 @@ class AISetRunOrchestrator:
             item.commit_sha = apply_info["commit_sha"]
             item.pr_url = apply_info["pr_url"]
             item.error_text = None
+            resolution_note = build_apply_resolution_note(
+                task_id=task.id,
+                card_id=item.card_id,
+                run_mode="pr",
+                commit_sha=apply_info.get("commit_sha"),
+                pr_url=apply_info.get("pr_url"),
+            )
+            await resolve_open_issues_for_card(
+                db,
+                card_id=item.card_id,
+                resolution_note=resolution_note,
+            )
             db.add(
                 AIFixApplyAudit(
                     ai_task_id=task.id,

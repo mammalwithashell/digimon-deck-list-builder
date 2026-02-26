@@ -33,6 +33,62 @@ class ScriptAutofixOutput(BaseModel):
     edits: List[ScriptAutofixFileEdit] = Field(default_factory=list)
 
 
+class TranspilerGap(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    gap_id: str
+    kind: str
+    label: str
+    api_count: int = 0
+    dcgo_count: int = 0
+    severity: Literal["low", "medium", "high", "critical"] = "medium"
+    evidence: List[str] = Field(default_factory=list)
+
+
+class TranspilerValidationMetrics(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    api_uncovered_keyword_count: int = 0
+    api_uncovered_action_count: int = 0
+    dcgo_unmapped_action_count: int = 0
+    dcgo_no_action_effect_count: int = 0
+    merged_gap_count: int = 0
+
+
+class TranspilerRecommendation(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    recommendation_id: str = ""
+    title: str
+    recommendation_kind: str
+    priority: Literal["low", "medium", "high", "critical"] = "medium"
+    confidence: float = Field(0.0, ge=0.0, le=1.0)
+    rationale: str = ""
+    expected_impact: str = ""
+    suggested_files: List[str] = Field(default_factory=list)
+    patch_hints: List[str] = Field(default_factory=list)
+    evidence: List[str] = Field(default_factory=list)
+    auto_apply_eligible: bool = False
+
+
+class TranspilerAuditOutput(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    set_id: str
+    summary: str = ""
+    recommendations: List[TranspilerRecommendation] = Field(default_factory=list)
+    merged_gaps: List[TranspilerGap] = Field(default_factory=list)
+    validation_metrics: TranspilerValidationMetrics
+
+
+class TranspilerAutofixOutput(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    summary: str = ""
+    recommendation_id: str = ""
+    edits: List[ScriptAutofixFileEdit] = Field(default_factory=list)
+
+
 class EngineCapabilityOutput(BaseModel):
     model_config = ConfigDict(extra="forbid")
 

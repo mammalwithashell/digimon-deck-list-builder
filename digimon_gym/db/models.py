@@ -382,7 +382,9 @@ class AITask(Base):
         Index("idx_ai_tasks_task_type", "task_type"),
         Index("idx_ai_tasks_batch_id", "batch_id"),
         Index("idx_ai_tasks_set_run_id", "set_run_id"),
+        Index("idx_ai_tasks_set_id", "set_id"),
         Index("idx_ai_tasks_created_at", "created_at"),
+        Index("ix_ai_tasks_worker_id", "worker_id"),
     )
 
     id = Column(String, primary_key=True, default=_new_uuid)
@@ -403,8 +405,11 @@ class AITask(Base):
     created_by = Column(String, ForeignKey("users.id", ondelete="SET NULL"), nullable=True)
     batch_id = Column(String, ForeignKey("ai_fix_batches.id", ondelete="SET NULL"), nullable=True)
     set_run_id = Column(String, ForeignKey("ai_set_runs.id", ondelete="SET NULL"), nullable=True)
+    set_id = Column(String, nullable=True)
     run_mode = Column(String, nullable=True)
     scope_profile = Column(String, nullable=True)
+    worker_id = Column(String, nullable=True)
+    claimed_at = Column(DateTime(timezone=True), nullable=True)
     started_at = Column(DateTime(timezone=True), nullable=True)
     completed_at = Column(DateTime(timezone=True), nullable=True)
     created_at = Column(DateTime(timezone=True), default=_utcnow, nullable=False)

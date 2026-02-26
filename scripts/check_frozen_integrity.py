@@ -17,11 +17,9 @@ SCRIPT_FILENAME_RE = re.compile(r"^[a-z0-9]+_[0-9]{3}(?:_token)?\.py$")
 
 
 def sha256(path: Path) -> str:
-    h = hashlib.sha256()
-    with path.open("rb") as f:
-        for chunk in iter(lambda: f.read(1024 * 1024), b""):
-            h.update(chunk)
-    return h.hexdigest()
+    # Normalize CRLF -> LF so hashes match across platforms
+    content = path.read_bytes().replace(b"\r\n", b"\n")
+    return hashlib.sha256(content).hexdigest()
 
 
 def iter_frozen_files() -> list[Path]:

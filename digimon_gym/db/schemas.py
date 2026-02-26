@@ -86,6 +86,23 @@ class ApproveSetIssuesResponse(BaseModel):
     issue_ids: List[str] = Field(default_factory=list)
 
 
+class QueueSetIssueFixesRequest(BaseModel):
+    set_id: str = Field(..., min_length=1, max_length=32)
+    queue_mode: Literal["approved_only", "new_and_approved"] = "approved_only"
+
+
+class QueueSetIssueFixesResponse(BaseModel):
+    set_id: str
+    queue_mode: Literal["approved_only", "new_and_approved"]
+    matched_issues: int
+    queued_tasks: int
+    skipped_duplicate_cards: int
+    skipped_existing_task_cards: int
+    queued_task_ids: List[str] = Field(default_factory=list)
+    queued_card_ids: List[str] = Field(default_factory=list)
+    skipped_cards: List[str] = Field(default_factory=list)
+
+
 class IssueResponse(BaseModel):
     id: str
     card_id: str
@@ -133,17 +150,26 @@ class AITaskResponse(BaseModel):
     max_attempts: int
     created_by: Optional[str] = None
     batch_id: Optional[str] = None
+    set_run_id: Optional[str] = None
+    set_id: Optional[str] = None
+    work_id: str
+    work_type: Literal["set_run", "batch", "task"]
     run_mode: Optional[str] = None
     scope_profile: Optional[str] = None
     started_at: Optional[datetime] = None
     completed_at: Optional[datetime] = None
     created_at: datetime
     updated_at: datetime
+    apply_status: Optional[str] = None
 
 
 class AITaskRetryResponse(BaseModel):
     task_id: str
     status: str
+
+
+class AITaskApplyFixRequest(BaseModel):
+    force: bool = False
 
 
 class AITaskApplyFixResponse(BaseModel):
@@ -152,6 +178,7 @@ class AITaskApplyFixResponse(BaseModel):
     applied_files: List[str] = Field(default_factory=list)
     commit_sha: Optional[str] = None
     pr_url: Optional[str] = None
+    force_applied: bool = False
 
 
 class AIFixApplyAuditResponse(BaseModel):
@@ -195,6 +222,9 @@ class PromotionResponse(BaseModel):
     promoted_by: Optional[str] = None
     ai_task_id: Optional[str] = None
     batch_id: Optional[str] = None
+    set_run_id: Optional[str] = None
+    work_id: Optional[str] = None
+    work_type: Optional[Literal["set_run", "batch", "task"]] = None
     notes: str
     created_at: datetime
 

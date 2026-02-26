@@ -24,6 +24,18 @@ export interface ApproveSetIssuesResponse {
   issue_ids: string[];
 }
 
+export interface QueueSetIssueFixesResponse {
+  set_id: string;
+  queue_mode: 'approved_only' | 'new_and_approved';
+  matched_issues: number;
+  queued_tasks: number;
+  skipped_duplicate_cards: number;
+  skipped_existing_task_cards: number;
+  queued_task_ids: string[];
+  queued_card_ids: string[];
+  skipped_cards: string[];
+}
+
 export interface AITaskItem {
   id: string;
   task_type: 'review_batch' | 'qa_analysis' | 'engine_audit' | 'script_autofix' | 'llm_transpile' | 'transpiler_learn';
@@ -42,12 +54,17 @@ export interface AITaskItem {
   max_attempts: number;
   created_by?: string | null;
   batch_id?: string | null;
+  set_run_id?: string | null;
+  set_id?: string | null;
+  work_id: string;
+  work_type: 'set_run' | 'batch' | 'task';
   run_mode?: 'pr' | 'main' | null;
   scope_profile?: 'script' | 'script_engine' | 'script_engine_transpiler' | null;
   started_at?: string | null;
   completed_at?: string | null;
   created_at: string;
   updated_at: string;
+  apply_status?: 'applicable' | 'stale' | 'invalid' | null;
 }
 
 export interface PromotionItem {
@@ -61,6 +78,9 @@ export interface PromotionItem {
   promoted_by?: string | null;
   ai_task_id?: string | null;
   batch_id?: string | null;
+  set_run_id?: string | null;
+  work_id?: string | null;
+  work_type?: 'set_run' | 'batch' | 'task' | null;
   notes: string;
   created_at: string;
 }
@@ -192,6 +212,8 @@ export interface AITaskQueryParams {
   run_mode?: 'pr' | 'main';
   scope_profile?: 'script' | 'script_engine' | 'script_engine_transpiler';
   batch_id?: string;
+  set_id?: string;
+  work_id?: string;
   limit?: number;
 }
 
@@ -247,14 +269,23 @@ export async function retryAITask(taskId: string): Promise<{ task_id: string; st
 
 export async function applyAITaskFix(
   taskId: string,
-): Promise<{ task_id: string; status: string; applied_files: string[]; commit_sha?: string | null; pr_url?: string | null }> {
+  payload?: { force?: boolean },
+): Promise<{
+  task_id: string;
+  status: string;
+  applied_files: string[];
+  commit_sha?: string | null;
+  pr_url?: string | null;
+  force_applied?: boolean;
+}> {
   const { data } = await client.post<{
     task_id: string;
     status: string;
     applied_files: string[];
     commit_sha?: string | null;
     pr_url?: string | null;
-  }>(`/admin/ai-tasks/${taskId}/apply-fix`);
+    force_applied?: boolean;
+  }>(`/admin/ai-tasks/${taskId}/apply-fix`, payload ?? {});
   return data;
 }
 
@@ -266,8 +297,12 @@ export async function promoteTaskCard(
   return data;
 }
 
-export async function getPromotions(): Promise<PromotionItem[]> {
-  const { data } = await client.get<PromotionItem[]>('/admin/promotions');
+export async function getPromotions(params?: {
+  set_id?: string;
+  work_id?: string;
+  limit?: number;
+}): Promise<PromotionItem[]> {
+  const { data } = await client.get<PromotionItem[]>('/admin/promotions', { params });
   return data;
 }
 
@@ -354,6 +389,14 @@ export async function getAppliedCards(params?: {
 
 export async function queueIssueFix(issueId: string): Promise<AITaskItem> {
   const { data } = await client.post<AITaskItem>(`/admin/issues/${issueId}/queue-fix`);
+  return data;
+}
+
+export async function queueSetIssueFixes(payload: {
+  set_id: string;
+  queue_mode: 'approved_only' | 'new_and_approved';
+}): Promise<QueueSetIssueFixesResponse> {
+  const { data } = await client.post<QueueSetIssueFixesResponse>('/admin/issues/queue-fixes-set', payload);
   return data;
 }
 

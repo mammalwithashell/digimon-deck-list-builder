@@ -58,6 +58,26 @@ class ApplyValidationError(RuntimeError):
     """Raised when fix output violates scope/hash safety rules."""
 
 
+class HashMismatchError(ApplyValidationError):
+    """Raised when expected file hash differs from the current file hash."""
+
+    def __init__(
+        self,
+        *,
+        path: str,
+        expected_hash: str,
+        current_hash: str,
+        can_force_apply: bool,
+    ) -> None:
+        super().__init__(
+            f"Hash mismatch for {path}: expected {expected_hash} got {current_hash}"
+        )
+        self.path = path
+        self.expected_hash = expected_hash
+        self.current_hash = current_hash
+        self.can_force_apply = can_force_apply
+
+
 @dataclass
 class ApplyResult:
     applied_files: list[str]
@@ -214,7 +234,19 @@ def apply_validated_edits(
     *,
     repo_root: Path,
     edits: list[dict[str, str]],
+    force: bool = False,
+    force_allowed_path: str | None = None,
 ) -> list[str]:
+    if force:
+        if len(edits) != 1:
+            raise ApplyValidationError(
+                "Force apply is only supported for single-file script edits."
+            )
+        if not force_allowed_path:
+            raise ApplyValidationError(
+                "Force apply requires an explicit force_allowed_path."
+            )
+
     applied_paths: list[str] = []
     for edit in edits:
         abs_path = repo_root / edit["path"]
@@ -222,9 +254,20 @@ def apply_validated_edits(
             raise ApplyValidationError(f"Cannot edit missing file: {edit['path']}")
         current_hash = _sha256(abs_path).lower()
         if current_hash != edit["expected_hash"]:
-            raise ApplyValidationError(
-                f"Hash mismatch for {edit['path']}: expected {edit['expected_hash']} got {current_hash}"
+            can_force_apply = (
+                len(edits) == 1
+                and force_allowed_path is not None
+                and edit["path"] == force_allowed_path
             )
+            if force and can_force_apply:
+                pass
+            else:
+                raise HashMismatchError(
+                    path=edit["path"],
+                    expected_hash=edit["expected_hash"],
+                    current_hash=current_hash,
+                    can_force_apply=can_force_apply,
+                )
         abs_path.write_text(edit["new_content"], encoding="utf-8")
         applied_paths.append(edit["path"])
     return applied_paths
@@ -299,6 +342,56 @@ def run_profile_checks(*, repo_root: Path, scope_profile: str, applied_files: li
         outputs.append(_run_check_command(["pytest", "-q", *tests], cwd=repo_root))
 
     return outputs
+
+
+def check_edit_applicability(
+    *,
+    result_payload: dict[str, Any],
+    scope_profile: str,
+    set_id: str,
+    module_name: str,
+    repo_root: Path | None = None,
+) -> str:
+    """Read-only check whether a task's edits can still be applied.
+
+    Returns one of:
+      "applicable" — all file hashes match, edits can be applied
+      "stale"      — at least one file hash has changed
+      "invalid"    — result payload fails structural validation
+      "not_applicable" — not a script_autofix task or no edits
+    """
+    if repo_root is None:
+        repo_root = PROJECT_ROOT
+
+    if not result_payload or not isinstance(result_payload, dict):
+        return "not_applicable"
+
+    edits_raw = result_payload.get("edits")
+    if not edits_raw or not isinstance(edits_raw, list) or len(edits_raw) == 0:
+        return "not_applicable"
+
+    try:
+        validated = validate_edit_payload(
+            result_payload=result_payload,
+            scope_profile=scope_profile,
+            set_id=set_id,
+            module_name=module_name,
+        )
+    except ApplyValidationError:
+        return "invalid"
+
+    if not validated:
+        return "not_applicable"
+
+    for edit in validated:
+        abs_path = repo_root / edit["path"]
+        if not abs_path.exists():
+            return "stale"
+        current_hash = _sha256(abs_path).lower()
+        if current_hash != edit["expected_hash"]:
+            return "stale"
+
+    return "applicable"
 
 
 def serialize_check_outputs(check_outputs: list[str]) -> str:

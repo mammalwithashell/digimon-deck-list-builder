@@ -21,6 +21,10 @@ from digimon_gym.ai.autofix_apply import (
 )
 from digimon_gym.ai.dispatcher import TaskDispatcher
 from digimon_gym.ai.git_adapter import GitAdapter, GitCommandError
+from digimon_gym.ai.issue_resolution import (
+    build_apply_resolution_note,
+    resolve_open_issues_for_card,
+)
 from digimon_gym.db.database import async_session
 from digimon_gym.db.models import (
     AIFixApplyAudit,
@@ -272,6 +276,17 @@ class AIFixBatchOrchestrator:
                         item.applied_at = _utcnow()
                         item.commit_sha = apply_info["commit_sha"]
                         item.error_text = None
+                        resolution_note = build_apply_resolution_note(
+                            task_id=task.id,
+                            card_id=item.card_id,
+                            run_mode=str(task.run_mode or batch.run_mode),
+                            commit_sha=apply_info.get("commit_sha"),
+                        )
+                        await resolve_open_issues_for_card(
+                            db,
+                            card_id=item.card_id,
+                            resolution_note=resolution_note,
+                        )
                         db.add(
                             AIFixApplyAudit(
                                 ai_task_id=task.id,
@@ -373,6 +388,7 @@ class AIFixBatchOrchestrator:
                 max_attempts=3,
                 created_by=batch.created_by,
                 batch_id=batch.id,
+                set_id=set_id,
                 run_mode=batch.run_mode,
                 scope_profile=batch.scope_profile,
             )
