@@ -339,3 +339,17 @@ class TestLookupPinnedEngineMethods:
         )
         # draw_cards should always be found via exact match
         assert any(r["function_name"] == "draw_cards" for r in results)
+
+
+class TestLLMTranspileDispatch:
+    def test_rejects_missing_card_id(self):
+        from digimon_gym.ai.dispatcher import TaskDispatcher
+        d = TaskDispatcher(rag_index=None, client=None)
+        with pytest.raises(ValueError, match="card_id"):
+            d.run("llm_transpile", {"set_id": "bt24", "module_name": "bt24_042"})
+
+    def test_unknown_task_type_raises(self):
+        from digimon_gym.ai.dispatcher import TaskDispatcher
+        d = TaskDispatcher(rag_index=None, client=None)
+        with pytest.raises(ValueError, match="Unsupported"):
+            d.run("nonexistent_type", {})

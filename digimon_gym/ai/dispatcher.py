@@ -16,12 +16,14 @@ from digimon_gym.ai.autofix_apply import (
 from digimon_gym.ai.client import ANTHROPIC_PRICING, MODEL_PRICING, LLMClient, create_llm_client
 from digimon_gym.ai.contracts import (
     EngineCapabilityOutput,
+    LLMTranspileOutput,
     QATriageOutput,
     ScriptAutofixOutput,
     ScriptFidelityOutput,
 )
 from digimon_gym.ai.prompts import (
     build_engine_capability_messages,
+    build_llm_transpile_messages,
     build_qa_triage_messages,
     build_script_autofix_messages,
     build_script_fidelity_messages,
@@ -155,6 +157,27 @@ def lookup_pinned_engine_methods(
     return results
 
 
+def _load_few_shot_examples(set_id: str, limit: int = 5) -> list[dict]:
+    """Load frozen scripts from the same set as few-shot examples."""
+    manifest_path = SCRIPTS_ROOT / "_frozen_manifest.json"
+    if not manifest_path.exists():
+        return []
+    manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+    examples = []
+    for card in manifest.get("cards", {}).values():
+        if card.get("set_id") != set_id:
+            continue
+        if not card.get("frozen_hash"):
+            continue
+        frozen_path = SCRIPTS_ROOT / card.get("frozen_relpath", "")
+        if frozen_path.exists() and len(examples) < limit:
+            examples.append({
+                "card_id": card["card_id"],
+                "script": frozen_path.read_text(encoding="utf-8"),
+            })
+    return examples
+
+
 class TaskDispatcher:
     def __init__(self, *, rag_index: LocalRAGIndex | None = None, client: LLMClient | None = None):
         self.rag_index = rag_index or LocalRAGIndex()
@@ -173,6 +196,8 @@ class TaskDispatcher:
             return self._run_engine_audit(payload, model_name=model_name)
         if task_type == "script_autofix":
             return self._run_script_autofix(payload, model_name=model_name)
+        if task_type == "llm_transpile":
+            return self._run_llm_transpile(payload, model_name=model_name)
         raise ValueError(f"Unsupported task_type: {task_type}")
 
     def _run_review_batch(self, payload: dict[str, Any], model_name: str | None) -> DispatchOutcome:
@@ -395,6 +420,69 @@ class TaskDispatcher:
                 "scope_profile": scope_profile,
                 "allowed_roots": allowed_roots,
             },
+            retrieval_refs=all_refs,
+            input_tokens=run.input_tokens,
+            output_tokens=run.output_tokens,
+            cost_actual=self._cost_from_usage(run.model_name, run.input_tokens, run.output_tokens),
+        )
+
+    def _run_llm_transpile(self, payload: dict[str, Any], model_name: str | None) -> DispatchOutcome:
+        card_id = str(payload.get("card_id", "")).strip().upper()
+        set_id = str(payload.get("set_id", "")).strip().lower()
+        module_name = str(payload.get("module_name", "")).strip().lower()
+        cs_source = str(payload.get("cs_source", "")).strip()
+        regex_output = str(payload.get("regex_output", "")).strip()
+        regex_score = float(payload.get("regex_score", 0.0))
+
+        if not card_id or not set_id or not module_name:
+            raise ValueError("llm_transpile payload must include card_id, set_id, module_name")
+
+        card_meta = self.cards_index.get(card_id, {})
+        card_text = _card_text_from_meta(card_meta)
+
+        # Pin engine methods from the regex output
+        engine_method_names = extract_engine_calls(regex_output) if regex_output else []
+        pinned_chunks = (
+            lookup_pinned_engine_methods(self.rag_index, engine_method_names)
+            if self.rag_index and engine_method_names
+            else []
+        )
+
+        # RAG context
+        query = f"{card_id} {card_text[:300]}"
+        context = (
+            self.rag_index.retrieve(query, k=6, source_types=["engine_api", "rules"])
+            if self.rag_index
+            else []
+        )
+
+        # Few-shot: load frozen scripts from same set that exist
+        few_shot_examples = _load_few_shot_examples(set_id, limit=5)
+
+        system_prompt, user_prompt = build_llm_transpile_messages(
+            card_id=card_id,
+            card_text=card_text,
+            cs_source=cs_source,
+            regex_output=regex_output,
+            regex_score=regex_score,
+            context_chunks=context,
+            pinned_engine_chunks=pinned_chunks or None,
+            few_shot_examples=few_shot_examples,
+        )
+
+        run = self.client.run_structured(
+            task_type="llm_transpile",
+            system_prompt=system_prompt,
+            user_prompt=user_prompt,
+            schema_model=LLMTranspileOutput,
+            model_name=model_name,
+        )
+
+        all_refs = [{"source": c.get("source", ""), "chunk_id": c.get("chunk_id", "")} for c in context]
+        return DispatchOutcome(
+            model_name=run.model_name,
+            result=run.output,
+            sanitized_input={"card_id": card_id, "set_id": set_id, "module_name": module_name, "regex_score": regex_score},
             retrieval_refs=all_refs,
             input_tokens=run.input_tokens,
             output_tokens=run.output_tokens,
