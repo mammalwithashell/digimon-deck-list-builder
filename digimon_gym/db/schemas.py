@@ -276,6 +276,7 @@ class AISetRunCreateRequest(BaseModel):
     max_total_cost_usd: float = Field(5.0, ge=0.0)
     failure_rate_stop: float = Field(0.3, ge=0.0, le=1.0)
     max_fix_tasks: int = Field(0, ge=0, le=5000)
+    score_threshold: Optional[float] = Field(None, ge=0.0, le=1.0)
 
 
 class AISetRunItemResponse(BaseModel):
@@ -290,6 +291,8 @@ class AISetRunItemResponse(BaseModel):
     review_task_id: Optional[str] = None
     fix_task_id: Optional[str] = None
     fix_apply_status: str
+    transpile_score: Optional[float] = None
+    retranspile_task_id: Optional[str] = None
     commit_sha: Optional[str] = None
     pr_url: Optional[str] = None
     error_text: Optional[str] = None
@@ -321,6 +324,10 @@ class AISetRunResponse(BaseModel):
     fix_completed: int
     fix_failed: int
     fix_applied: int
+    score_threshold: Optional[float] = None
+    retranspile_total: int = 0
+    retranspile_completed: int = 0
+    retranspile_failed: int = 0
     stopped_reason: Optional[str] = None
     created_at: datetime
     updated_at: datetime
@@ -338,6 +345,24 @@ class AISetRunDetailResponse(BaseModel):
 class AISetRunCancelResponse(BaseModel):
     set_run_id: str
     status: str
+
+
+class AITranspilerLearnCreateRequest(BaseModel):
+    source_set_run_id: str
+    min_cluster_size: int = Field(3, ge=1, le=50)
+
+
+class AITranspilerLearnResponse(BaseModel):
+    id: str
+    source_set_run_id: Optional[str] = None
+    status: str
+    clusters_found: int
+    patches_proposed: int
+    pr_url: Optional[str] = None
+    created_at: datetime
+    completed_at: Optional[datetime] = None
+
+    model_config = {"from_attributes": True}
 
 
 class EngineBacklogCreateRequest(BaseModel):

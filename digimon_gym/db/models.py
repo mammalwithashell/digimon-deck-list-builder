@@ -431,7 +431,7 @@ class AISetRun(Base):
             name="ck_ai_set_runs_status",
         ),
         CheckConstraint(
-            "stage IN ('qa', 'review', 'fix', 'completed', 'canceled')",
+            "stage IN ('qa', 'review', 'fix', 'score', 'retranspile', 'completed', 'canceled')",
             name="ck_ai_set_runs_stage",
         ),
         Index("idx_ai_set_runs_set_id", "set_id"),
@@ -450,6 +450,11 @@ class AISetRun(Base):
     max_total_cost_usd = Column(Float, nullable=False, default=5.0)
     failure_rate_stop = Column(Float, nullable=False, default=0.3)
     max_fix_tasks = Column(Integer, nullable=False, default=0)
+    # Retranspile configuration and counters
+    score_threshold = Column(Float, nullable=True)
+    retranspile_total = Column(Integer, nullable=False, default=0)
+    retranspile_completed = Column(Integer, nullable=False, default=0)
+    retranspile_failed = Column(Integer, nullable=False, default=0)
     qa_total = Column(Integer, nullable=False, default=0)
     qa_completed = Column(Integer, nullable=False, default=0)
     qa_failed = Column(Integer, nullable=False, default=0)
@@ -488,6 +493,8 @@ class AISetRunItem(Base):
     set_id = Column(String, nullable=False)
     module_name = Column(String, nullable=False)
     review_faithful = Column(Integer, nullable=True)
+    transpile_score = Column(Float, nullable=True)
+    retranspile_task_id = Column(String, ForeignKey("ai_tasks.id", ondelete="SET NULL"), nullable=True)
     issue_id = Column(String, ForeignKey("issues.id", ondelete="SET NULL"), nullable=True)
     qa_task_id = Column(String, ForeignKey("ai_tasks.id", ondelete="SET NULL"), nullable=True)
     review_task_id = Column(String, ForeignKey("ai_tasks.id", ondelete="SET NULL"), nullable=True)
@@ -504,6 +511,7 @@ class AISetRunItem(Base):
     qa_task = relationship("AITask", foreign_keys=[qa_task_id])
     review_task = relationship("AITask", foreign_keys=[review_task_id])
     fix_task = relationship("AITask", foreign_keys=[fix_task_id])
+    retranspile_task = relationship("AITask", foreign_keys=[retranspile_task_id])
 
 
 class AIFixBatch(Base):
@@ -657,6 +665,21 @@ class AIFixApplyAudit(Base):
     task = relationship("AITask")
     batch = relationship("AIFixBatch")
     creator = relationship("User")
+
+
+class AITranspilerLearnRun(Base):
+    __tablename__ = "ai_transpiler_learn_runs"
+
+    id = Column(String, primary_key=True, default=_new_uuid)
+    source_set_run_id = Column(String, ForeignKey("ai_set_runs.id", ondelete="SET NULL"), nullable=True)
+    status = Column(String, nullable=False, default="clustering")
+    clusters_found = Column(Integer, nullable=False, default=0)
+    patches_proposed = Column(Integer, nullable=False, default=0)
+    pr_url = Column(String, nullable=True)
+    created_at = Column(DateTime(timezone=True), default=_utcnow, nullable=False)
+    completed_at = Column(DateTime(timezone=True), nullable=True)
+
+    source_set_run = relationship("AISetRun")
 
 
 # ── Agent Training ─────────────────────────────────────────────────────
