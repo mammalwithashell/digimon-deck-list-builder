@@ -13,19 +13,6 @@ class BT13_008(CardScript):
     def get_card_effects(self, card: 'CardSource') -> List['ICardEffect']:
         effects = []
 
-        # Factory effect: alt_digivolve_req
-        # Alternate digivolution requirement
-        effect0 = ICardEffect()
-        effect0.set_effect_name("BT13-008 Alternate digivolution requirement")
-        effect0.set_effect_description("Alternate digivolution requirement")
-        # Alternate digivolution: alternate source for cost 0
-        effect0._alt_digi_cost = 0
-
-        def condition0(context: Dict[str, Any]) -> bool:
-            return True
-        effect0.set_can_use_condition(condition0)
-        effects.append(effect0)
-
         # Timing: EffectTiming.OnDeclaration
         # [Main][Once Per Turn] For the turn, 1 of your [Marcus Damon]s is also treated as a 3000 DP Digimon and can't digivolve.
         effect1 = ICardEffect()
@@ -34,13 +21,44 @@ class BT13_008(CardScript):
         effect1.set_max_count_per_turn(1)
         effect1.set_hash_string("BecomeDigimon_BT13_008")
 
-        effect = effect1  # alias for condition closure
         def condition1(context: Dict[str, Any]) -> bool:
-            if card and card.permanent_of_this_card() is None:
+            player = context.get('player')
+            game = context.get('game')
+            if not (player and game):
                 return False
             return True
 
         effect1.set_can_use_condition(condition1)
+
+        def process1(ctx: Dict[str, Any]):
+            player = ctx.get('player')
+            game = ctx.get('game')
+            if not (player and game):
+                return
+
+            def target_filter(p):
+                src = getattr(p, 'card_source', None)
+                name = getattr(src, 'card_name', '') or getattr(src, 'card_name_eng', '')
+                owner = getattr(p, 'owner', None)
+                is_tamer = bool(getattr(p, 'is_tamer', False))
+                return owner == player and is_tamer and name == 'Marcus Damon'
+
+            def on_select(target_perm):
+                # Explicitly mark the selected Marcus Damon as treated as a 3000 DP Digimon
+                # and unable to digivolve for the turn.
+                setattr(target_perm, 'bt13_008_temp_dp', 3000)
+                setattr(target_perm, 'bt13_008_cannot_digivolve', True)
+                setattr(target_perm, 'bt13_008_until_end_of_turn', True)
+
+            game.effect_select_permanent(
+                player,
+                on_select,
+                filter_fn=target_filter,
+                count=1,
+                is_optional=False,
+            )
+
+        effect1.set_on_process_callback(process1)
         effects.append(effect1)
 
         # Timing: EffectTiming.OnTappedAnyone
@@ -53,33 +71,58 @@ class BT13_008(CardScript):
         effect2.set_max_count_per_turn(1)
         effect2.set_hash_string("Delete_BT13_008")
 
-        effect = effect2  # alias for condition closure
         def condition2(context: Dict[str, Any]) -> bool:
-            if card and card.permanent_of_this_card() is None:
+            player = context.get('player')
+            tapped = context.get('permanent') or context.get('target_permanent')
+            if not player or not getattr(player, 'is_my_turn', False):
                 return False
-            if not (card and card.owner and card.owner.is_my_turn):
+            if tapped is None:
                 return False
-            return True
+            if getattr(tapped, 'owner', None) != player:
+                return False
+            if not getattr(tapped, 'is_tamer', False):
+                return False
+
+            colors = getattr(getattr(tapped, 'card_source', None), 'card_colors', None)
+            if colors is None:
+                colors = getattr(tapped, 'card_colors', None)
+            if not isinstance(colors, list):
+                return False
+            # red=0, yellow=2
+            return (0 in colors) or (2 in colors)
 
         effect2.set_can_use_condition(condition2)
 
         def process2(ctx: Dict[str, Any]):
-            """Action: Delete"""
+            """Action: may delete opponent Digimon with 3000 DP or less."""
             player = ctx.get('player')
-            perm = ctx.get('permanent')
             game = ctx.get('game')
             if not (player and game):
                 return
+
             def target_filter(p):
-                if p.dp is None or p.dp > 3000:
+                if not getattr(p, 'is_digimon', False):
                     return False
-                return p.is_digimon
+                dp = getattr(p, 'dp', None)
+                return dp is not None and dp <= 3000
+
             def on_delete(target_perm):
-                enemy = player.enemy if player else None
-                if enemy:
-                    enemy.delete_permanent(target_perm)
+                enemy = getattr(player, 'enemy', None)
+                if enemy is None:
+                    return
+                if not getattr(target_perm, 'is_digimon', False):
+                    return
+                dp = getattr(target_perm, 'dp', None)
+                if dp is None or dp > 3000:
+                    return
+                enemy.delete_permanent(target_perm)
+
             game.effect_select_opponent_permanent(
-                player, on_delete, filter_fn=target_filter, is_optional=True)
+                player,
+                on_delete,
+                filter_fn=target_filter,
+                is_optional=True,
+            )
 
         effect2.set_on_process_callback(process2)
         effects.append(effect2)
