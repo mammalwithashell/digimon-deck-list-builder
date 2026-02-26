@@ -362,7 +362,7 @@ class AITask(Base):
     __tablename__ = "ai_tasks"
     __table_args__ = (
         CheckConstraint(
-            "task_type IN ('review_batch', 'qa_analysis', 'engine_audit', 'script_autofix')",
+            "task_type IN ('review_batch', 'qa_analysis', 'engine_audit', 'script_autofix', 'llm_transpile')",
             name="ck_ai_tasks_task_type",
         ),
         CheckConstraint(

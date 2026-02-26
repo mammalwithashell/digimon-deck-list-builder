@@ -95,6 +95,7 @@ class AISetRunOrchestrator:
         max_total_cost_usd: float,
         failure_rate_stop: float,
         max_fix_tasks: int,
+        score_threshold: float | None = None,
     ) -> AISetRun:
         if run_mode == "main" and not self._main_allowed:
             raise SetRunOrchestrationError("run_mode=main is disabled. Set AI_APPLY_MAIN_ALLOWED=1 to enable.")
@@ -111,6 +112,7 @@ class AISetRunOrchestrator:
             max_total_cost_usd=max_total_cost_usd,
             failure_rate_stop=failure_rate_stop,
             max_fix_tasks=max_fix_tasks,
+            score_threshold=score_threshold,
         )
         db.add(run)
         await db.flush()
@@ -280,7 +282,9 @@ class AISetRunOrchestrator:
             if run is None or run.status != "running":
                 return
 
-            if task.task_type == "qa_analysis":
+            if task.task_type == "llm_transpile":
+                await self._handle_retranspile_task_finished(db, run=run, task=task)
+            elif task.task_type == "qa_analysis":
                 await self._handle_qa_task_finished(db, run=run)
             elif task.task_type == "review_batch":
                 await self._handle_review_task_finished(db, run=run, task=task)
@@ -602,6 +606,127 @@ class AISetRunOrchestrator:
             "pr_url": pr_url,
         }
 
+    def _score_cards(
+        self,
+        items: list[AISetRunItem],
+        set_id: str,
+        threshold: float,
+        cs_dir: str | None = None,
+    ) -> list[AISetRunItem]:
+        """Compute transpile scores for all items. Synchronous, no LLM calls."""
+        from tools.transpiler.scoring import score_card
+        from tools.transpiler.validation import validate_card
+
+        cards_json_path = PROJECT_ROOT / "digimon_gym" / "engine" / "data" / "cards.json"
+        card_db = json.loads(cards_json_path.read_text(encoding="utf-8")) if cards_json_path.exists() else {}
+
+        for item in items:
+            gen_path = GENERATED_SCRIPTS_ROOT / item.set_id / f"{item.module_name}.py"
+            if not gen_path.exists():
+                item.transpile_score = 0.0
+                continue
+
+            card_meta = card_db.get(item.card_id, {})
+            script_text = gen_path.read_text(encoding="utf-8")
+            vr = validate_card(item.card_id, card_meta, script_text)
+
+            # Attempt to load EffectBlocks if C# source available
+            effects = []
+            if cs_dir:
+                cs_path = self._find_cs_file(cs_dir, item.module_name)
+                if cs_path:
+                    from tools.transpiler.extractors import parse_cs_file
+                    _, effects = parse_cs_file(str(cs_path))
+
+            result = score_card(item.card_id, effects, vr, card_meta, threshold=threshold)
+            item.transpile_score = result.score
+
+        return items
+
+    @staticmethod
+    def _find_cs_file(cs_dir: str, module_name: str) -> Path | None:
+        """Find C# source file matching a module name."""
+        cs_dir_path = Path(cs_dir)
+        if not cs_dir_path.exists():
+            return None
+        # Try exact match and common patterns
+        for pattern in [f"{module_name}.cs", f"{module_name.upper()}.cs"]:
+            candidates = list(cs_dir_path.glob(f"**/{pattern}"))
+            if candidates:
+                return candidates[0]
+        return None
+
+    async def _queue_retranspile_tasks(
+        self, db: AsyncSession, run: AISetRun, items: list[AISetRunItem], cs_dir: str | None
+    ) -> int:
+        """Create llm_transpile tasks for items below score threshold."""
+        threshold = run.score_threshold or 0.7
+        count = 0
+        for item in items:
+            if item.transpile_score is not None and item.transpile_score < threshold:
+                # Load C# source if available
+                cs_source = ""
+                if cs_dir:
+                    cs_path = self._find_cs_file(cs_dir, item.module_name)
+                    if cs_path:
+                        cs_source = cs_path.read_text(encoding="utf-8")
+
+                # Load regex output
+                gen_path = GENERATED_SCRIPTS_ROOT / item.set_id / f"{item.module_name}.py"
+                regex_output = gen_path.read_text(encoding="utf-8") if gen_path.exists() else ""
+
+                task = AITask(
+                    task_type="llm_transpile",
+                    status="queued",
+                    set_run_id=run.id,
+                    payload_json=json.dumps({
+                        "card_id": item.card_id,
+                        "set_id": item.set_id,
+                        "module_name": item.module_name,
+                        "cs_source": cs_source,
+                        "regex_output": regex_output,
+                        "regex_score": item.transpile_score,
+                    }),
+                    max_attempts=2,
+                )
+                db.add(task)
+                await db.flush()
+                item.retranspile_task_id = task.id
+                count += 1
+
+        run.retranspile_total = count
+        run.stage = "retranspile" if count > 0 else "qa"
+        await db.commit()
+        return count
+
+    async def _handle_retranspile_task_finished(
+        self, db: AsyncSession, *, run: AISetRun, task: AITask
+    ) -> None:
+        """Write retranspiled script to disk and advance stage if all done."""
+        item = (
+            await db.execute(
+                select(AISetRunItem).where(AISetRunItem.retranspile_task_id == task.id)
+            )
+        ).scalar_one_or_none()
+        if not item:
+            return
+
+        if task.status == "completed" and task.result_json:
+            result = _load_json(task.result_json, {})
+            script_content = result.get("script_content", "")
+            if script_content:
+                out_path = GENERATED_SCRIPTS_ROOT / item.set_id / f"{item.module_name}.py"
+                out_path.write_text(script_content, encoding="utf-8")
+            run.retranspile_completed += 1
+        else:
+            run.retranspile_failed += 1
+
+        # Check if all retranspile tasks done
+        done = run.retranspile_completed + run.retranspile_failed
+        if done >= run.retranspile_total:
+            # Move to QA stage (re-queue review)
+            await self._queue_review_task(db, run=run)
+
     async def _refresh_run_counters(self, db: AsyncSession, run: AISetRun) -> None:
         qa_tasks = (
             await db.execute(
@@ -634,6 +759,18 @@ class AISetRunOrchestrator:
         run.fix_failed = sum(1 for item in fix_items if item.fix_apply_status == "failed")
         run.fix_completed = run.fix_applied + run.fix_failed
 
+        retranspile_tasks = (
+            await db.execute(
+                select(AITask).where(
+                    AITask.set_run_id == run.id,
+                    AITask.task_type == "llm_transpile",
+                )
+            )
+        ).scalars().all()
+        run.retranspile_total = len(retranspile_tasks)
+        run.retranspile_completed = sum(1 for t in retranspile_tasks if t.status == "completed")
+        run.retranspile_failed = sum(1 for t in retranspile_tasks if t.status == "failed")
+
     async def _finalize_run_if_complete(self, db: AsyncSession, run: AISetRun) -> None:
         if run.status != "running":
             return
@@ -653,6 +790,19 @@ class AISetRunOrchestrator:
             ).scalars().all()
             if review_tasks and all(t.status in {"completed", "failed"} for t in review_tasks):
                 return
+
+        if run.stage == "retranspile":
+            retranspile_tasks = (
+                await db.execute(
+                    select(AITask).where(
+                        AITask.set_run_id == run.id,
+                        AITask.task_type == "llm_transpile",
+                    )
+                )
+            ).scalars().all()
+            if retranspile_tasks and all(t.status in {"completed", "failed"} for t in retranspile_tasks):
+                return
+            return
 
         if run.stage != "fix":
             return
