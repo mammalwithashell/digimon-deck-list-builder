@@ -235,3 +235,50 @@ def build_llm_transpile_messages(
     )
 
     return system, user
+
+
+def build_transpiler_learn_messages(
+    *,
+    cluster: dict,
+    extractors_source: str,
+    generators_source: str,
+    patterns_source: str,
+    cs_examples: list[dict],
+) -> tuple[str, str]:
+    """Build prompts for transpiler pattern learning."""
+    import json as _json
+
+    system = (
+        "You are a Python developer improving a regex-based C# to Python transpiler. "
+        "You will receive a cluster of similar autofix diffs — changes that were needed "
+        "to fix transpiled card scripts. Your job is to propose changes to the transpiler "
+        "source code (extractors.py, generators.py, or patterns.py) that would produce "
+        "the correct output in the first place, eliminating the need for these fixes.\n\n"
+        "Rules:\n"
+        "- Propose minimal, targeted changes\n"
+        "- Show exact before/after snippets that can be applied to the transpiler\n"
+        "- Each patch should reference actual code from the transpiler source\n"
+        "- Estimate how many cards would benefit\n"
+    )
+
+    examples_block = ""
+    if cs_examples:
+        parts = [f"### {ex['card_id']}\n```csharp\n{ex['cs_source']}\n```" for ex in cs_examples]
+        examples_block = "## Representative C# Sources\n\n" + "\n\n".join(parts)
+
+    diffs_block = _json.dumps(cluster.get("representative_diffs", []), indent=2)
+
+    user = (
+        f"## Diff Cluster\n\n"
+        f"**Type:** {cluster.get('change_type', 'unknown')}\n"
+        f"**Count:** {cluster.get('count', 0)} cards affected\n"
+        f"**Description:** {cluster.get('description', '')}\n\n"
+        f"### Representative Diffs\n```json\n{diffs_block}\n```\n\n"
+        f"{examples_block}\n\n"
+        f"## Transpiler Source: extractors.py\n```python\n{extractors_source}\n```\n\n"
+        f"## Transpiler Source: generators.py\n```python\n{generators_source}\n```\n\n"
+        f"## Transpiler Source: patterns.py\n```python\n{patterns_source}\n```\n\n"
+        f"Propose transpiler changes to handle this pattern automatically."
+    )
+
+    return system, user

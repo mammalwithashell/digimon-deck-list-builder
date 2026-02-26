@@ -60,3 +60,26 @@ class LLMTranspileOutput(BaseModel):
     effects_skipped: list[str]
     engine_gaps: list[str]
     reasoning: str
+
+
+class TranspilerPatchSuggestion(BaseModel):
+    """A suggested change to the transpiler codebase."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    target_file: str
+    description: str
+    before_snippet: str
+    after_snippet: str
+    cards_affected: list[str]
+
+
+class TranspilerLearnOutput(BaseModel):
+    """Output from transpiler pattern learning."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    cluster_summary: str
+    patches: list[TranspilerPatchSuggestion]
+    estimated_cards_fixed: int
+    confidence: Literal["low", "medium", "high"]

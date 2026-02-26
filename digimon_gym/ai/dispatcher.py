@@ -20,6 +20,7 @@ from digimon_gym.ai.contracts import (
     QATriageOutput,
     ScriptAutofixOutput,
     ScriptFidelityOutput,
+    TranspilerLearnOutput,
 )
 from digimon_gym.ai.prompts import (
     build_engine_capability_messages,
@@ -27,6 +28,7 @@ from digimon_gym.ai.prompts import (
     build_qa_triage_messages,
     build_script_autofix_messages,
     build_script_fidelity_messages,
+    build_transpiler_learn_messages,
 )
 from digimon_gym.ai.retrieval import LocalRAGIndex
 
@@ -198,6 +200,8 @@ class TaskDispatcher:
             return self._run_script_autofix(payload, model_name=model_name)
         if task_type == "llm_transpile":
             return self._run_llm_transpile(payload, model_name=model_name)
+        if task_type == "transpiler_learn":
+            return self._run_transpiler_learn(payload, model_name=model_name)
         raise ValueError(f"Unsupported task_type: {task_type}")
 
     def _run_review_batch(self, payload: dict[str, Any], model_name: str | None) -> DispatchOutcome:
@@ -484,6 +488,45 @@ class TaskDispatcher:
             result=run.output,
             sanitized_input={"card_id": card_id, "set_id": set_id, "module_name": module_name, "regex_score": regex_score},
             retrieval_refs=all_refs,
+            input_tokens=run.input_tokens,
+            output_tokens=run.output_tokens,
+            cost_actual=self._cost_from_usage(run.model_name, run.input_tokens, run.output_tokens),
+        )
+
+    def _run_transpiler_learn(self, payload: dict[str, Any], model_name: str | None) -> DispatchOutcome:
+        cluster = payload.get("cluster", {})
+        if not cluster:
+            raise ValueError("transpiler_learn payload must include cluster")
+
+        # Load transpiler source files
+        transpiler_dir = PROJECT_ROOT / "tools" / "transpiler"
+        extractors_src = (transpiler_dir / "extractors.py").read_text(encoding="utf-8")
+        generators_src = (transpiler_dir / "generators.py").read_text(encoding="utf-8")
+        patterns_src = (transpiler_dir / "patterns.py").read_text(encoding="utf-8")
+
+        cs_examples = payload.get("cs_examples", [])
+
+        system_prompt, user_prompt = build_transpiler_learn_messages(
+            cluster=cluster,
+            extractors_source=extractors_src,
+            generators_source=generators_src,
+            patterns_source=patterns_src,
+            cs_examples=cs_examples,
+        )
+
+        run = self.client.run_structured(
+            task_type="transpiler_learn",
+            system_prompt=system_prompt,
+            user_prompt=user_prompt,
+            schema_model=TranspilerLearnOutput,
+            model_name=model_name,
+        )
+
+        return DispatchOutcome(
+            model_name=run.model_name,
+            result=run.output,
+            sanitized_input={"change_type": cluster.get("change_type"), "count": cluster.get("count")},
+            retrieval_refs=[],
             input_tokens=run.input_tokens,
             output_tokens=run.output_tokens,
             cost_actual=self._cost_from_usage(run.model_name, run.input_tokens, run.output_tokens),
