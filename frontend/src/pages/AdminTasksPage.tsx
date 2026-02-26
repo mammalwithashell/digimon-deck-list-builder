@@ -29,7 +29,7 @@ const DEFAULT_PAYLOAD = JSON.stringify(
   2,
 );
 
-type TaskTypeFilter = 'all' | 'review_batch' | 'qa_analysis' | 'engine_audit' | 'script_autofix';
+type TaskTypeFilter = 'all' | 'review_batch' | 'qa_analysis' | 'engine_audit' | 'script_autofix' | 'llm_transpile' | 'transpiler_learn';
 type TaskStatusFilter = 'all' | 'queued' | 'running' | 'completed' | 'failed';
 type RunModeFilter = 'all' | 'pr' | 'main' | 'n/a';
 type ScopeFilter = 'all' | 'script' | 'script_engine' | 'script_engine_transpiler' | 'n/a';
@@ -50,7 +50,7 @@ export function AdminTasksPage() {
   const [promotionNotes, setPromotionNotes] = useState<Record<string, string>>({});
   const [error, setError] = useState<string | null>(null);
 
-  const [taskType, setTaskType] = useState<'review_batch' | 'qa_analysis' | 'engine_audit' | 'script_autofix'>('review_batch');
+  const [taskType, setTaskType] = useState<'review_batch' | 'qa_analysis' | 'engine_audit' | 'script_autofix' | 'llm_transpile' | 'transpiler_learn'>('review_batch');
   const [payloadText, setPayloadText] = useState(DEFAULT_PAYLOAD);
   const [modelName, setModelName] = useState('');
   const [costEstimate, setCostEstimate] = useState('0.5');
@@ -80,7 +80,7 @@ export function AdminTasksPage() {
       const limit = Math.min(500, Math.max(1, Number(limitFilter) || 250));
       const params: {
         status?: 'queued' | 'running' | 'completed' | 'failed';
-        task_type?: 'review_batch' | 'qa_analysis' | 'engine_audit' | 'script_autofix';
+        task_type?: 'review_batch' | 'qa_analysis' | 'engine_audit' | 'script_autofix' | 'llm_transpile' | 'transpiler_learn';
         run_mode?: 'pr' | 'main';
         scope_profile?: 'script' | 'script_engine' | 'script_engine_transpiler';
         limit: number;
@@ -368,6 +368,8 @@ export function AdminTasksPage() {
                 <option value="qa_analysis">qa_analysis</option>
                 <option value="engine_audit">engine_audit</option>
                 <option value="script_autofix">script_autofix</option>
+                <option value="llm_transpile">llm_transpile</option>
+                <option value="transpiler_learn">transpiler_learn</option>
               </select>
               <input
                 value={modelName}
@@ -420,6 +422,8 @@ export function AdminTasksPage() {
                 <option value="qa_analysis">qa_analysis</option>
                 <option value="engine_audit">engine_audit</option>
                 <option value="script_autofix">script_autofix</option>
+                <option value="llm_transpile">llm_transpile</option>
+                <option value="transpiler_learn">transpiler_learn</option>
               </select>
               <select
                 value={runModeFilter}

@@ -26,7 +26,7 @@ export interface ApproveSetIssuesResponse {
 
 export interface AITaskItem {
   id: string;
-  task_type: 'review_batch' | 'qa_analysis' | 'engine_audit' | 'script_autofix';
+  task_type: 'review_batch' | 'qa_analysis' | 'engine_audit' | 'script_autofix' | 'llm_transpile' | 'transpiler_learn';
   payload: Record<string, unknown>;
   status: 'queued' | 'running' | 'completed' | 'failed';
   result?: Record<string, unknown> | null;
@@ -188,7 +188,7 @@ export interface AppliedCardItem {
 
 export interface AITaskQueryParams {
   status?: 'queued' | 'running' | 'completed' | 'failed';
-  task_type?: 'review_batch' | 'qa_analysis' | 'engine_audit' | 'script_autofix';
+  task_type?: 'review_batch' | 'qa_analysis' | 'engine_audit' | 'script_autofix' | 'llm_transpile' | 'transpiler_learn';
   run_mode?: 'pr' | 'main';
   scope_profile?: 'script' | 'script_engine' | 'script_engine_transpiler';
   batch_id?: string;
@@ -227,7 +227,7 @@ export async function getAITask(taskId: string): Promise<AITaskItem> {
 }
 
 export async function createAITask(payload: {
-  task_type: 'review_batch' | 'qa_analysis' | 'engine_audit' | 'script_autofix';
+  task_type: 'review_batch' | 'qa_analysis' | 'engine_audit' | 'script_autofix' | 'llm_transpile' | 'transpiler_learn';
   payload: Record<string, unknown>;
   model_name?: string;
   cost_estimate?: number;
@@ -367,4 +367,17 @@ export async function createPromotion(payload: {
 }): Promise<PromotionItem> {
   const { data } = await client.post<PromotionItem>('/admin/promotions', payload);
   return data;
+}
+
+export async function createTranspilerLearnRun(sourceSetRunId: string, minClusterSize = 3) {
+  const resp = await client.post('/admin/transpiler-learn', {
+    source_set_run_id: sourceSetRunId,
+    min_cluster_size: minClusterSize,
+  });
+  return resp.data;
+}
+
+export async function getTranspilerLearnRun(learnRunId: string) {
+  const resp = await client.get(`/admin/transpiler-learn/${learnRunId}`);
+  return resp.data;
 }
