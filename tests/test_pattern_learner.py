@@ -65,3 +65,9 @@ class TestClusterAutofixDiffs:
             assert hasattr(c, "card_ids")
             assert hasattr(c, "representative_diffs")
             assert hasattr(c, "count")
+
+
+class TestCreateLearnRun:
+    def test_create_learn_run_exists(self):
+        from digimon_gym.ai.pattern_learner import create_learn_run
+        assert callable(create_learn_run)

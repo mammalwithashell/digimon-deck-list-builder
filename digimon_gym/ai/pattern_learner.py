@@ -112,3 +112,64 @@ def cluster_autofix_diffs(
 
     clusters.sort(key=lambda c: c.count, reverse=True)
     return clusters
+
+
+async def create_learn_run(
+    db: "AsyncSession",
+    *,
+    source_set_run_id: str,
+    min_cluster_size: int = 3,
+) -> "AITranspilerLearnRun":
+    """Create a transpiler learn run from a completed set run's autofixes."""
+    from sqlalchemy import select
+    from digimon_gym.db.models import AIFixApplyAudit, AITranspilerLearnRun, AITask
+
+    # Fetch successful audits for this set run
+    stmt = (
+        select(AIFixApplyAudit)
+        .join(AITask, AIFixApplyAudit.ai_task_id == AITask.id)
+        .where(AITask.set_run_id == source_set_run_id)
+        .where(AIFixApplyAudit.status == "applied")
+    )
+    result = await db.execute(stmt)
+    audits = list(result.scalars().all())
+
+    # Create learn run record
+    learn_run = AITranspilerLearnRun(
+        source_set_run_id=source_set_run_id,
+        status="clustering",
+    )
+    db.add(learn_run)
+    await db.flush()
+
+    # Phase 1: cluster diffs (synchronous)
+    clusters = cluster_autofix_diffs(audits, min_cluster_size=min_cluster_size)
+    learn_run.clusters_found = len(clusters)
+
+    if not clusters:
+        learn_run.status = "completed"
+        await db.commit()
+        return learn_run
+
+    # Phase 2: create transpiler_learn tasks for each cluster
+    learn_run.status = "generating"
+    for cluster in clusters:
+        task = AITask(
+            task_type="transpiler_learn",
+            status="queued",
+            payload_json=json.dumps({
+                "cluster": {
+                    "description": cluster.description,
+                    "change_type": cluster.change_type,
+                    "card_ids": cluster.card_ids,
+                    "representative_diffs": cluster.representative_diffs,
+                    "count": cluster.count,
+                },
+                "learn_run_id": learn_run.id,
+            }),
+            max_attempts=2,
+        )
+        db.add(task)
+
+    await db.commit()
+    return learn_run
