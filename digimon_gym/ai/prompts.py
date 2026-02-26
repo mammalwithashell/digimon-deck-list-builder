@@ -173,3 +173,65 @@ def build_qa_triage_messages(
         """
     ).strip()
     return system, user
+
+
+def build_llm_transpile_messages(
+    *,
+    card_id: str,
+    card_text: str,
+    cs_source: str,
+    regex_output: str,
+    regex_score: float,
+    context_chunks: list[dict],
+    pinned_engine_chunks: list[dict] | None,
+    few_shot_examples: list[dict],
+) -> tuple[str, str]:
+    """Build system + user prompts for LLM retranspilation."""
+    context_block = _join_context_chunks(context_chunks)
+    pinned_block = _join_pinned_engine_chunks(pinned_engine_chunks) if pinned_engine_chunks else ""
+
+    examples_block = ""
+    if few_shot_examples:
+        parts = []
+        for ex in few_shot_examples:
+            parts.append(f"### {ex['card_id']}\n```python\n{ex['script']}\n```")
+        examples_block = "## Working Examples from This Set\n\n" + "\n\n".join(parts)
+
+    system = (
+        "You are a Digimon TCG card script transpiler. You convert C# card effect "
+        "classes from DCGO into Python CardScript subclasses for a headless game engine.\n\n"
+        "You will receive:\n"
+        "1. The original C# source file\n"
+        "2. The official card text\n"
+        "3. A partial Python output from a regex-based transpiler (with a confidence score)\n"
+        "4. Engine API documentation for available methods\n"
+        "5. Working examples of similar cards from the same set\n\n"
+        "Your job: produce a COMPLETE, CORRECT Python CardScript module that faithfully "
+        "implements the card's effects using the available engine API. Build on the regex "
+        "output where it is correct. Fix or rewrite parts that are wrong or missing.\n\n"
+        "Rules:\n"
+        "- Output the complete Python module (imports through class definition)\n"
+        "- Use only engine methods shown in the API reference\n"
+        "- If an effect requires an engine mechanic that doesn't exist, list it in engine_gaps and skip that effect\n"
+        "- Follow the exact CardScript structure shown in the working examples\n"
+        "- Do not invent engine methods\n"
+    )
+
+    user = (
+        f"## Card: {card_id}\n\n"
+        f"**Official card text:**\n{card_text}\n\n"
+        f"## C# Source\n```csharp\n{cs_source}\n```\n\n"
+        f"## Regex Transpiler Output (score: {regex_score})\n```python\n{regex_output}\n```\n\n"
+    )
+    if examples_block:
+        user += f"{examples_block}\n\n"
+    if pinned_block:
+        user += f"## Engine API Reference\n{pinned_block}\n\n"
+    if context_block:
+        user += f"## Rules & Context\n{context_block}\n\n"
+    user += (
+        "Produce the complete corrected Python module. List any effects you "
+        "skipped and any engine gaps you identified."
+    )
+
+    return system, user
