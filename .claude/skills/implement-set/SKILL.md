@@ -1,6 +1,6 @@
 ---
 name: implement-set
-description: Implement a Digimon TCG card set by ingesting card metadata, transpiling C# scripts, reviewing transpiled output against official rules, and running validation tests. Use when asked to add a new card set, implement a set, or transpile cards.
+description: Implement a Digimon TCG card set by ingesting card metadata, transpiling C# scripts, running AI pipeline review, applying fixes, and promoting to frozen lane. Use when asked to add a new card set, implement a set, transpile cards, or run the AI pipeline on a set.
 argument-hint: <SET_ID> [--review-only]
 allowed-tools: Bash, Read, Write, Edit, Glob, Grep, WebFetch, Task, TodoWrite
 ---
@@ -160,6 +160,176 @@ If Phase 4 reveals issues:
 
 ---
 
+## Phase 7: AI Pipeline Review (Set Run)
+
+**Goal**: Use the automated AI set run pipeline to review all generated scripts for faithfulness and fix non-faithful cards.
+
+This replaces/augments the manual review in Phase 4. The pipeline runs QA analysis on cards with open issues, then reviews ALL cards for faithfulness, then auto-generates fixes for non-faithful scripts.
+
+### 7a. Prerequisites
+
+- Backend server running: `python -m uvicorn digimon_gym.api:app --reload --reload-dir digimon_gym`
+- AI worker running (started automatically with the server)
+- Valid admin credentials (login via `/auth/login`)
+- Generated scripts must exist in `digimon_gym/engine/data/scripts/generated/{set_lower}/`
+
+### 7b. Login and create the set run
+
+```python
+import requests, json
+
+r = requests.post('http://localhost:8000/auth/login',
+    json={'username': '<USERNAME>', 'password': '<PASSWORD>'})
+token = r.json()['access_token']
+
+r2 = requests.post('http://localhost:8000/admin/set-runs',
+    headers={'Authorization': f'Bearer {token}'},
+    json={
+        'set_id': '{set_lower}',
+        'run_mode': 'pr',
+        'scope_profile': 'script',
+        'max_fix_tasks': 10,       # cap on fix tasks (0 = unlimited)
+    })
+print(r2.json())
+RUN_ID = r2.json()['id']
+```
+
+### 7c. Monitor pipeline progress
+
+The pipeline progresses through stages: **qa** → **review** → **fix** → **completed**
+
+```python
+r = requests.get(f'http://localhost:8000/admin/set-runs/{RUN_ID}',
+    headers={'Authorization': f'Bearer {token}'})
+run = r.json()['run']
+print(f'Stage: {run["stage"]}  Status: {run["status"]}')
+print(f'QA: {run["qa_completed"]}/{run["qa_total"]}')
+print(f'Review: {run["review_completed"]}/{run["review_total"]} ({run["review_failed"]} failed)')
+print(f'Fix: {run["fix_applied"]}/{run["fix_total"]} ({run["fix_failed"]} failed)')
+```
+
+**Key behaviors:**
+- **QA stage**: One task per card with an open issue. Cards without issues skip QA.
+- **Review stage**: Cards are split into ~3 chunks to avoid rate limits. Each chunk is a separate `review_batch` task with `max_attempts=3`.
+- **Fix stage**: Non-faithful cards get `script_autofix` tasks. Each fix runs in an isolated git worktree.
+- **Partial success**: If some review chunks fail, the pipeline proceeds with successfully reviewed cards.
+
+### 7d. Wait for completion
+
+Poll until `status != 'running'`. A typical set (100+ cards) takes 5-15 minutes depending on API load. If the run fails, check `stopped_reason` for details.
+
+---
+
+## Phase 8: Apply Fix Results
+
+**Goal**: Copy AI-generated script fixes from worktrees into the main repo.
+
+Fix tasks produce edits in isolated worktrees at `data/run/ai_worktrees/task-{TASK_ID}/`. Even if the apply step failed (e.g., frozen integrity check), the script changes are still in the worktree.
+
+### 8a. Identify fix items
+
+```python
+r = requests.get(f'http://localhost:8000/admin/set-runs/{RUN_ID}',
+    headers={'Authorization': f'Bearer {token}'})
+items = r.json()['items']
+fix_items = [it for it in items if it.get('fix_task_id')]
+for it in fix_items:
+    print(f'{it["card_id"]}  task={it["fix_task_id"][:12]}  status={it["fix_apply_status"]}')
+```
+
+### 8b. Review diffs before applying
+
+For each fix task, inspect the worktree diff:
+```bash
+cd data/run/ai_worktrees/task-{TASK_ID}
+git diff HEAD -- digimon_gym/engine/data/scripts/generated/{set_lower}/
+```
+
+**Review each diff** for correctness before copying. The AI may have introduced incorrect logic.
+
+### 8c. Copy approved fixes
+
+```bash
+# For each approved card:
+cp data/run/ai_worktrees/task-{TASK_ID}/digimon_gym/engine/data/scripts/generated/{set_lower}/{module}.py \
+   digimon_gym/engine/data/scripts/generated/{set_lower}/{module}.py
+```
+
+---
+
+## Phase 9: Promote to Frozen Lane
+
+**Goal**: Move reviewed and fixed scripts from `generated/` to the frozen script lane used by the game engine.
+
+Scripts in `generated/` are the staging area. The game engine runs from the frozen lane at `digimon_gym/engine/data/scripts/{set_lower}/`.
+
+### 9a. Promote scripts
+
+```python
+import hashlib
+from pathlib import Path
+from digimon_gym.engine.data.script_promotion import promote_script_from_generated, _sha256
+
+cards_to_promote = [
+    # (card_id, set_id, module_name) for each card to promote
+    ("BT13-001", "bt13", "bt13_001"),
+    # ... add all cards
+]
+
+for card_id, set_id, module_name in cards_to_promote:
+    gen_path = Path(f"digimon_gym/engine/data/scripts/generated/{set_id}/{module_name}.py")
+    gen_hash = _sha256(gen_path)
+    result = promote_script_from_generated(
+        card_id=card_id,
+        set_id=set_id,
+        module_name=module_name,
+        expected_generated_hash=gen_hash,
+    )
+    print(f"Promoted {card_id}: manifest v{result['manifest_version']}")
+```
+
+To promote ALL cards in a set at once:
+```python
+from digimon_gym.ai.set_run_orchestrator import set_run_orchestrator
+
+cards = set_run_orchestrator.discover_set_cards(set_id='{set_lower}')
+for card_id, set_id, module_name in cards:
+    gen_path = Path(f"digimon_gym/engine/data/scripts/generated/{set_id}/{module_name}.py")
+    gen_hash = _sha256(gen_path)
+    result = promote_script_from_generated(
+        card_id=card_id, set_id=set_id, module_name=module_name,
+        expected_generated_hash=gen_hash,
+    )
+    print(f"Promoted {card_id}")
+```
+
+### 9b. Verify frozen integrity
+
+```bash
+python scripts/check_frozen_integrity.py
+```
+
+Must print `Frozen integrity check passed.` If it fails, the manifest hashes don't match the frozen files. Re-promote the failing cards.
+
+### 9c. Run full test suite
+
+```bash
+python -m pytest tests/ -v
+```
+
+### 9d. Commit and push
+
+Stage the frozen scripts, manifest, and any generated script changes:
+```bash
+git add digimon_gym/engine/data/scripts/{set_lower}/ \
+       digimon_gym/engine/data/scripts/generated/{set_lower}/ \
+       digimon_gym/engine/data/scripts/_frozen_manifest.json
+git commit -m "feat: promote {SET_ID} scripts to frozen lane after AI review"
+git push origin main
+```
+
+---
+
 ## Output Summary
 
 When complete, provide:
@@ -170,3 +340,5 @@ When complete, provide:
 - Test results (pass/fail counts)
 - Any issues found during review and whether they were fixed
 - Any remaining known gaps
+- **AI pipeline results**: QA/review/fix counts, which cards were fixed, which were promoted
+- **Frozen integrity**: pass/fail
