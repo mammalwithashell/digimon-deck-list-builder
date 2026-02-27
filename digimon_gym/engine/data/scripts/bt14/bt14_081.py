@@ -35,16 +35,25 @@ class BT14_081(CardScript):
             player = ctx.get('player')
             perm = ctx.get('permanent')
             game = ctx.get('game')
-            if not (player and game):
+            if not (player and game and perm):
                 return
+
+            cards = getattr(perm, 'digivolution_cards', []) or []
+            has_eiji = any(getattr(dc, 'card_id', '') == 'BT14-087' for dc in cards)
+            max_play = 1 + (2 if has_eiji else 0)
+
             def play_filter(c):
                 if not getattr(c, 'has_play_cost', False):
                     return False
-                if getattr(c, 'level', None) is None or c.level > 4:
+                level = getattr(c, 'level', None)
+                if level is None or level > 4:
                     return False
-                return True
-            game.effect_play_from_zone(
-                player, 'trash', play_filter, free=True, is_optional=True)
+                traits = getattr(c, 'type_eng', None) or []
+                return ('Dark Animal' in traits) or ('SoC' in traits)
+
+            for _ in range(max_play):
+                game.effect_play_from_zone(
+                    player, 'trash', play_filter, free=True, is_optional=True)
 
         effect0.set_on_process_callback(process0)
         effects.append(effect0)
@@ -69,18 +78,26 @@ class BT14_081(CardScript):
         effect1.set_can_use_condition(condition1)
 
         def process1(ctx: Dict[str, Any]):
-            """Action: Unsuspend"""
+            """Action: Delete opponent Digimon then unsuspend this Digimon"""
             player = ctx.get('player')
             perm = ctx.get('permanent')
             game = ctx.get('game')
-            if not (player and game):
+            if not (player and game and perm):
                 return
+
+            own_count = len(getattr(player, 'battle_area', []) or [])
+            max_level = 3 + own_count
+
             def target_filter(p):
-                return True
-            def on_unsuspend(target_perm):
-                target_perm.unsuspend()
-            game.effect_select_own_permanent(
-                player, on_unsuspend, filter_fn=target_filter, is_optional=True)
+                level = getattr(getattr(p, 'card', None), 'level', None)
+                return level is not None and level <= max_level
+
+            def on_delete(target_perm):
+                game.delete_digimon(target_perm)
+                perm.unsuspend()
+
+            game.effect_select_opponent_permanent(
+                player, on_delete, filter_fn=target_filter, is_optional=True)
 
         effect1.set_on_process_callback(process1)
         effects.append(effect1)
