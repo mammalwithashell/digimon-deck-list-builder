@@ -31,11 +31,17 @@ class BT14_017(CardScript):
         effect1.set_effect_name("BT14-017 Opponent can't play Digimon card with DP 6000 or less")
         effect1.set_effect_description("Play Restriction")
 
-        effect = effect1  # alias for condition closure
         def condition1(context: Dict[str, Any]) -> bool:
             if card and card.permanent_of_this_card() is None:
                 return False
-            return True
+            game = context.get('game')
+            player = context.get('player')
+            if game is None or player is None:
+                return False
+            opp = game.get_opponent(player)
+            if opp is None:
+                return False
+            return opp.get_memory() >= 1
 
         effect1.set_can_use_condition(condition1)
 
@@ -60,7 +66,15 @@ class BT14_017(CardScript):
         def condition2(context: Dict[str, Any]) -> bool:
             if card and card.permanent_of_this_card() is None:
                 return False
-            return True
+            game = context.get('game')
+            player = context.get('player')
+            if game is None or player is None:
+                return False
+            opp = game.get_opponent(player)
+            if opp is None:
+                return False
+            return opp.get_memory() >= 1
+
         effect2.set_can_use_condition(condition2)
         effects.append(effect2)
 
