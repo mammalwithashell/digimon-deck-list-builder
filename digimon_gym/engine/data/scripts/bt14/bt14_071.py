@@ -16,11 +16,10 @@ class BT14_071(CardScript):
         # Timing: EffectTiming.OnStartMainPhase
         # [Start of Your Main Phase] By placing 1 [Eiji Nagasumi] from your hand or trash as this Digimon's bottom digivolution card, gain 1 memory.
         effect0 = ICardEffect()
-        effect0.set_effect_name("BT14-071 Place cards under this Digimon's digivolution cards to gain Memory +1")
+        effect0.set_effect_name("BT14-071 Place Eiji as bottom digivolution to gain Memory +1")
         effect0.set_effect_description("[Start of Your Main Phase] By placing 1 [Eiji Nagasumi] from your hand or trash as this Digimon's bottom digivolution card, gain 1 memory.")
         effect0.is_optional = True
 
-        effect = effect0  # alias for condition closure
         def condition0(context: Dict[str, Any]) -> bool:
             if card and card.permanent_of_this_card() is None:
                 return False
@@ -31,12 +30,47 @@ class BT14_071(CardScript):
         effect0.set_can_use_condition(condition0)
 
         def process0(ctx: Dict[str, Any]):
-            """Action: Gain 1 memory"""
+            """Action: place 1 [Eiji Nagasumi] from hand or trash under this Digimon, then gain 1 memory."""
             player = ctx.get('player')
             perm = ctx.get('permanent')
             game = ctx.get('game')
-            if player:
-                player.add_memory(1)
+            if not player or not perm:
+                return
+
+            chosen = None
+
+            # Prefer hand, then trash, matching "from your hand or trash".
+            hand = getattr(player, 'hand', None) or []
+            for c in hand:
+                if getattr(c, 'card_id', None) == 'BT14-087':
+                    chosen = c
+                    remove_from = 'hand'
+                    break
+
+            if chosen is None:
+                trash = getattr(player, 'trash', None) or []
+                for c in trash:
+                    if getattr(c, 'card_id', None) == 'BT14-087':
+                        chosen = c
+                        remove_from = 'trash'
+                        break
+
+            if chosen is None:
+                return
+
+            # Remove from source zone.
+            zone = getattr(player, remove_from, None)
+            if zone is not None and chosen in zone:
+                zone.remove(chosen)
+
+            # Place as bottom digivolution card.
+            evo_cards = getattr(perm, 'digivolution_cards', None)
+            if evo_cards is None:
+                evo_cards = []
+                setattr(perm, 'digivolution_cards', evo_cards)
+            evo_cards.insert(0, chosen)
+
+            player.add_memory(1)
 
         effect0.set_on_process_callback(process0)
         effects.append(effect0)
@@ -51,7 +85,6 @@ class BT14_071(CardScript):
         effect1.set_hash_string("Memory+1_BT14_071")
         effect1.is_on_play = True
 
-        effect = effect1  # alias for condition closure
         def condition1(context: Dict[str, Any]) -> bool:
             if card and card.permanent_of_this_card() is None:
                 return False
@@ -64,8 +97,6 @@ class BT14_071(CardScript):
         def process1(ctx: Dict[str, Any]):
             """Action: Gain 1 memory"""
             player = ctx.get('player')
-            perm = ctx.get('permanent')
-            game = ctx.get('game')
             if player:
                 player.add_memory(1)
 
