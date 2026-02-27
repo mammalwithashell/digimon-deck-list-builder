@@ -26,16 +26,22 @@ class BT14_005(CardScript):
         effect0.dp_modifier = 2000
 
         def _is_valid_trait_card(c: Any) -> bool:
-            traits = []
+            traits: List[str] = []
             if hasattr(c, 'get_type'):
                 try:
                     t = c.get_type()
                     if isinstance(t, list):
                         traits = t
+                    elif isinstance(t, str):
+                        traits = [t]
                 except Exception:
                     traits = []
             if not traits and hasattr(c, 'card_data') and isinstance(getattr(c, 'card_data'), dict):
-                traits = c.card_data.get('type_eng', []) or []
+                raw_traits = c.card_data.get('type_eng', []) or []
+                if isinstance(raw_traits, list):
+                    traits = raw_traits
+                elif isinstance(raw_traits, str):
+                    traits = [raw_traits]
             return ('D-Brigade' in traits) or ('DigiPolice' in traits)
 
         def _get_trash_cards(player: Any) -> List[Any]:
