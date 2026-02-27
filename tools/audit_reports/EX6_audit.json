@@ -2,7 +2,7 @@
   "set_id": "EX6",
   "total_cards": 74,
   "cards_audited": 74,
-  "cards_with_issues": 27,
+  "cards_with_issues": 26,
   "cards_below_threshold": 20,
   "cards_missing_script": 0,
   "average_score": 0.7714,
@@ -1164,12 +1164,8 @@
       "coroutine_score": 0.0,
       "forward_issues": [],
       "reverse_issues": [],
-      "timing_issues": [
-        "timing 'Security' -> is_security_effect not found"
-      ],
-      "structural_warnings": [
-        "API has security effect but script has no is_security_effect"
-      ],
+      "timing_issues": [],
+      "structural_warnings": [],
       "below_threshold": true,
       "has_script": true,
       "api_effect_blocks": 5,
@@ -1282,12 +1278,8 @@
         "security_trash"
       ],
       "reverse_issues": [],
-      "timing_issues": [
-        "timing 'Security' -> is_security_effect not found"
-      ],
-      "structural_warnings": [
-        "API has security effect but script has no is_security_effect"
-      ],
+      "timing_issues": [],
+      "structural_warnings": [],
       "below_threshold": true,
       "has_script": true,
       "api_effect_blocks": 2,
@@ -1410,7 +1402,7 @@
       ],
       [
         "timing 'Security' -> is_security_effect not found",
-        4
+        2
       ]
     ],
     "worst_cards": [

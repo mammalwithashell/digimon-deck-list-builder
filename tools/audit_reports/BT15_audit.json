@@ -2,10 +2,10 @@
   "set_id": "BT15",
   "total_cards": 102,
   "cards_audited": 102,
-  "cards_with_issues": 39,
-  "cards_below_threshold": 18,
+  "cards_with_issues": 29,
+  "cards_below_threshold": 16,
   "cards_missing_script": 0,
-  "average_score": 0.7996,
+  "average_score": 0.803,
   "cards": {
     "BT15-001": {
       "card_id": "BT15-001",
@@ -280,14 +280,12 @@
     "BT15-016": {
       "card_id": "BT15-016",
       "card_name": "Brachiomon",
-      "score": 0.9,
+      "score": 1.0,
       "effects_ratio": 1.0,
       "actions_ratio": 1.0,
-      "forward_match_ratio": 0.5,
+      "forward_match_ratio": 1.0,
       "coroutine_score": 1.0,
-      "forward_issues": [
-        "attack_prevention"
-      ],
+      "forward_issues": [],
       "reverse_issues": [],
       "timing_issues": [],
       "structural_warnings": [],
@@ -367,14 +365,12 @@
     "BT15-021": {
       "card_id": "BT15-021",
       "card_name": "Gomamon (X Antibody)",
-      "score": 0.9,
+      "score": 1.0,
       "effects_ratio": 1.0,
       "actions_ratio": 1.0,
-      "forward_match_ratio": 0.5,
+      "forward_match_ratio": 1.0,
       "coroutine_score": 1.0,
-      "forward_issues": [
-        "attack_prevention"
-      ],
+      "forward_issues": [],
       "reverse_issues": [],
       "timing_issues": [],
       "structural_warnings": [],
@@ -386,18 +382,16 @@
     "BT15-022": {
       "card_id": "BT15-022",
       "card_name": "Betamon",
-      "score": 0.6,
+      "score": 0.7,
       "effects_ratio": 0.5,
       "actions_ratio": 1.0,
-      "forward_match_ratio": 0.5,
+      "forward_match_ratio": 1.0,
       "coroutine_score": 0.0,
-      "forward_issues": [
-        "attack_prevention"
-      ],
+      "forward_issues": [],
       "reverse_issues": [],
       "timing_issues": [],
       "structural_warnings": [],
-      "below_threshold": true,
+      "below_threshold": false,
       "has_script": true,
       "api_effect_blocks": 2,
       "script_effect_count": 1
@@ -1609,12 +1603,8 @@
         "security_trash"
       ],
       "reverse_issues": [],
-      "timing_issues": [
-        "timing 'Security' -> is_security_effect not found"
-      ],
-      "structural_warnings": [
-        "API has security effect but script has no is_security_effect"
-      ],
+      "timing_issues": [],
+      "structural_warnings": [],
       "below_threshold": true,
       "has_script": true,
       "api_effect_blocks": 2,
@@ -1630,12 +1620,8 @@
       "coroutine_score": 0.0,
       "forward_issues": [],
       "reverse_issues": [],
-      "timing_issues": [
-        "timing 'Security' -> is_security_effect not found"
-      ],
-      "structural_warnings": [
-        "API has security effect but script has no is_security_effect"
-      ],
+      "timing_issues": [],
+      "structural_warnings": [],
       "below_threshold": false,
       "has_script": true,
       "api_effect_blocks": 2,
@@ -1687,12 +1673,8 @@
       "coroutine_score": 0.0,
       "forward_issues": [],
       "reverse_issues": [],
-      "timing_issues": [
-        "timing 'Security' -> is_security_effect not found"
-      ],
-      "structural_warnings": [
-        "API has security effect but script has no is_security_effect"
-      ],
+      "timing_issues": [],
+      "structural_warnings": [],
       "below_threshold": true,
       "has_script": true,
       "api_effect_blocks": 2,
@@ -1708,12 +1690,8 @@
       "coroutine_score": 0.0,
       "forward_issues": [],
       "reverse_issues": [],
-      "timing_issues": [
-        "timing 'Security' -> is_security_effect not found"
-      ],
-      "structural_warnings": [
-        "API has security effect but script has no is_security_effect"
-      ],
+      "timing_issues": [],
+      "structural_warnings": [],
       "below_threshold": false,
       "has_script": true,
       "api_effect_blocks": 2,
@@ -1763,12 +1741,8 @@
       "coroutine_score": 0.0,
       "forward_issues": [],
       "reverse_issues": [],
-      "timing_issues": [
-        "timing 'Security' -> is_security_effect not found"
-      ],
-      "structural_warnings": [
-        "API has security effect but script has no is_security_effect"
-      ],
+      "timing_issues": [],
+      "structural_warnings": [],
       "below_threshold": false,
       "has_script": true,
       "api_effect_blocks": 2,
@@ -1805,12 +1779,8 @@
       "coroutine_score": 0.0,
       "forward_issues": [],
       "reverse_issues": [],
-      "timing_issues": [
-        "timing 'Security' -> is_security_effect not found"
-      ],
-      "structural_warnings": [
-        "API has security effect but script has no is_security_effect"
-      ],
+      "timing_issues": [],
+      "structural_warnings": [],
       "below_threshold": false,
       "has_script": true,
       "api_effect_blocks": 2,
@@ -1826,12 +1796,8 @@
       "coroutine_score": 0.0,
       "forward_issues": [],
       "reverse_issues": [],
-      "timing_issues": [
-        "timing 'Security' -> is_security_effect not found"
-      ],
-      "structural_warnings": [
-        "API has security effect but script has no is_security_effect"
-      ],
+      "timing_issues": [],
+      "structural_warnings": [],
       "below_threshold": false,
       "has_script": true,
       "api_effect_blocks": 3,
@@ -1840,18 +1806,16 @@
     "BT15-101": {
       "card_id": "BT15-101",
       "card_name": "MetalGarurumon",
-      "score": 0.65,
+      "score": 0.7,
       "effects_ratio": 0.5,
       "actions_ratio": 1.0,
-      "forward_match_ratio": 0.75,
+      "forward_match_ratio": 1.0,
       "coroutine_score": 0.0,
-      "forward_issues": [
-        "digivolve_into"
-      ],
+      "forward_issues": [],
       "reverse_issues": [],
       "timing_issues": [],
       "structural_warnings": [],
-      "below_threshold": true,
+      "below_threshold": false,
       "has_script": true,
       "api_effect_blocks": 4,
       "script_effect_count": 2
@@ -1877,15 +1841,11 @@
   "summary": {
     "top_forward_issues": [
       [
-        "attack_prevention",
-        5
+        "bounce",
+        4
       ],
       [
         "digivolve_into",
-        5
-      ],
-      [
-        "bounce",
         4
       ],
       [
@@ -1902,6 +1862,10 @@
       ],
       [
         "dp_modification",
+        2
+      ],
+      [
+        "attack_prevention",
         2
       ],
       [
@@ -1933,12 +1897,12 @@
     ],
     "top_timing_issues": [
       [
-        "timing 'Security' -> is_security_effect not found",
-        10
-      ],
-      [
         "has inherited effect text but no is_inherited_effect flag",
         9
+      ],
+      [
+        "timing 'Security' -> is_security_effect not found",
+        3
       ]
     ],
     "worst_cards": [
@@ -1978,11 +1942,6 @@
         "score": 0.5667
       },
       {
-        "card_id": "BT15-022",
-        "name": "Betamon",
-        "score": 0.6
-      },
-      {
         "card_id": "BT15-029",
         "name": "MegaSeadramon",
         "score": 0.6
@@ -1990,6 +1949,11 @@
       {
         "card_id": "BT15-038",
         "name": "Angewomon",
+        "score": 0.6
+      },
+      {
+        "card_id": "BT15-040",
+        "name": "Monzaemon (X Antibody)",
         "score": 0.6
       }
     ]

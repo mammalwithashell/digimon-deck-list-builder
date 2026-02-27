@@ -4,8 +4,8 @@ Generated from DCGO C# card scripts.
 
 - Total scripts: 76
 - Scripts with effects: 76
-- Total effects: 248
-- Factory effects: 70
+- Total effects: 252
+- Factory effects: 74
 - Activate effects: 178
 
 ## Per-Card Breakdown
@@ -141,8 +141,9 @@ EX5_065: 4 effects
   [EffectTiming.OnStartTurn] play_card
   [EffectTiming.OnStartTurn] play_card, bounce, effect_immunity
   [factory] security_play
-EX5_067: 1 effects
+EX5_067: 2 effects
   [EffectTiming.OptionSkill] play_card, effect_immunity
+  [factory] security_play
 EX5_003: 1 effects
   [factory] dp_modifier
 EX5_004: 1 effects
@@ -217,10 +218,11 @@ EX5_063: 4 effects
   [EffectTiming.OnEnterFieldAnyone] delete
   [EffectTiming.OnEnterFieldAnyone] delete
   [EffectTiming.OnDestroyedAnyone] no-action
-EX5_069: 3 effects
+EX5_069: 4 effects
   [EffectTiming.OptionSkill] delete, trash_from_hand
   [factory] delay
   [EffectTiming.OnEnterFieldAnyone] play_card
+  [factory] security_play
 EX5_001: 1 effects
   [EffectTiming.OnAddDigivolutionCards] digivolve (inherited) (1/turn)
 EX5_007: 3 effects
@@ -267,8 +269,9 @@ EX5_064: 4 effects
   [EffectTiming.OnEnterFieldAnyone] suspend, digivolve
   [EffectTiming.OnDeclaration] suspend, digivolve
   [factory] security_play
-EX5_066: 1 effects
+EX5_066: 2 effects
   [EffectTiming.OptionSkill] delete, add_to_hand
+  [factory] security_play
 EX5_073: 6 effects
   [EffectTiming.None] jogress_condition
   [factory] security_attack_plus
@@ -282,9 +285,10 @@ EX5_070: 5 effects
   [EffectTiming.SecuritySkill] add_to_hand
   [EffectTiming.OptionSkill] digivolve
   [EffectTiming.WhenRemoveField] add_to_hand, add_to_security (inherited)
-EX5_071: 2 effects
+EX5_071: 3 effects
   [EffectTiming.None] ignore_color_req (descriptive-tagged)
   [EffectTiming.OptionSkill] add_to_hand, reveal_and_select
+  [factory] security_play
 EX5_072: 4 effects
   [EffectTiming.None] ignore_color_req (descriptive-tagged)
   [EffectTiming.None] cost_reduction
@@ -390,10 +394,6 @@ EX5-041: has inherited effect text but no is_inherited_effect flag
 EX5-049: has inherited effect text but no is_inherited_effect flag
 EX5-053: has inherited effect text but no is_inherited_effect flag
 EX5-060: has inherited effect text but no is_inherited_effect flag
-EX5-066: timing 'Security' -> is_security_effect not found
-EX5-067: timing 'Security' -> is_security_effect not found
-EX5-069: timing 'Security' -> is_security_effect not found
-EX5-071: timing 'Security' -> is_security_effect not found
 ```
 
 ### Structural Warnings
@@ -408,9 +408,5 @@ EX5-041: API has inherited effect but script has no is_inherited_effect
 EX5-049: API has inherited effect but script has no is_inherited_effect
 EX5-053: API has inherited effect but script has no is_inherited_effect
 EX5-060: API has inherited effect but script has no is_inherited_effect
-EX5-066: API has security effect but script has no is_security_effect
-EX5-067: API has security effect but script has no is_security_effect
-EX5-069: API has security effect but script has no is_security_effect
-EX5-071: API has security effect but script has no is_security_effect
 ```
 

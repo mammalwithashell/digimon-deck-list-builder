@@ -4,8 +4,8 @@ Generated from DCGO C# card scripts.
 
 - Total scripts: 102
 - Scripts with effects: 102
-- Total effects: 398
-- Factory effects: 156
+- Total effects: 400
+- Factory effects: 158
 - Activate effects: 242
 
 ## Per-Card Breakdown
@@ -191,10 +191,11 @@ BT22_086: 3 effects
   [EffectTiming.OnStartMainPhase] play_card, bounce
   [EffectTiming.OnAddDigivolutionCards] draw, suspend
   [factory] security_play
-BT22_096: 3 effects
+BT22_096: 4 effects
   [EffectTiming.OptionSkill] play_card
   [factory] delay
   [EffectTiming.OnTappedAnyone] digivolve
+  [factory] security_play
 BT22_004: 1 effects
   [EffectTiming.OnAddDigivolutionCards] digivolve (inherited) (1/turn)
 BT22_043: 3 effects
@@ -507,10 +508,11 @@ BT22_097: 5 effects
   [factory] delay
   [EffectTiming.OnEnterFieldAnyone] no-action
   [EffectTiming.SecuritySkill] no-action
-BT22_098: 3 effects
+BT22_098: 4 effects
   [EffectTiming.OptionSkill] play_card
   [factory] delay
   [EffectTiming.OnTappedAnyone] digivolve
+  [factory] security_play
 ```
 
 
@@ -523,27 +525,20 @@ Checked 102 cards against digimoncard.io effect text.
 ```
 BT22-006: API has 'mill' but script missing implementation
 BT22-008: API has 'bounce' but script missing implementation
-BT22-008: API has 'digivolve_into' but script missing implementation
 BT22-014: API has 'suspend_target' but script missing implementation
-BT22-017: API has 'digivolve_into' but script missing implementation
 BT22-018: API has 'destruction_immunity' but script missing implementation
-BT22-019: API has 'digivolve_into' but script missing implementation
 BT22-031: API has 'once_per_turn' but script missing implementation
 BT22-033: API has 'dp_modification' but script missing implementation
 BT22-038: API has 'armor_purge' but script missing implementation
-BT22-038: API has 'digivolve_into' but script missing implementation
 BT22-040: API has 'play' but script missing implementation
 BT22-045: API has 'piercing' but script missing implementation
 BT22-049: API has 'piercing' but script missing implementation
 BT22-051: API has 'fortitude' but script missing implementation
 BT22-052: API has 'blocker' but script missing implementation
 BT22-054: API has 'dp_modification' but script missing implementation
-BT22-058: API has 'bounce' but script missing implementation
-BT22-059: API has 'bounce' but script missing implementation
 BT22-059: API has 'play' but script missing implementation
 BT22-060: API has 'de_digivolve' but script missing implementation
 BT22-060: API has 'dp_modification' but script missing implementation
-BT22-061: API has 'digivolve_into' but script missing implementation
 BT22-062: API has 'dp_modification' but script missing implementation
 BT22-063: API has 'dp_modification' but script missing implementation
 BT22-064: API has 'play' but script missing implementation
@@ -554,7 +549,6 @@ BT22-071: API has 'bounce' but script missing implementation
 BT22-072: API has 'destruction_immunity' but script missing implementation
 BT22-073: API has 'destruction_immunity' but script missing implementation
 BT22-074: API has 'delete_opponent' but script missing implementation
-BT22-076: API has 'digivolve_into' but script missing implementation
 BT22-079: API has 'once_per_turn' but script missing implementation
 BT22-083: API has 'dp_modification' but script missing implementation
 BT22-087: API has 'memory_gain' but script missing implementation
@@ -600,8 +594,6 @@ BT22-066: has inherited effect text but no is_inherited_effect flag
 BT22-075: has inherited effect text but no is_inherited_effect flag
 BT22-079: has inherited effect text but no is_inherited_effect flag
 BT22-080: has inherited effect text but no is_inherited_effect flag
-BT22-096: timing 'Security' -> is_security_effect not found
-BT22-098: timing 'Security' -> is_security_effect not found
 BT22-099: timing 'Security' -> is_security_effect not found
 ```
 
@@ -624,8 +616,6 @@ BT22-066: API has inherited effect but script has no is_inherited_effect
 BT22-075: API has inherited effect but script has no is_inherited_effect
 BT22-079: API has inherited effect but script has no is_inherited_effect
 BT22-080: API has inherited effect but script has no is_inherited_effect
-BT22-096: API has security effect but script has no is_security_effect
-BT22-098: API has security effect but script has no is_security_effect
 BT22-099: API has security effect but script has no is_security_effect
 ```
 

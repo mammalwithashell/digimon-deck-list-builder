@@ -18,6 +18,7 @@ class BT19_059(CardScript):
         effect0 = ICardEffect()
         effect0.set_effect_name("BT19-059 Retaliation")
         effect0.set_effect_description("Retaliation")
+        effect0.is_on_deletion = True
         effect0._is_retaliation = True
 
         def condition0(context: Dict[str, Any]) -> bool:
@@ -30,6 +31,7 @@ class BT19_059(CardScript):
         effect1 = ICardEffect()
         effect1.set_effect_name("BT19-059 Save")
         effect1.set_effect_description("Save")
+        effect1.is_on_deletion = True
         effect1._is_save = True
 
         def condition1(context: Dict[str, Any]) -> bool:

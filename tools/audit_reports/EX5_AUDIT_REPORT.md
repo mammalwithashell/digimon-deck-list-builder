@@ -2,7 +2,7 @@
 
 - **Total cards**: 76
 - **Cards audited**: 76
-- **Cards with issues**: 31
+- **Cards with issues**: 28
 - **Cards below threshold**: 11
 - **Cards missing script**: 0
 - **Average score**: 0.8312
@@ -16,8 +16,8 @@
 | EX5-032 | LoaderLeomon | 0.40 | 1 | 0 | 0 |
 | EX5-013 | Zhuqiaomon | 0.60 | 0 | 0 | 1 |
 | EX5-035 | Hawkmon | 0.60 | 1 | 0 | 0 |
-| EX5-066 | Phoebus Blow | 0.60 | 1 | 0 | 1 |
-| EX5-071 | Loyalty Deeper than the Sea | 0.62 | 0 | 0 | 1 |
+| EX5-066 | Phoebus Blow | 0.60 | 1 | 0 | 0 |
+| EX5-071 | Loyalty Deeper than the Sea | 0.62 | 0 | 0 | 0 |
 | EX5-014 | Apollomon | 0.63 | 0 | 0 | 1 |
 | EX5-049 | GrapLeomon | 0.63 | 2 | 0 | 1 |
 | EX5-050 | Sinduramon | 0.63 | 0 | 1 | 0 |
@@ -50,5 +50,4 @@
 ## Timing Issues
 
 - **has inherited effect text but no is_inherited_effect flag**: 9 cards
-- **timing 'Security' -> is_security_effect not found**: 4 cards
 - **timing 'When Digivolving' -> is_when_digivolving not found**: 1 cards

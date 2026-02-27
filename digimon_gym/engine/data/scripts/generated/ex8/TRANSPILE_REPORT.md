@@ -4,8 +4,8 @@ Generated from DCGO C# card scripts.
 
 - Total scripts: 75
 - Scripts with effects: 75
-- Total effects: 253
-- Factory effects: 92
+- Total effects: 254
+- Factory effects: 93
 - Activate effects: 161
 
 ## Per-Card Breakdown
@@ -238,9 +238,10 @@ EX8_071: 4 effects
   [factory] scapegoat
   [EffectTiming.None] grant_skill
   [EffectTiming.SecuritySkill] play_card
-EX8_072: 2 effects
+EX8_072: 3 effects
   [EffectTiming.OnEnterFieldAnyone] return_to_deck
   [EffectTiming.OptionSkill] delete, trash_from_hand
+  [factory] security_play
 EX8_001: 1 effects
   [EffectTiming.OnAllyAttack] delete (inherited) (1/turn)
 EX8_007: 3 effects
@@ -351,9 +352,7 @@ Checked 74 cards against digimoncard.io effect text.
 ```
 EX8-014: API has 'fortitude' but script missing implementation
 EX8-016: API has 'fortitude' but script missing implementation
-EX8-019: API has 'digivolve_into' but script missing implementation
 EX8-023: API has 'piercing' but script missing implementation
-EX8-027: API has 'digivolve_into' but script missing implementation
 EX8-031: API has 'bounce' but script missing implementation
 EX8-033: API has 'bounce' but script missing implementation
 EX8-037: API has 'play' but script missing implementation
@@ -365,10 +364,8 @@ EX8-051: API has 'piercing' but script missing implementation
 EX8-053: API has 'dp_modification' but script missing implementation
 EX8-053: API has 'reveal_top' but script missing implementation
 EX8-054: API has 'piercing' but script missing implementation
-EX8-060: API has 'digivolve_into' but script missing implementation
 EX8-064: API has 'dp_modification' but script missing implementation
 EX8-067: API has 'digivolve_into' but script missing implementation
-EX8-070: API has 'bounce' but script missing implementation
 EX8-070: API has 'collision' but script missing implementation
 EX8-070: API has 'dp_modification' but script missing implementation
 EX8-072: API has 'security_trash' but script missing implementation
@@ -389,7 +386,6 @@ EX8-023: has inherited effect text but no is_inherited_effect flag
 EX8-026: has inherited effect text but no is_inherited_effect flag
 EX8-044: has inherited effect text but no is_inherited_effect flag
 EX8-062: has inherited effect text but no is_inherited_effect flag
-EX8-072: timing 'Security' -> is_security_effect not found
 ```
 
 ### Structural Warnings
@@ -399,6 +395,5 @@ EX8-023: API has inherited effect but script has no is_inherited_effect
 EX8-026: API has inherited effect but script has no is_inherited_effect
 EX8-044: API has inherited effect but script has no is_inherited_effect
 EX8-062: API has inherited effect but script has no is_inherited_effect
-EX8-072: API has security effect but script has no is_security_effect
 ```
 

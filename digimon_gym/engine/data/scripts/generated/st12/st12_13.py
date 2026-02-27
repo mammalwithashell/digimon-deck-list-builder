@@ -71,4 +71,22 @@ class ST12_13(CardScript):
         effect1.set_can_use_condition(condition1)
         effects.append(effect1)
 
+        # Factory effect: reboot_non_self
+        # Reboot (grant to others)
+        effect2 = ICardEffect()
+        effect2.set_effect_name("ST12-13 Reboot (grant to others)")
+        effect2.set_effect_description("Reboot (grant to others)")
+        effect2._is_reboot = True
+        effect2._applies_to_all_own_digimon = True
+
+        def condition2(context: Dict[str, Any]) -> bool:
+            if card and card.permanent_of_this_card() is None:
+                return False
+            permanent = card.permanent_of_this_card() if card else None
+            if not (permanent and permanent.top_card and (any('Royal Knight' in tr for tr in (getattr(permanent.top_card, 'card_traits', []) or [])))):
+                return False
+            return True
+        effect2.set_can_use_condition(condition2)
+        effects.append(effect2)
+
         return effects

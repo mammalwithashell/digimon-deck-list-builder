@@ -2,10 +2,10 @@
   "set_id": "BT16",
   "total_cards": 103,
   "cards_audited": 103,
-  "cards_with_issues": 46,
+  "cards_with_issues": 42,
   "cards_below_threshold": 29,
   "cards_missing_script": 0,
-  "average_score": 0.7637,
+  "average_score": 0.767,
   "cards": {
     "BT16-001": {
       "card_id": "BT16-001",
@@ -254,8 +254,7 @@
       "forward_issues": [],
       "reverse_issues": [],
       "timing_issues": [
-        "timing 'When Digivolving' -> is_when_digivolving not found",
-        "timing 'When Attacking' -> is_on_attack not found"
+        "timing 'When Digivolving' -> is_when_digivolving not found"
       ],
       "structural_warnings": [],
       "below_threshold": true,
@@ -374,14 +373,12 @@
     "BT16-021": {
       "card_id": "BT16-021",
       "card_name": "Togemogumon",
-      "score": 0.5667,
+      "score": 0.6333,
       "effects_ratio": 0.3333,
       "actions_ratio": 1.0,
-      "forward_match_ratio": 0.6667,
+      "forward_match_ratio": 1.0,
       "coroutine_score": 0.0,
-      "forward_issues": [
-        "attack_prevention"
-      ],
+      "forward_issues": [],
       "reverse_issues": [],
       "timing_issues": [],
       "structural_warnings": [],
@@ -429,14 +426,12 @@
     "BT16-024": {
       "card_id": "BT16-024",
       "card_name": "MagnaAngemon",
-      "score": 0.9,
+      "score": 1.0,
       "effects_ratio": 1.0,
       "actions_ratio": 1.0,
-      "forward_match_ratio": 0.5,
+      "forward_match_ratio": 1.0,
       "coroutine_score": 1.0,
-      "forward_issues": [
-        "digivolve_into"
-      ],
+      "forward_issues": [],
       "reverse_issues": [],
       "timing_issues": [],
       "structural_warnings": [],
@@ -706,13 +701,12 @@
     "BT16-038": {
       "card_id": "BT16-038",
       "card_name": "Terriermon (X Antibody)",
-      "score": 0.2,
+      "score": 0.3,
       "effects_ratio": 0.5,
       "actions_ratio": 0.0,
-      "forward_match_ratio": 0.0,
+      "forward_match_ratio": 0.5,
       "coroutine_score": 0.0,
       "forward_issues": [
-        "digivolve_into",
         "piercing"
       ],
       "reverse_issues": [],
@@ -980,14 +974,12 @@
     "BT16-053": {
       "card_id": "BT16-053",
       "card_name": "Ankylomon",
-      "score": 0.7,
+      "score": 0.7667,
       "effects_ratio": 0.6667,
       "actions_ratio": 1.0,
-      "forward_match_ratio": 0.6667,
+      "forward_match_ratio": 1.0,
       "coroutine_score": 0.0,
-      "forward_issues": [
-        "attack_prevention"
-      ],
+      "forward_issues": [],
       "reverse_issues": [],
       "timing_issues": [],
       "structural_warnings": [],
@@ -1747,12 +1739,8 @@
         "dp_modification"
       ],
       "reverse_issues": [],
-      "timing_issues": [
-        "timing 'Security' -> is_security_effect not found"
-      ],
-      "structural_warnings": [
-        "API has security effect but script has no is_security_effect"
-      ],
+      "timing_issues": [],
+      "structural_warnings": [],
       "below_threshold": true,
       "has_script": true,
       "api_effect_blocks": 2,
@@ -1806,12 +1794,8 @@
       "coroutine_score": 0.0,
       "forward_issues": [],
       "reverse_issues": [],
-      "timing_issues": [
-        "timing 'Security' -> is_security_effect not found"
-      ],
-      "structural_warnings": [
-        "API has security effect but script has no is_security_effect"
-      ],
+      "timing_issues": [],
+      "structural_warnings": [],
       "below_threshold": false,
       "has_script": true,
       "api_effect_blocks": 2,
@@ -1919,10 +1903,6 @@
       ],
       [
         "digivolve_into",
-        6
-      ],
-      [
-        "attack_prevention",
         4
       ],
       [
@@ -1947,6 +1927,10 @@
       ],
       [
         "piercing",
+        2
+      ],
+      [
+        "attack_prevention",
         2
       ],
       [
@@ -1986,14 +1970,6 @@
         3
       ],
       [
-        "timing 'Security' -> is_security_effect not found",
-        2
-      ],
-      [
-        "timing 'When Attacking' -> is_on_attack not found",
-        1
-      ],
-      [
         "[Once Per Turn] in API but no set_max_count_per_turn",
         1
       ]
@@ -2020,11 +1996,6 @@
         "score": 0.2
       },
       {
-        "card_id": "BT16-038",
-        "name": "Terriermon (X Antibody)",
-        "score": 0.2
-      },
-      {
         "card_id": "BT16-050",
         "name": "Commandramon",
         "score": 0.2
@@ -2038,6 +2009,11 @@
         "card_id": "BT16-052",
         "name": "Hagurumon (X Antibody)",
         "score": 0.2
+      },
+      {
+        "card_id": "BT16-038",
+        "name": "Terriermon (X Antibody)",
+        "score": 0.3
       },
       {
         "card_id": "BT16-009",

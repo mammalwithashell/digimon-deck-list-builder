@@ -94,4 +94,16 @@ class EX6_065(CardScript):
         effect3.set_on_process_callback(process3)
         effects.append(effect3)
 
+        # Factory effect: security_play
+        # Security: Play this card
+        effect4 = ICardEffect()
+        effect4.set_effect_name("EX6-065 Security: Play this card")
+        effect4.set_effect_description("Security: Play this card")
+        effect4.is_security_effect = True
+
+        def condition4(context: Dict[str, Any]) -> bool:
+            return True
+        effect4.set_can_use_condition(condition4)
+        effects.append(effect4)
+
         return effects

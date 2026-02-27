@@ -32,6 +32,7 @@ class BT22_011(CardScript):
         effect1 = ICardEffect()
         effect1.set_effect_name("BT22-011 Alliance")
         effect1.set_effect_description("Alliance")
+        effect1.is_on_attack = True
         effect1._is_alliance = True
 
         def condition1(context: Dict[str, Any]) -> bool:
@@ -88,6 +89,7 @@ class BT22_011(CardScript):
         effect3.set_effect_name("BT22-011 Alliance")
         effect3.set_effect_description("Alliance")
         effect3.is_inherited_effect = True
+        effect3.is_on_attack = True
         effect3._is_alliance = True
 
         def condition3(context: Dict[str, Any]) -> bool:

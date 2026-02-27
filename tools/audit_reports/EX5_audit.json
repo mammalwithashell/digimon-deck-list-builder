@@ -2,7 +2,7 @@
   "set_id": "EX5",
   "total_cards": 76,
   "cards_audited": 76,
-  "cards_with_issues": 31,
+  "cards_with_issues": 28,
   "cards_below_threshold": 11,
   "cards_missing_script": 0,
   "average_score": 0.8312,
@@ -1220,12 +1220,8 @@
         "bounce"
       ],
       "reverse_issues": [],
-      "timing_issues": [
-        "timing 'Security' -> is_security_effect not found"
-      ],
-      "structural_warnings": [
-        "API has security effect but script has no is_security_effect"
-      ],
+      "timing_issues": [],
+      "structural_warnings": [],
       "below_threshold": true,
       "has_script": true,
       "api_effect_blocks": 2,
@@ -1241,12 +1237,8 @@
       "coroutine_score": 0.0,
       "forward_issues": [],
       "reverse_issues": [],
-      "timing_issues": [
-        "timing 'Security' -> is_security_effect not found"
-      ],
-      "structural_warnings": [
-        "API has security effect but script has no is_security_effect"
-      ],
+      "timing_issues": [],
+      "structural_warnings": [],
       "below_threshold": false,
       "has_script": true,
       "api_effect_blocks": 2,
@@ -1279,12 +1271,8 @@
       "coroutine_score": 0.0,
       "forward_issues": [],
       "reverse_issues": [],
-      "timing_issues": [
-        "timing 'Security' -> is_security_effect not found"
-      ],
-      "structural_warnings": [
-        "API has security effect but script has no is_security_effect"
-      ],
+      "timing_issues": [],
+      "structural_warnings": [],
       "below_threshold": false,
       "has_script": true,
       "api_effect_blocks": 4,
@@ -1319,12 +1307,8 @@
       "coroutine_score": 0.0,
       "forward_issues": [],
       "reverse_issues": [],
-      "timing_issues": [
-        "timing 'Security' -> is_security_effect not found"
-      ],
-      "structural_warnings": [
-        "API has security effect but script has no is_security_effect"
-      ],
+      "timing_issues": [],
+      "structural_warnings": [],
       "below_threshold": true,
       "has_script": true,
       "api_effect_blocks": 3,
@@ -1456,10 +1440,6 @@
       [
         "has inherited effect text but no is_inherited_effect flag",
         9
-      ],
-      [
-        "timing 'Security' -> is_security_effect not found",
-        4
       ],
       [
         "timing 'When Digivolving' -> is_when_digivolving not found",

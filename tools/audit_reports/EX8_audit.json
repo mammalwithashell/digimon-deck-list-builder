@@ -2,10 +2,10 @@
   "set_id": "EX8",
   "total_cards": 75,
   "cards_audited": 75,
-  "cards_with_issues": 24,
+  "cards_with_issues": 21,
   "cards_below_threshold": 20,
   "cards_missing_script": 0,
-  "average_score": 0.7659,
+  "average_score": 0.7695,
   "cards": {
     "EX8-001": {
       "card_id": "EX8-001",
@@ -320,14 +320,12 @@
     "EX8-019": {
       "card_id": "EX8-019",
       "card_name": "Penguinmon",
-      "score": 0.3,
+      "score": 0.4,
       "effects_ratio": 0.5,
       "actions_ratio": 0.0,
-      "forward_match_ratio": 0.5,
+      "forward_match_ratio": 1.0,
       "coroutine_score": 0.0,
-      "forward_issues": [
-        "digivolve_into"
-      ],
+      "forward_issues": [],
       "reverse_issues": [],
       "timing_issues": [],
       "structural_warnings": [],
@@ -468,14 +466,12 @@
     "EX8-027": {
       "card_id": "EX8-027",
       "card_name": "Plesiomon",
-      "score": 0.9,
+      "score": 1.0,
       "effects_ratio": 1.0,
       "actions_ratio": 1.0,
-      "forward_match_ratio": 0.5,
+      "forward_match_ratio": 1.0,
       "coroutine_score": 1.0,
-      "forward_issues": [
-        "digivolve_into"
-      ],
+      "forward_issues": [],
       "reverse_issues": [],
       "timing_issues": [],
       "structural_warnings": [],
@@ -1059,14 +1055,12 @@
     "EX8-060": {
       "card_id": "EX8-060",
       "card_name": "Myotismon",
-      "score": 0.9333,
+      "score": 1.0,
       "effects_ratio": 1.0,
       "actions_ratio": 1.0,
-      "forward_match_ratio": 0.6667,
+      "forward_match_ratio": 1.0,
       "coroutine_score": 1.0,
-      "forward_issues": [
-        "digivolve_into"
-      ],
+      "forward_issues": [],
       "reverse_issues": [],
       "timing_issues": [],
       "structural_warnings": [],
@@ -1246,7 +1240,6 @@
       "coroutine_score": 1.0,
       "forward_issues": [
         "dp_modification",
-        "bounce",
         "collision"
       ],
       "reverse_issues": [],
@@ -1286,12 +1279,8 @@
         "security_trash"
       ],
       "reverse_issues": [],
-      "timing_issues": [
-        "timing 'Security' -> is_security_effect not found"
-      ],
-      "structural_warnings": [
-        "API has security effect but script has no is_security_effect"
-      ],
+      "timing_issues": [],
+      "structural_warnings": [],
       "below_threshold": false,
       "has_script": true,
       "api_effect_blocks": 3,
@@ -1354,10 +1343,6 @@
   "summary": {
     "top_forward_issues": [
       [
-        "digivolve_into",
-        4
-      ],
-      [
         "piercing",
         4
       ],
@@ -1366,12 +1351,12 @@
         3
       ],
       [
-        "bounce",
+        "dp_modification",
         3
       ],
       [
-        "dp_modification",
-        3
+        "bounce",
+        2
       ],
       [
         "reveal_top",
@@ -1383,6 +1368,10 @@
       ],
       [
         "token_play",
+        1
+      ],
+      [
+        "digivolve_into",
         1
       ],
       [
@@ -1408,10 +1397,6 @@
       [
         "has inherited effect text but no is_inherited_effect flag",
         4
-      ],
-      [
-        "timing 'Security' -> is_security_effect not found",
-        1
       ]
     ],
     "worst_cards": [
@@ -1438,7 +1423,7 @@
       {
         "card_id": "EX8-019",
         "name": "Penguinmon",
-        "score": 0.3
+        "score": 0.4
       },
       {
         "card_id": "EX8-011",

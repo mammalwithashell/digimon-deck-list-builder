@@ -4,8 +4,8 @@ Generated from DCGO C# card scripts.
 
 - Total scripts: 100
 - Scripts with effects: 100
-- Total effects: 254
-- Factory effects: 81
+- Total effects: 258
+- Factory effects: 85
 - Activate effects: 173
 
 ## Per-Card Breakdown
@@ -167,9 +167,10 @@ BT10_091: 3 effects
 BT10_102: 2 effects
   [EffectTiming.OptionSkill] gain_keyword_piercing, suspend
   [EffectTiming.SecuritySkill] add_to_hand, suspend
-BT10_103: 2 effects
+BT10_103: 3 effects
   [EffectTiming.None] cost_reduction
   [EffectTiming.OptionSkill] suspend, bounce
+  [factory] security_play
 BT10_006: 1 effects
   [EffectTiming.OnDigivolutionCardDiscarded] draw (inherited)
 BT10_071: 1 effects
@@ -228,9 +229,10 @@ BT10_093: 3 effects
 BT10_107: 2 effects
   [EffectTiming.OptionSkill] add_to_hand, reveal_and_select
   [EffectTiming.SecuritySkill] play_card, add_to_hand
-BT10_108: 2 effects
+BT10_108: 3 effects
   [EffectTiming.OnDiscardLibrary] add_to_hand
   [EffectTiming.OptionSkill] delete
+  [factory] security_play
 BT10_001: 1 effects
   [factory] dp_modifier
 BT10_007: 1 effects
@@ -356,13 +358,88 @@ BT10_089: 3 effects
   [EffectTiming.OnEnterFieldAnyone] play_card
   [EffectTiming.OnEnterFieldAnyone] draw, suspend
   [factory] security_play
-BT10_099: 1 effects
+BT10_099: 2 effects
   [EffectTiming.OptionSkill] change_security_attack (descriptive-tagged)
+  [factory] security_play
 BT10_100: 3 effects
   [EffectTiming.OptionSkill] play_card
   [factory] delay
   [EffectTiming.OnDeclaration] gain_memory
-BT10_101: 2 effects
+BT10_101: 3 effects
   [EffectTiming.None] ignore_color_req (descriptive-tagged)
   [EffectTiming.OptionSkill] change_dp, put_to_security
+  [factory] security_play
 ```
+
+
+## Cross-Validation Results
+
+Checked 100 cards against digimoncard.io effect text.
+
+### Forward Mismatches (API mentions X, script missing)
+
+```
+BT10-009: API has 'suspend_target' but script missing implementation
+BT10-012: API has 'bounce' but script missing implementation
+BT10-016: API has 'dp_modification' but script missing implementation
+BT10-016: API has 'piercing' but script missing implementation
+BT10-019: API has 'bounce' but script missing implementation
+BT10-020: API has 'draw_keyword' but script missing implementation
+BT10-021: API has 'bounce' but script missing implementation
+BT10-036: API has 'bounce' but script missing implementation
+BT10-042: API has 'attack_prevention' but script missing implementation
+BT10-049: API has 'piercing' but script missing implementation
+BT10-050: API has 'piercing' but script missing implementation
+BT10-056: API has 'bounce' but script missing implementation
+BT10-057: API has 'memory_gain' but script missing implementation
+BT10-068: API has 'bounce' but script missing implementation
+BT10-068: API has 'dp_modification' but script missing implementation
+BT10-069: API has 'bounce' but script missing implementation
+BT10-082: API has 'memory_gain' but script missing implementation
+BT10-086: API has 'security_trash' but script missing implementation
+BT10-087: API has 'play' but script missing implementation
+BT10-088: API has 'play' but script missing implementation
+BT10-093: API has 'play' but script missing implementation
+BT10-096: API has 'reveal_top' but script missing implementation
+BT10-097: API has 'reveal_top' but script missing implementation
+BT10-104: API has 'security_trash' but script missing implementation
+BT10-104: API has 'trash_from_hand' but script missing implementation
+BT10-105: API has 'destruction_immunity' but script missing implementation
+BT10-110: API has 'suspend_target' but script missing implementation
+BT10-111: API has 'bounce' but script missing implementation
+BT10-112: API has 'blitz' but script missing implementation
+BT10-112: API has 'piercing' but script missing implementation
+```
+
+### Reverse Mismatches (Script claims X, API doesn't mention)
+
+```
+BT10-009: script has '_is_material_save' but API text doesn't mention it
+BT10-009: script has '_is_save' but API text doesn't mention it
+BT10-013: script has '_is_material_save' but API text doesn't mention it
+BT10-013: script has '_is_save' but API text doesn't mention it
+BT10-024: script has '_is_material_save' but API text doesn't mention it
+BT10-024: script has '_is_save' but API text doesn't mention it
+BT10-111: script has '_is_material_save' but API text doesn't mention it
+BT10-111: script has '_is_save' but API text doesn't mention it
+```
+
+### Timing Mismatches
+
+```
+BT10-014: timing 'When Digivolving' -> is_when_digivolving not found
+BT10-034: has inherited effect text but no is_inherited_effect flag
+BT10-049: has inherited effect text but no is_inherited_effect flag
+BT10-097: timing 'Security' -> is_security_effect not found
+BT10-100: timing 'Security' -> is_security_effect not found
+```
+
+### Structural Warnings
+
+```
+BT10-034: API has inherited effect but script has no is_inherited_effect
+BT10-049: API has inherited effect but script has no is_inherited_effect
+BT10-097: API has security effect but script has no is_security_effect
+BT10-100: API has security effect but script has no is_security_effect
+```
+

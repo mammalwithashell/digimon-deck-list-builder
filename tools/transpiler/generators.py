@@ -876,6 +876,16 @@ def generate_factory_effect(eb: EffectBlock, card_id: str, idx: int) -> str:
     if eb.is_inherited:
         lines.append(f"        {var}.is_inherited_effect = True")
 
+    # Apply timing-based property flags (same logic as generate_activate_effect)
+    prop = TIMING_TO_PROPERTY.get(eb.timing)
+    if prop:
+        if prop == "is_on_play" and "trigger_when_digivolving" in eb.conditions:
+            lines.append(f"        {var}.is_when_digivolving = True")
+        else:
+            # security_play already sets is_security_effect explicitly below
+            if not (eb.factory_method == "security_play" and prop == "is_security_effect"):
+                lines.append(f"        {var}.{prop} = True")
+
     if eb.factory_method == "blocker":
         lines.append(f"        {var}._is_blocker = True")
     elif eb.factory_method == "jamming":
@@ -956,6 +966,21 @@ def generate_factory_effect(eb: EffectBlock, card_id: str, idx: int) -> str:
         lines.append(f"        {var}._is_fragment = True")
     elif eb.factory_method == "execute":
         lines.append(f"        {var}._is_execute = True")
+    # Rare factory patterns (audit gap fix)
+    elif eb.factory_method == "blast_dna_digivolve":
+        lines.append(f"        {var}.is_counter_effect = True")
+        lines.append(f"        {var}._is_blast_dna_digivolve = True")
+    elif eb.factory_method == "cannot_destroyed_by_skill":
+        lines.append(f"        {var}._grant_destruction_immunity = True")
+    elif eb.factory_method == "cannot_return_to_hand":
+        lines.append(f"        {var}._grant_bounce_immunity = True")
+    elif eb.factory_method == "cannot_return_to_deck":
+        lines.append(f"        {var}._grant_return_to_deck_immunity = True")
+    elif eb.factory_method == "cannot_be_blocked":
+        lines.append(f"        {var}._cannot_be_blocked = True")
+    elif eb.factory_method == "reboot_non_self":
+        lines.append(f"        {var}._is_reboot = True")
+        lines.append(f"        {var}._applies_to_all_own_digimon = True")
     elif eb.factory_method == "set_memory_3":
         lines.append(f"        # [Start of Your Turn] Set memory to 3 if <= 2")
     elif eb.factory_method == "gain_memory_tamer":

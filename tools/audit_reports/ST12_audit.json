@@ -2,7 +2,7 @@
   "set_id": "ST12",
   "total_cards": 16,
   "cards_audited": 12,
-  "cards_with_issues": 4,
+  "cards_with_issues": 3,
   "cards_below_threshold": 5,
   "cards_missing_script": 4,
   "average_score": 0.6528,
@@ -280,12 +280,8 @@
       "coroutine_score": 0.0,
       "forward_issues": [],
       "reverse_issues": [],
-      "timing_issues": [
-        "timing 'Security' -> is_security_effect not found"
-      ],
-      "structural_warnings": [
-        "API has security effect but script has no is_security_effect"
-      ],
+      "timing_issues": [],
+      "structural_warnings": [],
       "below_threshold": false,
       "has_script": true,
       "api_effect_blocks": 3,
@@ -307,10 +303,6 @@
       ],
       [
         "has inherited effect text but no is_inherited_effect flag",
-        1
-      ],
-      [
-        "timing 'Security' -> is_security_effect not found",
         1
       ]
     ],

@@ -2,10 +2,10 @@
 
 - **Total cards**: 112
 - **Cards audited**: 94
-- **Cards with issues**: 23
-- **Cards below threshold**: 26
+- **Cards with issues**: 17
+- **Cards below threshold**: 25
 - **Cards missing script**: 18
-- **Average score**: 0.7431
+- **Average score**: 0.7452
 
 ## Worst-Scoring Cards
 
@@ -29,18 +29,18 @@
 | BT8-075 | Kogamon | 0.00 | 0 | 0 | 0 |
 | BT8-076 | Fangmon | 0.00 | 0 | 0 | 0 |
 | BT8-078 | Karatenmon | 0.00 | 0 | 0 | 0 |
-| BT8-100 | Disaster Blaster | 0.10 | 1 | 0 | 1 |
+| BT8-100 | Disaster Blaster | 0.10 | 1 | 0 | 0 |
 | BT8-002 | Hiyarimon | 0.20 | 0 | 0 | 0 |
 
 ## Top Forward Issues (API mentions X, script missing)
 
 - **digivolve_into**: 3 cards
-- **attack_prevention**: 3 cards
 - **dp_modification**: 3 cards
 - **bounce**: 3 cards
 - **blocker**: 2 cards
 - **mill**: 2 cards
 - **memory_gain**: 1 cards
+- **attack_prevention**: 1 cards
 - **destruction_immunity**: 1 cards
 - **suspend_target**: 1 cards
 
@@ -50,4 +50,4 @@
 
 ## Timing Issues
 
-- **timing 'Security' -> is_security_effect not found**: 8 cards
+- **timing 'Security' -> is_security_effect not found**: 1 cards

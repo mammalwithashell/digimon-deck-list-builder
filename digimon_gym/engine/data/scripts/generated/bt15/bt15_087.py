@@ -84,6 +84,7 @@ class BT15_087(CardScript):
         effect4.set_effect_name("BT15-087 Alliance")
         effect4.set_effect_description("Alliance")
         effect4.is_inherited_effect = True
+        effect4.is_on_attack = True
         effect4._is_alliance = True
 
         def condition4(context: Dict[str, Any]) -> bool:

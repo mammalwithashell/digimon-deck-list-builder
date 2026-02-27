@@ -4,8 +4,8 @@ Generated from DCGO C# card scripts.
 
 - Total scripts: 74
 - Scripts with effects: 74
-- Total effects: 257
-- Factory effects: 64
+- Total effects: 262
+- Factory effects: 69
 - Activate effects: 193
 
 ## Per-Card Breakdown
@@ -192,8 +192,9 @@ EX6_070: 5 effects
   [factory] delay
   [EffectTiming.OnEndTurn] delete
   [EffectTiming.SecuritySkill] delete
-EX6_071: 1 effects
+EX6_071: 2 effects
   [EffectTiming.OptionSkill] delete, trash_from_hand
+  [factory] security_play
 EX6_073: 4 effects
   [factory] alt_digivolve_req
   [EffectTiming.OnEnterFieldAnyone] delete
@@ -226,24 +227,27 @@ EX6_010: 5 effects
   [EffectTiming.OnDeclaration] delete
   [EffectTiming.OnEnterFieldAnyone] force_attack (descriptive-tagged)
   [EffectTiming.None] disable_effect (descriptive-tagged) (inherited)
-EX6_011: 5 effects
+EX6_011: 6 effects
+  [factory] blast_dna_digivolve
   [EffectTiming.None] jogress_condition
   [factory] raid
   [factory] reboot
   [EffectTiming.OnEnterFieldAnyone] delete, de_digivolve, destroy_security, effect_immunity
   [EffectTiming.OnEnterFieldAnyone] delete, de_digivolve, destroy_security, effect_immunity
-EX6_065: 4 effects
+EX6_065: 5 effects
   [EffectTiming.None] ignore_color_req (descriptive-tagged)
   [EffectTiming.OptionSkill] no-action
   [factory] delay
   [EffectTiming.WhenRemoveField] play_card
+  [factory] security_play
 EX6_062: 4 effects
   [factory] partition
   [EffectTiming.None] jogress_condition
   [EffectTiming.OnEnterFieldAnyone] bounce
   [factory] security_attack_plus
-EX6_072: 3 effects
+EX6_072: 4 effects
   [EffectTiming.None] ignore_color_req (descriptive-tagged)
+  [factory] blast_dna_digivolve
   [EffectTiming.OptionSkill] play_card, jogress_condition
   [EffectTiming.SecuritySkill] add_to_hand
 EX6_003: 1 effects
@@ -313,7 +317,8 @@ EX6_028: 5 effects
   [EffectTiming.OnEnterFieldAnyone] recovery
   [EffectTiming.OnEnterFieldAnyone] recovery
   [EffectTiming.OnAddSecurity] bounce (1/turn)
-EX6_029: 3 effects
+EX6_029: 4 effects
+  [factory] blast_dna_digivolve
   [EffectTiming.None] jogress_condition
   [EffectTiming.OnEnterFieldAnyone] play_card, put_to_security, effect_immunity
   [EffectTiming.OnEnterFieldAnyone] play_card, put_to_security, effect_immunity
@@ -392,10 +397,8 @@ EX6-027: has inherited effect text but no is_inherited_effect flag
 EX6-028: has inherited effect text but no is_inherited_effect flag
 EX6-029: has inherited effect text but no is_inherited_effect flag
 EX6-035: has inherited effect text but no is_inherited_effect flag
-EX6-065: timing 'Security' -> is_security_effect not found
 EX6-068: timing 'Security' -> is_security_effect not found
 EX6-069: timing 'Security' -> is_security_effect not found
-EX6-071: timing 'Security' -> is_security_effect not found
 ```
 
 ### Structural Warnings
@@ -407,9 +410,7 @@ EX6-027: API has inherited effect but script has no is_inherited_effect
 EX6-028: API has inherited effect but script has no is_inherited_effect
 EX6-029: API has inherited effect but script has no is_inherited_effect
 EX6-035: API has inherited effect but script has no is_inherited_effect
-EX6-065: API has security effect but script has no is_security_effect
 EX6-068: API has security effect but script has no is_security_effect
 EX6-069: API has security effect but script has no is_security_effect
-EX6-071: API has security effect but script has no is_security_effect
 ```
 

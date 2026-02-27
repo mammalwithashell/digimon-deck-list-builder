@@ -46,6 +46,7 @@ class BT16_018(CardScript):
         effect2 = ICardEffect()
         effect2.set_effect_name("BT16-018 Raid")
         effect2.set_effect_description("Raid")
+        effect2.is_on_attack = True
         effect2._is_raid = True
 
         def condition2(context: Dict[str, Any]) -> bool:

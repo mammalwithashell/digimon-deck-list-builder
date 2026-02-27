@@ -2,10 +2,10 @@
   "set_id": "BT19",
   "total_cards": 103,
   "cards_audited": 103,
-  "cards_with_issues": 42,
+  "cards_with_issues": 37,
   "cards_below_threshold": 33,
   "cards_missing_script": 0,
-  "average_score": 0.7295,
+  "average_score": 0.7315,
   "cards": {
     "BT19-001": {
       "card_id": "BT19-001",
@@ -133,14 +133,13 @@
     "BT19-008": {
       "card_id": "BT19-008",
       "card_name": "Shoutmon",
-      "score": 0.5667,
+      "score": 0.6333,
       "effects_ratio": 0.6667,
       "actions_ratio": 1.0,
-      "forward_match_ratio": 0.0,
+      "forward_match_ratio": 0.3333,
       "coroutine_score": 0.0,
       "forward_issues": [
         "reveal_top",
-        "digivolve_into",
         "save"
       ],
       "reverse_issues": [],
@@ -603,7 +602,6 @@
       ],
       "reverse_issues": [],
       "timing_issues": [
-        "timing 'On Deletion' -> is_on_deletion not found",
         "has inherited effect text but no is_inherited_effect flag"
       ],
       "structural_warnings": [
@@ -817,14 +815,12 @@
     "BT19-045": {
       "card_id": "BT19-045",
       "card_name": "FunBeemon",
-      "score": 0.2667,
+      "score": 0.3333,
       "effects_ratio": 0.3333,
       "actions_ratio": 0.0,
-      "forward_match_ratio": 0.6667,
+      "forward_match_ratio": 1.0,
       "coroutine_score": 0.0,
-      "forward_issues": [
-        "digivolve_into"
-      ],
+      "forward_issues": [],
       "reverse_issues": [],
       "timing_issues": [
         "timing 'Security' -> is_security_effect not found"
@@ -864,9 +860,7 @@
         "digivolve_into"
       ],
       "reverse_issues": [],
-      "timing_issues": [
-        "timing 'On Deletion' -> is_on_deletion not found"
-      ],
+      "timing_issues": [],
       "structural_warnings": [],
       "below_threshold": true,
       "has_script": true,
@@ -1036,18 +1030,14 @@
     "BT19-057": {
       "card_id": "BT19-057",
       "card_name": "Sparrowmon",
-      "score": 0.5667,
+      "score": 0.6333,
       "effects_ratio": 0.3333,
       "actions_ratio": 1.0,
-      "forward_match_ratio": 0.6667,
+      "forward_match_ratio": 1.0,
       "coroutine_score": 0.0,
-      "forward_issues": [
-        "digivolve_into"
-      ],
+      "forward_issues": [],
       "reverse_issues": [],
-      "timing_issues": [
-        "timing 'On Deletion' -> is_on_deletion not found"
-      ],
+      "timing_issues": [],
       "structural_warnings": [],
       "below_threshold": true,
       "has_script": true,
@@ -1065,7 +1055,6 @@
       "forward_issues": [],
       "reverse_issues": [],
       "timing_issues": [
-        "timing 'On Deletion' -> is_on_deletion not found",
         "has inherited effect text but no is_inherited_effect flag"
       ],
       "structural_warnings": [
@@ -1086,9 +1075,7 @@
       "coroutine_score": 0.0,
       "forward_issues": [],
       "reverse_issues": [],
-      "timing_issues": [
-        "timing 'On Deletion' -> is_on_deletion not found"
-      ],
+      "timing_issues": [],
       "structural_warnings": [],
       "below_threshold": true,
       "has_script": true,
@@ -1392,9 +1379,7 @@
       "coroutine_score": 0.0,
       "forward_issues": [],
       "reverse_issues": [],
-      "timing_issues": [
-        "timing 'On Deletion' -> is_on_deletion not found"
-      ],
+      "timing_issues": [],
       "structural_warnings": [],
       "below_threshold": false,
       "has_script": true,
@@ -1672,12 +1657,8 @@
       "coroutine_score": 0.0,
       "forward_issues": [],
       "reverse_issues": [],
-      "timing_issues": [
-        "timing 'Security' -> is_security_effect not found"
-      ],
-      "structural_warnings": [
-        "API has security effect but script has no is_security_effect"
-      ],
+      "timing_issues": [],
+      "structural_warnings": [],
       "below_threshold": false,
       "has_script": true,
       "api_effect_blocks": 2,
@@ -1747,12 +1728,8 @@
       "coroutine_score": 0.0,
       "forward_issues": [],
       "reverse_issues": [],
-      "timing_issues": [
-        "timing 'Security' -> is_security_effect not found"
-      ],
-      "structural_warnings": [
-        "API has security effect but script has no is_security_effect"
-      ],
+      "timing_issues": [],
+      "structural_warnings": [],
       "below_threshold": false,
       "has_script": true,
       "api_effect_blocks": 2,
@@ -1892,7 +1869,7 @@
     "top_forward_issues": [
       [
         "digivolve_into",
-        9
+        6
       ],
       [
         "save",
@@ -1971,15 +1948,11 @@
     ],
     "top_timing_issues": [
       [
-        "timing 'Security' -> is_security_effect not found",
-        7
-      ],
-      [
-        "timing 'On Deletion' -> is_on_deletion not found",
-        6
-      ],
-      [
         "has inherited effect text but no is_inherited_effect flag",
+        5
+      ],
+      [
+        "timing 'Security' -> is_security_effect not found",
         5
       ],
       [
@@ -2026,7 +1999,7 @@
       {
         "card_id": "BT19-045",
         "name": "FunBeemon",
-        "score": 0.2667
+        "score": 0.3333
       },
       {
         "card_id": "BT19-035",

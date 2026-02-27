@@ -4,8 +4,8 @@ Generated from DCGO C# card scripts.
 
 - Total scripts: 102
 - Scripts with effects: 102
-- Total effects: 292
-- Factory effects: 79
+- Total effects: 299
+- Factory effects: 86
 - Activate effects: 213
 
 ## Per-Card Breakdown
@@ -96,8 +96,9 @@ BT15_096: 4 effects
   [factory] delay
   [EffectTiming.OnDeclaration] play_card, cost_reduction
   [EffectTiming.SecuritySkill] trash_from_hand, add_to_hand, reveal_and_select
-BT15_097: 1 effects
+BT15_097: 2 effects
   [EffectTiming.OptionSkill] delete, trash_from_hand
+  [factory] security_play
 BT15_002: 1 effects
   [EffectTiming.OnAddHand] change_dp (inherited) (1/turn)
 BT15_019: 1 effects
@@ -155,8 +156,9 @@ BT15_032: 4 effects
 BT15_083: 2 effects
   [EffectTiming.OnEnterFieldAnyone] add_to_hand, reveal_and_select
   [EffectTiming.OnAddHand] gain_memory, suspend
-BT15_090: 1 effects
+BT15_090: 2 effects
   [EffectTiming.OptionSkill] bounce
+  [factory] security_play
 BT15_091: 3 effects
   [EffectTiming.None] ignore_color_req (descriptive-tagged)
   [EffectTiming.OptionSkill] digivolve
@@ -216,8 +218,9 @@ BT15_054: 4 effects
 BT15_085: 2 effects
   [factory] set_memory_3
   [EffectTiming.OnAllyAttack] suspend, redirect_attack
-BT15_094: 1 effects
+BT15_094: 2 effects
   [EffectTiming.OptionSkill] change_dp, suspend
+  [factory] security_play
 BT15_095: 3 effects
   [EffectTiming.OptionSkill] suspend
   [EffectTiming.OptionSkill] destroy_security, add_temp_effect, effect_immunity
@@ -286,11 +289,13 @@ BT15_098: 3 effects
   [EffectTiming.OptionSkill] play_card
   [factory] delay
   [EffectTiming.OnDestroyedAnyone] play_card
-BT15_099: 1 effects
+BT15_099: 2 effects
   [EffectTiming.OptionSkill] draw, delete, trash_from_hand
-BT15_100: 2 effects
+  [factory] security_play
+BT15_100: 3 effects
   [EffectTiming.OnEnterFieldAnyone] delete, return_to_deck
   [EffectTiming.OptionSkill] delete, trash_from_hand
+  [factory] security_play
 BT15_001: 1 effects
   [EffectTiming.OnDestroyedAnyone] add_to_hand (inherited)
 BT15_007: 2 effects
@@ -342,8 +347,9 @@ BT15_082: 3 effects
 BT15_088: 2 effects
   [EffectTiming.OptionSkill] play_card, add_to_hand
   [EffectTiming.SecuritySkill] play_card, add_to_hand
-BT15_089: 1 effects
+BT15_089: 2 effects
   [EffectTiming.OptionSkill] delete
+  [factory] security_play
 BT15_102: 3 effects
   [EffectTiming.BeforePayCost] cost_reduction
   [EffectTiming.None] cost_reduction
@@ -403,6 +409,83 @@ BT15_092: 3 effects
   [EffectTiming.OnDiscardSecurity] no-action
   [EffectTiming.OptionSkill] play_card, add_to_security, destroy_security
   [EffectTiming.SecuritySkill] no-action
-BT15_093: 1 effects
+BT15_093: 2 effects
   [EffectTiming.OptionSkill] change_dp, destroy_security
+  [factory] security_play
 ```
+
+
+## Cross-Validation Results
+
+Checked 102 cards against digimoncard.io effect text.
+
+### Forward Mismatches (API mentions X, script missing)
+
+```
+BT15-001: API has 'bounce' but script missing implementation
+BT15-007: API has 'mill' but script missing implementation
+BT15-013: API has 'bounce' but script missing implementation
+BT15-014: API has 'blocker' but script missing implementation
+BT15-029: API has 'bounce' but script missing implementation
+BT15-030: API has 'mill' but script missing implementation
+BT15-031: API has 'blocker' but script missing implementation
+BT15-031: API has 'digivolve_into' but script missing implementation
+BT15-040: API has 'dp_modification' but script missing implementation
+BT15-050: API has 'piercing' but script missing implementation
+BT15-051: API has 'draw_keyword' but script missing implementation
+BT15-052: API has 'digivolve_into' but script missing implementation
+BT15-052: API has 'piercing' but script missing implementation
+BT15-061: API has 'attack_prevention' but script missing implementation
+BT15-061: API has 'destruction_immunity' but script missing implementation
+BT15-063: API has 'suspend_target' but script missing implementation
+BT15-066: API has 'digivolve_into' but script missing implementation
+BT15-074: API has 'attack_prevention' but script missing implementation
+BT15-078: API has 'piercing' but script missing implementation
+BT15-079: API has 'digivolve_into' but script missing implementation
+BT15-082: API has 'security_trash' but script missing implementation
+BT15-088: API has 'bounce' but script missing implementation
+BT15-089: API has 'security_trash' but script missing implementation
+BT15-092: API has 'dp_modification' but script missing implementation
+```
+
+### Reverse Mismatches (Script claims X, API doesn't mention)
+
+```
+BT15-012: script has '_is_material_save' but API text doesn't mention it
+BT15-012: script has '_is_save' but API text doesn't mention it
+```
+
+### Timing Mismatches
+
+```
+BT15-014: has inherited effect text but no is_inherited_effect flag
+BT15-026: has inherited effect text but no is_inherited_effect flag
+BT15-031: has inherited effect text but no is_inherited_effect flag
+BT15-038: has inherited effect text but no is_inherited_effect flag
+BT15-049: has inherited effect text but no is_inherited_effect flag
+BT15-050: has inherited effect text but no is_inherited_effect flag
+BT15-052: has inherited effect text but no is_inherited_effect flag
+BT15-076: has inherited effect text but no is_inherited_effect flag
+BT15-078: has inherited effect text but no is_inherited_effect flag
+BT15-083: timing 'Security' -> is_security_effect not found
+BT15-085: timing 'Security' -> is_security_effect not found
+BT15-098: timing 'Security' -> is_security_effect not found
+```
+
+### Structural Warnings
+
+```
+BT15-014: API has inherited effect but script has no is_inherited_effect
+BT15-026: API has inherited effect but script has no is_inherited_effect
+BT15-031: API has inherited effect but script has no is_inherited_effect
+BT15-038: API has inherited effect but script has no is_inherited_effect
+BT15-049: API has inherited effect but script has no is_inherited_effect
+BT15-050: API has inherited effect but script has no is_inherited_effect
+BT15-052: API has inherited effect but script has no is_inherited_effect
+BT15-076: API has inherited effect but script has no is_inherited_effect
+BT15-078: API has inherited effect but script has no is_inherited_effect
+BT15-083: API has security effect but script has no is_security_effect
+BT15-085: API has security effect but script has no is_security_effect
+BT15-098: API has security effect but script has no is_security_effect
+```
+

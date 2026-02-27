@@ -2,10 +2,10 @@
   "set_id": "BT11",
   "total_cards": 112,
   "cards_audited": 102,
-  "cards_with_issues": 35,
+  "cards_with_issues": 22,
   "cards_below_threshold": 24,
   "cards_missing_script": 10,
-  "average_score": 0.7742,
+  "average_score": 0.7759,
   "cards": {
     "BT11-001": {
       "card_id": "BT11-001",
@@ -261,9 +261,7 @@
       "coroutine_score": 0.0,
       "forward_issues": [],
       "reverse_issues": [],
-      "timing_issues": [
-        "timing 'On Deletion' -> is_on_deletion not found"
-      ],
+      "timing_issues": [],
       "structural_warnings": [],
       "below_threshold": true,
       "has_script": true,
@@ -311,14 +309,12 @@
     "BT11-018": {
       "card_id": "BT11-018",
       "card_name": "Shoutmon DX",
-      "score": 0.9333,
+      "score": 1.0,
       "effects_ratio": 1.0,
       "actions_ratio": 1.0,
-      "forward_match_ratio": 0.6667,
+      "forward_match_ratio": 1.0,
       "coroutine_score": 1.0,
-      "forward_issues": [
-        "attack_prevention"
-      ],
+      "forward_issues": [],
       "reverse_issues": [
         "_is_save",
         "_is_material_save"
@@ -1123,14 +1119,12 @@
     "BT11-064": {
       "card_id": "BT11-064",
       "card_name": "Greymon (X Antibody)",
-      "score": 0.3,
+      "score": 0.4,
       "effects_ratio": 0.5,
       "actions_ratio": 0.0,
-      "forward_match_ratio": 0.5,
+      "forward_match_ratio": 1.0,
       "coroutine_score": 0.0,
-      "forward_issues": [
-        "digivolve_into"
-      ],
+      "forward_issues": [],
       "reverse_issues": [],
       "timing_issues": [
         "has inherited effect text but no is_inherited_effect flag"
@@ -1361,9 +1355,7 @@
       "coroutine_score": 0.0,
       "forward_issues": [],
       "reverse_issues": [],
-      "timing_issues": [
-        "timing 'On Deletion' -> is_on_deletion not found"
-      ],
+      "timing_issues": [],
       "structural_warnings": [],
       "below_threshold": false,
       "has_script": true,
@@ -1431,9 +1423,7 @@
       "coroutine_score": 0.0,
       "forward_issues": [],
       "reverse_issues": [],
-      "timing_issues": [
-        "timing 'On Deletion' -> is_on_deletion not found"
-      ],
+      "timing_issues": [],
       "structural_warnings": [],
       "below_threshold": false,
       "has_script": true,
@@ -1700,12 +1690,8 @@
       "coroutine_score": 0.0,
       "forward_issues": [],
       "reverse_issues": [],
-      "timing_issues": [
-        "timing 'Security' -> is_security_effect not found"
-      ],
-      "structural_warnings": [
-        "API has security effect but script has no is_security_effect"
-      ],
+      "timing_issues": [],
+      "structural_warnings": [],
       "below_threshold": false,
       "has_script": true,
       "api_effect_blocks": 3,
@@ -1721,12 +1707,8 @@
       "coroutine_score": 0.0,
       "forward_issues": [],
       "reverse_issues": [],
-      "timing_issues": [
-        "timing 'Security' -> is_security_effect not found"
-      ],
-      "structural_warnings": [
-        "API has security effect but script has no is_security_effect"
-      ],
+      "timing_issues": [],
+      "structural_warnings": [],
       "below_threshold": false,
       "has_script": true,
       "api_effect_blocks": 2,
@@ -1742,12 +1724,8 @@
       "coroutine_score": 0.0,
       "forward_issues": [],
       "reverse_issues": [],
-      "timing_issues": [
-        "timing 'Security' -> is_security_effect not found"
-      ],
-      "structural_warnings": [
-        "API has security effect but script has no is_security_effect"
-      ],
+      "timing_issues": [],
+      "structural_warnings": [],
       "below_threshold": false,
       "has_script": true,
       "api_effect_blocks": 2,
@@ -1763,12 +1741,8 @@
       "coroutine_score": 0.0,
       "forward_issues": [],
       "reverse_issues": [],
-      "timing_issues": [
-        "timing 'Security' -> is_security_effect not found"
-      ],
-      "structural_warnings": [
-        "API has security effect but script has no is_security_effect"
-      ],
+      "timing_issues": [],
+      "structural_warnings": [],
       "below_threshold": true,
       "has_script": true,
       "api_effect_blocks": 3,
@@ -1784,12 +1758,8 @@
       "coroutine_score": 0.0,
       "forward_issues": [],
       "reverse_issues": [],
-      "timing_issues": [
-        "timing 'Security' -> is_security_effect not found"
-      ],
-      "structural_warnings": [
-        "API has security effect but script has no is_security_effect"
-      ],
+      "timing_issues": [],
+      "structural_warnings": [],
       "below_threshold": true,
       "has_script": true,
       "api_effect_blocks": 3,
@@ -1805,12 +1775,8 @@
       "coroutine_score": 0.0,
       "forward_issues": [],
       "reverse_issues": [],
-      "timing_issues": [
-        "timing 'Security' -> is_security_effect not found"
-      ],
-      "structural_warnings": [
-        "API has security effect but script has no is_security_effect"
-      ],
+      "timing_issues": [],
+      "structural_warnings": [],
       "below_threshold": true,
       "has_script": true,
       "api_effect_blocks": 3,
@@ -1843,12 +1809,8 @@
       "coroutine_score": 0.0,
       "forward_issues": [],
       "reverse_issues": [],
-      "timing_issues": [
-        "timing 'Security' -> is_security_effect not found"
-      ],
-      "structural_warnings": [
-        "API has security effect but script has no is_security_effect"
-      ],
+      "timing_issues": [],
+      "structural_warnings": [],
       "below_threshold": true,
       "has_script": true,
       "api_effect_blocks": 3,
@@ -1934,12 +1896,8 @@
       "coroutine_score": 0.0,
       "forward_issues": [],
       "reverse_issues": [],
-      "timing_issues": [
-        "timing 'Security' -> is_security_effect not found"
-      ],
-      "structural_warnings": [
-        "API has security effect but script has no is_security_effect"
-      ],
+      "timing_issues": [],
+      "structural_warnings": [],
       "below_threshold": false,
       "has_script": true,
       "api_effect_blocks": 3,
@@ -1955,12 +1913,8 @@
       "coroutine_score": 0.0,
       "forward_issues": [],
       "reverse_issues": [],
-      "timing_issues": [
-        "timing 'Security' -> is_security_effect not found"
-      ],
-      "structural_warnings": [
-        "API has security effect but script has no is_security_effect"
-      ],
+      "timing_issues": [],
+      "structural_warnings": [],
       "below_threshold": true,
       "has_script": true,
       "api_effect_blocks": 2,
@@ -1976,12 +1930,8 @@
       "coroutine_score": 0.0,
       "forward_issues": [],
       "reverse_issues": [],
-      "timing_issues": [
-        "timing 'Security' -> is_security_effect not found"
-      ],
-      "structural_warnings": [
-        "API has security effect but script has no is_security_effect"
-      ],
+      "timing_issues": [],
+      "structural_warnings": [],
       "below_threshold": false,
       "has_script": true,
       "api_effect_blocks": 3,
@@ -2026,7 +1976,7 @@
     "top_forward_issues": [
       [
         "digivolve_into",
-        5
+        4
       ],
       [
         "memory_gain",
@@ -2035,10 +1985,6 @@
       [
         "bounce",
         2
-      ],
-      [
-        "attack_prevention",
-        1
       ],
       [
         "dp_modification",
@@ -2092,14 +2038,6 @@
       ]
     ],
     "top_timing_issues": [
-      [
-        "timing 'Security' -> is_security_effect not found",
-        10
-      ],
-      [
-        "timing 'On Deletion' -> is_on_deletion not found",
-        3
-      ],
       [
         "has inherited effect text but no is_inherited_effect flag",
         2

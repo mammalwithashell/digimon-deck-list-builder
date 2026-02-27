@@ -18,6 +18,7 @@ class BT19_014(CardScript):
         effect0 = ICardEffect()
         effect0.set_effect_name("BT19-014 Alliance")
         effect0.set_effect_description("Alliance")
+        effect0.is_on_attack = True
         effect0._is_alliance = True
 
         def condition0(context: Dict[str, Any]) -> bool:

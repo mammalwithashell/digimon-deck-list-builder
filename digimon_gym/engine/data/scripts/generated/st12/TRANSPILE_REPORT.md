@@ -4,8 +4,8 @@ Generated from DCGO C# card scripts.
 
 - Total scripts: 12
 - Scripts with effects: 12
-- Total effects: 26
-- Factory effects: 9
+- Total effects: 28
+- Factory effects: 11
 - Activate effects: 17
 
 ## Per-Card Breakdown
@@ -14,9 +14,10 @@ Generated from DCGO C# card scripts.
 ST12_11: 2 effects
   [EffectTiming.OnEnterFieldAnyone] play_card
   [EffectTiming.OnEnterFieldAnyone] de_digivolve (1/turn)
-ST12_16: 2 effects
+ST12_16: 3 effects
   [EffectTiming.None] ignore_color_req (descriptive-tagged)
   [EffectTiming.OptionSkill] delete
+  [factory] security_play
 ST12_01: 1 effects
   [factory] dp_modifier
 ST12_04: 2 effects
@@ -46,7 +47,33 @@ ST12_15: 5 effects
 ST12_12: 2 effects
   [EffectTiming.OnEnterFieldAnyone] draw, trash_from_hand
   [factory] decoy
-ST12_13: 2 effects
+ST12_13: 3 effects
   [EffectTiming.OnEnterFieldAnyone] add_to_hand, reveal_and_select
   [factory] reboot
+  [factory] reboot_non_self
 ```
+
+
+## Cross-Validation Results
+
+Checked 12 cards against digimoncard.io effect text.
+
+### Reverse Mismatches (Script claims X, API doesn't mention)
+
+```
+ST12-12: script has '_is_decoy' but API text doesn't mention it
+```
+
+### Timing Mismatches
+
+```
+ST12-10: timing 'When Digivolving' -> is_when_digivolving not found
+ST12-13: has inherited effect text but no is_inherited_effect flag
+```
+
+### Structural Warnings
+
+```
+ST12-13: API has inherited effect but script has no is_inherited_effect
+```
+

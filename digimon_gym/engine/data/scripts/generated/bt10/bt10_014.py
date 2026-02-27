@@ -18,6 +18,7 @@ class BT10_014(CardScript):
         effect0 = ICardEffect()
         effect0.set_effect_name("BT10-014 Blitz")
         effect0.set_effect_description("Blitz")
+        effect0.is_on_play = True
         effect0._is_blitz = True
 
         def condition0(context: Dict[str, Any]) -> bool:

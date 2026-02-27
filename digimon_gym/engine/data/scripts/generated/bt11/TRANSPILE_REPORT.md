@@ -3,9 +3,9 @@
 Generated from DCGO C# card scripts.
 
 - Total scripts: 102
-- Scripts with effects: 101
-- Total effects: 267
-- Factory effects: 66
+- Scripts with effects: 102
+- Total effects: 279
+- Factory effects: 78
 - Activate effects: 201
 
 ## Per-Card Breakdown
@@ -13,7 +13,9 @@ Generated from DCGO C# card scripts.
 ```
 BT11_005: 1 effects
   [EffectTiming.OnDestroyedAnyone] draw (inherited) (1/turn)
-BT11_060: 0 effects
+BT11_060: 2 effects
+  [factory] cannot_return_to_hand
+  [factory] cannot_return_to_deck
 BT11_061: 2 effects
   [EffectTiming.OnDeclaration] suspend, add_to_hand, reveal_and_select
   [EffectTiming.None] cost_reduction (inherited)
@@ -86,9 +88,10 @@ BT11_107: 3 effects
   [EffectTiming.None] cost_reduction
   [EffectTiming.OptionSkill] delete, force_attack
   [EffectTiming.SecuritySkill] delete
-BT11_108: 2 effects
+BT11_108: 3 effects
   [EffectTiming.None] cost_reduction
   [EffectTiming.OptionSkill] delete, de_digivolve
+  [factory] security_play
 BT11_111: 4 effects
   [factory] alt_digivolve_req
   [EffectTiming.OnEnterFieldAnyone] delete
@@ -142,11 +145,13 @@ BT11_090: 3 effects
   [EffectTiming.OnStartMainPhase] gain_keyword_jamming
   [EffectTiming.OnAddHand] gain_memory, suspend
   [factory] security_play
-BT11_098: 1 effects
+BT11_098: 2 effects
   [EffectTiming.OptionSkill] play_card, bounce
-BT11_099: 2 effects
+  [factory] security_play
+BT11_099: 3 effects
   [EffectTiming.None] cost_reduction
   [EffectTiming.OptionSkill] bounce, trash_digivolution_cards
+  [factory] security_play
 BT11_112: 4 effects
   [EffectTiming.OnEnterFieldAnyone] gain_keyword_blocker, gain_keyword_evade
   [EffectTiming.OnTappedAnyone] suspend
@@ -194,10 +199,11 @@ BT11_091: 3 effects
 BT11_102: 2 effects
   [EffectTiming.OptionSkill] suspend, gain_keyword_cannot_unsuspend
   [EffectTiming.SecuritySkill] suspend
-BT11_103: 3 effects
+BT11_103: 4 effects
   [EffectTiming.None] cost_reduction
   [EffectTiming.OptionSkill] grant_skill
   [EffectTiming.OptionSkill] no-action
+  [factory] security_play
 BT11_104: 3 effects
   [EffectTiming.None] cost_reduction
   [EffectTiming.OptionSkill] change_dp, gain_keyword_rush, force_attack
@@ -264,11 +270,13 @@ BT11_094: 3 effects
   [EffectTiming.OnStartTurn] gain_memory
   [EffectTiming.OnEnterFieldAnyone] suspend, play_card
   [factory] security_play
-BT11_109: 1 effects
+BT11_109: 2 effects
   [EffectTiming.OptionSkill] no-action
-BT11_110: 2 effects
+  [factory] security_play
+BT11_110: 3 effects
   [EffectTiming.None] cost_reduction
   [EffectTiming.OptionSkill] delete
+  [factory] security_play
 BT11_001: 1 effects
   [EffectTiming.OnDestroyedAnyone] draw (inherited)
 BT11_007: 2 effects
@@ -329,11 +337,13 @@ BT11_089: 3 effects
   [EffectTiming.OnEnterFieldAnyone] add_to_hand, reveal_and_select
   [EffectTiming.OnEnterFieldAnyone] suspend, gain_keyword_rush
   [factory] security_play
-BT11_096: 2 effects
+BT11_096: 3 effects
   [EffectTiming.None] cost_reduction
   [EffectTiming.OptionSkill] delete
-BT11_097: 1 effects
+  [factory] security_play
+BT11_097: 2 effects
   [EffectTiming.OptionSkill] delete
+  [factory] security_play
 BT11_095: 3 effects
   [EffectTiming.OnStartMainPhase] draw, gain_memory
   [EffectTiming.BeforePayCost] suspend
@@ -374,10 +384,71 @@ BT11_044: 2 effects
 BT11_045: 2 effects
   [EffectTiming.OnEnterFieldAnyone] recovery
   [EffectTiming.OnLoseSecurity] change_dp
-BT11_100: 2 effects
+BT11_100: 3 effects
   [EffectTiming.None] cost_reduction
   [EffectTiming.OptionSkill] change_dp
-BT11_101: 2 effects
+  [factory] security_play
+BT11_101: 3 effects
   [EffectTiming.None] cost_reduction
   [EffectTiming.OptionSkill] change_dp, change_security_attack
+  [factory] security_play
 ```
+
+
+## Cross-Validation Results
+
+Checked 102 cards against digimoncard.io effect text.
+
+### Forward Mismatches (API mentions X, script missing)
+
+```
+BT11-017: API has 'memory_gain' but script missing implementation
+BT11-028: API has 'dp_modification' but script missing implementation
+BT11-031: API has 'save' but script missing implementation
+BT11-033: API has 'memory_gain' but script missing implementation
+BT11-036: API has 'digivolve_into' but script missing implementation
+BT11-057: API has 'memory_gain' but script missing implementation
+BT11-057: API has 'piercing' but script missing implementation
+BT11-059: API has 'digivolve_into' but script missing implementation
+BT11-061: API has 'digivolve_into' but script missing implementation
+BT11-061: API has 'once_per_turn' but script missing implementation
+BT11-065: API has 'bounce' but script missing implementation
+BT11-069: API has 'de_digivolve' but script missing implementation
+BT11-082: API has 'destruction_immunity' but script missing implementation
+BT11-083: API has 'bounce' but script missing implementation
+BT11-086: API has 'retaliation' but script missing implementation
+BT11-091: API has 'digivolve_into' but script missing implementation
+BT11-095: API has 'play' but script missing implementation
+BT11-105: API has 'mill' but script missing implementation
+```
+
+### Reverse Mismatches (Script claims X, API doesn't mention)
+
+```
+BT11-009: script has '_is_material_save' but API text doesn't mention it
+BT11-009: script has '_is_save' but API text doesn't mention it
+BT11-012: script has '_is_material_save' but API text doesn't mention it
+BT11-012: script has '_is_save' but API text doesn't mention it
+BT11-018: script has '_is_material_save' but API text doesn't mention it
+BT11-018: script has '_is_save' but API text doesn't mention it
+BT11-019: script has '_is_material_save' but API text doesn't mention it
+BT11-019: script has '_is_save' but API text doesn't mention it
+BT11-082: script has '_is_decoy' but API text doesn't mention it
+```
+
+### Timing Mismatches
+
+```
+BT11-017: timing 'When Digivolving' -> is_when_digivolving not found
+BT11-061: [Once Per Turn] in API but no set_max_count_per_turn
+BT11-062: has inherited effect text but no is_inherited_effect flag
+BT11-064: has inherited effect text but no is_inherited_effect flag
+```
+
+### Structural Warnings
+
+```
+BT11-062: API has inherited effect but script has no is_inherited_effect
+BT11-064: API has inherited effect but script has no is_inherited_effect
+```
+

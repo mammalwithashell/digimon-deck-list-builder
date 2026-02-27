@@ -50,6 +50,7 @@ class BT19_047(CardScript):
         effect1 = ICardEffect()
         effect1.set_effect_name("BT19-047 Save")
         effect1.set_effect_description("Save")
+        effect1.is_on_deletion = True
         effect1._is_save = True
 
         def condition1(context: Dict[str, Any]) -> bool:

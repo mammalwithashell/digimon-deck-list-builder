@@ -4,8 +4,8 @@ Generated from DCGO C# card scripts.
 
 - Total scripts: 94
 - Scripts with effects: 94
-- Total effects: 191
-- Factory effects: 49
+- Total effects: 198
+- Factory effects: 56
 - Activate effects: 142
 
 ## Per-Card Breakdown
@@ -58,8 +58,9 @@ BT8_104: 2 effects
 BT8_105: 2 effects
   [EffectTiming.OptionSkill] delete
   [EffectTiming.SecuritySkill] delete
-BT8_106: 1 effects
+BT8_106: 2 effects
   [EffectTiming.OptionSkill] delete, play_card, reveal_and_select
+  [factory] security_play
 BT8_002: 1 effects
   [factory] dp_modifier
 BT8_020: 1 effects
@@ -100,8 +101,9 @@ BT8_088: 3 effects
   [EffectTiming.OnStartMainPhase] gain_memory
   [EffectTiming.OnEnterFieldAnyone] suspend, unsuspend
   [factory] security_play
-BT8_098: 1 effects
+BT8_098: 2 effects
   [EffectTiming.OptionSkill] trash_digivolution_cards, gain_keyword_cannot_attack, gain_keyword_cannot_block, grant_cannot_block, effect_immunity
+  [factory] security_play
 BT8_099: 2 effects
   [EffectTiming.OptionSkill] suspend, effect_immunity
   [EffectTiming.SecuritySkill] suspend, bounce, effect_immunity
@@ -187,8 +189,9 @@ BT8_108: 3 effects
   [EffectTiming.OptionSkill] draw, mill
   [factory] delay
   [EffectTiming.OnDeclaration] gain_memory
-BT8_109: 1 effects
+BT8_109: 2 effects
   [EffectTiming.OptionSkill] change_dp, play_card
+  [factory] security_play
 BT8_111: 2 effects
   [EffectTiming.OnEnterFieldAnyone] play_card, mill
   [EffectTiming.OnAllyAttack] mill (1/turn)
@@ -229,11 +232,13 @@ BT8_095: 3 effects
   [EffectTiming.None] ignore_color_req (descriptive-tagged)
   [EffectTiming.OptionSkill] change_security_attack (descriptive-tagged)
   [EffectTiming.SecuritySkill] delete
-BT8_096: 1 effects
+BT8_096: 2 effects
   [EffectTiming.OptionSkill] delete
-BT8_097: 2 effects
+  [factory] security_play
+BT8_097: 3 effects
   [EffectTiming.None] cost_reduction
   [EffectTiming.OptionSkill] delete, play_restriction, effect_immunity
+  [factory] security_play
 BT8_084: 4 effects
   [EffectTiming.None] jogress_condition
   [EffectTiming.OnEnterFieldAnyone] no-action
@@ -291,9 +296,57 @@ BT8_090: 3 effects
   [factory] set_memory_3
   [EffectTiming.OnAddSecurity] gain_memory, suspend
   [factory] security_play
-BT8_100: 1 effects
+BT8_100: 2 effects
   [EffectTiming.OptionSkill] no-action
-BT8_101: 2 effects
+  [factory] security_play
+BT8_101: 3 effects
   [EffectTiming.None] ignore_color_req (descriptive-tagged)
   [EffectTiming.OptionSkill] change_dp
+  [factory] security_play
 ```
+
+
+## Cross-Validation Results
+
+Checked 94 cards against digimoncard.io effect text.
+
+### Forward Mismatches (API mentions X, script missing)
+
+```
+BT8-019: API has 'memory_gain' but script missing implementation
+BT8-020: API has 'digivolve_into' but script missing implementation
+BT8-029: API has 'attack_prevention' but script missing implementation
+BT8-038: API has 'dp_modification' but script missing implementation
+BT8-048: API has 'blocker' but script missing implementation
+BT8-065: API has 'bounce' but script missing implementation
+BT8-069: API has 'destruction_immunity' but script missing implementation
+BT8-079: API has 'bounce' but script missing implementation
+BT8-081: API has 'mill' but script missing implementation
+BT8-081: API has 'suspend_target' but script missing implementation
+BT8-091: API has 'digivolve_into' but script missing implementation
+BT8-095: API has 'blocker' but script missing implementation
+BT8-100: API has 'dp_modification' but script missing implementation
+BT8-110: API has 'mill' but script missing implementation
+BT8-111: API has 'dp_modification' but script missing implementation
+BT8-112: API has 'bounce' but script missing implementation
+BT8-112: API has 'digivolve_into' but script missing implementation
+```
+
+### Reverse Mismatches (Script claims X, API doesn't mention)
+
+```
+BT8-060: script has '_is_decoy' but API text doesn't mention it
+```
+
+### Timing Mismatches
+
+```
+BT8-108: timing 'Security' -> is_security_effect not found
+```
+
+### Structural Warnings
+
+```
+BT8-108: API has security effect but script has no is_security_effect
+```
+

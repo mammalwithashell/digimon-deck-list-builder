@@ -2,10 +2,10 @@
   "set_id": "BT22",
   "total_cards": 102,
   "cards_audited": 102,
-  "cards_with_issues": 56,
-  "cards_below_threshold": 41,
+  "cards_with_issues": 51,
+  "cards_below_threshold": 39,
   "cards_missing_script": 0,
-  "average_score": 0.7254,
+  "average_score": 0.7315,
   "cards": {
     "BT22-001": {
       "card_id": "BT22-001",
@@ -131,19 +131,18 @@
     "BT22-008": {
       "card_id": "BT22-008",
       "card_name": "Agumon",
-      "score": 0.65,
+      "score": 0.75,
       "effects_ratio": 1.0,
       "actions_ratio": 0.5,
-      "forward_match_ratio": 0.0,
+      "forward_match_ratio": 0.5,
       "coroutine_score": 1.0,
       "forward_issues": [
-        "digivolve_into",
         "bounce"
       ],
       "reverse_issues": [],
       "timing_issues": [],
       "structural_warnings": [],
-      "below_threshold": true,
+      "below_threshold": false,
       "has_script": true,
       "api_effect_blocks": 2,
       "script_effect_count": 2
@@ -299,14 +298,12 @@
     "BT22-017": {
       "card_id": "BT22-017",
       "card_name": "Gabumon",
-      "score": 0.9,
+      "score": 1.0,
       "effects_ratio": 1.0,
       "actions_ratio": 1.0,
-      "forward_match_ratio": 0.5,
+      "forward_match_ratio": 1.0,
       "coroutine_score": 1.0,
-      "forward_issues": [
-        "digivolve_into"
-      ],
+      "forward_issues": [],
       "reverse_issues": [],
       "timing_issues": [],
       "structural_warnings": [],
@@ -337,14 +334,12 @@
     "BT22-019": {
       "card_id": "BT22-019",
       "card_name": "Veemon",
-      "score": 0.9,
+      "score": 1.0,
       "effects_ratio": 1.0,
       "actions_ratio": 1.0,
-      "forward_match_ratio": 0.5,
+      "forward_match_ratio": 1.0,
       "coroutine_score": 1.0,
-      "forward_issues": [
-        "digivolve_into"
-      ],
+      "forward_issues": [],
       "reverse_issues": [],
       "timing_issues": [],
       "structural_warnings": [],
@@ -694,13 +689,12 @@
     "BT22-038": {
       "card_id": "BT22-038",
       "card_name": "Monzaemon",
-      "score": 0.78,
+      "score": 0.83,
       "effects_ratio": 1.0,
       "actions_ratio": 0.6,
-      "forward_match_ratio": 0.5,
+      "forward_match_ratio": 0.75,
       "coroutine_score": 1.0,
       "forward_issues": [
-        "digivolve_into",
         "armor_purge"
       ],
       "reverse_issues": [],
@@ -1075,14 +1069,12 @@
     "BT22-058": {
       "card_id": "BT22-058",
       "card_name": "Dreammon",
-      "score": 0.7,
+      "score": 0.7667,
       "effects_ratio": 0.6667,
       "actions_ratio": 1.0,
-      "forward_match_ratio": 0.6667,
+      "forward_match_ratio": 1.0,
       "coroutine_score": 0.0,
-      "forward_issues": [
-        "bounce"
-      ],
+      "forward_issues": [],
       "reverse_issues": [],
       "timing_issues": [
         "has inherited effect text but no is_inherited_effect flag"
@@ -1098,14 +1090,13 @@
     "BT22-059": {
       "card_id": "BT22-059",
       "card_name": "Infermon",
-      "score": 0.8,
+      "score": 0.9,
       "effects_ratio": 1.0,
       "actions_ratio": 1.0,
-      "forward_match_ratio": 0.0,
+      "forward_match_ratio": 0.5,
       "coroutine_score": 1.0,
       "forward_issues": [
-        "play",
-        "bounce"
+        "play"
       ],
       "reverse_issues": [],
       "timing_issues": [],
@@ -1138,14 +1129,12 @@
     "BT22-061": {
       "card_id": "BT22-061",
       "card_name": "Vademon",
-      "score": 0.95,
+      "score": 1.0,
       "effects_ratio": 1.0,
       "actions_ratio": 1.0,
-      "forward_match_ratio": 0.75,
+      "forward_match_ratio": 1.0,
       "coroutine_score": 1.0,
-      "forward_issues": [
-        "digivolve_into"
-      ],
+      "forward_issues": [],
       "reverse_issues": [
         "_is_fragment"
       ],
@@ -1427,18 +1416,16 @@
     "BT22-076": {
       "card_id": "BT22-076",
       "card_name": "ShinMonzaemon",
-      "score": 0.65,
+      "score": 0.7,
       "effects_ratio": 0.5,
       "actions_ratio": 1.0,
-      "forward_match_ratio": 0.75,
+      "forward_match_ratio": 1.0,
       "coroutine_score": 0.0,
-      "forward_issues": [
-        "digivolve_into"
-      ],
+      "forward_issues": [],
       "reverse_issues": [],
       "timing_issues": [],
       "structural_warnings": [],
-      "below_threshold": true,
+      "below_threshold": false,
       "has_script": true,
       "api_effect_blocks": 4,
       "script_effect_count": 2
@@ -1792,12 +1779,8 @@
       "coroutine_score": 0.0,
       "forward_issues": [],
       "reverse_issues": [],
-      "timing_issues": [
-        "timing 'Security' -> is_security_effect not found"
-      ],
-      "structural_warnings": [
-        "API has security effect but script has no is_security_effect"
-      ],
+      "timing_issues": [],
+      "structural_warnings": [],
       "below_threshold": false,
       "has_script": true,
       "api_effect_blocks": 4,
@@ -1830,12 +1813,8 @@
       "coroutine_score": 0.0,
       "forward_issues": [],
       "reverse_issues": [],
-      "timing_issues": [
-        "timing 'Security' -> is_security_effect not found"
-      ],
-      "structural_warnings": [
-        "API has security effect but script has no is_security_effect"
-      ],
+      "timing_issues": [],
+      "structural_warnings": [],
       "below_threshold": false,
       "has_script": true,
       "api_effect_blocks": 4,
@@ -1927,12 +1906,8 @@
         8
       ],
       [
-        "digivolve_into",
-        6
-      ],
-      [
         "bounce",
-        6
+        4
       ],
       [
         "memory_gain",
@@ -2011,11 +1986,11 @@
         16
       ],
       [
-        "timing 'Security' -> is_security_effect not found",
-        3
+        "[Once Per Turn] in API but no set_max_count_per_turn",
+        1
       ],
       [
-        "[Once Per Turn] in API but no set_max_count_per_turn",
+        "timing 'Security' -> is_security_effect not found",
         1
       ]
     ],

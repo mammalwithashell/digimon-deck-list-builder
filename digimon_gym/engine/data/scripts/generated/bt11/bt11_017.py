@@ -18,6 +18,7 @@ class BT11_017(CardScript):
         effect0 = ICardEffect()
         effect0.set_effect_name("BT11-017 Raid")
         effect0.set_effect_description("Raid")
+        effect0.is_on_attack = True
         effect0._is_raid = True
 
         def condition0(context: Dict[str, Any]) -> bool:
@@ -30,6 +31,7 @@ class BT11_017(CardScript):
         effect1 = ICardEffect()
         effect1.set_effect_name("BT11-017 Blitz")
         effect1.set_effect_description("Blitz")
+        effect1.is_on_play = True
         effect1._is_blitz = True
 
         def condition1(context: Dict[str, Any]) -> bool:

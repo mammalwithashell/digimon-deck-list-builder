@@ -71,6 +71,7 @@ TIMING_TO_PROPERTY = {
     "EffectTiming.OnAllyAttack": "is_on_attack",
     "EffectTiming.OnDestroyedAnyone": "is_on_deletion",
     "EffectTiming.SecuritySkill": "is_security_effect",
+    "EffectTiming.WhenDigivolving": "is_when_digivolving",
 }
 
 # ─── C# Parsing Regex Patterns ─────────────────────────────────────
@@ -218,7 +219,11 @@ RE_FACTORY_RUSH = re.compile(r'Rush(?:Self)?(?:Static)?Effect')
 RE_FACTORY_REBOOT = re.compile(r'Reboot(?:Self)?StaticEffect')
 RE_FACTORY_RAID = re.compile(r'Raid(?:Self)?Effect')
 RE_FACTORY_ALLIANCE = re.compile(r'Alliance(?:Self)?Effect')
-RE_FACTORY_SEC_PLAY = re.compile(r'PlaySelfTamerSecurityEffect|PlaySelfDigimonAfterBattleSecurityEffect')
+RE_FACTORY_SEC_PLAY = re.compile(
+    r'PlaySelfTamerSecurityEffect'
+    r'|PlaySelfDigimonAfterBattleSecurityEffect'
+    r'|(?:Add)?ActivateMainOptionSecurityEffect'
+)
 RE_FACTORY_SA_PLUS = re.compile(r'ChangeSelfSAttackStaticEffect')
 RE_FACTORY_DP = re.compile(r'ChangeSelfDPStaticEffect')
 RE_FACTORY_DP_ALL = re.compile(r'CardEffectFactory\.ChangeDPStaticEffect\b')  # Fix 5: non-self DP
@@ -259,6 +264,12 @@ RE_FACTORY_DECODE = re.compile(r'Decode(?:Self)?Effect')
 RE_FACTORY_ICECLAD = re.compile(r'(?:Iceclad|IceClad)(?:Self)?Effect')
 RE_FACTORY_FRAGMENT = re.compile(r'Fragment(?:Self)?Effect')
 RE_FACTORY_EXECUTE = re.compile(r'Execute(?:Self)?Effect')
+RE_FACTORY_BLAST_DNA_DIGI = re.compile(r'BlastDNA(?:Digivolve)?Effect')
+RE_FACTORY_CANNOT_DESTROYED_SKILL = re.compile(r'CanNotBeDestroyedBySkillStaticEffect')
+RE_FACTORY_CANNOT_RETURN_HAND = re.compile(r'CannotReturnToHandStaticEffect')
+RE_FACTORY_CANNOT_RETURN_DECK = re.compile(r'CannotReturnToDeckStaticEffect')
+RE_FACTORY_CANNOT_BE_BLOCKED = re.compile(r'CanNotBeBlockedStatic(?:Self)?Effect')
+RE_FACTORY_REBOOT_NON_SELF = re.compile(r'RebootStaticEffect')
 RE_FACTORY_ADD_DIGI_REQ = re.compile(r'AddSelfDigivolutionRequirementStaticEffect')
 RE_FACTORY_CHANGE_DIGI_COST = re.compile(r'ChangeDigivolutionCostStaticEffect')
 RE_FACTORY_CHANGE_DIGI_COST_VALUE = re.compile(

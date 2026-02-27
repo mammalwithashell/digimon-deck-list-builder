@@ -2,7 +2,7 @@
 
 - **Total cards**: 16
 - **Cards audited**: 12
-- **Cards with issues**: 4
+- **Cards with issues**: 3
 - **Cards below threshold**: 5
 - **Cards missing script**: 4
 - **Average score**: 0.6528
@@ -29,4 +29,3 @@
 
 - **timing 'When Digivolving' -> is_when_digivolving not found**: 1 cards
 - **has inherited effect text but no is_inherited_effect flag**: 1 cards
-- **timing 'Security' -> is_security_effect not found**: 1 cards

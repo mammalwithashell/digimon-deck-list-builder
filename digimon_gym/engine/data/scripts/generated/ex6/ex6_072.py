@@ -36,20 +36,33 @@ class EX6_072(CardScript):
         effect0.set_on_process_callback(process0)
         effects.append(effect0)
 
+        # Factory effect: blast_dna_digivolve
+        # Blast DNA Digivolve
+        effect1 = ICardEffect()
+        effect1.set_effect_name("EX6-072 Blast DNA Digivolve")
+        effect1.set_effect_description("Blast DNA Digivolve")
+        effect1.is_counter_effect = True
+        effect1._is_blast_dna_digivolve = True
+
+        def condition1(context: Dict[str, Any]) -> bool:
+            return True
+        effect1.set_can_use_condition(condition1)
+        effects.append(effect1)
+
         # Timing: EffectTiming.OptionSkill
         # Play Card, Jogress Condition
-        effect1 = ICardEffect()
-        effect1.set_effect_name("EX6-072 DNA Digivolve")
-        effect1.set_effect_description("Play Card, Jogress Condition")
+        effect2 = ICardEffect()
+        effect2.set_effect_name("EX6-072 DNA Digivolve")
+        effect2.set_effect_description("Play Card, Jogress Condition")
 
-        effect = effect1  # alias for condition closure
-        def condition1(context: Dict[str, Any]) -> bool:
+        effect = effect2  # alias for condition closure
+        def condition2(context: Dict[str, Any]) -> bool:
             # Option main effect — validated by engine timing
             return True
 
-        effect1.set_can_use_condition(condition1)
+        effect2.set_can_use_condition(condition2)
 
-        def process1(ctx: Dict[str, Any]):
+        def process2(ctx: Dict[str, Any]):
             """Action: Play Card, Jogress Condition"""
             player = ctx.get('player')
             perm = ctx.get('permanent')
@@ -67,25 +80,25 @@ class EX6_072(CardScript):
             # DNA/Jogress digivolution condition — handled by engine
             pass
 
-        effect1.set_on_process_callback(process1)
-        effects.append(effect1)
+        effect2.set_on_process_callback(process2)
+        effects.append(effect2)
 
         # Timing: EffectTiming.SecuritySkill
         # [Security] Return 1 level 6 or higher Digimon card from your trash to the hand. Then, add this card to the hand.
-        effect2 = ICardEffect()
-        effect2.set_effect_name("EX6-072 Return 1 Digimon from trash to hand then add this card to hand")
-        effect2.set_effect_description("[Security] Return 1 level 6 or higher Digimon card from your trash to the hand. Then, add this card to the hand.")
-        effect2.is_security_effect = True
-        effect2.is_security_effect = True
+        effect3 = ICardEffect()
+        effect3.set_effect_name("EX6-072 Return 1 Digimon from trash to hand then add this card to hand")
+        effect3.set_effect_description("[Security] Return 1 level 6 or higher Digimon card from your trash to the hand. Then, add this card to the hand.")
+        effect3.is_security_effect = True
+        effect3.is_security_effect = True
 
-        effect = effect2  # alias for condition closure
-        def condition2(context: Dict[str, Any]) -> bool:
+        effect = effect3  # alias for condition closure
+        def condition3(context: Dict[str, Any]) -> bool:
             # Security effect — validated by engine timing
             return True
 
-        effect2.set_can_use_condition(condition2)
+        effect3.set_can_use_condition(condition3)
 
-        def process2(ctx: Dict[str, Any]):
+        def process3(ctx: Dict[str, Any]):
             """Action: Add To Hand"""
             player = ctx.get('player')
             perm = ctx.get('permanent')
@@ -95,7 +108,7 @@ class EX6_072(CardScript):
                 card_to_add = player.trash_cards.pop()
                 player.hand_cards.append(card_to_add)
 
-        effect2.set_on_process_callback(process2)
-        effects.append(effect2)
+        effect3.set_on_process_callback(process3)
+        effects.append(effect3)
 
         return effects

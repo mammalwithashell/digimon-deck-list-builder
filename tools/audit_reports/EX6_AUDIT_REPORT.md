@@ -2,7 +2,7 @@
 
 - **Total cards**: 74
 - **Cards audited**: 74
-- **Cards with issues**: 27
+- **Cards with issues**: 26
 - **Cards below threshold**: 20
 - **Cards missing script**: 0
 - **Average score**: 0.7714
@@ -17,13 +17,13 @@
 | EX6-043 | Diaboromon | 0.40 | 1 | 0 | 0 |
 | EX6-008 | ZubaEagermon | 0.47 | 0 | 0 | 0 |
 | EX6-040 | TiaLudomon | 0.47 | 0 | 0 | 0 |
-| EX6-065 | Mythical Arms of Salvation! | 0.51 | 0 | 0 | 1 |
+| EX6-065 | Mythical Arms of Salvation! | 0.51 | 0 | 0 | 0 |
 | EX6-031 | Shakamon | 0.55 | 1 | 0 | 0 |
 | EX6-010 | Durandamon | 0.57 | 1 | 0 | 0 |
 | EX6-025 | Sanzomon | 0.57 | 2 | 0 | 0 |
 | EX6-062 | UltimateChaosmon | 0.57 | 1 | 1 | 0 |
 | EX6-069 | Rise of the Seven Great Demon Lords | 0.60 | 0 | 0 | 1 |
-| EX6-071 | Pandemonium Lost | 0.60 | 1 | 0 | 1 |
+| EX6-071 | Pandemonium Lost | 0.60 | 1 | 0 | 0 |
 | EX6-007 | Zubamon | 0.62 | 0 | 0 | 0 |
 | EX6-038 | Ludomon | 0.62 | 0 | 0 | 0 |
 | EX6-026 | Cho-Hakkaimon | 0.63 | 1 | 0 | 0 |
@@ -53,4 +53,4 @@
 ## Timing Issues
 
 - **has inherited effect text but no is_inherited_effect flag**: 6 cards
-- **timing 'Security' -> is_security_effect not found**: 4 cards
+- **timing 'Security' -> is_security_effect not found**: 2 cards

@@ -2,10 +2,10 @@
 
 - **Total cards**: 102
 - **Cards audited**: 102
-- **Cards with issues**: 56
-- **Cards below threshold**: 41
+- **Cards with issues**: 51
+- **Cards below threshold**: 39
 - **Cards missing script**: 0
-- **Average score**: 0.7254
+- **Average score**: 0.7315
 
 ## Worst-Scoring Cards
 
@@ -35,8 +35,7 @@
 ## Top Forward Issues (API mentions X, script missing)
 
 - **dp_modification**: 8 cards
-- **digivolve_into**: 6 cards
-- **bounce**: 6 cards
+- **bounce**: 4 cards
 - **memory_gain**: 4 cards
 - **destruction_immunity**: 3 cards
 - **play**: 3 cards
@@ -61,5 +60,5 @@
 ## Timing Issues
 
 - **has inherited effect text but no is_inherited_effect flag**: 16 cards
-- **timing 'Security' -> is_security_effect not found**: 3 cards
 - **[Once Per Turn] in API but no set_max_count_per_turn**: 1 cards
+- **timing 'Security' -> is_security_effect not found**: 1 cards

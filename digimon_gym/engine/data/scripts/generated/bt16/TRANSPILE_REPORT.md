@@ -4,8 +4,8 @@ Generated from DCGO C# card scripts.
 
 - Total scripts: 103
 - Scripts with effects: 103
-- Total effects: 363
-- Factory effects: 139
+- Total effects: 365
+- Factory effects: 141
 - Activate effects: 224
 
 ## Per-Card Breakdown
@@ -117,8 +117,9 @@ BT16_096: 4 effects
 BT16_097: 2 effects
   [EffectTiming.OptionSkill] recovery, play_card
   [EffectTiming.SecuritySkill] play_card, add_to_hand
-BT16_098: 1 effects
+BT16_098: 2 effects
   [EffectTiming.OptionSkill] delete
+  [factory] security_play
 BT16_002: 1 effects
   [factory] dp_modifier
 BT16_016: 4 effects
@@ -250,8 +251,9 @@ BT16_048: 4 effects
   [EffectTiming.OnEnterFieldAnyone] play_card, cost_reduction (1/turn)
   [EffectTiming.None] effect_immunity
   [EffectTiming.OnEndTurn] suspend, bounce, effect_immunity (1/turn)
-BT16_095: 1 effects
+BT16_095: 2 effects
   [EffectTiming.OptionSkill] suspend, effect_immunity
+  [factory] security_play
 BT16_006: 1 effects
   [EffectTiming.OnDestroyedAnyone] gain_memory, trash_from_hand (inherited)
 BT16_066: 4 effects
@@ -494,20 +496,16 @@ BT16-013: API has 'delete_opponent' but script missing implementation
 BT16-013: API has 'dp_modification' but script missing implementation
 BT16-018: API has 'destruction_immunity' but script missing implementation
 BT16-019: API has 'suspend_target' but script missing implementation
-BT16-021: API has 'attack_prevention' but script missing implementation
 BT16-023: API has 'suspend_target' but script missing implementation
-BT16-024: API has 'digivolve_into' but script missing implementation
 BT16-029: API has 'dp_modification' but script missing implementation
 BT16-030: API has 'dp_modification' but script missing implementation
 BT16-031: API has 'bounce' but script missing implementation
 BT16-031: API has 'dp_modification' but script missing implementation
 BT16-036: API has 'dp_modification' but script missing implementation
-BT16-038: API has 'digivolve_into' but script missing implementation
 BT16-038: API has 'piercing' but script missing implementation
 BT16-052: API has 'attack_prevention' but script missing implementation
 BT16-052: API has 'blocker' but script missing implementation
 BT16-052: API has 'play' but script missing implementation
-BT16-053: API has 'attack_prevention' but script missing implementation
 BT16-055: API has 'de_digivolve' but script missing implementation
 BT16-057: API has 'attack_prevention' but script missing implementation
 BT16-065: API has 'digivolve_into' but script missing implementation
@@ -549,7 +547,6 @@ BT16-077: script has '_is_partition' but API text doesn't mention it
 
 ```
 BT16-013: has inherited effect text but no is_inherited_effect flag
-BT16-014: timing 'When Attacking' -> is_on_attack not found
 BT16-014: timing 'When Digivolving' -> is_when_digivolving not found
 BT16-015: timing 'When Digivolving' -> is_when_digivolving not found
 BT16-025: has inherited effect text but no is_inherited_effect flag
@@ -563,8 +560,6 @@ BT16-046: has inherited effect text but no is_inherited_effect flag
 BT16-052: has inherited effect text but no is_inherited_effect flag
 BT16-080: [Once Per Turn] in API but no set_max_count_per_turn
 BT16-080: timing 'When Digivolving' -> is_when_digivolving not found
-BT16-095: timing 'Security' -> is_security_effect not found
-BT16-098: timing 'Security' -> is_security_effect not found
 ```
 
 ### Structural Warnings
@@ -580,7 +575,5 @@ BT16-031: API has inherited effect but script has no is_inherited_effect
 BT16-038: API has inherited effect but script has no is_inherited_effect
 BT16-046: API has inherited effect but script has no is_inherited_effect
 BT16-052: API has inherited effect but script has no is_inherited_effect
-BT16-095: API has security effect but script has no is_security_effect
-BT16-098: API has security effect but script has no is_security_effect
 ```
 

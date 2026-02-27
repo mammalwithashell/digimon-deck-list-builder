@@ -4,8 +4,8 @@ Generated from DCGO C# card scripts.
 
 - Total scripts: 103
 - Scripts with effects: 103
-- Total effects: 343
-- Factory effects: 114
+- Total effects: 345
+- Factory effects: 116
 - Activate effects: 229
 
 ## Per-Card Breakdown
@@ -141,8 +141,9 @@ BT19_082: 3 effects
   [factory] set_memory_3
   [EffectTiming.OnAllyAttack] suspend
   [factory] security_play
-BT19_092: 1 effects
+BT19_092: 2 effects
   [EffectTiming.OptionSkill] bounce
+  [factory] security_play
 BT19_004: 1 effects
   [factory] dp_modifier
 BT19_044: 2 effects
@@ -208,8 +209,9 @@ BT19_095: 4 effects
   [EffectTiming.OnDestroyedAnyone] change_dp, gain_keyword_piercing
   [EffectTiming.OptionSkill] change_dp, gain_keyword_piercing
   [EffectTiming.SecuritySkill] add_to_hand, suspend
-BT19_096: 1 effects
+BT19_096: 2 effects
   [EffectTiming.OptionSkill] delete, add_to_security
+  [factory] security_play
 BT19_006: 1 effects
   [EffectTiming.OnDestroyedAnyone] add_to_hand (inherited)
 BT19_066: 3 effects
@@ -458,3 +460,86 @@ BT19_094: 3 effects
   [EffectTiming.OptionSkill] recovery
   [EffectTiming.SecuritySkill] play_card
 ```
+
+
+## Cross-Validation Results
+
+Checked 102 cards against digimoncard.io effect text.
+
+### Forward Mismatches (API mentions X, script missing)
+
+```
+BT19-003: API has 'bounce' but script missing implementation
+BT19-006: API has 'bounce' but script missing implementation
+BT19-008: API has 'reveal_top' but script missing implementation
+BT19-008: API has 'save' but script missing implementation
+BT19-011: API has 'memory_gain' but script missing implementation
+BT19-014: API has 'dp_modification' but script missing implementation
+BT19-020: API has 'save' but script missing implementation
+BT19-022: API has 'save' but script missing implementation
+BT19-023: API has 'destruction_immunity' but script missing implementation
+BT19-025: API has 'digivolve_into' but script missing implementation
+BT19-026: API has 'save' but script missing implementation
+BT19-028: API has 'suspend_target' but script missing implementation
+BT19-029: API has 'mill' but script missing implementation
+BT19-033: API has 'digivolve_into' but script missing implementation
+BT19-033: API has 'piercing' but script missing implementation
+BT19-038: API has 'piercing' but script missing implementation
+BT19-040: API has 'play' but script missing implementation
+BT19-040: API has 'token_play' but script missing implementation
+BT19-042: API has 'mill' but script missing implementation
+BT19-043: API has 'mill' but script missing implementation
+BT19-047: API has 'digivolve_into' but script missing implementation
+BT19-048: API has 'once_per_turn' but script missing implementation
+BT19-068: API has 'save' but script missing implementation
+BT19-073: API has 'piercing' but script missing implementation
+BT19-077: API has 'attack_prevention' but script missing implementation
+BT19-080: API has 'digivolve_into' but script missing implementation
+BT19-085: API has 'digivolve_into' but script missing implementation
+BT19-094: API has 'digivolve_into' but script missing implementation
+BT19-094: API has 'mill' but script missing implementation
+```
+
+### Reverse Mismatches (Script claims X, API doesn't mention)
+
+```
+BT19-014: script has '_is_material_save' but API text doesn't mention it
+BT19-014: script has '_is_save' but API text doesn't mention it
+BT19-024: script has '_is_decode' but API text doesn't mention it
+BT19-025: script has '_is_material_save' but API text doesn't mention it
+BT19-025: script has '_is_save' but API text doesn't mention it
+BT19-027: script has '_is_decode' but API text doesn't mention it
+BT19-031: script has '_is_decoy' but API text doesn't mention it
+BT19-063: script has '_is_material_save' but API text doesn't mention it
+BT19-063: script has '_is_save' but API text doesn't mention it
+BT19-101: script has '_is_overclock' but API text doesn't mention it
+```
+
+### Timing Mismatches
+
+```
+BT19-033: has inherited effect text but no is_inherited_effect flag
+BT19-038: has inherited effect text but no is_inherited_effect flag
+BT19-045: timing 'Security' -> is_security_effect not found
+BT19-048: [Once Per Turn] in API but no set_max_count_per_turn
+BT19-048: timing 'Security' -> is_security_effect not found
+BT19-052: timing 'Security' -> is_security_effect not found
+BT19-058: has inherited effect text but no is_inherited_effect flag
+BT19-064: has inherited effect text but no is_inherited_effect flag
+BT19-074: has inherited effect text but no is_inherited_effect flag
+BT19-097: timing 'Security' -> is_security_effect not found
+BT19-099: timing 'Security' -> is_security_effect not found
+```
+
+### Structural Warnings
+
+```
+BT19-033: API has inherited effect but script has no is_inherited_effect
+BT19-038: API has inherited effect but script has no is_inherited_effect
+BT19-058: API has inherited effect but script has no is_inherited_effect
+BT19-064: API has inherited effect but script has no is_inherited_effect
+BT19-074: API has inherited effect but script has no is_inherited_effect
+BT19-097: API has security effect but script has no is_security_effect
+BT19-099: API has security effect but script has no is_security_effect
+```
+

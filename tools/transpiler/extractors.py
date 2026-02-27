@@ -49,6 +49,9 @@ from .patterns import (
     RE_FACTORY_PARTITION, RE_FACTORY_DIGIXROS, RE_FACTORY_SCAPEGOAT,
     RE_FACTORY_DECODE, RE_FACTORY_ICECLAD, RE_FACTORY_FRAGMENT,
     RE_FACTORY_EXECUTE,
+    RE_FACTORY_BLAST_DNA_DIGI, RE_FACTORY_CANNOT_DESTROYED_SKILL,
+    RE_FACTORY_CANNOT_RETURN_HAND, RE_FACTORY_CANNOT_RETURN_DECK,
+    RE_FACTORY_CANNOT_BE_BLOCKED, RE_FACTORY_REBOOT_NON_SELF,
     RE_FACTORY_ADD_DIGI_REQ, RE_FACTORY_CHANGE_DIGI_COST,
     RE_FACTORY_CHANGE_DIGI_COST_VALUE,
     RE_FACTORY_DIGI_REQ_COST, RE_FACTORY_DIGI_REQ_NAME, RE_FACTORY_DIGI_REQ_TRAIT,
@@ -233,6 +236,13 @@ def extract_factory_effects(block: str) -> List[EffectBlock]:
         (RE_FACTORY_ICECLAD, "iceclad", "Iceclad"),
         (RE_FACTORY_FRAGMENT, "fragment", "Fragment"),
         (RE_FACTORY_EXECUTE, "execute", "Execute"),
+        # Rare factory patterns (audit gap fix)
+        (RE_FACTORY_BLAST_DNA_DIGI, "blast_dna_digivolve", "Blast DNA Digivolve"),
+        (RE_FACTORY_CANNOT_DESTROYED_SKILL, "cannot_destroyed_by_skill", "Cannot Be Destroyed by Effects"),
+        (RE_FACTORY_CANNOT_RETURN_HAND, "cannot_return_to_hand", "Cannot Return to Hand"),
+        (RE_FACTORY_CANNOT_RETURN_DECK, "cannot_return_to_deck", "Cannot Return to Deck"),
+        (RE_FACTORY_CANNOT_BE_BLOCKED, "cannot_be_blocked", "Cannot Be Blocked"),
+        (RE_FACTORY_REBOOT_NON_SELF, "reboot_non_self", "Reboot (grant to others)"),
     ]
 
     for regex, method, desc in factories:

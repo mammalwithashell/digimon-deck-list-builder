@@ -132,6 +132,7 @@ class BT15_079(CardScript):
         effect3.set_effect_name("BT15-079 Retaliation")
         effect3.set_effect_description("Retaliation")
         effect3.is_inherited_effect = True
+        effect3.is_on_deletion = True
         effect3._is_retaliation = True
 
         def condition3(context: Dict[str, Any]) -> bool:
