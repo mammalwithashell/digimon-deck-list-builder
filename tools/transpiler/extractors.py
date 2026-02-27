@@ -77,6 +77,11 @@ from .patterns import (
     RE_PLAY_HAND_OR_TRASH,
     # ActivateCoroutine lambda delegate (Fix 13)
     RE_ACTIVATE_COROUTINE_LAMBDA,
+    # P8: Modifier interface patterns
+    RE_CANNOT_BE_DESTROYED, RE_CANNOT_BE_SELECTED,
+    RE_CANNOT_UNSUSPEND, RE_CANNOT_ATTACK, RE_CANNOT_BLOCK,
+    RE_IMMUNE_FROM_DP_MINUS, RE_CANNOT_BE_RETURNED,
+    RE_EFFECT_IMMUNITY, RE_DONT_BATTLE_SECURITY,
 )
 
 
@@ -750,6 +755,28 @@ def _scan_actions(block: str, eb: EffectBlock):
     if RE_CAN_ATTACK_TARGET.search(block) and "attack_unsuspended" not in eb.actions:
         eb.actions.append("attack_unsuspended")
         eb.descriptive_tag = "attack_unsuspended"
+
+    # ── P8: Modifier interface patterns (Phase 2 — DCGO engine alignment) ──
+    # These detect C# modifier classes and emit actions that now have engine support
+    # via the ModifierRegistry system added in Phase 1.
+    if RE_CANNOT_BE_DESTROYED.search(block) and "grant_destruction_immunity" not in eb.actions:
+        eb.actions.append("grant_destruction_immunity")
+    if RE_CANNOT_BE_SELECTED.search(block) and "grant_targeting_immunity" not in eb.actions:
+        eb.actions.append("grant_targeting_immunity")
+    if RE_CANNOT_UNSUSPEND.search(block) and "grant_cannot_unsuspend" not in eb.actions:
+        eb.actions.append("grant_cannot_unsuspend")
+    if RE_CANNOT_ATTACK.search(block) and "grant_cannot_attack" not in eb.actions:
+        eb.actions.append("grant_cannot_attack")
+    if RE_CANNOT_BLOCK.search(block) and "grant_cannot_block" not in eb.actions:
+        eb.actions.append("grant_cannot_block")
+    if RE_IMMUNE_FROM_DP_MINUS.search(block) and "grant_dp_minus_immunity" not in eb.actions:
+        eb.actions.append("grant_dp_minus_immunity")
+    if RE_CANNOT_BE_RETURNED.search(block) and "grant_bounce_immunity" not in eb.actions:
+        eb.actions.append("grant_bounce_immunity")
+    if RE_EFFECT_IMMUNITY.search(block) and "effect_immunity" not in eb.actions:
+        eb.actions.append("effect_immunity")
+    if RE_DONT_BATTLE_SECURITY.search(block) and "grant_no_security_battle" not in eb.actions:
+        eb.actions.append("grant_no_security_battle")
 
     # ── P2: Mill detection — IAddTrashCardsFromLibraryTop ──
     m_mill = RE_MILL.search(block)

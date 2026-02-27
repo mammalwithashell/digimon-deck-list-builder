@@ -371,6 +371,47 @@ RE_CHANGE_CARD_NAMES = re.compile(r'ChangeCardNamesClass|SetUpChangeCardNamesCla
 RE_CAN_ATTACK_TARGET = re.compile(r'CanAttackTargetDefendingPermanentClass')
 RE_CAN_NOT_AFFECTED = re.compile(r'CanNotAffectedClass')
 
+# ─── P8: Modifier interface patterns (Phase 2 — DCGO engine alignment) ──
+
+# Continuous modifier classes from DCGO's CardEffectInterfaces.cs
+# These map to our engine's ModifierRegistry system
+RE_CANNOT_BE_DESTROYED = re.compile(
+    r'CanNotBeDestroyedClass|ICanNotBeDestroyed|CanNotBeDestroyedByBattleClass')
+RE_CANNOT_BE_SELECTED = re.compile(
+    r'CanNotBeSelectedByEffectClass|ICanNotBeSelectedByEffect|IcecladEffect')
+RE_CHANGE_PLAY_COST = re.compile(
+    r'ChangeCostClass|ChangePlayCostStaticEffect\s*\([^)]*changeValue:\s*(-?\d+)')
+RE_CHANGE_DIGI_COST_MODIFIER = re.compile(
+    r'ChangeDigivolutionCostClass\s*\([^)]*changeValue:\s*(-?\d+)')
+RE_CANNOT_UNSUSPEND = re.compile(
+    r'CanNotUnsuspendClass|GainCanNotUnsuspend')
+RE_CANNOT_ATTACK = re.compile(
+    r'CanNotAttackClass|GainCanNotAttack(?:Player)?Effect')
+RE_CANNOT_BLOCK = re.compile(
+    r'CanNotBlockClass|GainCanNotBlock')
+RE_GRANT_SECURITY_ATTACK_MOD = re.compile(
+    r'ChangeSAttackClass|ChangeDigimonSAttack')
+RE_IMMUNE_FROM_DP_MINUS = re.compile(
+    r'ImmuneFromDPMinusClass|ImmuneFromDPMinus(?:Static)?Effect')
+RE_CANNOT_BE_RETURNED = re.compile(
+    r'CanNotReturnToHandClass|CanNotReturnToDeckClass|GainCanNotReturnToHand|GainCanNotReturnToDeck')
+RE_DONT_BATTLE_SECURITY = re.compile(
+    r'DontBattleSecurityDigimonClass|IDontBattleSecurityDigimon')
+
+# Protection/immunity grant: "this Digimon isn't affected by opponent effects"
+RE_EFFECT_IMMUNITY = re.compile(
+    r'CanNotBeAffectedByOpponentEffect|CanNotAffectedClass|TopCard\.CanNotBeAffected')
+# Retaliation target selection (select an opposing Digimon to delete)
+RE_RETALIATION_TARGET = re.compile(
+    r'RetaliationProcess|RetaliationCoroutine')
+# Redirect attack to self (Decoy-like)
+RE_REDIRECT_ATTACK_TO_SELF = re.compile(
+    r'RedirectAttackToSelf|SwitchDefenderToSelf')
+# End of attack modifier
+RE_END_OF_ATTACK_MODIFIER = re.compile(
+    r'EndOfAttackModifier|IsEndAttack\s*=\s*true')
+
+
 # ─── Card selection filter patterns (CanSelectCardCondition body) ─────
 
 RE_CF_EQUALS_TRAITS = re.compile(r'\.EqualsTraits\s*\(\s*"([^"]+)"\s*\)')

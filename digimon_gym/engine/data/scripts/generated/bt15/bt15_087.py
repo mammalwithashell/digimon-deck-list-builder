@@ -1,0 +1,127 @@
+from __future__ import annotations
+from typing import TYPE_CHECKING, List, Dict, Any
+from ....core.card_script import CardScript
+from ....interfaces.card_effect import ICardEffect
+
+if TYPE_CHECKING:
+    from ....core.card_source import CardSource
+
+
+class BT15_087(CardScript):
+    """BT15-087 Shuu Yulin"""
+
+    def get_card_effects(self, card: 'CardSource') -> List['ICardEffect']:
+        effects = []
+
+        # Factory effect: set_memory_3
+        # Set memory to 3
+        effect0 = ICardEffect()
+        effect0.set_effect_name("BT15-087 Set memory to 3")
+        effect0.set_effect_description("Set memory to 3")
+        # [Start of Your Turn] Set memory to 3 if <= 2
+
+        def condition0(context: Dict[str, Any]) -> bool:
+            return True
+        effect0.set_can_use_condition(condition0)
+        effects.append(effect0)
+
+        # Factory effect: security_play
+        # Security: Play this card
+        effect1 = ICardEffect()
+        effect1.set_effect_name("BT15-087 Security: Play this card")
+        effect1.set_effect_description("Security: Play this card")
+        effect1.is_security_effect = True
+
+        def condition1(context: Dict[str, Any]) -> bool:
+            return True
+        effect1.set_can_use_condition(condition1)
+        effects.append(effect1)
+
+        # Timing: EffectTiming.OnDeclaration
+        # [Main] <Mind Link> with 1 of your Digimon with the [X Antibody] or the [DigiPolice] trait. (Place this Tamer as that Digimon's bottom digivolution card if there are no Tamer cards in its digivolution cards.)
+        effect2 = ICardEffect()
+        effect2.set_effect_name("BT15-087 Mind Link")
+        effect2.set_effect_description("[Main] <Mind Link> with 1 of your Digimon with the [X Antibody] or the [DigiPolice] trait. (Place this Tamer as that Digimon's bottom digivolution card if there are no Tamer cards in its digivolution cards.)")
+
+        effect = effect2  # alias for condition closure
+        def condition2(context: Dict[str, Any]) -> bool:
+            if card and card.permanent_of_this_card() is None:
+                return False
+            return True
+
+        effect2.set_can_use_condition(condition2)
+
+        def process2(ctx: Dict[str, Any]):
+            """Action: Mind Link"""
+            player = ctx.get('player')
+            perm = ctx.get('permanent')
+            game = ctx.get('game')
+            if not (player and game):
+                return
+            game.effect_link_to_permanent(player, card, is_optional=True)
+
+        effect2.set_on_process_callback(process2)
+        effects.append(effect2)
+
+        # Factory effect: reboot
+        # Reboot
+        effect3 = ICardEffect()
+        effect3.set_effect_name("BT15-087 Reboot")
+        effect3.set_effect_description("Reboot")
+        effect3.is_inherited_effect = True
+        effect3._is_reboot = True
+
+        def condition3(context: Dict[str, Any]) -> bool:
+            if card and card.permanent_of_this_card() is None:
+                return False
+            return True
+        effect3.set_can_use_condition(condition3)
+        effects.append(effect3)
+
+        # Factory effect: alliance
+        # Alliance
+        effect4 = ICardEffect()
+        effect4.set_effect_name("BT15-087 Alliance")
+        effect4.set_effect_description("Alliance")
+        effect4.is_inherited_effect = True
+        effect4._is_alliance = True
+
+        def condition4(context: Dict[str, Any]) -> bool:
+            if card and card.permanent_of_this_card() is None:
+                return False
+            return True
+        effect4.set_can_use_condition(condition4)
+        effects.append(effect4)
+
+        # Timing: EffectTiming.OnEndTurn
+        # [End of All Turns] You may play 1 [Shuu Yulin] from this Digimon's digivolution cards without paying the cost.
+        effect5 = ICardEffect()
+        effect5.set_effect_name("BT15-087 Play 1 [Shuu Yulin] from this Digimon's digivolution cards")
+        effect5.set_effect_description("[End of All Turns] You may play 1 [Shuu Yulin] from this Digimon's digivolution cards without paying the cost.")
+        effect5.is_inherited_effect = True
+        effect5.is_optional = True
+
+        effect = effect5  # alias for condition closure
+        def condition5(context: Dict[str, Any]) -> bool:
+            if card and card.permanent_of_this_card() is None:
+                return False
+            return True
+
+        effect5.set_can_use_condition(condition5)
+
+        def process5(ctx: Dict[str, Any]):
+            """Action: Play Card"""
+            player = ctx.get('player')
+            perm = ctx.get('permanent')
+            game = ctx.get('game')
+            if not (player and game):
+                return
+            def play_filter(c):
+                return True
+            game.effect_play_from_zone(
+                player, 'hand', play_filter, free=True, is_optional=True)
+
+        effect5.set_on_process_callback(process5)
+        effects.append(effect5)
+
+        return effects

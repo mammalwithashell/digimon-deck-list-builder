@@ -104,10 +104,14 @@ class ModifierType(Enum):
     CANNOT_DIGIVOLVE = auto()
 
     # ── Attack Restrictions ─────────────────────────────────────────
+    # ICanNotAttackEffect (general attack prevention)
+    CANNOT_ATTACK = auto()
     # ICanNotAttackTargetDefendingPermanentEffect
     CANNOT_ATTACK_TARGET = auto()
     # ICanAttackTargetDefendingPermanentEffect
     CAN_ATTACK_TARGET = auto()
+    # ICanAttackTargetDefendingPermanentClass (unsuspended attack)
+    CAN_ATTACK_UNSUSPENDED = auto()
     # ICanNotSwitchAttackTargetEffect
     CANNOT_SWITCH_ATTACK_TARGET = auto()
     # ICannotBlockEffect
