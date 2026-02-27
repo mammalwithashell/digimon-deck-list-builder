@@ -33,35 +33,51 @@ class BT14_026(CardScript):
         effect1.set_effect_description("[On Play] Trash any 2 digivolution cards from your opponent's Digimon. Then, return 1 of your opponent's Digimon with no digivolution cards to the hand.")
         effect1.is_on_play = True
 
-        effect = effect1  # alias for condition closure
         def condition1(context: Dict[str, Any]) -> bool:
             if card and card.permanent_of_this_card() is None:
                 return False
-            # Triggered on play — validated by engine timing
             return True
 
         effect1.set_can_use_condition(condition1)
 
         def process1(ctx: Dict[str, Any]):
-            """Action: Bounce, Trash Digivolution Cards"""
             player = ctx.get('player')
-            perm = ctx.get('permanent')
             game = ctx.get('game')
             if not (player and game):
                 return
-            def target_filter(p):
-                return True
+
+            # Trash any 2 opponent digivolution cards (can be split across Digimon)
+            for _ in range(2):
+                def can_trash_source(p):
+                    return not p.has_no_digivolution_cards
+
+                def on_trash_source(target_perm):
+                    trashed = target_perm.trash_digivolution_cards(1)
+                    if player:
+                        player.trash_cards.extend(trashed)
+
+                game.effect_select_opponent_permanent(
+                    player,
+                    on_trash_source,
+                    filter_fn=can_trash_source,
+                    is_optional=True,
+                )
+
+            # Then return 1 opponent Digimon with no digivolution cards to hand
+            def can_bounce_target(p):
+                return p.has_no_digivolution_cards
+
             def on_bounce(target_perm):
                 enemy = player.enemy if player else None
                 if enemy:
                     enemy.bounce_permanent_to_hand(target_perm)
+
             game.effect_select_opponent_permanent(
-                player, on_bounce, filter_fn=target_filter, is_optional=False)
-            # Trash digivolution cards from this permanent
-            if perm and not perm.has_no_digivolution_cards:
-                trashed = perm.trash_digivolution_cards(1)
-                if player:
-                    player.trash_cards.extend(trashed)
+                player,
+                on_bounce,
+                filter_fn=can_bounce_target,
+                is_optional=True,
+            )
 
         effect1.set_on_process_callback(process1)
         effects.append(effect1)
@@ -73,35 +89,51 @@ class BT14_026(CardScript):
         effect2.set_effect_description("[When Digivolving] Trash any 2 digivolution cards from your opponent's Digimon. Then, return 1 of your opponent's Digimon with no digivolution cards to the hand.")
         effect2.is_when_digivolving = True
 
-        effect = effect2  # alias for condition closure
         def condition2(context: Dict[str, Any]) -> bool:
             if card and card.permanent_of_this_card() is None:
                 return False
-            # Triggered when digivolving — validated by engine timing
             return True
 
         effect2.set_can_use_condition(condition2)
 
         def process2(ctx: Dict[str, Any]):
-            """Action: Bounce, Trash Digivolution Cards"""
             player = ctx.get('player')
-            perm = ctx.get('permanent')
             game = ctx.get('game')
             if not (player and game):
                 return
-            def target_filter(p):
-                return True
+
+            # Trash any 2 opponent digivolution cards (can be split across Digimon)
+            for _ in range(2):
+                def can_trash_source(p):
+                    return not p.has_no_digivolution_cards
+
+                def on_trash_source(target_perm):
+                    trashed = target_perm.trash_digivolution_cards(1)
+                    if player:
+                        player.trash_cards.extend(trashed)
+
+                game.effect_select_opponent_permanent(
+                    player,
+                    on_trash_source,
+                    filter_fn=can_trash_source,
+                    is_optional=True,
+                )
+
+            # Then return 1 opponent Digimon with no digivolution cards to hand
+            def can_bounce_target(p):
+                return p.has_no_digivolution_cards
+
             def on_bounce(target_perm):
                 enemy = player.enemy if player else None
                 if enemy:
                     enemy.bounce_permanent_to_hand(target_perm)
+
             game.effect_select_opponent_permanent(
-                player, on_bounce, filter_fn=target_filter, is_optional=False)
-            # Trash digivolution cards from this permanent
-            if perm and not perm.has_no_digivolution_cards:
-                trashed = perm.trash_digivolution_cards(1)
-                if player:
-                    player.trash_cards.extend(trashed)
+                player,
+                on_bounce,
+                filter_fn=can_bounce_target,
+                is_optional=True,
+            )
 
         effect2.set_on_process_callback(process2)
         effects.append(effect2)
