@@ -79,7 +79,22 @@ class BT14_039(CardScript):
                 return False
             if card and card.permanent_of_this_card() is None:
                 return False
-            return True
+
+            name_targets = ("monzaemon", "numemon")
+
+            card_name = (getattr(card, 'name', '') or '').lower()
+            if any(n in card_name for n in name_targets):
+                return True
+
+            perm = card.permanent_of_this_card()
+            digi_cards = getattr(perm, 'digivolution_cards', None)
+            if digi_cards:
+                for src in digi_cards:
+                    src_name = (getattr(src, 'name', '') or '').lower()
+                    if any(n in src_name for n in name_targets):
+                        return True
+
+            return False
         effect3.set_can_use_condition(condition3)
         effects.append(effect3)
 
