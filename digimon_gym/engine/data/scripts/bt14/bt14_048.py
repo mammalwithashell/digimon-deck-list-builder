@@ -21,12 +21,16 @@ class BT14_048(CardScript):
         effect0.is_optional = True
         effect0.is_on_attack = True
 
-        effect = effect0  # alias for condition closure
         def condition0(context: Dict[str, Any]) -> bool:
             if card and card.permanent_of_this_card() is None:
                 return False
-            # Triggered on attack — validated by engine timing
-            return True
+            attacker = context.get('permanent')
+            attack_target = context.get('attack_target')
+            if not (attacker and attack_target):
+                return False
+            attacker_dp = getattr(attacker, 'get_dp', lambda: 0)()
+            target_dp = getattr(attack_target, 'get_dp', lambda: 0)()
+            return target_dp > attacker_dp
 
         effect0.set_can_use_condition(condition0)
 
@@ -37,14 +41,22 @@ class BT14_048(CardScript):
             game = ctx.get('game')
             if not (player and perm and game):
                 return
+
             def digi_filter(c):
                 if not getattr(c, 'is_digimon', False):
                     return False
-                if not (any('Leomon' in _n for _n in getattr(c, 'card_names', []))):
+                if getattr(c, 'level', None) != 6:
                     return False
-                return True
+                return any('Leomon' in _n for _n in getattr(c, 'card_names', []))
+
             game.effect_digivolve_from_hand(
-                player, perm, digi_filter, is_optional=True)
+                player,
+                perm,
+                digi_filter,
+                digivolution_cost=6,
+                ignore_requirements=True,
+                is_optional=True,
+            )
 
         effect0.set_on_process_callback(process0)
         effects.append(effect0)
@@ -60,7 +72,12 @@ class BT14_048(CardScript):
         def condition1(context: Dict[str, Any]) -> bool:
             if not (card and card.owner and card.owner.is_my_turn):
                 return False
-            return True
+            host = context.get('permanent')
+            if not host:
+                return False
+            host_names = getattr(host, 'card_names', [])
+            return any('Leomon' in n for n in host_names)
+
         effect1.set_can_use_condition(condition1)
         effects.append(effect1)
 
