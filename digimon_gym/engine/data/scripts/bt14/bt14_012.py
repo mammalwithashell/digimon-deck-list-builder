@@ -77,7 +77,11 @@ class BT14_012(CardScript):
                 name = getattr(source, 'card_name_eng', '') if source else ''
 
             lowered = str(name).lower() if name else ''
-            return ('greymon' in lowered) or ('omnimon' in lowered)
+            if not (('greymon' in lowered) or ('omnimon' in lowered)):
+                return False
+
+            excluded_names = ('dorugreymon', 'burninggreymon', 'dexdorugreymon')
+            return not any(excluded in lowered for excluded in excluded_names)
 
         effect2.set_can_use_condition(condition2)
         effects.append(effect2)
