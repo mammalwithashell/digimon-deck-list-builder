@@ -31,26 +31,25 @@ class BT14_054(CardScript):
         effect0.set_can_use_condition(condition0)
 
         def process0(ctx: Dict[str, Any]):
-            """Action: Suspend, Unsuspend"""
+            """Action: Unsuspend self, then suspend 1 opponent Digimon"""
             player = ctx.get('player')
             perm = ctx.get('permanent')
             game = ctx.get('game')
-            if not (player and game):
+            if not (player and game and perm):
                 return
+
+            # By unsuspending this Digimon...
+            perm.unsuspend()
+
+            # ...suspend 1 of your opponent's Digimon.
             def target_filter(p):
                 return True
+
             def on_suspend(target_perm):
                 target_perm.suspend()
+
             game.effect_select_opponent_permanent(
                 player, on_suspend, filter_fn=target_filter, is_optional=True)
-            if not (player and game):
-                return
-            def target_filter(p):
-                return True
-            def on_unsuspend(target_perm):
-                target_perm.unsuspend()
-            game.effect_select_own_permanent(
-                player, on_unsuspend, filter_fn=target_filter, is_optional=True)
 
         effect0.set_on_process_callback(process0)
         effects.append(effect0)
