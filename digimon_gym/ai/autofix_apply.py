@@ -103,6 +103,11 @@ def _normalize_rel_path(raw_path: str) -> str:
         normalized = normalized[2:]
     if not normalized:
         raise ApplyValidationError("Empty edit path is not allowed")
+    # LLM may return scripts/generated/{set_id}/ — redirect to frozen lane
+    normalized = normalized.replace(
+        "digimon_gym/engine/data/scripts/generated/",
+        "digimon_gym/engine/data/scripts/",
+    )
     return normalized
 
 
