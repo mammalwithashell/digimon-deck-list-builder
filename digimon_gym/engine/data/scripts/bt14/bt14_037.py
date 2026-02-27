@@ -33,22 +33,46 @@ class BT14_037(CardScript):
         effect1.set_effect_description("[On Play] If you have 5 or fewer security cards, <Recovery +1 (Deck)>. Then, for the turn, 1 of your opponent's Digimon gets -1000 DP for each card in your security stack.")
         effect1.is_on_play = True
 
-        effect = effect1  # alias for condition closure
         def condition1(context: Dict[str, Any]) -> bool:
             if card and card.permanent_of_this_card() is None:
                 return False
-            # Triggered on play — validated by engine timing
-            return True
+            player = context.get('player')
+            if player is None:
+                return False
+            try:
+                return len(player.security) <= 5
+            except Exception:
+                return False
 
         effect1.set_can_use_condition(condition1)
 
         def process1(ctx: Dict[str, Any]):
-            """Action: Recovery +1"""
             player = ctx.get('player')
-            perm = ctx.get('permanent')
             game = ctx.get('game')
-            if player:
-                player.recovery(1)
+            if player is None:
+                return
+
+            # Recovery +1 (Deck)
+            player.recovery(1)
+
+            # Then apply DP reduction based on current security count.
+            try:
+                sec_count = len(player.security)
+            except Exception:
+                sec_count = 0
+            dp_minus = 1000 * sec_count
+            if dp_minus <= 0:
+                return
+
+            if game is None:
+                return
+
+            opponents = game.get_opponent_digimon(player)
+            if not opponents:
+                return
+
+            target = opponents[0]
+            game.apply_dp_modifier_until_end_of_turn(target, -dp_minus, source=card)
 
         effect1.set_on_process_callback(process1)
         effects.append(effect1)
@@ -60,22 +84,46 @@ class BT14_037(CardScript):
         effect2.set_effect_description("[When Digivolving] If you have 5 or fewer security cards, <Recovery +1 (Deck)>. Then, for the turn, 1 of your opponent's Digimon gets -1000 DP for each card in your security stack.")
         effect2.is_when_digivolving = True
 
-        effect = effect2  # alias for condition closure
         def condition2(context: Dict[str, Any]) -> bool:
             if card and card.permanent_of_this_card() is None:
                 return False
-            # Triggered when digivolving — validated by engine timing
-            return True
+            player = context.get('player')
+            if player is None:
+                return False
+            try:
+                return len(player.security) <= 5
+            except Exception:
+                return False
 
         effect2.set_can_use_condition(condition2)
 
         def process2(ctx: Dict[str, Any]):
-            """Action: Recovery +1"""
             player = ctx.get('player')
-            perm = ctx.get('permanent')
             game = ctx.get('game')
-            if player:
-                player.recovery(1)
+            if player is None:
+                return
+
+            # Recovery +1 (Deck)
+            player.recovery(1)
+
+            # Then apply DP reduction based on current security count.
+            try:
+                sec_count = len(player.security)
+            except Exception:
+                sec_count = 0
+            dp_minus = 1000 * sec_count
+            if dp_minus <= 0:
+                return
+
+            if game is None:
+                return
+
+            opponents = game.get_opponent_digimon(player)
+            if not opponents:
+                return
+
+            target = opponents[0]
+            game.apply_dp_modifier_until_end_of_turn(target, -dp_minus, source=card)
 
         effect2.set_on_process_callback(process2)
         effects.append(effect2)
