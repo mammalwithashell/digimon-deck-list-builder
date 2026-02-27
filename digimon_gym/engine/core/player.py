@@ -31,6 +31,11 @@ class Player:
         if self.game and hasattr(self.game, 'logger'):
             self.game.logger.log(message)
 
+    def _fire_timing(self, timing: 'EffectTiming', context: dict = None):
+        """Fire an effect timing via the game if available."""
+        if self.game and hasattr(self.game, 'execute_effects'):
+            self.game.execute_effects(timing, context)
+
     def _apply_ace_overflow(self, card_sources: List['CardSource']):
         """Check card sources for ACE cards and apply overflow memory penalty.
 
@@ -93,6 +98,7 @@ class Player:
         card = self.library_cards.pop(0)
         self.hand_cards.append(card)
         self._log(f"{self.player_name} drew a card. Hand size: {len(self.hand_cards)}")
+        self._fire_timing(EffectTiming.OnAddHand, {"added_card": card, "player": self})
         return True
 
     def hatch(self):
@@ -131,6 +137,7 @@ class Player:
                 perm.turn_played = -1  # keep -1 = no sickness
         self.battle_area.append(perm)
         self._log(f"{self.player_name} moved {perm.top_card.card_names[0]} from Breeding to Battle Area.")
+        # OnMove timing is fired by game.py after verifying the move succeeded
 
     def play_card(self, card_source: 'CardSource'):
         if card_source in self.hand_cards:
@@ -274,11 +281,13 @@ class Player:
         Checks deletion prevention keywords in order:
         - <Progress>: immune to opponent effects while attacking
         - <Decoy>: substitute another Digimon to prevent deletion (opponent effect only)
+        - <Scapegoat>: redirect own deletion to another friendly Digimon
         - <Material Save>: save digi source cards under a Tamer before deletion
         - <Armor Purge>: trash top digivolution card to survive
         - <Evade>: suspend self (if unsuspended) to survive
         - <Barrier>: trash top security card (if in battle) to survive
         Post-deletion:
+        - <Fragment>: return to bottom of deck instead of trash
         - <Fortitude>: replay from trash if had digi cards (mandatory)
         - <Save>: place under a Tamer (optional)
 
@@ -296,11 +305,41 @@ class Player:
 
         perm_name = permanent.top_card.card_names[0] if permanent.top_card else "Unknown"
 
+        # Fire pre-deletion timing (allows effects to react before prevention checks)
+        self._fire_timing(EffectTiming.WhenPermanentWouldBeDeleted,
+                          {"permanent": permanent, "player": self, "is_battle": is_battle})
+
+        # Check modifier registry for destruction prevention
+        if self.game and hasattr(self.game, 'modifiers'):
+            if not self.game.modifiers.can_be_destroyed(permanent, is_battle=is_battle):
+                self._log(f"{perm_name} is protected by a continuous effect!")
+                return False
+
         # <Progress>: immune to opponent effects while attacking
         # This blocks opponent effects even during battle (e.g. Retaliation)
         if is_opponent_effect and permanent.is_immune_to_opponent_effects:
             self._log(f"{perm_name} is protected by Progress while attacking!")
             return False
+
+        # <Scapegoat>: redirect own deletion to another friendly Digimon
+        # (DCGO: triggers when the permanent would be removed from field, except by own effects)
+        if permanent.has_keyword('_is_scapegoat'):
+            scapegoat_targets = [
+                p for p in self.battle_area
+                if p is not permanent and p.is_digimon
+            ]
+            if scapegoat_targets and self.game:
+                target = scapegoat_targets[0]
+                target_name = target.top_card.card_names[0] if target.top_card else "Unknown"
+                self._log(f"[Scapegoat] {perm_name} redirects deletion to {target_name}!")
+                self.battle_area.remove(target)
+                if self.game and hasattr(self.game, 'cleanup_modifiers_for_permanent'):
+                    self.game.cleanup_modifiers_for_permanent(target)
+                self._apply_ace_overflow(target.card_sources)
+                self.trash_cards.extend(target.card_sources)
+                if self.game and hasattr(self.game, 'execute_deletion_effects'):
+                    self.game.execute_deletion_effects(target, self)
+                return False
 
         # <Decoy>: another Digimon with Decoy can be deleted instead (opponent effect only)
         if is_opponent_effect and not is_battle:
@@ -357,16 +396,31 @@ class Player:
             return False
 
         # No prevention — actually delete
-        # Capture state before deletion for Fortitude check
+        # Capture state before deletion for Fragment/Fortitude/Save checks
         had_digi_cards = len(permanent.card_sources) > 1
+        has_fragment = permanent.has_keyword('_is_fragment')
         has_fortitude = permanent.has_keyword('_is_fortitude')
         has_save = permanent.has_keyword('_is_save')
         top_card = permanent.top_card
 
         self.battle_area.remove(permanent)
+        # Clean up continuous modifiers sourced from this permanent
+        if self.game and hasattr(self.game, 'cleanup_modifiers_for_permanent'):
+            self.game.cleanup_modifiers_for_permanent(permanent)
         self._apply_ace_overflow(permanent.card_sources)
-        self.trash_cards.extend(permanent.card_sources)
+
+        # <Fragment>: return top card to bottom of deck instead of trash
+        # (DCGO: when deleted, the top card goes to deck bottom, digi sources go to trash)
+        if has_fragment and top_card:
+            self.library_cards.append(top_card)
+            under_cards = [c for c in permanent.card_sources if c is not top_card]
+            self.trash_cards.extend(under_cards)
+            self._log(f"[Fragment] {perm_name} returned to bottom of deck!")
+        else:
+            self.trash_cards.extend(permanent.card_sources)
         self._log(f"{self.player_name}'s permanent {perm_name} deleted.")
+        self._fire_timing(EffectTiming.WhenRemoveField, {"permanent": permanent, "player": self})
+        self._fire_timing(EffectTiming.OnRemovedField, {"permanent": permanent, "player": self})
 
         # Execute On Deletion effects
         if self.game and hasattr(self.game, 'execute_deletion_effects'):
@@ -394,6 +448,15 @@ class Player:
         return True
 
     def security_attack(self, attacker: 'Permanent') -> AttackResolution:
+        """Process a security check against this player.
+
+        DCGO reference: ISecurityCheck class + AttackProcess security region.
+        - Reveals top security card as 'security_digimon' if it's a Digimon
+        - Activates SecuritySkill effects on the revealed card
+        - If security card is a Digimon, battles against attacker
+        - Jamming prevents attacker deletion vs security Digimon
+        - DontBattleSecurityDigimon modifier skips the battle entirely
+        """
         self._log(f"{self.player_name} receives Security Attack from {attacker.top_card.card_names[0] if attacker.top_card else 'Unknown'}!")
 
         if len(self.security_cards) == 0:
@@ -403,6 +466,9 @@ class Player:
         # Reveal top card
         security_card = self.security_cards.pop(0)
         self._log(f"Security Check: Revealed {security_card.card_names[0]}")
+
+        # Track Security Digimon concept (DCGO: AttackProcess.SecurityDigimon)
+        security_digimon = security_card if security_card.is_digimon else None
 
         # Execute Security Effects
         # <Progress>: attacker is immune to opponent's effects (including security) while attacking
@@ -419,6 +485,8 @@ class Player:
                             "player": self,
                             "permanent": None,  # Security card isn't on a permanent
                             "card": security_card,
+                            "security_digimon": security_digimon,
+                            "attacker": attacker,
                             "turn_player": self.game.turn_player if self.game else None,
                             "opponent_player": self.game.opponent_player if self.game else None,
                         }
@@ -426,23 +494,34 @@ class Player:
 
         result = AttackResolution.Survivor
 
-        # Battle
-        if security_card.is_digimon:
-            a_dp = attacker.dp or 0
-            s_dp = security_card.base_dp or 0
-            self._log(f"Battle: Attacker DP {a_dp} vs Security DP {s_dp}")
-            if a_dp < s_dp or a_dp == s_dp:
-                # <Jamming>: Digimon can't be deleted in battles against Security Digimon
-                if attacker.has_keyword('_is_jamming'):
-                    self._log(f"Attacker {attacker.top_card.card_names[0]} survives (Jamming).")
-                else:
-                    self._log(f"Attacker {attacker.top_card.card_names[0]} is deleted by Security Digimon!")
-                    result = AttackResolution.AttackerDeleted
+        # Battle against Security Digimon
+        if security_digimon is not None:
+            # DCGO: DontBattleSecurityDigimon modifier skips battle entirely
+            dont_battle = False
+            if self.game and hasattr(self.game, 'modifiers'):
+                from ..interfaces.modifiers import ModifierType
+                dont_battle = self.game.modifiers.has_modifier(
+                    attacker, ModifierType.DONT_BATTLE_SECURITY_DIGIMON)
+
+            if dont_battle:
+                self._log(f"Attacker skips battle with Security Digimon (effect)")
             else:
-                self._log(f"Attacker {attacker.top_card.card_names[0]} survives.")
+                a_dp = attacker.dp or 0
+                s_dp = security_card.base_dp or 0
+                self._log(f"Battle: Attacker DP {a_dp} vs Security DP {s_dp}")
+                if a_dp < s_dp or a_dp == s_dp:
+                    # <Jamming>: Digimon can't be deleted in battles against Security Digimon
+                    if attacker.has_keyword('_is_jamming'):
+                        self._log(f"Attacker {attacker.top_card.card_names[0]} survives (Jamming).")
+                    else:
+                        self._log(f"Attacker {attacker.top_card.card_names[0]} is deleted by Security Digimon!")
+                        result = AttackResolution.AttackerDeleted
+                else:
+                    self._log(f"Attacker {attacker.top_card.card_names[0]} survives.")
 
         # Trash the security card
         self.trash_cards.append(security_card)
+        self._fire_timing(EffectTiming.OnLoseSecurity, {"lost_card": security_card, "player": self})
         return result
 
     # ─── Effect Action Methods ───────────────────────────────────────
@@ -461,6 +540,8 @@ class Player:
             card = self.library_cards.pop(0)
             self.hand_cards.append(card)
             drawn.append(card)
+        if drawn:
+            self._fire_timing(EffectTiming.OnAddHand, {"added_cards": drawn, "player": self})
         return drawn
 
     def add_memory(self, amount: int):
@@ -477,10 +558,14 @@ class Player:
 
     def trash_from_hand(self, cards: List['CardSource']):
         """Move specific cards from hand to trash."""
+        trashed = []
         for card in cards:
             if card in self.hand_cards:
                 self.hand_cards.remove(card)
                 self.trash_cards.append(card)
+                trashed.append(card)
+        if trashed:
+            self._fire_timing(EffectTiming.OnDiscardHand, {"discarded_cards": trashed, "player": self})
 
     def bounce_permanent_to_hand(self, permanent: 'Permanent'):
         """Return a permanent from battle area to its owner's hand (top card only, rest to trash)."""
@@ -492,6 +577,8 @@ class Player:
         owner = self._find_permanent_owner(permanent)
         if owner and permanent in owner.battle_area:
             owner.battle_area.remove(permanent)
+            if self.game and hasattr(self.game, 'cleanup_modifiers_for_permanent'):
+                self.game.cleanup_modifiers_for_permanent(permanent)
             if permanent.top_card:
                 owner.hand_cards.append(permanent.top_card)
             # Digivolution cards under top go to trash — trigger ACE overflow
@@ -499,13 +586,19 @@ class Player:
             self._apply_ace_overflow(under_cards)
             for card in under_cards:
                 owner.trash_cards.append(card)
+            self._fire_timing(EffectTiming.WhenReturntoHandAnyone, {"permanent": permanent, "player": owner})
+            self._fire_timing(EffectTiming.OnPermamemtReturnedToHand, {"permanent": permanent, "player": owner})
 
     def recovery(self, count: int):
         """Add cards from the top of library to security stack."""
+        added = []
         for _ in range(count):
             if self.library_cards:
                 card = self.library_cards.pop(0)
                 self.security_cards.append(card)
+                added.append(card)
+        if added:
+            self._fire_timing(EffectTiming.OnAddSecurity, {"added_cards": added, "player": self})
 
     def mill(self, count: int) -> List['CardSource']:
         """Trash cards from the top of library."""
@@ -515,6 +608,8 @@ class Player:
                 card = self.library_cards.pop(0)
                 self.trash_cards.append(card)
                 milled.append(card)
+        if milled:
+            self._fire_timing(EffectTiming.OnDiscardLibrary, {"milled_cards": milled, "player": self})
         return milled
 
     def add_to_security_from_hand(self, card: 'CardSource', to_top: bool = True):
@@ -525,12 +620,15 @@ class Player:
                 self.security_cards.append(card)
             else:
                 self.security_cards.insert(0, card)
+            self._fire_timing(EffectTiming.OnAddSecurity, {"added_cards": [card], "player": self})
 
     def trash_security_card(self, card: 'CardSource'):
         """Remove a specific card from the security stack and trash it."""
         if card in self.security_cards:
             self.security_cards.remove(card)
             self.trash_cards.append(card)
+            self._fire_timing(EffectTiming.OnDiscardSecurity, {"discarded_card": card, "player": self})
+            self._fire_timing(EffectTiming.OnLoseSecurity, {"lost_card": card, "player": self})
 
     def remove_from_security(self, card: 'CardSource') -> Optional['CardSource']:
         """Remove a card from the security stack (without trashing). Returns the card."""
@@ -583,11 +681,14 @@ class Player:
         owner = self._find_permanent_owner(permanent)
         if owner and permanent in owner.battle_area:
             owner.battle_area.remove(permanent)
+            if self.game and hasattr(self.game, 'cleanup_modifiers_for_permanent'):
+                self.game.cleanup_modifiers_for_permanent(permanent)
             if permanent.top_card:
                 owner.library_cards.append(permanent.top_card)
             under_cards = permanent.card_sources[:-1]
             self._apply_ace_overflow(under_cards)
             owner.trash_cards.extend(under_cards)
+            self._fire_timing(EffectTiming.WhenReturntoLibraryAnyone, {"permanent": permanent, "player": owner})
 
     def get_battle_area_digimons(self) -> List['Permanent']:
         """Get all Digimon permanents in battle area."""

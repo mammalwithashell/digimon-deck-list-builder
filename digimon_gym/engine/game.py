@@ -8,6 +8,7 @@ from digimon_gym.engine.core.player import Player
 from digimon_gym.engine.core.permanent import Permanent
 from digimon_gym.engine.data.card_registry import CardRegistry
 from digimon_gym.engine.loggers import IGameLogger, SilentLogger
+from digimon_gym.engine.interfaces.modifiers import ModifierRegistry, ModifierType, ModifierEntry
 from digimon_gym.engine.validation.digivolve_validator import (
     can_digivolve, has_valid_dna_targets, get_valid_dna_first_targets,
     get_valid_dna_second_targets, get_dna_stacking_order,
@@ -50,6 +51,21 @@ SEL_EFFECT_CHOICE_END = 1009
 
 
 @dataclass
+class TriggeredEffect:
+    """An effect that has been collected for stack-based resolution.
+
+    Mirrors DCGO's SkillInfo — captures the effect, its owning permanent,
+    and the context at the moment it triggered so resolution can proceed
+    even if the board state has since changed.
+    """
+    effect: Any  # ICardEffect
+    permanent: Permanent  # permanent that owns this effect
+    owner: Any  # Player who owns the permanent
+    context: Dict[str, Any]  # full context dict for on_process_callback
+    is_turn_player: bool = False  # whether owner is the current turn player
+
+
+@dataclass
 class PendingAttack:
     """Context for an attack in progress (paused for block/counter decisions)."""
     attacker: Permanent
@@ -60,6 +76,7 @@ class PendingAttack:
     without_suspend: bool = False  # Overclock: attack without suspending
     is_vortex: bool = False  # Vortex: end-of-turn Digimon-only attack
     return_phase: Optional[GamePhase] = None  # Phase to return to after resolution (e.g. EndOfTurnAction)
+    is_end_attack: bool = False  # DCGO: effects can force-end the attack early
 
 
 @dataclass
@@ -106,6 +123,9 @@ class Game:
 
         # Revealed cards zone (for reveal-and-select effects)
         self.revealed_cards: List['CardSource'] = []
+
+        # Continuous effect modifier registry (mirrors DCGO's CardEffectInterfaces)
+        self.modifiers: ModifierRegistry = ModifierRegistry()
 
         # Deferred turn-end: set when memory crosses 0 during a pending selection.
         # The turn ends after the selection resolves, not immediately.
@@ -251,6 +271,7 @@ class Game:
         self.opponent_player.unsuspend_reboot_only()
         self._reset_effect_turn_counts()
         self._clear_temp_dp()
+        self.modifiers.clear_expiry('end_of_turn')
         self.execute_effects(EffectTiming.OnStartTurn)
 
         self.next_phase()
@@ -329,6 +350,7 @@ class Game:
     def pass_turn(self):
         if self.memory >= 0:
             self.memory = -3
+        self.execute_effects(EffectTiming.OnEndMainPhase)
         self.current_phase = GamePhase.End
         self.next_phase()
 
@@ -372,16 +394,40 @@ class Game:
     # ─── Effect Execution ────────────────────────────────────────────
 
     def execute_effects(self, timing: EffectTiming, extra_context: Optional[dict] = None):
-        """Execute all effects matching the given timing across all permanents.
+        """Execute all effects matching the given timing with stack-based resolution.
 
-        Since effect_list() returns ALL cached effects (timing-agnostic),
-        we filter by the effect's timing flags (is_on_play, is_when_digivolving,
-        is_on_attack, is_on_deletion) to prevent wrong-timing execution.
+        Mirrors DCGO's AutoProcessing:
+        1. Collect all triggered effects into a stack.
+        2. Sort: turn player first, then opponent; mandatory before optional
+           within each group.
+        3. Resolve one at a time, validating each can still fire.
+        4. After each resolution, check for newly-triggered effects (chain).
         """
-        all_perms: List[Permanent] = list(self.turn_player.battle_area) + list(self.opponent_player.battle_area)
+        stack = self._collect_triggered_effects(timing, extra_context)
+        if not stack:
+            return
+
+        self._resolve_effect_stack(stack, timing, extra_context)
+
+    def _collect_triggered_effects(
+        self, timing: EffectTiming, extra_context: Optional[dict] = None
+    ) -> List[TriggeredEffect]:
+        """Collect all activatable effects for a timing into a sorted stack.
+
+        Resolution order (matching DCGO MultipleSkills):
+        1. Turn player mandatory effects
+        2. Turn player optional effects
+        3. Non-turn player mandatory effects
+        4. Non-turn player optional effects
+        """
+        all_perms: List[Permanent] = (
+            list(self.turn_player.battle_area) + list(self.opponent_player.battle_area)
+        )
 
         played_card = extra_context.get('played_card') if extra_context else None
         digivolved_perm = extra_context.get('digivolved_permanent') if extra_context else None
+
+        stack: List[TriggeredEffect] = []
 
         for perm in all_perms:
             effects = perm.effect_list(timing)
@@ -405,10 +451,93 @@ class Game:
                 if extra_context:
                     context.update(extra_context)
 
-                if effect.can_use_condition is None or effect.can_use_condition(context):
-                    self._log_effect_activation(effect, timing)
-                    effect.record_activation()
-                    effect.on_process_callback(context)
+                is_tp = (owner is self.turn_player)
+
+                stack.append(TriggeredEffect(
+                    effect=effect,
+                    permanent=perm,
+                    owner=owner,
+                    context=context,
+                    is_turn_player=is_tp,
+                ))
+
+        # Sort: turn player first, mandatory before optional within each group
+        def sort_key(te: TriggeredEffect):
+            player_order = 0 if te.is_turn_player else 1
+            optional_order = 1 if te.effect.is_optional else 0
+            return (player_order, optional_order)
+
+        stack.sort(key=sort_key)
+        return stack
+
+    def _resolve_effect_stack(
+        self,
+        stack: List[TriggeredEffect],
+        timing: EffectTiming,
+        extra_context: Optional[dict] = None,
+    ):
+        """Resolve a stack of triggered effects, handling chain triggers.
+
+        After each effect fires, newly-triggered effects are collected and
+        resolved first (LIFO), matching DCGO's recursive TriggeredSkillProcess.
+        """
+        max_chain = 50  # safety bound to prevent infinite loops
+
+        for te in stack:
+            # Validate the effect can still fire (permanent may have left field)
+            if not self._triggered_effect_still_valid(te):
+                continue
+
+            if te.effect.can_use_condition is not None and not te.effect.can_use_condition(te.context):
+                continue
+
+            self._log_effect_activation(te.effect, timing)
+            te.effect.record_activation()
+            te.effect.on_process_callback(te.context)
+
+            # Check for chain triggers — effects that just became activatable
+            # due to the state change from the effect we just resolved.
+            # DCGO does this recursively; we bound with max_chain.
+            chain_count = 0
+            while chain_count < max_chain:
+                chain_stack = self._collect_triggered_effects(timing, extra_context)
+                # Filter out effects already in the original stack or already fired
+                chain_stack = [
+                    cte for cte in chain_stack
+                    if cte.effect.can_activate_this_turn()
+                    and not any(cte.effect is orig.effect for orig in stack)
+                ]
+                if not chain_stack:
+                    break
+                for cte in chain_stack:
+                    if not self._triggered_effect_still_valid(cte):
+                        continue
+                    if cte.effect.can_use_condition is not None and not cte.effect.can_use_condition(cte.context):
+                        continue
+                    self._log_effect_activation(cte.effect, timing)
+                    cte.effect.record_activation()
+                    cte.effect.on_process_callback(cte.context)
+                chain_count += 1
+
+    @staticmethod
+    def _triggered_effect_still_valid(te: TriggeredEffect) -> bool:
+        """Check that a triggered effect's source is still in a valid state.
+
+        An effect should be skipped if its source permanent has left the field
+        since the effect was collected (e.g., destroyed by a prior effect in
+        the same stack resolution).
+        """
+        perm = te.permanent
+        # Check the permanent still has cards (not removed from field)
+        if perm.top_card is None:
+            return False
+        # Check the owning player still has this permanent on field
+        owner = te.owner
+        if hasattr(owner, 'battle_area') and perm not in owner.battle_area:
+            # Also check breeding area
+            if hasattr(owner, 'breeding_area') and perm is not owner.breeding_area:
+                return False
+        return True
 
     @staticmethod
     def _effect_matches_timing(
@@ -471,12 +600,20 @@ class Game:
         return False
 
     def execute_deletion_effects(self, deleted_permanent: Permanent, owner: Player):
-        """Execute OnDeletion effects for a permanent that was just deleted."""
-        # Effects from the deleted permanent's card stack
+        """Execute OnDeletion effects for a permanent that was just deleted.
+
+        Uses stack-based ordering: mandatory before optional, sorted by the
+        effect's position in the card stack (top card effects first).
+        """
+        stack: List[TriggeredEffect] = []
+        is_tp = (owner is self.turn_player)
+
         for source in deleted_permanent.card_sources:
             effects = source.effect_list(EffectTiming.OnDestroyedAnyone)
             for effect in effects:
                 if not effect.can_activate_this_turn():
+                    continue
+                if not effect.on_process_callback:
                     continue
                 context = {
                     "game": self,
@@ -487,11 +624,67 @@ class Game:
                     "opponent_player": self.opponent_player,
                     "deleted_permanent": deleted_permanent,
                 }
-                if effect.can_use_condition is None or effect.can_use_condition(context):
-                    self._log_effect_activation(effect, EffectTiming.OnDestroyedAnyone)
-                    effect.record_activation()
-                    if effect.on_process_callback:
-                        effect.on_process_callback(context)
+                stack.append(TriggeredEffect(
+                    effect=effect,
+                    permanent=deleted_permanent,
+                    owner=owner,
+                    context=context,
+                    is_turn_player=is_tp,
+                ))
+
+        # Sort: mandatory before optional
+        stack.sort(key=lambda te: (1 if te.effect.is_optional else 0))
+
+        for te in stack:
+            if te.effect.can_use_condition is not None and not te.effect.can_use_condition(te.context):
+                continue
+            self._log_effect_activation(te.effect, EffectTiming.OnDestroyedAnyone)
+            te.effect.record_activation()
+            te.effect.on_process_callback(te.context)
+
+    # ─── Modifier Registry Convenience Methods ──────────────────────
+
+    def register_modifier(
+        self,
+        target_permanent: Permanent,
+        modifier_type: ModifierType,
+        condition: Optional[Callable] = None,
+        value_fn: Optional[Callable] = None,
+        source_effect=None,
+        expiry: str = 'permanent',
+    ) -> ModifierEntry:
+        """Register a continuous modifier on a permanent.
+
+        Args:
+            target_permanent: The permanent that owns this modifier effect.
+            modifier_type: What kind of modifier (from ModifierType enum).
+            condition: Optional callable(permanent, context) -> bool.
+            value_fn: Optional callable for value modifiers.
+            source_effect: The ICardEffect that created this modifier.
+            expiry: 'permanent', 'end_of_turn', 'end_of_attack', 'end_of_opponent_turn'.
+
+        Returns:
+            The ModifierEntry, which can be used to unregister later.
+        """
+        entry = ModifierEntry(
+            modifier_type=modifier_type,
+            condition=condition,
+            value_fn=value_fn,
+            source_effect=source_effect,
+            source_permanent=target_permanent,
+            expiry=expiry,
+        )
+        self.modifiers.register(entry)
+        return entry
+
+    def cleanup_modifiers_for_permanent(self, permanent: Permanent):
+        """Remove all modifiers sourced from a permanent that left the field."""
+        self.modifiers.unregister_by_source(permanent)
+
+    def force_end_attack(self):
+        """Force the current attack to end early (DCGO: IsEndAttack flag)."""
+        if self.pending_attack:
+            self.pending_attack.is_end_attack = True
 
     def _find_owner(self, perm: Permanent) -> Player:
         """Determine which player owns a permanent."""
@@ -897,13 +1090,36 @@ class Game:
                 self.current_phase = GamePhase.AllianceTiming
                 return  # Park for Alliance decision
 
-        # No Alliance — check blockers
+        # No Alliance — enter counter timing (DCGO: counter before block)
+        self._enter_counter_timing()
+
+    def _enter_counter_timing(self):
+        """Check for counter opportunities and enter CounterTiming if any exist.
+
+        DCGO attack order: OnAttack → Counter → Block → Battle.
+        Counter effects (blast digivolve) resolve before blocker selection,
+        allowing the defending player to create stronger blockers.
+        """
+        pa = self.pending_attack
+        if pa is None or pa.is_end_attack:
+            self._resolve_battle()
+            return
+
+        has_counter = self._opponent_has_counter_options()
+
+        if has_counter:
+            self.current_phase = GamePhase.CounterTiming
+            self.active_player = self.opponent_player
+            return  # Park here; _decode_counter() will resume
+
+        # No counter options — check for blockers
         self._check_blockers_or_continue()
 
     def _check_blockers_or_continue(self):
-        """Check for blockers after Alliance decisions, then continue attack flow."""
+        """Check for blockers after counter decisions, then continue attack flow."""
         pa = self.pending_attack
-        if pa is None:
+        if pa is None or pa.is_end_attack:
+            self._resolve_battle()
             return
 
         has_blockers = any(
@@ -915,19 +1131,7 @@ class Game:
             self.active_player = self.opponent_player
             return  # Park here; _decode_block() will resume
 
-        # No blockers — check for counter timing
-        self._enter_counter_timing()
-
-    def _enter_counter_timing(self):
-        """Check for counter opportunities and enter CounterTiming if any exist."""
-        has_counter = self._opponent_has_counter_options()
-
-        if has_counter:
-            self.current_phase = GamePhase.CounterTiming
-            self.active_player = self.opponent_player
-            return  # Park here; _decode_counter() will resume
-
-        # No counter options — resolve battle immediately
+        # No blockers — resolve battle immediately
         self._resolve_battle()
 
     def _opponent_has_counter_options(self) -> bool:
@@ -956,6 +1160,7 @@ class Game:
         Returns:
             True if the attacker survived all security checks, False otherwise.
         """
+        self.execute_effects(EffectTiming.OnSecurityCheck, {"attacker": attacker})
         sa_mod = attacker.security_attack_modifier()
         num_checks = max(0, 1 + sa_mod)
         for _ in range(num_checks):
@@ -991,6 +1196,7 @@ class Game:
         if isinstance(target, Player):
             self._execute_security_checks(attacker, target)
         elif isinstance(target, Permanent):
+            self.execute_effects(EffectTiming.OnStartBattle, {"attacker": attacker, "defender": target})
             a_dp = attacker.dp or 0
             t_dp = target.dp or 0
             attacker_wins = a_dp > t_dp
@@ -1022,9 +1228,11 @@ class Game:
                 # Tie: both deleted (Retaliation doesn't trigger since neither "wins")
                 self.opponent_player.delete_permanent(target, is_battle=True)
                 self.turn_player.delete_permanent(attacker, is_battle=True)
+            self.execute_effects(EffectTiming.OnEndBattle, {"attacker": attacker, "defender": target})
 
         # Clear attacker state before end-of-attack effects
         attacker.clear_attack_state()
+        self.modifiers.clear_expiry('end_of_attack')
 
         self.execute_effects(EffectTiming.OnEndAttack)
 
@@ -1050,9 +1258,12 @@ class Game:
         cost = card.get_cost_itself
 
         self.logger.log(f"[Play] {self.turn_player.player_name} plays {card.card_names[0]} (cost: {cost})")
+        is_option = card.is_option
         self.turn_player.play_card(card)
         self.turn_player.lose_memory(cost)
 
+        if is_option:
+            self.execute_effects(EffectTiming.OnUseOption, {"played_card": card})
         self.execute_effects(EffectTiming.OnEnterFieldAnyone, {"played_card": card})
         self.check_turn_end()
 
@@ -1161,6 +1372,7 @@ class Game:
             and len(self.turn_player.battle_area) > before_battle_count
         )
         if moved:
+            self.execute_effects(EffectTiming.OnMove, {"moved_permanent": self.turn_player.battle_area[-1]})
             self.current_phase = GamePhase.Main
             self.phase_main()
 
@@ -1906,15 +2118,19 @@ class Game:
         self._check_deferred_turn_end()
 
     def _decode_block(self, action_id: int):
-        """Handle the defender's blocking decision during an attack."""
+        """Handle the defender's blocking decision during an attack.
+
+        DCGO order: counter timing already resolved before blockers.
+        After block decision, proceed directly to battle resolution.
+        """
         pa = self.pending_attack
         if pa is None:
             return
 
         if action_id == 62:
-            # Decline to block — proceed to counter timing
+            # Decline to block — resolve battle directly
             self.logger.log("[Block] Declined to block")
-            self._enter_counter_timing()
+            self._resolve_battle()
 
         elif 100 <= action_id <= 111:
             blocker_idx = action_id - 100
@@ -1925,6 +2141,12 @@ class Game:
 
             blocker = defender.battle_area[blocker_idx]
             if not blocker.can_block(pa.attacker):
+                return
+
+            # Check CanSwitchAttackTarget (DCGO: AttackProcess.SwitchDefender line 495)
+            if self.modifiers.has_modifier(pa.attacker, ModifierType.CANNOT_SWITCH_ATTACK_TARGET):
+                self.logger.log(f"[Block] Attack target cannot be switched!")
+                self._resolve_battle()
                 return
 
             # Suspend the blocker and redirect the attack
@@ -1938,10 +2160,11 @@ class Game:
 
             # Fire block-related effects
             self.execute_effects(EffectTiming.OnBlockAnyone, {"blocker": blocker})
+            self.execute_effects(EffectTiming.OnAttackTargetChanged, {"attacker": pa.attacker, "new_target": blocker})
             self.execute_effects(EffectTiming.OnEndBlockDesignation, {"blocker": blocker})
 
-            # Proceed to counter timing
-            self._enter_counter_timing()
+            # Resolve battle (counter already resolved)
+            self._resolve_battle()
 
     def _decode_counter(self, action_id: int):
         """Handle the defender's counter/blast digivolve decision."""
@@ -1950,9 +2173,9 @@ class Game:
             return
 
         if action_id == 62:
-            # Decline counter — resolve battle
+            # Decline counter — proceed to blocker check (DCGO: counter before block)
             self.logger.log("[Counter] Declined counter")
-            self._resolve_battle()
+            self._check_blockers_or_continue()
 
         elif 400 <= action_id <= 999:
             normalized = action_id - 400
@@ -1962,10 +2185,10 @@ class Game:
             defender = self.opponent_player
 
             if hand_idx >= len(defender.hand_cards):
-                self._resolve_battle()
+                self._check_blockers_or_continue()
                 return
             if field_idx >= len(defender.battle_area):
-                self._resolve_battle()
+                self._check_blockers_or_continue()
                 return
 
             card = defender.hand_cards[hand_idx]
@@ -1975,7 +2198,7 @@ class Game:
             effects = card.effect_list(EffectTiming.NoTiming)
             has_blast = any(getattr(e, '_is_blast_digivolve', False) for e in effects)
             if not has_blast:
-                self._resolve_battle()
+                self._check_blockers_or_continue()
                 return
 
             # Execute blast digivolve (free cost — no memory change)
@@ -1990,8 +2213,8 @@ class Game:
             self.execute_effects(EffectTiming.OnCounterTiming, {"counter_card": card, "counter_permanent": perm})
             self.execute_effects(EffectTiming.WhenDigivolving, {"digivolved_permanent": perm})
 
-            # Resolve battle (DP has changed due to digivolution)
-            self._resolve_battle()
+            # Proceed to blocker check (DCGO: counter before block)
+            self._check_blockers_or_continue()
 
     def _decode_trash_selection(self, action_id: int):
         """Handle trash card selection from an effect callback."""
@@ -2235,6 +2458,9 @@ class Game:
         opponent = self.player2 if player is self.player1 else self.player1
         valid = []
         for i, perm in enumerate(opponent.battle_area):
+            # Check modifier-based targeting protection
+            if not self.modifiers.can_be_selected_by_effect(perm):
+                continue
             if filter_fn is None or filter_fn(perm):
                 valid.append(SEL_OPP_FIELD_START + i)
         if not valid:

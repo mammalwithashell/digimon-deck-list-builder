@@ -256,6 +256,7 @@ class Permanent:
 
     def add_card_source(self, card_source: 'CardSource'):
         self.card_sources.append(card_source)
+        self._fire_timing(EffectTiming.OnAddDigivolutionCards, {"permanent": self, "added_card": card_source})
 
     def add_card_source_bottom(self, card_source: 'CardSource'):
         """Add a card source at the bottom of the digivolution stack."""
@@ -286,6 +287,9 @@ class Permanent:
                 break
             card = self.card_sources.pop()
             removed.append(card)
+        if removed:
+            self._fire_timing(EffectTiming.WhenTopCardTrashed,
+                              {"permanent": self, "trashed_cards": removed})
         # Caller is responsible for putting removed cards in trash
         return removed
 
@@ -305,6 +309,9 @@ class Permanent:
             if idx >= 0:
                 card = self.card_sources.pop(idx)
                 trashed.append(card)
+        if trashed:
+            self._fire_timing(EffectTiming.OnDigivolutionCardDiscarded,
+                              {"permanent": self, "trashed_cards": trashed})
         return trashed
 
     def contains_card_name(self, name: str) -> bool:
@@ -391,6 +398,7 @@ class Permanent:
     def link_card(self, card: 'CardSource'):
         """Link an option card sideways to this permanent (e.g. [TS] options)."""
         self.linked_cards.append(card)
+        self._fire_timing(EffectTiming.WhenLinked, {"permanent": self, "linked_card": card})
 
     def unlink_all(self) -> List['CardSource']:
         """Remove all linked cards and return them (for when permanent leaves field)."""
@@ -398,11 +406,20 @@ class Permanent:
         self.linked_cards.clear()
         return cards
 
+    def _fire_timing(self, timing: 'EffectTiming', context: dict = None):
+        """Fire an effect timing via the owner game if available."""
+        if self._owner_game and hasattr(self._owner_game, 'execute_effects'):
+            self._owner_game.execute_effects(timing, context)
+
     def suspend(self):
-        self.is_suspended = True
+        if not self.is_suspended:
+            self.is_suspended = True
+            self._fire_timing(EffectTiming.OnTappedAnyone, {"permanent": self})
 
     def unsuspend(self):
-        self.is_suspended = False
+        if self.is_suspended:
+            self.is_suspended = False
+            self._fire_timing(EffectTiming.OnUnTappedAnyone, {"permanent": self})
 
     def clear_attack_state(self):
         """Clear temporary attack state (is_attacking flag and temp SA modifier)."""
