@@ -2012,7 +2012,7 @@
     },
     "BT14-098": {
       "card_id": "BT14-098",
-      "frozen_hash": "da890978ea2a08e9c212a7b57b6bf41c5a293f4ca0312a1fa7d66144b26ac1ef",
+      "frozen_hash": "d7031a1538fd6e56c652fd91f1a6e67c0cecae84ca50265d385a85cf37a7ce87",
       "frozen_relpath": "bt14/bt14_098.py",
       "generated_hash": "da890978ea2a08e9c212a7b57b6bf41c5a293f4ca0312a1fa7d66144b26ac1ef",
       "generated_relpath": "generated/bt14/bt14_098.py",
