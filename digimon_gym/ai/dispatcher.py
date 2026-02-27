@@ -66,10 +66,13 @@ def _derive_set_and_module(card_id: str) -> tuple[str, str]:
     return set_id, normalized
 
 
-def _read_generated_script(set_id: str, module_name: str) -> str:
-    path = SCRIPTS_ROOT / "generated" / set_id / f"{module_name}.py"
+def _read_script(set_id: str, module_name: str) -> str:
+    """Read script from frozen lane, falling back to generated."""
+    path = SCRIPTS_ROOT / set_id / f"{module_name}.py"
     if not path.exists():
-        return ""
+        path = SCRIPTS_ROOT / "generated" / set_id / f"{module_name}.py"
+        if not path.exists():
+            return ""
     return path.read_text(encoding="utf-8")
 
 
@@ -232,7 +235,7 @@ class TaskDispatcher:
 
             card_meta = self.cards_index.get(card_id, {})
             card_text = _card_text_from_meta(card_meta)
-            generated_script = _read_generated_script(set_id, module_name)
+            generated_script = _read_script(set_id, module_name)
             query = f"{card_id} {card_meta.get('card_name_eng', '')} {card_text[:350]}"
             context = self.rag_index.retrieve(query, k=6, source_types=["rules", "card_metadata"])
             retrieval_refs.extend(
@@ -380,7 +383,7 @@ class TaskDispatcher:
             allowed_paths.insert(0, primary_path)
 
         # Load the generated script and extract engine method calls
-        generated_script = _read_generated_script(set_id, module_name)
+        generated_script = _read_script(set_id, module_name)
         engine_method_names = extract_engine_calls(generated_script) if generated_script else []
         pinned_chunks = lookup_pinned_engine_methods(self.rag_index, engine_method_names) if engine_method_names else []
 

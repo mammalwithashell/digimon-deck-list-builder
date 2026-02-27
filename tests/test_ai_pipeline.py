@@ -319,7 +319,7 @@ class TestAITasks:
                         "summary": "fix",
                         "edits": [
                             {
-                                "path": "digimon_gym/engine/data/scripts/generated/bt13/bt13_006.py",
+                                "path": "digimon_gym/engine/data/scripts/bt13/bt13_006.py",
                                 "expected_hash": "a" * 64,
                                 "new_content": "# test\n",
                             }
@@ -338,7 +338,7 @@ class TestAITasks:
 
         def _raise_stale(**_kwargs):
             raise HashMismatchError(
-                path="digimon_gym/engine/data/scripts/generated/bt13/bt13_006.py",
+                path="digimon_gym/engine/data/scripts/bt13/bt13_006.py",
                 expected_hash="f1d736",
                 current_hash="14b303",
                 can_force_apply=True,
@@ -405,7 +405,7 @@ class TestAITasks:
                         "summary": "fix",
                         "edits": [
                             {
-                                "path": "digimon_gym/engine/data/scripts/generated/bt13/bt13_006.py",
+                                "path": "digimon_gym/engine/data/scripts/bt13/bt13_006.py",
                                 "expected_hash": "b" * 64,
                                 "new_content": "# force apply\n",
                             }
@@ -425,7 +425,7 @@ class TestAITasks:
         monkeypatch.setattr(
             admin_ai_router,
             "apply_validated_edits",
-            lambda **_kwargs: ["digimon_gym/engine/data/scripts/generated/bt13/bt13_006.py"],
+            lambda **_kwargs: ["digimon_gym/engine/data/scripts/bt13/bt13_006.py"],
         )
         monkeypatch.setattr(admin_ai_router, "run_profile_checks", lambda **_kwargs: [])
 
@@ -472,7 +472,7 @@ class TestAITasks:
                         "summary": "fix",
                         "edits": [
                             {
-                                "path": "digimon_gym/engine/data/scripts/generated/bt13/bt13_006.py",
+                                "path": "digimon_gym/engine/data/scripts/bt13/bt13_006.py",
                                 "expected_hash": "c" * 64,
                                 "new_content": "# test\n",
                             }
@@ -1217,7 +1217,7 @@ class TestAIFixBatches:
             batch_orchestrator,
             "_apply_and_commit_task",
             lambda **_: {
-                "applied_files": ["digimon_gym/engine/data/scripts/generated/bt24/bt24_099.py"],
+                "applied_files": ["digimon_gym/engine/data/scripts/bt24/bt24_099.py"],
                 "check_outputs": [],
                 "commit_sha": "deadbeef",
             },
@@ -1445,7 +1445,7 @@ class TestSetRuns:
             set_run_orchestrator,
             "_apply_fix_task_pr_mode",
             lambda **_: {
-                "applied_files": ["digimon_gym/engine/data/scripts/generated/bt13/bt13_001.py"],
+                "applied_files": ["digimon_gym/engine/data/scripts/bt13/bt13_001.py"],
                 "check_outputs": [],
                 "commit_sha": "abc123",
                 "pr_url": "https://example.test/pr/1",

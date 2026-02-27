@@ -99,21 +99,31 @@ class GitAdapter:
         branch = self.branch_name_for_task(task_id=task_id)
 
         if wt.exists() and (wt / ".git").exists():
-            target_branch = branch if run_mode == "pr" else DEFAULT_BRANCH
+            # Health check: verify the worktree is functional
             try:
-                _run(["git", "checkout", target_branch], cwd=wt)
+                _run(["git", "rev-parse", "--git-dir"], cwd=wt)
             except GitCommandError:
+                # Corrupted worktree — remove and recreate
+                shutil.rmtree(wt, ignore_errors=True)
+                _run(["git", "worktree", "prune"], cwd=self.repo_root)
+            else:
+                # Worktree is healthy — reset to latest origin/main
+                target_branch = branch if run_mode == "pr" else DEFAULT_BRANCH
                 _run(["git", "fetch", "origin", DEFAULT_BRANCH], cwd=self.repo_root)
-                _run(
-                    ["git", "checkout", "-B", target_branch, f"origin/{DEFAULT_BRANCH}"],
-                    cwd=wt,
-                )
-            self.restore_worktree_to_head(worktree_path=wt)
-            return WorktreeContext(
-                worktree_path=wt,
-                branch_name=target_branch,
-            )
+                try:
+                    _run(["git", "checkout", "-B", target_branch, f"origin/{DEFAULT_BRANCH}"], cwd=wt)
+                except GitCommandError:
+                    # Branch checkout failed, nuke and recreate
+                    shutil.rmtree(wt, ignore_errors=True)
+                    _run(["git", "worktree", "prune"], cwd=self.repo_root)
+                else:
+                    self.restore_worktree_to_head(worktree_path=wt)
+                    return WorktreeContext(
+                        worktree_path=wt,
+                        branch_name=target_branch,
+                    )
 
+        # Create fresh worktree
         _run(["git", "fetch", "origin", DEFAULT_BRANCH], cwd=self.repo_root)
         if run_mode == "pr":
             _run(

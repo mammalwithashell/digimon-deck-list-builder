@@ -119,7 +119,7 @@ def _is_allowed_for_scope(
     set_id: str,
     module_name: str,
 ) -> bool:
-    primary = f"digimon_gym/engine/data/scripts/generated/{set_id}/{module_name}.py"
+    primary = f"digimon_gym/engine/data/scripts/{set_id}/{module_name}.py"
     if rel_path == primary:
         return True
     if scope_profile == SCOPE_SCRIPT:
@@ -133,7 +133,7 @@ def _is_allowed_for_scope(
 
 
 def get_allowed_roots_for_scope(scope_profile: str) -> list[str]:
-    roots = ["digimon_gym/engine/data/scripts/generated/"]
+    roots = ["digimon_gym/engine/data/scripts/"]
     if scope_profile in {SCOPE_SCRIPT_ENGINE, SCOPE_SCRIPT_ENGINE_TRANSPILER}:
         roots.append("digimon_gym/engine/")
     if scope_profile == SCOPE_SCRIPT_ENGINE_TRANSPILER:
@@ -142,7 +142,7 @@ def get_allowed_roots_for_scope(scope_profile: str) -> list[str]:
 
 
 def get_primary_script_path(set_id: str, module_name: str) -> str:
-    return f"digimon_gym/engine/data/scripts/generated/{set_id}/{module_name}.py"
+    return f"digimon_gym/engine/data/scripts/{set_id}/{module_name}.py"
 
 
 def _read_text_with_cap(path: Path, max_chars: int) -> tuple[str, bool]:
@@ -296,7 +296,7 @@ def derive_targeted_tests(applied_files: list[str]) -> list[str]:
     has_transpiler_change = False
 
     for rel in applied_files:
-        if rel.startswith("digimon_gym/engine/data/scripts/generated/"):
+        if rel.startswith("digimon_gym/engine/data/scripts/") and not rel.startswith("digimon_gym/engine/data/scripts/_"):
             parts = rel.split("/")
             if len(parts) >= 6:
                 touched_sets.add(parts[4].lower())
