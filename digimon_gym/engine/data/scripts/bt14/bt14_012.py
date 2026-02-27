@@ -62,13 +62,14 @@ class BT14_012(CardScript):
         effect2.dp_modifier = 2000
 
         def condition2(context: Dict[str, Any]) -> bool:
-            if not (card and card.owner and card.owner.is_my_turn):
-                return False
-
             host = context.get('permanent')
             if host is None:
                 host = card.permanent_of_this_card() if card else None
             if host is None:
+                return False
+
+            owner = getattr(host, 'owner', None)
+            if not (owner and getattr(owner, 'is_my_turn', False)):
                 return False
 
             name = getattr(host, 'name', None)
