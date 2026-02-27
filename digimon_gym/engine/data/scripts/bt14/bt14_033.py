@@ -16,7 +16,7 @@ class BT14_033(CardScript):
         # Timing: EffectTiming.OnStartMainPhase
         # [Start of Your Main Phase] Search your security stack. This Digimon may digivolve into a yellow Digimon card with the [Vaccine] trait among them without paying the cost. Then, shuffle your security stack. If digivolved by this effect, you may place 1 yellow card with the [Vaccine] trait from your hand at the bottom of your security stack.
         effect0 = ICardEffect()
-        effect0.set_effect_name("BT14-033 This Digimon digivolves into Digimon card in security")
+        effect0.set_effect_name("BT14-033 Security digivolve")
         effect0.set_effect_description("[Start of Your Main Phase] Search your security stack. This Digimon may digivolve into a yellow Digimon card with the [Vaccine] trait among them without paying the cost. Then, shuffle your security stack. If digivolved by this effect, you may place 1 yellow card with the [Vaccine] trait from your hand at the bottom of your security stack.")
 
         effect = effect0  # alias for condition closure
@@ -30,21 +30,74 @@ class BT14_033(CardScript):
         effect0.set_can_use_condition(condition0)
 
         def process0(ctx: Dict[str, Any]):
-            """Action: Play Card, Add To Security"""
             player = ctx.get('player')
             perm = ctx.get('permanent')
             game = ctx.get('game')
-            if not (player and game):
+            if not (player and game and perm):
                 return
-            def play_filter(c):
-                if not ('Yellow' in [col.name for col in getattr(c, 'card_colors', [])]):
+
+            def sec_digi_filter(c):
+                if 'Yellow' not in [col.name for col in getattr(c, 'card_colors', [])]:
+                    return False
+                attrs = [str(a) for a in getattr(c, 'attribute_eng', [])]
+                if 'Vaccine' not in attrs:
+                    return False
+                if getattr(c, 'card_kind', None) != 0:
                     return False
                 return True
-            game.effect_play_from_zone(
-                player, 'hand', play_filter, free=True, is_optional=True)
-            # Add top card of deck to security
-            if player:
-                player.recovery(1)
+
+            digivolved = False
+            if hasattr(game, 'effect_digivolve_from_zone'):
+                digivolved = bool(game.effect_digivolve_from_zone(
+                    player=player,
+                    permanent=perm,
+                    zone='security',
+                    card_filter=sec_digi_filter,
+                    cost=0,
+                    is_optional=True,
+                    shuffle_after=True,
+                ))
+            elif hasattr(game, 'effect_search_zone_then'):
+                result = game.effect_search_zone_then(
+                    player=player,
+                    zone='security',
+                    card_filter=sec_digi_filter,
+                    action='digivolve_this',
+                    action_target=perm,
+                    free=True,
+                    is_optional=True,
+                    shuffle_after=True,
+                )
+                digivolved = bool(result)
+            else:
+                return
+
+            if not digivolved:
+                return
+
+            def hand_place_filter(c):
+                if 'Yellow' not in [col.name for col in getattr(c, 'card_colors', [])]:
+                    return False
+                attrs = [str(a) for a in getattr(c, 'attribute_eng', [])]
+                return 'Vaccine' in attrs
+
+            if hasattr(game, 'effect_move_from_zone_to_security_bottom'):
+                game.effect_move_from_zone_to_security_bottom(
+                    player=player,
+                    from_zone='hand',
+                    card_filter=hand_place_filter,
+                    is_optional=True,
+                    count=1,
+                )
+            elif hasattr(game, 'effect_place_from_zone_to_security'):
+                game.effect_place_from_zone_to_security(
+                    player=player,
+                    from_zone='hand',
+                    card_filter=hand_place_filter,
+                    is_optional=True,
+                    count=1,
+                    to_bottom=True,
+                )
 
         effect0.set_on_process_callback(process0)
         effects.append(effect0)
