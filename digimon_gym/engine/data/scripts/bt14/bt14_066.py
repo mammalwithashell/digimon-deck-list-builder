@@ -44,23 +44,27 @@ class BT14_066(CardScript):
         effect1.set_can_use_condition(condition1)
 
         def process1(ctx: Dict[str, Any]):
-            """Action: Gain 2 memory, Trash From Hand"""
+            """Action: Trash From Hand, then Gain 2 memory if trashed"""
             player = ctx.get('player')
-            perm = ctx.get('permanent')
             game = ctx.get('game')
             if not (player and game):
                 return
+
+            trashed = {'ok': False}
+
             def hand_filter(c):
-                if not (any('Numemon' in _n for _n in getattr(c, 'card_names', []))):
-                    return False
-                return True
+                return any('Numemon' in _n for _n in getattr(c, 'card_names', []))
+
             def on_trashed(selected):
                 if selected in player.hand_cards:
                     player.hand_cards.remove(selected)
                     player.trash_cards.append(selected)
+                    trashed['ok'] = True
+
             game.effect_select_hand_card(
                 player, hand_filter, on_trashed, is_optional=True)
-            if player:
+
+            if trashed['ok']:
                 player.add_memory(2)
 
         effect1.set_on_process_callback(process1)
@@ -84,23 +88,27 @@ class BT14_066(CardScript):
         effect2.set_can_use_condition(condition2)
 
         def process2(ctx: Dict[str, Any]):
-            """Action: Gain 2 memory, Trash From Hand"""
+            """Action: Trash From Hand, then Gain 2 memory if trashed"""
             player = ctx.get('player')
-            perm = ctx.get('permanent')
             game = ctx.get('game')
             if not (player and game):
                 return
+
+            trashed = {'ok': False}
+
             def hand_filter(c):
-                if not (any('Numemon' in _n for _n in getattr(c, 'card_names', []))):
-                    return False
-                return True
+                return any('Numemon' in _n for _n in getattr(c, 'card_names', []))
+
             def on_trashed(selected):
                 if selected in player.hand_cards:
                     player.hand_cards.remove(selected)
                     player.trash_cards.append(selected)
+                    trashed['ok'] = True
+
             game.effect_select_hand_card(
                 player, hand_filter, on_trashed, is_optional=True)
-            if player:
+
+            if trashed['ok']:
                 player.add_memory(2)
 
         effect2.set_on_process_callback(process2)
@@ -124,7 +132,6 @@ class BT14_066(CardScript):
         def process3(ctx: Dict[str, Any]):
             """Action: Play Card"""
             player = ctx.get('player')
-            perm = ctx.get('permanent')
             game = ctx.get('game')
             if not (player and game):
                 return
