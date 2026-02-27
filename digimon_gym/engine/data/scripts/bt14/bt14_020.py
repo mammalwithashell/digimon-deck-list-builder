@@ -31,15 +31,28 @@ class BT14_020(CardScript):
         effect0.set_can_use_condition(condition0)
 
         def process0(ctx: Dict[str, Any]):
-            """Action: Trash Digivolution Cards, Gain Keyword Cannot Be Blocked"""
+            """Action: Trash 1 digivolution card from an opponent's Digimon, then gain cannot be blocked"""
             player = ctx.get('player')
             perm = ctx.get('permanent')
             game = ctx.get('game')
-            # Trash digivolution cards from this permanent
-            if perm and not perm.has_no_digivolution_cards:
-                trashed = perm.trash_digivolution_cards(1)
-                if player:
-                    player.trash_cards.extend(trashed)
+
+            if player and game:
+                opponents = []
+                if hasattr(game, 'get_opponents_of'):
+                    opponents = game.get_opponents_of(player) or []
+                elif hasattr(player, 'opponent') and player.opponent is not None:
+                    opponents = [player.opponent]
+
+                for opp in opponents:
+                    digimons = getattr(opp, 'battle_area', [])
+                    for d in digimons:
+                        if not getattr(d, 'has_no_digivolution_cards', True):
+                            d.trash_digivolution_cards(1)
+                            opponents = None
+                            break
+                    if opponents is None:
+                        break
+
             if perm:
                 perm.grant_keyword('_is_cannot_be_blocked')
 
@@ -64,18 +77,21 @@ class BT14_020(CardScript):
         effect1.set_can_use_condition(condition1)
 
         def process1(ctx: Dict[str, Any]):
-            """Action: Play Card"""
+            """Action: Play [Gomamon] from this Digimon's digivolution cards"""
             player = ctx.get('player')
             perm = ctx.get('permanent')
             game = ctx.get('game')
-            if not (player and game):
+            if not (player and game and perm):
                 return
-            def play_filter(c):
-                if not getattr(c, 'is_digimon', False):
-                    return False
-                return True
-            game.effect_play_from_zone(
-                player, 'hand', play_filter, free=True, is_optional=True)
+
+            evo_cards = getattr(perm, 'digivolution_cards', [])
+            for c in evo_cards:
+                if getattr(c, 'card_name_eng', '') == 'Gomamon':
+                    if hasattr(game, 'play_card'):
+                        game.play_card(player, c, free=True)
+                    elif hasattr(player, 'play_card'):
+                        player.play_card(c, free=True)
+                    break
 
         effect1.set_on_process_callback(process1)
         effects.append(effect1)
