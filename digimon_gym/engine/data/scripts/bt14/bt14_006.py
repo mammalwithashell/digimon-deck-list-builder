@@ -27,7 +27,8 @@ class BT14_006(CardScript):
             return any('Dark Animal' in t or 'DarkAnimal' in t or 'SoC' in t for t in traits)
 
         def condition0(context: Dict[str, Any]) -> bool:
-            if card and card.permanent_of_this_card() is None:
+            # Inherited effects should only function while this card is in a digivolution stack.
+            if not (card and card.permanent_of_this_card() is not None):
                 return False
             if not (card and card.owner and card.owner.is_my_turn):
                 return False
