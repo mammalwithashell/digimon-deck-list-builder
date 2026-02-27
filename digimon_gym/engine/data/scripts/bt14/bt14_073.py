@@ -21,11 +21,14 @@ class BT14_073(CardScript):
         effect0.set_max_count_per_turn(1)
         effect0.set_hash_string("Memory+1_BT14_073")
 
-        effect = effect0  # alias for condition closure
         def condition0(context: Dict[str, Any]) -> bool:
             if card and card.permanent_of_this_card() is None:
                 return False
             if not (card and card.owner and card.owner.is_my_turn):
+                return False
+            if not context.get('is_discard_from_hand', False):
+                return False
+            if context.get('by_effect_player') is not card.owner:
                 return False
             return True
 
@@ -34,8 +37,6 @@ class BT14_073(CardScript):
         def process0(ctx: Dict[str, Any]):
             """Action: Gain 1 memory"""
             player = ctx.get('player')
-            perm = ctx.get('permanent')
-            game = ctx.get('game')
             if player:
                 player.add_memory(1)
 
@@ -51,11 +52,14 @@ class BT14_073(CardScript):
         effect1.set_max_count_per_turn(1)
         effect1.set_hash_string("Memory+1_BT14_073_inherited")
 
-        effect = effect1  # alias for condition closure
         def condition1(context: Dict[str, Any]) -> bool:
             if card and card.permanent_of_this_card() is None:
                 return False
             if not (card and card.owner and card.owner.is_my_turn):
+                return False
+            if not context.get('is_discard_from_hand', False):
+                return False
+            if context.get('by_effect_player') is not card.owner:
                 return False
             return True
 
@@ -64,8 +68,6 @@ class BT14_073(CardScript):
         def process1(ctx: Dict[str, Any]):
             """Action: Gain 1 memory"""
             player = ctx.get('player')
-            perm = ctx.get('permanent')
-            game = ctx.get('game')
             if player:
                 player.add_memory(1)
 
