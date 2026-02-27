@@ -13,7 +13,6 @@ class BT14_070(CardScript):
     def get_card_effects(self, card: 'CardSource') -> List['ICardEffect']:
         effects = []
 
-        # Timing: EffectTiming.OnDiscardHand
         # [Your Turn][Once Per Turn] When one of your effects trashes a card in your hand, gain 1 memory.
         effect0 = ICardEffect()
         effect0.set_effect_name("BT14-070 Memory +1")
