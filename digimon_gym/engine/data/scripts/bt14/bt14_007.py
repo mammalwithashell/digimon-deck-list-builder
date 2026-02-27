@@ -13,19 +13,6 @@ class BT14_007(CardScript):
     def get_card_effects(self, card: 'CardSource') -> List['ICardEffect']:
         effects = []
 
-        # Factory effect: alt_digivolve_req
-        # Alternate digivolution requirement
-        effect0 = ICardEffect()
-        effect0.set_effect_name("BT14-007 Alternate digivolution requirement")
-        effect0.set_effect_description("Alternate digivolution requirement")
-        # Alternate digivolution: alternate source for cost 0
-        effect0._alt_digi_cost = 0
-
-        def condition0(context: Dict[str, Any]) -> bool:
-            return True
-        effect0.set_can_use_condition(condition0)
-        effects.append(effect0)
-
         # Timing: EffectTiming.OnStartMainPhase
         # [Start of Your Main Phase] If you have a Tamer with [Tai Kamiya] in its name, this Digimon may digivolve into [Greymon] in your hand without paying the cost.
         effect1 = ICardEffect()

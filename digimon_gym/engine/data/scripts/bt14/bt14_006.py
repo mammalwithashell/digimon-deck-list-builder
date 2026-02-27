@@ -26,10 +26,36 @@ class BT14_006(CardScript):
             traits = getattr(c, 'card_traits', []) or []
             return any('Dark Animal' in t or 'DarkAnimal' in t or 'SoC' in t for t in traits)
 
+        def _trashed_from_owner_hand(context: Dict[str, Any]) -> bool:
+            zones = [
+                context.get('from_zone'),
+                context.get('source_zone'),
+                context.get('origin_zone'),
+                context.get('prev_zone'),
+            ]
+            if any(z is not None for z in zones):
+                for z in zones:
+                    if z is None:
+                        continue
+                    z_text = str(z).lower()
+                    if 'hand' in z_text:
+                        return True
+                return False
+
+            # Fallback for events that may only provide timing hints.
+            timing = str(context.get('timing') or context.get('event') or '').lower()
+            if 'discard' in timing and 'hand' in timing:
+                return True
+
+            return True
+
         def condition0(context: Dict[str, Any]) -> bool:
             if card and card.permanent_of_this_card() is None:
                 return False
             if not (card and card.owner and card.owner.is_my_turn):
+                return False
+
+            if not _trashed_from_owner_hand(context):
                 return False
 
             trashed = context.get('trashed_card') or context.get('card') or context.get('target_card')

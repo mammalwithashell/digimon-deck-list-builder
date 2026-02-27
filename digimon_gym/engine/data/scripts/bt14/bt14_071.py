@@ -20,23 +20,70 @@ class BT14_071(CardScript):
         effect0.set_effect_description("[Start of Your Main Phase] By placing 1 [Eiji Nagasumi] from your hand or trash as this Digimon's bottom digivolution card, gain 1 memory.")
         effect0.is_optional = True
 
-        effect = effect0  # alias for condition closure
         def condition0(context: Dict[str, Any]) -> bool:
             if card and card.permanent_of_this_card() is None:
                 return False
             if not (card and card.owner and card.owner.is_my_turn):
                 return False
-            return True
+
+            player = context.get('player')
+            if not player:
+                return False
+
+            hand = getattr(player, 'hand', []) or []
+            trash = getattr(player, 'trash', []) or []
+
+            def is_eiji_nagasumi(c: Any) -> bool:
+                return getattr(c, 'card_id', '') == 'BT14-087' or getattr(c, 'card_name_eng', '') == 'Eiji Nagasumi'
+
+            return any(is_eiji_nagasumi(c) for c in hand) or any(is_eiji_nagasumi(c) for c in trash)
 
         effect0.set_can_use_condition(condition0)
 
         def process0(ctx: Dict[str, Any]):
-            """Action: Gain 1 memory"""
+            """Action: Place 1 [Eiji Nagasumi] from hand/trash as bottom digivolution card, then gain 1 memory."""
             player = ctx.get('player')
             perm = ctx.get('permanent')
-            game = ctx.get('game')
-            if player:
-                player.add_memory(1)
+            if not player or not perm:
+                return
+
+            hand = getattr(player, 'hand', []) or []
+            trash = getattr(player, 'trash', []) or []
+
+            def is_eiji_nagasumi(c: Any) -> bool:
+                return getattr(c, 'card_id', '') == 'BT14-087' or getattr(c, 'card_name_eng', '') == 'Eiji Nagasumi'
+
+            source_zone = None
+            target = None
+
+            for c in hand:
+                if is_eiji_nagasumi(c):
+                    source_zone = hand
+                    target = c
+                    break
+
+            if target is None:
+                for c in trash:
+                    if is_eiji_nagasumi(c):
+                        source_zone = trash
+                        target = c
+                        break
+
+            if target is None:
+                return
+
+            try:
+                source_zone.remove(target)
+            except ValueError:
+                return
+
+            evo_cards = getattr(perm, 'digivolution_cards', None)
+            if evo_cards is None:
+                evo_cards = []
+                setattr(perm, 'digivolution_cards', evo_cards)
+
+            evo_cards.insert(0, target)
+            player.add_memory(1)
 
         effect0.set_on_process_callback(process0)
         effects.append(effect0)
@@ -51,21 +98,24 @@ class BT14_071(CardScript):
         effect1.set_hash_string("Memory+1_BT14_071")
         effect1.is_on_play = True
 
-        effect = effect1  # alias for condition closure
         def condition1(context: Dict[str, Any]) -> bool:
             if card and card.permanent_of_this_card() is None:
                 return False
             if not (card and card.owner and card.owner.is_my_turn):
                 return False
-            return True
+
+            played_card = context.get('played_card') or context.get('card')
+            if not played_card:
+                return False
+
+            traits = getattr(played_card, 'type_eng', None) or []
+            return ('Dark Animal' in traits) or ('SoC' in traits)
 
         effect1.set_can_use_condition(condition1)
 
         def process1(ctx: Dict[str, Any]):
             """Action: Gain 1 memory"""
             player = ctx.get('player')
-            perm = ctx.get('permanent')
-            game = ctx.get('game')
             if player:
                 player.add_memory(1)
 

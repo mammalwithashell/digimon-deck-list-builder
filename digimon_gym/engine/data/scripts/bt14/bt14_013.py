@@ -25,17 +25,35 @@ class BT14_013(CardScript):
                 return False
             if not (card and card.owner and card.owner.is_my_turn):
                 return False
-            return True
+
+            # Only applies to this Digimon's digivolution, and only into valid targets.
+            source_perm = context.get('permanent') or context.get('source_permanent')
+            self_perm = card.permanent_of_this_card() if card else None
+            if self_perm is not None and source_perm is not None and source_perm is not self_perm:
+                return False
+
+            target = (
+                context.get('target_card')
+                or context.get('digivolve_to')
+                or context.get('to_card')
+                or context.get('evo_target')
+            )
+            if target is None:
+                # If target is unavailable in this timing context, keep effect usable and let engine consume cost_reduction.
+                return True
+
+            name = str(getattr(target, 'card_name_eng', '') or getattr(target, 'name', '') or '')
+            traits = list(getattr(target, 'type_eng', []) or getattr(target, 'traits', []) or [])
+            if 'Tyrannomon' in name:
+                return True
+            return ('Dinosaur' in traits) or ('Ceratopsian' in traits)
 
         effect1.set_can_use_condition(condition1)
 
         def process1(ctx: Dict[str, Any]):
             """Action: Effect"""
-            player = ctx.get('player')
-            perm = ctx.get('permanent')
-            game = ctx.get('game')
             # Cost reduction (variable amount) — handled via cost_reduction property
-            pass  # descriptive-tagged: cost_reduction
+            pass
 
         effect1.set_on_process_callback(process1)
         effects.append(effect1)
@@ -55,17 +73,35 @@ class BT14_013(CardScript):
                 return False
             if not (card and card.owner and card.owner.is_my_turn):
                 return False
-            return True
+
+            # Inherited effect checks the host Digimon.
+            host = context.get('permanent') or card.permanent_of_this_card()
+            if host is None:
+                return False
+
+            name = str(getattr(host, 'name', '') or getattr(host, 'card_name_eng', '') or '')
+            traits = list(getattr(host, 'type_eng', []) or getattr(host, 'traits', []) or [])
+            if 'Tyrannomon' in name:
+                return True
+            return ('Dinosaur' in traits) or ('Ceratopsian' in traits)
 
         effect2.set_can_use_condition(condition2)
 
         def process2(ctx: Dict[str, Any]):
-            """Action: Force Attack"""
-            player = ctx.get('player')
+            """Action: Allow this Digimon to attack at end of turn."""
             perm = ctx.get('permanent')
             game = ctx.get('game')
-            # Force attack — target Digimon may attack (requires engine SelectAttack)
-            pass  # descriptive-tagged: force_attack
+            if perm is None or game is None:
+                return
+
+            # Use optional engine hook when present.
+            grant_cb = getattr(game, 'grant_extra_attack_permission', None)
+            if callable(grant_cb):
+                grant_cb(perm, source='BT14-013')
+                return
+
+            # Fallback flag for engines that inspect per-permanent markers.
+            setattr(perm, 'can_attack_end_of_turn_bt14_013', True)
 
         effect2.set_on_process_callback(process2)
         effects.append(effect2)

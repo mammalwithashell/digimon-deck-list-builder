@@ -26,19 +26,6 @@ class BT14_101(CardScript):
         effect0.set_can_use_condition(condition0)
         effects.append(effect0)
 
-        # Factory effect: alt_digivolve_req
-        # Alternate digivolution requirement
-        effect1 = ICardEffect()
-        effect1.set_effect_name("BT14-101 Alternate digivolution requirement")
-        effect1.set_effect_description("Alternate digivolution requirement")
-        # Alternate digivolution: alternate source for cost 4
-        effect1._alt_digi_cost = 4
-
-        def condition1(context: Dict[str, Any]) -> bool:
-            return True
-        effect1.set_can_use_condition(condition1)
-        effects.append(effect1)
-
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [When Digivolving] This Digimon gains <Raid> for the turn. Then, it may attack.
         effect2 = ICardEffect()
@@ -58,9 +45,7 @@ class BT14_101(CardScript):
 
         def process2(ctx: Dict[str, Any]):
             """Action: Gain Keyword Raid, Force Attack"""
-            player = ctx.get('player')
             perm = ctx.get('permanent')
-            game = ctx.get('game')
             if perm:
                 perm.grant_keyword('_is_raid')
             # Force attack — target Digimon may attack (requires engine SelectAttack)
@@ -70,12 +55,13 @@ class BT14_101(CardScript):
         effects.append(effect2)
 
         # Timing: EffectTiming.OnAllyAttack
-        # [When Attacking] If you have a Tamer, this Digimon gains ��Security A. +1�� and <Piercing> for the turn.
+        # [When Attacking] If you have a Tamer, this Digimon gains <Security A. +1> and <Piercing> for the turn.
         effect3 = ICardEffect()
-        effect3.set_effect_name("BT14-101 Gain Keyword Piercing")
-        effect3.set_effect_description("[When Attacking] If you have a Tamer, this Digimon gains ��Security A. +1�� and <Piercing> for the turn.")
+        effect3.set_effect_name("BT14-101 Gain Security Attack +1 and Piercing")
+        effect3.set_effect_description("[When Attacking] If you have a Tamer, this Digimon gains <Security A. +1> and <Piercing> for the turn.")
         effect3.is_on_attack = True
         effect3._is_piercing = True
+        effect3._security_attack = 1
 
         effect = effect3  # alias for condition closure
         def condition3(context: Dict[str, Any]) -> bool:
@@ -87,10 +73,8 @@ class BT14_101(CardScript):
         effect3.set_can_use_condition(condition3)
 
         def process3(ctx: Dict[str, Any]):
-            """Action: Gain Keyword Piercing"""
-            player = ctx.get('player')
+            """Action: Gain Security Attack +1 and Keyword Piercing"""
             perm = ctx.get('permanent')
-            game = ctx.get('game')
             if perm:
                 perm.grant_keyword('_is_piercing')
 

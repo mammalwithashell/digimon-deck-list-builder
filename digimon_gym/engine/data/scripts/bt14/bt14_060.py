@@ -53,34 +53,45 @@ class BT14_060(CardScript):
         effect1.set_can_use_condition(condition1)
 
         def process1(ctx: Dict[str, Any]):
-            """Action: Play Card, Reveal And Select"""
+            """Action: Reveal top 3; optionally play 1 matching card from revealed; bottom-deck the rest."""
             player = ctx.get('player')
-            perm = ctx.get('permanent')
             game = ctx.get('game')
             if not (player and game):
                 return
-            def play_filter(c):
-                if not getattr(c, 'has_play_cost', False):
-                    return False
-                if getattr(c, 'get_cost_itself', 0) > 3:
-                    return False
-                return True
-            game.effect_play_from_zone(
-                player, 'hand', play_filter, free=True, is_optional=True)
-            if not (player and game):
-                return
+
             def reveal_filter(c):
                 if not getattr(c, 'has_play_cost', False):
                     return False
                 if getattr(c, 'get_cost_itself', 0) > 3:
                     return False
-                return True
+                traits = []
+                if hasattr(c, 'get_type'):
+                    t = c.get_type()
+                    if isinstance(t, list):
+                        traits = [str(x) for x in t]
+                    elif t is not None:
+                        traits = [str(t)]
+                joined = " ".join(traits)
+                return ('D-Brigade' in joined) or ('DigiPolice' in joined)
+
             def on_revealed(selected, remaining):
-                player.hand_cards.append(selected)
+                # selected may be None if player chooses not to play.
+                if selected is not None:
+                    # Put chosen card into hand, then play from hand for free.
+                    player.hand_cards.append(selected)
+
+                    def selected_only(c):
+                        return c is selected
+
+                    game.effect_play_from_zone(
+                        player, 'hand', selected_only, free=True, is_optional=False
+                    )
                 for c in remaining:
                     player.library_cards.append(c)
+
             game.effect_reveal_and_select(
-                player, 3, reveal_filter, on_revealed, is_optional=True)
+                player, 3, reveal_filter, on_revealed, is_optional=True
+            )
 
         effect1.set_on_process_callback(process1)
         effects.append(effect1)

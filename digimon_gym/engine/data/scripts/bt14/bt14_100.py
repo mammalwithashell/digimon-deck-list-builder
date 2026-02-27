@@ -21,15 +21,22 @@ class BT14_100(CardScript):
 
         effect = effect0  # alias for condition closure
         def condition0(context: Dict[str, Any]) -> bool:
-            return True
+            # Must be this card, trashed from hand, by your own effect.
+            if context.get('card') is not card:
+                return False
+            if context.get('from_zone') != 'hand':
+                return False
+            owner = context.get('owner')
+            player = context.get('player')
+            if owner is not None and player is not None and owner is not player:
+                return False
+            return bool(context.get('by_effect', True))
 
         effect0.set_can_use_condition(condition0)
 
         def process0(ctx: Dict[str, Any]):
             """Action: Draw 1"""
             player = ctx.get('player')
-            perm = ctx.get('permanent')
-            game = ctx.get('game')
             if player:
                 player.draw_cards(1)
 
@@ -52,18 +59,20 @@ class BT14_100(CardScript):
         def process1(ctx: Dict[str, Any]):
             """Action: Delete"""
             player = ctx.get('player')
-            perm = ctx.get('permanent')
             game = ctx.get('game')
             if not (player and game):
                 return
+
             def target_filter(p):
                 if p.level is None or p.level > 4:
                     return False
                 return p.is_digimon
+
             def on_delete(target_perm):
                 enemy = player.enemy if player else None
                 if enemy:
                     enemy.delete_permanent(target_perm)
+
             game.effect_select_opponent_permanent(
                 player, on_delete, filter_fn=target_filter, is_optional=False)
 

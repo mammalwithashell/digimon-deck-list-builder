@@ -13,67 +13,60 @@ class BT14_032(CardScript):
     def get_card_effects(self, card: 'CardSource') -> List['ICardEffect']:
         effects = []
 
-        # Timing: EffectTiming.OnEnterFieldAnyone
-        # [On Play] Add the top card of your security stack to the hand. Then, you may place 1 card with [Sukamon] in its name from your hand on top of your security stack.
+        # [On Play] Add the top card of your security stack to the hand.
+        # Then, you may place 1 card with [Sukamon] in its name from your hand on top of your security stack.
         effect0 = ICardEffect()
-        effect0.set_effect_name("BT14-032 Add the security top card to hand and place 1 card from hand to security ")
+        effect0.set_effect_name("BT14-032 Return top security to hand, then optional Sukamon to security")
         effect0.set_effect_description("[On Play] Add the top card of your security stack to the hand. Then, you may place 1 card with [Sukamon] in its name from your hand on top of your security stack.")
         effect0.is_on_play = True
 
-        effect = effect0  # alias for condition closure
         def condition0(context: Dict[str, Any]) -> bool:
             if card and card.permanent_of_this_card() is None:
                 return False
-            # Triggered on play — validated by engine timing
             return True
 
         effect0.set_can_use_condition(condition0)
 
         def process0(ctx: Dict[str, Any]):
-            """Action: Add To Hand, Add To Security, Destroy Security"""
             player = ctx.get('player')
-            perm = ctx.get('permanent')
-            game = ctx.get('game')
-            # Add card to hand (from trash/reveal)
-            if player and player.trash_cards:
-                card_to_add = player.trash_cards.pop()
-                player.hand_cards.append(card_to_add)
-            # Add top card of deck to security
-            if player:
-                player.recovery(1)
-            # Trash opponent's top security card(s)
-            enemy = player.enemy if player else None
-            if enemy:
-                for _ in range(1):
-                    if enemy.security_cards:
-                        trashed = enemy.security_cards.pop(0)
-                        enemy.trash_cards.append(trashed)
+            if not player:
+                return
+
+            # Add the top card of your security stack to hand.
+            if getattr(player, 'security_cards', None):
+                sec_top = player.security_cards.pop(0)
+                player.hand_cards.append(sec_top)
+
+            # Then, you may place 1 [Sukamon]-named card from hand on top of security.
+            hand = getattr(player, 'hand_cards', [])
+            sukamon_idx = None
+            for i, hand_card in enumerate(hand):
+                name = getattr(hand_card, 'card_name', None) or getattr(hand_card, 'name', '')
+                if isinstance(name, str) and 'sukamon' in name.lower():
+                    sukamon_idx = i
+                    break
+
+            if sukamon_idx is not None:
+                chosen = hand.pop(sukamon_idx)
+                player.security_cards.insert(0, chosen)
 
         effect0.set_on_process_callback(process0)
         effects.append(effect0)
 
-        # Timing: EffectTiming.OnDestroyedAnyone
-        # [On Deletion] 1 of your opponent's Digimon gets -3000 DP for the turn.
+        # Inherited [On Deletion] 1 of your opponent's Digimon gets -3000 DP for the turn.
         effect1 = ICardEffect()
-        effect1.set_effect_name("BT14-032 DP -3000")
+        effect1.set_effect_name("BT14-032 Inherited DP -3000")
         effect1.set_effect_description("[On Deletion] 1 of your opponent's Digimon gets -3000 DP for the turn.")
-        effect1.is_inherited_effect = True
         effect1.is_on_deletion = True
         effect1.dp_modifier = -3000
 
-        effect = effect1  # alias for condition closure
         def condition1(context: Dict[str, Any]) -> bool:
-            # Triggered on deletion — validated by engine timing
             return True
 
         effect1.set_can_use_condition(condition1)
 
         def process1(ctx: Dict[str, Any]):
-            """Action: DP -3000"""
             player = ctx.get('player')
-            perm = ctx.get('permanent')
-            game = ctx.get('game')
-            # DP change targets opponent digimon
             enemy = player.enemy if player else None
             if enemy and enemy.battle_area:
                 dp_targets = [p for p in enemy.battle_area if p.is_digimon and p.dp is not None]

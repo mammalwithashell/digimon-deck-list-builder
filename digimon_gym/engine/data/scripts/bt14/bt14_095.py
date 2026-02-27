@@ -11,43 +11,79 @@ class BT14_095(CardScript):
     """BT14-095 Poison Ivy"""
 
     def get_card_effects(self, card: 'CardSource') -> List['ICardEffect']:
-        effects = []
+        effects: List[ICardEffect] = []
 
-        # Timing: EffectTiming.OptionSkill
-        # Effect
-        effect0 = ICardEffect()
-        effect0.set_effect_name("BT14-095 Effect")
-        effect0.set_effect_description("Effect")
+        # [Main] 1 of your opponent's Digimon gains
+        # "[All Turns] When this Digimon becomes suspended, lose 2 memory."
+        # until the end of your opponent's turn.
+        main = ICardEffect()
+        main.set_effect_name("BT14-095 Main")
+        main.set_effect_description(
+            "[Main] 1 of your opponent's Digimon gains \"[All Turns] When this Digimon becomes suspended, lose 2 memory.\" until the end of your opponent's turn."
+        )
+        main.set_can_use_condition(lambda _ctx: True)
 
-        effect = effect0  # alias for condition closure
-        def condition0(context: Dict[str, Any]) -> bool:
-            # Option main effect — validated by engine timing
-            return True
+        def main_process(ctx: Dict[str, Any]):
+            game = ctx.get("game")
+            player = ctx.get("player")
+            if game is None or player is None:
+                return
 
-        effect0.set_can_use_condition(condition0)
-        effects.append(effect0)
+            # Select 1 of opponent's Digimon.
+            target = None
+            if hasattr(game, "select_opponent_digimon"):
+                target = game.select_opponent_digimon(player, 1)
+                if isinstance(target, list):
+                    target = target[0] if target else None
+            elif hasattr(game, "choose_opponent_digimon"):
+                target = game.choose_opponent_digimon(player)
+            elif hasattr(ctx, "get"):
+                target = ctx.get("target")
 
-        # Timing: EffectTiming.OptionSkill
-        # [All Turns] When this Digimon becomes suspended, lose 2 memory.
-        effect1 = ICardEffect()
-        effect1.set_effect_name("BT14-095 Memory -2")
-        effect1.set_effect_description("[All Turns] When this Digimon becomes suspended, lose 2 memory.")
+            if target is None:
+                return
 
-        effect = effect1  # alias for condition closure
-        def condition1(context: Dict[str, Any]) -> bool:
-            return True
+            # Grant temporary trigger until end of opponent's turn.
+            if hasattr(game, "grant_temp_effect"):
+                game.grant_temp_effect(
+                    target=target,
+                    source=card,
+                    effect_text="[All Turns] When this Digimon becomes suspended, lose 2 memory.",
+                    until="end_of_opponents_turn",
+                )
+            elif hasattr(target, "add_temp_effect"):
+                target.add_temp_effect(
+                    "[All Turns] When this Digimon becomes suspended, lose 2 memory.",
+                    duration="end_of_opponents_turn",
+                    source=card,
+                )
 
-        effect1.set_can_use_condition(condition1)
+        main.set_on_process_callback(main_process)
+        effects.append(main)
 
-        def process1(ctx: Dict[str, Any]):
-            """Action: Add Temp Effect"""
-            player = ctx.get('player')
-            perm = ctx.get('permanent')
-            game = ctx.get('game')
-            # Grant temporary effect to target permanent
-            pass  # descriptive-tagged: add_temp_effect
+        # Security: Activate this card's [Main] effects. Then, add this card to your hand.
+        security = ICardEffect()
+        security.set_effect_name("BT14-095 Security")
+        security.set_effect_description(
+            "[Security] Activate this card's [Main] effects. Then, add this card to your hand."
+        )
+        security.set_can_use_condition(lambda _ctx: True)
 
-        effect1.set_on_process_callback(process1)
-        effects.append(effect1)
+        def security_process(ctx: Dict[str, Any]):
+            # Reuse [Main]
+            main_process(ctx)
+
+            game = ctx.get("game")
+            player = ctx.get("player")
+            if game is None or player is None:
+                return
+
+            if hasattr(game, "add_card_to_hand_from_security"):
+                game.add_card_to_hand_from_security(player, card)
+            elif hasattr(game, "move_card"):
+                game.move_card(card, "security", "hand", player)
+
+        security.set_on_process_callback(security_process)
+        effects.append(security)
 
         return effects
