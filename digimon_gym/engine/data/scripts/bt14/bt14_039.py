@@ -46,7 +46,6 @@ class BT14_039(CardScript):
         effect2.is_optional = True
         effect2.is_on_play = True
 
-        effect = effect2  # alias for condition closure
         def condition2(context: Dict[str, Any]) -> bool:
             if card and card.permanent_of_this_card() is None:
                 return False
@@ -58,8 +57,6 @@ class BT14_039(CardScript):
         def process2(ctx: Dict[str, Any]):
             """Action: Gain 2 memory"""
             player = ctx.get('player')
-            perm = ctx.get('permanent')
-            game = ctx.get('game')
             if player:
                 player.add_memory(2)
 
@@ -70,16 +67,30 @@ class BT14_039(CardScript):
         # Security Attack +1
         effect3 = ICardEffect()
         effect3.set_effect_name("BT14-039 Security Attack +1")
-        effect3.set_effect_description("Security Attack +1")
+        effect3.set_effect_description("[Your Turn] While this Digimon has [Monzaemon] or [Numemon] in its name, it gains Security Attack +1")
         effect3.is_inherited_effect = True
         effect3._security_attack_modifier = 1
 
         def condition3(context: Dict[str, Any]) -> bool:
             if not (card and card.owner and card.owner.is_my_turn):
                 return False
-            if card and card.permanent_of_this_card() is None:
+            perm = card.permanent_of_this_card() if card else None
+            if perm is None:
                 return False
-            return True
+
+            # Active only while this Digimon has [Monzaemon] or [Numemon] in its name
+            stack_cards = []
+            if hasattr(perm, 'digivolution_cards') and perm.digivolution_cards is not None:
+                stack_cards = perm.digivolution_cards
+            elif hasattr(perm, 'evolution_cards') and perm.evolution_cards is not None:
+                stack_cards = perm.evolution_cards
+
+            for c in stack_cards:
+                name = getattr(c, 'card_name_eng', None) or getattr(c, 'name', None) or ''
+                if isinstance(name, str) and ("Monzaemon" in name or "Numemon" in name):
+                    return True
+            return False
+
         effect3.set_can_use_condition(condition3)
         effects.append(effect3)
 
