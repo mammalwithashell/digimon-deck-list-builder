@@ -83,22 +83,22 @@ class BT14_018(CardScript):
         effect2.set_can_use_condition(condition2)
 
         def process2(ctx: Dict[str, Any]):
-            """Action: Recovery +1, Delete"""
+            """Action: Delete own Amon/Umon tokens; if any deleted, Recovery +1"""
             player = ctx.get('player')
-            perm = ctx.get('permanent')
-            game = ctx.get('game')
-            if player:
-                player.recovery(1)
-            if not (player and game):
+            if not player:
                 return
-            def target_filter(p):
-                return p.is_digimon
-            def on_delete(target_perm):
-                enemy = player.enemy if player else None
-                if enemy:
-                    enemy.delete_permanent(target_perm)
-            game.effect_select_opponent_permanent(
-                player, on_delete, filter_fn=target_filter, is_optional=False)
+
+            deleted_any = False
+            for p in list(getattr(player, 'battle_area', [])):
+                if not getattr(p, 'is_digimon', False):
+                    continue
+                name = getattr(p, 'get_name', lambda: '')()
+                if name in ("Amon of Crimson Flame", "Umon of Blue Thunder"):
+                    player.delete_permanent(p)
+                    deleted_any = True
+
+            if deleted_any:
+                player.recovery(1)
 
         effect2.set_on_process_callback(process2)
         effects.append(effect2)
@@ -119,22 +119,22 @@ class BT14_018(CardScript):
         effect3.set_can_use_condition(condition3)
 
         def process3(ctx: Dict[str, Any]):
-            """Action: Recovery +1, Delete"""
+            """Action: Delete own Amon/Umon tokens; if any deleted, Recovery +1"""
             player = ctx.get('player')
-            perm = ctx.get('permanent')
-            game = ctx.get('game')
-            if player:
-                player.recovery(1)
-            if not (player and game):
+            if not player:
                 return
-            def target_filter(p):
-                return p.is_digimon
-            def on_delete(target_perm):
-                enemy = player.enemy if player else None
-                if enemy:
-                    enemy.delete_permanent(target_perm)
-            game.effect_select_opponent_permanent(
-                player, on_delete, filter_fn=target_filter, is_optional=False)
+
+            deleted_any = False
+            for p in list(getattr(player, 'battle_area', [])):
+                if not getattr(p, 'is_digimon', False):
+                    continue
+                name = getattr(p, 'get_name', lambda: '')()
+                if name in ("Amon of Crimson Flame", "Umon of Blue Thunder"):
+                    player.delete_permanent(p)
+                    deleted_any = True
+
+            if deleted_any:
+                player.recovery(1)
 
         effect3.set_on_process_callback(process3)
         effects.append(effect3)
