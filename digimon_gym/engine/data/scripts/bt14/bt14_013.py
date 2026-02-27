@@ -10,6 +10,14 @@ if TYPE_CHECKING:
 class BT14_013(CardScript):
     """BT14-013 Tyrannomon | Lv.4"""
 
+    @staticmethod
+    def _name_or_trait_match(name: str, traits: List[str]) -> bool:
+        n = (name or "").lower()
+        t = [str(x).lower() for x in (traits or [])]
+        if "tyrannomon" in n:
+            return True
+        return "dinosaur" in t or "ceratopsian" in t
+
     def get_card_effects(self, card: 'CardSource') -> List['ICardEffect']:
         effects = []
 
@@ -25,7 +33,15 @@ class BT14_013(CardScript):
                 return False
             if not (card and card.owner and card.owner.is_my_turn):
                 return False
-            return True
+
+            # Apply only when the digivolution target matches Tyrannomon/Dinosaur/Ceratopsian.
+            target = context.get('to_card') or context.get('digivolve_to') or context.get('target_card')
+            if target is None:
+                return False
+
+            target_name = getattr(target, 'card_name_eng', None) or getattr(target, 'name', '')
+            target_traits = getattr(target, 'type_eng', None) or getattr(target, 'traits', [])
+            return self._name_or_trait_match(target_name, target_traits)
 
         effect1.set_can_use_condition(condition1)
 
@@ -55,7 +71,15 @@ class BT14_013(CardScript):
                 return False
             if not (card and card.owner and card.owner.is_my_turn):
                 return False
-            return True
+
+            # This inherited effect checks the current Digimon's own name/traits.
+            perm = context.get('permanent')
+            if perm is None:
+                return False
+
+            p_name = getattr(perm, 'card_name_eng', None) or getattr(perm, 'name', '')
+            p_traits = getattr(perm, 'type_eng', None) or getattr(perm, 'traits', [])
+            return self._name_or_trait_match(p_name, p_traits)
 
         effect2.set_can_use_condition(condition2)
 
