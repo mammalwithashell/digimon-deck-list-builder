@@ -37,14 +37,12 @@ class BT14_047(CardScript):
             game = ctx.get('game')
             if not (player and game):
                 return
-            def target_filter(p):
-                if p.dp is None or p.dp > 5000:
-                    return False
-                return True
+
             def on_suspend(target_perm):
                 target_perm.suspend()
+
             game.effect_select_opponent_permanent(
-                player, on_suspend, filter_fn=target_filter, is_optional=False)
+                player, on_suspend, is_optional=False)
             if perm:
                 perm.grant_keyword('_is_cannot_unsuspend_player')
 
@@ -75,14 +73,12 @@ class BT14_047(CardScript):
             game = ctx.get('game')
             if not (player and game):
                 return
-            def target_filter(p):
-                if p.dp is None or p.dp > 5000:
-                    return False
-                return True
+
             def on_suspend(target_perm):
                 target_perm.suspend()
+
             game.effect_select_opponent_permanent(
-                player, on_suspend, filter_fn=target_filter, is_optional=False)
+                player, on_suspend, is_optional=False)
             if perm:
                 perm.grant_keyword('_is_cannot_unsuspend_player')
 
