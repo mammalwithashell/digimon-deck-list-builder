@@ -23,8 +23,9 @@ class BT14_031(CardScript):
         effect0.set_hash_string("DP-2000_BT14_031")
         effect0.is_on_attack = True
         effect0.dp_modifier = -2000
+        effect0.enemy_count = 1
+        effect0.enemy_target_type = "digimon"
 
-        effect = effect0  # alias for condition closure
         def condition0(context: Dict[str, Any]) -> bool:
             if card and card.permanent_of_this_card() is None:
                 return False
@@ -35,16 +36,8 @@ class BT14_031(CardScript):
 
         def process0(ctx: Dict[str, Any]):
             """Action: DP -2000"""
-            player = ctx.get('player')
-            perm = ctx.get('permanent')
-            game = ctx.get('game')
-            # DP change targets opponent digimon
-            enemy = player.enemy if player else None
-            if enemy and enemy.battle_area:
-                dp_targets = [p for p in enemy.battle_area if p.is_digimon and p.dp is not None]
-                if dp_targets:
-                    target = min(dp_targets, key=lambda p: p.dp)
-                    target.change_dp(-2000)
+            # Targeting/application is handled by engine via dp_modifier + target metadata.
+            return
 
         effect0.set_on_process_callback(process0)
         effects.append(effect0)
