@@ -1,0 +1,2054 @@
+{
+  "set_id": "BT16",
+  "total_cards": 103,
+  "cards_audited": 103,
+  "cards_with_issues": 46,
+  "cards_below_threshold": 29,
+  "cards_missing_script": 0,
+  "average_score": 0.7637,
+  "cards": {
+    "BT16-001": {
+      "card_id": "BT16-001",
+      "card_name": "Poromon",
+      "score": 1.0,
+      "effects_ratio": 1.0,
+      "actions_ratio": 1.0,
+      "forward_match_ratio": 1.0,
+      "coroutine_score": 1.0,
+      "forward_issues": [],
+      "reverse_issues": [],
+      "timing_issues": [],
+      "structural_warnings": [],
+      "below_threshold": false,
+      "has_script": true,
+      "api_effect_blocks": 1,
+      "script_effect_count": 1
+    },
+    "BT16-002": {
+      "card_id": "BT16-002",
+      "card_name": "DemiVeemon",
+      "score": 0.2,
+      "effects_ratio": 0.0,
+      "actions_ratio": 0.0,
+      "forward_match_ratio": 1.0,
+      "coroutine_score": 0.0,
+      "forward_issues": [],
+      "reverse_issues": [],
+      "timing_issues": [],
+      "structural_warnings": [],
+      "below_threshold": true,
+      "has_script": true,
+      "api_effect_blocks": 1,
+      "script_effect_count": 0
+    },
+    "BT16-003": {
+      "card_id": "BT16-003",
+      "card_name": "Upamon",
+      "score": 0.2,
+      "effects_ratio": 0.0,
+      "actions_ratio": 0.0,
+      "forward_match_ratio": 1.0,
+      "coroutine_score": 0.0,
+      "forward_issues": [],
+      "reverse_issues": [],
+      "timing_issues": [],
+      "structural_warnings": [],
+      "below_threshold": true,
+      "has_script": true,
+      "api_effect_blocks": 1,
+      "script_effect_count": 0
+    },
+    "BT16-004": {
+      "card_id": "BT16-004",
+      "card_name": "Minomon",
+      "score": 1.0,
+      "effects_ratio": 1.0,
+      "actions_ratio": 1.0,
+      "forward_match_ratio": 1.0,
+      "coroutine_score": 1.0,
+      "forward_issues": [],
+      "reverse_issues": [],
+      "timing_issues": [],
+      "structural_warnings": [],
+      "below_threshold": false,
+      "has_script": true,
+      "api_effect_blocks": 1,
+      "script_effect_count": 1
+    },
+    "BT16-005": {
+      "card_id": "BT16-005",
+      "card_name": "Dorimon",
+      "score": 0.8,
+      "effects_ratio": 1.0,
+      "actions_ratio": 1.0,
+      "forward_match_ratio": 0.0,
+      "coroutine_score": 1.0,
+      "forward_issues": [
+        "blocker"
+      ],
+      "reverse_issues": [],
+      "timing_issues": [],
+      "structural_warnings": [],
+      "below_threshold": false,
+      "has_script": true,
+      "api_effect_blocks": 1,
+      "script_effect_count": 1
+    },
+    "BT16-006": {
+      "card_id": "BT16-006",
+      "card_name": "Cupimon",
+      "score": 1.0,
+      "effects_ratio": 1.0,
+      "actions_ratio": 1.0,
+      "forward_match_ratio": 1.0,
+      "coroutine_score": 1.0,
+      "forward_issues": [],
+      "reverse_issues": [],
+      "timing_issues": [],
+      "structural_warnings": [],
+      "below_threshold": false,
+      "has_script": true,
+      "api_effect_blocks": 1,
+      "script_effect_count": 1
+    },
+    "BT16-007": {
+      "card_id": "BT16-007",
+      "card_name": "Hawkmon",
+      "score": 0.6,
+      "effects_ratio": 0.5,
+      "actions_ratio": 1.0,
+      "forward_match_ratio": 0.5,
+      "coroutine_score": 0.0,
+      "forward_issues": [
+        "memory_gain"
+      ],
+      "reverse_issues": [],
+      "timing_issues": [],
+      "structural_warnings": [],
+      "below_threshold": true,
+      "has_script": true,
+      "api_effect_blocks": 2,
+      "script_effect_count": 1
+    },
+    "BT16-008": {
+      "card_id": "BT16-008",
+      "card_name": "Aquilamon",
+      "score": 1.0,
+      "effects_ratio": 1.0,
+      "actions_ratio": 1.0,
+      "forward_match_ratio": 1.0,
+      "coroutine_score": 1.0,
+      "forward_issues": [],
+      "reverse_issues": [],
+      "timing_issues": [],
+      "structural_warnings": [],
+      "below_threshold": false,
+      "has_script": true,
+      "api_effect_blocks": 3,
+      "script_effect_count": 3
+    },
+    "BT16-009": {
+      "card_id": "BT16-009",
+      "card_name": "Lynxmon",
+      "score": 0.3333,
+      "effects_ratio": 0.3333,
+      "actions_ratio": 0.0,
+      "forward_match_ratio": 1.0,
+      "coroutine_score": 0.0,
+      "forward_issues": [],
+      "reverse_issues": [],
+      "timing_issues": [],
+      "structural_warnings": [],
+      "below_threshold": true,
+      "has_script": true,
+      "api_effect_blocks": 3,
+      "script_effect_count": 1
+    },
+    "BT16-010": {
+      "card_id": "BT16-010",
+      "card_name": "Helloogarmon",
+      "score": 0.7667,
+      "effects_ratio": 0.6667,
+      "actions_ratio": 1.0,
+      "forward_match_ratio": 1.0,
+      "coroutine_score": 0.0,
+      "forward_issues": [],
+      "reverse_issues": [],
+      "timing_issues": [],
+      "structural_warnings": [],
+      "below_threshold": false,
+      "has_script": true,
+      "api_effect_blocks": 3,
+      "script_effect_count": 2
+    },
+    "BT16-011": {
+      "card_id": "BT16-011",
+      "card_name": "Garudamon (X Antibody)",
+      "score": 0.9333,
+      "effects_ratio": 1.0,
+      "actions_ratio": 1.0,
+      "forward_match_ratio": 0.6667,
+      "coroutine_score": 1.0,
+      "forward_issues": [
+        "bounce"
+      ],
+      "reverse_issues": [],
+      "timing_issues": [],
+      "structural_warnings": [],
+      "below_threshold": false,
+      "has_script": true,
+      "api_effect_blocks": 3,
+      "script_effect_count": 4
+    },
+    "BT16-012": {
+      "card_id": "BT16-012",
+      "card_name": "Silphymon",
+      "score": 0.8,
+      "effects_ratio": 0.75,
+      "actions_ratio": 1.0,
+      "forward_match_ratio": 1.0,
+      "coroutine_score": 0.0,
+      "forward_issues": [],
+      "reverse_issues": [
+        "_is_partition"
+      ],
+      "timing_issues": [],
+      "structural_warnings": [],
+      "below_threshold": false,
+      "has_script": true,
+      "api_effect_blocks": 4,
+      "script_effect_count": 3
+    },
+    "BT16-013": {
+      "card_id": "BT16-013",
+      "card_name": "Valkyrimon",
+      "score": 0.1,
+      "effects_ratio": 0.0,
+      "actions_ratio": 0.0,
+      "forward_match_ratio": 0.5,
+      "coroutine_score": 0.0,
+      "forward_issues": [
+        "delete_opponent",
+        "dp_modification"
+      ],
+      "reverse_issues": [],
+      "timing_issues": [
+        "has inherited effect text but no is_inherited_effect flag"
+      ],
+      "structural_warnings": [
+        "API has inherited effect but script has no is_inherited_effect"
+      ],
+      "below_threshold": true,
+      "has_script": true,
+      "api_effect_blocks": 4,
+      "script_effect_count": 0
+    },
+    "BT16-014": {
+      "card_id": "BT16-014",
+      "card_name": "Goldramon (X Antibody)",
+      "score": 0.3333,
+      "effects_ratio": 0.3333,
+      "actions_ratio": 0.0,
+      "forward_match_ratio": 1.0,
+      "coroutine_score": 0.0,
+      "forward_issues": [],
+      "reverse_issues": [],
+      "timing_issues": [
+        "timing 'When Digivolving' -> is_when_digivolving not found",
+        "timing 'When Attacking' -> is_on_attack not found"
+      ],
+      "structural_warnings": [],
+      "below_threshold": true,
+      "has_script": true,
+      "api_effect_blocks": 3,
+      "script_effect_count": 1
+    },
+    "BT16-015": {
+      "card_id": "BT16-015",
+      "card_name": "Phoenixmon (X Antibody)",
+      "score": 0.6333,
+      "effects_ratio": 0.3333,
+      "actions_ratio": 1.0,
+      "forward_match_ratio": 1.0,
+      "coroutine_score": 0.0,
+      "forward_issues": [],
+      "reverse_issues": [],
+      "timing_issues": [
+        "timing 'When Digivolving' -> is_when_digivolving not found"
+      ],
+      "structural_warnings": [],
+      "below_threshold": true,
+      "has_script": true,
+      "api_effect_blocks": 3,
+      "script_effect_count": 1
+    },
+    "BT16-016": {
+      "card_id": "BT16-016",
+      "card_name": "Patamon",
+      "score": 0.9,
+      "effects_ratio": 1.0,
+      "actions_ratio": 0.6667,
+      "forward_match_ratio": 1.0,
+      "coroutine_score": 1.0,
+      "forward_issues": [],
+      "reverse_issues": [],
+      "timing_issues": [],
+      "structural_warnings": [],
+      "below_threshold": false,
+      "has_script": true,
+      "api_effect_blocks": 2,
+      "script_effect_count": 3
+    },
+    "BT16-017": {
+      "card_id": "BT16-017",
+      "card_name": "Veemon",
+      "score": 0.7,
+      "effects_ratio": 0.5,
+      "actions_ratio": 1.0,
+      "forward_match_ratio": 1.0,
+      "coroutine_score": 0.0,
+      "forward_issues": [],
+      "reverse_issues": [],
+      "timing_issues": [],
+      "structural_warnings": [],
+      "below_threshold": false,
+      "has_script": true,
+      "api_effect_blocks": 2,
+      "script_effect_count": 1
+    },
+    "BT16-018": {
+      "card_id": "BT16-018",
+      "card_name": "ExVeemon",
+      "score": 0.7,
+      "effects_ratio": 0.6667,
+      "actions_ratio": 1.0,
+      "forward_match_ratio": 0.6667,
+      "coroutine_score": 0.0,
+      "forward_issues": [
+        "destruction_immunity"
+      ],
+      "reverse_issues": [],
+      "timing_issues": [],
+      "structural_warnings": [],
+      "below_threshold": false,
+      "has_script": true,
+      "api_effect_blocks": 3,
+      "script_effect_count": 2
+    },
+    "BT16-019": {
+      "card_id": "BT16-019",
+      "card_name": "Angemon",
+      "score": 0.9333,
+      "effects_ratio": 1.0,
+      "actions_ratio": 1.0,
+      "forward_match_ratio": 0.6667,
+      "coroutine_score": 1.0,
+      "forward_issues": [
+        "suspend_target"
+      ],
+      "reverse_issues": [],
+      "timing_issues": [],
+      "structural_warnings": [],
+      "below_threshold": false,
+      "has_script": true,
+      "api_effect_blocks": 3,
+      "script_effect_count": 3
+    },
+    "BT16-020": {
+      "card_id": "BT16-020",
+      "card_name": "Gaogamon",
+      "score": 0.7,
+      "effects_ratio": 0.5,
+      "actions_ratio": 1.0,
+      "forward_match_ratio": 1.0,
+      "coroutine_score": 0.0,
+      "forward_issues": [],
+      "reverse_issues": [],
+      "timing_issues": [],
+      "structural_warnings": [],
+      "below_threshold": false,
+      "has_script": true,
+      "api_effect_blocks": 2,
+      "script_effect_count": 1
+    },
+    "BT16-021": {
+      "card_id": "BT16-021",
+      "card_name": "Togemogumon",
+      "score": 0.5667,
+      "effects_ratio": 0.3333,
+      "actions_ratio": 1.0,
+      "forward_match_ratio": 0.6667,
+      "coroutine_score": 0.0,
+      "forward_issues": [
+        "attack_prevention"
+      ],
+      "reverse_issues": [],
+      "timing_issues": [],
+      "structural_warnings": [],
+      "below_threshold": true,
+      "has_script": true,
+      "api_effect_blocks": 3,
+      "script_effect_count": 1
+    },
+    "BT16-022": {
+      "card_id": "BT16-022",
+      "card_name": "Mantaraymon",
+      "score": 0.4,
+      "effects_ratio": 0.5,
+      "actions_ratio": 0.0,
+      "forward_match_ratio": 1.0,
+      "coroutine_score": 0.0,
+      "forward_issues": [],
+      "reverse_issues": [],
+      "timing_issues": [],
+      "structural_warnings": [],
+      "below_threshold": true,
+      "has_script": true,
+      "api_effect_blocks": 2,
+      "script_effect_count": 1
+    },
+    "BT16-023": {
+      "card_id": "BT16-023",
+      "card_name": "Divemon",
+      "score": 0.9,
+      "effects_ratio": 1.0,
+      "actions_ratio": 1.0,
+      "forward_match_ratio": 0.5,
+      "coroutine_score": 1.0,
+      "forward_issues": [
+        "suspend_target"
+      ],
+      "reverse_issues": [],
+      "timing_issues": [],
+      "structural_warnings": [],
+      "below_threshold": false,
+      "has_script": true,
+      "api_effect_blocks": 2,
+      "script_effect_count": 3
+    },
+    "BT16-024": {
+      "card_id": "BT16-024",
+      "card_name": "MagnaAngemon",
+      "score": 0.9,
+      "effects_ratio": 1.0,
+      "actions_ratio": 1.0,
+      "forward_match_ratio": 0.5,
+      "coroutine_score": 1.0,
+      "forward_issues": [
+        "digivolve_into"
+      ],
+      "reverse_issues": [],
+      "timing_issues": [],
+      "structural_warnings": [],
+      "below_threshold": false,
+      "has_script": true,
+      "api_effect_blocks": 2,
+      "script_effect_count": 2
+    },
+    "BT16-025": {
+      "card_id": "BT16-025",
+      "card_name": "Paildramon",
+      "score": 0.7,
+      "effects_ratio": 0.5,
+      "actions_ratio": 1.0,
+      "forward_match_ratio": 1.0,
+      "coroutine_score": 0.0,
+      "forward_issues": [],
+      "reverse_issues": [
+        "_is_partition"
+      ],
+      "timing_issues": [
+        "has inherited effect text but no is_inherited_effect flag"
+      ],
+      "structural_warnings": [
+        "API has inherited effect but script has no is_inherited_effect"
+      ],
+      "below_threshold": false,
+      "has_script": true,
+      "api_effect_blocks": 4,
+      "script_effect_count": 2
+    },
+    "BT16-026": {
+      "card_id": "BT16-026",
+      "card_name": "Vikemon",
+      "score": 0.8,
+      "effects_ratio": 0.75,
+      "actions_ratio": 1.0,
+      "forward_match_ratio": 1.0,
+      "coroutine_score": 0.0,
+      "forward_issues": [],
+      "reverse_issues": [],
+      "timing_issues": [
+        "has inherited effect text but no is_inherited_effect flag"
+      ],
+      "structural_warnings": [
+        "API has inherited effect but script has no is_inherited_effect"
+      ],
+      "below_threshold": false,
+      "has_script": true,
+      "api_effect_blocks": 4,
+      "script_effect_count": 3
+    },
+    "BT16-027": {
+      "card_id": "BT16-027",
+      "card_name": "Imperialdramon: Fighter Mode",
+      "score": 0.8,
+      "effects_ratio": 0.75,
+      "actions_ratio": 1.0,
+      "forward_match_ratio": 1.0,
+      "coroutine_score": 0.0,
+      "forward_issues": [],
+      "reverse_issues": [],
+      "timing_issues": [
+        "has inherited effect text but no is_inherited_effect flag"
+      ],
+      "structural_warnings": [
+        "API has inherited effect but script has no is_inherited_effect"
+      ],
+      "below_threshold": false,
+      "has_script": true,
+      "api_effect_blocks": 4,
+      "script_effect_count": 3
+    },
+    "BT16-028": {
+      "card_id": "BT16-028",
+      "card_name": "Imperialdramon: Dragon Mode",
+      "score": 1.0,
+      "effects_ratio": 1.0,
+      "actions_ratio": 1.0,
+      "forward_match_ratio": 1.0,
+      "coroutine_score": 1.0,
+      "forward_issues": [],
+      "reverse_issues": [],
+      "timing_issues": [],
+      "structural_warnings": [],
+      "below_threshold": false,
+      "has_script": true,
+      "api_effect_blocks": 2,
+      "script_effect_count": 2
+    },
+    "BT16-029": {
+      "card_id": "BT16-029",
+      "card_name": "Agumon",
+      "score": 0.6,
+      "effects_ratio": 0.5,
+      "actions_ratio": 1.0,
+      "forward_match_ratio": 0.5,
+      "coroutine_score": 0.0,
+      "forward_issues": [
+        "dp_modification"
+      ],
+      "reverse_issues": [],
+      "timing_issues": [
+        "has inherited effect text but no is_inherited_effect flag"
+      ],
+      "structural_warnings": [
+        "API has inherited effect but script has no is_inherited_effect"
+      ],
+      "below_threshold": true,
+      "has_script": true,
+      "api_effect_blocks": 2,
+      "script_effect_count": 1
+    },
+    "BT16-030": {
+      "card_id": "BT16-030",
+      "card_name": "Salamon",
+      "score": 0.9,
+      "effects_ratio": 1.0,
+      "actions_ratio": 1.0,
+      "forward_match_ratio": 0.5,
+      "coroutine_score": 1.0,
+      "forward_issues": [
+        "dp_modification"
+      ],
+      "reverse_issues": [],
+      "timing_issues": [
+        "has inherited effect text but no is_inherited_effect flag"
+      ],
+      "structural_warnings": [
+        "API has inherited effect but script has no is_inherited_effect"
+      ],
+      "below_threshold": false,
+      "has_script": true,
+      "api_effect_blocks": 2,
+      "script_effect_count": 2
+    },
+    "BT16-031": {
+      "card_id": "BT16-031",
+      "card_name": "Gatomon",
+      "score": 0.6333,
+      "effects_ratio": 0.6667,
+      "actions_ratio": 1.0,
+      "forward_match_ratio": 0.3333,
+      "coroutine_score": 0.0,
+      "forward_issues": [
+        "dp_modification",
+        "bounce"
+      ],
+      "reverse_issues": [],
+      "timing_issues": [
+        "has inherited effect text but no is_inherited_effect flag"
+      ],
+      "structural_warnings": [
+        "API has inherited effect but script has no is_inherited_effect"
+      ],
+      "below_threshold": true,
+      "has_script": true,
+      "api_effect_blocks": 3,
+      "script_effect_count": 2
+    },
+    "BT16-032": {
+      "card_id": "BT16-032",
+      "card_name": "Sheepmon",
+      "score": 0.2,
+      "effects_ratio": 0.0,
+      "actions_ratio": 0.0,
+      "forward_match_ratio": 1.0,
+      "coroutine_score": 0.0,
+      "forward_issues": [],
+      "reverse_issues": [],
+      "timing_issues": [],
+      "structural_warnings": [],
+      "below_threshold": true,
+      "has_script": true,
+      "api_effect_blocks": 3,
+      "script_effect_count": 0
+    },
+    "BT16-033": {
+      "card_id": "BT16-033",
+      "card_name": "Harpymon",
+      "score": 0.7,
+      "effects_ratio": 0.5,
+      "actions_ratio": 1.0,
+      "forward_match_ratio": 1.0,
+      "coroutine_score": 0.0,
+      "forward_issues": [],
+      "reverse_issues": [],
+      "timing_issues": [],
+      "structural_warnings": [],
+      "below_threshold": false,
+      "has_script": true,
+      "api_effect_blocks": 2,
+      "script_effect_count": 1
+    },
+    "BT16-034": {
+      "card_id": "BT16-034",
+      "card_name": "Tempomon",
+      "score": 0.9,
+      "effects_ratio": 1.0,
+      "actions_ratio": 0.6667,
+      "forward_match_ratio": 1.0,
+      "coroutine_score": 1.0,
+      "forward_issues": [],
+      "reverse_issues": [],
+      "timing_issues": [],
+      "structural_warnings": [],
+      "below_threshold": false,
+      "has_script": true,
+      "api_effect_blocks": 2,
+      "script_effect_count": 3
+    },
+    "BT16-035": {
+      "card_id": "BT16-035",
+      "card_name": "SlashAngemon",
+      "score": 0.6333,
+      "effects_ratio": 0.3333,
+      "actions_ratio": 1.0,
+      "forward_match_ratio": 1.0,
+      "coroutine_score": 0.0,
+      "forward_issues": [],
+      "reverse_issues": [],
+      "timing_issues": [],
+      "structural_warnings": [],
+      "below_threshold": true,
+      "has_script": true,
+      "api_effect_blocks": 3,
+      "script_effect_count": 1
+    },
+    "BT16-036": {
+      "card_id": "BT16-036",
+      "card_name": "Chaosmon",
+      "score": 0.47,
+      "effects_ratio": 0.4,
+      "actions_ratio": 0.5,
+      "forward_match_ratio": 0.8,
+      "coroutine_score": 0.0,
+      "forward_issues": [
+        "dp_modification"
+      ],
+      "reverse_issues": [
+        "_is_partition"
+      ],
+      "timing_issues": [],
+      "structural_warnings": [],
+      "below_threshold": true,
+      "has_script": true,
+      "api_effect_blocks": 5,
+      "script_effect_count": 2
+    },
+    "BT16-037": {
+      "card_id": "BT16-037",
+      "card_name": "KoKabuterimon",
+      "score": 0.7,
+      "effects_ratio": 0.5,
+      "actions_ratio": 1.0,
+      "forward_match_ratio": 1.0,
+      "coroutine_score": 0.0,
+      "forward_issues": [],
+      "reverse_issues": [],
+      "timing_issues": [],
+      "structural_warnings": [],
+      "below_threshold": false,
+      "has_script": true,
+      "api_effect_blocks": 2,
+      "script_effect_count": 1
+    },
+    "BT16-038": {
+      "card_id": "BT16-038",
+      "card_name": "Terriermon (X Antibody)",
+      "score": 0.2,
+      "effects_ratio": 0.5,
+      "actions_ratio": 0.0,
+      "forward_match_ratio": 0.0,
+      "coroutine_score": 0.0,
+      "forward_issues": [
+        "digivolve_into",
+        "piercing"
+      ],
+      "reverse_issues": [],
+      "timing_issues": [
+        "has inherited effect text but no is_inherited_effect flag"
+      ],
+      "structural_warnings": [
+        "API has inherited effect but script has no is_inherited_effect"
+      ],
+      "below_threshold": true,
+      "has_script": true,
+      "api_effect_blocks": 2,
+      "script_effect_count": 1
+    },
+    "BT16-039": {
+      "card_id": "BT16-039",
+      "card_name": "Pulsemon",
+      "score": 0.7,
+      "effects_ratio": 0.5,
+      "actions_ratio": 1.0,
+      "forward_match_ratio": 1.0,
+      "coroutine_score": 0.0,
+      "forward_issues": [],
+      "reverse_issues": [],
+      "timing_issues": [],
+      "structural_warnings": [],
+      "below_threshold": false,
+      "has_script": true,
+      "api_effect_blocks": 2,
+      "script_effect_count": 1
+    },
+    "BT16-040": {
+      "card_id": "BT16-040",
+      "card_name": "Wormmon",
+      "score": 1.0,
+      "effects_ratio": 1.0,
+      "actions_ratio": 1.0,
+      "forward_match_ratio": 1.0,
+      "coroutine_score": 1.0,
+      "forward_issues": [],
+      "reverse_issues": [],
+      "timing_issues": [],
+      "structural_warnings": [],
+      "below_threshold": false,
+      "has_script": true,
+      "api_effect_blocks": 2,
+      "script_effect_count": 3
+    },
+    "BT16-041": {
+      "card_id": "BT16-041",
+      "card_name": "Stingmon",
+      "score": 1.0,
+      "effects_ratio": 1.0,
+      "actions_ratio": 1.0,
+      "forward_match_ratio": 1.0,
+      "coroutine_score": 1.0,
+      "forward_issues": [],
+      "reverse_issues": [],
+      "timing_issues": [],
+      "structural_warnings": [],
+      "below_threshold": false,
+      "has_script": true,
+      "api_effect_blocks": 3,
+      "script_effect_count": 3
+    },
+    "BT16-042": {
+      "card_id": "BT16-042",
+      "card_name": "BladeKuwagamon",
+      "score": 0.7,
+      "effects_ratio": 1.0,
+      "actions_ratio": 0.0,
+      "forward_match_ratio": 1.0,
+      "coroutine_score": 1.0,
+      "forward_issues": [],
+      "reverse_issues": [],
+      "timing_issues": [],
+      "structural_warnings": [],
+      "below_threshold": false,
+      "has_script": true,
+      "api_effect_blocks": 2,
+      "script_effect_count": 2
+    },
+    "BT16-043": {
+      "card_id": "BT16-043",
+      "card_name": "Runnermon",
+      "score": 1.0,
+      "effects_ratio": 1.0,
+      "actions_ratio": 1.0,
+      "forward_match_ratio": 1.0,
+      "coroutine_score": 1.0,
+      "forward_issues": [],
+      "reverse_issues": [],
+      "timing_issues": [],
+      "structural_warnings": [],
+      "below_threshold": false,
+      "has_script": true,
+      "api_effect_blocks": 2,
+      "script_effect_count": 2
+    },
+    "BT16-044": {
+      "card_id": "BT16-044",
+      "card_name": "Pistmon",
+      "score": 1.0,
+      "effects_ratio": 1.0,
+      "actions_ratio": 1.0,
+      "forward_match_ratio": 1.0,
+      "coroutine_score": 1.0,
+      "forward_issues": [],
+      "reverse_issues": [],
+      "timing_issues": [],
+      "structural_warnings": [],
+      "below_threshold": false,
+      "has_script": true,
+      "api_effect_blocks": 2,
+      "script_effect_count": 3
+    },
+    "BT16-045": {
+      "card_id": "BT16-045",
+      "card_name": "MetallifeKuwagamon",
+      "score": 1.0,
+      "effects_ratio": 1.0,
+      "actions_ratio": 1.0,
+      "forward_match_ratio": 1.0,
+      "coroutine_score": 1.0,
+      "forward_issues": [],
+      "reverse_issues": [],
+      "timing_issues": [],
+      "structural_warnings": [],
+      "below_threshold": false,
+      "has_script": true,
+      "api_effect_blocks": 2,
+      "script_effect_count": 3
+    },
+    "BT16-046": {
+      "card_id": "BT16-046",
+      "card_name": "GranKuwagamon",
+      "score": 0.8,
+      "effects_ratio": 0.75,
+      "actions_ratio": 1.0,
+      "forward_match_ratio": 1.0,
+      "coroutine_score": 0.0,
+      "forward_issues": [],
+      "reverse_issues": [],
+      "timing_issues": [
+        "has inherited effect text but no is_inherited_effect flag"
+      ],
+      "structural_warnings": [
+        "API has inherited effect but script has no is_inherited_effect"
+      ],
+      "below_threshold": false,
+      "has_script": true,
+      "api_effect_blocks": 4,
+      "script_effect_count": 3
+    },
+    "BT16-047": {
+      "card_id": "BT16-047",
+      "card_name": "Achillesmon",
+      "score": 1.0,
+      "effects_ratio": 1.0,
+      "actions_ratio": 1.0,
+      "forward_match_ratio": 1.0,
+      "coroutine_score": 1.0,
+      "forward_issues": [],
+      "reverse_issues": [],
+      "timing_issues": [],
+      "structural_warnings": [],
+      "below_threshold": false,
+      "has_script": true,
+      "api_effect_blocks": 2,
+      "script_effect_count": 2
+    },
+    "BT16-048": {
+      "card_id": "BT16-048",
+      "card_name": "TyrantKabuterimon",
+      "score": 1.0,
+      "effects_ratio": 1.0,
+      "actions_ratio": 1.0,
+      "forward_match_ratio": 1.0,
+      "coroutine_score": 1.0,
+      "forward_issues": [],
+      "reverse_issues": [],
+      "timing_issues": [],
+      "structural_warnings": [],
+      "below_threshold": false,
+      "has_script": true,
+      "api_effect_blocks": 3,
+      "script_effect_count": 3
+    },
+    "BT16-049": {
+      "card_id": "BT16-049",
+      "card_name": "Armadillomon",
+      "score": 0.7,
+      "effects_ratio": 0.5,
+      "actions_ratio": 1.0,
+      "forward_match_ratio": 1.0,
+      "coroutine_score": 0.0,
+      "forward_issues": [],
+      "reverse_issues": [],
+      "timing_issues": [],
+      "structural_warnings": [],
+      "below_threshold": false,
+      "has_script": true,
+      "api_effect_blocks": 2,
+      "script_effect_count": 1
+    },
+    "BT16-050": {
+      "card_id": "BT16-050",
+      "card_name": "Commandramon",
+      "score": 0.2,
+      "effects_ratio": 0.0,
+      "actions_ratio": 0.0,
+      "forward_match_ratio": 1.0,
+      "coroutine_score": 0.0,
+      "forward_issues": [],
+      "reverse_issues": [],
+      "timing_issues": [],
+      "structural_warnings": [],
+      "below_threshold": true,
+      "has_script": true,
+      "api_effect_blocks": 2,
+      "script_effect_count": 0
+    },
+    "BT16-051": {
+      "card_id": "BT16-051",
+      "card_name": "Dorumon",
+      "score": 0.2,
+      "effects_ratio": 0.0,
+      "actions_ratio": 0.0,
+      "forward_match_ratio": 1.0,
+      "coroutine_score": 0.0,
+      "forward_issues": [],
+      "reverse_issues": [],
+      "timing_issues": [],
+      "structural_warnings": [],
+      "below_threshold": true,
+      "has_script": true,
+      "api_effect_blocks": 2,
+      "script_effect_count": 0
+    },
+    "BT16-052": {
+      "card_id": "BT16-052",
+      "card_name": "Hagurumon (X Antibody)",
+      "score": 0.2,
+      "effects_ratio": 0.5,
+      "actions_ratio": 0.0,
+      "forward_match_ratio": 0.0,
+      "coroutine_score": 0.0,
+      "forward_issues": [
+        "play",
+        "blocker",
+        "attack_prevention"
+      ],
+      "reverse_issues": [],
+      "timing_issues": [
+        "has inherited effect text but no is_inherited_effect flag"
+      ],
+      "structural_warnings": [
+        "API has inherited effect but script has no is_inherited_effect"
+      ],
+      "below_threshold": true,
+      "has_script": true,
+      "api_effect_blocks": 2,
+      "script_effect_count": 1
+    },
+    "BT16-053": {
+      "card_id": "BT16-053",
+      "card_name": "Ankylomon",
+      "score": 0.7,
+      "effects_ratio": 0.6667,
+      "actions_ratio": 1.0,
+      "forward_match_ratio": 0.6667,
+      "coroutine_score": 0.0,
+      "forward_issues": [
+        "attack_prevention"
+      ],
+      "reverse_issues": [],
+      "timing_issues": [],
+      "structural_warnings": [],
+      "below_threshold": false,
+      "has_script": true,
+      "api_effect_blocks": 3,
+      "script_effect_count": 2
+    },
+    "BT16-054": {
+      "card_id": "BT16-054",
+      "card_name": "Sealsdramon",
+      "score": 0.7,
+      "effects_ratio": 1.0,
+      "actions_ratio": 0.0,
+      "forward_match_ratio": 1.0,
+      "coroutine_score": 1.0,
+      "forward_issues": [],
+      "reverse_issues": [],
+      "timing_issues": [],
+      "structural_warnings": [],
+      "below_threshold": false,
+      "has_script": true,
+      "api_effect_blocks": 2,
+      "script_effect_count": 2
+    },
+    "BT16-055": {
+      "card_id": "BT16-055",
+      "card_name": "Namakemon",
+      "score": 0.9,
+      "effects_ratio": 1.0,
+      "actions_ratio": 1.0,
+      "forward_match_ratio": 0.5,
+      "coroutine_score": 1.0,
+      "forward_issues": [
+        "de_digivolve"
+      ],
+      "reverse_issues": [],
+      "timing_issues": [],
+      "structural_warnings": [],
+      "below_threshold": false,
+      "has_script": true,
+      "api_effect_blocks": 2,
+      "script_effect_count": 2
+    },
+    "BT16-056": {
+      "card_id": "BT16-056",
+      "card_name": "Publimon",
+      "score": 1.0,
+      "effects_ratio": 1.0,
+      "actions_ratio": 1.0,
+      "forward_match_ratio": 1.0,
+      "coroutine_score": 1.0,
+      "forward_issues": [],
+      "reverse_issues": [],
+      "timing_issues": [],
+      "structural_warnings": [],
+      "below_threshold": false,
+      "has_script": true,
+      "api_effect_blocks": 2,
+      "script_effect_count": 3
+    },
+    "BT16-057": {
+      "card_id": "BT16-057",
+      "card_name": "Mekanorimon",
+      "score": 0.55,
+      "effects_ratio": 0.25,
+      "actions_ratio": 1.0,
+      "forward_match_ratio": 0.75,
+      "coroutine_score": 0.0,
+      "forward_issues": [
+        "attack_prevention"
+      ],
+      "reverse_issues": [],
+      "timing_issues": [],
+      "structural_warnings": [],
+      "below_threshold": true,
+      "has_script": true,
+      "api_effect_blocks": 4,
+      "script_effect_count": 1
+    },
+    "BT16-058": {
+      "card_id": "BT16-058",
+      "card_name": "Dorugamon",
+      "score": 1.0,
+      "effects_ratio": 1.0,
+      "actions_ratio": 1.0,
+      "forward_match_ratio": 1.0,
+      "coroutine_score": 1.0,
+      "forward_issues": [],
+      "reverse_issues": [],
+      "timing_issues": [],
+      "structural_warnings": [],
+      "below_threshold": false,
+      "has_script": true,
+      "api_effect_blocks": 3,
+      "script_effect_count": 4
+    },
+    "BT16-059": {
+      "card_id": "BT16-059",
+      "card_name": "Shootmon",
+      "score": 1.0,
+      "effects_ratio": 1.0,
+      "actions_ratio": 1.0,
+      "forward_match_ratio": 1.0,
+      "coroutine_score": 1.0,
+      "forward_issues": [],
+      "reverse_issues": [],
+      "timing_issues": [],
+      "structural_warnings": [],
+      "below_threshold": false,
+      "has_script": true,
+      "api_effect_blocks": 2,
+      "script_effect_count": 3
+    },
+    "BT16-060": {
+      "card_id": "BT16-060",
+      "card_name": "Tankdramon",
+      "score": 1.0,
+      "effects_ratio": 1.0,
+      "actions_ratio": 1.0,
+      "forward_match_ratio": 1.0,
+      "coroutine_score": 1.0,
+      "forward_issues": [],
+      "reverse_issues": [],
+      "timing_issues": [],
+      "structural_warnings": [],
+      "below_threshold": false,
+      "has_script": true,
+      "api_effect_blocks": 2,
+      "script_effect_count": 3
+    },
+    "BT16-061": {
+      "card_id": "BT16-061",
+      "card_name": "DoruGreymon",
+      "score": 1.0,
+      "effects_ratio": 1.0,
+      "actions_ratio": 1.0,
+      "forward_match_ratio": 1.0,
+      "coroutine_score": 1.0,
+      "forward_issues": [],
+      "reverse_issues": [],
+      "timing_issues": [],
+      "structural_warnings": [],
+      "below_threshold": false,
+      "has_script": true,
+      "api_effect_blocks": 3,
+      "script_effect_count": 3
+    },
+    "BT16-062": {
+      "card_id": "BT16-062",
+      "card_name": "Zanmetsumon",
+      "score": 1.0,
+      "effects_ratio": 1.0,
+      "actions_ratio": 1.0,
+      "forward_match_ratio": 1.0,
+      "coroutine_score": 1.0,
+      "forward_issues": [],
+      "reverse_issues": [],
+      "timing_issues": [],
+      "structural_warnings": [],
+      "below_threshold": false,
+      "has_script": true,
+      "api_effect_blocks": 3,
+      "script_effect_count": 4
+    },
+    "BT16-063": {
+      "card_id": "BT16-063",
+      "card_name": "Shakkoumon",
+      "score": 0.6333,
+      "effects_ratio": 0.3333,
+      "actions_ratio": 1.0,
+      "forward_match_ratio": 1.0,
+      "coroutine_score": 0.0,
+      "forward_issues": [],
+      "reverse_issues": [
+        "_is_partition"
+      ],
+      "timing_issues": [],
+      "structural_warnings": [],
+      "below_threshold": true,
+      "has_script": true,
+      "api_effect_blocks": 3,
+      "script_effect_count": 1
+    },
+    "BT16-064": {
+      "card_id": "BT16-064",
+      "card_name": "Dorugoramon",
+      "score": 0.7667,
+      "effects_ratio": 0.6667,
+      "actions_ratio": 1.0,
+      "forward_match_ratio": 1.0,
+      "coroutine_score": 0.0,
+      "forward_issues": [],
+      "reverse_issues": [],
+      "timing_issues": [],
+      "structural_warnings": [],
+      "below_threshold": false,
+      "has_script": true,
+      "api_effect_blocks": 3,
+      "script_effect_count": 2
+    },
+    "BT16-065": {
+      "card_id": "BT16-065",
+      "card_name": "Darkdramon",
+      "score": 0.9333,
+      "effects_ratio": 1.0,
+      "actions_ratio": 1.0,
+      "forward_match_ratio": 0.6667,
+      "coroutine_score": 1.0,
+      "forward_issues": [
+        "digivolve_into"
+      ],
+      "reverse_issues": [],
+      "timing_issues": [],
+      "structural_warnings": [],
+      "below_threshold": false,
+      "has_script": true,
+      "api_effect_blocks": 3,
+      "script_effect_count": 5
+    },
+    "BT16-066": {
+      "card_id": "BT16-066",
+      "card_name": "Syakomon (X Antibody)",
+      "score": 1.0,
+      "effects_ratio": 1.0,
+      "actions_ratio": 1.0,
+      "forward_match_ratio": 1.0,
+      "coroutine_score": 1.0,
+      "forward_issues": [],
+      "reverse_issues": [],
+      "timing_issues": [],
+      "structural_warnings": [],
+      "below_threshold": false,
+      "has_script": true,
+      "api_effect_blocks": 2,
+      "script_effect_count": 3
+    },
+    "BT16-067": {
+      "card_id": "BT16-067",
+      "card_name": "Lopmon (X Antibody)",
+      "score": 1.0,
+      "effects_ratio": 1.0,
+      "actions_ratio": 1.0,
+      "forward_match_ratio": 1.0,
+      "coroutine_score": 1.0,
+      "forward_issues": [],
+      "reverse_issues": [],
+      "timing_issues": [],
+      "structural_warnings": [],
+      "below_threshold": false,
+      "has_script": true,
+      "api_effect_blocks": 2,
+      "script_effect_count": 3
+    },
+    "BT16-068": {
+      "card_id": "BT16-068",
+      "card_name": "Dobermon",
+      "score": 1.0,
+      "effects_ratio": 1.0,
+      "actions_ratio": 1.0,
+      "forward_match_ratio": 1.0,
+      "coroutine_score": 1.0,
+      "forward_issues": [],
+      "reverse_issues": [],
+      "timing_issues": [],
+      "structural_warnings": [],
+      "below_threshold": false,
+      "has_script": true,
+      "api_effect_blocks": 2,
+      "script_effect_count": 3
+    },
+    "BT16-069": {
+      "card_id": "BT16-069",
+      "card_name": "Gesomon (X Antibody)",
+      "score": 1.0,
+      "effects_ratio": 1.0,
+      "actions_ratio": 1.0,
+      "forward_match_ratio": 1.0,
+      "coroutine_score": 1.0,
+      "forward_issues": [],
+      "reverse_issues": [],
+      "timing_issues": [],
+      "structural_warnings": [],
+      "below_threshold": false,
+      "has_script": true,
+      "api_effect_blocks": 2,
+      "script_effect_count": 3
+    },
+    "BT16-070": {
+      "card_id": "BT16-070",
+      "card_name": "Sethmon",
+      "score": 1.0,
+      "effects_ratio": 1.0,
+      "actions_ratio": 1.0,
+      "forward_match_ratio": 1.0,
+      "coroutine_score": 1.0,
+      "forward_issues": [],
+      "reverse_issues": [],
+      "timing_issues": [],
+      "structural_warnings": [],
+      "below_threshold": false,
+      "has_script": true,
+      "api_effect_blocks": 2,
+      "script_effect_count": 2
+    },
+    "BT16-071": {
+      "card_id": "BT16-071",
+      "card_name": "MadLeomon",
+      "score": 1.0,
+      "effects_ratio": 1.0,
+      "actions_ratio": 1.0,
+      "forward_match_ratio": 1.0,
+      "coroutine_score": 1.0,
+      "forward_issues": [],
+      "reverse_issues": [],
+      "timing_issues": [],
+      "structural_warnings": [],
+      "below_threshold": false,
+      "has_script": true,
+      "api_effect_blocks": 2,
+      "script_effect_count": 2
+    },
+    "BT16-072": {
+      "card_id": "BT16-072",
+      "card_name": "Arukenimon",
+      "score": 0.7667,
+      "effects_ratio": 0.6667,
+      "actions_ratio": 1.0,
+      "forward_match_ratio": 1.0,
+      "coroutine_score": 0.0,
+      "forward_issues": [],
+      "reverse_issues": [],
+      "timing_issues": [],
+      "structural_warnings": [],
+      "below_threshold": false,
+      "has_script": true,
+      "api_effect_blocks": 3,
+      "script_effect_count": 2
+    },
+    "BT16-073": {
+      "card_id": "BT16-073",
+      "card_name": "Mummymon",
+      "score": 0.7667,
+      "effects_ratio": 0.6667,
+      "actions_ratio": 1.0,
+      "forward_match_ratio": 1.0,
+      "coroutine_score": 0.0,
+      "forward_issues": [],
+      "reverse_issues": [],
+      "timing_issues": [],
+      "structural_warnings": [],
+      "below_threshold": false,
+      "has_script": true,
+      "api_effect_blocks": 3,
+      "script_effect_count": 2
+    },
+    "BT16-074": {
+      "card_id": "BT16-074",
+      "card_name": "Climbmon",
+      "score": 0.9,
+      "effects_ratio": 1.0,
+      "actions_ratio": 1.0,
+      "forward_match_ratio": 0.5,
+      "coroutine_score": 1.0,
+      "forward_issues": [
+        "security_trash"
+      ],
+      "reverse_issues": [],
+      "timing_issues": [],
+      "structural_warnings": [],
+      "below_threshold": false,
+      "has_script": true,
+      "api_effect_blocks": 2,
+      "script_effect_count": 3
+    },
+    "BT16-075": {
+      "card_id": "BT16-075",
+      "card_name": "Cerberusmon",
+      "score": 0.7,
+      "effects_ratio": 1.0,
+      "actions_ratio": 0.3333,
+      "forward_match_ratio": 0.5,
+      "coroutine_score": 1.0,
+      "forward_issues": [
+        "bounce"
+      ],
+      "reverse_issues": [],
+      "timing_issues": [],
+      "structural_warnings": [],
+      "below_threshold": false,
+      "has_script": true,
+      "api_effect_blocks": 2,
+      "script_effect_count": 3
+    },
+    "BT16-076": {
+      "card_id": "BT16-076",
+      "card_name": "Soloogarmon",
+      "score": 0.9333,
+      "effects_ratio": 1.0,
+      "actions_ratio": 1.0,
+      "forward_match_ratio": 0.6667,
+      "coroutine_score": 1.0,
+      "forward_issues": [
+        "delete_opponent"
+      ],
+      "reverse_issues": [],
+      "timing_issues": [],
+      "structural_warnings": [],
+      "below_threshold": false,
+      "has_script": true,
+      "api_effect_blocks": 3,
+      "script_effect_count": 3
+    },
+    "BT16-077": {
+      "card_id": "BT16-077",
+      "card_name": "Dinobeemon",
+      "score": 0.6,
+      "effects_ratio": 0.25,
+      "actions_ratio": 1.0,
+      "forward_match_ratio": 1.0,
+      "coroutine_score": 0.0,
+      "forward_issues": [],
+      "reverse_issues": [
+        "_is_partition"
+      ],
+      "timing_issues": [],
+      "structural_warnings": [],
+      "below_threshold": true,
+      "has_script": true,
+      "api_effect_blocks": 4,
+      "script_effect_count": 1
+    },
+    "BT16-078": {
+      "card_id": "BT16-078",
+      "card_name": "Pharaohmon",
+      "score": 1.0,
+      "effects_ratio": 1.0,
+      "actions_ratio": 1.0,
+      "forward_match_ratio": 1.0,
+      "coroutine_score": 1.0,
+      "forward_issues": [],
+      "reverse_issues": [],
+      "timing_issues": [],
+      "structural_warnings": [],
+      "below_threshold": false,
+      "has_script": true,
+      "api_effect_blocks": 2,
+      "script_effect_count": 3
+    },
+    "BT16-079": {
+      "card_id": "BT16-079",
+      "card_name": "Cherubimon (X Antibody)",
+      "score": 1.0,
+      "effects_ratio": 1.0,
+      "actions_ratio": 1.0,
+      "forward_match_ratio": 1.0,
+      "coroutine_score": 1.0,
+      "forward_issues": [],
+      "reverse_issues": [],
+      "timing_issues": [],
+      "structural_warnings": [],
+      "below_threshold": false,
+      "has_script": true,
+      "api_effect_blocks": 3,
+      "script_effect_count": 3
+    },
+    "BT16-080": {
+      "card_id": "BT16-080",
+      "card_name": "Shroudmon",
+      "score": 0.5,
+      "effects_ratio": 0.3333,
+      "actions_ratio": 1.0,
+      "forward_match_ratio": 0.3333,
+      "coroutine_score": 0.0,
+      "forward_issues": [
+        "dp_modification",
+        "once_per_turn"
+      ],
+      "reverse_issues": [],
+      "timing_issues": [
+        "timing 'When Digivolving' -> is_when_digivolving not found",
+        "[Once Per Turn] in API but no set_max_count_per_turn"
+      ],
+      "structural_warnings": [],
+      "below_threshold": true,
+      "has_script": true,
+      "api_effect_blocks": 3,
+      "script_effect_count": 1
+    },
+    "BT16-081": {
+      "card_id": "BT16-081",
+      "card_name": "MaloMyotismon",
+      "score": 1.0,
+      "effects_ratio": 1.0,
+      "actions_ratio": 1.0,
+      "forward_match_ratio": 1.0,
+      "coroutine_score": 1.0,
+      "forward_issues": [],
+      "reverse_issues": [],
+      "timing_issues": [],
+      "structural_warnings": [],
+      "below_threshold": false,
+      "has_script": true,
+      "api_effect_blocks": 2,
+      "script_effect_count": 2
+    },
+    "BT16-082": {
+      "card_id": "BT16-082",
+      "card_name": "Ukkomon",
+      "score": 0.5,
+      "effects_ratio": 1.0,
+      "actions_ratio": 0.0,
+      "forward_match_ratio": 0.0,
+      "coroutine_score": 1.0,
+      "forward_issues": [
+        "reveal_top"
+      ],
+      "reverse_issues": [],
+      "timing_issues": [],
+      "structural_warnings": [],
+      "below_threshold": true,
+      "has_script": true,
+      "api_effect_blocks": 1,
+      "script_effect_count": 1
+    },
+    "BT16-083": {
+      "card_id": "BT16-083",
+      "card_name": "BigUkkomon",
+      "score": 1.0,
+      "effects_ratio": 1.0,
+      "actions_ratio": 1.0,
+      "forward_match_ratio": 1.0,
+      "coroutine_score": 1.0,
+      "forward_issues": [],
+      "reverse_issues": [],
+      "timing_issues": [],
+      "structural_warnings": [],
+      "below_threshold": false,
+      "has_script": true,
+      "api_effect_blocks": 2,
+      "script_effect_count": 2
+    },
+    "BT16-084": {
+      "card_id": "BT16-084",
+      "card_name": "Yolei Inoue & Kari Kamiya",
+      "score": 0.8667,
+      "effects_ratio": 1.0,
+      "actions_ratio": 1.0,
+      "forward_match_ratio": 0.3333,
+      "coroutine_score": 1.0,
+      "forward_issues": [
+        "dp_modification",
+        "bounce"
+      ],
+      "reverse_issues": [],
+      "timing_issues": [],
+      "structural_warnings": [],
+      "below_threshold": false,
+      "has_script": true,
+      "api_effect_blocks": 3,
+      "script_effect_count": 3
+    },
+    "BT16-085": {
+      "card_id": "BT16-085",
+      "card_name": "Davis Motomiya & Ken Ichijoji",
+      "score": 0.9333,
+      "effects_ratio": 1.0,
+      "actions_ratio": 1.0,
+      "forward_match_ratio": 0.6667,
+      "coroutine_score": 1.0,
+      "forward_issues": [
+        "bounce"
+      ],
+      "reverse_issues": [],
+      "timing_issues": [],
+      "structural_warnings": [],
+      "below_threshold": false,
+      "has_script": true,
+      "api_effect_blocks": 3,
+      "script_effect_count": 3
+    },
+    "BT16-086": {
+      "card_id": "BT16-086",
+      "card_name": "Hacker Judge",
+      "score": 0.64,
+      "effects_ratio": 0.6,
+      "actions_ratio": 0.6667,
+      "forward_match_ratio": 1.0,
+      "coroutine_score": 0.0,
+      "forward_issues": [],
+      "reverse_issues": [],
+      "timing_issues": [],
+      "structural_warnings": [],
+      "below_threshold": true,
+      "has_script": true,
+      "api_effect_blocks": 5,
+      "script_effect_count": 3
+    },
+    "BT16-087": {
+      "card_id": "BT16-087",
+      "card_name": "Kosuke Kisakata",
+      "score": 0.62,
+      "effects_ratio": 0.4,
+      "actions_ratio": 1.0,
+      "forward_match_ratio": 0.8,
+      "coroutine_score": 0.0,
+      "forward_issues": [
+        "piercing"
+      ],
+      "reverse_issues": [],
+      "timing_issues": [],
+      "structural_warnings": [],
+      "below_threshold": true,
+      "has_script": true,
+      "api_effect_blocks": 5,
+      "script_effect_count": 2
+    },
+    "BT16-088": {
+      "card_id": "BT16-088",
+      "card_name": "Cody Hida & T.K. Takaishi",
+      "score": 0.9333,
+      "effects_ratio": 1.0,
+      "actions_ratio": 1.0,
+      "forward_match_ratio": 0.6667,
+      "coroutine_score": 1.0,
+      "forward_issues": [
+        "bounce"
+      ],
+      "reverse_issues": [],
+      "timing_issues": [],
+      "structural_warnings": [],
+      "below_threshold": false,
+      "has_script": true,
+      "api_effect_blocks": 3,
+      "script_effect_count": 3
+    },
+    "BT16-089": {
+      "card_id": "BT16-089",
+      "card_name": "Arukenimon & Mummymon",
+      "score": 1.0,
+      "effects_ratio": 1.0,
+      "actions_ratio": 1.0,
+      "forward_match_ratio": 1.0,
+      "coroutine_score": 1.0,
+      "forward_issues": [],
+      "reverse_issues": [],
+      "timing_issues": [],
+      "structural_warnings": [],
+      "below_threshold": false,
+      "has_script": true,
+      "api_effect_blocks": 3,
+      "script_effect_count": 3
+    },
+    "BT16-090": {
+      "card_id": "BT16-090",
+      "card_name": "Lui Ohwada",
+      "score": 0.6333,
+      "effects_ratio": 0.3333,
+      "actions_ratio": 1.0,
+      "forward_match_ratio": 1.0,
+      "coroutine_score": 0.0,
+      "forward_issues": [],
+      "reverse_issues": [],
+      "timing_issues": [],
+      "structural_warnings": [],
+      "below_threshold": true,
+      "has_script": true,
+      "api_effect_blocks": 3,
+      "script_effect_count": 1
+    },
+    "BT16-091": {
+      "card_id": "BT16-091",
+      "card_name": "Beastly Storm Dance of Affection",
+      "score": 0.9,
+      "effects_ratio": 1.0,
+      "actions_ratio": 1.0,
+      "forward_match_ratio": 0.5,
+      "coroutine_score": 1.0,
+      "forward_issues": [
+        "digivolve_into"
+      ],
+      "reverse_issues": [],
+      "timing_issues": [],
+      "structural_warnings": [],
+      "below_threshold": false,
+      "has_script": true,
+      "api_effect_blocks": 2,
+      "script_effect_count": 2
+    },
+    "BT16-092": {
+      "card_id": "BT16-092",
+      "card_name": "Invincible Dragon-Insect Fusion",
+      "score": 0.8,
+      "effects_ratio": 1.0,
+      "actions_ratio": 1.0,
+      "forward_match_ratio": 0.0,
+      "coroutine_score": 1.0,
+      "forward_issues": [
+        "digivolve_into",
+        "destruction_immunity"
+      ],
+      "reverse_issues": [],
+      "timing_issues": [],
+      "structural_warnings": [],
+      "below_threshold": false,
+      "has_script": true,
+      "api_effect_blocks": 2,
+      "script_effect_count": 2
+    },
+    "BT16-093": {
+      "card_id": "BT16-093",
+      "card_name": "The Sparkle of Fate!",
+      "score": 0.9,
+      "effects_ratio": 1.0,
+      "actions_ratio": 0.6667,
+      "forward_match_ratio": 1.0,
+      "coroutine_score": 1.0,
+      "forward_issues": [],
+      "reverse_issues": [],
+      "timing_issues": [],
+      "structural_warnings": [],
+      "below_threshold": false,
+      "has_script": true,
+      "api_effect_blocks": 3,
+      "script_effect_count": 3
+    },
+    "BT16-094": {
+      "card_id": "BT16-094",
+      "card_name": "Dragon's Breath",
+      "score": 0.4,
+      "effects_ratio": 0.5,
+      "actions_ratio": 0.5,
+      "forward_match_ratio": 0.25,
+      "coroutine_score": 0.0,
+      "forward_issues": [
+        "reveal_top",
+        "dp_modification",
+        "security_trash"
+      ],
+      "reverse_issues": [],
+      "timing_issues": [],
+      "structural_warnings": [],
+      "below_threshold": true,
+      "has_script": true,
+      "api_effect_blocks": 4,
+      "script_effect_count": 2
+    },
+    "BT16-095": {
+      "card_id": "BT16-095",
+      "card_name": "Shine of Bee",
+      "score": 0.6,
+      "effects_ratio": 0.5,
+      "actions_ratio": 1.0,
+      "forward_match_ratio": 0.5,
+      "coroutine_score": 0.0,
+      "forward_issues": [
+        "dp_modification"
+      ],
+      "reverse_issues": [],
+      "timing_issues": [
+        "timing 'Security' -> is_security_effect not found"
+      ],
+      "structural_warnings": [
+        "API has security effect but script has no is_security_effect"
+      ],
+      "below_threshold": true,
+      "has_script": true,
+      "api_effect_blocks": 2,
+      "script_effect_count": 1
+    },
+    "BT16-096": {
+      "card_id": "BT16-096",
+      "card_name": "Metropolitan Police Department, Community Safety Bureau, Cyber Crime Division, Investigation Unit 11",
+      "score": 0.75,
+      "effects_ratio": 0.75,
+      "actions_ratio": 1.0,
+      "forward_match_ratio": 0.75,
+      "coroutine_score": 0.0,
+      "forward_issues": [
+        "mill"
+      ],
+      "reverse_issues": [],
+      "timing_issues": [],
+      "structural_warnings": [],
+      "below_threshold": false,
+      "has_script": true,
+      "api_effect_blocks": 4,
+      "script_effect_count": 3
+    },
+    "BT16-097": {
+      "card_id": "BT16-097",
+      "card_name": "Advent of the Ancient Steel Angel",
+      "score": 0.9,
+      "effects_ratio": 1.0,
+      "actions_ratio": 1.0,
+      "forward_match_ratio": 0.5,
+      "coroutine_score": 1.0,
+      "forward_issues": [
+        "digivolve_into"
+      ],
+      "reverse_issues": [],
+      "timing_issues": [],
+      "structural_warnings": [],
+      "below_threshold": false,
+      "has_script": true,
+      "api_effect_blocks": 2,
+      "script_effect_count": 2
+    },
+    "BT16-098": {
+      "card_id": "BT16-098",
+      "card_name": "DORU-Din",
+      "score": 0.7,
+      "effects_ratio": 0.5,
+      "actions_ratio": 1.0,
+      "forward_match_ratio": 1.0,
+      "coroutine_score": 0.0,
+      "forward_issues": [],
+      "reverse_issues": [],
+      "timing_issues": [
+        "timing 'Security' -> is_security_effect not found"
+      ],
+      "structural_warnings": [
+        "API has security effect but script has no is_security_effect"
+      ],
+      "below_threshold": false,
+      "has_script": true,
+      "api_effect_blocks": 2,
+      "script_effect_count": 1
+    },
+    "BT16-099": {
+      "card_id": "BT16-099",
+      "card_name": "The Demon Wolf of the Castle of Nine Wolves",
+      "score": 0.75,
+      "effects_ratio": 0.75,
+      "actions_ratio": 1.0,
+      "forward_match_ratio": 0.75,
+      "coroutine_score": 0.0,
+      "forward_issues": [
+        "mill"
+      ],
+      "reverse_issues": [],
+      "timing_issues": [],
+      "structural_warnings": [],
+      "below_threshold": false,
+      "has_script": true,
+      "api_effect_blocks": 4,
+      "script_effect_count": 3
+    },
+    "BT16-100": {
+      "card_id": "BT16-100",
+      "card_name": "Thunderflame Crusher",
+      "score": 0.95,
+      "effects_ratio": 1.0,
+      "actions_ratio": 1.0,
+      "forward_match_ratio": 0.75,
+      "coroutine_score": 1.0,
+      "forward_issues": [
+        "mill"
+      ],
+      "reverse_issues": [],
+      "timing_issues": [],
+      "structural_warnings": [],
+      "below_threshold": false,
+      "has_script": true,
+      "api_effect_blocks": 4,
+      "script_effect_count": 4
+    },
+    "BT16-101": {
+      "card_id": "BT16-101",
+      "card_name": "Rapidmon (X Antibody)",
+      "score": 0.8,
+      "effects_ratio": 0.75,
+      "actions_ratio": 1.0,
+      "forward_match_ratio": 1.0,
+      "coroutine_score": 0.0,
+      "forward_issues": [],
+      "reverse_issues": [],
+      "timing_issues": [],
+      "structural_warnings": [],
+      "below_threshold": false,
+      "has_script": true,
+      "api_effect_blocks": 4,
+      "script_effect_count": 3
+    },
+    "BT16-102": {
+      "card_id": "BT16-102",
+      "card_name": "Magnamon (X Antibody)",
+      "score": 0.6,
+      "effects_ratio": 0.25,
+      "actions_ratio": 1.0,
+      "forward_match_ratio": 1.0,
+      "coroutine_score": 0.0,
+      "forward_issues": [],
+      "reverse_issues": [],
+      "timing_issues": [],
+      "structural_warnings": [],
+      "below_threshold": true,
+      "has_script": true,
+      "api_effect_blocks": 4,
+      "script_effect_count": 1
+    },
+    "BT16-token": {
+      "card_id": "BT16-token",
+      "card_name": "",
+      "score": 1.0,
+      "effects_ratio": 1.0,
+      "actions_ratio": 1.0,
+      "forward_match_ratio": 1.0,
+      "coroutine_score": 1.0,
+      "forward_issues": [],
+      "reverse_issues": [],
+      "timing_issues": [],
+      "structural_warnings": [],
+      "below_threshold": false,
+      "has_script": true,
+      "api_effect_blocks": 0,
+      "script_effect_count": 0
+    }
+  },
+  "summary": {
+    "top_forward_issues": [
+      [
+        "dp_modification",
+        9
+      ],
+      [
+        "bounce",
+        6
+      ],
+      [
+        "digivolve_into",
+        6
+      ],
+      [
+        "attack_prevention",
+        4
+      ],
+      [
+        "mill",
+        3
+      ],
+      [
+        "blocker",
+        2
+      ],
+      [
+        "delete_opponent",
+        2
+      ],
+      [
+        "destruction_immunity",
+        2
+      ],
+      [
+        "suspend_target",
+        2
+      ],
+      [
+        "piercing",
+        2
+      ],
+      [
+        "security_trash",
+        2
+      ],
+      [
+        "reveal_top",
+        2
+      ],
+      [
+        "memory_gain",
+        1
+      ],
+      [
+        "play",
+        1
+      ],
+      [
+        "de_digivolve",
+        1
+      ]
+    ],
+    "top_reverse_issues": [
+      [
+        "_is_partition",
+        5
+      ]
+    ],
+    "top_timing_issues": [
+      [
+        "has inherited effect text but no is_inherited_effect flag",
+        10
+      ],
+      [
+        "timing 'When Digivolving' -> is_when_digivolving not found",
+        3
+      ],
+      [
+        "timing 'Security' -> is_security_effect not found",
+        2
+      ],
+      [
+        "timing 'When Attacking' -> is_on_attack not found",
+        1
+      ],
+      [
+        "[Once Per Turn] in API but no set_max_count_per_turn",
+        1
+      ]
+    ],
+    "worst_cards": [
+      {
+        "card_id": "BT16-013",
+        "name": "Valkyrimon",
+        "score": 0.1
+      },
+      {
+        "card_id": "BT16-002",
+        "name": "DemiVeemon",
+        "score": 0.2
+      },
+      {
+        "card_id": "BT16-003",
+        "name": "Upamon",
+        "score": 0.2
+      },
+      {
+        "card_id": "BT16-032",
+        "name": "Sheepmon",
+        "score": 0.2
+      },
+      {
+        "card_id": "BT16-038",
+        "name": "Terriermon (X Antibody)",
+        "score": 0.2
+      },
+      {
+        "card_id": "BT16-050",
+        "name": "Commandramon",
+        "score": 0.2
+      },
+      {
+        "card_id": "BT16-051",
+        "name": "Dorumon",
+        "score": 0.2
+      },
+      {
+        "card_id": "BT16-052",
+        "name": "Hagurumon (X Antibody)",
+        "score": 0.2
+      },
+      {
+        "card_id": "BT16-009",
+        "name": "Lynxmon",
+        "score": 0.3333
+      },
+      {
+        "card_id": "BT16-014",
+        "name": "Goldramon (X Antibody)",
+        "score": 0.3333
+      }
+    ]
+  }
+}

@@ -1,0 +1,370 @@
+{
+  "set_id": "ST12",
+  "total_cards": 16,
+  "cards_audited": 12,
+  "cards_with_issues": 4,
+  "cards_below_threshold": 5,
+  "cards_missing_script": 4,
+  "average_score": 0.6528,
+  "cards": {
+    "ST12-01": {
+      "card_id": "ST12-01",
+      "card_name": "Gurimon",
+      "score": 0.2,
+      "effects_ratio": 0.0,
+      "actions_ratio": 0.0,
+      "forward_match_ratio": 1.0,
+      "coroutine_score": 0.0,
+      "forward_issues": [],
+      "reverse_issues": [],
+      "timing_issues": [],
+      "structural_warnings": [],
+      "below_threshold": true,
+      "has_script": true,
+      "api_effect_blocks": 1,
+      "script_effect_count": 0
+    },
+    "ST12-02": {
+      "card_id": "ST12-02",
+      "card_name": "Candlemon",
+      "score": 0.0,
+      "effects_ratio": 1.0,
+      "actions_ratio": 1.0,
+      "forward_match_ratio": 1.0,
+      "coroutine_score": 1.0,
+      "forward_issues": [],
+      "reverse_issues": [],
+      "timing_issues": [],
+      "structural_warnings": [],
+      "below_threshold": false,
+      "has_script": false,
+      "api_effect_blocks": 0,
+      "script_effect_count": 0
+    },
+    "ST12-03": {
+      "card_id": "ST12-03",
+      "card_name": "Solarmon",
+      "score": 0.0,
+      "effects_ratio": 1.0,
+      "actions_ratio": 1.0,
+      "forward_match_ratio": 1.0,
+      "coroutine_score": 1.0,
+      "forward_issues": [],
+      "reverse_issues": [],
+      "timing_issues": [],
+      "structural_warnings": [],
+      "below_threshold": false,
+      "has_script": false,
+      "api_effect_blocks": 0,
+      "script_effect_count": 0
+    },
+    "ST12-04": {
+      "card_id": "ST12-04",
+      "card_name": "Huckmon",
+      "score": 0.7,
+      "effects_ratio": 0.5,
+      "actions_ratio": 1.0,
+      "forward_match_ratio": 1.0,
+      "coroutine_score": 0.0,
+      "forward_issues": [],
+      "reverse_issues": [],
+      "timing_issues": [],
+      "structural_warnings": [],
+      "below_threshold": false,
+      "has_script": true,
+      "api_effect_blocks": 2,
+      "script_effect_count": 1
+    },
+    "ST12-05": {
+      "card_id": "ST12-05",
+      "card_name": "Meramon",
+      "score": 0.0,
+      "effects_ratio": 1.0,
+      "actions_ratio": 1.0,
+      "forward_match_ratio": 1.0,
+      "coroutine_score": 1.0,
+      "forward_issues": [],
+      "reverse_issues": [],
+      "timing_issues": [],
+      "structural_warnings": [],
+      "below_threshold": false,
+      "has_script": false,
+      "api_effect_blocks": 0,
+      "script_effect_count": 0
+    },
+    "ST12-06": {
+      "card_id": "ST12-06",
+      "card_name": "BaoHuckmon",
+      "score": 0.2,
+      "effects_ratio": 0.0,
+      "actions_ratio": 0.0,
+      "forward_match_ratio": 1.0,
+      "coroutine_score": 0.0,
+      "forward_issues": [],
+      "reverse_issues": [],
+      "timing_issues": [],
+      "structural_warnings": [],
+      "below_threshold": true,
+      "has_script": true,
+      "api_effect_blocks": 1,
+      "script_effect_count": 0
+    },
+    "ST12-07": {
+      "card_id": "ST12-07",
+      "card_name": "SkullMeramon",
+      "score": 0.0,
+      "effects_ratio": 1.0,
+      "actions_ratio": 1.0,
+      "forward_match_ratio": 1.0,
+      "coroutine_score": 1.0,
+      "forward_issues": [],
+      "reverse_issues": [],
+      "timing_issues": [],
+      "structural_warnings": [],
+      "below_threshold": false,
+      "has_script": false,
+      "api_effect_blocks": 0,
+      "script_effect_count": 0
+    },
+    "ST12-08": {
+      "card_id": "ST12-08",
+      "card_name": "SaviorHuckmon",
+      "score": 1.0,
+      "effects_ratio": 1.0,
+      "actions_ratio": 1.0,
+      "forward_match_ratio": 1.0,
+      "coroutine_score": 1.0,
+      "forward_issues": [],
+      "reverse_issues": [],
+      "timing_issues": [],
+      "structural_warnings": [],
+      "below_threshold": false,
+      "has_script": true,
+      "api_effect_blocks": 2,
+      "script_effect_count": 2
+    },
+    "ST12-09": {
+      "card_id": "ST12-09",
+      "card_name": "Volcanomon",
+      "score": 0.2,
+      "effects_ratio": 0.0,
+      "actions_ratio": 0.0,
+      "forward_match_ratio": 1.0,
+      "coroutine_score": 0.0,
+      "forward_issues": [],
+      "reverse_issues": [],
+      "timing_issues": [],
+      "structural_warnings": [],
+      "below_threshold": true,
+      "has_script": true,
+      "api_effect_blocks": 2,
+      "script_effect_count": 0
+    },
+    "ST12-10": {
+      "card_id": "ST12-10",
+      "card_name": "Jesmon",
+      "score": 0.6167,
+      "effects_ratio": 0.6667,
+      "actions_ratio": 0.5,
+      "forward_match_ratio": 1.0,
+      "coroutine_score": 0.0,
+      "forward_issues": [],
+      "reverse_issues": [],
+      "timing_issues": [
+        "timing 'When Digivolving' -> is_when_digivolving not found"
+      ],
+      "structural_warnings": [],
+      "below_threshold": true,
+      "has_script": true,
+      "api_effect_blocks": 3,
+      "script_effect_count": 2
+    },
+    "ST12-11": {
+      "card_id": "ST12-11",
+      "card_name": "Gankoomon",
+      "score": 1.0,
+      "effects_ratio": 1.0,
+      "actions_ratio": 1.0,
+      "forward_match_ratio": 1.0,
+      "coroutine_score": 1.0,
+      "forward_issues": [],
+      "reverse_issues": [],
+      "timing_issues": [],
+      "structural_warnings": [],
+      "below_threshold": false,
+      "has_script": true,
+      "api_effect_blocks": 2,
+      "script_effect_count": 2
+    },
+    "ST12-12": {
+      "card_id": "ST12-12",
+      "card_name": "Sistermon Blanc",
+      "score": 0.7,
+      "effects_ratio": 0.5,
+      "actions_ratio": 1.0,
+      "forward_match_ratio": 1.0,
+      "coroutine_score": 0.0,
+      "forward_issues": [],
+      "reverse_issues": [
+        "_is_decoy"
+      ],
+      "timing_issues": [],
+      "structural_warnings": [],
+      "below_threshold": false,
+      "has_script": true,
+      "api_effect_blocks": 2,
+      "script_effect_count": 1
+    },
+    "ST12-13": {
+      "card_id": "ST12-13",
+      "card_name": "Sistermon Ciel",
+      "score": 0.6,
+      "effects_ratio": 0.25,
+      "actions_ratio": 1.0,
+      "forward_match_ratio": 1.0,
+      "coroutine_score": 0.0,
+      "forward_issues": [],
+      "reverse_issues": [],
+      "timing_issues": [
+        "has inherited effect text but no is_inherited_effect flag"
+      ],
+      "structural_warnings": [
+        "API has inherited effect but script has no is_inherited_effect"
+      ],
+      "below_threshold": true,
+      "has_script": true,
+      "api_effect_blocks": 4,
+      "script_effect_count": 1
+    },
+    "ST12-14": {
+      "card_id": "ST12-14",
+      "card_name": "Aus Generics",
+      "score": 1.0,
+      "effects_ratio": 1.0,
+      "actions_ratio": 1.0,
+      "forward_match_ratio": 1.0,
+      "coroutine_score": 1.0,
+      "forward_issues": [],
+      "reverse_issues": [],
+      "timing_issues": [],
+      "structural_warnings": [],
+      "below_threshold": false,
+      "has_script": true,
+      "api_effect_blocks": 2,
+      "script_effect_count": 2
+    },
+    "ST12-15": {
+      "card_id": "ST12-15",
+      "card_name": "From Master to Disciple",
+      "score": 0.85,
+      "effects_ratio": 1.0,
+      "actions_ratio": 0.5,
+      "forward_match_ratio": 1.0,
+      "coroutine_score": 1.0,
+      "forward_issues": [],
+      "reverse_issues": [],
+      "timing_issues": [],
+      "structural_warnings": [],
+      "below_threshold": false,
+      "has_script": true,
+      "api_effect_blocks": 4,
+      "script_effect_count": 4
+    },
+    "ST12-16": {
+      "card_id": "ST12-16",
+      "card_name": "Quake! Blast! Fire! Father!",
+      "score": 0.7667,
+      "effects_ratio": 0.6667,
+      "actions_ratio": 1.0,
+      "forward_match_ratio": 1.0,
+      "coroutine_score": 0.0,
+      "forward_issues": [],
+      "reverse_issues": [],
+      "timing_issues": [
+        "timing 'Security' -> is_security_effect not found"
+      ],
+      "structural_warnings": [
+        "API has security effect but script has no is_security_effect"
+      ],
+      "below_threshold": false,
+      "has_script": true,
+      "api_effect_blocks": 3,
+      "script_effect_count": 2
+    }
+  },
+  "summary": {
+    "top_forward_issues": [],
+    "top_reverse_issues": [
+      [
+        "_is_decoy",
+        1
+      ]
+    ],
+    "top_timing_issues": [
+      [
+        "timing 'When Digivolving' -> is_when_digivolving not found",
+        1
+      ],
+      [
+        "has inherited effect text but no is_inherited_effect flag",
+        1
+      ],
+      [
+        "timing 'Security' -> is_security_effect not found",
+        1
+      ]
+    ],
+    "worst_cards": [
+      {
+        "card_id": "ST12-02",
+        "name": "Candlemon",
+        "score": 0.0
+      },
+      {
+        "card_id": "ST12-03",
+        "name": "Solarmon",
+        "score": 0.0
+      },
+      {
+        "card_id": "ST12-05",
+        "name": "Meramon",
+        "score": 0.0
+      },
+      {
+        "card_id": "ST12-07",
+        "name": "SkullMeramon",
+        "score": 0.0
+      },
+      {
+        "card_id": "ST12-01",
+        "name": "Gurimon",
+        "score": 0.2
+      },
+      {
+        "card_id": "ST12-06",
+        "name": "BaoHuckmon",
+        "score": 0.2
+      },
+      {
+        "card_id": "ST12-09",
+        "name": "Volcanomon",
+        "score": 0.2
+      },
+      {
+        "card_id": "ST12-13",
+        "name": "Sistermon Ciel",
+        "score": 0.6
+      },
+      {
+        "card_id": "ST12-10",
+        "name": "Jesmon",
+        "score": 0.6167
+      },
+      {
+        "card_id": "ST12-04",
+        "name": "Huckmon",
+        "score": 0.7
+      }
+    ]
+  }
+}
