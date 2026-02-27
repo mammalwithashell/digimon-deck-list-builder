@@ -623,8 +623,10 @@ class AISetRunOrchestrator:
                 )
             )
         except Exception as exc:
+            import traceback as _tb
+            detail = f"{exc}\n{''.join(_tb.format_exception(exc))}"
             item.fix_apply_status = "failed"
-            item.error_text = str(exc)
+            item.error_text = detail[:2000]
             db.add(
                 AIFixApplyAudit(
                     ai_task_id=task.id,
@@ -637,7 +639,7 @@ class AISetRunOrchestrator:
                     commit_sha=None,
                     pr_url=None,
                     status="failed",
-                    error_text=str(exc),
+                    error_text=detail[:2000],
                     created_by=run.created_by,
                 )
             )
