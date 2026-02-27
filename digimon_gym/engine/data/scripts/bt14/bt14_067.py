@@ -13,98 +13,84 @@ class BT14_067(CardScript):
     def get_card_effects(self, card: 'CardSource') -> List['ICardEffect']:
         effects = []
 
-        # Timing: EffectTiming.OnEnterFieldAnyone
-        # [On Play] Your opponent reveals the top 3 cards of their deck. Choose 1 Digimon card among them, and delete up to its play cost's total worth of your opponent's Digimon. Return the revealed cards to the top or bottom of the deck.
+        def _process_reveal_then_delete(ctx: Dict[str, Any]):
+            player = ctx.get('player')
+            game = ctx.get('game')
+            if not (player and game and getattr(player, 'enemy', None)):
+                return
+
+            enemy = player.enemy
+
+            def reveal_filter(c):
+                return bool(getattr(c, 'is_digimon', False))
+
+            def on_revealed(selected, remaining):
+                selected_cost = int(getattr(selected, 'play_cost', 0) or 0) if selected else 0
+
+                if selected_cost > 0:
+                    deleted_total = 0
+
+                    def target_filter(p):
+                        if deleted_total >= selected_cost:
+                            return False
+                        if not getattr(p, 'is_digimon', False):
+                            return False
+                        play_cost = int(getattr(getattr(p, 'card', None), 'play_cost', 0) or 0)
+                        return play_cost <= (selected_cost - deleted_total)
+
+                    def on_delete(target_perm):
+                        nonlocal deleted_total
+                        play_cost = int(getattr(getattr(target_perm, 'card', None), 'play_cost', 0) or 0)
+                        enemy.delete_permanent(target_perm)
+                        deleted_total += max(0, play_cost)
+
+                    while deleted_total < selected_cost:
+                        before = deleted_total
+                        game.effect_select_opponent_permanent(
+                            player,
+                            on_delete,
+                            filter_fn=target_filter,
+                            is_optional=True,
+                        )
+                        if deleted_total == before:
+                            break
+
+            game.effect_reveal_and_select(
+                enemy,
+                3,
+                reveal_filter,
+                on_revealed,
+                is_optional=True,
+            )
+
+        # [On Play]
         effect0 = ICardEffect()
-        effect0.set_effect_name("BT14-067 Reveal the top 3 cards of opponent's deck")
+        effect0.set_effect_name("BT14-067 Reveal and delete by selected play cost")
         effect0.set_effect_description("[On Play] Your opponent reveals the top 3 cards of their deck. Choose 1 Digimon card among them, and delete up to its play cost's total worth of your opponent's Digimon. Return the revealed cards to the top or bottom of the deck.")
         effect0.is_on_play = True
 
-        effect = effect0  # alias for condition closure
         def condition0(context: Dict[str, Any]) -> bool:
             if card and card.permanent_of_this_card() is None:
                 return False
-            # Triggered on play — validated by engine timing
             return True
 
         effect0.set_can_use_condition(condition0)
-
-        def process0(ctx: Dict[str, Any]):
-            """Action: Delete, Reveal And Select"""
-            player = ctx.get('player')
-            perm = ctx.get('permanent')
-            game = ctx.get('game')
-            if not (player and game):
-                return
-            def target_filter(p):
-                return p.is_digimon
-            def on_delete(target_perm):
-                enemy = player.enemy if player else None
-                if enemy:
-                    enemy.delete_permanent(target_perm)
-            game.effect_select_opponent_permanent(
-                player, on_delete, filter_fn=target_filter, is_optional=False)
-            if not (player and game):
-                return
-            def reveal_filter(c):
-                if not getattr(c, 'is_digimon', False):
-                    return False
-                return True
-            def on_revealed(selected, remaining):
-                player.hand_cards.append(selected)
-                for c in remaining:
-                    player.library_cards.append(c)
-            game.effect_reveal_and_select(
-                player, 3, reveal_filter, on_revealed, is_optional=True)
-
-        effect0.set_on_process_callback(process0)
+        effect0.set_on_process_callback(_process_reveal_then_delete)
         effects.append(effect0)
 
-        # Timing: EffectTiming.OnEnterFieldAnyone
-        # [When Digivolving] Your opponent reveals the top 3 cards of their deck. Choose 1 Digimon card among them, and delete up to its play cost's total worth of your opponent's Digimon. Return the revealed cards to the top or bottom of the deck.
+        # [When Digivolving]
         effect1 = ICardEffect()
-        effect1.set_effect_name("BT14-067 Reveal the top 3 cards of opponent's deck")
+        effect1.set_effect_name("BT14-067 Reveal and delete by selected play cost")
         effect1.set_effect_description("[When Digivolving] Your opponent reveals the top 3 cards of their deck. Choose 1 Digimon card among them, and delete up to its play cost's total worth of your opponent's Digimon. Return the revealed cards to the top or bottom of the deck.")
         effect1.is_when_digivolving = True
 
-        effect = effect1  # alias for condition closure
         def condition1(context: Dict[str, Any]) -> bool:
             if card and card.permanent_of_this_card() is None:
                 return False
-            # Triggered when digivolving — validated by engine timing
             return True
 
         effect1.set_can_use_condition(condition1)
-
-        def process1(ctx: Dict[str, Any]):
-            """Action: Delete, Reveal And Select"""
-            player = ctx.get('player')
-            perm = ctx.get('permanent')
-            game = ctx.get('game')
-            if not (player and game):
-                return
-            def target_filter(p):
-                return p.is_digimon
-            def on_delete(target_perm):
-                enemy = player.enemy if player else None
-                if enemy:
-                    enemy.delete_permanent(target_perm)
-            game.effect_select_opponent_permanent(
-                player, on_delete, filter_fn=target_filter, is_optional=False)
-            if not (player and game):
-                return
-            def reveal_filter(c):
-                if not getattr(c, 'is_digimon', False):
-                    return False
-                return True
-            def on_revealed(selected, remaining):
-                player.hand_cards.append(selected)
-                for c in remaining:
-                    player.library_cards.append(c)
-            game.effect_reveal_and_select(
-                player, 3, reveal_filter, on_revealed, is_optional=True)
-
-        effect1.set_on_process_callback(process1)
+        effect1.set_on_process_callback(_process_reveal_then_delete)
         effects.append(effect1)
 
         return effects
