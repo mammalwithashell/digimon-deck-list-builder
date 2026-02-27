@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import asyncio
+import hashlib
 import json
 import math
 import os
@@ -663,14 +664,22 @@ class AISetRunOrchestrator:
         self.git.preflight(run_mode="pr")
         ctx = self.git.prepare_worktree_for_task(task_id=task.id, run_mode="pr")
         applied_files = apply_validated_edits(repo_root=ctx.worktree_path, edits=edits)
+
+        # Update frozen manifest hashes for any edited frozen-lane scripts
+        self._update_manifest_hashes(ctx.worktree_path, card_id, applied_files)
+
         check_outputs = run_profile_checks(
             repo_root=ctx.worktree_path,
             scope_profile=scope_profile,
             applied_files=applied_files,
         )
+        commit_files = list(applied_files)
+        manifest_rel = "digimon_gym/engine/data/scripts/_frozen_manifest.json"
+        if manifest_rel not in commit_files:
+            commit_files.append(manifest_rel)
         commit_sha = self.git.commit_files(
             worktree_path=ctx.worktree_path,
-            files=applied_files,
+            files=commit_files,
             message=f"AI set-run autofix {card_id}",
         )
         if commit_sha is None:
@@ -690,6 +699,51 @@ class AISetRunOrchestrator:
             "commit_sha": commit_sha,
             "pr_url": pr_url,
         }
+
+    @staticmethod
+    def _update_manifest_hashes(
+        worktree_path: Path, card_id: str, applied_files: list[str]
+    ) -> None:
+        """Update frozen manifest hashes in the worktree after editing scripts."""
+        scripts_root = worktree_path / "digimon_gym" / "engine" / "data" / "scripts"
+        manifest_path = scripts_root / "_frozen_manifest.json"
+        if not manifest_path.exists():
+            return
+
+        manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+        cards = manifest.get("cards", {})
+        updated = False
+
+        for rel_path in applied_files:
+            # Only update manifest for frozen-lane script edits
+            if not rel_path.startswith("digimon_gym/engine/data/scripts/"):
+                continue
+            if "/generated/" in rel_path:
+                continue
+            abs_path = worktree_path / rel_path
+            if not abs_path.exists():
+                continue
+
+            # Compute new hash (CRLF-normalized to match check_frozen_integrity.py)
+            content = abs_path.read_bytes().replace(b"\r\n", b"\n")
+            new_hash = hashlib.sha256(content).hexdigest()
+
+            # Find matching manifest entry by card_id or relpath
+            for cid, entry in cards.items():
+                frozen_rel = entry.get("frozen_relpath", "").replace("\\", "/")
+                script_rel = rel_path.replace(
+                    "digimon_gym/engine/data/scripts/", ""
+                ).replace("\\", "/")
+                if frozen_rel == script_rel:
+                    entry["frozen_hash"] = new_hash
+                    updated = True
+                    break
+
+        if updated:
+            manifest_path.write_text(
+                json.dumps(manifest, indent=2, ensure_ascii=False) + "\n",
+                encoding="utf-8",
+            )
 
     def _score_cards(
         self,
