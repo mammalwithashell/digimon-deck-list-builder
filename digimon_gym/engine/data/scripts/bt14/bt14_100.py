@@ -21,6 +21,21 @@ class BT14_100(CardScript):
 
         effect = effect0  # alias for condition closure
         def condition0(context: Dict[str, Any]) -> bool:
+            # Must be this card trashed from hand by one of your own effects.
+            owner = context.get('player')
+            source_card = context.get('card') or context.get('source_card')
+            trashed_card = context.get('trashed_card') or context.get('target_card')
+            from_zone = context.get('from_zone')
+            by_effect_owner = context.get('effect_owner') or context.get('source_player')
+
+            if source_card is not None and source_card is not card:
+                return False
+            if trashed_card is not None and trashed_card is not card:
+                return False
+            if from_zone is not None and from_zone != 'hand':
+                return False
+            if by_effect_owner is not None and owner is not None and by_effect_owner is not owner:
+                return False
             return True
 
         effect0.set_can_use_condition(condition0)
