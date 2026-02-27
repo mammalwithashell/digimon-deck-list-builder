@@ -22,22 +22,32 @@ class BT14_101(CardScript):
         effect0._alt_digi_cost = 4
 
         def condition0(context: Dict[str, Any]) -> bool:
-            return True
+            player = context.get('player')
+            game = context.get('game')
+            if player is None or game is None:
+                return False
+
+            # Must have a Tamer with [Tai Kamiya] in its name.
+            has_tai_kamiya_tamer = False
+            for perm in getattr(player, 'tamers', []) or []:
+                tamer_name = str(getattr(perm, 'name', '') or '').lower()
+                if 'tai kamiya' in tamer_name:
+                    has_tai_kamiya_tamer = True
+                    break
+            if not has_tai_kamiya_tamer:
+                return False
+
+            # Opponent must have a Digimon with 10000 DP or more.
+            opponent = game.get_opponent(player)
+            if opponent is None:
+                return False
+            for opp_perm in getattr(opponent, 'digimon', []) or []:
+                if int(getattr(opp_perm, 'dp', 0) or 0) >= 10000:
+                    return True
+            return False
+
         effect0.set_can_use_condition(condition0)
         effects.append(effect0)
-
-        # Factory effect: alt_digivolve_req
-        # Alternate digivolution requirement
-        effect1 = ICardEffect()
-        effect1.set_effect_name("BT14-101 Alternate digivolution requirement")
-        effect1.set_effect_description("Alternate digivolution requirement")
-        # Alternate digivolution: alternate source for cost 4
-        effect1._alt_digi_cost = 4
-
-        def condition1(context: Dict[str, Any]) -> bool:
-            return True
-        effect1.set_can_use_condition(condition1)
-        effects.append(effect1)
 
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [When Digivolving] This Digimon gains <Raid> for the turn. Then, it may attack.
