@@ -22,12 +22,26 @@ class BT14_006(CardScript):
         effect0.is_optional = True
         effect0.set_hash_string("Digivolve_BT14_006")
 
-        effect = effect0  # alias for condition closure
+        def _has_required_trait(c: Any) -> bool:
+            traits = getattr(c, 'card_traits', []) or []
+            return any('Dark Animal' in t or 'DarkAnimal' in t or 'SoC' in t for t in traits)
+
         def condition0(context: Dict[str, Any]) -> bool:
             if card and card.permanent_of_this_card() is None:
                 return False
             if not (card and card.owner and card.owner.is_my_turn):
                 return False
+
+            trashed = context.get('trashed_card') or context.get('card') or context.get('target_card')
+            if trashed is None:
+                return False
+
+            if getattr(trashed, 'card_kind', None) != 0:
+                return False
+
+            if not _has_required_trait(trashed):
+                return False
+
             return True
 
         effect0.set_can_use_condition(condition0)
@@ -39,12 +53,15 @@ class BT14_006(CardScript):
             game = ctx.get('game')
             if not (player and perm and game):
                 return
+
+            trashed = ctx.get('trashed_card') or ctx.get('card') or ctx.get('target_card')
+            if trashed is None:
+                return
+
             def digi_filter(c):
-                if not (any('Dark Animal' in _t or 'DarkAnimal' in _t or 'SoC' in _t for _t in (getattr(c, 'card_traits', []) or []))):
-                    return False
-                return True
-            game.effect_digivolve_from_hand(
-                player, perm, digi_filter, is_optional=True)
+                return c is trashed and _has_required_trait(c)
+
+            game.effect_digivolve_from_hand(player, perm, digi_filter, is_optional=True)
 
         effect0.set_on_process_callback(process0)
         effects.append(effect0)

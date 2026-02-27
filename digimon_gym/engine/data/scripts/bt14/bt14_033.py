@@ -30,8 +30,21 @@ class BT14_033(CardScript):
         effect0.set_can_use_condition(condition0)
 
         def process0(ctx: Dict[str, Any]):
-            """Action: Search security, digivolve from it (not yet supported)"""
-            pass  # Engine lacks security-search + digivolve-from-security support
+            """Action: Play Card, Add To Security"""
+            player = ctx.get('player')
+            perm = ctx.get('permanent')
+            game = ctx.get('game')
+            if not (player and game):
+                return
+            def play_filter(c):
+                if not ('Yellow' in [col.name for col in getattr(c, 'card_colors', [])]):
+                    return False
+                return True
+            game.effect_play_from_zone(
+                player, 'hand', play_filter, free=True, is_optional=True)
+            # Add top card of deck to security
+            if player:
+                player.recovery(1)
 
         effect0.set_on_process_callback(process0)
         effects.append(effect0)

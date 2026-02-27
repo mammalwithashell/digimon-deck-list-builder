@@ -13,19 +13,6 @@ class BT14_014(CardScript):
     def get_card_effects(self, card: 'CardSource') -> List['ICardEffect']:
         effects = []
 
-        # Factory effect: alt_digivolve_req
-        # Alternate digivolution requirement
-        effect0 = ICardEffect()
-        effect0.set_effect_name("BT14-014 Alternate digivolution requirement")
-        effect0.set_effect_description("Alternate digivolution requirement")
-        # Alternate digivolution: alternate source for cost 3
-        effect0._alt_digi_cost = 3
-
-        def condition0(context: Dict[str, Any]) -> bool:
-            return True
-        effect0.set_can_use_condition(condition0)
-        effects.append(effect0)
-
         # Factory effect: blast_digivolve
         # Blast Digivolve
         effect1 = ICardEffect()

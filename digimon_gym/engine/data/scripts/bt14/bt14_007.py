@@ -33,13 +33,15 @@ class BT14_007(CardScript):
         effect1.set_effect_description("[Start of Your Main Phase] If you have a Tamer with [Tai Kamiya] in its name, this Digimon may digivolve into [Greymon] in your hand without paying the cost.")
         effect1.is_optional = True
 
-        effect = effect1  # alias for condition closure
         def condition1(context: Dict[str, Any]) -> bool:
             if card and card.permanent_of_this_card() is None:
                 return False
             if not (card and card.owner and card.owner.is_my_turn):
                 return False
-            return True
+            player = context.get('player')
+            if not player:
+                return False
+            return player.has_tamer_with_name("Tai Kamiya")
 
         effect1.set_can_use_condition(condition1)
 
@@ -50,10 +52,10 @@ class BT14_007(CardScript):
             game = ctx.get('game')
             if not (player and perm and game):
                 return
+
             def digi_filter(c):
-                if not (any('Tai Kamiya' in _n for _n in getattr(c, 'card_names', []))):
-                    return False
-                return True
+                return any('Greymon' in _n for _n in getattr(c, 'card_names', []))
+
             game.effect_digivolve_from_hand(
                 player, perm, digi_filter, is_optional=True)
 
@@ -71,7 +73,12 @@ class BT14_007(CardScript):
         def condition2(context: Dict[str, Any]) -> bool:
             if not (card and card.owner and card.owner.is_my_turn):
                 return False
-            return True
+            perm = card.permanent_of_this_card() if card else None
+            if not perm:
+                return False
+            names = getattr(perm, 'card_names', [])
+            return any(('Greymon' in n) or ('Omnimon' in n) for n in names)
+
         effect2.set_can_use_condition(condition2)
         effects.append(effect2)
 
