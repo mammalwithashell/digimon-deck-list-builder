@@ -21,32 +21,37 @@ class BT14_079(CardScript):
         effect0.is_optional = True
         effect0.is_when_digivolving = True
 
-        effect = effect0  # alias for condition closure
         def condition0(context: Dict[str, Any]) -> bool:
             if card and card.permanent_of_this_card() is None:
                 return False
-            # Triggered when digivolving — validated by engine timing
             return True
 
         effect0.set_can_use_condition(condition0)
 
         def process0(ctx: Dict[str, Any]):
-            """Action: Play Card"""
             player = ctx.get('player')
-            perm = ctx.get('permanent')
             game = ctx.get('game')
             if not (player and game):
                 return
+
+            max_level = 3
+            srcs = getattr(card, 'evolution_sources', None) or getattr(card, 'digivolution_cards', None) or []
+            for s in srcs:
+                name = (getattr(s, 'card_name_eng', None) or getattr(s, 'name', None) or '').lower()
+                if 'eiji nagasumi' in name:
+                    max_level += 1
+                    break
+
             def play_filter(c):
                 if getattr(c, 'is_digi_egg', False):
                     return False
-                if getattr(c, 'level', None) is None or c.level > 2:
+                lv = getattr(c, 'level', None)
+                if lv is None or lv > max_level:
                     return False
-                if getattr(c, 'level', None) is None or c.level < 2:
-                    return False
-                return True
-            game.effect_play_from_zone(
-                player, 'trash', play_filter, free=True, is_optional=True)
+                traits = getattr(c, 'type_eng', None) or getattr(c, 'types', None) or []
+                return ('Dark Animal' in traits) or ('SoC' in traits)
+
+            game.effect_play_from_zone(player, 'trash', play_filter, free=True, is_optional=True)
 
         effect0.set_on_process_callback(process0)
         effects.append(effect0)
@@ -59,31 +64,32 @@ class BT14_079(CardScript):
         effect1.is_optional = True
         effect1.is_on_attack = True
 
-        effect = effect1  # alias for condition closure
         def condition1(context: Dict[str, Any]) -> bool:
             if card and card.permanent_of_this_card() is None:
                 return False
-            # Triggered on attack — validated by engine timing
             return True
 
         effect1.set_can_use_condition(condition1)
 
         def process1(ctx: Dict[str, Any]):
-            """Action: Gain 1 memory, Trash From Hand"""
             player = ctx.get('player')
-            perm = ctx.get('permanent')
             game = ctx.get('game')
             if not (player and game):
                 return
+
+            trashed = {'ok': False}
+
             def hand_filter(c):
                 return True
+
             def on_trashed(selected):
                 if selected in player.hand_cards:
                     player.hand_cards.remove(selected)
                     player.trash_cards.append(selected)
-            game.effect_select_hand_card(
-                player, hand_filter, on_trashed, is_optional=True)
-            if player:
+                    trashed['ok'] = True
+
+            game.effect_select_hand_card(player, hand_filter, on_trashed, is_optional=True)
+            if trashed['ok']:
                 player.add_memory(1)
 
         effect1.set_on_process_callback(process1)
@@ -100,29 +106,21 @@ class BT14_079(CardScript):
         effect2.set_hash_string("Unsupend_BT14_079")
         effect2.is_on_play = True
 
-        effect = effect2  # alias for condition closure
         def condition2(context: Dict[str, Any]) -> bool:
             if card and card.permanent_of_this_card() is None:
                 return False
             if not (card and card.owner and card.owner.is_my_turn):
                 return False
-            return True
+            played = context.get('played_card') or context.get('card')
+            traits = getattr(played, 'type_eng', None) or getattr(played, 'types', None) or []
+            return ('Dark Animal' in traits) or ('SoC' in traits)
 
         effect2.set_can_use_condition(condition2)
 
         def process2(ctx: Dict[str, Any]):
-            """Action: Unsuspend"""
-            player = ctx.get('player')
             perm = ctx.get('permanent')
-            game = ctx.get('game')
-            if not (player and game):
-                return
-            def target_filter(p):
-                return True
-            def on_unsuspend(target_perm):
-                target_perm.unsuspend()
-            game.effect_select_own_permanent(
-                player, on_unsuspend, filter_fn=target_filter, is_optional=True)
+            if perm is not None:
+                perm.unsuspend()
 
         effect2.set_on_process_callback(process2)
         effects.append(effect2)
