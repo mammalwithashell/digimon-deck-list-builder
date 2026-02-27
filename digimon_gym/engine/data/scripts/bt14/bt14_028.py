@@ -28,24 +28,24 @@ class BT14_028(CardScript):
         # Timing: EffectTiming.OnDigivolutionCardDiscarded
         # [All Turns][Once Per Turn] When a digivolution card of an opponent's Digimon is trashed, this Digimon can't be deleted in battle until the end of your opponent's turn.
         effect1 = ICardEffect()
-        effect1.set_effect_name("BT14-028 This Digimon can't be deleted by battle)")
+        effect1.set_effect_name("BT14-028 This Digimon can't be deleted by battle")
         effect1.set_effect_description("[All Turns][Once Per Turn] When a digivolution card of an opponent's Digimon is trashed, this Digimon can't be deleted in battle until the end of your opponent's turn.")
         effect1.set_max_count_per_turn(1)
         effect1._is_cannot_be_deleted_by_battle = True
 
-        effect = effect1  # alias for condition closure
         def condition1(context: Dict[str, Any]) -> bool:
             if card and card.permanent_of_this_card() is None:
                 return False
-            return True
+            trigger_scope = context.get('trigger_scope')
+            if trigger_scope not in ('opponent', 'opponent_digimon', 'opponent_digimon_digivolution'):
+                return False
+            return bool(context.get('trashed_digivolution_card'))
 
         effect1.set_can_use_condition(condition1)
 
         def process1(ctx: Dict[str, Any]):
             """Action: Gain Keyword Cannot Be Deleted By Battle"""
-            player = ctx.get('player')
             perm = ctx.get('permanent')
-            game = ctx.get('game')
             if perm:
                 perm.grant_keyword('_is_cannot_be_deleted_by_battle')
 
