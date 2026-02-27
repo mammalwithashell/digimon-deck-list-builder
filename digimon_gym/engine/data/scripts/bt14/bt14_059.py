@@ -13,7 +13,6 @@ class BT14_059(CardScript):
     def get_card_effects(self, card: 'CardSource') -> List['ICardEffect']:
         effects = []
 
-        # Factory effect: retaliation
         # Retaliation
         effect0 = ICardEffect()
         effect0.set_effect_name("BT14-059 Retaliation")
@@ -25,20 +24,19 @@ class BT14_059(CardScript):
         effect0.set_can_use_condition(condition0)
         effects.append(effect0)
 
-        # Factory effect: save
-        # Save
+        # [On Deletion] Save
         effect1 = ICardEffect()
-        effect1.set_effect_name("BT14-059 Save")
-        effect1.set_effect_description("Save")
+        effect1.set_effect_name("BT14-059 On Deletion Save")
+        effect1.set_effect_description("[On Deletion] Save")
         effect1._is_save = True
+        effect1.trigger_timing = "on_deletion"
 
         def condition1(context: Dict[str, Any]) -> bool:
             return True
         effect1.set_can_use_condition(condition1)
         effects.append(effect1)
 
-        # Factory effect: blocker
-        # Blocker
+        # Inherited: Blocker
         effect2 = ICardEffect()
         effect2.set_effect_name("BT14-059 Blocker")
         effect2.set_effect_description("Blocker")
