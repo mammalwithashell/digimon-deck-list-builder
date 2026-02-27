@@ -13,6 +13,48 @@ class BT14_058(CardScript):
     def get_card_effects(self, card: 'CardSource') -> List['ICardEffect']:
         effects = []
 
+        def _has_satsuki_in_hand(player) -> bool:
+            hand = getattr(player, 'hand', None)
+            if not hand:
+                return False
+            for c in hand:
+                cid = getattr(c, 'card_id', '')
+                name = getattr(c, 'card_name', '')
+                if cid == 'BT14-084' or name == 'Satsuki Tamahime':
+                    return True
+            return False
+
+        def _place_satsuki_as_bottom_evo(player, perm) -> bool:
+            if not (player and perm):
+                return False
+            hand = getattr(player, 'hand', None)
+            if not hand:
+                return False
+            target = None
+            for c in hand:
+                cid = getattr(c, 'card_id', '')
+                name = getattr(c, 'card_name', '')
+                if cid == 'BT14-084' or name == 'Satsuki Tamahime':
+                    target = c
+                    break
+            if target is None:
+                return False
+
+            if hasattr(player, 'remove_card_from_hand'):
+                player.remove_card_from_hand(target)
+            else:
+                hand.remove(target)
+
+            if hasattr(perm, 'add_bottom_digivolution_card'):
+                perm.add_bottom_digivolution_card(target)
+            elif hasattr(perm, 'add_evolution_base_bottom'):
+                perm.add_evolution_base_bottom(target)
+            elif hasattr(perm, 'digivolution_cards'):
+                perm.digivolution_cards.insert(0, target)
+            else:
+                return False
+            return True
+
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [On Play] By placing 1 [Satsuki Tamahime] from your hand as this Digimon's bottom digivolution card, 1 of your Digimon gains <Rush> for the turn.
         effect0 = ICardEffect()
@@ -22,26 +64,30 @@ class BT14_058(CardScript):
         effect0.is_on_play = True
         effect0._is_rush = True
 
-        effect = effect0  # alias for condition closure
         def condition0(context: Dict[str, Any]) -> bool:
             if card and card.permanent_of_this_card() is None:
                 return False
-            # Triggered on play — validated by engine timing
-            return True
+            player = context.get('player')
+            return _has_satsuki_in_hand(player)
 
         effect0.set_can_use_condition(condition0)
 
         def process0(ctx: Dict[str, Any]):
-            """Action: Gain Keyword Rush"""
+            """Action: pay by placing Satsuki, then grant Rush"""
             player = ctx.get('player')
             perm = ctx.get('permanent')
             game = ctx.get('game')
-            if not (player and game):
+            if not (player and game and perm):
                 return
+            if not _place_satsuki_as_bottom_evo(player, perm):
+                return
+
             def target_filter(p):
                 return p.is_digimon
+
             def on_grant(target_perm):
                 target_perm.grant_keyword('_is_rush')
+
             game.effect_select_own_permanent(
                 player, on_grant, filter_fn=target_filter, is_optional=True)
 
@@ -57,26 +103,30 @@ class BT14_058(CardScript):
         effect1.is_when_digivolving = True
         effect1._is_rush = True
 
-        effect = effect1  # alias for condition closure
         def condition1(context: Dict[str, Any]) -> bool:
             if card and card.permanent_of_this_card() is None:
                 return False
-            # Triggered when digivolving — validated by engine timing
-            return True
+            player = context.get('player')
+            return _has_satsuki_in_hand(player)
 
         effect1.set_can_use_condition(condition1)
 
         def process1(ctx: Dict[str, Any]):
-            """Action: Gain Keyword Rush"""
+            """Action: pay by placing Satsuki, then grant Rush"""
             player = ctx.get('player')
             perm = ctx.get('permanent')
             game = ctx.get('game')
-            if not (player and game):
+            if not (player and game and perm):
                 return
+            if not _place_satsuki_as_bottom_evo(player, perm):
+                return
+
             def target_filter(p):
                 return p.is_digimon
+
             def on_grant(target_perm):
                 target_perm.grant_keyword('_is_rush')
+
             game.effect_select_own_permanent(
                 player, on_grant, filter_fn=target_filter, is_optional=True)
 
