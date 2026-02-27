@@ -27,8 +27,17 @@ class BT14_003(CardScript):
                 return False
             if not (card and card.owner and card.owner.is_my_turn):
                 return False
-            # Trigger only when a card is actually added to this player's security stack.
-            return bool(context.get('security_added'))
+            if not context.get('security_added'):
+                return False
+
+            owner = card.owner
+            event_player = context.get('player')
+            security_owner = context.get('security_owner')
+            if security_owner is not None:
+                return security_owner == owner
+            if event_player is not None:
+                return event_player == owner
+            return True
 
         effect0.set_can_use_condition(condition0)
 
