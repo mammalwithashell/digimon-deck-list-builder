@@ -44,8 +44,6 @@ class BT14_087(CardScript):
         def process1(ctx: Dict[str, Any]):
             """Action: Gain 1 memory"""
             player = ctx.get('player')
-            perm = ctx.get('permanent')
-            game = ctx.get('game')
             if player:
                 player.add_memory(1)
 
@@ -69,7 +67,6 @@ class BT14_087(CardScript):
         def process2(ctx: Dict[str, Any]):
             """Action: Mind Link"""
             player = ctx.get('player')
-            perm = ctx.get('permanent')
             game = ctx.get('game')
             if not (player and game):
                 return
@@ -89,7 +86,10 @@ class BT14_087(CardScript):
         def condition3(context: Dict[str, Any]) -> bool:
             if card and card.permanent_of_this_card() is None:
                 return False
-            return True
+            host = context.get('permanent')
+            if not host:
+                return False
+            return host.has_trait("Dark Animal") or host.has_trait("SoC")
         effect3.set_can_use_condition(condition3)
         effects.append(effect3)
 
@@ -104,7 +104,10 @@ class BT14_087(CardScript):
         def condition4(context: Dict[str, Any]) -> bool:
             if card and card.permanent_of_this_card() is None:
                 return False
-            return True
+            host = context.get('permanent')
+            if not host:
+                return False
+            return host.has_trait("Dark Animal") or host.has_trait("SoC")
         effect4.set_can_use_condition(condition4)
         effects.append(effect4)
 
@@ -127,14 +130,14 @@ class BT14_087(CardScript):
         def process5(ctx: Dict[str, Any]):
             """Action: Play Card"""
             player = ctx.get('player')
-            perm = ctx.get('permanent')
             game = ctx.get('game')
             if not (player and game):
                 return
+
             def play_filter(c):
-                return True
-            game.effect_play_from_zone(
-                player, 'hand', play_filter, free=True, is_optional=True)
+                return getattr(c, 'card_id', None) == "BT14-087"
+
+            game.effect_play_from_source(player, card, 'evolution_sources', play_filter, free=True, is_optional=True)
 
         effect5.set_on_process_callback(process5)
         effects.append(effect5)
