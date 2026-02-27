@@ -31,21 +31,22 @@ class BT14_086(CardScript):
         effect1.set_effect_name("BT14-086 Memory +1")
         effect1.set_effect_description("[Start of Your Main Phase] If your opponent has a Digimon, gain 1 memory.")
 
-        effect = effect1  # alias for condition closure
         def condition1(context: Dict[str, Any]) -> bool:
             if card and card.permanent_of_this_card() is None:
                 return False
             if not (card and card.owner and card.owner.is_my_turn):
                 return False
-            return True
+            opponent = getattr(card.owner, 'opponent', None)
+            if not opponent:
+                return False
+            opponent_battle_area = getattr(opponent, 'battle_area', None) or []
+            return len(opponent_battle_area) > 0
 
         effect1.set_can_use_condition(condition1)
 
         def process1(ctx: Dict[str, Any]):
             """Action: Gain 1 memory"""
             player = ctx.get('player')
-            perm = ctx.get('permanent')
-            game = ctx.get('game')
             if player:
                 player.add_memory(1)
 
@@ -58,7 +59,6 @@ class BT14_086(CardScript):
         effect2.set_effect_name("BT14-086 Mind Link")
         effect2.set_effect_description("[Main] <Mind Link> with 1 of your Digimon with [Numemon] or [Monzaemon] in its name, or the [DigiPolice] trait. (Place this Tamer as that Digimon's bottom digivolution card if there are no Tamer cards in its digivolution cards.)")
 
-        effect = effect2  # alias for condition closure
         def condition2(context: Dict[str, Any]) -> bool:
             if card and card.permanent_of_this_card() is None:
                 return False
@@ -69,7 +69,6 @@ class BT14_086(CardScript):
         def process2(ctx: Dict[str, Any]):
             """Action: Mind Link"""
             player = ctx.get('player')
-            perm = ctx.get('permanent')
             game = ctx.get('game')
             if not (player and game):
                 return
@@ -77,6 +76,22 @@ class BT14_086(CardScript):
 
         effect2.set_on_process_callback(process2)
         effects.append(effect2)
+
+        def linked_target_matches() -> bool:
+            perm = card.permanent_of_this_card() if card else None
+            if perm is None:
+                return False
+            linked = getattr(perm, 'mind_linked_perm', None)
+            if linked is None:
+                return False
+            name = (getattr(linked, 'name', '') or '').lower()
+            if 'numemon' in name or 'monzaemon' in name:
+                return True
+            traits = getattr(linked, 'traits', None) or []
+            for t in traits:
+                if str(t).lower() == 'digipolice':
+                    return True
+            return False
 
         # Factory effect: jamming
         # Jamming
@@ -89,7 +104,7 @@ class BT14_086(CardScript):
         def condition3(context: Dict[str, Any]) -> bool:
             if card and card.permanent_of_this_card() is None:
                 return False
-            return True
+            return linked_target_matches()
         effect3.set_can_use_condition(condition3)
         effects.append(effect3)
 
@@ -104,7 +119,7 @@ class BT14_086(CardScript):
         def condition4(context: Dict[str, Any]) -> bool:
             if card and card.permanent_of_this_card() is None:
                 return False
-            return True
+            return linked_target_matches()
         effect4.set_can_use_condition(condition4)
         effects.append(effect4)
 
@@ -116,7 +131,6 @@ class BT14_086(CardScript):
         effect5.is_inherited_effect = True
         effect5.is_optional = True
 
-        effect = effect5  # alias for condition closure
         def condition5(context: Dict[str, Any]) -> bool:
             if card and card.permanent_of_this_card() is None:
                 return False
@@ -127,14 +141,22 @@ class BT14_086(CardScript):
         def process5(ctx: Dict[str, Any]):
             """Action: Play Card"""
             player = ctx.get('player')
-            perm = ctx.get('permanent')
             game = ctx.get('game')
-            if not (player and game):
+            permanent = ctx.get('permanent')
+            if not (player and game and permanent):
                 return
-            def play_filter(c):
-                return True
-            game.effect_play_from_zone(
-                player, 'hand', play_filter, free=True, is_optional=True)
+
+            sources = getattr(permanent, 'digivolution_cards', None) or []
+            target = None
+            for c in sources:
+                cid = getattr(c, 'card_id', '') or ''
+                cname = getattr(c, 'name', '') or ''
+                if cid == 'BT14-086' or cname == 'Satsuki Tamahime':
+                    target = c
+                    break
+            if target is None:
+                return
+            game.play_card(player, target, free=True)
 
         effect5.set_on_process_callback(process5)
         effects.append(effect5)
