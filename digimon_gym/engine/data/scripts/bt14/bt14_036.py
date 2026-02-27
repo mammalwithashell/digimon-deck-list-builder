@@ -33,15 +33,19 @@ class BT14_036(CardScript):
         def process0(ctx: Dict[str, Any]):
             """Action: DP -3000"""
             player = ctx.get('player')
-            perm = ctx.get('permanent')
-            game = ctx.get('game')
-            # DP change targets opponent digimon
             enemy = player.enemy if player else None
-            if enemy and enemy.battle_area:
-                dp_targets = [p for p in enemy.battle_area if p.is_digimon and p.dp is not None]
-                if dp_targets:
-                    target = min(dp_targets, key=lambda p: p.dp)
-                    target.change_dp(-3000)
+            if not enemy or not enemy.battle_area:
+                return
+
+            dp_targets = [p for p in enemy.battle_area if p.is_digimon and p.dp is not None]
+            if not dp_targets:
+                return
+
+            chosen = ctx.get('target_permanent') or ctx.get('target')
+            if chosen not in dp_targets:
+                # Deterministic fallback when no explicit target is provided by engine/UI.
+                chosen = min(dp_targets, key=lambda p: p.dp)
+            chosen.change_dp(-3000)
 
         effect0.set_on_process_callback(process0)
         effects.append(effect0)
@@ -69,15 +73,19 @@ class BT14_036(CardScript):
         def process1(ctx: Dict[str, Any]):
             """Action: DP -2000"""
             player = ctx.get('player')
-            perm = ctx.get('permanent')
-            game = ctx.get('game')
-            # DP change targets opponent digimon
             enemy = player.enemy if player else None
-            if enemy and enemy.battle_area:
-                dp_targets = [p for p in enemy.battle_area if p.is_digimon and p.dp is not None]
-                if dp_targets:
-                    target = min(dp_targets, key=lambda p: p.dp)
-                    target.change_dp(-2000)
+            if not enemy or not enemy.battle_area:
+                return
+
+            dp_targets = [p for p in enemy.battle_area if p.is_digimon and p.dp is not None]
+            if not dp_targets:
+                return
+
+            chosen = ctx.get('target_permanent') or ctx.get('target')
+            if chosen not in dp_targets:
+                # Deterministic fallback when no explicit target is provided by engine/UI.
+                chosen = min(dp_targets, key=lambda p: p.dp)
+            chosen.change_dp(-2000)
 
         effect1.set_on_process_callback(process1)
         effects.append(effect1)
