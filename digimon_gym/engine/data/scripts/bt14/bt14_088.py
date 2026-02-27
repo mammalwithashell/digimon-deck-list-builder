@@ -21,39 +21,36 @@ class BT14_088(CardScript):
         effect0.is_optional = True
         effect0.is_on_play = True
 
-        effect = effect0  # alias for condition closure
         def condition0(context: Dict[str, Any]) -> bool:
             if card and card.permanent_of_this_card() is None:
                 return False
-            # Triggered on play — validated by engine timing
             return True
 
         effect0.set_can_use_condition(condition0)
 
         def process0(ctx: Dict[str, Any]):
-            """Action: Add To Hand, Reveal And Select"""
             player = ctx.get('player')
-            perm = ctx.get('permanent')
             game = ctx.get('game')
-            # Add card to hand (from trash/reveal)
-            if player and player.trash_cards:
-                card_to_add = player.trash_cards.pop()
-                player.hand_cards.append(card_to_add)
             if not (player and game):
                 return
+
             def reveal_filter_0(c):
                 if not getattr(c, 'is_digimon', False):
                     return False
-                return True
+                return getattr(c, 'level', None) == 3
+
             def reveal_filter_1(c):
                 if not getattr(c, 'is_tamer', False):
                     return False
-                if not ('White' in [col.name for col in getattr(c, 'card_colors', [])]):
-                    return False
-                return True
+                return not ('White' in [col.name for col in getattr(c, 'card_colors', [])])
+
             game.effect_reveal_and_select_multi(
-                player, 5, [(reveal_filter_0, 'hand'), (reveal_filter_1, 'hand')],
-                remaining_placement='deck_bottom', is_optional=True)
+                player,
+                5,
+                [(reveal_filter_0, 'hand'), (reveal_filter_1, 'hand')],
+                remaining_placement='deck_bottom',
+                is_optional=True,
+            )
 
         effect0.set_on_process_callback(process0)
         effects.append(effect0)
@@ -66,29 +63,39 @@ class BT14_088(CardScript):
         effect1.is_optional = True
         effect1.is_on_attack = True
 
-        effect = effect1  # alias for condition closure
         def condition1(context: Dict[str, Any]) -> bool:
             if card and card.permanent_of_this_card() is None:
+                return False
+            attacker = context.get('attacker')
+            if not attacker:
+                return False
+            if getattr(attacker, 'level', None) is None or getattr(attacker, 'level', 0) < 5:
+                return False
+            owner = context.get('player')
+            if owner is not None and hasattr(attacker, 'owner') and attacker.owner == owner:
                 return False
             return True
 
         effect1.set_can_use_condition(condition1)
 
         def process1(ctx: Dict[str, Any]):
-            """Action: Suspend"""
             player = ctx.get('player')
             perm = ctx.get('permanent')
             game = ctx.get('game')
-            if not (player and game):
+            if not (player and game and perm):
                 return
-            def target_filter(p):
-                if p.level is None or p.level < 5:
-                    return False
+
+            perm.suspend()
+
+            def can_move(p):
                 return True
-            def on_suspend(target_perm):
-                target_perm.suspend()
-            game.effect_select_opponent_permanent(
-                player, on_suspend, filter_fn=target_filter, is_optional=True)
+
+            game.effect_select_own_breeding_permanent(
+                player,
+                lambda target_perm: game.move_permanent_to_battle_area(target_perm),
+                filter_fn=can_move,
+                is_optional=False,
+            )
 
         effect1.set_on_process_callback(process1)
         effects.append(effect1)
@@ -102,6 +109,7 @@ class BT14_088(CardScript):
 
         def condition2(context: Dict[str, Any]) -> bool:
             return True
+
         effect2.set_can_use_condition(condition2)
         effects.append(effect2)
 
