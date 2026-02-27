@@ -23,7 +23,6 @@ class BT14_019(CardScript):
         effect0.set_hash_string("TrashDigivolution_BT14_019")
         effect0.is_on_attack = True
 
-        effect = effect0  # alias for condition closure
         def condition0(context: Dict[str, Any]) -> bool:
             if card and card.permanent_of_this_card() is None:
                 return False
@@ -32,13 +31,11 @@ class BT14_019(CardScript):
         effect0.set_can_use_condition(condition0)
 
         def process0(ctx: Dict[str, Any]):
-            """Action: Trash Digivolution Cards"""
+            """Action: Trash Digivolution Cards from the attacking opponent Digimon"""
             player = ctx.get('player')
-            perm = ctx.get('permanent')
-            game = ctx.get('game')
-            # Trash digivolution cards from this permanent
-            if perm and not perm.has_no_digivolution_cards:
-                trashed = perm.trash_digivolution_cards(1)
+            target = ctx.get('permanent')
+            if target and not target.has_no_digivolution_cards:
+                trashed = target.trash_digivolution_cards(2)
                 if player:
                     player.trash_cards.extend(trashed)
 
