@@ -473,6 +473,7 @@ class AISetRun(Base):
     fix_failed = Column(Integer, nullable=False, default=0)
     fix_applied = Column(Integer, nullable=False, default=0)
     stopped_reason = Column(Text, nullable=True)
+    pr_url = Column(String, nullable=True)
     created_at = Column(DateTime(timezone=True), default=_utcnow, nullable=False)
     updated_at = Column(DateTime(timezone=True), default=_utcnow, onupdate=_utcnow, nullable=False)
     completed_at = Column(DateTime(timezone=True), nullable=True)

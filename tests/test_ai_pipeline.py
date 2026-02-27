@@ -1452,6 +1452,27 @@ class TestSetRuns:
             },
         )
 
+        # Mock consolidation so it doesn't try real git/gh commands
+        async def _mock_consolidate(db, *, run):
+            run.pr_url = "https://example.test/pr/consolidated"
+            items = (
+                await db.execute(
+                    select(AISetRunItem).where(
+                        AISetRunItem.set_run_id == run.id,
+                        AISetRunItem.fix_apply_status == "applied",
+                    )
+                )
+            ).scalars().all()
+            for item in items:
+                item.pr_url = "https://example.test/pr/consolidated"
+            return "https://example.test/pr/consolidated"
+
+        monkeypatch.setattr(
+            set_run_orchestrator,
+            "_consolidate_and_open_pr",
+            _mock_consolidate,
+        )
+
         # Signal each review task as finished; fix tasks created after last one
         for rtid in review_task_ids:
             await set_run_orchestrator.on_task_finished(rtid)
@@ -1480,6 +1501,8 @@ class TestSetRuns:
         payload = detail_after.json()
         assert payload["run"]["status"] == "completed"
         assert any(item["card_id"] == "BT13-001" and item["pr_url"] for item in payload["items"])
+        # Consolidated PR should be set on the run
+        assert payload["run"]["pr_url"] == "https://example.test/pr/consolidated"
 
         async with session_factory() as db:
             resolved_issue = (
@@ -1655,6 +1678,10 @@ class TestSetRuns:
             },
         )
 
+        async def _noop_consolidate(db, *, run):
+            return None
+        monkeypatch.setattr(set_run_orchestrator, "_consolidate_and_open_pr", _noop_consolidate)
+
         for rid in review_ids:
             await set_run_orchestrator.on_task_finished(rid)
 
@@ -1800,6 +1827,10 @@ class TestSetRuns:
             },
         )
 
+        async def _noop_consolidate(db, *, run):
+            return None
+        monkeypatch.setattr(set_run_orchestrator, "_consolidate_and_open_pr", _noop_consolidate)
+
         for rid in review_ids:
             await set_run_orchestrator.on_task_finished(rid)
 
@@ -1887,6 +1918,10 @@ class TestSetRuns:
                 rt.result_json = json.dumps({"cards": cards_result})
             await db.commit()
             review_ids = [rt.id for rt in review_tasks]
+
+        async def _noop_consolidate(db, *, run):
+            return None
+        monkeypatch.setattr(set_run_orchestrator, "_consolidate_and_open_pr", _noop_consolidate)
 
         for rid in review_ids:
             await set_run_orchestrator.on_task_finished(rid)

@@ -339,6 +339,7 @@ def _set_run_to_response(run: AISetRun) -> AISetRunResponse:
         retranspile_completed=int(run.retranspile_completed or 0),
         retranspile_failed=int(run.retranspile_failed or 0),
         stopped_reason=run.stopped_reason,
+        pr_url=run.pr_url,
         created_at=run.created_at,
         updated_at=run.updated_at,
         completed_at=run.completed_at,

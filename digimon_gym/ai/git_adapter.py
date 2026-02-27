@@ -2,12 +2,15 @@
 
 from __future__ import annotations
 
+import logging
 import os
 import shutil
 import subprocess
 import tempfile
 from dataclasses import dataclass
 from pathlib import Path
+
+logger = logging.getLogger(__name__)
 
 
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
@@ -200,3 +203,60 @@ class GitAdapter:
 
     def push_to_main(self, *, worktree_path: Path) -> None:
         _run(["git", "push", "origin", "HEAD:main"], cwd=worktree_path)
+
+    # ── Set-run consolidation ────────────────────────────────────────
+
+    def branch_name_for_set_run(self, *, set_id: str, run_id: str) -> str:
+        prefix = run_id.split("-", 1)[0]
+        return f"ai/set-run-{set_id.lower()}-{prefix}"
+
+    def create_consolidation_branch(
+        self,
+        *,
+        set_id: str,
+        run_id: str,
+        commit_shas: list[str],
+    ) -> tuple[WorktreeContext, list[str]]:
+        """Cherry-pick applied fix commits onto a fresh consolidation branch.
+
+        Returns (WorktreeContext, skipped_shas) where skipped_shas are commits
+        that could not be cherry-picked (conflict).
+        """
+        branch = self.branch_name_for_set_run(set_id=set_id, run_id=run_id)
+        wt = _WORKTREE_BASE / f"consolidate-{run_id}"
+
+        # Clean up any existing worktree at this path
+        if wt.exists():
+            shutil.rmtree(wt, ignore_errors=True)
+            _run(["git", "worktree", "prune"], cwd=self.repo_root)
+
+        _run(["git", "fetch", "origin", DEFAULT_BRANCH], cwd=self.repo_root)
+        wt.parent.mkdir(parents=True, exist_ok=True)
+        _run(
+            ["git", "worktree", "add", "-B", branch, str(wt), f"origin/{DEFAULT_BRANCH}"],
+            cwd=self.repo_root,
+        )
+
+        skipped: list[str] = []
+        for sha in commit_shas:
+            try:
+                _run(["git", "cherry-pick", sha], cwd=wt)
+            except GitCommandError:
+                logger.warning("Cherry-pick failed for %s, skipping", sha)
+                # Abort the failed cherry-pick so the worktree is clean
+                subprocess.run(
+                    ["git", "cherry-pick", "--abort"],
+                    cwd=str(wt),
+                    capture_output=True,
+                    check=False,
+                )
+                skipped.append(sha)
+
+        return WorktreeContext(worktree_path=wt, branch_name=branch), skipped
+
+    def close_pr(self, pr_url: str) -> None:
+        """Close a PR by URL. Ignores errors (already closed/merged)."""
+        try:
+            _run(["gh", "pr", "close", pr_url], cwd=self.repo_root)
+        except GitCommandError:
+            logger.debug("Could not close PR %s (may already be closed)", pr_url)

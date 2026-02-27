@@ -362,6 +362,7 @@ class AISetRunResponse(BaseModel):
     retranspile_completed: int = 0
     retranspile_failed: int = 0
     stopped_reason: Optional[str] = None
+    pr_url: Optional[str] = None
     created_at: datetime
     updated_at: datetime
     completed_at: Optional[datetime] = None

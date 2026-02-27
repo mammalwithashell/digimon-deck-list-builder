@@ -5,11 +5,14 @@ from __future__ import annotations
 import asyncio
 import hashlib
 import json
+import logging
 import math
 import os
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
+
+logger = logging.getLogger(__name__)
 
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -912,6 +915,80 @@ class AISetRunOrchestrator:
         run.retranspile_completed = sum(1 for t in retranspile_tasks if t.status == "completed")
         run.retranspile_failed = sum(1 for t in retranspile_tasks if t.status == "failed")
 
+    async def _consolidate_and_open_pr(self, db: AsyncSession, run: AISetRun) -> str | None:
+        """Cherry-pick all applied fix commits into one branch, open combined PR, close individual PRs."""
+        if run.run_mode != "pr":
+            return None
+
+        items = (
+            await db.execute(
+                select(AISetRunItem)
+                .where(
+                    AISetRunItem.set_run_id == run.id,
+                    AISetRunItem.fix_apply_status == "applied",
+                    AISetRunItem.commit_sha.isnot(None),
+                )
+                .order_by(AISetRunItem.card_id)
+            )
+        ).scalars().all()
+
+        if not items:
+            return None
+
+        commit_shas = [item.commit_sha for item in items]
+        individual_pr_urls = list({item.pr_url for item in items if item.pr_url})
+
+        try:
+            ctx, skipped = await asyncio.to_thread(
+                self.git.create_consolidation_branch,
+                set_id=run.set_id,
+                run_id=run.id,
+                commit_shas=commit_shas,
+            )
+        except Exception:
+            logger.exception("Failed to create consolidation branch for run %s", run.id)
+            return None
+
+        picked_count = len(commit_shas) - len(skipped)
+        if picked_count == 0:
+            logger.warning("All cherry-picks failed for run %s, skipping consolidated PR", run.id)
+            return None
+
+        card_list = "\n".join(f"- {item.card_id}" for item in items if item.commit_sha not in skipped)
+        body = (
+            f"## Consolidated AI fixes for `{run.set_id}`\n\n"
+            f"Set run: `{run.id}`\n"
+            f"Applied: {picked_count} cards | Skipped: {len(skipped)}\n\n"
+            f"### Fixed cards\n{card_list}"
+        )
+
+        try:
+            pr_url = await asyncio.to_thread(
+                self.git.push_pr_branch_and_open_draft_pr,
+                worktree_path=ctx.worktree_path,
+                branch_name=ctx.branch_name,
+                title=f"AI set-run fixes: {run.set_id} ({picked_count} cards)",
+                body=body,
+            )
+        except Exception:
+            logger.exception("Failed to push consolidated PR for run %s", run.id)
+            return None
+
+        # Close individual per-card PRs
+        for url in individual_pr_urls:
+            try:
+                await asyncio.to_thread(self.git.close_pr, url)
+            except Exception:
+                logger.debug("Failed to close individual PR %s", url)
+
+        # Update all applied items and the run itself with the consolidated PR URL
+        run.pr_url = pr_url
+        for item in items:
+            if item.commit_sha not in skipped:
+                item.pr_url = pr_url
+
+        return pr_url
+
     async def _finalize_run_if_complete(self, db: AsyncSession, run: AISetRun) -> None:
         if run.status != "running":
             return
@@ -951,6 +1028,7 @@ class AISetRunOrchestrator:
         items = await self.list_set_run_items(db, set_run_id=run.id)
         tracked_fix_items = [item for item in items if item.fix_task_id]
         if not tracked_fix_items:
+            await self._consolidate_and_open_pr(db, run=run)
             run.status = "completed"
             run.stage = "completed"
             run.completed_at = _utcnow()
@@ -966,6 +1044,7 @@ class AISetRunOrchestrator:
 
         if applied_this_iteration == 0:
             # No progress — complete (convergence failure or all failed)
+            await self._consolidate_and_open_pr(db, run=run)
             run.status = "completed"
             run.stage = "completed"
             run.completed_at = _utcnow()
@@ -979,6 +1058,7 @@ class AISetRunOrchestrator:
                 1 for item in items
                 if item.review_faithful == 0 and item.fix_apply_status != "applied"
             )
+            await self._consolidate_and_open_pr(db, run=run)
             run.status = "completed"
             run.stage = "completed"
             run.completed_at = _utcnow()
