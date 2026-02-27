@@ -339,7 +339,7 @@ def run_profile_checks(*, repo_root: Path, scope_profile: str, applied_files: li
 
     tests = derive_targeted_tests(applied_files)
     if tests:
-        outputs.append(_run_check_command(["pytest", "-q", *tests], cwd=repo_root))
+        outputs.append(_run_check_command(["python", "-m", "pytest", "-q", *tests], cwd=repo_root))
 
     return outputs
 
