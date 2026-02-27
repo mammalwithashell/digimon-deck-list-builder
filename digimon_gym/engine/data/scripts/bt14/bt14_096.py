@@ -14,13 +14,13 @@ class BT14_096(CardScript):
         effects = []
 
         # Timing: EffectTiming.OptionSkill
-        # [Main] Suspend 1 of your opponent's Digimon. Then, if you have a Tamer with [Mimi Tachikawa] in its name, 1 of your opponent's Digimon doesn't unsuspend until the end of their turn.
+        # [Main] Suspend 1 of your opponent's Digimon. Then, if you have a Tamer with [Mimi Tachikawa] in its name,
+        # 1 of your opponent's Digimon doesn't unsuspend until the end of their turn.
         effect0 = ICardEffect()
         effect0.set_effect_name("BT14-096 Suspend, Gain Keyword Cannot Unsuspend")
         effect0.set_effect_description("[Main] Suspend 1 of your opponent's Digimon. Then, if you have a Tamer with [Mimi Tachikawa] in its name, 1 of your opponent's Digimon doesn't unsuspend until the end of their turn.")
         effect0._is_cannot_unsuspend = True
 
-        effect = effect0  # alias for condition closure
         def condition0(context: Dict[str, Any]) -> bool:
             # Option main effect — validated by engine timing
             return True
@@ -28,22 +28,36 @@ class BT14_096(CardScript):
         effect0.set_can_use_condition(condition0)
 
         def process0(ctx: Dict[str, Any]):
-            """Action: Suspend, Gain Keyword Cannot Unsuspend"""
+            """Action: Suspend, then conditionally apply cannot-unsuspend to an opponent Digimon"""
             player = ctx.get('player')
-            perm = ctx.get('permanent')
             game = ctx.get('game')
             if not (player and game):
                 return
-            def target_filter(p):
-                if not (p.contains_card_name('Mimi Tachikawa')):
-                    return False
-                return True
+
+            def opponent_digimon_filter(p):
+                return getattr(p, 'is_digimon', lambda: False)()
+
+            # Suspend 1 of opponent's Digimon
             def on_suspend(target_perm):
                 target_perm.suspend()
+
             game.effect_select_opponent_permanent(
-                player, on_suspend, filter_fn=target_filter, is_optional=False)
-            if perm:
-                perm.grant_keyword('_is_cannot_unsuspend')
+                player, on_suspend, filter_fn=opponent_digimon_filter, is_optional=False)
+
+            # If you have a Tamer with [Mimi Tachikawa] in name, choose 1 opponent Digimon
+            # that doesn't unsuspend until end of their turn.
+            has_mimi_tamer = False
+            for p in player.get_permanents():
+                if getattr(p, 'is_tamer', lambda: False)() and p.contains_card_name('Mimi Tachikawa'):
+                    has_mimi_tamer = True
+                    break
+
+            if has_mimi_tamer:
+                def on_cannot_unsuspend(target_perm):
+                    target_perm.grant_keyword('_is_cannot_unsuspend')
+
+                game.effect_select_opponent_permanent(
+                    player, on_cannot_unsuspend, filter_fn=opponent_digimon_filter, is_optional=False)
 
         effect0.set_on_process_callback(process0)
         effects.append(effect0)
