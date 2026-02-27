@@ -52,18 +52,19 @@ class BT14_097(CardScript):
         def process1(ctx: Dict[str, Any]):
             """Action: Digivolve"""
             player = ctx.get('player')
-            perm = ctx.get('permanent')
             game = ctx.get('game')
-            if not (player and perm and game):
+            if not (player and game):
                 return
+
             def digi_filter(c):
                 if not getattr(c, 'is_digimon', False):
                     return False
-                if not (any('Sukamon' in _n for _n in getattr(c, 'card_names', []))):
+                if not any('Sukamon' in _n for _n in getattr(c, 'card_names', [])):
                     return False
                 return True
-            game.effect_digivolve_from_hand(
-                player, perm, digi_filter, is_optional=True)
+
+            # Source should be 1 of your non-white Digimon; engine handles selection.
+            game.effect_digivolve_from_hand(player, None, digi_filter, is_optional=True)
 
         effect1.set_on_process_callback(process1)
         effects.append(effect1)
@@ -73,7 +74,6 @@ class BT14_097(CardScript):
         effect2 = ICardEffect()
         effect2.set_effect_name("BT14-097 Original card name is [Sukamon]")
         effect2.set_effect_description("[Security] Until the end of your turn, change 1 of your opponent's Digimon into being white and having 3000 DP and an original name of [Sukamon].")
-        effect2.is_security_effect = True
         effect2.is_security_effect = True
 
         effect = effect2  # alias for condition closure
