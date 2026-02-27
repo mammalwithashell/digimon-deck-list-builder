@@ -1422,7 +1422,7 @@
     },
     "BT14-036": {
       "card_id": "BT14-036",
-      "frozen_hash": "faf39a661a9eccbf04b3f110463871bc9cc6cc0ac17240facc306631b136e3df",
+      "frozen_hash": "c13ed813df644364bb9565950083f5d447eef92d6cbcfd754dd533c1c44e57f1",
       "frozen_relpath": "bt14/bt14_036.py",
       "generated_hash": "faf39a661a9eccbf04b3f110463871bc9cc6cc0ac17240facc306631b136e3df",
       "generated_relpath": "generated/bt14/bt14_036.py",
