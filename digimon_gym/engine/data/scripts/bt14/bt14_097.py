@@ -74,7 +74,6 @@ class BT14_097(CardScript):
         effect2.set_effect_name("BT14-097 Original card name is [Sukamon]")
         effect2.set_effect_description("[Security] Until the end of your turn, change 1 of your opponent's Digimon into being white and having 3000 DP and an original name of [Sukamon].")
         effect2.is_security_effect = True
-        effect2.is_security_effect = True
 
         effect = effect2  # alias for condition closure
         def condition2(context: Dict[str, Any]) -> bool:
@@ -86,10 +85,23 @@ class BT14_097(CardScript):
         def process2(ctx: Dict[str, Any]):
             """Action: Add Temp Effect"""
             player = ctx.get('player')
-            perm = ctx.get('permanent')
             game = ctx.get('game')
-            # Grant temporary effect to target permanent
-            pass  # descriptive-tagged: add_temp_effect
+            if not (player and game):
+                return
+
+            def target_filter(p):
+                owner = getattr(p, 'owner', None)
+                return getattr(p, 'is_digimon', False) and owner is not None and owner != player
+
+            target = game.select_permanent(player, target_filter, 'opponent')
+            if not target:
+                return
+
+            game.add_until_end_of_turn_modifier(target, {
+                'set_colors': [2],   # white
+                'set_dp': 3000,
+                'set_original_name': 'Sukamon',
+            })
 
         effect2.set_on_process_callback(process2)
         effects.append(effect2)
