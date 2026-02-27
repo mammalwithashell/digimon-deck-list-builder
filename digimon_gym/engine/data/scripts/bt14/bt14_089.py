@@ -29,18 +29,34 @@ class BT14_089(CardScript):
         def process0(ctx: Dict[str, Any]):
             """Action: Delete"""
             player = ctx.get('player')
-            perm = ctx.get('permanent')
             game = ctx.get('game')
             if not (player and game):
                 return
-            def target_filter(p):
-                if p.dp is None or p.dp > 6000:
-                    return False
-                return p.is_digimon
+
+            my_digimon = [p for p in getattr(player, 'battle_area', []) if getattr(p, 'is_digimon', False)]
+            has_greymon = any('greymon' in (getattr(p, 'name', '') or '').lower() for p in my_digimon)
+
+            enemy = player.enemy
+            enemy_digimon = [p for p in getattr(enemy, 'battle_area', []) if getattr(p, 'is_digimon', False)]
+            if not enemy_digimon:
+                return
+
+            if has_greymon:
+                valid = [p for p in enemy_digimon if getattr(p, 'dp', None) is not None]
+                if not valid:
+                    return
+                min_dp = min(p.dp for p in valid)
+
+                def target_filter(p):
+                    return getattr(p, 'is_digimon', False) and getattr(p, 'dp', None) == min_dp
+            else:
+                def target_filter(p):
+                    dp = getattr(p, 'dp', None)
+                    return getattr(p, 'is_digimon', False) and dp is not None and dp <= 6000
+
             def on_delete(target_perm):
-                enemy = player.enemy if player else None
-                if enemy:
-                    enemy.delete_permanent(target_perm)
+                enemy.delete_permanent(target_perm)
+
             game.effect_select_opponent_permanent(
                 player, on_delete, filter_fn=target_filter, is_optional=False)
 
