@@ -1921,7 +1921,7 @@ class TestPromotionAndRetrieval:
         generated_dir.mkdir(parents=True, exist_ok=True)
         generated_file = generated_dir / "bt24_001.py"
         generated_file.write_text("print('generated')\n", encoding="utf-8")
-        expected_hash = hashlib.sha256(generated_file.read_bytes()).hexdigest()
+        expected_hash = hashlib.sha256(generated_file.read_bytes().replace(b"\r\n", b"\n")).hexdigest()
         manifest_path = scripts_dir / "_frozen_manifest.json"
 
         monkeypatch.setattr(script_promotion, "scripts_root", lambda: scripts_dir)
