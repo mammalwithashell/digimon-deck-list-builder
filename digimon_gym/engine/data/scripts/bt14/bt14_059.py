@@ -25,11 +25,12 @@ class BT14_059(CardScript):
         effect0.set_can_use_condition(condition0)
         effects.append(effect0)
 
-        # Factory effect: save
-        # Save
+        # Factory effect: on deletion save
+        # [On Deletion] Save
         effect1 = ICardEffect()
-        effect1.set_effect_name("BT14-059 Save")
-        effect1.set_effect_description("Save")
+        effect1.set_effect_name("BT14-059 On Deletion Save")
+        effect1.set_effect_description("[On Deletion] Save")
+        effect1.trigger_type = "on_deletion"
         effect1._is_save = True
 
         def condition1(context: Dict[str, Any]) -> bool:
