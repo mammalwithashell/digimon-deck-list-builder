@@ -1381,6 +1381,7 @@ class TestSetRuns:
                 "run_mode": "pr",
                 "scope_profile": "script",
                 "max_fix_tasks": 1,
+                "max_fix_iterations": 1,
             },
         )
         assert create.status_code == 201
@@ -1570,6 +1571,347 @@ class TestSetRuns:
             review_task_ids = {rt.id for rt in review_tasks}
             for item in items:
                 assert item.review_task_id in review_task_ids
+
+
+    async def test_fix_review_loop_iterates_on_remaining_not_faithful(
+        self, client: AsyncClient, session_factory, monkeypatch
+    ):
+        """After fix stage, if items were applied, loop back to re-review them."""
+        monkeypatch.setattr(set_run_module, "async_session", session_factory)
+        admin_tokens = await _register_and_login(client, "adminloop")
+        await _grant_roles(session_factory, "adminloop", ROLE_ADMIN)
+
+        create = await client.post(
+            "/admin/set-runs",
+            headers={"Authorization": f"Bearer {admin_tokens['access_token']}"},
+            json={
+                "set_id": "bt13",
+                "run_mode": "pr",
+                "scope_profile": "script",
+                "max_fix_tasks": 0,
+                "max_fix_iterations": 3,
+            },
+        )
+        assert create.status_code == 201
+        set_run_id = create.json()["id"]
+
+        # Complete QA tasks
+        async with session_factory() as db:
+            qa_tasks = (
+                await db.execute(
+                    select(AITask).where(
+                        AITask.set_run_id == set_run_id,
+                        AITask.task_type == "qa_analysis",
+                    )
+                )
+            ).scalars().all()
+            for qt in qa_tasks:
+                qt.status = "completed"
+                qt.result_json = json.dumps({"classification": "script"})
+            await db.commit()
+            qa_ids = [qt.id for qt in qa_tasks]
+
+        for qid in qa_ids:
+            await set_run_orchestrator.on_task_finished(qid)
+
+        # Build review result: BT13-001 and BT13-002 not faithful, rest faithful
+        async with session_factory() as db:
+            items = (
+                await db.execute(select(AISetRunItem).where(AISetRunItem.set_run_id == set_run_id))
+            ).scalars().all()
+            cards_result = {}
+            for item in items:
+                not_faithful = item.card_id in ("BT13-001", "BT13-002")
+                cards_result[item.card_id] = {
+                    "faithful_to_card_text": not not_faithful,
+                    "engine_supported": True,
+                    "issues": ["Mismatch"] if not_faithful else [],
+                    "suggested_fixes": [],
+                    "engine_requests": [],
+                }
+
+            review_tasks = (
+                await db.execute(
+                    select(AITask).where(
+                        AITask.set_run_id == set_run_id,
+                        AITask.task_type == "review_batch",
+                    )
+                )
+            ).scalars().all()
+            for rt in review_tasks:
+                rt.status = "completed"
+                rt.result_json = json.dumps({"cards": cards_result})
+            await db.commit()
+            review_ids = [rt.id for rt in review_tasks]
+
+        monkeypatch.setattr(
+            set_run_orchestrator,
+            "_apply_fix_task_pr_mode",
+            lambda **_: {
+                "applied_files": ["fake.py"],
+                "check_outputs": [],
+                "commit_sha": "abc123",
+                "pr_url": "https://example.test/pr/1",
+            },
+        )
+
+        for rid in review_ids:
+            await set_run_orchestrator.on_task_finished(rid)
+
+        # Should be in fix stage with 2 fix tasks
+        async with session_factory() as db:
+            run = (await db.execute(select(AISetRun).where(AISetRun.id == set_run_id))).scalar_one()
+            assert run.stage == "fix"
+            fix_tasks = (
+                await db.execute(
+                    select(AITask).where(
+                        AITask.set_run_id == set_run_id,
+                        AITask.task_type == "script_autofix",
+                    )
+                )
+            ).scalars().all()
+            assert len(fix_tasks) == 2
+
+            for ft in fix_tasks:
+                ft.status = "completed"
+                ft.result_json = json.dumps({"summary": "ok", "edits": []})
+            await db.commit()
+            fix_ids = [ft.id for ft in fix_tasks]
+
+        for fid in fix_ids:
+            await set_run_orchestrator.on_task_finished(fid)
+
+        # Pipeline should loop back to review (iteration 1)
+        async with session_factory() as db:
+            run = (await db.execute(select(AISetRun).where(AISetRun.id == set_run_id))).scalar_one()
+            assert run.stage == "review", f"Expected review, got {run.stage}"
+            assert run.fix_iteration == 1
+
+            # New review tasks should exist for just the 2 fixed cards
+            new_review_tasks = (
+                await db.execute(
+                    select(AITask).where(
+                        AITask.set_run_id == set_run_id,
+                        AITask.task_type == "review_batch",
+                        AITask.status == "queued",
+                    )
+                )
+            ).scalars().all()
+            assert len(new_review_tasks) >= 1
+
+            # Complete re-review: mark both as faithful this time
+            re_review_result = {}
+            re_items = (
+                await db.execute(select(AISetRunItem).where(AISetRunItem.set_run_id == set_run_id))
+            ).scalars().all()
+            for item in re_items:
+                re_review_result[item.card_id] = {
+                    "faithful_to_card_text": True,
+                    "engine_supported": True,
+                    "issues": [],
+                    "suggested_fixes": [],
+                    "engine_requests": [],
+                }
+            for nrt in new_review_tasks:
+                nrt.status = "completed"
+                nrt.result_json = json.dumps({"cards": re_review_result})
+            await db.commit()
+            new_review_ids = [nrt.id for nrt in new_review_tasks]
+
+        for nrid in new_review_ids:
+            await set_run_orchestrator.on_task_finished(nrid)
+
+        # All faithful — run should complete
+        async with session_factory() as db:
+            run = (await db.execute(select(AISetRun).where(AISetRun.id == set_run_id))).scalar_one()
+            assert run.status == "completed"
+            assert run.stage == "completed"
+
+    async def test_fix_review_loop_stops_at_max_iterations(
+        self, client: AsyncClient, session_factory, monkeypatch
+    ):
+        """Pipeline should stop after max_fix_iterations even if items were fixed."""
+        monkeypatch.setattr(set_run_module, "async_session", session_factory)
+        admin_tokens = await _register_and_login(client, "adminmaxiter")
+        await _grant_roles(session_factory, "adminmaxiter", ROLE_ADMIN)
+
+        create = await client.post(
+            "/admin/set-runs",
+            headers={"Authorization": f"Bearer {admin_tokens['access_token']}"},
+            json={
+                "set_id": "bt13",
+                "run_mode": "pr",
+                "scope_profile": "script",
+                "max_fix_tasks": 0,
+                "max_fix_iterations": 1,
+            },
+        )
+        assert create.status_code == 201
+        set_run_id = create.json()["id"]
+
+        # Fast-forward: complete QA
+        async with session_factory() as db:
+            qa_tasks = (
+                await db.execute(
+                    select(AITask).where(AITask.set_run_id == set_run_id, AITask.task_type == "qa_analysis")
+                )
+            ).scalars().all()
+            for qt in qa_tasks:
+                qt.status = "completed"
+                qt.result_json = json.dumps({"classification": "script"})
+            await db.commit()
+            qa_ids = [qt.id for qt in qa_tasks]
+        for qid in qa_ids:
+            await set_run_orchestrator.on_task_finished(qid)
+
+        # Review: BT13-001 not faithful
+        async with session_factory() as db:
+            items = (
+                await db.execute(select(AISetRunItem).where(AISetRunItem.set_run_id == set_run_id))
+            ).scalars().all()
+            cards_result = {}
+            for item in items:
+                cards_result[item.card_id] = {
+                    "faithful_to_card_text": item.card_id != "BT13-001",
+                    "engine_supported": True,
+                    "issues": ["Mismatch"] if item.card_id == "BT13-001" else [],
+                    "suggested_fixes": [],
+                    "engine_requests": [],
+                }
+            review_tasks = (
+                await db.execute(
+                    select(AITask).where(AITask.set_run_id == set_run_id, AITask.task_type == "review_batch")
+                )
+            ).scalars().all()
+            for rt in review_tasks:
+                rt.status = "completed"
+                rt.result_json = json.dumps({"cards": cards_result})
+            await db.commit()
+            review_ids = [rt.id for rt in review_tasks]
+
+        monkeypatch.setattr(
+            set_run_orchestrator,
+            "_apply_fix_task_pr_mode",
+            lambda **_: {
+                "applied_files": ["fake.py"],
+                "check_outputs": [],
+                "commit_sha": "abc123",
+                "pr_url": "https://example.test/pr/1",
+            },
+        )
+
+        for rid in review_ids:
+            await set_run_orchestrator.on_task_finished(rid)
+
+        # Complete fix task
+        async with session_factory() as db:
+            fix_tasks = (
+                await db.execute(
+                    select(AITask).where(AITask.set_run_id == set_run_id, AITask.task_type == "script_autofix")
+                )
+            ).scalars().all()
+            assert len(fix_tasks) == 1
+            for ft in fix_tasks:
+                ft.status = "completed"
+                ft.result_json = json.dumps({"summary": "ok", "edits": []})
+            await db.commit()
+            fix_ids = [ft.id for ft in fix_tasks]
+
+        for fid in fix_ids:
+            await set_run_orchestrator.on_task_finished(fid)
+
+        # With max_fix_iterations=1, iteration goes from 0 to 1 which equals max — should stop
+        async with session_factory() as db:
+            run = (await db.execute(select(AISetRun).where(AISetRun.id == set_run_id))).scalar_one()
+            assert run.status == "completed"
+            assert "iteration" in (run.stopped_reason or "").lower()
+
+    async def test_fix_review_loop_stops_on_zero_progress(
+        self, client: AsyncClient, session_factory, monkeypatch
+    ):
+        """Pipeline stops if a fix iteration produces zero applied fixes (all failed)."""
+        monkeypatch.setattr(set_run_module, "async_session", session_factory)
+        admin_tokens = await _register_and_login(client, "adminnoprogress")
+        await _grant_roles(session_factory, "adminnoprogress", ROLE_ADMIN)
+
+        create = await client.post(
+            "/admin/set-runs",
+            headers={"Authorization": f"Bearer {admin_tokens['access_token']}"},
+            json={
+                "set_id": "bt13",
+                "run_mode": "pr",
+                "scope_profile": "script",
+                "max_fix_tasks": 0,
+                "max_fix_iterations": 5,
+            },
+        )
+        assert create.status_code == 201
+        set_run_id = create.json()["id"]
+
+        # Fast-forward QA
+        async with session_factory() as db:
+            qa_tasks = (
+                await db.execute(
+                    select(AITask).where(AITask.set_run_id == set_run_id, AITask.task_type == "qa_analysis")
+                )
+            ).scalars().all()
+            for qt in qa_tasks:
+                qt.status = "completed"
+                qt.result_json = json.dumps({"classification": "script"})
+            await db.commit()
+            qa_ids = [qt.id for qt in qa_tasks]
+        for qid in qa_ids:
+            await set_run_orchestrator.on_task_finished(qid)
+
+        # Review: BT13-001 not faithful
+        async with session_factory() as db:
+            items = (
+                await db.execute(select(AISetRunItem).where(AISetRunItem.set_run_id == set_run_id))
+            ).scalars().all()
+            cards_result = {}
+            for item in items:
+                cards_result[item.card_id] = {
+                    "faithful_to_card_text": item.card_id != "BT13-001",
+                    "engine_supported": True,
+                    "issues": ["Mismatch"] if item.card_id == "BT13-001" else [],
+                    "suggested_fixes": [],
+                    "engine_requests": [],
+                }
+            review_tasks = (
+                await db.execute(
+                    select(AITask).where(AITask.set_run_id == set_run_id, AITask.task_type == "review_batch")
+                )
+            ).scalars().all()
+            for rt in review_tasks:
+                rt.status = "completed"
+                rt.result_json = json.dumps({"cards": cards_result})
+            await db.commit()
+            review_ids = [rt.id for rt in review_tasks]
+
+        for rid in review_ids:
+            await set_run_orchestrator.on_task_finished(rid)
+
+        # Fix task FAILS (not applied)
+        async with session_factory() as db:
+            fix_tasks = (
+                await db.execute(
+                    select(AITask).where(AITask.set_run_id == set_run_id, AITask.task_type == "script_autofix")
+                )
+            ).scalars().all()
+            for ft in fix_tasks:
+                ft.status = "failed"
+                ft.error_text = "OpenAI error"
+            await db.commit()
+            fix_ids = [ft.id for ft in fix_tasks]
+
+        for fid in fix_ids:
+            await set_run_orchestrator.on_task_finished(fid)
+
+        # Zero progress — should complete, not loop
+        async with session_factory() as db:
+            run = (await db.execute(select(AISetRun).where(AISetRun.id == set_run_id))).scalar_one()
+            assert run.status == "completed"
+            assert run.fix_failed > 0
 
 
 class TestPromotionAndRetrieval:

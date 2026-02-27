@@ -605,6 +605,7 @@ async def create_set_run(
             max_total_cost_usd=request.max_total_cost_usd,
             failure_rate_stop=request.failure_rate_stop,
             max_fix_tasks=request.max_fix_tasks,
+            max_fix_iterations=request.max_fix_iterations,
             score_threshold=request.score_threshold,
         )
     except SetRunOrchestrationError as exc:

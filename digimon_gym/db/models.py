@@ -455,6 +455,8 @@ class AISetRun(Base):
     max_total_cost_usd = Column(Float, nullable=False, default=5.0)
     failure_rate_stop = Column(Float, nullable=False, default=0.3)
     max_fix_tasks = Column(Integer, nullable=False, default=0)
+    fix_iteration = Column(Integer, nullable=False, default=0)
+    max_fix_iterations = Column(Integer, nullable=False, default=3)
     # Retranspile configuration and counters
     score_threshold = Column(Float, nullable=True)
     retranspile_total = Column(Integer, nullable=False, default=0)

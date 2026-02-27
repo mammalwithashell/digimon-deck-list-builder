@@ -100,6 +100,7 @@ class AISetRunOrchestrator:
         max_total_cost_usd: float,
         failure_rate_stop: float,
         max_fix_tasks: int,
+        max_fix_iterations: int = 3,
         score_threshold: float | None = None,
     ) -> AISetRun:
         if run_mode == "main" and not self._main_allowed:
@@ -117,6 +118,7 @@ class AISetRunOrchestrator:
             max_total_cost_usd=max_total_cost_usd,
             failure_rate_stop=failure_rate_stop,
             max_fix_tasks=max_fix_tasks,
+            max_fix_iterations=max_fix_iterations,
             score_threshold=score_threshold,
         )
         db.add(run)
@@ -320,27 +322,36 @@ class AISetRunOrchestrator:
             await self._queue_review_task(db, run=run)
 
     async def _queue_review_task(self, db: AsyncSession, *, run: AISetRun) -> None:
-        existing = (
+        # On re-review iterations, only check for queued tasks (not old completed ones)
+        existing_queued = (
             await db.execute(
                 select(AITask).where(
                     AITask.set_run_id == run.id,
                     AITask.task_type == "review_batch",
+                    AITask.status == "queued",
                 )
             )
         ).scalars().all()
-        if existing:
+        if existing_queued:
             run.stage = "review"
-            run.review_total = len(existing)
+            run.review_total = len(existing_queued)
             return
 
         items = await self.list_set_run_items(db, set_run_id=run.id)
+        # Only include items that need (re-)review
+        items_to_review = [item for item in items if item.review_faithful is None]
+        if not items_to_review:
+            # All items already reviewed — advance to fix
+            await self._advance_to_fix_from_review(db, run=run, items=items)
+            return
+
         payload_cards = [
             {
                 "card_id": item.card_id,
                 "set_id": item.set_id,
                 "module_name": item.module_name,
             }
-            for item in items
+            for item in items_to_review
         ]
 
         # Split into ~3 chunks to stay under rate limits
@@ -350,7 +361,7 @@ class AISetRunOrchestrator:
             for i in range(0, len(payload_cards), chunk_size)
         ]
 
-        item_by_card = {item.card_id: item for item in items}
+        item_by_card = {item.card_id: item for item in items_to_review}
         for chunk in chunks:
             payload = {"cards": chunk}
             estimate = self.dispatcher.estimate_cost("review_batch", payload, model_name=run.model_name)
@@ -422,10 +433,14 @@ class AISetRunOrchestrator:
 
         # At least some succeeded — advance to fix stage with partial results
         items = await self.list_set_run_items(db, set_run_id=run.id)
+        await self._advance_to_fix_from_review(db, run=run, items=items)
 
+    async def _advance_to_fix_from_review(
+        self, db: AsyncSession, *, run: AISetRun, items: list[AISetRunItem]
+    ) -> None:
+        """Transition from review to fix: create fix tasks for non-faithful items."""
         non_faithful: list[AISetRunItem] = []
         for item in items:
-            # Items from failed chunks haven't been reviewed; skip them
             if item.review_faithful is None:
                 item.fix_apply_status = "skipped"
                 continue
@@ -433,15 +448,19 @@ class AISetRunOrchestrator:
                 continue  # already marked skipped during chunk processing
             non_faithful.append(item)
             issue = await self._upsert_non_faithful_issue(
-                db,
-                run=run,
-                item=item,
-                review_payload={},
+                db, run=run, item=item, review_payload={},
             )
             item.issue_id = issue.id
             item.fix_apply_status = "pending"
 
         run.stage = "fix"
+
+        if not non_faithful:
+            # All items faithful — complete the run
+            run.status = "completed"
+            run.stage = "completed"
+            run.completed_at = _utcnow()
+            return
 
         max_fix = int(run.max_fix_tasks or 0)
         candidates = non_faithful if max_fix <= 0 else non_faithful[:max_fix]
@@ -461,9 +480,7 @@ class AISetRunOrchestrator:
                 "scope_profile": run.scope_profile,
             }
             estimate = self.dispatcher.estimate_cost(
-                "script_autofix",
-                payload,
-                model_name=run.model_name,
+                "script_autofix", payload, model_name=run.model_name,
             )
             fix_task = AITask(
                 task_type="script_autofix",
@@ -886,11 +903,55 @@ class AISetRunOrchestrator:
         if any(item.fix_apply_status == "pending" for item in tracked_fix_items):
             return
 
-        run.status = "completed"
-        run.stage = "completed"
-        run.completed_at = _utcnow()
-        if run.fix_failed > 0:
+        # All fix tasks resolved — check if we should loop back for re-review
+        applied_this_iteration = sum(
+            1 for item in tracked_fix_items if item.fix_apply_status == "applied"
+        )
+
+        if applied_this_iteration == 0:
+            # No progress — complete (convergence failure or all failed)
+            run.status = "completed"
+            run.stage = "completed"
+            run.completed_at = _utcnow()
             run.stopped_reason = f"Completed with {run.fix_failed} fix failures."
+            return
+
+        max_iters = int(run.max_fix_iterations or 3)
+        if run.fix_iteration + 1 >= max_iters:
+            # Safety limit reached
+            still_not_faithful = sum(
+                1 for item in items
+                if item.review_faithful == 0 and item.fix_apply_status != "applied"
+            )
+            run.status = "completed"
+            run.stage = "completed"
+            run.completed_at = _utcnow()
+            run.stopped_reason = (
+                f"Max iterations ({max_iters}) reached. "
+                f"{still_not_faithful} items still not faithful."
+            )
+            return
+
+        # Loop back: re-review items that were applied in this iteration
+        run.fix_iteration += 1
+        for item in tracked_fix_items:
+            if item.fix_apply_status == "applied":
+                item.review_faithful = None
+                item.fix_apply_status = "pending"
+                item.fix_task_id = None
+                item.review_task_id = None
+
+        # Reset counters for the new iteration
+        run.review_total = 0
+        run.review_completed = 0
+        run.review_failed = 0
+        run.fix_total = 0
+        run.fix_completed = 0
+        run.fix_failed = 0
+        run.fix_applied = 0
+
+        run.stage = "review"
+        await self._queue_review_task(db, run=run)
 
 
 set_run_orchestrator = AISetRunOrchestrator()

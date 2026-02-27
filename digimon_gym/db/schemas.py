@@ -306,6 +306,7 @@ class AISetRunCreateRequest(BaseModel):
     max_total_cost_usd: float = Field(5.0, ge=0.0)
     failure_rate_stop: float = Field(0.3, ge=0.0, le=1.0)
     max_fix_tasks: int = Field(0, ge=0, le=5000)
+    max_fix_iterations: int = Field(3, ge=1, le=20)
     score_threshold: Optional[float] = Field(None, ge=0.0, le=1.0)
 
 
@@ -344,6 +345,8 @@ class AISetRunResponse(BaseModel):
     max_total_cost_usd: float
     failure_rate_stop: float
     max_fix_tasks: int
+    fix_iteration: int = 0
+    max_fix_iterations: int = 3
     qa_total: int
     qa_completed: int
     qa_failed: int
