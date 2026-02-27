@@ -30,24 +30,20 @@ class BT14_056(CardScript):
         effect0.set_can_use_condition(condition0)
 
         def process0(ctx: Dict[str, Any]):
-            """Action: Add To Hand, Reveal And Select"""
+            """Action: Reveal And Select"""
             player = ctx.get('player')
-            perm = ctx.get('permanent')
             game = ctx.get('game')
-            # Add card to hand (from trash/reveal)
-            if player and player.trash_cards:
-                card_to_add = player.trash_cards.pop()
-                player.hand_cards.append(card_to_add)
             if not (player and game):
                 return
+
             def reveal_filter(c):
-                if not (any('D-Brigade' in _t or 'DigiPolice' in _t for _t in (getattr(c, 'card_traits', []) or []))):
-                    return False
-                return True
+                return any('D-Brigade' in _t or 'DigiPolice' in _t for _t in (getattr(c, 'card_traits', []) or []))
+
             def on_revealed(selected, remaining):
                 player.hand_cards.append(selected)
                 for c in remaining:
                     player.library_cards.append(c)
+
             game.effect_reveal_and_select(
                 player, 5, reveal_filter, on_revealed, is_optional=True)
 
@@ -59,7 +55,6 @@ class BT14_056(CardScript):
         effect1 = ICardEffect()
         effect1.set_effect_name("BT14-056 Delete your 1 other Digimon to prevent this Digimon from leaving Battle Area")
         effect1.set_effect_description("[All Turns][Once Per Turn] When this Digimon would leave the battle area other than by one of your effects, by deleting 1 of your other Digimon with the [D-Brigade] trait, prevent it from leaving.")
-        effect1.is_inherited_effect = True
         effect1.is_optional = True
         effect1.set_max_count_per_turn(1)
         effect1.set_hash_string("Substitute_BT14_056")
