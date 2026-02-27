@@ -44,8 +44,6 @@ class BT14_087(CardScript):
         def process1(ctx: Dict[str, Any]):
             """Action: Gain 1 memory"""
             player = ctx.get('player')
-            perm = ctx.get('permanent')
-            game = ctx.get('game')
             if player:
                 player.add_memory(1)
 
@@ -69,7 +67,6 @@ class BT14_087(CardScript):
         def process2(ctx: Dict[str, Any]):
             """Action: Mind Link"""
             player = ctx.get('player')
-            perm = ctx.get('permanent')
             game = ctx.get('game')
             if not (player and game):
                 return
@@ -79,7 +76,7 @@ class BT14_087(CardScript):
         effects.append(effect2)
 
         # Factory effect: blocker
-        # Blocker
+        # [All Turns] While this Digimon has the [Dark Animal] or [SoC] trait, this Digimon gains Blocker.
         effect3 = ICardEffect()
         effect3.set_effect_name("BT14-087 Blocker")
         effect3.set_effect_description("Blocker")
@@ -89,12 +86,15 @@ class BT14_087(CardScript):
         def condition3(context: Dict[str, Any]) -> bool:
             if card and card.permanent_of_this_card() is None:
                 return False
-            return True
+            perm = context.get('permanent')
+            if not perm:
+                return False
+            return perm.has_trait('Dark Animal') or perm.has_trait('SoC')
         effect3.set_can_use_condition(condition3)
         effects.append(effect3)
 
         # Factory effect: alliance
-        # Alliance
+        # [All Turns] While this Digimon has the [Dark Animal] or [SoC] trait, this Digimon gains Alliance.
         effect4 = ICardEffect()
         effect4.set_effect_name("BT14-087 Alliance")
         effect4.set_effect_description("Alliance")
@@ -104,7 +104,10 @@ class BT14_087(CardScript):
         def condition4(context: Dict[str, Any]) -> bool:
             if card and card.permanent_of_this_card() is None:
                 return False
-            return True
+            perm = context.get('permanent')
+            if not perm:
+                return False
+            return perm.has_trait('Dark Animal') or perm.has_trait('SoC')
         effect4.set_can_use_condition(condition4)
         effects.append(effect4)
 
@@ -129,12 +132,14 @@ class BT14_087(CardScript):
             player = ctx.get('player')
             perm = ctx.get('permanent')
             game = ctx.get('game')
-            if not (player and game):
+            if not (player and perm and game):
                 return
+
             def play_filter(c):
-                return True
+                return getattr(c, 'card_id', None) == 'BT14-087'
+
             game.effect_play_from_zone(
-                player, 'hand', play_filter, free=True, is_optional=True)
+                player, perm.digivolution_cards, play_filter, free=True, is_optional=True)
 
         effect5.set_on_process_callback(process5)
         effects.append(effect5)
