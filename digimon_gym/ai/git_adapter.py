@@ -2,13 +2,18 @@
 
 from __future__ import annotations
 
+import os
 import shutil
 import subprocess
+import tempfile
 from dataclasses import dataclass
 from pathlib import Path
 
 
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
+_WORKTREE_BASE = Path(
+    os.environ.get("AI_WORKTREE_DIR", "")
+) if os.environ.get("AI_WORKTREE_DIR") else Path(tempfile.gettempdir()) / "ai_worktrees"
 DEFAULT_BRANCH = "main"
 
 
@@ -58,7 +63,7 @@ class GitAdapter:
         return f"ai/fix-{set_id.lower()}-{prefix}"
 
     def worktree_path_for_batch(self, *, batch_id: str) -> Path:
-        return self.repo_root / "data" / "run" / "ai_worktrees" / batch_id
+        return _WORKTREE_BASE / batch_id
 
     def prepare_worktree(self, *, set_id: str, batch_id: str, run_mode: str) -> WorktreeContext:
         wt = self.worktree_path_for_batch(batch_id=batch_id)
@@ -89,7 +94,7 @@ class GitAdapter:
         return f"ai/fix-manual-{prefix}"
 
     def worktree_path_for_task(self, *, task_id: str) -> Path:
-        return self.repo_root / "data" / "run" / "ai_worktrees" / f"task-{task_id}"
+        return _WORKTREE_BASE / f"task-{task_id}"
 
     def prepare_worktree_for_task(
         self, *, task_id: str, run_mode: str
