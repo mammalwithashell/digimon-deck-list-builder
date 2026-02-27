@@ -25,17 +25,32 @@ class BT14_005(CardScript):
         effect0.is_on_attack = True
         effect0.dp_modifier = 2000
 
-        def _is_valid_trait_card(c: Any) -> bool:
-            traits = []
-            if hasattr(c, 'get_type'):
+        def _get_traits(c: Any) -> List[str]:
+            # Prefer explicit trait accessors/fields, then fall back to known card data keys.
+            if hasattr(c, 'get_traits'):
                 try:
-                    t = c.get_type()
+                    t = c.get_traits()
                     if isinstance(t, list):
-                        traits = t
+                        return t
                 except Exception:
-                    traits = []
-            if not traits and hasattr(c, 'card_data') and isinstance(getattr(c, 'card_data'), dict):
-                traits = c.card_data.get('type_eng', []) or []
+                    pass
+            if hasattr(c, 'traits'):
+                t = getattr(c, 'traits', None)
+                if isinstance(t, list):
+                    return t
+            if hasattr(c, 'card_data') and isinstance(getattr(c, 'card_data'), dict):
+                data = c.card_data
+                traits = data.get('traits_eng', []) or []
+                if isinstance(traits, list) and traits:
+                    return traits
+                # In this data model, trait-like values are stored in type_eng.
+                type_eng = data.get('type_eng', []) or []
+                if isinstance(type_eng, list):
+                    return type_eng
+            return []
+
+        def _is_valid_trait_card(c: Any) -> bool:
+            traits = _get_traits(c)
             return ('D-Brigade' in traits) or ('DigiPolice' in traits)
 
         def _get_trash_cards(player: Any) -> List[Any]:
