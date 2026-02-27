@@ -22,30 +22,50 @@ class BT14_028(CardScript):
 
         def condition0(context: Dict[str, Any]) -> bool:
             return True
+
         effect0.set_can_use_condition(condition0)
         effects.append(effect0)
 
         # Timing: EffectTiming.OnDigivolutionCardDiscarded
-        # [All Turns][Once Per Turn] When a digivolution card of an opponent's Digimon is trashed, this Digimon can't be deleted in battle until the end of your opponent's turn.
+        # [All Turns][Once Per Turn] When a digivolution card of an opponent's Digimon is trashed,
+        # this Digimon can't be deleted in battle until the end of your opponent's turn.
         effect1 = ICardEffect()
-        effect1.set_effect_name("BT14-028 This Digimon can't be deleted by battle)")
+        effect1.set_effect_name("BT14-028 This Digimon can't be deleted by battle")
         effect1.set_effect_description("[All Turns][Once Per Turn] When a digivolution card of an opponent's Digimon is trashed, this Digimon can't be deleted in battle until the end of your opponent's turn.")
         effect1.set_max_count_per_turn(1)
         effect1._is_cannot_be_deleted_by_battle = True
 
-        effect = effect1  # alias for condition closure
         def condition1(context: Dict[str, Any]) -> bool:
             if card and card.permanent_of_this_card() is None:
                 return False
-            return True
+
+            target = context.get('target')
+            if target is None:
+                target = context.get('digimon')
+            if target is None:
+                target = context.get('opponent_digimon')
+            if target is None:
+                return False
+
+            player = context.get('player')
+            if player is None:
+                return False
+
+            owner_getter = getattr(target, 'get_owner', None)
+            if callable(owner_getter):
+                return owner_getter() != player
+
+            owner = getattr(target, 'owner', None)
+            if owner is not None:
+                return owner != player
+
+            return False
 
         effect1.set_can_use_condition(condition1)
 
         def process1(ctx: Dict[str, Any]):
             """Action: Gain Keyword Cannot Be Deleted By Battle"""
-            player = ctx.get('player')
             perm = ctx.get('permanent')
-            game = ctx.get('game')
             if perm:
                 perm.grant_keyword('_is_cannot_be_deleted_by_battle')
 
