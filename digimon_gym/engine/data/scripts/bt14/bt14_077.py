@@ -20,7 +20,6 @@ class BT14_077(CardScript):
         effect0.set_effect_description("[On Play] Trash the top 2 cards of both players' decks.")
         effect0.is_on_play = True
 
-        effect = effect0  # alias for condition closure
         def condition0(context: Dict[str, Any]) -> bool:
             if card and card.permanent_of_this_card() is None:
                 return False
@@ -28,6 +27,16 @@ class BT14_077(CardScript):
             return True
 
         effect0.set_can_use_condition(condition0)
+
+        def process0(ctx: Dict[str, Any]):
+            game = ctx.get('game')
+            if not game:
+                return
+            for p in game.get_players():
+                if p:
+                    p.trash_top_cards_from_deck(2)
+
+        effect0.set_on_process_callback(process0)
         effects.append(effect0)
 
         # Timing: EffectTiming.OnEnterFieldAnyone
@@ -37,7 +46,6 @@ class BT14_077(CardScript):
         effect1.set_effect_description("[When Digivolving] Trash the top 2 cards of both players' decks.")
         effect1.is_when_digivolving = True
 
-        effect = effect1  # alias for condition closure
         def condition1(context: Dict[str, Any]) -> bool:
             if card and card.permanent_of_this_card() is None:
                 return False
@@ -45,6 +53,16 @@ class BT14_077(CardScript):
             return True
 
         effect1.set_can_use_condition(condition1)
+
+        def process1(ctx: Dict[str, Any]):
+            game = ctx.get('game')
+            if not game:
+                return
+            for p in game.get_players():
+                if p:
+                    p.trash_top_cards_from_deck(2)
+
+        effect1.set_on_process_callback(process1)
         effects.append(effect1)
 
         # Timing: EffectTiming.OnDiscardLibrary
@@ -55,21 +73,28 @@ class BT14_077(CardScript):
         effect2.set_max_count_per_turn(1)
         effect2.set_hash_string("Memory+_BT14_077")
 
-        effect = effect2  # alias for condition closure
         def condition2(context: Dict[str, Any]) -> bool:
             if card and card.permanent_of_this_card() is None:
                 return False
             if not (card and card.owner and card.owner.is_my_turn):
                 return False
-            return True
+
+            source_player = context.get('player')
+            if source_player is None:
+                source_player = context.get('source_player')
+            if source_player is None:
+                source_player = context.get('target_player')
+            if source_player is None:
+                return False
+
+            # Only trigger when opponent's deck is trashed.
+            return source_player != card.owner
 
         effect2.set_can_use_condition(condition2)
 
         def process2(ctx: Dict[str, Any]):
             """Action: Gain 1 memory"""
             player = ctx.get('player')
-            perm = ctx.get('permanent')
-            game = ctx.get('game')
             if player:
                 player.add_memory(1)
 
