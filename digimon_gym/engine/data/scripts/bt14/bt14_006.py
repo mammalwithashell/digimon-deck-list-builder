@@ -23,8 +23,8 @@ class BT14_006(CardScript):
         effect0.set_hash_string("Digivolve_BT14_006")
 
         def _has_required_trait(c: Any) -> bool:
-            traits = getattr(c, 'card_traits', []) or []
-            return any('Dark Animal' in t or 'DarkAnimal' in t or 'SoC' in t for t in traits)
+            traits = getattr(c, 'card_traits', None) or getattr(c, 'type_eng', []) or []
+            return any(("Dark Animal" in t) or ("DarkAnimal" in t) or ("SoC" in t) for t in traits)
 
         def condition0(context: Dict[str, Any]) -> bool:
             if card and card.permanent_of_this_card() is None:
@@ -36,7 +36,15 @@ class BT14_006(CardScript):
             if trashed is None:
                 return False
 
+            # Must be a Digimon card.
             if getattr(trashed, 'card_kind', None) != 0:
+                return False
+
+            # Must be trashed from hand by the same player.
+            if context.get('from_zone') not in (None, 'hand'):
+                return False
+            event_player = context.get('player')
+            if event_player is not None and card.owner is not None and event_player != card.owner:
                 return False
 
             if not _has_required_trait(trashed):
