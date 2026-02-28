@@ -5,6 +5,13 @@ from .models import EffectBlock
 from .patterns import TIMING_TO_PROPERTY
 
 
+def _safe_str(s: str) -> str:
+    """Escape a string for safe inclusion in generated Python string literals."""
+    if not s:
+        return s
+    return s.replace("\\", "\\\\").replace('"', '\\"')
+
+
 def generate_condition_code(eb: EffectBlock, indent: str = "            ") -> str:
     """Generate Python condition function code from extracted conditions."""
     checks = []
@@ -870,8 +877,8 @@ def generate_factory_effect(eb: EffectBlock, card_id: str, idx: int) -> str:
     lines.append(f"        # Factory effect: {eb.factory_method}")
     lines.append(f"        # {eb.description}")
     lines.append(f"        {var} = ICardEffect()")
-    lines.append(f'        {var}.set_effect_name("{card_id} {eb.description}")')
-    lines.append(f'        {var}.set_effect_description("{eb.description}")')
+    lines.append(f'        {var}.set_effect_name("{card_id} {_safe_str(eb.description)}")')
+    lines.append(f'        {var}.set_effect_description("{_safe_str(eb.description)}")')
 
     if eb.is_inherited:
         lines.append(f"        {var}.is_inherited_effect = True")
@@ -1037,8 +1044,8 @@ def generate_activate_effect(eb: EffectBlock, card_id: str, idx: int) -> str:
     lines.append(f"        # Timing: {eb.timing}")
     lines.append(f"        # {desc}")
     lines.append(f"        {var} = ICardEffect()")
-    lines.append(f'        {var}.set_effect_name("{card_id} {eb.effect_name or action_desc}")')
-    lines.append(f'        {var}.set_effect_description("{desc}")')
+    lines.append(f'        {var}.set_effect_name("{card_id} {_safe_str(eb.effect_name or action_desc)}")')
+    lines.append(f'        {var}.set_effect_description("{_safe_str(desc)}")')
 
     if eb.is_inherited:
         lines.append(f"        {var}.is_inherited_effect = True")

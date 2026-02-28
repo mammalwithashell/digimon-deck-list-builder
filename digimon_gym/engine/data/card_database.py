@@ -243,15 +243,17 @@ class CardDatabase:
                  module = importlib.import_module(module_path)
                  script_class = getattr(module, script_name)
                  self.scripts[entity.card_id] = script_class()
-             except (ImportError, AttributeError):
+             except (ImportError, AttributeError, SyntaxError):
                  # Try without set folder
                  try:
                      module_path = f"{prefix}.{module_name}"
                      module = importlib.import_module(module_path)
                      script_class = getattr(module, script_name)
                      self.scripts[entity.card_id] = script_class()
-                 except (ImportError, AttributeError):
-                     pass  # No script found for this card (vanilla cards with no effects)
+                 except (ImportError, AttributeError, SyntaxError) as exc:
+                     if isinstance(exc, SyntaxError):
+                         logger.warning("SyntaxError loading script for %s: %s", entity.card_id, exc)
+                     # No script found for this card (vanilla cards with no effects)
 
     def get_card(self, card_id: str) -> Optional[CEntity_Base]:
         return self.cards.get(card_id)
