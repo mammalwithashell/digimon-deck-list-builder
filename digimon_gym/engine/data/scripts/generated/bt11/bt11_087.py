@@ -51,7 +51,7 @@ class BT11_087(CardScript):
         # Timing: EffectTiming.OnMove
         # Trash Digivolution Cards
         effect1 = ICardEffect()
-        effect1.set_effect_name("BT11-087 The moved Digimon gets \")
+        effect1.set_effect_name("BT11-087 The moved Digimon gets")
         effect1.set_effect_description("Trash Digivolution Cards")
         effect1.is_optional = True
 
