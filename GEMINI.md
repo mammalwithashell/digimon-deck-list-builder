@@ -30,7 +30,7 @@ It also includes an admin AI workflow for issue triage, AI task dispatch, autofi
 - `frontend/src/App.tsx`: route map
 - `frontend/src/pages/`: primary UI pages
 - `frontend/src/api/`: backend API clients
-- `TENSOR_SPEC.md`, `ACTION_SPEC.md`, `AGENTS.md`: behavior contracts
+- `docs/TENSOR_SPEC.md`, `docs/ACTION_SPEC.md`, `AGENTS.md`, `docs/TRAINING_RUNBOOK.md`: behavior contracts
 
 ## RL and Game Contracts
 
@@ -46,13 +46,13 @@ It also includes an admin AI workflow for issue triage, AI task dispatch, autofi
 ### Tensor Contract
 
 - Tensor size: `981`
-- See `TENSOR_SPEC.md` for exact layout
+- See `docs/TENSOR_SPEC.md` for exact layout
 
 ### Action Contract
 
 - Action space size: `2120`
 - Phase-aware decoding in `Game.decode_action`
-- See `ACTION_SPEC.md` for ranges and conventions
+- See `docs/ACTION_SPEC.md` for ranges and conventions
 
 ### Phase Coverage
 

@@ -1,9 +1,9 @@
-Admin user login: mammalwithashell/@Circuit397
+# AGENTS.md
 
-AGENTS.md
-Refer to RULES_CONTEXT.md for rule implementation details.
+Refer to `docs/RULES_CONTEXT.md` for rule implementation details.
+Refer to `docs/TRAINING_RUNBOOK.md` for training pipeline operations.
 
-# Project Overview
+## Project Overview
 
 The project currently has two agent tracks:
 
@@ -16,7 +16,7 @@ The app also includes a FastAPI backend, React frontend, and admin AI workflow u
 
 # 1. Architect (Deck Builder Agent)
 
-Status: planned.
+**Status: planned / roadmap.**
 
 Intended algorithm: DQN/Q-DeckRec style deck optimization against meta opponents.
 
@@ -31,6 +31,12 @@ Intended algorithm: DQN/Q-DeckRec style deck optimization against meta opponents
 - Reward:
   - Cumulative win-rate based objective (batch simulations against pilot opponents)
 
+Roadmap items (not implemented):
+
+- Q-DeckRec: DQN-based deck recommendation trained on simulated win rates
+- CPR (Contextual Preference Ranking): dense card embeddings from autoencoder on stats/keywords
+- Card embedding space: allows recommending unseen cards by semantic distance
+
 This architecture remains a spec target and is not wired into the current runtime.
 
 ---
@@ -39,76 +45,284 @@ This architecture remains a spec target and is not wired into the current runtim
 
 Goal: play Digimon matches inside the headless engine to generate win/loss and policy quality signals.
 
-## Implemented Pilot Types
+## 2.1 Implemented Pilot Types
 
-1. RL Pilot MLP (`MaskablePPO`)
-- Feed-forward policy.
-- Uses action masking.
+### MaskablePPO (MLP baseline)
+
+- Feed-forward policy from `sb3_contrib.MaskablePPO` with default `"MlpPolicy"`.
+- Uses action masking via `ActionMasker` wrapper.
 - Training entrypoint: `digimon_gym/agents/pilot_training.py`.
+- Observation: 981 floats → MLP → 2120 action logits.
 
-2. RL Pilot LSTM (`MaskableRecurrentPPO` custom)
-- Recurrent policy with action masking.
-- Implementation: `digimon_gym/agents/maskable_recurrent/`.
-- Supports threaded LSTM state during evaluation/inference.
+### MaskableRecurrentPPO (Custom LSTM)
 
-3. Heuristic policy helpers
-- `greedy_policy` lives in `digimon_gym/digimon_gym.py` and is used as a fast baseline/utility policy.
+Custom implementation in `digimon_gym/agents/maskable_recurrent/` (3 modules + `__init__`).
 
-## Gym Environment Contract
+**Motivation**: SB3's `RecurrentPPO` and `MaskablePPO` are separate algorithms with no official combination. This module merges both capabilities.
+
+**Architecture**:
+
+- `MaskableMlpLstmPolicy` (`policies.py`):
+  - Extends `RecurrentActorCriticPolicy`.
+  - Swaps `CategoricalDistribution` for `MaskableCategoricalDistribution`.
+  - Separate actor/critic LSTMs (`enable_critic_lstm=True` by default).
+  - `forward()` accepts `action_masks` kwarg → `distribution.apply_masking()`.
+  - `evaluate_actions()` also accepts `action_masks` for training loss computation.
+  - `predict()` handles numpy in/out with LSTM state management.
+
+- `MaskableRecurrentRolloutBuffer` (`buffers.py`):
+  - Extends `RecurrentRolloutBuffer` with `action_masks` storage.
+  - Sequence-aware batching preserves LSTM state boundaries.
+
+- `MaskableRecurrentPPO` (`maskable_recurrent_ppo.py`):
+  - Extends `RecurrentPPO`.
+  - `collect_rollouts()` modified to gather action masks each step.
+  - `train()` modified to pass action masks during `evaluate_actions()`.
+
+**Default hyperparameters** (from `pilot_training.py`):
+
+- `lstm_hidden_size`: 256
+- `n_lstm_layers`: 1
+- `enable_critic_lstm`: True
+- `net_arch`: `dict(pi=[64], vf=[64])`
+- `batch_size`: forced = `n_steps` (RecurrentPPO requirement)
+
+**LSTM state threading during inference**:
+
+- `state = (h, c)` tuple passed between `predict()` calls within an episode.
+- Reset to `None` at episode boundaries.
+- Closure pattern in `make_agent_opponent_fn()` for opponent LSTM state.
+
+### Greedy Policy (Heuristic)
+
+Location: `digimon_gym.digimon_gym.greedy_policy()`.
+
+Used as default opponent during training and fast baseline. Priority logic by phase:
+
+- **Mulligan**: checks hand for level-3 digimon; mulligan (action 1) if none, keep (action 0) if found.
+- **Breeding**: hatch > move > pass.
+- **Main**: keep-turn digivolve > attack > play > pass.
+  - Attack scoring: lethal priority 3, favorable DP priority 2, unfavorable 0.
+  - Digivolve scoring: only digivolves that keep turn (cost ≤ relative memory).
+- **Selection (TRASH_CARD)**: dump lowest-value card first.
+- **Default/other phases**: pass or first valid action.
+
+### Random Policy
+
+`pilot_training.random_policy()`: uniform sample from valid actions. Fallback: `ACTION_PASS_TURN` if no valid actions.
+
+## 2.2 Action Masking Deep Dive
+
+How masking works end-to-end:
+
+1. **Engine**: `Game.get_action_mask(player_id)` → `float32[2120]` (1.0 = legal, 0.0 = illegal). Phase-aware: different actions are legal in different phases.
+2. **DigimonEnv**: `action_mask()` thresholds at 0.5, returns `bool[2120]`.
+3. **Info dict**: `info['action_mask']` included in both `reset()` and `step()`.
+4. **Wrapper chain**: `ActionMasker(env, mask_fn)` at the outermost layer. `mask_fn` unwraps to `DigimonEnv` and calls `action_mask()`.
+5. **MaskablePPO**: reads masks during `collect_rollouts()`, applies during `train()`.
+6. **MaskableRecurrentPPO**: same, but also stores masks in `MaskableRecurrentRolloutBuffer`.
+7. **Inference**: `predict()` accepts `action_masks` kwarg, applies to distribution.
+
+**Masking in the distribution layer**: `MaskableCategoricalDistribution` sets logits of masked actions to `-inf`. This guarantees zero probability for illegal actions during both sampling (exploration) and `log_prob` computation (policy gradient). Entropy computation excludes masked actions.
+
+## 2.3 Gym Environment Contract
 
 Primary env: `DigimonEnv` (`digimon_gym/digimon_gym.py`).
 
-- `reset(seed=None, options=None) -> (obs, info)`
-- `step(action) -> (obs, reward, terminated, truncated, info)`
-- `action_mask() -> np.ndarray[int8]`
-- `get_action_mask()` alias retained for compatibility
+### API
 
-Observation/action spaces:
+- `reset(seed, options)` → `(obs, info)`. Options supports: `deck1`, `deck2` (per-episode override).
+- `step(action)` → `(obs, reward, terminated, truncated, info)`. Truncation safety: `max_turns * 10` steps.
+- `action_mask()` → `bool[2120]`
+- `get_action_mask()` alias retained for compatibility.
 
-- Observation: `Box(shape=(981,), dtype=float32)`
-- Action: `Discrete(2120)`
+### Observation/Action Spaces
 
-Mask delivery:
+- Observation: `Box(shape=(981,), low=-10.0, high=10000.0, dtype=float32)`. See `docs/TENSOR_SPEC.md`.
+- Action: `Discrete(2120)`. See `docs/ACTION_SPEC.md`.
 
-- `info['action_mask']` on `reset` and `step`
-- `env.action_mask()` for direct retrieval
+### Mask Delivery
 
-Reward shaping:
+- `info['action_mask']` on `reset` and `step`.
+- `env.action_mask()` for direct retrieval.
 
-- Terminal: win `+1.0`, loss `-1.0`, draw `0.0`
-- Dense:
-  - Security delta term
-  - Board DP delta term
+### Reward Shaping
 
-## Phase and Action Coverage
+- **Terminal**: win `+1.0`, loss `-1.0`, draw `0.0`.
+- **Dense (per-step)**:
+  - Security delta: `(my_security - opp_security) * 0.01`
+  - Board DP delta: `(my_total_DP - opp_total_DP) * 0.0001`
+- **Bounty bonus** (via GauntletWrapper): configurable bonus on terminal wins vs high-TI opponents.
 
-Current engine supports core and interrupt/selection phases including:
+### PendingAction Enum
 
-- Start, Draw, Breeding, Main, End
-- SelectTarget, SelectMaterial, SelectTrash, SelectSource, SelectHand, SelectReveal, SelectEffectChoice, SelectSecurity
-- BlockTiming, CounterTiming
-- EndOfTurnAction
-- AllianceTiming
+- `NO_ACTION = 0`: no pending action.
+- `TRASH_CARD = 1`: must select card(s) to trash.
+- *(Roadmap: additional pending action types planned.)*
 
-Action space remains `2120`, with phase-dependent reuse of ID ranges. See `ACTION_SPEC.md`.
+## 2.4 Wrapper Chain
+
+Full training wrapper chain (innermost to outermost):
+
+```
+DigimonEnv
+  → OpponentWrapper        (converts 2-player to single-agent MDP)
+  → DeckPoolWrapper         (varies agent's own deck per episode)
+  → GauntletWrapper         (samples opponent decks from MetaGauntlet)
+  → ActionMasker            (SB3 mask interface)
+```
+
+### OpponentWrapper
+
+Location: `pilot_training.OpponentWrapper`.
+
+Converts 2-player game to single-agent MDP. Auto-plays Player 2 turns using configurable `opponent_fn`. Reward attribution: only terminal rewards from opponent sequences pass through; dense shaping from opponent moves is discarded. Handles Player 2 going first after `reset()`.
+
+### DeckPoolWrapper
+
+Location: `digimon_gym/agents/deck_pool.DeckPoolWrapper`.
+
+Varies agent's deck per episode for robustness training. On `reset()`, samples a variant from the pool and injects via `options["deck1"]`.
+
+**Modes**:
+- `"eager"`: uniform sample from pre-generated variants.
+- `"hybrid"`: 80% pre-generated, 20% on-the-fly generation (capped at `hybrid_max_dynamic`, default 10).
+
+**Core/flex analysis**: `analyze_core()` identifies max-copy cards as core, rest as flex. Digi-Egg cards excluded from both (separate deck zone).
+
+**Variant generation**: `generate_variants()` applies stochastic count-adjust and side-swap on flex slots only. Number of modifications scales with flex pool size (1-3, 2-5, or 3-8). Validates 50-card constraint and deduplicates.
+
+### GauntletWrapper
+
+Location: `digimon_gym/agents/gauntlet.GauntletWrapper`.
+
+Samples opponent deck from MetaGauntlet on `reset()`. Injects sampled deck via `options["deck2"]`.
+
+- **Bounty reward**: `+bounty_bonus` (default 0.5) on terminal win vs opponent with `TI > bounty_threshold` (default 0.15).
+- **Info enrichment**: `opponent_archetype`, `opponent_threat_index`.
+
+### LeagueOpponentWrapper
+
+Location: `digimon_gym/agents/league_wrapper.LeagueOpponentWrapper`.
+
+Used in Stage 2 of GauntletOrchestrator pipeline. Two sampling modes:
+
+- **meta_weighted**: weight = `meta_share` from DigiLab stats. Minimum weight 0.01.
+- **pfsp**: inverse win-rate weighting (targets weakest matchups). Uniform until 5+ games per opponent, then `weight = max(0.01, 1.0 - win_rate)`.
+
+Tracks per-opponent game/win counts during `step()` on terminal episodes.
 
 ---
 
 # 3. MetaGauntlet
 
-Implemented in `digimon_gym/agents/gauntlet.py`.
+Location: `digimon_gym/agents/gauntlet.py`.
 
 Purpose: sample opponent decks with meta weighting for training and evaluation.
 
-- Threat-index weighted archetype sampling
-- Deck source preference routing
-- Optional bounty rewards through wrapper integration in training
+## 3.1 Threat Index Formula
 
-Deck library pipeline: `tools/meta_loader.py` -> `digimon_gym/engine/data/deck_library.json`.
+```
+if digilab_times_played >= confidence_min_appearances (default: 5):
+    TI = (digilab_meta_share * alpha) + (digilab_conversion_rate * beta)
+else:
+    TI = digilab_meta_share * alpha   # insufficient data for conversion
+```
+
+Default parameters: `alpha=1.0`, `beta=2.0`.
+
+## 3.2 Sleeper Rule
+
+If ALL three conditions met:
+
+1. `digilab_times_played >= confidence_min_appearances` (5)
+2. `digilab_conversion_rate > sleeper_threshold` (0.50)
+3. Current sampling probability < `sleeper_floor` (0.05)
+
+Then: force sampling probability to `sleeper_floor` (5%). Redistribution: proportionally reduce non-sleeper weights.
+
+## 3.3 Survivorship Bias Fix
+
+- Statistical weights (TI) derived ONLY from DigiLab tournament log data (full field participation counts).
+- Scraper sources (DigimonMeta, Egman Events) contribute decklists only, NOT the `meta_share` / `conversion_rate` used to weight sampling.
+- `digilab_meta_share` computed as: `digilab_times_played / total_across_all_archetypes`.
+
+## 3.4 Deck Pool Routing
+
+When sampling within an archetype, prefer higher-quality deck sources:
+
+```
+digimonmeta (3) > egman (2) > digimoncard_io (1) > file/manual/test (0)
+```
+
+Decks sorted by source preference; position-biased within archetype.
+
+## 3.5 Deck Library Pipeline
+
+`tools/meta_loader.py` → `digimon_gym/engine/data/deck_library.json` → `MetaGauntlet.load()`
 
 ---
 
-# 4. Current App Integrations
+# 4. GauntletOrchestrator (3-Stage Pipeline)
+
+Location: `digimon_gym/agents/gauntlet_orchestrator.py`.
+
+DB-backed training pipeline managed by `GauntletOrchestrator`. Requires running backend (FastAPI + TrainingJobWorker). Detailed operations in `docs/TRAINING_RUNBOOK.md`.
+
+## Stage Flow
+
+```
+configuring → stage_1 (bootstrap) → stage_2 (meta training) → stage_3 (evaluation) → completed
+                                                                                    → failed (if >50% jobs fail)
+```
+
+## Stage 1: Bootstrap
+
+- All participants train vs greedy opponent.
+- Creates `Agent` + `TrainingJob(job_type="train_vs_greedy")` per participant.
+- Timesteps: `stage1_games * STEPS_PER_GAME_ESTIMATE` (50).
+
+## Stage 2: Meta-Weighted Training
+
+- **Core agents**: meta_weighted sampling (weight = opponent `meta_share`).
+- **Supporting agents**: PFSP sampling (uniform over core agents).
+- Creates `TrainingJob(job_type="train_vs_agent")` per participant.
+- Each job has `opponent_pool` in `config_json`.
+
+## Stage 3: Round-Robin Evaluation
+
+- All `C(n,2)` matchups between core agents (e.g., C(8,2) = 28 for 8 agents).
+- Creates `TrainingJob(job_type="evaluate")` per matchup pair.
+- Finalization computes:
+  - **Matchup matrix**: pairwise win rates.
+  - **ETWR** (Expected Tournament Win Rate): `ETWR(A) = sum(wr(A,X) * meta_share(X)) / sum(meta_share(X))` for all X ≠ A.
+  - Rankings sorted by ETWR descending.
+
+## Stage Transitions
+
+- Automatic on job completion via `on_job_finished()` callback.
+- Failure guard: if >50% of stage jobs fail, gauntlet status → `"failed"`.
+- Optimistic locking: prevent double stage transitions from parallel jobs.
+
+---
+
+# 5. Training Job Worker
+
+Location: `digimon_gym/agents/training_worker.py`.
+
+- Async DB-backed queue worker.
+- Polls for queued `TrainingJob` rows.
+- Concurrent execution bounded by `TRAINING_WORKER_MAX_CONCURRENT` (default 1).
+- Device management: round-robin across CUDA GPUs or CPU fallback.
+- Stale job recovery: marks long-running jobs (>2h) from other workers as failed.
+- Gauntlet hook: notifies `GauntletOrchestrator` when gauntlet-linked jobs finish.
+- Agent stats: atomic SQL increments for wins/losses/draws/timesteps.
+
+**Note**: `_run_heuristic_training`, `_run_agent_training`, `_run_evaluation` are currently placeholder stubs. The DB queue mechanics, job claiming, stale recovery, and gauntlet hooks are fully implemented.
+
+---
+
+# 6. Current App Integrations
 
 The agent stack now runs inside a broader app platform:
 
@@ -127,17 +341,19 @@ This means Pilot outputs now feed both RL workflows and operational review/fix w
 
 ---
 
-# 5. Implementation Rules for Contributors
+# 7. Implementation Rules for Contributors
 
 1. Strict typing and serializable game state for ML workflows.
 2. Headless-first game logic (UI is a client/view layer).
 3. Legal action masking must be maintained for every decision step.
 4. Recurrent evaluation loops must thread `(state, episode_start)` correctly.
-5. Keep tensor and action contracts synchronized with `TENSOR_SPEC.md` and `ACTION_SPEC.md`.
+5. Keep tensor and action contracts synchronized with `docs/TENSOR_SPEC.md` and `docs/ACTION_SPEC.md`.
+6. When threading LSTM state during evaluation/inference, reset state to `None` at episode boundaries.
+7. OpponentWrapper discards dense rewards from opponent steps; only terminal rewards pass through.
 
 ---
 
-# 6. Generated Script Promotion Workflow
+# 8. Generated Script Promotion Workflow
 
 Use this workflow to promote generated scripts into frozen production lanes.
 
