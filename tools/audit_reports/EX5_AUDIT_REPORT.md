@@ -3,7 +3,8 @@
 - **Total cards**: 76
 - **Cards audited**: 76
 - **Cards with issues**: 28
-- **Cards below threshold**: 11
+- **Cards below threshold**: 29
+- **Cards known complex (excluded)**: 3
 - **Cards missing script**: 0
 - **Average score**: 0.8312
 
@@ -22,11 +23,13 @@
 | EX5-049 | GrapLeomon | 0.63 | 2 | 0 | 1 |
 | EX5-050 | Sinduramon | 0.63 | 0 | 1 | 0 |
 | EX5-051 | Caturamon | 0.63 | 0 | 0 | 0 |
+| EX5-029 | Reppamon | 0.70 | 0 | 0 | 0 |
 | EX5-037 | Vajramon | 0.70 | 1 | 0 | 1 |
 | EX5-038 | Vikaralamon | 0.70 | 1 | 0 | 1 |
 | EX5-039 | Garudamon | 0.70 | 1 | 0 | 0 |
 | EX5-040 | Kumbhiramon | 0.70 | 1 | 0 | 1 |
 | EX5-042 | Merukimon | 0.70 | 1 | 0 | 0 |
+| EX5-053 | Baihumon | 0.70 | 0 | 0 | 1 |
 | EX5-058 | Octomon | 0.70 | 1 | 0 | 0 |
 | EX5-063 | Leviamon | 0.70 | 1 | 0 | 0 |
 

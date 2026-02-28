@@ -4,7 +4,8 @@
   "cards_audited": 12,
   "cards_with_issues": 3,
   "cards_below_threshold": 5,
-  "cards_missing_script": 4,
+  "cards_missing_script": 0,
+  "cards_known_complex": 7,
   "average_score": 0.6528,
   "cards": {
     "ST12-01": {
@@ -70,7 +71,7 @@
       "reverse_issues": [],
       "timing_issues": [],
       "structural_warnings": [],
-      "below_threshold": false,
+      "below_threshold": true,
       "has_script": true,
       "api_effect_blocks": 2,
       "script_effect_count": 1
@@ -210,7 +211,7 @@
       ],
       "timing_issues": [],
       "structural_warnings": [],
-      "below_threshold": false,
+      "below_threshold": true,
       "has_script": true,
       "api_effect_blocks": 2,
       "script_effect_count": 1
@@ -282,7 +283,7 @@
       "reverse_issues": [],
       "timing_issues": [],
       "structural_warnings": [],
-      "below_threshold": false,
+      "below_threshold": true,
       "has_script": true,
       "api_effect_blocks": 3,
       "script_effect_count": 2

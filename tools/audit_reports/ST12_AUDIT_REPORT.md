@@ -4,7 +4,8 @@
 - **Cards audited**: 12
 - **Cards with issues**: 3
 - **Cards below threshold**: 5
-- **Cards missing script**: 4
+- **Cards known complex (excluded)**: 7
+- **Cards missing script**: 0
 - **Average score**: 0.6528
 
 ## Worst-Scoring Cards
@@ -20,6 +21,9 @@
 | ST12-09 | Volcanomon | 0.20 | 0 | 0 | 0 |
 | ST12-13 | Sistermon Ciel | 0.60 | 0 | 0 | 1 |
 | ST12-10 | Jesmon | 0.62 | 0 | 0 | 1 |
+| ST12-04 | Huckmon | 0.70 | 0 | 0 | 0 |
+| ST12-12 | Sistermon Blanc | 0.70 | 0 | 1 | 0 |
+| ST12-16 | Quake! Blast! Fire! Father! | 0.77 | 0 | 0 | 0 |
 
 ## Top Reverse Issues (script claims X, API doesn't mention)
 

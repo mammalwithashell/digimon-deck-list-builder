@@ -3,7 +3,8 @@
 - **Total cards**: 102
 - **Cards audited**: 102
 - **Cards with issues**: 29
-- **Cards below threshold**: 16
+- **Cards below threshold**: 51
+- **Cards known complex (excluded)**: 3
 - **Cards missing script**: 0
 - **Average score**: 0.8030
 
@@ -27,6 +28,10 @@
 | BT15-089 | Meteor Wing | 0.60 | 1 | 0 | 0 |
 | BT15-085 | Izzy Izumi | 0.63 | 0 | 0 | 1 |
 | BT15-087 | Shuu Yulin | 0.66 | 0 | 0 | 0 |
+| BT15-002 | Tsunomon | 0.70 | 0 | 0 | 0 |
+| BT15-004 | Motimon | 0.70 | 0 | 0 | 0 |
+| BT15-011 | Tyrannomon | 0.70 | 0 | 0 | 0 |
+| BT15-015 | SkullMeramon | 0.70 | 0 | 0 | 0 |
 
 ## Top Forward Issues (API mentions X, script missing)
 

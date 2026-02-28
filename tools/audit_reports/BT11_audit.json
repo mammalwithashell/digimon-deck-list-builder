@@ -3,8 +3,9 @@
   "total_cards": 112,
   "cards_audited": 102,
   "cards_with_issues": 22,
-  "cards_below_threshold": 24,
-  "cards_missing_script": 10,
+  "cards_below_threshold": 47,
+  "cards_missing_script": 0,
+  "cards_known_complex": 16,
   "average_score": 0.7759,
   "cards": {
     "BT11-001": {
@@ -104,7 +105,7 @@
       "reverse_issues": [],
       "timing_issues": [],
       "structural_warnings": [],
-      "below_threshold": false,
+      "below_threshold": true,
       "has_script": true,
       "api_effect_blocks": 1,
       "script_effect_count": 1
@@ -138,7 +139,7 @@
       "reverse_issues": [],
       "timing_issues": [],
       "structural_warnings": [],
-      "below_threshold": false,
+      "below_threshold": true,
       "has_script": true,
       "api_effect_blocks": 1,
       "script_effect_count": 1
@@ -192,7 +193,7 @@
       "reverse_issues": [],
       "timing_issues": [],
       "structural_warnings": [],
-      "below_threshold": false,
+      "below_threshold": true,
       "has_script": true,
       "api_effect_blocks": 2,
       "script_effect_count": 1
@@ -212,7 +213,7 @@
       ],
       "timing_issues": [],
       "structural_warnings": [],
-      "below_threshold": false,
+      "below_threshold": true,
       "has_script": true,
       "api_effect_blocks": 3,
       "script_effect_count": 2
@@ -280,7 +281,7 @@
       "reverse_issues": [],
       "timing_issues": [],
       "structural_warnings": [],
-      "below_threshold": false,
+      "below_threshold": true,
       "has_script": true,
       "api_effect_blocks": 2,
       "script_effect_count": 1
@@ -513,7 +514,7 @@
       "reverse_issues": [],
       "timing_issues": [],
       "structural_warnings": [],
-      "below_threshold": false,
+      "below_threshold": true,
       "has_script": true,
       "api_effect_blocks": 2,
       "script_effect_count": 1
@@ -706,7 +707,7 @@
       "reverse_issues": [],
       "timing_issues": [],
       "structural_warnings": [],
-      "below_threshold": false,
+      "below_threshold": true,
       "has_script": true,
       "api_effect_blocks": 2,
       "script_effect_count": 1
@@ -740,7 +741,7 @@
       "reverse_issues": [],
       "timing_issues": [],
       "structural_warnings": [],
-      "below_threshold": false,
+      "below_threshold": true,
       "has_script": true,
       "api_effect_blocks": 3,
       "script_effect_count": 2
@@ -757,7 +758,7 @@
       "reverse_issues": [],
       "timing_issues": [],
       "structural_warnings": [],
-      "below_threshold": false,
+      "below_threshold": true,
       "has_script": true,
       "api_effect_blocks": 3,
       "script_effect_count": 2
@@ -808,7 +809,7 @@
       "reverse_issues": [],
       "timing_issues": [],
       "structural_warnings": [],
-      "below_threshold": false,
+      "below_threshold": true,
       "has_script": true,
       "api_effect_blocks": 2,
       "script_effect_count": 1
@@ -1015,7 +1016,7 @@
       "reverse_issues": [],
       "timing_issues": [],
       "structural_warnings": [],
-      "below_threshold": false,
+      "below_threshold": true,
       "has_script": true,
       "api_effect_blocks": 2,
       "script_effect_count": 1
@@ -1306,7 +1307,7 @@
       "reverse_issues": [],
       "timing_issues": [],
       "structural_warnings": [],
-      "below_threshold": false,
+      "below_threshold": true,
       "has_script": true,
       "api_effect_blocks": 3,
       "script_effect_count": 2
@@ -1357,7 +1358,7 @@
       "reverse_issues": [],
       "timing_issues": [],
       "structural_warnings": [],
-      "below_threshold": false,
+      "below_threshold": true,
       "has_script": true,
       "api_effect_blocks": 3,
       "script_effect_count": 2
@@ -1391,7 +1392,7 @@
       "reverse_issues": [],
       "timing_issues": [],
       "structural_warnings": [],
-      "below_threshold": false,
+      "below_threshold": true,
       "has_script": true,
       "api_effect_blocks": 2,
       "script_effect_count": 1
@@ -1425,7 +1426,7 @@
       "reverse_issues": [],
       "timing_issues": [],
       "structural_warnings": [],
-      "below_threshold": false,
+      "below_threshold": true,
       "has_script": true,
       "api_effect_blocks": 3,
       "script_effect_count": 2
@@ -1482,7 +1483,7 @@
       "reverse_issues": [],
       "timing_issues": [],
       "structural_warnings": [],
-      "below_threshold": false,
+      "below_threshold": true,
       "has_script": true,
       "api_effect_blocks": 3,
       "script_effect_count": 2
@@ -1518,7 +1519,7 @@
       "reverse_issues": [],
       "timing_issues": [],
       "structural_warnings": [],
-      "below_threshold": false,
+      "below_threshold": true,
       "has_script": true,
       "api_effect_blocks": 3,
       "script_effect_count": 2
@@ -1569,7 +1570,7 @@
       "reverse_issues": [],
       "timing_issues": [],
       "structural_warnings": [],
-      "below_threshold": false,
+      "below_threshold": true,
       "has_script": true,
       "api_effect_blocks": 3,
       "script_effect_count": 2
@@ -1586,7 +1587,7 @@
       "reverse_issues": [],
       "timing_issues": [],
       "structural_warnings": [],
-      "below_threshold": false,
+      "below_threshold": true,
       "has_script": true,
       "api_effect_blocks": 3,
       "script_effect_count": 2
@@ -1622,7 +1623,7 @@
       "reverse_issues": [],
       "timing_issues": [],
       "structural_warnings": [],
-      "below_threshold": false,
+      "below_threshold": true,
       "has_script": true,
       "api_effect_blocks": 3,
       "script_effect_count": 2
@@ -1656,7 +1657,7 @@
       "reverse_issues": [],
       "timing_issues": [],
       "structural_warnings": [],
-      "below_threshold": false,
+      "below_threshold": true,
       "has_script": true,
       "api_effect_blocks": 3,
       "script_effect_count": 2
@@ -1675,7 +1676,7 @@
       "reverse_issues": [],
       "timing_issues": [],
       "structural_warnings": [],
-      "below_threshold": false,
+      "below_threshold": true,
       "has_script": true,
       "api_effect_blocks": 3,
       "script_effect_count": 2
@@ -1692,7 +1693,7 @@
       "reverse_issues": [],
       "timing_issues": [],
       "structural_warnings": [],
-      "below_threshold": false,
+      "below_threshold": true,
       "has_script": true,
       "api_effect_blocks": 3,
       "script_effect_count": 2
@@ -1709,7 +1710,7 @@
       "reverse_issues": [],
       "timing_issues": [],
       "structural_warnings": [],
-      "below_threshold": false,
+      "below_threshold": true,
       "has_script": true,
       "api_effect_blocks": 2,
       "script_effect_count": 1
@@ -1726,7 +1727,7 @@
       "reverse_issues": [],
       "timing_issues": [],
       "structural_warnings": [],
-      "below_threshold": false,
+      "below_threshold": true,
       "has_script": true,
       "api_effect_blocks": 2,
       "script_effect_count": 1
@@ -1828,7 +1829,7 @@
       "reverse_issues": [],
       "timing_issues": [],
       "structural_warnings": [],
-      "below_threshold": false,
+      "below_threshold": true,
       "has_script": true,
       "api_effect_blocks": 3,
       "script_effect_count": 3
@@ -1898,7 +1899,7 @@
       "reverse_issues": [],
       "timing_issues": [],
       "structural_warnings": [],
-      "below_threshold": false,
+      "below_threshold": true,
       "has_script": true,
       "api_effect_blocks": 3,
       "script_effect_count": 2
@@ -1932,7 +1933,7 @@
       "reverse_issues": [],
       "timing_issues": [],
       "structural_warnings": [],
-      "below_threshold": false,
+      "below_threshold": true,
       "has_script": true,
       "api_effect_blocks": 3,
       "script_effect_count": 2
@@ -1949,7 +1950,7 @@
       "reverse_issues": [],
       "timing_issues": [],
       "structural_warnings": [],
-      "below_threshold": false,
+      "below_threshold": true,
       "has_script": true,
       "api_effect_blocks": 3,
       "script_effect_count": 2

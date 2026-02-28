@@ -45,7 +45,10 @@ W_EFFECTS = 0.40
 W_ACTIONS = 0.30
 W_FORWARD = 0.20
 W_COROUTINE = 0.10
-DEFAULT_THRESHOLD = 0.7
+DEFAULT_THRESHOLD = 0.8
+
+# Known complex cards that cannot be faithfully transpiled
+KNOWN_COMPLEX_PATH = PROJECT_ROOT / "tools" / "transpiler" / "known_complex_cards.json"
 
 
 # ─── Data Classes ────────────────────────────────────────────────────
@@ -77,6 +80,7 @@ class SetAuditResult:
     cards_with_issues: int = 0
     cards_below_threshold: int = 0
     cards_missing_script: int = 0
+    cards_known_complex: int = 0
     average_score: float = 0.0
     cards: Dict[str, CardAuditResult] = field(default_factory=dict)
 
@@ -137,6 +141,15 @@ def load_set_metadata(set_id: str, card_db: Dict[str, dict], use_api: bool = Fal
                     "security_effect_description_eng": "",
                 }
     return cards
+
+
+def load_known_complex() -> set:
+    """Load the set of card IDs known to be beyond transpiler capability."""
+    if not KNOWN_COMPLEX_PATH.exists():
+        return set()
+    with open(KNOWN_COMPLEX_PATH) as f:
+        data = json.load(f)
+    return {c["card_id"] for c in data.get("cards", [])}
 
 
 def _strip_html(text: str) -> str:
@@ -227,6 +240,7 @@ def audit_set(
     card_db: Dict[str, dict],
     threshold: float = DEFAULT_THRESHOLD,
     use_api: bool = False,
+    known_complex: Optional[set] = None,
 ) -> SetAuditResult:
     """Audit all cards in a set."""
     result = SetAuditResult(set_id=set_id)
@@ -243,15 +257,21 @@ def audit_set(
 
     scores = []
 
+    _known = known_complex or set()
+
     for card_id in all_card_ids:
         meta = metadata.get(card_id, {})
         script_path = scripts.get(card_id)
+        is_known_complex = card_id in _known
 
         if not script_path or not script_path.exists():
             card_result = CardAuditResult(card_id=card_id, has_script=False, score=0.0)
             card_result.card_name = meta.get("card_name_eng", "")
             result.cards[card_id] = card_result
-            result.cards_missing_script += 1
+            if is_known_complex:
+                result.cards_known_complex += 1
+            else:
+                result.cards_missing_script += 1
             continue
 
         script_code = script_path.read_text()
@@ -263,7 +283,9 @@ def audit_set(
         # Score
         card_result = standalone_score(card_id, meta, script_code, vr, threshold)
 
-        if card_result.below_threshold:
+        if is_known_complex:
+            result.cards_known_complex += 1
+        elif card_result.below_threshold:
             result.cards_below_threshold += 1
 
         has_issues = (
@@ -311,6 +333,7 @@ def format_json_report(result: SetAuditResult) -> dict:
         "cards_with_issues": result.cards_with_issues,
         "cards_below_threshold": result.cards_below_threshold,
         "cards_missing_script": result.cards_missing_script,
+        "cards_known_complex": result.cards_known_complex,
         "average_score": result.average_score,
         "cards": cards_dict,
         "summary": {
@@ -334,6 +357,7 @@ def format_markdown_report(result: SetAuditResult) -> str:
         f"- **Cards audited**: {result.cards_audited}",
         f"- **Cards with issues**: {result.cards_with_issues}",
         f"- **Cards below threshold**: {result.cards_below_threshold}",
+        f"- **Cards known complex (excluded)**: {result.cards_known_complex}",
         f"- **Cards missing script**: {result.cards_missing_script}",
         f"- **Average score**: {result.average_score:.4f}",
         "",
@@ -417,11 +441,15 @@ def main():
     card_db = load_cards_json()
     print(f"Loaded {len(card_db)} cards", file=sys.stderr)
 
+    known_complex = load_known_complex()
+    if known_complex:
+        print(f"Known complex cards: {len(known_complex)} (excluded from threshold)", file=sys.stderr)
+
     all_results = []
 
     for set_id in set_ids:
         print(f"\nAuditing {set_id}...", file=sys.stderr)
-        result = audit_set(set_id, card_db, threshold=args.threshold, use_api=args.use_api)
+        result = audit_set(set_id, card_db, threshold=args.threshold, use_api=args.use_api, known_complex=known_complex)
         all_results.append(result)
 
         print(
@@ -453,6 +481,7 @@ def main():
     total_issues = sum(r.cards_with_issues for r in all_results)
     total_below = sum(r.cards_below_threshold for r in all_results)
     total_missing = sum(r.cards_missing_script for r in all_results)
+    total_known_complex = sum(r.cards_known_complex for r in all_results)
 
     all_scores = []
     for r in all_results:
@@ -466,14 +495,15 @@ def main():
     print(f"Total cards audited: {total_audited}")
     print(f"Total cards with issues: {total_issues}")
     print(f"Total cards below threshold ({args.threshold}): {total_below}")
+    print(f"Total cards known complex (excluded): {total_known_complex}")
     print(f"Total cards missing script: {total_missing}")
     print(f"Overall average score: {overall_avg:.4f}")
     print()
     print("Per-set breakdown:")
-    print(f"{'Set':<8} {'Audited':>8} {'Issues':>8} {'Below':>8} {'Avg Score':>10}")
-    print("-" * 44)
+    print(f"{'Set':<8} {'Audited':>8} {'Issues':>8} {'Below':>8} {'Known':>8} {'Avg Score':>10}")
+    print("-" * 54)
     for r in sorted(all_results, key=lambda x: x.average_score):
-        print(f"{r.set_id:<8} {r.cards_audited:>8} {r.cards_with_issues:>8} {r.cards_below_threshold:>8} {r.average_score:>10.4f}")
+        print(f"{r.set_id:<8} {r.cards_audited:>8} {r.cards_with_issues:>8} {r.cards_below_threshold:>8} {r.cards_known_complex:>8} {r.average_score:>10.4f}")
 
 
 if __name__ == "__main__":

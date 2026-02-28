@@ -3,8 +3,9 @@
 - **Total cards**: 112
 - **Cards audited**: 102
 - **Cards with issues**: 22
-- **Cards below threshold**: 24
-- **Cards missing script**: 10
+- **Cards below threshold**: 47
+- **Cards known complex (excluded)**: 16
+- **Cards missing script**: 0
 - **Average score**: 0.7759
 
 ## Worst-Scoring Cards

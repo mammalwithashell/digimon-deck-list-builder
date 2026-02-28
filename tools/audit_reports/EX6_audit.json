@@ -3,8 +3,9 @@
   "total_cards": 74,
   "cards_audited": 74,
   "cards_with_issues": 26,
-  "cards_below_threshold": 20,
+  "cards_below_threshold": 38,
   "cards_missing_script": 0,
+  "cards_known_complex": 3,
   "average_score": 0.7714,
   "cards": {
     "EX6-001": {
@@ -70,7 +71,7 @@
       "reverse_issues": [],
       "timing_issues": [],
       "structural_warnings": [],
-      "below_threshold": false,
+      "below_threshold": true,
       "has_script": true,
       "api_effect_blocks": 1,
       "script_effect_count": 1
@@ -158,7 +159,7 @@
       "reverse_issues": [],
       "timing_issues": [],
       "structural_warnings": [],
-      "below_threshold": false,
+      "below_threshold": true,
       "has_script": true,
       "api_effect_blocks": 3,
       "script_effect_count": 3
@@ -236,7 +237,7 @@
       "reverse_issues": [],
       "timing_issues": [],
       "structural_warnings": [],
-      "below_threshold": false,
+      "below_threshold": true,
       "has_script": true,
       "api_effect_blocks": 2,
       "script_effect_count": 1
@@ -338,7 +339,7 @@
       "reverse_issues": [],
       "timing_issues": [],
       "structural_warnings": [],
-      "below_threshold": false,
+      "below_threshold": true,
       "has_script": true,
       "api_effect_blocks": 2,
       "script_effect_count": 1
@@ -389,7 +390,7 @@
       "reverse_issues": [],
       "timing_issues": [],
       "structural_warnings": [],
-      "below_threshold": false,
+      "below_threshold": true,
       "has_script": true,
       "api_effect_blocks": 3,
       "script_effect_count": 2
@@ -408,7 +409,7 @@
       "reverse_issues": [],
       "timing_issues": [],
       "structural_warnings": [],
-      "below_threshold": false,
+      "below_threshold": true,
       "has_script": true,
       "api_effect_blocks": 3,
       "script_effect_count": 4
@@ -427,7 +428,7 @@
       "reverse_issues": [],
       "timing_issues": [],
       "structural_warnings": [],
-      "below_threshold": false,
+      "below_threshold": true,
       "has_script": true,
       "api_effect_blocks": 3,
       "script_effect_count": 4
@@ -487,7 +488,7 @@
       "structural_warnings": [
         "API has inherited effect but script has no is_inherited_effect"
       ],
-      "below_threshold": false,
+      "below_threshold": true,
       "has_script": true,
       "api_effect_blocks": 4,
       "script_effect_count": 4
@@ -529,7 +530,7 @@
       "structural_warnings": [
         "API has inherited effect but script has no is_inherited_effect"
       ],
-      "below_threshold": false,
+      "below_threshold": true,
       "has_script": true,
       "api_effect_blocks": 3,
       "script_effect_count": 2
@@ -616,7 +617,7 @@
       "reverse_issues": [],
       "timing_issues": [],
       "structural_warnings": [],
-      "below_threshold": false,
+      "below_threshold": true,
       "has_script": true,
       "api_effect_blocks": 3,
       "script_effect_count": 2
@@ -658,7 +659,7 @@
       "reverse_issues": [],
       "timing_issues": [],
       "structural_warnings": [],
-      "below_threshold": false,
+      "below_threshold": true,
       "has_script": true,
       "api_effect_blocks": 2,
       "script_effect_count": 2
@@ -815,7 +816,7 @@
       "reverse_issues": [],
       "timing_issues": [],
       "structural_warnings": [],
-      "below_threshold": false,
+      "below_threshold": true,
       "has_script": true,
       "api_effect_blocks": 2,
       "script_effect_count": 1
@@ -832,7 +833,7 @@
       "reverse_issues": [],
       "timing_issues": [],
       "structural_warnings": [],
-      "below_threshold": false,
+      "below_threshold": true,
       "has_script": true,
       "api_effect_blocks": 2,
       "script_effect_count": 1
@@ -849,7 +850,7 @@
       "reverse_issues": [],
       "timing_issues": [],
       "structural_warnings": [],
-      "below_threshold": false,
+      "below_threshold": true,
       "has_script": true,
       "api_effect_blocks": 2,
       "script_effect_count": 1
@@ -934,7 +935,7 @@
       "reverse_issues": [],
       "timing_issues": [],
       "structural_warnings": [],
-      "below_threshold": false,
+      "below_threshold": true,
       "has_script": true,
       "api_effect_blocks": 3,
       "script_effect_count": 2
@@ -951,7 +952,7 @@
       "reverse_issues": [],
       "timing_issues": [],
       "structural_warnings": [],
-      "below_threshold": false,
+      "below_threshold": true,
       "has_script": true,
       "api_effect_blocks": 3,
       "script_effect_count": 2
@@ -1006,7 +1007,7 @@
       "reverse_issues": [],
       "timing_issues": [],
       "structural_warnings": [],
-      "below_threshold": false,
+      "below_threshold": true,
       "has_script": true,
       "api_effect_blocks": 3,
       "script_effect_count": 2
@@ -1094,7 +1095,7 @@
       "reverse_issues": [],
       "timing_issues": [],
       "structural_warnings": [],
-      "below_threshold": false,
+      "below_threshold": true,
       "has_script": true,
       "api_effect_blocks": 2,
       "script_effect_count": 1
@@ -1149,7 +1150,7 @@
       "reverse_issues": [],
       "timing_issues": [],
       "structural_warnings": [],
-      "below_threshold": false,
+      "below_threshold": true,
       "has_script": true,
       "api_effect_blocks": 3,
       "script_effect_count": 2
@@ -1223,7 +1224,7 @@
       "structural_warnings": [
         "API has security effect but script has no is_security_effect"
       ],
-      "below_threshold": false,
+      "below_threshold": true,
       "has_script": true,
       "api_effect_blocks": 4,
       "script_effect_count": 2
@@ -1336,7 +1337,7 @@
       "reverse_issues": [],
       "timing_issues": [],
       "structural_warnings": [],
-      "below_threshold": false,
+      "below_threshold": true,
       "has_script": true,
       "api_effect_blocks": 3,
       "script_effect_count": 2
