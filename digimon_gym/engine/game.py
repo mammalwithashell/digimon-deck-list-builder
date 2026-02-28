@@ -757,6 +757,13 @@ class Game:
         ("_is_evade", "Evade"),
         ("_is_barrier", "Barrier"),
         ("_is_delay", "Delay"),
+        ("_is_blast_dna_digivolve", "Blast DNA Digivolve"),
+        ("_is_scapegoat", "Scapegoat"),
+        ("_is_fragment", "Fragment"),
+        ("_is_decode", "Decode"),
+        ("_is_execute", "Execute"),
+        ("_is_digisorption", "Digisorption"),
+        ("_is_iceclad", "Iceclad"),
         ("_is_cannot_attack", "Cannot Attack"),
         ("_is_cannot_attack_player", "Cannot Attack Player"),
         ("_is_cannot_block", "Cannot Block"),
@@ -861,6 +868,10 @@ class Game:
         '_is_collision', '_is_training', '_is_progress', '_is_fortitude',
         '_is_save', '_is_decoy', '_is_material_save', '_is_vortex',
         '_is_overclock', '_is_armor_purge', '_is_evade', '_is_barrier',
+        '_is_blast_digivolve', '_is_blast_dna_digivolve',
+        '_is_delay', '_is_digisorption',
+        '_is_scapegoat', '_is_fragment', '_is_iceclad',
+        '_is_decode', '_is_execute',
         '_is_cannot_attack', '_is_cannot_attack_player', '_is_cannot_block',
         '_is_cannot_be_blocked', '_is_cannot_unsuspend',
     ]
@@ -1284,6 +1295,9 @@ class Game:
         cost = self.turn_player.digivolve(perm, card)
         self.turn_player.lose_memory(cost)
 
+        # Digivolution bonus: draw 1 card (Rule 8-1-4)
+        self.turn_player.draw()
+
         # Track digivolution turn for <Blitz> checks
         perm.turn_digivolved = self.turn_count
 
@@ -1307,6 +1321,11 @@ class Game:
 
         cost = self.turn_player.digivolve(perm, card)
         self.turn_player.lose_memory(cost)
+
+        # Digivolution bonus: draw 1 card (Rule 8-1-4)
+        # The draw is part of the digivolution procedure, not an effect,
+        # so it applies even in the breeding area.
+        self.turn_player.draw()
 
         perm.turn_digivolved = self.turn_count
 
