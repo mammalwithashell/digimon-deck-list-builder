@@ -1,0 +1,144 @@
+from __future__ import annotations
+from typing import TYPE_CHECKING, List, Dict, Any
+from ....core.card_script import CardScript
+from ....interfaces.card_effect import ICardEffect
+
+if TYPE_CHECKING:
+    from ....core.card_source import CardSource
+
+
+class BT16_061(CardScript):
+    """BT16-061 DoruGreymon | Lv.5"""
+
+    def get_card_effects(self, card: 'CardSource') -> List['ICardEffect']:
+        effects = []
+
+        # Factory effect: alt_digivolve_req
+        # Alternate digivolution requirement
+        effect0 = ICardEffect()
+        effect0.set_effect_name("BT16-061 Alternate digivolution requirement")
+        effect0.set_effect_description("Alternate digivolution requirement")
+        # Alternate digivolution: alternate source for cost 3
+        effect0._alt_digi_cost = 3
+
+        def condition0(context: Dict[str, Any]) -> bool:
+            return True
+        effect0.set_can_use_condition(condition0)
+        effects.append(effect0)
+
+        # Factory effect: collision
+        # Collision
+        effect1 = ICardEffect()
+        effect1.set_effect_name("BT16-061 Collision")
+        effect1.set_effect_description("Collision")
+        effect1._is_collision = True
+
+        def condition1(context: Dict[str, Any]) -> bool:
+            return True
+        effect1.set_can_use_condition(condition1)
+        effects.append(effect1)
+
+        # Timing: EffectTiming.OnAttackTargetChanged
+        # [All Turns] When an attack target is switched, this Digimon with a Tamer card with the [SoC] trait in its digivolution cards may digivolve into a Digimon card with the [Beast Dragon], [Undead] or [SoC] trait in your hand without paying the cost.
+        effect2 = ICardEffect()
+        effect2.set_effect_name("BT16-061 Digivolve this digimon")
+        effect2.set_effect_description("[All Turns] When an attack target is switched, this Digimon with a Tamer card with the [SoC] trait in its digivolution cards may digivolve into a Digimon card with the [Beast Dragon], [Undead] or [SoC] trait in your hand without paying the cost.")
+        effect2.is_optional = True
+
+        effect = effect2  # alias for condition closure
+        def condition2(context: Dict[str, Any]) -> bool:
+            if card and card.permanent_of_this_card() is None:
+                return False
+            return True
+
+        effect2.set_can_use_condition(condition2)
+
+        def process2(ctx: Dict[str, Any]):
+            """Action: Digivolve"""
+            player = ctx.get('player')
+            perm = ctx.get('permanent')
+            game = ctx.get('game')
+            if not (player and perm and game):
+                return
+            def digi_filter(c):
+                if not getattr(c, 'is_digimon', False):
+                    return False
+                return True
+            game.effect_digivolve_from_hand(
+                player, perm, digi_filter, is_optional=True)
+
+        effect2.set_on_process_callback(process2)
+        effects.append(effect2)
+
+        # Timing: EffectTiming.OnDestroyedAnyone
+        # [All Turns] (Once Per Turn) When this Digimon deletes another Digimon, you may play 1 card with the [X Antibody] or [SoC] trait and a play cost of 5 or less from your trash without paying the cost.
+        effect3 = ICardEffect()
+        effect3.set_effect_name("BT16-061 Play 1 card with 5 cost or less")
+        effect3.set_effect_description("[All Turns] (Once Per Turn) When this Digimon deletes another Digimon, you may play 1 card with the [X Antibody] or [SoC] trait and a play cost of 5 or less from your trash without paying the cost.")
+        effect3.is_inherited_effect = True
+        effect3.is_optional = True
+        effect3.set_max_count_per_turn(1)
+        effect3.set_hash_string("PlayCard_BT16_061")
+        effect3.is_on_deletion = True
+
+        effect = effect3  # alias for condition closure
+        def condition3(context: Dict[str, Any]) -> bool:
+            if card and card.permanent_of_this_card() is None:
+                return False
+            return True
+
+        effect3.set_can_use_condition(condition3)
+
+        def process3(ctx: Dict[str, Any]):
+            """Action: Play Card"""
+            player = ctx.get('player')
+            perm = ctx.get('permanent')
+            game = ctx.get('game')
+            if not (player and game):
+                return
+            def play_filter(c):
+                if not getattr(c, 'is_digimon', False):
+                    return False
+                return True
+            game.effect_play_from_zone(
+                player, 'hand', play_filter, free=True, is_optional=True)
+
+        effect3.set_on_process_callback(process3)
+        effects.append(effect3)
+
+        # Timing: EffectTiming.OnEndBattle
+        # [All Turns] (Once Per Turn) When this Digimon deletes another Digimon, you may play 1 card with the [X Antibody] or [SoC] trait and a play cost of 5 or less from your trash without paying the cost.
+        effect4 = ICardEffect()
+        effect4.set_effect_name("BT16-061 Play 1 card with 5 cost or less")
+        effect4.set_effect_description("[All Turns] (Once Per Turn) When this Digimon deletes another Digimon, you may play 1 card with the [X Antibody] or [SoC] trait and a play cost of 5 or less from your trash without paying the cost.")
+        effect4.is_inherited_effect = True
+        effect4.is_optional = True
+        effect4.set_max_count_per_turn(1)
+        effect4.set_hash_string("PlayCard_BT16_061")
+
+        effect = effect4  # alias for condition closure
+        def condition4(context: Dict[str, Any]) -> bool:
+            if card and card.permanent_of_this_card() is None:
+                return False
+            return True
+
+        effect4.set_can_use_condition(condition4)
+
+        def process4(ctx: Dict[str, Any]):
+            """Action: Play Card"""
+            player = ctx.get('player')
+            perm = ctx.get('permanent')
+            game = ctx.get('game')
+            if not (player and game):
+                return
+            def play_filter(c):
+                if not getattr(c, 'is_digimon', False):
+                    return False
+                return True
+            game.effect_play_from_zone(
+                player, 'hand', play_filter, free=True, is_optional=True)
+
+        effect4.set_on_process_callback(process4)
+        effects.append(effect4)
+
+        return effects

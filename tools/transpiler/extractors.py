@@ -49,6 +49,9 @@ from .patterns import (
     RE_FACTORY_PARTITION, RE_FACTORY_DIGIXROS, RE_FACTORY_SCAPEGOAT,
     RE_FACTORY_DECODE, RE_FACTORY_ICECLAD, RE_FACTORY_FRAGMENT,
     RE_FACTORY_EXECUTE,
+    RE_FACTORY_BLAST_DNA_DIGI, RE_FACTORY_CANNOT_DESTROYED_SKILL,
+    RE_FACTORY_CANNOT_RETURN_HAND, RE_FACTORY_CANNOT_RETURN_DECK,
+    RE_FACTORY_CANNOT_BE_BLOCKED, RE_FACTORY_REBOOT_NON_SELF,
     RE_FACTORY_ADD_DIGI_REQ, RE_FACTORY_CHANGE_DIGI_COST,
     RE_FACTORY_CHANGE_DIGI_COST_VALUE,
     RE_FACTORY_DIGI_REQ_COST, RE_FACTORY_DIGI_REQ_NAME, RE_FACTORY_DIGI_REQ_TRAIT,
@@ -77,6 +80,11 @@ from .patterns import (
     RE_PLAY_HAND_OR_TRASH,
     # ActivateCoroutine lambda delegate (Fix 13)
     RE_ACTIVATE_COROUTINE_LAMBDA,
+    # P8: Modifier interface patterns
+    RE_CANNOT_BE_DESTROYED, RE_CANNOT_BE_SELECTED,
+    RE_CANNOT_UNSUSPEND, RE_CANNOT_ATTACK, RE_CANNOT_BLOCK,
+    RE_IMMUNE_FROM_DP_MINUS, RE_CANNOT_BE_RETURNED,
+    RE_EFFECT_IMMUNITY, RE_DONT_BATTLE_SECURITY,
 )
 
 
@@ -228,6 +236,13 @@ def extract_factory_effects(block: str) -> List[EffectBlock]:
         (RE_FACTORY_ICECLAD, "iceclad", "Iceclad"),
         (RE_FACTORY_FRAGMENT, "fragment", "Fragment"),
         (RE_FACTORY_EXECUTE, "execute", "Execute"),
+        # Rare factory patterns (audit gap fix)
+        (RE_FACTORY_BLAST_DNA_DIGI, "blast_dna_digivolve", "Blast DNA Digivolve"),
+        (RE_FACTORY_CANNOT_DESTROYED_SKILL, "cannot_destroyed_by_skill", "Cannot Be Destroyed by Effects"),
+        (RE_FACTORY_CANNOT_RETURN_HAND, "cannot_return_to_hand", "Cannot Return to Hand"),
+        (RE_FACTORY_CANNOT_RETURN_DECK, "cannot_return_to_deck", "Cannot Return to Deck"),
+        (RE_FACTORY_CANNOT_BE_BLOCKED, "cannot_be_blocked", "Cannot Be Blocked"),
+        (RE_FACTORY_REBOOT_NON_SELF, "reboot_non_self", "Reboot (grant to others)"),
     ]
 
     for regex, method, desc in factories:
@@ -750,6 +765,28 @@ def _scan_actions(block: str, eb: EffectBlock):
     if RE_CAN_ATTACK_TARGET.search(block) and "attack_unsuspended" not in eb.actions:
         eb.actions.append("attack_unsuspended")
         eb.descriptive_tag = "attack_unsuspended"
+
+    # ── P8: Modifier interface patterns (Phase 2 — DCGO engine alignment) ──
+    # These detect C# modifier classes and emit actions that now have engine support
+    # via the ModifierRegistry system added in Phase 1.
+    if RE_CANNOT_BE_DESTROYED.search(block) and "grant_destruction_immunity" not in eb.actions:
+        eb.actions.append("grant_destruction_immunity")
+    if RE_CANNOT_BE_SELECTED.search(block) and "grant_targeting_immunity" not in eb.actions:
+        eb.actions.append("grant_targeting_immunity")
+    if RE_CANNOT_UNSUSPEND.search(block) and "grant_cannot_unsuspend" not in eb.actions:
+        eb.actions.append("grant_cannot_unsuspend")
+    if RE_CANNOT_ATTACK.search(block) and "grant_cannot_attack" not in eb.actions:
+        eb.actions.append("grant_cannot_attack")
+    if RE_CANNOT_BLOCK.search(block) and "grant_cannot_block" not in eb.actions:
+        eb.actions.append("grant_cannot_block")
+    if RE_IMMUNE_FROM_DP_MINUS.search(block) and "grant_dp_minus_immunity" not in eb.actions:
+        eb.actions.append("grant_dp_minus_immunity")
+    if RE_CANNOT_BE_RETURNED.search(block) and "grant_bounce_immunity" not in eb.actions:
+        eb.actions.append("grant_bounce_immunity")
+    if RE_EFFECT_IMMUNITY.search(block) and "effect_immunity" not in eb.actions:
+        eb.actions.append("effect_immunity")
+    if RE_DONT_BATTLE_SECURITY.search(block) and "grant_no_security_battle" not in eb.actions:
+        eb.actions.append("grant_no_security_battle")
 
     # ── P2: Mill detection — IAddTrashCardsFromLibraryTop ──
     m_mill = RE_MILL.search(block)

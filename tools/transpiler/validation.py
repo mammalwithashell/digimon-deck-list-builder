@@ -199,7 +199,8 @@ def _build_validation_patterns():
        r"reveal\s+(?:the\s+)?top\s+\d+\s+cards?")
     _p("play", lambda s: "effect_play_from_zone" in s,
        r"play\s+(?:1|up\s+to\s+\d+|it\b)")
-    _p("digivolve_into", lambda s: "effect_digivolve_from_hand" in s,
+    _p("digivolve_into",
+       lambda s: "effect_digivolve_from_hand" in s or "DigivolveIntoHandOrTrashCard" in s or "_alt_digi_cost" in s,
        r"(?:digivolve\s+into|may\s+digivolve|can\s+digivolve)")
     _p("delete_opponent",
        lambda s: "delete_permanent" in s or "effect_select_opponent_permanent" in s,
@@ -215,7 +216,7 @@ def _build_validation_patterns():
     _p("mind_link", lambda s: "effect_link_to_permanent" in s,
        r"<Mind\s*Link>")
     _p("blocker", lambda s: "_is_blocker" in s, r"<Blocker>")
-    _p("piercing", lambda s: "_is_piercing" in s, r"<Piercing>")
+    _p("piercing", lambda s: "_is_piercing" in s or "piercing" in s.lower(), r"<Piercing>")
     _p("rush", lambda s: "_is_rush" in s, r"<Rush>")
     _p("reboot", lambda s: "_is_reboot" in s, r"<Reboot>")
     _p("raid", lambda s: "_is_raid" in s, r"<Raid>")
@@ -230,7 +231,9 @@ def _build_validation_patterns():
 
     # --- New Phase 4 patterns ---
     _p("bounce",
-       lambda s: "bounce_permanent_to_hand" in s or "on_bounce" in s,
+       lambda s: ("bounce_permanent_to_hand" in s or "on_bounce" in s
+                  or "Mode.Bounce" in s or "return_to_deck" in s
+                  or "HandBounceCla" in s),
        r"return\s+\d+|return\s+(?:it|them|all)\s+to\s+(?:the\s+|their\s+)?(?:hand|owner)")
     _p("trash_from_hand",
        lambda s: "effect_select_hand_card" in s,
@@ -254,6 +257,34 @@ def _build_validation_patterns():
     _p("retaliation", lambda s: "_is_retaliation" in s, r"<Retaliation>")
     _p("alliance", lambda s: "_is_alliance" in s, r"<Alliance>")
     _p("delay", lambda s: "_is_delay" in s, r"<Delay>")
+
+    # Phase 2: New keyword validation patterns
+    _p("decoy", lambda s: "_is_decoy" in s, r"<Decoy>")
+    _p("fortitude", lambda s: "_is_fortitude" in s, r"<Fortitude>")
+    _p("save", lambda s: "_is_save" in s, r"<Save>")
+    _p("material_save", lambda s: "_is_material_save" in s, r"<Material Save>")
+    _p("collision", lambda s: "_is_collision" in s, r"<Collision>")
+    _p("blitz", lambda s: "_is_blitz" in s, r"<Blitz>")
+    _p("overclock", lambda s: "_is_overclock" in s, r"<Overclock>")
+    _p("training", lambda s: "_is_training" in s, r"<Training>")
+    _p("vortex", lambda s: "_is_vortex" in s, r"<Vortex>")
+    _p("scapegoat", lambda s: "_is_scapegoat" in s, r"<Scapegoat>")
+    _p("ice_clad", lambda s: "_is_iceclad" in s, r"<Ice Clad>")
+    _p("fragment", lambda s: "_is_fragment" in s, r"<Fragment>")
+    _p("decode", lambda s: "_is_decode" in s, r"<Decode>")
+    _p("partition", lambda s: "_is_partition" in s, r"<Partition>")
+
+    # Phase 2: Modifier-based action patterns
+    _p("destruction_immunity",
+       lambda s: "CANNOT_BE_DESTROYED" in s or "grant_destruction_immunity" in s,
+       r"(?:can't|cannot|isn't)\s+(?:be\s+)?(?:deleted|destroyed)")
+    _p("attack_prevention",
+       lambda s: ("CANNOT_ATTACK" in s or "grant_cannot_attack" in s
+                  or "_cannot_attack" in s or "cannot_attack_player" in s),
+       r"(?:can't|cannot)\s+attack")
+    _p("block_prevention",
+       lambda s: "CANNOT_BLOCK" in s or "grant_cannot_block" in s,
+       r"(?:can't|cannot)\s+block")
 
     return patterns
 
@@ -280,6 +311,22 @@ def _build_reverse_patterns():
     _r("_is_barrier", r"<Barrier>")
     _r("_is_delay", r"<Delay>")
     _r("_security_attack_modifier", r"<Security\s+A(?:ttack)?\.?\s*[+\-]\d+>")
+
+    # Phase 2: New keyword reverse patterns
+    _r("_is_decoy", r"<Decoy>")
+    _r("_is_fortitude", r"<Fortitude>")
+    _r("_is_save", r"<Save>")
+    _r("_is_material_save", r"<Material Save>")
+    _r("_is_collision", r"<Collision>")
+    _r("_is_blitz", r"<Blitz>")
+    _r("_is_overclock", r"<Overclock>")
+    _r("_is_training", r"<Training>")
+    _r("_is_vortex", r"<Vortex>")
+    _r("_is_scapegoat", r"<Scapegoat>")
+    _r("_is_iceclad", r"<Ice Clad>")
+    _r("_is_fragment", r"<Fragment>")
+    _r("_is_decode", r"<Decode>")
+    _r("_is_partition", r"<Partition>")
 
     return patterns
 
@@ -336,6 +383,18 @@ SCAN_KEYWORD_PATTERNS = [
     ("Draw", re.compile(r"<Draw\s*\d*>", re.I)),
     ("Recovery", re.compile(r"<Recovery\s*\+?\d*>", re.I)),
     ("De-Digivolve", re.compile(r"<De-Digivolve\s*\d*>", re.I)),
+    # Phase 2: Newly scannable keywords
+    ("Scapegoat", re.compile(r"<Scapegoat>", re.I)),
+    ("Fragment", re.compile(r"<Fragment>", re.I)),
+    ("Decode", re.compile(r"<Decode>", re.I)),
+    ("Partition", re.compile(r"<Partition>", re.I)),
+    ("Training", re.compile(r"<Training>", re.I)),
+    ("Vortex", re.compile(r"<Vortex>", re.I)),
+    ("Progress", re.compile(r"<Progress>", re.I)),
+    ("DigiXros", re.compile(r"<DigiXros>", re.I)),
+    ("Digiburst", re.compile(r"<Digiburst\s*-?\d*>", re.I)),
+    ("Digisorption", re.compile(r"<Digisorption\s*-?\d*>", re.I)),
+    ("Execute", re.compile(r"<Execute>", re.I)),
 ]
 
 SCAN_ACTION_PATTERNS = [
@@ -384,6 +443,9 @@ TRANSPILER_KEYWORDS = {
     "Fortitude", "Save", "Material Save", "Collision", "Blitz", "Overclock",
     "Ice Clad", "Mind Link", "Blast Digivolve", "Security Attack +/-",
     "Draw", "Recovery", "De-Digivolve",
+    # Phase 2: Newly supported keywords
+    "Scapegoat", "Fragment", "Decode", "Partition", "Training", "Vortex",
+    "Progress", "DigiXros", "Digiburst", "Digisorption",
 }
 
 # Actions the transpiler currently handles
@@ -392,6 +454,9 @@ TRANSPILER_ACTIONS = {
     "suspend", "memory_gain", "dp_change", "token", "trash_from_hand",
     "mill", "unsuspend", "security_trash", "cost_reduction",
     "stack_manipulation",
+    # Phase 2: Modifier-based actions now supported
+    "destruction_immunity", "attack_prevention", "block_prevention",
+    "restriction", "protection",
 }
 
 

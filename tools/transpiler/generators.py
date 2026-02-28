@@ -534,13 +534,16 @@ def _emit_action(eb: EffectBlock, action: str, lines: List[str], indent: str):
         lines.append(f"{indent}            trashed = enemy.security_cards.pop(0)")
         lines.append(f"{indent}            enemy.trash_cards.append(trashed)")
     elif action == "restrict_attack":
-        lines.append(f"{indent}# Attack restriction — select opponent permanent to restrict")
+        lines.append(f"{indent}# Attack restriction via modifier system")
         lines.append(f"{indent}if not (player and game):")
         lines.append(f"{indent}    return")
+        lines.append(f"{indent}from digimon_gym.engine.interfaces.modifiers import ModifierType")
         lines.append(f"{indent}def target_filter(p):")
         lines.append(f"{indent}    return p.is_digimon")
         lines.append(f"{indent}def on_restrict(target_perm):")
-        lines.append(f"{indent}    target_perm.suspend()  # Approximate as suspend")
+        lines.append(f"{indent}    game.register_modifier(")
+        lines.append(f"{indent}        ModifierType.CANNOT_ATTACK, target_perm,")
+        lines.append(f"{indent}        value_fn=lambda: True, expiry='end_of_opponent_turn')")
         lines.append(f"{indent}game.effect_select_opponent_permanent(")
         lines.append(f"{indent}    player, on_restrict, filter_fn=target_filter, is_optional={eb.is_optional})")
     elif action == "target_lock":
@@ -673,17 +676,95 @@ def _emit_action(eb: EffectBlock, action: str, lines: List[str], indent: str):
         lines.append(f"{indent}# Redirect attack target (SwitchDefender) — not yet in engine")
         lines.append(f"{indent}pass  # descriptive-tagged: redirect_attack")
     elif action == "effect_immunity":
-        lines.append(f"{indent}# Grant effect immunity (CanNotAffectedClass) — not yet in engine")
-        lines.append(f"{indent}pass  # descriptive-tagged: effect_immunity")
+        lines.append(f"{indent}# Grant effect immunity via modifier system")
+        lines.append(f"{indent}if perm and game:")
+        lines.append(f"{indent}    from digimon_gym.engine.interfaces.modifiers import ModifierType")
+        lines.append(f"{indent}    game.register_modifier(")
+        lines.append(f"{indent}        ModifierType.CANNOT_BE_SELECTED_BY_EFFECT, perm,")
+        lines.append(f"{indent}        value_fn=lambda: True, expiry='end_of_turn')")
     elif action == "grant_skill":
         lines.append(f"{indent}# Grant keyword to other permanents (AddSkillClass) — not yet in engine")
         lines.append(f"{indent}pass  # descriptive-tagged: grant_skill")
     elif action == "attack_unsuspended":
-        lines.append(f"{indent}# Can attack unsuspended Digimon (CanAttackTargetDefendingPermanentClass) — not yet in engine")
-        lines.append(f"{indent}pass  # descriptive-tagged: attack_unsuspended")
+        lines.append(f"{indent}# Can attack unsuspended Digimon via modifier system")
+        lines.append(f"{indent}if perm and game:")
+        lines.append(f"{indent}    from digimon_gym.engine.interfaces.modifiers import ModifierType")
+        lines.append(f"{indent}    game.register_modifier(")
+        lines.append(f"{indent}        ModifierType.CAN_ATTACK_UNSUSPENDED, perm,")
+        lines.append(f"{indent}        value_fn=lambda: True, expiry='persistent')")
     elif action == "play_restriction":
         lines.append(f"{indent}# Play restriction (CanNotPutFieldClass) — opponent play restrictions")
         lines.append(f"{indent}pass  # descriptive-tagged")
+
+    # ── P8: Modifier-based actions (using ModifierRegistry from Phase 1) ──
+    elif action == "grant_destruction_immunity":
+        lines.append(f"{indent}# Grant destruction immunity via modifier system")
+        lines.append(f"{indent}if perm and game:")
+        lines.append(f"{indent}    from digimon_gym.engine.interfaces.modifiers import ModifierType")
+        lines.append(f"{indent}    game.register_modifier(")
+        lines.append(f"{indent}        ModifierType.CANNOT_BE_DESTROYED, perm,")
+        lines.append(f"{indent}        value_fn=lambda: True, expiry='end_of_turn')")
+    elif action == "grant_targeting_immunity":
+        lines.append(f"{indent}# Grant targeting immunity (Iceclad-like) via modifier system")
+        lines.append(f"{indent}if perm and game:")
+        lines.append(f"{indent}    from digimon_gym.engine.interfaces.modifiers import ModifierType")
+        lines.append(f"{indent}    game.register_modifier(")
+        lines.append(f"{indent}        ModifierType.CANNOT_BE_SELECTED_BY_EFFECT, perm,")
+        lines.append(f"{indent}        value_fn=lambda: True, expiry='end_of_turn')")
+    elif action == "grant_cannot_unsuspend":
+        lines.append(f"{indent}# Prevent target from unsuspending")
+        lines.append(f"{indent}if not (player and game):")
+        lines.append(f"{indent}    return")
+        lines.append(f"{indent}from digimon_gym.engine.interfaces.modifiers import ModifierType")
+        lines.append(f"{indent}def on_freeze(target_perm):")
+        lines.append(f"{indent}    game.register_modifier(")
+        lines.append(f"{indent}        ModifierType.CANNOT_UNSUSPEND, target_perm,")
+        lines.append(f"{indent}        value_fn=lambda: True, expiry='end_of_opponent_turn')")
+        lines.append(f"{indent}game.effect_select_opponent_permanent(")
+        lines.append(f"{indent}    player, on_freeze, filter_fn=lambda p: p.is_suspended, is_optional={eb.is_optional})")
+    elif action == "grant_cannot_attack":
+        lines.append(f"{indent}# Prevent target from attacking")
+        lines.append(f"{indent}if not (player and game):")
+        lines.append(f"{indent}    return")
+        lines.append(f"{indent}from digimon_gym.engine.interfaces.modifiers import ModifierType")
+        lines.append(f"{indent}def on_restrict(target_perm):")
+        lines.append(f"{indent}    game.register_modifier(")
+        lines.append(f"{indent}        ModifierType.CANNOT_ATTACK, target_perm,")
+        lines.append(f"{indent}        value_fn=lambda: True, expiry='end_of_opponent_turn')")
+        lines.append(f"{indent}game.effect_select_opponent_permanent(")
+        lines.append(f"{indent}    player, on_restrict, filter_fn=lambda p: p.is_digimon, is_optional={eb.is_optional})")
+    elif action == "grant_cannot_block":
+        lines.append(f"{indent}# Prevent target from blocking")
+        lines.append(f"{indent}if not (player and game):")
+        lines.append(f"{indent}    return")
+        lines.append(f"{indent}from digimon_gym.engine.interfaces.modifiers import ModifierType")
+        lines.append(f"{indent}def on_restrict(target_perm):")
+        lines.append(f"{indent}    game.register_modifier(")
+        lines.append(f"{indent}        ModifierType.CANNOT_BLOCK, target_perm,")
+        lines.append(f"{indent}        value_fn=lambda: True, expiry='end_of_turn')")
+        lines.append(f"{indent}game.effect_select_opponent_permanent(")
+        lines.append(f"{indent}    player, on_restrict, filter_fn=lambda p: p.is_digimon, is_optional={eb.is_optional})")
+    elif action == "grant_dp_minus_immunity":
+        lines.append(f"{indent}# Grant immunity from DP reduction via modifier system")
+        lines.append(f"{indent}if perm and game:")
+        lines.append(f"{indent}    from digimon_gym.engine.interfaces.modifiers import ModifierType")
+        lines.append(f"{indent}    game.register_modifier(")
+        lines.append(f"{indent}        ModifierType.IMMUNE_FROM_DP_MINUS, perm,")
+        lines.append(f"{indent}        value_fn=lambda: True, expiry='end_of_turn')")
+    elif action == "grant_bounce_immunity":
+        lines.append(f"{indent}# Prevent return to hand/deck via modifier system")
+        lines.append(f"{indent}if perm and game:")
+        lines.append(f"{indent}    from digimon_gym.engine.interfaces.modifiers import ModifierType")
+        lines.append(f"{indent}    game.register_modifier(")
+        lines.append(f"{indent}        ModifierType.CANNOT_BE_RETURNED, perm,")
+        lines.append(f"{indent}        value_fn=lambda: True, expiry='end_of_turn')")
+    elif action == "grant_no_security_battle":
+        lines.append(f"{indent}# Skip battle with Security Digimon via modifier system")
+        lines.append(f"{indent}if perm and game:")
+        lines.append(f"{indent}    from digimon_gym.engine.interfaces.modifiers import ModifierType")
+        lines.append(f"{indent}    game.register_modifier(")
+        lines.append(f"{indent}        ModifierType.DONT_BATTLE_SECURITY_DIGIMON, perm,")
+        lines.append(f"{indent}        value_fn=lambda: True, expiry='end_of_attack')")
 
     # P5: New descriptive-tagged action types
     elif action == "play_token":
@@ -795,6 +876,16 @@ def generate_factory_effect(eb: EffectBlock, card_id: str, idx: int) -> str:
     if eb.is_inherited:
         lines.append(f"        {var}.is_inherited_effect = True")
 
+    # Apply timing-based property flags (same logic as generate_activate_effect)
+    prop = TIMING_TO_PROPERTY.get(eb.timing)
+    if prop:
+        if prop == "is_on_play" and "trigger_when_digivolving" in eb.conditions:
+            lines.append(f"        {var}.is_when_digivolving = True")
+        else:
+            # security_play already sets is_security_effect explicitly below
+            if not (eb.factory_method == "security_play" and prop == "is_security_effect"):
+                lines.append(f"        {var}.{prop} = True")
+
     if eb.factory_method == "blocker":
         lines.append(f"        {var}._is_blocker = True")
     elif eb.factory_method == "jamming":
@@ -875,6 +966,21 @@ def generate_factory_effect(eb: EffectBlock, card_id: str, idx: int) -> str:
         lines.append(f"        {var}._is_fragment = True")
     elif eb.factory_method == "execute":
         lines.append(f"        {var}._is_execute = True")
+    # Rare factory patterns (audit gap fix)
+    elif eb.factory_method == "blast_dna_digivolve":
+        lines.append(f"        {var}.is_counter_effect = True")
+        lines.append(f"        {var}._is_blast_dna_digivolve = True")
+    elif eb.factory_method == "cannot_destroyed_by_skill":
+        lines.append(f"        {var}._grant_destruction_immunity = True")
+    elif eb.factory_method == "cannot_return_to_hand":
+        lines.append(f"        {var}._grant_bounce_immunity = True")
+    elif eb.factory_method == "cannot_return_to_deck":
+        lines.append(f"        {var}._grant_return_to_deck_immunity = True")
+    elif eb.factory_method == "cannot_be_blocked":
+        lines.append(f"        {var}._cannot_be_blocked = True")
+    elif eb.factory_method == "reboot_non_self":
+        lines.append(f"        {var}._is_reboot = True")
+        lines.append(f"        {var}._applies_to_all_own_digimon = True")
     elif eb.factory_method == "set_memory_3":
         lines.append(f"        # [Start of Your Turn] Set memory to 3 if <= 2")
     elif eb.factory_method == "gain_memory_tamer":
