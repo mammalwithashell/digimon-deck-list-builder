@@ -22,21 +22,12 @@ class BT14_003(CardScript):
         effect0.set_max_count_per_turn(1)
         effect0.set_hash_string("Draw1_BT14_003")
 
+        effect = effect0  # alias for condition closure
         def condition0(context: Dict[str, Any]) -> bool:
             if card and card.permanent_of_this_card() is None:
                 return False
             if not (card and card.owner and card.owner.is_my_turn):
                 return False
-            if not context.get('security_added'):
-                return False
-
-            owner = card.owner
-            event_player = context.get('player')
-            security_owner = context.get('security_owner')
-            if security_owner is not None:
-                return security_owner == owner
-            if event_player is not None:
-                return event_player == owner
             return True
 
         effect0.set_can_use_condition(condition0)
@@ -44,6 +35,8 @@ class BT14_003(CardScript):
         def process0(ctx: Dict[str, Any]):
             """Action: Draw 1"""
             player = ctx.get('player')
+            perm = ctx.get('permanent')
+            game = ctx.get('game')
             if player:
                 player.draw_cards(1)
 

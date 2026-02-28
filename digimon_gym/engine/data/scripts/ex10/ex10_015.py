@@ -18,8 +18,9 @@ class EX10_015(CardScript):
         effect0 = ICardEffect()
         effect0.set_effect_name("EX10-015 Alternate digivolution requirement")
         effect0.set_effect_description("Alternate digivolution requirement")
-        # Alternate digivolution: alternate source for cost 0
+        # Alternate digivolution: Lv.2 for cost 0
         effect0._alt_digi_cost = 0
+        effect0._alt_digi_level = 2
 
         def condition0(context: Dict[str, Any]) -> bool:
             return True
@@ -44,6 +45,7 @@ class EX10_015(CardScript):
         effect2 = ICardEffect()
         effect2.set_effect_name("EX10-015 Save")
         effect2.set_effect_description("Save")
+        effect2.is_on_deletion = True
         effect2._is_save = True
 
         def condition2(context: Dict[str, Any]) -> bool:

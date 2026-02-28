@@ -81,7 +81,7 @@ class EX10_072(CardScript):
         # [End of Opponent's Turn] <Delay> (By trashing this card after the placing turn, activate the effect below.)\r\n・You may play 1 face-up Digimon card with the [Dark Masters] trait from your security stack without paying the cost. At the end of your turn, delete the Digimon this effect played.
         effect3 = ICardEffect()
         effect3.set_effect_name("EX10-072 Play 1 [Dark Masters], delete it at end of your turn")
-        effect3.set_effect_description("[End of Opponent's Turn] <Delay> (By trashing this card after the placing turn, activate the effect below.)\r\n・You may play 1 face-up Digimon card with the [Dark Masters] trait from your security stack without paying the cost. At the end of your turn, delete the Digimon this effect played.")
+        effect3.set_effect_description("[End of Opponent's Turn] <Delay> (By trashing this card after the placing turn, activate the effect below.)\\r\\n・You may play 1 face-up Digimon card with the [Dark Masters] trait from your security stack without paying the cost. At the end of your turn, delete the Digimon this effect played.")
         effect3.is_optional = True
 
         effect = effect3  # alias for condition closure
@@ -110,10 +110,10 @@ class EX10_072(CardScript):
         effects.append(effect3)
 
         # Timing: EffectTiming.OnEndTurn
-        # Delete
+        # Delete, Effect Immunity
         effect4 = ICardEffect()
         effect4.set_effect_name("EX10-072 Delete this Digimon")
-        effect4.set_effect_description("Delete")
+        effect4.set_effect_description("Delete, Effect Immunity")
 
         effect = effect4  # alias for condition closure
         def condition4(context: Dict[str, Any]) -> bool:
@@ -124,7 +124,7 @@ class EX10_072(CardScript):
         effect4.set_can_use_condition(condition4)
 
         def process4(ctx: Dict[str, Any]):
-            """Action: Delete"""
+            """Action: Delete, Effect Immunity"""
             player = ctx.get('player')
             perm = ctx.get('permanent')
             game = ctx.get('game')
@@ -138,6 +138,12 @@ class EX10_072(CardScript):
                     enemy.delete_permanent(target_perm)
             game.effect_select_opponent_permanent(
                 player, on_delete, filter_fn=target_filter, is_optional=False)
+            # Grant effect immunity via modifier system
+            if perm and game:
+                from digimon_gym.engine.interfaces.modifiers import ModifierType
+                game.register_modifier(
+                    ModifierType.CANNOT_BE_SELECTED_BY_EFFECT, perm,
+                    value_fn=lambda: True, expiry='end_of_turn')
 
         effect4.set_on_process_callback(process4)
         effects.append(effect4)
@@ -177,10 +183,10 @@ class EX10_072(CardScript):
         effects.append(effect5)
 
         # Timing: EffectTiming.SecuritySkill
-        # Delete, Add To Hand
+        # Delete, Add To Hand, Effect Immunity
         effect6 = ICardEffect()
         effect6.set_effect_name("EX10-072 Delete this Digimon")
-        effect6.set_effect_description("Delete, Add To Hand")
+        effect6.set_effect_description("Delete, Add To Hand, Effect Immunity")
         effect6.is_security_effect = True
         effect6.is_security_effect = True
 
@@ -191,7 +197,7 @@ class EX10_072(CardScript):
         effect6.set_can_use_condition(condition6)
 
         def process6(ctx: Dict[str, Any]):
-            """Action: Delete, Add To Hand"""
+            """Action: Delete, Add To Hand, Effect Immunity"""
             player = ctx.get('player')
             perm = ctx.get('permanent')
             game = ctx.get('game')
@@ -209,6 +215,12 @@ class EX10_072(CardScript):
             if player and player.trash_cards:
                 card_to_add = player.trash_cards.pop()
                 player.hand_cards.append(card_to_add)
+            # Grant effect immunity via modifier system
+            if perm and game:
+                from digimon_gym.engine.interfaces.modifiers import ModifierType
+                game.register_modifier(
+                    ModifierType.CANNOT_BE_SELECTED_BY_EFFECT, perm,
+                    value_fn=lambda: True, expiry='end_of_turn')
 
         effect6.set_on_process_callback(process6)
         effects.append(effect6)

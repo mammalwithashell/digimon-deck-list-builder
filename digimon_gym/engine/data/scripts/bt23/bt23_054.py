@@ -18,8 +18,9 @@ class BT23_054(CardScript):
         effect0 = ICardEffect()
         effect0.set_effect_name("BT23-054 Alternate digivolution requirement")
         effect0.set_effect_description("Alternate digivolution requirement")
-        # Alternate digivolution: from [Veemon] for cost 3
+        # Alternate digivolution: Lv.3 from [Veemon] for cost 3
         effect0._alt_digi_cost = 3
+        effect0._alt_digi_level = 3
         effect0._alt_digi_name = "Veemon"
 
         def condition0(context: Dict[str, Any]) -> bool:
@@ -73,21 +74,21 @@ class BT23_054(CardScript):
         effect3.set_can_use_condition(condition3)
 
         def process3(ctx: Dict[str, Any]):
-            """Action: Draw 1, Gain Keyword Cannot Return To Hand, Gain Keyword Cannot Return To Deck"""
+            """Action: Draw 1, Gain Keyword Cannot Return To Hand, Gain Keyword Cannot Return To Deck, Grant Bounce Immunity"""
             player = ctx.get('player')
             perm = ctx.get('permanent')
             game = ctx.get('game')
             if player:
                 player.draw_cards(1)
-            if not (player and game):
-                return
-            def target_filter(p):
-                return p.is_digimon
-            def on_grant(target_perm):
-                target_perm.grant_keyword('_is_cannot_return_to_hand')
-                target_perm.grant_keyword('_is_cannot_return_to_deck')
-            game.effect_select_own_permanent(
-                player, on_grant, filter_fn=target_filter, is_optional=False)
+            if perm:
+                perm.grant_keyword('_is_cannot_return_to_hand')
+                perm.grant_keyword('_is_cannot_return_to_deck')
+            # Prevent return to hand/deck via modifier system
+            if perm and game:
+                from digimon_gym.engine.interfaces.modifiers import ModifierType
+                game.register_modifier(
+                    ModifierType.CANNOT_BE_RETURNED, perm,
+                    value_fn=lambda: True, expiry='end_of_turn')
 
         effect3.set_on_process_callback(process3)
         effects.append(effect3)
@@ -111,21 +112,21 @@ class BT23_054(CardScript):
         effect4.set_can_use_condition(condition4)
 
         def process4(ctx: Dict[str, Any]):
-            """Action: Draw 1, Gain Keyword Cannot Return To Hand, Gain Keyword Cannot Return To Deck"""
+            """Action: Draw 1, Gain Keyword Cannot Return To Hand, Gain Keyword Cannot Return To Deck, Grant Bounce Immunity"""
             player = ctx.get('player')
             perm = ctx.get('permanent')
             game = ctx.get('game')
             if player:
                 player.draw_cards(1)
-            if not (player and game):
-                return
-            def target_filter(p):
-                return p.is_digimon
-            def on_grant(target_perm):
-                target_perm.grant_keyword('_is_cannot_return_to_hand')
-                target_perm.grant_keyword('_is_cannot_return_to_deck')
-            game.effect_select_own_permanent(
-                player, on_grant, filter_fn=target_filter, is_optional=False)
+            if perm:
+                perm.grant_keyword('_is_cannot_return_to_hand')
+                perm.grant_keyword('_is_cannot_return_to_deck')
+            # Prevent return to hand/deck via modifier system
+            if perm and game:
+                from digimon_gym.engine.interfaces.modifiers import ModifierType
+                game.register_modifier(
+                    ModifierType.CANNOT_BE_RETURNED, perm,
+                    value_fn=lambda: True, expiry='end_of_turn')
 
         effect4.set_on_process_callback(process4)
         effects.append(effect4)

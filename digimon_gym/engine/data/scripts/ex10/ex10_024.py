@@ -18,8 +18,10 @@ class EX10_024(CardScript):
         effect0 = ICardEffect()
         effect0.set_effect_name("EX10-024 Alternate digivolution requirement")
         effect0.set_effect_description("Alternate digivolution requirement")
-        # Alternate digivolution: alternate source for cost 0
+        # Alternate digivolution: Lv.2 with [Appmon] trait for cost 0
         effect0._alt_digi_cost = 0
+        effect0._alt_digi_level = 2
+        effect0._alt_digi_trait = "Appmon"
 
         def condition0(context: Dict[str, Any]) -> bool:
             return True

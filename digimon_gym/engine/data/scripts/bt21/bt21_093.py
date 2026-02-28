@@ -115,7 +115,7 @@ class BT21_093(CardScript):
         # [All Turns] When your opponent's security stack is removed from, <Delay> (After this card is placed, by trashing it the next turn or later, activate the effect below).\r\n・1 of your [Reptile]/[Dragonkin] trait Digimon may digivolve into a [Reptile]/[Dragonkin] trait Digimon card in the hand without paying the cost.\r\n
         effect4 = ICardEffect()
         effect4.set_effect_name("BT21-093 1 of your [Reptile]/[Dragonkin] trait Digimon may digivolve")
-        effect4.set_effect_description("[All Turns] When your opponent's security stack is removed from, <Delay> (After this card is placed, by trashing it the next turn or later, activate the effect below).\r\n・1 of your [Reptile]/[Dragonkin] trait Digimon may digivolve into a [Reptile]/[Dragonkin] trait Digimon card in the hand without paying the cost.\r\n")
+        effect4.set_effect_description("[All Turns] When your opponent's security stack is removed from, <Delay> (After this card is placed, by trashing it the next turn or later, activate the effect below).\\r\\n・1 of your [Reptile]/[Dragonkin] trait Digimon may digivolve into a [Reptile]/[Dragonkin] trait Digimon card in the hand without paying the cost.\\r\\n")
         effect4.is_optional = True
 
         effect = effect4  # alias for condition closure

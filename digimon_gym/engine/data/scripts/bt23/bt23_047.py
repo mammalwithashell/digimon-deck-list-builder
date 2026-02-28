@@ -18,8 +18,9 @@ class BT23_047(CardScript):
         effect0 = ICardEffect()
         effect0.set_effect_name("BT23-047 Alternate digivolution requirement")
         effect0.set_effect_description("Alternate digivolution requirement")
-        # Alternate digivolution: alternate source for cost 5
+        # Alternate digivolution: Lv.6 for cost 5
         effect0._alt_digi_cost = 5
+        effect0._alt_digi_level = 6
 
         def condition0(context: Dict[str, Any]) -> bool:
             return True
@@ -64,10 +65,10 @@ class BT23_047(CardScript):
         effects.append(effect3)
 
         # Timing: EffectTiming.OnEnterFieldAnyone
-        # Suspend, Gain Keyword Cannot Unsuspend Player, Force Attack
+        # Suspend, Gain Keyword Cannot Unsuspend Player, Force Attack, Grant Cannot Unsuspend
         effect4 = ICardEffect()
         effect4.set_effect_name("BT23-047 Suspend 5 digimon/tamer, none can unsuspend. Then you may attack")
-        effect4.set_effect_description("Suspend, Gain Keyword Cannot Unsuspend Player, Force Attack")
+        effect4.set_effect_description("Suspend, Gain Keyword Cannot Unsuspend Player, Force Attack, Grant Cannot Unsuspend")
         effect4.is_on_play = True
         effect4._is_cannot_unsuspend_player = True
 
@@ -81,7 +82,7 @@ class BT23_047(CardScript):
         effect4.set_can_use_condition(condition4)
 
         def process4(ctx: Dict[str, Any]):
-            """Action: Suspend, Gain Keyword Cannot Unsuspend Player, Force Attack"""
+            """Action: Suspend, Gain Keyword Cannot Unsuspend Player, Force Attack, Grant Cannot Unsuspend"""
             player = ctx.get('player')
             perm = ctx.get('permanent')
             game = ctx.get('game')
@@ -97,15 +98,25 @@ class BT23_047(CardScript):
                 perm.grant_keyword('_is_cannot_unsuspend_player')
             # Force attack — target Digimon may attack (requires engine SelectAttack)
             pass  # descriptive-tagged: force_attack
+            # Prevent target from unsuspending
+            if not (player and game):
+                return
+            from digimon_gym.engine.interfaces.modifiers import ModifierType
+            def on_freeze(target_perm):
+                game.register_modifier(
+                    ModifierType.CANNOT_UNSUSPEND, target_perm,
+                    value_fn=lambda: True, expiry='end_of_opponent_turn')
+            game.effect_select_opponent_permanent(
+                player, on_freeze, filter_fn=lambda p: p.is_suspended, is_optional=False)
 
         effect4.set_on_process_callback(process4)
         effects.append(effect4)
 
         # Timing: EffectTiming.OnEnterFieldAnyone
-        # Suspend, Gain Keyword Cannot Unsuspend Player, Force Attack
+        # Suspend, Gain Keyword Cannot Unsuspend Player, Force Attack, Grant Cannot Unsuspend
         effect5 = ICardEffect()
         effect5.set_effect_name("BT23-047 Suspend 5 digimon/tamer, none can unsuspend. Then you may attack")
-        effect5.set_effect_description("Suspend, Gain Keyword Cannot Unsuspend Player, Force Attack")
+        effect5.set_effect_description("Suspend, Gain Keyword Cannot Unsuspend Player, Force Attack, Grant Cannot Unsuspend")
         effect5.is_when_digivolving = True
         effect5._is_cannot_unsuspend_player = True
 
@@ -119,7 +130,7 @@ class BT23_047(CardScript):
         effect5.set_can_use_condition(condition5)
 
         def process5(ctx: Dict[str, Any]):
-            """Action: Suspend, Gain Keyword Cannot Unsuspend Player, Force Attack"""
+            """Action: Suspend, Gain Keyword Cannot Unsuspend Player, Force Attack, Grant Cannot Unsuspend"""
             player = ctx.get('player')
             perm = ctx.get('permanent')
             game = ctx.get('game')
@@ -135,6 +146,16 @@ class BT23_047(CardScript):
                 perm.grant_keyword('_is_cannot_unsuspend_player')
             # Force attack — target Digimon may attack (requires engine SelectAttack)
             pass  # descriptive-tagged: force_attack
+            # Prevent target from unsuspending
+            if not (player and game):
+                return
+            from digimon_gym.engine.interfaces.modifiers import ModifierType
+            def on_freeze(target_perm):
+                game.register_modifier(
+                    ModifierType.CANNOT_UNSUSPEND, target_perm,
+                    value_fn=lambda: True, expiry='end_of_opponent_turn')
+            game.effect_select_opponent_permanent(
+                player, on_freeze, filter_fn=lambda p: p.is_suspended, is_optional=False)
 
         effect5.set_on_process_callback(process5)
         effects.append(effect5)

@@ -65,6 +65,7 @@ class BT23_099(CardScript):
         effect2 = ICardEffect()
         effect2.set_effect_name("BT23-099 Delay")
         effect2.set_effect_description("Delay")
+        effect2.is_on_play = True
         effect2._is_delay = True
 
         def condition2(context: Dict[str, Any]) -> bool:
@@ -80,7 +81,7 @@ class BT23_099(CardScript):
         # [Your Turn] When any of your Digimon digivolve into a Digimon with [Huckmon] or [Jesmon] in its name, <Delay> \r\n・You may play 1 card with [Sistermon] in its name from your hand or trash without paying the cost.
         effect3 = ICardEffect()
         effect3.set_effect_name("BT23-099 Play 1 card with [Sistermon] in its name")
-        effect3.set_effect_description("[Your Turn] When any of your Digimon digivolve into a Digimon with [Huckmon] or [Jesmon] in its name, <Delay> \r\n・You may play 1 card with [Sistermon] in its name from your hand or trash without paying the cost.")
+        effect3.set_effect_description("[Your Turn] When any of your Digimon digivolve into a Digimon with [Huckmon] or [Jesmon] in its name, <Delay> \\r\\n・You may play 1 card with [Sistermon] in its name from your hand or trash without paying the cost.")
         effect3.is_optional = True
         effect3.is_on_play = True
 

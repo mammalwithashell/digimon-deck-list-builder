@@ -72,6 +72,7 @@ class BT23_096(CardScript):
         effect2 = ICardEffect()
         effect2.set_effect_name("BT23-096 Delay")
         effect2.set_effect_description("Delay")
+        effect2.is_on_attack = True
         effect2._is_delay = True
 
         def condition2(context: Dict[str, Any]) -> bool:
@@ -87,7 +88,7 @@ class BT23_096(CardScript):
         # [Your Turn] When one of your [CS] trait Digimon attacks, <Delay> \r\n・<De-Digivolve 4> 1 of your opponent's Digimon. (Trash up to 4 cards from the top. You can't trash past level 3 cards.)
         effect3 = ICardEffect()
         effect3.set_effect_name("BT23-096 <De-Digivolve 4> 1 digimon")
-        effect3.set_effect_description("[Your Turn] When one of your [CS] trait Digimon attacks, <Delay> \r\n・<De-Digivolve 4> 1 of your opponent's Digimon. (Trash up to 4 cards from the top. You can't trash past level 3 cards.)")
+        effect3.set_effect_description("[Your Turn] When one of your [CS] trait Digimon attacks, <Delay> \\r\\n・<De-Digivolve 4> 1 of your opponent's Digimon. (Trash up to 4 cards from the top. You can't trash past level 3 cards.)")
         effect3.is_optional = True
         effect3.is_on_attack = True
 

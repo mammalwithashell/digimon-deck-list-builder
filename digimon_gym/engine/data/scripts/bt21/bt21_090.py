@@ -109,7 +109,7 @@ class BT21_090(CardScript):
         # [All Turns] When effects place digivolution cards under your Digimon, <Delay> (After this card is placed, by trashing it the next turn or later, activate the effect below).\r\n・1 of your Digimon may digivolve into a Digimon card with [Gammamon] in its text in the hand without paying the cost.
         effect3 = ICardEffect()
         effect3.set_effect_name("BT21-090 Your 1 Digimon digivolves")
-        effect3.set_effect_description("[All Turns] When effects place digivolution cards under your Digimon, <Delay> (After this card is placed, by trashing it the next turn or later, activate the effect below).\r\n・1 of your Digimon may digivolve into a Digimon card with [Gammamon] in its text in the hand without paying the cost.")
+        effect3.set_effect_description("[All Turns] When effects place digivolution cards under your Digimon, <Delay> (After this card is placed, by trashing it the next turn or later, activate the effect below).\\r\\n・1 of your Digimon may digivolve into a Digimon card with [Gammamon] in its text in the hand without paying the cost.")
         effect3.is_optional = True
 
         effect = effect3  # alias for condition closure

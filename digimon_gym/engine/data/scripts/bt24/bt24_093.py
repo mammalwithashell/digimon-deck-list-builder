@@ -42,7 +42,7 @@ class BT24_093(CardScript):
             if enemy:
                 for _ in range(1):
                     if enemy.security_cards:
-                        trashed = enemy.security_cards.pop()
+                        trashed = enemy.security_cards.pop(0)
                         enemy.trash_cards.append(trashed)
 
         effect0.set_on_process_callback(process0)
@@ -69,7 +69,7 @@ class BT24_093(CardScript):
         # [All Turns] When your security stack is removed, <Delay>.\r\n• You may place the top stacked card of any your Digimon with [Aegiochusmon] or [Jupitermon] in their names as the top security card.
         effect2 = ICardEffect()
         effect2.set_effect_name("BT24-093 Place top card [Aegiochusmon] or [Jupitermon] on top sec.")
-        effect2.set_effect_description("[All Turns] When your security stack is removed, <Delay>.\r\n• You may place the top stacked card of any your Digimon with [Aegiochusmon] or [Jupitermon] in their names as the top security card.")
+        effect2.set_effect_description("[All Turns] When your security stack is removed, <Delay>.\\r\\n• You may place the top stacked card of any your Digimon with [Aegiochusmon] or [Jupitermon] in their names as the top security card.")
         effect2.is_optional = True
 
         effect = effect2  # alias for condition closure

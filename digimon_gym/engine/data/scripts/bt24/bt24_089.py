@@ -69,7 +69,7 @@ class BT24_089(CardScript):
         # [Your Turn] When any of your [Owen Dreadnought] suspend, <Delay> (By trashing this card after the placing turn, activate the effect below.)\r\n・1 of your [Dragonkin] or [Reptile] trait Digimon may digivolve into a [Dragonkin] or [Reptile] and [LIBERATOR] trait Digimon card in the hand with the digivolution cost reduced by 3.
         effect2 = ICardEffect()
         effect2.set_effect_name("BT24-089 1 of your [Dragonkin] or [Reptile] trait Digimon may digivolve")
-        effect2.set_effect_description("[Your Turn] When any of your [Owen Dreadnought] suspend, <Delay> (By trashing this card after the placing turn, activate the effect below.)\r\n・1 of your [Dragonkin] or [Reptile] trait Digimon may digivolve into a [Dragonkin] or [Reptile] and [LIBERATOR] trait Digimon card in the hand with the digivolution cost reduced by 3.")
+        effect2.set_effect_description("[Your Turn] When any of your [Owen Dreadnought] suspend, <Delay> (By trashing this card after the placing turn, activate the effect below.)\\r\\n・1 of your [Dragonkin] or [Reptile] trait Digimon may digivolve into a [Dragonkin] or [Reptile] and [LIBERATOR] trait Digimon card in the hand with the digivolution cost reduced by 3.")
         effect2.is_optional = True
 
         effect = effect2  # alias for condition closure
@@ -101,5 +101,17 @@ class BT24_089(CardScript):
 
         effect2.set_on_process_callback(process2)
         effects.append(effect2)
+
+        # Factory effect: security_play
+        # Security: Play this card
+        effect3 = ICardEffect()
+        effect3.set_effect_name("BT24-089 Security: Play this card")
+        effect3.set_effect_description("Security: Play this card")
+        effect3.is_security_effect = True
+
+        def condition3(context: Dict[str, Any]) -> bool:
+            return True
+        effect3.set_can_use_condition(condition3)
+        effects.append(effect3)
 
         return effects

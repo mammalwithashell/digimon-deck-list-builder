@@ -75,4 +75,32 @@ class BT13_076(CardScript):
         effect2.set_can_use_condition(condition2)
         effects.append(effect2)
 
+        # Factory effect: cannot_return_to_hand
+        # Cannot Return to Hand
+        effect3 = ICardEffect()
+        effect3.set_effect_name("BT13-076 Cannot Return to Hand")
+        effect3.set_effect_description("Cannot Return to Hand")
+        effect3._grant_bounce_immunity = True
+
+        def condition3(context: Dict[str, Any]) -> bool:
+            if card and card.permanent_of_this_card() is None:
+                return False
+            return True
+        effect3.set_can_use_condition(condition3)
+        effects.append(effect3)
+
+        # Factory effect: cannot_return_to_deck
+        # Cannot Return to Deck
+        effect4 = ICardEffect()
+        effect4.set_effect_name("BT13-076 Cannot Return to Deck")
+        effect4.set_effect_description("Cannot Return to Deck")
+        effect4._grant_return_to_deck_immunity = True
+
+        def condition4(context: Dict[str, Any]) -> bool:
+            if card and card.permanent_of_this_card() is None:
+                return False
+            return True
+        effect4.set_can_use_condition(condition4)
+        effects.append(effect4)
+
         return effects

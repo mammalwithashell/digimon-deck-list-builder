@@ -73,10 +73,10 @@ class EX11_070(CardScript):
         effects.append(effect2)
 
         # Timing: EffectTiming.None
-        # Effect
+        # Effect Immunity
         effect3 = ICardEffect()
         effect3.set_effect_name("EX11-070 Can't have less than 1000 DP")
-        effect3.set_effect_description("Effect")
+        effect3.set_effect_description("Effect Immunity")
         effect3.is_inherited_effect = True
 
         effect = effect3  # alias for condition closure
@@ -93,6 +93,20 @@ class EX11_070(CardScript):
             return True
 
         effect3.set_can_use_condition(condition3)
+
+        def process3(ctx: Dict[str, Any]):
+            """Action: Effect Immunity"""
+            player = ctx.get('player')
+            perm = ctx.get('permanent')
+            game = ctx.get('game')
+            # Grant effect immunity via modifier system
+            if perm and game:
+                from digimon_gym.engine.interfaces.modifiers import ModifierType
+                game.register_modifier(
+                    ModifierType.CANNOT_BE_SELECTED_BY_EFFECT, perm,
+                    value_fn=lambda: True, expiry='end_of_turn')
+
+        effect3.set_on_process_callback(process3)
         effects.append(effect3)
 
         return effects

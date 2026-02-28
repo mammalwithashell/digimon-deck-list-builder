@@ -20,39 +20,38 @@ class BT14_072(CardScript):
         effect0.set_effect_description("[On Play] Return 1 purple Digimon card with the [Dark Animal] trait from your trash to the hand. Then, trash 1 card in your hand.")
         effect0.is_on_play = True
 
+        effect = effect0  # alias for condition closure
         def condition0(context: Dict[str, Any]) -> bool:
             if card and card.permanent_of_this_card() is None:
                 return False
+            # Triggered on play — validated by engine timing
             return True
 
         effect0.set_can_use_condition(condition0)
 
         def process0(ctx: Dict[str, Any]):
+            """Action: Trash From Hand, Add To Hand"""
             player = ctx.get('player')
+            perm = ctx.get('permanent')
             game = ctx.get('game')
             if not (player and game):
                 return
-
-            def trash_filter(c):
+            def hand_filter(c):
                 if not getattr(c, 'is_digimon', False):
                     return False
-                if 'Dark Animal' not in getattr(c, 'type_eng', []):
+                if not ('Purple' in [col.name for col in getattr(c, 'card_colors', [])]):
                     return False
-                return 'Purple' in [col.name for col in getattr(c, 'card_colors', [])]
-
-            def on_add_to_hand(selected):
-                if selected in player.trash_cards:
-                    player.trash_cards.remove(selected)
-                    player.hand_cards.append(selected)
-
-            game.effect_select_trash_card(player, trash_filter, on_add_to_hand, is_optional=False)
-
+                return True
             def on_trashed(selected):
                 if selected in player.hand_cards:
                     player.hand_cards.remove(selected)
                     player.trash_cards.append(selected)
-
-            game.effect_select_hand_card(player, lambda c: True, on_trashed, is_optional=False)
+            game.effect_select_hand_card(
+                player, hand_filter, on_trashed, is_optional=False)
+            # Add card to hand (from trash/reveal)
+            if player and player.trash_cards:
+                card_to_add = player.trash_cards.pop()
+                player.hand_cards.append(card_to_add)
 
         effect0.set_on_process_callback(process0)
         effects.append(effect0)
@@ -64,39 +63,38 @@ class BT14_072(CardScript):
         effect1.set_effect_description("[When Attacking] Return 1 purple Digimon card with the [Dark Animal] trait from your trash to the hand. Then, trash 1 card in your hand.")
         effect1.is_on_attack = True
 
+        effect = effect1  # alias for condition closure
         def condition1(context: Dict[str, Any]) -> bool:
             if card and card.permanent_of_this_card() is None:
                 return False
+            # Triggered on attack — validated by engine timing
             return True
 
         effect1.set_can_use_condition(condition1)
 
         def process1(ctx: Dict[str, Any]):
+            """Action: Trash From Hand, Add To Hand"""
             player = ctx.get('player')
+            perm = ctx.get('permanent')
             game = ctx.get('game')
             if not (player and game):
                 return
-
-            def trash_filter(c):
+            def hand_filter(c):
                 if not getattr(c, 'is_digimon', False):
                     return False
-                if 'Dark Animal' not in getattr(c, 'type_eng', []):
+                if not ('Purple' in [col.name for col in getattr(c, 'card_colors', [])]):
                     return False
-                return 'Purple' in [col.name for col in getattr(c, 'card_colors', [])]
-
-            def on_add_to_hand(selected):
-                if selected in player.trash_cards:
-                    player.trash_cards.remove(selected)
-                    player.hand_cards.append(selected)
-
-            game.effect_select_trash_card(player, trash_filter, on_add_to_hand, is_optional=False)
-
+                return True
             def on_trashed(selected):
                 if selected in player.hand_cards:
                     player.hand_cards.remove(selected)
                     player.trash_cards.append(selected)
-
-            game.effect_select_hand_card(player, lambda c: True, on_trashed, is_optional=False)
+            game.effect_select_hand_card(
+                player, hand_filter, on_trashed, is_optional=False)
+            # Add card to hand (from trash/reveal)
+            if player and player.trash_cards:
+                card_to_add = player.trash_cards.pop()
+                player.hand_cards.append(card_to_add)
 
         effect1.set_on_process_callback(process1)
         effects.append(effect1)

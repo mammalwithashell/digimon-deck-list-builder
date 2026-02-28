@@ -18,8 +18,9 @@ class EX11_017(CardScript):
         effect0 = ICardEffect()
         effect0.set_effect_name("EX11-017 Alternate digivolution requirement")
         effect0.set_effect_description("Alternate digivolution requirement")
-        # Alternate digivolution: with [Ice-Snow] trait for cost 3
+        # Alternate digivolution: Lv.5 with [Ice-Snow] trait for cost 3
         effect0._alt_digi_cost = 3
+        effect0._alt_digi_level = 5
         effect0._alt_digi_trait = "Ice-Snow"
 
         def condition0(context: Dict[str, Any]) -> bool:
@@ -136,10 +137,10 @@ class EX11_017(CardScript):
         effects.append(effect4)
 
         # Timing: EffectTiming.OnEnterFieldAnyone
-        # Trash Digivolution Cards
+        # Trash Digivolution Cards, Effect Immunity
         effect5 = ICardEffect()
         effect5.set_effect_name("EX11-017 Trash any 3 sources from opponent's Digimon. 1 of their Digimon with no sources can't suspend until their turn ends.")
-        effect5.set_effect_description("Trash Digivolution Cards")
+        effect5.set_effect_description("Trash Digivolution Cards, Effect Immunity")
         effect5.set_max_count_per_turn(1)
         effect5.set_hash_string("EX11_017_AT_Trash_3_Stun")
         effect5.is_on_play = True
@@ -153,7 +154,7 @@ class EX11_017(CardScript):
         effect5.set_can_use_condition(condition5)
 
         def process5(ctx: Dict[str, Any]):
-            """Action: Trash Digivolution Cards"""
+            """Action: Trash Digivolution Cards, Effect Immunity"""
             player = ctx.get('player')
             perm = ctx.get('permanent')
             game = ctx.get('game')
@@ -162,6 +163,12 @@ class EX11_017(CardScript):
                 trashed = perm.trash_digivolution_cards(1)
                 if player:
                     player.trash_cards.extend(trashed)
+            # Grant effect immunity via modifier system
+            if perm and game:
+                from digimon_gym.engine.interfaces.modifiers import ModifierType
+                game.register_modifier(
+                    ModifierType.CANNOT_BE_SELECTED_BY_EFFECT, perm,
+                    value_fn=lambda: True, expiry='end_of_turn')
 
         effect5.set_on_process_callback(process5)
         effects.append(effect5)

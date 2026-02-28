@@ -1,3 +1,5 @@
+Admin user login: mammalwithashell/@Circuit397
+
 AGENTS.md
 Refer to RULES_CONTEXT.md for rule implementation details.
 

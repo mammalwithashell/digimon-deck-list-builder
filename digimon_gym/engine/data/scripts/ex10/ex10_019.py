@@ -77,7 +77,7 @@ class EX10_019(CardScript):
         effect3.set_can_use_condition(condition3)
 
         def process3(ctx: Dict[str, Any]):
-            """Action: Suspend, Gain Keyword Cannot Unsuspend Player"""
+            """Action: Suspend, Gain Keyword Cannot Unsuspend Player, Grant Cannot Unsuspend"""
             player = ctx.get('player')
             perm = ctx.get('permanent')
             game = ctx.get('game')
@@ -91,6 +91,16 @@ class EX10_019(CardScript):
                 player, on_suspend, filter_fn=target_filter, is_optional=True)
             if perm:
                 perm.grant_keyword('_is_cannot_unsuspend_player')
+            # Prevent target from unsuspending
+            if not (player and game):
+                return
+            from digimon_gym.engine.interfaces.modifiers import ModifierType
+            def on_freeze(target_perm):
+                game.register_modifier(
+                    ModifierType.CANNOT_UNSUSPEND, target_perm,
+                    value_fn=lambda: True, expiry='end_of_opponent_turn')
+            game.effect_select_opponent_permanent(
+                player, on_freeze, filter_fn=lambda p: p.is_suspended, is_optional=True)
 
         effect3.set_on_process_callback(process3)
         effects.append(effect3)
@@ -119,7 +129,7 @@ class EX10_019(CardScript):
             if enemy:
                 for _ in range(1):
                     if enemy.security_cards:
-                        trashed = enemy.security_cards.pop()
+                        trashed = enemy.security_cards.pop(0)
                         enemy.trash_cards.append(trashed)
 
         effect4.set_on_process_callback(process4)

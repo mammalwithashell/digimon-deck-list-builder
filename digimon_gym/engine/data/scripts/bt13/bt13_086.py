@@ -29,7 +29,7 @@ class BT13_086(CardScript):
         effect0.set_can_use_condition(condition0)
 
         def process0(ctx: Dict[str, Any]):
-            """Action: Cost -6, Play Card"""
+            """Action: Cost -6, Play Card, Effect Immunity"""
             player = ctx.get('player')
             perm = ctx.get('permanent')
             game = ctx.get('game')
@@ -41,15 +41,21 @@ class BT13_086(CardScript):
                 player, 'hand', play_filter, free=True, is_optional=True)
             # Cost reduction by 6 — handled via cost_reduction property
             pass  # descriptive-tagged: cost_reduction
+            # Grant effect immunity via modifier system
+            if perm and game:
+                from digimon_gym.engine.interfaces.modifiers import ModifierType
+                game.register_modifier(
+                    ModifierType.CANNOT_BE_SELECTED_BY_EFFECT, perm,
+                    value_fn=lambda: True, expiry='end_of_turn')
 
         effect0.set_on_process_callback(process0)
         effects.append(effect0)
 
         # Timing: EffectTiming.None
-        # Cost -6
+        # Cost -6, Effect Immunity
         effect1 = ICardEffect()
         effect1.set_effect_name("BT13-086 Play Cost -6")
-        effect1.set_effect_description("Cost -6")
+        effect1.set_effect_description("Cost -6, Effect Immunity")
         effect1.cost_reduction = 6
 
         effect = effect1  # alias for condition closure
@@ -59,12 +65,18 @@ class BT13_086(CardScript):
         effect1.set_can_use_condition(condition1)
 
         def process1(ctx: Dict[str, Any]):
-            """Action: Cost -6"""
+            """Action: Cost -6, Effect Immunity"""
             player = ctx.get('player')
             perm = ctx.get('permanent')
             game = ctx.get('game')
             # Cost reduction by 6 — handled via cost_reduction property
             pass  # descriptive-tagged: cost_reduction
+            # Grant effect immunity via modifier system
+            if perm and game:
+                from digimon_gym.engine.interfaces.modifiers import ModifierType
+                game.register_modifier(
+                    ModifierType.CANNOT_BE_SELECTED_BY_EFFECT, perm,
+                    value_fn=lambda: True, expiry='end_of_turn')
 
         effect1.set_on_process_callback(process1)
         effects.append(effect1)

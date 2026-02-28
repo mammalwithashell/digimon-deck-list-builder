@@ -31,6 +31,7 @@ class BT14_087(CardScript):
         effect1.set_effect_name("BT14-087 Memory +1")
         effect1.set_effect_description("[Start of Your Main Phase] If your opponent has a Digimon, gain 1 memory.")
 
+        effect = effect1  # alias for condition closure
         def condition1(context: Dict[str, Any]) -> bool:
             if card and card.permanent_of_this_card() is None:
                 return False
@@ -43,6 +44,8 @@ class BT14_087(CardScript):
         def process1(ctx: Dict[str, Any]):
             """Action: Gain 1 memory"""
             player = ctx.get('player')
+            perm = ctx.get('permanent')
+            game = ctx.get('game')
             if player:
                 player.add_memory(1)
 
@@ -55,6 +58,7 @@ class BT14_087(CardScript):
         effect2.set_effect_name("BT14-087 Mind Link")
         effect2.set_effect_description("[Main] <Mind Link> with 1 of your Digimon with the [Dark Animal] or [SoC] trait. (Place this Tamer as that Digimon's bottom digivolution card if there are no Tamer cards in its digivolution cards.)")
 
+        effect = effect2  # alias for condition closure
         def condition2(context: Dict[str, Any]) -> bool:
             if card and card.permanent_of_this_card() is None:
                 return False
@@ -65,6 +69,7 @@ class BT14_087(CardScript):
         def process2(ctx: Dict[str, Any]):
             """Action: Mind Link"""
             player = ctx.get('player')
+            perm = ctx.get('permanent')
             game = ctx.get('game')
             if not (player and game):
                 return
@@ -72,14 +77,6 @@ class BT14_087(CardScript):
 
         effect2.set_on_process_callback(process2)
         effects.append(effect2)
-
-        def linked_has_required_trait() -> bool:
-            if not card:
-                return False
-            host = card.permanent_of_this_card()
-            if host is None:
-                return False
-            return host.has_trait('Dark Animal') or host.has_trait('SoC')
 
         # Factory effect: blocker
         # Blocker
@@ -90,8 +87,9 @@ class BT14_087(CardScript):
         effect3._is_blocker = True
 
         def condition3(context: Dict[str, Any]) -> bool:
-            return linked_has_required_trait()
-
+            if card and card.permanent_of_this_card() is None:
+                return False
+            return True
         effect3.set_can_use_condition(condition3)
         effects.append(effect3)
 
@@ -101,11 +99,13 @@ class BT14_087(CardScript):
         effect4.set_effect_name("BT14-087 Alliance")
         effect4.set_effect_description("Alliance")
         effect4.is_inherited_effect = True
+        effect4.is_on_attack = True
         effect4._is_alliance = True
 
         def condition4(context: Dict[str, Any]) -> bool:
-            return linked_has_required_trait()
-
+            if card and card.permanent_of_this_card() is None:
+                return False
+            return True
         effect4.set_can_use_condition(condition4)
         effects.append(effect4)
 
@@ -117,23 +117,25 @@ class BT14_087(CardScript):
         effect5.is_inherited_effect = True
         effect5.is_optional = True
 
+        effect = effect5  # alias for condition closure
         def condition5(context: Dict[str, Any]) -> bool:
-            return linked_has_required_trait()
+            if card and card.permanent_of_this_card() is None:
+                return False
+            return True
 
         effect5.set_can_use_condition(condition5)
 
         def process5(ctx: Dict[str, Any]):
-            """Action: Play [Eiji Nagasumi] from this Digimon's digivolution cards"""
+            """Action: Play Card"""
             player = ctx.get('player')
+            perm = ctx.get('permanent')
             game = ctx.get('game')
             if not (player and game):
                 return
-
             def play_filter(c):
-                return getattr(c, 'card_id', '') == 'BT14-087'
-
+                return True
             game.effect_play_from_zone(
-                player, 'digivolution_cards', play_filter, free=True, is_optional=True)
+                player, 'hand', play_filter, free=True, is_optional=True)
 
         effect5.set_on_process_callback(process5)
         effects.append(effect5)

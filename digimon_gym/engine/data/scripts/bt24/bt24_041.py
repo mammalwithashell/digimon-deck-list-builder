@@ -18,8 +18,9 @@ class BT24_041(CardScript):
         effect0 = ICardEffect()
         effect0.set_effect_name("BT24-041 Alternate digivolution requirement")
         effect0.set_effect_description("Alternate digivolution requirement")
-        # Alternate digivolution: with [Beastkin] trait for cost 3
+        # Alternate digivolution: Lv.5 with [Beastkin] trait for cost 3
         effect0._alt_digi_cost = 3
+        effect0._alt_digi_level = 5
         effect0._alt_digi_trait = "Beastkin"
 
         def condition0(context: Dict[str, Any]) -> bool:
@@ -245,5 +246,23 @@ class BT24_041(CardScript):
             return True
         effect7.set_can_use_condition(condition7)
         effects.append(effect7)
+
+        # Factory effect: reboot_non_self
+        # Reboot (grant to others)
+        effect8 = ICardEffect()
+        effect8.set_effect_name("BT24-041 Reboot (grant to others)")
+        effect8.set_effect_description("Reboot (grant to others)")
+        effect8._is_reboot = True
+        effect8._applies_to_all_own_digimon = True
+
+        def condition8(context: Dict[str, Any]) -> bool:
+            if card and card.permanent_of_this_card() is None:
+                return False
+            permanent = card.permanent_of_this_card() if card else None
+            if not (permanent and permanent.top_card and (any('Iliad' in tr for tr in (getattr(permanent.top_card, 'card_traits', []) or [])))):
+                return False
+            return True
+        effect8.set_can_use_condition(condition8)
+        effects.append(effect8)
 
         return effects

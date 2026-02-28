@@ -14,10 +14,10 @@ class BT24_047(CardScript):
         effects = []
 
         # Timing: EffectTiming.OnEnterFieldAnyone
-        # Suspend, Unsuspend, Force Attack
+        # Suspend, Unsuspend, Force Attack, Effect Immunity
         effect0 = ICardEffect()
-        effect0.set_effect_name("BT24-047 Suspend, Unsuspend, Force Attack")
-        effect0.set_effect_description("Suspend, Unsuspend, Force Attack")
+        effect0.set_effect_name("BT24-047 Suspend, Unsuspend, Force Attack, Effect Immunity")
+        effect0.set_effect_description("Suspend, Unsuspend, Force Attack, Effect Immunity")
         effect0.is_on_play = True
 
         effect = effect0  # alias for condition closure
@@ -30,7 +30,7 @@ class BT24_047(CardScript):
         effect0.set_can_use_condition(condition0)
 
         def process0(ctx: Dict[str, Any]):
-            """Action: Suspend, Unsuspend, Force Attack"""
+            """Action: Suspend, Unsuspend, Force Attack, Effect Immunity"""
             player = ctx.get('player')
             perm = ctx.get('permanent')
             game = ctx.get('game')
@@ -52,15 +52,21 @@ class BT24_047(CardScript):
                 player, on_unsuspend, filter_fn=target_filter, is_optional=False)
             # Force attack — target Digimon may attack (requires engine SelectAttack)
             pass  # descriptive-tagged: force_attack
+            # Grant effect immunity via modifier system
+            if perm and game:
+                from digimon_gym.engine.interfaces.modifiers import ModifierType
+                game.register_modifier(
+                    ModifierType.CANNOT_BE_SELECTED_BY_EFFECT, perm,
+                    value_fn=lambda: True, expiry='end_of_turn')
 
         effect0.set_on_process_callback(process0)
         effects.append(effect0)
 
         # Timing: EffectTiming.OnEnterFieldAnyone
-        # Suspend, Unsuspend, Force Attack
+        # Suspend, Unsuspend, Force Attack, Effect Immunity
         effect1 = ICardEffect()
-        effect1.set_effect_name("BT24-047 Suspend, Unsuspend, Force Attack")
-        effect1.set_effect_description("Suspend, Unsuspend, Force Attack")
+        effect1.set_effect_name("BT24-047 Suspend, Unsuspend, Force Attack, Effect Immunity")
+        effect1.set_effect_description("Suspend, Unsuspend, Force Attack, Effect Immunity")
         effect1.is_when_digivolving = True
 
         effect = effect1  # alias for condition closure
@@ -73,7 +79,7 @@ class BT24_047(CardScript):
         effect1.set_can_use_condition(condition1)
 
         def process1(ctx: Dict[str, Any]):
-            """Action: Suspend, Unsuspend, Force Attack"""
+            """Action: Suspend, Unsuspend, Force Attack, Effect Immunity"""
             player = ctx.get('player')
             perm = ctx.get('permanent')
             game = ctx.get('game')
@@ -95,6 +101,12 @@ class BT24_047(CardScript):
                 player, on_unsuspend, filter_fn=target_filter, is_optional=False)
             # Force attack — target Digimon may attack (requires engine SelectAttack)
             pass  # descriptive-tagged: force_attack
+            # Grant effect immunity via modifier system
+            if perm and game:
+                from digimon_gym.engine.interfaces.modifiers import ModifierType
+                game.register_modifier(
+                    ModifierType.CANNOT_BE_SELECTED_BY_EFFECT, perm,
+                    value_fn=lambda: True, expiry='end_of_turn')
 
         effect1.set_on_process_callback(process1)
         effects.append(effect1)

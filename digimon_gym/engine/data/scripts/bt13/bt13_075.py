@@ -32,21 +32,34 @@ class BT13_075(CardScript):
         effect0.set_can_use_condition(condition0)
 
         def process0(ctx: Dict[str, Any]):
-            """Action: Restrict Attack, Gain Keyword Cannot Attack Player"""
+            """Action: Restrict Attack, Gain Keyword Cannot Attack Player, Grant Cannot Attack"""
             player = ctx.get('player')
             perm = ctx.get('permanent')
             game = ctx.get('game')
-            # Attack restriction — select opponent permanent to restrict
+            # Attack restriction via modifier system
             if not (player and game):
                 return
+            from digimon_gym.engine.interfaces.modifiers import ModifierType
             def target_filter(p):
                 return p.is_digimon
             def on_restrict(target_perm):
-                target_perm.suspend()  # Approximate as suspend
+                game.register_modifier(
+                    ModifierType.CANNOT_ATTACK, target_perm,
+                    value_fn=lambda: True, expiry='end_of_opponent_turn')
             game.effect_select_opponent_permanent(
                 player, on_restrict, filter_fn=target_filter, is_optional=True)
             if perm:
                 perm.grant_keyword('_is_cannot_attack_player')
+            # Prevent target from attacking
+            if not (player and game):
+                return
+            from digimon_gym.engine.interfaces.modifiers import ModifierType
+            def on_restrict(target_perm):
+                game.register_modifier(
+                    ModifierType.CANNOT_ATTACK, target_perm,
+                    value_fn=lambda: True, expiry='end_of_opponent_turn')
+            game.effect_select_opponent_permanent(
+                player, on_restrict, filter_fn=lambda p: p.is_digimon, is_optional=True)
 
         effect0.set_on_process_callback(process0)
         effects.append(effect0)
@@ -70,21 +83,34 @@ class BT13_075(CardScript):
         effect1.set_can_use_condition(condition1)
 
         def process1(ctx: Dict[str, Any]):
-            """Action: Restrict Attack, Gain Keyword Cannot Attack Player"""
+            """Action: Restrict Attack, Gain Keyword Cannot Attack Player, Grant Cannot Attack"""
             player = ctx.get('player')
             perm = ctx.get('permanent')
             game = ctx.get('game')
-            # Attack restriction — select opponent permanent to restrict
+            # Attack restriction via modifier system
             if not (player and game):
                 return
+            from digimon_gym.engine.interfaces.modifiers import ModifierType
             def target_filter(p):
                 return p.is_digimon
             def on_restrict(target_perm):
-                target_perm.suspend()  # Approximate as suspend
+                game.register_modifier(
+                    ModifierType.CANNOT_ATTACK, target_perm,
+                    value_fn=lambda: True, expiry='end_of_opponent_turn')
             game.effect_select_opponent_permanent(
                 player, on_restrict, filter_fn=target_filter, is_optional=True)
             if perm:
                 perm.grant_keyword('_is_cannot_attack_player')
+            # Prevent target from attacking
+            if not (player and game):
+                return
+            from digimon_gym.engine.interfaces.modifiers import ModifierType
+            def on_restrict(target_perm):
+                game.register_modifier(
+                    ModifierType.CANNOT_ATTACK, target_perm,
+                    value_fn=lambda: True, expiry='end_of_opponent_turn')
+            game.effect_select_opponent_permanent(
+                player, on_restrict, filter_fn=lambda p: p.is_digimon, is_optional=True)
 
         effect1.set_on_process_callback(process1)
         effects.append(effect1)

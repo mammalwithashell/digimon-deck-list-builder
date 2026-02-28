@@ -153,4 +153,22 @@ class BT13_074(CardScript):
         effect3.set_can_use_condition(condition3)
         effects.append(effect3)
 
+        # Factory effect: reboot_non_self
+        # Reboot (grant to others)
+        effect4 = ICardEffect()
+        effect4.set_effect_name("BT13-074 Reboot (grant to others)")
+        effect4.set_effect_description("Reboot (grant to others)")
+        effect4._is_reboot = True
+        effect4._applies_to_all_own_digimon = True
+
+        def condition4(context: Dict[str, Any]) -> bool:
+            if card and card.permanent_of_this_card() is None:
+                return False
+            permanent = card.permanent_of_this_card() if card else None
+            if not (permanent and permanent.top_card and (any('Royal Knight' in tr for tr in (getattr(permanent.top_card, 'card_traits', []) or [])))):
+                return False
+            return True
+        effect4.set_can_use_condition(condition4)
+        effects.append(effect4)
+
         return effects

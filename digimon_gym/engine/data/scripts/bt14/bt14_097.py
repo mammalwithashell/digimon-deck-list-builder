@@ -27,7 +27,10 @@ class BT14_097(CardScript):
 
         def process0(ctx: Dict[str, Any]):
             """Action: Also Treated As"""
-            # Name aliasing not modeled in engine.
+            player = ctx.get('player')
+            perm = ctx.get('permanent')
+            game = ctx.get('game')
+            # Also treated as [Name] — name aliasing not modeled in engine
             pass  # descriptive-tagged: also_treated_as_name
 
         effect0.set_on_process_callback(process0)
@@ -49,33 +52,18 @@ class BT14_097(CardScript):
         def process1(ctx: Dict[str, Any]):
             """Action: Digivolve"""
             player = ctx.get('player')
+            perm = ctx.get('permanent')
             game = ctx.get('game')
-            if not (player and game):
+            if not (player and perm and game):
                 return
-
-            sources = [p for p in getattr(player, 'battle_area', []) if getattr(p, 'is_digimon', False)]
-            non_white = [p for p in sources if 5 not in getattr(p, 'colors', [])]
-            if not non_white:
-                return
-
-            target = game.prompt_select(
-                player,
-                non_white,
-                1,
-                1,
-                'Select 1 of your non-white Digimon to digivolve',
-                can_cancel=True,
-            )
-            if not target:
-                return
-            base = target[0]
-
             def digi_filter(c):
                 if not getattr(c, 'is_digimon', False):
                     return False
-                return any('Sukamon' in n for n in getattr(c, 'card_names', []))
-
-            game.effect_digivolve_from_hand(player, base, digi_filter, is_optional=True)
+                if not (any('Sukamon' in _n for _n in getattr(c, 'card_names', []))):
+                    return False
+                return True
+            game.effect_digivolve_from_hand(
+                player, perm, digi_filter, is_optional=True)
 
         effect1.set_on_process_callback(process1)
         effects.append(effect1)
@@ -86,6 +74,7 @@ class BT14_097(CardScript):
         effect2.set_effect_name("BT14-097 Original card name is [Sukamon]")
         effect2.set_effect_description("[Security] Until the end of your turn, change 1 of your opponent's Digimon into being white and having 3000 DP and an original name of [Sukamon].")
         effect2.is_security_effect = True
+        effect2.is_security_effect = True
 
         effect = effect2  # alias for condition closure
         def condition2(context: Dict[str, Any]) -> bool:
@@ -95,9 +84,18 @@ class BT14_097(CardScript):
         effect2.set_can_use_condition(condition2)
 
         def process2(ctx: Dict[str, Any]):
-            """Action: Add Temp Effect"""
-            # Temporary conversion effect not modeled here.
+            """Action: Add Temp Effect, Effect Immunity"""
+            player = ctx.get('player')
+            perm = ctx.get('permanent')
+            game = ctx.get('game')
+            # Grant temporary effect to target permanent
             pass  # descriptive-tagged: add_temp_effect
+            # Grant effect immunity via modifier system
+            if perm and game:
+                from digimon_gym.engine.interfaces.modifiers import ModifierType
+                game.register_modifier(
+                    ModifierType.CANNOT_BE_SELECTED_BY_EFFECT, perm,
+                    value_fn=lambda: True, expiry='end_of_turn')
 
         effect2.set_on_process_callback(process2)
         effects.append(effect2)

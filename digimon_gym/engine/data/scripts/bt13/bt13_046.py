@@ -109,7 +109,7 @@ class BT13_046(CardScript):
             if enemy:
                 for _ in range(1):
                     if enemy.security_cards:
-                        trashed = enemy.security_cards.pop()
+                        trashed = enemy.security_cards.pop(0)
                         enemy.trash_cards.append(trashed)
             if not (player and game):
                 return

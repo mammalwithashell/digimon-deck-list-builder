@@ -24,31 +24,27 @@ class BT14_031(CardScript):
         effect0.is_on_attack = True
         effect0.dp_modifier = -2000
 
+        effect = effect0  # alias for condition closure
         def condition0(context: Dict[str, Any]) -> bool:
             if card and card.permanent_of_this_card() is None:
                 return False
+            # Triggered on attack — validated by engine timing
             return True
 
         effect0.set_can_use_condition(condition0)
 
         def process0(ctx: Dict[str, Any]):
-            """Action: DP -2000 to 1 chosen opponent Digimon"""
+            """Action: DP -2000"""
             player = ctx.get('player')
-            if not player or not player.enemy or not player.enemy.battle_area:
-                return
-
-            dp_targets = [p for p in player.enemy.battle_area if p.is_digimon and p.dp is not None]
-            if not dp_targets:
-                return
-
+            perm = ctx.get('permanent')
             game = ctx.get('game')
-            target = None
-            if game and hasattr(game, 'choose_target'):
-                target = game.choose_target(player, dp_targets, effect0)
-            if target is None:
-                target = dp_targets[0]
-
-            target.change_dp(-2000)
+            # DP change targets opponent digimon
+            enemy = player.enemy if player else None
+            if enemy and enemy.battle_area:
+                dp_targets = [p for p in enemy.battle_area if p.is_digimon and p.dp is not None]
+                if dp_targets:
+                    target = min(dp_targets, key=lambda p: p.dp)
+                    target.change_dp(-2000)
 
         effect0.set_on_process_callback(process0)
         effects.append(effect0)

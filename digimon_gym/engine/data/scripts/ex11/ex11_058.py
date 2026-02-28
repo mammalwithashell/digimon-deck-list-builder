@@ -42,10 +42,10 @@ class EX11_058(CardScript):
         effects.append(effect0)
 
         # Timing: EffectTiming.OnEnterFieldAnyone
-        # Draw 1, Suspend
+        # Draw 1, Suspend, Effect Immunity
         effect1 = ICardEffect()
         effect1.set_effect_name("EX11-058 Draw 1. If played by Decode, 1 enemy can't suspend.")
-        effect1.set_effect_description("Draw 1, Suspend")
+        effect1.set_effect_description("Draw 1, Suspend, Effect Immunity")
         effect1.is_optional = True
         effect1.is_on_play = True
 
@@ -58,7 +58,7 @@ class EX11_058(CardScript):
         effect1.set_can_use_condition(condition1)
 
         def process1(ctx: Dict[str, Any]):
-            """Action: Draw 1, Suspend"""
+            """Action: Draw 1, Suspend, Effect Immunity"""
             player = ctx.get('player')
             perm = ctx.get('permanent')
             game = ctx.get('game')
@@ -72,6 +72,12 @@ class EX11_058(CardScript):
                 target_perm.suspend()
             game.effect_select_opponent_permanent(
                 player, on_suspend, filter_fn=target_filter, is_optional=True)
+            # Grant effect immunity via modifier system
+            if perm and game:
+                from digimon_gym.engine.interfaces.modifiers import ModifierType
+                game.register_modifier(
+                    ModifierType.CANNOT_BE_SELECTED_BY_EFFECT, perm,
+                    value_fn=lambda: True, expiry='end_of_turn')
 
         effect1.set_on_process_callback(process1)
         effects.append(effect1)

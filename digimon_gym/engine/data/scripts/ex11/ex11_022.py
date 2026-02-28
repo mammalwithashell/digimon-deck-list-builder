@@ -18,8 +18,9 @@ class EX11_022(CardScript):
         effect0 = ICardEffect()
         effect0.set_effect_name("EX11-022 Alternate digivolution requirement")
         effect0.set_effect_description("Alternate digivolution requirement")
-        # Alternate digivolution: with [Puppet] trait for cost 3
+        # Alternate digivolution: Lv.4 with [Puppet] trait for cost 3
         effect0._alt_digi_cost = 3
+        effect0._alt_digi_level = 4
         effect0._alt_digi_trait = "Puppet"
 
         def condition0(context: Dict[str, Any]) -> bool:
@@ -43,10 +44,10 @@ class EX11_022(CardScript):
         effects.append(effect1)
 
         # Timing: EffectTiming.OnEnterFieldAnyone
-        # Delete, Play Card
+        # Delete, Play Card, Effect Immunity
         effect2 = ICardEffect()
-        effect2.set_effect_name("EX11-022 Delete, Play Card")
-        effect2.set_effect_description("Delete, Play Card")
+        effect2.set_effect_name("EX11-022 Delete, Play Card, Effect Immunity")
+        effect2.set_effect_description("Delete, Play Card, Effect Immunity")
         effect2.is_on_play = True
 
         effect = effect2  # alias for condition closure
@@ -59,7 +60,7 @@ class EX11_022(CardScript):
         effect2.set_can_use_condition(condition2)
 
         def process2(ctx: Dict[str, Any]):
-            """Action: Delete, Play Card"""
+            """Action: Delete, Play Card, Effect Immunity"""
             player = ctx.get('player')
             perm = ctx.get('permanent')
             game = ctx.get('game')
@@ -83,15 +84,21 @@ class EX11_022(CardScript):
                 return True
             game.effect_play_from_zone(
                 player, 'hand_or_trash', play_filter, free=True, is_optional=True)
+            # Grant effect immunity via modifier system
+            if perm and game:
+                from digimon_gym.engine.interfaces.modifiers import ModifierType
+                game.register_modifier(
+                    ModifierType.CANNOT_BE_SELECTED_BY_EFFECT, perm,
+                    value_fn=lambda: True, expiry='end_of_turn')
 
         effect2.set_on_process_callback(process2)
         effects.append(effect2)
 
         # Timing: EffectTiming.OnEnterFieldAnyone
-        # Delete, Play Card
+        # Delete, Play Card, Effect Immunity
         effect3 = ICardEffect()
-        effect3.set_effect_name("EX11-022 Delete, Play Card")
-        effect3.set_effect_description("Delete, Play Card")
+        effect3.set_effect_name("EX11-022 Delete, Play Card, Effect Immunity")
+        effect3.set_effect_description("Delete, Play Card, Effect Immunity")
         effect3.is_when_digivolving = True
 
         effect = effect3  # alias for condition closure
@@ -104,7 +111,7 @@ class EX11_022(CardScript):
         effect3.set_can_use_condition(condition3)
 
         def process3(ctx: Dict[str, Any]):
-            """Action: Delete, Play Card"""
+            """Action: Delete, Play Card, Effect Immunity"""
             player = ctx.get('player')
             perm = ctx.get('permanent')
             game = ctx.get('game')
@@ -128,6 +135,12 @@ class EX11_022(CardScript):
                 return True
             game.effect_play_from_zone(
                 player, 'hand_or_trash', play_filter, free=True, is_optional=True)
+            # Grant effect immunity via modifier system
+            if perm and game:
+                from digimon_gym.engine.interfaces.modifiers import ModifierType
+                game.register_modifier(
+                    ModifierType.CANNOT_BE_SELECTED_BY_EFFECT, perm,
+                    value_fn=lambda: True, expiry='end_of_turn')
 
         effect3.set_on_process_callback(process3)
         effects.append(effect3)

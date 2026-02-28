@@ -78,7 +78,7 @@ class EX10_070(CardScript):
         # [All Turns] When effects trash any of your Digimon's link cards, <Delay>.\r\n � You may link 1 Digimon card with the [Appmon] trait from your trash to 1 of those Digimon without paying the cost.
         effect3 = ICardEffect()
         effect3.set_effect_name("EX10-070 Effect")
-        effect3.set_effect_description("[All Turns] When effects trash any of your Digimon's link cards, <Delay>.\r\n � You may link 1 Digimon card with the [Appmon] trait from your trash to 1 of those Digimon without paying the cost.")
+        effect3.set_effect_description("[All Turns] When effects trash any of your Digimon's link cards, <Delay>.\\r\\n � You may link 1 Digimon card with the [Appmon] trait from your trash to 1 of those Digimon without paying the cost.")
         effect3.is_optional = True
 
         effect = effect3  # alias for condition closure

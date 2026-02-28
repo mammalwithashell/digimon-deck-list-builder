@@ -18,8 +18,10 @@ class BT24_101(CardScript):
         effect0 = ICardEffect()
         effect0.set_effect_name("BT24-101 Alternate digivolution requirement")
         effect0.set_effect_description("Alternate digivolution requirement")
-        # Alternate digivolution: alternate source for cost 5
+        # Alternate digivolution: Lv.5 with [TS] trait for cost 5
         effect0._alt_digi_cost = 5
+        effect0._alt_digi_level = 5
+        effect0._alt_digi_trait = "TS"
 
         def condition0(context: Dict[str, Any]) -> bool:
             return True
@@ -31,157 +33,198 @@ class BT24_101(CardScript):
         effect1 = ICardEffect()
         effect1.set_effect_name("BT24-101 Alternate digivolution requirement")
         effect1.set_effect_description("Alternate digivolution requirement")
-        # Alternate digivolution: alternate source for cost 5
+        # Alternate digivolution: Lv.5 for cost 5
         effect1._alt_digi_cost = 5
+        effect1._alt_digi_level = 5
 
         def condition1(context: Dict[str, Any]) -> bool:
             return True
         effect1.set_can_use_condition(condition1)
         effects.append(effect1)
 
-        # Timing: EffectTiming.OnEnterFieldAnyone
-        # DP -13000, Recovery +2, Destroy Security
+        # ----------------------------------------------------------------
+        # [On Play] Trash your top security card and 1 of your opponent's
+        # Digimon gets -13000 DP until their turn ends.  Then, if you have
+        # 1 or fewer security cards, <Recovery +2 (Deck)>.
+        # ----------------------------------------------------------------
         effect2 = ICardEffect()
-        effect2.set_effect_name("BT24-101 DP -13000, Recovery +2, Destroy Security")
-        effect2.set_effect_description("DP -13000, Recovery +2, Destroy Security")
+        effect2.set_effect_name("BT24-101 Trash own security, -13000 DP, conditional Recovery +2")
+        effect2.set_effect_description("[On Play] Trash your top security card and 1 of your opponent's Digimon gets -13000 DP. Then, if you have 1 or fewer security cards, Recovery +2.")
         effect2.is_on_play = True
 
-        effect = effect2  # alias for condition closure
         def condition2(context: Dict[str, Any]) -> bool:
             if card and card.permanent_of_this_card() is None:
                 return False
-            # Triggered on play — validated by engine timing
             return True
 
         effect2.set_can_use_condition(condition2)
 
-        def process2(ctx: Dict[str, Any]):
-            """Action: DP -13000, Recovery +2, Destroy Security"""
+        def process2_fixed(ctx: Dict[str, Any]):
+            """[On Play] Trash own security, -13000 DP opponent, conditional Recovery +2."""
             player = ctx.get('player')
-            perm = ctx.get('permanent')
             game = ctx.get('game')
-            # DP change targets opponent digimon
+            if not player:
+                return
+            # Step 1: Trash YOUR top security card (cost of the effect)
+            if player.security_cards:
+                top_sec = player.security_cards[0]
+                player.trash_security_card(top_sec)
+            # Step 2: 1 of opponent's Digimon gets -13000 DP
             enemy = player.enemy if player else None
             if enemy and enemy.battle_area:
                 dp_targets = [p for p in enemy.battle_area if p.is_digimon and p.dp is not None]
                 if dp_targets:
                     target = min(dp_targets, key=lambda p: p.dp)
                     target.change_dp(-13000)
-            if player:
+            # Step 3: If you have 1 or fewer security cards, Recovery +2
+            if len(player.security_cards) <= 1:
                 player.recovery(2)
-            # Trash opponent's top security card(s)
-            enemy = player.enemy if player else None
-            if enemy:
-                for _ in range(1):
-                    if enemy.security_cards:
-                        trashed = enemy.security_cards.pop()
-                        enemy.trash_cards.append(trashed)
 
-        effect2.set_on_process_callback(process2)
+        effect2.set_on_process_callback(process2_fixed)
         effects.append(effect2)
 
-        # Timing: EffectTiming.OnEnterFieldAnyone
-        # DP -13000, Recovery +2, Destroy Security
+        # ----------------------------------------------------------------
+        # [When Digivolving] Same effect as On Play
+        # ----------------------------------------------------------------
         effect3 = ICardEffect()
-        effect3.set_effect_name("BT24-101 DP -13000, Recovery +2, Destroy Security")
-        effect3.set_effect_description("DP -13000, Recovery +2, Destroy Security")
+        effect3.set_effect_name("BT24-101 Trash own security, -13000 DP, conditional Recovery +2")
+        effect3.set_effect_description("[When Digivolving] Trash your top security card and 1 of your opponent's Digimon gets -13000 DP. Then, if you have 1 or fewer security cards, Recovery +2.")
         effect3.is_when_digivolving = True
 
-        effect = effect3  # alias for condition closure
         def condition3(context: Dict[str, Any]) -> bool:
             if card and card.permanent_of_this_card() is None:
                 return False
-            # Triggered when digivolving — validated by engine timing
             return True
 
         effect3.set_can_use_condition(condition3)
 
         def process3(ctx: Dict[str, Any]):
-            """Action: DP -13000, Recovery +2, Destroy Security"""
+            """[When Digivolving] Trash own security, -13000 DP opponent, conditional Recovery +2."""
             player = ctx.get('player')
-            perm = ctx.get('permanent')
             game = ctx.get('game')
-            # DP change targets opponent digimon
+            if not player:
+                return
+            # Step 1: Trash YOUR top security card (cost of the effect)
+            if player.security_cards:
+                top_sec = player.security_cards[0]
+                player.trash_security_card(top_sec)
+            # Step 2: 1 of opponent's Digimon gets -13000 DP
             enemy = player.enemy if player else None
             if enemy and enemy.battle_area:
                 dp_targets = [p for p in enemy.battle_area if p.is_digimon and p.dp is not None]
                 if dp_targets:
                     target = min(dp_targets, key=lambda p: p.dp)
                     target.change_dp(-13000)
-            if player:
+            # Step 3: If you have 1 or fewer security cards, Recovery +2
+            if len(player.security_cards) <= 1:
                 player.recovery(2)
-            # Trash opponent's top security card(s)
-            enemy = player.enemy if player else None
-            if enemy:
-                for _ in range(1):
-                    if enemy.security_cards:
-                        trashed = enemy.security_cards.pop()
-                        enemy.trash_cards.append(trashed)
 
         effect3.set_on_process_callback(process3)
         effects.append(effect3)
 
-        # Timing: EffectTiming.OnLoseSecurity
-        # [All Turns] [Once Per Turn] When your security stack is removed from, trash your opponent's top security card.
+        # ----------------------------------------------------------------
+        # [All Turns] [Once Per Turn] When your security stack is removed
+        # from, trash your opponent's top security card.
+        # ----------------------------------------------------------------
         effect4 = ICardEffect()
         effect4.set_effect_name("BT24-101 Trash Opponent's top security")
         effect4.set_effect_description("[All Turns] [Once Per Turn] When your security stack is removed from, trash your opponent's top security card.")
         effect4.set_max_count_per_turn(1)
         effect4.set_hash_string("BT24_101_AT_Trash_sec")
 
-        effect = effect4  # alias for condition closure
         def condition4(context: Dict[str, Any]) -> bool:
             if card and card.permanent_of_this_card() is None:
+                return False
+            # Only fire on OnLoseSecurity timing (context contains 'lost_card')
+            if 'lost_card' not in context:
+                return False
+            # Must be the card OWNER's security that was lost
+            owner = card.owner if card else None
+            if owner is None or owner is not context.get('player'):
+                return False
+            # Re-check OPT (engine doesn't re-check at resolution time)
+            if not effect4.can_activate_this_turn():
                 return False
             return True
 
         effect4.set_can_use_condition(condition4)
 
         def process4(ctx: Dict[str, Any]):
-            """Action: Destroy Security"""
+            """Trash opponent's top security card."""
             player = ctx.get('player')
-            perm = ctx.get('permanent')
-            game = ctx.get('game')
-            # Trash opponent's top security card(s)
+            if not player:
+                return
             enemy = player.enemy if player else None
-            if enemy:
-                for _ in range(1):
-                    if enemy.security_cards:
-                        trashed = enemy.security_cards.pop()
-                        enemy.trash_cards.append(trashed)
+            if enemy and enemy.security_cards:
+                top_sec = enemy.security_cards[0]
+                enemy.trash_security_card(top_sec)
 
         effect4.set_on_process_callback(process4)
         effects.append(effect4)
 
-        # Timing: EffectTiming.WhenRemoveField
-        # [All Turns] [Once Per Turn] When any of your [TS] trait Digimon or Tamers would leave the battle area, by trashing your top security card, they don't leave.
+        # ----------------------------------------------------------------
+        # [All Turns] [Once Per Turn] When any of your [TS] trait Digimon
+        # or Tamers would leave the battle area, by trashing your top
+        # security card, they don't leave.
+        # ----------------------------------------------------------------
         effect5 = ICardEffect()
-        effect5.set_effect_name("BT24-101 By trashing top security, card doesn't leave")
+        effect5.set_effect_name("BT24-101 By trashing top security, [TS] card doesn't leave")
         effect5.set_effect_description("[All Turns] [Once Per Turn] When any of your [TS] trait Digimon or Tamers would leave the battle area, by trashing your top security card, they don't leave.")
         effect5.is_optional = True
         effect5.set_max_count_per_turn(1)
         effect5.set_hash_string("BT24_101_AT_Protect_TS")
 
-        effect = effect5  # alias for condition closure
         def condition5(context: Dict[str, Any]) -> bool:
             if card and card.permanent_of_this_card() is None:
+                return False
+            # Only fire during WhenPermanentWouldBeDeleted
+            # (this timing provides 'is_battle' in context; WhenRemoveField does not)
+            if 'is_battle' not in context:
+                return False
+            # The permanent being deleted must have [TS] trait
+            target_perm = context.get('permanent')
+            if target_perm is None:
+                return False
+            if not target_perm.has_trait('TS'):
+                return False
+            # The target must belong to the card's owner
+            owner = card.owner if card else None
+            if owner is None:
+                return False
+            if target_perm not in owner.battle_area:
+                return False
+            # Owner must have security to trash
+            if not owner.security_cards:
+                return False
+            # Re-check OPT
+            if not effect5.can_activate_this_turn():
                 return False
             return True
 
         effect5.set_can_use_condition(condition5)
 
         def process5(ctx: Dict[str, Any]):
-            """Action: Destroy Security"""
-            player = ctx.get('player')
-            perm = ctx.get('permanent')
+            """Trash own top security to prevent [TS] permanent from leaving."""
+            owner = card.owner if card else None
             game = ctx.get('game')
-            # Trash opponent's top security card(s)
-            enemy = player.enemy if player else None
-            if enemy:
-                for _ in range(1):
-                    if enemy.security_cards:
-                        trashed = enemy.security_cards.pop()
-                        enemy.trash_cards.append(trashed)
+            if not owner or not game:
+                return
+            if not owner.security_cards:
+                return
+            # Trash own top security card as cost
+            top_sec = owner.security_cards[0]
+            owner.trash_security_card(top_sec)
+            # Register destruction prevention modifier
+            target_perm = ctx.get('permanent')
+            if target_perm and hasattr(game, 'modifiers'):
+                from ....interfaces.modifiers import ModifierEntry, ModifierType
+                game.modifiers.register(ModifierEntry(
+                    modifier_type=ModifierType.CANNOT_BE_DESTROYED,
+                    condition=lambda perm, c: perm is target_perm,
+                    source_effect=effect5,
+                    source_permanent=card.permanent_of_this_card(),
+                    expiry='end_of_turn',
+                ))
 
         effect5.set_on_process_callback(process5)
         effects.append(effect5)

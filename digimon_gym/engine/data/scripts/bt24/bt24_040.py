@@ -18,8 +18,10 @@ class BT24_040(CardScript):
         effect0 = ICardEffect()
         effect0.set_effect_name("BT24-040 Alternate digivolution requirement")
         effect0.set_effect_description("Alternate digivolution requirement")
-        # Alternate digivolution: alternate source for cost 3
+        # Alternate digivolution: Lv.5 with [TS] trait for cost 3
         effect0._alt_digi_cost = 3
+        effect0._alt_digi_level = 5
+        effect0._alt_digi_trait = "TS"
 
         def condition0(context: Dict[str, Any]) -> bool:
             return True
@@ -73,10 +75,10 @@ class BT24_040(CardScript):
         effects.append(effect2)
 
         # Timing: EffectTiming.OnEnterFieldAnyone
-        # Trash Digivolution Cards, Gain Keyword Cannot Suspend Player, Disable Effect
+        # Trash Digivolution Cards, Gain Keyword Cannot Suspend Player, Disable Effect, Effect Immunity
         effect3 = ICardEffect()
-        effect3.set_effect_name("BT24-040 Trash Digivolution Cards, Gain Keyword Cannot Suspend Player, Disable Effect")
-        effect3.set_effect_description("Trash Digivolution Cards, Gain Keyword Cannot Suspend Player, Disable Effect")
+        effect3.set_effect_name("BT24-040 Trash Digivolution Cards, Gain Keyword Cannot Suspend Player, Disable Effect, Effect Immunity")
+        effect3.set_effect_description("Trash Digivolution Cards, Gain Keyword Cannot Suspend Player, Disable Effect, Effect Immunity")
         effect3.is_on_play = True
         effect3._is_cannot_suspend_player = True
 
@@ -90,7 +92,7 @@ class BT24_040(CardScript):
         effect3.set_can_use_condition(condition3)
 
         def process3(ctx: Dict[str, Any]):
-            """Action: Trash Digivolution Cards, Gain Keyword Cannot Suspend Player, Disable Effect"""
+            """Action: Trash Digivolution Cards, Gain Keyword Cannot Suspend Player, Disable Effect, Effect Immunity"""
             player = ctx.get('player')
             perm = ctx.get('permanent')
             game = ctx.get('game')
@@ -103,15 +105,21 @@ class BT24_040(CardScript):
                 perm.grant_keyword('_is_cannot_suspend_player')
             # Disable/invalidate effects on target — not yet in engine
             pass  # descriptive-tagged: disable_effect
+            # Grant effect immunity via modifier system
+            if perm and game:
+                from digimon_gym.engine.interfaces.modifiers import ModifierType
+                game.register_modifier(
+                    ModifierType.CANNOT_BE_SELECTED_BY_EFFECT, perm,
+                    value_fn=lambda: True, expiry='end_of_turn')
 
         effect3.set_on_process_callback(process3)
         effects.append(effect3)
 
         # Timing: EffectTiming.OnEnterFieldAnyone
-        # Trash Digivolution Cards, Gain Keyword Cannot Suspend Player, Disable Effect
+        # Trash Digivolution Cards, Gain Keyword Cannot Suspend Player, Disable Effect, Effect Immunity
         effect4 = ICardEffect()
-        effect4.set_effect_name("BT24-040 Trash Digivolution Cards, Gain Keyword Cannot Suspend Player, Disable Effect")
-        effect4.set_effect_description("Trash Digivolution Cards, Gain Keyword Cannot Suspend Player, Disable Effect")
+        effect4.set_effect_name("BT24-040 Trash Digivolution Cards, Gain Keyword Cannot Suspend Player, Disable Effect, Effect Immunity")
+        effect4.set_effect_description("Trash Digivolution Cards, Gain Keyword Cannot Suspend Player, Disable Effect, Effect Immunity")
         effect4.is_when_digivolving = True
         effect4._is_cannot_suspend_player = True
 
@@ -125,7 +133,7 @@ class BT24_040(CardScript):
         effect4.set_can_use_condition(condition4)
 
         def process4(ctx: Dict[str, Any]):
-            """Action: Trash Digivolution Cards, Gain Keyword Cannot Suspend Player, Disable Effect"""
+            """Action: Trash Digivolution Cards, Gain Keyword Cannot Suspend Player, Disable Effect, Effect Immunity"""
             player = ctx.get('player')
             perm = ctx.get('permanent')
             game = ctx.get('game')
@@ -138,6 +146,12 @@ class BT24_040(CardScript):
                 perm.grant_keyword('_is_cannot_suspend_player')
             # Disable/invalidate effects on target — not yet in engine
             pass  # descriptive-tagged: disable_effect
+            # Grant effect immunity via modifier system
+            if perm and game:
+                from digimon_gym.engine.interfaces.modifiers import ModifierType
+                game.register_modifier(
+                    ModifierType.CANNOT_BE_SELECTED_BY_EFFECT, perm,
+                    value_fn=lambda: True, expiry='end_of_turn')
 
         effect4.set_on_process_callback(process4)
         effects.append(effect4)
@@ -160,7 +174,7 @@ class BT24_040(CardScript):
         effect5.set_can_use_condition(condition5)
 
         def process5(ctx: Dict[str, Any]):
-            """Action: Put To Security"""
+            """Action: Put To Security, Effect Immunity"""
             player = ctx.get('player')
             perm = ctx.get('permanent')
             game = ctx.get('game')
@@ -174,6 +188,12 @@ class BT24_040(CardScript):
                     player.put_permanent_to_security(target_perm)
             game.effect_select_own_permanent(
                 player, on_put_security, filter_fn=target_filter, is_optional=True)
+            # Grant effect immunity via modifier system
+            if perm and game:
+                from digimon_gym.engine.interfaces.modifiers import ModifierType
+                game.register_modifier(
+                    ModifierType.CANNOT_BE_SELECTED_BY_EFFECT, perm,
+                    value_fn=lambda: True, expiry='end_of_turn')
 
         effect5.set_on_process_callback(process5)
         effects.append(effect5)

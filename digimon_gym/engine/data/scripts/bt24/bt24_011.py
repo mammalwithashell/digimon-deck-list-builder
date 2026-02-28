@@ -18,8 +18,10 @@ class BT24_011(CardScript):
         effect0 = ICardEffect()
         effect0.set_effect_name("BT24-011 Alternate digivolution requirement")
         effect0.set_effect_description("Alternate digivolution requirement")
-        # Alternate digivolution: alternate source for cost 2
+        # Alternate digivolution: Lv.3 with [TS] trait for cost 2
         effect0._alt_digi_cost = 2
+        effect0._alt_digi_level = 3
+        effect0._alt_digi_trait = "TS"
 
         def condition0(context: Dict[str, Any]) -> bool:
             return True
@@ -43,6 +45,7 @@ class BT24_011(CardScript):
         effect2 = ICardEffect()
         effect2.set_effect_name("BT24-011 Raid")
         effect2.set_effect_description("Raid")
+        effect2.is_on_attack = True
         effect2._is_raid = True
 
         def condition2(context: Dict[str, Any]) -> bool:
@@ -56,6 +59,7 @@ class BT24_011(CardScript):
         effect3.set_effect_name("BT24-011 Raid")
         effect3.set_effect_description("Raid")
         effect3.is_inherited_effect = True
+        effect3.is_on_attack = True
         effect3._is_raid = True
 
         def condition3(context: Dict[str, Any]) -> bool:

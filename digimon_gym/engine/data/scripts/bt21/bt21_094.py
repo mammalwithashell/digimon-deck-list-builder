@@ -92,4 +92,16 @@ class BT21_094(CardScript):
         effect2.set_on_process_callback(process2)
         effects.append(effect2)
 
+        # Factory effect: security_play
+        # Security: Play this card
+        effect3 = ICardEffect()
+        effect3.set_effect_name("BT21-094 Security: Play this card")
+        effect3.set_effect_description("Security: Play this card")
+        effect3.is_security_effect = True
+
+        def condition3(context: Dict[str, Any]) -> bool:
+            return True
+        effect3.set_can_use_condition(condition3)
+        effects.append(effect3)
+
         return effects

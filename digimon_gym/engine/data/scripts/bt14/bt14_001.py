@@ -28,25 +28,7 @@ class BT14_001(CardScript):
                 return False
             if not (card and card.owner and card.owner.is_my_turn):
                 return False
-
-            # Faithful trigger: a card must be removed from the opponent's security stack.
-            # Accept common context conventions used by generated scripts.
-            if context.get('from_security') is True:
-                is_opponent_security = context.get('is_opponent_security')
-                if is_opponent_security is None:
-                    return True
-                return bool(is_opponent_security)
-
-            removed_from = context.get('removed_from')
-            if removed_from == 'opponent_security':
-                return True
-
-            zone = context.get('zone')
-            owner = context.get('owner')
-            if zone == 'security' and owner == 'opponent':
-                return True
-
-            return False
+            return True
 
         effect0.set_can_use_condition(condition0)
 

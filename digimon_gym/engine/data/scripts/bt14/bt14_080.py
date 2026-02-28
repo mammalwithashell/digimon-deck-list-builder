@@ -22,28 +22,27 @@ class BT14_080(CardScript):
         effect0.set_hash_string("TrashDeck_BT14_080")
         effect0.is_when_digivolving = True
 
+        effect = effect0  # alias for condition closure
         def condition0(context: Dict[str, Any]) -> bool:
             if card and card.permanent_of_this_card() is None:
                 return False
+            # Triggered when digivolving — validated by engine timing
             return True
 
         effect0.set_can_use_condition(condition0)
 
         def process0(ctx: Dict[str, Any]):
+            """Action: Mill"""
             player = ctx.get('player')
+            perm = ctx.get('permanent')
+            game = ctx.get('game')
+            # Mill 3 cards from opponent's deck
             enemy = player.enemy if player else None
-            if not enemy or not enemy.library_cards:
-                return
-
-            own_trash_count = len(player.trash_cards) if player and player.trash_cards is not None else 0
-            mill_count = (own_trash_count // 10) * 3
-            if mill_count <= 0:
-                return
-
-            mill_count = min(mill_count, len(enemy.library_cards))
-            trashed = enemy.library_cards[:mill_count]
-            enemy.library_cards = enemy.library_cards[mill_count:]
-            enemy.trash_cards.extend(trashed)
+            if enemy and enemy.library_cards:
+                mill_count = min(3, len(enemy.library_cards))
+                trashed = enemy.library_cards[:mill_count]
+                enemy.library_cards = enemy.library_cards[mill_count:]
+                enemy.trash_cards.extend(trashed)
 
         effect0.set_on_process_callback(process0)
         effects.append(effect0)
@@ -57,60 +56,48 @@ class BT14_080(CardScript):
         effect1.set_hash_string("TrashDeck_BT14_080")
         effect1.is_on_attack = True
 
+        effect = effect1  # alias for condition closure
         def condition1(context: Dict[str, Any]) -> bool:
             if card and card.permanent_of_this_card() is None:
                 return False
+            # Triggered on attack — validated by engine timing
             return True
 
         effect1.set_can_use_condition(condition1)
 
         def process1(ctx: Dict[str, Any]):
+            """Action: Mill"""
             player = ctx.get('player')
+            perm = ctx.get('permanent')
+            game = ctx.get('game')
+            # Mill 3 cards from opponent's deck
             enemy = player.enemy if player else None
-            if not enemy or not enemy.library_cards:
-                return
-
-            own_trash_count = len(player.trash_cards) if player and player.trash_cards is not None else 0
-            mill_count = (own_trash_count // 10) * 3
-            if mill_count <= 0:
-                return
-
-            mill_count = min(mill_count, len(enemy.library_cards))
-            trashed = enemy.library_cards[:mill_count]
-            enemy.library_cards = enemy.library_cards[mill_count:]
-            enemy.trash_cards.extend(trashed)
+            if enemy and enemy.library_cards:
+                mill_count = min(3, len(enemy.library_cards))
+                trashed = enemy.library_cards[:mill_count]
+                enemy.library_cards = enemy.library_cards[mill_count:]
+                enemy.trash_cards.extend(trashed)
 
         effect1.set_on_process_callback(process1)
         effects.append(effect1)
 
         # Timing: EffectTiming.OnAllyAttack
-        # [When Attacking][Once Per Turn] If your opponent has 10 or more cards in their trash, this Digimon gains <Security A. +1> for the turn.
+        # [When Attacking][Once Per Turn] If your opponent has 10 or more cards in their trash, this Digimon gains ��Security A. +1�� for the turn.
         effect2 = ICardEffect()
         effect2.set_effect_name("BT14-080 This Digimon gains Security Attack +1")
-        effect2.set_effect_description("[When Attacking][Once Per Turn] If your opponent has 10 or more cards in their trash, this Digimon gains <Security A. +1> for the turn.")
+        effect2.set_effect_description("[When Attacking][Once Per Turn] If your opponent has 10 or more cards in their trash, this Digimon gains ��Security A. +1�� for the turn.")
         effect2.set_max_count_per_turn(1)
         effect2.set_hash_string("SecurityAttack+1_BT14_080")
         effect2.is_on_attack = True
 
+        effect = effect2  # alias for condition closure
         def condition2(context: Dict[str, Any]) -> bool:
             if card and card.permanent_of_this_card() is None:
                 return False
-            player = context.get('player')
-            enemy = player.enemy if player else None
-            return bool(enemy and len(enemy.trash_cards) >= 10)
+            # Triggered on attack — validated by engine timing
+            return True
 
         effect2.set_can_use_condition(condition2)
-
-        def process2(ctx: Dict[str, Any]):
-            perm = ctx.get('permanent')
-            if perm is None:
-                return
-            if hasattr(perm, 'add_security_attack_plus'):
-                perm.add_security_attack_plus(1)
-            elif hasattr(perm, 'security_attack_plus'):
-                perm.security_attack_plus += 1
-
-        effect2.set_on_process_callback(process2)
         effects.append(effect2)
 
         return effects

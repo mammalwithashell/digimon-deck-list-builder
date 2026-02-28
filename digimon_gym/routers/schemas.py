@@ -39,3 +39,30 @@ class DeckValidateRequest(BaseModel):
     deck: Optional[str] = None
     main_deck: list[str] = Field(default_factory=list)
     egg_deck: list[str] = Field(default_factory=list)
+
+
+class CreateDebugGameRequest(BaseModel):
+    deck1: list[str]
+    deck2: list[str]
+    player1_type: str = "human"
+    player2_type: str = "agent"
+    player1_policy: str = "greedy"
+    player2_policy: str = "greedy"
+    agent_action_delay_ms: int = Field(0, ge=0, le=3000)
+    # Deterministic controls
+    first_player: int = Field(1, ge=1, le=2)
+    skip_shuffle: bool = True
+    starting_hand1: list[str] = Field(default_factory=list)
+    starting_hand2: list[str] = Field(default_factory=list)
+    auto_mulligan: str = "keep"  # "keep" or "manual"
+    initial_memory: int = Field(0, ge=-10, le=10)
+
+
+class SetMemoryRequest(BaseModel):
+    memory: int = Field(ge=-10, le=10)
+
+
+class InjectCardRequest(BaseModel):
+    player_id: int = Field(ge=1, le=2)
+    card_id: str
+    zone: str = "hand"  # "hand", "library_top", "security_top"

@@ -18,8 +18,9 @@ class EX11_031(CardScript):
         effect0 = ICardEffect()
         effect0.set_effect_name("EX11-031 Alternate digivolution requirement")
         effect0.set_effect_description("Alternate digivolution requirement")
-        # Alternate digivolution: with [Royal Base] trait for cost 3
+        # Alternate digivolution: Lv.4 with [Royal Base] trait for cost 3
         effect0._alt_digi_cost = 3
+        effect0._alt_digi_level = 4
         effect0._alt_digi_trait = "Royal Base"
 
         def condition0(context: Dict[str, Any]) -> bool:
@@ -31,10 +32,10 @@ class EX11_031(CardScript):
         effects.append(effect0)
 
         # Timing: EffectTiming.OnEnterFieldAnyone
-        # Suspend, Gain Keyword Cannot Unsuspend
+        # Suspend, Gain Keyword Cannot Unsuspend, Grant Cannot Unsuspend
         effect1 = ICardEffect()
-        effect1.set_effect_name("EX11-031 Suspend, Gain Keyword Cannot Unsuspend")
-        effect1.set_effect_description("Suspend, Gain Keyword Cannot Unsuspend")
+        effect1.set_effect_name("EX11-031 Suspend, Gain Keyword Cannot Unsuspend, Grant Cannot Unsuspend")
+        effect1.set_effect_description("Suspend, Gain Keyword Cannot Unsuspend, Grant Cannot Unsuspend")
         effect1.is_on_play = True
         effect1._is_cannot_unsuspend = True
 
@@ -48,7 +49,7 @@ class EX11_031(CardScript):
         effect1.set_can_use_condition(condition1)
 
         def process1(ctx: Dict[str, Any]):
-            """Action: Suspend, Gain Keyword Cannot Unsuspend"""
+            """Action: Suspend, Gain Keyword Cannot Unsuspend, Grant Cannot Unsuspend"""
             player = ctx.get('player')
             perm = ctx.get('permanent')
             game = ctx.get('game')
@@ -62,15 +63,25 @@ class EX11_031(CardScript):
                 player, on_suspend, filter_fn=target_filter, is_optional=False)
             if perm:
                 perm.grant_keyword('_is_cannot_unsuspend')
+            # Prevent target from unsuspending
+            if not (player and game):
+                return
+            from digimon_gym.engine.interfaces.modifiers import ModifierType
+            def on_freeze(target_perm):
+                game.register_modifier(
+                    ModifierType.CANNOT_UNSUSPEND, target_perm,
+                    value_fn=lambda: True, expiry='end_of_opponent_turn')
+            game.effect_select_opponent_permanent(
+                player, on_freeze, filter_fn=lambda p: p.is_suspended, is_optional=False)
 
         effect1.set_on_process_callback(process1)
         effects.append(effect1)
 
         # Timing: EffectTiming.OnEnterFieldAnyone
-        # Suspend, Gain Keyword Cannot Unsuspend
+        # Suspend, Gain Keyword Cannot Unsuspend, Grant Cannot Unsuspend
         effect2 = ICardEffect()
-        effect2.set_effect_name("EX11-031 Suspend, Gain Keyword Cannot Unsuspend")
-        effect2.set_effect_description("Suspend, Gain Keyword Cannot Unsuspend")
+        effect2.set_effect_name("EX11-031 Suspend, Gain Keyword Cannot Unsuspend, Grant Cannot Unsuspend")
+        effect2.set_effect_description("Suspend, Gain Keyword Cannot Unsuspend, Grant Cannot Unsuspend")
         effect2.is_when_digivolving = True
         effect2._is_cannot_unsuspend = True
 
@@ -84,7 +95,7 @@ class EX11_031(CardScript):
         effect2.set_can_use_condition(condition2)
 
         def process2(ctx: Dict[str, Any]):
-            """Action: Suspend, Gain Keyword Cannot Unsuspend"""
+            """Action: Suspend, Gain Keyword Cannot Unsuspend, Grant Cannot Unsuspend"""
             player = ctx.get('player')
             perm = ctx.get('permanent')
             game = ctx.get('game')
@@ -98,6 +109,16 @@ class EX11_031(CardScript):
                 player, on_suspend, filter_fn=target_filter, is_optional=False)
             if perm:
                 perm.grant_keyword('_is_cannot_unsuspend')
+            # Prevent target from unsuspending
+            if not (player and game):
+                return
+            from digimon_gym.engine.interfaces.modifiers import ModifierType
+            def on_freeze(target_perm):
+                game.register_modifier(
+                    ModifierType.CANNOT_UNSUSPEND, target_perm,
+                    value_fn=lambda: True, expiry='end_of_opponent_turn')
+            game.effect_select_opponent_permanent(
+                player, on_freeze, filter_fn=lambda p: p.is_suspended, is_optional=False)
 
         effect2.set_on_process_callback(process2)
         effects.append(effect2)

@@ -18,8 +18,9 @@ class BT23_102(CardScript):
         effect0 = ICardEffect()
         effect0.set_effect_name("BT23-102 Alternate digivolution requirement")
         effect0.set_effect_description("Alternate digivolution requirement")
-        # Alternate digivolution: alternate source for cost 5
+        # Alternate digivolution: Lv.5 for cost 5
         effect0._alt_digi_cost = 5
+        effect0._alt_digi_level = 5
 
         def condition0(context: Dict[str, Any]) -> bool:
             return True
@@ -114,7 +115,7 @@ class BT23_102(CardScript):
         effect5.set_can_use_condition(condition5)
 
         def process5(ctx: Dict[str, Any]):
-            """Action: Put To Security"""
+            """Action: Put To Security, Effect Immunity"""
             player = ctx.get('player')
             perm = ctx.get('permanent')
             game = ctx.get('game')
@@ -128,6 +129,12 @@ class BT23_102(CardScript):
                     player.put_permanent_to_security(target_perm)
             game.effect_select_own_permanent(
                 player, on_put_security, filter_fn=target_filter, is_optional=True)
+            # Grant effect immunity via modifier system
+            if perm and game:
+                from digimon_gym.engine.interfaces.modifiers import ModifierType
+                game.register_modifier(
+                    ModifierType.CANNOT_BE_SELECTED_BY_EFFECT, perm,
+                    value_fn=lambda: True, expiry='end_of_turn')
 
         effect5.set_on_process_callback(process5)
         effects.append(effect5)

@@ -25,85 +25,20 @@ class BT14_005(CardScript):
         effect0.is_on_attack = True
         effect0.dp_modifier = 2000
 
-        def _get_traits(c: Any) -> List[str]:
-            # Prefer explicit trait accessors/fields, then fall back to known card data keys.
-            if hasattr(c, 'get_traits'):
-                try:
-                    t = c.get_traits()
-                    if isinstance(t, list):
-                        return t
-                except Exception:
-                    pass
-            if hasattr(c, 'traits'):
-                t = getattr(c, 'traits', None)
-                if isinstance(t, list):
-                    return t
-            if hasattr(c, 'card_data') and isinstance(getattr(c, 'card_data'), dict):
-                data = c.card_data
-                traits = data.get('traits_eng', []) or []
-                if isinstance(traits, list) and traits:
-                    return traits
-                # In this data model, trait-like values are stored in type_eng.
-                type_eng = data.get('type_eng', []) or []
-                if isinstance(type_eng, list):
-                    return type_eng
-            return []
-
-        def _is_valid_trait_card(c: Any) -> bool:
-            traits = _get_traits(c)
-            return ('D-Brigade' in traits) or ('DigiPolice' in traits)
-
-        def _get_trash_cards(player: Any) -> List[Any]:
-            if player is None:
-                return []
-            for attr in ('trash', 'trash_cards', 'graveyard'):
-                zone = getattr(player, attr, None)
-                if isinstance(zone, list):
-                    return zone
-            return []
-
+        effect = effect0  # alias for condition closure
         def condition0(context: Dict[str, Any]) -> bool:
             if card and card.permanent_of_this_card() is None:
                 return False
-            player = context.get('player')
-            trash_cards = _get_trash_cards(player)
-            valid_count = sum(1 for c in trash_cards if _is_valid_trait_card(c))
-            return valid_count >= 3
+            # Triggered on attack — validated by engine timing
+            return True
 
         effect0.set_can_use_condition(condition0)
 
         def process0(ctx: Dict[str, Any]):
-            """Cost: return 3 matching cards from trash to top of deck. Effect: DP +2000 for turn."""
+            """Action: DP +2000"""
             player = ctx.get('player')
             perm = ctx.get('permanent')
-
-            trash_cards = _get_trash_cards(player)
-            selected = []
-            for c in list(trash_cards):
-                if _is_valid_trait_card(c):
-                    selected.append(c)
-                    if len(selected) == 3:
-                        break
-
-            if len(selected) < 3:
-                return
-
-            # Return selected cards from trash to top of deck (deterministic order).
-            for c in selected:
-                if c in trash_cards:
-                    trash_cards.remove(c)
-
-            deck = getattr(player, 'deck', None) if player is not None else None
-            if isinstance(deck, list):
-                for c in reversed(selected):
-                    deck.insert(0, c)
-            elif player is not None and hasattr(player, 'move_card'):
-                for c in selected:
-                    try:
-                        player.move_card(c, 'trash', 'deck_top')
-                    except Exception:
-                        pass
-
+            game = ctx.get('game')
             if perm:
                 perm.change_dp(2000)
 

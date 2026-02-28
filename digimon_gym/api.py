@@ -71,3 +71,8 @@ app.include_router(games.router)
 app.include_router(recordings.router)
 app.include_router(replays.router)
 app.include_router(deck_tools.router)
+
+# Debug endpoints (only in debug mode)
+if os.getenv("DEBUG_MODE") == "1":
+    from digimon_gym.routers import debug_games
+    app.include_router(debug_games.router)

@@ -36,6 +36,7 @@ class EX10_039(CardScript):
         effect1 = ICardEffect()
         effect1.set_effect_name("EX10-039 Save")
         effect1.set_effect_description("Save")
+        effect1.is_on_deletion = True
         effect1._is_save = True
 
         def condition1(context: Dict[str, Any]) -> bool:

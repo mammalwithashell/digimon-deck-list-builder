@@ -73,6 +73,7 @@ class BT23_095(CardScript):
         effect2 = ICardEffect()
         effect2.set_effect_name("BT23-095 Delay")
         effect2.set_effect_description("Delay")
+        effect2.is_on_attack = True
         effect2._is_delay = True
 
         def condition2(context: Dict[str, Any]) -> bool:
@@ -88,7 +89,7 @@ class BT23_095(CardScript):
         # [Your Turn] When one of your [CS] trait Digimon attacks, <Delay> \r\n・Return 1 of your opponent's suspended Digimon to the bottom of the deck.
         effect3 = ICardEffect()
         effect3.set_effect_name("BT23-095 Bottom-deck 1 suspended digimon")
-        effect3.set_effect_description("[Your Turn] When one of your [CS] trait Digimon attacks, <Delay> \r\n・Return 1 of your opponent's suspended Digimon to the bottom of the deck.")
+        effect3.set_effect_description("[Your Turn] When one of your [CS] trait Digimon attacks, <Delay> \\r\\n・Return 1 of your opponent's suspended Digimon to the bottom of the deck.")
         effect3.is_optional = True
         effect3.is_on_attack = True
 

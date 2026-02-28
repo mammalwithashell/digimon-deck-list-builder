@@ -69,7 +69,7 @@ class EX11_072(CardScript):
         # [Your Turn] When any of your [Shoto Kazama]s suspend, <Delay>.\r\n• 1 of your Digimon with [Avian] or [Bird] in any of its traits or the [Vortex Warriors] trait may digivolve into a [Bird Dragon] and the [LIBERATOR] trait Digimon card in the hand with the digivolution cost reduced by 3.
         effect2 = ICardEffect()
         effect2.set_effect_name("EX11-072 1 of your [Avian]/[Bird] in traits or [Vortex Warriors] trait may digivolve into [Bird Dragon]&[LIBERATOR] trait")
-        effect2.set_effect_description("[Your Turn] When any of your [Shoto Kazama]s suspend, <Delay>.\r\n• 1 of your Digimon with [Avian] or [Bird] in any of its traits or the [Vortex Warriors] trait may digivolve into a [Bird Dragon] and the [LIBERATOR] trait Digimon card in the hand with the digivolution cost reduced by 3.")
+        effect2.set_effect_description("[Your Turn] When any of your [Shoto Kazama]s suspend, <Delay>.\\r\\n• 1 of your Digimon with [Avian] or [Bird] in any of its traits or the [Vortex Warriors] trait may digivolve into a [Bird Dragon] and the [LIBERATOR] trait Digimon card in the hand with the digivolution cost reduced by 3.")
         effect2.is_optional = True
 
         effect = effect2  # alias for condition closure
@@ -101,5 +101,17 @@ class EX11_072(CardScript):
 
         effect2.set_on_process_callback(process2)
         effects.append(effect2)
+
+        # Factory effect: security_play
+        # Security: Play this card
+        effect3 = ICardEffect()
+        effect3.set_effect_name("EX11-072 Security: Play this card")
+        effect3.set_effect_description("Security: Play this card")
+        effect3.is_security_effect = True
+
+        def condition3(context: Dict[str, Any]) -> bool:
+            return True
+        effect3.set_can_use_condition(condition3)
+        effects.append(effect3)
 
         return effects

@@ -78,6 +78,7 @@ class BT21_100(CardScript):
         effect2 = ICardEffect()
         effect2.set_effect_name("BT21-100 Delay")
         effect2.set_effect_description("Delay")
+        effect2.is_on_deletion = True
         effect2._is_delay = True
 
         def condition2(context: Dict[str, Any]) -> bool:
@@ -91,7 +92,7 @@ class BT21_100(CardScript):
         # [Your Turn] When effects delete Digimon, <Delay>.\r\n� 1 of your Digimon with [Guilmon] or [Growlmon] in its name may digivolve into a Digimon card with [Growlmon], [Gallantmon] or [Megidramon] in its name in the trash without paying the cost.
         effect3 = ICardEffect()
         effect3.set_effect_name("BT21-100 Digivolve to Gallant line when deletion happens")
-        effect3.set_effect_description("[Your Turn] When effects delete Digimon, <Delay>.\r\n� 1 of your Digimon with [Guilmon] or [Growlmon] in its name may digivolve into a Digimon card with [Growlmon], [Gallantmon] or [Megidramon] in its name in the trash without paying the cost.")
+        effect3.set_effect_description("[Your Turn] When effects delete Digimon, <Delay>.\\r\\n� 1 of your Digimon with [Guilmon] or [Growlmon] in its name may digivolve into a Digimon card with [Growlmon], [Gallantmon] or [Megidramon] in its name in the trash without paying the cost.")
         effect3.is_optional = True
         effect3.is_on_deletion = True
 

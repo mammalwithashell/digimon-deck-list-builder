@@ -18,8 +18,9 @@ class BT23_051(CardScript):
         effect0 = ICardEffect()
         effect0.set_effect_name("BT23-051 Alternate digivolution requirement")
         effect0.set_effect_description("Alternate digivolution requirement")
-        # Alternate digivolution: alternate source for cost 2
+        # Alternate digivolution: Lv.3 for cost 2
         effect0._alt_digi_cost = 2
+        effect0._alt_digi_level = 3
 
         def condition0(context: Dict[str, Any]) -> bool:
             return True
@@ -31,6 +32,7 @@ class BT23_051(CardScript):
         effect1 = ICardEffect()
         effect1.set_effect_name("BT23-051 Alliance")
         effect1.set_effect_description("Alliance")
+        effect1.is_on_attack = True
         effect1._is_alliance = True
 
         def condition1(context: Dict[str, Any]) -> bool:

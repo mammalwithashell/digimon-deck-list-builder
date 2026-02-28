@@ -18,8 +18,9 @@ class EX11_045(CardScript):
         effect0 = ICardEffect()
         effect0.set_effect_name("EX11-045 Alternate digivolution requirement")
         effect0.set_effect_description("Alternate digivolution requirement")
-        # Alternate digivolution: alternate source for cost 3
+        # Alternate digivolution: Lv.5 for cost 3
         effect0._alt_digi_cost = 3
+        effect0._alt_digi_level = 5
 
         def condition0(context: Dict[str, Any]) -> bool:
             permanent = card.permanent_of_this_card() if card else None
@@ -46,10 +47,10 @@ class EX11_045(CardScript):
         effects.append(effect1)
 
         # Timing: EffectTiming.OnEnterFieldAnyone
-        # De Digivolve
+        # De Digivolve, Effect Immunity
         effect2 = ICardEffect()
-        effect2.set_effect_name("EX11-045 De Digivolve")
-        effect2.set_effect_description("De Digivolve")
+        effect2.set_effect_name("EX11-045 De Digivolve, Effect Immunity")
+        effect2.set_effect_description("De Digivolve, Effect Immunity")
         effect2.is_on_play = True
 
         effect = effect2  # alias for condition closure
@@ -62,7 +63,7 @@ class EX11_045(CardScript):
         effect2.set_can_use_condition(condition2)
 
         def process2(ctx: Dict[str, Any]):
-            """Action: De Digivolve"""
+            """Action: De Digivolve, Effect Immunity"""
             player = ctx.get('player')
             perm = ctx.get('permanent')
             game = ctx.get('game')
@@ -75,15 +76,21 @@ class EX11_045(CardScript):
                     enemy.trash_cards.extend(removed)
             game.effect_select_opponent_permanent(
                 player, on_de_digivolve, filter_fn=lambda p: p.is_digimon, is_optional=False)
+            # Grant effect immunity via modifier system
+            if perm and game:
+                from digimon_gym.engine.interfaces.modifiers import ModifierType
+                game.register_modifier(
+                    ModifierType.CANNOT_BE_SELECTED_BY_EFFECT, perm,
+                    value_fn=lambda: True, expiry='end_of_turn')
 
         effect2.set_on_process_callback(process2)
         effects.append(effect2)
 
         # Timing: EffectTiming.OnEnterFieldAnyone
-        # De Digivolve
+        # De Digivolve, Effect Immunity
         effect3 = ICardEffect()
-        effect3.set_effect_name("EX11-045 De Digivolve")
-        effect3.set_effect_description("De Digivolve")
+        effect3.set_effect_name("EX11-045 De Digivolve, Effect Immunity")
+        effect3.set_effect_description("De Digivolve, Effect Immunity")
         effect3.is_when_digivolving = True
 
         effect = effect3  # alias for condition closure
@@ -96,7 +103,7 @@ class EX11_045(CardScript):
         effect3.set_can_use_condition(condition3)
 
         def process3(ctx: Dict[str, Any]):
-            """Action: De Digivolve"""
+            """Action: De Digivolve, Effect Immunity"""
             player = ctx.get('player')
             perm = ctx.get('permanent')
             game = ctx.get('game')
@@ -109,15 +116,21 @@ class EX11_045(CardScript):
                     enemy.trash_cards.extend(removed)
             game.effect_select_opponent_permanent(
                 player, on_de_digivolve, filter_fn=lambda p: p.is_digimon, is_optional=False)
+            # Grant effect immunity via modifier system
+            if perm and game:
+                from digimon_gym.engine.interfaces.modifiers import ModifierType
+                game.register_modifier(
+                    ModifierType.CANNOT_BE_SELECTED_BY_EFFECT, perm,
+                    value_fn=lambda: True, expiry='end_of_turn')
 
         effect3.set_on_process_callback(process3)
         effects.append(effect3)
 
         # Timing: EffectTiming.OnAllyAttack
-        # De Digivolve
+        # De Digivolve, Effect Immunity
         effect4 = ICardEffect()
-        effect4.set_effect_name("EX11-045 De Digivolve")
-        effect4.set_effect_description("De Digivolve")
+        effect4.set_effect_name("EX11-045 De Digivolve, Effect Immunity")
+        effect4.set_effect_description("De Digivolve, Effect Immunity")
         effect4.is_on_attack = True
 
         effect = effect4  # alias for condition closure
@@ -130,7 +143,7 @@ class EX11_045(CardScript):
         effect4.set_can_use_condition(condition4)
 
         def process4(ctx: Dict[str, Any]):
-            """Action: De Digivolve"""
+            """Action: De Digivolve, Effect Immunity"""
             player = ctx.get('player')
             perm = ctx.get('permanent')
             game = ctx.get('game')
@@ -143,6 +156,12 @@ class EX11_045(CardScript):
                     enemy.trash_cards.extend(removed)
             game.effect_select_opponent_permanent(
                 player, on_de_digivolve, filter_fn=lambda p: p.is_digimon, is_optional=False)
+            # Grant effect immunity via modifier system
+            if perm and game:
+                from digimon_gym.engine.interfaces.modifiers import ModifierType
+                game.register_modifier(
+                    ModifierType.CANNOT_BE_SELECTED_BY_EFFECT, perm,
+                    value_fn=lambda: True, expiry='end_of_turn')
 
         effect4.set_on_process_callback(process4)
         effects.append(effect4)

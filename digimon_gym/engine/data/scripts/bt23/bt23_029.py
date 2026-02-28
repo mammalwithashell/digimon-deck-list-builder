@@ -18,8 +18,9 @@ class BT23_029(CardScript):
         effect0 = ICardEffect()
         effect0.set_effect_name("BT23-029 Alternate digivolution requirement")
         effect0.set_effect_description("Alternate digivolution requirement")
-        # Alternate digivolution: from [Turuiemon] for cost 3
+        # Alternate digivolution: Lv.4 from [Turuiemon] for cost 3
         effect0._alt_digi_cost = 3
+        effect0._alt_digi_level = 4
         effect0._alt_digi_name = "Turuiemon"
 
         def condition0(context: Dict[str, Any]) -> bool:
@@ -35,6 +36,7 @@ class BT23_029(CardScript):
         effect1 = ICardEffect()
         effect1.set_effect_name("BT23-029 Alliance")
         effect1.set_effect_description("Alliance")
+        effect1.is_on_attack = True
         effect1._is_alliance = True
 
         def condition1(context: Dict[str, Any]) -> bool:
@@ -60,12 +62,18 @@ class BT23_029(CardScript):
         effect2.set_can_use_condition(condition2)
 
         def process2(ctx: Dict[str, Any]):
-            """Action: Disable Effect"""
+            """Action: Disable Effect, Effect Immunity"""
             player = ctx.get('player')
             perm = ctx.get('permanent')
             game = ctx.get('game')
             # Disable/invalidate effects on target — not yet in engine
             pass  # descriptive-tagged: disable_effect
+            # Grant effect immunity via modifier system
+            if perm and game:
+                from digimon_gym.engine.interfaces.modifiers import ModifierType
+                game.register_modifier(
+                    ModifierType.CANNOT_BE_SELECTED_BY_EFFECT, perm,
+                    value_fn=lambda: True, expiry='end_of_turn')
 
         effect2.set_on_process_callback(process2)
         effects.append(effect2)

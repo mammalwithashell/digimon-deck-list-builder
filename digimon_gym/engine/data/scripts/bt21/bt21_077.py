@@ -34,10 +34,10 @@ class BT21_077(CardScript):
         effects.append(effect0)
 
         # Timing: EffectTiming.OnEnterFieldAnyone
-        # Trash From Hand, Grant Skill
+        # Trash From Hand, Grant Skill, Effect Immunity
         effect1 = ICardEffect()
         effect1.set_effect_name("BT21-077 Force attack and give collision")
-        effect1.set_effect_description("Trash From Hand, Grant Skill")
+        effect1.set_effect_description("Trash From Hand, Grant Skill, Effect Immunity")
         effect1.is_on_play = True
 
         effect = effect1  # alias for condition closure
@@ -50,7 +50,7 @@ class BT21_077(CardScript):
         effect1.set_can_use_condition(condition1)
 
         def process1(ctx: Dict[str, Any]):
-            """Action: Trash From Hand, Grant Skill"""
+            """Action: Trash From Hand, Grant Skill, Effect Immunity"""
             player = ctx.get('player')
             perm = ctx.get('permanent')
             game = ctx.get('game')
@@ -66,6 +66,12 @@ class BT21_077(CardScript):
                 player, hand_filter, on_trashed, is_optional=False)
             # Grant keyword to other permanents (AddSkillClass) — not yet in engine
             pass  # descriptive-tagged: grant_skill
+            # Grant effect immunity via modifier system
+            if perm and game:
+                from digimon_gym.engine.interfaces.modifiers import ModifierType
+                game.register_modifier(
+                    ModifierType.CANNOT_BE_SELECTED_BY_EFFECT, perm,
+                    value_fn=lambda: True, expiry='end_of_turn')
 
         effect1.set_on_process_callback(process1)
         effects.append(effect1)
@@ -84,21 +90,27 @@ class BT21_077(CardScript):
         effect2.set_can_use_condition(condition2)
 
         def process2(ctx: Dict[str, Any]):
-            """Action: Force Attack"""
+            """Action: Force Attack, Effect Immunity"""
             player = ctx.get('player')
             perm = ctx.get('permanent')
             game = ctx.get('game')
             # Force attack — target Digimon may attack (requires engine SelectAttack)
             pass  # descriptive-tagged: force_attack
+            # Grant effect immunity via modifier system
+            if perm and game:
+                from digimon_gym.engine.interfaces.modifiers import ModifierType
+                game.register_modifier(
+                    ModifierType.CANNOT_BE_SELECTED_BY_EFFECT, perm,
+                    value_fn=lambda: True, expiry='end_of_turn')
 
         effect2.set_on_process_callback(process2)
         effects.append(effect2)
 
         # Timing: EffectTiming.OnEnterFieldAnyone
-        # Trash From Hand, Grant Skill
+        # Trash From Hand, Grant Skill, Effect Immunity
         effect3 = ICardEffect()
         effect3.set_effect_name("BT21-077 Force attack and give collision")
-        effect3.set_effect_description("Trash From Hand, Grant Skill")
+        effect3.set_effect_description("Trash From Hand, Grant Skill, Effect Immunity")
         effect3.is_when_digivolving = True
 
         effect = effect3  # alias for condition closure
@@ -111,7 +123,7 @@ class BT21_077(CardScript):
         effect3.set_can_use_condition(condition3)
 
         def process3(ctx: Dict[str, Any]):
-            """Action: Trash From Hand, Grant Skill"""
+            """Action: Trash From Hand, Grant Skill, Effect Immunity"""
             player = ctx.get('player')
             perm = ctx.get('permanent')
             game = ctx.get('game')
@@ -127,6 +139,12 @@ class BT21_077(CardScript):
                 player, hand_filter, on_trashed, is_optional=False)
             # Grant keyword to other permanents (AddSkillClass) — not yet in engine
             pass  # descriptive-tagged: grant_skill
+            # Grant effect immunity via modifier system
+            if perm and game:
+                from digimon_gym.engine.interfaces.modifiers import ModifierType
+                game.register_modifier(
+                    ModifierType.CANNOT_BE_SELECTED_BY_EFFECT, perm,
+                    value_fn=lambda: True, expiry='end_of_turn')
 
         effect3.set_on_process_callback(process3)
         effects.append(effect3)
@@ -145,12 +163,18 @@ class BT21_077(CardScript):
         effect4.set_can_use_condition(condition4)
 
         def process4(ctx: Dict[str, Any]):
-            """Action: Force Attack"""
+            """Action: Force Attack, Effect Immunity"""
             player = ctx.get('player')
             perm = ctx.get('permanent')
             game = ctx.get('game')
             # Force attack — target Digimon may attack (requires engine SelectAttack)
             pass  # descriptive-tagged: force_attack
+            # Grant effect immunity via modifier system
+            if perm and game:
+                from digimon_gym.engine.interfaces.modifiers import ModifierType
+                game.register_modifier(
+                    ModifierType.CANNOT_BE_SELECTED_BY_EFFECT, perm,
+                    value_fn=lambda: True, expiry='end_of_turn')
 
         effect4.set_on_process_callback(process4)
         effects.append(effect4)

@@ -30,26 +30,26 @@ class BT14_056(CardScript):
         effect0.set_can_use_condition(condition0)
 
         def process0(ctx: Dict[str, Any]):
-            """Action: Reveal and select 1 matching trait card to hand."""
+            """Action: Add To Hand, Reveal And Select"""
             player = ctx.get('player')
+            perm = ctx.get('permanent')
             game = ctx.get('game')
+            # Add card to hand (from trash/reveal)
+            if player and player.trash_cards:
+                card_to_add = player.trash_cards.pop()
+                player.hand_cards.append(card_to_add)
             if not (player and game):
                 return
-
             def reveal_filter(c):
-                return any(
-                    ('D-Brigade' in t) or ('DigiPolice' in t)
-                    for t in (getattr(c, 'card_traits', []) or [])
-                )
-
+                if not (any('D-Brigade' in _t or 'DigiPolice' in _t for _t in (getattr(c, 'card_traits', []) or []))):
+                    return False
+                return True
             def on_revealed(selected, remaining):
-                if selected is not None:
-                    player.hand_cards.append(selected)
-                # Engine handles placing remaining revealed cards to top or bottom.
-
+                player.hand_cards.append(selected)
+                for c in remaining:
+                    player.library_cards.append(c)
             game.effect_reveal_and_select(
-                player, 5, reveal_filter, on_revealed, is_optional=True
-            )
+                player, 5, reveal_filter, on_revealed, is_optional=True)
 
         effect0.set_on_process_callback(process0)
         effects.append(effect0)

@@ -20,28 +20,25 @@ class BT14_083(CardScript):
         effect0.set_effect_description("[On Play] Trash any 1 digivolution card of 1 of your opponent's Digimon.")
         effect0.is_on_play = True
 
+        effect = effect0  # alias for condition closure
         def condition0(context: Dict[str, Any]) -> bool:
             if card and card.permanent_of_this_card() is None:
                 return False
+            # Triggered on play — validated by engine timing
             return True
 
         effect0.set_can_use_condition(condition0)
 
         def process0(ctx: Dict[str, Any]):
-            """Action: Trash 1 digivolution card from 1 opponent Digimon"""
+            """Action: Trash Digivolution Cards"""
             player = ctx.get('player')
+            perm = ctx.get('permanent')
             game = ctx.get('game')
-            if not (player and game):
-                return
-
-            def target_filter(p):
-                return p is not None and getattr(p, 'owner', None) != player and (not p.has_no_digivolution_cards)
-
-            def on_target(target_perm):
-                target_perm.trash_digivolution_cards(1)
-
-            game.effect_select_opponent_permanent(
-                player, on_target, filter_fn=target_filter, is_optional=False)
+            # Trash digivolution cards from this permanent
+            if perm and not perm.has_no_digivolution_cards:
+                trashed = perm.trash_digivolution_cards(1)
+                if player:
+                    player.trash_cards.extend(trashed)
 
         effect0.set_on_process_callback(process0)
         effects.append(effect0)
@@ -53,6 +50,7 @@ class BT14_083(CardScript):
         effect1.set_effect_description("[Your Turn] When a digivolution card of an opponent's Digimon is trashed, by suspending this Tamer, gain 1 memory.")
         effect1.is_optional = True
 
+        effect = effect1  # alias for condition closure
         def condition1(context: Dict[str, Any]) -> bool:
             if card and card.permanent_of_this_card() is None:
                 return False
@@ -63,13 +61,20 @@ class BT14_083(CardScript):
         effect1.set_can_use_condition(condition1)
 
         def process1(ctx: Dict[str, Any]):
-            """Action: Suspend this Tamer to gain 1 memory"""
+            """Action: Gain 1 memory, Suspend"""
             player = ctx.get('player')
             perm = ctx.get('permanent')
-            if not (player and perm):
+            game = ctx.get('game')
+            if player:
+                player.add_memory(1)
+            if not (player and game):
                 return
-            perm.suspend()
-            player.add_memory(1)
+            def target_filter(p):
+                return True
+            def on_suspend(target_perm):
+                target_perm.suspend()
+            game.effect_select_opponent_permanent(
+                player, on_suspend, filter_fn=target_filter, is_optional=True)
 
         effect1.set_on_process_callback(process1)
         effects.append(effect1)

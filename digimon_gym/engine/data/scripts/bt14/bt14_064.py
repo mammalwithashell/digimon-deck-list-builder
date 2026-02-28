@@ -20,33 +20,42 @@ class BT14_064(CardScript):
         effect0.set_effect_description("[On Play] Reveal the top 3 cards of your deck. You may play 1 card with the [D-Brigade] or [DigiPolice] trait and a play cost of 4 or less among them without paying the cost. Trash the rest.")
         effect0.is_on_play = True
 
+        effect = effect0  # alias for condition closure
         def condition0(context: Dict[str, Any]) -> bool:
             if card and card.permanent_of_this_card() is None:
                 return False
+            # Triggered on play — validated by engine timing
             return True
 
         effect0.set_can_use_condition(condition0)
 
         def process0(ctx: Dict[str, Any]):
+            """Action: Play Card, Reveal And Select"""
             player = ctx.get('player')
+            perm = ctx.get('permanent')
             game = ctx.get('game')
             if not (player and game):
                 return
-
+            def play_filter(c):
+                if not getattr(c, 'has_play_cost', False):
+                    return False
+                if getattr(c, 'get_cost_itself', 0) > 4:
+                    return False
+                return True
+            game.effect_play_from_zone(
+                player, 'hand', play_filter, free=True, is_optional=True)
+            if not (player and game):
+                return
             def reveal_filter(c):
                 if not getattr(c, 'has_play_cost', False):
                     return False
                 if getattr(c, 'get_cost_itself', 0) > 4:
                     return False
-                traits = [str(t) for t in getattr(c, 'type_eng', [])]
-                return ('D-Brigade' in traits) or ('DigiPolice' in traits)
-
+                return True
             def on_revealed(selected, remaining):
-                if selected is not None:
-                    game.effect_play_this_card(player, selected, free=True)
+                player.hand_cards.append(selected)
                 for c in remaining:
-                    game.effect_trash_card(player, c)
-
+                    player.library_cards.append(c)
             game.effect_reveal_and_select(
                 player, 3, reveal_filter, on_revealed, is_optional=True)
 
@@ -60,33 +69,42 @@ class BT14_064(CardScript):
         effect1.set_effect_description("[When Digivolving] Reveal the top 3 cards of your deck. You may play 1 card with the [D-Brigade] or [DigiPolice] trait and a play cost of 4 or less among them without paying the cost. Trash the rest.")
         effect1.is_when_digivolving = True
 
+        effect = effect1  # alias for condition closure
         def condition1(context: Dict[str, Any]) -> bool:
             if card and card.permanent_of_this_card() is None:
                 return False
+            # Triggered when digivolving — validated by engine timing
             return True
 
         effect1.set_can_use_condition(condition1)
 
         def process1(ctx: Dict[str, Any]):
+            """Action: Play Card, Reveal And Select"""
             player = ctx.get('player')
+            perm = ctx.get('permanent')
             game = ctx.get('game')
             if not (player and game):
                 return
-
+            def play_filter(c):
+                if not getattr(c, 'has_play_cost', False):
+                    return False
+                if getattr(c, 'get_cost_itself', 0) > 4:
+                    return False
+                return True
+            game.effect_play_from_zone(
+                player, 'hand', play_filter, free=True, is_optional=True)
+            if not (player and game):
+                return
             def reveal_filter(c):
                 if not getattr(c, 'has_play_cost', False):
                     return False
                 if getattr(c, 'get_cost_itself', 0) > 4:
                     return False
-                traits = [str(t) for t in getattr(c, 'type_eng', [])]
-                return ('D-Brigade' in traits) or ('DigiPolice' in traits)
-
+                return True
             def on_revealed(selected, remaining):
-                if selected is not None:
-                    game.effect_play_this_card(player, selected, free=True)
+                player.hand_cards.append(selected)
                 for c in remaining:
-                    game.effect_trash_card(player, c)
-
+                    player.library_cards.append(c)
             game.effect_reveal_and_select(
                 player, 3, reveal_filter, on_revealed, is_optional=True)
 
@@ -103,6 +121,7 @@ class BT14_064(CardScript):
         effect2.set_hash_string("Reveal_BT14_064")
         effect2.is_on_deletion = True
 
+        effect = effect2  # alias for condition closure
         def condition2(context: Dict[str, Any]) -> bool:
             if card and card.permanent_of_this_card() is None:
                 return False
@@ -111,20 +130,24 @@ class BT14_064(CardScript):
         effect2.set_can_use_condition(condition2)
 
         def process2(ctx: Dict[str, Any]):
+            """Action: Play Card, Reveal And Select"""
             player = ctx.get('player')
+            perm = ctx.get('permanent')
             game = ctx.get('game')
             if not (player and game):
                 return
-
+            def play_filter(c):
+                return True
+            game.effect_play_from_zone(
+                player, 'hand', play_filter, free=True, is_optional=True)
+            if not (player and game):
+                return
             def reveal_filter(c):
-                return 'Commandramon' in str(getattr(c, 'card_name_eng', ''))
-
+                return True
             def on_revealed(selected, remaining):
-                if selected is not None:
-                    game.effect_play_this_card(player, selected, free=True)
+                player.hand_cards.append(selected)
                 for c in remaining:
-                    game.effect_trash_card(player, c)
-
+                    player.library_cards.append(c)
             game.effect_reveal_and_select(
                 player, 3, reveal_filter, on_revealed, is_optional=True)
 

@@ -75,6 +75,7 @@ class BT21_091(CardScript):
         effect2 = ICardEffect()
         effect2.set_effect_name("BT21-091 Delay")
         effect2.set_effect_description("Delay")
+        effect2.is_on_play = True
         effect2._is_delay = True
 
         def condition2(context: Dict[str, Any]) -> bool:
@@ -86,7 +87,7 @@ class BT21_091(CardScript):
         # [All Turns] When any of your Tamers with inherited effects are played, <Delay> (After this card is placed, by trashing it the next turn or later, activate the effect below).\r\n・1 of your Tamers may digivolve into a Digimon card with the [Hybrid] trait in the hand without paying the cost
         effect3 = ICardEffect()
         effect3.set_effect_name("BT21-091 Your 1 Digimon digivolves")
-        effect3.set_effect_description("[All Turns] When any of your Tamers with inherited effects are played, <Delay> (After this card is placed, by trashing it the next turn or later, activate the effect below).\r\n・1 of your Tamers may digivolve into a Digimon card with the [Hybrid] trait in the hand without paying the cost")
+        effect3.set_effect_description("[All Turns] When any of your Tamers with inherited effects are played, <Delay> (After this card is placed, by trashing it the next turn or later, activate the effect below).\\r\\n・1 of your Tamers may digivolve into a Digimon card with the [Hybrid] trait in the hand without paying the cost")
         effect3.is_optional = True
         effect3.is_on_play = True
 

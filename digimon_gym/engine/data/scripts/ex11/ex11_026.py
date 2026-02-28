@@ -14,10 +14,10 @@ class EX11_026(CardScript):
         effects = []
 
         # Timing: EffectTiming.OnMove
-        # DP +3000, Suspend
+        # DP +3000, Suspend, Effect Immunity
         effect0 = ICardEffect()
-        effect0.set_effect_name("EX11-026 DP +3000, Suspend")
-        effect0.set_effect_description("DP +3000, Suspend")
+        effect0.set_effect_name("EX11-026 DP +3000, Suspend, Effect Immunity")
+        effect0.set_effect_description("DP +3000, Suspend, Effect Immunity")
 
         effect = effect0  # alias for condition closure
         def condition0(context: Dict[str, Any]) -> bool:
@@ -28,7 +28,7 @@ class EX11_026(CardScript):
         effect0.set_can_use_condition(condition0)
 
         def process0(ctx: Dict[str, Any]):
-            """Action: DP +3000, Suspend"""
+            """Action: DP +3000, Suspend, Effect Immunity"""
             player = ctx.get('player')
             perm = ctx.get('permanent')
             game = ctx.get('game')
@@ -42,15 +42,21 @@ class EX11_026(CardScript):
                 target_perm.suspend()
             game.effect_select_opponent_permanent(
                 player, on_suspend, filter_fn=target_filter, is_optional=False)
+            # Grant effect immunity via modifier system
+            if perm and game:
+                from digimon_gym.engine.interfaces.modifiers import ModifierType
+                game.register_modifier(
+                    ModifierType.CANNOT_BE_SELECTED_BY_EFFECT, perm,
+                    value_fn=lambda: True, expiry='end_of_turn')
 
         effect0.set_on_process_callback(process0)
         effects.append(effect0)
 
         # Timing: EffectTiming.OnEnterFieldAnyone
-        # DP +3000, Suspend
+        # DP +3000, Suspend, Effect Immunity
         effect1 = ICardEffect()
-        effect1.set_effect_name("EX11-026 DP +3000, Suspend")
-        effect1.set_effect_description("DP +3000, Suspend")
+        effect1.set_effect_name("EX11-026 DP +3000, Suspend, Effect Immunity")
+        effect1.set_effect_description("DP +3000, Suspend, Effect Immunity")
         effect1.is_on_play = True
 
         effect = effect1  # alias for condition closure
@@ -63,7 +69,7 @@ class EX11_026(CardScript):
         effect1.set_can_use_condition(condition1)
 
         def process1(ctx: Dict[str, Any]):
-            """Action: DP +3000, Suspend"""
+            """Action: DP +3000, Suspend, Effect Immunity"""
             player = ctx.get('player')
             perm = ctx.get('permanent')
             game = ctx.get('game')
@@ -77,6 +83,12 @@ class EX11_026(CardScript):
                 target_perm.suspend()
             game.effect_select_opponent_permanent(
                 player, on_suspend, filter_fn=target_filter, is_optional=False)
+            # Grant effect immunity via modifier system
+            if perm and game:
+                from digimon_gym.engine.interfaces.modifiers import ModifierType
+                game.register_modifier(
+                    ModifierType.CANNOT_BE_SELECTED_BY_EFFECT, perm,
+                    value_fn=lambda: True, expiry='end_of_turn')
 
         effect1.set_on_process_callback(process1)
         effects.append(effect1)

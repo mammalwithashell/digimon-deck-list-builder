@@ -31,6 +31,7 @@ class EX10_010(CardScript):
         effect1 = ICardEffect()
         effect1.set_effect_name("EX10-010 Raid")
         effect1.set_effect_description("Raid")
+        effect1.is_on_attack = True
         effect1._is_raid = True
 
         def condition1(context: Dict[str, Any]) -> bool:
@@ -149,8 +150,12 @@ class EX10_010(CardScript):
             player = ctx.get('player')
             perm = ctx.get('permanent')
             game = ctx.get('game')
-            # Grant effect immunity (CanNotAffectedClass) — not yet in engine
-            pass  # descriptive-tagged: effect_immunity
+            # Grant effect immunity via modifier system
+            if perm and game:
+                from digimon_gym.engine.interfaces.modifiers import ModifierType
+                game.register_modifier(
+                    ModifierType.CANNOT_BE_SELECTED_BY_EFFECT, perm,
+                    value_fn=lambda: True, expiry='end_of_turn')
 
         effect6.set_on_process_callback(process6)
         effects.append(effect6)

@@ -18,8 +18,10 @@ class BT24_039(CardScript):
         effect0 = ICardEffect()
         effect0.set_effect_name("BT24-039 Alternate digivolution requirement")
         effect0.set_effect_description("Alternate digivolution requirement")
-        # Alternate digivolution: alternate source for cost 3
+        # Alternate digivolution: Lv.4 with [TS] trait for cost 3
         effect0._alt_digi_cost = 3
+        effect0._alt_digi_level = 4
+        effect0._alt_digi_trait = "TS"
 
         def condition0(context: Dict[str, Any]) -> bool:
             return True
@@ -27,16 +29,30 @@ class BT24_039(CardScript):
         effects.append(effect0)
 
         # Timing: EffectTiming.None
-        # Effect
+        # Grant No Security Battle
         effect1 = ICardEffect()
         effect1.set_effect_name("BT24-039 Ignore Battle")
-        effect1.set_effect_description("Effect")
+        effect1.set_effect_description("Grant No Security Battle")
 
         effect = effect1  # alias for condition closure
         def condition1(context: Dict[str, Any]) -> bool:
             return True
 
         effect1.set_can_use_condition(condition1)
+
+        def process1(ctx: Dict[str, Any]):
+            """Action: Grant No Security Battle"""
+            player = ctx.get('player')
+            perm = ctx.get('permanent')
+            game = ctx.get('game')
+            # Skip battle with Security Digimon via modifier system
+            if perm and game:
+                from digimon_gym.engine.interfaces.modifiers import ModifierType
+                game.register_modifier(
+                    ModifierType.DONT_BATTLE_SECURITY_DIGIMON, perm,
+                    value_fn=lambda: True, expiry='end_of_attack')
+
+        effect1.set_on_process_callback(process1)
         effects.append(effect1)
 
         # Timing: EffectTiming.SecuritySkill

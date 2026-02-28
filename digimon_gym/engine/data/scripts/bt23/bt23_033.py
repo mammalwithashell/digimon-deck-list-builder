@@ -118,13 +118,19 @@ class BT23_033(CardScript):
         effect5.set_can_use_condition(condition5)
 
         def process5(ctx: Dict[str, Any]):
-            """Action: Gain Keyword Cannot Return To Deck, Gain Keyword Cannot Return To Hand"""
+            """Action: Gain Keyword Cannot Return To Deck, Gain Keyword Cannot Return To Hand, Grant Bounce Immunity"""
             player = ctx.get('player')
             perm = ctx.get('permanent')
             game = ctx.get('game')
             if perm:
                 perm.grant_keyword('_is_cannot_return_to_deck')
                 perm.grant_keyword('_is_cannot_return_to_hand')
+            # Prevent return to hand/deck via modifier system
+            if perm and game:
+                from digimon_gym.engine.interfaces.modifiers import ModifierType
+                game.register_modifier(
+                    ModifierType.CANNOT_BE_RETURNED, perm,
+                    value_fn=lambda: True, expiry='end_of_turn')
 
         effect5.set_on_process_callback(process5)
         effects.append(effect5)

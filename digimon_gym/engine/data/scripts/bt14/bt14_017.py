@@ -13,46 +13,56 @@ class BT14_017(CardScript):
     def get_card_effects(self, card: 'CardSource') -> List['ICardEffect']:
         effects = []
 
-        def _in_battle_and_opponent_has_memory(context: Dict[str, Any]) -> bool:
-            if card and card.permanent_of_this_card() is None:
-                return False
-            game = context.get('game')
-            player = context.get('player')
-            if game is None or player is None:
-                return False
-            try:
-                opponent = game.get_opponent(player)
-                return opponent is not None and opponent.memory >= 1
-            except Exception:
-                return False
-
-        # [When Digivolving] Blitz
+        # Factory effect: blitz
+        # Blitz
         effect0 = ICardEffect()
         effect0.set_effect_name("BT14-017 Blitz")
         effect0.set_effect_description("Blitz")
+        effect0.is_on_play = True
         effect0._is_blitz = True
-        effect0.set_can_use_condition(_in_battle_and_opponent_has_memory)
+
+        def condition0(context: Dict[str, Any]) -> bool:
+            return True
+        effect0.set_can_use_condition(condition0)
         effects.append(effect0)
 
-        # [All Turns] Opponent can't play Digimon with 6000 DP or less
+        # Timing: EffectTiming.None
+        # Play Restriction
         effect1 = ICardEffect()
         effect1.set_effect_name("BT14-017 Opponent can't play Digimon card with DP 6000 or less")
         effect1.set_effect_description("Play Restriction")
-        effect1.set_can_use_condition(_in_battle_and_opponent_has_memory)
+
+        effect = effect1  # alias for condition closure
+        def condition1(context: Dict[str, Any]) -> bool:
+            if card and card.permanent_of_this_card() is None:
+                return False
+            return True
+
+        effect1.set_can_use_condition(condition1)
 
         def process1(ctx: Dict[str, Any]):
             """Action: Play Restriction"""
+            player = ctx.get('player')
+            perm = ctx.get('permanent')
+            game = ctx.get('game')
+            # Play restriction (CanNotPutFieldClass) — opponent play restrictions
             pass  # descriptive-tagged
 
         effect1.set_on_process_callback(process1)
         effects.append(effect1)
 
-        # [All Turns] This Digimon gets +4000 DP
+        # Factory effect: dp_modifier
+        # DP modifier
         effect2 = ICardEffect()
         effect2.set_effect_name("BT14-017 DP modifier")
         effect2.set_effect_description("DP modifier")
         effect2.dp_modifier = 4000
-        effect2.set_can_use_condition(_in_battle_and_opponent_has_memory)
+
+        def condition2(context: Dict[str, Any]) -> bool:
+            if card and card.permanent_of_this_card() is None:
+                return False
+            return True
+        effect2.set_can_use_condition(condition2)
         effects.append(effect2)
 
         return effects

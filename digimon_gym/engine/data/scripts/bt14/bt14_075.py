@@ -20,6 +20,7 @@ class BT14_075(CardScript):
         effect0.set_effect_description("[On Play] Trash the top 3 cards of your deck.")
         effect0.is_on_play = True
 
+        effect = effect0  # alias for condition closure
         def condition0(context: Dict[str, Any]) -> bool:
             if card and card.permanent_of_this_card() is None:
                 return False
@@ -29,7 +30,11 @@ class BT14_075(CardScript):
         effect0.set_can_use_condition(condition0)
 
         def process0(ctx: Dict[str, Any]):
+            """Action: Mill"""
             player = ctx.get('player')
+            perm = ctx.get('permanent')
+            game = ctx.get('game')
+            # Mill 3 cards from own deck
             if player and player.library_cards:
                 mill_count = min(3, len(player.library_cards))
                 trashed = player.library_cards[:mill_count]
@@ -46,6 +51,7 @@ class BT14_075(CardScript):
         effect1.set_effect_description("[When Attacking] Trash the top 3 cards of your deck.")
         effect1.is_on_attack = True
 
+        effect = effect1  # alias for condition closure
         def condition1(context: Dict[str, Any]) -> bool:
             if card and card.permanent_of_this_card() is None:
                 return False
@@ -55,7 +61,11 @@ class BT14_075(CardScript):
         effect1.set_can_use_condition(condition1)
 
         def process1(ctx: Dict[str, Any]):
+            """Action: Mill"""
             player = ctx.get('player')
+            perm = ctx.get('permanent')
+            game = ctx.get('game')
+            # Mill 3 cards from own deck
             if player and player.library_cards:
                 mill_count = min(3, len(player.library_cards))
                 trashed = player.library_cards[:mill_count]
@@ -65,10 +75,12 @@ class BT14_075(CardScript):
         effect1.set_on_process_callback(process1)
         effects.append(effect1)
 
-        # [Your Turn] This Digimon gets +1000 DP for every 3 cards in your trash.
+        # Factory effect: dp_modifier
+        # DP modifier
         effect2 = ICardEffect()
-        effect2.set_effect_name("BT14-075 Your Turn DP boost")
-        effect2.set_effect_description("[Your Turn] This Digimon gets +1000 DP for every 3 cards in your trash.")
+        effect2.set_effect_name("BT14-075 DP modifier")
+        effect2.set_effect_description("DP modifier")
+        effect2.dp_modifier = 0
 
         def condition2(context: Dict[str, Any]) -> bool:
             if not (card and card.owner and card.owner.is_my_turn):
@@ -76,18 +88,7 @@ class BT14_075(CardScript):
             if card and card.permanent_of_this_card() is None:
                 return False
             return True
-
         effect2.set_can_use_condition(condition2)
-
-        def dp_mod2(ctx: Dict[str, Any]) -> int:
-            player = ctx.get('player')
-            if not player and card:
-                player = card.owner
-            if not player:
-                return 0
-            return (len(player.trash_cards) // 3) * 1000
-
-        effect2.dp_modifier = dp_mod2
         effects.append(effect2)
 
         # Timing: EffectTiming.OnDestroyedAnyone
@@ -97,30 +98,32 @@ class BT14_075(CardScript):
         effect3.set_effect_description("[On Deletion] Trash 1 card in your opponent's hand without looking.")
         effect3.is_on_deletion = True
 
+        effect = effect3  # alias for condition closure
         def condition3(context: Dict[str, Any]) -> bool:
+            # Triggered on deletion — validated by engine timing
             return True
 
         effect3.set_can_use_condition(condition3)
 
         def process3(ctx: Dict[str, Any]):
+            """Action: Trash From Hand, Flip Security"""
             player = ctx.get('player')
+            perm = ctx.get('permanent')
             game = ctx.get('game')
-            if not (player and game and player.enemy):
+            if not (player and game):
                 return
-
-            enemy = player.enemy
-
             def hand_filter(c):
                 return True
-
             def on_trashed(selected):
-                if selected in enemy.hand_cards:
-                    enemy.hand_cards.remove(selected)
-                    enemy.trash_cards.append(selected)
-
+                if selected in player.hand_cards:
+                    player.hand_cards.remove(selected)
+                    player.trash_cards.append(selected)
             game.effect_select_hand_card(
-                enemy, hand_filter, on_trashed, is_optional=False
-            )
+                player, hand_filter, on_trashed, is_optional=False)
+            # Flip opponent's top face-down security card face up
+            enemy = player.enemy if player else None
+            if enemy and enemy.security_cards:
+                pass  # Security flip — engine handles face-up/face-down state
 
         effect3.set_on_process_callback(process3)
         effects.append(effect3)

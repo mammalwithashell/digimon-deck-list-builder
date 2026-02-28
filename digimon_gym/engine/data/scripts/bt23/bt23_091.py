@@ -73,6 +73,7 @@ class BT23_091(CardScript):
         effect2 = ICardEffect()
         effect2.set_effect_name("BT23-091 Delay")
         effect2.set_effect_description("Delay")
+        effect2.is_on_attack = True
         effect2._is_delay = True
 
         def condition2(context: Dict[str, Any]) -> bool:

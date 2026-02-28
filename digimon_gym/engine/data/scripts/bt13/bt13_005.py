@@ -23,11 +23,11 @@ class BT13_005(CardScript):
 
         effect = effect0  # alias for condition closure
         def condition0(context: Dict[str, Any]) -> bool:
-            # Get the permanent from context or from effect if not present in context.
-            permanent = context.get('permanent', None)
-            if permanent is None:
-                permanent = getattr(effect, 'effect_source_permanent', None)
-            if not (permanent and hasattr(permanent, 'digivolution_cards') and len(permanent.digivolution_cards) >= 4):
+            if card and card.permanent_of_this_card() is None:
+                return False
+            # Triggered on attack — validated by engine timing
+            permanent = effect.effect_source_permanent if hasattr(effect, 'effect_source_permanent') else None
+            if not (permanent and len(permanent.digivolution_cards) >= 4):
                 return False
             return True
 
@@ -36,6 +36,8 @@ class BT13_005(CardScript):
         def process0(ctx: Dict[str, Any]):
             """Action: Draw 1"""
             player = ctx.get('player')
+            perm = ctx.get('permanent')
+            game = ctx.get('game')
             if player:
                 player.draw_cards(1)
 

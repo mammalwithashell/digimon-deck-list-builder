@@ -50,7 +50,7 @@ class BT23_094(CardScript):
         effect1.set_can_use_condition(condition1)
 
         def process1(ctx: Dict[str, Any]):
-            """Action: Change Security Attack, Disable Effect"""
+            """Action: Change Security Attack, Disable Effect, Effect Immunity"""
             player = ctx.get('player')
             perm = ctx.get('permanent')
             game = ctx.get('game')
@@ -58,6 +58,12 @@ class BT23_094(CardScript):
             pass  # descriptive-tagged: change_security_attack
             # Disable/invalidate effects on target — not yet in engine
             pass  # descriptive-tagged: disable_effect
+            # Grant effect immunity via modifier system
+            if perm and game:
+                from digimon_gym.engine.interfaces.modifiers import ModifierType
+                game.register_modifier(
+                    ModifierType.CANNOT_BE_SELECTED_BY_EFFECT, perm,
+                    value_fn=lambda: True, expiry='end_of_turn')
 
         effect1.set_on_process_callback(process1)
         effects.append(effect1)
@@ -67,6 +73,7 @@ class BT23_094(CardScript):
         effect2 = ICardEffect()
         effect2.set_effect_name("BT23-094 Delay")
         effect2.set_effect_description("Delay")
+        effect2.is_on_attack = True
         effect2._is_delay = True
 
         def condition2(context: Dict[str, Any]) -> bool:
@@ -97,7 +104,7 @@ class BT23_094(CardScript):
         effect3.set_can_use_condition(condition3)
 
         def process3(ctx: Dict[str, Any]):
-            """Action: Change Security Attack, Disable Effect"""
+            """Action: Change Security Attack, Disable Effect, Effect Immunity"""
             player = ctx.get('player')
             perm = ctx.get('permanent')
             game = ctx.get('game')
@@ -105,6 +112,12 @@ class BT23_094(CardScript):
             pass  # descriptive-tagged: change_security_attack
             # Disable/invalidate effects on target — not yet in engine
             pass  # descriptive-tagged: disable_effect
+            # Grant effect immunity via modifier system
+            if perm and game:
+                from digimon_gym.engine.interfaces.modifiers import ModifierType
+                game.register_modifier(
+                    ModifierType.CANNOT_BE_SELECTED_BY_EFFECT, perm,
+                    value_fn=lambda: True, expiry='end_of_turn')
 
         effect3.set_on_process_callback(process3)
         effects.append(effect3)
@@ -125,7 +138,7 @@ class BT23_094(CardScript):
         effect4.set_can_use_condition(condition4)
 
         def process4(ctx: Dict[str, Any]):
-            """Action: Change Security Attack, Disable Effect"""
+            """Action: Change Security Attack, Disable Effect, Effect Immunity"""
             player = ctx.get('player')
             perm = ctx.get('permanent')
             game = ctx.get('game')
@@ -133,6 +146,12 @@ class BT23_094(CardScript):
             pass  # descriptive-tagged: change_security_attack
             # Disable/invalidate effects on target — not yet in engine
             pass  # descriptive-tagged: disable_effect
+            # Grant effect immunity via modifier system
+            if perm and game:
+                from digimon_gym.engine.interfaces.modifiers import ModifierType
+                game.register_modifier(
+                    ModifierType.CANNOT_BE_SELECTED_BY_EFFECT, perm,
+                    value_fn=lambda: True, expiry='end_of_turn')
 
         effect4.set_on_process_callback(process4)
         effects.append(effect4)

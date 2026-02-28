@@ -35,8 +35,9 @@ class BT23_059(CardScript):
         effect1 = ICardEffect()
         effect1.set_effect_name("BT23-059 Alternate digivolution requirement")
         effect1.set_effect_description("Alternate digivolution requirement")
-        # Alternate digivolution: alternate source for cost 3
+        # Alternate digivolution: Lv.5 for cost 3
         effect1._alt_digi_cost = 3
+        effect1._alt_digi_level = 5
 
         def condition1(context: Dict[str, Any]) -> bool:
             return True
@@ -193,8 +194,12 @@ class BT23_059(CardScript):
                 target_perm.unsuspend()
             game.effect_select_own_permanent(
                 player, on_unsuspend, filter_fn=target_filter, is_optional=False)
-            # Grant effect immunity (CanNotAffectedClass) — not yet in engine
-            pass  # descriptive-tagged: effect_immunity
+            # Grant effect immunity via modifier system
+            if perm and game:
+                from digimon_gym.engine.interfaces.modifiers import ModifierType
+                game.register_modifier(
+                    ModifierType.CANNOT_BE_SELECTED_BY_EFFECT, perm,
+                    value_fn=lambda: True, expiry='end_of_turn')
 
         effect6.set_on_process_callback(process6)
         effects.append(effect6)

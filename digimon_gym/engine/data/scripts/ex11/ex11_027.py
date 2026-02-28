@@ -18,8 +18,9 @@ class EX11_027(CardScript):
         effect0 = ICardEffect()
         effect0.set_effect_name("EX11-027 Alternate digivolution requirement")
         effect0.set_effect_description("Alternate digivolution requirement")
-        # Alternate digivolution: alternate source for cost 0
+        # Alternate digivolution: Lv.2 for cost 0
         effect0._alt_digi_cost = 0
+        effect0._alt_digi_level = 2
 
         def condition0(context: Dict[str, Any]) -> bool:
             permanent = card.permanent_of_this_card() if card else None

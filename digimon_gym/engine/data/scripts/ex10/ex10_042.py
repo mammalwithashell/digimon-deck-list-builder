@@ -136,6 +136,7 @@ class EX10_042(CardScript):
         effect4.set_effect_name("EX10-042 Raid")
         effect4.set_effect_description("Raid")
         effect4.is_inherited_effect = True
+        effect4.is_on_attack = True
         effect4._is_raid = True
 
         def condition4(context: Dict[str, Any]) -> bool:

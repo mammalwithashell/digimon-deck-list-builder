@@ -18,8 +18,9 @@ class BT21_016(CardScript):
         effect0 = ICardEffect()
         effect0.set_effect_name("BT21-016 Alternate digivolution requirement")
         effect0.set_effect_description("Alternate digivolution requirement")
-        # Alternate digivolution: with [Xros Heart] trait for cost 2
+        # Alternate digivolution: Lv.3 with [Xros Heart] trait for cost 2
         effect0._alt_digi_cost = 2
+        effect0._alt_digi_level = 3
         effect0._alt_digi_trait = "Xros Heart"
 
         def condition0(context: Dict[str, Any]) -> bool:
@@ -58,6 +59,7 @@ class BT21_016(CardScript):
         effect2 = ICardEffect()
         effect2.set_effect_name("BT21-016 Raid")
         effect2.set_effect_description("Raid")
+        effect2.is_on_attack = True
         effect2._is_raid = True
 
         def condition2(context: Dict[str, Any]) -> bool:

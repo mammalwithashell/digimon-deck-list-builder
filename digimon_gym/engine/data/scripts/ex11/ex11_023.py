@@ -18,8 +18,9 @@ class EX11_023(CardScript):
         effect0 = ICardEffect()
         effect0.set_effect_name("EX11-023 Alternate digivolution requirement")
         effect0.set_effect_description("Alternate digivolution requirement")
-        # Alternate digivolution: with [Puppet] trait for cost 3
+        # Alternate digivolution: Lv.5 with [Puppet] trait for cost 3
         effect0._alt_digi_cost = 3
+        effect0._alt_digi_level = 5
         effect0._alt_digi_trait = "Puppet"
 
         def condition0(context: Dict[str, Any]) -> bool:
@@ -35,6 +36,7 @@ class EX11_023(CardScript):
         effect1 = ICardEffect()
         effect1.set_effect_name("EX11-023 Alliance")
         effect1.set_effect_description("Alliance")
+        effect1.is_on_attack = True
         effect1._is_alliance = True
 
         def condition1(context: Dict[str, Any]) -> bool:

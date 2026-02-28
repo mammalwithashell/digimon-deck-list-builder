@@ -14,9 +14,7 @@ class BT14_051(CardScript):
         effects = []
 
         # Timing: EffectTiming.OnEndTurn
-        # [End of Opponent's Turn][Once Per Turn] By suspending 1 of your Digimon,
-        # reveal the top 5 cards of your deck. Add 2 green Digimon cards among them
-        # to the hand. Return the rest to the bottom of deck.
+        # [End of Opponent's Turn][Once Per Turn] By suspending 1 of your Digimon, reveal the top 5 cards of your deck. Add 2 green Digimon cards among them to the hand. Return the rest to the bottom of deck.
         effect0 = ICardEffect()
         effect0.set_effect_name("BT14-051 Suspend your 1 Digimon to reveal the top 5 cards of deck")
         effect0.set_effect_description("[End of Opponent's Turn][Once Per Turn] By suspending 1 of your Digimon, reveal the top 5 cards of your deck. Add 2 green Digimon cards among them to the hand. Return the rest to the bottom of deck.")
@@ -24,6 +22,7 @@ class BT14_051(CardScript):
         effect0.set_max_count_per_turn(1)
         effect0.set_hash_string("Reveal_BT14_051")
 
+        effect = effect0  # alias for condition closure
         def condition0(context: Dict[str, Any]) -> bool:
             if card and card.permanent_of_this_card() is None:
                 return False
@@ -32,38 +31,42 @@ class BT14_051(CardScript):
         effect0.set_can_use_condition(condition0)
 
         def process0(ctx: Dict[str, Any]):
-            """Action: Suspend 1 of your Digimon, then reveal top 5 and add up to 2 green Digimon."""
+            """Action: Suspend, Add To Hand, Reveal And Select, Effect Immunity"""
             player = ctx.get('player')
+            perm = ctx.get('permanent')
             game = ctx.get('game')
             if not (player and game):
                 return
-
-            def own_unsuspended_filter(p):
-                return getattr(p, 'owner', None) == player and not getattr(p, 'is_suspended', False)
-
-            def after_suspend(_selected_perm):
-                def reveal_filter(c):
-                    if not getattr(c, 'is_digimon', False):
-                        return False
-                    return 'Green' in [col.name for col in getattr(c, 'card_colors', [])]
-
-                def on_revealed(selected, remaining):
-                    # Add up to 2 green Digimon among revealed cards
-                    if isinstance(selected, list):
-                        for c in selected[:2]:
-                            player.hand_cards.append(c)
-                    elif selected is not None:
-                        player.hand_cards.append(selected)
-                    for c in remaining:
-                        player.library_cards.append(c)
-
-                game.effect_reveal_and_select(
-                    player, 5, reveal_filter, on_revealed, is_optional=True, max_select=2
-                )
-
-            game.effect_select_permanent(
-                player, after_suspend, filter_fn=own_unsuspended_filter, is_optional=True, suspend_on_select=True
-            )
+            def target_filter(p):
+                return True
+            def on_suspend(target_perm):
+                target_perm.suspend()
+            game.effect_select_opponent_permanent(
+                player, on_suspend, filter_fn=target_filter, is_optional=True)
+            # Add card to hand (from trash/reveal)
+            if player and player.trash_cards:
+                card_to_add = player.trash_cards.pop()
+                player.hand_cards.append(card_to_add)
+            if not (player and game):
+                return
+            def reveal_filter(c):
+                if not getattr(c, 'is_digimon', False):
+                    return False
+                if not ('Green' in [col.name for col in getattr(c, 'card_colors', [])]):
+                    return False
+                return True
+            def on_revealed(selected, remaining):
+                player.hand_cards.append(selected)
+                for c in remaining:
+                    player.library_cards.append(c)
+            game.effect_reveal_and_select(
+                player, 5, reveal_filter, on_revealed, is_optional=True)
+            # Grant effect immunity via modifier system
+            if perm and game:
+                from digimon_gym.engine.interfaces.modifiers import ModifierType
+                game.register_modifier(
+                    ModifierType.CANNOT_BE_SELECTED_BY_EFFECT, perm,
+                    value_fn=lambda: True, expiry='end_of_turn')
 
         effect0.set_on_process_callback(process0)
         effects.append(effect0)

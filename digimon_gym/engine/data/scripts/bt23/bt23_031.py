@@ -18,8 +18,9 @@ class BT23_031(CardScript):
         effect0 = ICardEffect()
         effect0.set_effect_name("BT23-031 Alternate digivolution requirement")
         effect0.set_effect_description("Alternate digivolution requirement")
-        # Alternate digivolution: alternate source for cost 3
+        # Alternate digivolution: Lv.4 for cost 3
         effect0._alt_digi_cost = 3
+        effect0._alt_digi_level = 4
 
         def condition0(context: Dict[str, Any]) -> bool:
             return True
@@ -107,7 +108,7 @@ class BT23_031(CardScript):
             if enemy:
                 for _ in range(1):
                     if enemy.security_cards:
-                        trashed = enemy.security_cards.pop()
+                        trashed = enemy.security_cards.pop(0)
                         enemy.trash_cards.append(trashed)
 
         effect3.set_on_process_callback(process3)
@@ -145,7 +146,7 @@ class BT23_031(CardScript):
             if enemy:
                 for _ in range(1):
                     if enemy.security_cards:
-                        trashed = enemy.security_cards.pop()
+                        trashed = enemy.security_cards.pop(0)
                         enemy.trash_cards.append(trashed)
 
         effect4.set_on_process_callback(process4)
@@ -157,6 +158,7 @@ class BT23_031(CardScript):
         effect5.set_effect_name("BT23-031 Alliance")
         effect5.set_effect_description("Alliance")
         effect5.is_inherited_effect = True
+        effect5.is_on_attack = True
         effect5._is_alliance = True
 
         def condition5(context: Dict[str, Any]) -> bool:

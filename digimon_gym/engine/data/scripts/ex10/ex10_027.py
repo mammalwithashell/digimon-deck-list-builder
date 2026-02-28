@@ -136,6 +136,7 @@ class EX10_027(CardScript):
         effect3 = ICardEffect()
         effect3.set_effect_name("EX10-027 Save")
         effect3.set_effect_description("Save")
+        effect3.is_on_deletion = True
         effect3._is_save = True
 
         def condition3(context: Dict[str, Any]) -> bool:
@@ -149,6 +150,7 @@ class EX10_027(CardScript):
         effect4.set_effect_name("EX10-027 Retaliation")
         effect4.set_effect_description("Retaliation")
         effect4.is_inherited_effect = True
+        effect4.is_on_deletion = True
         effect4._is_retaliation = True
 
         def condition4(context: Dict[str, Any]) -> bool:

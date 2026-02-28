@@ -24,18 +24,9 @@ class BT13_004(CardScript):
         def condition0(context: Dict[str, Any]) -> bool:
             if not (card and card.owner and card.owner.is_my_turn):
                 return False
-            # Check if opponent has any suspended Digimon in play
-            opponent = card.owner.get_opponent() if card.owner else None
-            if opponent is None:
+            if card and card.permanent_of_this_card() is None:
                 return False
-            battle_area = getattr(opponent, 'battle_area', None)
-            if battle_area is None:
-                return False
-            # Return True if any Digimon in opponent's battle area is suspended
-            for digimon in battle_area.digimon_cards:
-                if getattr(digimon, 'is_suspended', False):
-                    return True
-            return False
+            return True
         effect0.set_can_use_condition(condition0)
         effects.append(effect0)
 

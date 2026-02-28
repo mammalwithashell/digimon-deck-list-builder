@@ -46,6 +46,7 @@ class BT14_039(CardScript):
         effect2.is_optional = True
         effect2.is_on_play = True
 
+        effect = effect2  # alias for condition closure
         def condition2(context: Dict[str, Any]) -> bool:
             if card and card.permanent_of_this_card() is None:
                 return False
@@ -57,6 +58,8 @@ class BT14_039(CardScript):
         def process2(ctx: Dict[str, Any]):
             """Action: Gain 2 memory"""
             player = ctx.get('player')
+            perm = ctx.get('permanent')
+            game = ctx.get('game')
             if player:
                 player.add_memory(2)
 
@@ -76,34 +79,7 @@ class BT14_039(CardScript):
                 return False
             if card and card.permanent_of_this_card() is None:
                 return False
-
-            # [Your Turn] While this Digimon has [Monzaemon] or [Numemon] in its name...
-            target_name_tokens = ("monzaemon", "numemon")
-
-            # Check this card's own name first.
-            try:
-                own_name = (card.get_name() or "").lower()
-            except Exception:
-                own_name = ""
-            if any(token in own_name for token in target_name_tokens):
-                return True
-
-            # Then check digivolution cards' names.
-            try:
-                permanent = card.permanent_of_this_card()
-                if permanent and hasattr(permanent, 'digivolution_cards'):
-                    for evo_card in (permanent.digivolution_cards or []):
-                        try:
-                            evo_name = (evo_card.get_name() or "").lower()
-                        except Exception:
-                            evo_name = ""
-                        if any(token in evo_name for token in target_name_tokens):
-                            return True
-            except Exception:
-                return False
-
-            return False
-
+            return True
         effect3.set_can_use_condition(condition3)
         effects.append(effect3)
 

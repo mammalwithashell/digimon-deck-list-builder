@@ -18,6 +18,7 @@ class BT14_059(CardScript):
         effect0 = ICardEffect()
         effect0.set_effect_name("BT14-059 Retaliation")
         effect0.set_effect_description("Retaliation")
+        effect0.is_on_deletion = True
         effect0._is_retaliation = True
 
         def condition0(context: Dict[str, Any]) -> bool:
@@ -26,12 +27,12 @@ class BT14_059(CardScript):
         effects.append(effect0)
 
         # Factory effect: save
-        # [On Deletion] Save
+        # Save
         effect1 = ICardEffect()
         effect1.set_effect_name("BT14-059 Save")
-        effect1.set_effect_description("[On Deletion] Save")
+        effect1.set_effect_description("Save")
+        effect1.is_on_deletion = True
         effect1._is_save = True
-        effect1.trigger_timing = "on_deletion"
 
         def condition1(context: Dict[str, Any]) -> bool:
             return True

@@ -18,8 +18,9 @@ class EX11_052(CardScript):
         effect0 = ICardEffect()
         effect0.set_effect_name("EX11-052 Alternate digivolution requirement")
         effect0.set_effect_description("Alternate digivolution requirement")
-        # Alternate digivolution: with [Dark Dragon] trait for cost 4
+        # Alternate digivolution: Lv.5 with [Dark Dragon] trait for cost 4
         effect0._alt_digi_cost = 4
+        effect0._alt_digi_level = 5
         effect0._alt_digi_trait = "Dark Dragon"
 
         def condition0(context: Dict[str, Any]) -> bool:
@@ -244,7 +245,7 @@ class EX11_052(CardScript):
             if enemy:
                 for _ in range(1):
                     if enemy.security_cards:
-                        trashed = enemy.security_cards.pop()
+                        trashed = enemy.security_cards.pop(0)
                         enemy.trash_cards.append(trashed)
 
         effect4.set_on_process_callback(process4)
