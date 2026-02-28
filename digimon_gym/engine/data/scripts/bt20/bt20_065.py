@@ -62,12 +62,18 @@ class BT20_065(CardScript):
         effect1.set_can_use_condition(condition1)
 
         def process1(ctx: Dict[str, Any]):
-            """Action: Add Temp Effect"""
+            """Action: Add Temp Effect, Effect Immunity"""
             player = ctx.get('player')
             perm = ctx.get('permanent')
             game = ctx.get('game')
             # Grant temporary effect to target permanent
             pass  # descriptive-tagged: add_temp_effect
+            # Grant effect immunity via modifier system
+            if perm and game:
+                from digimon_gym.engine.interfaces.modifiers import ModifierType
+                game.register_modifier(
+                    ModifierType.CANNOT_BE_SELECTED_BY_EFFECT, perm,
+                    value_fn=lambda: True, expiry='end_of_turn')
 
         effect1.set_on_process_callback(process1)
         effects.append(effect1)
@@ -78,6 +84,7 @@ class BT20_065(CardScript):
         effect2.set_effect_name("BT20-065 Retaliation")
         effect2.set_effect_description("Retaliation")
         effect2.is_inherited_effect = True
+        effect2.is_on_deletion = True
         effect2._is_retaliation = True
 
         def condition2(context: Dict[str, Any]) -> bool:

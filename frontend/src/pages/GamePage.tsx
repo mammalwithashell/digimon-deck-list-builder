@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useRef } from 'react';
 import {
   DndContext,
   PointerSensor,
@@ -15,8 +15,15 @@ import { useDropZone, type DragData } from '@/hooks/useDropZone';
 import { GameBoard } from '@/components/board/GameBoard';
 import { ActionBar } from '@/components/game/ActionBar';
 import { PhaseIndicator } from '@/components/game/PhaseIndicator';
-import { GameLog } from '@/components/game/GameLog';
-import { StackInspector } from '@/components/game/StackInspector';
+import { PromptBar } from '@/components/game/PromptBar';
+import { SelectionPanel } from '@/components/game/SelectionPanel';
+import { TrashViewer } from '@/components/game/TrashViewer';
+import { ResultOverlay } from '@/components/game/ResultOverlay';
+import { AttackArrow } from '@/components/game/AttackArrow';
+import { PhaseBanner } from '@/components/game/PhaseBanner';
+import { CardOverlay } from '@/components/game/CardOverlay';
+import { GameLogDrawer } from '@/components/game/GameLogDrawer';
+import { KeywordPromptDialog } from '@/components/game/KeywordPromptDialog';
 import { DragOverlayCard } from '@/components/game/DragOverlayCard';
 import { useDeckBuilderStore } from '@/stores/deckBuilderStore';
 import * as gameApi from '@/api/gameApi';
@@ -37,6 +44,7 @@ export function GamePage() {
   const { getDropAction } = useDropZone(parsedMask);
 
   const [selectedDeckId, setSelectedDeckId] = useState<string>('');
+  const [opponentDeckId, setOpponentDeckId] = useState<string>('');
   const [agentType, setAgentType] = useState<string>('greedy');
   const [starting, setStarting] = useState(false);
   const [inspectedPerm, setInspectedPerm] = useState<PermanentInfo | null>(null);
@@ -52,6 +60,9 @@ export function GamePage() {
   } | null>(null);
   // When set, slot clicks are interpreted as digivolve targets
   const [digivolvingHandIndex, setDigivolvingHandIndex] = useState<number | null>(null);
+  // Trash viewer state: null = closed, 1 = own trash, 2 = opponent trash
+  const [trashViewerPlayer, setTrashViewerPlayer] = useState<number | null>(null);
+  const boardContainerRef = useRef<HTMLDivElement>(null);
 
   // Load saved decks on first render
   useState(() => {
@@ -65,16 +76,17 @@ export function GamePage() {
   );
 
   const handleStartGame = async () => {
-    if (!selectedDeckId) return;
+    if (!selectedDeckId || !opponentDeckId) return;
     setStarting(true);
     try {
-      const deck = await deckApiMod.getDeck(selectedDeckId);
-      const deckIds = deck.main_deck;
-      const eggIds = deck.egg_deck;
+      const [deck, oppDeck] = await Promise.all([
+        deckApiMod.getDeck(selectedDeckId),
+        deckApiMod.getDeck(opponentDeckId),
+      ]);
 
       const result = await gameApi.createGame({
-        deck1: [...eggIds, ...deckIds],
-        deck2: [...eggIds, ...deckIds], // Agent uses same deck for now
+        deck1: [...deck.egg_deck, ...deck.main_deck],
+        deck2: [...oppDeck.egg_deck, ...oppDeck.main_deck],
         player1_type: 'human',
         player2_type: 'agent',
         player2_policy: agentType,
@@ -311,18 +323,32 @@ export function GamePage() {
     [getDropAction],
   );
 
+  // Auto-select opponent deck: first deck that differs from player's selection
+  const autoSelectOpponentDeck = useCallback(
+    (playerDeckId: string) => {
+      const other = savedDecks.find((d) => d.id !== playerDeckId);
+      setOpponentDeckId(other?.id ?? playerDeckId);
+    },
+    [savedDecks],
+  );
+
   // No game — show setup screen
   if (!store.gameId) {
     return (
-      <div className="flex flex-col items-center justify-center min-h-[calc(100vh-56px)] p-8 gap-4">
+      <div className="flex flex-col items-center justify-center min-h-[calc(100vh-56px)] p-8 gap-6">
         <h1 className="text-2xl font-bold text-gray-100">Start a Game</h1>
 
-        <div className="flex gap-3 items-end">
+        <div className="flex flex-wrap gap-3 items-end justify-center">
           <div>
             <label className="block text-sm text-gray-400 mb-1">Your Deck</label>
             <select
               value={selectedDeckId}
-              onChange={(e) => setSelectedDeckId(e.target.value)}
+              onChange={(e) => {
+                setSelectedDeckId(e.target.value);
+                if (!opponentDeckId || opponentDeckId === selectedDeckId) {
+                  autoSelectOpponentDeck(e.target.value);
+                }
+              }}
               className="px-3 py-2 bg-gray-700 border border-gray-600 rounded text-gray-200"
             >
               <option value="">Select a deck...</option>
@@ -333,7 +359,21 @@ export function GamePage() {
           </div>
 
           <div>
-            <label className="block text-sm text-gray-400 mb-1">Opponent</label>
+            <label className="block text-sm text-gray-400 mb-1">Opponent Deck</label>
+            <select
+              value={opponentDeckId}
+              onChange={(e) => setOpponentDeckId(e.target.value)}
+              className="px-3 py-2 bg-gray-700 border border-gray-600 rounded text-gray-200"
+            >
+              <option value="">Select a deck...</option>
+              {savedDecks.map((d) => (
+                <option key={d.id} value={d.id}>{d.name}</option>
+              ))}
+            </select>
+          </div>
+
+          <div>
+            <label className="block text-sm text-gray-400 mb-1">Agent Type</label>
             <select
               value={agentType}
               onChange={(e) => setAgentType(e.target.value)}
@@ -346,7 +386,7 @@ export function GamePage() {
 
           <button
             onClick={handleStartGame}
-            disabled={!selectedDeckId || starting}
+            disabled={!selectedDeckId || !opponentDeckId || starting}
             className="px-6 py-2 bg-blue-600 hover:bg-blue-500 disabled:bg-blue-800 disabled:opacity-50 text-white font-medium rounded"
           >
             {starting ? 'Starting...' : 'Start Game'}
@@ -423,8 +463,8 @@ export function GamePage() {
   }
 
   return (
-    <div className="h-[calc(100vh-56px)] flex">
-      {/* Main board area */}
+    <div className="h-[calc(100vh-56px)] flex flex-col">
+      {/* Full-width board area */}
       <div className="flex-1 flex flex-col min-w-0">
         <div className="px-3 py-1 flex items-center justify-between">
           <PhaseIndicator
@@ -450,7 +490,26 @@ export function GamePage() {
           </div>
         )}
 
-        <div className="flex-1 overflow-hidden">
+        <PromptBar
+          currentPhase={store.currentPhase}
+          pendingSelection={store.pendingSelection}
+          localPlayer={1}
+          isGameOver={store.isGameOver}
+        />
+
+        <PhaseBanner phase={store.currentPhase} isGameOver={store.isGameOver} />
+
+        <div className="flex-1 overflow-hidden relative" ref={boardContainerRef}>
+          <CardOverlay
+            permanent={inspectedPerm}
+            onClose={() => setInspectedPerm(null)}
+          />
+          <GameLogDrawer logs={store.logs} />
+          <AttackArrow
+            pendingAttack={store.pendingAttack}
+            selectedAttacker={store.selectedAttacker}
+            containerRef={boardContainerRef}
+          />
           <DndContext
             sensors={sensors}
             onDragStart={handleDragStart}
@@ -473,6 +532,8 @@ export function GamePage() {
                     : undefined
               }
               onRevealedClick={handleRevealedClick}
+              onOwnTrashClick={() => setTrashViewerPlayer(1)}
+              onOpponentTrashClick={() => setTrashViewerPlayer(2)}
               canHatch={parsedMask.canHatch}
               canMove={parsedMask.canMove}
               canDigivolveBreeding={parsedMask.canDigivolveBreeding.size > 0}
@@ -539,17 +600,51 @@ export function GamePage() {
         />
       </div>
 
-      {/* Right sidebar */}
-      <div className="w-[240px] flex flex-col border-l border-gray-700">
-        {inspectedPerm ? (
-          <StackInspector
-            permanent={inspectedPerm}
-            onClose={() => setInspectedPerm(null)}
-          />
-        ) : (
-          <GameLog logs={store.logs} />
-        )}
-      </div>
+      {/* Win/Loss result overlay */}
+      <ResultOverlay
+        isGameOver={store.isGameOver}
+        winner={store.winner}
+        localPlayer={1}
+        playerLabels={store.playerLabels}
+        onReturnToMenu={() => store.reset()}
+      />
+
+      {/* Trash viewer modal */}
+      <TrashViewer
+        isOpen={trashViewerPlayer !== null}
+        onClose={() => setTrashViewerPlayer(null)}
+        trashIds={
+          trashViewerPlayer === 2
+            ? (store.player2?.trashIds ?? [])
+            : (store.player1?.trashIds ?? [])
+        }
+        ownerLabel={
+          trashViewerPlayer !== null
+            ? (store.playerLabels[trashViewerPlayer] ?? `Player ${trashViewerPlayer}`)
+            : ''
+        }
+      />
+
+      {/* Selection panel modal for hand/trash/security/effect-choice selections */}
+      <SelectionPanel
+        currentPhase={store.currentPhase}
+        pendingSelection={store.pendingSelection}
+        actionMask={store.actionMask}
+        handIds={store.player1?.handIds ?? []}
+        trashIds={store.player1?.trashIds ?? []}
+        securityIds={store.player1?.securityIds ?? []}
+        onAction={handleAction}
+        localPlayer={1}
+      />
+
+      {/* Keyword prompt dialog for optional keyword activations */}
+      <KeywordPromptDialog
+        currentPhase={store.currentPhase}
+        pendingSelection={store.pendingSelection}
+        actionMask={store.actionMask}
+        onAction={handleAction}
+        localPlayer={1}
+      />
     </div>
   );
 }

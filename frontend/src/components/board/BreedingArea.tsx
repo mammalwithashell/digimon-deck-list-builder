@@ -56,7 +56,7 @@ export function BreedingArea({
       ) : (
         <div
           ref={setDropNodeRef}
-          className={`w-[80px] h-[112px] border border-dashed rounded flex items-center justify-center ${
+          className={`w-[96px] h-[134px] border border-dashed rounded flex items-center justify-center ${
             showDropHighlight ? 'border-green-400 ring-2 ring-green-400/80' : 'border-gray-700/50'
           }`}
         >

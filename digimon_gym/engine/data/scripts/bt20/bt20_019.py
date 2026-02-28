@@ -35,6 +35,7 @@ class BT20_019(CardScript):
         effect1 = ICardEffect()
         effect1.set_effect_name("BT20-019 Alliance")
         effect1.set_effect_description("Alliance")
+        effect1.is_on_attack = True
         effect1._is_alliance = True
 
         def condition1(context: Dict[str, Any]) -> bool:
@@ -65,8 +66,12 @@ class BT20_019(CardScript):
             game = ctx.get('game')
             # Force attack — target Digimon may attack (requires engine SelectAttack)
             pass  # descriptive-tagged: force_attack
-            # Grant effect immunity (CanNotAffectedClass) — not yet in engine
-            pass  # descriptive-tagged: effect_immunity
+            # Grant effect immunity via modifier system
+            if perm and game:
+                from digimon_gym.engine.interfaces.modifiers import ModifierType
+                game.register_modifier(
+                    ModifierType.CANNOT_BE_SELECTED_BY_EFFECT, perm,
+                    value_fn=lambda: True, expiry='end_of_turn')
 
         effect2.set_on_process_callback(process2)
         effects.append(effect2)
@@ -119,8 +124,12 @@ class BT20_019(CardScript):
             player = ctx.get('player')
             perm = ctx.get('permanent')
             game = ctx.get('game')
-            # Can attack unsuspended Digimon (CanAttackTargetDefendingPermanentClass) — not yet in engine
-            pass  # descriptive-tagged: attack_unsuspended
+            # Can attack unsuspended Digimon via modifier system
+            if perm and game:
+                from digimon_gym.engine.interfaces.modifiers import ModifierType
+                game.register_modifier(
+                    ModifierType.CAN_ATTACK_UNSUSPENDED, perm,
+                    value_fn=lambda: True, expiry='persistent')
 
         effect4.set_on_process_callback(process4)
         effects.append(effect4)
@@ -152,8 +161,12 @@ class BT20_019(CardScript):
             game = ctx.get('game')
             # Grant keyword to other permanents (AddSkillClass) — not yet in engine
             pass  # descriptive-tagged: grant_skill
-            # Can attack unsuspended Digimon (CanAttackTargetDefendingPermanentClass) — not yet in engine
-            pass  # descriptive-tagged: attack_unsuspended
+            # Can attack unsuspended Digimon via modifier system
+            if perm and game:
+                from digimon_gym.engine.interfaces.modifiers import ModifierType
+                game.register_modifier(
+                    ModifierType.CAN_ATTACK_UNSUSPENDED, perm,
+                    value_fn=lambda: True, expiry='persistent')
 
         effect5.set_on_process_callback(process5)
         effects.append(effect5)

@@ -183,18 +183,18 @@ class P_203(CardScript):
         effect5.set_can_use_condition(condition5)
 
         def process5(ctx: Dict[str, Any]):
-            """Action: Gain Keyword Cannot Attack"""
+            """Action: Gain Keyword Cannot Attack, Effect Immunity"""
             player = ctx.get('player')
             perm = ctx.get('permanent')
             game = ctx.get('game')
-            if not (player and game):
-                return
-            def target_filter(p):
-                return p.is_digimon
-            def on_grant(target_perm):
-                target_perm.grant_keyword('_is_cannot_attack')
-            game.effect_select_opponent_permanent(
-                player, on_grant, filter_fn=target_filter, is_optional=False)
+            if perm:
+                perm.grant_keyword('_is_cannot_attack')
+            # Grant effect immunity via modifier system
+            if perm and game:
+                from digimon_gym.engine.interfaces.modifiers import ModifierType
+                game.register_modifier(
+                    ModifierType.CANNOT_BE_SELECTED_BY_EFFECT, perm,
+                    value_fn=lambda: True, expiry='end_of_turn')
 
         effect5.set_on_process_callback(process5)
         effects.append(effect5)

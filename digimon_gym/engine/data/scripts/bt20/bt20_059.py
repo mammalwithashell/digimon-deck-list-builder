@@ -66,8 +66,12 @@ class BT20_059(CardScript):
                     enemy.trash_cards.extend(removed)
             game.effect_select_opponent_permanent(
                 player, on_de_digivolve, filter_fn=lambda p: p.is_digimon, is_optional=False)
-            # Grant effect immunity (CanNotAffectedClass) — not yet in engine
-            pass  # descriptive-tagged: effect_immunity
+            # Grant effect immunity via modifier system
+            if perm and game:
+                from digimon_gym.engine.interfaces.modifiers import ModifierType
+                game.register_modifier(
+                    ModifierType.CANNOT_BE_SELECTED_BY_EFFECT, perm,
+                    value_fn=lambda: True, expiry='end_of_turn')
 
         effect1.set_on_process_callback(process1)
         effects.append(effect1)
@@ -106,31 +110,31 @@ class BT20_059(CardScript):
         effect3.set_can_use_condition(condition3)
         effects.append(effect3)
 
-        # Factory effect: blocker
-        # Blocker
+        # Factory effect: reboot_non_self
+        # Reboot (grant to others)
         effect4 = ICardEffect()
-        effect4.set_effect_name("BT20-059 Blocker")
-        effect4.set_effect_description("Blocker")
-        effect4.is_inherited_effect = True
-        effect4._is_blocker = True
+        effect4.set_effect_name("BT20-059 Reboot (grant to others)")
+        effect4.set_effect_description("Reboot (grant to others)")
+        effect4._is_reboot = True
+        effect4._applies_to_all_own_digimon = True
 
         def condition4(context: Dict[str, Any]) -> bool:
             if card and card.permanent_of_this_card() is None:
                 return False
             permanent = card.permanent_of_this_card() if card else None
-            if not (permanent and (permanent.contains_card_name('Jesmon GX'))):
+            if not (permanent and permanent.top_card and (any('Royal Knight' in tr for tr in (getattr(permanent.top_card, 'card_traits', []) or [])))):
                 return False
             return True
         effect4.set_can_use_condition(condition4)
         effects.append(effect4)
 
-        # Factory effect: reboot
-        # Reboot
+        # Factory effect: blocker
+        # Blocker
         effect5 = ICardEffect()
-        effect5.set_effect_name("BT20-059 Reboot")
-        effect5.set_effect_description("Reboot")
+        effect5.set_effect_name("BT20-059 Blocker")
+        effect5.set_effect_description("Blocker")
         effect5.is_inherited_effect = True
-        effect5._is_reboot = True
+        effect5._is_blocker = True
 
         def condition5(context: Dict[str, Any]) -> bool:
             if card and card.permanent_of_this_card() is None:
@@ -141,5 +145,42 @@ class BT20_059(CardScript):
             return True
         effect5.set_can_use_condition(condition5)
         effects.append(effect5)
+
+        # Factory effect: reboot
+        # Reboot
+        effect6 = ICardEffect()
+        effect6.set_effect_name("BT20-059 Reboot")
+        effect6.set_effect_description("Reboot")
+        effect6.is_inherited_effect = True
+        effect6._is_reboot = True
+
+        def condition6(context: Dict[str, Any]) -> bool:
+            if card and card.permanent_of_this_card() is None:
+                return False
+            permanent = card.permanent_of_this_card() if card else None
+            if not (permanent and (permanent.contains_card_name('Jesmon GX'))):
+                return False
+            return True
+        effect6.set_can_use_condition(condition6)
+        effects.append(effect6)
+
+        # Factory effect: reboot_non_self
+        # Reboot (grant to others)
+        effect7 = ICardEffect()
+        effect7.set_effect_name("BT20-059 Reboot (grant to others)")
+        effect7.set_effect_description("Reboot (grant to others)")
+        effect7.is_inherited_effect = True
+        effect7._is_reboot = True
+        effect7._applies_to_all_own_digimon = True
+
+        def condition7(context: Dict[str, Any]) -> bool:
+            if card and card.permanent_of_this_card() is None:
+                return False
+            permanent = card.permanent_of_this_card() if card else None
+            if not (permanent and (permanent.contains_card_name('Jesmon GX'))):
+                return False
+            return True
+        effect7.set_can_use_condition(condition7)
+        effects.append(effect7)
 
         return effects

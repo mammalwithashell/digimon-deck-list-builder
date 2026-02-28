@@ -62,10 +62,10 @@ class P_216(CardScript):
         effects.append(effect1)
 
         # Timing: EffectTiming.OnEnterFieldAnyone
-        # Delete
+        # Delete, Effect Immunity
         effect2 = ICardEffect()
         effect2.set_effect_name("P-216 Delete this Digimon")
-        effect2.set_effect_description("Delete")
+        effect2.set_effect_description("Delete, Effect Immunity")
         effect2.is_on_play = True
 
         effect = effect2  # alias for condition closure
@@ -75,7 +75,7 @@ class P_216(CardScript):
         effect2.set_can_use_condition(condition2)
 
         def process2(ctx: Dict[str, Any]):
-            """Action: Delete"""
+            """Action: Delete, Effect Immunity"""
             player = ctx.get('player')
             perm = ctx.get('permanent')
             game = ctx.get('game')
@@ -89,6 +89,12 @@ class P_216(CardScript):
                     enemy.delete_permanent(target_perm)
             game.effect_select_opponent_permanent(
                 player, on_delete, filter_fn=target_filter, is_optional=False)
+            # Grant effect immunity via modifier system
+            if perm and game:
+                from digimon_gym.engine.interfaces.modifiers import ModifierType
+                game.register_modifier(
+                    ModifierType.CANNOT_BE_SELECTED_BY_EFFECT, perm,
+                    value_fn=lambda: True, expiry='end_of_turn')
 
         effect2.set_on_process_callback(process2)
         effects.append(effect2)
@@ -128,10 +134,10 @@ class P_216(CardScript):
         effects.append(effect3)
 
         # Timing: EffectTiming.OnDestroyedAnyone
-        # Delete
+        # Delete, Effect Immunity
         effect4 = ICardEffect()
         effect4.set_effect_name("P-216 Delete this Digimon")
-        effect4.set_effect_description("Delete")
+        effect4.set_effect_description("Delete, Effect Immunity")
         effect4.is_on_deletion = True
 
         effect = effect4  # alias for condition closure
@@ -143,7 +149,7 @@ class P_216(CardScript):
         effect4.set_can_use_condition(condition4)
 
         def process4(ctx: Dict[str, Any]):
-            """Action: Delete"""
+            """Action: Delete, Effect Immunity"""
             player = ctx.get('player')
             perm = ctx.get('permanent')
             game = ctx.get('game')
@@ -157,6 +163,12 @@ class P_216(CardScript):
                     enemy.delete_permanent(target_perm)
             game.effect_select_opponent_permanent(
                 player, on_delete, filter_fn=target_filter, is_optional=False)
+            # Grant effect immunity via modifier system
+            if perm and game:
+                from digimon_gym.engine.interfaces.modifiers import ModifierType
+                game.register_modifier(
+                    ModifierType.CANNOT_BE_SELECTED_BY_EFFECT, perm,
+                    value_fn=lambda: True, expiry='end_of_turn')
 
         effect4.set_on_process_callback(process4)
         effects.append(effect4)

@@ -6,6 +6,7 @@ import { MAX_BATTLE_AREA_SLOTS } from '@/utils/constants';
 interface DroppableSlotProps {
   slotIndex: number;
   isEmpty: boolean;
+  isOpponent: boolean;
   /** This slot is a valid drop target for the currently dragged card */
   isValidDrop: boolean;
   /** This slot should glow to indicate it's a valid digivolve target */
@@ -14,7 +15,7 @@ interface DroppableSlotProps {
   onClick?: () => void;
 }
 
-function DroppableSlot({ slotIndex, isEmpty, isValidDrop, isDigivolveTarget, children, onClick }: DroppableSlotProps) {
+function DroppableSlot({ slotIndex, isEmpty, isOpponent, isValidDrop, isDigivolveTarget, children, onClick }: DroppableSlotProps) {
   const dropType = isEmpty ? 'empty-field-slot' : 'occupied-field-slot';
   const { isOver, setNodeRef } = useDroppable({
     id: `field-slot-${slotIndex}`,
@@ -26,6 +27,7 @@ function DroppableSlot({ slotIndex, isEmpty, isValidDrop, isDigivolveTarget, chi
   return (
     <div
       ref={setNodeRef}
+      data-slot-id={`${isOpponent ? 'opponent' : 'player'}-${slotIndex}`}
       className={`rounded ${
         showDropHighlight
           ? isEmpty
@@ -71,7 +73,7 @@ export function BattleArea({
   const slots = Array.from({ length: MAX_BATTLE_AREA_SLOTS }, (_, i) => i);
 
   return (
-    <div className="grid grid-cols-6 gap-1 justify-center min-h-[232px] w-fit mx-auto">
+    <div className="grid grid-cols-6 gap-1 justify-center min-h-[276px] w-fit mx-auto">
       {slots.map((i) => {
         const perm = permanents[i];
         const isEmpty = !perm;
@@ -81,6 +83,7 @@ export function BattleArea({
             key={i}
             slotIndex={i}
             isEmpty={isEmpty}
+            isOpponent={isOpponent}
             isValidDrop={
               !isOpponent && isDraggingHandCard
                 ? isEmpty
@@ -94,7 +97,7 @@ export function BattleArea({
             onClick={() => onSlotClick?.(i)}
           >
             {isEmpty ? (
-              <div className="w-[80px] h-[112px] border border-dashed border-gray-700/30 rounded flex items-center justify-center">
+              <div className="w-[96px] h-[134px] border border-dashed border-gray-700/30 rounded flex items-center justify-center">
                 <span className="text-[9px] text-gray-700">{i}</span>
               </div>
             ) : (

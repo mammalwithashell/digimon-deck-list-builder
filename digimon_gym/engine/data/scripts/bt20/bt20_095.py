@@ -62,6 +62,7 @@ class BT20_095(CardScript):
         effect1 = ICardEffect()
         effect1.set_effect_name("BT20-095 Delay")
         effect1.set_effect_description("Delay")
+        effect1.is_on_deletion = True
         effect1._is_delay = True
 
         def condition1(context: Dict[str, Any]) -> bool:
@@ -73,7 +74,7 @@ class BT20_095(CardScript):
         # [All Turns] When any of your [Chronicle] trait Digimon are deleted, <Delay>.\n・By moving your level 3 or higher Digimon from the breeding area to the battle area, it may digivolve into a [Chronicle] trait Digimon card in the hand or trash without paying the cost.
         effect2 = ICardEffect()
         effect2.set_effect_name("BT20-095 Move 1 Digimon")
-        effect2.set_effect_description("[All Turns] When any of your [Chronicle] trait Digimon are deleted, <Delay>.\n・By moving your level 3 or higher Digimon from the breeding area to the battle area, it may digivolve into a [Chronicle] trait Digimon card in the hand or trash without paying the cost.")
+        effect2.set_effect_description("[All Turns] When any of your [Chronicle] trait Digimon are deleted, <Delay>.\\n・By moving your level 3 or higher Digimon from the breeding area to the battle area, it may digivolve into a [Chronicle] trait Digimon card in the hand or trash without paying the cost.")
         effect2.is_optional = True
         effect2.is_on_deletion = True
 

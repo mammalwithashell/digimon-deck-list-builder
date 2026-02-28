@@ -64,8 +64,12 @@ class BT20_053(CardScript):
                 return True
             game.effect_play_from_zone(
                 player, 'hand', play_filter, free=True, is_optional=True)
-            # Grant effect immunity (CanNotAffectedClass) — not yet in engine
-            pass  # descriptive-tagged: effect_immunity
+            # Grant effect immunity via modifier system
+            if perm and game:
+                from digimon_gym.engine.interfaces.modifiers import ModifierType
+                game.register_modifier(
+                    ModifierType.CANNOT_BE_SELECTED_BY_EFFECT, perm,
+                    value_fn=lambda: True, expiry='end_of_turn')
 
         effect1.set_on_process_callback(process1)
         effects.append(effect1)
@@ -99,8 +103,12 @@ class BT20_053(CardScript):
                 return True
             game.effect_play_from_zone(
                 player, 'hand', play_filter, free=True, is_optional=True)
-            # Grant effect immunity (CanNotAffectedClass) — not yet in engine
-            pass  # descriptive-tagged: effect_immunity
+            # Grant effect immunity via modifier system
+            if perm and game:
+                from digimon_gym.engine.interfaces.modifiers import ModifierType
+                game.register_modifier(
+                    ModifierType.CANNOT_BE_SELECTED_BY_EFFECT, perm,
+                    value_fn=lambda: True, expiry='end_of_turn')
 
         effect2.set_on_process_callback(process2)
         effects.append(effect2)

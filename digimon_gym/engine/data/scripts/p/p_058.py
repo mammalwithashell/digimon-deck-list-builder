@@ -32,8 +32,12 @@ class P_058(CardScript):
             player = ctx.get('player')
             perm = ctx.get('permanent')
             game = ctx.get('game')
-            # Can attack unsuspended Digimon (CanAttackTargetDefendingPermanentClass) — not yet in engine
-            pass  # descriptive-tagged: attack_unsuspended
+            # Can attack unsuspended Digimon via modifier system
+            if perm and game:
+                from digimon_gym.engine.interfaces.modifiers import ModifierType
+                game.register_modifier(
+                    ModifierType.CAN_ATTACK_UNSUSPENDED, perm,
+                    value_fn=lambda: True, expiry='persistent')
 
         effect0.set_on_process_callback(process0)
         effects.append(effect0)

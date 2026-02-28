@@ -26,77 +26,91 @@ class BT20_045(CardScript):
         effect0.set_can_use_condition(condition0)
         effects.append(effect0)
 
-        # Factory effect: raid
-        # Raid
+        # Factory effect: blast_dna_digivolve
+        # Blast DNA Digivolve
         effect1 = ICardEffect()
-        effect1.set_effect_name("BT20-045 Raid")
-        effect1.set_effect_description("Raid")
-        effect1._is_raid = True
+        effect1.set_effect_name("BT20-045 Blast DNA Digivolve")
+        effect1.set_effect_description("Blast DNA Digivolve")
+        effect1.is_counter_effect = True
+        effect1._is_blast_dna_digivolve = True
 
         def condition1(context: Dict[str, Any]) -> bool:
             return True
         effect1.set_can_use_condition(condition1)
         effects.append(effect1)
 
-        # Factory effect: blocker
-        # Blocker
+        # Factory effect: raid
+        # Raid
         effect2 = ICardEffect()
-        effect2.set_effect_name("BT20-045 Blocker")
-        effect2.set_effect_description("Blocker")
-        effect2._is_blocker = True
+        effect2.set_effect_name("BT20-045 Raid")
+        effect2.set_effect_description("Raid")
+        effect2.is_on_attack = True
+        effect2._is_raid = True
 
         def condition2(context: Dict[str, Any]) -> bool:
             return True
         effect2.set_can_use_condition(condition2)
         effects.append(effect2)
 
-        # Factory effect: evade
-        # Evade
+        # Factory effect: blocker
+        # Blocker
         effect3 = ICardEffect()
-        effect3.set_effect_name("BT20-045 Evade")
-        effect3.set_effect_description("Evade")
-        effect3._is_evade = True
+        effect3.set_effect_name("BT20-045 Blocker")
+        effect3.set_effect_description("Blocker")
+        effect3._is_blocker = True
 
         def condition3(context: Dict[str, Any]) -> bool:
             return True
         effect3.set_can_use_condition(condition3)
         effects.append(effect3)
 
-        # Timing: EffectTiming.OnEnterFieldAnyone
-        # [When Digivolving] If DNA digivolving, return all of your opponent's Digimon with the highest DP to the bottom of the deck.
+        # Factory effect: evade
+        # Evade
         effect4 = ICardEffect()
-        effect4.set_effect_name("BT20-045 Return opponent's Digimon with the highest DP to the bottom of deck")
-        effect4.set_effect_description("[When Digivolving] If DNA digivolving, return all of your opponent's Digimon with the highest DP to the bottom of the deck.")
-        effect4.is_when_digivolving = True
+        effect4.set_effect_name("BT20-045 Evade")
+        effect4.set_effect_description("Evade")
+        effect4._is_evade = True
 
-        effect = effect4  # alias for condition closure
         def condition4(context: Dict[str, Any]) -> bool:
-            if card and card.permanent_of_this_card() is None:
-                return False
-            # Triggered when digivolving — validated by engine timing
             return True
-
         effect4.set_can_use_condition(condition4)
         effects.append(effect4)
 
-        # Timing: EffectTiming.OnTappedAnyone
-        # [Your Turn] (Once Per Turn) When any Digimon suspend, this Digimon may unsuspend.
+        # Timing: EffectTiming.OnEnterFieldAnyone
+        # [When Digivolving] If DNA digivolving, return all of your opponent's Digimon with the highest DP to the bottom of the deck.
         effect5 = ICardEffect()
-        effect5.set_effect_name("BT20-045 Unsuspend this Digimon")
-        effect5.set_effect_description("[Your Turn] (Once Per Turn) When any Digimon suspend, this Digimon may unsuspend.")
-        effect5.is_optional = True
-        effect5.set_max_count_per_turn(1)
-        effect5.set_hash_string("Unsuspend_BT20_045")
+        effect5.set_effect_name("BT20-045 Return opponent's Digimon with the highest DP to the bottom of deck")
+        effect5.set_effect_description("[When Digivolving] If DNA digivolving, return all of your opponent's Digimon with the highest DP to the bottom of the deck.")
+        effect5.is_when_digivolving = True
 
         effect = effect5  # alias for condition closure
         def condition5(context: Dict[str, Any]) -> bool:
             if card and card.permanent_of_this_card() is None:
                 return False
+            # Triggered when digivolving — validated by engine timing
             return True
 
         effect5.set_can_use_condition(condition5)
+        effects.append(effect5)
 
-        def process5(ctx: Dict[str, Any]):
+        # Timing: EffectTiming.OnTappedAnyone
+        # [Your Turn] (Once Per Turn) When any Digimon suspend, this Digimon may unsuspend.
+        effect6 = ICardEffect()
+        effect6.set_effect_name("BT20-045 Unsuspend this Digimon")
+        effect6.set_effect_description("[Your Turn] (Once Per Turn) When any Digimon suspend, this Digimon may unsuspend.")
+        effect6.is_optional = True
+        effect6.set_max_count_per_turn(1)
+        effect6.set_hash_string("Unsuspend_BT20_045")
+
+        effect = effect6  # alias for condition closure
+        def condition6(context: Dict[str, Any]) -> bool:
+            if card and card.permanent_of_this_card() is None:
+                return False
+            return True
+
+        effect6.set_can_use_condition(condition6)
+
+        def process6(ctx: Dict[str, Any]):
             """Action: Unsuspend"""
             player = ctx.get('player')
             perm = ctx.get('permanent')
@@ -110,7 +124,7 @@ class BT20_045(CardScript):
             game.effect_select_own_permanent(
                 player, on_unsuspend, filter_fn=target_filter, is_optional=True)
 
-        effect5.set_on_process_callback(process5)
-        effects.append(effect5)
+        effect6.set_on_process_callback(process6)
+        effects.append(effect6)
 
         return effects

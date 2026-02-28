@@ -73,12 +73,27 @@ export interface PermanentInfo {
   colors: number[];
 }
 
+export interface EffectChoice {
+  index: number;
+  cardId: string;
+  cardName: string;
+  label: string;
+}
+
+export interface KeywordPrompt {
+  keyword: string;
+  cardId: string;
+  cardName: string;
+}
+
 export interface PendingSelection {
   phase: GamePhase;
   validIndices: number[];
   isOptional: boolean;
   prompt: string;
   selectingPlayer: number;
+  effectChoices?: EffectChoice[];
+  keywordPrompt?: KeywordPrompt;
 }
 
 export interface PendingAttack {

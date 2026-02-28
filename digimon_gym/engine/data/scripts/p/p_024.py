@@ -16,7 +16,7 @@ class P_024(CardScript):
         # Timing: EffectTiming.OptionSkill
         # [Main] If you have [Tai Kamiya] in play, you may place 1 of your [Agumon] cards at the bottom of its owner's deck to trigger <Draw 3>. (Draw 3 cards from your deck.) Trash that Digimon's digivolution cards.
         effect0 = ICardEffect()
-        effect0.set_effect_name("P-024 Draw 3")
+        effect0.set_effect_name("P-024 Draw 3, Effect Immunity")
         effect0.set_effect_description("[Main] If you have [Tai Kamiya] in play, you may place 1 of your [Agumon] cards at the bottom of its owner's deck to trigger <Draw 3>. (Draw 3 cards from your deck.) Trash that Digimon's digivolution cards.")
 
         effect = effect0  # alias for condition closure
@@ -27,12 +27,18 @@ class P_024(CardScript):
         effect0.set_can_use_condition(condition0)
 
         def process0(ctx: Dict[str, Any]):
-            """Action: Draw 3"""
+            """Action: Draw 3, Effect Immunity"""
             player = ctx.get('player')
             perm = ctx.get('permanent')
             game = ctx.get('game')
             if player:
                 player.draw_cards(3)
+            # Grant effect immunity via modifier system
+            if perm and game:
+                from digimon_gym.engine.interfaces.modifiers import ModifierType
+                game.register_modifier(
+                    ModifierType.CANNOT_BE_SELECTED_BY_EFFECT, perm,
+                    value_fn=lambda: True, expiry='end_of_turn')
 
         effect0.set_on_process_callback(process0)
         effects.append(effect0)

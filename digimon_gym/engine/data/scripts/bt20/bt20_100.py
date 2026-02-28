@@ -67,7 +67,7 @@ class BT20_100(CardScript):
         # [All Turns] When any of your Digimon with [Omnimon] in their names would leave the battle area, <Delay>.\r\n� 1 of those Digimon doesn't leave.
         effect2 = ICardEffect()
         effect2.set_effect_name("BT20-100 Prevent Removal")
-        effect2.set_effect_description("[All Turns] When any of your Digimon with [Omnimon] in their names would leave the battle area, <Delay>.\r\n� 1 of those Digimon doesn't leave.")
+        effect2.set_effect_description("[All Turns] When any of your Digimon with [Omnimon] in their names would leave the battle area, <Delay>.\\r\\n� 1 of those Digimon doesn't leave.")
         effect2.is_optional = True
 
         effect = effect2  # alias for condition closure

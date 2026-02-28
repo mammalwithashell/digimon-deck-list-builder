@@ -32,10 +32,10 @@ class P_215(CardScript):
         effects.append(effect0)
 
         # Timing: EffectTiming.OnMove
-        # Gain Keyword Cannot Return To Hand, Gain Keyword Cannot Return To Deck
+        # Gain Keyword Cannot Return To Hand, Gain Keyword Cannot Return To Deck, Grant Bounce Immunity
         effect1 = ICardEffect()
-        effect1.set_effect_name("P-215 Gain Keyword Cannot Return To Hand, Gain Keyword Cannot Return To Deck")
-        effect1.set_effect_description("Gain Keyword Cannot Return To Hand, Gain Keyword Cannot Return To Deck")
+        effect1.set_effect_name("P-215 Gain Keyword Cannot Return To Hand, Gain Keyword Cannot Return To Deck, Grant Bounce Immunity")
+        effect1.set_effect_description("Gain Keyword Cannot Return To Hand, Gain Keyword Cannot Return To Deck, Grant Bounce Immunity")
         effect1._is_cannot_return_to_hand = True
         effect1._is_cannot_return_to_deck = True
 
@@ -48,28 +48,28 @@ class P_215(CardScript):
         effect1.set_can_use_condition(condition1)
 
         def process1(ctx: Dict[str, Any]):
-            """Action: Gain Keyword Cannot Return To Hand, Gain Keyword Cannot Return To Deck"""
+            """Action: Gain Keyword Cannot Return To Hand, Gain Keyword Cannot Return To Deck, Grant Bounce Immunity"""
             player = ctx.get('player')
             perm = ctx.get('permanent')
             game = ctx.get('game')
-            if not (player and game):
-                return
-            def target_filter(p):
-                return p.is_digimon
-            def on_grant(target_perm):
-                target_perm.grant_keyword('_is_cannot_return_to_hand')
-                target_perm.grant_keyword('_is_cannot_return_to_deck')
-            game.effect_select_own_permanent(
-                player, on_grant, filter_fn=target_filter, is_optional=False)
+            if perm:
+                perm.grant_keyword('_is_cannot_return_to_hand')
+                perm.grant_keyword('_is_cannot_return_to_deck')
+            # Prevent return to hand/deck via modifier system
+            if perm and game:
+                from digimon_gym.engine.interfaces.modifiers import ModifierType
+                game.register_modifier(
+                    ModifierType.CANNOT_BE_RETURNED, perm,
+                    value_fn=lambda: True, expiry='end_of_turn')
 
         effect1.set_on_process_callback(process1)
         effects.append(effect1)
 
         # Timing: EffectTiming.OnEnterFieldAnyone
-        # Gain Keyword Cannot Return To Hand, Gain Keyword Cannot Return To Deck
+        # Gain Keyword Cannot Return To Hand, Gain Keyword Cannot Return To Deck, Grant Bounce Immunity
         effect2 = ICardEffect()
-        effect2.set_effect_name("P-215 Gain Keyword Cannot Return To Hand, Gain Keyword Cannot Return To Deck")
-        effect2.set_effect_description("Gain Keyword Cannot Return To Hand, Gain Keyword Cannot Return To Deck")
+        effect2.set_effect_name("P-215 Gain Keyword Cannot Return To Hand, Gain Keyword Cannot Return To Deck, Grant Bounce Immunity")
+        effect2.set_effect_description("Gain Keyword Cannot Return To Hand, Gain Keyword Cannot Return To Deck, Grant Bounce Immunity")
         effect2.is_on_play = True
         effect2._is_cannot_return_to_hand = True
         effect2._is_cannot_return_to_deck = True
@@ -82,28 +82,28 @@ class P_215(CardScript):
         effect2.set_can_use_condition(condition2)
 
         def process2(ctx: Dict[str, Any]):
-            """Action: Gain Keyword Cannot Return To Hand, Gain Keyword Cannot Return To Deck"""
+            """Action: Gain Keyword Cannot Return To Hand, Gain Keyword Cannot Return To Deck, Grant Bounce Immunity"""
             player = ctx.get('player')
             perm = ctx.get('permanent')
             game = ctx.get('game')
-            if not (player and game):
-                return
-            def target_filter(p):
-                return p.is_digimon
-            def on_grant(target_perm):
-                target_perm.grant_keyword('_is_cannot_return_to_hand')
-                target_perm.grant_keyword('_is_cannot_return_to_deck')
-            game.effect_select_own_permanent(
-                player, on_grant, filter_fn=target_filter, is_optional=False)
+            if perm:
+                perm.grant_keyword('_is_cannot_return_to_hand')
+                perm.grant_keyword('_is_cannot_return_to_deck')
+            # Prevent return to hand/deck via modifier system
+            if perm and game:
+                from digimon_gym.engine.interfaces.modifiers import ModifierType
+                game.register_modifier(
+                    ModifierType.CANNOT_BE_RETURNED, perm,
+                    value_fn=lambda: True, expiry='end_of_turn')
 
         effect2.set_on_process_callback(process2)
         effects.append(effect2)
 
         # Timing: EffectTiming.OnEnterFieldAnyone
-        # Gain Keyword Cannot Return To Hand, Gain Keyword Cannot Return To Deck
+        # Gain Keyword Cannot Return To Hand, Gain Keyword Cannot Return To Deck, Grant Bounce Immunity
         effect3 = ICardEffect()
-        effect3.set_effect_name("P-215 Gain Keyword Cannot Return To Hand, Gain Keyword Cannot Return To Deck")
-        effect3.set_effect_description("Gain Keyword Cannot Return To Hand, Gain Keyword Cannot Return To Deck")
+        effect3.set_effect_name("P-215 Gain Keyword Cannot Return To Hand, Gain Keyword Cannot Return To Deck, Grant Bounce Immunity")
+        effect3.set_effect_description("Gain Keyword Cannot Return To Hand, Gain Keyword Cannot Return To Deck, Grant Bounce Immunity")
         effect3.is_when_digivolving = True
         effect3._is_cannot_return_to_hand = True
         effect3._is_cannot_return_to_deck = True
@@ -116,19 +116,19 @@ class P_215(CardScript):
         effect3.set_can_use_condition(condition3)
 
         def process3(ctx: Dict[str, Any]):
-            """Action: Gain Keyword Cannot Return To Hand, Gain Keyword Cannot Return To Deck"""
+            """Action: Gain Keyword Cannot Return To Hand, Gain Keyword Cannot Return To Deck, Grant Bounce Immunity"""
             player = ctx.get('player')
             perm = ctx.get('permanent')
             game = ctx.get('game')
-            if not (player and game):
-                return
-            def target_filter(p):
-                return p.is_digimon
-            def on_grant(target_perm):
-                target_perm.grant_keyword('_is_cannot_return_to_hand')
-                target_perm.grant_keyword('_is_cannot_return_to_deck')
-            game.effect_select_own_permanent(
-                player, on_grant, filter_fn=target_filter, is_optional=False)
+            if perm:
+                perm.grant_keyword('_is_cannot_return_to_hand')
+                perm.grant_keyword('_is_cannot_return_to_deck')
+            # Prevent return to hand/deck via modifier system
+            if perm and game:
+                from digimon_gym.engine.interfaces.modifiers import ModifierType
+                game.register_modifier(
+                    ModifierType.CANNOT_BE_RETURNED, perm,
+                    value_fn=lambda: True, expiry='end_of_turn')
 
         effect3.set_on_process_callback(process3)
         effects.append(effect3)

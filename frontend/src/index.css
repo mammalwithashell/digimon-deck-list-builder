@@ -19,3 +19,26 @@ body {
 ::-webkit-scrollbar-thumb:hover {
   @apply bg-gray-500;
 }
+
+/* Phase banner animation */
+@keyframes bannerSlide {
+  0% {
+    opacity: 0;
+    transform: scaleX(0.3) scaleY(0.6);
+  }
+  15% {
+    opacity: 1;
+    transform: scaleX(1.05) scaleY(1);
+  }
+  25% {
+    transform: scaleX(1) scaleY(1);
+  }
+  75% {
+    opacity: 1;
+    transform: scaleX(1) scaleY(1);
+  }
+  100% {
+    opacity: 0;
+    transform: scaleX(0.8) scaleY(0.4);
+  }
+}

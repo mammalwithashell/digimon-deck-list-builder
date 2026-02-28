@@ -29,7 +29,7 @@ class P_056(CardScript):
         effect0.set_can_use_condition(condition0)
 
         def process0(ctx: Dict[str, Any]):
-            """Action: Cost -2, Suspend"""
+            """Action: Cost -2, Suspend, Effect Immunity"""
             player = ctx.get('player')
             perm = ctx.get('permanent')
             game = ctx.get('game')
@@ -43,6 +43,12 @@ class P_056(CardScript):
                 target_perm.suspend()
             game.effect_select_opponent_permanent(
                 player, on_suspend, filter_fn=target_filter, is_optional=True)
+            # Grant effect immunity via modifier system
+            if perm and game:
+                from digimon_gym.engine.interfaces.modifiers import ModifierType
+                game.register_modifier(
+                    ModifierType.CANNOT_BE_SELECTED_BY_EFFECT, perm,
+                    value_fn=lambda: True, expiry='end_of_turn')
 
         effect0.set_on_process_callback(process0)
         effects.append(effect0)
@@ -66,19 +72,23 @@ class P_056(CardScript):
         effect1.set_can_use_condition(condition1)
 
         def process1(ctx: Dict[str, Any]):
-            """Action: Gain Keyword Cannot Attack, Gain Keyword Cannot Block"""
+            """Action: Gain Keyword Cannot Attack, Gain Keyword Cannot Block, Grant Cannot Block"""
             player = ctx.get('player')
             perm = ctx.get('permanent')
             game = ctx.get('game')
+            if perm:
+                perm.grant_keyword('_is_cannot_attack')
+                perm.grant_keyword('_is_cannot_block')
+            # Prevent target from blocking
             if not (player and game):
                 return
-            def target_filter(p):
-                return p.is_digimon
-            def on_grant(target_perm):
-                target_perm.grant_keyword('_is_cannot_attack')
-                target_perm.grant_keyword('_is_cannot_block')
+            from digimon_gym.engine.interfaces.modifiers import ModifierType
+            def on_restrict(target_perm):
+                game.register_modifier(
+                    ModifierType.CANNOT_BLOCK, target_perm,
+                    value_fn=lambda: True, expiry='end_of_turn')
             game.effect_select_opponent_permanent(
-                player, on_grant, filter_fn=target_filter, is_optional=False)
+                player, on_restrict, filter_fn=lambda p: p.is_digimon, is_optional=False)
 
         effect1.set_on_process_callback(process1)
         effects.append(effect1)

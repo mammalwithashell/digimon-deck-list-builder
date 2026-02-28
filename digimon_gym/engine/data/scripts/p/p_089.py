@@ -30,7 +30,7 @@ class P_089(CardScript):
         effect0.set_can_use_condition(condition0)
 
         def process0(ctx: Dict[str, Any]):
-            """Action: Trash From Hand, Trash Digivolution Cards"""
+            """Action: Trash From Hand, Trash Digivolution Cards, Effect Immunity"""
             player = ctx.get('player')
             perm = ctx.get('permanent')
             game = ctx.get('game')
@@ -49,6 +49,12 @@ class P_089(CardScript):
                 trashed = perm.trash_digivolution_cards(1)
                 if player:
                     player.trash_cards.extend(trashed)
+            # Grant effect immunity via modifier system
+            if perm and game:
+                from digimon_gym.engine.interfaces.modifiers import ModifierType
+                game.register_modifier(
+                    ModifierType.CANNOT_BE_SELECTED_BY_EFFECT, perm,
+                    value_fn=lambda: True, expiry='end_of_turn')
 
         effect0.set_on_process_callback(process0)
         effects.append(effect0)

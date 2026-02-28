@@ -57,6 +57,7 @@ class P_227(CardScript):
         effect1 = ICardEffect()
         effect1.set_effect_name("P-227 Delay")
         effect1.set_effect_description("Delay")
+        effect1.is_on_play = True
         effect1._is_delay = True
 
         def condition1(context: Dict[str, Any]) -> bool:
@@ -75,7 +76,7 @@ class P_227(CardScript):
         # [Your Turn] When any of your [Ryutaro Williams] are played, <Delay>.\r\n 1 of your Digimon may digivolve into a level 6 or lower [LIBERATOR] trait card in the hand with the digivolution cost reduced by 3.
         effect2 = ICardEffect()
         effect2.set_effect_name("P-227 Digivolve into a level 6 or lower [LIBERATOR] Digimon for 3 less.")
-        effect2.set_effect_description("[Your Turn] When any of your [Ryutaro Williams] are played, <Delay>.\r\n 1 of your Digimon may digivolve into a level 6 or lower [LIBERATOR] trait card in the hand with the digivolution cost reduced by 3.")
+        effect2.set_effect_description("[Your Turn] When any of your [Ryutaro Williams] are played, <Delay>.\\r\\n 1 of your Digimon may digivolve into a level 6 or lower [LIBERATOR] trait card in the hand with the digivolution cost reduced by 3.")
         effect2.is_optional = True
         effect2.is_on_play = True
 
@@ -108,5 +109,17 @@ class P_227(CardScript):
 
         effect2.set_on_process_callback(process2)
         effects.append(effect2)
+
+        # Factory effect: security_play
+        # Security: Play this card
+        effect3 = ICardEffect()
+        effect3.set_effect_name("P-227 Security: Play this card")
+        effect3.set_effect_description("Security: Play this card")
+        effect3.is_security_effect = True
+
+        def condition3(context: Dict[str, Any]) -> bool:
+            return True
+        effect3.set_can_use_condition(condition3)
+        effects.append(effect3)
 
         return effects

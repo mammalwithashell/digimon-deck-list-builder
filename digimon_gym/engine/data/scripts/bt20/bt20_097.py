@@ -66,7 +66,7 @@ class BT20_097(CardScript):
         # [All Turns] When any of your [DexDorugoramon] would leave the battle area, <Delay>.\r\n� By return 1 [Dorumon] from those Digimon's digivolution cards to the hand, you may play 1 [DeathXmon] from your trash without paying the cost.
         effect2 = ICardEffect()
         effect2.set_effect_name("BT20-097 Play 1 [DeathXmon]")
-        effect2.set_effect_description("[All Turns] When any of your [DexDorugoramon] would leave the battle area, <Delay>.\r\n� By return 1 [Dorumon] from those Digimon's digivolution cards to the hand, you may play 1 [DeathXmon] from your trash without paying the cost.")
+        effect2.set_effect_description("[All Turns] When any of your [DexDorugoramon] would leave the battle area, <Delay>.\\r\\n� By return 1 [Dorumon] from those Digimon's digivolution cards to the hand, you may play 1 [DeathXmon] from your trash without paying the cost.")
         effect2.is_optional = True
 
         effect = effect2  # alias for condition closure

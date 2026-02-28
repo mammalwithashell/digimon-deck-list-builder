@@ -97,6 +97,7 @@ class P_170(CardScript):
         effect3 = ICardEffect()
         effect3.set_effect_name("P-170 Raid")
         effect3.set_effect_description("Raid")
+        effect3.is_on_attack = True
         effect3._is_raid = True
 
         def condition3(context: Dict[str, Any]) -> bool:
@@ -109,6 +110,7 @@ class P_170(CardScript):
         effect4 = ICardEffect()
         effect4.set_effect_name("P-170 Retaliation")
         effect4.set_effect_description("Retaliation")
+        effect4.is_on_deletion = True
         effect4._is_retaliation = True
 
         def condition4(context: Dict[str, Any]) -> bool:

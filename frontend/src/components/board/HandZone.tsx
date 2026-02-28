@@ -26,7 +26,7 @@ function DraggableHandCard({ cardId, index, isOpponent, highlighted, onClick }: 
       {...listeners}
       {...attributes}
       className={`transition-transform hover:-translate-y-2 ${isDragging ? 'opacity-30' : ''}`}
-      style={{ marginLeft: index > 0 ? '-10px' : 0, zIndex: isDragging ? 100 : index }}
+      style={{ marginLeft: index > 0 ? '-12px' : 0, zIndex: isDragging ? 100 : index }}
     >
       <Card
         cardId={cardId}

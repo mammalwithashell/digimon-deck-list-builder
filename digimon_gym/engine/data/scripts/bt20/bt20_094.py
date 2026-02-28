@@ -65,7 +65,7 @@ class BT20_094(CardScript):
         # [All Turns] When your opponent's security stack is removed from, <Delay>.\r\n� You may play 1 [Imperialdramon: Dragon Mode] from any of your [Imperialdramon: Fighter Mode]'s digivolution cards without paying the cost.
         effect2 = ICardEffect()
         effect2.set_effect_name("BT20-094 You may play 1 [Imperialdramon: Dragon Mode] from any of your [Imperialdramon: Fighter Mode]'s digivolution cards without paying the cost.")
-        effect2.set_effect_description("[All Turns] When your opponent's security stack is removed from, <Delay>.\r\n� You may play 1 [Imperialdramon: Dragon Mode] from any of your [Imperialdramon: Fighter Mode]'s digivolution cards without paying the cost.")
+        effect2.set_effect_description("[All Turns] When your opponent's security stack is removed from, <Delay>.\\r\\n� You may play 1 [Imperialdramon: Dragon Mode] from any of your [Imperialdramon: Fighter Mode]'s digivolution cards without paying the cost.")
         effect2.is_optional = True
 
         effect = effect2  # alias for condition closure

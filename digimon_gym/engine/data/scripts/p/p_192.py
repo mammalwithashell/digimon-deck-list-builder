@@ -117,6 +117,7 @@ class P_192(CardScript):
         effect2.set_effect_name("P-192 Retaliation")
         effect2.set_effect_description("Retaliation")
         effect2.is_inherited_effect = True
+        effect2.is_on_deletion = True
         effect2._is_retaliation = True
 
         def condition2(context: Dict[str, Any]) -> bool:

@@ -79,7 +79,7 @@ class P_155(CardScript):
         # [Main] <Delay> (By trashing this card after the placing turn, active the effect.)\r\n� By trashing 1 of your non-red option cards in your battle area, gain 1 memory.
         effect3 = ICardEffect()
         effect3.set_effect_name("P-155 Memory +1")
-        effect3.set_effect_description("[Main] <Delay> (By trashing this card after the placing turn, active the effect.)\r\n� By trashing 1 of your non-red option cards in your battle area, gain 1 memory.")
+        effect3.set_effect_description("[Main] <Delay> (By trashing this card after the placing turn, active the effect.)\\r\\n� By trashing 1 of your non-red option cards in your battle area, gain 1 memory.")
 
         effect = effect3  # alias for condition closure
         def condition3(context: Dict[str, Any]) -> bool:

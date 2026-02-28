@@ -1,13 +1,14 @@
 import { useCardImage } from '@/hooks/useCardImage';
 import { COLOR_HEX, COLOR_NAMES } from '@/utils/constants';
 
-type CardSize = 'sm' | 'md' | 'lg' | 'xl';
+type CardSize = 'sm' | 'md' | 'lg' | 'xl' | 'inspector';
 
 const SIZE_MAP: Record<CardSize, { width: number; height: number }> = {
   sm: { width: 60, height: 84 },
-  md: { width: 80, height: 112 },
+  md: { width: 96, height: 134 },
   lg: { width: 100, height: 140 },
   xl: { width: 200, height: 280 },
+  inspector: { width: 160, height: 224 },
 };
 
 interface CardOverlay {
@@ -57,16 +58,17 @@ export function Card({
   const bgColor = colorName ? COLOR_HEX[colorName] ?? '#374151' : '#374151';
 
   const borderClass = highlighted
-    ? 'ring-2 ring-green-400'
+    ? 'ring-2 ring-cyan-400 shadow-[0_0_10px_rgba(34,211,238,0.4)]'
     : targeted
-      ? 'ring-2 ring-red-500'
+      ? 'ring-2 ring-red-500 shadow-[0_0_10px_rgba(239,68,68,0.4)]'
       : '';
 
   return (
     <div
-      className={`relative inline-block rounded overflow-hidden select-none cursor-pointer
+      className={`relative inline-block rounded overflow-hidden select-none cursor-pointer transition-shadow duration-200
         ${suspended ? 'rotate-90' : ''}
         ${dimmed ? 'opacity-30' : ''}
+        ${!dimmed && !highlighted && !targeted ? 'hover:shadow-[0_0_8px_rgba(34,211,238,0.3)] hover:ring-1 hover:ring-cyan-500/40' : ''}
         ${borderClass} ${className}`}
       style={{ width, height }}
       title={faceDown ? undefined : cardId}

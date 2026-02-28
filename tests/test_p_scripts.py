@@ -283,4 +283,4 @@ class TestPEffectsExecute:
             instance = script_class()
             effects = instance.get_card_effects(None)
             total_effects += len(effects)
-        assert total_effects == 639, f"Expected 639 total effects, got {total_effects}"
+        assert total_effects == 650, f"Expected 650 total effects, got {total_effects}"

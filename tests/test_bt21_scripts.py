@@ -268,4 +268,4 @@ class TestBT21EffectsExecute:
             instance = script_class()
             effects = instance.get_card_effects(None)
             total_effects += len(effects)
-        assert total_effects == 399, f"Expected 399 total effects, got {total_effects}"
+        assert total_effects == 400, f"Expected 400 total effects, got {total_effects}"

@@ -27,6 +27,8 @@ interface GameBoardProps {
   isDraggingHandCard?: boolean;
   /** Whether the dragged hand card can be played (to empty slots) */
   canPlayDragged?: boolean;
+  onOwnTrashClick?: () => void;
+  onOpponentTrashClick?: () => void;
 }
 
 export function GameBoard({
@@ -48,11 +50,14 @@ export function GameBoard({
   dragValidDropSlots,
   isDraggingHandCard = false,
   canPlayDragged = false,
+  onOwnTrashClick,
+  onOpponentTrashClick,
 }: GameBoardProps) {
   const {
     player1,
     player2,
     memoryGauge,
+    currentPhase,
     revealedCards,
     pendingSelection,
   } = useGameStore();
@@ -73,23 +78,24 @@ export function GameBoard({
 
   return (
     <div className="flex flex-col gap-1 h-full">
+      {/* Opponent hand (top edge) */}
+      <HandZone cardIds={player2.handIds} isOpponent />
+
       {/* Opponent half */}
       <div className="flex-[2]">
         <PlayerHalf
           player={player2}
           isOpponent
           highlightedSlots={highlightedEnemySlots}
+          onTrashClick={onOpponentTrashClick}
           targetedSlots={targetedSlots}
           onSlotClick={(i) => onSlotClick?.(true, i)}
         />
       </div>
 
-      {/* Opponent hand */}
-      <HandZone cardIds={player2.handIds} isOpponent />
-
-      {/* Memory gauge + revealed cards */}
+      {/* Memory gauge */}
       <div className="flex items-center justify-center gap-4 py-1 border-y border-gray-700/50">
-        <MemoryGauge value={memoryGauge} />
+        <MemoryGauge value={memoryGauge} localPlayer={1} currentPhase={currentPhase} />
       </div>
 
       {/* Revealed cards */}
@@ -115,13 +121,14 @@ export function GameBoard({
           onHatch={onHatch}
           onMove={onMove}
           onBreedingClick={onBreedingClick}
+          onTrashClick={onOwnTrashClick}
           dragValidDropSlots={dragValidDropSlots}
           isDraggingHandCard={isDraggingHandCard}
           canPlayDragged={canPlayDragged}
         />
       </div>
 
-      {/* Player hand */}
+      {/* Player hand (bottom edge) */}
       <HandZone
         cardIds={player1.handIds}
         isOpponent={false}

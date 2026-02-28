@@ -44,7 +44,7 @@ class P_195(CardScript):
         # [On Play] Activate 1 of the effects below:\r\n・You may play 1 [Elecmon] from your hand without paying the cost.\r\n・1 of your Digimon may digivolve into [Aegiomon] in the hand without paying the cost.
         effect1 = ICardEffect()
         effect1.set_effect_name("P-195 Play 1 [Elecmon] or digivolve into [Aegiomon]")
-        effect1.set_effect_description("[On Play] Activate 1 of the effects below:\r\n・You may play 1 [Elecmon] from your hand without paying the cost.\r\n・1 of your Digimon may digivolve into [Aegiomon] in the hand without paying the cost.")
+        effect1.set_effect_description("[On Play] Activate 1 of the effects below:\\r\\n・You may play 1 [Elecmon] from your hand without paying the cost.\\r\\n・1 of your Digimon may digivolve into [Aegiomon] in the hand without paying the cost.")
         effect1.is_on_play = True
 
         effect = effect1  # alias for condition closure

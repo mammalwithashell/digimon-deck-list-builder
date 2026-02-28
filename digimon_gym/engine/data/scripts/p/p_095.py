@@ -50,7 +50,7 @@ class P_095(CardScript):
         effect1.set_can_use_condition(condition1)
 
         def process1(ctx: Dict[str, Any]):
-            """Action: DP -6000, Disable Effect"""
+            """Action: DP -6000, Disable Effect, Effect Immunity"""
             player = ctx.get('player')
             perm = ctx.get('permanent')
             game = ctx.get('game')
@@ -63,6 +63,12 @@ class P_095(CardScript):
                     target.change_dp(-6000)
             # Disable/invalidate effects on target — not yet in engine
             pass  # descriptive-tagged: disable_effect
+            # Grant effect immunity via modifier system
+            if perm and game:
+                from digimon_gym.engine.interfaces.modifiers import ModifierType
+                game.register_modifier(
+                    ModifierType.CANNOT_BE_SELECTED_BY_EFFECT, perm,
+                    value_fn=lambda: True, expiry='end_of_turn')
 
         effect1.set_on_process_callback(process1)
         effects.append(effect1)

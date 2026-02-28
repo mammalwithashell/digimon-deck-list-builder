@@ -87,6 +87,9 @@ class PendingSelection:
     previous_phase: GamePhase
     valid_indices: List[int] = field(default_factory=list)
     is_optional: bool = False  # if True, player can decline with action 62
+    prompt: str = ""  # human-readable prompt for the UI
+    effect_choices: Optional[List[dict]] = None  # for SelectEffectChoice: [{index, cardId, cardName, label}]
+    keyword_prompt: Optional[dict] = None  # for keyword triggers: {keyword, cardId, cardName}
 
 
 class Game:
@@ -371,11 +374,31 @@ class Game:
             self.check_turn_end()
 
     @staticmethod
+    def _card_ref(card) -> str:
+        """Format a card reference as [CARD_ID:Name] for frontend parsing."""
+        if card is None:
+            return "Unknown"
+        card_id = getattr(card, "card_id", None)
+        names = getattr(card, "card_names", None)
+        name = names[0] if names else "Unknown"
+        if card_id:
+            return f"[{card_id}:{name}]"
+        return name
+
+    @staticmethod
+    def _perm_ref(perm) -> str:
+        """Format a permanent's top card as [CARD_ID:Name]."""
+        if perm is None:
+            return "Unknown"
+        top = getattr(perm, "top_card", None)
+        return Game._card_ref(top)
+
+    @staticmethod
     def _effect_source_name(effect) -> str:
         src = getattr(effect, "effect_source_card", None)
-        if src and src.card_names:
-            return src.card_names[0]
-        return "Unknown"
+        if src is None:
+            return "Unknown"
+        return Game._card_ref(src)
 
     @staticmethod
     def _effect_text_for_log(effect) -> str:
@@ -486,6 +509,11 @@ class Game:
         for te in stack:
             # Validate the effect can still fire (permanent may have left field)
             if not self._triggered_effect_still_valid(te):
+                continue
+
+            # Re-check OPT: nested effects may have incremented the count
+            # since the stack was collected.
+            if not te.effect.can_activate_this_turn():
                 continue
 
             if te.effect.can_use_condition is not None and not te.effect.can_use_condition(te.context):
@@ -1013,9 +1041,13 @@ class Game:
                 "phase": self.current_phase.value,
                 "validIndices": ps.valid_indices,
                 "isOptional": ps.is_optional,
-                "prompt": "",
+                "prompt": ps.prompt,
                 "selectingPlayer": ps.selecting_player.player_id,
             }
+            if ps.effect_choices:
+                pending_sel["effectChoices"] = ps.effect_choices
+            if ps.keyword_prompt:
+                pending_sel["keywordPrompt"] = ps.keyword_prompt
 
         pending_atk = None
         if self.pending_attack:
@@ -1068,9 +1100,9 @@ class Game:
         if not attacker.can_attack(without_tap=without_suspend, is_vortex=is_vortex):
             return
 
-        target_name = target.player_name if isinstance(target, Player) else (target.top_card.card_names[0] if target.top_card else "Unknown")
-        attacker_name = attacker.top_card.card_names[0] if attacker.top_card else "Unknown"
-        self.logger.log(f"[Attack] {attacker_name} attacks {target_name}")
+        target_name = target.player_name if isinstance(target, Player) else self._perm_ref(target)
+        attacker_ref = self._perm_ref(attacker)
+        self.logger.log(f"[Attack] {attacker_ref} attacks {target_name}")
 
         # <Progress>: mark attacker as attacking (for effect immunity)
         attacker.is_attacking = True
@@ -1219,20 +1251,20 @@ class Game:
                 has_retaliation = target.has_keyword('_is_retaliation')
                 was_deleted = self.opponent_player.delete_permanent(target, is_battle=True)
                 if has_retaliation and was_deleted:
-                    self.logger.log(f"[Retaliation] {target.top_card.card_names[0] if target.top_card else 'Unknown'} retaliates!")
+                    self.logger.log(f"[Retaliation] {self._perm_ref(target)} retaliates!")
                     # Retaliation is an opponent's effect — Progress blocks this
                     self.turn_player.delete_permanent(attacker, is_battle=True, is_opponent_effect=True)
                 # <Piercing>: after winning battle vs Digimon, check security
                 # Only triggers when the target was actually deleted (not prevented)
                 elif was_deleted and attacker.has_keyword('_is_piercing') and attacker in self.turn_player.battle_area:
-                    self.logger.log(f"[Piercing] {attacker.top_card.card_names[0] if attacker.top_card else 'Unknown'} pierces through!")
+                    self.logger.log(f"[Piercing] {self._perm_ref(attacker)} pierces through!")
                     self._execute_security_checks(attacker, self.opponent_player)
             elif defender_wins:
                 # <Retaliation> on attacker: when deleted in battle, delete the winner
                 has_retaliation = attacker.has_keyword('_is_retaliation')
                 was_deleted = self.turn_player.delete_permanent(attacker, is_battle=True)
                 if has_retaliation and was_deleted:
-                    self.logger.log(f"[Retaliation] {attacker.top_card.card_names[0] if attacker.top_card else 'Unknown'} retaliates!")
+                    self.logger.log(f"[Retaliation] {self._perm_ref(attacker)} retaliates!")
                     # Retaliation is an opponent's effect — Progress blocks this
                     self.opponent_player.delete_permanent(target, is_battle=True, is_opponent_effect=True)
             else:
@@ -1268,7 +1300,7 @@ class Game:
         card = self.turn_player.hand_cards[card_index]
         cost = card.get_cost_itself
 
-        self.logger.log(f"[Play] {self.turn_player.player_name} plays {card.card_names[0]} (cost: {cost})")
+        self.logger.log(f"[Play] {self.turn_player.player_name} plays {self._card_ref(card)} (cost: {cost})")
         is_option = card.is_option
         self.turn_player.play_card(card)
         self.turn_player.lose_memory(cost)
@@ -2174,8 +2206,7 @@ class Game:
             pa.blocker = blocker
             pa.effective_target = blocker
 
-            blocker_name = blocker.top_card.card_names[0] if blocker.top_card else "Unknown"
-            self.logger.log(f"[Block] {blocker_name} blocks the attack")
+            self.logger.log(f"[Block] {self._perm_ref(blocker)} blocks the attack")
 
             # Fire block-related effects
             self.execute_effects(EffectTiming.OnBlockAnyone, {"blocker": blocker})
@@ -2221,9 +2252,7 @@ class Game:
                 return
 
             # Execute blast digivolve (free cost — no memory change)
-            card_name = card.card_names[0] if card.card_names else "Unknown"
-            target_name = perm.top_card.card_names[0] if perm.top_card else "Unknown"
-            self.logger.log(f"[Counter] Blast Digivolve: {card_name} onto {target_name}")
+            self.logger.log(f"[Counter] Blast Digivolve: {self._card_ref(card)} onto {self._perm_ref(perm)}")
 
             defender.hand_cards.remove(card)
             perm.add_card_source(card)
@@ -2283,9 +2312,7 @@ class Game:
         perm.suspend()
         top_card = owner.library_cards.pop(0)
         perm.add_card_source_bottom(top_card)
-        card_name = top_card.card_names[0] if top_card.card_names else "Unknown"
-        perm_name = perm.top_card.card_names[0] if perm.top_card else "Unknown"
-        self.logger.log(f"[Training] {perm_name} trains: placed {card_name} at bottom of digi stack")
+        self.logger.log(f"[Training] {self._perm_ref(perm)} trains: placed {self._card_ref(top_card)} at bottom of digi stack")
 
     def _has_delay_effect(self, perm: Permanent) -> bool:
         """Check if a permanent has a <Delay> effect that can be activated."""
@@ -2313,7 +2340,7 @@ class Game:
     def _execute_delay(self, perm: Permanent, owner: Player):
         """Execute <Delay>: trash this card from battle area and activate the delayed effect."""
         delay_effect = self._get_delay_callback(perm)
-        perm_name = perm.top_card.card_names[0] if perm.top_card else "Unknown"
+        perm_ref = self._perm_ref(perm)
 
         # Trash the card from battle area
         if perm in owner.battle_area:
@@ -2321,7 +2348,7 @@ class Game:
         for source in perm.card_sources:
             owner.trash_cards.append(source)
 
-        self.logger.log(f"[Delay] {perm_name} trashed from battle area to activate delayed effect")
+        self.logger.log(f"[Delay] {perm_ref} trashed from battle area to activate delayed effect")
 
         # Execute the delayed effect callback
         if delay_effect and delay_effect.on_process_callback:
@@ -2379,8 +2406,7 @@ class Game:
             idx = action_id - SEL_MY_FIELD_START
             if 0 <= idx < len(self.turn_player.battle_area):
                 sacrifice = self.turn_player.battle_area[idx]
-                sacrifice_name = sacrifice.top_card.card_names[0] if sacrifice.top_card else "Unknown"
-                self.logger.log(f"[Overclock] Sacrificed {sacrifice_name}")
+                self.logger.log(f"[Overclock] Sacrificed {self._perm_ref(sacrifice)}")
                 self.turn_player.delete_permanent(sacrifice)
                 # Attack player without suspending
                 self.logger.log(f"[Overclock] End-of-turn attack on player!")
@@ -2407,12 +2433,11 @@ class Game:
             if ally_idx < len(self.turn_player.battle_area):
                 ally = self.turn_player.battle_area[ally_idx]
                 if ally is not pa.attacker and ally.is_digimon and not ally.is_suspended:
-                    ally_name = ally.top_card.card_names[0] if ally.top_card else "Unknown"
                     ally_dp = ally.dp or 0
                     ally.suspend()
                     pa.attacker.change_dp(ally_dp)
                     pa.attacker._temp_sa_modifier += 1
-                    self.logger.log(f"[Alliance] Suspended {ally_name}, adding {ally_dp} DP and SA+1")
+                    self.logger.log(f"[Alliance] Suspended {self._perm_ref(ally)}, adding {ally_dp} DP and SA+1")
 
                     # Check for more Alliance-eligible allies
                     has_more = any(
@@ -2430,7 +2455,10 @@ class Game:
     def request_selection(self, phase: GamePhase, player: Player,
                           callback: Callable[[int], None],
                           valid_indices: Optional[List[int]] = None,
-                          is_optional: bool = False):
+                          is_optional: bool = False,
+                          prompt: str = "",
+                          effect_choices: Optional[List[dict]] = None,
+                          keyword_prompt: Optional[dict] = None):
         """Pause the game to request a selection from the given player.
 
         Used by effect callbacks that need player input (target, trash, source).
@@ -2443,6 +2471,9 @@ class Game:
             callback: Called with the selected action_id when chosen.
             valid_indices: List of valid action IDs the player can choose from.
             is_optional: If True, the player can decline (action 62 = pass).
+            prompt: Human-readable prompt text for the UI.
+            effect_choices: For SelectEffectChoice: list of {index, cardId, cardName, label}.
+            keyword_prompt: For keyword triggers: {keyword, cardId, cardName}.
         """
         self.pending_selection = PendingSelection(
             callback=callback,
@@ -2450,6 +2481,9 @@ class Game:
             previous_phase=self.current_phase,
             valid_indices=valid_indices or [],
             is_optional=is_optional,
+            prompt=prompt,
+            effect_choices=effect_choices,
+            keyword_prompt=keyword_prompt,
         )
         self.current_phase = phase
         self.active_player = player
@@ -2462,18 +2496,9 @@ class Game:
         self, player: Player, callback: Callable[['Permanent'], None],
         filter_fn: Optional[Callable[['Permanent'], bool]] = None,
         is_optional: bool = False,
+        prompt: str = "Select an opponent's Digimon.",
     ):
-        """Request selection of an opponent's permanent (for delete, suspend, bounce, etc.).
-
-        Covers: delete_opponent (34 cards), suspend_target (19), return_bounce (15),
-        de_digivolve (13) = 81 cards total.
-
-        Args:
-            player: The player whose effect is triggering.
-            callback: Called with the selected Permanent.
-            filter_fn: Optional filter (e.g. lambda p: p.dp <= 5000).
-            is_optional: If True, player can decline.
-        """
+        """Request selection of an opponent's permanent (for delete, suspend, bounce, etc.)."""
         opponent = self.player2 if player is self.player1 else self.player1
         valid = []
         for i, perm in enumerate(opponent.battle_area):
@@ -2492,23 +2517,16 @@ class Game:
                 callback(opp.battle_area[idx])
 
         self.request_selection(
-            GamePhase.SelectTarget, player, on_select, valid, is_optional)
+            GamePhase.SelectTarget, player, on_select, valid, is_optional,
+            prompt=prompt)
 
     def effect_select_own_permanent(
         self, player: Player, callback: Callable[['Permanent'], None],
         filter_fn: Optional[Callable[['Permanent'], bool]] = None,
         is_optional: bool = False,
+        prompt: str = "Select one of your Digimon.",
     ):
-        """Request selection of one of the player's own permanents.
-
-        Covers: mind_link (3 cards), save (2), sacrifice_cost (12) = 17 cards.
-
-        Args:
-            player: The player making the selection.
-            callback: Called with the selected Permanent.
-            filter_fn: Optional filter (e.g. lambda p: 'SoC' in p.traits).
-            is_optional: If True, player can decline.
-        """
+        """Request selection of one of the player's own permanents."""
         valid = []
         for i, perm in enumerate(player.battle_area):
             if filter_fn is None or filter_fn(perm):
@@ -2522,17 +2540,17 @@ class Game:
                 callback(player.battle_area[idx])
 
         self.request_selection(
-            GamePhase.SelectTarget, player, on_select, valid, is_optional)
+            GamePhase.SelectTarget, player, on_select, valid, is_optional,
+            prompt=prompt)
 
     def effect_reveal_and_select(
         self, player: Player, count: int,
         filter_fn: Callable[['CardSource'], bool],
         on_selected: Callable[['CardSource', List['CardSource']], None],
         is_optional: bool = False,
+        prompt: str = "",
     ):
         """Reveal top N cards, let agent pick one matching filter, return rest to bottom.
-
-        Covers: reveal_top (28 cards).
 
         Args:
             player: The player revealing cards.
@@ -2572,8 +2590,10 @@ class Game:
                 on_selected(selected, remaining)
             self.revealed_cards = []
 
+        auto_prompt = prompt or f"Select a card from the {count} revealed cards."
         self.request_selection(
-            GamePhase.SelectReveal, player, on_select, valid, is_optional)
+            GamePhase.SelectReveal, player, on_select, valid, is_optional,
+            prompt=auto_prompt)
 
     def effect_reveal_and_select_multi(
         self, player: Player, count: int,
@@ -2640,7 +2660,8 @@ class Game:
                 run_pass(pass_idx + 1)
 
             self.request_selection(
-                GamePhase.SelectReveal, player, on_select, valid, is_optional)
+                GamePhase.SelectReveal, player, on_select, valid, is_optional,
+                prompt=f"Select a card from the revealed cards (pass {pass_idx + 1}).")
 
         run_pass(0)
 
@@ -2650,18 +2671,12 @@ class Game:
         filter_fn: Callable[['CardSource'], bool],
         free: bool = True,
         is_optional: bool = True,
+        prompt: str = "",
     ):
-        """Let agent pick a card from a zone to play onto the field.
-
-        Covers: play (85 cards).
-
-        Args:
-            player: The player whose effect triggers.
-            zone: 'hand', 'trash', 'revealed', or 'hand_or_trash'.
-            filter_fn: Which cards in the zone are valid.
-            free: If True, play without paying cost.
-            is_optional: If True, player can decline.
-        """
+        """Let agent pick a card from a zone to play onto the field."""
+        if not prompt:
+            cost_text = "without paying its cost" if free else "by paying its cost"
+            prompt = f"Select a card from {zone} to play {cost_text}."
         if zone == 'hand_or_trash':
             # Combine valid cards from both hand and trash into one selection
             valid = []
@@ -2687,12 +2702,13 @@ class Game:
                     card = source[idx]
                     player.play_card_from_source(card, pay_cost=not free)
                     self.logger.log(f"[Effect] {player.player_name} played "
-                                    f"{card.card_names[0]} from {src_name}")
+                                    f"{self._card_ref(card)} from {src_name}")
                     self.execute_effects(EffectTiming.OnEnterFieldAnyone,
                                          {"played_card": card})
 
             self.request_selection(GamePhase.SelectTarget, player,
-                                   on_select_hot, valid, is_optional)
+                                   on_select_hot, valid, is_optional,
+                                   prompt=prompt)
             return
 
         if zone == 'hand':
@@ -2720,12 +2736,13 @@ class Game:
                 card = source_list[idx]
                 player.play_card_from_source(card, pay_cost=not free)
                 self.logger.log(f"[Effect] {player.player_name} played "
-                                f"{card.card_names[0]} from {zone}")
+                                f"{self._card_ref(card)} from {zone}")
                 self.execute_effects(EffectTiming.OnEnterFieldAnyone,
                                      {"played_card": card})
 
         phase = GamePhase.SelectReveal if zone == 'revealed' else GamePhase.SelectTarget
-        self.request_selection(phase, player, on_select, valid, is_optional)
+        self.request_selection(phase, player, on_select, valid, is_optional,
+                               prompt=prompt)
 
     def effect_digivolve_from_hand(
         self, player: Player, permanent: 'Permanent',
@@ -2734,20 +2751,12 @@ class Game:
         cost_reduction: int = 0,
         ignore_requirements: bool = False,
         is_optional: bool = True,
+        prompt: str = "",
     ):
-        """Let agent pick a hand card to digivolve a permanent into via effect.
-
-        Covers: digivolve_into (52 cards).
-
-        Args:
-            player: The card owner.
-            permanent: The permanent to digivolve.
-            filter_fn: Which hand cards are valid digivolution targets.
-            cost_override: Fixed cost (None = use card's evo cost).
-            cost_reduction: Reduce normal evo cost by this amount.
-            ignore_requirements: If True, skip level/color requirements.
-            is_optional: If True, player can decline.
-        """
+        """Let agent pick a hand card to digivolve a permanent into via effect."""
+        if not prompt:
+            perm_name = self._perm_ref(permanent)
+            prompt = f"Select a card from hand to digivolve {perm_name}."
         valid = []
         for i, card in enumerate(player.hand_cards):
             if filter_fn(card):
@@ -2770,8 +2779,8 @@ class Game:
                 permanent.turn_digivolved = self.turn_count  # Track for <Blitz>
                 player.lose_memory(cost)
                 self.logger.log(
-                    f"[Effect Digivolve] {card.card_names[0]} onto "
-                    f"{permanent.top_card.card_names[0] if permanent.top_card else 'Unknown'} "
+                    f"[Effect Digivolve] {self._card_ref(card)} onto "
+                    f"{self._perm_ref(permanent)} "
                     f"(cost: {cost})")
                 # Draw 1 (digivolution bonus)
                 player.draw()
@@ -2779,24 +2788,17 @@ class Game:
                                      {"digivolved_permanent": permanent})
 
         self.request_selection(
-            GamePhase.SelectTarget, player, on_select, valid, is_optional)
+            GamePhase.SelectTarget, player, on_select, valid, is_optional,
+            prompt=prompt)
 
     def effect_select_hand_card(
         self, player: Player,
         filter_fn: Callable[['CardSource'], bool],
         callback: Callable[['CardSource'], None],
         is_optional: bool = False,
+        prompt: str = "Select a card from your hand.",
     ):
-        """Let agent pick a card from hand (for trash-as-cost, discard, etc.).
-
-        Covers: trash_selection (19 cards), general hand picks.
-
-        Args:
-            player: The player selecting.
-            filter_fn: Which hand cards are valid.
-            callback: Called with the selected CardSource.
-            is_optional: If True, player can decline.
-        """
+        """Let agent pick a card from hand (for trash-as-cost, discard, etc.)."""
         valid = []
         for i, card in enumerate(player.hand_cards):
             if filter_fn(card):
@@ -2810,21 +2812,16 @@ class Game:
                 callback(player.hand_cards[idx])
 
         self.request_selection(
-            GamePhase.SelectHand, player, on_select, valid, is_optional)
+            GamePhase.SelectHand, player, on_select, valid, is_optional,
+            prompt=prompt)
 
     def effect_choose_branch(
         self, player: Player, num_choices: int,
         callback: Callable[[int], None],
+        prompt: str = "Choose an effect to activate.",
+        branch_labels: Optional[List[str]] = None,
     ):
-        """Let agent choose between N effect branches ("activate 1 of the effects below").
-
-        Covers: multi_choice (2 cards).
-
-        Args:
-            player: The player choosing.
-            num_choices: Number of branches (typically 2-3).
-            callback: Called with the branch index (0-based).
-        """
+        """Let agent choose between N effect branches."""
         valid = [SEL_EFFECT_CHOICE_START + i for i in range(num_choices)]
 
         def on_select(action_id: int):
@@ -2833,25 +2830,17 @@ class Game:
                 callback(branch)
 
         self.request_selection(
-            GamePhase.SelectEffectChoice, player, on_select, valid)
+            GamePhase.SelectEffectChoice, player, on_select, valid,
+            prompt=prompt)
 
     def effect_select_own_security(
         self, player: Player,
         filter_fn: Callable[['CardSource'], bool],
         callback: Callable[['CardSource'], None],
         is_optional: bool = True,
+        prompt: str = "Select a card from your security stack.",
     ):
-        """Let agent select a card from their own security stack.
-
-        Covers: search_security (BT14-033 Patamon, BT14-093 Emissary of Hope),
-        barrier cost, and effects that interact with own security.
-
-        Args:
-            player: The player whose security stack is searched.
-            filter_fn: Which security cards are valid selections.
-            callback: Called with the selected CardSource.
-            is_optional: If True, player can decline.
-        """
+        """Let agent select a card from their own security stack."""
         valid = []
         for i, card in enumerate(player.security_cards):
             if filter_fn(card):
@@ -2865,25 +2854,17 @@ class Game:
                 callback(player.security_cards[idx])
 
         self.request_selection(
-            GamePhase.SelectSecurity, player, on_select, valid, is_optional)
+            GamePhase.SelectSecurity, player, on_select, valid, is_optional,
+            prompt=prompt)
 
     def effect_select_opponent_security(
         self, player: Player,
         filter_fn: Optional[Callable[['CardSource'], bool]],
         callback: Callable[['CardSource'], None],
         is_optional: bool = True,
+        prompt: str = "Select a card from opponent's security stack.",
     ):
-        """Let agent select a card from the opponent's security stack.
-
-        Covers: BT24-018 Styracomon (trash opponent security), and effects
-        that interact with opponent security cards.
-
-        Args:
-            player: The player whose effect is triggering.
-            filter_fn: Optional filter on opponent's security cards.
-            callback: Called with the selected CardSource.
-            is_optional: If True, player can decline.
-        """
+        """Let agent select a card from the opponent's security stack."""
         opponent = self.player2 if player is self.player1 else self.player1
         valid = []
         for i, card in enumerate(opponent.security_cards):
@@ -2899,27 +2880,18 @@ class Game:
                 callback(opp.security_cards[idx])
 
         self.request_selection(
-            GamePhase.SelectSecurity, player, on_select, valid, is_optional)
+            GamePhase.SelectSecurity, player, on_select, valid, is_optional,
+            prompt=prompt)
 
     def effect_link_to_permanent(
         self, player: Player, card_to_link: 'CardSource',
         filter_fn: Optional[Callable[['Permanent'], bool]] = None,
         is_optional: bool = True,
+        prompt: str = "",
     ):
-        """Let agent choose a Digimon to link an option card to (sideways attach).
-
-        Covers: [TS] option cards (BT24-091, 092, 095, 097) that link after
-        their security/main effect resolves. Includes battle area and breeding
-        area targets.
-
-        Restrictions: Cannot link to tokens or eggs (level <= 2 in breeding).
-
-        Args:
-            player: The player whose effect is triggering.
-            card_to_link: The option card to link.
-            filter_fn: Optional additional filter on target permanents.
-            is_optional: If True, player can decline (default True).
-        """
+        """Let agent choose a Digimon to link an option card to (sideways attach)."""
+        if not prompt:
+            prompt = f"Select a Digimon to link {self._card_ref(card_to_link)} to."
         valid = []
 
         # Battle area targets (100-111): exclude tokens
@@ -2954,11 +2926,12 @@ class Game:
                 return
             target.link_card(card_to_link)
             self.logger.log(
-                f"[Link] {card_to_link.card_names[0]} linked to "
-                f"{target.top_card.card_names[0] if target.top_card else 'Unknown'}")
+                f"[Link] {self._card_ref(card_to_link)} linked to "
+                f"{self._perm_ref(target)}")
 
         self.request_selection(
-            GamePhase.SelectTarget, player, on_select, valid, is_optional)
+            GamePhase.SelectTarget, player, on_select, valid, is_optional,
+            prompt=prompt)
 
     # ─── DNA Digivolve ────────────────────────────────────────────────
 
@@ -3028,12 +3001,9 @@ class Game:
 
         top_perm, bottom_perm, dna_cost = stacking
 
-        top_name = top_perm.top_card.card_names[0] if top_perm.top_card else "Unknown"
-        bottom_name = bottom_perm.top_card.card_names[0] if bottom_perm.top_card else "Unknown"
-        card_name = card.card_names[0] if card.card_names else "Unknown"
         self.logger.log(
-            f"[DNA Digivolve] {card_name} from "
-            f"{top_name} + {bottom_name} (cost: {dna_cost.memory_cost})"
+            f"[DNA Digivolve] {self._card_ref(card)} from "
+            f"{self._perm_ref(top_perm)} + {self._perm_ref(bottom_perm)} (cost: {dna_cost.memory_cost})"
         )
 
         cost = player.dna_digivolve(top_perm, bottom_perm, card, dna_cost)
