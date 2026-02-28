@@ -854,3 +854,79 @@ class TestEffectTimingGuards:
             "[Effect] OnEnterFieldAnyone" in line and "[On Play] Gain 1 memory." in line
             for line in logs
         )
+
+
+# ═══════════════════════════════════════════════════════════════════════
+# I. Digivolution Bonus Draw Tests (Rule 8-1-4)
+# ═══════════════════════════════════════════════════════════════════════
+
+class TestDigivolveBonusDraw:
+    """Standard digivolution draws 1 card (Rule 8-1-4 step 4)."""
+
+    def test_digivolve_draws_one_card(self):
+        game = setup_game_at_phase(GamePhase.Main)
+        p1 = game.player1
+
+        # Seed library so draw has something to pull
+        for _ in range(5):
+            p1.library_cards.append(make_card(name="LibCard", owner=p1))
+
+        base = make_card(card_id="BASE-001", name="Base", level=3, owner=p1)
+        p1.battle_area.append(Permanent([base]))
+
+        evo = make_card(card_id="EVO-001", name="Evo", level=4, owner=p1)
+        evo.c_entity_base.evo_costs = [EvoCost(card_color=CardColor.Red, level=3, memory_cost=2)]
+        p1.hand_cards.append(evo)
+
+        hand_before = len(p1.hand_cards) - 1  # -1 for evo card leaving hand
+        lib_before = len(p1.library_cards)
+
+        game.action_digivolve(0, 0)
+
+        # Net hand change: -1 (evo card used) + 1 (draw) = 0
+        assert len(p1.hand_cards) == hand_before + 1
+        assert len(p1.library_cards) == lib_before - 1
+
+    def test_breeding_digivolve_draws_one_card(self):
+        game = setup_game_at_phase(GamePhase.Main)
+        p1 = game.player1
+
+        for _ in range(5):
+            p1.library_cards.append(make_card(name="LibCard", owner=p1))
+
+        egg = make_card(card_id="EGG-001", name="Egg", kind=CardKind.DigiEgg, level=2, owner=p1)
+        p1.breeding_area = Permanent([egg])
+
+        evo = make_card(card_id="EVO-001", name="Evo", level=3, owner=p1)
+        evo.c_entity_base.evo_costs = [EvoCost(card_color=CardColor.Red, level=2, memory_cost=1)]
+        p1.hand_cards.append(evo)
+
+        hand_before = len(p1.hand_cards) - 1
+        lib_before = len(p1.library_cards)
+
+        game.action_digivolve_breeding(0)
+
+        assert len(p1.hand_cards) == hand_before + 1
+        assert len(p1.library_cards) == lib_before - 1
+
+    def test_digivolve_empty_library_no_crash(self):
+        """Digivolve with empty library: card stacks but no draw (no crash)."""
+        game = setup_game_at_phase(GamePhase.Main)
+        p1 = game.player1
+
+        # Empty library
+        p1.library_cards.clear()
+
+        base = make_card(card_id="BASE-001", name="Base", level=3, owner=p1)
+        p1.battle_area.append(Permanent([base]))
+
+        evo = make_card(card_id="EVO-001", name="Evo", level=4, owner=p1)
+        evo.c_entity_base.evo_costs = [EvoCost(card_color=CardColor.Red, level=3, memory_cost=2)]
+        p1.hand_cards.append(evo)
+
+        game.action_digivolve(0, 0)
+
+        # Card was used from hand, nothing drawn
+        assert len(p1.hand_cards) == 0
+        # Stack grew
+        assert len(p1.battle_area[0].card_sources) == 2
