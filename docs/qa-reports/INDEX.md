@@ -12,7 +12,8 @@
 | [medusa-vs-hudie](2026-02-28-medusa-vs-hudie.md) | 11 | 7 | 2 | 2 |
 | [medusa-hudie-coverage](2026-03-01-medusa-hudie-coverage.md) | 5 | 5 | 0 | 0 |
 | [partial-fixes](2026-03-01-partial-fixes.md) | 28 | 28 | 0 | 0 |
-| **Total** | **77** | **68** | **7** | **2** |
+| [medusa-v2](2026-03-01-medusa-v2.md) | 5 | 4 | 1 | 0 |
+| **Total** | **82** | **72** | **8** | **2** |
 
 ---
 
@@ -134,3 +135,15 @@ Cross-archetype matchup test. 11 issues found across 2 games (~9 turns each).
 | 26 | BT10-042 no WhenDigivolving callback | high | FIXED | Security Attack -1 on all opp Digimon |
 | 27 | EX10-010 no cost filter, no Tamer targets | high | FIXED | play_cost<=7 filter + Tamer in targets |
 | 28 | Multiple hash collisions across scripts | low | FIXED | Unique hash strings per timing |
+
+## Report 7: Meduamon vs TS Olympos v2 (2026-03-01)
+
+5 user-reported bugs investigated. 4 fixed, 1 documented as engine limitation.
+
+| # | Issue | Sev | Status | Fix |
+|---|-------|-----|--------|-----|
+| 1 | EX11-012 empty evo_costs prevents digivolve | high | FIXED | Added evo_costs to cards.json |
+| 2 | Digimon can attack suspended Tamers | high | FIXED | Added `target.is_digimon` to attack mask |
+| 3 | Petrification Tokens not implemented | med | WONTFIX | Engine limitation — no token creation API |
+| 4 | OnLoseSecurity inherited adds memory to wrong player | high | FIXED | Use `card.owner` instead of `ctx.get('player')` |
+| 5 | Lamiamon WhenDigivolving incorrect condition | high | FIXED | Removed spurious Reptile/Dragonkin ally check |

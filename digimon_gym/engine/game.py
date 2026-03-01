@@ -1683,7 +1683,7 @@ class Game:
                 has_raid = attacker.has_keyword('_is_raid')
                 for j in range(min(len(opp.battle_area), FIELD_SLOTS)):
                     target = opp.battle_area[j]
-                    if target.is_suspended:
+                    if target.is_suspended and target.is_digimon:
                         mask[100 + i * 15 + j] = 1.0
                     elif has_raid and not target.is_suspended and target.is_digimon:
                         # <Raid>: can attack unsuspended Digimon with highest DP
@@ -1756,7 +1756,7 @@ class Game:
                     has_raid = attacker.has_keyword('_is_raid')
                     for j in range(min(len(opp.battle_area), FIELD_SLOTS)):
                         target = opp.battle_area[j]
-                        if target.is_suspended:
+                        if target.is_suspended and target.is_digimon:
                             forced_mask[100 + i * 15 + j] = 1.0
                             has_any_attack = True
                         elif has_raid and not target.is_suspended and target.is_digimon:

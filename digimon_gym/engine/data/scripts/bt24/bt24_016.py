@@ -110,19 +110,6 @@ class BT24_016(CardScript):
         def condition2(context: Dict[str, Any]) -> bool:
             if card and card.permanent_of_this_card() is None:
                 return False
-            perm = card.permanent_of_this_card()
-            player = card.owner
-            if player:
-                has_qualifying = False
-                for p in player.battle_area:
-                    if p is perm:
-                        continue
-                    traits = getattr(p.top_card, 'card_traits', []) or []
-                    if any('Reptile' in t or 'Dragonkin' in t for t in traits):
-                        has_qualifying = True
-                        break
-                if not has_qualifying:
-                    return False
             return True
 
         effect2.set_can_use_condition(condition2)

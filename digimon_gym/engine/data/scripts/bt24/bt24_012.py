@@ -79,11 +79,11 @@ class BT24_012(CardScript):
 
         def process2(ctx: Dict[str, Any]):
             """Action: Gain 1 memory"""
-            player = ctx.get('player')
             perm = ctx.get('permanent')
             game = ctx.get('game')
-            if player:
-                player.add_memory(1)
+            owner = card.owner if card else ctx.get('player')
+            if owner:
+                owner.add_memory(1)
 
         effect2.set_on_process_callback(process2)
         effects.append(effect2)

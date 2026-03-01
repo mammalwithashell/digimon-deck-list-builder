@@ -8,9 +8,6 @@
       "module": "uvicorn",
       "args": [
         "digimon_gym.api:app",
-        "--reload",
-        "--reload-dir",
-        "digimon_gym",
         "--port",
         "8000"
       ],

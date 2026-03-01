@@ -1,5 +1,5 @@
 {
-  "version": 5,
+  "version": 6,
   "last_updated": "2026-03-01",
   "cards": {
     "BT1-090": {
@@ -95,10 +95,10 @@
     },
     "BT21-008": {
       "card_name": "Elizamon",
-      "validated_date": "2026-02-28",
-      "report": "2026-02-28-retest-medusa-hudie.md",
+      "validated_date": "2026-03-01",
+      "report": "2026-03-01-medusa-v2.md",
       "status": "PASS",
-      "notes": "On Play reveal fixed and verified."
+      "notes": "Fixed: OnLoseSecurity inherited was adding memory to wrong player (ctx overwrite). Now uses card.owner. On Play reveal still verified."
     },
     "BT21-017": {
       "card_name": "Dimetromon",
@@ -361,10 +361,10 @@
     },
     "BT24-008": {
       "card_name": "Elizamon",
-      "validated_date": "2026-02-28",
-      "report": "2026-02-28-retest-medusa-hudie.md",
+      "validated_date": "2026-03-01",
+      "report": "2026-03-01-medusa-v2.md",
       "status": "PASS",
-      "notes": "Trait filter fixed and verified. Draw 2 verified. Inherited OnLoseSecurity verified."
+      "notes": "Fixed: OnLoseSecurity inherited was adding memory to wrong player (ctx overwrite). Now uses card.owner. Verified +1 memory on own-turn security attack."
     },
     "BT24-011": {
       "card_name": "Cyclonemon",
@@ -375,17 +375,17 @@
     },
     "BT24-012": {
       "card_name": "Dimetromon",
-      "validated_date": "2026-02-28",
-      "report": "2026-02-28-retest-medusa-hudie.md",
+      "validated_date": "2026-03-01",
+      "report": "2026-03-01-medusa-v2.md",
       "status": "PASS",
-      "notes": "Protection callback added and verified. Blocker verified. WhenRemoveField verified."
+      "notes": "Fixed: OnLoseSecurity inherited was adding memory to wrong player (ctx overwrite). Now uses card.owner. Blocker and WhenRemoveField still verified."
     },
     "BT24-016": {
       "card_name": "Lamiamon",
-      "validated_date": "2026-02-28",
-      "report": "2026-02-28-medusa-vs-hudie.md",
+      "validated_date": "2026-03-01",
+      "report": "2026-03-01-medusa-v2.md",
       "status": "PASS",
-      "notes": "When Attacking and WhenDigivolving conditions require Reptile/Dragonkin companion (verified by code inspection). Evo cost verified."
+      "notes": "Fixed: WhenDigivolving condition incorrectly required another Reptile/Dragonkin. Card text has no such restriction. Removed condition. Verified fires solo. OnAllyAttack condition (requires ally) is correct."
     },
     "BT24-017": {
       "card_name": "Medusamon",
@@ -446,9 +446,9 @@
     "EX11-012": {
       "card_name": "Medusamon",
       "validated_date": "2026-03-01",
-      "report": "2026-03-01-medusa-hudie-coverage.md",
+      "report": "2026-03-01-medusa-v2.md",
       "status": "PARTIAL",
-      "notes": "Static analysis only. Rush/Progress keywords present. Token play is engine stub. WhenDigivolving delete+return logic present but not gameplay verified."
+      "notes": "Fixed: evo_costs was empty in cards.json, preventing digivolution. Added Red Lv.5 cost 3. Digivolve onto Lamiamon verified. Token play still engine stub."
     },
     "EX11-054": {
       "card_name": "Owen Dreadnought",
