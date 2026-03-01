@@ -90,6 +90,7 @@ class PendingSelection:
     prompt: str = ""  # human-readable prompt for the UI
     effect_choices: Optional[List[dict]] = None  # for SelectEffectChoice: [{index, cardId, cardName, label}]
     keyword_prompt: Optional[dict] = None  # for keyword triggers: {keyword, cardId, cardName}
+    on_decline: Optional[Callable[[], None]] = None  # called when player declines optional selection
 
 
 class Game:
@@ -2217,10 +2218,13 @@ class Game:
         # Optional selection: action 62 = decline/pass
         if action_id == 62 and getattr(ps, 'is_optional', False):
             prev_phase = ps.previous_phase
+            on_decline = ps.on_decline
             self.pending_selection = None
             self.revealed_cards = []  # clear any revealed cards
             self.current_phase = prev_phase
             self.active_player = None
+            if on_decline:
+                on_decline()
             self._check_deferred_turn_end()
             return
 
@@ -2525,7 +2529,8 @@ class Game:
                           is_optional: bool = False,
                           prompt: str = "",
                           effect_choices: Optional[List[dict]] = None,
-                          keyword_prompt: Optional[dict] = None):
+                          keyword_prompt: Optional[dict] = None,
+                          on_decline: Optional[Callable[[], None]] = None):
         """Pause the game to request a selection from the given player.
 
         Used by effect callbacks that need player input (target, trash, source).
@@ -2541,6 +2546,7 @@ class Game:
             prompt: Human-readable prompt text for the UI.
             effect_choices: For SelectEffectChoice: list of {index, cardId, cardName, label}.
             keyword_prompt: For keyword triggers: {keyword, cardId, cardName}.
+            on_decline: Called when player declines optional selection (action 62).
         """
         self.pending_selection = PendingSelection(
             callback=callback,
@@ -2551,6 +2557,7 @@ class Game:
             prompt=prompt,
             effect_choices=effect_choices,
             keyword_prompt=keyword_prompt,
+            on_decline=on_decline,
         )
         self.current_phase = phase
         self.active_player = player
@@ -2657,10 +2664,18 @@ class Game:
                 on_selected(selected, remaining)
             self.revealed_cards = []
 
+        def on_decline_reveal():
+            # Declined — move all revealed to bottom of deck
+            for card in revealed:
+                if card in player.library_cards:
+                    player.library_cards.remove(card)
+                    player.library_cards.append(card)
+            self.revealed_cards = []
+
         auto_prompt = prompt or f"Select a card from the {count} revealed cards."
         self.request_selection(
             GamePhase.SelectReveal, player, on_select, valid, is_optional,
-            prompt=auto_prompt)
+            prompt=auto_prompt, on_decline=on_decline_reveal)
 
     def effect_reveal_and_select_multi(
         self, player: Player, count: int,
@@ -2726,11 +2741,67 @@ class Game:
                 self.revealed_cards = []
                 run_pass(pass_idx + 1)
 
+            def on_decline_pass():
+                self.revealed_cards = []
+                run_pass(pass_idx + 1)
+
             self.request_selection(
                 GamePhase.SelectReveal, player, on_select, valid, is_optional,
-                prompt=f"Select a card from the revealed cards (pass {pass_idx + 1}).")
+                prompt=f"Select a card from the revealed cards (pass {pass_idx + 1}).",
+                on_decline=on_decline_pass)
 
         run_pass(0)
+
+    def effect_play_token(
+        self, player: Player, token_type: str,
+        on_opponent_field: bool = False, count: int = 1,
+    ):
+        """Create and play token permanent(s) onto a player's field.
+
+        Tokens are synthetic Digimon that cease to exist when leaving the field.
+        The token's effects (e.g., On Deletion) are pre-attached via _cached_effects.
+
+        Args:
+            player: The player whose effect creates the token.
+            token_type: Token type key (e.g., 'petrification').
+            on_opponent_field: If True, place on opponent's field.
+            count: Number of tokens to create.
+        """
+        from .data.token_registry import create_token_card_source
+
+        target_player = player.enemy if on_opponent_field else player
+        if target_player is None:
+            return
+
+        for _ in range(count):
+            if len(target_player.battle_area) >= FIELD_SLOTS:
+                self.logger.log(f"[Token] Field full — cannot play {token_type} token")
+                break
+
+            card_source = create_token_card_source(token_type, target_player)
+            perm = Permanent([card_source])
+            perm.turn_played = self.turn_count
+            perm._owner_game = self
+            target_player.battle_area.append(perm)
+
+            # Register CANNOT_SUSPEND modifier for petrification ([Your Turn] can't suspend)
+            if token_type == 'petrification':
+                self.modifiers.register(ModifierEntry(
+                    modifier_type=ModifierType.CANNOT_SUSPEND,
+                    condition=lambda t, ctx, p=perm, o=target_player: (
+                        t is p and o.is_my_turn and p in o.battle_area
+                    ),
+                    source_permanent=perm,
+                    expiry='permanent',
+                ))
+
+            self.logger.log(
+                f"[Token] {token_type.title()} Token played on "
+                f"{target_player.player_name}'s field")
+
+            self.execute_effects(
+                EffectTiming.OnEnterFieldAnyone,
+                {"played_card": card_source, "permanent": perm, "player": target_player})
 
     def effect_play_from_zone(
         self, player: Player,

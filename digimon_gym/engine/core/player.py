@@ -413,43 +413,48 @@ class Player:
         # Clean up continuous modifiers sourced from this permanent
         if self.game and hasattr(self.game, 'cleanup_modifiers_for_permanent'):
             self.game.cleanup_modifiers_for_permanent(permanent)
-        self._apply_ace_overflow(permanent.card_sources)
 
-        # <Fragment>: return top card to bottom of deck instead of trash
-        # (DCGO: when deleted, the top card goes to deck bottom, digi sources go to trash)
-        if has_fragment and top_card:
-            self.library_cards.append(top_card)
-            under_cards = [c for c in permanent.card_sources if c is not top_card]
-            self.trash_cards.extend(under_cards)
-            self._log(f"[Fragment] {perm_name} returned to bottom of deck!")
+        if permanent.is_token:
+            # Tokens cease to exist — don't go to trash
+            self._log(f"Token {perm_name} removed from the game.")
         else:
-            self.trash_cards.extend(permanent.card_sources)
-        self._log(f"{self.player_name}'s permanent {perm_name} deleted.")
+            self._apply_ace_overflow(permanent.card_sources)
+            # <Fragment>: return top card to bottom of deck instead of trash
+            if has_fragment and top_card:
+                self.library_cards.append(top_card)
+                under_cards = [c for c in permanent.card_sources if c is not top_card]
+                self.trash_cards.extend(under_cards)
+                self._log(f"[Fragment] {perm_name} returned to bottom of deck!")
+            else:
+                self.trash_cards.extend(permanent.card_sources)
+            self._log(f"{self.player_name}'s permanent {perm_name} deleted.")
+
         self._fire_timing(EffectTiming.WhenRemoveField, {"permanent": permanent, "player": self})
         self._fire_timing(EffectTiming.OnRemovedField, {"permanent": permanent, "player": self})
 
-        # Execute On Deletion effects
+        # Execute On Deletion effects (fires for tokens too)
         if self.game and hasattr(self.game, 'execute_deletion_effects'):
             self.game.execute_deletion_effects(permanent, self)
 
-        # <Fortitude>: mandatory — replay from trash if had digi cards
-        if has_fortitude and had_digi_cards and top_card and top_card in self.trash_cards:
-            self.trash_cards.remove(top_card)
-            new_perm = self.play_card_from_source(top_card, pay_cost=False)
-            self._log(f"[Fortitude] {perm_name} replays from trash!")
-            if self.game and hasattr(self.game, 'execute_effects'):
-                self.game.execute_effects(EffectTiming.OnEnterFieldAnyone, {"played_card": top_card})
-
-        # <Save>: optional — place under a Tamer
-        elif has_save and top_card and top_card in self.trash_cards:
-            tamers = [p for p in self.battle_area if p.is_tamer]
-            if tamers:
-                # Auto-select first Tamer for RL simplicity
-                tamer = tamers[0]
+        if not permanent.is_token:
+            # <Fortitude>: mandatory — replay from trash if had digi cards
+            if has_fortitude and had_digi_cards and top_card and top_card in self.trash_cards:
                 self.trash_cards.remove(top_card)
-                tamer.add_card_source_bottom(top_card)
-                tamer_name = tamer.top_card.card_names[0] if tamer.top_card else "Unknown"
-                self._log(f"[Save] {perm_name} placed under {tamer_name}")
+                new_perm = self.play_card_from_source(top_card, pay_cost=False)
+                self._log(f"[Fortitude] {perm_name} replays from trash!")
+                if self.game and hasattr(self.game, 'execute_effects'):
+                    self.game.execute_effects(EffectTiming.OnEnterFieldAnyone, {"played_card": top_card})
+
+            # <Save>: optional — place under a Tamer
+            elif has_save and top_card and top_card in self.trash_cards:
+                tamers = [p for p in self.battle_area if p.is_tamer]
+                if tamers:
+                    # Auto-select first Tamer for RL simplicity
+                    tamer = tamers[0]
+                    self.trash_cards.remove(top_card)
+                    tamer.add_card_source_bottom(top_card)
+                    tamer_name = tamer.top_card.card_names[0] if tamer.top_card else "Unknown"
+                    self._log(f"[Save] {perm_name} placed under {tamer_name}")
 
         return True
 
@@ -585,13 +590,17 @@ class Player:
             owner.battle_area.remove(permanent)
             if self.game and hasattr(self.game, 'cleanup_modifiers_for_permanent'):
                 self.game.cleanup_modifiers_for_permanent(permanent)
-            if permanent.top_card:
-                owner.hand_cards.append(permanent.top_card)
-            # Digivolution cards under top go to trash — trigger ACE overflow
-            under_cards = permanent.card_sources[:-1]
-            self._apply_ace_overflow(under_cards)
-            for card in under_cards:
-                owner.trash_cards.append(card)
+            if permanent.is_token:
+                # Tokens cease to exist when bounced
+                self._log(f"Token bounced — removed from the game.")
+            else:
+                if permanent.top_card:
+                    owner.hand_cards.append(permanent.top_card)
+                # Digivolution cards under top go to trash — trigger ACE overflow
+                under_cards = permanent.card_sources[:-1]
+                self._apply_ace_overflow(under_cards)
+                for card in under_cards:
+                    owner.trash_cards.append(card)
             self._fire_timing(EffectTiming.WhenReturntoHandAnyone, {"permanent": permanent, "player": owner})
             self._fire_timing(EffectTiming.OnPermamemtReturnedToHand, {"permanent": permanent, "player": owner})
 
@@ -668,6 +677,10 @@ class Player:
         if permanent not in self.battle_area:
             return
         self.battle_area.remove(permanent)
+        if permanent.is_token:
+            # Tokens cease to exist when moved to security
+            self._log(f"Token moved to security — removed from the game.")
+            return
         if permanent.top_card:
             self.security_cards.append(permanent.top_card)
             self._log(f"{permanent.top_card.card_names[0]} placed into security.")
@@ -689,11 +702,15 @@ class Player:
             owner.battle_area.remove(permanent)
             if self.game and hasattr(self.game, 'cleanup_modifiers_for_permanent'):
                 self.game.cleanup_modifiers_for_permanent(permanent)
-            if permanent.top_card:
-                owner.library_cards.append(permanent.top_card)
-            under_cards = permanent.card_sources[:-1]
-            self._apply_ace_overflow(under_cards)
-            owner.trash_cards.extend(under_cards)
+            if permanent.is_token:
+                # Tokens cease to exist when returned to deck
+                self._log(f"Token returned to deck — removed from the game.")
+            else:
+                if permanent.top_card:
+                    owner.library_cards.append(permanent.top_card)
+                under_cards = permanent.card_sources[:-1]
+                self._apply_ace_overflow(under_cards)
+                owner.trash_cards.extend(under_cards)
             self._fire_timing(EffectTiming.WhenReturntoLibraryAnyone, {"permanent": permanent, "player": owner})
 
     def get_battle_area_digimons(self) -> List['Permanent']:

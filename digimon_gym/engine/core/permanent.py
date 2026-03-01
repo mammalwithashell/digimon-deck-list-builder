@@ -193,6 +193,11 @@ class Permanent:
         # Restriction: cannot attack
         if self.has_keyword('_is_cannot_attack'):
             return False
+        # Restriction: cannot suspend (attacking requires suspending)
+        if not without_tap and self._owner_game and hasattr(self._owner_game, 'modifiers'):
+            from ..interfaces.modifiers import ModifierType
+            if self._owner_game.modifiers.has_modifier(self, ModifierType.CANNOT_SUSPEND):
+                return False
         # Restriction: cannot attack player (partial — checked separately for target filtering)
         # Summoning sickness: can't attack the turn played, unless has <Rush> or <Vortex>
         if self.turn_played >= 0 and self._owner_game is not None:
@@ -213,6 +218,7 @@ class Permanent:
         Requires: unsuspended, is a Digimon, has _is_blocker effect.
         Also checks:
         - <cannot block> restriction on this blocker
+        - <cannot suspend> restriction (blocking requires suspending)
         - <cannot be blocked> on the attacker
         - <Collision> on the attacker (all Digimon gain Blocker, skip _is_blocker check)
         """
@@ -223,6 +229,11 @@ class Permanent:
         # Restriction: this Digimon cannot block
         if self.has_keyword('_is_cannot_block'):
             return False
+        # Restriction: cannot suspend (blocking requires suspending)
+        if self._owner_game and hasattr(self._owner_game, 'modifiers'):
+            from ..interfaces.modifiers import ModifierType
+            if self._owner_game.modifiers.has_modifier(self, ModifierType.CANNOT_SUSPEND):
+                return False
         # Restriction: attacker cannot be blocked
         if attacking_permanent.has_keyword('_is_cannot_be_blocked'):
             return False

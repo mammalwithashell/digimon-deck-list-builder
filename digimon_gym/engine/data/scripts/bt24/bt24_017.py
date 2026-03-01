@@ -77,8 +77,8 @@ class BT24_017(CardScript):
                     enemy.delete_permanent(target_perm)
             game.effect_select_opponent_permanent(
                 player, on_delete, filter_fn=target_filter, is_optional=False)
-            # Play Petrification Token — token play not yet supported in engine
-            pass  # descriptive-tagged: play_token
+            # Play 2 Petrification Tokens on opponent's field
+            game.effect_play_token(player, 'petrification', on_opponent_field=True, count=2)
 
         effect2.set_on_process_callback(process2)
         effects.append(effect2)

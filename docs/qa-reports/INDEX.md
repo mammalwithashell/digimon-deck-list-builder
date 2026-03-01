@@ -9,11 +9,11 @@
 | [medusa](2026-02-28-medusa.md) | 14 | 12 | 2 | 0 |
 | [cs-hudiemon](2026-02-28-cs-hudiemon.md) | 12 | 9 | 3 | 0 |
 | [retest-medusa-hudie](2026-02-28-retest-medusa-hudie.md) | 7 | 7 | 0 | 0 |
-| [medusa-vs-hudie](2026-02-28-medusa-vs-hudie.md) | 11 | 7 | 2 | 2 |
+| [medusa-vs-hudie](2026-02-28-medusa-vs-hudie.md) | 11 | 8 | 2 | 1 |
 | [medusa-hudie-coverage](2026-03-01-medusa-hudie-coverage.md) | 5 | 5 | 0 | 0 |
 | [partial-fixes](2026-03-01-partial-fixes.md) | 28 | 28 | 0 | 0 |
-| [medusa-v2](2026-03-01-medusa-v2.md) | 5 | 4 | 1 | 0 |
-| **Total** | **82** | **72** | **8** | **2** |
+| [medusa-v2](2026-03-01-medusa-v2.md) | 5 | 5 | 0 | 0 |
+| **Total** | **82** | **74** | **7** | **1** |
 
 ---
 
@@ -84,7 +84,7 @@ Cross-archetype matchup test. 11 issues found across 2 games (~9 turns each).
 | 5 | Gotsumon trait-based evo cost missing | med | FIXED | Added `_alt_digi_trait="CS"` to bt23_048.py; player.py uses min of standard+alt costs |
 | 6 | Hudiemon trait-based evo cost missing | med | FIXED | Added `_alt_digi_trait="CS"` to bt23_101.py; verified evo cost 4 onto CS Lv.3 |
 | 7 | Chitose Imai OnTapped triggers for non-Hudie | med | FIXED | Rewrote condition1+process1 in bt23_081.py — Hudie trait check, suspend self as cost |
-| 8 | Gotsumon reveal only allows 1 selection | med | OUTSTANDING | Code analysis shows 2-pass logic is correct; may be card availability issue |
+| 8 | Gotsumon reveal only allows 1 selection | med | FIXED | `_decode_selection` decline path now calls `on_decline` callback to chain multi-pass reveals |
 | 9 | OnLoseSecurity digivolve shows Play actions | low | WONTFIX | Cosmetic — action labels don't affect gameplay |
 | 10 | Owen Dreadnought displays piercing keyword | low | WONTFIX | Cosmetic — keyword display on tamer doesn't affect gameplay |
 | 11 | Lamiamon condition may not be checked | low | FIXED | Added Reptile/Dragonkin trait check to condition1+condition2 in bt24_016.py |
@@ -138,12 +138,18 @@ Cross-archetype matchup test. 11 issues found across 2 games (~9 turns each).
 
 ## Report 7: Meduamon vs TS Olympos v2 (2026-03-01)
 
-5 user-reported bugs investigated. 4 fixed, 1 documented as engine limitation.
+5 user-reported bugs investigated. All 5 fixed.
 
 | # | Issue | Sev | Status | Fix |
 |---|-------|-----|--------|-----|
 | 1 | EX11-012 empty evo_costs prevents digivolve | high | FIXED | Added evo_costs to cards.json |
 | 2 | Digimon can attack suspended Tamers | high | FIXED | Added `target.is_digimon` to attack mask |
-| 3 | Petrification Tokens not implemented | med | WONTFIX | Engine limitation — no token creation API |
+| 3 | Petrification Tokens not implemented | med | FIXED | Token system implemented — `token_registry.py`, `effect_play_token()`, lifecycle intercepts |
 | 4 | OnLoseSecurity inherited adds memory to wrong player | high | FIXED | Use `card.owner` instead of `ctx.get('player')` |
 | 5 | Lamiamon WhenDigivolving incorrect condition | high | FIXED | Removed spurious Reptile/Dragonkin ally check |
+
+## Systemic Issues (Backlog)
+
+| # | Issue | Sev | Status | Notes |
+|---|-------|-----|--------|-------|
+| S1 | Transpiled scripts use `OnEnterFieldAnyone` + `is_when_digivolving` flag instead of `EffectTiming.WhenDigivolving` | low | OUTSTANDING | Transpiler generates roundabout timing pattern. Dedicated `WhenDigivolving` timing exists and works. Affects many frozen scripts — needs bulk migration. |

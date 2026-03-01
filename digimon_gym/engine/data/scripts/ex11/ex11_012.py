@@ -38,10 +38,10 @@ class EX11_012(CardScript):
         effect1.set_can_use_condition(condition1)
         effects.append(effect1)
 
-        # Timing: EffectTiming.OnEnterFieldAnyone
+        # Timing: EffectTiming.WhenDigivolving
         # Delete, Return To Deck, Play Token
         effect2 = ICardEffect()
-        effect2.set_timing(EffectTiming.OnEnterFieldAnyone)
+        effect2.set_timing(EffectTiming.WhenDigivolving)
         effect2.set_effect_name("EX11-012 Delete, Return To Deck, Play Token")
         effect2.set_effect_description("Delete, Return To Deck, Play Token")
         effect2.is_when_digivolving = True
@@ -80,8 +80,8 @@ class EX11_012(CardScript):
                     enemy.return_permanent_to_deck_bottom(target_perm)
             game.effect_select_opponent_permanent(
                 player, on_return, filter_fn=target_filter, is_optional=False)
-            # Play Petrification Token — token play not yet supported in engine
-            pass  # descriptive-tagged: play_token
+            # Play 1 Petrification Token on opponent's field
+            game.effect_play_token(player, 'petrification', on_opponent_field=True, count=1)
 
         effect2.set_on_process_callback(process2)
         effects.append(effect2)
@@ -127,8 +127,8 @@ class EX11_012(CardScript):
                     enemy.return_permanent_to_deck_bottom(target_perm)
             game.effect_select_opponent_permanent(
                 player, on_return, filter_fn=target_filter, is_optional=False)
-            # Play Petrification Token — token play not yet supported in engine
-            pass  # descriptive-tagged: play_token
+            # Play 1 Petrification Token on opponent's field
+            game.effect_play_token(player, 'petrification', on_opponent_field=True, count=1)
 
         effect3.set_on_process_callback(process3)
         effects.append(effect3)
