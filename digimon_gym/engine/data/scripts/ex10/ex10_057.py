@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -16,6 +17,7 @@ class EX10_057(CardScript):
         # Timing: EffectTiming.OnDeclaration
         # [Hand] [Main] If you don't have any Digimon other than Digimon with [Dark Masters] in their texts, you may play this card with the play cost reduced by 5. At turn end, delete the Digimon this effect played.
         effect0 = ICardEffect()
+        effect0.set_timing(EffectTiming.OnDeclaration)
         effect0.set_effect_name("EX10-057 Play for reduced cost of 5, delete at end of turn")
         effect0.set_effect_description("[Hand] [Main] If you don't have any Digimon other than Digimon with [Dark Masters] in their texts, you may play this card with the play cost reduced by 5. At turn end, delete the Digimon this effect played.")
         effect0.is_optional = True
@@ -58,6 +60,7 @@ class EX10_057(CardScript):
         # Timing: EffectTiming.OnDeclaration
         # [End of Your Turn] Delete this Digimon.
         effect1 = ICardEffect()
+        effect1.set_timing(EffectTiming.OnDeclaration)
         effect1.set_effect_name("EX10-057 Delete the Digimon")
         effect1.set_effect_description("[End of Your Turn] Delete this Digimon.")
 
@@ -97,6 +100,7 @@ class EX10_057(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [On Play] Delete 1 of your opponent's unsuspended Digimon.
         effect2 = ICardEffect()
+        effect2.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect2.set_effect_name("EX10-057 Delete 1 unsuspended Digimon")
         effect2.set_effect_description("[On Play] Delete 1 of your opponent's unsuspended Digimon.")
         effect2.is_on_play = True
@@ -132,6 +136,7 @@ class EX10_057(CardScript):
         # Timing: EffectTiming.OnAllyAttack
         # [When Attacking] Delete 1 of your opponent's unsuspended Digimon.
         effect3 = ICardEffect()
+        effect3.set_timing(EffectTiming.OnAllyAttack)
         effect3.set_effect_name("EX10-057 Delete 1 unsuspended Digimon")
         effect3.set_effect_description("[When Attacking] Delete 1 of your opponent's unsuspended Digimon.")
         effect3.is_on_attack = True
@@ -165,6 +170,7 @@ class EX10_057(CardScript):
         # Timing: EffectTiming.OnDestroyedAnyone
         # [On Deletion] If you have no purple face-up security cards, place this Digimon face up as the bottom security card.
         effect4 = ICardEffect()
+        effect4.set_timing(EffectTiming.OnDestroyedAnyone)
         effect4.set_effect_name("EX10-057 Place this Digimon face up as bottom security")
         effect4.set_effect_description("[On Deletion] If you have no purple face-up security cards, place this Digimon face up as the bottom security card.")
         effect4.is_on_deletion = True
@@ -191,6 +197,7 @@ class EX10_057(CardScript):
         # Timing: EffectTiming.SecuritySkill
         # [Security] If this card was face-up, you may play 1 level 5 or lower card with [Dark Masters] in its text from your hand or trash without paying the cost.
         effect5 = ICardEffect()
+        effect5.set_timing(EffectTiming.SecuritySkill)
         effect5.set_effect_name("EX10-057 Play Card")
         effect5.set_effect_description("[Security] If this card was face-up, you may play 1 level 5 or lower card with [Dark Masters] in its text from your hand or trash without paying the cost.")
         effect5.is_optional = True

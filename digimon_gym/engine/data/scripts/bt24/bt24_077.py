@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -41,6 +42,7 @@ class BT24_077(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # Effect
         effect2 = ICardEffect()
+        effect2.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect2.set_effect_name("BT24-077 Effect")
         effect2.set_effect_description("Effect")
         effect2.is_when_digivolving = True
@@ -58,6 +60,7 @@ class BT24_077(CardScript):
         # Timing: EffectTiming.OnDestroyedAnyone
         # Effect
         effect3 = ICardEffect()
+        effect3.set_timing(EffectTiming.OnDestroyedAnyone)
         effect3.set_effect_name("BT24-077 Effect")
         effect3.set_effect_description("Effect")
         effect3.is_on_deletion = True
@@ -73,6 +76,7 @@ class BT24_077(CardScript):
         # Timing: EffectTiming.OnDestroyedAnyone
         # Play Card
         effect4 = ICardEffect()
+        effect4.set_timing(EffectTiming.OnDestroyedAnyone)
         effect4.set_effect_name("BT24-077 Play 1 lvl 4- [Appmon] from trash")
         effect4.set_effect_description("Play Card")
         effect4.is_optional = True
@@ -105,6 +109,7 @@ class BT24_077(CardScript):
         # Timing: EffectTiming.WhenLinked
         # [When Linking] Delete 1 of your opponent's Digimon with the lowest DP.
         effect5 = ICardEffect()
+        effect5.set_timing(EffectTiming.WhenLinked)
         effect5.set_effect_name("BT24-077 Delete 1 lowest DP Digimon")
         effect5.set_effect_description("[When Linking] Delete 1 of your opponent's Digimon with the lowest DP.")
 

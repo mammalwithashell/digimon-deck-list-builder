@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -44,6 +45,7 @@ class BT24_037(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # DP -5000, Force Attack, Change Security Attack
         effect2 = ICardEffect()
+        effect2.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect2.set_effect_name("BT24-037 DP -5000, Force Attack, Change Security Attack")
         effect2.set_effect_description("DP -5000, Force Attack, Change Security Attack")
         effect2.is_on_play = True
@@ -80,6 +82,7 @@ class BT24_037(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # DP -5000, Force Attack, Change Security Attack
         effect3 = ICardEffect()
+        effect3.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect3.set_effect_name("BT24-037 DP -5000, Force Attack, Change Security Attack")
         effect3.set_effect_description("DP -5000, Force Attack, Change Security Attack")
         effect3.is_when_digivolving = True
@@ -116,6 +119,7 @@ class BT24_037(CardScript):
         # Timing: EffectTiming.WhenRemoveField
         # [All Turns] [Once Per Turn] When this Digimon would leave the battle area other than by your effects, you may play 1 level 4 or lower yellow, red or [TS] trait Digimon card from its digivolution cards without paying the cost.
         effect4 = ICardEffect()
+        effect4.set_timing(EffectTiming.WhenRemoveField)
         effect4.set_effect_name("BT24-037 Play 1 level 4- [Yellow]/[Red]/[TS] trait digimon from digivolution sources")
         effect4.set_effect_description("[All Turns] [Once Per Turn] When this Digimon would leave the battle area other than by your effects, you may play 1 level 4 or lower yellow, red or [TS] trait Digimon card from its digivolution cards without paying the cost.")
         effect4.is_optional = True
@@ -156,6 +160,7 @@ class BT24_037(CardScript):
         # Timing: EffectTiming.WhenRemoveField
         # [All Turns] [Once Per Turn] When this Digimon would leave the battle area other than by your effects, you may play 1 level 4 or lower yellow, red or [TS] trait Digimon card from its digivolution cards without paying the cost.
         effect5 = ICardEffect()
+        effect5.set_timing(EffectTiming.WhenRemoveField)
         effect5.set_effect_name("BT24-037 Play 1 level 4- [Yellow]/[Red]/[CS] trait digimon from digivolution sources")
         effect5.set_effect_description("[All Turns] [Once Per Turn] When this Digimon would leave the battle area other than by your effects, you may play 1 level 4 or lower yellow, red or [TS] trait Digimon card from its digivolution cards without paying the cost.")
         effect5.is_inherited_effect = True

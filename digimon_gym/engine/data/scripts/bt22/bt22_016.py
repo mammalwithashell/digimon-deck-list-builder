@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -34,6 +35,7 @@ class BT22_016(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # Add To Hand, Reveal And Select
         effect1 = ICardEffect()
+        effect1.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect1.set_effect_name("BT22-016 Reveal top 3, Add Appmon & Entertainment/Awakening")
         effect1.set_effect_description("Add To Hand, Reveal And Select")
         effect1.is_on_play = True
@@ -75,6 +77,7 @@ class BT22_016(CardScript):
         # Timing: EffectTiming.WhenLinked
         # Trash Digivolution Cards
         effect2 = ICardEffect()
+        effect2.set_timing(EffectTiming.WhenLinked)
         effect2.set_effect_name("BT22-016 Trash 1 digivolution source")
         effect2.set_effect_description("Trash Digivolution Cards")
 

@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -16,6 +17,7 @@ class BT10_027(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [When Digivolving] Trash 2 digivolution cards at the bottom of 1 of your opponent's Digimon.
         effect0 = ICardEffect()
+        effect0.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect0.set_effect_name("BT10-027 Trash digivolution cards")
         effect0.set_effect_description("[When Digivolving] Trash 2 digivolution cards at the bottom of 1 of your opponent's Digimon.")
         effect0.is_when_digivolving = True
@@ -46,6 +48,7 @@ class BT10_027(CardScript):
         # Timing: EffectTiming.OnAllyAttack
         # [When Attacking] If your opponent has a Digimon with no digivolution cards in play, you may play 1 level 3 Digimon card and 1 level 4 Digimon card from this Digimon's digivolution cards without paying their memory costs.
         effect1 = ICardEffect()
+        effect1.set_timing(EffectTiming.OnAllyAttack)
         effect1.set_effect_name("BT10-027 Play level3 and level 4 digivolution cards")
         effect1.set_effect_description("[When Attacking] If your opponent has a Digimon with no digivolution cards in play, you may play 1 level 3 Digimon card and 1 level 4 Digimon card from this Digimon's digivolution cards without paying their memory costs.")
         effect1.is_optional = True

@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -42,6 +43,7 @@ class EX6_031(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [On Play] All Digimon gain <Security Attack -1> until the end of your opponent's turn.
         effect2 = ICardEffect()
+        effect2.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect2.set_effect_name("EX6-031 Security Attack -1")
         effect2.set_effect_description("[On Play] All Digimon gain <Security Attack -1> until the end of your opponent's turn.")
         effect2.is_on_play = True
@@ -57,6 +59,7 @@ class EX6_031(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [When Digivolving] All Digimon gain <Security Attack -1> until the end of your opponent's turn.
         effect3 = ICardEffect()
+        effect3.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect3.set_effect_name("EX6-031 Security Attack -1")
         effect3.set_effect_description("[When Digivolving] All Digimon gain <Security Attack -1> until the end of your opponent's turn.")
         effect3.is_when_digivolving = True
@@ -72,6 +75,7 @@ class EX6_031(CardScript):
         # Timing: EffectTiming.OnEndTurn
         # [End of Your Turn] [Once Per Turn] You may place 1 Digimon with [Security Attack] on top of its owner's security stack.
         effect4 = ICardEffect()
+        effect4.set_timing(EffectTiming.OnEndTurn)
         effect4.set_effect_name("EX6-031 Place 1 Digimon with [Security Attack] on top of its owner's security stack")
         effect4.set_effect_description("[End of Your Turn] [Once Per Turn] You may place 1 Digimon with [Security Attack] on top of its owner's security stack.")
         effect4.is_optional = True

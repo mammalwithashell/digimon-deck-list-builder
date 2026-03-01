@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -29,6 +30,7 @@ class BT13_020(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [When Digivolving] You may play 1 [Marcus Damon] from your hand without paying the cost. For the turn, the Tamer played by this effect is also treated as a 12000 DP Digimon, can't digivolve, and gains <Rush>.
         effect1 = ICardEffect()
+        effect1.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect1.set_effect_name("BT13-020 Play 1 [Marcus Damon] from hand")
         effect1.set_effect_description("[When Digivolving] You may play 1 [Marcus Damon] from your hand without paying the cost. For the turn, the Tamer played by this effect is also treated as a 12000 DP Digimon, can't digivolve, and gains <Rush>.")
         effect1.is_optional = True
@@ -64,6 +66,7 @@ class BT13_020(CardScript):
         # Timing: EffectTiming.OnTappedAnyone
         # [Your Turn][Once Per Turn] When one of your Tamers becomes suspended, trash the top card of your opponent's security stack.
         effect2 = ICardEffect()
+        effect2.set_timing(EffectTiming.OnTappedAnyone)
         effect2.set_effect_name("BT13-020 Trash the top card of opponent's security")
         effect2.set_effect_description("[Your Turn][Once Per Turn] When one of your Tamers becomes suspended, trash the top card of your opponent's security stack.")
         effect2.set_max_count_per_turn(1)

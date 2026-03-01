@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -58,6 +59,7 @@ class BT21_018(CardScript):
         # Timing: EffectTiming.WhenLinked
         # Force Attack
         effect3 = ICardEffect()
+        effect3.set_timing(EffectTiming.WhenLinked)
         effect3.set_effect_name("BT21-018 This digimon may attack")
         effect3.set_effect_description("Force Attack")
         effect3.is_optional = True
@@ -88,6 +90,7 @@ class BT21_018(CardScript):
         # Timing: EffectTiming.WhenLinked
         # Force Attack
         effect4 = ICardEffect()
+        effect4.set_timing(EffectTiming.WhenLinked)
         effect4.set_effect_name("BT21-018 This digimon may attack")
         effect4.set_effect_description("Force Attack")
         effect4.is_optional = True

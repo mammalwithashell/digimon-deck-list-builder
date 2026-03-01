@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -29,6 +30,7 @@ class EX10_043(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [On Play] Delete 1 of your opponent's level 3 Digimon.
         effect1 = ICardEffect()
+        effect1.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect1.set_effect_name("EX10-043 Delete 1 level 3 Digimon")
         effect1.set_effect_description("[On Play] Delete 1 of your opponent's level 3 Digimon.")
         effect1.is_on_play = True
@@ -62,6 +64,7 @@ class EX10_043(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [When Digivolving] Delete 1 of your opponent's level 3 Digimon.
         effect2 = ICardEffect()
+        effect2.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect2.set_effect_name("EX10-043 Delete 1 level 3 Digimon")
         effect2.set_effect_description("[When Digivolving] Delete 1 of your opponent's level 3 Digimon.")
         effect2.is_when_digivolving = True
@@ -95,6 +98,7 @@ class EX10_043(CardScript):
         # Timing: EffectTiming.OnLinkCardDiscarded
         # [All turns] [Once Per Turn] When effects trash any of this Digimon's link cards, gain 1 memory.
         effect3 = ICardEffect()
+        effect3.set_timing(EffectTiming.OnLinkCardDiscarded)
         effect3.set_effect_name("EX10-043 Gain +1 Memory")
         effect3.set_effect_description("[All turns] [Once Per Turn] When effects trash any of this Digimon's link cards, gain 1 memory.")
         effect3.set_max_count_per_turn(1)
@@ -122,6 +126,7 @@ class EX10_043(CardScript):
         # Timing: EffectTiming.OnAllyAttack
         # Delete
         effect4 = ICardEffect()
+        effect4.set_timing(EffectTiming.OnAllyAttack)
         effect4.set_effect_name("EX10-043 Trash to delete")
         effect4.set_effect_description("Delete")
         effect4.is_on_attack = True

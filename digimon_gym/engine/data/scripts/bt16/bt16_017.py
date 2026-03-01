@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -29,6 +30,7 @@ class BT16_017(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [Your Turn] [Once Per Turn] When one of your other Digimon is played or digivolves, if that Digimon is green or has the [Free] trait, gain 1 memory.
         effect1 = ICardEffect()
+        effect1.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect1.set_effect_name("BT16-017 Memory +1")
         effect1.set_effect_description("[Your Turn] [Once Per Turn] When one of your other Digimon is played or digivolves, if that Digimon is green or has the [Free] trait, gain 1 memory.")
         effect1.set_max_count_per_turn(1)

@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -16,6 +17,7 @@ class BT19_049(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [When Digivolving] If you have 1 or fewer Tamers, you may play 1 [Henry Wong] from your hand without paying the cost.
         effect0 = ICardEffect()
+        effect0.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect0.set_effect_name("BT19-049 Play 1 [Henry Wong] from hand")
         effect0.set_effect_description("[When Digivolving] If you have 1 or fewer Tamers, you may play 1 [Henry Wong] from your hand without paying the cost.")
         effect0.is_optional = True
@@ -48,6 +50,7 @@ class BT19_049(CardScript):
         # Timing: EffectTiming.OnAllyAttack
         # [When Attacking] [Once Per Turn] Suspend 1 of your opponent's Digimon.
         effect1 = ICardEffect()
+        effect1.set_timing(EffectTiming.OnAllyAttack)
         effect1.set_effect_name("BT19-049 Suspend 1 opponent's Digimon")
         effect1.set_effect_description("[When Attacking] [Once Per Turn] Suspend 1 of your opponent's Digimon.")
         effect1.is_inherited_effect = True

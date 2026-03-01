@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -41,6 +42,7 @@ class BT15_063(CardScript):
         # Timing: EffectTiming.OnTappedAnyone
         # [All Turns][Once Per Turn] When an effect suspends another Digimon or Tamer, unsuspend 1 of your Digimon with the [Beast Dragon] or [DigiPolice] trait.
         effect2 = ICardEffect()
+        effect2.set_timing(EffectTiming.OnTappedAnyone)
         effect2.set_effect_name("BT15-063 Unsuspend a Digimon with the [Beast Dragon] or [DigiPolice] trait.")
         effect2.set_effect_description("[All Turns][Once Per Turn] When an effect suspends another Digimon or Tamer, unsuspend 1 of your Digimon with the [Beast Dragon] or [DigiPolice] trait.")
         effect2.is_inherited_effect = True
@@ -75,6 +77,7 @@ class BT15_063(CardScript):
         # Timing: EffectTiming.OnTappedAnyone
         # [All Turns] When an effect suspends another Digimon or Tamer, if this Digimon has a Tamer card with the [DigiPolice] trait in it's digivolution cards, you may digivole this Digimon into a Digimon card with the [Beast Dragon] or [DigiPolice] trait from your hand without paying the cost.
         effect3 = ICardEffect()
+        effect3.set_timing(EffectTiming.OnTappedAnyone)
         effect3.set_effect_name("BT15-063 This Digimon digivolves")
         effect3.set_effect_description("[All Turns] When an effect suspends another Digimon or Tamer, if this Digimon has a Tamer card with the [DigiPolice] trait in it's digivolution cards, you may digivole this Digimon into a Digimon card with the [Beast Dragon] or [DigiPolice] trait from your hand without paying the cost.")
         effect3.is_optional = True

@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -42,6 +43,7 @@ class BT21_100(CardScript):
         # Timing: EffectTiming.OptionSkill
         # [Main] <Draw 1> and trash 1 card in your hand. Then, place this card in the battle area.
         effect1 = ICardEffect()
+        effect1.set_timing(EffectTiming.OptionSkill)
         effect1.set_effect_name("BT21-100 Draw 1 trash 1")
         effect1.set_effect_description("[Main] <Draw 1> and trash 1 card in your hand. Then, place this card in the battle area.")
 
@@ -91,6 +93,7 @@ class BT21_100(CardScript):
         # Timing: EffectTiming.OnDestroyedAnyone
         # [Your Turn] When effects delete Digimon, <Delay>.\r\n� 1 of your Digimon with [Guilmon] or [Growlmon] in its name may digivolve into a Digimon card with [Growlmon], [Gallantmon] or [Megidramon] in its name in the trash without paying the cost.
         effect3 = ICardEffect()
+        effect3.set_timing(EffectTiming.OnDestroyedAnyone)
         effect3.set_effect_name("BT21-100 Digivolve to Gallant line when deletion happens")
         effect3.set_effect_description("[Your Turn] When effects delete Digimon, <Delay>.\\r\\n� 1 of your Digimon with [Guilmon] or [Growlmon] in its name may digivolve into a Digimon card with [Growlmon], [Gallantmon] or [Megidramon] in its name in the trash without paying the cost.")
         effect3.is_optional = True
@@ -124,6 +127,7 @@ class BT21_100(CardScript):
         # Timing: EffectTiming.SecuritySkill
         # [Security] Gain 1 memory. Then, place this card in the battle area.
         effect4 = ICardEffect()
+        effect4.set_timing(EffectTiming.SecuritySkill)
         effect4.set_effect_name("BT21-100 Gain 1 memory")
         effect4.set_effect_description("[Security] Gain 1 memory. Then, place this card in the battle area.")
         effect4.is_security_effect = True

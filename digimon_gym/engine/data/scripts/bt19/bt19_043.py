@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -29,6 +30,7 @@ class BT19_043(CardScript):
         # Timing: EffectTiming.WhenRemoveField
         # [All Turns][Once Per Turn] When this Digimon would leave the battle area, if a card with [Lucemon] in its name is in this Digimon's digivolution cards, by trashing both players' top security cards, it doesn't leave.
         effect1 = ICardEffect()
+        effect1.set_timing(EffectTiming.WhenRemoveField)
         effect1.set_effect_name("BT19-043 Trash both players top security card to prevent this Digimon from leaving Battle Area")
         effect1.set_effect_description("[All Turns][Once Per Turn] When this Digimon would leave the battle area, if a card with [Lucemon] in its name is in this Digimon's digivolution cards, by trashing both players' top security cards, it doesn't leave.")
         effect1.is_optional = True
@@ -62,6 +64,7 @@ class BT19_043(CardScript):
         # Timing: EffectTiming.OnEndTurn
         # [End of Your Turn] [Once Per Turn] Your opponent may trash their top security card. If this effect didn't trash, <Recovery +1 (Deck)>, and delete 1 of their Digimon or Tamers.
         effect2 = ICardEffect()
+        effect2.set_timing(EffectTiming.OnEndTurn)
         effect2.set_effect_name("BT19-043 Opponent may trash 1 card from secuirty or Recovery +1 and delete 1 Digimon or Tamer")
         effect2.set_effect_description("[End of Your Turn] [Once Per Turn] Your opponent may trash their top security card. If this effect didn't trash, <Recovery +1 (Deck)>, and delete 1 of their Digimon or Tamers.")
         effect2.set_max_count_per_turn(1)

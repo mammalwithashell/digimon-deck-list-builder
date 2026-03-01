@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -29,6 +30,7 @@ class BT14_007(CardScript):
         # Timing: EffectTiming.OnStartMainPhase
         # [Start of Your Main Phase] If you have a Tamer with [Tai Kamiya] in its name, this Digimon may digivolve into [Greymon] in your hand without paying the cost.
         effect1 = ICardEffect()
+        effect1.set_timing(EffectTiming.OnStartMainPhase)
         effect1.set_effect_name("BT14-007 This Digimon digivolves")
         effect1.set_effect_description("[Start of Your Main Phase] If you have a Tamer with [Tai Kamiya] in its name, this Digimon may digivolve into [Greymon] in your hand without paying the cost.")
         effect1.is_optional = True

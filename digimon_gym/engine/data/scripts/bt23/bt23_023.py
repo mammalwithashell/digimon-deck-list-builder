@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -30,6 +31,7 @@ class BT23_023(CardScript):
         # Timing: EffectTiming.WhenRemoveField
         # [All Turns] [Once Per Turn] When this Digimon would leave the battle area other than by your effects, you may play 1 level 4 or lower blue or [CS] trait Digimon card from its digivolution cards without paying the cost.
         effect1 = ICardEffect()
+        effect1.set_timing(EffectTiming.WhenRemoveField)
         effect1.set_effect_name("BT23-023 Play 1 level 4 or lower Blue or [CS] digimon from sources")
         effect1.set_effect_description("[All Turns] [Once Per Turn] When this Digimon would leave the battle area other than by your effects, you may play 1 level 4 or lower blue or [CS] trait Digimon card from its digivolution cards without paying the cost.")
         effect1.set_hash_string("BT23-023_AT")
@@ -68,6 +70,7 @@ class BT23_023(CardScript):
         # Timing: EffectTiming.WhenRemoveField
         # [All Turns] [Once Per Turn] When this Digimon would leave the battle area other than by your effects, you may play 1 level 4 or lower blue or [CS] trait Digimon card from its digivolution cards without paying the cost.
         effect2 = ICardEffect()
+        effect2.set_timing(EffectTiming.WhenRemoveField)
         effect2.set_effect_name("BT23-023 Play 1 level 4 or lower Blue or [CS] digimon from sources")
         effect2.set_effect_description("[All Turns] [Once Per Turn] When this Digimon would leave the battle area other than by your effects, you may play 1 level 4 or lower blue or [CS] trait Digimon card from its digivolution cards without paying the cost.")
         effect2.is_inherited_effect = True

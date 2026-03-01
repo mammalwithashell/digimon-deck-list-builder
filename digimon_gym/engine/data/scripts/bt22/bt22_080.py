@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -33,6 +34,7 @@ class BT22_080(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [When Digivolving] You may place 1 [Eater (Species Form)] from this Digimon's digivolution cards as the bottom digivolution card of your [Mother Eater] in the breeding area.
         effect1 = ICardEffect()
+        effect1.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect1.set_effect_name("BT22-080 Move 1 [Eater (Species Form)] from sources under [Mother Eater] in breeding")
         effect1.set_effect_description("[When Digivolving] You may place 1 [Eater (Species Form)] from this Digimon's digivolution cards as the bottom digivolution card of your [Mother Eater] in the breeding area.")
         effect1.is_optional = True
@@ -54,6 +56,7 @@ class BT22_080(CardScript):
         # Timing: EffectTiming.OnSecurityCheck
         # [Your Turn] [Once Per Turn] When this Digimon checks your opponent's security stack, you may play 1 Tamer card with the [CS] trait from your hand without paying the cost.
         effect2 = ICardEffect()
+        effect2.set_timing(EffectTiming.OnSecurityCheck)
         effect2.set_effect_name("BT22-080 Play 1 [CS] Tamer")
         effect2.set_effect_description("[Your Turn] [Once Per Turn] When this Digimon checks your opponent's security stack, you may play 1 Tamer card with the [CS] trait from your hand without paying the cost.")
         effect2.is_optional = True

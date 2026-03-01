@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -16,6 +17,7 @@ class BT19_032(CardScript):
         # Timing: EffectTiming.OnDestroyedAnyone
         # [On Deletion] 1 of your opponent's Digimon gains <Security Attack -1> until the end of their turn. Then, if you have 2 or fewer security cards, <Recovery +1>.
         effect0 = ICardEffect()
+        effect0.set_timing(EffectTiming.OnDestroyedAnyone)
         effect0.set_effect_name("BT19-032 Security Attack -1 to an opponents' Digimon and if you have less than 2 security, Recovery +1")
         effect0.set_effect_description("[On Deletion] 1 of your opponent's Digimon gains <Security Attack -1> until the end of their turn. Then, if you have 2 or fewer security cards, <Recovery +1>.")
         effect0.is_on_deletion = True

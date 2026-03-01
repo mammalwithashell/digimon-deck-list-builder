@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -16,6 +17,7 @@ class BT15_073(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # Draw 1, Trash From Hand
         effect0 = ICardEffect()
+        effect0.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect0.set_effect_name("BT15-073 Draw 1 and trash 1 card from hand")
         effect0.set_effect_description("Draw 1, Trash From Hand")
         effect0.is_when_digivolving = True
@@ -53,6 +55,7 @@ class BT15_073(CardScript):
         # Timing: EffectTiming.OnDestroyedAnyone
         # Draw 1, Trash From Hand
         effect1 = ICardEffect()
+        effect1.set_timing(EffectTiming.OnDestroyedAnyone)
         effect1.set_effect_name("BT15-073 Draw 1 and trash 1 card from hand")
         effect1.set_effect_description("Draw 1, Trash From Hand")
         effect1.is_on_deletion = True

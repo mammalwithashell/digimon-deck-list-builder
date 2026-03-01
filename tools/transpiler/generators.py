@@ -990,8 +990,32 @@ def generate_factory_effect(eb: EffectBlock, card_id: str, idx: int) -> str:
         lines.append(f"        {var}._applies_to_all_own_digimon = True")
     elif eb.factory_method == "set_memory_3":
         lines.append(f"        # [Start of Your Turn] Set memory to 3 if <= 2")
+        lines.append(f"        {var}.set_timing(EffectTiming.OnStartMainPhase)")
+        eb.factory_cond_on_battle = True
+        eb.factory_cond_owner_turn = True
+        lines.append(f"")
+        lines.append(f"        def process{idx}(ctx: Dict[str, Any]):")
+        lines.append(f'            """Action: Set memory to 3 if <= 2"""')
+        lines.append(f"            player = ctx.get('player')")
+        lines.append(f"            game = ctx.get('game')")
+        lines.append(f"            if player and game and game.memory <= 2:")
+        lines.append(f"                game.memory = 3")
+        lines.append(f"        {var}.set_on_process_callback(process{idx})")
     elif eb.factory_method == "gain_memory_tamer":
         lines.append(f"        # [Start of Main] Gain 1 memory if opponent has Digimon")
+        lines.append(f"        {var}.set_timing(EffectTiming.OnStartMainPhase)")
+        eb.factory_cond_on_battle = True
+        eb.factory_cond_owner_turn = True
+        lines.append(f"")
+        lines.append(f"        def process{idx}(ctx: Dict[str, Any]):")
+        lines.append(f'            """Action: Gain 1 memory if opponent has Digimon"""')
+        lines.append(f"            player = ctx.get('player')")
+        lines.append(f"            game = ctx.get('game')")
+        lines.append(f"            if player and game:")
+        lines.append(f"                opponent = game.opponent_player")
+        lines.append(f"                if opponent and any(p.is_digimon for p in opponent.battle_area):")
+        lines.append(f"                    game.memory += 1")
+        lines.append(f"        {var}.set_on_process_callback(process{idx})")
     elif eb.factory_method == "alt_digivolve_req":
         cost = eb.digi_cost_override if eb.digi_cost_override is not None else 0
         names = eb.name_checks
@@ -1025,6 +1049,10 @@ def generate_factory_effect(eb: EffectBlock, card_id: str, idx: int) -> str:
         desc_str = " ".join(desc_parts) if desc_parts else "matching"
         lines.append(f"        # Reduce digivolution cost by {abs(cost_val)} for {desc_str}")
         lines.append(f"        {var}.cost_reduction = {abs(cost_val)}")
+
+    # Always emit set_timing() so the engine can match by timing field
+    if eb.timing and eb.timing != "EffectTiming.NoTiming":
+        lines.append(f"        {var}.set_timing({eb.timing})")
 
     # Fix 1: Generate real condition code from extracted closure data
     lines.append(f"")
@@ -1070,6 +1098,10 @@ def generate_activate_effect(eb: EffectBlock, card_id: str, idx: int) -> str:
 
     if eb.timing == "EffectTiming.SecuritySkill":
         lines.append(f"        {var}.is_security_effect = True")
+
+    # Always emit set_timing() so the engine can match by timing field
+    if eb.timing and eb.timing != "EffectTiming.NoTiming":
+        lines.append(f"        {var}.set_timing({eb.timing})")
 
     # DP modifier
     if eb.dp_change and not any(a for a in eb.actions if a not in ("change_dp",)):
@@ -1125,6 +1157,7 @@ def generate_python_script(class_name: str, card_id: str, effects: List[EffectBl
     lines.append("from typing import TYPE_CHECKING, List, Dict, Any")
     lines.append("from ....core.card_script import CardScript")
     lines.append("from ....interfaces.card_effect import ICardEffect")
+    lines.append("from ....data.enums import EffectTiming")
     lines.append("")
     lines.append("if TYPE_CHECKING:")
     lines.append("    from ....core.card_source import CardSource")

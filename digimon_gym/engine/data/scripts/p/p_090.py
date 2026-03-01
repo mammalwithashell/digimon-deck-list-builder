@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -16,6 +17,7 @@ class P_090(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [When Digivolving] Suspend 2 of your opponent's Digimon.
         effect0 = ICardEffect()
+        effect0.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect0.set_effect_name("P-090 Suspend Digimons")
         effect0.set_effect_description("[When Digivolving] Suspend 2 of your opponent's Digimon.")
         effect0.is_when_digivolving = True
@@ -49,6 +51,7 @@ class P_090(CardScript):
         # Timing: EffectTiming.OnEndBattle
         # [All Turns] [Once Per Turn] When one of your Digimon deletes an opponent's Digimon in battle and survives, if [Angoramon] is in this Digimon's digivolution cards, unsuspend 1 of your Digimon.
         effect1 = ICardEffect()
+        effect1.set_timing(EffectTiming.OnEndBattle)
         effect1.set_effect_name("P-090 Unsuspend your 1 Digimon")
         effect1.set_effect_description("[All Turns] [Once Per Turn] When one of your Digimon deletes an opponent's Digimon in battle and survives, if [Angoramon] is in this Digimon's digivolution cards, unsuspend 1 of your Digimon.")
         effect1.set_max_count_per_turn(1)

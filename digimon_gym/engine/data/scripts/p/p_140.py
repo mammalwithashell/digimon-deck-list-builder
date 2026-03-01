@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -70,6 +71,7 @@ class P_140(CardScript):
         # Timing: EffectTiming.OnEndBattle
         # [Your Turn][Once Per Turn] When this Digimon deletes an opponent's Digimon in battle, trash the top card of your opponent's security stack.
         effect3 = ICardEffect()
+        effect3.set_timing(EffectTiming.OnEndBattle)
         effect3.set_effect_name("P-140 Trash the top card of opponent's security")
         effect3.set_effect_description("[Your Turn][Once Per Turn] When this Digimon deletes an opponent's Digimon in battle, trash the top card of your opponent's security stack.")
         effect3.is_inherited_effect = True

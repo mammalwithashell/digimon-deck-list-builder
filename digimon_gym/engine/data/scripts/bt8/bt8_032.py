@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -29,6 +30,7 @@ class BT8_032(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [When Digivolving] Return 1 of your opponent's Digimon with 10000 DP or less to its owner's hand.
         effect1 = ICardEffect()
+        effect1.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect1.set_effect_name("BT8-032 Return 1 Digimon with 10000 DP or less to hand")
         effect1.set_effect_description("[When Digivolving] Return 1 of your opponent's Digimon with 10000 DP or less to its owner's hand.")
         effect1.is_when_digivolving = True
@@ -66,6 +68,7 @@ class BT8_032(CardScript):
         # Timing: EffectTiming.OnAllyAttack
         # [When Attacking][Once Per Turn] If a blue card is in this Digimon's digivolution cards, unsuspend 1 of your Digimon. If a green card is in this Digimon's digivolution cards, suspend 1 of your opponent's Digimon.
         effect2 = ICardEffect()
+        effect2.set_timing(EffectTiming.OnAllyAttack)
         effect2.set_effect_name("BT8-032 Unsuspend and suspend Digimons")
         effect2.set_effect_description("[When Attacking][Once Per Turn] If a blue card is in this Digimon's digivolution cards, unsuspend 1 of your Digimon. If a green card is in this Digimon's digivolution cards, suspend 1 of your opponent's Digimon.")
         effect2.set_max_count_per_turn(1)

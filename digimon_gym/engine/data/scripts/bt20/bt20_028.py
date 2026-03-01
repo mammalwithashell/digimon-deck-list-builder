@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -69,6 +70,7 @@ class BT20_028(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [When Digivolving][Once Per Turn] From the digivolution cards of this Digimon with [MetalSeadramon]/[X Antibody] in its digivolution cards, you may play 1 level 5 or lower Digimon card without paying the cost.
         effect4 = ICardEffect()
+        effect4.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect4.set_effect_name("BT20-028 Play 1 Digimon from this Digimon's digivolution cards")
         effect4.set_effect_description("[When Digivolving][Once Per Turn] From the digivolution cards of this Digimon with [MetalSeadramon]/[X Antibody] in its digivolution cards, you may play 1 level 5 or lower Digimon card without paying the cost.")
         effect4.is_optional = True
@@ -105,6 +107,7 @@ class BT20_028(CardScript):
         # Timing: EffectTiming.OnAllyAttack
         # [When Attacking][Once Per Turn] From the digivolution cards of this Digimon with [MetalSeadramon]/[X Antibody] in its digivolution cards, you may play 1 level 5 or lower Digimon card without paying the cost.
         effect5 = ICardEffect()
+        effect5.set_timing(EffectTiming.OnAllyAttack)
         effect5.set_effect_name("BT20-028 Play 1 Digimon from this Digimon's digivolution cards")
         effect5.set_effect_description("[When Attacking][Once Per Turn] From the digivolution cards of this Digimon with [MetalSeadramon]/[X Antibody] in its digivolution cards, you may play 1 level 5 or lower Digimon card without paying the cost.")
         effect5.is_optional = True
@@ -141,6 +144,7 @@ class BT20_028(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [All Turns][Once Per Turn] When any of your Digimon are played from digivolution cards, <De-Digivolve 2> 1 of your opponent's Digimon.
         effect6 = ICardEffect()
+        effect6.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect6.set_effect_name("BT20-028 <De-Digivolve 2> 1 of your opponent's Digimon")
         effect6.set_effect_description("[All Turns][Once Per Turn] When any of your Digimon are played from digivolution cards, <De-Digivolve 2> 1 of your opponent's Digimon.")
         effect6.set_max_count_per_turn(1)

@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -16,6 +17,7 @@ class BT15_015(CardScript):
         # Timing: EffectTiming.OnDeclaration
         # [Main][Once per turn] By paying 2 memory, this Digimon gains [Security A+1] for the turn. Then, this Digimon may attack.
         effect0 = ICardEffect()
+        effect0.set_timing(EffectTiming.OnDeclaration)
         effect0.set_effect_name("BT15-015 This Digimon gains Security Attack +1 and can attack")
         effect0.set_effect_description("[Main][Once per turn] By paying 2 memory, this Digimon gains [Security A+1] for the turn. Then, this Digimon may attack.")
         effect0.set_max_count_per_turn(1)

@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -16,6 +17,7 @@ class BT11_040(CardScript):
         # Timing: EffectTiming.OnDestroyedAnyone
         # [On Deletion] Reveal the top 3 cards of your deck. Add 1 card with [Chuumon], [Sukamon], or [Etemon] in its name among them to your hand. Trash the rest.
         effect0 = ICardEffect()
+        effect0.set_timing(EffectTiming.OnDestroyedAnyone)
         effect0.set_effect_name("BT11-040 Reveal the top 3 cards of deck")
         effect0.set_effect_description("[On Deletion] Reveal the top 3 cards of your deck. Add 1 card with [Chuumon], [Sukamon], or [Etemon] in its name among them to your hand. Trash the rest.")
         effect0.is_on_deletion = True
@@ -55,6 +57,7 @@ class BT11_040(CardScript):
         # Timing: EffectTiming.WhenPermanentWouldBeDeleted
         # [All Turns] When this Digimon would be deleted, by deleting 1 other Digimon with [Sukamon] in its name, prevent that deletion.
         effect1 = ICardEffect()
+        effect1.set_timing(EffectTiming.WhenPermanentWouldBeDeleted)
         effect1.set_effect_name("BT11-040 Prevent this Digimon from being deleted")
         effect1.set_effect_description("[All Turns] When this Digimon would be deleted, by deleting 1 other Digimon with [Sukamon] in its name, prevent that deletion.")
         effect1.is_inherited_effect = True

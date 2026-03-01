@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -16,6 +17,7 @@ class BT14_048(CardScript):
         # Timing: EffectTiming.OnAllyAttack
         # [When Attacking] If attacked a Digimon with higher DP than this Digimon, this Digimon may digivolve into 1 level 6 Digimon card with [Leomon] in its name in your hand for a digivolution cost of 6, ignoring its digivolution requirements.
         effect0 = ICardEffect()
+        effect0.set_timing(EffectTiming.OnAllyAttack)
         effect0.set_effect_name("BT14-048 Digivolve this Digimon")
         effect0.set_effect_description("[When Attacking] If attacked a Digimon with higher DP than this Digimon, this Digimon may digivolve into 1 level 6 Digimon card with [Leomon] in its name in your hand for a digivolution cost of 6, ignoring its digivolution requirements.")
         effect0.is_optional = True

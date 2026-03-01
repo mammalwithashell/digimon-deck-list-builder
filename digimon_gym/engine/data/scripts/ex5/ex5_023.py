@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -29,6 +30,7 @@ class EX5_023(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [When Digivolving] By trashing 2 cards in your hand, unsuspend this Digimon. Then, if [WereGarurumon] or [X Antibody] is in this Digimon's digivolution cards, you may return 1 Digimon card with [Garurumon]/[X Antibody] in its name from your trash to the hand.
         effect1 = ICardEffect()
+        effect1.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect1.set_effect_name("EX5-023 Trash 2 cards from hand to unsuspend this Digimon and return 1 card from trash to hand")
         effect1.set_effect_description("[When Digivolving] By trashing 2 cards in your hand, unsuspend this Digimon. Then, if [WereGarurumon] or [X Antibody] is in this Digimon's digivolution cards, you may return 1 Digimon card with [Garurumon]/[X Antibody] in its name from your trash to the hand.")
         effect1.is_when_digivolving = True
@@ -78,6 +80,7 @@ class EX5_023(CardScript):
         # Timing: EffectTiming.OnAllyAttack
         # [When Attacking] [Once Per Turn] If this Digimon has [Garurumon]/[Omnimon] in its name, by trashing 1 card in your hand, unsuspend this Digimon.
         effect2 = ICardEffect()
+        effect2.set_timing(EffectTiming.OnAllyAttack)
         effect2.set_effect_name("EX5-023 Trash 1 card from hand to unsuspend this Digimon")
         effect2.set_effect_description("[When Attacking] [Once Per Turn] If this Digimon has [Garurumon]/[Omnimon] in its name, by trashing 1 card in your hand, unsuspend this Digimon.")
         effect2.is_inherited_effect = True

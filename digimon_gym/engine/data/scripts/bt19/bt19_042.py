@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -58,6 +59,7 @@ class BT19_042(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [When Digivolving][Once Per Turn] If [Dynasmon]/[X Antibody] is in this Digimon's digivolution cards, by trashing the top card of your security stack, trash the top card of your opponent's security stack, and this Digimon gets +6000 DP until the end of your opponent's turn.
         effect3 = ICardEffect()
+        effect3.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect3.set_effect_name("BT19-042 Trash top security card to trash opponents top security and gain +6000 DP")
         effect3.set_effect_description("[When Digivolving][Once Per Turn] If [Dynasmon]/[X Antibody] is in this Digimon's digivolution cards, by trashing the top card of your security stack, trash the top card of your opponent's security stack, and this Digimon gets +6000 DP until the end of your opponent's turn.")
         effect3.is_optional = True
@@ -95,6 +97,7 @@ class BT19_042(CardScript):
         # Timing: EffectTiming.OnAllyAttack
         # [When Attacking][Once Per Turn] If [Dynasmon]/[X Antibody] is in this Digimon's digivolution cards, by trashing the top card of your security stack, trash the top card of your opponent's security stack, and this Digimon gets +6000 DP until the end of your opponent's turn.
         effect4 = ICardEffect()
+        effect4.set_timing(EffectTiming.OnAllyAttack)
         effect4.set_effect_name("BT19-042 Trash top security card to trash opponents top security and gain +6000 DP")
         effect4.set_effect_description("[When Attacking][Once Per Turn] If [Dynasmon]/[X Antibody] is in this Digimon's digivolution cards, by trashing the top card of your security stack, trash the top card of your opponent's security stack, and this Digimon gets +6000 DP until the end of your opponent's turn.")
         effect4.is_optional = True
@@ -132,6 +135,7 @@ class BT19_042(CardScript):
         # Timing: EffectTiming.OnEndTurn
         # [End of Your Turn] If you have 2 or fewer security cards, <Recovery +1>.
         effect5 = ICardEffect()
+        effect5.set_timing(EffectTiming.OnEndTurn)
         effect5.set_effect_name("BT19-042 Recovery +1")
         effect5.set_effect_description("[End of Your Turn] If you have 2 or fewer security cards, <Recovery +1>.")
 

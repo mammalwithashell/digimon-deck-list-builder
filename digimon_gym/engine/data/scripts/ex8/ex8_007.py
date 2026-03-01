@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -29,6 +30,7 @@ class EX8_007(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [On Play] Reveal the top 3 cards of your deck. Add 1 card with [Tyrannomon] in its name or the [Reptile]/[Dinosaur] trait and 1 [Ryutaro Williams] among them to the hand. Return the rest to the bottom of the deck.
         effect1 = ICardEffect()
+        effect1.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect1.set_effect_name("EX8-007 Reveal the top 3 cards of the deck")
         effect1.set_effect_description("[On Play] Reveal the top 3 cards of your deck. Add 1 card with [Tyrannomon] in its name or the [Reptile]/[Dinosaur] trait and 1 [Ryutaro Williams] among them to the hand. Return the rest to the bottom of the deck.")
         effect1.is_on_play = True

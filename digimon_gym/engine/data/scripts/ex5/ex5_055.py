@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -29,6 +30,7 @@ class EX5_055(CardScript):
         # Timing: EffectTiming.OnDestroyedAnyone
         # [On Deletion] ��De-Digivolve  1��n 1 of your opponent's Digimon (Trash up to 1 card from the top of one of your opponent's Digimon. If it has no digivolution cards, or becomes a level 3 Digimon, you can't trash any more cards). Then, return 1 of their 6000 DP or lower Digimon to the bottom of the deck.
         effect1 = ICardEffect()
+        effect1.set_timing(EffectTiming.OnDestroyedAnyone)
         effect1.set_effect_name("EX5-055 De-Digivolve 1 on 1 Digimon and return 1 Digimon to the bottom of deck")
         effect1.set_effect_description("[On Deletion] ��De-Digivolve  1��n 1 of your opponent's Digimon (Trash up to 1 card from the top of one of your opponent's Digimon. If it has no digivolution cards, or becomes a level 3 Digimon, you can't trash any more cards). Then, return 1 of their 6000 DP or lower Digimon to the bottom of the deck.")
         effect1.is_on_deletion = True
@@ -73,6 +75,7 @@ class EX5_055(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [When Digivolving] ��De-Digivolve  1��n 1 of your opponent's Digimon (Trash up to 1 card from the top of one of your opponent's Digimon. If it has no digivolution cards, or becomes a level 3 Digimon, you can't trash any more cards). Then, return 1 of their 6000 DP or lower Digimon to the bottom of the deck.
         effect2 = ICardEffect()
+        effect2.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect2.set_effect_name("EX5-055 De-Digivolve 1 on 1 Digimon and return 1 Digimon to the bottom of deck")
         effect2.set_effect_description("[When Digivolving] ��De-Digivolve  1��n 1 of your opponent's Digimon (Trash up to 1 card from the top of one of your opponent's Digimon. If it has no digivolution cards, or becomes a level 3 Digimon, you can't trash any more cards). Then, return 1 of their 6000 DP or lower Digimon to the bottom of the deck.")
         effect2.is_when_digivolving = True
@@ -119,6 +122,7 @@ class EX5_055(CardScript):
         # Timing: EffectTiming.OnEndAttack
         # [End of Attack] [Once Per Turn] Return 1 of your opponent's 4000 DP or lower Digimon to the bottom of the deck. If you didn't, unsuspend this Digimon.
         effect3 = ICardEffect()
+        effect3.set_timing(EffectTiming.OnEndAttack)
         effect3.set_effect_name("EX5-055 Return 1 Digimon to the bottom of deck or unsuspend this Digimon")
         effect3.set_effect_description("[End of Attack] [Once Per Turn] Return 1 of your opponent's 4000 DP or lower Digimon to the bottom of the deck. If you didn't, unsuspend this Digimon.")
         effect3.set_max_count_per_turn(1)

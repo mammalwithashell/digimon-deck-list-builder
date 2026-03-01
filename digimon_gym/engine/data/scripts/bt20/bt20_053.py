@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -38,6 +39,7 @@ class BT20_053(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [On Play] You may play 1 [Dorumon]/[Ryudamon] from your hand to your empty breeding area without paying the cost. Then if during an attack until the end of your opponent's turn, 1 of your Digimon isn't affected by your opponent's Digimon's effects and gets +5000 DP.
         effect1 = ICardEffect()
+        effect1.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect1.set_effect_name("BT20-053 Play 1 Digimon from your hand to your empty breeding area")
         effect1.set_effect_description("[On Play] You may play 1 [Dorumon]/[Ryudamon] from your hand to your empty breeding area without paying the cost. Then if during an attack until the end of your opponent's turn, 1 of your Digimon isn't affected by your opponent's Digimon's effects and gets +5000 DP.")
         effect1.is_on_play = True
@@ -77,6 +79,7 @@ class BT20_053(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [When Digivolving] You may play 1 [Dorumon]/[Ryudamon] from your hand to your empty breeding area without paying the cost. Then if during an attack until the end of your opponent's turn, 1 of your Digimon isn't affected by your opponent's Digimon's effects and gets +5000 DP.
         effect2 = ICardEffect()
+        effect2.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect2.set_effect_name("BT20-053 Play 1 Digimon from your hand to your empty breeding area")
         effect2.set_effect_description("[When Digivolving] You may play 1 [Dorumon]/[Ryudamon] from your hand to your empty breeding area without paying the cost. Then if during an attack until the end of your opponent's turn, 1 of your Digimon isn't affected by your opponent's Digimon's effects and gets +5000 DP.")
         effect2.is_when_digivolving = True
@@ -116,6 +119,7 @@ class BT20_053(CardScript):
         # Timing: EffectTiming.OnAllyAttack
         # [Opponent's Turn] [Once Per Turn] When one of your opponent's Digimon attacks, you may switch the attack target to this Digimon.
         effect3 = ICardEffect()
+        effect3.set_timing(EffectTiming.OnAllyAttack)
         effect3.set_effect_name("BT20-053 Switch attack target to this Digimon")
         effect3.set_effect_description("[Opponent's Turn] [Once Per Turn] When one of your opponent's Digimon attacks, you may switch the attack target to this Digimon.")
         effect3.is_inherited_effect = True

@@ -104,6 +104,8 @@ class ModifierType(Enum):
     CANNOT_DIGIVOLVE = auto()
 
     # ── Attack Restrictions ─────────────────────────────────────────
+    # Force a Digimon to attack at start of main phase
+    FORCE_ATTACK = auto()
     # ICanNotAttackEffect (general attack prevention)
     CANNOT_ATTACK = auto()
     # ICanNotAttackTargetDefendingPermanentEffect
@@ -196,7 +198,7 @@ class ModifierEntry:
                 'end_of_opponent_turn' = cleared at end of opponent's next turn
     """
     __slots__ = ('modifier_type', 'condition', 'value_fn', 'source_effect',
-                 'source_permanent', 'expiry')
+                 'source_permanent', 'expiry', 'granting_player')
 
     def __init__(
         self,
@@ -206,6 +208,7 @@ class ModifierEntry:
         source_effect: Optional['ICardEffect'] = None,
         source_permanent: Optional['Permanent'] = None,
         expiry: str = 'permanent',
+        granting_player=None,
     ):
         self.modifier_type = modifier_type
         self.condition = condition
@@ -213,6 +216,7 @@ class ModifierEntry:
         self.source_effect = source_effect
         self.source_permanent = source_permanent
         self.expiry = expiry
+        self.granting_player = granting_player
 
     def is_active(self, target: 'Permanent', context: Optional[Dict[str, Any]] = None) -> bool:
         """Check if this modifier is currently active for the given target."""
@@ -269,6 +273,19 @@ class ModifierRegistry:
             self._modifiers[mod_type] = [
                 e for e in self._modifiers[mod_type]
                 if e.expiry != expiry
+            ]
+
+    def clear_opponent_turn_expiry(self, current_turn_player):
+        """Clear 'end_of_opponent_turn' modifiers granted by the current turn player.
+
+        These modifiers last "until your opponent's turn ends", so they expire
+        at the start of the granting player's next turn.
+        """
+        for mod_type in self._modifiers:
+            self._modifiers[mod_type] = [
+                e for e in self._modifiers[mod_type]
+                if not (e.expiry == 'end_of_opponent_turn'
+                        and e.granting_player is current_turn_player)
             ]
 
     def clear_all(self):

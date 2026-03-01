@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -40,6 +41,7 @@ class BT11_103(CardScript):
         # Timing: EffectTiming.OptionSkill
         # Grant Skill
         effect1 = ICardEffect()
+        effect1.set_timing(EffectTiming.OptionSkill)
         effect1.set_effect_name("BT11-103 Memory -1")
         effect1.set_effect_description("Grant Skill")
 
@@ -64,6 +66,7 @@ class BT11_103(CardScript):
         # Timing: EffectTiming.OptionSkill
         # [All Turns] When this Digimon becomes suspended, lose 1 memory.
         effect2 = ICardEffect()
+        effect2.set_timing(EffectTiming.OptionSkill)
         effect2.set_effect_name("BT11-103 Memory -1")
         effect2.set_effect_description("[All Turns] When this Digimon becomes suspended, lose 1 memory.")
 

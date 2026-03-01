@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -39,6 +40,7 @@ class BT11_054(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [When Digivolving] You may play 1 green or blue Tamer card with a play cost of 4 or less from your hand without paying the cost.
         effect1 = ICardEffect()
+        effect1.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect1.set_effect_name("BT11-054 Play 1 Tamer from hand")
         effect1.set_effect_description("[When Digivolving] You may play 1 green or blue Tamer card with a play cost of 4 or less from your hand without paying the cost.")
         effect1.is_optional = True
@@ -77,6 +79,7 @@ class BT11_054(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [Your Turn][Once Per Turn] When you play another Digimon by an effect, 1 of your Digimon gains <Rush> for the turn. (This Digimon may attack the turn it was played.)
         effect2 = ICardEffect()
+        effect2.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect2.set_effect_name("BT11-054 Your 1 Digimon gains Rush")
         effect2.set_effect_description("[Your Turn][Once Per Turn] When you play another Digimon by an effect, 1 of your Digimon gains <Rush> for the turn. (This Digimon may attack the turn it was played.)")
         effect2.is_inherited_effect = True

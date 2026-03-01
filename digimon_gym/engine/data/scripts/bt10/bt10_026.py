@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -28,6 +29,7 @@ class BT10_026(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [On Play] You may place 1 Digimon card with [Blue Flare] in its traits from your hand or from under one of your Tamers under this Digimon as its bottom digivolution card. Then, if [Deckerdramon] is in this Digimon's digivolution cards, 1 of your opponent's Digimon can't attack or block until the end of your opponent's turn.
         effect1 = ICardEffect()
+        effect1.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect1.set_effect_name("BT10-026 Place 1 card to digivolution cards and opponent's 1 Digimon can't attack and block")
         effect1.set_effect_description("[On Play] You may place 1 Digimon card with [Blue Flare] in its traits from your hand or from under one of your Tamers under this Digimon as its bottom digivolution card. Then, if [Deckerdramon] is in this Digimon's digivolution cards, 1 of your opponent's Digimon can't attack or block until the end of your opponent's turn.")
         effect1.is_on_play = True
@@ -68,6 +70,7 @@ class BT10_026(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [When Digivolving] You may place 1 Digimon card with [Blue Flare] in its traits from your hand or from under one of your Tamers under this Digimon as its bottom digivolution card. Then, if [Deckerdramon] is in this Digimon's digivolution cards, 1 of your opponent's Digimon can't attack or block until the end of your opponent's turn.
         effect2 = ICardEffect()
+        effect2.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect2.set_effect_name("BT10-026 Place 1 card to digivolution cards and opponent's 1 Digimon can't attack and block")
         effect2.set_effect_description("[When Digivolving] You may place 1 Digimon card with [Blue Flare] in its traits from your hand or from under one of your Tamers under this Digimon as its bottom digivolution card. Then, if [Deckerdramon] is in this Digimon's digivolution cards, 1 of your opponent's Digimon can't attack or block until the end of your opponent's turn.")
         effect2.is_when_digivolving = True

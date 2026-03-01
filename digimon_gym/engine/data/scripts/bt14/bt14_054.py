@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -16,6 +17,7 @@ class BT14_054(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [When Digivolving] By unsuspending this Digimon, suspend 1 of your opponent's Digimon.
         effect0 = ICardEffect()
+        effect0.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect0.set_effect_name("BT14-054 Unsuspend this Digimon to suspend opponent's 1 Digimon")
         effect0.set_effect_description("[When Digivolving] By unsuspending this Digimon, suspend 1 of your opponent's Digimon.")
         effect0.is_optional = True
@@ -58,6 +60,7 @@ class BT14_054(CardScript):
         # Timing: EffectTiming.OnEndTurn
         # [End of Your Turn] This Digimon may attack an opponent's Digimon.
         effect1 = ICardEffect()
+        effect1.set_timing(EffectTiming.OnEndTurn)
         effect1.set_effect_name("BT14-054 This Digimon can attack to opponent's 1 Digimon")
         effect1.set_effect_description("[End of Your Turn] This Digimon may attack an opponent's Digimon.")
         effect1.is_optional = True

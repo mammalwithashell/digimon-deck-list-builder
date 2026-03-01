@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -16,6 +17,7 @@ class EX6_021(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [On Play] By adding the top or bottom card of your security stack to the hand, 1 of your opponent's Digimon gets -4000 DP for the turn. Then, you may place 1 Digimon card with the [Angel]/[Archangel]/[Three Great Angels] trait from your hand at the bottom of your security stack.
         effect0 = ICardEffect()
+        effect0.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect0.set_effect_name("EX6-021 Add 1 card from top or bottom security to hand to -4000 DP an opponent's Digimon, then place 1 card from hand at the bottom of security")
         effect0.set_effect_description("[On Play] By adding the top or bottom card of your security stack to the hand, 1 of your opponent's Digimon gets -4000 DP for the turn. Then, you may place 1 Digimon card with the [Angel]/[Archangel]/[Three Great Angels] trait from your hand at the bottom of your security stack.")
         effect0.is_on_play = True
@@ -60,6 +62,7 @@ class EX6_021(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [When Digivolving] By adding the top or bottom card of your security stack to the hand, 1 of your opponent's Digimon gets -4000 DP for the turn. Then, you may place 1 Digimon card with the [Angel]/[Archangel]/[Three Great Angels] trait from your hand at the bottom of your security stack.
         effect1 = ICardEffect()
+        effect1.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect1.set_effect_name("EX6-021 Add 1 card from top or bottom security to hand to -4000 DP an opponent's Digimon, then place 1 card from hand at the bottom of security")
         effect1.set_effect_description("[When Digivolving] By adding the top or bottom card of your security stack to the hand, 1 of your opponent's Digimon gets -4000 DP for the turn. Then, you may place 1 Digimon card with the [Angel]/[Archangel]/[Three Great Angels] trait from your hand at the bottom of your security stack.")
         effect1.is_when_digivolving = True

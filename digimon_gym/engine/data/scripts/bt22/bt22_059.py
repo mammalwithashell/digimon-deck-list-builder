@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -30,6 +31,7 @@ class BT22_059(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [On Play] Delete 1 of your opponent's Digimon with a play cost of 5 or less. Then, if you have [Arata Sanada] or [Eater Adam], your opponent's effects can't reduce this Digimon's DP or return it to hands or decks until their turn ends.
         effect1 = ICardEffect()
+        effect1.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect1.set_effect_name("BT22-059 Delete a 5 or less play cost digimon, then if you have [Arata Sanada]/[Eater Adam], gain immunity to DP reduction and bounce")
         effect1.set_effect_description("[On Play] Delete 1 of your opponent's Digimon with a play cost of 5 or less. Then, if you have [Arata Sanada] or [Eater Adam], your opponent's effects can't reduce this Digimon's DP or return it to hands or decks until their turn ends.")
         effect1.is_on_play = True
@@ -78,6 +80,7 @@ class BT22_059(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [When Digivolving] Delete 1 of your opponent's Digimon with a play cost of 5 or less. Then, if you have [Arata Sanada] or [Eater Adam], your opponent's effects can't reduce this Digimon's DP or return it to hands or decks until their turn ends.
         effect2 = ICardEffect()
+        effect2.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect2.set_effect_name("BT22-059 Delete a 5 or less play cost digimon, then if you have [Arata Sanada]/[Eater Adam], gain immunity to DP reduction and bounce")
         effect2.set_effect_description("[When Digivolving] Delete 1 of your opponent's Digimon with a play cost of 5 or less. Then, if you have [Arata Sanada] or [Eater Adam], your opponent's effects can't reduce this Digimon's DP or return it to hands or decks until their turn ends.")
         effect2.is_when_digivolving = True
@@ -126,6 +129,7 @@ class BT22_059(CardScript):
         # Timing: EffectTiming.OnDestroyedAnyone
         # [All Turns] [Once Per Turn] When any of your Digimon with the [Unidentified] trait are deleted, you may play 1 [Diaboromon] Token without paying the cost. (Digimon/Cost 14/Lv.6/White/Mega/Unknown/Unidentified/3000 DP)
         effect3 = ICardEffect()
+        effect3.set_timing(EffectTiming.OnDestroyedAnyone)
         effect3.set_effect_name("BT22-059 Play 1 [Diaboromon] Token")
         effect3.set_effect_description("[All Turns] [Once Per Turn] When any of your Digimon with the [Unidentified] trait are deleted, you may play 1 [Diaboromon] Token without paying the cost. (Digimon/Cost 14/Lv.6/White/Mega/Unknown/Unidentified/3000 DP)")
         effect3.is_inherited_effect = True

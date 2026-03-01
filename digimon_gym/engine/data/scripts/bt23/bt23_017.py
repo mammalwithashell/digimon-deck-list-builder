@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -30,6 +31,7 @@ class BT23_017(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [On Play] By trashing 1 card in your hand, you may return 1 non-Digi-Egg card with the [CS] trait from your trash to the hand.
         effect1 = ICardEffect()
+        effect1.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect1.set_effect_name("BT23-017 Trash 1 card, return 1 non digi-egg [CS] card from trash to hand")
         effect1.set_effect_description("[On Play] By trashing 1 card in your hand, you may return 1 non-Digi-Egg card with the [CS] trait from your trash to the hand.")
         effect1.is_on_play = True
@@ -44,28 +46,31 @@ class BT23_017(CardScript):
         effect1.set_can_use_condition(condition1)
 
         def process1(ctx: Dict[str, Any]):
-            """Action: Trash From Hand, Add To Hand"""
+            """Action: Trash 1 hand card, then return 1 non-Digi-Egg CS card from trash to hand"""
             player = ctx.get('player')
             perm = ctx.get('permanent')
             game = ctx.get('game')
             if not (player and game):
                 return
+            # Step 1: Select ANY card from hand to trash
             def hand_filter(c):
-                if getattr(c, 'is_digi_egg', False):
-                    return False
-                if not (any('CS' in _t for _t in (getattr(c, 'card_traits', []) or []))):
-                    return False
                 return True
             def on_trashed(selected):
                 if selected in player.hand_cards:
                     player.hand_cards.remove(selected)
                     player.trash_cards.append(selected)
+                # Step 2: Find and return 1 non-Digi-Egg CS card from trash to hand
+                for tc in list(player.trash_cards):
+                    if getattr(tc, 'is_digi_egg', False):
+                        continue
+                    traits = getattr(tc, 'card_traits', []) or []
+                    if any('CS' in t for t in traits):
+                        player.trash_cards.remove(tc)
+                        player.hand_cards.append(tc)
+                        break
             game.effect_select_hand_card(
-                player, hand_filter, on_trashed, is_optional=False)
-            # Add card to hand (from trash/reveal)
-            if player and player.trash_cards:
-                card_to_add = player.trash_cards.pop()
-                player.hand_cards.append(card_to_add)
+                player, hand_filter, on_trashed, is_optional=False,
+                prompt="Select a card from hand to trash.")
 
         effect1.set_on_process_callback(process1)
         effects.append(effect1)
@@ -73,6 +78,7 @@ class BT23_017(CardScript):
         # Timing: EffectTiming.OnAllyAttack
         # [When Attacking] [Once Per Turn] You may play 1 play cost 5 or lower Digimon card with the [Hudie] trait from your hand without paying the cost. The Digimon this effect played can't digivolve and is deleted at the end of your opponent's turn.
         effect2 = ICardEffect()
+        effect2.set_timing(EffectTiming.OnAllyAttack)
         effect2.set_effect_name("BT23-017 Play 1 5 cost or less [Hudie] digimon from hand")
         effect2.set_effect_description("[When Attacking] [Once Per Turn] You may play 1 play cost 5 or lower Digimon card with the [Hudie] trait from your hand without paying the cost. The Digimon this effect played can't digivolve and is deleted at the end of your opponent's turn.")
         effect2.is_inherited_effect = True
@@ -112,43 +118,5 @@ class BT23_017(CardScript):
 
         effect2.set_on_process_callback(process2)
         effects.append(effect2)
-
-        # Timing: EffectTiming.OnAllyAttack
-        # [End of Opponents Turn] Delete this Digimon.
-        effect3 = ICardEffect()
-        effect3.set_effect_name("BT23-017 Delete the Digimon")
-        effect3.set_effect_description("[End of Opponents Turn] Delete this Digimon.")
-        effect3.is_on_attack = True
-
-        effect = effect3  # alias for condition closure
-        def condition3(context: Dict[str, Any]) -> bool:
-            return True
-
-        effect3.set_can_use_condition(condition3)
-
-        def process3(ctx: Dict[str, Any]):
-            """Action: Delete, Effect Immunity"""
-            player = ctx.get('player')
-            perm = ctx.get('permanent')
-            game = ctx.get('game')
-            if not (player and game):
-                return
-            def target_filter(p):
-                return p.is_digimon
-            def on_delete(target_perm):
-                enemy = player.enemy if player else None
-                if enemy:
-                    enemy.delete_permanent(target_perm)
-            game.effect_select_opponent_permanent(
-                player, on_delete, filter_fn=target_filter, is_optional=False)
-            # Grant effect immunity via modifier system
-            if perm and game:
-                from digimon_gym.engine.interfaces.modifiers import ModifierType
-                game.register_modifier(
-                    ModifierType.CANNOT_BE_SELECTED_BY_EFFECT, perm,
-                    value_fn=lambda: True, expiry='end_of_turn')
-
-        effect3.set_on_process_callback(process3)
-        effects.append(effect3)
 
         return effects

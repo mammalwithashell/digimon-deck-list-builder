@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -69,6 +70,7 @@ class BT22_076(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [When Digivolving] [Once Per Turn] By trashing this Digimon's bottom face-down digivolution card, place 1 Digimon with as much or less DP as this Digimon as the top security card.
         effect4 = ICardEffect()
+        effect4.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect4.set_effect_name("BT22-076 Trash face down source, Place 1 in security")
         effect4.set_effect_description("[When Digivolving] [Once Per Turn] By trashing this Digimon's bottom face-down digivolution card, place 1 Digimon with as much or less DP as this Digimon as the top security card.")
         effect4.is_optional = True
@@ -112,6 +114,7 @@ class BT22_076(CardScript):
         # Timing: EffectTiming.OnAllyAttack
         # [When Attacking] [Once Per Turn] By trashing this Digimon's bottom face-down digivolution card, place 1 Digimon with as much or less DP as this Digimon as the top security card.
         effect5 = ICardEffect()
+        effect5.set_timing(EffectTiming.OnAllyAttack)
         effect5.set_effect_name("BT22-076 Trash face down source, Place 1 in security")
         effect5.set_effect_description("[When Attacking] [Once Per Turn] By trashing this Digimon's bottom face-down digivolution card, place 1 Digimon with as much or less DP as this Digimon as the top security card.")
         effect5.is_optional = True

@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -29,6 +30,7 @@ class EX5_059(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [On Play] 1 of your Digimon gains <Retaliation> (When this Digimon is deleted after losing a battle, delete the Digimon it was battling), until the end of your opponent's turn.
         effect1 = ICardEffect()
+        effect1.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect1.set_effect_name("EX5-059 Your 1 Digimon gains Retaliation")
         effect1.set_effect_description("[On Play] 1 of your Digimon gains <Retaliation> (When this Digimon is deleted after losing a battle, delete the Digimon it was battling), until the end of your opponent's turn.")
         effect1.is_on_play = True
@@ -63,6 +65,7 @@ class EX5_059(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [When Digivolving] <Draw 1> (Draw 1 card from your deck). Then, trash 1 card in your hand. If [Dobermon] in its name or [X Antibody] is in this Digimon's digivolution cards, activate this Digimon's [On Play] effects.
         effect2 = ICardEffect()
+        effect2.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect2.set_effect_name("EX5-059 Draw 1, trash 1 card from hand and activate [On Play] effect")
         effect2.set_effect_description("[When Digivolving] <Draw 1> (Draw 1 card from your deck). Then, trash 1 card in your hand. If [Dobermon] in its name or [X Antibody] is in this Digimon's digivolution cards, activate this Digimon's [On Play] effects.")
         effect2.is_when_digivolving = True
@@ -102,6 +105,7 @@ class EX5_059(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [Your Turn] [Once Per Turn] When an effect plays one of your Digimon, gain 1 memory.
         effect3 = ICardEffect()
+        effect3.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect3.set_effect_name("EX5-059 Memory +1")
         effect3.set_effect_description("[Your Turn] [Once Per Turn] When an effect plays one of your Digimon, gain 1 memory.")
         effect3.is_inherited_effect = True

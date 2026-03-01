@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -16,6 +17,7 @@ class BT11_065(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [When Digivolving] You may place up to 2 [Vemmon] from your trash under this Digimon as its bottom digivolution cards. Then, if there are 4 or more [Vemmon] in this Digimon's digivolution cards, return 1 [Fusionize] from your trash to your hand.
         effect0 = ICardEffect()
+        effect0.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect0.set_effect_name("BT11-065 Place [Vemmon] from trash to digivolution cards and return 1 [Fusionize] from trash to hand")
         effect0.set_effect_description("[When Digivolving] You may place up to 2 [Vemmon] from your trash under this Digimon as its bottom digivolution cards. Then, if there are 4 or more [Vemmon] in this Digimon's digivolution cards, return 1 [Fusionize] from your trash to your hand.")
         effect0.is_when_digivolving = True
@@ -45,6 +47,7 @@ class BT11_065(CardScript):
         # Timing: EffectTiming.OnDigivolutionCardReturnToDeckBottom
         # [All Turns][Once Per Turn] When [Vemmon] is placed from this Digimon's digivolution cards at the bottom of its owner's deck, unsuspend this Digimon, and it gains <Blocker> until the end of your opponent's turn.
         effect1 = ICardEffect()
+        effect1.set_timing(EffectTiming.OnDigivolutionCardReturnToDeckBottom)
         effect1.set_effect_name("BT11-065 Unsuspend this Digimon and it gain Blocker")
         effect1.set_effect_description("[All Turns][Once Per Turn] When [Vemmon] is placed from this Digimon's digivolution cards at the bottom of its owner's deck, unsuspend this Digimon, and it gains <Blocker> until the end of your opponent's turn.")
         effect1.is_inherited_effect = True

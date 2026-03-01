@@ -22,21 +22,77 @@ for any bugs you find.
   - https://world.digimoncard.com/rule/pdf/general_rule.pdf
   - https://world.digimoncard.com/rule/pdf/manual.pdf
 - **Card API**: https://digimoncard.io/index.php/api-public/search?card=CARD_ID
+- **QA Index**: `docs/qa-reports/INDEX.md` — tracks all QA issues and their resolution status
+- **QA Reports**: `docs/qa-reports/YYYY-MM-DD-{archetype}.md`
+- **Validated Cards**: `docs/qa-reports/validated_cards.json` — cards confirmed working through QA
 
 ---
 
-## Phase 1: Find Test Decks
+## Phase 0: Review Prior QA Work
 
-Find competitive decklists where ALL cards have frozen script implementations.
+Before starting a new QA session, check what has already been tested.
+
+1. Read `docs/qa-reports/INDEX.md` to see:
+   - Which archetypes have been tested
+   - Outstanding issues that may still affect gameplay
+   - Won't-fix issues to be aware of during testing
+2. Read `docs/qa-reports/validated_cards.json` to see which individual cards are already validated:
+   - `PASS` cards can be skipped unless doing regression testing
+   - `PARTIAL` cards should be prioritized for deeper testing
+   - `FAIL` cards need retesting after fixes
+3. Skim any relevant existing reports in `docs/qa-reports/` for the archetype you plan to test
+4. If re-testing a previously tested archetype (regression test), note which prior issues were fixed and verify them
+
+---
+
+## Phase 1: Find Test Decks and Identify Cards to Validate
+
+### 1a. Pick an archetype
+
+If $ARGUMENTS contains an archetype name, use that. Otherwise, find eligible archetypes:
 
 ```bash
 python -m digimon_gym.engine.data.deck_finder --min-coverage 1.0 --max-results 20
 ```
 
-If $ARGUMENTS contains an archetype name, look for that archetype specifically.
 If no fully-playable decks are found, try `--min-coverage 0.95` and note the missing cards.
+Prefer archetypes with higher `meta_share` (more competitive).
 
-Pick 1-2 archetypes to test. Prefer decks with higher `meta_share` (more competitive).
+### 1b. Collect ALL unique cards for the archetype
+
+Look up the archetype in `deck_library.json` and gather every unique card across all its decklists:
+
+```bash
+python -c "
+import json
+from pathlib import Path
+
+lib = json.loads(Path('digimon_gym/engine/data/deck_library.json').read_text())
+validated = json.loads(Path('docs/qa-reports/validated_cards.json').read_text()) if Path('docs/qa-reports/validated_cards.json').exists() else {'cards': {}}
+
+archetype = lib['archetypes'].get('ARCHETYPE_NAME', {})
+all_cards = set()
+for dl in archetype.get('decklists', []):
+    all_cards.update(json.loads(dl['decklist']))
+
+validated_ids = {k for k, v in validated.get('cards', {}).items() if v['status'] == 'PASS'}
+partial_ids = {k for k, v in validated.get('cards', {}).items() if v['status'] == 'PARTIAL'}
+unvalidated = sorted(all_cards - validated_ids - partial_ids)
+print(f'Total unique cards: {len(all_cards)}')
+print(f'Already validated (PASS): {len(all_cards & validated_ids)}')
+print(f'Partially validated: {len(all_cards & partial_ids)}')
+print(f'Need testing: {len(unvalidated)}')
+for c in unvalidated:
+    print(f'  {c}')
+"
+```
+
+### 1c. Plan test games to cover all unvalidated cards
+
+- Arrange deck order so unvalidated cards appear in the opening hand (first 5 non-egg cards)
+- Create multiple games if needed to cover all unvalidated cards
+- Prioritize PARTIAL cards for deeper testing, then untested cards
+- Use the archetype's actual decklist as the base (pick the highest-placement list)
 
 ---
 
@@ -181,7 +237,11 @@ curl -s http://localhost:8000/debug/games/GAME_ID/internal-state | python -m jso
 
 Use this to verify deck order, security stack, and hidden information.
 
-### 4e. Manipulate game state for targeted testing
+### 4e. Track card coverage
+
+After each game, track which cards were played/tested. Continue creating new games with different deck arrangements until all unvalidated cards from Phase 1b have been covered. Use `inject-card` to add specific cards to hand if they aren't appearing naturally.
+
+### 4f. Manipulate game state for targeted testing
 
 Set memory to test edge cases:
 ```bash
@@ -267,6 +327,49 @@ Save to: `docs/qa-reports/YYYY-MM-DD-{archetype}.md`
 - {mechanic or card not tested in this session}
 ```
 
+### Update the QA Index
+
+After saving the report, update `docs/qa-reports/INDEX.md`:
+
+1. Add a row to the **Summary** table:
+   ```markdown
+   | [archetype](YYYY-MM-DD-archetype.md) | N | N | N | N |
+   ```
+
+2. Add a new **Report section** at the bottom with the issue table:
+   ```markdown
+   ## Report N: {Archetype} (YYYY-MM-DD)
+
+   N issues found across M cards. {summary of resolution status}.
+
+   | # | Issue | Sev | Status | Fix |
+   |---|-------|-----|--------|-----|
+   | 1 | {brief description} | crit/high/med/low | FIXED/WONTFIX/OUTSTANDING | {fix description} |
+   ```
+
+3. Update the **Last updated** date at the top
+
+4. Update the **Total** row in the summary table
+
+**Status values**: `FIXED`, `WONTFIX`, `OUTSTANDING`
+
+### Update the Validated Cards Index
+
+After saving the report, update `docs/qa-reports/validated_cards.json`:
+
+1. For each card in the "Cards Tested" table:
+   - **PASS** cards: add/update entry with `"status": "PASS"`
+   - **PARTIAL** cards: add/update entry with `"status": "PARTIAL"` and notes explaining gaps
+   - **FAIL** cards: add/update entry with `"status": "FAIL"`
+2. Set `validated_date` to today and `report` to the report filename
+3. Increment `version` and update `last_updated`
+
+Cards that were previously FAIL but are now fixed should be updated to PASS after verifying the fix.
+
+### Completion Criteria
+
+Testing for an archetype is complete when **ALL unique cards** in the archetype's decklists (from Phase 1b) have an entry in `validated_cards.json` with status `PASS` or `PARTIAL`. Cards that cannot be tested in gameplay (e.g., situational cards) should be marked `PARTIAL` with `"notes": "static analysis only"`.
+
 ---
 
 ## Phase 7: File Issues
@@ -291,6 +394,14 @@ curl -s -X POST http://localhost:8000/issues \
     "severity": "high"
   }'
 ```
+
+### Update index when issues are resolved
+
+When bugs from a QA report are fixed (in the same session or later), update `docs/qa-reports/INDEX.md`:
+- Change the issue's status from `OUTSTANDING` to `FIXED`
+- Add a brief fix description in the Fix column
+- Update the summary table counts (Fixed/Outstanding columns)
+- When all issues are resolved, add "All outstanding issues resolved." below the summary table
 
 ### Severity Guidelines
 - **critical**: Game crashes, infinite loops, wrong winner declared, game state corruption

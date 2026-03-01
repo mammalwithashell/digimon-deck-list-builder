@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -30,6 +31,7 @@ class BT22_026(CardScript):
         # Timing: EffectTiming.OnDeclaration
         # [Hand] [Main] If you have [Nokia Shiramine], 1 of your [Gabumon] digivolves into this card for a digivolution cost of 6, ignoring digivolution requirements.
         effect1 = ICardEffect()
+        effect1.set_timing(EffectTiming.OnDeclaration)
         effect1.set_effect_name("BT22-026 Digivolve 1 [Gabumon] into this card for 6")
         effect1.set_effect_description("[Hand] [Main] If you have [Nokia Shiramine], 1 of your [Gabumon] digivolves into this card for a digivolution cost of 6, ignoring digivolution requirements.")
 
@@ -60,6 +62,7 @@ class BT22_026(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [When Digivolving] Activate 1 of the effects below: 1 of your [Agumon] may digivolve into [WarGreymon] in the hand, ignoring digivolution requirements and without paying the cost. or Return 1 of your opponent's Digimon with the lowest level to the hand.
         effect2 = ICardEffect()
+        effect2.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect2.set_effect_name("BT22-026 Digivolve 1 [Agumon] into [WarGreymon], or bounce lowest level digimon to hand")
         effect2.set_effect_description("[When Digivolving] Activate 1 of the effects below: 1 of your [Agumon] may digivolve into [WarGreymon] in the hand, ignoring digivolution requirements and without paying the cost. or Return 1 of your opponent's Digimon with the lowest level to the hand.")
         effect2.is_when_digivolving = True
@@ -104,6 +107,7 @@ class BT22_026(CardScript):
         # Timing: EffectTiming.OnAllyAttack
         # [When Attacking] [Once Per Turn] If this Digimon has [Omnimon] in its name, it unsuspends.
         effect3 = ICardEffect()
+        effect3.set_timing(EffectTiming.OnAllyAttack)
         effect3.set_effect_name("BT22-026 Unsuspend this digimon")
         effect3.set_effect_description("[When Attacking] [Once Per Turn] If this Digimon has [Omnimon] in its name, it unsuspends.")
         effect3.is_inherited_effect = True

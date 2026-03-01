@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -46,6 +47,7 @@ class EX8_025(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [On Play] You may place 1 Digimon card with the [DS] trait from your trash as this Digimon's bottom digivolution card.
         effect2 = ICardEffect()
+        effect2.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect2.set_effect_name("EX8-025 Place 1 Digimon with [DS] trait from trash as this Digimon's bottom digivolution card")
         effect2.set_effect_description("[On Play] You may place 1 Digimon card with the [DS] trait from your trash as this Digimon's bottom digivolution card.")
         effect2.is_optional = True
@@ -64,6 +66,7 @@ class EX8_025(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [When Digivolving] You may place 1 Digimon card with the [DS] trait from your trash as this Digimon's bottom digivolution card.
         effect3 = ICardEffect()
+        effect3.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect3.set_effect_name("EX8-025 Place 1 Digimon with [DS] trait from trash as this Digimon's bottom digivolution card")
         effect3.set_effect_description("[When Digivolving] You may place 1 Digimon card with the [DS] trait from your trash as this Digimon's bottom digivolution card.")
         effect3.is_optional = True
@@ -82,6 +85,7 @@ class EX8_025(CardScript):
         # Timing: EffectTiming.OnEndAttack
         # [End of Attack] [Once Per Turn] You may play 1 [DS] trait Digimon card with a play cost of 5 or less from this Digimon's digivolution cards without paying the cost.
         effect4 = ICardEffect()
+        effect4.set_timing(EffectTiming.OnEndAttack)
         effect4.set_effect_name("EX8-025 Play 1 digivolution card")
         effect4.set_effect_description("[End of Attack] [Once Per Turn] You may play 1 [DS] trait Digimon card with a play cost of 5 or less from this Digimon's digivolution cards without paying the cost.")
         effect4.is_optional = True

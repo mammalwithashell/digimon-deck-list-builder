@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -47,6 +48,7 @@ class BT19_053(CardScript):
         # Timing: EffectTiming.OnAllyAttack
         # [When Attacking] [Once Per Turn] You may play 1 [Royal Base] trait Digimon card from your face up security cards with the play cost reduced by 8.
         effect2 = ICardEffect()
+        effect2.set_timing(EffectTiming.OnAllyAttack)
         effect2.set_effect_name("BT19-053 Play [Royal Base] Digimon from faceup security")
         effect2.set_effect_description("[When Attacking] [Once Per Turn] You may play 1 [Royal Base] trait Digimon card from your face up security cards with the play cost reduced by 8.")
         effect2.is_optional = True
@@ -88,6 +90,7 @@ class BT19_053(CardScript):
         # Timing: EffectTiming.WhenRemoveField
         # [All Turns] When any of your [Royal Base] trait Digimon would leave the battle area other than in battle, you may place those Digimon face up as your bottom security cards.
         effect3 = ICardEffect()
+        effect3.set_timing(EffectTiming.WhenRemoveField)
         effect3.set_effect_name("BT19-053 Place those Digimon face up as your bottom security cards")
         effect3.set_effect_description("[All Turns] When any of your [Royal Base] trait Digimon would leave the battle area other than in battle, you may place those Digimon face up as your bottom security cards.")
         effect3.is_optional = True

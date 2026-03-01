@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -34,6 +35,7 @@ class EX11_034(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # Delete, Add To Security
         effect1 = ICardEffect()
+        effect1.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect1.set_effect_name("EX11-034 Delete, Add To Security")
         effect1.set_effect_description("Delete, Add To Security")
         effect1.is_on_play = True
@@ -72,6 +74,7 @@ class EX11_034(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # Delete, Add To Security
         effect2 = ICardEffect()
+        effect2.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect2.set_effect_name("EX11-034 Delete, Add To Security")
         effect2.set_effect_description("Delete, Add To Security")
         effect2.is_when_digivolving = True
@@ -110,6 +113,7 @@ class EX11_034(CardScript):
         # Timing: EffectTiming.OnAllyAttack
         # Delete, Add To Security
         effect3 = ICardEffect()
+        effect3.set_timing(EffectTiming.OnAllyAttack)
         effect3.set_effect_name("EX11-034 Delete, Add To Security")
         effect3.set_effect_description("Delete, Add To Security")
         effect3.is_on_attack = True
@@ -148,6 +152,7 @@ class EX11_034(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # Play Card
         effect4 = ICardEffect()
+        effect4.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect4.set_effect_name("EX11-034 Play Card")
         effect4.set_effect_description("Play Card")
         effect4.is_when_digivolving = True
@@ -183,6 +188,7 @@ class EX11_034(CardScript):
         # Timing: EffectTiming.OnAllyAttack
         # Play Card
         effect5 = ICardEffect()
+        effect5.set_timing(EffectTiming.OnAllyAttack)
         effect5.set_effect_name("EX11-034 Play Card")
         effect5.set_effect_description("Play Card")
         effect5.is_on_attack = True

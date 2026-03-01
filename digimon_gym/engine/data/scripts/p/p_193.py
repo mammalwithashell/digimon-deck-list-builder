@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -16,6 +17,7 @@ class P_193(CardScript):
         # Timing: EffectTiming.OptionSkill
         # [Main] By trashing 1 card with the [Composite] or [Wicked God] trait from your hand, <Draw 2> (Draw 2 cards from your deck). Then, place this card in the battle area.
         effect0 = ICardEffect()
+        effect0.set_timing(EffectTiming.OptionSkill)
         effect0.set_effect_name("P-193 Trash 1 [Composite]/[Wicked god] from hand, draw 2")
         effect0.set_effect_description("[Main] By trashing 1 card with the [Composite] or [Wicked God] trait from your hand, <Draw 2> (Draw 2 cards from your deck). Then, place this card in the battle area.")
         effect0.is_optional = True
@@ -66,6 +68,7 @@ class P_193(CardScript):
         # Timing: EffectTiming.OnEndTurn
         # [End of All Turns] <Delay> (After this card is placed, by trashing it the next turn or later, activate the effect below). By deleting 1 of your [Millenniummon], you may play 1 [Wicked God] trait Digimon card from your hand or trash without paying the cost.
         effect2 = ICardEffect()
+        effect2.set_timing(EffectTiming.OnEndTurn)
         effect2.set_effect_name("P-193 Delete Millenniummon, play 1 [Wicked God] digimon from hand or trash")
         effect2.set_effect_description("[End of All Turns] <Delay> (After this card is placed, by trashing it the next turn or later, activate the effect below). By deleting 1 of your [Millenniummon], you may play 1 [Wicked God] trait Digimon card from your hand or trash without paying the cost.")
         effect2.is_optional = True

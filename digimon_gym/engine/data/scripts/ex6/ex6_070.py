@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -16,6 +17,7 @@ class EX6_070(CardScript):
         # Timing: EffectTiming.OptionSkill
         # Effect
         effect0 = ICardEffect()
+        effect0.set_timing(EffectTiming.OptionSkill)
         effect0.set_effect_name("EX6-070 1 Oponnent's Digimon gains, [End of Your Turn] Delete this digimon.")
         effect0.set_effect_description("Effect")
 
@@ -30,6 +32,7 @@ class EX6_070(CardScript):
         # Timing: EffectTiming.OptionSkill
         # [End of Your Turn] Delete this Digimon.
         effect1 = ICardEffect()
+        effect1.set_timing(EffectTiming.OptionSkill)
         effect1.set_effect_name("EX6-070 Delete this Digimon")
         effect1.set_effect_description("[End of Your Turn] Delete this Digimon.")
 
@@ -81,6 +84,7 @@ class EX6_070(CardScript):
         # Timing: EffectTiming.OnEndTurn
         # [End of Opponent's Turn] If you have a Digimon with [Lilithmon] in its name, <Delay>.\r\n� Delete 1 of your opponent's unsuspended Digimon.
         effect3 = ICardEffect()
+        effect3.set_timing(EffectTiming.OnEndTurn)
         effect3.set_effect_name("EX6-070 Delete 1 of your opponent's unsuspended Digimon")
         effect3.set_effect_description("[End of Opponent's Turn] If you have a Digimon with [Lilithmon] in its name, <Delay>.\r\n� Delete 1 of your opponent's unsuspended Digimon.")
         effect3.is_optional = True
@@ -117,6 +121,7 @@ class EX6_070(CardScript):
         # Timing: EffectTiming.SecuritySkill
         # [Security] Delete 1 of your opponent's unsuspended Digimon.
         effect4 = ICardEffect()
+        effect4.set_timing(EffectTiming.SecuritySkill)
         effect4.set_effect_name("EX6-070 Delete")
         effect4.set_effect_description("[Security] Delete 1 of your opponent's unsuspended Digimon.")
         effect4.is_security_effect = True

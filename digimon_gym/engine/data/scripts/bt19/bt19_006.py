@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -16,6 +17,7 @@ class BT19_006(CardScript):
         # Timing: EffectTiming.OnDestroyedAnyone
         # [On Deletion] If deleted other than by battle, return 1 level 3 purple Digimon card from your trash to the hand.
         effect0 = ICardEffect()
+        effect0.set_timing(EffectTiming.OnDestroyedAnyone)
         effect0.set_effect_name("BT19-006 Return 1 level 3 purple Digimon card from your trash")
         effect0.set_effect_description("[On Deletion] If deleted other than by battle, return 1 level 3 purple Digimon card from your trash to the hand.")
         effect0.is_inherited_effect = True

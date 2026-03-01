@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -46,6 +47,7 @@ class BT10_070(CardScript):
         # Timing: EffectTiming.OnAllyAttack
         # [Opponent's Turn][Once Per Turn] When an opponent's Digimon attacks, by trashing 1 of this Digimon's digivolution cards, delete 1 of your opponent's level 4 or lower Digimon.
         effect2 = ICardEffect()
+        effect2.set_timing(EffectTiming.OnAllyAttack)
         effect2.set_effect_name("BT10-070 Trash 1 digivolution card to delete 1 level4 or lower Digimon")
         effect2.set_effect_description("[Opponent's Turn][Once Per Turn] When an opponent's Digimon attacks, by trashing 1 of this Digimon's digivolution cards, delete 1 of your opponent's level 4 or lower Digimon.")
         effect2.is_optional = True

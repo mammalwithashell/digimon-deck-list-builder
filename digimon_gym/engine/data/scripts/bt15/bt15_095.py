@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -16,6 +17,7 @@ class BT15_095(CardScript):
         # Timing: EffectTiming.OptionSkill
         # Suspend
         effect0 = ICardEffect()
+        effect0.set_timing(EffectTiming.OptionSkill)
         effect0.set_effect_name("BT15-095 Suspend")
         effect0.set_effect_description("Suspend")
 
@@ -48,6 +50,7 @@ class BT15_095(CardScript):
         # Timing: EffectTiming.OptionSkill
         # [On Deletion] Trash the top card of your security stack.
         effect1 = ICardEffect()
+        effect1.set_timing(EffectTiming.OptionSkill)
         effect1.set_effect_name("BT15-095 Trash the top card of your security")
         effect1.set_effect_description("[On Deletion] Trash the top card of your security stack.")
 
@@ -84,6 +87,7 @@ class BT15_095(CardScript):
         # Timing: EffectTiming.SecuritySkill
         # [Security] Suspend 1 of your opponent's Digimon. Then, add this card to your hand.
         effect2 = ICardEffect()
+        effect2.set_timing(EffectTiming.SecuritySkill)
         effect2.set_effect_name("BT15-095 Add To Hand, Suspend")
         effect2.set_effect_description("[Security] Suspend 1 of your opponent's Digimon. Then, add this card to your hand.")
         effect2.is_security_effect = True

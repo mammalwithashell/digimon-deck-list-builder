@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -40,6 +41,7 @@ class BT21_029(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # Effect
         effect2 = ICardEffect()
+        effect2.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect2.set_effect_name("BT21-029 Delete lowest DP Digimon")
         effect2.set_effect_description("Effect")
         effect2.set_hash_string("Delete_BT21_029")
@@ -58,6 +60,7 @@ class BT21_029(CardScript):
         # Timing: EffectTiming.OnEndAttack
         # Effect
         effect3 = ICardEffect()
+        effect3.set_timing(EffectTiming.OnEndAttack)
         effect3.set_effect_name("BT21-029 Delete lowest DP Digimon")
         effect3.set_effect_description("Effect")
         effect3.set_hash_string("Delete_BT21_029")
@@ -74,6 +77,7 @@ class BT21_029(CardScript):
         # Timing: EffectTiming.OnDestroyedAnyone
         # [All Turns] [Once Per Turn] When any of your opponent's Digimon are deleted, they play 1 [Petrification] Token
         effect4 = ICardEffect()
+        effect4.set_timing(EffectTiming.OnDestroyedAnyone)
         effect4.set_effect_name("BT21-029 Play 1 [Petrification Token]")
         effect4.set_effect_description("[All Turns] [Once Per Turn] When any of your opponent's Digimon are deleted, they play 1 [Petrification] Token")
         effect4.set_hash_string("PlayToken_BT21_029")
@@ -101,6 +105,7 @@ class BT21_029(CardScript):
         # Timing: EffectTiming.OnLoseSecurity
         # [All Turns] [Once Per Turn] When opponents security stack is removed from, they play 1 [Petrification] Token
         effect5 = ICardEffect()
+        effect5.set_timing(EffectTiming.OnLoseSecurity)
         effect5.set_effect_name("BT21-029 Play 1 [Petrification Token]")
         effect5.set_effect_description("[All Turns] [Once Per Turn] When opponents security stack is removed from, they play 1 [Petrification] Token")
         effect5.set_hash_string("PlayToken_BT21_029")

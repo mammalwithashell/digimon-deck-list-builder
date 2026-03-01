@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -30,6 +31,7 @@ class P_197(CardScript):
         # Timing: EffectTiming.OnStartMainPhase
         # [Start of Your Main Phase] If you have 4 or less memory, this Digimon may digivolve into a Digimon card with the [Angel] or [TS] trait in the hand without paying the cost.
         effect1 = ICardEffect()
+        effect1.set_timing(EffectTiming.OnStartMainPhase)
         effect1.set_effect_name("P-197 Digivolve into a [Angel]/[TS] digimon in hand")
         effect1.set_effect_description("[Start of Your Main Phase] If you have 4 or less memory, this Digimon may digivolve into a Digimon card with the [Angel] or [TS] trait in the hand without paying the cost.")
         effect1.is_optional = True
@@ -66,6 +68,7 @@ class P_197(CardScript):
         # Timing: EffectTiming.OnAllyAttack
         # [When Attacking] [Once Per Turn] 1 of your opponent's Digimon gets -2000 DP for the turn.
         effect2 = ICardEffect()
+        effect2.set_timing(EffectTiming.OnAllyAttack)
         effect2.set_effect_name("P-197 -2k DP")
         effect2.set_effect_description("[When Attacking] [Once Per Turn] 1 of your opponent's Digimon gets -2000 DP for the turn.")
         effect2.is_inherited_effect = True

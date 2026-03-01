@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -29,6 +30,7 @@ class BT16_043(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [On Play] If you have 3 or more security cards, suspend 1 of your opponent's Digimon. If you have 3 or fewer security cards, gain 1 memory.
         effect1 = ICardEffect()
+        effect1.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect1.set_effect_name("BT16-043 Suspend and/or gain memory")
         effect1.set_effect_description("[On Play] If you have 3 or more security cards, suspend 1 of your opponent's Digimon. If you have 3 or fewer security cards, gain 1 memory.")
         effect1.is_on_play = True
@@ -64,6 +66,7 @@ class BT16_043(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [When Digivolving] If you have 3 or more security cards, suspend 1 of your opponent's Digimon. If you have 3 or fewer security cards, gain 1 memory.
         effect2 = ICardEffect()
+        effect2.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect2.set_effect_name("BT16-043 Suspend and/or gain memory")
         effect2.set_effect_description("[When Digivolving] If you have 3 or more security cards, suspend 1 of your opponent's Digimon. If you have 3 or fewer security cards, gain 1 memory.")
         effect2.is_when_digivolving = True

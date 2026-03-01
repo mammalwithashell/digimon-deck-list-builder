@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -16,6 +17,7 @@ class EX11_038(CardScript):
         # Timing: EffectTiming.OnMove
         # Draw 1, Trash From Hand, Trash Digivolution Cards
         effect0 = ICardEffect()
+        effect0.set_timing(EffectTiming.OnMove)
         effect0.set_effect_name("EX11-038 Draw 1, Trash From Hand, Trash Digivolution Cards")
         effect0.set_effect_description("Draw 1, Trash From Hand, Trash Digivolution Cards")
 
@@ -56,6 +58,7 @@ class EX11_038(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # Draw 1, Trash From Hand, Trash Digivolution Cards
         effect1 = ICardEffect()
+        effect1.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect1.set_effect_name("EX11-038 Draw 1, Trash From Hand, Trash Digivolution Cards")
         effect1.set_effect_description("Draw 1, Trash From Hand, Trash Digivolution Cards")
         effect1.is_on_play = True
@@ -98,6 +101,7 @@ class EX11_038(CardScript):
         # Timing: EffectTiming.OnDigivolutionCardDiscarded
         # When effects trash this card from a [Mineral] or [Rock] trait Digimon's digivolution cards, <Draw 1>.
         effect2 = ICardEffect()
+        effect2.set_timing(EffectTiming.OnDigivolutionCardDiscarded)
         effect2.set_effect_name("EX11-038 <Draw 1>")
         effect2.set_effect_description("When effects trash this card from a [Mineral] or [Rock] trait Digimon's digivolution cards, <Draw 1>.")
         effect2.is_inherited_effect = True

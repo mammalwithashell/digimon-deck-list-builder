@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -39,6 +40,7 @@ class BT15_035(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [On Play] By trashing 1 card with [Numemon] or [Sukamon] in its name in your hand, 1 of your opponent's Digimon gains [Security A. -1] until the end of your opponent's turn.
         effect1 = ICardEffect()
+        effect1.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect1.set_effect_name("BT15-035 Trash 1 card from hand so that the opponent's 1 Digimon gains Secuirty Attack -1")
         effect1.set_effect_description("[On Play] By trashing 1 card with [Numemon] or [Sukamon] in its name in your hand, 1 of your opponent's Digimon gains [Security A. -1] until the end of your opponent's turn.")
         effect1.is_optional = True
@@ -79,6 +81,7 @@ class BT15_035(CardScript):
         # Timing: EffectTiming.OnDestroyedAnyone
         # [On Deletion] By trashing 1 card with [Numemon] or [Sukamon] in its name in your hand, 1 of your opponent's Digimon gains [Security A. -1] until the end of your opponent's turn.
         effect2 = ICardEffect()
+        effect2.set_timing(EffectTiming.OnDestroyedAnyone)
         effect2.set_effect_name("BT15-035 Trash 1 card from hand so that the opponent's 1 Digimon gains Secuirty Attack -1")
         effect2.set_effect_description("[On Deletion] By trashing 1 card with [Numemon] or [Sukamon] in its name in your hand, 1 of your opponent's Digimon gains [Security A. -1] until the end of your opponent's turn.")
         effect2.is_optional = True
@@ -117,6 +120,7 @@ class BT15_035(CardScript):
         # Timing: EffectTiming.OnAllyAttack
         # [When Attacking] 1 of your opponent's Digimon gains [Security A. -1] until the end of your opponent's turn.
         effect3 = ICardEffect()
+        effect3.set_timing(EffectTiming.OnAllyAttack)
         effect3.set_effect_name("BT15-035 Security Attack -1")
         effect3.set_effect_description("[When Attacking] 1 of your opponent's Digimon gains [Security A. -1] until the end of your opponent's turn.")
         effect3.is_inherited_effect = True

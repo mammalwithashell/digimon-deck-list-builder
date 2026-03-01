@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -31,6 +32,7 @@ class P_190(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [On Play] <Draw 1> (Draw 1 card from your deck).
         effect1 = ICardEffect()
+        effect1.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect1.set_effect_name("P-190 Draw 1")
         effect1.set_effect_description("[On Play] <Draw 1> (Draw 1 card from your deck).")
         effect1.is_on_play = True
@@ -56,6 +58,7 @@ class P_190(CardScript):
         # Timing: EffectTiming.WhenLinked
         # [When Linking] <Draw 1> (Draw 1 card from your deck).
         effect2 = ICardEffect()
+        effect2.set_timing(EffectTiming.WhenLinked)
         effect2.set_effect_name("P-190 Draw 1")
         effect2.set_effect_description("[When Linking] <Draw 1> (Draw 1 card from your deck).")
 

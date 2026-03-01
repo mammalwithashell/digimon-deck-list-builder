@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -16,6 +17,7 @@ class BT14_075(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [On Play] Trash the top 3 cards of your deck.
         effect0 = ICardEffect()
+        effect0.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect0.set_effect_name("BT14-075 Trash 3 cards from deck top")
         effect0.set_effect_description("[On Play] Trash the top 3 cards of your deck.")
         effect0.is_on_play = True
@@ -47,6 +49,7 @@ class BT14_075(CardScript):
         # Timing: EffectTiming.OnAllyAttack
         # [When Attacking] Trash the top 3 cards of your deck.
         effect1 = ICardEffect()
+        effect1.set_timing(EffectTiming.OnAllyAttack)
         effect1.set_effect_name("BT14-075 Trash 3 cards from deck top")
         effect1.set_effect_description("[When Attacking] Trash the top 3 cards of your deck.")
         effect1.is_on_attack = True
@@ -94,6 +97,7 @@ class BT14_075(CardScript):
         # Timing: EffectTiming.OnDestroyedAnyone
         # [On Deletion] Trash 1 card in your opponent's hand without looking.
         effect3 = ICardEffect()
+        effect3.set_timing(EffectTiming.OnDestroyedAnyone)
         effect3.set_effect_name("BT14-075 Trash 1 card from opponent's hand")
         effect3.set_effect_description("[On Deletion] Trash 1 card in your opponent's hand without looking.")
         effect3.is_on_deletion = True

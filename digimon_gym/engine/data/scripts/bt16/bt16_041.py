@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -42,6 +43,7 @@ class BT16_041(CardScript):
         # Timing: EffectTiming.OnAllyAttack
         # [When Attacking] [Once per turn] Suspend 1 of your opponent's Digimon.
         effect2 = ICardEffect()
+        effect2.set_timing(EffectTiming.OnAllyAttack)
         effect2.set_effect_name("BT16-041 Suspend 1 Digimon")
         effect2.set_effect_description("[When Attacking] [Once per turn] Suspend 1 of your opponent's Digimon.")
         effect2.is_inherited_effect = True
@@ -78,6 +80,7 @@ class BT16_041(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [On Play] Suspend 1 of your opponent's Digimon.
         effect3 = ICardEffect()
+        effect3.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect3.set_effect_name("BT16-041 Suspend 1 Digimon")
         effect3.set_effect_description("[On Play] Suspend 1 of your opponent's Digimon.")
         effect3.set_hash_string("SuspendOnPlay_B16_061")
@@ -112,6 +115,7 @@ class BT16_041(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [When Digivolving] Suspend 1 of your opponent's Digimon.
         effect4 = ICardEffect()
+        effect4.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect4.set_effect_name("BT16-041 Suspend 1 Digimon")
         effect4.set_effect_description("[When Digivolving] Suspend 1 of your opponent's Digimon.")
         effect4.set_hash_string("SuspendDigivolve_B16_061")

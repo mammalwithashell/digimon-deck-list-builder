@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -29,6 +30,7 @@ class BT11_034(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [On Play] Place 1 Digimon card with [Xros Heart] in its traits from your trash under 1 of your Tamers. If you have a Digimon with [Dorulumon] in its name or with [Dorulumon] in its digivolution cards, place up to 2 Digimon cards with [Xros Heart] in their traits from your trash under 1 of your Tamers instead.
         effect1 = ICardEffect()
+        effect1.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect1.set_effect_name("BT11-034 Place cards to digivolution cards from trash")
         effect1.set_effect_description("[On Play] Place 1 Digimon card with [Xros Heart] in its traits from your trash under 1 of your Tamers. If you have a Digimon with [Dorulumon] in its name or with [Dorulumon] in its digivolution cards, place up to 2 Digimon cards with [Xros Heart] in their traits from your trash under 1 of your Tamers instead.")
         effect1.is_on_play = True

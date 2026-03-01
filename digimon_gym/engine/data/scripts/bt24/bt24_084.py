@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -16,6 +17,7 @@ class BT24_084(CardScript):
         # Timing: EffectTiming.OnStartMainPhase
         # Gain 1 memory
         effect0 = ICardEffect()
+        effect0.set_timing(EffectTiming.OnStartMainPhase)
         effect0.set_effect_name("BT24-084 Memory +1")
         effect0.set_effect_description("Gain 1 memory")
 
@@ -43,6 +45,7 @@ class BT24_084(CardScript):
         # Timing: EffectTiming.OnLoseSecurity
         # Suspend, Digivolve
         effect1 = ICardEffect()
+        effect1.set_timing(EffectTiming.OnLoseSecurity)
         effect1.set_effect_name("BT24-084 Digivolve an [Aegiomon] into an [Aegiochusmon]")
         effect1.set_effect_description("Suspend, Digivolve")
         effect1.is_optional = True

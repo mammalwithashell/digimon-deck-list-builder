@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -16,6 +17,7 @@ class ST12_15(CardScript):
         # Timing: EffectTiming.OptionSkill
         # [Main] Reveal the top 3 cards of your deck. Add 1 card with [Huckmon] or [Sistermon] in its name or [Royal Knight] in its traits among them to your hand. Trash the rest. Then, place this card in your Battle Area.
         effect0 = ICardEffect()
+        effect0.set_timing(EffectTiming.OptionSkill)
         effect0.set_effect_name("ST12-15 Add To Hand, Reveal And Select")
         effect0.set_effect_description("[Main] Reveal the top 3 cards of your deck. Add 1 card with [Huckmon] or [Sistermon] in its name or [Royal Knight] in its traits among them to your hand. Trash the rest. Then, place this card in your Battle Area.")
 
@@ -66,6 +68,7 @@ class ST12_15(CardScript):
         # Timing: EffectTiming.OnDeclaration
         # [Main] <Delay> (Trash this card in your battle area to activate the effect below. You can't activate this effect the turn this card enters play.) - The next time one of your Digimon would digivolve this turn, reduce the digivolution cost by 1.
         effect2 = ICardEffect()
+        effect2.set_timing(EffectTiming.OnDeclaration)
         effect2.set_effect_name("ST12-15 Digivolution Cost -1")
         effect2.set_effect_description("[Main] <Delay> (Trash this card in your battle area to activate the effect below. You can't activate this effect the turn this card enters play.) - The next time one of your Digimon would digivolve this turn, reduce the digivolution cost by 1.")
 
@@ -89,6 +92,7 @@ class ST12_15(CardScript):
         # Timing: EffectTiming.OnDeclaration
         # Cost -1
         effect3 = ICardEffect()
+        effect3.set_timing(EffectTiming.OnDeclaration)
         effect3.set_effect_name("ST12-15 Remove Effect")
         effect3.set_effect_description("Cost -1")
         effect3.cost_reduction = 1
@@ -113,6 +117,7 @@ class ST12_15(CardScript):
         # Timing: EffectTiming.SecuritySkill
         # [Security] Reveal 3 cards from the top of your deck. Add 1 card with [Huckmon] or [Sistermon] in its name or [Royal Knight] in its traits among them to your hand. Trash the rest. Then, place this card in your Battle Area.
         effect4 = ICardEffect()
+        effect4.set_timing(EffectTiming.SecuritySkill)
         effect4.set_effect_name("ST12-15 Reveal the top 3 cards of deck and place this card in battle area")
         effect4.set_effect_description("[Security] Reveal 3 cards from the top of your deck. Add 1 card with [Huckmon] or [Sistermon] in its name or [Royal Knight] in its traits among them to your hand. Trash the rest. Then, place this card in your Battle Area.")
         effect4.is_security_effect = True

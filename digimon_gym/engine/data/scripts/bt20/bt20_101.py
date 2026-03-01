@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -71,6 +72,7 @@ class BT20_101(CardScript):
         # Timing: EffectTiming.OnTappedAnyone
         # [All Turns] [Once Per Turn] When any Digimon suspend, this Digimon may unsuspend.
         effect4 = ICardEffect()
+        effect4.set_timing(EffectTiming.OnTappedAnyone)
         effect4.set_effect_name("BT20-101 Unsuspend this Digimon")
         effect4.set_effect_description("[All Turns] [Once Per Turn] When any Digimon suspend, this Digimon may unsuspend.")
         effect4.is_optional = True
@@ -105,6 +107,7 @@ class BT20_101(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [On Play] You may suspend 1 Digimon. Then, for every 2 suspended Digimon, you may return 1 of your opponent's suspended Digimon to the bottom of the deck.
         effect5 = ICardEffect()
+        effect5.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect5.set_effect_name("BT20-101 Suspend 1 Digimon, Then return 1 to bottom of deck for every 2 suspended")
         effect5.set_effect_description("[On Play] You may suspend 1 Digimon. Then, for every 2 suspended Digimon, you may return 1 of your opponent's suspended Digimon to the bottom of the deck.")
         effect5.is_on_play = True
@@ -148,6 +151,7 @@ class BT20_101(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [When Digivolving] You may suspend 1 Digimon. Then, for every 2 suspended Digimon, you may return 1 of your opponent's suspended Digimon to the bottom of the deck.
         effect6 = ICardEffect()
+        effect6.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect6.set_effect_name("BT20-101 Suspend 1 Digimon, Then return 1 to bottom of deck for every 2 suspended")
         effect6.set_effect_description("[When Digivolving] You may suspend 1 Digimon. Then, for every 2 suspended Digimon, you may return 1 of your opponent's suspended Digimon to the bottom of the deck.")
         effect6.is_when_digivolving = True

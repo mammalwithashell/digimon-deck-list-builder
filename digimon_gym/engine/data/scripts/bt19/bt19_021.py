@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -16,6 +17,7 @@ class BT19_021(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [On Play] Return 1 of your opponent's level 3 Digimon to the hand.
         effect0 = ICardEffect()
+        effect0.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect0.set_effect_name("BT19-021 Return 1 of your opponent's level 3 Digimon to the hand")
         effect0.set_effect_description("[On Play] Return 1 of your opponent's level 3 Digimon to the hand.")
         effect0.is_on_play = True
@@ -49,6 +51,7 @@ class BT19_021(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [When Digivolving] Return 1 of your opponent's level 3 Digimon to the hand.
         effect1 = ICardEffect()
+        effect1.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect1.set_effect_name("BT19-021 Return 1 of your opponent's level 3 Digimon to the hand")
         effect1.set_effect_description("[When Digivolving] Return 1 of your opponent's level 3 Digimon to the hand.")
         effect1.is_when_digivolving = True

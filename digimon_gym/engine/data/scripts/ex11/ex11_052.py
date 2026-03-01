@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -34,6 +35,7 @@ class EX11_052(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # Delete, Play Card, Trash From Hand
         effect1 = ICardEffect()
+        effect1.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect1.set_effect_name("EX11-052 Delete, Play Card, Trash From Hand")
         effect1.set_effect_description("Delete, Play Card, Trash From Hand")
         effect1.is_on_play = True
@@ -97,6 +99,7 @@ class EX11_052(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # Delete, Play Card, Trash From Hand
         effect2 = ICardEffect()
+        effect2.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect2.set_effect_name("EX11-052 Delete, Play Card, Trash From Hand")
         effect2.set_effect_description("Delete, Play Card, Trash From Hand")
         effect2.is_when_digivolving = True
@@ -160,6 +163,7 @@ class EX11_052(CardScript):
         # Timing: EffectTiming.OnEndAttack
         # Delete, Play Card, Trash From Hand
         effect3 = ICardEffect()
+        effect3.set_timing(EffectTiming.OnEndAttack)
         effect3.set_effect_name("EX11-052 Delete, Play Card, Trash From Hand")
         effect3.set_effect_description("Delete, Play Card, Trash From Hand")
 
@@ -222,6 +226,7 @@ class EX11_052(CardScript):
         # Timing: EffectTiming.WhenRemoveField
         # [All Turns] [Once Per Turn] When any of your [Dark Dragon] or [Evil Dragon] trait Digimon would leave the battle area, if you have 4 or fewer cards in your hand, trash your opponent's top security card.
         effect4 = ICardEffect()
+        effect4.set_timing(EffectTiming.WhenRemoveField)
         effect4.set_effect_name("EX11-052 If 4 or less cards in hand, trash opponent's security.")
         effect4.set_effect_description("[All Turns] [Once Per Turn] When any of your [Dark Dragon] or [Evil Dragon] trait Digimon would leave the battle area, if you have 4 or fewer cards in your hand, trash your opponent's top security card.")
         effect4.set_max_count_per_turn(1)

@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -16,6 +17,7 @@ class BT19_088(CardScript):
         # Timing: EffectTiming.OnStartMainPhase
         # [Start of Your Main Phase] If your opponent has a Digimon, gain 1 memory.
         effect0 = ICardEffect()
+        effect0.set_timing(EffectTiming.OnStartMainPhase)
         effect0.set_effect_name("BT19-088 Memory +1")
         effect0.set_effect_description("[Start of Your Main Phase] If your opponent has a Digimon, gain 1 memory.")
 
@@ -43,6 +45,7 @@ class BT19_088(CardScript):
         # Timing: EffectTiming.OnDeclaration
         # [Main] If you have 20 or more cards in your trash, by suspending this Tamer, 1 of your [Impmon] may digivolve into [Beelzemon] in the hand or trash for a digivolution cost of 4, ignoring its digivolution requirements.
         effect1 = ICardEffect()
+        effect1.set_timing(EffectTiming.OnDeclaration)
         effect1.set_effect_name("BT19-088 Suspend this tamer to digivolve from trash or hand")
         effect1.set_effect_description("[Main] If you have 20 or more cards in your trash, by suspending this Tamer, 1 of your [Impmon] may digivolve into [Beelzemon] in the hand or trash for a digivolution cost of 4, ignoring its digivolution requirements.")
         effect1.is_optional = True

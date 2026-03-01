@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -16,6 +17,7 @@ class BT16_045(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [On Play] You may suspend 1 Digimon. Then, 1 of your Digimon gets +3000 DP until the end of your opponent's turn.
         effect0 = ICardEffect()
+        effect0.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect0.set_effect_name("BT16-045 Suspend and gain DP")
         effect0.set_effect_description("[On Play] You may suspend 1 Digimon. Then, 1 of your Digimon gets +3000 DP until the end of your opponent's turn.")
         effect0.is_on_play = True
@@ -51,6 +53,7 @@ class BT16_045(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [When Digivolving] You may suspend 1 Digimon. Then, 1 of your Digimon gets +3000 DP until the end of your opponent's turn.
         effect1 = ICardEffect()
+        effect1.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect1.set_effect_name("BT16-045 Suspend and gain DP")
         effect1.set_effect_description("[When Digivolving] You may suspend 1 Digimon. Then, 1 of your Digimon gets +3000 DP until the end of your opponent's turn.")
         effect1.is_when_digivolving = True
@@ -86,6 +89,7 @@ class BT16_045(CardScript):
         # Timing: EffectTiming.OnAllyAttack
         # [Opponent's Turn] [Once Per Turn] When one of your opponent's Digimon attacks, you may switch the target of attack to one of your suspended Digimon with the [Insectoid] trait.
         effect2 = ICardEffect()
+        effect2.set_timing(EffectTiming.OnAllyAttack)
         effect2.set_effect_name("BT16-045 Switch attack target")
         effect2.set_effect_description("[Opponent's Turn] [Once Per Turn] When one of your opponent's Digimon attacks, you may switch the target of attack to one of your suspended Digimon with the [Insectoid] trait.")
         effect2.is_inherited_effect = True

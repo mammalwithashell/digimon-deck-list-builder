@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -43,6 +44,7 @@ class P_191(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [On Play] To 1 of your opponent�s Digimon, give -4000 DP for the turn for each of your Digimon with the [Olympos XII] trait. Then, delete up to 7000 DP total worth of their Digimon.
         effect2 = ICardEffect()
+        effect2.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect2.set_effect_name("P-191 Delete")
         effect2.set_effect_description("[On Play] To 1 of your opponent�s Digimon, give -4000 DP for the turn for each of your Digimon with the [Olympos XII] trait. Then, delete up to 7000 DP total worth of their Digimon.")
         effect2.is_on_play = True
@@ -78,6 +80,7 @@ class P_191(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [When Digivolving] To 1 of your opponent�s Digimon, give -4000 DP for the turn for each of your Digimon with the [Olympos XII] trait. Then, delete up to 7000 DP total worth of their Digimon.
         effect3 = ICardEffect()
+        effect3.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect3.set_effect_name("P-191 Delete")
         effect3.set_effect_description("[When Digivolving] To 1 of your opponent�s Digimon, give -4000 DP for the turn for each of your Digimon with the [Olympos XII] trait. Then, delete up to 7000 DP total worth of their Digimon.")
         effect3.is_when_digivolving = True
@@ -113,6 +116,7 @@ class P_191(CardScript):
         # Timing: EffectTiming.OnEndTurn
         # [End of Your Turn] 2 of your Digimon may DNA digivolve into [GraceNovamon] in the hand. Then, 1 of your Digimon may attack.
         effect4 = ICardEffect()
+        effect4.set_timing(EffectTiming.OnEndTurn)
         effect4.set_effect_name("P-191 DNA into [GraceNovamon]")
         effect4.set_effect_description("[End of Your Turn] 2 of your Digimon may DNA digivolve into [GraceNovamon] in the hand. Then, 1 of your Digimon may attack.")
 
@@ -150,6 +154,7 @@ class P_191(CardScript):
         # Timing: EffectTiming.OnEndTurn
         # [End of Your Turn] [Once Per Turn] 1 of your Digimon may attack.
         effect5 = ICardEffect()
+        effect5.set_timing(EffectTiming.OnEndTurn)
         effect5.set_effect_name("P-191 1 digimon may attack")
         effect5.set_effect_description("[End of Your Turn] [Once Per Turn] 1 of your Digimon may attack.")
         effect5.is_inherited_effect = True

@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -47,6 +48,7 @@ class BT22_064(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [When Digivolving] You may play 1 [Diaboromon] Token without paying the cost. (Digimon / Cost 14 / Lv.6 / White / Mega / Unknown / Unidentified / 3000 DP)
         effect2 = ICardEffect()
+        effect2.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect2.set_effect_name("BT22-064 Play 1 [Diaboromon] token")
         effect2.set_effect_description("[When Digivolving] You may play 1 [Diaboromon] Token without paying the cost. (Digimon / Cost 14 / Lv.6 / White / Mega / Unknown / Unidentified / 3000 DP)")
         effect2.is_optional = True
@@ -75,6 +77,7 @@ class BT22_064(CardScript):
         # Timing: EffectTiming.OnAllyAttack
         # [When Attacking] You may play 1 [Diaboromon] Token without paying the cost. (Digimon / Cost 14 / Lv.6 / White / Mega / Unknown / Unidentified / 3000 DP)
         effect3 = ICardEffect()
+        effect3.set_timing(EffectTiming.OnAllyAttack)
         effect3.set_effect_name("BT22-064 Play 1 [Diaboromon] token")
         effect3.set_effect_description("[When Attacking] You may play 1 [Diaboromon] Token without paying the cost. (Digimon / Cost 14 / Lv.6 / White / Mega / Unknown / Unidentified / 3000 DP)")
         effect3.is_optional = True
@@ -103,6 +106,7 @@ class BT22_064(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [All Turns] [Once Per Turn] When any of your other Digimon with the [Unidentified] trait are played, delete 1 of your opponent's Digimon with the lowest play cost.
         effect4 = ICardEffect()
+        effect4.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect4.set_effect_name("BT22-064 Delete lowest play cost digimon")
         effect4.set_effect_description("[All Turns] [Once Per Turn] When any of your other Digimon with the [Unidentified] trait are played, delete 1 of your opponent's Digimon with the lowest play cost.")
         effect4.set_max_count_per_turn(1)

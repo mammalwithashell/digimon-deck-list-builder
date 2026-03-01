@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -86,6 +87,7 @@ class P_220(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # Delete, De Digivolve, Effect Immunity
         effect5 = ICardEffect()
+        effect5.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect5.set_effect_name("P-220 Delete, De Digivolve, Effect Immunity")
         effect5.set_effect_description("Delete, De Digivolve, Effect Immunity")
         effect5.is_on_play = True
@@ -136,6 +138,7 @@ class P_220(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # Delete, De Digivolve, Effect Immunity
         effect6 = ICardEffect()
+        effect6.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect6.set_effect_name("P-220 Delete, De Digivolve, Effect Immunity")
         effect6.set_effect_description("Delete, De Digivolve, Effect Immunity")
         effect6.is_when_digivolving = True
@@ -186,6 +189,7 @@ class P_220(CardScript):
         # Timing: EffectTiming.OnDestroyedAnyone
         # [On Deletion] By returning 3 [Composite], [Wicked God] or [DM] trait cards from your trash to the bottom of the deck, you may play 2 level 6 or lower [Composite], [Ver.3] or [Ver.5] trait Digimon cards from your trash without paying the costs. This effect can't play cards of the same level.
         effect7 = ICardEffect()
+        effect7.set_timing(EffectTiming.OnDestroyedAnyone)
         effect7.set_effect_name("P-220 Return 3 cards to play 2 digimon from Trash")
         effect7.set_effect_description("[On Deletion] By returning 3 [Composite], [Wicked God] or [DM] trait cards from your trash to the bottom of the deck, you may play 2 level 6 or lower [Composite], [Ver.3] or [Ver.5] trait Digimon cards from your trash without paying the costs. This effect can't play cards of the same level.")
         effect7.is_optional = True

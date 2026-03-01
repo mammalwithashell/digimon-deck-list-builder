@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -16,6 +17,7 @@ class EX5_001(CardScript):
         # Timing: EffectTiming.OnAddDigivolutionCards
         # [Your Turn] [Once Per Turn] When an effect places the top card of this Digimon in its digivolution cards, this Digimon may digivolve into a Digimon card in your hand with the digivolution cost reduced by 1.
         effect0 = ICardEffect()
+        effect0.set_timing(EffectTiming.OnAddDigivolutionCards)
         effect0.set_effect_name("EX5-001 This Digimon digivolves")
         effect0.set_effect_description("[Your Turn] [Once Per Turn] When an effect places the top card of this Digimon in its digivolution cards, this Digimon may digivolve into a Digimon card in your hand with the digivolution cost reduced by 1.")
         effect0.is_inherited_effect = True

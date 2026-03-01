@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -29,6 +30,7 @@ class BT16_071(CardScript):
         # Timing: EffectTiming.OnAllyAttack
         # [When Attacking] This Digimon may digivolve into a Digimon card with [Leomon] in it's name from your hand or trash.
         effect1 = ICardEffect()
+        effect1.set_timing(EffectTiming.OnAllyAttack)
         effect1.set_effect_name("BT16-071 Digivolve into a [Leomon] in name Digimon from hand or trash.")
         effect1.set_effect_description("[When Attacking] This Digimon may digivolve into a Digimon card with [Leomon] in it's name from your hand or trash.")
         effect1.is_optional = True
@@ -65,6 +67,7 @@ class BT16_071(CardScript):
         # Timing: EffectTiming.OnEndAttack
         # [End of Attack] By deleting this Digimon, you may play 1 level 4 or lower Digimon card from your trash without paying the cost.
         effect2 = ICardEffect()
+        effect2.set_timing(EffectTiming.OnEndAttack)
         effect2.set_effect_name("BT16-071 Delete this Digimon to play a level 4 or lower Digimon from your trash.")
         effect2.set_effect_description("[End of Attack] By deleting this Digimon, you may play 1 level 4 or lower Digimon card from your trash without paying the cost.")
         effect2.is_inherited_effect = True

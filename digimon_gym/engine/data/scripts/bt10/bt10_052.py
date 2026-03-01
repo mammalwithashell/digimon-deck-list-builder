@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -16,6 +17,7 @@ class BT10_052(CardScript):
         # Timing: EffectTiming.BeforePayCost
         # <Digisorption -2> (When one of your Digimon digivolves into this card from your hand, you may suspend 1 of your Digimon to reduce the memory cost of the digivolution by 2.)
         effect0 = ICardEffect()
+        effect0.set_timing(EffectTiming.BeforePayCost)
         effect0.set_effect_name("BT10-052 Digisorption -2")
         effect0.set_effect_description("<Digisorption -2> (When one of your Digimon digivolves into this card from your hand, you may suspend 1 of your Digimon to reduce the memory cost of the digivolution by 2.)")
         effect0.is_optional = True
@@ -56,6 +58,7 @@ class BT10_052(CardScript):
         # Timing: EffectTiming.OnAllyAttack
         # [Opponent's Turn][Once Per Turn] When an opponent's Digimon attacks, you may switch the target of attack to 1 of your suspended Digimon.
         effect1 = ICardEffect()
+        effect1.set_timing(EffectTiming.OnAllyAttack)
         effect1.set_effect_name("BT10-052 Switch Attack Target")
         effect1.set_effect_description("[Opponent's Turn][Once Per Turn] When an opponent's Digimon attacks, you may switch the target of attack to 1 of your suspended Digimon.")
         effect1.is_optional = True

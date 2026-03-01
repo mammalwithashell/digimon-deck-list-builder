@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -29,6 +30,7 @@ class P_094(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # Delete
         effect1 = ICardEffect()
+        effect1.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect1.set_effect_name("P-094 Delete")
         effect1.set_effect_description("Delete")
         effect1.is_on_play = True
@@ -64,6 +66,7 @@ class P_094(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # Delete
         effect2 = ICardEffect()
+        effect2.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect2.set_effect_name("P-094 Delete")
         effect2.set_effect_description("Delete")
         effect2.is_when_digivolving = True
@@ -99,6 +102,7 @@ class P_094(CardScript):
         # Timing: EffectTiming.OnAllyAttack
         # [Opponent's Turn] [Once Per Turn] When an opponent's Digimon attacks, by placing 2 [Vemmon] from 1 of your [Galacticmon]'s digivolution cards at the bottom of their owners' decks, switch the target of attack to this Digimon.
         effect3 = ICardEffect()
+        effect3.set_timing(EffectTiming.OnAllyAttack)
         effect3.set_effect_name("P-094 Return 2 [Vemmon] from [Galacticmon]'s digivolution cards to the deck bottom to switch attack target to this Digimon")
         effect3.set_effect_description("[Opponent's Turn] [Once Per Turn] When an opponent's Digimon attacks, by placing 2 [Vemmon] from 1 of your [Galacticmon]'s digivolution cards at the bottom of their owners' decks, switch the target of attack to this Digimon.")
         effect3.is_inherited_effect = True

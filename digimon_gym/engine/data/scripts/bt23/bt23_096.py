@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -39,6 +40,7 @@ class BT23_096(CardScript):
         # Timing: EffectTiming.OptionSkill
         # [Main] <De-Digivolve 4> 1 of your opponent's Digimon. Then, place this card in the battle area.
         effect1 = ICardEffect()
+        effect1.set_timing(EffectTiming.OptionSkill)
         effect1.set_effect_name("BT23-096 <De-Digivolve 4> 1 digimon, then place in battle area")
         effect1.set_effect_description("[Main] <De-Digivolve 4> 1 of your opponent's Digimon. Then, place this card in the battle area.")
 
@@ -85,10 +87,11 @@ class BT23_096(CardScript):
         effects.append(effect2)
 
         # Timing: EffectTiming.OnAllyAttack
-        # [Your Turn] When one of your [CS] trait Digimon attacks, <Delay> \r\n・<De-Digivolve 4> 1 of your opponent's Digimon. (Trash up to 4 cards from the top. You can't trash past level 3 cards.)
+        # [Your Turn] When one of your [CS] trait Digimon attacks <Delay>, draw 2.
         effect3 = ICardEffect()
-        effect3.set_effect_name("BT23-096 <De-Digivolve 4> 1 digimon")
-        effect3.set_effect_description("[Your Turn] When one of your [CS] trait Digimon attacks, <Delay> \\r\\n・<De-Digivolve 4> 1 of your opponent's Digimon. (Trash up to 4 cards from the top. You can't trash past level 3 cards.)")
+        effect3.set_timing(EffectTiming.OnAllyAttack)
+        effect3.set_effect_name("BT23-096 Delay draw 2")
+        effect3.set_effect_description("[Your Turn] When one of your [CS] trait Digimon attacks <Delay>, draw 2.")
         effect3.is_optional = True
         effect3.is_on_attack = True
 
@@ -103,19 +106,10 @@ class BT23_096(CardScript):
         effect3.set_can_use_condition(condition3)
 
         def process3(ctx: Dict[str, Any]):
-            """Action: De Digivolve"""
+            """Action: Draw 2"""
             player = ctx.get('player')
-            perm = ctx.get('permanent')
-            game = ctx.get('game')
-            if not (player and game):
-                return
-            def on_de_digivolve(target_perm):
-                removed = target_perm.de_digivolve(4)
-                enemy = player.enemy if player else None
-                if enemy:
-                    enemy.trash_cards.extend(removed)
-            game.effect_select_opponent_permanent(
-                player, on_de_digivolve, filter_fn=lambda p: p.is_digimon, is_optional=True)
+            if player:
+                player.draw_cards(2)
 
         effect3.set_on_process_callback(process3)
         effects.append(effect3)
@@ -123,9 +117,9 @@ class BT23_096(CardScript):
         # Timing: EffectTiming.SecuritySkill
         # [Security] <De-Digivolve 4> 1 of your opponent's Digimon. Then, place this card in the battle area.
         effect4 = ICardEffect()
+        effect4.set_timing(EffectTiming.SecuritySkill)
         effect4.set_effect_name("BT23-096 <De-Digivolve 4> 1 digimon, then place in battle area")
         effect4.set_effect_description("[Security] <De-Digivolve 4> 1 of your opponent's Digimon. Then, place this card in the battle area.")
-        effect4.is_security_effect = True
         effect4.is_security_effect = True
 
         effect = effect4  # alias for condition closure

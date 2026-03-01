@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -34,6 +35,7 @@ class BT22_017(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [On Play] Reveal the top 3 cards of your deck. Add 1 card with [Omnimon] in its text and 1 card with the [CS] trait among them to the hand. Return the rest to the bottom of the deck.
         effect1 = ICardEffect()
+        effect1.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect1.set_effect_name("BT22-017 Reveal top 3, Add 1 card with [Omnimon] in text and 1 other with [CS] trait to hand.")
         effect1.set_effect_description("[On Play] Reveal the top 3 cards of your deck. Add 1 card with [Omnimon] in its text and 1 card with the [CS] trait among them to the hand. Return the rest to the bottom of the deck.")
         effect1.is_on_play = True
@@ -82,6 +84,7 @@ class BT22_017(CardScript):
         # Timing: EffectTiming.OnEndTurn
         # [End of Your Turn] This Digimon and any of your other Digimon may DNA digivolve into a Digimon card in the hand.
         effect2 = ICardEffect()
+        effect2.set_timing(EffectTiming.OnEndTurn)
         effect2.set_effect_name("BT22-017 DNA digivolve this Digimon")
         effect2.set_effect_description("[End of Your Turn] This Digimon and any of your other Digimon may DNA digivolve into a Digimon card in the hand.")
         effect2.is_inherited_effect = True

@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -16,6 +17,7 @@ class BT24_006(CardScript):
         # Timing: EffectTiming.WhenLinked
         # [Your Turn] [Oncer Per Turn] When this Digimon gets linked, <Draw 1> and trash 1 card in your hand.
         effect0 = ICardEffect()
+        effect0.set_timing(EffectTiming.WhenLinked)
         effect0.set_effect_name("BT24-006 <Draw 1>, trash 1")
         effect0.set_effect_description("[Your Turn] [Oncer Per Turn] When this Digimon gets linked, <Draw 1> and trash 1 card in your hand.")
         effect0.is_inherited_effect = True

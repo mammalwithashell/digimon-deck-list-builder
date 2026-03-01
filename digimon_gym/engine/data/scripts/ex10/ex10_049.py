@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -28,6 +29,7 @@ class EX10_049(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [When Digivolving] If your opponent has 10 or fewer cards in their trash, trash the top 3 cards of both players' decks. Then, delete 1 of your opponent's level 3 or lower Digimon. If your opponent has 10 or more cards in their trash, add 2 to this effect's level maximum.
         effect1 = ICardEffect()
+        effect1.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect1.set_effect_name("EX10-049 If opponent has 10 or more trash cards, trash top 3 of both player decks. then delete 1 level 3 or lower digimon, add 2 levels if enemy trash is 10 or more")
         effect1.set_effect_description("[When Digivolving] If your opponent has 10 or fewer cards in their trash, trash the top 3 cards of both players' decks. Then, delete 1 of your opponent's level 3 or lower Digimon. If your opponent has 10 or more cards in their trash, add 2 to this effect's level maximum.")
         effect1.is_when_digivolving = True
@@ -69,6 +71,7 @@ class EX10_049(CardScript):
         # Timing: EffectTiming.OnDestroyedAnyone
         # [On Deletion] If your opponent has 10 or fewer cards in their trash, trash the top 3 cards of both players' decks. Then, delete 1 of your opponent's level 3 or lower Digimon. If your opponent has 10 or more cards in their trash, add 2 to this effect's level maximum.
         effect2 = ICardEffect()
+        effect2.set_timing(EffectTiming.OnDestroyedAnyone)
         effect2.set_effect_name("EX10-049 If opponent has 10 or more trash cards, trash top 3 of both player decks. then delete 1 level 3 or lower digimon, add 2 levels if enemy trash is 10 or more")
         effect2.set_effect_description("[On Deletion] If your opponent has 10 or fewer cards in their trash, trash the top 3 cards of both players' decks. Then, delete 1 of your opponent's level 3 or lower Digimon. If your opponent has 10 or more cards in their trash, add 2 to this effect's level maximum.")
         effect2.is_on_deletion = True
@@ -108,6 +111,7 @@ class EX10_049(CardScript):
         # Timing: EffectTiming.OnAllyAttack
         # [When Attacking] [Once Per Turn] This Digimon gains <Security A. +1> for the turn. (This Digimon checks 1 additional security card.) If your opponent has 10 or fewer cards in their trash, instead trash the top 2 cards of both players' decks.
         effect3 = ICardEffect()
+        effect3.set_timing(EffectTiming.OnAllyAttack)
         effect3.set_effect_name("EX10-049 If opponent has 10 or less trash cards, both player trash 2 cards from top deck, otherwise Sec +1")
         effect3.set_effect_description("[When Attacking] [Once Per Turn] This Digimon gains <Security A. +1> for the turn. (This Digimon checks 1 additional security card.) If your opponent has 10 or fewer cards in their trash, instead trash the top 2 cards of both players' decks.")
         effect3.is_inherited_effect = True

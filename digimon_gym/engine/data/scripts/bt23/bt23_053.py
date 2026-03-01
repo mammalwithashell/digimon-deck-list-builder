@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -30,6 +31,7 @@ class BT23_053(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [Your Turn] When any of your Option cards are placed in the battle area, this Digimon may digivolve into a Digimon card with [Cyberdramon] in its name or the [CS] in the hand with the digivolution cost reduced by 2.
         effect1 = ICardEffect()
+        effect1.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect1.set_effect_name("BT23-053 Digivolve for reduced cost")
         effect1.set_effect_description("[Your Turn] When any of your Option cards are placed in the battle area, this Digimon may digivolve into a Digimon card with [Cyberdramon] in its name or the [CS] in the hand with the digivolution cost reduced by 2.")
         effect1.is_on_play = True

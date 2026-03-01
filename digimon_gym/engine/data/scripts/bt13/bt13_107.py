@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -16,6 +17,7 @@ class BT13_107(CardScript):
         # Timing: EffectTiming.OptionSkill
         # [Main] Choose 1 of your Digimon. Return 1 of your opponent's suspended Digimon with DP less than or equal to that Digimon to the hand. Then, by returning the top card of one of your [Leopardmon: Leopard Mode] to the hand, unsuspend all of your Digimon.
         effect0 = ICardEffect()
+        effect0.set_timing(EffectTiming.OptionSkill)
         effect0.set_effect_name("BT13-107 Bounce, Add To Hand, Unsuspend")
         effect0.set_effect_description("[Main] Choose 1 of your Digimon. Return 1 of your opponent's suspended Digimon with DP less than or equal to that Digimon to the hand. Then, by returning the top card of one of your [Leopardmon: Leopard Mode] to the hand, unsuspend all of your Digimon.")
 
@@ -63,6 +65,7 @@ class BT13_107(CardScript):
         # Timing: EffectTiming.SecuritySkill
         # [Security] Suspend 1 of your opponent's Digimon. Then, add this card to the hand.
         effect1 = ICardEffect()
+        effect1.set_timing(EffectTiming.SecuritySkill)
         effect1.set_effect_name("BT13-107 Add To Hand, Suspend")
         effect1.set_effect_description("[Security] Suspend 1 of your opponent's Digimon. Then, add this card to the hand.")
         effect1.is_security_effect = True

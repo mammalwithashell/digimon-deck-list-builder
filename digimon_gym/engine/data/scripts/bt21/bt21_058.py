@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -16,6 +17,7 @@ class BT21_058(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # Add To Hand, Reveal And Select
         effect0 = ICardEffect()
+        effect0.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect0.set_effect_name("BT21-058 Add To Hand, Reveal And Select")
         effect0.set_effect_description("Add To Hand, Reveal And Select")
         effect0.is_on_play = True
@@ -55,6 +57,7 @@ class BT21_058(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # Add To Hand, Reveal And Select
         effect1 = ICardEffect()
+        effect1.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect1.set_effect_name("BT21-058 Add To Hand, Reveal And Select")
         effect1.set_effect_description("Add To Hand, Reveal And Select")
         effect1.is_when_digivolving = True
@@ -94,6 +97,7 @@ class BT21_058(CardScript):
         # Timing: EffectTiming.OnDigivolutionCardReturnToDeckBottom
         # [All Turns] [Once Per Turn] When any [Vemmon] are returned to the bottom of the deck from this Digimon's digivolution cards, delete 1 of your opponent's Digimon with a play cost of 4 or less.
         effect2 = ICardEffect()
+        effect2.set_timing(EffectTiming.OnDigivolutionCardReturnToDeckBottom)
         effect2.set_effect_name("BT21-058 Delete 1 opponent Digimon with play cost 4 or less")
         effect2.set_effect_description("[All Turns] [Once Per Turn] When any [Vemmon] are returned to the bottom of the deck from this Digimon's digivolution cards, delete 1 of your opponent's Digimon with a play cost of 4 or less.")
         effect2.is_inherited_effect = True

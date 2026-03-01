@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -16,6 +17,7 @@ class BT16_056(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [On Play] You may place the top card of 1 of your opponent's Digimon with the [Vaccine] trait at the top of your opponent's security stack.
         effect0 = ICardEffect()
+        effect0.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect0.set_effect_name("BT16-056 Place top card of one of your opponent's Digimon to the top/bottom of their security stack.")
         effect0.set_effect_description("[On Play] You may place the top card of 1 of your opponent's Digimon with the [Vaccine] trait at the top of your opponent's security stack.")
         effect0.is_optional = True
@@ -54,6 +56,7 @@ class BT16_056(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [When Digivolving] You may place the top card of 1 of your opponent's Digimon with the [Vaccine] trait at the top of your opponent's security stack.
         effect1 = ICardEffect()
+        effect1.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect1.set_effect_name("BT16-056 Place top card of one of your opponent's Digimon to the top/bottom of their security stack.")
         effect1.set_effect_description("[When Digivolving] You may place the top card of 1 of your opponent's Digimon with the [Vaccine] trait at the top of your opponent's security stack.")
         effect1.is_optional = True
@@ -92,6 +95,7 @@ class BT16_056(CardScript):
         # Timing: EffectTiming.OnAddSecurity
         # [All Turns] [Once Per Turn] When a card is added to your opponent's security stack, if they have 3 or more security cards, trash the top or bottom card of their security stack.
         effect2 = ICardEffect()
+        effect2.set_timing(EffectTiming.OnAddSecurity)
         effect2.set_effect_name("BT16-056 Trash top or bottom of opponents security")
         effect2.set_effect_description("[All Turns] [Once Per Turn] When a card is added to your opponent's security stack, if they have 3 or more security cards, trash the top or bottom card of their security stack.")
         effect2.set_max_count_per_turn(1)

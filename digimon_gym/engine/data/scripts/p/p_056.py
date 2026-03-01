@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -16,6 +17,7 @@ class P_056(CardScript):
         # Timing: EffectTiming.BeforePayCost
         # <Digisorption -2> (When one of your Digimon digivolves into this card from your hand, you may suspend 1 of your Digimon to reduce the memory cost of the digivolution by 2.)
         effect0 = ICardEffect()
+        effect0.set_timing(EffectTiming.BeforePayCost)
         effect0.set_effect_name("P-056 Digisorption -2")
         effect0.set_effect_description("<Digisorption -2> (When one of your Digimon digivolves into this card from your hand, you may suspend 1 of your Digimon to reduce the memory cost of the digivolution by 2.)")
         effect0.is_optional = True
@@ -56,6 +58,7 @@ class P_056(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [When Digivolving] If you have a Tamer in play, 1 of your opponent's Digimon can't attack or block until the end of their next turn.
         effect1 = ICardEffect()
+        effect1.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect1.set_effect_name("P-056 Opponent's 1 Digimon can't Attack or Block")
         effect1.set_effect_description("[When Digivolving] If you have a Tamer in play, 1 of your opponent's Digimon can't attack or block until the end of their next turn.")
         effect1.is_when_digivolving = True

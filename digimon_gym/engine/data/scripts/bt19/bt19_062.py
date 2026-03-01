@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -57,6 +58,7 @@ class BT19_062(CardScript):
         # Timing: EffectTiming.OnAllyAttack
         # [When Attacking] Trash 1 Option card in your battle area.
         effect3 = ICardEffect()
+        effect3.set_timing(EffectTiming.OnAllyAttack)
         effect3.set_effect_name("BT19-062 Trash 1 Option card in your battle area")
         effect3.set_effect_description("[When Attacking] Trash 1 Option card in your battle area.")
         effect3.is_on_attack = True
@@ -92,6 +94,7 @@ class BT19_062(CardScript):
         # Timing: EffectTiming.OnEndTurn
         # [End of Your Turn] If your opponent has an unsuspended Digimon, this Digimon attacks the player.
         effect4 = ICardEffect()
+        effect4.set_timing(EffectTiming.OnEndTurn)
         effect4.set_effect_name("BT19-062 This Digimon may attack a player")
         effect4.set_effect_description("[End of Your Turn] If your opponent has an unsuspended Digimon, this Digimon attacks the player.")
 

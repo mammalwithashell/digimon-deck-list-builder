@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -28,6 +29,7 @@ class EX6_050(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [When Digivolving] If your opponent has 5 or fewer cards in their hand, gain 1 memory. If your opponent has 7 or more cards in their hand, your opponent trashes 1 card in their hand.
         effect1 = ICardEffect()
+        effect1.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect1.set_effect_name("EX6-050 Gain 1 memory/Opponent trashes 1 card")
         effect1.set_effect_description("[When Digivolving] If your opponent has 5 or fewer cards in their hand, gain 1 memory. If your opponent has 7 or more cards in their hand, your opponent trashes 1 card in their hand.")
         effect1.is_when_digivolving = True
@@ -65,6 +67,7 @@ class EX6_050(CardScript):
         # Timing: EffectTiming.OnDestroyedAnyone
         # [On Deletion] If your opponent has 5 or fewer cards in their hand, gain 1 memory. If your opponent has 7 or more cards in their hand, your opponent trashes 1 card in their hand.
         effect2 = ICardEffect()
+        effect2.set_timing(EffectTiming.OnDestroyedAnyone)
         effect2.set_effect_name("EX6-050 Gain 1 memory/Opponent trashes 1 card")
         effect2.set_effect_description("[On Deletion] If your opponent has 5 or fewer cards in their hand, gain 1 memory. If your opponent has 7 or more cards in their hand, your opponent trashes 1 card in their hand.")
         effect2.is_on_deletion = True
@@ -100,6 +103,7 @@ class EX6_050(CardScript):
         # Timing: EffectTiming.OnAllyAttack
         # [When Attacking] [Once Per Turn] Your opponent may trash 1 card in their hand. If they don't, you may play 1 purple level 3 Digimon card from your trash wihtout paying the cost.
         effect3 = ICardEffect()
+        effect3.set_timing(EffectTiming.OnAllyAttack)
         effect3.set_effect_name("EX6-050 Your opponent trashes 1 card/Play 1 level 3 purple Digimon from your trash.")
         effect3.set_effect_description("[When Attacking] [Once Per Turn] Your opponent may trash 1 card in their hand. If they don't, you may play 1 purple level 3 Digimon card from your trash wihtout paying the cost.")
         effect3.is_inherited_effect = True

@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -30,6 +31,7 @@ class BT23_031(CardScript):
         # Timing: EffectTiming.BeforePayCost
         # When this card would be played from the hand, if you have [LadyDevimon] or [Mirei Mikagura], reduce the play cost by 3.
         effect1 = ICardEffect()
+        effect1.set_timing(EffectTiming.BeforePayCost)
         effect1.set_effect_name("BT23-031 Play cost reduction -3")
         effect1.set_effect_description("When this card would be played from the hand, if you have [LadyDevimon] or [Mirei Mikagura], reduce the play cost by 3.")
         effect1.set_hash_string("BT23_031_ReducePlayCost")
@@ -79,6 +81,7 @@ class BT23_031(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [On Play] Add your top security card to the hand. Then, if you have 3 or fewer security cards, <Recovery +1 (Deck)>
         effect3 = ICardEffect()
+        effect3.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect3.set_effect_name("BT23-031 Add top security to hand. then if you have 3 or less security, <Recovery +1>")
         effect3.set_effect_description("[On Play] Add your top security card to the hand. Then, if you have 3 or fewer security cards, <Recovery +1 (Deck)>")
         effect3.is_on_play = True
@@ -117,6 +120,7 @@ class BT23_031(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [When Digivolving] Add your top security card to the hand. Then, if you have 3 or fewer security cards, <Recovery +1 (Deck)>
         effect4 = ICardEffect()
+        effect4.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect4.set_effect_name("BT23-031 Add top security to hand. then if you have 3 or less security, <Recovery +1>")
         effect4.set_effect_description("[When Digivolving] Add your top security card to the hand. Then, if you have 3 or fewer security cards, <Recovery +1 (Deck)>")
         effect4.is_when_digivolving = True

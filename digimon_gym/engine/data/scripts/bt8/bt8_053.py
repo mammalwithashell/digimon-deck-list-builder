@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -41,6 +42,7 @@ class BT8_053(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [When Digivolving] Suspend 1 of your opponent's level 4 or lower Digimon.
         effect2 = ICardEffect()
+        effect2.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect2.set_effect_name("BT8-053 Suspend 1 level 4 or lower Digimon")
         effect2.set_effect_description("[When Digivolving] Suspend 1 of your opponent's level 4 or lower Digimon.")
         effect2.is_when_digivolving = True

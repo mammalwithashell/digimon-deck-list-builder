@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -16,6 +17,7 @@ class BT19_086(CardScript):
         # Timing: EffectTiming.OnStartMainPhase
         # [Start of Your Main Phase] By placing 1 Option card with the [Device] trait from your hand in your battle area, <Draw 1>.
         effect0 = ICardEffect()
+        effect0.set_timing(EffectTiming.OnStartMainPhase)
         effect0.set_effect_name("BT19-086 Place a Device option in the battle area to Draw 1")
         effect0.set_effect_description("[Start of Your Main Phase] By placing 1 Option card with the [Device] trait from your hand in your battle area, <Draw 1>.")
         effect0.is_optional = True
@@ -44,6 +46,7 @@ class BT19_086(CardScript):
         # Timing: EffectTiming.OnDeclaration
         # [Main] By suspending this Tamer and trashing 4 Option cards with the [Device] trait in your battle area, you may play 1 [Cyberdramon] from your hand or trash without paying the cost.
         effect1 = ICardEffect()
+        effect1.set_timing(EffectTiming.OnDeclaration)
         effect1.set_effect_name("BT19-086 Trash 4 Device options in battle area, play a Cyberdramon without paying the cost")
         effect1.set_effect_description("[Main] By suspending this Tamer and trashing 4 Option cards with the [Device] trait in your battle area, you may play 1 [Cyberdramon] from your hand or trash without paying the cost.")
         effect1.is_optional = True

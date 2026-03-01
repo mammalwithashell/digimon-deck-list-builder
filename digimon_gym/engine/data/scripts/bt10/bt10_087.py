@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -16,6 +17,7 @@ class BT10_087(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [On Play] Reveal the top 4 cards of your deck. Add 1 card with [Xros Heart] in its traits among them to your hand, and place 1 Digimon card with [Xros Heart] in its traits among them under this Tamer. Place the rest at the bottom of your deck in any order.
         effect0 = ICardEffect()
+        effect0.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect0.set_effect_name("BT10-087 Reveal the top 4 cards of deck")
         effect0.set_effect_description("[On Play] Reveal the top 4 cards of your deck. Add 1 card with [Xros Heart] in its traits among them to your hand, and place 1 Digimon card with [Xros Heart] in its traits among them under this Tamer. Place the rest at the bottom of your deck in any order.")
         effect0.is_on_play = True
@@ -56,6 +58,7 @@ class BT10_087(CardScript):
         # Timing: EffectTiming.BeforePayCost
         # [Your Turn] When you play 1 Digimon with DigiXros requirements, by suspending this Tamer, you may place cards from under one of your Tamers as digivolution cards for a DigiXros.
         effect1 = ICardEffect()
+        effect1.set_timing(EffectTiming.BeforePayCost)
         effect1.set_effect_name("BT10-087 Can select DigiXros cards from Tamer's digivolution cards")
         effect1.set_effect_description("[Your Turn] When you play 1 Digimon with DigiXros requirements, by suspending this Tamer, you may place cards from under one of your Tamers as digivolution cards for a DigiXros.")
         effect1.is_optional = True

@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -77,6 +78,7 @@ class BT22_039(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [When Digivolving] [Once Per Turn] You may play 1 level 4 or lower [Appmon] trait Digimon card from your hand without paying the cost.
         effect3 = ICardEffect()
+        effect3.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect3.set_effect_name("BT22-039 Play 1 Level 4 or lower [Appmon]")
         effect3.set_effect_description("[When Digivolving] [Once Per Turn] You may play 1 level 4 or lower [Appmon] trait Digimon card from your hand without paying the cost.")
         effect3.is_optional = True
@@ -113,6 +115,7 @@ class BT22_039(CardScript):
         # Timing: EffectTiming.OnAllyAttack
         # [When Attacking] [Once Per Turn] You may play 1 level 4 or lower [Appmon] trait Digimon card from your hand without paying the cost.
         effect4 = ICardEffect()
+        effect4.set_timing(EffectTiming.OnAllyAttack)
         effect4.set_effect_name("BT22-039 Play 1 Level 4 or lower [Appmon]")
         effect4.set_effect_description("[When Attacking] [Once Per Turn] You may play 1 level 4 or lower [Appmon] trait Digimon card from your hand without paying the cost.")
         effect4.is_optional = True
@@ -149,6 +152,7 @@ class BT22_039(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [All Turns] [Once Per Turn] When any of your Digimon are played, you may link 1 [Appmon] trait Digimon card from this Digimon's digivolution cards to 1 of your Digimon without paying the cost.
         effect5 = ICardEffect()
+        effect5.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect5.set_effect_name("BT22-039 Link 1 [Appmon] digimon in sources to 1 digimon")
         effect5.set_effect_description("[All Turns] [Once Per Turn] When any of your Digimon are played, you may link 1 [Appmon] trait Digimon card from this Digimon's digivolution cards to 1 of your Digimon without paying the cost.")
         effect5.is_optional = True

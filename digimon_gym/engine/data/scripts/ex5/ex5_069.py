@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -16,6 +17,7 @@ class EX5_069(CardScript):
         # Timing: EffectTiming.OptionSkill
         # [Main] By trashing 1 card in your hand, delete 1 of your opponent's level 6 or lower Digimon. If this effect trashed a card with the [Seven Great Demon Lords] trait, place this card in the battle area.
         effect0 = ICardEffect()
+        effect0.set_timing(EffectTiming.OptionSkill)
         effect0.set_effect_name("EX5-069 By Trashing 1 card, delete level 6 or lower")
         effect0.set_effect_description("[Main] By trashing 1 card in your hand, delete 1 of your opponent's level 6 or lower Digimon. If this effect trashed a card with the [Seven Great Demon Lords] trait, place this card in the battle area.")
 
@@ -81,6 +83,7 @@ class EX5_069(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [All Turns] When an effect plays an opponent's Digimon, <Delay> (After this card is placed, by trashing it the next turn or later, activate the effect below.) - You may play 1 [Leviamon] from your trash without paying the cost.
         effect2 = ICardEffect()
+        effect2.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect2.set_effect_name("EX5-069 Play 1 [Leviamon] from trash")
         effect2.set_effect_description("[All Turns] When an effect plays an opponent's Digimon, <Delay> (After this card is placed, by trashing it the next turn or later, activate the effect below.) - You may play 1 [Leviamon] from your trash without paying the cost.")
         effect2.is_optional = True

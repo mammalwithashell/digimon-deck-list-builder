@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -16,6 +17,7 @@ class BT13_013(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [Your Turn] When you play a Digimon with [Sistermon] in its name, this Digimon may digivolve into [SaviorHuckmon] in the hand for the digivolution cost. When this Digimon would digivolve by this effect, reduce the digivolution cost by 2.
         effect0 = ICardEffect()
+        effect0.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect0.set_effect_name("BT13-013 This Digimon digivolves into [SaviorHuckmon]")
         effect0.set_effect_description("[Your Turn] When you play a Digimon with [Sistermon] in its name, this Digimon may digivolve into [SaviorHuckmon] in the hand for the digivolution cost. When this Digimon would digivolve by this effect, reduce the digivolution cost by 2.")
         effect0.is_optional = True
@@ -51,6 +53,7 @@ class BT13_013(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [Your Turn][Once Per Turn] When you play a Digimon with [Sistermon] in its name, gain 1 memory.
         effect1 = ICardEffect()
+        effect1.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect1.set_effect_name("BT13-013 Memory +1")
         effect1.set_effect_description("[Your Turn][Once Per Turn] When you play a Digimon with [Sistermon] in its name, gain 1 memory.")
         effect1.is_inherited_effect = True

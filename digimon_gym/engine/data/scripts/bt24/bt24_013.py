@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -34,6 +35,7 @@ class BT24_013(CardScript):
         # Timing: EffectTiming.OnDiscardHand
         # When this card is trashed from the hand, if you have 5 or fewer cards in hand, <Draw 1>.
         effect1 = ICardEffect()
+        effect1.set_timing(EffectTiming.OnDiscardHand)
         effect1.set_effect_name("BT24-013 If you have 5 or less cards, draw 1")
         effect1.set_effect_description("When this card is trashed from the hand, if you have 5 or fewer cards in hand, <Draw 1>.")
 
@@ -57,6 +59,7 @@ class BT24_013(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # Delete, Trash From Hand
         effect2 = ICardEffect()
+        effect2.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect2.set_effect_name("BT24-013 Delete, Trash From Hand")
         effect2.set_effect_description("Delete, Trash From Hand")
         effect2.is_on_play = True
@@ -102,6 +105,7 @@ class BT24_013(CardScript):
         # Timing: EffectTiming.OnAllyAttack
         # Delete, Trash From Hand
         effect3 = ICardEffect()
+        effect3.set_timing(EffectTiming.OnAllyAttack)
         effect3.set_effect_name("BT24-013 Delete, Trash From Hand")
         effect3.set_effect_description("Delete, Trash From Hand")
         effect3.is_on_attack = True
@@ -147,6 +151,7 @@ class BT24_013(CardScript):
         # Timing: EffectTiming.OnDiscardHand
         # [Your Turn] [Once Per Turn] When your hand is trashed from, this [Demon] or [Titan] trait Digimon may digivolve into [Titamon] or a [Titan] trait Digimon card in the trash with the digivolution cost reduced by 1.
         effect4 = ICardEffect()
+        effect4.set_timing(EffectTiming.OnDiscardHand)
         effect4.set_effect_name("BT24-013 When your hand is trashed from, digivolve")
         effect4.set_effect_description("[Your Turn] [Once Per Turn] When your hand is trashed from, this [Demon] or [Titan] trait Digimon may digivolve into [Titamon] or a [Titan] trait Digimon card in the trash with the digivolution cost reduced by 1.")
         effect4.is_inherited_effect = True

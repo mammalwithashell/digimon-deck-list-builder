@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -16,6 +17,7 @@ class BT21_088(CardScript):
         # Timing: EffectTiming.OnStartMainPhase
         # [Start of Your Main Phase] By placing 1 Digimon card with <Save> in its text or the [Hero] trait from your hand under this Tamer, <Draw 1> and gain 1 memory.
         effect0 = ICardEffect()
+        effect0.set_timing(EffectTiming.OnStartMainPhase)
         effect0.set_effect_name("BT21-088 Place 1 card under this Tamer from hand to Draw 1")
         effect0.set_effect_description("[Start of Your Main Phase] By placing 1 Digimon card with <Save> in its text or the [Hero] trait from your hand under this Tamer, <Draw 1> and gain 1 memory.")
 
@@ -45,6 +47,7 @@ class BT21_088(CardScript):
         # Timing: EffectTiming.BeforePayCost
         # [Your Turn] When any of your Digimon would digivolve into a Digimon card with <Save> in its text or the [Hero] trait, by suspending this Tamer and placing 1 card from under your Tamers as any of their bottom digivolution card, reduce the digivolution cost by 1.
         effect1 = ICardEffect()
+        effect1.set_timing(EffectTiming.BeforePayCost)
         effect1.set_effect_name("BT21-088 Digivolution Cost -1")
         effect1.set_effect_description("[Your Turn] When any of your Digimon would digivolve into a Digimon card with <Save> in its text or the [Hero] trait, by suspending this Tamer and placing 1 card from under your Tamers as any of their bottom digivolution card, reduce the digivolution cost by 1.")
         effect1.is_optional = True

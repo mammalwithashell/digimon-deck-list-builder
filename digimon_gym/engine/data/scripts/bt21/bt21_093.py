@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -16,6 +17,7 @@ class BT21_093(CardScript):
         # Timing: EffectTiming.BeforePayCost
         # When this card would be used, if your opponent has 3 or fewer security cards, reduce the use cost by 
         effect0 = ICardEffect()
+        effect0.set_timing(EffectTiming.BeforePayCost)
         effect0.set_effect_name("BT21-093 Reduce Play Cost -4")
         effect0.set_effect_description("When this card would be used, if your opponent has 3 or fewer security cards, reduce the use cost by ")
         effect0.set_hash_string("PlayCost-4_BT21_093")
@@ -23,48 +25,21 @@ class BT21_093(CardScript):
 
         effect = effect0  # alias for condition closure
         def condition0(context: Dict[str, Any]) -> bool:
+            # Only reduce cost if opponent has 3 or fewer security cards
+            player = card.owner if card else None
+            if player:
+                enemy = player.enemy if player else None
+                if enemy and len(enemy.security_cards) > 3:
+                    return False
             return True
 
         effect0.set_can_use_condition(condition0)
-
-        def process0(ctx: Dict[str, Any]):
-            """Action: Cost -4"""
-            player = ctx.get('player')
-            perm = ctx.get('permanent')
-            game = ctx.get('game')
-            # Cost reduction by 4 — handled via cost_reduction property
-            pass  # descriptive-tagged: cost_reduction
-
-        effect0.set_on_process_callback(process0)
         effects.append(effect0)
-
-        # Timing: EffectTiming.None
-        # Cost -4
-        effect1 = ICardEffect()
-        effect1.set_effect_name("BT21-093 Play Cost -4")
-        effect1.set_effect_description("Cost -4")
-        effect1.cost_reduction = 4
-
-        effect = effect1  # alias for condition closure
-        def condition1(context: Dict[str, Any]) -> bool:
-            return True
-
-        effect1.set_can_use_condition(condition1)
-
-        def process1(ctx: Dict[str, Any]):
-            """Action: Cost -4"""
-            player = ctx.get('player')
-            perm = ctx.get('permanent')
-            game = ctx.get('game')
-            # Cost reduction by 4 — handled via cost_reduction property
-            pass  # descriptive-tagged: cost_reduction
-
-        effect1.set_on_process_callback(process1)
-        effects.append(effect1)
 
         # Timing: EffectTiming.OptionSkill
         # [Main] Delete 1 of your opponent's highest DP Digimon. Then, place this card in the battle area.
         effect2 = ICardEffect()
+        effect2.set_timing(EffectTiming.OptionSkill)
         effect2.set_effect_name("BT21-093 Delete 1 of your opponent's Digimon with the highest DP")
         effect2.set_effect_description("[Main] Delete 1 of your opponent's highest DP Digimon. Then, place this card in the battle area.")
 
@@ -76,16 +51,20 @@ class BT21_093(CardScript):
         effect2.set_can_use_condition(condition2)
 
         def process2(ctx: Dict[str, Any]):
-            """Action: Delete"""
+            """Action: Delete opponent's highest DP Digimon"""
             player = ctx.get('player')
             perm = ctx.get('permanent')
             game = ctx.get('game')
             if not (player and game):
                 return
+            enemy = player.enemy if player else None
+            if not enemy:
+                return
+            dps = [p.dp or 0 for p in enemy.battle_area if p.is_digimon]
+            max_dp = max(dps) if dps else 0
             def target_filter(p):
-                return p.is_digimon
+                return p.is_digimon and (p.dp or 0) >= max_dp
             def on_delete(target_perm):
-                enemy = player.enemy if player else None
                 if enemy:
                     enemy.delete_permanent(target_perm)
             game.effect_select_opponent_permanent(
@@ -114,6 +93,7 @@ class BT21_093(CardScript):
         # Timing: EffectTiming.OnLoseSecurity
         # [All Turns] When your opponent's security stack is removed from, <Delay> (After this card is placed, by trashing it the next turn or later, activate the effect below).\r\n・1 of your [Reptile]/[Dragonkin] trait Digimon may digivolve into a [Reptile]/[Dragonkin] trait Digimon card in the hand without paying the cost.\r\n
         effect4 = ICardEffect()
+        effect4.set_timing(EffectTiming.OnLoseSecurity)
         effect4.set_effect_name("BT21-093 1 of your [Reptile]/[Dragonkin] trait Digimon may digivolve")
         effect4.set_effect_description("[All Turns] When your opponent's security stack is removed from, <Delay> (After this card is placed, by trashing it the next turn or later, activate the effect below).\\r\\n・1 of your [Reptile]/[Dragonkin] trait Digimon may digivolve into a [Reptile]/[Dragonkin] trait Digimon card in the hand without paying the cost.\\r\\n")
         effect4.is_optional = True
@@ -127,18 +107,28 @@ class BT21_093(CardScript):
         effect4.set_can_use_condition(condition4)
 
         def process4(ctx: Dict[str, Any]):
-            """Action: Digivolve"""
+            """Action: Select own Reptile/Dragonkin Digimon, digivolve from hand free"""
             player = ctx.get('player')
-            perm = ctx.get('permanent')
             game = ctx.get('game')
-            if not (player and perm and game):
+            if not (player and game):
                 return
-            def digi_filter(c):
-                if not (any('Reptile' in _t or 'Dragonkin' in _t for _t in (getattr(c, 'card_traits', []) or []))):
+            # Select own Reptile/Dragonkin Digimon to digivolve
+            def own_filter(p):
+                if not p.is_digimon:
                     return False
-                return True
-            game.effect_digivolve_from_hand(
-                player, perm, digi_filter, is_optional=True)
+                traits = getattr(p.top_card, 'card_traits', []) or []
+                return any('Reptile' in t or 'Dragonkin' in t for t in traits)
+            def on_selected(target_perm):
+                # Digivolve into Reptile/Dragonkin from hand without paying cost
+                def digi_filter(c):
+                    if not getattr(c, 'is_digimon', False):
+                        return False
+                    traits = getattr(c, 'card_traits', []) or []
+                    return any('Reptile' in t or 'Dragonkin' in t for t in traits)
+                game.effect_digivolve_from_hand(
+                    player, target_perm, digi_filter, cost_override=0, is_optional=True)
+            game.effect_select_own_permanent(
+                player, on_selected, filter_fn=own_filter, is_optional=True)
 
         effect4.set_on_process_callback(process4)
         effects.append(effect4)
@@ -146,9 +136,9 @@ class BT21_093(CardScript):
         # Timing: EffectTiming.SecuritySkill
         # [Security] Delete 1 of your opponent's Digimon with the highest DP.
         effect5 = ICardEffect()
+        effect5.set_timing(EffectTiming.SecuritySkill)
         effect5.set_effect_name("BT21-093 Delete 1 of your opponent's Digimon with the highest DP")
         effect5.set_effect_description("[Security] Delete 1 of your opponent's Digimon with the highest DP.")
-        effect5.is_security_effect = True
         effect5.is_security_effect = True
 
         effect = effect5  # alias for condition closure
@@ -159,16 +149,20 @@ class BT21_093(CardScript):
         effect5.set_can_use_condition(condition5)
 
         def process5(ctx: Dict[str, Any]):
-            """Action: Delete"""
+            """Action: Delete opponent's highest DP Digimon (security)"""
             player = ctx.get('player')
             perm = ctx.get('permanent')
             game = ctx.get('game')
             if not (player and game):
                 return
+            enemy = player.enemy if player else None
+            if not enemy:
+                return
+            dps = [p.dp or 0 for p in enemy.battle_area if p.is_digimon]
+            max_dp = max(dps) if dps else 0
             def target_filter(p):
-                return p.is_digimon
+                return p.is_digimon and (p.dp or 0) >= max_dp
             def on_delete(target_perm):
-                enemy = player.enemy if player else None
                 if enemy:
                     enemy.delete_permanent(target_perm)
             game.effect_select_opponent_permanent(

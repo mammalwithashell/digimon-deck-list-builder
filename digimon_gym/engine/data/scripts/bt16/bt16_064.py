@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -41,6 +42,7 @@ class BT16_064(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [When Digivolving] If this Digimon has a Tamer card with the [SoC] trait in its digivolution cards, delete 1 of your opponent's unsuspended Digimon or Tamers.
         effect2 = ICardEffect()
+        effect2.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect2.set_effect_name("BT16-064 Delete Unsuspended Digimon or Tamer")
         effect2.set_effect_description("[When Digivolving] If this Digimon has a Tamer card with the [SoC] trait in its digivolution cards, delete 1 of your opponent's unsuspended Digimon or Tamers.")
         effect2.is_when_digivolving = True
@@ -76,6 +78,7 @@ class BT16_064(CardScript):
         # Timing: EffectTiming.OnDestroyedAnyone
         # [All Turns] (Once Per Turn) When another Digimon is deleted, you may unsuspend this Digimon.
         effect3 = ICardEffect()
+        effect3.set_timing(EffectTiming.OnDestroyedAnyone)
         effect3.set_effect_name("BT16-064 Unsuspend this Digimon")
         effect3.set_effect_description("[All Turns] (Once Per Turn) When another Digimon is deleted, you may unsuspend this Digimon.")
         effect3.is_optional = True

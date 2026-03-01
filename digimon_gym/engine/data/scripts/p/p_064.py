@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -16,6 +17,7 @@ class P_064(CardScript):
         # Timing: EffectTiming.OnAllyAttack
         # [Your Turn] When you attack with a Digimon that has [Jellymon] in its digivolution cards, you may suspend this Tamer to have that Digimon gain <Jamming> for the turn. (This Digimon can't be deleted in battles against Security Digimon.)
         effect0 = ICardEffect()
+        effect0.set_timing(EffectTiming.OnAllyAttack)
         effect0.set_effect_name("P-064 Your Attacking Digimon gains Jamming")
         effect0.set_effect_description("[Your Turn] When you attack with a Digimon that has [Jellymon] in its digivolution cards, you may suspend this Tamer to have that Digimon gain <Jamming> for the turn. (This Digimon can't be deleted in battles against Security Digimon.)")
         effect0.is_optional = True

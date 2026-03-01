@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -28,6 +29,7 @@ class BT13_044(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [When Digivolving] By trashing the top card of your security stack, 1 of your opponent's Digimon gets -6000 DP until the end of your opponent's turn.
         effect1 = ICardEffect()
+        effect1.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect1.set_effect_name("BT13-044 Trash your 1 security and DP -6000")
         effect1.set_effect_description("[When Digivolving] By trashing the top card of your security stack, 1 of your opponent's Digimon gets -6000 DP until the end of your opponent's turn.")
         effect1.is_optional = True
@@ -68,6 +70,7 @@ class BT13_044(CardScript):
         # Timing: EffectTiming.OnLoseSecurity
         # [All Turns][Once Per Turn] When a card is removed from your security stack, you may play 1 yellow Tamer card from your hand without paying the cost.
         effect2 = ICardEffect()
+        effect2.set_timing(EffectTiming.OnLoseSecurity)
         effect2.set_effect_name("BT13-044 Play 1 yellow Tamer from hand")
         effect2.set_effect_description("[All Turns][Once Per Turn] When a card is removed from your security stack, you may play 1 yellow Tamer card from your hand without paying the cost.")
         effect2.is_optional = True

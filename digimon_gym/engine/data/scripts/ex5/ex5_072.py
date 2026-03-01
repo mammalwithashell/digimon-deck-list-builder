@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -62,6 +63,7 @@ class EX5_072(CardScript):
         # Timing: EffectTiming.OptionSkill
         # [Main] You may play 1 Digimon card with [Fanglongmon] in its name from your hand without paying the play cost.
         effect2 = ICardEffect()
+        effect2.set_timing(EffectTiming.OptionSkill)
         effect2.set_effect_name("EX5-072 Play Card")
         effect2.set_effect_description("[Main] You may play 1 Digimon card with [Fanglongmon] in its name from your hand without paying the play cost.")
 
@@ -94,6 +96,7 @@ class EX5_072(CardScript):
         # Timing: EffectTiming.SecuritySkill
         # [Security] Return 1 card with [Fanglongmon] in its name from your trash to the hand. Then, add this card to the hand.
         effect3 = ICardEffect()
+        effect3.set_timing(EffectTiming.SecuritySkill)
         effect3.set_effect_name("EX5-072 Add To Hand")
         effect3.set_effect_description("[Security] Return 1 card with [Fanglongmon] in its name from your trash to the hand. Then, add this card to the hand.")
         effect3.is_security_effect = True

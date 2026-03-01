@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -16,6 +17,7 @@ class BT22_089(CardScript):
         # Timing: EffectTiming.OnStartMainPhase
         # [Start of Your Main Phase] By returning this Tamer to the bottom of the deck, you may play 1 play cost 4 or higher [Mirei Mikagura] or play cost 4 or higher Tamer card with the [CS] trait from your hand without paying the cost.
         effect0 = ICardEffect()
+        effect0.set_timing(EffectTiming.OnStartMainPhase)
         effect0.set_effect_name("BT22-089 By bottom decking, Play 1 4 cost or higher [Mirei Mikagura] or [CS] tamer from hand")
         effect0.set_effect_description("[Start of Your Main Phase] By returning this Tamer to the bottom of the deck, you may play 1 play cost 4 or higher [Mirei Mikagura] or play cost 4 or higher Tamer card with the [CS] trait from your hand without paying the cost.")
         effect0.is_optional = True
@@ -56,6 +58,7 @@ class BT22_089(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [On Play] By trashing 1 card with the [Holy Beast], [Angel], [Archangel], [Fallen Angel] or [CS] trait from your hand, <Draw 2> (Draw 2 cards from your deck.)
         effect1 = ICardEffect()
+        effect1.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect1.set_effect_name("BT22-089 By trashing 1 [Holy Beast]/[Angel]/[Archangel]/[Fallen Angel]/[CS], Draw 2")
         effect1.set_effect_description("[On Play] By trashing 1 card with the [Holy Beast], [Angel], [Archangel], [Fallen Angel] or [CS] trait from your hand, <Draw 2> (Draw 2 cards from your deck.)")
         effect1.is_optional = True

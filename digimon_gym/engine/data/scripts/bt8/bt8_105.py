@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -16,6 +17,7 @@ class BT8_105(CardScript):
         # Timing: EffectTiming.OptionSkill
         # [Main] Choose any number of your opponent's Digimon whose play costs add up to 15 or less and delete them.
         effect0 = ICardEffect()
+        effect0.set_timing(EffectTiming.OptionSkill)
         effect0.set_effect_name("BT8-105 Delete")
         effect0.set_effect_description("[Main] Choose any number of your opponent's Digimon whose play costs add up to 15 or less and delete them.")
 
@@ -48,6 +50,7 @@ class BT8_105(CardScript):
         # Timing: EffectTiming.SecuritySkill
         # [Security] Delete 1 of your opponent's Digimon with a play cost of 15 or less.
         effect1 = ICardEffect()
+        effect1.set_timing(EffectTiming.SecuritySkill)
         effect1.set_effect_name("BT8-105 Delete")
         effect1.set_effect_description("[Security] Delete 1 of your opponent's Digimon with a play cost of 15 or less.")
         effect1.is_security_effect = True

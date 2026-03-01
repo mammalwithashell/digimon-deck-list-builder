@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -16,6 +17,7 @@ class BT16_084(CardScript):
         # Timing: EffectTiming.OnStartMainPhase
         # [Start of Your Main Phase] You may play 1 [Hawkmon] or [Salamon] from your hand without paying the cost. At the next time your opponent's turn ends, return that Digimon to the hand.
         effect0 = ICardEffect()
+        effect0.set_timing(EffectTiming.OnStartMainPhase)
         effect0.set_effect_name("BT16-084 You may play 1 [Hawkmon] or [Salamon] from your hand.")
         effect0.set_effect_description("[Start of Your Main Phase] You may play 1 [Hawkmon] or [Salamon] from your hand without paying the cost. At the next time your opponent's turn ends, return that Digimon to the hand.")
         effect0.is_optional = True
@@ -48,6 +50,7 @@ class BT16_084(CardScript):
         # Timing: EffectTiming.OnStartMainPhase
         # [End of Opponent's Turn] Return this Digimon to the hand.
         effect1 = ICardEffect()
+        effect1.set_timing(EffectTiming.OnStartMainPhase)
         effect1.set_effect_name("BT16-084 Return this Digimon to the hand")
         effect1.set_effect_description("[End of Opponent's Turn] Return this Digimon to the hand.")
 
@@ -75,6 +78,7 @@ class BT16_084(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [Your Turn] When one of your Digimon digivolves into a red or yellow Digimon, by suspending this Tamer, gain 1 memory. If DNA digivolving, 1 of your opponent's Digimon gets -3000 DP for the turn.
         effect2 = ICardEffect()
+        effect2.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect2.set_effect_name("BT16-084 Gain 1 Memory | If DNA Digivolving give -3000 DP")
         effect2.set_effect_description("[Your Turn] When one of your Digimon digivolves into a red or yellow Digimon, by suspending this Tamer, gain 1 memory. If DNA digivolving, 1 of your opponent's Digimon gets -3000 DP for the turn.")
         effect2.is_optional = True

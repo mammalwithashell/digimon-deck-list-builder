@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -16,6 +17,7 @@ class P_181(CardScript):
         # Timing: EffectTiming.BeforePayCost
         # Cost -1
         effect0 = ICardEffect()
+        effect0.set_timing(EffectTiming.BeforePayCost)
         effect0.set_effect_name("P-181 Reduce Digivolve Cost")
         effect0.set_effect_description("Cost -1")
         effect0.set_max_count_per_turn(1)
@@ -44,6 +46,7 @@ class P_181(CardScript):
         # Timing: EffectTiming.OptionSkill
         # [Main] Add your top security card to the hand. Then, place this card face up as the bottom security card.
         effect1 = ICardEffect()
+        effect1.set_timing(EffectTiming.OptionSkill)
         effect1.set_effect_name("P-181 Add top sec to hand, send this to bottom sec")
         effect1.set_effect_description("[Main] Add your top security card to the hand. Then, place this card face up as the bottom security card.")
 
@@ -80,6 +83,7 @@ class P_181(CardScript):
         # Timing: EffectTiming.SecuritySkill
         # [Security] You may play 1 level 5 or lower [Royal Base] trait Digimon card from your hand without paying the cost.
         effect2 = ICardEffect()
+        effect2.set_timing(EffectTiming.SecuritySkill)
         effect2.set_effect_name("P-181 Play Card")
         effect2.set_effect_description("[Security] You may play 1 level 5 or lower [Royal Base] trait Digimon card from your hand without paying the cost.")
         effect2.is_security_effect = True

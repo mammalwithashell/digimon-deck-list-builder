@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -33,6 +34,7 @@ class BT22_045(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [On Play] By placing 1 Digimon card with [Gammamon] in its name from your hand as this Digimon's bottom digivolution card, it gains <Blocker> and +3000 DP until your opponent's turn ends.
         effect1 = ICardEffect()
+        effect1.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect1.set_effect_name("BT22-045 Tuck gammamon to gain <Blocker> +3000 DP")
         effect1.set_effect_description("[On Play] By placing 1 Digimon card with [Gammamon] in its name from your hand as this Digimon's bottom digivolution card, it gains <Blocker> and +3000 DP until your opponent's turn ends.")
         effect1.is_optional = True
@@ -64,6 +66,7 @@ class BT22_045(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [On Play] By placing 1 Digimon card with [Gammamon] in its name from your hand as this Digimon's bottom digivolution card, it gains <Blocker> and +3000 DP until your opponent's turn ends.
         effect2 = ICardEffect()
+        effect2.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect2.set_effect_name("BT22-045 Tuck gammamon to gain <Blocker> +3000 DP")
         effect2.set_effect_description("[On Play] By placing 1 Digimon card with [Gammamon] in its name from your hand as this Digimon's bottom digivolution card, it gains <Blocker> and +3000 DP until your opponent's turn ends.")
         effect2.is_optional = True

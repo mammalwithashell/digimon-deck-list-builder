@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -28,6 +29,7 @@ class BT22_027(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [On Play] By placing 1 level 5 or lower Digimon card with [Aqua] or [Sea Animal] in any of its traits from your hand as this Digimon's bottom digivolution card, 1 of your opponent's Digimon or Tamers can't suspend until their turn ends.
         effect1 = ICardEffect()
+        effect1.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect1.set_effect_name("BT22-027 Place 1 level 5 or lower [Aqua]/[Sea Animal] digimon in sources, 1 digimon or tamer cant suspend")
         effect1.set_effect_description("[On Play] By placing 1 level 5 or lower Digimon card with [Aqua] or [Sea Animal] in any of its traits from your hand as this Digimon's bottom digivolution card, 1 of your opponent's Digimon or Tamers can't suspend until their turn ends.")
         effect1.is_on_play = True
@@ -45,6 +47,7 @@ class BT22_027(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [When Digivolving] By placing 1 level 5 or lower Digimon card with [Aqua] or [Sea Animal] in any of its traits from your hand as this Digimon's bottom digivolution card, 1 of your opponent's Digimon or Tamers can't suspend until their turn ends.
         effect2 = ICardEffect()
+        effect2.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect2.set_effect_name("BT22-027 Place 1 level 5 or lower [Aqua]/[Sea Animal] digimon in sources, 1 digimon or tamer cant suspend")
         effect2.set_effect_description("[When Digivolving] By placing 1 level 5 or lower Digimon card with [Aqua] or [Sea Animal] in any of its traits from your hand as this Digimon's bottom digivolution card, 1 of your opponent's Digimon or Tamers can't suspend until their turn ends.")
         effect2.is_when_digivolving = True
@@ -62,6 +65,7 @@ class BT22_027(CardScript):
         # Timing: EffectTiming.OnAddDigivolutionCards
         # [All Turns] [Once Per Turn] When effects add to this Digimon's digivolution cards, return 1 of your opponent's level 5 or lower Digimon to the bottom of the deck.
         effect3 = ICardEffect()
+        effect3.set_timing(EffectTiming.OnAddDigivolutionCards)
         effect3.set_effect_name("BT22-027 Bottom deck 1 level 5 or lower digimon")
         effect3.set_effect_description("[All Turns] [Once Per Turn] When effects add to this Digimon's digivolution cards, return 1 of your opponent's level 5 or lower Digimon to the bottom of the deck.")
         effect3.set_max_count_per_turn(1)

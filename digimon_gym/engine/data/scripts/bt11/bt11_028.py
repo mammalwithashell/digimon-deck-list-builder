@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -16,6 +17,7 @@ class BT11_028(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [When Digivolving] Until the end of your opponent's turn, this Digimon gains <Blocker> (When an opponent's Digimon attacks, you may suspend this Digimon to force the opponent to attack it instead) and gets +2000 DP for every 4 cards in your opponent's hand.
         effect0 = ICardEffect()
+        effect0.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect0.set_effect_name("BT11-028 This Digimon gains Blocker and it gets DP+")
         effect0.set_effect_description("[When Digivolving] Until the end of your opponent's turn, this Digimon gains <Blocker> (When an opponent's Digimon attacks, you may suspend this Digimon to force the opponent to attack it instead) and gets +2000 DP for every 4 cards in your opponent's hand.")
         effect0.is_when_digivolving = True
@@ -44,6 +46,7 @@ class BT11_028(CardScript):
         # Timing: EffectTiming.OnAddHand
         # [All Turns][Once Per Turn] When an effect adds cards to your opponent's hand, unsuspend this Digimon.
         effect1 = ICardEffect()
+        effect1.set_timing(EffectTiming.OnAddHand)
         effect1.set_effect_name("BT11-028 Unsuspend this Digimon")
         effect1.set_effect_description("[All Turns][Once Per Turn] When an effect adds cards to your opponent's hand, unsuspend this Digimon.")
         effect1.is_inherited_effect = True

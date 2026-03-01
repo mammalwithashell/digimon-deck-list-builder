@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -16,6 +17,7 @@ class BT19_096(CardScript):
         # Timing: EffectTiming.OptionSkill
         # [Main] You may place 1 [Royal Base] trait Digimon card from your trash face up as your bottom security card. Then, delete up to 8 play cost's total worth of your opponent's Digimon. For each of your face up security cards, add 2 to the maximum play cost you may choose with this effect.
         effect0 = ICardEffect()
+        effect0.set_timing(EffectTiming.OptionSkill)
         effect0.set_effect_name("BT19-096 Place 1 [Royal Base] faceup as bottom security, delete up to 8 play cost total")
         effect0.set_effect_description("[Main] You may place 1 [Royal Base] trait Digimon card from your trash face up as your bottom security card. Then, delete up to 8 play cost's total worth of your opponent's Digimon. For each of your face up security cards, add 2 to the maximum play cost you may choose with this effect.")
 

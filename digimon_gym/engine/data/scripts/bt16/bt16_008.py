@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -41,6 +42,7 @@ class BT16_008(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [On Play] Delete 1 of your opponent's Digimon with 3000 DP or less.
         effect2 = ICardEffect()
+        effect2.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect2.set_effect_name("BT16-008 Delete 1 of your opponent's Digimon with 3000 DP or less.")
         effect2.set_effect_description("[On Play] Delete 1 of your opponent's Digimon with 3000 DP or less.")
         effect2.is_on_play = True
@@ -78,6 +80,7 @@ class BT16_008(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [When Digivolving] Delete 1 of your opponent's Digimon with 3000 DP or less.
         effect3 = ICardEffect()
+        effect3.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect3.set_effect_name("BT16-008 Delete 1 of your opponent's Digimon with 3000 DP or less.")
         effect3.set_effect_description("[When Digivolving] Delete 1 of your opponent's Digimon with 3000 DP or less.")
         effect3.is_when_digivolving = True
@@ -115,6 +118,7 @@ class BT16_008(CardScript):
         # Timing: EffectTiming.OnAllyAttack
         # [When Attacking] [Once Per Turn] Suspend 1 of your opponent's Digimon
         effect4 = ICardEffect()
+        effect4.set_timing(EffectTiming.OnAllyAttack)
         effect4.set_effect_name("BT16-008 Suspend 1 of your opponent's Digimon.")
         effect4.set_effect_description("[When Attacking] [Once Per Turn] Suspend 1 of your opponent's Digimon")
         effect4.is_inherited_effect = True

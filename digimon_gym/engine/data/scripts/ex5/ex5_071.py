@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -39,6 +40,7 @@ class EX5_071(CardScript):
         # Timing: EffectTiming.OptionSkill
         # [Main] Reveal the top 3 cards of your deck. Place 1 card with [Deva]/[Four Sovereigns] trait among them as the bottom digivolution card of 1 of your Digimon or add it to your hand. Return the rest to the top or bottom of the deck.
         effect1 = ICardEffect()
+        effect1.set_timing(EffectTiming.OptionSkill)
         effect1.set_effect_name("EX5-071 Add To Hand, Reveal And Select")
         effect1.set_effect_description("[Main] Reveal the top 3 cards of your deck. Place 1 card with [Deva]/[Four Sovereigns] trait among them as the bottom digivolution card of 1 of your Digimon or add it to your hand. Return the rest to the top or bottom of the deck.")
 

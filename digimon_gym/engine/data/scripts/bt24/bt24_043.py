@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -31,6 +32,7 @@ class BT24_043(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [On Play] Reveal the top 3 cards of your deck. Add 1 Digimon card with the [Shaman] trait or with [Beast], [Animal], or [Sovereign], other than [Sea Animal], in any of its traits and 1 card with [TS] trait among them to the hand. Return the rest to the bottom of the deck.
         effect1 = ICardEffect()
+        effect1.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect1.set_effect_name("BT24-043 Reveal 3 from deck. Add 2. Bottom deck the rest.")
         effect1.set_effect_description("[On Play] Reveal the top 3 cards of your deck. Add 1 Digimon card with the [Shaman] trait or with [Beast], [Animal], or [Sovereign], other than [Sea Animal], in any of its traits and 1 card with [TS] trait among them to the hand. Return the rest to the bottom of the deck.")
         effect1.is_on_play = True
@@ -75,6 +77,7 @@ class BT24_043(CardScript):
         # Timing: EffectTiming.OnAllyAttack
         # [When Attacking] [Once Per Turn] Suspend 1 of your opponent's Digimon.
         effect2 = ICardEffect()
+        effect2.set_timing(EffectTiming.OnAllyAttack)
         effect2.set_effect_name("BT24-043 Suspend 1 opponent's Digimon")
         effect2.set_effect_description("[When Attacking] [Once Per Turn] Suspend 1 of your opponent's Digimon.")
         effect2.is_inherited_effect = True

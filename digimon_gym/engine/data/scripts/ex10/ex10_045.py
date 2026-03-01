@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -70,6 +71,7 @@ class EX10_045(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # Trash Digivolution Cards, Gain Keyword Blocker, Gain Keyword Retaliation
         effect4 = ICardEffect()
+        effect4.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect4.set_effect_name("EX10-045 By trashing 1 source, 1 digimon gains Blocker, Retaliation")
         effect4.set_effect_description("Trash Digivolution Cards, Gain Keyword Blocker, Gain Keyword Retaliation")
         effect4.set_hash_string("OPWDWA_EX10_045")
@@ -106,6 +108,7 @@ class EX10_045(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # Trash Digivolution Cards, Gain Keyword Blocker, Gain Keyword Retaliation
         effect5 = ICardEffect()
+        effect5.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect5.set_effect_name("EX10-045 By trashing 1 source, 1 digimon gains Blocker, Retaliation")
         effect5.set_effect_description("Trash Digivolution Cards, Gain Keyword Blocker, Gain Keyword Retaliation")
         effect5.set_hash_string("OPWDWA_EX10_045")
@@ -142,6 +145,7 @@ class EX10_045(CardScript):
         # Timing: EffectTiming.OnAllyAttack
         # Trash Digivolution Cards, Gain Keyword Blocker, Gain Keyword Retaliation
         effect6 = ICardEffect()
+        effect6.set_timing(EffectTiming.OnAllyAttack)
         effect6.set_effect_name("EX10-045 By trashing 1 source, 1 digimon gains Blocker, Retaliation")
         effect6.set_effect_description("Trash Digivolution Cards, Gain Keyword Blocker, Gain Keyword Retaliation")
         effect6.set_hash_string("OPWDWA_EX10_045")
@@ -191,6 +195,7 @@ class EX10_045(CardScript):
         # Timing: EffectTiming.OnDigivolutionCardDiscarded
         # When effects trash this card from a [Bagra Army] trait Digimon's digivolution cards, <Draw 1>
         effect8 = ICardEffect()
+        effect8.set_timing(EffectTiming.OnDigivolutionCardDiscarded)
         effect8.set_effect_name("EX10-045 <Draw 1>")
         effect8.set_effect_description("When effects trash this card from a [Bagra Army] trait Digimon's digivolution cards, <Draw 1>")
         effect8.is_inherited_effect = True

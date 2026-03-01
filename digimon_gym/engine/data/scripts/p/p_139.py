@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -29,6 +30,7 @@ class P_139(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [On Play] 1 of your opponent's Digimon gets -3000 DP for the turn.
         effect1 = ICardEffect()
+        effect1.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect1.set_effect_name("P-139 DP -3000")
         effect1.set_effect_description("[On Play] 1 of your opponent's Digimon gets -3000 DP for the turn.")
         effect1.is_on_play = True
@@ -62,6 +64,7 @@ class P_139(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [When Digivolving] 1 of your opponent's Digimon gets -3000 DP for the turn.
         effect2 = ICardEffect()
+        effect2.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect2.set_effect_name("P-139 DP -3000")
         effect2.set_effect_description("[When Digivolving] 1 of your opponent's Digimon gets -3000 DP for the turn.")
         effect2.is_when_digivolving = True
@@ -107,6 +110,7 @@ class P_139(CardScript):
         # Timing: EffectTiming.OnDestroyedAnyone
         # [On Deletion] <Recovery +1 (Deck)>
         effect4 = ICardEffect()
+        effect4.set_timing(EffectTiming.OnDestroyedAnyone)
         effect4.set_effect_name("P-139 Recovery +1 (Deck)")
         effect4.set_effect_description("[On Deletion] <Recovery +1 (Deck)>")
         effect4.is_inherited_effect = True

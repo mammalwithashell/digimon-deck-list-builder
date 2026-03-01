@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -16,6 +17,7 @@ class BT15_093(CardScript):
         # Timing: EffectTiming.OptionSkill
         # [Main] 1 of your opponent's Digimon gets -6000 DP for the turn. Then, by trashing the top or bottom card of your security stack, 1 of your opponent's Digimon gets -6000 DP for the turn.
         effect0 = ICardEffect()
+        effect0.set_timing(EffectTiming.OptionSkill)
         effect0.set_effect_name("BT15-093 DP -6000, Destroy Security")
         effect0.set_effect_description("[Main] 1 of your opponent's Digimon gets -6000 DP for the turn. Then, by trashing the top or bottom card of your security stack, 1 of your opponent's Digimon gets -6000 DP for the turn.")
 

@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -54,6 +55,7 @@ class EX10_053(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [On Play] You may place up to 5 differently named Digimon cards with [Gammamon] in their names from your trash as this Digimon's bottom digivolution cards. Then, delete 1 of your opponent's Digimon with as much or less DP as this Digimon.
         effect3 = ICardEffect()
+        effect3.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect3.set_effect_name("EX10-053 Place up to 5 [Gammamon] Digimon from trash to digivolution cards, then delete 1 Digimon")
         effect3.set_effect_description("[On Play] You may place up to 5 differently named Digimon cards with [Gammamon] in their names from your trash as this Digimon's bottom digivolution cards. Then, delete 1 of your opponent's Digimon with as much or less DP as this Digimon.")
         effect3.is_on_play = True
@@ -91,6 +93,7 @@ class EX10_053(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [When Digivolving] You may place up to 5 differently named Digimon cards with [Gammamon] in their names from your trash as this Digimon's bottom digivolution cards. Then, delete 1 of your opponent's Digimon with as much or less DP as this Digimon.
         effect4 = ICardEffect()
+        effect4.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect4.set_effect_name("EX10-053 Place up to 5 [Gammamon] Digimon from trash to digivolution cards, then delete 1 Digimon")
         effect4.set_effect_description("[When Digivolving] You may place up to 5 differently named Digimon cards with [Gammamon] in their names from your trash as this Digimon's bottom digivolution cards. Then, delete 1 of your opponent's Digimon with as much or less DP as this Digimon.")
         effect4.is_when_digivolving = True
@@ -128,6 +131,7 @@ class EX10_053(CardScript):
         # Timing: EffectTiming.OnEndTurn
         # [End of Your Turn] [Once Per Turn] If this Digimon has 5 or more digivolution cards, it may attack without suspending.
         effect5 = ICardEffect()
+        effect5.set_timing(EffectTiming.OnEndTurn)
         effect5.set_effect_name("EX10-053 Attack without suspending")
         effect5.set_effect_description("[End of Your Turn] [Once Per Turn] If this Digimon has 5 or more digivolution cards, it may attack without suspending.")
         effect5.set_max_count_per_turn(1)
@@ -160,6 +164,7 @@ class EX10_053(CardScript):
         # Timing: EffectTiming.OnDestroyedAnyone
         # [Your Turn] [Once Per Turn] When any of your opponent's Digimon are deleted, gain 1 memory.
         effect6 = ICardEffect()
+        effect6.set_timing(EffectTiming.OnDestroyedAnyone)
         effect6.set_effect_name("EX10-053 Memory +1")
         effect6.set_effect_description("[Your Turn] [Once Per Turn] When any of your opponent's Digimon are deleted, gain 1 memory.")
         effect6.is_inherited_effect = True

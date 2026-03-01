@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -34,6 +35,7 @@ class BT24_041(CardScript):
         # Timing: EffectTiming.BeforePayCost
         # When this card would be played, if you have an [Iliad] trait Digimon or Tamer, reduce the play cost by 5.
         effect1 = ICardEffect()
+        effect1.set_timing(EffectTiming.BeforePayCost)
         effect1.set_effect_name("BT24-041 Reduce play cost (5)")
         effect1.set_effect_description("When this card would be played, if you have an [Iliad] trait Digimon or Tamer, reduce the play cost by 5.")
 
@@ -80,6 +82,7 @@ class BT24_041(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # Play Card, De Digivolve
         effect3 = ICardEffect()
+        effect3.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect3.set_effect_name("BT24-041 Play Card, De Digivolve")
         effect3.set_effect_description("Play Card, De Digivolve")
         effect3.is_on_play = True
@@ -126,6 +129,7 @@ class BT24_041(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # Play Card, De Digivolve
         effect4 = ICardEffect()
+        effect4.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect4.set_effect_name("BT24-041 Play Card, De Digivolve")
         effect4.set_effect_description("Play Card, De Digivolve")
         effect4.is_when_digivolving = True
@@ -172,6 +176,7 @@ class BT24_041(CardScript):
         # Timing: EffectTiming.OnDestroyedAnyone
         # Play Card, De Digivolve
         effect5 = ICardEffect()
+        effect5.set_timing(EffectTiming.OnDestroyedAnyone)
         effect5.set_effect_name("BT24-041 Play Card, De Digivolve")
         effect5.set_effect_description("Play Card, De Digivolve")
         effect5.is_on_deletion = True

@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -16,6 +17,7 @@ class P_102(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [On Play] By deleting 1 of your Digimon, delete 2 of your opponent's Digimon with 5000 DP or less.
         effect0 = ICardEffect()
+        effect0.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect0.set_effect_name("P-102 Delete your 1 Digimon to delete opponent's Digimons with 5000 DP or less")
         effect0.set_effect_description("[On Play] By deleting 1 of your Digimon, delete 2 of your opponent's Digimon with 5000 DP or less.")
         effect0.is_optional = True
@@ -54,6 +56,7 @@ class P_102(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [When Digivolving] By deleting 1 of your Digimon, delete 2 of your opponent's Digimon with 5000 DP or less.
         effect1 = ICardEffect()
+        effect1.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect1.set_effect_name("P-102 Delete your 1 Digimon to delete opponent's Digimons with 5000 DP or less")
         effect1.set_effect_description("[When Digivolving] By deleting 1 of your Digimon, delete 2 of your opponent's Digimon with 5000 DP or less.")
         effect1.is_optional = True
@@ -92,6 +95,7 @@ class P_102(CardScript):
         # Timing: EffectTiming.OnDestroyedAnyone
         # [On Deletion] You may play 1 purple or red level 3 Digimon card from your trash without paying the cost.
         effect2 = ICardEffect()
+        effect2.set_timing(EffectTiming.OnDestroyedAnyone)
         effect2.set_effect_name("P-102 Play 1 level 3 from trash")
         effect2.set_effect_description("[On Deletion] You may play 1 purple or red level 3 Digimon card from your trash without paying the cost.")
         effect2.is_optional = True
@@ -126,6 +130,7 @@ class P_102(CardScript):
         # Timing: EffectTiming.OnDestroyedAnyone
         # [On Deletion] You may play 1 red or purple level 3 Digimon card from your trash without paying the cost.
         effect3 = ICardEffect()
+        effect3.set_timing(EffectTiming.OnDestroyedAnyone)
         effect3.set_effect_name("P-102 Play 1 level 3 from trash")
         effect3.set_effect_description("[On Deletion] You may play 1 red or purple level 3 Digimon card from your trash without paying the cost.")
         effect3.is_inherited_effect = True

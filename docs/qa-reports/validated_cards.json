@@ -1,0 +1,503 @@
+{
+  "version": 5,
+  "last_updated": "2026-03-01",
+  "cards": {
+    "BT1-090": {
+      "card_name": "Gravity Crush",
+      "validated_date": "2026-03-01",
+      "report": "2026-03-01-medusa-hudie-coverage.md",
+      "status": "PARTIAL",
+      "notes": "New script. Gain 2 memory works; end-of-turn -2 cannot fire (Options trash after resolve)."
+    },
+    "BT3-103": {
+      "card_name": "Hidden Potential Discovered!",
+      "validated_date": "2026-03-01",
+      "report": "2026-03-01-medusa-hudie-coverage.md",
+      "status": "PARTIAL",
+      "notes": "New script. Conditional cost reduction stubbed (cost_reduction=5); security add-to-hand works."
+    },
+    "BT4-104": {
+      "card_name": "Blinding Ray",
+      "validated_date": "2026-03-01",
+      "report": "2026-03-01-medusa-hudie-coverage.md",
+      "status": "PASS",
+      "notes": "New script. Trash security + gain 2 memory fully implemented."
+    },
+    "BT5-008": {
+      "card_name": "Gaossmon",
+      "validated_date": "2026-03-01",
+      "report": "2026-03-01-medusa-hudie-coverage.md",
+      "status": "PARTIAL",
+      "notes": "New script. DP modifier for other Gaossmon works; opponent cost block not modelable."
+    },
+    "BT8-084": {
+      "card_name": "Kimeramon",
+      "validated_date": "2026-03-01",
+      "report": "2026-03-01-partial-fixes.md",
+      "status": "PASS",
+      "notes": "Process callback added: Lv.5- Digimon from trash to bottom evo card. Dynamic DP per color."
+    },
+    "BT8-097": {
+      "card_name": "Crimson Blaze",
+      "validated_date": "2026-03-01",
+      "report": "2026-03-01-partial-fixes.md",
+      "status": "PASS",
+      "notes": "Dynamic cost reduction (count opp Digimon). Batch delete all <=6000 DP. Play restriction."
+    },
+    "BT10-042": {
+      "card_name": "Venusmon",
+      "validated_date": "2026-03-01",
+      "report": "2026-03-01-partial-fixes.md",
+      "status": "PASS",
+      "notes": "Process callback added: Security Attack -1 on all opponent Digimon."
+    },
+    "BT16-025": {
+      "card_name": "Paildramon",
+      "validated_date": "2026-02-28",
+      "report": "2026-02-28-retest-medusa-hudie.md",
+      "status": "PASS",
+      "notes": "Suspend ALL opponents verified. WhenDigivolving callback verified."
+    },
+    "BT16-077": {
+      "card_name": "Dinobeemon",
+      "validated_date": "2026-03-01",
+      "report": "2026-03-01-partial-fixes.md",
+      "status": "PASS",
+      "notes": "Play source changed from hand to trash. Rush grant via selection."
+    },
+    "BT16-082": {
+      "card_name": "Ukkomon",
+      "validated_date": "2026-02-28",
+      "report": "2026-02-28-retest-medusa-hudie.md",
+      "status": "PASS",
+      "notes": "Reveal logic rewritten and verified."
+    },
+    "BT18-087": {
+      "card_name": "Owen Dreadnought",
+      "validated_date": "2026-02-28",
+      "report": "2026-02-28-retest-medusa-hudie.md",
+      "status": "PASS",
+      "notes": "set_memory_3 fixed and verified. Security effect verified."
+    },
+    "BT20-102": {
+      "card_name": "Omnimon (X Antibody)",
+      "validated_date": "2026-03-01",
+      "report": "2026-03-01-partial-fixes.md",
+      "status": "PASS",
+      "notes": "Piercing added. Board wipe rewritten (keep self+1 opp). Bounce to deck bottom."
+    },
+    "BT21-001": {
+      "card_name": "Gigimon",
+      "validated_date": "2026-02-28",
+      "report": "2026-02-28-medusa.md",
+      "status": "PASS",
+      "notes": ""
+    },
+    "BT21-008": {
+      "card_name": "Elizamon",
+      "validated_date": "2026-02-28",
+      "report": "2026-02-28-retest-medusa-hudie.md",
+      "status": "PASS",
+      "notes": "On Play reveal fixed and verified."
+    },
+    "BT21-017": {
+      "card_name": "Dimetromon",
+      "validated_date": "2026-02-28",
+      "report": "2026-02-28-medusa.md",
+      "status": "PASS",
+      "notes": "WhenDigivolving play Owen verified. Evo cost verified."
+    },
+    "BT21-025": {
+      "card_name": "Lamiamon",
+      "validated_date": "2026-02-28",
+      "report": "2026-02-28-medusa.md",
+      "status": "PASS",
+      "notes": "Evo cost and inherited effects verified."
+    },
+    "BT21-029": {
+      "card_name": "Medusamon",
+      "validated_date": "2026-02-28",
+      "report": "2026-02-28-medusa.md",
+      "status": "PARTIAL",
+      "notes": "Token effects (On Deletion, On Loss Security) are engine stubs. Core digivolve verified."
+    },
+    "BT21-072": {
+      "card_name": "Arresterdramon: Superior Mode",
+      "validated_date": "2026-03-01",
+      "report": "2026-03-01-partial-fixes.md",
+      "status": "PASS",
+      "notes": "Piercing added. CAN_ATTACK_UNSUSPENDED modifier. Dynamic DP per opponent Digimon count."
+    },
+    "BT21-081": {
+      "card_name": "Owen Dreadnought",
+      "validated_date": "2026-02-28",
+      "report": "2026-02-28-medusa-vs-hudie.md",
+      "status": "PASS",
+      "notes": "End-of-Turn targeting fixed. Start-of-Main +1 memory verified. Low: displays piercing keyword (cosmetic WONTFIX)."
+    },
+    "BT21-093": {
+      "card_name": "Raging Serpentine",
+      "validated_date": "2026-03-01",
+      "report": "2026-03-01-partial-fixes.md",
+      "status": "PASS",
+      "notes": "Security<=3 check added. Highest-DP filter. Delay rewritten for own Reptile/Dragonkin digivolve."
+    },
+    "BT22-005": {
+      "card_name": "Tsumemon",
+      "validated_date": "2026-02-28",
+      "report": "2026-02-28-cs-hudiemon.md",
+      "status": "PASS",
+      "notes": ""
+    },
+    "BT22-043": {
+      "card_name": "Terriermon",
+      "validated_date": "2026-02-28",
+      "report": "2026-02-28-cs-hudiemon.md",
+      "status": "PASS",
+      "notes": "Play cost and On Play CS tamer play verified."
+    },
+    "BT22-044": {
+      "card_name": "Palmon",
+      "validated_date": "2026-02-28",
+      "report": "2026-02-28-cs-hudiemon.md",
+      "status": "PASS",
+      "notes": "Inherited memory gain verified."
+    },
+    "BT22-089": {
+      "card_name": "Mirei Mikagura",
+      "validated_date": "2026-02-28",
+      "report": "2026-02-28-retest-medusa-hudie.md",
+      "status": "PASS",
+      "notes": "Timing bug fixed systemically. Security effect verified."
+    },
+    "BT22-094": {
+      "card_name": "Yuugo Kamishiro",
+      "validated_date": "2026-03-01",
+      "report": "2026-03-01-partial-fixes.md",
+      "status": "PASS",
+      "notes": "Spurious trash pop removed. CS trait filter added. Self-removal cost implemented."
+    },
+    "BT22-099": {
+      "card_name": "Kuremi Detective Agency",
+      "validated_date": "2026-02-28",
+      "report": "2026-02-28-cs-hudiemon.md",
+      "status": "PARTIAL",
+      "notes": "Action descriptions during SelectReveal are wrong (cosmetic, WONTFIX)."
+    },
+    "BT22-100": {
+      "card_name": "Cyberspace EDEN",
+      "validated_date": "2026-03-01",
+      "report": "2026-03-01-partial-fixes.md",
+      "status": "PASS",
+      "notes": "CS trait filter added to DP modifier; security play filter fixed to level<=5."
+    },
+    "BT23-002": {
+      "card_name": "Yokomon",
+      "validated_date": "2026-03-01",
+      "report": "2026-03-01-partial-fixes.md",
+      "status": "PASS",
+      "notes": "CS trait check added to inherited WhenAttacking condition."
+    },
+    "BT23-005": {
+      "card_name": "Elizamon",
+      "validated_date": "2026-02-28",
+      "report": "2026-02-28-retest-medusa-hudie.md",
+      "status": "PASS",
+      "notes": "Evo cost reduction (-1) verified. Inherited DP modifier verified."
+    },
+    "BT23-017": {
+      "card_name": "Betamon",
+      "validated_date": "2026-03-01",
+      "report": "2026-03-01-partial-fixes.md",
+      "status": "PASS",
+      "notes": "On Play rewritten: trash ANY hand card, recover CS non-Digi-Egg from trash. QA verified."
+    },
+    "BT23-020": {
+      "card_name": "Seadramon",
+      "validated_date": "2026-02-28",
+      "report": "2026-02-28-cs-hudiemon.md",
+      "status": "PASS",
+      "notes": "Static analysis: clean. Alliance keyword registered."
+    },
+    "BT23-027": {
+      "card_name": "Angemon",
+      "validated_date": "2026-02-28",
+      "report": "2026-02-28-medusa-vs-hudie.md",
+      "status": "PASS",
+      "notes": "On Play draw + DNA digivolve into Shakkoumon verified. Uses effect_dna_digivolve_from_hand. Barrier keyword verified."
+    },
+    "BT23-032": {
+      "card_name": "Shakkoumon",
+      "validated_date": "2026-02-28",
+      "report": "2026-02-28-medusa-vs-hudie.md",
+      "status": "PASS",
+      "notes": "DNA digivolve requires 2 Digimon (verified). WhenDigivolving fires only on digivolve. Force attack grants modifier with expiry, restricts actions. De-digivolve on DNA verified."
+    },
+    "BT23-037": {
+      "card_name": "Tentomon",
+      "validated_date": "2026-03-01",
+      "report": "2026-03-01-partial-fixes.md",
+      "status": "PASS",
+      "notes": "CS trait scope added to cost reduction. Hash collision fixed. Harmful effect3 removed."
+    },
+    "BT23-040": {
+      "card_name": "Wormmon",
+      "validated_date": "2026-03-01",
+      "report": "2026-03-01-partial-fixes.md",
+      "status": "PASS",
+      "notes": "Erika placement implemented. Hudiemon name filter. cost_reduction=2. DP scoped to Hudie."
+    },
+    "BT23-041": {
+      "card_name": "Kabuterimon",
+      "validated_date": "2026-03-01",
+      "report": "2026-03-01-partial-fixes.md",
+      "status": "PASS",
+      "notes": "DP buff moved into on_grant callback to target selected ally."
+    },
+    "BT23-048": {
+      "card_name": "Gotsumon",
+      "validated_date": "2026-02-28",
+      "report": "2026-02-28-medusa-vs-hudie.md",
+      "status": "PASS",
+      "notes": "Trait-based evo cost 0 onto CS Lv.2 verified. 2-pass reveal logic correct by code analysis. Inherited WhenAttacking play verified."
+    },
+    "BT23-050": {
+      "card_name": "Ankylomon",
+      "validated_date": "2026-02-28",
+      "report": "2026-02-28-medusa-vs-hudie.md",
+      "status": "PASS",
+      "notes": "Blocker verified. DNA digivolve uses effect_dna_digivolve_from_hand (requires 2 Digimon). On Play DP reduction verified."
+    },
+    "BT23-051": {
+      "card_name": "Golemon",
+      "validated_date": "2026-03-01",
+      "report": "2026-03-01-partial-fixes.md",
+      "status": "PASS",
+      "notes": "cant_attack_digimon restriction added. Engine check added to game.py action mask."
+    },
+    "BT23-059": {
+      "card_name": "Justimon: Blitz Arm",
+      "validated_date": "2026-03-01",
+      "report": "2026-03-01-partial-fixes.md",
+      "status": "PASS",
+      "notes": "Option trash as cost before delete. Lowest play cost filter. Unique hash strings. QA verified."
+    },
+    "BT23-081": {
+      "card_name": "Chitose Imai",
+      "validated_date": "2026-02-28",
+      "report": "2026-02-28-medusa-vs-hudie.md",
+      "status": "PASS",
+      "notes": "Free CS play verified. OnTapped trait filter fixed — triggers only for Hudie Digimon. Suspends self as cost. Security play verified."
+    },
+    "BT23-084": {
+      "card_name": "Erika Mishima",
+      "validated_date": "2026-03-01",
+      "report": "2026-03-01-partial-fixes.md",
+      "status": "PASS",
+      "notes": "Rewritten: suspend self-tamer, bounce own Hudie, play Lv.3 CS from hand. +1 memory added."
+    },
+    "BT23-085": {
+      "card_name": "Ryuji Mishima",
+      "validated_date": "2026-03-01",
+      "report": "2026-03-01-partial-fixes.md",
+      "status": "PASS",
+      "notes": "Hudie trait filter added to keyword grant. Self-suspend fixed. CS Option play added."
+    },
+    "BT23-090": {
+      "card_name": "Keisuke Amasawa",
+      "validated_date": "2026-02-28",
+      "report": "2026-02-28-retest-medusa-hudie.md",
+      "status": "PASS",
+      "notes": "set_memory_3 fixed. End-of-turn targeting fixed. DP modifier and security play verified."
+    },
+    "BT23-091": {
+      "card_name": "Wolkenapalm",
+      "validated_date": "2026-03-01",
+      "report": "2026-03-01-partial-fixes.md",
+      "status": "PASS",
+      "notes": "Lowest-DP filter added to main+security delete. Delay rewritten to delete lowest DP. QA verified."
+    },
+    "BT23-092": {
+      "card_name": "Ice Archery",
+      "validated_date": "2026-03-01",
+      "report": "2026-03-01-partial-fixes.md",
+      "status": "PASS",
+      "notes": "Tamer selection added as second step. Delay rewritten for cant-suspend with CS check."
+    },
+    "BT23-095": {
+      "card_name": "Crescent Leaf",
+      "validated_date": "2026-03-01",
+      "report": "2026-03-01-partial-fixes.md",
+      "status": "PASS",
+      "notes": "Removed duplicate is_security_effect flag."
+    },
+    "BT23-096": {
+      "card_name": "Comet Hammer",
+      "validated_date": "2026-03-01",
+      "report": "2026-03-01-partial-fixes.md",
+      "status": "PASS",
+      "notes": "Removed duplicate is_security_effect flag."
+    },
+    "BT23-100": {
+      "card_name": "Hudie Net Cafe",
+      "validated_date": "2026-03-01",
+      "report": "2026-03-01-partial-fixes.md",
+      "status": "PASS",
+      "notes": "Delay filter fixed (CS Tamer). Security filter fixed (CS+Lv.3). QA verified."
+    },
+    "BT23-101": {
+      "card_name": "Hudiemon",
+      "validated_date": "2026-02-28",
+      "report": "2026-02-28-medusa-vs-hudie.md",
+      "status": "PASS",
+      "notes": "Trait-based evo cost 4 onto CS Lv.3 verified. WhenDigivolving CS play+DP reduction fixed. Alliance keyword verified."
+    },
+    "BT24-001": {
+      "card_name": "Gigimon",
+      "validated_date": "2026-03-01",
+      "report": "2026-03-01-partial-fixes.md",
+      "status": "PASS",
+      "notes": "Removed is_my_turn guard from OnLoseSecurity condition."
+    },
+    "BT24-008": {
+      "card_name": "Elizamon",
+      "validated_date": "2026-02-28",
+      "report": "2026-02-28-retest-medusa-hudie.md",
+      "status": "PASS",
+      "notes": "Trait filter fixed and verified. Draw 2 verified. Inherited OnLoseSecurity verified."
+    },
+    "BT24-011": {
+      "card_name": "Cyclonemon",
+      "validated_date": "2026-02-28",
+      "report": "2026-02-28-retest-medusa-hudie.md",
+      "status": "PASS",
+      "notes": "Rush, Raid keywords verified. Security check mechanics verified."
+    },
+    "BT24-012": {
+      "card_name": "Dimetromon",
+      "validated_date": "2026-02-28",
+      "report": "2026-02-28-retest-medusa-hudie.md",
+      "status": "PASS",
+      "notes": "Protection callback added and verified. Blocker verified. WhenRemoveField verified."
+    },
+    "BT24-016": {
+      "card_name": "Lamiamon",
+      "validated_date": "2026-02-28",
+      "report": "2026-02-28-medusa-vs-hudie.md",
+      "status": "PASS",
+      "notes": "When Attacking and WhenDigivolving conditions require Reptile/Dragonkin companion (verified by code inspection). Evo cost verified."
+    },
+    "BT24-017": {
+      "card_name": "Medusamon",
+      "validated_date": "2026-02-28",
+      "report": "2026-02-28-retest-medusa-hudie.md",
+      "status": "PARTIAL",
+      "notes": "DP scaling fixed and verified. Raid and Progress verified. Token play is engine stub."
+    },
+    "BT24-018": {
+      "card_name": "Styracomon",
+      "validated_date": "2026-02-28",
+      "report": "2026-02-28-retest-medusa-hudie.md",
+      "status": "PARTIAL",
+      "notes": "Alt digivolve condition fixed and verified. Armor Purge not fully implemented."
+    },
+    "BT24-082": {
+      "card_name": "Owen Dreadnought",
+      "validated_date": "2026-02-28",
+      "report": "2026-02-28-retest-medusa-hudie.md",
+      "status": "PASS",
+      "notes": "Timing bug fixed systemically."
+    },
+    "BT24-089": {
+      "card_name": "Unique Emblem",
+      "validated_date": "2026-02-28",
+      "report": "2026-02-28-retest-medusa-hudie.md",
+      "status": "PASS",
+      "notes": "Play Elizamon/Owen effect and Delay verified."
+    },
+    "EX1-068": {
+      "card_name": "Ice Wall!",
+      "validated_date": "2026-03-01",
+      "report": "2026-03-01-medusa-hudie-coverage.md",
+      "status": "PARTIAL",
+      "notes": "New script. Security gain 2 memory works. Main effect (grant WhenAttacking memory loss) descriptive-tagged."
+    },
+    "EX1-071": {
+      "card_name": "Win Rate: 60%!",
+      "validated_date": "2026-03-01",
+      "report": "2026-03-01-medusa-hudie-coverage.md",
+      "status": "PARTIAL",
+      "notes": "New script. Conditional cost reduction stubbed (cost_reduction=4). Security add-to-hand works."
+    },
+    "EX10-010": {
+      "card_name": "BlackWarGreymon",
+      "validated_date": "2026-03-01",
+      "report": "2026-03-01-partial-fixes.md",
+      "status": "PASS",
+      "notes": "play_cost<=7 filter added. Tamer targets added. Duplicate effects merged with unique hashes."
+    },
+    "EX11-008": {
+      "card_name": "Elizamon",
+      "validated_date": "2026-03-01",
+      "report": "2026-03-01-partial-fixes.md",
+      "status": "PASS",
+      "notes": "DP +3000 moved into on_grant callback. Reptile/Dragonkin trait filter added on Raid grant."
+    },
+    "EX11-012": {
+      "card_name": "Medusamon",
+      "validated_date": "2026-03-01",
+      "report": "2026-03-01-medusa-hudie-coverage.md",
+      "status": "PARTIAL",
+      "notes": "Static analysis only. Rush/Progress keywords present. Token play is engine stub. WhenDigivolving delete+return logic present but not gameplay verified."
+    },
+    "EX11-054": {
+      "card_name": "Owen Dreadnought",
+      "validated_date": "2026-03-01",
+      "report": "2026-03-01-partial-fixes.md",
+      "status": "PASS",
+      "notes": "Fixed self-suspend (targets own permanent instead of opponent)."
+    },
+    "LM-027": {
+      "card_name": "Red Scramble",
+      "validated_date": "2026-02-28",
+      "report": "2026-02-28-retest-medusa-hudie.md",
+      "status": "PASS",
+      "notes": "Digivolve with cost -3 and Delay verified."
+    },
+    "P-035": {
+      "card_name": "Red Memory Boost!",
+      "validated_date": "2026-02-28",
+      "report": "2026-02-28-retest-medusa-hudie.md",
+      "status": "PASS",
+      "notes": "Main effect and Delay activation fixed and verified."
+    },
+    "P-103": {
+      "card_name": "Offense Training",
+      "validated_date": "2026-02-28",
+      "report": "2026-02-28-retest-medusa-hudie.md",
+      "status": "PASS",
+      "notes": "Reveal 2 + Delay verified."
+    },
+    "P-189": {
+      "card_name": "Dimetromon",
+      "validated_date": "2026-02-28",
+      "report": "2026-02-28-medusa-vs-hudie.md",
+      "status": "PASS",
+      "notes": "Evo cost and security effect registered. Progress keyword blocks security effects during attack verified in matchup."
+    },
+    "P-225": {
+      "card_name": "DigiLab",
+      "validated_date": "2026-03-01",
+      "report": "2026-03-01-partial-fixes.md",
+      "status": "PASS",
+      "notes": "Fixed Delay condition; process3 targets own CS Lv.4+ Digimon; security effect added."
+    },
+    "ST9-05": {
+      "card_name": "Paildramon",
+      "validated_date": "2026-03-01",
+      "report": "2026-03-01-medusa-hudie-coverage.md",
+      "status": "PASS",
+      "notes": "New script. DNA WhenDigivolving return <=6000 DP to deck bottom. Once/turn unsuspend. Fully implemented."
+    }
+  }
+}

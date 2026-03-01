@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -16,6 +17,7 @@ class P_089(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [When Digivolving] You may trash up to 3 blue cards from your hand. For each card trashed by this effect, you may trash 1 card under 1 of your opponent's Digimon or Tamers. Then, 1 of your opponent's Digimon or Tamers without cards under it can't suspend until the end of your opponent's turn.
         effect0 = ICardEffect()
+        effect0.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect0.set_effect_name("P-089 Trash cards from hand to trash digivolution cards, and opponent's 1 Digimon or Tamer can't suspend")
         effect0.set_effect_description("[When Digivolving] You may trash up to 3 blue cards from your hand. For each card trashed by this effect, you may trash 1 card under 1 of your opponent's Digimon or Tamers. Then, 1 of your opponent's Digimon or Tamers without cards under it can't suspend until the end of your opponent's turn.")
         effect0.is_when_digivolving = True
@@ -62,6 +64,7 @@ class P_089(CardScript):
         # Timing: EffectTiming.OnAllyAttack
         # [Opponent's Turn] [Once Per Turn] When an opponent's Digimon attacks, end that attack by returning 3 cards with [Jellymon] in their text from your trash to the bottom of your deck.
         effect1 = ICardEffect()
+        effect1.set_timing(EffectTiming.OnAllyAttack)
         effect1.set_effect_name("P-089 Return cards from trash to the bottom of deck to end the attack")
         effect1.set_effect_description("[Opponent's Turn] [Once Per Turn] When an opponent's Digimon attacks, end that attack by returning 3 cards with [Jellymon] in their text from your trash to the bottom of your deck.")
         effect1.is_optional = True

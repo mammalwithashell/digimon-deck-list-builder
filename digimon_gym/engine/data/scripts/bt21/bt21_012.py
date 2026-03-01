@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -16,6 +17,7 @@ class BT21_012(CardScript):
         # Timing: EffectTiming.OnDeclaration
         # Suspend, Play Card
         effect0 = ICardEffect()
+        effect0.set_timing(EffectTiming.OnDeclaration)
         effect0.set_effect_name("BT21-012 Suspend this digimon, play 1 red tamer with inherit effects")
         effect0.set_effect_description("Suspend, Play Card")
         effect0.is_optional = True

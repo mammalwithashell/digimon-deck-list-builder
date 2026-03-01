@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -79,6 +80,7 @@ class BT22_015(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [On Play] Delete 1 of your opponent's Digimon with the lowest DP.
         effect5 = ICardEffect()
+        effect5.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect5.set_effect_name("BT22-015 Delete 1 Digimon")
         effect5.set_effect_description("[On Play] Delete 1 of your opponent's Digimon with the lowest DP.")
         effect5.is_on_play = True
@@ -114,6 +116,7 @@ class BT22_015(CardScript):
         # Timing: EffectTiming.OnAllyAttack
         # [When Attacking] Delete 1 of your opponent's Digimon with the lowest DP.
         effect6 = ICardEffect()
+        effect6.set_timing(EffectTiming.OnAllyAttack)
         effect6.set_effect_name("BT22-015 Delete 1 Digimon")
         effect6.set_effect_description("[When Attacking] Delete 1 of your opponent's Digimon with the lowest DP.")
         effect6.is_on_attack = True
@@ -149,6 +152,7 @@ class BT22_015(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [When Digivolving] For every 2 same-level cards this Digimon's stack has, return 1 of your opponent's Digimon to the bottom of the deck. Then, this Digimon may attack.
         effect7 = ICardEffect()
+        effect7.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect7.set_effect_name("BT22-015 Return 1 digimon, then attack")
         effect7.set_effect_description("[When Digivolving] For every 2 same-level cards this Digimon's stack has, return 1 of your opponent's Digimon to the bottom of the deck. Then, this Digimon may attack.")
         effect7.is_when_digivolving = True

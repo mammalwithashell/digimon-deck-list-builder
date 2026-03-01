@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -16,6 +17,7 @@ class BT14_079(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [When Digivolving] You may play 1 level 3 or lower card with the [Dark Animal] or [SoC] trait from your trash without paying the cost. If [Eiji Nagasumi] is in this Digimon's digivolution cards, add 1 to the level this effect may choose.
         effect0 = ICardEffect()
+        effect0.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect0.set_effect_name("BT14-079 Play 1 Digimon from trash")
         effect0.set_effect_description("[When Digivolving] You may play 1 level 3 or lower card with the [Dark Animal] or [SoC] trait from your trash without paying the cost. If [Eiji Nagasumi] is in this Digimon's digivolution cards, add 1 to the level this effect may choose.")
         effect0.is_optional = True
@@ -54,6 +56,7 @@ class BT14_079(CardScript):
         # Timing: EffectTiming.OnAllyAttack
         # [When Attacking] By trashing 1 card in your hand, gain 1 memory.
         effect1 = ICardEffect()
+        effect1.set_timing(EffectTiming.OnAllyAttack)
         effect1.set_effect_name("BT14-079 Trash 1 card from hand to gain Memory +1")
         effect1.set_effect_description("[When Attacking] By trashing 1 card in your hand, gain 1 memory.")
         effect1.is_optional = True
@@ -92,6 +95,7 @@ class BT14_079(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [Your Turn][Once Per Turn] When you play a card with the [Dark Animal] or [SoC] trait, you may unsuspend this Digimon.
         effect2 = ICardEffect()
+        effect2.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect2.set_effect_name("BT14-079 Unsuspend this Digimon")
         effect2.set_effect_description("[Your Turn][Once Per Turn] When you play a card with the [Dark Animal] or [SoC] trait, you may unsuspend this Digimon.")
         effect2.is_inherited_effect = True

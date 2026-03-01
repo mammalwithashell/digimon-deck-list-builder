@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -29,6 +30,7 @@ class BT16_007(CardScript):
         # Timing: EffectTiming.OnAllyAttack
         # [Your Turn] [Once Per Turn] Suspend 1 of your opponent's Digimon.
         effect1 = ICardEffect()
+        effect1.set_timing(EffectTiming.OnAllyAttack)
         effect1.set_effect_name("BT16-007 Suspend 1 of your opponent's Digimon")
         effect1.set_effect_description("[Your Turn] [Once Per Turn] Suspend 1 of your opponent's Digimon.")
         effect1.is_inherited_effect = True

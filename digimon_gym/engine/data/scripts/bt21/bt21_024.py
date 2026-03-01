@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -16,6 +17,7 @@ class BT21_024(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # Add To Security, Destroy Security
         effect0 = ICardEffect()
+        effect0.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect0.set_effect_name("BT21-024 Add To Security, Destroy Security")
         effect0.set_effect_description("Add To Security, Destroy Security")
         effect0.is_on_play = True
@@ -51,6 +53,7 @@ class BT21_024(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # Add To Security, Destroy Security
         effect1 = ICardEffect()
+        effect1.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect1.set_effect_name("BT21-024 Add To Security, Destroy Security")
         effect1.set_effect_description("Add To Security, Destroy Security")
         effect1.is_when_digivolving = True

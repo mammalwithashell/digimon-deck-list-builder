@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -16,6 +17,7 @@ class BT14_058(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [On Play] By placing 1 [Satsuki Tamahime] from your hand as this Digimon's bottom digivolution card, 1 of your Digimon gains <Rush> for the turn.
         effect0 = ICardEffect()
+        effect0.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect0.set_effect_name("BT14-058 Place 1 card to digivolution cards and your 1 Digimon gains Rush")
         effect0.set_effect_description("[On Play] By placing 1 [Satsuki Tamahime] from your hand as this Digimon's bottom digivolution card, 1 of your Digimon gains <Rush> for the turn.")
         effect0.is_optional = True
@@ -51,6 +53,7 @@ class BT14_058(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [When Digivolving] By placing 1 [Satsuki Tamahime] from your hand as this Digimon's bottom digivolution card, 1 of your Digimon gains <Rush> for the turn.
         effect1 = ICardEffect()
+        effect1.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect1.set_effect_name("BT14-058 Place 1 card to digivolution cards and your 1 Digimon gains Rush")
         effect1.set_effect_description("[When Digivolving] By placing 1 [Satsuki Tamahime] from your hand as this Digimon's bottom digivolution card, 1 of your Digimon gains <Rush> for the turn.")
         effect1.is_optional = True

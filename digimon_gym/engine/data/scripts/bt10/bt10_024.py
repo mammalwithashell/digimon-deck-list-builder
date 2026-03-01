@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -40,6 +41,7 @@ class BT10_024(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [On Play] This Digimon gains <Rush> for the turn. Then, if DigiXrosing, 3 of your opponent's Digimon with digivolution cards less than or equal to this Digimon's digivolution cards can't attack or block until the end of your opponent's turn.
         effect2 = ICardEffect()
+        effect2.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect2.set_effect_name("BT10-024 This Digimon gains Rush and opponent's Digimons can't attack and block")
         effect2.set_effect_description("[On Play] This Digimon gains <Rush> for the turn. Then, if DigiXrosing, 3 of your opponent's Digimon with digivolution cards less than or equal to this Digimon's digivolution cards can't attack or block until the end of your opponent's turn.")
         effect2.is_on_play = True

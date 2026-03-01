@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -33,6 +34,7 @@ class BT21_063(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [On Play] By trashing 1 card with <Save> in its text or the [Hero] trait from your hand, <Draw 2>.
         effect1 = ICardEffect()
+        effect1.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect1.set_effect_name("BT21-063 Trash 1 [Hero] / Save, <Draw 2>")
         effect1.set_effect_description("[On Play] By trashing 1 card with <Save> in its text or the [Hero] trait from your hand, <Draw 2>.")
         effect1.is_on_play = True

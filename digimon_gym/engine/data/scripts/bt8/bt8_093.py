@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -16,6 +17,7 @@ class BT8_093(CardScript):
         # Timing: EffectTiming.OnDestroyedAnyone
         # [All Turns] When one of your Digimon with [Myotismon] in its name is deleted, you may suspend this Tamer to gain 1 memory.
         effect0 = ICardEffect()
+        effect0.set_timing(EffectTiming.OnDestroyedAnyone)
         effect0.set_effect_name("BT8-093 Memory +1")
         effect0.set_effect_description("[All Turns] When one of your Digimon with [Myotismon] in its name is deleted, you may suspend this Tamer to gain 1 memory.")
         effect0.is_optional = True
@@ -53,6 +55,7 @@ class BT8_093(CardScript):
         # Timing: EffectTiming.OnEndTurn
         # [End of Opponent's Turn] If this Tamer is suspended, by deleting this Tamer , you may play 1 [MaloMyotismon] from your trash without paying its memory cost.
         effect1 = ICardEffect()
+        effect1.set_timing(EffectTiming.OnEndTurn)
         effect1.set_effect_name("BT8-093 Delete this Tamer to play [MaloMyotismon] from trash")
         effect1.set_effect_description("[End of Opponent's Turn] If this Tamer is suspended, by deleting this Tamer , you may play 1 [MaloMyotismon] from your trash without paying its memory cost.")
         effect1.is_optional = True

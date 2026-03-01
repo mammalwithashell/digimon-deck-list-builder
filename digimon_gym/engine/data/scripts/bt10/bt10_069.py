@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -29,6 +30,7 @@ class BT10_069(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [When Digivolving] Return 1 black or purple non-[DarkKnightmon (X Antibody)] Digimon card from your trash to your hand. Then, if [DarkKnightmon] or [X Antibody] is in this Digimon's digivolution cards, delete 1 Tamer, and unsuspend this Digimon.
         effect1 = ICardEffect()
+        effect1.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect1.set_effect_name("BT10-069 Return 1 card from trash to hand, delete a Tamer and unsuspend this Digimon")
         effect1.set_effect_description("[When Digivolving] Return 1 black or purple non-[DarkKnightmon (X Antibody)] Digimon card from your trash to your hand. Then, if [DarkKnightmon] or [X Antibody] is in this Digimon's digivolution cards, delete 1 Tamer, and unsuspend this Digimon.")
         effect1.is_when_digivolving = True
@@ -76,6 +78,7 @@ class BT10_069(CardScript):
         # Timing: EffectTiming.OnDestroyedAnyone
         # [On Deletion] You may play 1 [DarkKnightmon] from your trash without paying its memory cost.
         effect2 = ICardEffect()
+        effect2.set_timing(EffectTiming.OnDestroyedAnyone)
         effect2.set_effect_name("BT10-069 Play 1 [DarkKnightmon] from trash")
         effect2.set_effect_description("[On Deletion] You may play 1 [DarkKnightmon] from your trash without paying its memory cost.")
         effect2.is_optional = True

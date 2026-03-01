@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -66,6 +67,7 @@ class BT19_102(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [On Play] Choose 1 other Digimon. By playing level 4 or lower Digimon card from it's digivolution cards, delete the chosen Digimon.
         effect3 = ICardEffect()
+        effect3.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect3.set_effect_name("BT19-102 Play level 4 from source, delete target Digimon")
         effect3.set_effect_description("[On Play] Choose 1 other Digimon. By playing level 4 or lower Digimon card from it's digivolution cards, delete the chosen Digimon.")
         effect3.is_on_play = True
@@ -117,6 +119,7 @@ class BT19_102(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [When Digivolving] Choose 1 other Digimon. By playing level 4 or lower Digimon card from it's digivolution cards, delete the chosen Digimon.
         effect4 = ICardEffect()
+        effect4.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect4.set_effect_name("BT19-102 Play level 4 from source, delete target Digimon")
         effect4.set_effect_description("[When Digivolving] Choose 1 other Digimon. By playing level 4 or lower Digimon card from it's digivolution cards, delete the chosen Digimon.")
         effect4.is_when_digivolving = True
@@ -168,6 +171,7 @@ class BT19_102(CardScript):
         # Timing: EffectTiming.OnDestroyedAnyone
         # [On Deletion] You may play 1 card with a play cost of 5 or less from under any of your Tamers without paying the cost.
         effect5 = ICardEffect()
+        effect5.set_timing(EffectTiming.OnDestroyedAnyone)
         effect5.set_effect_name("BT19-102 Play Card")
         effect5.set_effect_description("[On Deletion] You may play 1 card with a play cost of 5 or less from under any of your Tamers without paying the cost.")
         effect5.is_on_deletion = True

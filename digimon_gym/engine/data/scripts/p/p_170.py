@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -36,6 +37,7 @@ class P_170(CardScript):
         # Timing: EffectTiming.BeforePayCost
         # When this card would be played, by returning 3 cards with [Three Musketeers] in their texts from your trash to the bottom of the deck, reduce the play cost by 6.
         effect1 = ICardEffect()
+        effect1.set_timing(EffectTiming.BeforePayCost)
         effect1.set_effect_name("P-170 Return 3 [Three Musketeers] to get Play Cost -6")
         effect1.set_effect_description("When this card would be played, by returning 3 cards with [Three Musketeers] in their texts from your trash to the bottom of the deck, reduce the play cost by 6.")
         effect1.set_hash_string("PlayCost-6_P_170")
@@ -133,6 +135,7 @@ class P_170(CardScript):
         # Timing: EffectTiming.OnDestroyedAnyone
         # [On Deletion] You may play 1 [Three Musketeers] trait Digimon card with a play cost of 12 or less from your hand or trash without paying the cost.
         effect6 = ICardEffect()
+        effect6.set_timing(EffectTiming.OnDestroyedAnyone)
         effect6.set_effect_name("P-170 Play 1 [Three Musketeers] trait Digimon from hand/trash")
         effect6.set_effect_description("[On Deletion] You may play 1 [Three Musketeers] trait Digimon card with a play cost of 12 or less from your hand or trash without paying the cost.")
         effect6.is_optional = True

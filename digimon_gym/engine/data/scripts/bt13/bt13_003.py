@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -16,6 +17,7 @@ class BT13_003(CardScript):
         # Timing: EffectTiming.OnLoseSecurity
         # [Your Turn][Once Per Turn] When a card is removed from your security stack, 1 of your Digimon gains <Jamming> for the turn.
         effect0 = ICardEffect()
+        effect0.set_timing(EffectTiming.OnLoseSecurity)
         effect0.set_effect_name("BT13-003 Your 1 Digimon gains Jamming")
         effect0.set_effect_description("[Your Turn][Once Per Turn] When a card is removed from your security stack, 1 of your Digimon gains <Jamming> for the turn.")
         effect0.is_inherited_effect = True

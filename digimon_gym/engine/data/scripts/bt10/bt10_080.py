@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -16,6 +17,7 @@ class BT10_080(CardScript):
         # Timing: EffectTiming.OnDiscardHand
         # When one of your effects trashes this card in your hand, if it's your turn, 1 of your Digimon may digivolve into 1 purple Digimon card with [Undead] or [Dark Animal] in its traits from your trash for its digivolution cost.
         effect0 = ICardEffect()
+        effect0.set_timing(EffectTiming.OnDiscardHand)
         effect0.set_effect_name("BT10-080 Your Digimon can digivolve to trash cards")
         effect0.set_effect_description("When one of your effects trashes this card in your hand, if it's your turn, 1 of your Digimon may digivolve into 1 purple Digimon card with [Undead] or [Dark Animal] in its traits from your trash for its digivolution cost.")
         effect0.is_optional = True
@@ -50,6 +52,7 @@ class BT10_080(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # Effect
         effect1 = ICardEffect()
+        effect1.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect1.set_effect_name("BT10-080 This Digimon gets effects")
         effect1.set_effect_description("Effect")
         effect1.is_when_digivolving = True
@@ -67,6 +70,7 @@ class BT10_080(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [On Deletion] Delete 1 of your opponent's Digimon.
         effect2 = ICardEffect()
+        effect2.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect2.set_effect_name("BT10-080 Delete 1 Digimon")
         effect2.set_effect_description("[On Deletion] Delete 1 of your opponent's Digimon.")
         effect2.is_on_play = True

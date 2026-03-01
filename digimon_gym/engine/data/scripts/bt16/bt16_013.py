@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -42,6 +43,7 @@ class BT16_013(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [On Play] All of your opponent's Digimon get -5000DP for the turn.
         effect2 = ICardEffect()
+        effect2.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect2.set_effect_name("BT16-013 DP -5000 to opponent's all Digimons")
         effect2.set_effect_description("[On Play] All of your opponent's Digimon get -5000DP for the turn.")
         effect2.is_on_play = True
@@ -59,6 +61,7 @@ class BT16_013(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [When Digivolving] All of your opponent's Digimon get -5000DP for the turn.
         effect3 = ICardEffect()
+        effect3.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect3.set_effect_name("BT16-013 DP -5000 to opponent's all Digimons")
         effect3.set_effect_description("[When Digivolving] All of your opponent's Digimon get -5000DP for the turn.")
         effect3.is_when_digivolving = True
@@ -76,6 +79,7 @@ class BT16_013(CardScript):
         # Timing: EffectTiming.OnLoseSecurity
         # [All Turns] [Once Per Turn] When a card is removed from a security stack, delete 1 of your opponent's Digimon with 8000 DP or less. If this effect didn't delete, this Digimon gains [Security A +1] until the end of your turn.
         effect4 = ICardEffect()
+        effect4.set_timing(EffectTiming.OnLoseSecurity)
         effect4.set_effect_name("BT16-013 Delete 1 Digimon with 8000 DP or less.")
         effect4.set_effect_description("[All Turns] [Once Per Turn] When a card is removed from a security stack, delete 1 of your opponent's Digimon with 8000 DP or less. If this effect didn't delete, this Digimon gains [Security A +1] until the end of your turn.")
         effect4.set_max_count_per_turn(1)

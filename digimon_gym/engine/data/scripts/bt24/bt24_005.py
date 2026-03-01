@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -16,6 +17,7 @@ class BT24_005(CardScript):
         # Timing: EffectTiming.OnAddDigivolutionCards
         # [Your Turn] [Once Per Turn] When Tamer cards are placed in this Digimon's digivolution cards, reveal the top 3 cards of your deck. Return the revealed cards to the top or bottom of the deck.
         effect0 = ICardEffect()
+        effect0.set_timing(EffectTiming.OnAddDigivolutionCards)
         effect0.set_effect_name("BT24-005 Reveal 3 then return to top or bot.")
         effect0.set_effect_description("[Your Turn] [Once Per Turn] When Tamer cards are placed in this Digimon's digivolution cards, reveal the top 3 cards of your deck. Return the revealed cards to the top or bottom of the deck.")
         effect0.is_inherited_effect = True

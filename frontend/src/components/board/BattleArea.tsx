@@ -27,6 +27,7 @@ function DroppableSlot({ slotIndex, isEmpty, isOpponent, isValidDrop, isDigivolv
   return (
     <div
       ref={setNodeRef}
+      data-testid={`field-slot-${isOpponent ? 'p2' : 'p1'}-${slotIndex}`}
       data-slot-id={`${isOpponent ? 'opponent' : 'player'}-${slotIndex}`}
       className={`rounded ${
         showDropHighlight

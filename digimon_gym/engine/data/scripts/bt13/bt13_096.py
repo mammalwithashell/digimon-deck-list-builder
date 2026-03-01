@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -16,6 +17,7 @@ class BT13_096(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [On Play] You may play 1 blue level 3 Digimon card from 1 of your Digimon's digivolution cards without paying the cost.
         effect0 = ICardEffect()
+        effect0.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect0.set_effect_name("BT13-096 Play 1 digivolution card")
         effect0.set_effect_description("[On Play] You may play 1 blue level 3 Digimon card from 1 of your Digimon's digivolution cards without paying the cost.")
         effect0.is_optional = True
@@ -52,6 +54,7 @@ class BT13_096(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [All Turns] When you play a blue Digimon, by suspending this Tamer, you may place 1 blue level 4 or lower Digimon card as that Digimon's bottom digivolution card.
         effect1 = ICardEffect()
+        effect1.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect1.set_effect_name("BT13-096 Place 1 card to digivolution cards")
         effect1.set_effect_description("[All Turns] When you play a blue Digimon, by suspending this Tamer, you may place 1 blue level 4 or lower Digimon card as that Digimon's bottom digivolution card.")
         effect1.is_optional = True

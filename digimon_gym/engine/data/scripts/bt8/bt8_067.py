@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -16,6 +17,7 @@ class BT8_067(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [When Digivolving] <De-Digivolve 1> 1 of your opponent's Digimon. (Trash 1 card from the top of one of your opponent's Digimon. If it has no digivolution cards, or becomes a level 3 Digimon, you can't trash any more cards.) Then, delete 1 of your opponent's Digimon with 3000 DP or less.
         effect0 = ICardEffect()
+        effect0.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect0.set_effect_name("BT8-067 De-Digivolve 1 to 1 Digimon and delete 1 Digimon with 3000 DP or less")
         effect0.set_effect_description("[When Digivolving] <De-Digivolve 1> 1 of your opponent's Digimon. (Trash 1 card from the top of one of your opponent's Digimon. If it has no digivolution cards, or becomes a level 3 Digimon, you can't trash any more cards.) Then, delete 1 of your opponent's Digimon with 3000 DP or less.")
         effect0.is_when_digivolving = True

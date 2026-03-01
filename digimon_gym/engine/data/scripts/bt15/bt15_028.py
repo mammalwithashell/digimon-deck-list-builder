@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -16,6 +17,7 @@ class BT15_028(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [On Play] Trash the bottom 3 digivolution cards of 1 of your opponent's Digimon. Then, if your opponent has no Digimon with digivolution cards, you may play 1 blue Tamer card from your hand without paying the cost.
         effect0 = ICardEffect()
+        effect0.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect0.set_effect_name("BT15-028 Trash digivolution cards and play 1 Tamer from hand")
         effect0.set_effect_description("[On Play] Trash the bottom 3 digivolution cards of 1 of your opponent's Digimon. Then, if your opponent has no Digimon with digivolution cards, you may play 1 blue Tamer card from your hand without paying the cost.")
         effect0.is_on_play = True

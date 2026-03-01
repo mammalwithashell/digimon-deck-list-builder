@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -41,6 +42,7 @@ class BT23_033(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [On Play] You may link 1 level 4 or lower Digimon card from your trash or this Digimon's digivolution cards to this Digimon without paying the cost.
         effect2 = ICardEffect()
+        effect2.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect2.set_effect_name("BT23-033 link 1 level 4- digimon from trash or digivoultion sources to this digimon")
         effect2.set_effect_description("[On Play] You may link 1 level 4 or lower Digimon card from your trash or this Digimon's digivolution cards to this Digimon without paying the cost.")
         effect2.is_on_play = True
@@ -58,6 +60,7 @@ class BT23_033(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [When Digivolving] You may link 1 level 4 or lower Digimon card from your trash or this Digimon's digivolution cards to this Digimon without paying the cost.
         effect3 = ICardEffect()
+        effect3.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect3.set_effect_name("BT23-033 link 1 level 4- digimon from trash or digivoultion sources to this digimon")
         effect3.set_effect_description("[When Digivolving] You may link 1 level 4 or lower Digimon card from your trash or this Digimon's digivolution cards to this Digimon without paying the cost.")
         effect3.is_when_digivolving = True
@@ -75,6 +78,7 @@ class BT23_033(CardScript):
         # Timing: EffectTiming.WhenLinked
         # [Your Turn] [Once Per Turn] When this Digimon gets linked, if you have 5 or fewer security cards, <Recovery +1 (Deck)>. Then to 1 of your opponent's Digimon, give -1000 DP until their turn ends for each of your security cards.
         effect4 = ICardEffect()
+        effect4.set_timing(EffectTiming.WhenLinked)
         effect4.set_effect_name("BT23-033 If 5 or less security, <Recovery +1(Deck)>. then -1k DP for each security card")
         effect4.set_effect_description("[Your Turn] [Once Per Turn] When this Digimon gets linked, if you have 5 or fewer security cards, <Recovery +1 (Deck)>. Then to 1 of your opponent's Digimon, give -1000 DP until their turn ends for each of your security cards.")
         effect4.set_max_count_per_turn(1)
@@ -104,6 +108,7 @@ class BT23_033(CardScript):
         # Timing: EffectTiming.WhenLinked
         # [When Linking] Until your opponent's turn ends, their effects can't return this Digimon to hands or decks or affect it with <De-Digivolve> effects.
         effect5 = ICardEffect()
+        effect5.set_timing(EffectTiming.WhenLinked)
         effect5.set_effect_name("BT23-033 Gain deck and hand bounce & De-Digivolve immunity")
         effect5.set_effect_description("[When Linking] Until your opponent's turn ends, their effects can't return this Digimon to hands or decks or affect it with <De-Digivolve> effects.")
         effect5._is_cannot_return_to_deck = True

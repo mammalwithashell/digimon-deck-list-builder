@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -16,6 +17,7 @@ class BT11_112(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [On Play] Until the end of your opponent's turn, 1 of your Digimon with [Veemon] or [Veedramon] in its name gains <Blocker> and <Evade>.
         effect0 = ICardEffect()
+        effect0.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect0.set_effect_name("BT11-112 Your 1 Digimon gets Blocker and Evade")
         effect0.set_effect_description("[On Play] Until the end of your opponent's turn, 1 of your Digimon with [Veemon] or [Veedramon] in its name gains <Blocker> and <Evade>.")
         effect0.is_on_play = True
@@ -54,6 +56,7 @@ class BT11_112(CardScript):
         # Timing: EffectTiming.OnTappedAnyone
         # [All Turns] When one of your Digimon with [Veedramon] in its name becomes suspended, by suspending this Tamer, activate 1 of that Digimon's [When Digivolving] effects.
         effect1 = ICardEffect()
+        effect1.set_timing(EffectTiming.OnTappedAnyone)
         effect1.set_effect_name("BT11-112 Activate [When Digivolving] effect")
         effect1.set_effect_description("[All Turns] When one of your Digimon with [Veedramon] in its name becomes suspended, by suspending this Tamer, activate 1 of that Digimon's [When Digivolving] effects.")
         effect1.is_optional = True
@@ -88,6 +91,7 @@ class BT11_112(CardScript):
         # Timing: EffectTiming.OnUnTappedAnyone
         # [Your Turn][Once Per Turn] When one of your blue Digimon becomes unsuspended, gain 1 memory.
         effect2 = ICardEffect()
+        effect2.set_timing(EffectTiming.OnUnTappedAnyone)
         effect2.set_effect_name("BT11-112 Memory +1")
         effect2.set_effect_description("[Your Turn][Once Per Turn] When one of your blue Digimon becomes unsuspended, gain 1 memory.")
         effect2.set_max_count_per_turn(1)

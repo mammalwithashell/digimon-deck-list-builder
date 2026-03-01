@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -55,6 +56,7 @@ class BT23_021(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [When Digivolving] [Once Per Turn] You may link 1 level 3 Digimon card from your hand or this Digimon's digivolution cards to this Digimon without paying the cost.
         effect2 = ICardEffect()
+        effect2.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect2.set_effect_name("BT23-021 Link 1 level 3 digimon from hand or digivolution cards")
         effect2.set_effect_description("[When Digivolving] [Once Per Turn] You may link 1 level 3 Digimon card from your hand or this Digimon's digivolution cards to this Digimon without paying the cost.")
         effect2.set_hash_string("BT23_021_WD/WA")
@@ -73,6 +75,7 @@ class BT23_021(CardScript):
         # Timing: EffectTiming.OnAllyAttack
         # [When Attacking] [Once Per Turn] You may link 1 level 3 Digimon card from your hand or this Digimon's digivolution cards to this Digimon without paying the cost.
         effect3 = ICardEffect()
+        effect3.set_timing(EffectTiming.OnAllyAttack)
         effect3.set_effect_name("BT23-021 Link 1 level 3 digimon from hand or digivolution cards")
         effect3.set_effect_description("[When Attacking] [Once Per Turn] You may link 1 level 3 Digimon card from your hand or this Digimon's digivolution cards to this Digimon without paying the cost.")
         effect3.set_hash_string("BT23_021_WD/WA")
@@ -91,6 +94,7 @@ class BT23_021(CardScript):
         # Timing: EffectTiming.WhenLinked
         # [Your Turn] [Once Per Turn] When this Digimon gets linked, it can't be deleted in battle until your opponent's turn ends.
         effect4 = ICardEffect()
+        effect4.set_timing(EffectTiming.WhenLinked)
         effect4.set_effect_name("BT23-021 Gain immunity from battle")
         effect4.set_effect_description("[Your Turn] [Once Per Turn] When this Digimon gets linked, it can't be deleted in battle until your opponent's turn ends.")
         effect4.set_hash_string("BT23_021_WL")
@@ -120,6 +124,7 @@ class BT23_021(CardScript):
         # Timing: EffectTiming.WhenLinked
         # [When Linking] This Digimon can't be deleted in battle until your opponent's turn ends.
         effect5 = ICardEffect()
+        effect5.set_timing(EffectTiming.WhenLinked)
         effect5.set_effect_name("BT23-021 Gain immunity from battle")
         effect5.set_effect_description("[When Linking] This Digimon can't be deleted in battle until your opponent's turn ends.")
         effect5._is_cannot_be_deleted_by_battle = True

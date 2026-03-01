@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -53,6 +54,7 @@ class BT24_081(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # Delete, Trash From Hand
         effect3 = ICardEffect()
+        effect3.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect3.set_effect_name("BT24-081 Delete, Trash From Hand")
         effect3.set_effect_description("Delete, Trash From Hand")
         effect3.is_on_play = True
@@ -98,6 +100,7 @@ class BT24_081(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # Delete, Trash From Hand
         effect4 = ICardEffect()
+        effect4.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect4.set_effect_name("BT24-081 Delete, Trash From Hand")
         effect4.set_effect_description("Delete, Trash From Hand")
         effect4.is_when_digivolving = True
@@ -143,6 +146,7 @@ class BT24_081(CardScript):
         # Timing: EffectTiming.OnAllyAttack
         # Delete, Trash From Hand
         effect5 = ICardEffect()
+        effect5.set_timing(EffectTiming.OnAllyAttack)
         effect5.set_effect_name("BT24-081 Delete, Trash From Hand")
         effect5.set_effect_description("Delete, Trash From Hand")
         effect5.is_on_attack = True
@@ -188,6 +192,7 @@ class BT24_081(CardScript):
         # Timing: EffectTiming.OnDestroyedAnyone
         # [On Deletion] You may play 1 [Titamon] or 1 level 5 or lower Digimon card with the [Titan] trait from your trash without paying the cost.
         effect6 = ICardEffect()
+        effect6.set_timing(EffectTiming.OnDestroyedAnyone)
         effect6.set_effect_name("BT24-081 You may play 1 Titamon or level 5 or lower Titan Digimon")
         effect6.set_effect_description("[On Deletion] You may play 1 [Titamon] or 1 level 5 or lower Digimon card with the [Titan] trait from your trash without paying the cost.")
         effect6.is_on_deletion = True

@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -33,6 +34,7 @@ class BT15_054(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [When Digivolving] Suspend 1 of your opponent's Digimon and 1 of their Tamers. They can't unsuspend until the end of their turn.
         effect1 = ICardEffect()
+        effect1.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect1.set_effect_name("BT15-054 Opponent's 1 Digimon and 1 Tamer is suspended and can't unsuspend")
         effect1.set_effect_description("[When Digivolving] Suspend 1 of your opponent's Digimon and 1 of their Tamers. They can't unsuspend until the end of their turn.")
         effect1.is_when_digivolving = True
@@ -69,6 +71,7 @@ class BT15_054(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [Opponent's Turn] [Once Per Turn] When an opponent's Digimon is played, you may suspend 1 of their Digimon.
         effect2 = ICardEffect()
+        effect2.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect2.set_effect_name("BT15-054 Suspend 1 of your Opponent's Digimon")
         effect2.set_effect_description("[Opponent's Turn] [Once Per Turn] When an opponent's Digimon is played, you may suspend 1 of their Digimon.")
         effect2.is_optional = True
@@ -104,6 +107,7 @@ class BT15_054(CardScript):
         # Timing: EffectTiming.OnMove
         # [Opponent's Turn] [Once Per Turn] When an opponent's Digimon moves from the breeding area to the battle area, if [Rosemon] or [X Antibody] in this Digimon's digivolution cards, you may suspend 1 of their Digimon.
         effect3 = ICardEffect()
+        effect3.set_timing(EffectTiming.OnMove)
         effect3.set_effect_name("BT15-054 Suspend 1 of your Opponent's Digimon")
         effect3.set_effect_description("[Opponent's Turn] [Once Per Turn] When an opponent's Digimon moves from the breeding area to the battle area, if [Rosemon] or [X Antibody] in this Digimon's digivolution cards, you may suspend 1 of their Digimon.")
         effect3.is_optional = True

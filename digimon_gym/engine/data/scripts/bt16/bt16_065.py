@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -16,6 +17,7 @@ class BT16_065(CardScript):
         # Timing: EffectTiming.BeforePayCost
         # When this card would be played, if there is a Digimon with the [Boss] trait, reduce the play cost by 6. By returning 6 cards with the [D-Brigade] trait from your trash to the top of the deck, reduce the play cost by 6.
         effect0 = ICardEffect()
+        effect0.set_timing(EffectTiming.BeforePayCost)
         effect0.set_effect_name("BT16-065 Return 6 [D-Brigade] to get Play Cost -6")
         effect0.set_effect_description("When this card would be played, if there is a Digimon with the [Boss] trait, reduce the play cost by 6. By returning 6 cards with the [D-Brigade] trait from your trash to the top of the deck, reduce the play cost by 6.")
         effect0.set_hash_string("PlayCost-12_BT16_065")
@@ -65,6 +67,7 @@ class BT16_065(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [On Play] Reveal the top 3 cards of your deck. Delete 1 of your opponent's Digimon with play cost less than or equal to the play cost of 1 of the cards among them. Trash the revealed cards.
         effect2 = ICardEffect()
+        effect2.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect2.set_effect_name("BT16-065 Reveal top 3, then delete 1 digimon.")
         effect2.set_effect_description("[On Play] Reveal the top 3 cards of your deck. Delete 1 of your opponent's Digimon with play cost less than or equal to the play cost of 1 of the cards among them. Trash the revealed cards.")
         effect2.is_on_play = True
@@ -112,6 +115,7 @@ class BT16_065(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [When Digivolving] Reveal the top 3 cards of your deck. Delete 1 of your opponent's Digimon with play cost less than or equal to the play cost of 1 of the cards among them. Trash the revealed cards.
         effect3 = ICardEffect()
+        effect3.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect3.set_effect_name("BT16-065 Reveal top 3, then delete 1 digimon.")
         effect3.set_effect_description("[When Digivolving] Reveal the top 3 cards of your deck. Delete 1 of your opponent's Digimon with play cost less than or equal to the play cost of 1 of the cards among them. Trash the revealed cards.")
         effect3.is_when_digivolving = True
@@ -159,6 +163,7 @@ class BT16_065(CardScript):
         # Timing: EffectTiming.OnEndTurn
         # [End of Your Turn] 2 of your Digimon may DNA digivolve into a [Chaosmon] in your hand.
         effect4 = ICardEffect()
+        effect4.set_timing(EffectTiming.OnEndTurn)
         effect4.set_effect_name("BT16-065 DNA digivolve into [Chaosmon]")
         effect4.set_effect_description("[End of Your Turn] 2 of your Digimon may DNA digivolve into a [Chaosmon] in your hand.")
         effect4.is_optional = True

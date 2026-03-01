@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -16,6 +17,7 @@ class BT15_007(CardScript):
         # Timing: EffectTiming.OnStartMainPhase
         # [Start of Your Main Phase] By trashing 1 Digimon with [Avian], [Bird], [Beast], or [Sovereign], other that [Sea Animal], in one of its traits in your hard, reveal the top 4 cards of your deck. Add 1 red card among them to your hand. Return the rest to the bottom of the deck.
         effect0 = ICardEffect()
+        effect0.set_timing(EffectTiming.OnStartMainPhase)
         effect0.set_effect_name("BT15-007 Trash 1 card from hand to reveal the top 4 cards of deck")
         effect0.set_effect_description("[Start of Your Main Phase] By trashing 1 Digimon with [Avian], [Bird], [Beast], or [Sovereign], other that [Sea Animal], in one of its traits in your hard, reveal the top 4 cards of your deck. Add 1 red card among them to your hand. Return the rest to the bottom of the deck.")
         effect0.is_optional = True
@@ -71,6 +73,7 @@ class BT15_007(CardScript):
         # Timing: EffectTiming.OnLoseSecurity
         # [Your Turn][Once Per Turn] When a card is removed from your opponent's security stack, gain 1 memory.
         effect1 = ICardEffect()
+        effect1.set_timing(EffectTiming.OnLoseSecurity)
         effect1.set_effect_name("BT15-007 Memory +1")
         effect1.set_effect_description("[Your Turn][Once Per Turn] When a card is removed from your opponent's security stack, gain 1 memory.")
         effect1.is_inherited_effect = True

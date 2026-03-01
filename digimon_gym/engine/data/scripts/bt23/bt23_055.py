@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -30,6 +31,7 @@ class BT23_055(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # Delete
         effect1 = ICardEffect()
+        effect1.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect1.set_effect_name("BT23-055 Delete 1 Digimon")
         effect1.set_effect_description("Delete")
         effect1.is_on_play = True
@@ -65,6 +67,7 @@ class BT23_055(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # Delete
         effect2 = ICardEffect()
+        effect2.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect2.set_effect_name("BT23-055 Delete 1 Digimon")
         effect2.set_effect_description("Delete")
         effect2.is_when_digivolving = True
@@ -100,6 +103,7 @@ class BT23_055(CardScript):
         # Timing: EffectTiming.WhenRemoveField
         # [All Turns] [Once Per Turn] When this Digimon would leave the battle area, by trashing 1 of your Option cards in the battle area, it doesn't leave.
         effect3 = ICardEffect()
+        effect3.set_timing(EffectTiming.WhenRemoveField)
         effect3.set_effect_name("BT23-055 By trashing 1 of your Option cards, protect this digimon")
         effect3.set_effect_description("[All Turns] [Once Per Turn] When this Digimon would leave the battle area, by trashing 1 of your Option cards in the battle area, it doesn't leave.")
         effect3.is_optional = True
@@ -118,6 +122,7 @@ class BT23_055(CardScript):
         # Timing: EffectTiming.WhenRemoveField
         # [All Turns] [Once Per Turn] When this Digimon with [Cyberdramon] or [Justimon] in its name or the [CS] trait would leave the battle area, by trashing 1 of your Option cards in the battle area, it doesn't leave.
         effect4 = ICardEffect()
+        effect4.set_timing(EffectTiming.WhenRemoveField)
         effect4.set_effect_name("BT23-055 By trashing 1 of your Option cards, protect this digimon")
         effect4.set_effect_description("[All Turns] [Once Per Turn] When this Digimon with [Cyberdramon] or [Justimon] in its name or the [CS] trait would leave the battle area, by trashing 1 of your Option cards in the battle area, it doesn't leave.")
         effect4.is_inherited_effect = True

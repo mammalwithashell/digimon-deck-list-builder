@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -119,6 +120,7 @@ class BT21_101(CardScript):
         # Timing: EffectTiming.WhenLinked
         # Destroy Security, Unsuspend
         effect3 = ICardEffect()
+        effect3.set_timing(EffectTiming.WhenLinked)
         effect3.set_effect_name("BT21-101 Unsuspend, trash top sec")
         effect3.set_effect_description("Destroy Security, Unsuspend")
         effect3.is_optional = True
@@ -162,6 +164,7 @@ class BT21_101(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # Effect
         effect4 = ICardEffect()
+        effect4.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect4.set_effect_name("BT21-101 Add new link to a digimon")
         effect4.set_effect_description("Effect")
         effect4.is_when_digivolving = True
@@ -179,6 +182,7 @@ class BT21_101(CardScript):
         # Timing: EffectTiming.OnAllyAttack
         # Effect
         effect5 = ICardEffect()
+        effect5.set_timing(EffectTiming.OnAllyAttack)
         effect5.set_effect_name("BT21-101 Add new link to a digimon")
         effect5.set_effect_description("Effect")
         effect5.is_on_attack = True

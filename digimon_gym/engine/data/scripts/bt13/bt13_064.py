@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -28,6 +29,7 @@ class BT13_064(CardScript):
         # Timing: EffectTiming.OnDestroyedAnyone
         # [On Deletion] If it's your opponent's turn, you may play 1 level 3 or lower Digimon card with [Chessmon] in its name from your hand without paying the cost. If you have 8 or more Digimon cards with [Chessmon] in their names in your trash, add 2 to the maximum level of the card this effect can play.
         effect1 = ICardEffect()
+        effect1.set_timing(EffectTiming.OnDestroyedAnyone)
         effect1.set_effect_name("BT13-064 Play 1 Digimon card with [Chessmon] in its name from hand")
         effect1.set_effect_description("[On Deletion] If it's your opponent's turn, you may play 1 level 3 or lower Digimon card with [Chessmon] in its name from your hand without paying the cost. If you have 8 or more Digimon cards with [Chessmon] in their names in your trash, add 2 to the maximum level of the card this effect can play.")
         effect1.is_optional = True

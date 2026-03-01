@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -33,6 +34,7 @@ class BT24_078(CardScript):
         # Timing: EffectTiming.OnAllyAttack
         # Digivolve, Destroy Security
         effect1 = ICardEffect()
+        effect1.set_timing(EffectTiming.OnAllyAttack)
         effect1.set_effect_name("BT24-078 Digivolve into this to trash top opponent security")
         effect1.set_effect_description("Digivolve, Destroy Security")
         effect1.is_optional = True
@@ -76,6 +78,7 @@ class BT24_078(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # Delete, Play Card
         effect2 = ICardEffect()
+        effect2.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect2.set_effect_name("BT24-078 Delete opponent's lowest level, play a Digimon")
         effect2.set_effect_description("Delete, Play Card")
         effect2.is_when_digivolving = True

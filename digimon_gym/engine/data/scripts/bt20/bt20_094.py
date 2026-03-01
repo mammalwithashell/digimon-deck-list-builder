@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -16,6 +17,7 @@ class BT20_094(CardScript):
         # Timing: EffectTiming.OptionSkill
         # [Main] You may play 1 [Free] trait Digimon card from your trash with the play cost reduced by 5. Then, place this card in the battle area.
         effect0 = ICardEffect()
+        effect0.set_timing(EffectTiming.OptionSkill)
         effect0.set_effect_name("BT20-094 Play 1 [Free] trait Digimon card from your trash with the play cost reduced by 5.")
         effect0.set_effect_description("[Main] You may play 1 [Free] trait Digimon card from your trash with the play cost reduced by 5. Then, place this card in the battle area.")
         effect0.cost_reduction = 5
@@ -64,6 +66,7 @@ class BT20_094(CardScript):
         # Timing: EffectTiming.OnLoseSecurity
         # [All Turns] When your opponent's security stack is removed from, <Delay>.\r\n� You may play 1 [Imperialdramon: Dragon Mode] from any of your [Imperialdramon: Fighter Mode]'s digivolution cards without paying the cost.
         effect2 = ICardEffect()
+        effect2.set_timing(EffectTiming.OnLoseSecurity)
         effect2.set_effect_name("BT20-094 You may play 1 [Imperialdramon: Dragon Mode] from any of your [Imperialdramon: Fighter Mode]'s digivolution cards without paying the cost.")
         effect2.set_effect_description("[All Turns] When your opponent's security stack is removed from, <Delay>.\\r\\n� You may play 1 [Imperialdramon: Dragon Mode] from any of your [Imperialdramon: Fighter Mode]'s digivolution cards without paying the cost.")
         effect2.is_optional = True
@@ -97,6 +100,7 @@ class BT20_094(CardScript):
         # Timing: EffectTiming.SecuritySkill
         # [Security] You may play 1 level 3 Digimon card with the [Free] trait from your hand or trash without paying the cost. Then, add this card to the hand.
         effect3 = ICardEffect()
+        effect3.set_timing(EffectTiming.SecuritySkill)
         effect3.set_effect_name("BT20-094 Play Card, Add To Hand")
         effect3.set_effect_description("[Security] You may play 1 level 3 Digimon card with the [Free] trait from your hand or trash without paying the cost. Then, add this card to the hand.")
         effect3.is_security_effect = True

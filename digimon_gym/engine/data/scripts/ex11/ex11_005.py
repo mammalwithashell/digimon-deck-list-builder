@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -16,6 +17,7 @@ class EX11_005(CardScript):
         # Timing: EffectTiming.OnStartMainPhase
         # [Start of Your Main Phase] This Digimon may digivolve into a [Dark Dragon] or [Evil Dragon] trait Digimon card in the trash with the digivolution cost reduced by 1. If this effect digivolved, trash 2 cards in your hand.
         effect0 = ICardEffect()
+        effect0.set_timing(EffectTiming.OnStartMainPhase)
         effect0.set_effect_name("EX11-005 Digivolve into [Dark Dragon]/[Evil Dragon] trait for 1 less, if so trash 2 from hand.")
         effect0.set_effect_description("[Start of Your Main Phase] This Digimon may digivolve into a [Dark Dragon] or [Evil Dragon] trait Digimon card in the trash with the digivolution cost reduced by 1. If this effect digivolved, trash 2 cards in your hand.")
         effect0.is_inherited_effect = True

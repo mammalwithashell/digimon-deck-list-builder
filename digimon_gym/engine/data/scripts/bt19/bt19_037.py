@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -29,6 +30,7 @@ class BT19_037(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [On Play] If it's your turn, you may use 1 single-color Option card with a cost of 5 or less from your hand without paying the cost. If it's your opponent's turn, 1 of their Digimon gains <Security Attack -1> and can't activate  effects for the turn.
         effect1 = ICardEffect()
+        effect1.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect1.set_effect_name("BT19-037 If it's your turn, you may use 1 single-color Option")
         effect1.set_effect_description("[On Play] If it's your turn, you may use 1 single-color Option card with a cost of 5 or less from your hand without paying the cost. If it's your opponent's turn, 1 of their Digimon gains <Security Attack -1> and can't activate  effects for the turn.")
         effect1.is_on_play = True
@@ -66,6 +68,7 @@ class BT19_037(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [When Digivolving] If it's your turn, you may use 1 single-color Option card with a cost of 5 or less from your hand without paying the cost. If it's your opponent's turn, 1 of their Digimon gains <Security Attack -1> and can't activate  effects for the turn.
         effect2 = ICardEffect()
+        effect2.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect2.set_effect_name("BT19-037 If it's your turn, you may use 1 single-color Option")
         effect2.set_effect_description("[When Digivolving] If it's your turn, you may use 1 single-color Option card with a cost of 5 or less from your hand without paying the cost. If it's your opponent's turn, 1 of their Digimon gains <Security Attack -1> and can't activate  effects for the turn.")
         effect2.is_when_digivolving = True
@@ -103,6 +106,7 @@ class BT19_037(CardScript):
         # Timing: EffectTiming.OnAllyAttack
         # [When Attacking] 1 of your opponent's Digimon gets -4000 DP for the turn.
         effect3 = ICardEffect()
+        effect3.set_timing(EffectTiming.OnAllyAttack)
         effect3.set_effect_name("BT19-037 DP -4000")
         effect3.set_effect_description("[When Attacking] 1 of your opponent's Digimon gets -4000 DP for the turn.")
         effect3.is_inherited_effect = True

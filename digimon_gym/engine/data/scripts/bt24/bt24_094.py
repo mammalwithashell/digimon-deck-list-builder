@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -96,6 +97,7 @@ class BT24_094(CardScript):
         # Timing: EffectTiming.OptionSkill
         # [Main] Add your bottom security card to the hand and place this card face up as the bottom security card. Then, you may play 1 green or yellow [TS] trait Digimon card from your hand with the play cost reduced by 3.
         effect4 = ICardEffect()
+        effect4.set_timing(EffectTiming.OptionSkill)
         effect4.set_effect_name("BT24-094 Replace your bottom sec with this face-up card, play a [TS] Digimon for -3")
         effect4.set_effect_description("[Main] Add your bottom security card to the hand and place this card face up as the bottom security card. Then, you may play 1 green or yellow [TS] trait Digimon card from your hand with the play cost reduced by 3.")
         effect4.cost_reduction = 3
@@ -133,6 +135,7 @@ class BT24_094(CardScript):
         # Timing: EffectTiming.SecuritySkill
         # Play Card
         effect5 = ICardEffect()
+        effect5.set_timing(EffectTiming.SecuritySkill)
         effect5.set_effect_name("BT24-094 Play Card")
         effect5.set_effect_description("Play Card")
         effect5.is_security_effect = True

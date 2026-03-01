@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -16,6 +17,7 @@ class BT21_085(CardScript):
         # Timing: EffectTiming.OnStartMainPhase
         # [Start of Your Main Phase] If your opponent has a Digimon, gain 1 memory.
         effect0 = ICardEffect()
+        effect0.set_timing(EffectTiming.OnStartMainPhase)
         effect0.set_effect_name("BT21-085 Memory +1")
         effect0.set_effect_description("[Start of Your Main Phase] If your opponent has a Digimon, gain 1 memory.")
 
@@ -43,6 +45,7 @@ class BT21_085(CardScript):
         # Timing: EffectTiming.OnDeclaration
         # [Main] By suspending this Tamer and trashing the top stacked card of 1 of your [Armor Form] trait Digimon, <Draw 1> and gain 1 memory.
         effect1 = ICardEffect()
+        effect1.set_timing(EffectTiming.OnDeclaration)
         effect1.set_effect_name("BT21-085 Trash top card of [Armor Form] Digimon to <Draw 1> and gain 1 memory")
         effect1.set_effect_description("[Main] By suspending this Tamer and trashing the top stacked card of 1 of your [Armor Form] trait Digimon, <Draw 1> and gain 1 memory.")
 

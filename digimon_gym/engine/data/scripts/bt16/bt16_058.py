@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -41,6 +42,7 @@ class BT16_058(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # Draw 1, Trash From Hand
         effect2 = ICardEffect()
+        effect2.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect2.set_effect_name("BT16-058 Draw 1")
         effect2.set_effect_description("Draw 1, Trash From Hand")
         effect2.is_optional = True
@@ -81,6 +83,7 @@ class BT16_058(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [Start of Your Main Phase] Attack with this Digimon.
         effect3 = ICardEffect()
+        effect3.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect3.set_effect_name("BT16-058 Attack with this Digimon")
         effect3.set_effect_description("[Start of Your Main Phase] Attack with this Digimon.")
         effect3.is_on_play = True
@@ -111,6 +114,7 @@ class BT16_058(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # Draw 1, Trash From Hand
         effect4 = ICardEffect()
+        effect4.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect4.set_effect_name("BT16-058 Draw 1")
         effect4.set_effect_description("Draw 1, Trash From Hand")
         effect4.is_optional = True
@@ -151,6 +155,7 @@ class BT16_058(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [Start of Your Main Phase] Attack with this Digimon.
         effect5 = ICardEffect()
+        effect5.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect5.set_effect_name("BT16-058 Attack with this Digimon")
         effect5.set_effect_description("[Start of Your Main Phase] Attack with this Digimon.")
         effect5.is_on_play = True

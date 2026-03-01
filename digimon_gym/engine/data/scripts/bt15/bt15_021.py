@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -29,6 +30,7 @@ class BT15_021(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [On Play] Reveal the top 3 cards of your deck. Add 1 card with the [Sea Beast], [Plesiosaur], [Beastkin] or [X Antibody] trait among them to the hand.
         effect1 = ICardEffect()
+        effect1.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect1.set_effect_name("BT15-021 Reveal the top 3 cards of deck")
         effect1.set_effect_description("[On Play] Reveal the top 3 cards of your deck. Add 1 card with the [Sea Beast], [Plesiosaur], [Beastkin] or [X Antibody] trait among them to the hand.")
         effect1.is_on_play = True
@@ -68,6 +70,7 @@ class BT15_021(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [When Digivolving] Reveal the top 3 cards of your deck. Add 1 card with the [Sea Beast], [Plesiosaur], [Beastkin] or [X Antibody] trait among them to the hand.
         effect2 = ICardEffect()
+        effect2.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect2.set_effect_name("BT15-021 Reveal the top 3 cards of deck")
         effect2.set_effect_description("[When Digivolving] Reveal the top 3 cards of your deck. Add 1 card with the [Sea Beast], [Plesiosaur], [Beastkin] or [X Antibody] trait among them to the hand.")
         effect2.is_when_digivolving = True
@@ -107,6 +110,7 @@ class BT15_021(CardScript):
         # Timing: EffectTiming.OnAllyAttack
         # [When Attacking][Once Per Turn] Until the end of your opponent's turn, 1 of your opponent's Digimon with as many or fewer digivolution cards as this Digimon can't attack.
         effect3 = ICardEffect()
+        effect3.set_timing(EffectTiming.OnAllyAttack)
         effect3.set_effect_name("BT15-021 Opponent's 1 Digimon can't attack")
         effect3.set_effect_description("[When Attacking][Once Per Turn] Until the end of your opponent's turn, 1 of your opponent's Digimon with as many or fewer digivolution cards as this Digimon can't attack.")
         effect3.is_inherited_effect = True

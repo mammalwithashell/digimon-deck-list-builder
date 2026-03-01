@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -42,6 +43,7 @@ class BT22_060(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [On Play] Until your opponent's turn ends, their <De-Digivolve> effects don't affect this Digimon, and it gets +1000 DP for each of its face-down digivolution cards.
         effect2 = ICardEffect()
+        effect2.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect2.set_effect_name("BT22-060 Gain immunity to De-Digivolve & gain 1k DP for each FD source card")
         effect2.set_effect_description("[On Play] Until your opponent's turn ends, their <De-Digivolve> effects don't affect this Digimon, and it gets +1000 DP for each of its face-down digivolution cards.")
         effect2.is_on_play = True
@@ -59,6 +61,7 @@ class BT22_060(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [When Digivolving] Until your opponent's turn ends, their <De-Digivolve> effects don't affect this Digimon, and it gets +1000 DP for each of its face-down digivolution cards.
         effect3 = ICardEffect()
+        effect3.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect3.set_effect_name("BT22-060 Gain immunity to De-Digivolve & gain 1k DP for each FD source card")
         effect3.set_effect_description("[When Digivolving] Until your opponent's turn ends, their <De-Digivolve> effects don't affect this Digimon, and it gets +1000 DP for each of its face-down digivolution cards.")
         effect3.is_when_digivolving = True
@@ -76,6 +79,7 @@ class BT22_060(CardScript):
         # Timing: EffectTiming.OnEndTurn
         # [End of Opponent's Turn] [Once Per Turn] You may choose 1 of your opponent's Digimon. Your opponent attacks with the chosen Digimon.
         effect4 = ICardEffect()
+        effect4.set_timing(EffectTiming.OnEndTurn)
         effect4.set_effect_name("BT22-060 1 of your opponent's digimon attacks")
         effect4.set_effect_description("[End of Opponent's Turn] [Once Per Turn] You may choose 1 of your opponent's Digimon. Your opponent attacks with the chosen Digimon.")
         effect4.is_inherited_effect = True

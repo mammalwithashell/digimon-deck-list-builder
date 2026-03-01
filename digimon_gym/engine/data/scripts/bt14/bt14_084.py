@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -16,6 +17,7 @@ class BT14_084(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [On Play] By returning the top card of your security stack to the hand, you may place 1 yellow card with the [Vaccine] trait from your hand at the bottom of your security stack.
         effect0 = ICardEffect()
+        effect0.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect0.set_effect_name("BT14-084 Add 1 card from security to hand to place 1 card from hand at the bottom of security")
         effect0.set_effect_description("[On Play] By returning the top card of your security stack to the hand, you may place 1 yellow card with the [Vaccine] trait from your hand at the bottom of your security stack.")
         effect0.is_optional = True
@@ -56,6 +58,7 @@ class BT14_084(CardScript):
         # Timing: EffectTiming.OnAddSecurity
         # [Your Turn] When a card is added to your security stack, by suspending this Tamer, gain 1 memory.
         effect1 = ICardEffect()
+        effect1.set_timing(EffectTiming.OnAddSecurity)
         effect1.set_effect_name("BT14-084 Memory +1")
         effect1.set_effect_description("[Your Turn] When a card is added to your security stack, by suspending this Tamer, gain 1 memory.")
         effect1.is_optional = True

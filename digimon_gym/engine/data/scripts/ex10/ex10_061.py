@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -30,6 +31,7 @@ class EX10_061(CardScript):
         # Timing: EffectTiming.BeforePayCost
         # When this card would be played, by placing 1 of each face-up [Dark Masters] trait card with different names from your security stack under this card, reduce the play cost by 4 for each card placed.
         effect1 = ICardEffect()
+        effect1.set_timing(EffectTiming.BeforePayCost)
         effect1.set_effect_name("EX10-061 Placing 1 [Dark Masters] to get Play Cost -4")
         effect1.set_effect_description("When this card would be played, by placing 1 of each face-up [Dark Masters] trait card with different names from your security stack under this card, reduce the play cost by 4 for each card placed.")
         effect1.set_hash_string("PlayCost-_EX10-061")
@@ -84,6 +86,7 @@ class EX10_061(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [On Play] You may play 1 of each [Dark Masters] trait card with different names from this Digimon's digivolution cards without paying the costs. Then, all of your [Dark Masters] trait Digimon gain <Rush> for the turn. At turn end, delete the Digimon this effect played.
         effect3 = ICardEffect()
+        effect3.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect3.set_effect_name("EX10-061 Play 1 [Dark Masters] from sources, give <Rush>, Delete them at end of turn")
         effect3.set_effect_description("[On Play] You may play 1 of each [Dark Masters] trait card with different names from this Digimon's digivolution cards without paying the costs. Then, all of your [Dark Masters] trait Digimon gain <Rush> for the turn. At turn end, delete the Digimon this effect played.")
         effect3.is_on_play = True
@@ -119,6 +122,7 @@ class EX10_061(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [End of Your Turn] Delete this Digimon.
         effect4 = ICardEffect()
+        effect4.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect4.set_effect_name("EX10-061 Delete, Effect Immunity")
         effect4.set_effect_description("[End of Your Turn] Delete this Digimon.")
         effect4.is_on_play = True
@@ -159,6 +163,7 @@ class EX10_061(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [When Digivolving] You may play 1 of each [Dark Masters] trait card with different names from this Digimon's digivolution cards without paying the costs. Then, all of your [Dark Masters] trait Digimon gain <Rush> for the turn. (This Digimon can attack the turn it comes into play.) At turn end, delete the Digimon this effect played.
         effect5 = ICardEffect()
+        effect5.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect5.set_effect_name("EX10-061 Play 1 [Dark Masters] from sources, give <Rush>, Delete them at end of turn")
         effect5.set_effect_description("[When Digivolving] You may play 1 of each [Dark Masters] trait card with different names from this Digimon's digivolution cards without paying the costs. Then, all of your [Dark Masters] trait Digimon gain <Rush> for the turn. (This Digimon can attack the turn it comes into play.) At turn end, delete the Digimon this effect played.")
         effect5.is_when_digivolving = True
@@ -194,6 +199,7 @@ class EX10_061(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [End of Your Turn] Delete this Digimon.
         effect6 = ICardEffect()
+        effect6.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect6.set_effect_name("EX10-061 Delete the Digimon")
         effect6.set_effect_description("[End of Your Turn] Delete this Digimon.")
         effect6.is_on_play = True

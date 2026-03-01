@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -16,6 +17,7 @@ class BT14_056(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [On Play] Reveal the top 5 cards of your deck. Add 1 card with the [D-Brigade] or [DigiPolice] trait among them to the hand. Return the rest to the top or bottom of the deck.
         effect0 = ICardEffect()
+        effect0.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect0.set_effect_name("BT14-056 Reveal the top 5 cards of deck")
         effect0.set_effect_description("[On Play] Reveal the top 5 cards of your deck. Add 1 card with the [D-Brigade] or [DigiPolice] trait among them to the hand. Return the rest to the top or bottom of the deck.")
         effect0.is_on_play = True
@@ -57,6 +59,7 @@ class BT14_056(CardScript):
         # Timing: EffectTiming.WhenRemoveField
         # [All Turns][Once Per Turn] When this Digimon would leave the battle area other than by one of your effects, by deleting 1 of your other Digimon with the [D-Brigade] trait, prevent it from leaving.
         effect1 = ICardEffect()
+        effect1.set_timing(EffectTiming.WhenRemoveField)
         effect1.set_effect_name("BT14-056 Delete your 1 other Digimon to prevent this Digimon from leaving Battle Area")
         effect1.set_effect_description("[All Turns][Once Per Turn] When this Digimon would leave the battle area other than by one of your effects, by deleting 1 of your other Digimon with the [D-Brigade] trait, prevent it from leaving.")
         effect1.is_inherited_effect = True

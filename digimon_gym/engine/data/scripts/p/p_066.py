@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -16,6 +17,7 @@ class P_066(CardScript):
         # Timing: EffectTiming.SecuritySkill
         # [Security] At the end of the battle, delete 1 of your opponent's Digimon with 4000 DP or less. If no Digimon was deleted by this effect, <Draw 1>. (Draw 1 card from your deck.) Then, add this card to its owner's hand.
         effect0 = ICardEffect()
+        effect0.set_timing(EffectTiming.SecuritySkill)
         effect0.set_effect_name("P-066 Delete 1 Digimon with 4000 DP or less or Draw 1, and add this card to hand")
         effect0.set_effect_description("[Security] At the end of the battle, delete 1 of your opponent's Digimon with 4000 DP or less. If no Digimon was deleted by this effect, <Draw 1>. (Draw 1 card from your deck.) Then, add this card to its owner's hand.")
         effect0.is_security_effect = True
@@ -32,6 +34,7 @@ class P_066(CardScript):
         # Timing: EffectTiming.SecuritySkill
         # Delete 1 of your opponent's Digimon with 4000 DP or less. If no Digimon was deleted by this effect, <Draw 1>. (Draw 1 card from your deck.) Then, add this card to its owner's hand.
         effect1 = ICardEffect()
+        effect1.set_timing(EffectTiming.SecuritySkill)
         effect1.set_effect_name("P-066 Delete 1 Digimon with 4000 DP or less or Draw 1, and add this card to hand")
         effect1.set_effect_description("Delete 1 of your opponent's Digimon with 4000 DP or less. If no Digimon was deleted by this effect, <Draw 1>. (Draw 1 card from your deck.) Then, add this card to its owner's hand.")
         effect1.is_security_effect = True

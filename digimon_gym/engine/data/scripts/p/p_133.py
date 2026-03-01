@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -16,6 +17,7 @@ class P_133(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [On Play] You may play 1 [Pteromon] from your hand without paying the cost.
         effect0 = ICardEffect()
+        effect0.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect0.set_effect_name("P-133 Play 1 [Pteromon] from your hand")
         effect0.set_effect_description("[On Play] You may play 1 [Pteromon] from your hand without paying the cost.")
         effect0.is_optional = True
@@ -48,6 +50,7 @@ class P_133(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [Your Turn][Once Per Turn] When one of your Digimon digivolves into a Digimon with [Avian] or [Bird] in one of its traits, by suspending this Tamer, gain 1 memory.
         effect1 = ICardEffect()
+        effect1.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect1.set_effect_name("P-133 Memory +1")
         effect1.set_effect_description("[Your Turn][Once Per Turn] When one of your Digimon digivolves into a Digimon with [Avian] or [Bird] in one of its traits, by suspending this Tamer, gain 1 memory.")
         effect1.is_optional = True

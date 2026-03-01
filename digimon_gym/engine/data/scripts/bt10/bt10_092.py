@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -16,6 +17,7 @@ class BT10_092(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [On Play] Reveal the top 4 cards of your deck. Add 1 card with [Knightmon] or [DeadlyAxemon] in its name or [Twilight] in its traits among them to your hand. Place the rest at the bottom of your deck in any order.
         effect0 = ICardEffect()
+        effect0.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect0.set_effect_name("BT10-092 Reveal the top 4 cards of deck")
         effect0.set_effect_description("[On Play] Reveal the top 4 cards of your deck. Add 1 card with [Knightmon] or [DeadlyAxemon] in its name or [Twilight] in its traits among them to your hand. Place the rest at the bottom of your deck in any order.")
         effect0.is_on_play = True
@@ -71,6 +73,7 @@ class BT10_092(CardScript):
         # Timing: EffectTiming.OnDestroyedAnyone
         # [On Deletion] Gain 2 memory.
         effect2 = ICardEffect()
+        effect2.set_timing(EffectTiming.OnDestroyedAnyone)
         effect2.set_effect_name("BT10-092 Memory +2")
         effect2.set_effect_description("[On Deletion] Gain 2 memory.")
         effect2.is_on_deletion = True

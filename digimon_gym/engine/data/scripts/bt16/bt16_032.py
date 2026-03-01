@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -40,6 +41,7 @@ class BT16_032(CardScript):
         # Timing: EffectTiming.OnAttackTargetChanged
         # [All Turns][Once Per Turn] When an attack target is switched, you may end the attack.
         effect2 = ICardEffect()
+        effect2.set_timing(EffectTiming.OnAttackTargetChanged)
         effect2.set_effect_name("BT16-032 End an attack when an attack target is switched.")
         effect2.set_effect_description("[All Turns][Once Per Turn] When an attack target is switched, you may end the attack.")
         effect2.is_optional = True

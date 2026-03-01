@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -64,6 +65,7 @@ class BT21_079(CardScript):
         # Timing: EffectTiming.OnEndAttack
         # [End of Attack][Once Per Turn] Delete all Digimon.
         effect3 = ICardEffect()
+        effect3.set_timing(EffectTiming.OnEndAttack)
         effect3.set_effect_name("BT21-079 Delete all digimon")
         effect3.set_effect_description("[End of Attack][Once Per Turn] Delete all Digimon.")
         effect3.set_max_count_per_turn(1)
@@ -99,6 +101,7 @@ class BT21_079(CardScript):
         # Timing: EffectTiming.OnDestroyedAnyone
         # [On Deletion] You may play 1 play cost 3 or lower Digimon card with [Guilmon] or [Growlmon] in its name from your trash without paying the cost. For every 10 cards in both players' trashes, add 2 to this effect's play cost maximum.
         effect4 = ICardEffect()
+        effect4.set_timing(EffectTiming.OnDestroyedAnyone)
         effect4.set_effect_name("BT21-079 Play guilmon or growlmon in name")
         effect4.set_effect_description("[On Deletion] You may play 1 play cost 3 or lower Digimon card with [Guilmon] or [Growlmon] in its name from your trash without paying the cost. For every 10 cards in both players' trashes, add 2 to this effect's play cost maximum.")
         effect4.is_on_deletion = True

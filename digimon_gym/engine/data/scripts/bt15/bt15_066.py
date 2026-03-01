@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -16,6 +17,7 @@ class BT15_066(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # De Digivolve
         effect0 = ICardEffect()
+        effect0.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect0.set_effect_name("BT15-066 De Digivolve")
         effect0.set_effect_description("De Digivolve")
         effect0.is_on_play = True
@@ -50,6 +52,7 @@ class BT15_066(CardScript):
         # Timing: EffectTiming.OnAllyAttack
         # De Digivolve
         effect1 = ICardEffect()
+        effect1.set_timing(EffectTiming.OnAllyAttack)
         effect1.set_effect_name("BT15-066 De Digivolve")
         effect1.set_effect_description("De Digivolve")
         effect1.is_on_attack = True
@@ -84,6 +87,7 @@ class BT15_066(CardScript):
         # Timing: EffectTiming.OnEndTurn
         # [End of Opponent's Turn] Delete this Digimon. Then you may play 1 Digimon card with the [Dark Masters] trait, other than [Machinedramon] from your hand without paying the cost.
         effect2 = ICardEffect()
+        effect2.set_timing(EffectTiming.OnEndTurn)
         effect2.set_effect_name("BT15-066 Delete this Digimon and play 1 Digimon from hand")
         effect2.set_effect_description("[End of Opponent's Turn] Delete this Digimon. Then you may play 1 Digimon card with the [Dark Masters] trait, other than [Machinedramon] from your hand without paying the cost.")
 

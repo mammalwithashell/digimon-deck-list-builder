@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -28,6 +29,7 @@ class BT15_030(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [On Play] Trash the top 2 digivolution cards of all of your opponent's Digimon. Then, return 2 of your opponent's Digimon with no digivolution cards to the deck bottom
         effect1 = ICardEffect()
+        effect1.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect1.set_effect_name("BT15-030 Trash digivolution cards and return 1 Digimon without digivolution cards to the deck bottom")
         effect1.set_effect_description("[On Play] Trash the top 2 digivolution cards of all of your opponent's Digimon. Then, return 2 of your opponent's Digimon with no digivolution cards to the deck bottom")
         effect1.is_on_play = True
@@ -68,6 +70,7 @@ class BT15_030(CardScript):
         # Timing: EffectTiming.OnDestroyedAnyone
         # [On Deletion] Trash the top 2 digivolution cards of all of your opponent's Digimon. Then, return 2 of your opponent's Digimon with no digivolution cards to the deck bottom
         effect2 = ICardEffect()
+        effect2.set_timing(EffectTiming.OnDestroyedAnyone)
         effect2.set_effect_name("BT15-030 Trash digivolution cards and return 1 Digimon without digivolution cards to the deck bottom")
         effect2.set_effect_description("[On Deletion] Trash the top 2 digivolution cards of all of your opponent's Digimon. Then, return 2 of your opponent's Digimon with no digivolution cards to the deck bottom")
         effect2.is_on_deletion = True

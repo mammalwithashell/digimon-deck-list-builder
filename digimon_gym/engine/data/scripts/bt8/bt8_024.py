@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -16,6 +17,7 @@ class BT8_024(CardScript):
         # Timing: EffectTiming.BeforePayCost
         # [Your Turn] When this Digimon would digivolve, if you have 3 or fewer security cards, <Recovery +1 (Deck)>. (Place the top card of your deck on top of your security stack.)
         effect0 = ICardEffect()
+        effect0.set_timing(EffectTiming.BeforePayCost)
         effect0.set_effect_name("BT8-024 Recovery +1 (Deck)")
         effect0.set_effect_description("[Your Turn] When this Digimon would digivolve, if you have 3 or fewer security cards, <Recovery +1 (Deck)>. (Place the top card of your deck on top of your security stack.)")
         effect0.set_hash_string("Recovery1_BT8_024")
@@ -44,6 +46,7 @@ class BT8_024(CardScript):
         # Timing: EffectTiming.OnAllyAttack
         # [When Attacking] If you have 3 or more security cards, return 1 of your opponent's level 3 Digimon to its owner's hand.
         effect1 = ICardEffect()
+        effect1.set_timing(EffectTiming.OnAllyAttack)
         effect1.set_effect_name("BT8-024 Return 1 level 3 Digimon to hand")
         effect1.set_effect_description("[When Attacking] If you have 3 or more security cards, return 1 of your opponent's level 3 Digimon to its owner's hand.")
         effect1.is_inherited_effect = True

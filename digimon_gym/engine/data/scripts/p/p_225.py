@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -39,6 +40,7 @@ class P_225(CardScript):
         # Timing: EffectTiming.OptionSkill
         # [Main] <Draw 1>. Then, place this card in the battle area.
         effect1 = ICardEffect()
+        effect1.set_timing(EffectTiming.OptionSkill)
         effect1.set_effect_name("P-225 Draw 1, then place in battle area")
         effect1.set_effect_description("[Main] <Draw 1>. Then, place this card in the battle area.")
 
@@ -70,8 +72,7 @@ class P_225(CardScript):
         def condition2(context: Dict[str, Any]) -> bool:
             if card and card.permanent_of_this_card() is None:
                 return False
-            permanent = card.permanent_of_this_card() if card else None
-            if not (permanent and len(permanent.digivolution_cards) >= 1):
+            if not (card and card.owner and card.owner.is_my_turn):
                 return False
             return True
         effect2.set_can_use_condition(condition2)
@@ -80,6 +81,7 @@ class P_225(CardScript):
         # Timing: EffectTiming.OnDeclaration
         # [Main] <Delay>, By placing the top stacked card of any of your level 4 or higher [CS] Trait Digimon as its bottom digivolution card, gain 2 memory.
         effect3 = ICardEffect()
+        effect3.set_timing(EffectTiming.OnDeclaration)
         effect3.set_effect_name("P-225 By placing the top stacked card of any of your level 4 or higher [CS] Trait Digimon as its bottom digivolution card, gain 2 memory.")
         effect3.set_effect_description("[Main] <Delay>, By placing the top stacked card of any of your level 4 or higher [CS] Trait Digimon as its bottom digivolution card, gain 2 memory.")
 
@@ -87,22 +89,63 @@ class P_225(CardScript):
         def condition3(context: Dict[str, Any]) -> bool:
             if card and card.permanent_of_this_card() is None:
                 return False
-            permanent = effect.effect_source_permanent if hasattr(effect, 'effect_source_permanent') else None
-            if not (permanent and len(permanent.digivolution_cards) >= 1):
+            if not (card and card.owner and card.owner.is_my_turn):
                 return False
+            # Check that player has a Lv.4+ CS Digimon with stacked cards
+            player = card.owner if card else None
+            if player:
+                has_target = any(
+                    p.is_digimon and (getattr(p.top_card, 'level', 0) or 0) >= 4
+                    and any('CS' in t for t in (getattr(p.top_card, 'card_traits', []) or []))
+                    and len(p.card_sources) > 1
+                    for p in player.battle_area
+                )
+                if not has_target:
+                    return False
             return True
 
         effect3.set_can_use_condition(condition3)
 
         def process3(ctx: Dict[str, Any]):
-            """Action: Gain 2 memory"""
+            """Action: Place top stacked card of Lv.4+ CS Digimon as bottom evo card, gain 2 memory"""
             player = ctx.get('player')
-            perm = ctx.get('permanent')
             game = ctx.get('game')
-            if player:
+            if not (player and game):
+                return
+            def target_filter(p):
+                if not p.is_digimon:
+                    return False
+                if (getattr(p.top_card, 'level', 0) or 0) < 4:
+                    return False
+                traits = getattr(p.top_card, 'card_traits', []) or []
+                if not any('CS' in t for t in traits):
+                    return False
+                if len(p.card_sources) <= 1:
+                    return False
+                return True
+            def on_select(target_perm):
+                # Move top stacked card to bottom of digivolution stack
+                if len(target_perm.card_sources) > 1:
+                    top_card = target_perm.card_sources.pop()
+                    target_perm.card_sources.insert(0, top_card)
                 player.add_memory(2)
+            game.effect_select_own_permanent(
+                player, on_select, filter_fn=target_filter, is_optional=False)
 
         effect3.set_on_process_callback(process3)
         effects.append(effect3)
+
+        # Timing: EffectTiming.SecuritySkill
+        # [Security] Place this card in the battle area.
+        effect4 = ICardEffect()
+        effect4.set_timing(EffectTiming.SecuritySkill)
+        effect4.set_effect_name("P-225 Security: Place in battle area")
+        effect4.set_effect_description("[Security] Place this card in the battle area.")
+        effect4.is_security_effect = True
+
+        def condition4(context: Dict[str, Any]) -> bool:
+            return True
+        effect4.set_can_use_condition(condition4)
+        effects.append(effect4)
 
         return effects

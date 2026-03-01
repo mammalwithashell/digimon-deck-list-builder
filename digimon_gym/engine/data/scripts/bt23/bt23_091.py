@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -39,6 +40,7 @@ class BT23_091(CardScript):
         # Timing: EffectTiming.OptionSkill
         # [Main] Delete 1 of your opponent's Digimon with the lowest DP. Then, place this card in the battle area.
         effect1 = ICardEffect()
+        effect1.set_timing(EffectTiming.OptionSkill)
         effect1.set_effect_name("BT23-091 Delete 1 digimon with lowest DP, then place in battle area")
         effect1.set_effect_description("[Main] Delete 1 of your opponent's Digimon with the lowest DP. Then, place this card in the battle area.")
 
@@ -50,16 +52,21 @@ class BT23_091(CardScript):
         effect1.set_can_use_condition(condition1)
 
         def process1(ctx: Dict[str, Any]):
-            """Action: Delete"""
+            """Action: Delete opponent's lowest DP Digimon"""
             player = ctx.get('player')
             perm = ctx.get('permanent')
             game = ctx.get('game')
             if not (player and game):
                 return
+            enemy = player.enemy if player else None
+            if not enemy:
+                return
+            # Find lowest DP among opponent Digimon
+            dps = [p.dp or 0 for p in enemy.battle_area if p.is_digimon]
+            min_dp = min(dps) if dps else 0
             def target_filter(p):
-                return p.is_digimon
+                return p.is_digimon and (p.dp or 0) <= min_dp
             def on_delete(target_perm):
-                enemy = player.enemy if player else None
                 if enemy:
                     enemy.delete_permanent(target_perm)
             game.effect_select_opponent_permanent(
@@ -86,10 +93,11 @@ class BT23_091(CardScript):
         effects.append(effect2)
 
         # Timing: EffectTiming.OnAllyAttack
-        # [Your Turn] When one of your [CS] trait Digimon attacks <Delay>, Delete 1 of your opponent's Digimon with the lowest DP.
+        # [Your Turn] When one of your [CS] trait Digimon attacks <Delay>, delete 1 lowest DP opp Digimon.
         effect3 = ICardEffect()
-        effect3.set_effect_name("BT23-091 Delete 1 digimon with lowest DP")
-        effect3.set_effect_description("[Your Turn] When one of your [CS] trait Digimon attacks <Delay>, Delete 1 of your opponent's Digimon with the lowest DP.")
+        effect3.set_timing(EffectTiming.OnAllyAttack)
+        effect3.set_effect_name("BT23-091 Delay delete lowest DP")
+        effect3.set_effect_description("[Your Turn] When one of your [CS] trait Digimon attacks <Delay>, delete 1 of your opponent's Digimon with the lowest DP.")
         effect3.is_optional = True
         effect3.is_on_attack = True
 
@@ -99,25 +107,34 @@ class BT23_091(CardScript):
                 return False
             if not (card and card.owner and card.owner.is_my_turn):
                 return False
+            # Check attacking Digimon has CS trait
+            atk_perm = context.get('attacking_permanent') or context.get('permanent')
+            if atk_perm:
+                traits = getattr(atk_perm.top_card, 'card_traits', []) or []
+                if not any('CS' in t for t in traits):
+                    return False
             return True
 
         effect3.set_can_use_condition(condition3)
 
         def process3(ctx: Dict[str, Any]):
-            """Action: Delete"""
+            """Action: Delete opponent's lowest DP Digimon"""
             player = ctx.get('player')
-            perm = ctx.get('permanent')
             game = ctx.get('game')
             if not (player and game):
                 return
+            enemy = player.enemy if player else None
+            if not enemy:
+                return
+            dps = [p.dp or 0 for p in enemy.battle_area if p.is_digimon]
+            min_dp = min(dps) if dps else 0
             def target_filter(p):
-                return p.is_digimon
+                return p.is_digimon and (p.dp or 0) <= min_dp
             def on_delete(target_perm):
-                enemy = player.enemy if player else None
                 if enemy:
                     enemy.delete_permanent(target_perm)
             game.effect_select_opponent_permanent(
-                player, on_delete, filter_fn=target_filter, is_optional=True)
+                player, on_delete, filter_fn=target_filter, is_optional=False)
 
         effect3.set_on_process_callback(process3)
         effects.append(effect3)
@@ -125,9 +142,9 @@ class BT23_091(CardScript):
         # Timing: EffectTiming.SecuritySkill
         # [Security] Delete 1 of your opponent's Digimon with the lowest DP. Then, place this card in the battle area.
         effect4 = ICardEffect()
+        effect4.set_timing(EffectTiming.SecuritySkill)
         effect4.set_effect_name("BT23-091 Delete 1 digimon with lowest DP, then place in battle area")
         effect4.set_effect_description("[Security] Delete 1 of your opponent's Digimon with the lowest DP. Then, place this card in the battle area.")
-        effect4.is_security_effect = True
         effect4.is_security_effect = True
 
         effect = effect4  # alias for condition closure
@@ -138,16 +155,20 @@ class BT23_091(CardScript):
         effect4.set_can_use_condition(condition4)
 
         def process4(ctx: Dict[str, Any]):
-            """Action: Delete"""
+            """Action: Delete opponent's lowest DP Digimon (security)"""
             player = ctx.get('player')
             perm = ctx.get('permanent')
             game = ctx.get('game')
             if not (player and game):
                 return
+            enemy = player.enemy if player else None
+            if not enemy:
+                return
+            dps = [p.dp or 0 for p in enemy.battle_area if p.is_digimon]
+            min_dp = min(dps) if dps else 0
             def target_filter(p):
-                return p.is_digimon
+                return p.is_digimon and (p.dp or 0) <= min_dp
             def on_delete(target_perm):
-                enemy = player.enemy if player else None
                 if enemy:
                     enemy.delete_permanent(target_perm)
             game.effect_select_opponent_permanent(

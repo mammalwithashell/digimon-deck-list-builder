@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -29,6 +30,7 @@ class BT11_111(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [When Digivolving] You may place up to 4 [Vemmon] from your trash under this Digimon as its bottom digivolution cards. Then, if there are 8 or more [Vemmon] in this Digimon's digivolution cards, delete 1 of your opponent's Digimon.
         effect1 = ICardEffect()
+        effect1.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect1.set_effect_name("BT11-111 Place up to 4 [Vemmon] from trash to digivolution cards and delete 1 Digimon")
         effect1.set_effect_description("[When Digivolving] You may place up to 4 [Vemmon] from your trash under this Digimon as its bottom digivolution cards. Then, if there are 8 or more [Vemmon] in this Digimon's digivolution cards, delete 1 of your opponent's Digimon.")
         effect1.is_when_digivolving = True
@@ -64,6 +66,7 @@ class BT11_111(CardScript):
         # Timing: EffectTiming.WhenRemoveField
         # [All Turns] When this Digimon would leave the battle area, by placing 4 [Vemmon] from this Digimon's digivolution cards at the bottom of their owners' decks, prevent it from leaving play.
         effect2 = ICardEffect()
+        effect2.set_timing(EffectTiming.WhenRemoveField)
         effect2.set_effect_name("BT11-111 Prevent this Digimon from leaving play")
         effect2.set_effect_description("[All Turns] When this Digimon would leave the battle area, by placing 4 [Vemmon] from this Digimon's digivolution cards at the bottom of their owners' decks, prevent it from leaving play.")
         effect2.is_optional = True
@@ -80,6 +83,7 @@ class BT11_111(CardScript):
         # Timing: EffectTiming.OnStartMainPhase
         # [Start of Your Main Phase] Trash the top card of your opponent's security stack.
         effect3 = ICardEffect()
+        effect3.set_timing(EffectTiming.OnStartMainPhase)
         effect3.set_effect_name("BT11-111 Trash the top card of opponent's security")
         effect3.set_effect_description("[Start of Your Main Phase] Trash the top card of your opponent's security stack.")
 

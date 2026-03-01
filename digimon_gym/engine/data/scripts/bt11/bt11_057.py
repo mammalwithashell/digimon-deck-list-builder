@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -16,6 +17,7 @@ class BT11_057(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [When Digivolving] You may trash up to 3 cards in your hand. If you do, for each card trashed, suspend 1 of your opponent's Digimon. Then, for each suspended Digimon your opponent has in play, gain 1 memory.
         effect0 = ICardEffect()
+        effect0.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect0.set_effect_name("BT11-057 Trash cards from hand to suspend opponent's Digimons and gain Memory")
         effect0.set_effect_description("[When Digivolving] You may trash up to 3 cards in your hand. If you do, for each card trashed, suspend 1 of your opponent's Digimon. Then, for each suspended Digimon your opponent has in play, gain 1 memory.")
         effect0.is_when_digivolving = True

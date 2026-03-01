@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -28,6 +29,7 @@ class BT24_073(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # Play Card, Mill
         effect1 = ICardEffect()
+        effect1.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect1.set_effect_name("BT24-073 Play Card, Mill")
         effect1.set_effect_description("Play Card, Mill")
         effect1.is_when_digivolving = True
@@ -67,6 +69,7 @@ class BT24_073(CardScript):
         # Timing: EffectTiming.OnDestroyedAnyone
         # Play Card, Mill
         effect2 = ICardEffect()
+        effect2.set_timing(EffectTiming.OnDestroyedAnyone)
         effect2.set_effect_name("BT24-073 Play Card, Mill")
         effect2.set_effect_description("Play Card, Mill")
         effect2.is_on_deletion = True
@@ -104,6 +107,7 @@ class BT24_073(CardScript):
         # Timing: EffectTiming.OnAllyAttack
         # [When Attacking] [Once Per Turn] This Digimon gains <Security A. +1> for the turn. (This Digimon checks 1 additional security card.) If your opponent has 10 or fewer cards in their trash, instead trash the top 2 cards of both players' decks.
         effect3 = ICardEffect()
+        effect3.set_timing(EffectTiming.OnAllyAttack)
         effect3.set_effect_name("BT24-073 If opponent has 10 or less trash cards, both player trash 2 cards from top deck, otherwise Sec +1")
         effect3.set_effect_description("[When Attacking] [Once Per Turn] This Digimon gains <Security A. +1> for the turn. (This Digimon checks 1 additional security card.) If your opponent has 10 or fewer cards in their trash, instead trash the top 2 cards of both players' decks.")
         effect3.is_inherited_effect = True

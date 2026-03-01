@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -33,6 +34,7 @@ class EX8_031(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [On Play] Return 1 Option card with [Plug-In] in its name from your trash to your hand.
         effect1 = ICardEffect()
+        effect1.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect1.set_effect_name("EX8-031 Return 1 option card to hand")
         effect1.set_effect_description("[On Play] Return 1 Option card with [Plug-In] in its name from your trash to your hand.")
         effect1.is_optional = True
@@ -63,6 +65,7 @@ class EX8_031(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [When Digivolving] Return 1 Option card with [Plug-In] in its name from your trash to your hand.
         effect2 = ICardEffect()
+        effect2.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect2.set_effect_name("EX8-031 Return 1 option card to hand")
         effect2.set_effect_description("[When Digivolving] Return 1 Option card with [Plug-In] in its name from your trash to your hand.")
         effect2.is_optional = True
@@ -93,6 +96,7 @@ class EX8_031(CardScript):
         # Timing: EffectTiming.OnUseOption
         # [Your Turn][Once Per Turn] When you use an Option card with a cost of 2 or more, 1 of your opponent's Digimon gets -2000 DP for the turn.
         effect3 = ICardEffect()
+        effect3.set_timing(EffectTiming.OnUseOption)
         effect3.set_effect_name("EX8-031 DP -2000")
         effect3.set_effect_description("[Your Turn][Once Per Turn] When you use an Option card with a cost of 2 or more, 1 of your opponent's Digimon gets -2000 DP for the turn.")
         effect3.is_inherited_effect = True

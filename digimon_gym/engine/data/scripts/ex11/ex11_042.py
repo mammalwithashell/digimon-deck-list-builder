@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -37,6 +38,7 @@ class EX11_042(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # Play Card
         effect1 = ICardEffect()
+        effect1.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect1.set_effect_name("EX11-042 Play Card")
         effect1.set_effect_description("Play Card")
         effect1.is_on_play = True
@@ -68,6 +70,7 @@ class EX11_042(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # Play Card
         effect2 = ICardEffect()
+        effect2.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect2.set_effect_name("EX11-042 Play Card")
         effect2.set_effect_description("Play Card")
         effect2.is_when_digivolving = True
@@ -99,6 +102,7 @@ class EX11_042(CardScript):
         # Timing: EffectTiming.WhenLinked
         # Delete
         effect3 = ICardEffect()
+        effect3.set_timing(EffectTiming.WhenLinked)
         effect3.set_effect_name("EX11-042 Delete an opponent's 5 cost or less Digimon")
         effect3.set_effect_description("Delete")
         effect3.set_max_count_per_turn(1)
@@ -134,6 +138,7 @@ class EX11_042(CardScript):
         # Timing: EffectTiming.OnAllyAttack
         # [Opponent's Turn] [Once Per Turn] When one of your opponent's Digimon attacks, you may change the attack target to this Digimon.
         effect4 = ICardEffect()
+        effect4.set_timing(EffectTiming.OnAllyAttack)
         effect4.set_effect_name("EX11-042 You may change the attack target to this Digimon.")
         effect4.set_effect_description("[Opponent's Turn] [Once Per Turn] When one of your opponent's Digimon attacks, you may change the attack target to this Digimon.")
         effect4.is_inherited_effect = True

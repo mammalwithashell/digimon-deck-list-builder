@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -16,6 +17,7 @@ class EX6_064(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [On Play] Reveal the top 3 cards of your deck. Add 1 card with the [Beast]/[Beastkin]/[Holy Beast]/[Cherub] trait among them to the hand. Return the rest to the bottom of the deck.
         effect0 = ICardEffect()
+        effect0.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect0.set_effect_name("EX6-064 Reveal the top 3 cards of deck")
         effect0.set_effect_description("[On Play] Reveal the top 3 cards of your deck. Add 1 card with the [Beast]/[Beastkin]/[Holy Beast]/[Cherub] trait among them to the hand. Return the rest to the bottom of the deck.")
         effect0.is_on_play = True
@@ -59,6 +61,7 @@ class EX6_064(CardScript):
         # Timing: EffectTiming.OnTappedAnyone
         # [Your Turn] When an effect suspends one of your Digimon, by suspending this Tamer, 1 of your Digimon may digivolve into a Digimon card with the [Beastkin]/[Holy Beast]/[Cherub] trait in your hand with the digivolution cost reduced by 2.
         effect1 = ICardEffect()
+        effect1.set_timing(EffectTiming.OnTappedAnyone)
         effect1.set_effect_name("EX6-064 When an effect suspends your Digimon, one of your Digimon may digivolve from your hand with reduced cost.")
         effect1.set_effect_description("[Your Turn] When an effect suspends one of your Digimon, by suspending this Tamer, 1 of your Digimon may digivolve into a Digimon card with the [Beastkin]/[Holy Beast]/[Cherub] trait in your hand with the digivolution cost reduced by 2.")
         effect1.is_optional = True

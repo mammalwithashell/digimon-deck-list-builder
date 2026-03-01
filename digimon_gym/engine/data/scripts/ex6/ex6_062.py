@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -41,6 +42,7 @@ class EX6_062(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [When Digivolving] If DNA digivolving, you may place up to 2 level 6 cards from your trash as this Digimon's bottom digivolution cards. Then, for each of this Digimon's level 6 digivolution cards, return 1 of your opponent's Digimon to the bottom of the deck.
         effect2 = ICardEffect()
+        effect2.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect2.set_effect_name("EX6-062 Place lvl 6 cards from trash to digivolution cards")
         effect2.set_effect_description("[When Digivolving] If DNA digivolving, you may place up to 2 level 6 cards from your trash as this Digimon's bottom digivolution cards. Then, for each of this Digimon's level 6 digivolution cards, return 1 of your opponent's Digimon to the bottom of the deck.")
         effect2.is_when_digivolving = True

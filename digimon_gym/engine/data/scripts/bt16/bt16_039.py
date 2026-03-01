@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -29,6 +30,7 @@ class BT16_039(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [On Play] Reveal the top 4 cards of your deck. Add 1 card with [Pulsemon] in its text and 1 card with the [Abadin Electronics] trait among them to your hand. Place the rest at the bottom of your deck in any order.
         effect1 = ICardEffect()
+        effect1.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect1.set_effect_name("BT16-039 Reveal the top 4 cards of deck")
         effect1.set_effect_description("[On Play] Reveal the top 4 cards of your deck. Add 1 card with [Pulsemon] in its text and 1 card with the [Abadin Electronics] trait among them to your hand. Place the rest at the bottom of your deck in any order.")
         effect1.is_on_play = True

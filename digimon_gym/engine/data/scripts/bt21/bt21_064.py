@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -37,6 +38,7 @@ class BT21_064(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [On Play] By trashing 1 card with [Guilmon], [Growlmon], [Gallantmon] or [Megidramon] in its name or the [Hero] trait from your hand, <Draw 2>.
         effect1 = ICardEffect()
+        effect1.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect1.set_effect_name("BT21-064 Trash 1 [Hero] / gallant line, <Draw 2>")
         effect1.set_effect_description("[On Play] By trashing 1 card with [Guilmon], [Growlmon], [Gallantmon] or [Megidramon] in its name or the [Hero] trait from your hand, <Draw 2>.")
         effect1.is_on_play = True
@@ -76,6 +78,7 @@ class BT21_064(CardScript):
         # Timing: EffectTiming.OnDestroyedAnyone
         # [On Deletion] Gain 1 memory.
         effect2 = ICardEffect()
+        effect2.set_timing(EffectTiming.OnDestroyedAnyone)
         effect2.set_effect_name("BT21-064 Memory +1")
         effect2.set_effect_description("[On Deletion] Gain 1 memory.")
         effect2.is_inherited_effect = True

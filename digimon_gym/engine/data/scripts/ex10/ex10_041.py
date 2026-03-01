@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -30,6 +31,7 @@ class EX10_041(CardScript):
         # Timing: EffectTiming.OnDiscardLibrary
         # When effects trash this card from the deck or security stack, give 1 of your opponent's Digimon <Security A. -1> (This Digimon checks 1 additional security card.) until their turn ends.
         effect1 = ICardEffect()
+        effect1.set_timing(EffectTiming.OnDiscardLibrary)
         effect1.set_effect_name("EX10-041 Give 1 digimon Sec Atk -1 until their turn ends")
         effect1.set_effect_description("When effects trash this card from the deck or security stack, give 1 of your opponent's Digimon <Security A. -1> (This Digimon checks 1 additional security card.) until their turn ends.")
 
@@ -53,6 +55,7 @@ class EX10_041(CardScript):
         # Timing: EffectTiming.OnDiscardSecurity
         # When effects trash this card from the deck or security stack, give 1 of your opponent's Digimon <Security A. -1> (This Digimon checks 1 additional security card.) until their turn ends.
         effect2 = ICardEffect()
+        effect2.set_timing(EffectTiming.OnDiscardSecurity)
         effect2.set_effect_name("EX10-041 Give 1 digimon Sec Atk -1 until their turn ends")
         effect2.set_effect_description("When effects trash this card from the deck or security stack, give 1 of your opponent's Digimon <Security A. -1> (This Digimon checks 1 additional security card.) until their turn ends.")
 
@@ -76,6 +79,7 @@ class EX10_041(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [On Play] By trashing your top security card, trash the top 2 cards of your deck and all of your opponent's Digimon get -3000 DP for the turn.
         effect3 = ICardEffect()
+        effect3.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect3.set_effect_name("EX10-041 By trashing your top security, trash top 2 cards of your deck and all opponent digimon get -3K DP for the turn")
         effect3.set_effect_description("[On Play] By trashing your top security card, trash the top 2 cards of your deck and all of your opponent's Digimon get -3000 DP for the turn.")
         effect3.is_optional = True
@@ -108,6 +112,7 @@ class EX10_041(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [When Digivolving] By trashing your top security card, trash the top 2 cards of your deck and all of your opponent's Digimon get -3000 DP for the turn.
         effect4 = ICardEffect()
+        effect4.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect4.set_effect_name("EX10-041 By trashing your top security, trash top 2 cards of your deck and all opponent digimon get -3K DP for the turn")
         effect4.set_effect_description("[When Digivolving] By trashing your top security card, trash the top 2 cards of your deck and all of your opponent's Digimon get -3000 DP for the turn.")
         effect4.is_optional = True

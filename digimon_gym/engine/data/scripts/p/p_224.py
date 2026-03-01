@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -16,6 +17,7 @@ class P_224(CardScript):
         # Timing: EffectTiming.OnStartMainPhase
         # Effect
         effect0 = ICardEffect()
+        effect0.set_timing(EffectTiming.OnStartMainPhase)
         effect0.set_effect_name("P-224 Effect")
         effect0.set_effect_description("Effect")
 
@@ -33,6 +35,7 @@ class P_224(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # Effect
         effect1 = ICardEffect()
+        effect1.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect1.set_effect_name("P-224 Effect")
         effect1.set_effect_description("Effect")
         effect1.is_on_play = True
@@ -50,6 +53,7 @@ class P_224(CardScript):
         # Timing: EffectTiming.OnDeclaration
         # [Main] By suspending this Tamer, you may play 1 level 5 or higher [Xros Heart] trait Digimon card from under any of your Tamers with the play cost reduced by 1.
         effect2 = ICardEffect()
+        effect2.set_timing(EffectTiming.OnDeclaration)
         effect2.set_effect_name("P-224 Suspend to Play a Digimon from tamer")
         effect2.set_effect_description("[Main] By suspending this Tamer, you may play 1 level 5 or higher [Xros Heart] trait Digimon card from under any of your Tamers with the play cost reduced by 1.")
         effect2.is_optional = True

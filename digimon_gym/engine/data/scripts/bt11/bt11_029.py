@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -16,6 +17,7 @@ class BT11_029(CardScript):
         # Timing: EffectTiming.OnDeclaration
         # [Main][Once Per Turn] By suspending this Digimon, reveal the top 3 cards of your deck. Add all blue Tamer cards among them to your hand. Place the rest at the bottom of your deck in any order.
         effect0 = ICardEffect()
+        effect0.set_timing(EffectTiming.OnDeclaration)
         effect0.set_effect_name("BT11-029 Reveal the top 3 cards of deck")
         effect0.set_effect_description("[Main][Once Per Turn] By suspending this Digimon, reveal the top 3 cards of your deck. Add all blue Tamer cards among them to your hand. Place the rest at the bottom of your deck in any order.")
         effect0.set_max_count_per_turn(1)
@@ -67,6 +69,7 @@ class BT11_029(CardScript):
         # Timing: EffectTiming.OnAllyAttack
         # [When Attacking][Once Per Turn] Activate 1 of your [Rina Shinomiya]'s [On Play] effects.
         effect1 = ICardEffect()
+        effect1.set_timing(EffectTiming.OnAllyAttack)
         effect1.set_effect_name("BT11-029 Activate [On Play] effect")
         effect1.set_effect_description("[When Attacking][Once Per Turn] Activate 1 of your [Rina Shinomiya]'s [On Play] effects.")
         effect1.is_inherited_effect = True

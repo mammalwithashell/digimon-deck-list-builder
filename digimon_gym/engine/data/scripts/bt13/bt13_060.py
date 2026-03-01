@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -29,6 +30,7 @@ class BT13_060(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [When Digivolving] Suspend 1 of your opponent's Digimon and 1 of their Tamers. Until the end of your opponent's turn, all of their Digimon and Tamers don't unsuspend.
         effect1 = ICardEffect()
+        effect1.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect1.set_effect_name("BT13-060 Suspend 1 Digimon and 1 Tamer, and opponent's Digimon and Tamer can't unsuspend")
         effect1.set_effect_description("[When Digivolving] Suspend 1 of your opponent's Digimon and 1 of their Tamers. Until the end of your opponent's turn, all of their Digimon and Tamers don't unsuspend.")
         effect1.is_when_digivolving = True
@@ -81,6 +83,7 @@ class BT13_060(CardScript):
         # Timing: EffectTiming.OnAllyAttack
         # [When Attacking] Trash the top card of your opponent's security stack for every 2 of your opponent's suspended Digimon and Tamers.
         effect2 = ICardEffect()
+        effect2.set_timing(EffectTiming.OnAllyAttack)
         effect2.set_effect_name("BT13-060 Effect")
         effect2.set_effect_description("[When Attacking] Trash the top card of your opponent's security stack for every 2 of your opponent's suspended Digimon and Tamers.")
         effect2.is_on_attack = True

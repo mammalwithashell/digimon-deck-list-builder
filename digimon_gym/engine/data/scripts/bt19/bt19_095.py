@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -42,6 +43,7 @@ class BT19_095(CardScript):
         # Timing: EffectTiming.OnDestroyedAnyone
         # When this card is trashed in your battle area, 1 of your Digimon gains <Piercing> and gets +4000 DP for the turn.
         effect1 = ICardEffect()
+        effect1.set_timing(EffectTiming.OnDestroyedAnyone)
         effect1.set_effect_name("BT19-095 Gain Piercing, +4000 DP")
         effect1.set_effect_description("When this card is trashed in your battle area, 1 of your Digimon gains <Piercing> and gets +4000 DP for the turn.")
         effect1.is_on_deletion = True
@@ -76,6 +78,7 @@ class BT19_095(CardScript):
         # Timing: EffectTiming.OptionSkill
         # [Main] 1 of your Digimon gains <Piercing> and gets +4000 DP for the turn. Then, place this card in the battle area.
         effect2 = ICardEffect()
+        effect2.set_timing(EffectTiming.OptionSkill)
         effect2.set_effect_name("BT19-095 Gain Piercing, +4000 DP, then place in battle area")
         effect2.set_effect_description("[Main] 1 of your Digimon gains <Piercing> and gets +4000 DP for the turn. Then, place this card in the battle area.")
         effect2._is_piercing = True
@@ -109,6 +112,7 @@ class BT19_095(CardScript):
         # Timing: EffectTiming.SecuritySkill
         # [Security] Suspend 2 of your opponent's Digimon or Tamers. Then, add this card to the hand.
         effect3 = ICardEffect()
+        effect3.set_timing(EffectTiming.SecuritySkill)
         effect3.set_effect_name("BT19-095 Add To Hand, Suspend")
         effect3.set_effect_description("[Security] Suspend 2 of your opponent's Digimon or Tamers. Then, add this card to the hand.")
         effect3.is_security_effect = True

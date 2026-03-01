@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -16,6 +17,7 @@ class EX11_028(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # Suspend
         effect0 = ICardEffect()
+        effect0.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect0.set_effect_name("EX11-028 Suspend")
         effect0.set_effect_description("Suspend")
         effect0.is_on_play = True
@@ -49,6 +51,7 @@ class EX11_028(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # Suspend
         effect1 = ICardEffect()
+        effect1.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect1.set_effect_name("EX11-028 Suspend")
         effect1.set_effect_description("Suspend")
         effect1.is_when_digivolving = True
@@ -82,6 +85,7 @@ class EX11_028(CardScript):
         # Timing: EffectTiming.OnTappedAnyone
         # [All Turns] [Once Per Turn] When any of your Digimon suspend, if you have 1 or fewer Tamers, you may play 1 [Shoto Kazama] from your hand without paying the cost.
         effect2 = ICardEffect()
+        effect2.set_timing(EffectTiming.OnTappedAnyone)
         effect2.set_effect_name("EX11-028 Play 1 [Shoto Kazama] from your hand")
         effect2.set_effect_description("[All Turns] [Once Per Turn] When any of your Digimon suspend, if you have 1 or fewer Tamers, you may play 1 [Shoto Kazama] from your hand without paying the cost.")
         effect2.is_optional = True
@@ -114,6 +118,7 @@ class EX11_028(CardScript):
         # Timing: EffectTiming.OnEndBattle
         # Gain 1 memory
         effect3 = ICardEffect()
+        effect3.set_timing(EffectTiming.OnEndBattle)
         effect3.set_effect_name("EX11-028 Gain 1 memory.")
         effect3.set_effect_description("Gain 1 memory")
         effect3.is_inherited_effect = True

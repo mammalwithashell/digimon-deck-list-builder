@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -16,6 +17,7 @@ class BT15_017(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [On Play] If your opponent has 3 or fewer security cards, delete 1 of their Digimon with the lowest DP. If they have 4 or more, trash the top card of their security stack.
         effect0 = ICardEffect()
+        effect0.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect0.set_effect_name("BT15-017 Delete 1 Digimon with the lowest DP and trash the top card of opponent's security")
         effect0.set_effect_description("[On Play] If your opponent has 3 or fewer security cards, delete 1 of their Digimon with the lowest DP. If they have 4 or more, trash the top card of their security stack.")
         effect0.is_on_play = True
@@ -58,6 +60,7 @@ class BT15_017(CardScript):
         # Timing: EffectTiming.OnDestroyedAnyone
         # [On Deletion] If your opponent has 3 or fewer security cards, delete 1 of their Digimon with the lowest DP. If they have 4 or more, trash the top card of their security stack.
         effect1 = ICardEffect()
+        effect1.set_timing(EffectTiming.OnDestroyedAnyone)
         effect1.set_effect_name("BT15-017 Delete 1 Digimon with the lowest DP and trash the top card of opponent's security")
         effect1.set_effect_description("[On Deletion] If your opponent has 3 or fewer security cards, delete 1 of their Digimon with the lowest DP. If they have 4 or more, trash the top card of their security stack.")
         effect1.is_on_deletion = True
@@ -98,6 +101,7 @@ class BT15_017(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [When Digivolving] You may play 1 red Digimon card with 5000 DP or less or 1 red Tamer card from your hand without paying the cost.
         effect2 = ICardEffect()
+        effect2.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect2.set_effect_name("BT15-017 Play 1 Digimon or Tamer from hand")
         effect2.set_effect_description("[When Digivolving] You may play 1 red Digimon card with 5000 DP or less or 1 red Tamer card from your hand without paying the cost.")
         effect2.is_optional = True

@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -34,6 +35,7 @@ class EX10_052(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [When Digivolving] By trashing 1 card in your hand, your opponent may delete 1 of their Digimon or Tamers. If this effect didn't delete, <Recovery +1 (Deck)> (Place the top card of your deck on top of your security stack.)
         effect1 = ICardEffect()
+        effect1.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect1.set_effect_name("EX10-052 By trashing 1 card in hand, your opponent may delete a digimon or tamer. if they didnt Recover +1")
         effect1.set_effect_description("[When Digivolving] By trashing 1 card in your hand, your opponent may delete 1 of their Digimon or Tamers. If this effect didn't delete, <Recovery +1 (Deck)> (Place the top card of your deck on top of your security stack.)")
         effect1.is_when_digivolving = True
@@ -69,6 +71,7 @@ class EX10_052(CardScript):
         # Timing: EffectTiming.OnAllyAttack
         # [When Attacking] By trashing 1 card in your hand, your opponent may delete 1 of their Digimon or Tamers. If this effect didn't delete, <Recovery +1 (Deck)> (Place the top card of your deck on top of your security stack.)
         effect2 = ICardEffect()
+        effect2.set_timing(EffectTiming.OnAllyAttack)
         effect2.set_effect_name("EX10-052 By trashing 1 card in hand, your opponent may delete a digimon or tamer. if they didnt Recover +1")
         effect2.set_effect_description("[When Attacking] By trashing 1 card in your hand, your opponent may delete 1 of their Digimon or Tamers. If this effect didn't delete, <Recovery +1 (Deck)> (Place the top card of your deck on top of your security stack.)")
         effect2.is_on_attack = True
@@ -104,6 +107,7 @@ class EX10_052(CardScript):
         # Timing: EffectTiming.WhenRemoveField
         # [All Turns] [Once Per Turn] When this Digimon would leave the battle area, your opponent may delete 1 of their Digimon or Tamers. If this effect didn't delete, it doesn't leave.
         effect3 = ICardEffect()
+        effect3.set_timing(EffectTiming.WhenRemoveField)
         effect3.set_effect_name("EX10-052 Your opponent may delete a digimon or tamer, if they dont this cards doesnt leave")
         effect3.set_effect_description("[All Turns] [Once Per Turn] When this Digimon would leave the battle area, your opponent may delete 1 of their Digimon or Tamers. If this effect didn't delete, it doesn't leave.")
         effect3.set_max_count_per_turn(1)

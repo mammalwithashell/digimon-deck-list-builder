@@ -77,7 +77,7 @@ export function GameBoard({
   const ownSlots = new Set([...(highlightedOwnSlots ?? []), ...selectionHighlights]);
 
   return (
-    <div className="flex flex-col gap-1 h-full">
+    <div data-testid="game-board" className="flex flex-col gap-1 h-full">
       {/* Opponent hand (top edge) */}
       <HandZone cardIds={player2.handIds} isOpponent />
 

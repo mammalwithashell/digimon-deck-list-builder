@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -34,6 +35,7 @@ class BT20_041(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [On Play] Suspend 1 of your opponent's Digimon and 1 of your Digimon gets +3000 DP for the turn. Then, 1 of your Digimon may attack.
         effect1 = ICardEffect()
+        effect1.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect1.set_effect_name("BT20-041 Suspend 1 of your opponent's Digimon, 1 of your Digimon gets +3000DP, then attack")
         effect1.set_effect_description("[On Play] Suspend 1 of your opponent's Digimon and 1 of your Digimon gets +3000 DP for the turn. Then, 1 of your Digimon may attack.")
         effect1.is_on_play = True
@@ -71,6 +73,7 @@ class BT20_041(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [When Digivolving] Suspend 1 of your opponent's Digimon and 1 of your Digimon gets +3000 DP for the turn. Then, 1 of your Digimon may attack.
         effect2 = ICardEffect()
+        effect2.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect2.set_effect_name("BT20-041 Suspend 1 of your opponent's Digimon, 1 of your Digimon gets +3000DP, then attack")
         effect2.set_effect_description("[When Digivolving] Suspend 1 of your opponent's Digimon and 1 of your Digimon gets +3000 DP for the turn. Then, 1 of your Digimon may attack.")
         effect2.is_when_digivolving = True
@@ -108,6 +111,7 @@ class BT20_041(CardScript):
         # Timing: EffectTiming.OnAllyAttack
         # [When Attacking] [Once Per Turn] 1 of your opponent's Digimon gets -4000 DP for the turn.
         effect3 = ICardEffect()
+        effect3.set_timing(EffectTiming.OnAllyAttack)
         effect3.set_effect_name("BT20-041 1 Opponent's Digimon gets -4000 DP")
         effect3.set_effect_description("[When Attacking] [Once Per Turn] 1 of your opponent's Digimon gets -4000 DP for the turn.")
         effect3.is_inherited_effect = True

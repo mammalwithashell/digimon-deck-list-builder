@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -36,6 +37,7 @@ class BT16_062(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [On Play] <De-Digivolve 1> 1 of your opponent's Digimon with as much or less DP as this Digimon. Then, delete 1 Digimon with a play cost of 3 or less.
         effect1 = ICardEffect()
+        effect1.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect1.set_effect_name("BT16-062 <De-Digivolve 1>, then delete 3 cost")
         effect1.set_effect_description("[On Play] <De-Digivolve 1> 1 of your opponent's Digimon with as much or less DP as this Digimon. Then, delete 1 Digimon with a play cost of 3 or less.")
         effect1.is_on_play = True
@@ -80,6 +82,7 @@ class BT16_062(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [When Digivolving] <De-Digivolve 1> 1 of your opponent's Digimon with as much or less DP as this Digimon. Then, delete 1 Digimon with a play cost of 3 or less.
         effect2 = ICardEffect()
+        effect2.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect2.set_effect_name("BT16-062 <De-Digivolve 1>, then delete 3 cost")
         effect2.set_effect_description("[When Digivolving] <De-Digivolve 1> 1 of your opponent's Digimon with as much or less DP as this Digimon. Then, delete 1 Digimon with a play cost of 3 or less.")
         effect2.is_when_digivolving = True

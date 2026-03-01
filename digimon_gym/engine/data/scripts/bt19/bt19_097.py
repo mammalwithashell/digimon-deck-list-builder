@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -16,6 +17,7 @@ class BT19_097(CardScript):
         # Timing: EffectTiming.OnDiscardLibrary
         # When this card is trashed from your deck, you may place it in the battle area.
         effect0 = ICardEffect()
+        effect0.set_timing(EffectTiming.OnDiscardLibrary)
         effect0.set_effect_name("BT19-097 Place this card in the battle Area")
         effect0.set_effect_description("When this card is trashed from your deck, you may place it in the battle area.")
         effect0.is_optional = True
@@ -30,6 +32,7 @@ class BT19_097(CardScript):
         # Timing: EffectTiming.OptionSkill
         # [Main] Trash the top 2 cards of your deck. Then, place this card in the battle area.
         effect1 = ICardEffect()
+        effect1.set_timing(EffectTiming.OptionSkill)
         effect1.set_effect_name("BT19-097 Trash 2 cards of your deck and place this card in the battle area.")
         effect1.set_effect_description("[Main] Trash the top 2 cards of your deck. Then, place this card in the battle area.")
 
@@ -74,6 +77,7 @@ class BT19_097(CardScript):
         # Timing: EffectTiming.OnStartTurn
         # [Start of your Turn] If you don't have a Digimon, <Delay>.\r\n� You may play 1 [Impmon] from your trash without paying the cost.
         effect3 = ICardEffect()
+        effect3.set_timing(EffectTiming.OnStartTurn)
         effect3.set_effect_name("BT19-097 Play an [Impmon] from trash.")
         effect3.set_effect_description("[Start of your Turn] If you don't have a Digimon, <Delay>.\r\n� You may play 1 [Impmon] from your trash without paying the cost.")
         effect3.is_optional = True

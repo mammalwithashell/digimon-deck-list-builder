@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -16,6 +17,7 @@ class BT8_044(CardScript):
         # Timing: EffectTiming.OnAllyAttack
         # [When Attacking] You may trash the top card of your security stack to gain 2 memory.
         effect0 = ICardEffect()
+        effect0.set_timing(EffectTiming.OnAllyAttack)
         effect0.set_effect_name("BT8-044 Trash a Security to get Memory +2")
         effect0.set_effect_description("[When Attacking] You may trash the top card of your security stack to gain 2 memory.")
         effect0.is_optional = True
@@ -51,6 +53,7 @@ class BT8_044(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [Your Turn][Once Per Turn] When one of your other Digimon digivolves, you may unsuspend it.
         effect1 = ICardEffect()
+        effect1.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect1.set_effect_name("BT8-044 Unsuspend the digivolved Digimon")
         effect1.set_effect_description("[Your Turn][Once Per Turn] When one of your other Digimon digivolves, you may unsuspend it.")
         effect1.is_optional = True

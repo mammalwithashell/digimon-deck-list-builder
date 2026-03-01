@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -39,6 +40,7 @@ class BT23_099(CardScript):
         # Timing: EffectTiming.OptionSkill
         # [Main] <Draw 1> Then, place this card in the battle area.
         effect1 = ICardEffect()
+        effect1.set_timing(EffectTiming.OptionSkill)
         effect1.set_effect_name("BT23-099 Draw 1")
         effect1.set_effect_description("[Main] <Draw 1> Then, place this card in the battle area.")
 
@@ -80,6 +82,7 @@ class BT23_099(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [Your Turn] When any of your Digimon digivolve into a Digimon with [Huckmon] or [Jesmon] in its name, <Delay> \r\n・You may play 1 card with [Sistermon] in its name from your hand or trash without paying the cost.
         effect3 = ICardEffect()
+        effect3.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect3.set_effect_name("BT23-099 Play 1 card with [Sistermon] in its name")
         effect3.set_effect_description("[Your Turn] When any of your Digimon digivolve into a Digimon with [Huckmon] or [Jesmon] in its name, <Delay> \\r\\n・You may play 1 card with [Sistermon] in its name from your hand or trash without paying the cost.")
         effect3.is_optional = True
@@ -115,6 +118,7 @@ class BT23_099(CardScript):
         # Timing: EffectTiming.SecuritySkill
         # [Security] You may play 1 card with [Sistermon] in its name from your hand or trash without paying the cost. Then, place this card in the battle area.
         effect4 = ICardEffect()
+        effect4.set_timing(EffectTiming.SecuritySkill)
         effect4.set_effect_name("BT23-099 Play Card")
         effect4.set_effect_description("[Security] You may play 1 card with [Sistermon] in its name from your hand or trash without paying the cost. Then, place this card in the battle area.")
         effect4.is_security_effect = True

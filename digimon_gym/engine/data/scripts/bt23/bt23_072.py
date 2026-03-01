@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -16,6 +17,7 @@ class BT23_072(CardScript):
         # Timing: EffectTiming.OnDeclaration
         # [Hand][Main] By paying 3 cost and placing this card as the bottom digivolution card of your [King Drasil_7D6] or [Mother Eater] in the breeding area, <Draw 1>.
         effect0 = ICardEffect()
+        effect0.set_timing(EffectTiming.OnDeclaration)
         effect0.set_effect_name("BT23-072 <Draw 1>")
         effect0.set_effect_description("[Hand][Main] By paying 3 cost and placing this card as the bottom digivolution card of your [King Drasil_7D6] or [Mother Eater] in the breeding area, <Draw 1>.")
         effect0.is_optional = True
@@ -43,6 +45,7 @@ class BT23_072(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [All Turns] When any of your Digimon with the [Royal Knight] or [CS] trait are played, by suspending this Digimon, 1 of the played Digimon gains <Rush>, <Raid>, <Reboot> and <Blocker> until your opponent's turn ends.
         effect1 = ICardEffect()
+        effect1.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect1.set_effect_name("BT23-072 By suspending this digimon, 1 played digimon gains <Rush>, <Raid>, <Reboot> and <Blocker>")
         effect1.set_effect_description("[All Turns] When any of your Digimon with the [Royal Knight] or [CS] trait are played, by suspending this Digimon, 1 of the played Digimon gains <Rush>, <Raid>, <Reboot> and <Blocker> until your opponent's turn ends.")
         effect1.is_optional = True
@@ -87,6 +90,7 @@ class BT23_072(CardScript):
         # Timing: EffectTiming.OnStartMainPhase
         # [Breeding] [Start of Your Main Phase] If this Digimon has 6 or more digivolution cards, you may play 1 Digimon card with [King Drasil] in its name from its digivolution cards without paying the cost.
         effect2 = ICardEffect()
+        effect2.set_timing(EffectTiming.OnStartMainPhase)
         effect2.set_effect_name("BT23-072 Play 1 [King Drasil] from sources")
         effect2.set_effect_description("[Breeding] [Start of Your Main Phase] If this Digimon has 6 or more digivolution cards, you may play 1 Digimon card with [King Drasil] in its name from its digivolution cards without paying the cost.")
         effect2.is_inherited_effect = True

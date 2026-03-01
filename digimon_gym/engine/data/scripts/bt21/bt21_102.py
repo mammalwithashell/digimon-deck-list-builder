@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -16,6 +17,7 @@ class BT21_102(CardScript):
         # Timing: EffectTiming.OnStartTurn
         # Draw 1, Suspend
         effect0 = ICardEffect()
+        effect0.set_timing(EffectTiming.OnStartTurn)
         effect0.set_effect_name("BT21-102 Suspend to draw 1")
         effect0.set_effect_description("Draw 1, Suspend")
         effect0.is_optional = True
@@ -52,6 +54,7 @@ class BT21_102(CardScript):
         # Timing: EffectTiming.OnAllyAttack
         # Draw 1, Suspend
         effect1 = ICardEffect()
+        effect1.set_timing(EffectTiming.OnAllyAttack)
         effect1.set_effect_name("BT21-102 Suspend to draw 1")
         effect1.set_effect_description("Draw 1, Suspend")
         effect1.is_optional = True
@@ -89,6 +92,7 @@ class BT21_102(CardScript):
         # Timing: EffectTiming.OnDeclaration
         # Play Card
         effect2 = ICardEffect()
+        effect2.set_timing(EffectTiming.OnDeclaration)
         effect2.set_effect_name("BT21-102 Play Adventure/Hero card for reduced cost")
         effect2.set_effect_description("Play Card")
         effect2.is_optional = True

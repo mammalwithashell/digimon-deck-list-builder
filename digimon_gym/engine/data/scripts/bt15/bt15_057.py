@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -29,6 +30,7 @@ class BT15_057(CardScript):
         # Timing: EffectTiming.OnDestroyedAnyone
         # [On Deletion] You may play 1 Digimon with [Numemon] in it's name from your trash suspended without paying its memory cost.
         effect1 = ICardEffect()
+        effect1.set_timing(EffectTiming.OnDestroyedAnyone)
         effect1.set_effect_name("BT15-057 Play 1 [Numemon] from trash")
         effect1.set_effect_description("[On Deletion] You may play 1 Digimon with [Numemon] in it's name from your trash suspended without paying its memory cost.")
         effect1.is_optional = True
@@ -62,6 +64,7 @@ class BT15_057(CardScript):
         # Timing: EffectTiming.OnDestroyedAnyone
         # [On Deletion] You may play 1 Digimon with [Numemon] in it's name from your trash suspended without paying its memory cost.
         effect2 = ICardEffect()
+        effect2.set_timing(EffectTiming.OnDestroyedAnyone)
         effect2.set_effect_name("BT15-057 Play 1 [Numemon] from trash")
         effect2.set_effect_description("[On Deletion] You may play 1 Digimon with [Numemon] in it's name from your trash suspended without paying its memory cost.")
         effect2.is_inherited_effect = True

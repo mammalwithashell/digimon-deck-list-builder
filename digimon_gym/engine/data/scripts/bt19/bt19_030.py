@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -16,6 +17,7 @@ class BT19_030(CardScript):
         # Timing: EffectTiming.OnStartMainPhase
         # [Start of Your Main Phase] If you have [Rika Nonaka]/[Calumon], gain 1 memory.
         effect0 = ICardEffect()
+        effect0.set_timing(EffectTiming.OnStartMainPhase)
         effect0.set_effect_name("BT19-030 Gain 1 memory")
         effect0.set_effect_description("[Start of Your Main Phase] If you have [Rika Nonaka]/[Calumon], gain 1 memory.")
 
@@ -46,6 +48,7 @@ class BT19_030(CardScript):
         # Timing: EffectTiming.OnUseOption
         # [Your Turn][Once Per Turn] When you use an Option card with a cost of 2 or more, 1 of your opponent's Digimon gets -2000 DP for the turn.
         effect1 = ICardEffect()
+        effect1.set_timing(EffectTiming.OnUseOption)
         effect1.set_effect_name("BT19-030 DP -2000")
         effect1.set_effect_description("[Your Turn][Once Per Turn] When you use an Option card with a cost of 2 or more, 1 of your opponent's Digimon gets -2000 DP for the turn.")
         effect1.is_inherited_effect = True

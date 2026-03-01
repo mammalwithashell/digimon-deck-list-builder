@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -28,6 +29,7 @@ class BT15_036(CardScript):
         # Timing: EffectTiming.OnDestroyedAnyone
         # [On Deletion] By trashing the top or bottom card of your security stack, 1 of your opponent's Digimon gets -6000 DP until the end of the opponent's turn.
         effect1 = ICardEffect()
+        effect1.set_timing(EffectTiming.OnDestroyedAnyone)
         effect1.set_effect_name("BT15-036 Trash a security to give opponent's Digimon -6000 DP.")
         effect1.set_effect_description("[On Deletion] By trashing the top or bottom card of your security stack, 1 of your opponent's Digimon gets -6000 DP until the end of the opponent's turn.")
         effect1.is_optional = True
@@ -60,6 +62,7 @@ class BT15_036(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [On Play] By trashing the top or bottom card of your security stack, 1 of your opponent's Digimon gets -6000 DP until the end of the opponent's turn.
         effect2 = ICardEffect()
+        effect2.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect2.set_effect_name("BT15-036 Trash a security to give opponent's Digimon -6000 DP.")
         effect2.set_effect_description("[On Play] By trashing the top or bottom card of your security stack, 1 of your opponent's Digimon gets -6000 DP until the end of the opponent's turn.")
         effect2.is_optional = True

@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -16,6 +17,7 @@ class BT20_004(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [Your Turn] [Once Per Turn] When any of your Digimon with the [ACCEL] trait are played, this Digimon may digivolve into a Digimon card with the [ACCEL] trait in the hand with the digivolution cost reduced by 2.
         effect0 = ICardEffect()
+        effect0.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect0.set_effect_name("BT20-004 Digivolve, for reduced cost of 2")
         effect0.set_effect_description("[Your Turn] [Once Per Turn] When any of your Digimon with the [ACCEL] trait are played, this Digimon may digivolve into a Digimon card with the [ACCEL] trait in the hand with the digivolution cost reduced by 2.")
         effect0.is_inherited_effect = True

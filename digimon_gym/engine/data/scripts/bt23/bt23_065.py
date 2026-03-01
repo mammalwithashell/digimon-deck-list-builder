@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -16,6 +17,7 @@ class BT23_065(CardScript):
         # Timing: EffectTiming.OnDeclaration
         # [Hand] [Main] If you have [Violet Inboots], by placing 1 [Bakemon] from your trash as any of your [Ghostmon]'s bottom digivolution card, it digivolves into this card for a digivolution cost of 3, ignoring digivolution requirements.
         effect0 = ICardEffect()
+        effect0.set_timing(EffectTiming.OnDeclaration)
         effect0.set_effect_name("BT23-065 Place 1 [Bakemon] from trash under 1 [Ghostmon], to digivolve for 3")
         effect0.set_effect_description("[Hand] [Main] If you have [Violet Inboots], by placing 1 [Bakemon] from your trash as any of your [Ghostmon]'s bottom digivolution card, it digivolves into this card for a digivolution cost of 3, ignoring digivolution requirements.")
 
@@ -48,6 +50,7 @@ class BT23_065(CardScript):
         # Timing: EffectTiming.OnDestroyedAnyone
         # Play Card
         effect1 = ICardEffect()
+        effect1.set_timing(EffectTiming.OnDestroyedAnyone)
         effect1.set_effect_name("BT23-065 Play 1 level 4 [Ghost] trait from trash")
         effect1.set_effect_description("Play Card")
         effect1.is_on_deletion = True
@@ -79,6 +82,7 @@ class BT23_065(CardScript):
         # Timing: EffectTiming.OnDestroyedAnyone
         # Play Card
         effect2 = ICardEffect()
+        effect2.set_timing(EffectTiming.OnDestroyedAnyone)
         effect2.set_effect_name("BT23-065 Play 1 level 4 [Ghost] trait from trash")
         effect2.set_effect_description("Play Card")
         effect2.is_inherited_effect = True

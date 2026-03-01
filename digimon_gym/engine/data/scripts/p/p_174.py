@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -46,6 +47,7 @@ class P_174(CardScript):
         # Timing: EffectTiming.BeforePayCost
         # When this card would be played, if [Nightmare Soldiers] is in your face up security cards, reduce the play cost by 4.
         effect2 = ICardEffect()
+        effect2.set_timing(EffectTiming.BeforePayCost)
         effect2.set_effect_name("P-174 If [Nightmare Soldiers] is in your face up security cards get Play Cost -4")
         effect2.set_effect_description("When this card would be played, if [Nightmare Soldiers] is in your face up security cards, reduce the play cost by 4.")
         effect2.set_hash_string("PlayCost-4_P_174")
@@ -107,6 +109,7 @@ class P_174(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [When Digivolving] [On Deletion] <De-Digivolve 1> 1 of your opponent's Digimon. Then, delete 1 of their level 4 or lower Digimon.
         effect5 = ICardEffect()
+        effect5.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect5.set_effect_name("P-174 <De-Digivolve 1>, then delete 1 digimon")
         effect5.set_effect_description("[When Digivolving] [On Deletion] <De-Digivolve 1> 1 of your opponent's Digimon. Then, delete 1 of their level 4 or lower Digimon.")
         effect5.is_when_digivolving = True
@@ -153,6 +156,7 @@ class P_174(CardScript):
         # Timing: EffectTiming.OnDestroyedAnyone
         # [On Deletion] <De-Digivolve 1> 1 of your opponent's Digimon. Then, delete 1 of their level 4 or lower Digimon.
         effect6 = ICardEffect()
+        effect6.set_timing(EffectTiming.OnDestroyedAnyone)
         effect6.set_effect_name("P-174 <De-Digivolve 1>, then delete 1 digimon")
         effect6.set_effect_description("[On Deletion] <De-Digivolve 1> 1 of your opponent's Digimon. Then, delete 1 of their level 4 or lower Digimon.")
         effect6.is_on_deletion = True

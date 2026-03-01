@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -76,6 +77,7 @@ class BT21_021(CardScript):
         # Timing: EffectTiming.OnDestroyedAnyone
         # Effect
         effect4 = ICardEffect()
+        effect4.set_timing(EffectTiming.OnDestroyedAnyone)
         effect4.set_effect_name("BT21-021 Place 1 [Xros]/[Blue Flare] digimon under tamer, then <Save>")
         effect4.set_effect_description("Effect")
         effect4.is_optional = True
@@ -92,6 +94,7 @@ class BT21_021(CardScript):
         # Timing: EffectTiming.OnEndAttack
         # [End of Attack] You may play 1 card with the [Xros Heart]/[Blue Flare]/[Hero] trait from your hand with the play cost reduced by 5. If you did, delete this Digimon.
         effect5 = ICardEffect()
+        effect5.set_timing(EffectTiming.OnEndAttack)
         effect5.set_effect_name("BT21-021 Play 1 [Xros Heart]/[Blue Flare]/[Hero] Digimon")
         effect5.set_effect_description("[End of Attack] You may play 1 card with the [Xros Heart]/[Blue Flare]/[Hero] trait from your hand with the play cost reduced by 5. If you did, delete this Digimon.")
         effect5.cost_reduction = 5

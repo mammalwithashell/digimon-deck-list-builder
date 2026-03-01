@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -28,6 +29,7 @@ class BT13_023(CardScript):
         # Timing: EffectTiming.OnAllyAttack
         # [When Attacking] Trash the digivolution card at the bottom of 1 of your opponent's Digimon.
         effect1 = ICardEffect()
+        effect1.set_timing(EffectTiming.OnAllyAttack)
         effect1.set_effect_name("BT13-023 Trash 1 digivolution card")
         effect1.set_effect_description("[When Attacking] Trash the digivolution card at the bottom of 1 of your opponent's Digimon.")
         effect1.is_inherited_effect = True

@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -16,6 +17,7 @@ class EX8_066(CardScript):
         # Timing: EffectTiming.OnStartMainPhase
         # [Start of Your Main Phase] If your opponent has a Digimon, gain 1 memory.
         effect0 = ICardEffect()
+        effect0.set_timing(EffectTiming.OnStartMainPhase)
         effect0.set_effect_name("EX8-066 Memory +1")
         effect0.set_effect_description("[Start of Your Main Phase] If your opponent has a Digimon, gain 1 memory.")
 
@@ -43,6 +45,7 @@ class EX8_066(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [All Turns] When one of your Digimon are played or digivolve, if any of them have the [Ice-Snow] trait, by suspending this Tamer, trash any 1 digivolution card from your opponent's Digimon.
         effect1 = ICardEffect()
+        effect1.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect1.set_effect_name("EX8-066 Trash any 1 digivolution card from opponents digimon")
         effect1.set_effect_description("[All Turns] When one of your Digimon are played or digivolve, if any of them have the [Ice-Snow] trait, by suspending this Tamer, trash any 1 digivolution card from your opponent's Digimon.")
         effect1.is_optional = True

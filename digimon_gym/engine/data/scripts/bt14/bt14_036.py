@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -16,6 +17,7 @@ class BT14_036(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [When Digivolving] 1 of your opponent's Digimon gets -3000 DP for the turn.
         effect0 = ICardEffect()
+        effect0.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect0.set_effect_name("BT14-036 DP -3000")
         effect0.set_effect_description("[When Digivolving] 1 of your opponent's Digimon gets -3000 DP for the turn.")
         effect0.is_when_digivolving = True
@@ -49,6 +51,7 @@ class BT14_036(CardScript):
         # Timing: EffectTiming.OnAllyAttack
         # [When Attacking][Once Per Turn] 1 of your opponent's Digimon gets -2000 DP for the turn.
         effect1 = ICardEffect()
+        effect1.set_timing(EffectTiming.OnAllyAttack)
         effect1.set_effect_name("BT14-036 DP -2000")
         effect1.set_effect_description("[When Attacking][Once Per Turn] 1 of your opponent's Digimon gets -2000 DP for the turn.")
         effect1.is_inherited_effect = True

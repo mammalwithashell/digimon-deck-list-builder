@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -16,6 +17,7 @@ class EX10_004(CardScript):
         # Timing: EffectTiming.OnMove
         # [Your Turn] [Once Per Turn] When any of your Digimon with [Lucemon] in their names move from the breeding area to the battle area, by trashing 1 card in your hand, <Draw 1> (Draw 1 card from your deck.) and gain 1 memory.
         effect0 = ICardEffect()
+        effect0.set_timing(EffectTiming.OnMove)
         effect0.set_effect_name("EX10-004 Trash 1 card, Gain 1 Memory, Draw 1")
         effect0.set_effect_description("[Your Turn] [Once Per Turn] When any of your Digimon with [Lucemon] in their names move from the breeding area to the battle area, by trashing 1 card in your hand, <Draw 1> (Draw 1 card from your deck.) and gain 1 memory.")
         effect0.is_inherited_effect = True

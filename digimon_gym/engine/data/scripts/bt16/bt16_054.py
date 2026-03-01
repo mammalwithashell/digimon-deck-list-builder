@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -16,6 +17,7 @@ class BT16_054(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [On Play] By returning 3 cards with the [D-Brigade] or [DigiPolice] trait from your trash to the top of the deck, this Digimon gains <Rush>, and can't be blocked for the turn.
         effect0 = ICardEffect()
+        effect0.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect0.set_effect_name("BT16-054 <Rush>, Can't be Blocked")
         effect0.set_effect_description("[On Play] By returning 3 cards with the [D-Brigade] or [DigiPolice] trait from your trash to the top of the deck, this Digimon gains <Rush>, and can't be blocked for the turn.")
         effect0.is_optional = True
@@ -47,6 +49,7 @@ class BT16_054(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [When Digivolving] By returning 3 cards with the [D-Brigade] or [DigiPolice] trait from your trash to the top of the deck, this Digimon gains <Rush>, and can't be blocked for the turn.
         effect1 = ICardEffect()
+        effect1.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect1.set_effect_name("BT16-054 <Rush>, Can't be Blocked")
         effect1.set_effect_description("[When Digivolving] By returning 3 cards with the [D-Brigade] or [DigiPolice] trait from your trash to the top of the deck, this Digimon gains <Rush>, and can't be blocked for the turn.")
         effect1.is_optional = True

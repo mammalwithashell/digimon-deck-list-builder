@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -28,6 +29,7 @@ class BT15_074(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [On Play] Your opponent may trash 1 Digimon card in their hand. If they don't, gain 1 memory.
         effect1 = ICardEffect()
+        effect1.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect1.set_effect_name("BT15-074 Opponent trashes 1 Digimon card, or you gain Memory +1")
         effect1.set_effect_description("[On Play] Your opponent may trash 1 Digimon card in their hand. If they don't, gain 1 memory.")
         effect1.is_on_play = True
@@ -65,6 +67,7 @@ class BT15_074(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [When Digivolving] Your opponent may trash 1 Digimon card in their hand. If they don't, gain 1 memory.
         effect2 = ICardEffect()
+        effect2.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect2.set_effect_name("BT15-074 Opponent trashes 1 Digimon card, or you gain Memory +1")
         effect2.set_effect_description("[When Digivolving] Your opponent may trash 1 Digimon card in their hand. If they don't, gain 1 memory.")
         effect2.is_when_digivolving = True
@@ -102,6 +105,7 @@ class BT15_074(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [All Turns] [Once Per Turn] When an effect plays an opponent's Digimon, gain 1 memory.
         effect3 = ICardEffect()
+        effect3.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect3.set_effect_name("BT15-074 Memory +1")
         effect3.set_effect_description("[All Turns] [Once Per Turn] When an effect plays an opponent's Digimon, gain 1 memory.")
         effect3.is_inherited_effect = True

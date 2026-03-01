@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -31,6 +32,7 @@ class BT24_029(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [On Play] By placing 1 play cost 5 or lower card with the [Sea Beast] or [TS] trait or [Aqua] or [Sea Animal] in any of its traits from your hand as this Digimon's bottom digivolution card, 1 of your opponent's Digimon or Tamers can't suspend until their turn ends.
         effect1 = ICardEffect()
+        effect1.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect1.set_effect_name("BT24-029 By placing 1 5 or lower play cost [TS]/[Sea Beast]/[Aqua]/[Sea Animal] card as bottom source, 1 digimon/tamer cant suspend")
         effect1.set_effect_description("[On Play] By placing 1 play cost 5 or lower card with the [Sea Beast] or [TS] trait or [Aqua] or [Sea Animal] in any of its traits from your hand as this Digimon's bottom digivolution card, 1 of your opponent's Digimon or Tamers can't suspend until their turn ends.")
         effect1.is_on_play = True
@@ -62,6 +64,7 @@ class BT24_029(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [When Digivolving] By placing 1 play cost 5 or lower card with the [Sea Beast] or [TS] trait or [Aqua] or [Sea Animal] in any of its traits from your hand as this Digimon's bottom digivolution card, 1 of your opponent's Digimon or Tamers can't suspend until their turn ends.
         effect2 = ICardEffect()
+        effect2.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect2.set_effect_name("BT24-029 By placing 1 5 or lower play cost [TS]/[Sea Beast]/[Aqua]/[Sea Animal] card as bottom source, 1 digimon/tamer cant suspend")
         effect2.set_effect_description("[When Digivolving] By placing 1 play cost 5 or lower card with the [Sea Beast] or [TS] trait or [Aqua] or [Sea Animal] in any of its traits from your hand as this Digimon's bottom digivolution card, 1 of your opponent's Digimon or Tamers can't suspend until their turn ends.")
         effect2.is_when_digivolving = True
@@ -93,6 +96,7 @@ class BT24_029(CardScript):
         # Timing: EffectTiming.OnEndAttack
         # [End of Attack] [Once Per Turn] You may play 1 play cost 5 or lower [TS] trait card from this Digimon's digivolution cards without paying the cost.
         effect3 = ICardEffect()
+        effect3.set_timing(EffectTiming.OnEndAttack)
         effect3.set_effect_name("BT24-029 Play 1 5 cost or lower [TS] card from digivolution sources")
         effect3.set_effect_description("[End of Attack] [Once Per Turn] You may play 1 play cost 5 or lower [TS] trait card from this Digimon's digivolution cards without paying the cost.")
         effect3.is_optional = True
@@ -131,6 +135,7 @@ class BT24_029(CardScript):
         # Timing: EffectTiming.OnAllyAttack
         # [When Attacking] [Once Per Turn] You may play 1 level 4 or lower blue Digimon card with the [TS] trait from this Digimon's digivolution cards without paying the cost.
         effect4 = ICardEffect()
+        effect4.set_timing(EffectTiming.OnAllyAttack)
         effect4.set_effect_name("BT24-029 Play 1 level 4 or lower blue [TS] digimon in digivolution sources")
         effect4.set_effect_description("[When Attacking] [Once Per Turn] You may play 1 level 4 or lower blue Digimon card with the [TS] trait from this Digimon's digivolution cards without paying the cost.")
         effect4.is_inherited_effect = True

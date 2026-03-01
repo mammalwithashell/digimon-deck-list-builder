@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -42,6 +43,7 @@ class BT10_086(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [When Digivolving] Return all of your opponent's Digimon with the highest level to the bottom of their owners' decks in any order.
         effect2 = ICardEffect()
+        effect2.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect2.set_effect_name("BT10-086 Return oppponent's all Digimons with the highest level to the bottom of deck")
         effect2.set_effect_description("[When Digivolving] Return all of your opponent's Digimon with the highest level to the bottom of their owners' decks in any order.")
         effect2.is_when_digivolving = True
@@ -73,6 +75,7 @@ class BT10_086(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [When Digivolving][Once Per Turn] By placing 1 [X Antibody] or level 6 card from this Digimon's digivolution cards at the bottom of its owner's deck, reveal all of your opponent's security cards, and trash 1 of them. Place the rest in your opponent's security stack face down. Then, your opponent shuffles their security stack.
         effect3 = ICardEffect()
+        effect3.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect3.set_effect_name("BT10-086 Return 1 digivolution card to bottom of deck and trash Security")
         effect3.set_effect_description("[When Digivolving][Once Per Turn] By placing 1 [X Antibody] or level 6 card from this Digimon's digivolution cards at the bottom of its owner's deck, reveal all of your opponent's security cards, and trash 1 of them. Place the rest in your opponent's security stack face down. Then, your opponent shuffles their security stack.")
         effect3.is_optional = True
@@ -118,6 +121,7 @@ class BT10_086(CardScript):
         # Timing: EffectTiming.OnAllyAttack
         # [When Attacking][Once Per Turn] By placing 1 [X Antibody] or level 6 card from this Digimon's digivolution cards at the bottom of its owner's deck, reveal all of your opponent's security cards, and trash 1 of them. Place the rest in your opponent's security stack face down. Then, your opponent shuffles their security stack.
         effect4 = ICardEffect()
+        effect4.set_timing(EffectTiming.OnAllyAttack)
         effect4.set_effect_name("BT10-086 Return 1 digivolution card to bottom of deck and trash Security")
         effect4.set_effect_description("[When Attacking][Once Per Turn] By placing 1 [X Antibody] or level 6 card from this Digimon's digivolution cards at the bottom of its owner's deck, reveal all of your opponent's security cards, and trash 1 of them. Place the rest in your opponent's security stack face down. Then, your opponent shuffles their security stack.")
         effect4.is_optional = True

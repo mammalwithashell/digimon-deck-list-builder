@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -16,6 +17,7 @@ class BT14_040(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [On Play] You may place 1 Tamer card from your hand on top of your security stack. 
         effect0 = ICardEffect()
+        effect0.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect0.set_effect_name("BT14-040 Place 1 Tamer card from hand at the top of security")
         effect0.set_effect_description("[On Play] You may place 1 Tamer card from your hand on top of your security stack. ")
         effect0.is_optional = True
@@ -45,6 +47,7 @@ class BT14_040(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [When Digivolving] You may place 1 Tamer card from your hand on top of your security stack. 
         effect1 = ICardEffect()
+        effect1.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect1.set_effect_name("BT14-040 Place 1 Tamer card from hand at the top of security")
         effect1.set_effect_description("[When Digivolving] You may place 1 Tamer card from your hand on top of your security stack. ")
         effect1.is_optional = True
@@ -74,6 +77,7 @@ class BT14_040(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [All Turns][Once Per Turn] When you play a Tamer, you may play 1 level 3 Digimon card from your hand without paying the cost.
         effect2 = ICardEffect()
+        effect2.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect2.set_effect_name("BT14-040 Play 1 Digimon from hand")
         effect2.set_effect_description("[All Turns][Once Per Turn] When you play a Tamer, you may play 1 level 3 Digimon card from your hand without paying the cost.")
         effect2.is_optional = True

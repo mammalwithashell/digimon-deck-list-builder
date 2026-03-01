@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -16,6 +17,7 @@ class ST12_08(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [When Digivolving] This Digimon may also attack your opponent's unsuspended Digimon for the turn.
         effect0 = ICardEffect()
+        effect0.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect0.set_effect_name("ST12-08 This Digimon can attack unsuspended Digimon")
         effect0.set_effect_description("[When Digivolving] This Digimon may also attack your opponent's unsuspended Digimon for the turn.")
         effect0.is_when_digivolving = True
@@ -49,6 +51,7 @@ class ST12_08(CardScript):
         # Timing: EffectTiming.OnAllyAttack
         # [When Attacking][Once Per Turn] If this Digimon has [Royal Knight] in its traits, you may play 1 Digimon card with [Sistermon] in its name from your hand or trash without paying its memory cost.
         effect1 = ICardEffect()
+        effect1.set_timing(EffectTiming.OnAllyAttack)
         effect1.set_effect_name("ST12-08 Play 1 Digimon card with [Sistermon] in its name from hand or trash")
         effect1.set_effect_description("[When Attacking][Once Per Turn] If this Digimon has [Royal Knight] in its traits, you may play 1 Digimon card with [Sistermon] in its name from your hand or trash without paying its memory cost.")
         effect1.is_inherited_effect = True

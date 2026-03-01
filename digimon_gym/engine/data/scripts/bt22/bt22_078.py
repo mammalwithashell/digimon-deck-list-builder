@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -72,6 +73,7 @@ class BT22_078(CardScript):
         # Timing: EffectTiming.OnAllyAttack
         # [When Attacking] [Once Per Turn] Delete 1 of your opponent's Digimon with the lowest level.
         effect3 = ICardEffect()
+        effect3.set_timing(EffectTiming.OnAllyAttack)
         effect3.set_effect_name("BT22-078 Delete 1 Digimon with lowest level")
         effect3.set_effect_description("[When Attacking] [Once Per Turn] Delete 1 of your opponent's Digimon with the lowest level.")
         effect3.set_max_count_per_turn(1)

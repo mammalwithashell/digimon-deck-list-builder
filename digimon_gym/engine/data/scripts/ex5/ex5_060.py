@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -16,6 +17,7 @@ class EX5_060(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [On Play] Your opponent plays 1 level 4 or lower Digimon card from their trash suspended without paying the cost. [On Play] effects on Digimon played by this effect don't activate.
         effect0 = ICardEffect()
+        effect0.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect0.set_effect_name("EX5-060 Opponent plays 1  Digimon from trash")
         effect0.set_effect_description("[On Play] Your opponent plays 1 level 4 or lower Digimon card from their trash suspended without paying the cost. [On Play] effects on Digimon played by this effect don't activate.")
         effect0.is_on_play = True
@@ -51,6 +53,7 @@ class EX5_060(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [When Digivolving] Your opponent plays 1 level 4 or lower Digimon card from their trash suspended without paying the cost. [On Play] effects on Digimon played by this effect don't activate.
         effect1 = ICardEffect()
+        effect1.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect1.set_effect_name("EX5-060 Opponent plays1  Digimon from trash")
         effect1.set_effect_description("[When Digivolving] Your opponent plays 1 level 4 or lower Digimon card from their trash suspended without paying the cost. [On Play] effects on Digimon played by this effect don't activate.")
         effect1.is_when_digivolving = True
@@ -86,6 +89,7 @@ class EX5_060(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [All Turns] [Once Per Turn] When an effect plays an opponent's Digimon, you may play 1 purple Digimon card with a level less than or equal to it from your trash without paying the cost.
         effect2 = ICardEffect()
+        effect2.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect2.set_effect_name("EX5-060 Play 1 Digimon from trash")
         effect2.set_effect_description("[All Turns] [Once Per Turn] When an effect plays an opponent's Digimon, you may play 1 purple Digimon card with a level less than or equal to it from your trash without paying the cost.")
         effect2.is_optional = True

@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -30,6 +31,7 @@ class BT22_022(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [When Digivolving] If you have 1 or fewer Tamers, you may play 1 Tamer card with [Veedramon] in its text from your hand without paying the cost.
         effect1 = ICardEffect()
+        effect1.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect1.set_effect_name("BT22-022 Play tamer with [Veedramon] in text from hand")
         effect1.set_effect_description("[When Digivolving] If you have 1 or fewer Tamers, you may play 1 Tamer card with [Veedramon] in its text from your hand without paying the cost.")
         effect1.is_optional = True
@@ -69,6 +71,7 @@ class BT22_022(CardScript):
         # Timing: EffectTiming.WhenRemoveField
         # [All Turns] [Once Per Turn] When this Digimon with [Veedramon] in its name would leave the battle area by your opponent's effects, by suspending this Digimon, it doesn't leave.
         effect2 = ICardEffect()
+        effect2.set_timing(EffectTiming.WhenRemoveField)
         effect2.set_effect_name("BT22-022 Suspend to prevent this Digimon from leaving")
         effect2.set_effect_description("[All Turns] [Once Per Turn] When this Digimon with [Veedramon] in its name would leave the battle area by your opponent's effects, by suspending this Digimon, it doesn't leave.")
         effect2.is_inherited_effect = True

@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -28,6 +29,7 @@ class BT22_024(CardScript):
         # Timing: EffectTiming.OnDeclaration
         # [Hand] [Main] If you have [Yao Qinglan], by placing 1 [Shellmon] from your trash as any of your [Sangomon]'s bottom digivolution card, it digivolves into this card for a digivolution cost of 3, ignoring digivolution requirements.
         effect1 = ICardEffect()
+        effect1.set_timing(EffectTiming.OnDeclaration)
         effect1.set_effect_name("BT22-024 Place 1 [Shellmon] from trash under 1 [Sangomon], to digivolve for 3")
         effect1.set_effect_description("[Hand] [Main] If you have [Yao Qinglan], by placing 1 [Shellmon] from your trash as any of your [Sangomon]'s bottom digivolution card, it digivolves into this card for a digivolution cost of 3, ignoring digivolution requirements.")
 
@@ -66,6 +68,7 @@ class BT22_024(CardScript):
         # Timing: EffectTiming.OnEndAttack
         # [End of Attack] [Once Per Turn] You may play 1 level 4 or lower Digimon card with [Aqua] or [Sea Animal] in any of its traits from this Digimon's digivolution cards without paying the cost.
         effect2 = ICardEffect()
+        effect2.set_timing(EffectTiming.OnEndAttack)
         effect2.set_effect_name("BT22-024 Play 1 level 4 or lower [Aqua]/[Sea Animal] digimon from sources")
         effect2.set_effect_description("[End of Attack] [Once Per Turn] You may play 1 level 4 or lower Digimon card with [Aqua] or [Sea Animal] in any of its traits from this Digimon's digivolution cards without paying the cost.")
         effect2.is_inherited_effect = True

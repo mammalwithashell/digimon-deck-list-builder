@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -28,6 +29,7 @@ class EX8_065(CardScript):
         # Timing: EffectTiming.OnStartMainPhase
         # [Start of Your Main Phase] If your opponent has a Digimon, gain 1 memory.
         effect1 = ICardEffect()
+        effect1.set_timing(EffectTiming.OnStartMainPhase)
         effect1.set_effect_name("EX8-065 Memory +1")
         effect1.set_effect_description("[Start of Your Main Phase] If your opponent has a Digimon, gain 1 memory.")
 
@@ -55,6 +57,7 @@ class EX8_065(CardScript):
         # Timing: EffectTiming.OnAllyAttack
         # [Your Turn] When one of your Digimon with [Tyrannomon] in its name attacks, by suspending this Tamer, that Digimon may digivolve into a Digimon card with [Tyrannomon] in its name or the [Dinosaur] trait in the hand with the digivolution cost reduced by 1.
         effect2 = ICardEffect()
+        effect2.set_timing(EffectTiming.OnAllyAttack)
         effect2.set_effect_name("EX8-065 One of your Digimon may digivolve from your hand with reduced cost")
         effect2.set_effect_description("[Your Turn] When one of your Digimon with [Tyrannomon] in its name attacks, by suspending this Tamer, that Digimon may digivolve into a Digimon card with [Tyrannomon] in its name or the [Dinosaur] trait in the hand with the digivolution cost reduced by 1.")
         effect2.is_optional = True

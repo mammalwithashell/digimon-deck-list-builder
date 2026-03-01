@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -16,6 +17,7 @@ class BT14_080(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [When Digivolving][Once Per Turn] For every 10 cards in your trash, trash the top 3 cards of your opponent's deck.
         effect0 = ICardEffect()
+        effect0.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect0.set_effect_name("BT14-080 Trash cards from opponent's deck top")
         effect0.set_effect_description("[When Digivolving][Once Per Turn] For every 10 cards in your trash, trash the top 3 cards of your opponent's deck.")
         effect0.set_max_count_per_turn(1)
@@ -50,6 +52,7 @@ class BT14_080(CardScript):
         # Timing: EffectTiming.OnAllyAttack
         # [When Attacking][Once Per Turn] For every 10 cards in your trash, trash the top 3 cards of your opponent's deck.
         effect1 = ICardEffect()
+        effect1.set_timing(EffectTiming.OnAllyAttack)
         effect1.set_effect_name("BT14-080 Trash cards from opponent's deck top")
         effect1.set_effect_description("[When Attacking][Once Per Turn] For every 10 cards in your trash, trash the top 3 cards of your opponent's deck.")
         effect1.set_max_count_per_turn(1)
@@ -84,6 +87,7 @@ class BT14_080(CardScript):
         # Timing: EffectTiming.OnAllyAttack
         # [When Attacking][Once Per Turn] If your opponent has 10 or more cards in their trash, this Digimon gains ��Security A. +1�� for the turn.
         effect2 = ICardEffect()
+        effect2.set_timing(EffectTiming.OnAllyAttack)
         effect2.set_effect_name("BT14-080 This Digimon gains Security Attack +1")
         effect2.set_effect_description("[When Attacking][Once Per Turn] If your opponent has 10 or more cards in their trash, this Digimon gains ��Security A. +1�� for the turn.")
         effect2.set_max_count_per_turn(1)

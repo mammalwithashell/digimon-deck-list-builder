@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -42,6 +43,7 @@ class BT10_104(CardScript):
         # Timing: EffectTiming.OptionSkill
         # [Main] Trash 3 cards from the top of your deck. Then, you may play 1 [DarkKnightmon] from your trash for its memory cost. If you play a Digimon card with DigiXros requirements by this effect, you may also place cards from your trash in digivolution cards for a DigiXros.
         effect1 = ICardEffect()
+        effect1.set_timing(EffectTiming.OptionSkill)
         effect1.set_effect_name("BT10-104 Can select DigiXros cards from trash")
         effect1.set_effect_description("[Main] Trash 3 cards from the top of your deck. Then, you may play 1 [DarkKnightmon] from your trash for its memory cost. If you play a Digimon card with DigiXros requirements by this effect, you may also place cards from your trash in digivolution cards for a DigiXros.")
 
@@ -78,6 +80,7 @@ class BT10_104(CardScript):
         # Timing: EffectTiming.SecuritySkill
         # [Security] Add this card to its owner's hand.
         effect2 = ICardEffect()
+        effect2.set_timing(EffectTiming.SecuritySkill)
         effect2.set_effect_name("BT10-104 Add To Hand")
         effect2.set_effect_description("[Security] Add this card to its owner's hand.")
         effect2.is_security_effect = True

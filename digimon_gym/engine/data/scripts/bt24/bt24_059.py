@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -31,6 +32,7 @@ class BT24_059(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # De Digivolve
         effect1 = ICardEffect()
+        effect1.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect1.set_effect_name("BT24-059 De Digivolve")
         effect1.set_effect_description("De Digivolve")
         effect1.is_on_play = True
@@ -65,6 +67,7 @@ class BT24_059(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # De Digivolve
         effect2 = ICardEffect()
+        effect2.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect2.set_effect_name("BT24-059 De Digivolve")
         effect2.set_effect_description("De Digivolve")
         effect2.is_when_digivolving = True
@@ -99,6 +102,7 @@ class BT24_059(CardScript):
         # Timing: EffectTiming.OnDestroyedAnyone
         # [On Deletion] Reveal the top 3 cards of your deck. You may play 1 cost 7 or lower [TS] trait card suspended among them without paying the cost. Trash the rest.
         effect3 = ICardEffect()
+        effect3.set_timing(EffectTiming.OnDestroyedAnyone)
         effect3.set_effect_name("BT24-059 Reveal 3, maybe play 7 cost [TS] trait, trash rest.")
         effect3.set_effect_description("[On Deletion] Reveal the top 3 cards of your deck. You may play 1 cost 7 or lower [TS] trait card suspended among them without paying the cost. Trash the rest.")
         effect3.is_on_deletion = True
@@ -150,6 +154,7 @@ class BT24_059(CardScript):
         # Timing: EffectTiming.OnAllyAttack
         # [When Attacking] [Once Per Turn] By placing 1 of your other Digimon as this Digimon's bottom digivolution card, it unsuspends.
         effect4 = ICardEffect()
+        effect4.set_timing(EffectTiming.OnAllyAttack)
         effect4.set_effect_name("BT24-059 Place 1 of your other Digimon as this Digimon's bottom digivolution card to unsuspend this Digimon.")
         effect4.set_effect_description("[When Attacking] [Once Per Turn] By placing 1 of your other Digimon as this Digimon's bottom digivolution card, it unsuspends.")
         effect4.is_inherited_effect = True

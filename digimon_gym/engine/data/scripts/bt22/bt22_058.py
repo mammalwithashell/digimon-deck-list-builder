@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -33,6 +34,7 @@ class BT22_058(CardScript):
         # Timing: EffectTiming.WhenLinked
         # [All Turns] [Once Per Turn] When this Digimon gets linked, your opponent's effects can't return 1 of your Digimon to hands or decks until their turn ends.
         effect1 = ICardEffect()
+        effect1.set_timing(EffectTiming.WhenLinked)
         effect1.set_effect_name("BT22-058 1 digimon cannot be bounced to deck or hand")
         effect1.set_effect_description("[All Turns] [Once Per Turn] When this Digimon gets linked, your opponent's effects can't return 1 of your Digimon to hands or decks until their turn ends.")
         effect1.set_max_count_per_turn(1)
@@ -69,6 +71,7 @@ class BT22_058(CardScript):
         # Timing: EffectTiming.WhenLinked
         # De Digivolve
         effect2 = ICardEffect()
+        effect2.set_timing(EffectTiming.WhenLinked)
         effect2.set_effect_name("BT22-058 De-Digivolve 1")
         effect2.set_effect_description("De Digivolve")
 

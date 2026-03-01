@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -39,6 +40,7 @@ class BT10_101(CardScript):
         # Timing: EffectTiming.OptionSkill
         # [Main] If you have 3 or more security cards, 1 of your opponent's Digimon gets -12000 DP for the turn. If you have 3 or fewer security cards, place 1 of your opponent's Digimon face down on top of their security stack.
         effect1 = ICardEffect()
+        effect1.set_timing(EffectTiming.OptionSkill)
         effect1.set_effect_name("BT10-101 DP -12000, Put To Security")
         effect1.set_effect_description("[Main] If you have 3 or more security cards, 1 of your opponent's Digimon gets -12000 DP for the turn. If you have 3 or fewer security cards, place 1 of your opponent's Digimon face down on top of their security stack.")
 

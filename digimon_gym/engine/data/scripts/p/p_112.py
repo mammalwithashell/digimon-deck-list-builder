@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -16,6 +17,7 @@ class P_112(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [On Play] Reveal the top 3 cards of your deck. Add 1 [Eosmon] and 1 [Menoa Bellucci] among them to your hand. Place the rest at the bottom of your deck. Then, by placing this card under 1 of your [Eosmon], you may play 1 [Menoa Bellucci] from your hand without paying the cost.
         effect0 = ICardEffect()
+        effect0.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect0.set_effect_name("P-112 Reveal the top 3 cards of deck and play 1 [Menoa Bellucci]")
         effect0.set_effect_description("[On Play] Reveal the top 3 cards of your deck. Add 1 [Eosmon] and 1 [Menoa Bellucci] among them to your hand. Place the rest at the bottom of your deck. Then, by placing this card under 1 of your [Eosmon], you may play 1 [Menoa Bellucci] from your hand without paying the cost.")
         effect0.is_on_play = True
@@ -62,6 +64,7 @@ class P_112(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [Your Turn] [Once Per Turn] When another [Eosmon] is played, this Digimon may digivolve into an  [Eosmon] from your hand, reducing the digivolution cost by 3.
         effect1 = ICardEffect()
+        effect1.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect1.set_effect_name("P-112 This Digimon digivolves into [Eosmon]")
         effect1.set_effect_description("[Your Turn] [Once Per Turn] When another [Eosmon] is played, this Digimon may digivolve into an  [Eosmon] from your hand, reducing the digivolution cost by 3.")
         effect1.is_inherited_effect = True

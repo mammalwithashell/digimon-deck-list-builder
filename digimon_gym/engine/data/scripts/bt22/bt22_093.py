@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -16,6 +17,7 @@ class BT22_093(CardScript):
         # Timing: EffectTiming.OnStartMainPhase
         # [Start of Your Main Phase] If your opponent has a Digimon, gain 1 memory.
         effect0 = ICardEffect()
+        effect0.set_timing(EffectTiming.OnStartMainPhase)
         effect0.set_effect_name("BT22-093 Memory +1")
         effect0.set_effect_description("[Start of Your Main Phase] If your opponent has a Digimon, gain 1 memory.")
 
@@ -43,6 +45,7 @@ class BT22_093(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [Your Turn] When any of your Digimon digivolve into a Digimon with the [CS] trait, if it has a digivolution card with the same level as the digivolved Digimon, by suspending this Tamer, that Digimon may digivolve into a Digimon card with the [CS] trait in the hand without paying the cost.
         effect1 = ICardEffect()
+        effect1.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect1.set_effect_name("BT22-093 Digivolve into a [CS] Digimon")
         effect1.set_effect_description("[Your Turn] When any of your Digimon digivolve into a Digimon with the [CS] trait, if it has a digivolution card with the same level as the digivolved Digimon, by suspending this Tamer, that Digimon may digivolve into a Digimon card with the [CS] trait in the hand without paying the cost.")
         effect1.is_optional = True

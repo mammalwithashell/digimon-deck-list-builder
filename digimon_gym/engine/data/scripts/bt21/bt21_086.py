@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -28,6 +29,7 @@ class BT21_086(CardScript):
         # Timing: EffectTiming.OnStartMainPhase
         # [Start of Your Main Phase] If your opponent has a Digimon, gain 1 memory.
         effect1 = ICardEffect()
+        effect1.set_timing(EffectTiming.OnStartMainPhase)
         effect1.set_effect_name("BT21-086 Memory +1")
         effect1.set_effect_description("[Start of Your Main Phase] If your opponent has a Digimon, gain 1 memory.")
 
@@ -55,6 +57,7 @@ class BT21_086(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [On Play] 1 of your [Marcus Damon] may suspend.
         effect2 = ICardEffect()
+        effect2.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect2.set_effect_name("BT21-086 Suspend this Tamer")
         effect2.set_effect_description("[On Play] 1 of your [Marcus Damon] may suspend.")
         effect2.is_on_play = True
@@ -91,6 +94,7 @@ class BT21_086(CardScript):
         # Timing: EffectTiming.OnTappedAnyone
         # [All Turns][Once Per Turn] When this Tamer suspends, 1 of your Digimon gains <Piercing> and +3000 DP for the turn. Then, 1 of your opponent's Digimon gets -3000 DP for the turn.
         effect3 = ICardEffect()
+        effect3.set_timing(EffectTiming.OnTappedAnyone)
         effect3.set_effect_name("BT21-086 1 of you Digimon gains <Piercing> and -3000 DP to an opponent Digimon")
         effect3.set_effect_description("[All Turns][Once Per Turn] When this Tamer suspends, 1 of your Digimon gains <Piercing> and +3000 DP for the turn. Then, 1 of your opponent's Digimon gets -3000 DP for the turn.")
         effect3.set_max_count_per_turn(1)

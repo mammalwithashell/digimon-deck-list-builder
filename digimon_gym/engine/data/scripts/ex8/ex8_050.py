@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -28,6 +29,7 @@ class EX8_050(CardScript):
         # Timing: EffectTiming.OnDestroyedAnyone
         # [On Deletion] Reveal the top 3 cards of your deck. You may play 1 [Mineral] or [Rock] trait Digimon card with a play cost of 5 or less from among them without paying the cost. Trash the rest.
         effect1 = ICardEffect()
+        effect1.set_timing(EffectTiming.OnDestroyedAnyone)
         effect1.set_effect_name("EX8-050 Reveal top 3 from deck, Play 1 5 cost or less, [Mineral] or [Rock] trait Digimon.")
         effect1.set_effect_description("[On Deletion] Reveal the top 3 cards of your deck. You may play 1 [Mineral] or [Rock] trait Digimon card with a play cost of 5 or less from among them without paying the cost. Trash the rest.")
         effect1.is_on_deletion = True
@@ -57,6 +59,7 @@ class EX8_050(CardScript):
         # Timing: EffectTiming.OnAllyAttack
         # [Opponent's Turn] [Once Per Turn] When any of your opponent's Digimon attack, you may change the attack target to this Digimon.
         effect2 = ICardEffect()
+        effect2.set_timing(EffectTiming.OnAllyAttack)
         effect2.set_effect_name("EX8-050 You may change the attack target to this Digimon.")
         effect2.set_effect_description("[Opponent's Turn] [Once Per Turn] When any of your opponent's Digimon attack, you may change the attack target to this Digimon.")
         effect2.is_inherited_effect = True

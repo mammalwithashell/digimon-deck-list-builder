@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -29,6 +30,7 @@ class BT11_084(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [When Digivolving] Trigger <Draw 2>. (Draw 2 cards from your deck.) Then, trash 2 cards in your hand.
         effect1 = ICardEffect()
+        effect1.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect1.set_effect_name("BT11-084 Draw 2 and trash 2 cards from hand")
         effect1.set_effect_description("[When Digivolving] Trigger <Draw 2>. (Draw 2 cards from your deck.) Then, trash 2 cards in your hand.")
         effect1.is_when_digivolving = True
@@ -64,6 +66,7 @@ class BT11_084(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [All Turns][Once Per Turn] When you play a Digimon by an effect, gain 1 memory.
         effect2 = ICardEffect()
+        effect2.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect2.set_effect_name("BT11-084 Memory +1")
         effect2.set_effect_description("[All Turns][Once Per Turn] When you play a Digimon by an effect, gain 1 memory.")
         effect2.is_inherited_effect = True

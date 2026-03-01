@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -16,6 +17,7 @@ class P_115(CardScript):
         # Timing: EffectTiming.OnDestroyedAnyone
         # [On Deletion] You may play 1 tamer card with [Nene Amano]/[Yuu Amano] in its name from your hand or trash without paying the cost. Then, <Save> (You may place this card under one of your Tamers).
         effect0 = ICardEffect()
+        effect0.set_timing(EffectTiming.OnDestroyedAnyone)
         effect0.set_effect_name("P-115 Play 1 [Nene Amano] or [Yuu Amano] from hand or trash, and save")
         effect0.set_effect_description("[On Deletion] You may play 1 tamer card with [Nene Amano]/[Yuu Amano] in its name from your hand or trash without paying the cost. Then, <Save> (You may place this card under one of your Tamers).")
         effect0.is_on_deletion = True

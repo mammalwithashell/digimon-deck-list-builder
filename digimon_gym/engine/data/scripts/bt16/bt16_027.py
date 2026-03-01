@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -46,6 +47,7 @@ class BT16_027(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [On Play] Return 1 of your opponent's Digimon with as many or fewer digivolution cards as this Digimon to the bottom of the deck.
         effect2 = ICardEffect()
+        effect2.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect2.set_effect_name("BT16-027 Bottom Deck 1 of your opponent's Digimon")
         effect2.set_effect_description("[On Play] Return 1 of your opponent's Digimon with as many or fewer digivolution cards as this Digimon to the bottom of the deck.")
         effect2.is_on_play = True
@@ -81,6 +83,7 @@ class BT16_027(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [When Digivolving] Return 1 of your opponent's Digimon with as many or fewer digivolution cards as this Digimon to the bottom of the deck.
         effect3 = ICardEffect()
+        effect3.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect3.set_effect_name("BT16-027 Bottom Deck 1 of your opponent's Digimon")
         effect3.set_effect_description("[When Digivolving] Return 1 of your opponent's Digimon with as many or fewer digivolution cards as this Digimon to the bottom of the deck.")
         effect3.is_when_digivolving = True
@@ -116,6 +119,7 @@ class BT16_027(CardScript):
         # Timing: EffectTiming.OnEndAttack
         # [End of Attack] [Once Per Turn] Unsuspend this Digimon. Then, if [Imperialdramon: Dragon Mode] is in this Digimon's digivolution cards, return 1 of your opponent's suspended Digimon to the bottom of the deck.
         effect4 = ICardEffect()
+        effect4.set_timing(EffectTiming.OnEndAttack)
         effect4.set_effect_name("BT16-027 Unsuspend this Digimon/Return a suspended Digimon to the bottom of the deck.")
         effect4.set_effect_description("[End of Attack] [Once Per Turn] Unsuspend this Digimon. Then, if [Imperialdramon: Dragon Mode] is in this Digimon's digivolution cards, return 1 of your opponent's suspended Digimon to the bottom of the deck.")
         effect4.set_max_count_per_turn(1)

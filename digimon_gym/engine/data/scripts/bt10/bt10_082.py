@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -29,6 +30,7 @@ class BT10_082(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [On Play] You may trash the top 3 cards of your deck. Then, for every 10 cards in your trash, delete 1 of your opponent's level 4 or lower Digimon.
         effect1 = ICardEffect()
+        effect1.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect1.set_effect_name("BT10-082 Trash 3 cards from deck top and delete level 4 or lower Digimons")
         effect1.set_effect_description("[On Play] You may trash the top 3 cards of your deck. Then, for every 10 cards in your trash, delete 1 of your opponent's level 4 or lower Digimon.")
         effect1.is_on_play = True
@@ -72,6 +74,7 @@ class BT10_082(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [When Digivolving] You may trash the top 3 cards of your deck. Then, for every 10 cards in your trash, delete 1 of your opponent's level 4 or lower Digimon.
         effect2 = ICardEffect()
+        effect2.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect2.set_effect_name("BT10-082 Trash 3 cards from deck top and delete level 4 or lower Digimons")
         effect2.set_effect_description("[When Digivolving] You may trash the top 3 cards of your deck. Then, for every 10 cards in your trash, delete 1 of your opponent's level 4 or lower Digimon.")
         effect2.is_when_digivolving = True
@@ -115,6 +118,7 @@ class BT10_082(CardScript):
         # Timing: EffectTiming.OnEndAttack
         # [End of Attack][Once Per Turn] For every 10 cards in your trash, gain 1 memory.
         effect3 = ICardEffect()
+        effect3.set_timing(EffectTiming.OnEndAttack)
         effect3.set_effect_name("BT10-082 Gain Memory")
         effect3.set_effect_description("[End of Attack][Once Per Turn] For every 10 cards in your trash, gain 1 memory.")
         effect3.is_inherited_effect = True

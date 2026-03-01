@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -42,6 +43,7 @@ class BT23_066(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # Delete, Play Card
         effect2 = ICardEffect()
+        effect2.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect2.set_effect_name("BT23-066 Delete a digimon, then play a digimon from trash")
         effect2.set_effect_description("Delete, Play Card")
         effect2.is_on_play = True
@@ -83,6 +85,7 @@ class BT23_066(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # Delete, Play Card
         effect3 = ICardEffect()
+        effect3.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect3.set_effect_name("BT23-066 Delete a digimon, then play a digimon from trash")
         effect3.set_effect_description("Delete, Play Card")
         effect3.is_when_digivolving = True
@@ -124,6 +127,7 @@ class BT23_066(CardScript):
         # Timing: EffectTiming.WhenRemoveField
         # [All Turns] [Once per Turn] When any of your other Digimon would leave the battle area, by deleting this Digimon, they don't leave.
         effect4 = ICardEffect()
+        effect4.set_timing(EffectTiming.WhenRemoveField)
         effect4.set_effect_name("BT23-066 Protect others")
         effect4.set_effect_description("[All Turns] [Once per Turn] When any of your other Digimon would leave the battle area, by deleting this Digimon, they don't leave.")
         effect4.is_inherited_effect = True

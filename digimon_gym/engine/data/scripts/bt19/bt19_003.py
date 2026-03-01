@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -16,6 +17,7 @@ class BT19_003(CardScript):
         # Timing: EffectTiming.OnEndTurn
         # [End of Your Turn][Once Per Turn] Return 1 Option card with [Plug-In] in its name from your trash to the hand.
         effect0 = ICardEffect()
+        effect0.set_timing(EffectTiming.OnEndTurn)
         effect0.set_effect_name("BT19-003 Return 1 option card to hand")
         effect0.set_effect_description("[End of Your Turn][Once Per Turn] Return 1 Option card with [Plug-In] in its name from your trash to the hand.")
         effect0.is_inherited_effect = True

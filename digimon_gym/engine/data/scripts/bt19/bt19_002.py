@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -16,6 +17,7 @@ class BT19_002(CardScript):
         # Timing: EffectTiming.OnAllyAttack
         # [Opponent's Turn] When any of your opponent's Digimon attack, by returning this Digimon with [Aqua]/[Sea Animal] in one of its traits to the bottom of the deck, return 1 of your opponent's Digimon with as high or lower a level as the returned Digimon to the hand.
         effect0 = ICardEffect()
+        effect0.set_timing(EffectTiming.OnAllyAttack)
         effect0.set_effect_name("BT19-002 Bottom deck this Digimon to return to hand an opponent's Digimon with the same level")
         effect0.set_effect_description("[Opponent's Turn] When any of your opponent's Digimon attack, by returning this Digimon with [Aqua]/[Sea Animal] in one of its traits to the bottom of the deck, return 1 of your opponent's Digimon with as high or lower a level as the returned Digimon to the hand.")
         effect0.is_inherited_effect = True

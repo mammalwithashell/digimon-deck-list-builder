@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -29,6 +30,7 @@ class BT10_011(CardScript):
         # Timing: EffectTiming.OnTappedAnyone
         # [Your Turn][Once Per Turn] When one of your Tamers becomes suspended, this Digimon gets +2000 DP for the turn. Then, if this Digimon has 12000 DP or more, it gains <Security Attack +1> for the turn. (This Digimon checks 1 additional security card.)
         effect1 = ICardEffect()
+        effect1.set_timing(EffectTiming.OnTappedAnyone)
         effect1.set_effect_name("BT10-011 DP +2000 and gain Security Attack +1")
         effect1.set_effect_description("[Your Turn][Once Per Turn] When one of your Tamers becomes suspended, this Digimon gets +2000 DP for the turn. Then, if this Digimon has 12000 DP or more, it gains <Security Attack +1> for the turn. (This Digimon checks 1 additional security card.)")
         effect1.set_max_count_per_turn(1)

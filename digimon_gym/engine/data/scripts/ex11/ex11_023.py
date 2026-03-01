@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -59,6 +60,7 @@ class EX11_023(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # Delete
         effect3 = ICardEffect()
+        effect3.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect3.set_effect_name("EX11-023 Delete")
         effect3.set_effect_description("Delete")
         effect3.is_when_digivolving = True
@@ -94,6 +96,7 @@ class EX11_023(CardScript):
         # Timing: EffectTiming.OnEndTurn
         # Delete
         effect4 = ICardEffect()
+        effect4.set_timing(EffectTiming.OnEndTurn)
         effect4.set_effect_name("EX11-023 Delete")
         effect4.set_effect_description("Delete")
 
@@ -127,6 +130,7 @@ class EX11_023(CardScript):
         # Timing: EffectTiming.OnDestroyedAnyone
         # [All Turns] [Once Per Turn] When other Digimon are deleted, you may play 1 level 4 or lower [Puppet] trait Digimon card from your trash without paying the cost.
         effect5 = ICardEffect()
+        effect5.set_timing(EffectTiming.OnDestroyedAnyone)
         effect5.set_effect_name("EX11-023 Play a level 4 or lower [Puppet] trait for free.")
         effect5.set_effect_description("[All Turns] [Once Per Turn] When other Digimon are deleted, you may play 1 level 4 or lower [Puppet] trait Digimon card from your trash without paying the cost.")
         effect5.is_optional = True

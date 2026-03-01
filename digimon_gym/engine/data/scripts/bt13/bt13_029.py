@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -16,6 +17,7 @@ class BT13_029(CardScript):
         # Timing: EffectTiming.OnAllyAttack
         # [When Attacking] If your opponent has 8 or more cards in their hand, for the turn, this Digimon's attack target can't be switched.
         effect0 = ICardEffect()
+        effect0.set_timing(EffectTiming.OnAllyAttack)
         effect0.set_effect_name("BT13-029 This Digimon's attack target can't be switched")
         effect0.set_effect_description("[When Attacking] If your opponent has 8 or more cards in their hand, for the turn, this Digimon's attack target can't be switched.")
         effect0.is_on_attack = True
@@ -43,6 +45,7 @@ class BT13_029(CardScript):
         # Timing: EffectTiming.OnAddHand
         # [All Turns][Once Per Turn] When an effect adds cards to your opponent's hand, unsuspend this Digimon.
         effect1 = ICardEffect()
+        effect1.set_timing(EffectTiming.OnAddHand)
         effect1.set_effect_name("BT13-029 Unsuspend this Digimon")
         effect1.set_effect_description("[All Turns][Once Per Turn] When an effect adds cards to your opponent's hand, unsuspend this Digimon.")
         effect1.is_inherited_effect = True

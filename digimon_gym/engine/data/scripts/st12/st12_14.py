@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -16,6 +17,7 @@ class ST12_14(CardScript):
         # Timing: EffectTiming.OptionSkill
         # [Main] 1 of your Digimon gets +2000 DP for the turn. Then, if you have a Digimon with [Huckmon] in its name or [Royal Knight] in its traits in play, gain 1 memory, and 1 of your Digimon gains <Piercing> for the turn. (When this Digimon attacks and deletes an opponent's Digimon and survives the battle, it performs any security checks it normally would.)
         effect0 = ICardEffect()
+        effect0.set_timing(EffectTiming.OptionSkill)
         effect0.set_effect_name("ST12-14 Gain 1 memory, DP +2000, Gain Keyword Piercing")
         effect0.set_effect_description("[Main] 1 of your Digimon gets +2000 DP for the turn. Then, if you have a Digimon with [Huckmon] in its name or [Royal Knight] in its traits in play, gain 1 memory, and 1 of your Digimon gains <Piercing> for the turn. (When this Digimon attacks and deletes an opponent's Digimon and survives the battle, it performs any security checks it normally would.)")
         effect0._is_piercing = True
@@ -53,6 +55,7 @@ class ST12_14(CardScript):
         # Timing: EffectTiming.SecuritySkill
         # [Security] Gain 1 memory, and add this card to its owner's hand.
         effect1 = ICardEffect()
+        effect1.set_timing(EffectTiming.SecuritySkill)
         effect1.set_effect_name("ST12-14 Gain 1 memory, Add To Hand")
         effect1.set_effect_description("[Security] Gain 1 memory, and add this card to its owner's hand.")
         effect1.is_security_effect = True

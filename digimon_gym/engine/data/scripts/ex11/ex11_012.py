@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -40,6 +41,7 @@ class EX11_012(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # Delete, Return To Deck, Play Token
         effect2 = ICardEffect()
+        effect2.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect2.set_effect_name("EX11-012 Delete, Return To Deck, Play Token")
         effect2.set_effect_description("Delete, Return To Deck, Play Token")
         effect2.is_when_digivolving = True
@@ -87,6 +89,7 @@ class EX11_012(CardScript):
         # Timing: EffectTiming.OnEndAttack
         # Delete, Return To Deck, Play Token
         effect3 = ICardEffect()
+        effect3.set_timing(EffectTiming.OnEndAttack)
         effect3.set_effect_name("EX11-012 Delete, Return To Deck, Play Token")
         effect3.set_effect_description("Delete, Return To Deck, Play Token")
 
@@ -133,6 +136,7 @@ class EX11_012(CardScript):
         # Timing: EffectTiming.WhenRemoveField
         # Effect
         effect4 = ICardEffect()
+        effect4.set_timing(EffectTiming.WhenRemoveField)
         effect4.set_effect_name("EX11-012 By deleting a token, this does not leave")
         effect4.set_effect_description("Effect")
         effect4.is_optional = True

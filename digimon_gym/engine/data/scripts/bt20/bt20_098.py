@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -16,6 +17,7 @@ class BT20_098(CardScript):
         # Timing: EffectTiming.OptionSkill
         # [Main] By returning 9 levels' total worth of Digimon cards from your opponent's trash to the bottom of the deck, you may play 1 [Ghost] trait Digimon card of each returned card's level from your trash without paying the costs. Then, the Digimon this effect played gain <Rush> and <Blocker> until the end of your opponent's turn.
         effect0 = ICardEffect()
+        effect0.set_timing(EffectTiming.OptionSkill)
         effect0.set_effect_name("BT20-098 Play Card, Return To Deck, Gain Keyword Rush, Gain Keyword Blocker")
         effect0.set_effect_description("[Main] By returning 9 levels' total worth of Digimon cards from your opponent's trash to the bottom of the deck, you may play 1 [Ghost] trait Digimon card of each returned card's level from your trash without paying the costs. Then, the Digimon this effect played gain <Rush> and <Blocker> until the end of your opponent's turn.")
         effect0._is_rush = True
@@ -65,6 +67,7 @@ class BT20_098(CardScript):
         # Timing: EffectTiming.SecuritySkill
         # [Security] You may play 1 level 5 or lower Digimon card with the [Ghost] trait from your trash without paying the cost.
         effect1 = ICardEffect()
+        effect1.set_timing(EffectTiming.SecuritySkill)
         effect1.set_effect_name("BT20-098 Play Card")
         effect1.set_effect_description("[Security] You may play 1 level 5 or lower Digimon card with the [Ghost] trait from your trash without paying the cost.")
         effect1.is_security_effect = True

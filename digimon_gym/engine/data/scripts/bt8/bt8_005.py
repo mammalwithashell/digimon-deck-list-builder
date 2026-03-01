@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -16,6 +17,7 @@ class BT8_005(CardScript):
         # Timing: EffectTiming.OnAddDigivolutionCards
         # [Your Turn][Once Per Turn] When an effect places a digivolution card under this Digimon, it gets +1000 DP until the end of your opponent's next turn.
         effect0 = ICardEffect()
+        effect0.set_timing(EffectTiming.OnAddDigivolutionCards)
         effect0.set_effect_name("BT8-005 DP +1000")
         effect0.set_effect_description("[Your Turn][Once Per Turn] When an effect places a digivolution card under this Digimon, it gets +1000 DP until the end of your opponent's next turn.")
         effect0.is_inherited_effect = True

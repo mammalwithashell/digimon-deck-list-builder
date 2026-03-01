@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -29,6 +30,7 @@ class BT15_048(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [When Digivolving] 1 of your opponent's Digimon can't unsuspend until the end of their turn. If [Togemon] or [X Antibody] is in this Digimon's digivolution cards, suspend 1 of your opponent's Digimon.
         effect1 = ICardEffect()
+        effect1.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect1.set_effect_name("BT15-048 Opponent's 1 Digimon can't unsuspend and suspend 1 Digimon")
         effect1.set_effect_description("[When Digivolving] 1 of your opponent's Digimon can't unsuspend until the end of their turn. If [Togemon] or [X Antibody] is in this Digimon's digivolution cards, suspend 1 of your opponent's Digimon.")
         effect1.is_when_digivolving = True

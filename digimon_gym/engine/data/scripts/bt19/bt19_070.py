@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -43,6 +44,7 @@ class BT19_070(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [On Play] By deleting 1 of your Digimon, delete 1 of your opponent's level 3 Digimon, 1 of their level 4 Digimon, and 1 of their level 5 Digimon.
         effect2 = ICardEffect()
+        effect2.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect2.set_effect_name("BT19-070 Delete 1 of your Digimon to delete your opponent's Digimon")
         effect2.set_effect_description("[On Play] By deleting 1 of your Digimon, delete 1 of your opponent's level 3 Digimon, 1 of their level 4 Digimon, and 1 of their level 5 Digimon.")
         effect2.is_optional = True
@@ -77,6 +79,7 @@ class BT19_070(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [When Digivolving] By deleting 1 of your Digimon, delete 1 of your opponent's level 3 Digimon, 1 of their level 4 Digimon, and 1 of their level 5 Digimon.
         effect3 = ICardEffect()
+        effect3.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect3.set_effect_name("BT19-070 Delete 1 of your Digimon to delete your opponent's Digimon")
         effect3.set_effect_description("[When Digivolving] By deleting 1 of your Digimon, delete 1 of your opponent's level 3 Digimon, 1 of their level 4 Digimon, and 1 of their level 5 Digimon.")
         effect3.is_optional = True
@@ -111,6 +114,7 @@ class BT19_070(CardScript):
         # Timing: EffectTiming.OnDestroyedAnyone
         # [On Deletion] By deleting 1 of your level 4 or lower purple or red Digimon, you may play 1 [Machinedramon] from your trash without paying the cost.
         effect4 = ICardEffect()
+        effect4.set_timing(EffectTiming.OnDestroyedAnyone)
         effect4.set_effect_name("BT19-070 Delete 1 of your Digimon to play [Machinedramon] from your trash")
         effect4.set_effect_description("[On Deletion] By deleting 1 of your level 4 or lower purple or red Digimon, you may play 1 [Machinedramon] from your trash without paying the cost.")
         effect4.is_optional = True

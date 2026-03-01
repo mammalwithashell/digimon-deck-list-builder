@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -16,6 +17,7 @@ class EX10_028(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [On Play] By trashing any 1 card with the [Mineral] or [Rock] trait from your Digimon's digivolution cards, 1 of your Digimon with the [Mineral] or [Rock] trait gains <Reboot>, <Blocker> and +3000 DP until your opponent's turn ends.
         effect0 = ICardEffect()
+        effect0.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect0.set_effect_name("EX10-028 By trashing 1 sources, 1 Digimon gains <Reboot>, <Blocker> and +3000 DP")
         effect0.set_effect_description("[On Play] By trashing any 1 card with the [Mineral] or [Rock] trait from your Digimon's digivolution cards, 1 of your Digimon with the [Mineral] or [Rock] trait gains <Reboot>, <Blocker> and +3000 DP until your opponent's turn ends.")
         effect0.is_optional = True
@@ -54,6 +56,7 @@ class EX10_028(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [When Digivolving] By trashing any 1 card with the [Mineral] or [Rock] trait from your Digimon's digivolution cards, 1 of your Digimon with the [Mineral] or [Rock] trait gains <Reboot>, <Blocker> and +3000 DP until your opponent's turn ends.
         effect1 = ICardEffect()
+        effect1.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect1.set_effect_name("EX10-028 By trashing 1 sources, 1 Digimon gains <Reboot>, <Blocker> and +3000 DP")
         effect1.set_effect_description("[When Digivolving] By trashing any 1 card with the [Mineral] or [Rock] trait from your Digimon's digivolution cards, 1 of your Digimon with the [Mineral] or [Rock] trait gains <Reboot>, <Blocker> and +3000 DP until your opponent's turn ends.")
         effect1.is_optional = True
@@ -92,6 +95,7 @@ class EX10_028(CardScript):
         # Timing: EffectTiming.OnDigivolutionCardDiscarded
         # When effects trash this card from a [Mineral] or [Rock] trait Digimon's digivolution cards, delete 1 of your opponent's Digimon with a play cost of 4 or less.
         effect2 = ICardEffect()
+        effect2.set_timing(EffectTiming.OnDigivolutionCardDiscarded)
         effect2.set_effect_name("EX10-028 Delete 4 cost or less Digimon")
         effect2.set_effect_description("When effects trash this card from a [Mineral] or [Rock] trait Digimon's digivolution cards, delete 1 of your opponent's Digimon with a play cost of 4 or less.")
         effect2.is_inherited_effect = True

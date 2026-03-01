@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -31,6 +32,7 @@ class BT23_016(CardScript):
         # Timing: EffectTiming.WhenLinked
         # [Your Turn] [Once Per Turn] When this Digimon gets linked, if you have 1 or fewer Tamers, you may play 1 [Eri Karan] from your hand without paying the cost.
         effect1 = ICardEffect()
+        effect1.set_timing(EffectTiming.WhenLinked)
         effect1.set_effect_name("BT23-016 Play [Eri Karan] from hand")
         effect1.set_effect_description("[Your Turn] [Once Per Turn] When this Digimon gets linked, if you have 1 or fewer Tamers, you may play 1 [Eri Karan] from your hand without paying the cost.")
         effect1.is_optional = True
@@ -69,6 +71,7 @@ class BT23_016(CardScript):
         # Timing: EffectTiming.WhenLinked
         # [When Linking] <Draw 1>
         effect2 = ICardEffect()
+        effect2.set_timing(EffectTiming.WhenLinked)
         effect2.set_effect_name("BT23-016 Draw 1")
         effect2.set_effect_description("[When Linking] <Draw 1>")
 

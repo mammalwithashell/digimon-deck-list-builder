@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -29,6 +30,7 @@ class BT13_088(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [On Play] By placing 1 [Belphemon: Rage Mode] from your trash as this Digimon's top digivolution card, until the end of your opponent's turn, this Digimon can't attack and isn't affected by your opponent's effects.
         effect1 = ICardEffect()
+        effect1.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect1.set_effect_name("BT13-088 Place 1 card from trash to digivolution cards so that this Digimon gets effects")
         effect1.set_effect_description("[On Play] By placing 1 [Belphemon: Rage Mode] from your trash as this Digimon's top digivolution card, until the end of your opponent's turn, this Digimon can't attack and isn't affected by your opponent's effects.")
         effect1.is_optional = True
@@ -64,6 +66,7 @@ class BT13_088(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [When Digivolving] By placing 1 [Belphemon: Rage Mode] from your trash as this Digimon's top digivolution card, until the end of your opponent's turn, this Digimon can't attack and isn't affected by your opponent's effects.
         effect2 = ICardEffect()
+        effect2.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect2.set_effect_name("BT13-088 Place 1 card from trash to digivolution cards so that this Digimon gets effects")
         effect2.set_effect_description("[When Digivolving] By placing 1 [Belphemon: Rage Mode] from your trash as this Digimon's top digivolution card, until the end of your opponent's turn, this Digimon can't attack and isn't affected by your opponent's effects.")
         effect2.is_optional = True
@@ -99,6 +102,7 @@ class BT13_088(CardScript):
         # Timing: EffectTiming.OnAllyAttack
         # [Opponent's Turn][Once Per Turn] When an opponent's Digimon attacks, by trashing 2 cards in your hand, end the attack.
         effect3 = ICardEffect()
+        effect3.set_timing(EffectTiming.OnAllyAttack)
         effect3.set_effect_name("BT13-088 Trash 2 cards from hand to end the attack")
         effect3.set_effect_description("[Opponent's Turn][Once Per Turn] When an opponent's Digimon attacks, by trashing 2 cards in your hand, end the attack.")
         effect3.is_optional = True

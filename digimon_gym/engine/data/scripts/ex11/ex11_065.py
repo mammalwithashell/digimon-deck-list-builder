@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -16,6 +17,7 @@ class EX11_065(CardScript):
         # Timing: EffectTiming.OnStartMainPhase
         # [Start of Your Main Phase] By trashing 1 [Mineral] or [Rock] trait card from your hand or your Digimon's digivolution cards, gain 1 memory.
         effect0 = ICardEffect()
+        effect0.set_timing(EffectTiming.OnStartMainPhase)
         effect0.set_effect_name("EX11-065 Trash 1 to gain 1 memory")
         effect0.set_effect_description("[Start of Your Main Phase] By trashing 1 [Mineral] or [Rock] trait card from your hand or your Digimon's digivolution cards, gain 1 memory.")
 
@@ -58,6 +60,7 @@ class EX11_065(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # Suspend
         effect1 = ICardEffect()
+        effect1.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect1.set_effect_name("EX11-065 Place 1 [Mineral]/[Rock] trait card from hand or trash under played/digivolved digimon")
         effect1.set_effect_description("Suspend")
         effect1.is_optional = True

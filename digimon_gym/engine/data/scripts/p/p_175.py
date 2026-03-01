@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -16,6 +17,7 @@ class P_175(CardScript):
         # Timing: EffectTiming.OnStartTurn
         # [Your Turn] When any of your Digimon with the [Rock Dragon] or [Machine Dragon] trait are played, by suspending this Tamer, 1 of your level 4 or higher Digimon may digivolve into a Digimon card with the [Rock Dragon], [Earth Dragon], [Machine Dragon] or [Sky Dragon] trait in the hand with the digivolution cost reduced by 2.
         effect0 = ICardEffect()
+        effect0.set_timing(EffectTiming.OnStartTurn)
         effect0.set_effect_name("P-175 Digivolve, for reduced cost of 2")
         effect0.set_effect_description("[Your Turn] When any of your Digimon with the [Rock Dragon] or [Machine Dragon] trait are played, by suspending this Tamer, 1 of your level 4 or higher Digimon may digivolve into a Digimon card with the [Rock Dragon], [Earth Dragon], [Machine Dragon] or [Sky Dragon] trait in the hand with the digivolution cost reduced by 2.")
         effect0.is_optional = True
@@ -58,6 +60,7 @@ class P_175(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [Your Turn] When any of your Digimon with the [Rock Dragon] or [Machine Dragon] trait are played, by suspending this Tamer, 1 of your level 4 or higher Digimon may digivolve into a Digimon card with the [Rock Dragon], [Earth Dragon], [Machine Dragon] or [Sky Dragon] trait in the hand with the digivolution cost reduced by 2.
         effect1 = ICardEffect()
+        effect1.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect1.set_effect_name("P-175 Digivolve, for reduced cost of 2")
         effect1.set_effect_description("[Your Turn] When any of your Digimon with the [Rock Dragon] or [Machine Dragon] trait are played, by suspending this Tamer, 1 of your level 4 or higher Digimon may digivolve into a Digimon card with the [Rock Dragon], [Earth Dragon], [Machine Dragon] or [Sky Dragon] trait in the hand with the digivolution cost reduced by 2.")
         effect1.is_optional = True

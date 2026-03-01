@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -16,6 +17,7 @@ class BT11_087(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [On Play] Trash the top 4 cards of your deck. Then, add up to 2 cards with [Bagra Army] in one of their traits from your trash to your hand, and place up to 2 Digimon cards with [Bagra Army] in their traits from your trash under 1 of your Tamers.
         effect0 = ICardEffect()
+        effect0.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect0.set_effect_name("BT11-087 Trash 4 cards from deck top and return cards from trash to hand and under Tamer")
         effect0.set_effect_description("[On Play] Trash the top 4 cards of your deck. Then, add up to 2 cards with [Bagra Army] in one of their traits from your trash to your hand, and place up to 2 Digimon cards with [Bagra Army] in their traits from your trash under 1 of your Tamers.")
         effect0.is_on_play = True
@@ -51,6 +53,7 @@ class BT11_087(CardScript):
         # Timing: EffectTiming.OnMove
         # Trash Digivolution Cards
         effect1 = ICardEffect()
+        effect1.set_timing(EffectTiming.OnMove)
         effect1.set_effect_name("BT11-087 The moved Digimon gets")
         effect1.set_effect_description("Trash Digivolution Cards")
         effect1.is_optional = True
@@ -80,6 +83,7 @@ class BT11_087(CardScript):
         # Timing: EffectTiming.OnMove
         # [When Attacking] Lose 3 memory.
         effect2 = ICardEffect()
+        effect2.set_timing(EffectTiming.OnMove)
         effect2.set_effect_name("BT11-087 Memory -3")
         effect2.set_effect_description("[When Attacking] Lose 3 memory.")
 

@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -57,6 +58,7 @@ class BT24_065(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # Delete, De Digivolve
         effect3 = ICardEffect()
+        effect3.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect3.set_effect_name("BT24-065 De-digivolve 1 opponent's Digimon. Delete all their highest play cost Digimon.")
         effect3.set_effect_description("Delete, De Digivolve")
         effect3.is_when_digivolving = True
@@ -101,6 +103,7 @@ class BT24_065(CardScript):
         # Timing: EffectTiming.WhenRemoveField
         # [All Turns] [Once Per Turn] When any of your Digimon with [Diaboromon] in their names would leave the battle area, you may play 1 [Diaboromon] from your hand or this Digimon's digivolution cards without paying the cost.
         effect4 = ICardEffect()
+        effect4.set_timing(EffectTiming.WhenRemoveField)
         effect4.set_effect_name("BT24-065 Play a Diaboromon")
         effect4.set_effect_description("[All Turns] [Once Per Turn] When any of your Digimon with [Diaboromon] in their names would leave the battle area, you may play 1 [Diaboromon] from your hand or this Digimon's digivolution cards without paying the cost.")
         effect4.is_optional = True

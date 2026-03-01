@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -42,6 +43,7 @@ class EX6_006(CardScript):
         # Timing: EffectTiming.OnStartMainPhase
         # [Breeding][Start of Your Main Phase] Place the top card of your Digi-Egg deck as this Digimon's bottom digivolution card and delete all of your Digimon. If this effect deleted, place 1 card with the [Seven Great Demon Lords] trait from your trash as this Digimon's bottom digivolution card.
         effect1 = ICardEffect()
+        effect1.set_timing(EffectTiming.OnStartMainPhase)
         effect1.set_effect_name("EX6-006 Place the top card of your Digi-Egg deck as the bottom source of this Digimon and activate effects")
         effect1.set_effect_description("[Breeding][Start of Your Main Phase] Place the top card of your Digi-Egg deck as this Digimon's bottom digivolution card and delete all of your Digimon. If this effect deleted, place 1 card with the [Seven Great Demon Lords] trait from your trash as this Digimon's bottom digivolution card.")
 
@@ -71,6 +73,7 @@ class EX6_006(CardScript):
         # Timing: EffectTiming.OnEndTurn
         # [Breeding] [End of Opponent's Turn] By deleting this Digimon with 7 or more cards with different names in it's digivolution cards, you may play 1 [Ogudomon] from your trash without paying the cost
         effect2 = ICardEffect()
+        effect2.set_timing(EffectTiming.OnEndTurn)
         effect2.set_effect_name("EX6-006 Delete this Digimon with 7 or more different names to play [Ogudomon] from your trash.")
         effect2.set_effect_description("[Breeding] [End of Opponent's Turn] By deleting this Digimon with 7 or more cards with different names in it's digivolution cards, you may play 1 [Ogudomon] from your trash without paying the cost")
         effect2.is_optional = True

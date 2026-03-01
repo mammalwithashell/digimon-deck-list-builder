@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -31,6 +32,7 @@ class BT23_039(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [On Play] Reveal the top 3 cards of your deck. Add 1 card with the [Appmon] trait and 1 card with the [Game] or [Invincible] trait among them to the hand. Return the rest to the bottom of the deck.
         effect1 = ICardEffect()
+        effect1.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect1.set_effect_name("BT23-039 Reveal the top 3 cards of deck")
         effect1.set_effect_description("[On Play] Reveal the top 3 cards of your deck. Add 1 card with the [Appmon] trait and 1 card with the [Game] or [Invincible] trait among them to the hand. Return the rest to the bottom of the deck.")
         effect1.is_on_play = True
@@ -73,6 +75,7 @@ class BT23_039(CardScript):
         # Timing: EffectTiming.WhenLinked
         # [When Linking] You may suspend 1 of your opponent's Digimon.
         effect2 = ICardEffect()
+        effect2.set_timing(EffectTiming.WhenLinked)
         effect2.set_effect_name("BT23-039 Suspend 1 Digimon")
         effect2.set_effect_description("[When Linking] You may suspend 1 of your opponent's Digimon.")
         effect2.is_optional = True

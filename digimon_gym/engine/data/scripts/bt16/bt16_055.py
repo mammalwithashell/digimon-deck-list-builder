@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -29,6 +30,7 @@ class BT16_055(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [On Play] If you have 3 or more security cards, 1 of your Digimon can't have its DP reduced by your opponent's effects, and isn't affected by <De-Digivolve> effects until the end of your opponent's turn. If you have 3 or fewer security cards, 1 of your Digimon gains <Blocker> and <Reboot> until the end of your opponent's turn.
         effect1 = ICardEffect()
+        effect1.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect1.set_effect_name("BT16-055 Digimon can't be DP reduced or De-Digivolved, Digimon gains <Rush> and <Blocker>")
         effect1.set_effect_description("[On Play] If you have 3 or more security cards, 1 of your Digimon can't have its DP reduced by your opponent's effects, and isn't affected by <De-Digivolve> effects until the end of your opponent's turn. If you have 3 or fewer security cards, 1 of your Digimon gains <Blocker> and <Reboot> until the end of your opponent's turn.")
         effect1.is_on_play = True
@@ -65,6 +67,7 @@ class BT16_055(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [When Digivolving] If you have 3 or more security cards, 1 of your Digimon can't have its DP reduced by your opponent's effects, and isn't affected by <De-Digivolve> effects until the end of your opponent's turn. If you have 3 or fewer security cards, 1 of your Digimon gains <Blocker> and <Reboot> until the end of your opponent's turn.
         effect2 = ICardEffect()
+        effect2.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect2.set_effect_name("BT16-055 Digimon can't be DP reduced or De-Digivolved, Digimon gains <Rush> and <Blocker>")
         effect2.set_effect_description("[When Digivolving] If you have 3 or more security cards, 1 of your Digimon can't have its DP reduced by your opponent's effects, and isn't affected by <De-Digivolve> effects until the end of your opponent's turn. If you have 3 or fewer security cards, 1 of your Digimon gains <Blocker> and <Reboot> until the end of your opponent's turn.")
         effect2.is_when_digivolving = True

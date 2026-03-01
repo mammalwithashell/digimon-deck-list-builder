@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -72,6 +73,7 @@ class EX5_012(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [On Play] Delete 1 of your opponent's Digimon with 5000 DP or less.
         effect3 = ICardEffect()
+        effect3.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect3.set_effect_name("EX5-012 Delete 1 Digimon with 5000 DP or less")
         effect3.set_effect_description("[On Play] Delete 1 of your opponent's Digimon with 5000 DP or less.")
         effect3.is_on_play = True
@@ -109,6 +111,7 @@ class EX5_012(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [When Digivolving] Delete 1 of your opponent's Digimon with 5000 DP or less.
         effect4 = ICardEffect()
+        effect4.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect4.set_effect_name("EX5-012 Delete 1 Digimon with 5000 DP or less")
         effect4.set_effect_description("[When Digivolving] Delete 1 of your opponent's Digimon with 5000 DP or less.")
         effect4.is_when_digivolving = True

@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -45,6 +46,7 @@ class EX10_036(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [When Digivolving] [Once Per Turn] By placing 3 [Mineral] or [Rock] trait cards from your trash as this Digimon's bottom digivolution cards, it unsuspends.
         effect2 = ICardEffect()
+        effect2.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect2.set_effect_name("EX10-036 Place 3 cards from trash as bottom sources")
         effect2.set_effect_description("[When Digivolving] [Once Per Turn] By placing 3 [Mineral] or [Rock] trait cards from your trash as this Digimon's bottom digivolution cards, it unsuspends.")
         effect2.is_optional = True
@@ -81,6 +83,7 @@ class EX10_036(CardScript):
         # Timing: EffectTiming.OnAllyAttack
         # [When Attacking] [Once Per Turn] By placing 3 [Mineral] or [Rock] trait cards from your trash as this Digimon's bottom digivolution cards, it unsuspends.
         effect3 = ICardEffect()
+        effect3.set_timing(EffectTiming.OnAllyAttack)
         effect3.set_effect_name("EX10-036 Place 3 cards from trash as bottom sources")
         effect3.set_effect_description("[When Attacking] [Once Per Turn] By placing 3 [Mineral] or [Rock] trait cards from your trash as this Digimon's bottom digivolution cards, it unsuspends.")
         effect3.is_optional = True
@@ -117,6 +120,7 @@ class EX10_036(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [When Digivolving] By trashing 3 [Mineral] or [Rock] trait cards from any of your Digimon's digivolution cards, delete 1 of your opponent's Digimon and trash their top security card.
         effect4 = ICardEffect()
+        effect4.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect4.set_effect_name("EX10-036 By trashing 3 sources, Delete 1 digimon and trash top security")
         effect4.set_effect_description("[When Digivolving] By trashing 3 [Mineral] or [Rock] trait cards from any of your Digimon's digivolution cards, delete 1 of your opponent's Digimon and trash their top security card.")
         effect4.is_optional = True
@@ -165,6 +169,7 @@ class EX10_036(CardScript):
         # Timing: EffectTiming.OnAllyAttack
         # [When Attacking] By trashing 3 [Mineral] or [Rock] trait cards from any of your Digimon's digivolution cards, delete 1 of your opponent's Digimon and trash their top security card.
         effect5 = ICardEffect()
+        effect5.set_timing(EffectTiming.OnAllyAttack)
         effect5.set_effect_name("EX10-036 By trashing 3 sources, Delete 1 digimon and trash top security")
         effect5.set_effect_description("[When Attacking] By trashing 3 [Mineral] or [Rock] trait cards from any of your Digimon's digivolution cards, delete 1 of your opponent's Digimon and trash their top security card.")
         effect5.is_optional = True

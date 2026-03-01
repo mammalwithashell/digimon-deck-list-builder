@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -16,6 +17,7 @@ class BT22_096(CardScript):
         # Timing: EffectTiming.OptionSkill
         # [Main] You may play 1 [Sangomon] or [Yao Qinglan] from your hand or trash without paying the cost. Then, place this card in the battle area.
         effect0 = ICardEffect()
+        effect0.set_timing(EffectTiming.OptionSkill)
         effect0.set_effect_name("BT22-096 Play 1 [Sangomon] or [Yao Qinglan] from hand or trash")
         effect0.set_effect_description("[Main] You may play 1 [Sangomon] or [Yao Qinglan] from your hand or trash without paying the cost. Then, place this card in the battle area.")
 
@@ -63,6 +65,7 @@ class BT22_096(CardScript):
         # Timing: EffectTiming.OnTappedAnyone
         # [Your Turn] When any of your [Yao Qinglan] suspend, <Delay> (By trashing this card after the placing turn, activate the effect below.). 1 of your Digimon with [Aqua] or [Sea Animal] in any of its traits may digivolve into an [Aquatic] and [LIBERATOR] trait Digimon card in the hand with the digivolution cost reduced by 3.
         effect2 = ICardEffect()
+        effect2.set_timing(EffectTiming.OnTappedAnyone)
         effect2.set_effect_name("BT22-096 Digivolve 1 [Aqua]/[Sea Animal] digimon into a [Aquatic]/[Liberator] digimon in your hand for 3 reduced cost")
         effect2.set_effect_description("[Your Turn] When any of your [Yao Qinglan] suspend, <Delay> (By trashing this card after the placing turn, activate the effect below.). 1 of your Digimon with [Aqua] or [Sea Animal] in any of its traits may digivolve into an [Aquatic] and [LIBERATOR] trait Digimon card in the hand with the digivolution cost reduced by 3.")
         effect2.is_optional = True

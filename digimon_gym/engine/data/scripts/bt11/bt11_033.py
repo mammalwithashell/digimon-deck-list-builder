@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -16,6 +17,7 @@ class BT11_033(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [When Digivolving] Return 1 of your opponent's level 5 or lower Digimon to its owner's hand. If no Digimon was returned by this effect, your opponent adds the top card of their security stack to their hand.
         effect0 = ICardEffect()
+        effect0.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect0.set_effect_name("BT11-033 Return 1 level 5 or lower Digimon to hand or opponent adds the top card of Security")
         effect0.set_effect_description("[When Digivolving] Return 1 of your opponent's level 5 or lower Digimon to its owner's hand. If no Digimon was returned by this effect, your opponent adds the top card of their security stack to their hand.")
         effect0.is_when_digivolving = True
@@ -62,6 +64,7 @@ class BT11_033(CardScript):
         # Timing: EffectTiming.OnAddHand
         # [All Turns][Once Per Turn] When an effect adds cards to your opponent's hand, gain 1 memory for every 4 cards in your opponent's hand.
         effect1 = ICardEffect()
+        effect1.set_timing(EffectTiming.OnAddHand)
         effect1.set_effect_name("BT11-033 Gain Memory")
         effect1.set_effect_description("[All Turns][Once Per Turn] When an effect adds cards to your opponent's hand, gain 1 memory for every 4 cards in your opponent's hand.")
         effect1.set_max_count_per_turn(1)

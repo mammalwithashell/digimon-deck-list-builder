@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -33,6 +34,7 @@ class EX8_035(CardScript):
         # Timing: EffectTiming.SecuritySkill
         # [Security] At the end of the battle, give 2 of your opponent's Digimon <Security A. -1> for the turn. Then, add this card to the hand.
         effect1 = ICardEffect()
+        effect1.set_timing(EffectTiming.SecuritySkill)
         effect1.set_effect_name("EX8-035 2 Opponent's Digimon gain Security Attack -1 and add this card to hand")
         effect1.set_effect_description("[Security] At the end of the battle, give 2 of your opponent's Digimon <Security A. -1> for the turn. Then, add this card to the hand.")
         effect1.is_security_effect = True

@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -16,6 +17,7 @@ class BT19_084(CardScript):
         # Timing: EffectTiming.OnStartMainPhase
         # [Start of Your Main Phase] If you have face up security cards, gain 1 memory.
         effect0 = ICardEffect()
+        effect0.set_timing(EffectTiming.OnStartMainPhase)
         effect0.set_effect_name("BT19-084 +1 Memory")
         effect0.set_effect_description("[Start of Your Main Phase] If you have face up security cards, gain 1 memory.")
 
@@ -41,6 +43,7 @@ class BT19_084(CardScript):
         # Timing: EffectTiming.OnDeclaration
         # [Main] By suspending this Tamer, 1 of your Digimon digivolves into a Digimon card in your face up security cards. If this effect digivolved, you may place 1 Digimon card with the [Royal Base] trait from your hand face up as your bottom security card.
         effect1 = ICardEffect()
+        effect1.set_timing(EffectTiming.OnDeclaration)
         effect1.set_effect_name("BT19-084 One of your Digimon digivolves into Digimon card in security")
         effect1.set_effect_description("[Main] By suspending this Tamer, 1 of your Digimon digivolves into a Digimon card in your face up security cards. If this effect digivolved, you may place 1 Digimon card with the [Royal Base] trait from your hand face up as your bottom security card.")
 

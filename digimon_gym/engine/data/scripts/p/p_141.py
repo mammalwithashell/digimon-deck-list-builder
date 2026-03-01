@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -76,6 +77,7 @@ class P_141(CardScript):
         # Timing: EffectTiming.OnTappedAnyone
         # [All Turns] [Once Per Turn] When an opponent's Digimon becomes suspended, you may unsuspend this Digimon.
         effect4 = ICardEffect()
+        effect4.set_timing(EffectTiming.OnTappedAnyone)
         effect4.set_effect_name("P-141 Unsuspend this Digimon")
         effect4.set_effect_description("[All Turns] [Once Per Turn] When an opponent's Digimon becomes suspended, you may unsuspend this Digimon.")
         effect4.is_optional = True
@@ -110,6 +112,7 @@ class P_141(CardScript):
         # Timing: EffectTiming.OnTappedAnyone
         # [All Turns] [Once Per Turn] When an opponent's Digimon becomes suspended, you may unsuspend this Digimon.
         effect5 = ICardEffect()
+        effect5.set_timing(EffectTiming.OnTappedAnyone)
         effect5.set_effect_name("P-141 Unsuspend this Digimon")
         effect5.set_effect_description("[All Turns] [Once Per Turn] When an opponent's Digimon becomes suspended, you may unsuspend this Digimon.")
         effect5.is_inherited_effect = True

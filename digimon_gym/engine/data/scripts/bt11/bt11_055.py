@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -16,6 +17,7 @@ class BT11_055(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [On Play] For each green or black Tamer you have in play, suspend 1 of your opponent's Digimon. Then, 1 of your opponent's suspended Digimon can't unsuspend during your opponent's next unsuspend phase.
         effect0 = ICardEffect()
+        effect0.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect0.set_effect_name("BT11-055 Suspend Digimons and opponent's 1 Digimon can't unsuspend")
         effect0.set_effect_description("[On Play] For each green or black Tamer you have in play, suspend 1 of your opponent's Digimon. Then, 1 of your opponent's suspended Digimon can't unsuspend during your opponent's next unsuspend phase.")
         effect0.is_on_play = True
@@ -52,6 +54,7 @@ class BT11_055(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [When Digivolving] For each green or black Tamer you have in play, suspend 1 of your opponent's Digimon. Then, 1 of your opponent's suspended Digimon can't unsuspend during your opponent's next unsuspend phase.
         effect1 = ICardEffect()
+        effect1.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect1.set_effect_name("BT11-055 Suspend Digimons and opponent's 1 Digimon can't unsuspend")
         effect1.set_effect_description("[When Digivolving] For each green or black Tamer you have in play, suspend 1 of your opponent's Digimon. Then, 1 of your opponent's suspended Digimon can't unsuspend during your opponent's next unsuspend phase.")
         effect1.is_when_digivolving = True
@@ -88,6 +91,7 @@ class BT11_055(CardScript):
         # Timing: EffectTiming.OnEndBattle
         # [All Turns][Once Per Turn] When this Digimon deletes an opponent's Digimon in battle, trash the top card of your opponent's security stack.
         effect2 = ICardEffect()
+        effect2.set_timing(EffectTiming.OnEndBattle)
         effect2.set_effect_name("BT11-055 Trash the top card of opponent's security")
         effect2.set_effect_description("[All Turns][Once Per Turn] When this Digimon deletes an opponent's Digimon in battle, trash the top card of your opponent's security stack.")
         effect2.is_inherited_effect = True

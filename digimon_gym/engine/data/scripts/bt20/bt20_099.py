@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -39,6 +40,7 @@ class BT20_099(CardScript):
         # Timing: EffectTiming.OptionSkill
         # [Main] You may play 1 Digimon card with the [ACCEL] trait with the play cost reduced by 4. Then, place this card as any of your Digimon's bottom digivolution cards.
         effect1 = ICardEffect()
+        effect1.set_timing(EffectTiming.OptionSkill)
         effect1.set_effect_name("BT20-099 Play Cost -4")
         effect1.set_effect_description("[Main] You may play 1 Digimon card with the [ACCEL] trait with the play cost reduced by 4. Then, place this card as any of your Digimon's bottom digivolution cards.")
         effect1.cost_reduction = 4
@@ -74,6 +76,7 @@ class BT20_099(CardScript):
         # Timing: EffectTiming.SecuritySkill
         # [Security] Gain 1 memory and add this card to the hand.
         effect2 = ICardEffect()
+        effect2.set_timing(EffectTiming.SecuritySkill)
         effect2.set_effect_name("BT20-099 Gain 1 memory, Add To Hand")
         effect2.set_effect_description("[Security] Gain 1 memory and add this card to the hand.")
         effect2.is_security_effect = True
@@ -104,6 +107,7 @@ class BT20_099(CardScript):
         # Timing: EffectTiming.OnEndTurn
         # [End of Opponent's Turn] If this Digimon has [Chaosmon] in its name, trash your opponent's top security card and this Digimon gets -30000 DP for the turn.
         effect3 = ICardEffect()
+        effect3.set_timing(EffectTiming.OnEndTurn)
         effect3.set_effect_name("BT20-099 Trash opponent's top security, this Digimon get -30000 DP")
         effect3.set_effect_description("[End of Opponent's Turn] If this Digimon has [Chaosmon] in its name, trash your opponent's top security card and this Digimon gets -30000 DP for the turn.")
         effect3.is_inherited_effect = True

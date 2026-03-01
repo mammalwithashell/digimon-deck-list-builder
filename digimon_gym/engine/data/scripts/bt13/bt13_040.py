@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -41,6 +42,7 @@ class BT13_040(CardScript):
         # Timing: EffectTiming.WhenRemoveField
         # [All Turns] When this Digimon would leave the battle area, <Draw 1>. Then, you may play 1 [Veemon] from your hand or this Digimon's digivolution cards without paying the cost.
         effect2 = ICardEffect()
+        effect2.set_timing(EffectTiming.WhenRemoveField)
         effect2.set_effect_name("BT13-040 Draw 1 and play 1 [Veemon] from hand or this Digimon's digivolution cards")
         effect2.set_effect_description("[All Turns] When this Digimon would leave the battle area, <Draw 1>. Then, you may play 1 [Veemon] from your hand or this Digimon's digivolution cards without paying the cost.")
         effect2.set_hash_string("DrawAndPlay_BT13_040")

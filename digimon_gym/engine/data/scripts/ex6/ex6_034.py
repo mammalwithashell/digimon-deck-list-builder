@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -42,6 +43,7 @@ class EX6_034(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [When Digivolving] You may play 1 level 3 green or yellow Digimon card from your hand without paying the cost.
         effect2 = ICardEffect()
+        effect2.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect2.set_effect_name("EX6-034 Play 1 Digimon from hand")
         effect2.set_effect_description("[When Digivolving] You may play 1 level 3 green or yellow Digimon card from your hand without paying the cost.")
         effect2.is_optional = True
@@ -79,6 +81,7 @@ class EX6_034(CardScript):
         # Timing: EffectTiming.OnEndAttack
         # [End of Attack][Once Per Turn] By returning 1 of your other suspended Digimon to the hand, you may play 1 level 3 card with the [Beast] trait from your hand without paying the cost.
         effect3 = ICardEffect()
+        effect3.set_timing(EffectTiming.OnEndAttack)
         effect3.set_effect_name("EX6-034 Return 1 of your suspend Digimon to play 1 Digimon from hand")
         effect3.set_effect_description("[End of Attack][Once Per Turn] By returning 1 of your other suspended Digimon to the hand, you may play 1 level 3 card with the [Beast] trait from your hand without paying the cost.")
         effect3.is_inherited_effect = True

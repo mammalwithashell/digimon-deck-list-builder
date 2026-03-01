@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -41,6 +42,7 @@ class BT11_074(CardScript):
         # Timing: EffectTiming.OnAllyAttack
         # [Opponent's Turn][Once Per Turn] When your opponent's Digimon with the highest DP attacks, you may switch the target of attack to this Digimon.
         effect2 = ICardEffect()
+        effect2.set_timing(EffectTiming.OnAllyAttack)
         effect2.set_effect_name("BT11-074 Switch attack target to this Digimon")
         effect2.set_effect_description("[Opponent's Turn][Once Per Turn] When your opponent's Digimon with the highest DP attacks, you may switch the target of attack to this Digimon.")
         effect2.is_optional = True
@@ -70,6 +72,7 @@ class BT11_074(CardScript):
         # Timing: EffectTiming.OnUnTappedAnyone
         # [Opponent's Turn][Once Per Turn] When a Digimon becomes unsuspended, if this Digimon has [BlackWarGreymon] or [X Antibody] in its digivolution cards, you may delete 1 of your opponent's Digimon with the lowest play cost.
         effect3 = ICardEffect()
+        effect3.set_timing(EffectTiming.OnUnTappedAnyone)
         effect3.set_effect_name("BT11-074 Delete 1 Digimon with the lowest play cost")
         effect3.set_effect_description("[Opponent's Turn][Once Per Turn] When a Digimon becomes unsuspended, if this Digimon has [BlackWarGreymon] or [X Antibody] in its digivolution cards, you may delete 1 of your opponent's Digimon with the lowest play cost.")
         effect3.is_optional = True

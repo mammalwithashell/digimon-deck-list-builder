@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -41,6 +42,7 @@ class BT16_101(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [When Digivolving] Suspend all of your opponent's Digimon. Then, this Digimon may attack.
         effect2 = ICardEffect()
+        effect2.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect2.set_effect_name("BT16-101 Suspend all opponent's Digimon and attack.")
         effect2.set_effect_description("[When Digivolving] Suspend all of your opponent's Digimon. Then, this Digimon may attack.")
         effect2.is_when_digivolving = True
@@ -82,6 +84,7 @@ class BT16_101(CardScript):
         # Timing: EffectTiming.OnDestroyedAnyone
         # [All Turns][Once Per Turn] When an opponent's Digimon is deleted in battle or by dropping to 0 DP, gain 2 memory.
         effect3 = ICardEffect()
+        effect3.set_timing(EffectTiming.OnDestroyedAnyone)
         effect3.set_effect_name("BT16-101 Memory +2")
         effect3.set_effect_description("[All Turns][Once Per Turn] When an opponent's Digimon is deleted in battle or by dropping to 0 DP, gain 2 memory.")
         effect3.set_max_count_per_turn(1)
@@ -110,6 +113,7 @@ class BT16_101(CardScript):
         # Timing: EffectTiming.OnEndBattle
         # [All Turns][Once Per Turn] When an opponent's Digimon is deleted in battle or by dropping to 0 DP, gain 2 memory.
         effect4 = ICardEffect()
+        effect4.set_timing(EffectTiming.OnEndBattle)
         effect4.set_effect_name("BT16-101 Memory +2")
         effect4.set_effect_description("[All Turns][Once Per Turn] When an opponent's Digimon is deleted in battle or by dropping to 0 DP, gain 2 memory.")
         effect4.set_max_count_per_turn(1)

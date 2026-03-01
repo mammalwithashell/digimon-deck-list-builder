@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -43,6 +44,7 @@ class BT22_012(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [When Digivolving] If you have 1 or fewer Tamers, you may play 1 red or black Tamer card with a play cost of 4 or less or 1 Tamer card with the [CS] trait.
         effect2 = ICardEffect()
+        effect2.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect2.set_effect_name("BT22-012 Play either 1 4 cost or less red/black tamer, or 1 [CS] tamer")
         effect2.set_effect_description("[When Digivolving] If you have 1 or fewer Tamers, you may play 1 red or black Tamer card with a play cost of 4 or less or 1 Tamer card with the [CS] trait.")
         effect2.is_optional = True

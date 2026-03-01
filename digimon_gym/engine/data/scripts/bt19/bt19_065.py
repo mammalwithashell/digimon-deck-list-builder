@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -29,6 +30,7 @@ class BT19_065(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [On Play] Delete 1 level 5 or lower Digimon.
         effect1 = ICardEffect()
+        effect1.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect1.set_effect_name("BT19-065 Delete 1 level 5 or lower Digimon")
         effect1.set_effect_description("[On Play] Delete 1 level 5 or lower Digimon.")
         effect1.is_on_play = True
@@ -66,6 +68,7 @@ class BT19_065(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [When Digivolving] Delete 1 level 5 or lower Digimon.
         effect2 = ICardEffect()
+        effect2.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect2.set_effect_name("BT19-065 Delete 1 level 5 or lower Digimon")
         effect2.set_effect_description("[When Digivolving] Delete 1 level 5 or lower Digimon.")
         effect2.is_when_digivolving = True
@@ -103,6 +106,7 @@ class BT19_065(CardScript):
         # Timing: EffectTiming.OnDestroyedAnyone
         # [On Deletion] You may play 1 level 5 or lower Digimon card with the [Cyborg] or [Composite] trait from your trash without paying the cost.
         effect3 = ICardEffect()
+        effect3.set_timing(EffectTiming.OnDestroyedAnyone)
         effect3.set_effect_name("BT19-065 Play 1 level 5 or lower digimon from trash")
         effect3.set_effect_description("[On Deletion] You may play 1 level 5 or lower Digimon card with the [Cyborg] or [Composite] trait from your trash without paying the cost.")
         effect3.is_optional = True
@@ -139,6 +143,7 @@ class BT19_065(CardScript):
         # Timing: EffectTiming.OnAllyAttack
         # [Opponent's Turn] [Once Per Turn] When any of your opponent's Digimon attack, you may change the attack target to 1 of your Digimon with the [Composite] or [Wicked God] trait.
         effect4 = ICardEffect()
+        effect4.set_timing(EffectTiming.OnAllyAttack)
         effect4.set_effect_name("BT19-065 Switch attack target")
         effect4.set_effect_description("[Opponent's Turn] [Once Per Turn] When any of your opponent's Digimon attack, you may change the attack target to 1 of your Digimon with the [Composite] or [Wicked God] trait.")
         effect4.is_inherited_effect = True

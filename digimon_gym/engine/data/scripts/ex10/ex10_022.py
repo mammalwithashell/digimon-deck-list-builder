@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -33,6 +34,7 @@ class EX10_022(CardScript):
         # Timing: EffectTiming.OnStartMainPhase
         # [Start of Your Main Phase] Suspend all of your opponent's level 5 or lower Digimon. Then, if you have 6 or fewer cards in your hand, this Digimon gains <Piercing> (When this Digimon attacks and deletes an opponent's Digimon and survives the battle, it performs any security checks it normally would.), <Security A. +2> (This Digimon checks 2 additional security cards.) and +3000 DP for the turn.
         effect1 = ICardEffect()
+        effect1.set_timing(EffectTiming.OnStartMainPhase)
         effect1.set_effect_name("EX10-022 Suspend all lvl 5 or lower, then gain <Piercing>, <Security Atk +2>, +3000 DP")
         effect1.set_effect_description("[Start of Your Main Phase] Suspend all of your opponent's level 5 or lower Digimon. Then, if you have 6 or fewer cards in your hand, this Digimon gains <Piercing> (When this Digimon attacks and deletes an opponent's Digimon and survives the battle, it performs any security checks it normally would.), <Security A. +2> (This Digimon checks 2 additional security cards.) and +3000 DP for the turn.")
         effect1._is_piercing = True
@@ -81,6 +83,7 @@ class EX10_022(CardScript):
         # Timing: EffectTiming.OnStartMainPhase
         # Delete
         effect2 = ICardEffect()
+        effect2.set_timing(EffectTiming.OnStartMainPhase)
         effect2.set_effect_name("EX10-022 Delete 1 Suspended Digimon/Tamer")
         effect2.set_effect_description("Delete")
 
@@ -116,6 +119,7 @@ class EX10_022(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # Delete
         effect3 = ICardEffect()
+        effect3.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect3.set_effect_name("EX10-022 Delete 1 Suspended Digimon/Tamer")
         effect3.set_effect_description("Delete")
         effect3.is_on_play = True
@@ -151,6 +155,7 @@ class EX10_022(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # Delete
         effect4 = ICardEffect()
+        effect4.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect4.set_effect_name("EX10-022 Delete 1 Suspended Digimon/Tamer")
         effect4.set_effect_description("Delete")
         effect4.is_when_digivolving = True
@@ -186,6 +191,7 @@ class EX10_022(CardScript):
         # Timing: EffectTiming.OnEndTurn
         # [End of Opponent's Turn] If this Digimon is [Belphemon: Sleep Mode], trash the top card of this Digimon. 
         effect5 = ICardEffect()
+        effect5.set_timing(EffectTiming.OnEndTurn)
         effect5.set_effect_name("EX10-022 Trash the top card of this Digimon")
         effect5.set_effect_description("[End of Opponent's Turn] If this Digimon is [Belphemon: Sleep Mode], trash the top card of this Digimon. ")
         effect5.is_inherited_effect = True

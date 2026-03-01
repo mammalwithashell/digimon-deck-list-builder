@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -41,6 +42,7 @@ class BT14_039(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [On Play] By placing 1 Digimon card with [Numemon] in its name from your trash as this Digimon's bottom digivolution card, gain 2 memory.
         effect2 = ICardEffect()
+        effect2.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect2.set_effect_name("BT14-039 Place 1 card from trash to digivolution cards to gain Memory +2")
         effect2.set_effect_description("[On Play] By placing 1 Digimon card with [Numemon] in its name from your trash as this Digimon's bottom digivolution card, gain 2 memory.")
         effect2.is_optional = True

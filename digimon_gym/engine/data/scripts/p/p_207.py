@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -47,6 +48,7 @@ class P_207(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [On Play] You may play 1 level 4 or lower Digimon card with [Avian], [Bird], [Beast], [Animal] or [Sovereign] in any of its traits (other than [Sea Animal]) or the [TS] trait from your hand without paying the cost.
         effect2 = ICardEffect()
+        effect2.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect2.set_effect_name("P-207 Play 1 level 4 or lower [Avian]/[Bird]/[Beast]/[Animal]/Sovereign]/[TS] digimon from hand")
         effect2.set_effect_description("[On Play] You may play 1 level 4 or lower Digimon card with [Avian], [Bird], [Beast], [Animal] or [Sovereign] in any of its traits (other than [Sea Animal]) or the [TS] trait from your hand without paying the cost.")
         effect2.is_on_play = True
@@ -78,6 +80,7 @@ class P_207(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [When Digivolving] You may play 1 level 4 or lower Digimon card with [Avian], [Bird], [Beast], [Animal] or [Sovereign] in any of its traits (other than [Sea Animal]) or the [TS] trait from your hand without paying the cost.
         effect3 = ICardEffect()
+        effect3.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect3.set_effect_name("P-207 Play 1 level 4 or lower [Avian]/[Bird]/[Beast]/[Animal]/Sovereign]/[TS] digimon from hand")
         effect3.set_effect_description("[When Digivolving] You may play 1 level 4 or lower Digimon card with [Avian], [Bird], [Beast], [Animal] or [Sovereign] in any of its traits (other than [Sea Animal]) or the [TS] trait from your hand without paying the cost.")
         effect3.is_when_digivolving = True
@@ -109,6 +112,7 @@ class P_207(CardScript):
         # Timing: EffectTiming.OnAllyAttack
         # You may play 1 level 4 or lower Digimon card with [Avian], [Bird], [Beast], [Animal] or [Sovereign] in any of its traits (other than [Sea Animal]) or the [TS] trait from your trash without paying the cost.
         effect4 = ICardEffect()
+        effect4.set_timing(EffectTiming.OnAllyAttack)
         effect4.set_effect_name("P-207 Play 1 level 4 or lower [Avian]/[Bird]/[Beast]/[Animal]/Sovereign]/[TS] digimon from trash")
         effect4.set_effect_description("You may play 1 level 4 or lower Digimon card with [Avian], [Bird], [Beast], [Animal] or [Sovereign] in any of its traits (other than [Sea Animal]) or the [TS] trait from your trash without paying the cost.")
         effect4.is_optional = True

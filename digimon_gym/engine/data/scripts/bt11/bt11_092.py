@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -16,6 +17,7 @@ class BT11_092(CardScript):
         # Timing: EffectTiming.OnStartMainPhase
         # [Start of Your Main Phase] By trashing 1 level 5 card with [Cyborg] in its traits in your hand, gain 1 memory and <Draw 1>.
         effect0 = ICardEffect()
+        effect0.set_timing(EffectTiming.OnStartMainPhase)
         effect0.set_effect_name("BT11-092 Trash 1 card from hand to gain Memory +1 and Draw 1")
         effect0.set_effect_description("[Start of Your Main Phase] By trashing 1 level 5 card with [Cyborg] in its traits in your hand, gain 1 memory and <Draw 1>.")
         effect0.is_optional = True
@@ -58,6 +60,7 @@ class BT11_092(CardScript):
         # Timing: EffectTiming.OnAllyAttack
         # [Opponent's Turn] When an opponent's Digimon attacks a player, by suspending this Tamer, switch the target of attack to 1 of your level 6 Digimon with [Machine] in its traits.
         effect1 = ICardEffect()
+        effect1.set_timing(EffectTiming.OnAllyAttack)
         effect1.set_effect_name("BT11-092 Switch Attack Target to your Digimon")
         effect1.set_effect_description("[Opponent's Turn] When an opponent's Digimon attacks a player, by suspending this Tamer, switch the target of attack to 1 of your level 6 Digimon with [Machine] in its traits.")
         effect1.is_optional = True

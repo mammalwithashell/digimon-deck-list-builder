@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -29,6 +30,7 @@ class BT16_030(CardScript):
         # Timing: EffectTiming.OnStartMainPhase
         # [Start of Main Phase] If it's your turn, 1 of your Digimon may digivolve into a level 4 Digimon card with the [Holy Beast] or [Free] trait from your trash with the digivolution cost reduced by 1.
         effect1 = ICardEffect()
+        effect1.set_timing(EffectTiming.OnStartMainPhase)
         effect1.set_effect_name("BT16-030 1 of your Digimon may Digivolve")
         effect1.set_effect_description("[Start of Main Phase] If it's your turn, 1 of your Digimon may digivolve into a level 4 Digimon card with the [Holy Beast] or [Free] trait from your trash with the digivolution cost reduced by 1.")
         effect1.is_optional = True
@@ -65,6 +67,7 @@ class BT16_030(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [On Play] If it's your turn, 1 of your Digimon may digivolve into a level 4 Digimon card with the [Holy Beast] or [Free] trait from your trash with the digivolution cost reduced by 1.
         effect2 = ICardEffect()
+        effect2.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect2.set_effect_name("BT16-030 1 of your Digimon may Digivolve")
         effect2.set_effect_description("[On Play] If it's your turn, 1 of your Digimon may digivolve into a level 4 Digimon card with the [Holy Beast] or [Free] trait from your trash with the digivolution cost reduced by 1.")
         effect2.is_optional = True

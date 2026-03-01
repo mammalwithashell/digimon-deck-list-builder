@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -16,6 +17,7 @@ class BT24_076(CardScript):
         # Timing: EffectTiming.OnDeclaration
         # [Trash] [Main] If you have 4 or fewer cards in your hand, you may play this card from your trash with the play cost reduced by 2.
         effect0 = ICardEffect()
+        effect0.set_timing(EffectTiming.OnDeclaration)
         effect0.set_effect_name("BT24-076 Play this card from trash with reduced cost")
         effect0.set_effect_description("[Trash] [Main] If you have 4 or fewer cards in your hand, you may play this card from your trash with the play cost reduced by 2.")
 
@@ -53,6 +55,7 @@ class BT24_076(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # Delete
         effect1 = ICardEffect()
+        effect1.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect1.set_effect_name("BT24-076 Delete")
         effect1.set_effect_description("Delete")
         effect1.is_on_play = True
@@ -88,6 +91,7 @@ class BT24_076(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # Delete
         effect2 = ICardEffect()
+        effect2.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect2.set_effect_name("BT24-076 Delete")
         effect2.set_effect_description("Delete")
         effect2.is_when_digivolving = True
@@ -123,6 +127,7 @@ class BT24_076(CardScript):
         # Timing: EffectTiming.OnDestroyedAnyone
         # [On Deletion] You may play 1 level 4 or lower Digimon card with the [Dark Dragon] or [Evil Dragon] trait from your trash without paying the cost.
         effect3 = ICardEffect()
+        effect3.set_timing(EffectTiming.OnDestroyedAnyone)
         effect3.set_effect_name("BT24-076 Play 1 Digimon from trash")
         effect3.set_effect_description("[On Deletion] You may play 1 level 4 or lower Digimon card with the [Dark Dragon] or [Evil Dragon] trait from your trash without paying the cost.")
         effect3.is_inherited_effect = True

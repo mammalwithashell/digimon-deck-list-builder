@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -16,6 +17,7 @@ class P_231(CardScript):
         # Timing: EffectTiming.OptionSkill
         # [Main] Reveal the top 3 cards of your deck. Add 1 [Cyborg] or [Machine] trait Digimon card and 1 [LIBERATOR] trait card among them to the hand. Return the rest to the bottom of the deck. Then, place this card in the battle area.
         effect0 = ICardEffect()
+        effect0.set_timing(EffectTiming.OptionSkill)
         effect0.set_effect_name("P-231 Reveal 3, add 1 [Cyborg]/[Machine] trait and 1 [Liberator] trait, bot deck the rest, place in battle area.")
         effect0.set_effect_description("[Main] Reveal the top 3 cards of your deck. Add 1 [Cyborg] or [Machine] trait Digimon card and 1 [LIBERATOR] trait card among them to the hand. Return the rest to the bottom of the deck. Then, place this card in the battle area.")
 
@@ -75,6 +77,7 @@ class P_231(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [Your Turn] When any of your [Altea]s are played, <Delay>.\r\n 1 of your Digimon may digivolve into a level 6 or lower [LIBERATOR] trait card in the hand with the digivolution cost reduced by 3.
         effect2 = ICardEffect()
+        effect2.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect2.set_effect_name("P-231 Digivolve into a level 6 or lower [LIBERATOR] Digimon for 3 less.")
         effect2.set_effect_description("[Your Turn] When any of your [Altea]s are played, <Delay>.\\r\\n 1 of your Digimon may digivolve into a level 6 or lower [LIBERATOR] trait card in the hand with the digivolution cost reduced by 3.")
         effect2.is_optional = True

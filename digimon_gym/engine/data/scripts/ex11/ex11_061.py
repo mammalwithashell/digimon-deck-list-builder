@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -14,20 +15,35 @@ class EX11_061(CardScript):
         effects = []
 
         # Factory effect: gain_memory_tamer
-        # Gain 1 memory (Tamer)
-        effect0 = ICardEffect()
-        effect0.set_effect_name("EX11-061 Gain 1 memory (Tamer)")
-        effect0.set_effect_description("Gain 1 memory (Tamer)")
         # [Start of Main] Gain 1 memory if opponent has Digimon
+        effect0 = ICardEffect()
+        effect0.set_timing(EffectTiming.OnStartMainPhase)
+        effect0.set_effect_name("EX11-061 Gain 1 memory")
+        effect0.set_effect_description("[Start of Your Main Phase] If your opponent has a Digimon in play, gain 1 memory.")
 
         def condition0(context: Dict[str, Any]) -> bool:
+            if card and card.permanent_of_this_card() is None:
+                return False
+            if not (card and card.owner and card.owner.is_my_turn):
+                return False
             return True
         effect0.set_can_use_condition(condition0)
+
+        def process0(ctx: Dict[str, Any]):
+            """Action: Gain 1 memory if opponent has Digimon"""
+            player = ctx.get('player')
+            game = ctx.get('game')
+            if player and game:
+                opponent = game.opponent_player
+                if opponent and any(p.is_digimon for p in opponent.battle_area):
+                    game.memory += 1
+        effect0.set_on_process_callback(process0)
         effects.append(effect0)
 
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [Your Turn] When any of your Digimon digivolve into a [Puppet] trait Digimon, by suspending this Tamer, you may play 1 level 3 [Puppet] trait Digimon card from your hand without paying the cost. At turn end, delete the Digimon this effect played.
         effect1 = ICardEffect()
+        effect1.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect1.set_effect_name("EX11-061 Suspend tamer, play lvl 3 [Puppet], delete it at end of turns.")
         effect1.set_effect_description("[Your Turn] When any of your Digimon digivolve into a [Puppet] trait Digimon, by suspending this Tamer, you may play 1 level 3 [Puppet] trait Digimon card from your hand without paying the cost. At turn end, delete the Digimon this effect played.")
         effect1.is_optional = True
@@ -69,6 +85,7 @@ class EX11_061(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # Delete, Effect Immunity
         effect2 = ICardEffect()
+        effect2.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect2.set_effect_name("EX11-061 Delete this Digimon")
         effect2.set_effect_description("Delete, Effect Immunity")
         effect2.is_on_play = True

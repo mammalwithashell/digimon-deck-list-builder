@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -29,6 +30,7 @@ class BT15_059(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [On Play] By placing 1 [Marvin Jackson] from your hand under this Digimon as it's bottom digivolution card, [De-Digivolve 1] 1 of your opponent's Digimon.
         effect1 = ICardEffect()
+        effect1.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect1.set_effect_name("BT15-059 Place 1 card to digivolution cards to <De-Digivolve 1>")
         effect1.set_effect_description("[On Play] By placing 1 [Marvin Jackson] from your hand under this Digimon as it's bottom digivolution card, [De-Digivolve 1] 1 of your opponent's Digimon.")
         effect1.is_optional = True
@@ -64,6 +66,7 @@ class BT15_059(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [On Play] By placing 1[Marvin Jackson] from your hand under this Digimon as it's bottom digivolution card, [De-Digivolve 1] 1 of your opponent's Digimon.
         effect2 = ICardEffect()
+        effect2.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect2.set_effect_name("BT15-059 Place 1 card to digivolution cards to <De-Digivolve 1>")
         effect2.set_effect_description("[On Play] By placing 1[Marvin Jackson] from your hand under this Digimon as it's bottom digivolution card, [De-Digivolve 1] 1 of your opponent's Digimon.")
         effect2.is_optional = True

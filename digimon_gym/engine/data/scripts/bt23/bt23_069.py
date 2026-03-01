@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -28,6 +29,7 @@ class BT23_069(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [On Play] You may play 1 level 5 or lower Digimon card with the [Ghost] trait from your trash without paying the cost.
         effect1 = ICardEffect()
+        effect1.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect1.set_effect_name("BT23-069 You may play 1 level 5 or lower Digimon")
         effect1.set_effect_description("[On Play] You may play 1 level 5 or lower Digimon card with the [Ghost] trait from your trash without paying the cost.")
         effect1.is_on_play = True
@@ -61,6 +63,7 @@ class BT23_069(CardScript):
         # Timing: EffectTiming.OnDestroyedAnyone
         # [On Deletion] You may play 1 level 5 or lower Digimon card with the [Ghost] trait from your trash without paying the cost.
         effect2 = ICardEffect()
+        effect2.set_timing(EffectTiming.OnDestroyedAnyone)
         effect2.set_effect_name("BT23-069 You may play 1 level 5 or lower Digimon")
         effect2.set_effect_description("[On Deletion] You may play 1 level 5 or lower Digimon card with the [Ghost] trait from your trash without paying the cost.")
         effect2.is_on_deletion = True
@@ -92,6 +95,7 @@ class BT23_069(CardScript):
         # Timing: EffectTiming.OnAllyAttack
         # [All Turns] When another Digimon attacks, by deleting this Digimon, delete 1 of your opponent's level 6 or lower Digimon. If this effect didn't delete your opponent's Digimon, you may end that attack.
         effect3 = ICardEffect()
+        effect3.set_timing(EffectTiming.OnAllyAttack)
         effect3.set_effect_name("BT23-069 By deleting this digimon, delete 1 level 6 or lower digimon. if you didnt delete, you may end the attack")
         effect3.set_effect_description("[All Turns] When another Digimon attacks, by deleting this Digimon, delete 1 of your opponent's level 6 or lower Digimon. If this effect didn't delete your opponent's Digimon, you may end that attack.")
         effect3.is_on_attack = True

@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -16,6 +17,7 @@ class BT21_083(CardScript):
         # Timing: EffectTiming.OnStartMainPhase
         # [Start of Your Main Phase] By placing 1 Digimon card with the [Xros Heart]/[Blue Flare]/[Hero] trait from your hand under this Tamer, <Draw 1> (Draw 1 card from your deck) and gain 1 memory.
         effect0 = ICardEffect()
+        effect0.set_timing(EffectTiming.OnStartMainPhase)
         effect0.set_effect_name("BT21-083 Place digimon under tamer to draw 1 gain 1")
         effect0.set_effect_description("[Start of Your Main Phase] By placing 1 Digimon card with the [Xros Heart]/[Blue Flare]/[Hero] trait from your hand under this Tamer, <Draw 1> (Draw 1 card from your deck) and gain 1 memory.")
         effect0.is_optional = True
@@ -46,6 +48,7 @@ class BT21_083(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [Your Turn] When your Digimon are played or digivolve, if any of them have the [Xros Heart]/[Hero] trait, by suspending this Tamer, one of them may attack.
         effect1 = ICardEffect()
+        effect1.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect1.set_effect_name("BT21-083 Suspend this tamer, Attack with a [Xros Heart]/[Hero] Digimon")
         effect1.set_effect_description("[Your Turn] When your Digimon are played or digivolve, if any of them have the [Xros Heart]/[Hero] trait, by suspending this Tamer, one of them may attack.")
         effect1.is_optional = True

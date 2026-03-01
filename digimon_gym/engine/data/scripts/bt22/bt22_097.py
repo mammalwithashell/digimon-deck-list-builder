@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -39,6 +40,7 @@ class BT22_097(CardScript):
         # Timing: EffectTiming.OptionSkill
         # [Main] <Draw 1> (Draw 1 card from your deck.) Then, place this card in the battle area.
         effect1 = ICardEffect()
+        effect1.set_timing(EffectTiming.OptionSkill)
         effect1.set_effect_name("BT22-097 Draw 1")
         effect1.set_effect_description("[Main] <Draw 1> (Draw 1 card from your deck.) Then, place this card in the battle area.")
 
@@ -78,6 +80,7 @@ class BT22_097(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [All Turns] When any of your [Appmon] trait Digimon are played, <Delay> (By trashing this card after the placing turn, activate the effect below.)\r\n・You may link 1 [Appmon] trait Digimon card from your hand to 1 of your Digimon without paying the cost.
         effect3 = ICardEffect()
+        effect3.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect3.set_effect_name("BT22-097 Link 1 [Appmon] trait Digimon")
         effect3.set_effect_description("[All Turns] When any of your [Appmon] trait Digimon are played, <Delay> (By trashing this card after the placing turn, activate the effect below.)\r\n・You may link 1 [Appmon] trait Digimon card from your hand to 1 of your Digimon without paying the cost.")
         effect3.is_optional = True
@@ -95,6 +98,7 @@ class BT22_097(CardScript):
         # Timing: EffectTiming.SecuritySkill
         # [Security] place this card in the battle area.
         effect4 = ICardEffect()
+        effect4.set_timing(EffectTiming.SecuritySkill)
         effect4.set_effect_name("BT22-097 place in battle area")
         effect4.set_effect_description("[Security] place this card in the battle area.")
         effect4.is_security_effect = True

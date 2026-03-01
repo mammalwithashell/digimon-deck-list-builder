@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -67,6 +68,7 @@ class BT23_047(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # Suspend, Gain Keyword Cannot Unsuspend Player, Force Attack, Grant Cannot Unsuspend
         effect4 = ICardEffect()
+        effect4.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect4.set_effect_name("BT23-047 Suspend 5 digimon/tamer, none can unsuspend. Then you may attack")
         effect4.set_effect_description("Suspend, Gain Keyword Cannot Unsuspend Player, Force Attack, Grant Cannot Unsuspend")
         effect4.is_on_play = True
@@ -115,6 +117,7 @@ class BT23_047(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # Suspend, Gain Keyword Cannot Unsuspend Player, Force Attack, Grant Cannot Unsuspend
         effect5 = ICardEffect()
+        effect5.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect5.set_effect_name("BT23-047 Suspend 5 digimon/tamer, none can unsuspend. Then you may attack")
         effect5.set_effect_description("Suspend, Gain Keyword Cannot Unsuspend Player, Force Attack, Grant Cannot Unsuspend")
         effect5.is_when_digivolving = True
@@ -163,6 +166,7 @@ class BT23_047(CardScript):
         # Timing: EffectTiming.OnLoseSecurity
         # [Your Turn] [Once Per Turn] When your opponent's security stack is removed from, trash 1 of their Option cards in the battle area. Then, delete 1 of their suspended Digimon or Tamers.
         effect6 = ICardEffect()
+        effect6.set_timing(EffectTiming.OnLoseSecurity)
         effect6.set_effect_name("BT23-047 Trash 1 option card, then delete 1 suspended digimon/tamer")
         effect6.set_effect_description("[Your Turn] [Once Per Turn] When your opponent's security stack is removed from, trash 1 of their Option cards in the battle area. Then, delete 1 of their suspended Digimon or Tamers.")
         effect6.set_max_count_per_turn(1)

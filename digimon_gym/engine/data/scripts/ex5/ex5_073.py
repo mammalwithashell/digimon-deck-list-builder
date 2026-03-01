@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -53,6 +54,7 @@ class EX5_073(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [When Digivolving] [When Attacking] If DNA digivolving, trash any 8 digivolution cards from your opponent's Digimon. Then, delete 1 of their Digimon with as many or fewer digivolution cards as this Digimon.
         effect3 = ICardEffect()
+        effect3.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect3.set_effect_name("EX5-073 Trash digivolution cards and delete 1 Digimon")
         effect3.set_effect_description("[When Digivolving] [When Attacking] If DNA digivolving, trash any 8 digivolution cards from your opponent's Digimon. Then, delete 1 of their Digimon with as many or fewer digivolution cards as this Digimon.")
         effect3.is_when_digivolving = True
@@ -93,6 +95,7 @@ class EX5_073(CardScript):
         # Timing: EffectTiming.OnAllyAttack
         # [When Attacking] If DNA digivolving, trash any 8 digivolution cards from your opponent's Digimon. Then, delete 1 of their Digimon with as many or fewer digivolution cards as this Digimon.
         effect4 = ICardEffect()
+        effect4.set_timing(EffectTiming.OnAllyAttack)
         effect4.set_effect_name("EX5-073 Delete 1 Digimon with as many or fewer digivolution cards as this Digimon")
         effect4.set_effect_description("[When Attacking] If DNA digivolving, trash any 8 digivolution cards from your opponent's Digimon. Then, delete 1 of their Digimon with as many or fewer digivolution cards as this Digimon.")
         effect4.is_on_attack = True
@@ -128,6 +131,7 @@ class EX5_073(CardScript):
         # Timing: EffectTiming.WhenRemoveField
         # [All Turns] When this Digimon would leave the battle area by an opponent's effect, by trashing 2 same-level cards in this Digimon's digivolution cards, prevent it from leaving.
         effect5 = ICardEffect()
+        effect5.set_timing(EffectTiming.WhenRemoveField)
         effect5.set_effect_name("EX5-073 Prevent this Digimon from being leaving the battle area by opponent's effect")
         effect5.set_effect_description("[All Turns] When this Digimon would leave the battle area by an opponent's effect, by trashing 2 same-level cards in this Digimon's digivolution cards, prevent it from leaving.")
         effect5.is_optional = True

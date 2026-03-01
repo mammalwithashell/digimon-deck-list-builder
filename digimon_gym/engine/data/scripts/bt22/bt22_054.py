@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -30,6 +31,7 @@ class BT22_054(CardScript):
         # Timing: EffectTiming.OnAddDigivolutionCards
         # [Your Turn] [Once Per Turn] When effects place Digimon cards with the [CS] trait in this Digimon's digivolution cards, 1 of your opponent's Digimon gets -3000 DP for the turn.
         effect1 = ICardEffect()
+        effect1.set_timing(EffectTiming.OnAddDigivolutionCards)
         effect1.set_effect_name("BT22-054 Give 1 digimon -3k DP")
         effect1.set_effect_description("[Your Turn] [Once Per Turn] When effects place Digimon cards with the [CS] trait in this Digimon's digivolution cards, 1 of your opponent's Digimon gets -3000 DP for the turn.")
         effect1.set_max_count_per_turn(1)
@@ -49,6 +51,7 @@ class BT22_054(CardScript):
         # Timing: EffectTiming.OnDeclaration
         # [Main] [Once Per Turn] By placing this [CS] trait Digimon's top stacked card as its bottom digivolution card, <Draw 1> (Draw 1 card from your deck).
         effect2 = ICardEffect()
+        effect2.set_timing(EffectTiming.OnDeclaration)
         effect2.set_effect_name("BT22-054 Place the top card of this Digimon at the bottom of digivolution cards to Draw 1")
         effect2.set_effect_description("[Main] [Once Per Turn] By placing this [CS] trait Digimon's top stacked card as its bottom digivolution card, <Draw 1> (Draw 1 card from your deck).")
         effect2.is_inherited_effect = True

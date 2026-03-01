@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -16,6 +17,7 @@ class BT15_070(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [On Play] Reveal the top 4 cards of your deck. Add 1 card with [Myotismon] in its text among them to the hand. Return the rest to the bottom of the deck. If you added cards, trash 1 card in your hand.
         effect0 = ICardEffect()
+        effect0.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect0.set_effect_name("BT15-070 Reveal the top 4 cards of deck")
         effect0.set_effect_description("[On Play] Reveal the top 4 cards of your deck. Add 1 card with [Myotismon] in its text among them to the hand. Return the rest to the bottom of the deck. If you added cards, trash 1 card in your hand.")
         effect0.is_on_play = True

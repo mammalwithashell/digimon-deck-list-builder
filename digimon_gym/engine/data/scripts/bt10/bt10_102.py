@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -16,6 +17,7 @@ class BT10_102(CardScript):
         # Timing: EffectTiming.OptionSkill
         # [Main] 1 of your Digimon gains <Piercing> for the turn. (When this Digimon attacks and deletes an opponent's Digimon, it performs any security checks it normally would.) Then, if you have a Digimon in play with [Angoramon] in its name or digivolution cards, suspend 1 of your opponent's Digimon.
         effect0 = ICardEffect()
+        effect0.set_timing(EffectTiming.OptionSkill)
         effect0.set_effect_name("BT10-102 Gain Keyword Piercing, Suspend")
         effect0.set_effect_description("[Main] 1 of your Digimon gains <Piercing> for the turn. (When this Digimon attacks and deletes an opponent's Digimon, it performs any security checks it normally would.) Then, if you have a Digimon in play with [Angoramon] in its name or digivolution cards, suspend 1 of your opponent's Digimon.")
         effect0._is_piercing = True
@@ -51,6 +53,7 @@ class BT10_102(CardScript):
         # Timing: EffectTiming.SecuritySkill
         # [Security] Suspend 1 of your opponent's Digimon. Then, add this card to your hand.
         effect1 = ICardEffect()
+        effect1.set_timing(EffectTiming.SecuritySkill)
         effect1.set_effect_name("BT10-102 Add To Hand, Suspend")
         effect1.set_effect_description("[Security] Suspend 1 of your opponent's Digimon. Then, add this card to your hand.")
         effect1.is_security_effect = True

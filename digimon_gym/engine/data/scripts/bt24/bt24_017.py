@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -41,6 +42,7 @@ class BT24_017(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # DP +2000, Delete, Play Token
         effect2 = ICardEffect()
+        effect2.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect2.set_effect_name("BT24-017 Delete lowest DP Digimon, Return 2 cards from their trash to deck to play 2 Tokens and gain 2k DP per opponent's Digimon.")
         effect2.set_effect_description("DP +2000, Delete, Play Token")
         effect2.is_when_digivolving = True
@@ -59,8 +61,12 @@ class BT24_017(CardScript):
             player = ctx.get('player')
             perm = ctx.get('permanent')
             game = ctx.get('game')
-            if perm:
-                perm.change_dp(2000)
+            if perm and player:
+                enemy = player.enemy if player else None
+                opp_digimon_count = 0
+                if enemy:
+                    opp_digimon_count = len([p for p in enemy.battle_area if p.is_digimon])
+                perm.change_dp(2000 * opp_digimon_count)
             if not (player and game):
                 return
             def target_filter(p):

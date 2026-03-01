@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -16,6 +17,7 @@ class EX6_039(CardScript):
         # Timing: EffectTiming.BeforePayCost
         # When this card would be played from the hand, by deleting 1 of your Digimon with the [Unidentified] trait, reduce the play cost by 3.
         effect0 = ICardEffect()
+        effect0.set_timing(EffectTiming.BeforePayCost)
         effect0.set_effect_name("EX6-039 Delete 1 digimon with [Unidentified] trait, to get Play Cost -3")
         effect0.set_effect_description("When this card would be played from the hand, by deleting 1 of your Digimon with the [Unidentified] trait, reduce the play cost by 3.")
         effect0.set_hash_string("PlayCost-12_BT5_085")
@@ -47,6 +49,7 @@ class EX6_039(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [On Play] Delete 1 of your opponent's Digimon with a play cost of 3 or less.
         effect1 = ICardEffect()
+        effect1.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect1.set_effect_name("EX6-039 Delete 1 opponents Digimon, with 3 cost or less")
         effect1.set_effect_description("[On Play] Delete 1 of your opponent's Digimon with a play cost of 3 or less.")
         effect1.is_on_play = True
@@ -82,6 +85,7 @@ class EX6_039(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [When Digivolving] Delete 1 of your opponent's Digimon with a play cost of 3 or less.
         effect2 = ICardEffect()
+        effect2.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect2.set_effect_name("EX6-039 Delete 1 opponents Digimon, with 3 cost or less")
         effect2.set_effect_description("[When Digivolving] Delete 1 of your opponent's Digimon with a play cost of 3 or less.")
         effect2.is_when_digivolving = True
@@ -117,6 +121,7 @@ class EX6_039(CardScript):
         # Timing: EffectTiming.OnDestroyedAnyone
         # [On Deletion] If this card has the [Unidentified] trait, you may play 1 [Diaboromon] (Digimon | 14 Cost | Level 6 | White | Mega | Unknown | Unidentified | DP3000) Token without paying the cost.
         effect3 = ICardEffect()
+        effect3.set_timing(EffectTiming.OnDestroyedAnyone)
         effect3.set_effect_name("EX6-039 Play 1 Diaboromon Token")
         effect3.set_effect_description("[On Deletion] If this card has the [Unidentified] trait, you may play 1 [Diaboromon] (Digimon | 14 Cost | Level 6 | White | Mega | Unknown | Unidentified | DP3000) Token without paying the cost.")
         effect3.is_inherited_effect = True

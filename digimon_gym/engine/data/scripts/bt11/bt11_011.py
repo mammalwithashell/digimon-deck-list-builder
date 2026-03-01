@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -28,6 +29,7 @@ class BT11_011(CardScript):
         # Timing: EffectTiming.OnDestroyedAnyone
         # [On Deletion] You may play 1 red Tamer card with a play cost of 4 or less from your hand without paying the cost.
         effect1 = ICardEffect()
+        effect1.set_timing(EffectTiming.OnDestroyedAnyone)
         effect1.set_effect_name("BT11-011 Play 1 red Tamer from hand")
         effect1.set_effect_description("[On Deletion] You may play 1 red Tamer card with a play cost of 4 or less from your hand without paying the cost.")
         effect1.is_inherited_effect = True

@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -16,6 +17,7 @@ class P_132(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [When Digivolving] By suspending 1 Digimon, this Digimon gets +2000 DP until the end of your opponent's turn.
         effect0 = ICardEffect()
+        effect0.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect0.set_effect_name("P-132 +2000 DP, until end of opponent's turn")
         effect0.set_effect_description("[When Digivolving] By suspending 1 Digimon, this Digimon gets +2000 DP until the end of your opponent's turn.")
         effect0.is_optional = True

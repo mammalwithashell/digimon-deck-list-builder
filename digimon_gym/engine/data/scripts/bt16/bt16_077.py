@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -67,11 +68,11 @@ class BT16_077(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [When Digivolving] If DNA digivolving, you may play 1 level 5 or lower Digimon with the [Free] trait from your trash without paying the cost. Then, 1 of your Digimon may gain [Rush] for the turn and attack the player.
         effect4 = ICardEffect()
+        effect4.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect4.set_effect_name("BT16-077 You may play 1 level 5 or lower Digimon with the [Free] trait. Then 1 Digimon can gain [Rush] and attack.")
         effect4.set_effect_description("[When Digivolving] If DNA digivolving, you may play 1 level 5 or lower Digimon with the [Free] trait from your trash without paying the cost. Then, 1 of your Digimon may gain [Rush] for the turn and attack the player.")
         effect4.is_optional = True
         effect4.is_when_digivolving = True
-        effect4._is_rush = True
 
         effect = effect4  # alias for condition closure
         def condition4(context: Dict[str, Any]) -> bool:
@@ -96,9 +97,14 @@ class BT16_077(CardScript):
                     return False
                 return True
             game.effect_play_from_zone(
-                player, 'hand', play_filter, free=True, is_optional=True)
-            if perm:
-                perm.grant_keyword('_is_rush')
+                player, 'trash', play_filter, free=True, is_optional=True)
+            # Grant Rush to 1 of your Digimon for the turn
+            def rush_filter(p):
+                return p.is_digimon
+            def on_rush(target_perm):
+                target_perm.grant_keyword('_is_rush')
+            game.effect_select_own_permanent(
+                player, on_rush, filter_fn=rush_filter, is_optional=True)
             # Force attack — target Digimon may attack (requires engine SelectAttack)
             pass  # descriptive-tagged: force_attack
 

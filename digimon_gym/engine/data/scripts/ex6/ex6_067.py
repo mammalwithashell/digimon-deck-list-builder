@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -16,6 +17,7 @@ class EX6_067(CardScript):
         # Timing: EffectTiming.OptionSkill
         # [Main] Unsuspend 1 of your Digimon with the [Angel]/[Archangel]/[Three Great Angels] trait. If you have [Dominimon], unsuspend all of your Digimon with the [Angel]/[Archangel]/[Three Great Angels] trait instead.
         effect0 = ICardEffect()
+        effect0.set_timing(EffectTiming.OptionSkill)
         effect0.set_effect_name("EX6-067 Unsuspend")
         effect0.set_effect_description("[Main] Unsuspend 1 of your Digimon with the [Angel]/[Archangel]/[Three Great Angels] trait. If you have [Dominimon], unsuspend all of your Digimon with the [Angel]/[Archangel]/[Three Great Angels] trait instead.")
 
@@ -46,6 +48,7 @@ class EX6_067(CardScript):
         # Timing: EffectTiming.SecuritySkill
         # [Security] [Recovery +1 <Deck>]. Then, add this card to the hand
         effect1 = ICardEffect()
+        effect1.set_timing(EffectTiming.SecuritySkill)
         effect1.set_effect_name("EX6-067 Recovery +1, Add To Hand")
         effect1.set_effect_description("[Security] [Recovery +1 <Deck>]. Then, add this card to the hand")
         effect1.is_security_effect = True

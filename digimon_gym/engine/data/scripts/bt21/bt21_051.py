@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -70,6 +71,7 @@ class BT21_051(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [On Play] <De-Digivolve 2> 1 of your opponent's Digimon. Then, return 1 of their suspended Digimon to the bottom of the deck.
         effect4 = ICardEffect()
+        effect4.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect4.set_effect_name("BT21-051 <De-Digivolve 2> to 1 Digimon")
         effect4.set_effect_description("[On Play] <De-Digivolve 2> 1 of your opponent's Digimon. Then, return 1 of their suspended Digimon to the bottom of the deck.")
         effect4.is_on_play = True
@@ -114,6 +116,7 @@ class BT21_051(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [When Digivolving] <De-Digivolve 2> 1 of your opponent's Digimon. Then, return 1 of their suspended Digimon to the bottom of the deck.
         effect5 = ICardEffect()
+        effect5.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect5.set_effect_name("BT21-051 <De-Digivolve 2> to 1 Digimon")
         effect5.set_effect_description("[When Digivolving] <De-Digivolve 2> 1 of your opponent's Digimon. Then, return 1 of their suspended Digimon to the bottom of the deck.")
         effect5.is_when_digivolving = True

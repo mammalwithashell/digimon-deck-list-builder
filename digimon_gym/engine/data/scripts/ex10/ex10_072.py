@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -42,6 +43,7 @@ class EX10_072(CardScript):
         # Timing: EffectTiming.OptionSkill
         # [Main] <Draw 2> (Draw 2 cards from your deck.) Then, place this card in the battle area.
         effect1 = ICardEffect()
+        effect1.set_timing(EffectTiming.OptionSkill)
         effect1.set_effect_name("EX10-072 <Draw 2>, Place in battle area")
         effect1.set_effect_description("[Main] <Draw 2> (Draw 2 cards from your deck.) Then, place this card in the battle area.")
 
@@ -80,6 +82,7 @@ class EX10_072(CardScript):
         # Timing: EffectTiming.OnEndTurn
         # [End of Opponent's Turn] <Delay> (By trashing this card after the placing turn, activate the effect below.)\r\n・You may play 1 face-up Digimon card with the [Dark Masters] trait from your security stack without paying the cost. At the end of your turn, delete the Digimon this effect played.
         effect3 = ICardEffect()
+        effect3.set_timing(EffectTiming.OnEndTurn)
         effect3.set_effect_name("EX10-072 Play 1 [Dark Masters], delete it at end of your turn")
         effect3.set_effect_description("[End of Opponent's Turn] <Delay> (By trashing this card after the placing turn, activate the effect below.)\\r\\n・You may play 1 face-up Digimon card with the [Dark Masters] trait from your security stack without paying the cost. At the end of your turn, delete the Digimon this effect played.")
         effect3.is_optional = True
@@ -112,6 +115,7 @@ class EX10_072(CardScript):
         # Timing: EffectTiming.OnEndTurn
         # Delete, Effect Immunity
         effect4 = ICardEffect()
+        effect4.set_timing(EffectTiming.OnEndTurn)
         effect4.set_effect_name("EX10-072 Delete this Digimon")
         effect4.set_effect_description("Delete, Effect Immunity")
 
@@ -151,6 +155,7 @@ class EX10_072(CardScript):
         # Timing: EffectTiming.SecuritySkill
         # [Security] You may play 1 Digimon card with the [Dark Masters] trait from your hand or trash without paying the cost. Then, add this card to the hand. At turn end, delete the Digimon this effect played.
         effect5 = ICardEffect()
+        effect5.set_timing(EffectTiming.SecuritySkill)
         effect5.set_effect_name("EX10-072 Play 1 [Dark Masters], delete it at end of your turn")
         effect5.set_effect_description("[Security] You may play 1 Digimon card with the [Dark Masters] trait from your hand or trash without paying the cost. Then, add this card to the hand. At turn end, delete the Digimon this effect played.")
         effect5.is_security_effect = True
@@ -185,6 +190,7 @@ class EX10_072(CardScript):
         # Timing: EffectTiming.SecuritySkill
         # Delete, Add To Hand, Effect Immunity
         effect6 = ICardEffect()
+        effect6.set_timing(EffectTiming.SecuritySkill)
         effect6.set_effect_name("EX10-072 Delete this Digimon")
         effect6.set_effect_description("Delete, Add To Hand, Effect Immunity")
         effect6.is_security_effect = True

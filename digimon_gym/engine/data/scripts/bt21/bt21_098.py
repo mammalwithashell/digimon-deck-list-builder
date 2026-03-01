@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -16,6 +17,7 @@ class BT21_098(CardScript):
         # Timing: EffectTiming.OptionSkill
         # [Main] Delete 1 of your opponent's Digimon with the lowest play cost. Then, place this card in the battle area.
         effect0 = ICardEffect()
+        effect0.set_timing(EffectTiming.OptionSkill)
         effect0.set_effect_name("BT21-098 Delete")
         effect0.set_effect_description("[Main] Delete 1 of your opponent's Digimon with the lowest play cost. Then, place this card in the battle area.")
 
@@ -66,6 +68,7 @@ class BT21_098(CardScript):
         # Timing: EffectTiming.OnAllyAttack
         # [Your Turn] When one of your [Galacticmon] attacks, <Delay>.\n• Delete 1 of your opponent's Digimon with the lowest play cost. If this effect didn't delete, trash the top cards of your opponent's security stack so that is has 1 card left.
         effect2 = ICardEffect()
+        effect2.set_timing(EffectTiming.OnAllyAttack)
         effect2.set_effect_name("BT21-098 Delete 1 opponent's Digimon with lowest play cost, trash security until 1 left if didn't delete")
         effect2.set_effect_description("[Your Turn] When one of your [Galacticmon] attacks, <Delay>.\\n• Delete 1 of your opponent's Digimon with the lowest play cost. If this effect didn't delete, trash the top cards of your opponent's security stack so that is has 1 card left.")
         effect2.is_optional = True
@@ -86,6 +89,7 @@ class BT21_098(CardScript):
         # Timing: EffectTiming.SecuritySkill
         # [Security] You may play 1 card with [Vemmon] in its text and a play cost of 6 or less from your hand or trash without paying the cost. Then, add this card to the hand.
         effect3 = ICardEffect()
+        effect3.set_timing(EffectTiming.SecuritySkill)
         effect3.set_effect_name("BT21-098 Play Card, Add To Hand")
         effect3.set_effect_description("[Security] You may play 1 card with [Vemmon] in its text and a play cost of 6 or less from your hand or trash without paying the cost. Then, add this card to the hand.")
         effect3.is_security_effect = True

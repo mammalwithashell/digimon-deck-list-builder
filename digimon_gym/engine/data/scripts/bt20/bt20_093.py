@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -16,6 +17,7 @@ class BT20_093(CardScript):
         # Timing: EffectTiming.OptionSkill
         # [Main] You may play 1 Digimon card with [Dracomon]/[Examon] in its text from your hand with the play cost reduced by 3. Then, place this card in the battle area.
         effect0 = ICardEffect()
+        effect0.set_timing(EffectTiming.OptionSkill)
         effect0.set_effect_name("BT20-093 Play Card")
         effect0.set_effect_description("[Main] You may play 1 Digimon card with [Dracomon]/[Examon] in its text from your hand with the play cost reduced by 3. Then, place this card in the battle area.")
 
@@ -74,6 +76,7 @@ class BT20_093(CardScript):
         # Timing: EffectTiming.WhenRemoveField
         # [All Turns] When any of your Digimon with [Dracomon]/[Examon] in their texts would leave the battle area other than in battle, [Delay].・ 2 of your Digimon may DNA digivolve into [Examon] in the hand.
         effect2 = ICardEffect()
+        effect2.set_timing(EffectTiming.WhenRemoveField)
         effect2.set_effect_name("BT20-093 2 of your Digimon may DNA digivolve into [Examon]")
         effect2.set_effect_description("[All Turns] When any of your Digimon with [Dracomon]/[Examon] in their texts would leave the battle area other than in battle, [Delay].・ 2 of your Digimon may DNA digivolve into [Examon] in the hand.")
         effect2.is_optional = True
@@ -112,6 +115,7 @@ class BT20_093(CardScript):
         # Timing: EffectTiming.SecuritySkill
         # [Security] You may play 1 Digimon card with [Dracomon] in its name from your hand or trash without paying the cost. Then, place this card in the battle area.
         effect3 = ICardEffect()
+        effect3.set_timing(EffectTiming.SecuritySkill)
         effect3.set_effect_name("BT20-093 Play 1 [Dracomon] card from hand or trash")
         effect3.set_effect_description("[Security] You may play 1 Digimon card with [Dracomon] in its name from your hand or trash without paying the cost. Then, place this card in the battle area.")
         effect3.is_security_effect = True

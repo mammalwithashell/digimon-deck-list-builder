@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -30,6 +31,7 @@ class BT22_010(CardScript):
         # Timing: EffectTiming.OnDeclaration
         # [Main] [Once Per Turn] By paying 2 cost, this Digimon gains <Raid> (When this Digimon attacks, you may switch the target of attack to 1 of your opponent's unsuspended Digimon with the highest DP) and <Piercing> (When this Digimon attacks and deletes an opponent's Digimon and survives the battle, it performs any security checks it normally would) for the turn. Then, this Digimon may attack.
         effect1 = ICardEffect()
+        effect1.set_timing(EffectTiming.OnDeclaration)
         effect1.set_effect_name("BT22-010 Pay 2, Gain raid & piercing. then it may attack")
         effect1.set_effect_description("[Main] [Once Per Turn] By paying 2 cost, this Digimon gains <Raid> (When this Digimon attacks, you may switch the target of attack to 1 of your opponent's unsuspended Digimon with the highest DP) and <Piercing> (When this Digimon attacks and deletes an opponent's Digimon and survives the battle, it performs any security checks it normally would) for the turn. Then, this Digimon may attack.")
         effect1.set_max_count_per_turn(1)

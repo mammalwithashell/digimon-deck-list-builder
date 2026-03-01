@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -33,6 +34,7 @@ class EX8_022(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [On Play] Trash the bottom 2 digivolution cards of 1 your opponent's Digimon. Then, if your opponent has no Digimon with digivolution cards, gain 1 memory.
         effect1 = ICardEffect()
+        effect1.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect1.set_effect_name("EX8-022 Trash bottom 2 sources of 1 opponents digimon. Then memory +1")
         effect1.set_effect_description("[On Play] Trash the bottom 2 digivolution cards of 1 your opponent's Digimon. Then, if your opponent has no Digimon with digivolution cards, gain 1 memory.")
         effect1.is_on_play = True
@@ -68,6 +70,7 @@ class EX8_022(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [When Digivolving] Trash the bottom 2 digivolution cards of 1 your opponent's Digimon. Then, if your opponent has no Digimon with digivolution cards, gain 1 memory.
         effect2 = ICardEffect()
+        effect2.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect2.set_effect_name("EX8-022 Trash bottom 2 sources of 1 opponents digimon. Then memory +1")
         effect2.set_effect_description("[When Digivolving] Trash the bottom 2 digivolution cards of 1 your opponent's Digimon. Then, if your opponent has no Digimon with digivolution cards, gain 1 memory.")
         effect2.is_when_digivolving = True
@@ -103,6 +106,7 @@ class EX8_022(CardScript):
         # Timing: EffectTiming.OnAllyAttack
         # [When Attacking] Give 1 of your opponent's Digimon <Security A. -1> until the end of their turn.
         effect3 = ICardEffect()
+        effect3.set_timing(EffectTiming.OnAllyAttack)
         effect3.set_effect_name("EX8-022 Security Attack -1")
         effect3.set_effect_description("[When Attacking] Give 1 of your opponent's Digimon <Security A. -1> until the end of their turn.")
         effect3.is_inherited_effect = True

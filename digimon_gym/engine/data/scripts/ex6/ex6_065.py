@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -39,6 +40,7 @@ class EX6_065(CardScript):
         # Timing: EffectTiming.OptionSkill
         # [Main] You may place 1 Digimon card with the [Legend-Arms] trait from your trash as 1 of your Digimon’s bottom digivolution card. Then, place this card in the battle area.
         effect1 = ICardEffect()
+        effect1.set_timing(EffectTiming.OptionSkill)
         effect1.set_effect_name("EX6-065 Effect")
         effect1.set_effect_description("[Main] You may place 1 Digimon card with the [Legend-Arms] trait from your trash as 1 of your Digimon’s bottom digivolution card. Then, place this card in the battle area.")
         effect1.is_optional = True
@@ -66,6 +68,7 @@ class EX6_065(CardScript):
         # Timing: EffectTiming.WhenRemoveField
         # [All Turns] When one of your Digimon would leave the battle area other than by one of your effects,[Delay] • You may play 1 card with the [Legend-Arms] trait from that Digimon's digivolution cards without paying the cost.
         effect3 = ICardEffect()
+        effect3.set_timing(EffectTiming.WhenRemoveField)
         effect3.set_effect_name("EX6-065 Play 1 card with the [Legend-Arms] trait from the removed Digimon's digivolution cards without paying the cost")
         effect3.set_effect_description("[All Turns] When one of your Digimon would leave the battle area other than by one of your effects,[Delay] • You may play 1 card with the [Legend-Arms] trait from that Digimon's digivolution cards without paying the cost.")
         effect3.is_optional = True

@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -16,6 +17,7 @@ class BT13_016(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [Your Turn] When you play a Digimon with [Sistermon] in its name, this Digimon may digivolve into a Digimon card with [Jesmon] in its name in the hand for the digivolution cost. When this Digimon would digivolve by this effect, reduce the digivolution cost by 2.
         effect0 = ICardEffect()
+        effect0.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect0.set_effect_name("BT13-016 This Digimon digivolves into 1 Digimon card with [Jesmon] in its name")
         effect0.set_effect_description("[Your Turn] When you play a Digimon with [Sistermon] in its name, this Digimon may digivolve into a Digimon card with [Jesmon] in its name in the hand for the digivolution cost. When this Digimon would digivolve by this effect, reduce the digivolution cost by 2.")
         effect0.is_optional = True
@@ -53,6 +55,7 @@ class BT13_016(CardScript):
         # Timing: EffectTiming.OnAllyAttack
         # [When Attacking][Once Per Turn] If this Digimon has the [Royal Knight] trait, you may play 1 Digimon card with [Sistermon] in its name from your hand or trash without paying the cost.
         effect1 = ICardEffect()
+        effect1.set_timing(EffectTiming.OnAllyAttack)
         effect1.set_effect_name("BT13-016 Play 1 Digimon card with [Sistermon] in its name")
         effect1.set_effect_description("[When Attacking][Once Per Turn] If this Digimon has the [Royal Knight] trait, you may play 1 Digimon card with [Sistermon] in its name from your hand or trash without paying the cost.")
         effect1.is_inherited_effect = True

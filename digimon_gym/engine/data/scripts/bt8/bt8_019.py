@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -16,6 +17,7 @@ class BT8_019(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [When Digivolving] Your opponent chooses 1 of their Digimon. Delete all Digimon other than this Digimon and your opponent's chosen Digimon. For each Digimon deleted by this effect, gain 1 memory.
         effect0 = ICardEffect()
+        effect0.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect0.set_effect_name("BT8-019 Delete Digimons and gain Memory")
         effect0.set_effect_description("[When Digivolving] Your opponent chooses 1 of their Digimon. Delete all Digimon other than this Digimon and your opponent's chosen Digimon. For each Digimon deleted by this effect, gain 1 memory.")
         effect0.is_when_digivolving = True
@@ -57,6 +59,7 @@ class BT8_019(CardScript):
         # Timing: EffectTiming.OnDestroyedAnyone
         # [Your Turn] When an opponent's Digimon is deleted, this Digimon gains <Security Attack +1> for the turn for each of your opponent's Digimon deleted.
         effect1 = ICardEffect()
+        effect1.set_timing(EffectTiming.OnDestroyedAnyone)
         effect1.set_effect_name("BT8-019 This Digimon gains Security Attack +")
         effect1.set_effect_description("[Your Turn] When an opponent's Digimon is deleted, this Digimon gains <Security Attack +1> for the turn for each of your opponent's Digimon deleted.")
         effect1.is_on_deletion = True

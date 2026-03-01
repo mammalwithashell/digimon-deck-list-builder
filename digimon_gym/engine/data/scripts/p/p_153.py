@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -45,6 +46,7 @@ class P_153(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [When Digivolving] Return 1 of your opponent's level 3, level 4 and level 5 Digimon to the hand.
         effect2 = ICardEffect()
+        effect2.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect2.set_effect_name("P-153 Return 1 opponent's level 3, 4, and 5 to hand")
         effect2.set_effect_description("[When Digivolving] Return 1 of your opponent's level 3, level 4 and level 5 Digimon to the hand.")
         effect2.is_when_digivolving = True
@@ -80,6 +82,7 @@ class P_153(CardScript):
         # Timing: EffectTiming.OnEndAttack
         # [End of Attack] By placing this Digimon's top card as your top security card, unsuspend this Digimon or Tamer.
         effect3 = ICardEffect()
+        effect3.set_timing(EffectTiming.OnEndAttack)
         effect3.set_effect_name("P-153 Place top card of this digimon as top security to unsuspend")
         effect3.set_effect_description("[End of Attack] By placing this Digimon's top card as your top security card, unsuspend this Digimon or Tamer.")
         effect3.is_optional = True

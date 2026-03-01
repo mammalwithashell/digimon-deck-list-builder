@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -16,6 +17,7 @@ class BT15_043(CardScript):
         # Timing: EffectTiming.OnStartMainPhase
         # [Start of Your Main Phase] By suspending 1 Digimon, 1 of your Digimon with the [Insectoid] trait gets +3000 DP until the end of your opponent's turn.
         effect0 = ICardEffect()
+        effect0.set_timing(EffectTiming.OnStartMainPhase)
         effect0.set_effect_name("BT15-043 Suspend 1 Digimon so that your 1 Digimon gains DP +3000")
         effect0.set_effect_description("[Start of Your Main Phase] By suspending 1 Digimon, 1 of your Digimon with the [Insectoid] trait gets +3000 DP until the end of your opponent's turn.")
         effect0.is_optional = True
@@ -60,6 +62,7 @@ class BT15_043(CardScript):
         # Timing: EffectTiming.OnEndBattle
         # [All Turns] [Once Per Turn] When this Digimon deletes an opponent's Digimon in battle, gain 1 memory.
         effect1 = ICardEffect()
+        effect1.set_timing(EffectTiming.OnEndBattle)
         effect1.set_effect_name("BT15-043 Memory +1")
         effect1.set_effect_description("[All Turns] [Once Per Turn] When this Digimon deletes an opponent's Digimon in battle, gain 1 memory.")
         effect1.is_inherited_effect = True

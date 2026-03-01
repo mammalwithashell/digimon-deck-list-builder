@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -30,6 +31,7 @@ class BT22_070(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # Delete
         effect1 = ICardEffect()
+        effect1.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect1.set_effect_name("BT22-070 Delete level 4 or lower")
         effect1.set_effect_description("Delete")
         effect1.is_when_digivolving = True
@@ -67,6 +69,7 @@ class BT22_070(CardScript):
         # Timing: EffectTiming.OnAllyAttack
         # Digivolve
         effect2 = ICardEffect()
+        effect2.set_timing(EffectTiming.OnAllyAttack)
         effect2.set_effect_name("BT22-070 This Digimon digivolves")
         effect2.set_effect_description("Digivolve")
         effect2.is_optional = True
@@ -103,6 +106,7 @@ class BT22_070(CardScript):
         # Timing: EffectTiming.OnEndBattle
         # Gain 1 memory
         effect3 = ICardEffect()
+        effect3.set_timing(EffectTiming.OnEndBattle)
         effect3.set_effect_name("BT22-070 Gain 1 memory")
         effect3.set_effect_description("Gain 1 memory")
         effect3.is_inherited_effect = True

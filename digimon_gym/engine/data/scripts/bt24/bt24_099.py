@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -39,6 +40,7 @@ class BT24_099(CardScript):
         # Timing: EffectTiming.OptionSkill
         # [Main] By trashing 1 [Appmon] trait card from your hand, <Draw 2>. Then, place this card in the battle area.
         effect1 = ICardEffect()
+        effect1.set_timing(EffectTiming.OptionSkill)
         effect1.set_effect_name("BT24-099 Trash 1, Draw 2")
         effect1.set_effect_description("[Main] By trashing 1 [Appmon] trait card from your hand, <Draw 2>. Then, place this card in the battle area.")
 
@@ -88,6 +90,7 @@ class BT24_099(CardScript):
         # Timing: EffectTiming.OnDestroyedAnyone
         # Effect
         effect3 = ICardEffect()
+        effect3.set_timing(EffectTiming.OnDestroyedAnyone)
         effect3.set_effect_name("BT24-099 Link 1 [Appmon] from trash")
         effect3.set_effect_description("Effect")
         effect3.is_optional = True
@@ -105,6 +108,7 @@ class BT24_099(CardScript):
         # Timing: EffectTiming.SecuritySkill
         # [Security] place this card in the battle area.
         effect4 = ICardEffect()
+        effect4.set_timing(EffectTiming.SecuritySkill)
         effect4.set_effect_name("BT24-099 place in battle area")
         effect4.set_effect_description("[Security] place this card in the battle area.")
         effect4.is_security_effect = True

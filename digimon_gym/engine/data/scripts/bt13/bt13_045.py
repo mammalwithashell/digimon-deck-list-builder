@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -53,6 +54,7 @@ class BT13_045(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [On Play] By deleting 1 of your other Digimon, you may play 1 Digimon card with [Chessmon] in its name, other than [KingChessmon], from your hand without paying the cost.
         effect2 = ICardEffect()
+        effect2.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect2.set_effect_name("BT13-045 Delete your 1 Digimon to play 1 Digimon card with [Chessmon] in its name from hand")
         effect2.set_effect_description("[On Play] By deleting 1 of your other Digimon, you may play 1 Digimon card with [Chessmon] in its name, other than [KingChessmon], from your hand without paying the cost.")
         effect2.is_optional = True
@@ -89,6 +91,7 @@ class BT13_045(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [When Digivolving] By deleting 1 of your other Digimon, you may play 1 Digimon card with [Chessmon] in its name, other than [KingChessmon], from your hand without paying the cost.
         effect3 = ICardEffect()
+        effect3.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect3.set_effect_name("BT13-045 Delete your 1 Digimon to play 1 Digimon card with [Chessmon] in its name from hand")
         effect3.set_effect_description("[When Digivolving] By deleting 1 of your other Digimon, you may play 1 Digimon card with [Chessmon] in its name, other than [KingChessmon], from your hand without paying the cost.")
         effect3.is_optional = True

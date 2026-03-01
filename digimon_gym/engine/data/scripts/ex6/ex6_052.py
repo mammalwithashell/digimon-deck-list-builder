@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -28,6 +29,7 @@ class EX6_052(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [When Digivolving] You may play 1 purple level 3 Digimon from your trash without paying the cost.
         effect1 = ICardEffect()
+        effect1.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect1.set_effect_name("EX6-052 Play 1 level 3 purple Digimon from your trash")
         effect1.set_effect_description("[When Digivolving] You may play 1 purple level 3 Digimon from your trash without paying the cost.")
         effect1.is_optional = True
@@ -60,6 +62,7 @@ class EX6_052(CardScript):
         # Timing: EffectTiming.OnDestroyedAnyone
         # [Opponent's Turn] [Once per turn] When an opponent's Digimon is deleted, you may play 1 purple level 4 or lower Digimon from your trash without paying the cost.
         effect2 = ICardEffect()
+        effect2.set_timing(EffectTiming.OnDestroyedAnyone)
         effect2.set_effect_name("EX6-052 Play 1 level 4 or lower purple Digimon from your trash")
         effect2.set_effect_description("[Opponent's Turn] [Once per turn] When an opponent's Digimon is deleted, you may play 1 purple level 4 or lower Digimon from your trash without paying the cost.")
         effect2.is_inherited_effect = True

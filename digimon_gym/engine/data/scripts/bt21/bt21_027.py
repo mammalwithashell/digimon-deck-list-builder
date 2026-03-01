@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -88,6 +89,7 @@ class BT21_027(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [On Play] Delete 1 of your opponent's lowest DP Digimon.
         effect5 = ICardEffect()
+        effect5.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect5.set_effect_name("BT21-027 Destroy lowest DP digimon")
         effect5.set_effect_description("[On Play] Delete 1 of your opponent's lowest DP Digimon.")
         effect5.is_on_play = True
@@ -123,6 +125,7 @@ class BT21_027(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [When Digivolving] Delete 1 of your opponent's lowest DP Digimon.
         effect6 = ICardEffect()
+        effect6.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect6.set_effect_name("BT21-027 Destroy lowest DP digimon")
         effect6.set_effect_description("[When Digivolving] Delete 1 of your opponent's lowest DP Digimon.")
         effect6.is_when_digivolving = True
@@ -158,6 +161,7 @@ class BT21_027(CardScript):
         # Timing: EffectTiming.WhenRemoveField
         # [All Turns] When this Digimon would leave the battle area, you may place up to 4 [Xros Heart]/[Blue Flare] trait Digimon cards from its digivolution cards under 1 of your Tamers.
         effect7 = ICardEffect()
+        effect7.set_timing(EffectTiming.WhenRemoveField)
         effect7.set_effect_name("BT21-027 Place up to 4 [Xros Heart]/[Blue Flare] under tamer")
         effect7.set_effect_description("[All Turns] When this Digimon would leave the battle area, you may place up to 4 [Xros Heart]/[Blue Flare] trait Digimon cards from its digivolution cards under 1 of your Tamers.")
         effect7.is_optional = True

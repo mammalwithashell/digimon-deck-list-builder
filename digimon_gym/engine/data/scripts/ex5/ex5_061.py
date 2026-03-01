@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -29,6 +30,7 @@ class EX5_061(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [On Play] You may play 1 purple level 3 Digimon card from your trash without paying the cost.
         effect1 = ICardEffect()
+        effect1.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect1.set_effect_name("EX5-061 Play 1 purple level 3 Digimon from trash")
         effect1.set_effect_description("[On Play] You may play 1 purple level 3 Digimon card from your trash without paying the cost.")
         effect1.is_optional = True
@@ -65,6 +67,7 @@ class EX5_061(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [When Digivolving] <Draw 1> (Draw 1 card from your deck). Then, trash 1 card in your hand. If a Digimon card with [Cerberusmon] in its name or [X Antibody] is in this Digimon's digivolution cards, activate this Digimon's [On Play] effects.
         effect2 = ICardEffect()
+        effect2.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect2.set_effect_name("EX5-061 Draw 1, trash 1 card from hand and activate [On Play] effect")
         effect2.set_effect_description("[When Digivolving] <Draw 1> (Draw 1 card from your deck). Then, trash 1 card in your hand. If a Digimon card with [Cerberusmon] in its name or [X Antibody] is in this Digimon's digivolution cards, activate this Digimon's [On Play] effects.")
         effect2.is_when_digivolving = True
@@ -104,6 +107,7 @@ class EX5_061(CardScript):
         # Timing: EffectTiming.OnAllyAttack
         # [When Attacking] [Once Per Turn] By deleting 1 of your other Digimon, unsuspend this Digimon.
         effect3 = ICardEffect()
+        effect3.set_timing(EffectTiming.OnAllyAttack)
         effect3.set_effect_name("EX5-061 Delete your another Digimon to unsuspend this Digimon")
         effect3.set_effect_description("[When Attacking] [Once Per Turn] By deleting 1 of your other Digimon, unsuspend this Digimon.")
         effect3.is_inherited_effect = True

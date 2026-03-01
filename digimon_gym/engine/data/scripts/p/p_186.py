@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -77,6 +78,7 @@ class P_186(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [On Play] Delete 1 Digimon with 13000 DP or more. If this effect didn't delete, <Recovery +1 (Deck)> (Place the top card of your deck on top of your security stack).
         effect4 = ICardEffect()
+        effect4.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect4.set_effect_name("P-186 Delete a digimon, if you didnt <Recovery +1 (Deck)>")
         effect4.set_effect_description("[On Play] Delete 1 Digimon with 13000 DP or more. If this effect didn't delete, <Recovery +1 (Deck)> (Place the top card of your deck on top of your security stack).")
         effect4.is_on_play = True
@@ -104,6 +106,7 @@ class P_186(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [When Digivolving] Delete 1 Digimon with 13000 DP or more. If this effect didn't delete, <Recovery +1 (Deck)> (Place the top card of your deck on top of your security stack).
         effect5 = ICardEffect()
+        effect5.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect5.set_effect_name("P-186 Delete a digimon, if you didnt <Recovery +1 (Deck)>")
         effect5.set_effect_description("[When Digivolving] Delete 1 Digimon with 13000 DP or more. If this effect didn't delete, <Recovery +1 (Deck)> (Place the top card of your deck on top of your security stack).")
         effect5.is_when_digivolving = True

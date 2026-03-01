@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -53,6 +54,7 @@ class BT19_063(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [On Play] <De-Digivolve 1> 1 of your opponent's Digimon. Then, if DigiXrosing with 2 cards, you may delete 1 play cost 3 or lower Digimon or Tamer.
         effect3 = ICardEffect()
+        effect3.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect3.set_effect_name("BT19-063 De-Digivolve 1 to 1 Digimon and delete 1 Digimon or tamer with 3 or less Cost")
         effect3.set_effect_description("[On Play] <De-Digivolve 1> 1 of your opponent's Digimon. Then, if DigiXrosing with 2 cards, you may delete 1 play cost 3 or lower Digimon or Tamer.")
         effect3.is_on_play = True
@@ -97,6 +99,7 @@ class BT19_063(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [When Digivolving] <De-Digivolve 1> 1 of your opponent's Digimon. Then, if DigiXrosing with 2 cards, you may delete 1 play cost 3 or lower Digimon or Tamer.
         effect4 = ICardEffect()
+        effect4.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect4.set_effect_name("BT19-063 De-Digivolve 1 to 1 Digimon and delete 1 Digimon or tamer with 3 or less Cost")
         effect4.set_effect_description("[When Digivolving] <De-Digivolve 1> 1 of your opponent's Digimon. Then, if DigiXrosing with 2 cards, you may delete 1 play cost 3 or lower Digimon or Tamer.")
         effect4.is_when_digivolving = True
@@ -141,6 +144,7 @@ class BT19_063(CardScript):
         # Timing: EffectTiming.OnDestroyedAnyone
         # [On Deletion] You may play 1 level 4 or lower Digimon card with [Knightmon] in its text from under your Tamers without paying the cost.
         effect5 = ICardEffect()
+        effect5.set_timing(EffectTiming.OnDestroyedAnyone)
         effect5.set_effect_name("BT19-063 Play 1 level 4 or lower Digimon")
         effect5.set_effect_description("[On Deletion] You may play 1 level 4 or lower Digimon card with [Knightmon] in its text from under your Tamers without paying the cost.")
         effect5.is_optional = True
@@ -180,6 +184,7 @@ class BT19_063(CardScript):
         # Timing: EffectTiming.OnDestroyedAnyone
         # [On Deletion] You may play 1 level 4 or lower Digimon card with [Knightmon] in its text from your trash without paying the cost.
         effect6 = ICardEffect()
+        effect6.set_timing(EffectTiming.OnDestroyedAnyone)
         effect6.set_effect_name("BT19-063 Play 1 level 4 or lower Digimon")
         effect6.set_effect_description("[On Deletion] You may play 1 level 4 or lower Digimon card with [Knightmon] in its text from your trash without paying the cost.")
         effect6.is_inherited_effect = True

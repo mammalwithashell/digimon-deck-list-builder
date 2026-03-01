@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -16,6 +17,7 @@ class BT21_081(CardScript):
         # Timing: EffectTiming.OnStartMainPhase
         # [Start of Your Main Phase] If your opponent has a Digimon, gain 1 memory.
         effect0 = ICardEffect()
+        effect0.set_timing(EffectTiming.OnStartMainPhase)
         effect0.set_effect_name("BT21-081 Memory +1")
         effect0.set_effect_description("[Start of Your Main Phase] If your opponent has a Digimon, gain 1 memory.")
 
@@ -43,6 +45,7 @@ class BT21_081(CardScript):
         # Timing: EffectTiming.OnEndTurn
         # [End of Your Turn] By suspending this Tamer, 1 of your Digimon with the [Reptile] or [Dragonkin] trait gains <Piercing> for the turn. Then, that Digimon attacks.
         effect1 = ICardEffect()
+        effect1.set_timing(EffectTiming.OnEndTurn)
         effect1.set_effect_name("BT21-081 Give piercing and attack")
         effect1.set_effect_description("[End of Your Turn] By suspending this Tamer, 1 of your Digimon with the [Reptile] or [Dragonkin] trait gains <Piercing> for the turn. Then, that Digimon attacks.")
         effect1.is_optional = True
@@ -65,14 +68,15 @@ class BT21_081(CardScript):
             game = ctx.get('game')
             if not (player and game):
                 return
-            def target_filter(p):
-                return True
-            def on_suspend(target_perm):
-                target_perm.suspend()
-            game.effect_select_opponent_permanent(
-                player, on_suspend, filter_fn=target_filter, is_optional=True)
+            # Suspend this Tamer as cost
             if perm:
-                perm.grant_keyword('_is_piercing')
+                perm.suspend()
+            def target_filter(p):
+                return p.is_digimon
+            def on_grant(target_perm):
+                target_perm.grant_keyword('_is_piercing')
+            game.effect_select_own_permanent(
+                player, on_grant, filter_fn=target_filter, is_optional=True)
             # Force attack — target Digimon may attack (requires engine SelectAttack)
             pass  # descriptive-tagged: force_attack
 

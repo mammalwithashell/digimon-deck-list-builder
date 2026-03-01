@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -28,6 +29,7 @@ class BT22_083(CardScript):
         # Timing: EffectTiming.OnStartMainPhase
         # [Start of Your Main Phase] If your opponent has a Digimon, gain 1 memory.
         effect1 = ICardEffect()
+        effect1.set_timing(EffectTiming.OnStartMainPhase)
         effect1.set_effect_name("BT22-083 Memory +1")
         effect1.set_effect_description("[Start of Your Main Phase] If your opponent has a Digimon, gain 1 memory.")
 
@@ -55,6 +57,7 @@ class BT22_083(CardScript):
         # Timing: EffectTiming.OnAttackTargetChanged
         # [All Turns] When attack targets change, by suspending this Tamer, for the turn, your opponent's Digimon's effects don't affect 1 of your Digimon with [Greymon] in its name or the [CS] trait and it gets +3000 DP.
         effect2 = ICardEffect()
+        effect2.set_timing(EffectTiming.OnAttackTargetChanged)
         effect2.set_effect_name("BT22-083 Suspend tamer, give 1 digimon with [Greymon] in name or [CS] trait effect immunity & 3K DP")
         effect2.set_effect_description("[All Turns] When attack targets change, by suspending this Tamer, for the turn, your opponent's Digimon's effects don't affect 1 of your Digimon with [Greymon] in its name or the [CS] trait and it gets +3000 DP.")
         effect2.is_optional = True
@@ -93,6 +96,7 @@ class BT22_083(CardScript):
         # Timing: EffectTiming.OnAttackTargetChanged
         # [All Turns] [Once Per Turn] When attack targets change, if this Digimon is [Eater Eve], 1 of your Digimon gets +3000 DP for the turn
         effect3 = ICardEffect()
+        effect3.set_timing(EffectTiming.OnAttackTargetChanged)
         effect3.set_effect_name("BT22-083 give 1 digimon 3K DP")
         effect3.set_effect_description("[All Turns] [Once Per Turn] When attack targets change, if this Digimon is [Eater Eve], 1 of your Digimon gets +3000 DP for the turn")
         effect3.is_inherited_effect = True

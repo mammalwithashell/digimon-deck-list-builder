@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -39,6 +40,7 @@ class BT8_103(CardScript):
         # Timing: EffectTiming.OptionSkill
         # [Main] 1 of your Digimon with 2 or more colors gets +2000 DP and <Piercing> for the turn. (When this Digimon attacks and deletes an opponent's Digimon and survives the battle, it performs any security checks it normally would.)
         effect1 = ICardEffect()
+        effect1.set_timing(EffectTiming.OptionSkill)
         effect1.set_effect_name("BT8-103 DP +2000, Gain Keyword Piercing")
         effect1.set_effect_description("[Main] 1 of your Digimon with 2 or more colors gets +2000 DP and <Piercing> for the turn. (When this Digimon attacks and deletes an opponent's Digimon and survives the battle, it performs any security checks it normally would.)")
         effect1._is_piercing = True
@@ -72,6 +74,7 @@ class BT8_103(CardScript):
         # Timing: EffectTiming.SecuritySkill
         # [Security] Suspend 1 of your opponent's Digimon.
         effect2 = ICardEffect()
+        effect2.set_timing(EffectTiming.SecuritySkill)
         effect2.set_effect_name("BT8-103 Suspend")
         effect2.set_effect_description("[Security] Suspend 1 of your opponent's Digimon.")
         effect2.is_security_effect = True

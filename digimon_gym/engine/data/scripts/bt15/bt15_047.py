@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -45,6 +46,7 @@ class BT15_047(CardScript):
         # Timing: EffectTiming.OnEndBattle
         # [All Turns] [Once Per Turn] When this Digimon deletes an opponent's Digimon in battle, gain 1 memory.
         effect1 = ICardEffect()
+        effect1.set_timing(EffectTiming.OnEndBattle)
         effect1.set_effect_name("BT15-047 Memory +1")
         effect1.set_effect_description("[All Turns] [Once Per Turn] When this Digimon deletes an opponent's Digimon in battle, gain 1 memory.")
         effect1.is_inherited_effect = True

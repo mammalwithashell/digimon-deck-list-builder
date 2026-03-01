@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -16,6 +17,7 @@ class BT10_072(CardScript):
         # Timing: EffectTiming.OnAllyAttack
         # [When Attacking] By placing 1 purple Digimon card from your hand under one of your Tamers, <Draw 1>. (Draw 1 card from your deck.)
         effect0 = ICardEffect()
+        effect0.set_timing(EffectTiming.OnAllyAttack)
         effect0.set_effect_name("BT10-072 Place 1 card from hand under 1 Tamer to draw 1")
         effect0.set_effect_description("[When Attacking] By placing 1 purple Digimon card from your hand under one of your Tamers, <Draw 1>. (Draw 1 card from your deck.)")
         effect0.is_optional = True
@@ -57,6 +59,7 @@ class BT10_072(CardScript):
         # Timing: EffectTiming.OnDigivolutionCardDiscarded
         # [Opponent's Turn] When an effect trashes this digivolution card, gain 1 memory.
         effect2 = ICardEffect()
+        effect2.set_timing(EffectTiming.OnDigivolutionCardDiscarded)
         effect2.set_effect_name("BT10-072 Memory +1")
         effect2.set_effect_description("[Opponent's Turn] When an effect trashes this digivolution card, gain 1 memory.")
         effect2.is_inherited_effect = True

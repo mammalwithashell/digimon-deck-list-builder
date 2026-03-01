@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -16,6 +17,7 @@ class P_177(CardScript):
         # Timing: EffectTiming.OnDestroyedAnyone
         # Add To Hand
         effect0 = ICardEffect()
+        effect0.set_timing(EffectTiming.OnDestroyedAnyone)
         effect0.set_effect_name("P-177 Return 1 card from trash to hand")
         effect0.set_effect_description("Add To Hand")
         effect0.is_inherited_effect = True

@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -33,6 +34,7 @@ class BT21_060(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [When Digivolving] Until your opponent's turn ends, their effects can't trash this Digimon's top stacked cards. Then, to 1 of your opponent's Digimon, <De-Digivolve 1> for every 2 [Vemmon] in this Digimon's digivolution cards.
         effect1 = ICardEffect()
+        effect1.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect1.set_effect_name("BT21-060 Can't trash stacked cards, then de-digivolve")
         effect1.set_effect_description("[When Digivolving] Until your opponent's turn ends, their effects can't trash this Digimon's top stacked cards. Then, to 1 of your opponent's Digimon, <De-Digivolve 1> for every 2 [Vemmon] in this Digimon's digivolution cards.")
         effect1.is_when_digivolving = True
@@ -67,6 +69,7 @@ class BT21_060(CardScript):
         # Timing: EffectTiming.WhenRemoveField
         # [All Turns] When this Digimon would leave the battle area, you may play 1 [Vemmon] from its digivolution cards without paying the cost.
         effect2 = ICardEffect()
+        effect2.set_timing(EffectTiming.WhenRemoveField)
         effect2.set_effect_name("BT21-060 Play 1 [Vemmon] from source without paying the cost when leaving battle area.")
         effect2.set_effect_description("[All Turns] When this Digimon would leave the battle area, you may play 1 [Vemmon] from its digivolution cards without paying the cost.")
         effect2.is_optional = True
@@ -97,6 +100,7 @@ class BT21_060(CardScript):
         # Timing: EffectTiming.OnAllyAttack
         # [Opponent's Turn] [Once Per Turn] When one of your opponent's Digimon attacks, by returning 2 [Vemmon] from this Digimon's digivolution cards to the bottom of the deck, end that attack.
         effect3 = ICardEffect()
+        effect3.set_timing(EffectTiming.OnAllyAttack)
         effect3.set_effect_name("BT21-060 Return 2 [Vemmon] from source to bottom of deck to end the attack")
         effect3.set_effect_description("[Opponent's Turn] [Once Per Turn] When one of your opponent's Digimon attacks, by returning 2 [Vemmon] from this Digimon's digivolution cards to the bottom of the deck, end that attack.")
         effect3.is_inherited_effect = True

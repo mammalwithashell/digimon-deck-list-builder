@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -16,6 +17,7 @@ class EX5_067(CardScript):
         # Timing: EffectTiming.OptionSkill
         # [Main] Until the end of your opponent's turn, 1 of your opponent's Digimon and 1 of their Tamers can't suspend. Then, you may play 1 Tamer card with the [Night Claw]/[Light Fang] trait from your hand without paying the cost.
         effect0 = ICardEffect()
+        effect0.set_timing(EffectTiming.OptionSkill)
         effect0.set_effect_name("EX5-067 Can't Suspend")
         effect0.set_effect_description("[Main] Until the end of your opponent's turn, 1 of your opponent's Digimon and 1 of their Tamers can't suspend. Then, you may play 1 Tamer card with the [Night Claw]/[Light Fang] trait from your hand without paying the cost.")
 

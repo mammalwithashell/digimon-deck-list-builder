@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -16,6 +17,7 @@ class P_071(CardScript):
         # Timing: EffectTiming.SecuritySkill
         # [Security] At the end of the battle, you may play 1 purple level 3 Digimon card from your trash without paying its memory cost. Then, add this card to its owner's hand.
         effect0 = ICardEffect()
+        effect0.set_timing(EffectTiming.SecuritySkill)
         effect0.set_effect_name("P-071 Play 1 level 3 Digimon from trash and add this card to hand")
         effect0.set_effect_description("[Security] At the end of the battle, you may play 1 purple level 3 Digimon card from your trash without paying its memory cost. Then, add this card to its owner's hand.")
         effect0.is_security_effect = True
@@ -32,6 +34,7 @@ class P_071(CardScript):
         # Timing: EffectTiming.SecuritySkill
         # Play 1 purple level 3 Digimon card from your trash without paying its memory cost. Then, add this card to its owner's hand.
         effect1 = ICardEffect()
+        effect1.set_timing(EffectTiming.SecuritySkill)
         effect1.set_effect_name("P-071 Play 1 level 3 Digimon from trash and add this card to hand")
         effect1.set_effect_description("Play 1 purple level 3 Digimon card from your trash without paying its memory cost. Then, add this card to its owner's hand.")
         effect1.is_security_effect = True

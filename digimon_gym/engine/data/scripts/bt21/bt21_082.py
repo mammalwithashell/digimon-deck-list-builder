@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -16,6 +17,7 @@ class BT21_082(CardScript):
         # Timing: EffectTiming.OnStartMainPhase
         # [Start of Your Main Phase] 1 of your Digimon or Tamers may digivolve into a Digimon card with the [Hybrid] or [Hero] trait in the hand. For each of your red Tamers with different names, reduce this effect's digivolution cost by 1.
         effect0 = ICardEffect()
+        effect0.set_timing(EffectTiming.OnStartMainPhase)
         effect0.set_effect_name("BT21-082 Digivolve for reduced cost to hybrid or hero")
         effect0.set_effect_description("[Start of Your Main Phase] 1 of your Digimon or Tamers may digivolve into a Digimon card with the [Hybrid] or [Hero] trait in the hand. For each of your red Tamers with different names, reduce this effect's digivolution cost by 1.")
 
@@ -61,6 +63,7 @@ class BT21_082(CardScript):
         # Timing: EffectTiming.OnLoseSecurity
         # [Your Turn] [Once Per Turn] When your opponent's security stack is removed from, you may play 1 red Tamer card from your hand without paying the cost.
         effect2 = ICardEffect()
+        effect2.set_timing(EffectTiming.OnLoseSecurity)
         effect2.set_effect_name("BT21-082 Play tamer on remove security")
         effect2.set_effect_description("[Your Turn] [Once Per Turn] When your opponent's security stack is removed from, you may play 1 red Tamer card from your hand without paying the cost.")
         effect2.is_inherited_effect = True

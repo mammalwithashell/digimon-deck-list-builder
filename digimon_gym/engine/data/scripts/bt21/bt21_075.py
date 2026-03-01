@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -33,6 +34,7 @@ class BT21_075(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [On Play] 1 of your Digimon gains <Raid> and <Retaliation> until your opponent's turn ends.
         effect1 = ICardEffect()
+        effect1.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect1.set_effect_name("BT21-075 Give Raid and Retaliation")
         effect1.set_effect_description("[On Play] 1 of your Digimon gains <Raid> and <Retaliation> until your opponent's turn ends.")
         effect1.is_on_play = True
@@ -67,6 +69,7 @@ class BT21_075(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [When Digivolving] 1 of your Digimon gains <Raid> and <Retaliation> until your opponent's turn ends.
         effect2 = ICardEffect()
+        effect2.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect2.set_effect_name("BT21-075 Give Raid and Retaliation")
         effect2.set_effect_description("[When Digivolving] 1 of your Digimon gains <Raid> and <Retaliation> until your opponent's turn ends.")
         effect2.is_when_digivolving = True
@@ -101,6 +104,7 @@ class BT21_075(CardScript):
         # Timing: EffectTiming.OnDestroyedAnyone
         # Play Card
         effect3 = ICardEffect()
+        effect3.set_timing(EffectTiming.OnDestroyedAnyone)
         effect3.set_effect_name("BT21-075 Play ADVENTURE cost 4 or less")
         effect3.set_effect_description("Play Card")
         effect3.is_optional = True
@@ -131,6 +135,7 @@ class BT21_075(CardScript):
         # Timing: EffectTiming.OnDestroyedAnyone
         # Play Card
         effect4 = ICardEffect()
+        effect4.set_timing(EffectTiming.OnDestroyedAnyone)
         effect4.set_effect_name("BT21-075 Play ADVENTURE cost 4 or less")
         effect4.set_effect_description("Play Card")
         effect4.is_inherited_effect = True

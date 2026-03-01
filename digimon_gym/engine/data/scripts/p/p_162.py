@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -34,6 +35,7 @@ class P_162(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [On Play] Until the end of your opponent's turn, their effects can't reduce the DP of 1 of your [DS] trait Digimon or affect it with <De-Digivolve> effects.
         effect1 = ICardEffect()
+        effect1.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect1.set_effect_name("P-162 Opponent's effects can't reduce a DS digimon's DP or de-digivolve it")
         effect1.set_effect_description("[On Play] Until the end of your opponent's turn, their effects can't reduce the DP of 1 of your [DS] trait Digimon or affect it with <De-Digivolve> effects.")
         effect1.is_on_play = True
@@ -66,6 +68,7 @@ class P_162(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [When Digivolving] Until the end of your opponent's turn, their effects can't reduce the DP of 1 of your [DS] trait Digimon or affect it with <De-Digivolve> effects.
         effect2 = ICardEffect()
+        effect2.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect2.set_effect_name("P-162 Opponent's effects can't reduce a DS digimon's DP or de-digivolve it")
         effect2.set_effect_description("[When Digivolving] Until the end of your opponent's turn, their effects can't reduce the DP of 1 of your [DS] trait Digimon or affect it with <De-Digivolve> effects.")
         effect2.is_when_digivolving = True

@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -29,6 +30,7 @@ class EX6_037(CardScript):
         # Timing: EffectTiming.OnDeclaration
         # [Hand] [Main] By paying 1 cost and placing this card as the bottom digivolution card of 1 of your Digimon that's level 3 or has the [Legend-Arms] trait, <Draw 1>.
         effect1 = ICardEffect()
+        effect1.set_timing(EffectTiming.OnDeclaration)
         effect1.set_effect_name("EX6-037 Pay 1 Memory, Place as bottom Digivolution source to Draw 1")
         effect1.set_effect_description("[Hand] [Main] By paying 1 cost and placing this card as the bottom digivolution card of 1 of your Digimon that's level 3 or has the [Legend-Arms] trait, <Draw 1>.")
         effect1.is_optional = True
@@ -53,6 +55,7 @@ class EX6_037(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [On Play] By trashing 1 card with the [Legend-Arms] trait in your hand, <Draw 2>.
         effect2 = ICardEffect()
+        effect2.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect2.set_effect_name("EX6-037 Trash 1 [Legend-Arms], <Draw 2>")
         effect2.set_effect_description("[On Play] By trashing 1 card with the [Legend-Arms] trait in your hand, <Draw 2>.")
         effect2.is_optional = True
@@ -91,6 +94,7 @@ class EX6_037(CardScript):
         # Timing: EffectTiming.OnAllyAttack
         # [When Attacking] [Once Per Turn] Delete 1 of your opponent's Digimon with 3000 DP or less.
         effect3 = ICardEffect()
+        effect3.set_timing(EffectTiming.OnAllyAttack)
         effect3.set_effect_name("EX6-037 Delete 1 3000 DP or less Digimon")
         effect3.set_effect_description("[When Attacking] [Once Per Turn] Delete 1 of your opponent's Digimon with 3000 DP or less.")
         effect3.is_inherited_effect = True

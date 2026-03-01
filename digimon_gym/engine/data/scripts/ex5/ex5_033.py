@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -16,6 +17,7 @@ class EX5_033(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [When Digivolving] [Once Per Turn] By trashing the top card of your security stack, you may play 1 yellow level 4 or lower card from your hand without paying the cost. Any Digimon played by this effect gain <Rush> (This Digimon can attack the turn it comes into play), for the turn.
         effect0 = ICardEffect()
+        effect0.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect0.set_effect_name("EX5-033 Trash the top card of your security to play 1 Digimon from hand")
         effect0.set_effect_description("[When Digivolving] [Once Per Turn] By trashing the top card of your security stack, you may play 1 yellow level 4 or lower card from your hand without paying the cost. Any Digimon played by this effect gain <Rush> (This Digimon can attack the turn it comes into play), for the turn.")
         effect0.is_optional = True
@@ -64,6 +66,7 @@ class EX5_033(CardScript):
         # Timing: EffectTiming.OnAllyAttack
         # [When Attacking] [Once Per Turn] By trashing the top card of your security stack, you may play 1 yellow level 4 or lower card from your hand without paying the cost. Any Digimon played by this effect gain <Rush> (This Digimon can attack the turn it comes into play), for the turn.
         effect1 = ICardEffect()
+        effect1.set_timing(EffectTiming.OnAllyAttack)
         effect1.set_effect_name("EX5-033 Trash the top card of your security to play 1 Digimon from hand")
         effect1.set_effect_description("[When Attacking] [Once Per Turn] By trashing the top card of your security stack, you may play 1 yellow level 4 or lower card from your hand without paying the cost. Any Digimon played by this effect gain <Rush> (This Digimon can attack the turn it comes into play), for the turn.")
         effect1.is_optional = True

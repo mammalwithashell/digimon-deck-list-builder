@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -42,6 +43,7 @@ class P_161(CardScript):
         # Timing: EffectTiming.OnDestroyedAnyone
         # When this card is trashed from the battle area, until the end of your opponent's turn, 1 of their Digimon or Tamers can't suspend.
         effect1 = ICardEffect()
+        effect1.set_timing(EffectTiming.OnDestroyedAnyone)
         effect1.set_effect_name("P-161 1 of your opponent's digimon or tamers can't suspend.")
         effect1.set_effect_description("When this card is trashed from the battle area, until the end of your opponent's turn, 1 of their Digimon or Tamers can't suspend.")
         effect1.is_on_deletion = True
@@ -71,6 +73,7 @@ class P_161(CardScript):
         # Timing: EffectTiming.OptionSkill
         # [Main] Until the end of your opponent's turn, 1 of their Digimon or Tamers can't suspend. Then, place this card in the battle area.
         effect2 = ICardEffect()
+        effect2.set_timing(EffectTiming.OptionSkill)
         effect2.set_effect_name("P-161 1 of your opponent's digimon or tamers can't suspend, then place in battle area")
         effect2.set_effect_description("[Main] Until the end of your opponent's turn, 1 of their Digimon or Tamers can't suspend. Then, place this card in the battle area.")
 
@@ -99,6 +102,7 @@ class P_161(CardScript):
         # Timing: EffectTiming.SecuritySkill
         # [Security] Return 1 of your opponent's level 5 or lower Digimon to the bottom of the deck. Then, add this card to the hand.
         effect3 = ICardEffect()
+        effect3.set_timing(EffectTiming.SecuritySkill)
         effect3.set_effect_name("P-161 Return 1 opponent's level 5 or lower Digimon to the bottom of the deck, then add this to hand")
         effect3.set_effect_description("[Security] Return 1 of your opponent's level 5 or lower Digimon to the bottom of the deck. Then, add this card to the hand.")
         effect3.is_security_effect = True

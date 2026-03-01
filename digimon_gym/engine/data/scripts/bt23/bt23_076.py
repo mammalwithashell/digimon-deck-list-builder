@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -16,6 +17,7 @@ class BT23_076(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [On Play] Add your top security card to the hand. Then, <Recovery +1 (Deck)>
         effect0 = ICardEffect()
+        effect0.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect0.set_effect_name("BT23-076 Add your top security, <Recovery +1 (Deck)>")
         effect0.set_effect_description("[On Play] Add your top security card to the hand. Then, <Recovery +1 (Deck)>")
         effect0.is_on_play = True
@@ -54,6 +56,7 @@ class BT23_076(CardScript):
         # Timing: EffectTiming.OnTappedAnyone
         # [Your Turn] When this Digimon suspends, 1 of your other Digimon may digivolve into a Digimon card with [Huckmon] in its name or the [Royal Knight] or [CS] trait in the hand or trash with the digivolution cost reduced by 1.
         effect1 = ICardEffect()
+        effect1.set_timing(EffectTiming.OnTappedAnyone)
         effect1.set_effect_name("BT23-076 1 of your other Digimon digivolves without paying the cost")
         effect1.set_effect_description("[Your Turn] When this Digimon suspends, 1 of your other Digimon may digivolve into a Digimon card with [Huckmon] in its name or the [Royal Knight] or [CS] trait in the hand or trash with the digivolution cost reduced by 1.")
 

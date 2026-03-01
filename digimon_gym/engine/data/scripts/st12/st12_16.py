@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -39,6 +40,7 @@ class ST12_16(CardScript):
         # Timing: EffectTiming.OptionSkill
         # [Main] Delete 1 of your opponent's Digimon with a play cost of 13 or less.
         effect1 = ICardEffect()
+        effect1.set_timing(EffectTiming.OptionSkill)
         effect1.set_effect_name("ST12-16 Delete")
         effect1.set_effect_description("[Main] Delete 1 of your opponent's Digimon with a play cost of 13 or less.")
 

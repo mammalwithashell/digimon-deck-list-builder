@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -16,6 +17,7 @@ class BT10_108(CardScript):
         # Timing: EffectTiming.OnDiscardLibrary
         # When this card is trashed from your deck, return it to your hand.
         effect0 = ICardEffect()
+        effect0.set_timing(EffectTiming.OnDiscardLibrary)
         effect0.set_effect_name("BT10-108 Return this card to hand")
         effect0.set_effect_description("When this card is trashed from your deck, return it to your hand.")
 
@@ -41,6 +43,7 @@ class BT10_108(CardScript):
         # Timing: EffectTiming.OptionSkill
         # [Main] Delete 1 of your opponent's level 6 or lower Digimon. If there are 10 or more cards in your trash, add 1 to the level of the Digimon you can select with this effect.
         effect1 = ICardEffect()
+        effect1.set_timing(EffectTiming.OptionSkill)
         effect1.set_effect_name("BT10-108 Delete")
         effect1.set_effect_description("[Main] Delete 1 of your opponent's level 6 or lower Digimon. If there are 10 or more cards in your trash, add 1 to the level of the Digimon you can select with this effect.")
 

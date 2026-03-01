@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -30,6 +31,7 @@ class EX10_050(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [On Play] Trash the top 3 cards of your deck. Then, if you have 5 or more cards in your trash, this Digimon gains <Reboot> (Unsuspend this Digimon during your opponent's unsuspend phase.) and <Blocker> (At blocker timing, by suspending this Digimon, it becomes the attack target.) until your opponent's turn ends.
         effect1 = ICardEffect()
+        effect1.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect1.set_effect_name("EX10-050 Trash top 3 cards of deck, then if you have 5 or more in trash, gain Reboot and Blocker until opponent turn ends")
         effect1.set_effect_description("[On Play] Trash the top 3 cards of your deck. Then, if you have 5 or more cards in your trash, this Digimon gains <Reboot> (Unsuspend this Digimon during your opponent's unsuspend phase.) and <Blocker> (At blocker timing, by suspending this Digimon, it becomes the attack target.) until your opponent's turn ends.")
         effect1.is_on_play = True
@@ -66,6 +68,7 @@ class EX10_050(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [When Digivolving] Trash the top 3 cards of your deck. Then, if you have 5 or more cards in your trash, this Digimon gains <Reboot> (Unsuspend this Digimon during your opponent's unsuspend phase.) and <Blocker> (At blocker timing, by suspending this Digimon, it becomes the attack target.) until your opponent's turn ends.
         effect2 = ICardEffect()
+        effect2.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect2.set_effect_name("EX10-050 Trash top 3 cards of deck, then if you have 5 or more in trash, gain Reboot and Blocker until opponent turn ends")
         effect2.set_effect_description("[When Digivolving] Trash the top 3 cards of your deck. Then, if you have 5 or more cards in your trash, this Digimon gains <Reboot> (Unsuspend this Digimon during your opponent's unsuspend phase.) and <Blocker> (At blocker timing, by suspending this Digimon, it becomes the attack target.) until your opponent's turn ends.")
         effect2.is_when_digivolving = True
@@ -102,6 +105,7 @@ class EX10_050(CardScript):
         # Timing: EffectTiming.OnDestroyedAnyone
         # [On Deletion] If you have 10 or more cards in your trash, you may play 1 [Beelzemon] from your trash without paying the cost.
         effect3 = ICardEffect()
+        effect3.set_timing(EffectTiming.OnDestroyedAnyone)
         effect3.set_effect_name("EX10-050 Play 1 [Beelzemon] from trash")
         effect3.set_effect_description("[On Deletion] If you have 10 or more cards in your trash, you may play 1 [Beelzemon] from your trash without paying the cost.")
         effect3.is_on_deletion = True

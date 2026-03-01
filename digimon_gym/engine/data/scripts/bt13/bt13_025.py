@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -16,6 +17,7 @@ class BT13_025(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [When Digivolving] If you don't have [Thomas H. Norstein], you may play 1 [Thomas H. Norstein] from your hand without paying the cost.
         effect0 = ICardEffect()
+        effect0.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect0.set_effect_name("BT13-025 Play 1 [Thomas H. Norstein] from hand")
         effect0.set_effect_description("[When Digivolving] If you don't have [Thomas H. Norstein], you may play 1 [Thomas H. Norstein] from your hand without paying the cost.")
         effect0.is_optional = True

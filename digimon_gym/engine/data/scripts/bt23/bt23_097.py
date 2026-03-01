@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -16,6 +17,7 @@ class BT23_097(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [Trash] [Your Turn] When any of your Digimon digivolve into [Belphemon (X Antibody)], by returning this card to the bottom of the deck, activate this card's [Main] effects.
         effect0 = ICardEffect()
+        effect0.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect0.set_effect_name("BT23-097 By returning this card to deck, Activate [Main] effect")
         effect0.set_effect_description("[Trash] [Your Turn] When any of your Digimon digivolve into [Belphemon (X Antibody)], by returning this card to the bottom of the deck, activate this card's [Main] effects.")
         effect0.is_optional = True
@@ -52,6 +54,7 @@ class BT23_097(CardScript):
         # Timing: EffectTiming.OptionSkill
         # [Main] Delete 1 of your opponent's Digimon with a level as high or higher as the number of cards in your hand.
         effect1 = ICardEffect()
+        effect1.set_timing(EffectTiming.OptionSkill)
         effect1.set_effect_name("BT23-097 Delete 1 digimon with equal or high level then cards in hand")
         effect1.set_effect_description("[Main] Delete 1 of your opponent's Digimon with a level as high or higher as the number of cards in your hand.")
 

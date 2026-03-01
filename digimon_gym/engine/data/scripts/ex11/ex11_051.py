@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -28,6 +29,7 @@ class EX11_051(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # Delete, Play Card
         effect1 = ICardEffect()
+        effect1.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect1.set_effect_name("EX11-051 Delete, Play Card")
         effect1.set_effect_description("Delete, Play Card")
         effect1.is_on_play = True
@@ -75,6 +77,7 @@ class EX11_051(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # Delete, Play Card
         effect2 = ICardEffect()
+        effect2.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect2.set_effect_name("EX11-051 Delete, Play Card")
         effect2.set_effect_description("Delete, Play Card")
         effect2.is_when_digivolving = True
@@ -122,6 +125,7 @@ class EX11_051(CardScript):
         # Timing: EffectTiming.OnDestroyedAnyone
         # Delete, Play Card
         effect3 = ICardEffect()
+        effect3.set_timing(EffectTiming.OnDestroyedAnyone)
         effect3.set_effect_name("EX11-051 Delete, Play Card")
         effect3.set_effect_description("Delete, Play Card")
         effect3.is_on_deletion = True
@@ -167,6 +171,7 @@ class EX11_051(CardScript):
         # Timing: EffectTiming.OnDestroyedAnyone
         # [On Deletion] 1 of your [Ghost] trait Digimon may digivolve into a [Ghost] trait Digimon card in the hand without paying the cost.
         effect4 = ICardEffect()
+        effect4.set_timing(EffectTiming.OnDestroyedAnyone)
         effect4.set_effect_name("EX11-051 Digivolve a [Ghost] Digimon to a [Ghost] for free")
         effect4.set_effect_description("[On Deletion] 1 of your [Ghost] trait Digimon may digivolve into a [Ghost] trait Digimon card in the hand without paying the cost.")
         effect4.is_on_deletion = True

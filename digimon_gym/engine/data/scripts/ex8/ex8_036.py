@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -33,6 +34,7 @@ class EX8_036(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [When Digivolving] You may play 1 [NSo] trait Digimon card with a play cost of 5 or less from your hand or trash without paying the cost.
         effect1 = ICardEffect()
+        effect1.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect1.set_effect_name("EX8-036 Play 1 NSo Digimon card with a play cost 5 or less from your hand or trash")
         effect1.set_effect_description("[When Digivolving] You may play 1 [NSo] trait Digimon card with a play cost of 5 or less from your hand or trash without paying the cost.")
         effect1.is_optional = True
@@ -73,6 +75,7 @@ class EX8_036(CardScript):
         # Timing: EffectTiming.OnDestroyedAnyone
         # [On Deletion] <Recovery +1 (Deck)>.
         effect2 = ICardEffect()
+        effect2.set_timing(EffectTiming.OnDestroyedAnyone)
         effect2.set_effect_name("EX8-036 Recovery +1")
         effect2.set_effect_description("[On Deletion] <Recovery +1 (Deck)>.")
         effect2.is_on_deletion = True

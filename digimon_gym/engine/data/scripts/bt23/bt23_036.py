@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -30,6 +31,7 @@ class BT23_036(CardScript):
         # Timing: EffectTiming.BeforePayCost
         # When this card would be played, if your opponent has a Digimon with 10000 DP or more, reduce the play cost by 5.
         effect1 = ICardEffect()
+        effect1.set_timing(EffectTiming.BeforePayCost)
         effect1.set_effect_name("BT23-036 Reduce the play cost by 5")
         effect1.set_effect_description("When this card would be played, if your opponent has a Digimon with 10000 DP or more, reduce the play cost by 5.")
         effect1.set_hash_string("PlayCost-5_BT23_036")
@@ -79,6 +81,7 @@ class BT23_036(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [On Play] 1 of your other Digimon may digivolve into a level 6 or lower Digimon card with [Leomon] in its name or the [CS] trait in the hand without paying the cost.
         effect3 = ICardEffect()
+        effect3.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect3.set_effect_name("BT23-036 Digivolve into a level 6 with [Leomon] in name or [CS] trait")
         effect3.set_effect_description("[On Play] 1 of your other Digimon may digivolve into a level 6 or lower Digimon card with [Leomon] in its name or the [CS] trait in the hand without paying the cost.")
         effect3.is_on_play = True
@@ -112,6 +115,7 @@ class BT23_036(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [When Digivolving] 1 of your other Digimon may digivolve into a level 6 or lower Digimon card with [Leomon] in its name or the [CS] trait in the hand without paying the cost.
         effect4 = ICardEffect()
+        effect4.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect4.set_effect_name("BT23-036 Digivolve into a level 6 with [Leomon] in name or [CS] trait")
         effect4.set_effect_description("[When Digivolving] 1 of your other Digimon may digivolve into a level 6 or lower Digimon card with [Leomon] in its name or the [CS] trait in the hand without paying the cost.")
         effect4.is_when_digivolving = True
@@ -145,6 +149,7 @@ class BT23_036(CardScript):
         # Timing: EffectTiming.OnEndTurn
         # [End of Your Turn] [Once Per Turn] 1 of your Digimon gains <Raid> for the turn, Then that Digimon may attack.
         effect5 = ICardEffect()
+        effect5.set_timing(EffectTiming.OnEndTurn)
         effect5.set_effect_name("BT23-036 Give 1 digimon raid, then it may attack")
         effect5.set_effect_description("[End of Your Turn] [Once Per Turn] 1 of your Digimon gains <Raid> for the turn, Then that Digimon may attack.")
         effect5.set_max_count_per_turn(1)

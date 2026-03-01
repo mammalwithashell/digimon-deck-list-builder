@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -16,6 +17,7 @@ class BT13_075(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [On Play] By placing 1 Digimon card with the [X Antibody] or [Royal Knight] trait from your trash as this Digimon's bottom digivolution card, all of your opponent's play cost 10 or higher Digimon can't attack players until the end of their turn.
         effect0 = ICardEffect()
+        effect0.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect0.set_effect_name("BT13-075 Place 1 card from trash to digivolution cards so that opponent Digimons can't attack")
         effect0.set_effect_description("[On Play] By placing 1 Digimon card with the [X Antibody] or [Royal Knight] trait from your trash as this Digimon's bottom digivolution card, all of your opponent's play cost 10 or higher Digimon can't attack players until the end of their turn.")
         effect0.is_optional = True
@@ -67,6 +69,7 @@ class BT13_075(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [When Digivolving] By placing 1 Digimon card with the [X Antibody] or [Royal Knight] trait from your trash as this Digimon's bottom digivolution card, all of your opponent's play cost 10 or higher Digimon can't attack players until the end of their turn.
         effect1 = ICardEffect()
+        effect1.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect1.set_effect_name("BT13-075 Place 1 card from trash to digivolution cards so that opponent Digimons can't attack")
         effect1.set_effect_description("[When Digivolving] By placing 1 Digimon card with the [X Antibody] or [Royal Knight] trait from your trash as this Digimon's bottom digivolution card, all of your opponent's play cost 10 or higher Digimon can't attack players until the end of their turn.")
         effect1.is_optional = True
@@ -118,6 +121,7 @@ class BT13_075(CardScript):
         # Timing: EffectTiming.WhenRemoveField
         # [All Turns][Once Per Turn] When an effect would remove this Digimon from the battle area, by returning 1 card with the [X Antibody] or [Royal Knight] trait from this Digimon's digivolution cards to the bottom of the deck, prevent that removal.
         effect2 = ICardEffect()
+        effect2.set_timing(EffectTiming.WhenRemoveField)
         effect2.set_effect_name("BT13-075 Prevent this Digimon from leaving play")
         effect2.set_effect_description("[All Turns][Once Per Turn] When an effect would remove this Digimon from the battle area, by returning 1 card with the [X Antibody] or [Royal Knight] trait from this Digimon's digivolution cards to the bottom of the deck, prevent that removal.")
         effect2.is_optional = True

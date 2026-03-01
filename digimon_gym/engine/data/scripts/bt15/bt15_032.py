@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -29,6 +30,7 @@ class BT15_032(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # Bounce
         effect1 = ICardEffect()
+        effect1.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect1.set_effect_name("BT15-032 Return 1 Digimon to hand")
         effect1.set_effect_description("Bounce")
         effect1.set_max_count_per_turn(1)
@@ -64,6 +66,7 @@ class BT15_032(CardScript):
         # Timing: EffectTiming.OnAllyAttack
         # Bounce
         effect2 = ICardEffect()
+        effect2.set_timing(EffectTiming.OnAllyAttack)
         effect2.set_effect_name("BT15-032 Return 1 Digimon to hand")
         effect2.set_effect_description("Bounce")
         effect2.set_max_count_per_turn(1)
@@ -99,6 +102,7 @@ class BT15_032(CardScript):
         # Timing: EffectTiming.OnAllyAttack
         # [Opponent's Turn] When an opponent's Digimon with as many or fewer digivolution cards as this Digimon attacks, if [Plesiomon] or [X Antibody] is in this Digimon's digivolution cards, gain 2 memory.
         effect3 = ICardEffect()
+        effect3.set_timing(EffectTiming.OnAllyAttack)
         effect3.set_effect_name("BT15-032 Memory +2")
         effect3.set_effect_description("[Opponent's Turn] When an opponent's Digimon with as many or fewer digivolution cards as this Digimon attacks, if [Plesiomon] or [X Antibody] is in this Digimon's digivolution cards, gain 2 memory.")
         effect3.is_on_attack = True

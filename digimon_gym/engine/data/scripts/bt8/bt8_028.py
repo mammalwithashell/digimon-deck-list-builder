@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -16,6 +17,7 @@ class BT8_028(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [All Turns] When your opponent plays a level 5 or higher Digimon, gain 1 memory and <Draw 1>. (Draw 1 card from your deck.)
         effect0 = ICardEffect()
+        effect0.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect0.set_effect_name("BT8-028 Memory +1 and Draw 1")
         effect0.set_effect_description("[All Turns] When your opponent plays a level 5 or higher Digimon, gain 1 memory and <Draw 1>. (Draw 1 card from your deck.)")
         effect0.is_on_play = True

@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -16,6 +17,7 @@ class BT20_091(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [Your Turn] When your Digimon are played or digivolve, if any of them have the [Royal Knight] trait, by suspending this Tamer, <Draw 1> and gain 1 memory.
         effect0 = ICardEffect()
+        effect0.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect0.set_effect_name("BT20-091 <Draw 1> and gain 1 memory")
         effect0.set_effect_description("[Your Turn] When your Digimon are played or digivolve, if any of them have the [Royal Knight] trait, by suspending this Tamer, <Draw 1> and gain 1 memory.")
         effect0.is_optional = True
@@ -55,6 +57,7 @@ class BT20_091(CardScript):
         # Timing: EffectTiming.WhenRemoveField
         # [Opponent's Turn] [Once Per Turn] When any of your Digimon with the [Royal Knight] trait would leave the battle area, you may play 1 [Omekamon] from your hand without paying the cost.
         effect1 = ICardEffect()
+        effect1.set_timing(EffectTiming.WhenRemoveField)
         effect1.set_effect_name("BT20-091 Play 1 [Omekamon] from your hand")
         effect1.set_effect_description("[Opponent's Turn] [Once Per Turn] When any of your Digimon with the [Royal Knight] trait would leave the battle area, you may play 1 [Omekamon] from your hand without paying the cost.")
         effect1.is_optional = True

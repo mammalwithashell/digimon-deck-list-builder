@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -16,6 +17,7 @@ class P_070(CardScript):
         # Timing: EffectTiming.SecuritySkill
         # [Security] At the end of the battle, reveal the top card of your deck. If it�fs a black Digimon card with a play cost of 4 or less, you may play it without paying its memory cost. Add the remaining cards to your hand. Then, add this card to its owner�fs hand.
         effect0 = ICardEffect()
+        effect0.set_timing(EffectTiming.SecuritySkill)
         effect0.set_effect_name("P-070 Reveal the top card and add this card to hand")
         effect0.set_effect_description("[Security] At the end of the battle, reveal the top card of your deck. If it�fs a black Digimon card with a play cost of 4 or less, you may play it without paying its memory cost. Add the remaining cards to your hand. Then, add this card to its owner�fs hand.")
         effect0.is_security_effect = True
@@ -32,6 +34,7 @@ class P_070(CardScript):
         # Timing: EffectTiming.SecuritySkill
         # Reveal the top card of your deck. If it�fs a black Digimon card with a play cost of 4 or less, you may play it without paying its memory cost. Add the remaining cards to your hand. Then, add this card to its owner�fs hand.
         effect1 = ICardEffect()
+        effect1.set_timing(EffectTiming.SecuritySkill)
         effect1.set_effect_name("P-070 Reveal the top card and add this card to hand")
         effect1.set_effect_description("Reveal the top card of your deck. If it�fs a black Digimon card with a play cost of 4 or less, you may play it without paying its memory cost. Add the remaining cards to your hand. Then, add this card to its owner�fs hand.")
         effect1.is_security_effect = True

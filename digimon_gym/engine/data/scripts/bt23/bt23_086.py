@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -14,20 +15,33 @@ class BT23_086(CardScript):
         effects = []
 
         # Factory effect: set_memory_3
-        # Set memory to 3
-        effect0 = ICardEffect()
-        effect0.set_effect_name("BT23-086 Set memory to 3")
-        effect0.set_effect_description("Set memory to 3")
         # [Start of Your Turn] Set memory to 3 if <= 2
+        effect0 = ICardEffect()
+        effect0.set_timing(EffectTiming.OnStartMainPhase)
+        effect0.set_effect_name("BT23-086 Set memory to 3")
+        effect0.set_effect_description("[Start of Your Turn] If your memory is at 2 or less, it becomes 3.")
 
         def condition0(context: Dict[str, Any]) -> bool:
+            if card and card.permanent_of_this_card() is None:
+                return False
+            if not (card and card.owner and card.owner.is_my_turn):
+                return False
             return True
         effect0.set_can_use_condition(condition0)
+
+        def process0(ctx: Dict[str, Any]):
+            """Action: Set memory to 3 if <= 2"""
+            player = ctx.get('player')
+            game = ctx.get('game')
+            if player and game and game.memory <= 2:
+                game.memory = 3
+        effect0.set_on_process_callback(process0)
         effects.append(effect0)
 
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [On Play] By adding your top security card to the hand, you may place 1 Digimon card with the [Zaxon] trait from your hand or trash face up as the bottom security card.
         effect1 = ICardEffect()
+        effect1.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect1.set_effect_name("BT23-086 By adding your top security, you may place 1 digimon face up in security")
         effect1.set_effect_description("[On Play] By adding your top security card to the hand, you may place 1 Digimon card with the [Zaxon] trait from your hand or trash face up as the bottom security card.")
         effect1.is_optional = True
@@ -68,6 +82,7 @@ class BT23_086(CardScript):
         # Timing: EffectTiming.OnEndTurn
         # [End of Your Turn] By suspending this Tamer, 1 of your level 6 Digimon with the [Machine] or [Zaxon] trait may attack a player.
         effect2 = ICardEffect()
+        effect2.set_timing(EffectTiming.OnEndTurn)
         effect2.set_effect_name("BT23-086 By suspending, 1 of your digimon may attack")
         effect2.set_effect_description("[End of Your Turn] By suspending this Tamer, 1 of your level 6 Digimon with the [Machine] or [Zaxon] trait may attack a player.")
         effect2.is_optional = True

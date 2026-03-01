@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -16,6 +17,7 @@ class P_192(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [On Play] By trashing 1 card in your hand, delete 1 of your opponent's level 4 or lower Digimon.
         effect0 = ICardEffect()
+        effect0.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect0.set_effect_name("P-192 Trash 1 card from hand, delete 1 level 4 or lower digimon")
         effect0.set_effect_description("[On Play] By trashing 1 card in your hand, delete 1 of your opponent's level 4 or lower Digimon.")
         effect0.is_optional = True
@@ -64,6 +66,7 @@ class P_192(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [When Digivolving] By trashing 1 card in your hand, delete 1 of your opponent's level 4 or lower Digimon.
         effect1 = ICardEffect()
+        effect1.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect1.set_effect_name("P-192 Trash 1 card from hand, delete 1 level 4 or lower digimon")
         effect1.set_effect_description("[When Digivolving] By trashing 1 card in your hand, delete 1 of your opponent's level 4 or lower Digimon.")
         effect1.is_optional = True

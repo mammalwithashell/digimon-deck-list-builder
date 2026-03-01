@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -81,6 +82,7 @@ class BT22_041(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [On Play] You may place 1 yellow card from your hand as your top security card.
         effect4 = ICardEffect()
+        effect4.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect4.set_effect_name("BT22-041 Place 1 yellow card from hand as top secuity card")
         effect4.set_effect_description("[On Play] You may place 1 yellow card from your hand as your top security card.")
         effect4.is_optional = True
@@ -110,6 +112,7 @@ class BT22_041(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [When Digivolving] You may place 1 yellow card from your hand as your top security card.
         effect5 = ICardEffect()
+        effect5.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect5.set_effect_name("BT22-041 Place 1 yellow card from hand as top secuity card")
         effect5.set_effect_description("[When Digivolving] You may place 1 yellow card from your hand as your top security card.")
         effect5.is_optional = True
@@ -139,6 +142,7 @@ class BT22_041(CardScript):
         # Timing: EffectTiming.OnTappedAnyone
         # [All Turns] [Once Per Turn] When this Digimon suspends, by trashing your top security card, it unsuspends.
         effect6 = ICardEffect()
+        effect6.set_timing(EffectTiming.OnTappedAnyone)
         effect6.set_effect_name("BT22-041 By trashing top security, unsuspend")
         effect6.set_effect_description("[All Turns] [Once Per Turn] When this Digimon suspends, by trashing your top security card, it unsuspends.")
         effect6.is_optional = True

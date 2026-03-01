@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -16,6 +17,7 @@ class BT14_074(CardScript):
         # Timing: EffectTiming.OnAllyAttack
         # [When Attacking] By trashing 1 card in your hand, <Draw 1>. If [Eiji Nagasumi] is in this Digimon's digivolution cards, gain 1 memory.
         effect0 = ICardEffect()
+        effect0.set_timing(EffectTiming.OnAllyAttack)
         effect0.set_effect_name("BT14-074 Trash 1 card from hand to Draw 1, and gain Memory +1")
         effect0.set_effect_description("[When Attacking] By trashing 1 card in your hand, <Draw 1>. If [Eiji Nagasumi] is in this Digimon's digivolution cards, gain 1 memory.")
         effect0.is_on_attack = True
@@ -55,6 +57,7 @@ class BT14_074(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [Your Turn][Once Per Turn] When you play a card with the [Dark Animal] or [SoC] trait, gain 1 memory.
         effect1 = ICardEffect()
+        effect1.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect1.set_effect_name("BT14-074 Memory +1")
         effect1.set_effect_description("[Your Turn][Once Per Turn] When you play a card with the [Dark Animal] or [SoC] trait, gain 1 memory.")
         effect1.is_inherited_effect = True

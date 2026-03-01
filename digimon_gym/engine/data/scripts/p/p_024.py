@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -16,6 +17,7 @@ class P_024(CardScript):
         # Timing: EffectTiming.OptionSkill
         # [Main] If you have [Tai Kamiya] in play, you may place 1 of your [Agumon] cards at the bottom of its owner's deck to trigger <Draw 3>. (Draw 3 cards from your deck.) Trash that Digimon's digivolution cards.
         effect0 = ICardEffect()
+        effect0.set_timing(EffectTiming.OptionSkill)
         effect0.set_effect_name("P-024 Draw 3, Effect Immunity")
         effect0.set_effect_description("[Main] If you have [Tai Kamiya] in play, you may place 1 of your [Agumon] cards at the bottom of its owner's deck to trigger <Draw 3>. (Draw 3 cards from your deck.) Trash that Digimon's digivolution cards.")
 
@@ -46,6 +48,7 @@ class P_024(CardScript):
         # Timing: EffectTiming.SecuritySkill
         # [Security] Add this card to its owner's hand.
         effect1 = ICardEffect()
+        effect1.set_timing(EffectTiming.SecuritySkill)
         effect1.set_effect_name("P-024 Add To Hand")
         effect1.set_effect_description("[Security] Add this card to its owner's hand.")
         effect1.is_security_effect = True

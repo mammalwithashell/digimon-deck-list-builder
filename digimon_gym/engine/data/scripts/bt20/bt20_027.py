@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -33,6 +34,7 @@ class BT20_027(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [On Play] Trash any 3 digivolution cards of 1 of your opponent's Digimon. Then, delete 1 of their Digimon with no digivolution cards.
         effect1 = ICardEffect()
+        effect1.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect1.set_effect_name("BT20-027 Trash digivolution cards and delete 1 Digimon with no digivolution cards")
         effect1.set_effect_description("[On Play] Trash any 3 digivolution cards of 1 of your opponent's Digimon. Then, delete 1 of their Digimon with no digivolution cards.")
         effect1.is_on_play = True
@@ -73,6 +75,7 @@ class BT20_027(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [When Digivolving] Trash any 3 digivolution cards of 1 of your opponent's Digimon. Then, delete 1 of their Digimon with no digivolution cards.
         effect2 = ICardEffect()
+        effect2.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect2.set_effect_name("BT20-027 Trash digivolution cards and delete 1 Digimon with no digivolution cards")
         effect2.set_effect_description("[When Digivolving] Trash any 3 digivolution cards of 1 of your opponent's Digimon. Then, delete 1 of their Digimon with no digivolution cards.")
         effect2.is_when_digivolving = True
@@ -113,6 +116,7 @@ class BT20_027(CardScript):
         # Timing: EffectTiming.OnLoseSecurity
         # [All Turns] (Once Per Turn) When your opponent's security stack is removed from, 1 of your Digimon with [Dracomon]/[Examon] in its text may unsuspend.
         effect3 = ICardEffect()
+        effect3.set_timing(EffectTiming.OnLoseSecurity)
         effect3.set_effect_name("BT20-027 Unsuspend 1 of your Digimon with [Dracomon]/[Examon] in its text")
         effect3.set_effect_description("[All Turns] (Once Per Turn) When your opponent's security stack is removed from, 1 of your Digimon with [Dracomon]/[Examon] in its text may unsuspend.")
         effect3.is_optional = True
@@ -154,6 +158,7 @@ class BT20_027(CardScript):
         # Timing: EffectTiming.WhenRemoveField
         # [All Turns] When any of your Digimon with [Dracomon]/[Examon] in their texts would leave the battle area other than in battle by suspending this Digimon, they don't leave.
         effect4 = ICardEffect()
+        effect4.set_timing(EffectTiming.WhenRemoveField)
         effect4.set_effect_name("BT20-027 Suspend this Digimon to prevent Digimon from leaving")
         effect4.set_effect_description("[All Turns] When any of your Digimon with [Dracomon]/[Examon] in their texts would leave the battle area other than in battle by suspending this Digimon, they don't leave.")
         effect4.is_inherited_effect = True

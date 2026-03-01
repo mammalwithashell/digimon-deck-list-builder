@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -47,6 +48,7 @@ class EX8_062(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [On Play] Activate the effect below 4 times: • 1 of your opponent's Digimon gets -2000 DP for the turn.
         effect2 = ICardEffect()
+        effect2.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect2.set_effect_name("EX8-062 Apply -2000 DP 4 times")
         effect2.set_effect_description("[On Play] Activate the effect below 4 times: • 1 of your opponent's Digimon gets -2000 DP for the turn.")
         effect2.is_on_play = True
@@ -78,6 +80,7 @@ class EX8_062(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [When Digivolving] Activate the effect below 4 times: • 1 of your opponent's Digimon gets -2000 DP for the turn.
         effect3 = ICardEffect()
+        effect3.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect3.set_effect_name("EX8-062 Apply -2000 DP 4 times")
         effect3.set_effect_description("[When Digivolving] Activate the effect below 4 times: • 1 of your opponent's Digimon gets -2000 DP for the turn.")
         effect3.is_when_digivolving = True
@@ -109,6 +112,7 @@ class EX8_062(CardScript):
         # Timing: EffectTiming.OnDestroyedAnyone
         # [All Turns] [Once Per Turn] When other Digimon are deleted, you may play 1 level 4 or lower [NSo] trait Digimon card from your trash without paying the cost.
         effect4 = ICardEffect()
+        effect4.set_timing(EffectTiming.OnDestroyedAnyone)
         effect4.set_effect_name("EX8-062 Play 1 [NSo] Digimon from the trash")
         effect4.set_effect_description("[All Turns] [Once Per Turn] When other Digimon are deleted, you may play 1 level 4 or lower [NSo] trait Digimon card from your trash without paying the cost.")
         effect4.set_max_count_per_turn(1)

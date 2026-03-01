@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -16,6 +17,7 @@ class EX6_041(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [On Play] By deleting 1 of your Digimon with [Diaboromon] in its name, this Digimon may digivolve into [Diaboromon] in your hand without paying the cost.
         effect0 = ICardEffect()
+        effect0.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect0.set_effect_name("EX6-041 Delete 1 [Diaboromon], Digivolve into a [Diaboromon]")
         effect0.set_effect_description("[On Play] By deleting 1 of your Digimon with [Diaboromon] in its name, this Digimon may digivolve into [Diaboromon] in your hand without paying the cost.")
         effect0.is_optional = True
@@ -50,6 +52,7 @@ class EX6_041(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [When Digivolving] By deleting 1 of your Digimon with [Diaboromon] in its name, this Digimon may digivolve into [Diaboromon] in your hand without paying the cost.
         effect1 = ICardEffect()
+        effect1.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect1.set_effect_name("EX6-041 Delete 1 [Diaboromon], Digivolve into a [Diaboromon]")
         effect1.set_effect_description("[When Digivolving] By deleting 1 of your Digimon with [Diaboromon] in its name, this Digimon may digivolve into [Diaboromon] in your hand without paying the cost.")
         effect1.is_optional = True
@@ -84,6 +87,7 @@ class EX6_041(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [All Turns] [Once Per Turn] When one of your other Digimon with [Diaboromon] in its name is played, <De-Digivolve 1> 1 of your opponent's Digimon.
         effect2 = ICardEffect()
+        effect2.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect2.set_effect_name("EX6-041 <De-Digivolve 1> 1 of your opponent's Digimon")
         effect2.set_effect_description("[All Turns] [Once Per Turn] When one of your other Digimon with [Diaboromon] in its name is played, <De-Digivolve 1> 1 of your opponent's Digimon.")
         effect2.is_inherited_effect = True

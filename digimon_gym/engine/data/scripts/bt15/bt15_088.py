@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -16,6 +17,7 @@ class BT15_088(CardScript):
         # Timing: EffectTiming.OptionSkill
         # [Main] You may play 1 red Tamer card with a play cost of 4 or less from your hand without paying the cost. Then, if you have a Tamer with [Sora Takenouchi] in its name, return 1 red Digimon card from your trash to the hand.
         effect0 = ICardEffect()
+        effect0.set_timing(EffectTiming.OptionSkill)
         effect0.set_effect_name("BT15-088 Play Card, Add To Hand")
         effect0.set_effect_description("[Main] You may play 1 red Tamer card with a play cost of 4 or less from your hand without paying the cost. Then, if you have a Tamer with [Sora Takenouchi] in its name, return 1 red Digimon card from your trash to the hand.")
 
@@ -52,6 +54,7 @@ class BT15_088(CardScript):
         # Timing: EffectTiming.SecuritySkill
         # [Security] You may play 1 [Biyomon] from your hand or trash without paying the cost. Then, add this card to the hand.
         effect1 = ICardEffect()
+        effect1.set_timing(EffectTiming.SecuritySkill)
         effect1.set_effect_name("BT15-088 Play Card, Add To Hand")
         effect1.set_effect_description("[Security] You may play 1 [Biyomon] from your hand or trash without paying the cost. Then, add this card to the hand.")
         effect1.is_security_effect = True

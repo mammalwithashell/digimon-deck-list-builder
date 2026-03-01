@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -16,6 +17,7 @@ class EX10_062(CardScript):
         # Timing: EffectTiming.OnStartMainPhase
         # [Start of Your Main Phase] If your opponent has a Digimon, gain 1 memory.
         effect0 = ICardEffect()
+        effect0.set_timing(EffectTiming.OnStartMainPhase)
         effect0.set_effect_name("EX10-062 Memory +1")
         effect0.set_effect_description("[Start of Your Main Phase] If your opponent has a Digimon, gain 1 memory.")
 
@@ -43,6 +45,7 @@ class EX10_062(CardScript):
         # Timing: EffectTiming.OnLinkCardDiscarded
         # Draw 1, Suspend
         effect1 = ICardEffect()
+        effect1.set_timing(EffectTiming.OnLinkCardDiscarded)
         effect1.set_effect_name("EX10-062 Suspend to draw on trash")
         effect1.set_effect_description("Draw 1, Suspend")
         effect1.is_optional = True
@@ -75,6 +78,7 @@ class EX10_062(CardScript):
         # Timing: EffectTiming.OnEndTurn
         # [End of Your Turn] [Once Per Turn] 1 of your Digimon may app fuse into a Digimon card in the hand.
         effect2 = ICardEffect()
+        effect2.set_timing(EffectTiming.OnEndTurn)
         effect2.set_effect_name("EX10-062 App fuse 1 digimon into digimon in hand")
         effect2.set_effect_description("[End of Your Turn] [Once Per Turn] 1 of your Digimon may app fuse into a Digimon card in the hand.")
         effect2.is_optional = True

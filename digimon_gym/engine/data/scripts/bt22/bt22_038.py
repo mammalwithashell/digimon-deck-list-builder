@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -47,6 +48,7 @@ class BT22_038(CardScript):
         # Timing: EffectTiming.BeforePayCost
         # Effect
         effect2 = ICardEffect()
+        effect2.set_timing(EffectTiming.BeforePayCost)
         effect2.set_effect_name("BT22-038 Reduce the digivolution cost by 1 for each face-down source")
         effect2.set_effect_description("Effect")
 
@@ -70,6 +72,7 @@ class BT22_038(CardScript):
         # Timing: EffectTiming.WhenPermanentWouldBeDeleted
         # DP -4000, Trash Digivolution Cards, Disable Effect, Effect Immunity
         effect3 = ICardEffect()
+        effect3.set_timing(EffectTiming.WhenPermanentWouldBeDeleted)
         effect3.set_effect_name("BT22-038 Ignore [When Digivolving] Effect")
         effect3.set_effect_description("DP -4000, Trash Digivolution Cards, Disable Effect, Effect Immunity")
 
@@ -111,6 +114,7 @@ class BT22_038(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [When Digivolving] [Once Per Turn] By trashing this Digimon's bottom face-down digivolution card, until your opponent's turn ends, 1 of their Digimon can't activate [When Digivolving] effects and gets -4000 DP.
         effect4 = ICardEffect()
+        effect4.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect4.set_effect_name("BT22-038 by trashing bottom face down source, 1 digimon cant use When digivolving effects and get -4K DP")
         effect4.set_effect_description("[When Digivolving] [Once Per Turn] By trashing this Digimon's bottom face-down digivolution card, until your opponent's turn ends, 1 of their Digimon can't activate [When Digivolving] effects and gets -4000 DP.")
         effect4.is_optional = True
@@ -159,6 +163,7 @@ class BT22_038(CardScript):
         # Timing: EffectTiming.OnAllyAttack
         # [When Attacking] [Once Per Turn] By trashing this Digimon's bottom face-down digivolution card, until your opponent's turn ends, 1 of their Digimon can't activate [When Digivolving] effects and gets -4000 DP.
         effect5 = ICardEffect()
+        effect5.set_timing(EffectTiming.OnAllyAttack)
         effect5.set_effect_name("BT22-038 by trashing bottom face down source, 1 digimon cant use When digivolving effects and get -4K DP")
         effect5.set_effect_description("[When Attacking] [Once Per Turn] By trashing this Digimon's bottom face-down digivolution card, until your opponent's turn ends, 1 of their Digimon can't activate [When Digivolving] effects and gets -4000 DP.")
         effect5.is_optional = True
@@ -207,6 +212,7 @@ class BT22_038(CardScript):
         # Timing: EffectTiming.OnAllyAttack
         # [When Attacking] [Once Per Turn] 1 of your opponent's Digimon gets -4000 DP for the turn.
         effect6 = ICardEffect()
+        effect6.set_timing(EffectTiming.OnAllyAttack)
         effect6.set_effect_name("BT22-038 -4K DP")
         effect6.set_effect_description("[When Attacking] [Once Per Turn] 1 of your opponent's Digimon gets -4000 DP for the turn.")
         effect6.is_inherited_effect = True

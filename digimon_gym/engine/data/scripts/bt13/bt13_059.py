@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -29,6 +30,7 @@ class BT13_059(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [On Play] Suspend 1 of your opponent's Digimon. That Digimon doesn't unsuspend during your opponent's next unsuspend phase.
         effect1 = ICardEffect()
+        effect1.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect1.set_effect_name("BT13-059 Suspend 1 Digimon and it can't unsuspend")
         effect1.set_effect_description("[On Play] Suspend 1 of your opponent's Digimon. That Digimon doesn't unsuspend during your opponent's next unsuspend phase.")
         effect1.is_on_play = True
@@ -65,6 +67,7 @@ class BT13_059(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [When Digivolving] Suspend 1 of your opponent's Digimon. That Digimon doesn't unsuspend during your opponent's next unsuspend phase.
         effect2 = ICardEffect()
+        effect2.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect2.set_effect_name("BT13-059 Suspend 1 Digimon and it can't unsuspend")
         effect2.set_effect_description("[When Digivolving] Suspend 1 of your opponent's Digimon. That Digimon doesn't unsuspend during your opponent's next unsuspend phase.")
         effect2.is_when_digivolving = True
@@ -101,6 +104,7 @@ class BT13_059(CardScript):
         # Timing: EffectTiming.OnTappedAnyone
         # [All Turns][Once Per Turn] When an opponent's Digimon becomes suspended, you may activate 1 of the effects below. - Suspend 1 of your opponent's Digimon. - Unsuspend 1 of your Digimon.
         effect3 = ICardEffect()
+        effect3.set_timing(EffectTiming.OnTappedAnyone)
         effect3.set_effect_name("BT13-059 Choose 1 effect")
         effect3.set_effect_description("[All Turns][Once Per Turn] When an opponent's Digimon becomes suspended, you may activate 1 of the effects below. - Suspend 1 of your opponent's Digimon. - Unsuspend 1 of your Digimon.")
         effect3.is_optional = True

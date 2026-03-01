@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -29,6 +30,7 @@ class BT11_031(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [When Digivolving] Unsuspend this Digimon. Then, if a card with [Blue Flare] or [Xros Heart] in its traits is in this Digimon's digivolution cards and your opponent has 2 or more Digimon in play, gain 2 memory.
         effect1 = ICardEffect()
+        effect1.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect1.set_effect_name("BT11-031 Unsuspend this Digimon and gain Memory +2")
         effect1.set_effect_description("[When Digivolving] Unsuspend this Digimon. Then, if a card with [Blue Flare] or [Xros Heart] in its traits is in this Digimon's digivolution cards and your opponent has 2 or more Digimon in play, gain 2 memory.")
         effect1.is_when_digivolving = True
@@ -62,6 +64,7 @@ class BT11_031(CardScript):
         # Timing: EffectTiming.OnDestroyedAnyone
         # [On Deletion] <Save>. (You may place this card under one of your Tamers.) Then, place 1 blue [Greymon] and 1 blue [MailBirdramon] from your trash under 1 of your Tamers with [General] in its traits.
         effect2 = ICardEffect()
+        effect2.set_timing(EffectTiming.OnDestroyedAnyone)
         effect2.set_effect_name("BT11-031 Save and place cards to digivolution cards from trash")
         effect2.set_effect_description("[On Deletion] <Save>. (You may place this card under one of your Tamers.) Then, place 1 blue [Greymon] and 1 blue [MailBirdramon] from your trash under 1 of your Tamers with [General] in its traits.")
         effect2.is_on_deletion = True

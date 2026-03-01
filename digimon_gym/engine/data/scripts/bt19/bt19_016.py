@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -16,6 +17,7 @@ class BT19_016(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [On Play] By placing 1 [Blue Flare] trait Digimon card from your hand under any of your Tamers, <Draw 1>.
         effect0 = ICardEffect()
+        effect0.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect0.set_effect_name("BT19-016 Place 1 [Blue Flare] card under 1 of your Tamers to <Draw 1>")
         effect0.set_effect_description("[On Play] By placing 1 [Blue Flare] trait Digimon card from your hand under any of your Tamers, <Draw 1>.")
         effect0.is_optional = True
@@ -44,6 +46,7 @@ class BT19_016(CardScript):
         # Timing: EffectTiming.OnDestroyedAnyone
         # [On Deletion] By placing 1 [Blue Flare] trait Digimon card from your hand under any of your Tamers, <Draw 1>.
         effect1 = ICardEffect()
+        effect1.set_timing(EffectTiming.OnDestroyedAnyone)
         effect1.set_effect_name("BT19-016 Place 1 [Blue Flare] card from hand under 1 of your Tamers to <Draw 1>")
         effect1.set_effect_description("[On Deletion] By placing 1 [Blue Flare] trait Digimon card from your hand under any of your Tamers, <Draw 1>.")
         effect1.is_optional = True

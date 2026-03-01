@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -29,6 +30,7 @@ class BT13_012(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [When Digivolving] Search your security stack, and you may play 1 red or yellow Tamer card among it without paying the cost. If you did, <Recovery +1 (Deck)>. (Place the top card of your deck on top of your security stack.) Then, shuffle your security stack.
         effect1 = ICardEffect()
+        effect1.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect1.set_effect_name("BT13-012 Play 1 Tamer from security")
         effect1.set_effect_description("[When Digivolving] Search your security stack, and you may play 1 red or yellow Tamer card among it without paying the cost. If you did, <Recovery +1 (Deck)>. (Place the top card of your deck on top of your security stack.) Then, shuffle your security stack.")
         effect1.is_when_digivolving = True
@@ -73,6 +75,7 @@ class BT13_012(CardScript):
         # Timing: EffectTiming.OnTappedAnyone
         # [Your Turn][Once Per Turn] When one of your red or yellow Tamers becomes suspended, you may delete 1 of your opponent's Digimon with 3000 DP or less.
         effect2 = ICardEffect()
+        effect2.set_timing(EffectTiming.OnTappedAnyone)
         effect2.set_effect_name("BT13-012 Delete 1 Digimon with 3000 DP or less")
         effect2.set_effect_description("[Your Turn][Once Per Turn] When one of your red or yellow Tamers becomes suspended, you may delete 1 of your opponent's Digimon with 3000 DP or less.")
         effect2.is_inherited_effect = True

@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -29,6 +30,7 @@ class BT16_048(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [When Digivolving][Once Per Turn] You may play 1 Digimon card with the [Insectiod] or [Larva] trait from your hand with the play cost reduced by 8.
         effect1 = ICardEffect()
+        effect1.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect1.set_effect_name("BT16-048 Play 1 Digimon from hand")
         effect1.set_effect_description("[When Digivolving][Once Per Turn] You may play 1 Digimon card with the [Insectiod] or [Larva] trait from your hand with the play cost reduced by 8.")
         effect1.is_optional = True
@@ -97,6 +99,7 @@ class BT16_048(CardScript):
         # Timing: EffectTiming.OnEndTurn
         # [End of Your Turn] [Once Per Turn] By suspending 1 of your other Digimon, return 1 of your opponent's Digimon with DP less than or equal to the DP of the Digimon suspended by this effect to the bottom of the deck..
         effect3 = ICardEffect()
+        effect3.set_timing(EffectTiming.OnEndTurn)
         effect3.set_effect_name("BT16-048 Suspend your 1 Digimon to return an opponent's Digimon to the bottom of the deck.")
         effect3.set_effect_description("[End of Your Turn] [Once Per Turn] By suspending 1 of your other Digimon, return 1 of your opponent's Digimon with DP less than or equal to the DP of the Digimon suspended by this effect to the bottom of the deck..")
         effect3.is_optional = True

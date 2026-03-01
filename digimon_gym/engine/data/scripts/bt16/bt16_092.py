@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -16,6 +17,7 @@ class BT16_092(CardScript):
         # Timing: EffectTiming.OptionSkill
         # [Main] You may play 1 [ExVeemon] or [Stingmon] from your hand without paying the cost. Then, 2 of your Digimon may DNA digivolve into a Digimon card in your hand. Until the end of your opponent's turn, the Digimon this effect DNA digivolved can't be deleted in battle and gains <Blocker>.
         effect0 = ICardEffect()
+        effect0.set_timing(EffectTiming.OptionSkill)
         effect0.set_effect_name("BT16-092 Play 1 [ExVeemon] or [Stingmon]")
         effect0.set_effect_description("[Main] You may play 1 [ExVeemon] or [Stingmon] from your hand without paying the cost. Then, 2 of your Digimon may DNA digivolve into a Digimon card in your hand. Until the end of your opponent's turn, the Digimon this effect DNA digivolved can't be deleted in battle and gains <Blocker>.")
         effect0._is_blocker = True
@@ -49,6 +51,7 @@ class BT16_092(CardScript):
         # Timing: EffectTiming.SecuritySkill
         # [Security] You may play 1 [Veemon] or [Wormmon] from your hand or trash without paying the cost. Then, add this card to the hand.
         effect1 = ICardEffect()
+        effect1.set_timing(EffectTiming.SecuritySkill)
         effect1.set_effect_name("BT16-092 Play 1 [Veemon] or [Wormmon]")
         effect1.set_effect_description("[Security] You may play 1 [Veemon] or [Wormmon] from your hand or trash without paying the cost. Then, add this card to the hand.")
         effect1.is_security_effect = True

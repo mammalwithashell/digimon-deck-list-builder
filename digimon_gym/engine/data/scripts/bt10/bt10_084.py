@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -16,6 +17,7 @@ class BT10_084(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [On Play] Play 1 purple or yellow Digimon card with 6000 DP or less from your trash without paying its memory cost. If you have 1 or fewer security cards, you may play 1 level 6 or lower Digimon card with [Angel] or [Fallen Angel] in its traits from your trash without paying its memory cost instead.
         effect0 = ICardEffect()
+        effect0.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect0.set_effect_name("BT10-084 Play Digimons from trash")
         effect0.set_effect_description("[On Play] Play 1 purple or yellow Digimon card with 6000 DP or less from your trash without paying its memory cost. If you have 1 or fewer security cards, you may play 1 level 6 or lower Digimon card with [Angel] or [Fallen Angel] in its traits from your trash without paying its memory cost instead.")
         effect0.is_optional = True
@@ -55,6 +57,7 @@ class BT10_084(CardScript):
         # Timing: EffectTiming.WhenWouldDigivolutionCardDiscarded
         # [Opponent's Turn] When an effect would trash one of your other Digimon's digivolution cards, you may trash this Digimon's digivolution cards instead.
         effect1 = ICardEffect()
+        effect1.set_timing(EffectTiming.WhenWouldDigivolutionCardDiscarded)
         effect1.set_effect_name("BT10-084 Trash digivolution cards instead")
         effect1.set_effect_description("[Opponent's Turn] When an effect would trash one of your other Digimon's digivolution cards, you may trash this Digimon's digivolution cards instead.")
         effect1.is_optional = True

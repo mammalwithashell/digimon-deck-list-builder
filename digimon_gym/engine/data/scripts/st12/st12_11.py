@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -16,6 +17,7 @@ class ST12_11(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [When Digivolving] You may play 1 [Huckmon] or 1 Digimon card with [Sistermon] in its name in your trash without paying its memory cost.
         effect0 = ICardEffect()
+        effect0.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect0.set_effect_name("ST12-11 Play 1 Digimon from trash")
         effect0.set_effect_description("[When Digivolving] You may play 1 [Huckmon] or 1 Digimon card with [Sistermon] in its name in your trash without paying its memory cost.")
         effect0.is_optional = True
@@ -52,6 +54,7 @@ class ST12_11(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [Your Turn][Once Per Turn] When you play another Digimon by an effect, <De-Digivolve 1> up to 2 of your opponent's Digimon. (Trash 1 card from the top of one of your opponent's Digimon. If it has no digivolution cards, or becomes a level 3 Digimon, you can't trash any more cards.)
         effect1 = ICardEffect()
+        effect1.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect1.set_effect_name("ST12-11 De-Digivolve 1 on up to 2 Digimons")
         effect1.set_effect_description("[Your Turn][Once Per Turn] When you play another Digimon by an effect, <De-Digivolve 1> up to 2 of your opponent's Digimon. (Trash 1 card from the top of one of your opponent's Digimon. If it has no digivolution cards, or becomes a level 3 Digimon, you can't trash any more cards.)")
         effect1.set_max_count_per_turn(1)

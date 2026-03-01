@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -46,6 +47,7 @@ class EX8_026(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [On Play] [When Digivolving] <De-Digivolve 1> 1 of your opponent's Digimon. Then, return 1 of your opponent's Digimon with a play cost of 7 or less to the bottom of the deck.
         effect2 = ICardEffect()
+        effect2.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect2.set_effect_name("EX8-026 <De-Digivolve 1>, Return 1 Digimon with 7 cost or less to bottom of deck ")
         effect2.set_effect_description("[On Play] [When Digivolving] <De-Digivolve 1> 1 of your opponent's Digimon. Then, return 1 of your opponent's Digimon with a play cost of 7 or less to the bottom of the deck.")
         effect2.is_on_play = True
@@ -90,6 +92,7 @@ class EX8_026(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [When Digivolving] <De-Digivolve 1> 1 of your opponent's Digimon. Then, return 1 of your opponent's Digimon with a play cost of 7 or less to the bottom of the deck.
         effect3 = ICardEffect()
+        effect3.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect3.set_effect_name("EX8-026 <De-Digivolve 1>, Return 1 Digimon with 7 cost or less to bottom of deck ")
         effect3.set_effect_description("[When Digivolving] <De-Digivolve 1> 1 of your opponent's Digimon. Then, return 1 of your opponent's Digimon with a play cost of 7 or less to the bottom of the deck.")
         effect3.is_when_digivolving = True

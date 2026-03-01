@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -46,6 +47,7 @@ class BT21_090(CardScript):
         # Timing: EffectTiming.OptionSkill
         # [Main] Reveal the top 3 cards of your deck. Add 1 card with [Gammamon] in its text among them to the hand. Return the rest to the bottom of the deck. Then, place this card in the battle area.
         effect1 = ICardEffect()
+        effect1.set_timing(EffectTiming.OptionSkill)
         effect1.set_effect_name("BT21-090 Reveal top 3, add 1 [Gammamon] then place in battle area")
         effect1.set_effect_description("[Main] Reveal the top 3 cards of your deck. Add 1 card with [Gammamon] in its text among them to the hand. Return the rest to the bottom of the deck. Then, place this card in the battle area.")
 
@@ -108,6 +110,7 @@ class BT21_090(CardScript):
         # Timing: EffectTiming.OnAddDigivolutionCards
         # [All Turns] When effects place digivolution cards under your Digimon, <Delay> (After this card is placed, by trashing it the next turn or later, activate the effect below).\r\n・1 of your Digimon may digivolve into a Digimon card with [Gammamon] in its text in the hand without paying the cost.
         effect3 = ICardEffect()
+        effect3.set_timing(EffectTiming.OnAddDigivolutionCards)
         effect3.set_effect_name("BT21-090 Your 1 Digimon digivolves")
         effect3.set_effect_description("[All Turns] When effects place digivolution cards under your Digimon, <Delay> (After this card is placed, by trashing it the next turn or later, activate the effect below).\\r\\n・1 of your Digimon may digivolve into a Digimon card with [Gammamon] in its text in the hand without paying the cost.")
         effect3.is_optional = True
@@ -145,6 +148,7 @@ class BT21_090(CardScript):
         # Timing: EffectTiming.SecuritySkill
         # [Security] You may play 1 card with [Gammamon] in its text and a play cost of 4 or less from your hand or trash without paying the cost. Then, place this card in the battle area.
         effect4 = ICardEffect()
+        effect4.set_timing(EffectTiming.SecuritySkill)
         effect4.set_effect_name("BT21-090 Play a 4 play cost or less card with [Gammamon] in text")
         effect4.set_effect_description("[Security] You may play 1 card with [Gammamon] in its text and a play cost of 4 or less from your hand or trash without paying the cost. Then, place this card in the battle area.")
         effect4.is_security_effect = True

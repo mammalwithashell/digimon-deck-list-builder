@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -30,6 +31,7 @@ class BT22_074(CardScript):
         # Timing: EffectTiming.OnDeclaration
         # [Main] [Once Per Turn] By paying 3 cost, delete 1 of your opponent's level 5 or lower Digimon. If this effect didn't delete, this Digimon gains <Security A. +1> (This Digimon checks 1 additional security card) for the turn. Then, this Digimon may attack.
         effect1 = ICardEffect()
+        effect1.set_timing(EffectTiming.OnDeclaration)
         effect1.set_effect_name("BT22-074 Pay 3, Delete 1 level 5 or lower digimon, if it didnt Sec +1. then it may attack")
         effect1.set_effect_description("[Main] [Once Per Turn] By paying 3 cost, delete 1 of your opponent's level 5 or lower Digimon. If this effect didn't delete, this Digimon gains <Security A. +1> (This Digimon checks 1 additional security card) for the turn. Then, this Digimon may attack.")
         effect1.set_max_count_per_turn(1)
@@ -59,6 +61,7 @@ class BT22_074(CardScript):
         # Timing: EffectTiming.OnDestroyedAnyone
         # [On Deletion] <Draw 2> (Draw 2 cards from your deck) and trash 1 card in your hand.
         effect2 = ICardEffect()
+        effect2.set_timing(EffectTiming.OnDestroyedAnyone)
         effect2.set_effect_name("BT22-074 Draw 2 and trash 1 card from hand")
         effect2.set_effect_description("[On Deletion] <Draw 2> (Draw 2 cards from your deck) and trash 1 card in your hand.")
         effect2.is_on_deletion = True
@@ -94,6 +97,7 @@ class BT22_074(CardScript):
         # Timing: EffectTiming.OnDestroyedAnyone
         # [On Deletion] You may play 1 level 4 or lower Digimon card with the [Flame] or [CS] trait from your trash without paying the cost.
         effect3 = ICardEffect()
+        effect3.set_timing(EffectTiming.OnDestroyedAnyone)
         effect3.set_effect_name("BT22-074 Play 1 level 4 or lower [Flame]/[CS] Digimon")
         effect3.set_effect_description("[On Deletion] You may play 1 level 4 or lower Digimon card with the [Flame] or [CS] trait from your trash without paying the cost.")
         effect3.is_inherited_effect = True

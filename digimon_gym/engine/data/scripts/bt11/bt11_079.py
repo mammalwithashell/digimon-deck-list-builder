@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -29,6 +30,7 @@ class BT11_079(CardScript):
         # Timing: EffectTiming.OnDestroyedAnyone
         # [On Deletion] Trigger <Draw 1>. (Draw 1 card from your deck.) Then trash 1 card from your hand.
         effect1 = ICardEffect()
+        effect1.set_timing(EffectTiming.OnDestroyedAnyone)
         effect1.set_effect_name("BT11-079 Draw 1 and trash 1 card from hand")
         effect1.set_effect_description("[On Deletion] Trigger <Draw 1>. (Draw 1 card from your deck.) Then trash 1 card from your hand.")
         effect1.is_on_deletion = True

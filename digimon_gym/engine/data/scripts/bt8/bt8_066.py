@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -16,6 +17,7 @@ class BT8_066(CardScript):
         # Timing: EffectTiming.OnAddDigivolutionCards
         # [Your Turn] When one of your effects places a digivolution card under this Digimon, you may digivolve this Digimon into a Digimon card in your hand with [X-Antibody] in its traits by paying its digivolution cost. When this Digimon would digivolve with this effect, reduce the digivolution cost by 1.
         effect0 = ICardEffect()
+        effect0.set_timing(EffectTiming.OnAddDigivolutionCards)
         effect0.set_effect_name("BT8-066 This Digimon digivolves")
         effect0.set_effect_description("[Your Turn] When one of your effects places a digivolution card under this Digimon, you may digivolve this Digimon into a Digimon card in your hand with [X-Antibody] in its traits by paying its digivolution cost. When this Digimon would digivolve with this effect, reduce the digivolution cost by 1.")
         effect0.is_optional = True

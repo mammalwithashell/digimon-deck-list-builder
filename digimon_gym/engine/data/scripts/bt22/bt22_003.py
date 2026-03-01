@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -16,6 +17,7 @@ class BT22_003(CardScript):
         # Timing: EffectTiming.WhenLinked
         # [Your Turn] [Once Per Turn] When this Digimon gets linked, 1 of your opponent's Digimon gets -2000 DP for the turn.
         effect0 = ICardEffect()
+        effect0.set_timing(EffectTiming.WhenLinked)
         effect0.set_effect_name("BT22-003 -2000 DP")
         effect0.set_effect_description("[Your Turn] [Once Per Turn] When this Digimon gets linked, 1 of your opponent's Digimon gets -2000 DP for the turn.")
         effect0.is_inherited_effect = True

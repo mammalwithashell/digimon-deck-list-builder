@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -16,6 +17,7 @@ class EX10_009(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [When Digivolving] Delete all of your opponent's lowest DP Digimon. If this effect didn't delete, trash their deck's top 5 cards.
         effect0 = ICardEffect()
+        effect0.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect0.set_effect_name("EX10-009 Delete all lowest DP Digimon. if this didnt happen, trash their top 5 deck cards")
         effect0.set_effect_description("[When Digivolving] Delete all of your opponent's lowest DP Digimon. If this effect didn't delete, trash their deck's top 5 cards.")
         effect0.is_when_digivolving = True
@@ -48,6 +50,7 @@ class EX10_009(CardScript):
         # Timing: EffectTiming.OnDestroyedAnyone
         # [On Deletion] Delete all of your opponent's lowest DP Digimon. If this effect didn't delete, trash their deck's top 5 cards.
         effect1 = ICardEffect()
+        effect1.set_timing(EffectTiming.OnDestroyedAnyone)
         effect1.set_effect_name("EX10-009 Delete all lowest DP Digimon. if this didnt happen, trash their top 5 deck cards")
         effect1.set_effect_description("[On Deletion] Delete all of your opponent's lowest DP Digimon. If this effect didn't delete, trash their deck's top 5 cards.")
         effect1.is_on_deletion = True
@@ -78,6 +81,7 @@ class EX10_009(CardScript):
         # Timing: EffectTiming.OnAllyAttack
         # [When Attacking] If your opponent has 10 or more cards in their trash, you may play 1 red or purple 5000 DP or lower Digimon card from your trash to your empty breeding area without paying the cost.
         effect2 = ICardEffect()
+        effect2.set_timing(EffectTiming.OnAllyAttack)
         effect2.set_effect_name("EX10-009 Play 1 red/purple digimon with 5k DP to breeding area")
         effect2.set_effect_description("[When Attacking] If your opponent has 10 or more cards in their trash, you may play 1 red or purple 5000 DP or lower Digimon card from your trash to your empty breeding area without paying the cost.")
         effect2.is_optional = True
@@ -114,6 +118,7 @@ class EX10_009(CardScript):
         # Timing: EffectTiming.OnEndTurn
         # [End of Your Turn] This Digimon may attack.
         effect3 = ICardEffect()
+        effect3.set_timing(EffectTiming.OnEndTurn)
         effect3.set_effect_name("EX10-009 Attack with this digimon")
         effect3.set_effect_description("[End of Your Turn] This Digimon may attack.")
         effect3.is_optional = True

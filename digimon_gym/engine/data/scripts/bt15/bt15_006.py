@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -16,6 +17,7 @@ class BT15_006(CardScript):
         # Timing: EffectTiming.OnDestroyedAnyone
         # [On Deletion] By trashing 1 level 5 or higher Digimon card in your hand, <Draw 2>.
         effect0 = ICardEffect()
+        effect0.set_timing(EffectTiming.OnDestroyedAnyone)
         effect0.set_effect_name("BT15-006 Trash 1 card from hand to Draw 2")
         effect0.set_effect_description("[On Deletion] By trashing 1 level 5 or higher Digimon card in your hand, <Draw 2>.")
         effect0.is_inherited_effect = True

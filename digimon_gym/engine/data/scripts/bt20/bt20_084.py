@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -33,6 +34,7 @@ class BT20_084(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [Trash] [All Turns] When any of your Digimon are played, 1 of your [Sistermon Ciel] may digivolve into this card without paying the cost.
         effect1 = ICardEffect()
+        effect1.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect1.set_effect_name("BT20-084 Digivolve 1 [Sistermon Ciel (Awakened)] from trash")
         effect1.set_effect_description("[Trash] [All Turns] When any of your Digimon are played, 1 of your [Sistermon Ciel] may digivolve into this card without paying the cost.")
         effect1.is_optional = True
@@ -64,6 +66,7 @@ class BT20_084(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [On Play] 1 of your opponent's Digimon or Tamers can't suspend until the end of their turn.
         effect2 = ICardEffect()
+        effect2.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect2.set_effect_name("BT20-084 1 Digimon/Tamer can't suspend")
         effect2.set_effect_description("[On Play] 1 of your opponent's Digimon or Tamers can't suspend until the end of their turn.")
         effect2.is_on_play = True
@@ -95,6 +98,7 @@ class BT20_084(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [When Digivolving] 1 of your opponent's Digimon or Tamers can't suspend until the end of their turn.
         effect3 = ICardEffect()
+        effect3.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect3.set_effect_name("BT20-084 1 Digimon/Tamer can't suspend")
         effect3.set_effect_description("[When Digivolving] 1 of your opponent's Digimon or Tamers can't suspend until the end of their turn.")
         effect3.is_when_digivolving = True
@@ -126,6 +130,7 @@ class BT20_084(CardScript):
         # Timing: EffectTiming.OnEndTurn
         # [End of All Turns] Place this Digimon's top stacked card as the top security card.
         effect4 = ICardEffect()
+        effect4.set_timing(EffectTiming.OnEndTurn)
         effect4.set_effect_name("BT20-084 Place top card as top security")
         effect4.set_effect_description("[End of All Turns] Place this Digimon's top stacked card as the top security card.")
 

@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -16,6 +17,7 @@ class BT22_007(CardScript):
         # Timing: EffectTiming.OnStartMainPhase
         # [Breeding] [Start of Your Main Phase] Look at your Digi-Egg deck's top card. Among them, you may place [Mother Eater]s as this Digimon's top digivolution cards. Then, if this Digimon has 10 or more digivolution cards, you may play 3 [Mother Eater]s from its digivolution cards without paying the costs.
         effect0 = ICardEffect()
+        effect0.set_timing(EffectTiming.OnStartMainPhase)
         effect0.set_effect_name("BT22-007 Add [Mother Eater]s to top of stack. if 10 or more in digivolution source, play 3 [Mother Eater]s")
         effect0.set_effect_description("[Breeding] [Start of Your Main Phase] Look at your Digi-Egg deck's top card. Among them, you may place [Mother Eater]s as this Digimon's top digivolution cards. Then, if this Digimon has 10 or more digivolution cards, you may play 3 [Mother Eater]s from its digivolution cards without paying the costs.")
 
@@ -48,6 +50,7 @@ class BT22_007(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [On Play] Delete 1 of your opponent's Digimon.
         effect1 = ICardEffect()
+        effect1.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect1.set_effect_name("BT22-007 Delete 1 Digimon")
         effect1.set_effect_description("[On Play] Delete 1 of your opponent's Digimon.")
         effect1.is_on_play = True
@@ -83,6 +86,7 @@ class BT22_007(CardScript):
         # Timing: EffectTiming.WhenRemoveField
         # [Breeding] [All Turns] [Once Per Turn] When any of your [Eater] trait Digimon would leave the battle area other than by your effects, you may place them as this Digimon's bottom digivolution cards.
         effect2 = ICardEffect()
+        effect2.set_timing(EffectTiming.WhenRemoveField)
         effect2.set_effect_name("BT22-007 Place card as source")
         effect2.set_effect_description("[Breeding] [All Turns] [Once Per Turn] When any of your [Eater] trait Digimon would leave the battle area other than by your effects, you may place them as this Digimon's bottom digivolution cards.")
         effect2.is_inherited_effect = True
@@ -100,6 +104,7 @@ class BT22_007(CardScript):
         # Timing: EffectTiming.OnRemovedField
         # Effect
         effect3 = ICardEffect()
+        effect3.set_timing(EffectTiming.OnRemovedField)
         effect3.set_effect_name("BT22-007 Effect")
         effect3.set_effect_description("Effect")
         effect3.is_optional = True

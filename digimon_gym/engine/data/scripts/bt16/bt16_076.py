@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -29,6 +30,7 @@ class BT16_076(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [When Digivolving] By trashing 2 cards in your hand, delete 1 of your opponent's Digimon with 6000 DP or less. If this effect didn't delete, you may play 1 level 4 or lower card with the [SoC] trait from your trash without paying the cost.
         effect1 = ICardEffect()
+        effect1.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect1.set_effect_name("BT16-076 Delete an opponent's Digimon with 6000 DP or less, if the effect didn't delete, play a level 4 or lower [SoC] card.")
         effect1.set_effect_description("[When Digivolving] By trashing 2 cards in your hand, delete 1 of your opponent's Digimon with 6000 DP or less. If this effect didn't delete, you may play 1 level 4 or lower card with the [SoC] trait from your trash without paying the cost.")
         effect1.is_optional = True
@@ -83,6 +85,7 @@ class BT16_076(CardScript):
         # Timing: EffectTiming.OnDestroyedAnyone
         # [All Turns] When one of your other Digimon with the [SoC] trait is deleted, this Digimon with a Tamer with the [SoC] trait in its digivolution cards may digivolve into [Fenriloogamon] from your trash without paying the cost.
         effect2 = ICardEffect()
+        effect2.set_timing(EffectTiming.OnDestroyedAnyone)
         effect2.set_effect_name("BT16-076 Digivolve into [Fenriloogamon] from your trash.")
         effect2.set_effect_description("[All Turns] When one of your other Digimon with the [SoC] trait is deleted, this Digimon with a Tamer with the [SoC] trait in its digivolution cards may digivolve into [Fenriloogamon] from your trash without paying the cost.")
         effect2.is_optional = True
@@ -120,6 +123,7 @@ class BT16_076(CardScript):
         # Timing: EffectTiming.OnEndAttack
         # [End of Attack] [Once Per Turn] If your opponent has 1 or more memory, unsuspend this Digimon.
         effect3 = ICardEffect()
+        effect3.set_timing(EffectTiming.OnEndAttack)
         effect3.set_effect_name("BT16-076 Unsuspend this Digimon.")
         effect3.set_effect_description("[End of Attack] [Once Per Turn] If your opponent has 1 or more memory, unsuspend this Digimon.")
         effect3.is_inherited_effect = True

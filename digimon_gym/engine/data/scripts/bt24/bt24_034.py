@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -47,6 +48,7 @@ class BT24_034(CardScript):
         # Timing: EffectTiming.OnMove
         # Play Card, Add To Hand, Destroy Security
         effect2 = ICardEffect()
+        effect2.set_timing(EffectTiming.OnMove)
         effect2.set_effect_name("BT24-034 Play Card, Add To Hand, Destroy Security")
         effect2.set_effect_description("Play Card, Add To Hand, Destroy Security")
 
@@ -87,6 +89,7 @@ class BT24_034(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # Play Card, Add To Hand, Destroy Security
         effect3 = ICardEffect()
+        effect3.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect3.set_effect_name("BT24-034 Play Card, Add To Hand, Destroy Security")
         effect3.set_effect_description("Play Card, Add To Hand, Destroy Security")
         effect3.is_on_play = True
@@ -129,6 +132,7 @@ class BT24_034(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # Play Card, Add To Hand, Destroy Security
         effect4 = ICardEffect()
+        effect4.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect4.set_effect_name("BT24-034 Play Card, Add To Hand, Destroy Security")
         effect4.set_effect_description("Play Card, Add To Hand, Destroy Security")
         effect4.is_when_digivolving = True

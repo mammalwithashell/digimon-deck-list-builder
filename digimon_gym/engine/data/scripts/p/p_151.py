@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -39,6 +40,7 @@ class P_151(CardScript):
         # Timing: EffectTiming.OptionSkill
         # [Main] Reveal the top 3 cards of your deck. Add 1 card with the [LIBERATOR] trait among them to the hand. Return the rest to the bottom of the deck.Then, you may play 1 card with the [LIBERATOR] trait and a play cost of 3 or less from your hand without paying the cost.
         effect1 = ICardEffect()
+        effect1.set_timing(EffectTiming.OptionSkill)
         effect1.set_effect_name("P-151 Reveal top 3, Add 1 with [LIBERATOR] trait. Then Play 1 with [LIBERATOR] trait")
         effect1.set_effect_description("[Main] Reveal the top 3 cards of your deck. Add 1 card with the [LIBERATOR] trait among them to the hand. Return the rest to the bottom of the deck.Then, you may play 1 card with the [LIBERATOR] trait and a play cost of 3 or less from your hand without paying the cost.")
 

@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -16,6 +17,7 @@ class BT13_099(CardScript):
         # Timing: EffectTiming.OnTappedAnyone
         # [All Turns][Once Per Turn] When one of your yellow Digimon becomes suspended, 1 of your opponent's Digimon gets -1000 DP until the end of your opponent's turn.
         effect0 = ICardEffect()
+        effect0.set_timing(EffectTiming.OnTappedAnyone)
         effect0.set_effect_name("BT13-099 DP -1000")
         effect0.set_effect_description("[All Turns][Once Per Turn] When one of your yellow Digimon becomes suspended, 1 of your opponent's Digimon gets -1000 DP until the end of your opponent's turn.")
         effect0.set_max_count_per_turn(1)
@@ -49,6 +51,7 @@ class BT13_099(CardScript):
         # Timing: EffectTiming.OnEndTurn
         # [End of Your Turn][Once Per Turn] If there're 6 or fewer total cards in both players' security stacks, until the end of your opponent's turn, this Tamer is also treated as a 3000 DP Digimon, can't digivolve, and gains <Blocker>.
         effect1 = ICardEffect()
+        effect1.set_timing(EffectTiming.OnEndTurn)
         effect1.set_effect_name("BT13-099 This Tamer becomes Digimon")
         effect1.set_effect_description("[End of Your Turn][Once Per Turn] If there're 6 or fewer total cards in both players' security stacks, until the end of your opponent's turn, this Tamer is also treated as a 3000 DP Digimon, can't digivolve, and gains <Blocker>.")
         effect1.set_max_count_per_turn(1)

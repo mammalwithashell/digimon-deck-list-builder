@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -42,6 +43,7 @@ class BT16_010(CardScript):
         # Timing: EffectTiming.OnEndTurn
         # [End of Opponent's Turn] By deleting this Digimon, delete one of your opponent's Digimon with the lowest DP.
         effect2 = ICardEffect()
+        effect2.set_timing(EffectTiming.OnEndTurn)
         effect2.set_effect_name("BT16-010 Delete 1 Digimon")
         effect2.set_effect_description("[End of Opponent's Turn] By deleting this Digimon, delete one of your opponent's Digimon with the lowest DP.")
         effect2.is_optional = True
@@ -84,6 +86,7 @@ class BT16_010(CardScript):
         # Timing: EffectTiming.OnDestroyedAnyone
         # [On Deletion] You may play 1 [Loogamon] or [Eiji Nagasumi] from your trash without paying the cost
         effect3 = ICardEffect()
+        effect3.set_timing(EffectTiming.OnDestroyedAnyone)
         effect3.set_effect_name("BT16-010 Play Digimon or Tamer.")
         effect3.set_effect_description("[On Deletion] You may play 1 [Loogamon] or [Eiji Nagasumi] from your trash without paying the cost")
         effect3.is_optional = True

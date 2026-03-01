@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -76,6 +77,7 @@ class BT21_026(CardScript):
         # Timing: EffectTiming.OnDestroyedAnyone
         # [All Turns] [Once Per Turn] When any of your opponent's Digimon are deleted, this Digimon may unsuspend.
         effect4 = ICardEffect()
+        effect4.set_timing(EffectTiming.OnDestroyedAnyone)
         effect4.set_effect_name("BT21-026 Unsuspend")
         effect4.set_effect_description("[All Turns] [Once Per Turn] When any of your opponent's Digimon are deleted, this Digimon may unsuspend.")
         effect4.is_optional = True

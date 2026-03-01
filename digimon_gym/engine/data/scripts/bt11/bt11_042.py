@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -16,6 +17,7 @@ class BT11_042(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [When Digivolving] You may search your security stack, reveal 1 card with [Angel], [Archangel], or [Fallen Angel] in its traits from it, and add it to your hand. If you added a card, <Recovery +1 (Deck)>. Then, shuffle your security stack.
         effect0 = ICardEffect()
+        effect0.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect0.set_effect_name("BT11-042 Add 1 card from security to hand")
         effect0.set_effect_description("[When Digivolving] You may search your security stack, reveal 1 card with [Angel], [Archangel], or [Fallen Angel] in its traits from it, and add it to your hand. If you added a card, <Recovery +1 (Deck)>. Then, shuffle your security stack.")
         effect0.is_optional = True
@@ -55,6 +57,7 @@ class BT11_042(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [Your Turn][Once Per Turn] When you play [LadyDevimon] or [Mirei Mikagura], gain 1 memory.
         effect1 = ICardEffect()
+        effect1.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect1.set_effect_name("BT11-042 Memory +1")
         effect1.set_effect_description("[Your Turn][Once Per Turn] When you play [LadyDevimon] or [Mirei Mikagura], gain 1 memory.")
         effect1.set_max_count_per_turn(1)

@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -16,6 +17,7 @@ class P_023(CardScript):
         # Timing: EffectTiming.OptionSkill
         # [Main] If you have [T.K. Takaishi] in play, place 1 of your [Patamon] at the bottom of your security stack face down. Trash that Digimon's digivolution cards.
         effect0 = ICardEffect()
+        effect0.set_timing(EffectTiming.OptionSkill)
         effect0.set_effect_name("P-023 Put To Security")
         effect0.set_effect_description("[Main] If you have [T.K. Takaishi] in play, place 1 of your [Patamon] at the bottom of your security stack face down. Trash that Digimon's digivolution cards.")
 
@@ -48,6 +50,7 @@ class P_023(CardScript):
         # Timing: EffectTiming.SecuritySkill
         # [Security] Add this card to its owner's hand.
         effect1 = ICardEffect()
+        effect1.set_timing(EffectTiming.SecuritySkill)
         effect1.set_effect_name("P-023 Add To Hand")
         effect1.set_effect_description("[Security] Add this card to its owner's hand.")
         effect1.is_security_effect = True

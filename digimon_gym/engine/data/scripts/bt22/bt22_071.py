@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -30,6 +31,7 @@ class BT22_071(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [When Digivolving] If you have 1 or fewer Tamers, you may play 1 [Jimmy KEN] from your hand without paying the cost.
         effect1 = ICardEffect()
+        effect1.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect1.set_effect_name("BT22-071 Play 1 [Jimmy KEN] Tamer")
         effect1.set_effect_description("[When Digivolving] If you have 1 or fewer Tamers, you may play 1 [Jimmy KEN] from your hand without paying the cost.")
         effect1.is_optional = True
@@ -68,6 +70,7 @@ class BT22_071(CardScript):
         # Timing: EffectTiming.OnDestroyedAnyone
         # [On Deletion] You may return 1 Digimon card with the [Flame] or [CS] trait from your trash to the hand.
         effect2 = ICardEffect()
+        effect2.set_timing(EffectTiming.OnDestroyedAnyone)
         effect2.set_effect_name("BT22-071 Return 1 [Flame]/[CS] digimon from trash to hand")
         effect2.set_effect_description("[On Deletion] You may return 1 Digimon card with the [Flame] or [CS] trait from your trash to the hand.")
         effect2.is_inherited_effect = True

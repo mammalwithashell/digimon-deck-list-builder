@@ -19219,8 +19219,98 @@
       "module_name": "p_232",
       "promoted_at": "2026-02-28T06:55:21.314845+00:00",
       "set_id": "p"
+    },
+    "BT18-087": {
+      "card_id": "BT18-087",
+      "frozen_hash": "f7a8bc4f207ce8118733aa0376e3b5ebdf1218fe277d6c3fc36e3a5af75687ef",
+      "frozen_relpath": "bt18/bt18_087.py",
+      "generated_hash": "f7a8bc4f207ce8118733aa0376e3b5ebdf1218fe277d6c3fc36e3a5af75687ef",
+      "generated_relpath": "generated/bt18/bt18_087.py",
+      "module_name": "bt18_087",
+      "promoted_at": "2026-02-28T21:16:21.899863+00:00",
+      "set_id": "bt18"
+    },
+    "LM-027": {
+      "card_id": "LM-027",
+      "frozen_hash": "34f2f40e1d623ce71c59a01bbc204930172f76643e9e93eb7c64b1c23089711d",
+      "frozen_relpath": "lm/lm_027.py",
+      "generated_hash": "34f2f40e1d623ce71c59a01bbc204930172f76643e9e93eb7c64b1c23089711d",
+      "generated_relpath": "generated/lm/lm_027.py",
+      "module_name": "lm_027",
+      "promoted_at": "2026-02-28T21:16:21.899863+00:00",
+      "set_id": "lm"
+    },
+    "BT1-090": {
+      "card_id": "BT1-090",
+      "frozen_hash": "136b74a0382d0633c7ec07e3465aa3c8c6f12b51c605c7699ab97d9538679eb0",
+      "frozen_relpath": "bt1/bt1_090.py",
+      "generated_hash": "136b74a0382d0633c7ec07e3465aa3c8c6f12b51c605c7699ab97d9538679eb0",
+      "generated_relpath": "bt1/bt1_090.py",
+      "module_name": "bt1_090",
+      "promoted_at": "2026-03-01T06:18:55.087921+00:00",
+      "set_id": "bt1"
+    },
+    "BT3-103": {
+      "card_id": "BT3-103",
+      "frozen_hash": "6564f4044d3efb9da7234deddae9aa42924820e0cd92d71dd9f4fbbc14aaa377",
+      "frozen_relpath": "bt3/bt3_103.py",
+      "generated_hash": "6564f4044d3efb9da7234deddae9aa42924820e0cd92d71dd9f4fbbc14aaa377",
+      "generated_relpath": "bt3/bt3_103.py",
+      "module_name": "bt3_103",
+      "promoted_at": "2026-03-01T06:18:55.087921+00:00",
+      "set_id": "bt3"
+    },
+    "BT4-104": {
+      "card_id": "BT4-104",
+      "frozen_hash": "8d25b50ad7761ff801107162db3d3e27d854d22eba344662348370364ddc2668",
+      "frozen_relpath": "bt4/bt4_104.py",
+      "generated_hash": "8d25b50ad7761ff801107162db3d3e27d854d22eba344662348370364ddc2668",
+      "generated_relpath": "bt4/bt4_104.py",
+      "module_name": "bt4_104",
+      "promoted_at": "2026-03-01T06:18:55.087921+00:00",
+      "set_id": "bt4"
+    },
+    "BT5-008": {
+      "card_id": "BT5-008",
+      "frozen_hash": "b1349173dfadb6e409651fa93cd266184f07eb259e6b9573adfa5dd2ce094ece",
+      "frozen_relpath": "bt5/bt5_008.py",
+      "generated_hash": "b1349173dfadb6e409651fa93cd266184f07eb259e6b9573adfa5dd2ce094ece",
+      "generated_relpath": "bt5/bt5_008.py",
+      "module_name": "bt5_008",
+      "promoted_at": "2026-03-01T06:18:55.087921+00:00",
+      "set_id": "bt5"
+    },
+    "EX1-068": {
+      "card_id": "EX1-068",
+      "frozen_hash": "1e080be0544612ad6392c1c10ed942cb2f2fa974b4a419e00096d16a4391d969",
+      "frozen_relpath": "ex1/ex1_068.py",
+      "generated_hash": "1e080be0544612ad6392c1c10ed942cb2f2fa974b4a419e00096d16a4391d969",
+      "generated_relpath": "ex1/ex1_068.py",
+      "module_name": "ex1_068",
+      "promoted_at": "2026-03-01T06:18:55.087921+00:00",
+      "set_id": "ex1"
+    },
+    "EX1-071": {
+      "card_id": "EX1-071",
+      "frozen_hash": "c88d5df351d1ae8270bfd32a86a69a781516b28b0229faaabcfb19143538fac2",
+      "frozen_relpath": "ex1/ex1_071.py",
+      "generated_hash": "c88d5df351d1ae8270bfd32a86a69a781516b28b0229faaabcfb19143538fac2",
+      "generated_relpath": "ex1/ex1_071.py",
+      "module_name": "ex1_071",
+      "promoted_at": "2026-03-01T06:18:55.087921+00:00",
+      "set_id": "ex1"
+    },
+    "ST9-05": {
+      "card_id": "ST9-05",
+      "frozen_hash": "0dd37039a854ca295490ff875b577394bf94edb6e54957e599b98a74046c2990",
+      "frozen_relpath": "st9/st9_05.py",
+      "generated_hash": "0dd37039a854ca295490ff875b577394bf94edb6e54957e599b98a74046c2990",
+      "generated_relpath": "st9/st9_05.py",
+      "module_name": "st9_05",
+      "promoted_at": "2026-03-01T06:18:55.087921+00:00",
+      "set_id": "st9"
     }
   },
-  "updated_at": "2026-02-28T06:55:21.314845+00:00",
+  "updated_at": "2026-02-28T21:16:21.899863+00:00",
   "version": 1
 }

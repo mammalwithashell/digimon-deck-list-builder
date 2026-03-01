@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -28,6 +29,7 @@ class BT13_019(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [On Play] Without paying the cost, you may play 1 Digimon card with [Sistermon] in its name from your trash or 1 Digimon card with the [Royal Knight] trait from the digivolution cards of your Digimon in the breeding area. This effect can't play [Omnimon] or [Gankoomon].
         effect1 = ICardEffect()
+        effect1.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect1.set_effect_name("BT13-019 Play 1 Digimon from trash or digivolution cards")
         effect1.set_effect_description("[On Play] Without paying the cost, you may play 1 Digimon card with [Sistermon] in its name from your trash or 1 Digimon card with the [Royal Knight] trait from the digivolution cards of your Digimon in the breeding area. This effect can't play [Omnimon] or [Gankoomon].")
         effect1.is_optional = True
@@ -64,6 +66,7 @@ class BT13_019(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [When Digivolving] Without paying the cost, you may play 1 Digimon card with [Sistermon] in its name from your trash or 1 Digimon card with the [Royal Knight] trait from the digivolution cards of your Digimon in the breeding area. This effect can't play [Omnimon] or [Gankoomon].
         effect2 = ICardEffect()
+        effect2.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect2.set_effect_name("BT13-019 Play 1 Digimon from trash or digivolution cards")
         effect2.set_effect_description("[When Digivolving] Without paying the cost, you may play 1 Digimon card with [Sistermon] in its name from your trash or 1 Digimon card with the [Royal Knight] trait from the digivolution cards of your Digimon in the breeding area. This effect can't play [Omnimon] or [Gankoomon].")
         effect2.is_optional = True

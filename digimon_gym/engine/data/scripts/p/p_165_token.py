@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -16,6 +17,7 @@ class P_165_token(CardScript):
         # Timing: EffectTiming.OnDestroyedAnyone
         # [On Deletion] 1 of your opponent's Digimon gets -3000 DP for the turn.
         effect0 = ICardEffect()
+        effect0.set_timing(EffectTiming.OnDestroyedAnyone)
         effect0.set_effect_name("P-165-token DP -3000")
         effect0.set_effect_description("[On Deletion] 1 of your opponent's Digimon gets -3000 DP for the turn.")
         effect0.is_on_deletion = True
@@ -47,6 +49,7 @@ class P_165_token(CardScript):
         # Timing: EffectTiming.OnEndTurn
         # [End of Opponent's Turn] Delete this Digimon.
         effect1 = ICardEffect()
+        effect1.set_timing(EffectTiming.OnEndTurn)
         effect1.set_effect_name("P-165-token Delete this Digimon.")
         effect1.set_effect_description("[End of Opponent's Turn] Delete this Digimon.")
 

@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -28,6 +29,7 @@ class BT24_012(CardScript):
         # Timing: EffectTiming.WhenRemoveField
         # [All Turns] When any of your other Digimon with the [Reptile] or [Dragonkin] trait would leave the battle area by your opponent's effects, by returning this Digimon to the hand, they don't leave.
         effect1 = ICardEffect()
+        effect1.set_timing(EffectTiming.WhenRemoveField)
         effect1.set_effect_name("BT24-012 By bouncing to hand, others don't leave")
         effect1.set_effect_description("[All Turns] When any of your other Digimon with the [Reptile] or [Dragonkin] trait would leave the battle area by your opponent's effects, by returning this Digimon to the hand, they don't leave.")
         effect1.is_optional = True
@@ -39,11 +41,26 @@ class BT24_012(CardScript):
             return True
 
         effect1.set_can_use_condition(condition1)
+
+        def process1(ctx: Dict[str, Any]):
+            """Action: Return Dimetromon to hand to prevent ally from leaving"""
+            player = ctx.get('player')
+            perm = ctx.get('permanent')
+            game = ctx.get('game')
+            if perm and player:
+                # Return Dimetromon to hand
+                if perm in player.battle_area:
+                    for card_source in perm.card_sources:
+                        player.hand_cards.append(card_source)
+                    player.battle_area.remove(perm)
+
+        effect1.set_on_process_callback(process1)
         effects.append(effect1)
 
         # Timing: EffectTiming.OnLoseSecurity
         # Gain 1 memory
         effect2 = ICardEffect()
+        effect2.set_timing(EffectTiming.OnLoseSecurity)
         effect2.set_effect_name("BT24-012 Gain 1 memory")
         effect2.set_effect_description("Gain 1 memory")
         effect2.is_inherited_effect = True

@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -16,6 +17,7 @@ class BT15_084(CardScript):
         # Timing: EffectTiming.OnDiscardSecurity
         # When an effect trashes this card from the security stack, 1 of your opponent's Digimon gains [Security A -1] until the end of your opponent's turn.
         effect0 = ICardEffect()
+        effect0.set_timing(EffectTiming.OnDiscardSecurity)
         effect0.set_effect_name("BT15-084 Opponent's 1 Digimon gains Security Attack -1")
         effect0.set_effect_description("When an effect trashes this card from the security stack, 1 of your opponent's Digimon gains [Security A -1] until the end of your opponent's turn.")
 
@@ -37,20 +39,33 @@ class BT15_084(CardScript):
         effects.append(effect0)
 
         # Factory effect: set_memory_3
-        # Set memory to 3
-        effect1 = ICardEffect()
-        effect1.set_effect_name("BT15-084 Set memory to 3")
-        effect1.set_effect_description("Set memory to 3")
         # [Start of Your Turn] Set memory to 3 if <= 2
+        effect1 = ICardEffect()
+        effect1.set_timing(EffectTiming.OnStartMainPhase)
+        effect1.set_effect_name("BT15-084 Set memory to 3")
+        effect1.set_effect_description("[Start of Your Turn] If your memory is at 2 or less, it becomes 3.")
 
         def condition1(context: Dict[str, Any]) -> bool:
+            if card and card.permanent_of_this_card() is None:
+                return False
+            if not (card and card.owner and card.owner.is_my_turn):
+                return False
             return True
         effect1.set_can_use_condition(condition1)
+
+        def process1(ctx: Dict[str, Any]):
+            """Action: Set memory to 3 if <= 2"""
+            player = ctx.get('player')
+            game = ctx.get('game')
+            if player and game and game.memory <= 2:
+                game.memory = 3
+        effect1.set_on_process_callback(process1)
         effects.append(effect1)
 
         # Timing: EffectTiming.OnLoseSecurity
         # [All Turns] When an effect removes a card from your security stack, by suspending this Tamer, 1 of your opponent's Digimon gains [Security A-1] until the end of your opponent's turn.
         effect2 = ICardEffect()
+        effect2.set_timing(EffectTiming.OnLoseSecurity)
         effect2.set_effect_name("BT15-084 Opponent's 1 Digimon gains Security Attack -1")
         effect2.set_effect_description("[All Turns] When an effect removes a card from your security stack, by suspending this Tamer, 1 of your opponent's Digimon gains [Security A-1] until the end of your opponent's turn.")
         effect2.is_optional = True

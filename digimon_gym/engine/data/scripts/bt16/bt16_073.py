@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -29,6 +30,7 @@ class BT16_073(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [On Play] <Draw 2> and trash 2 cards in your hand.
         effect1 = ICardEffect()
+        effect1.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect1.set_effect_name("BT16-073 Draw 2 and trash 2.")
         effect1.set_effect_description("[On Play] <Draw 2> and trash 2 cards in your hand.")
         effect1.is_on_play = True
@@ -66,6 +68,7 @@ class BT16_073(CardScript):
         # Timing: EffectTiming.OnDestroyedAnyone
         # [On Deletion] From your trash, you may play 1 Tamer card with [Myotismon] in it's text without the same name as one of your Tamers without paying the cost.
         effect2 = ICardEffect()
+        effect2.set_timing(EffectTiming.OnDestroyedAnyone)
         effect2.set_effect_name("BT16-073 Play 1 tamer with [Myotismon] in it's text from your trash.")
         effect2.set_effect_description("[On Deletion] From your trash, you may play 1 Tamer card with [Myotismon] in it's text without the same name as one of your Tamers without paying the cost.")
         effect2.is_optional = True

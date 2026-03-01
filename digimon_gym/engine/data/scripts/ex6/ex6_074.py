@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -16,6 +17,7 @@ class EX6_074(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [Your Turn] When one of your Digimon with the [Holy Beast], [Archangel] or [Fallen Angel] trait is played, by suspending this Tamer, gain 1 memory. Then, 1 of your Digimon may digivolve into [Angewomon] or [LadyDevimon] in your trash with the cost reduced by 1.
         effect0 = ICardEffect()
+        effect0.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect0.set_effect_name("EX6-074 Memory +1, Digivolve from trash for 1 cost reduction")
         effect0.set_effect_description("[Your Turn] When one of your Digimon with the [Holy Beast], [Archangel] or [Fallen Angel] trait is played, by suspending this Tamer, gain 1 memory. Then, 1 of your Digimon may digivolve into [Angewomon] or [LadyDevimon] in your trash with the cost reduced by 1.")
         effect0.is_optional = True
@@ -61,6 +63,7 @@ class EX6_074(CardScript):
         # Timing: EffectTiming.OnEndTurn
         # [End of Your Turn] [Once Per Turn] 2 of your Digimon may DNA digivolve into a Digimon card in your hand.
         effect1 = ICardEffect()
+        effect1.set_timing(EffectTiming.OnEndTurn)
         effect1.set_effect_name("EX6-074 DNA digivolve 2 Digimon")
         effect1.set_effect_description("[End of Your Turn] [Once Per Turn] 2 of your Digimon may DNA digivolve into a Digimon card in your hand.")
         effect1.is_optional = True

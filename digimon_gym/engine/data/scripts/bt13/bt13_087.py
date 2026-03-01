@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -16,6 +17,7 @@ class BT13_087(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [On Play] Reveal the top 4 cards of your deck. Add 2 cards with [Lucemon] in their names or the [Royal Knight] trait among them to the hand. Trash the rest.
         effect0 = ICardEffect()
+        effect0.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect0.set_effect_name("BT13-087 Reveal the top 4 cards of deck")
         effect0.set_effect_description("[On Play] Reveal the top 4 cards of your deck. Add 2 cards with [Lucemon] in their names or the [Royal Knight] trait among them to the hand. Trash the rest.")
         effect0.is_on_play = True
@@ -57,6 +59,7 @@ class BT13_087(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [When Digivolving] Reveal the top 4 cards of your deck. Add 2 cards with [Lucemon] in their names or the [Royal Knight] trait among them to the hand. Trash the rest.
         effect1 = ICardEffect()
+        effect1.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect1.set_effect_name("BT13-087 Reveal the top 4 cards of deck")
         effect1.set_effect_description("[When Digivolving] Reveal the top 4 cards of your deck. Add 2 cards with [Lucemon] in their names or the [Royal Knight] trait among them to the hand. Trash the rest.")
         effect1.is_when_digivolving = True
@@ -98,6 +101,7 @@ class BT13_087(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [Your Turn] When you play another Digimon with [Lucemon] in its name or the [Royal Knight] trait, delete all of your opponent's level 4 or lower Digimon.
         effect2 = ICardEffect()
+        effect2.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect2.set_effect_name("BT13-087 Delete opponent's all level 4 or lower Digimons")
         effect2.set_effect_description("[Your Turn] When you play another Digimon with [Lucemon] in its name or the [Royal Knight] trait, delete all of your opponent's level 4 or lower Digimon.")
         effect2.is_on_play = True

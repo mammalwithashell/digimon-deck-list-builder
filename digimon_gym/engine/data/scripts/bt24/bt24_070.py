@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -16,6 +17,7 @@ class BT24_070(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # Play Card
         effect0 = ICardEffect()
+        effect0.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect0.set_effect_name("BT24-070 Play Card")
         effect0.set_effect_description("Play Card")
         effect0.is_on_play = True
@@ -53,6 +55,7 @@ class BT24_070(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # Play Card
         effect1 = ICardEffect()
+        effect1.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect1.set_effect_name("BT24-070 Play Card")
         effect1.set_effect_description("Play Card")
         effect1.is_when_digivolving = True
@@ -90,6 +93,7 @@ class BT24_070(CardScript):
         # Timing: EffectTiming.OnAllyAttack
         # [When Attacking] [Once Per Turn] Delete 1 of your opponent's level 3 Digimon.
         effect2 = ICardEffect()
+        effect2.set_timing(EffectTiming.OnAllyAttack)
         effect2.set_effect_name("BT24-070 Delete opponents level 3 Digimon")
         effect2.set_effect_description("[When Attacking] [Once Per Turn] Delete 1 of your opponent's level 3 Digimon.")
         effect2.is_inherited_effect = True

@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -33,6 +34,7 @@ class EX10_042(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [On Play] Trash the top 2 cards of your deck. Then, you may place 1 Digimon card with [Gammamon] in its name from your trash as this Digimon's bottom digivolution card.
         effect1 = ICardEffect()
+        effect1.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect1.set_effect_name("EX10-042 Trash 2 cards from deck, then place 1 digimon as bottom source")
         effect1.set_effect_description("[On Play] Trash the top 2 cards of your deck. Then, you may place 1 Digimon card with [Gammamon] in its name from your trash as this Digimon's bottom digivolution card.")
         effect1.is_on_play = True
@@ -64,6 +66,7 @@ class EX10_042(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [When Digivolving] Trash the top 2 cards of your deck. Then, you may place 1 Digimon card with [Gammamon] in its name from your trash as this Digimon's bottom digivolution card.
         effect2 = ICardEffect()
+        effect2.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect2.set_effect_name("EX10-042 Trash 2 cards from deck, then place 1 Digimon as bottom source")
         effect2.set_effect_description("[When Digivolving] Trash the top 2 cards of your deck. Then, you may place 1 Digimon card with [Gammamon] in its name from your trash as this Digimon's bottom digivolution card.")
         effect2.is_when_digivolving = True
@@ -95,6 +98,7 @@ class EX10_042(CardScript):
         # Timing: EffectTiming.OnAddDigivolutionCards
         # [Your Turn] [Once Per Turn] When effects add to this Digimon's digivolution cards, this Digimon may digivolve into [Regulusmon] in the hand or trash with the digivolution cost reduced by 1.
         effect3 = ICardEffect()
+        effect3.set_timing(EffectTiming.OnAddDigivolutionCards)
         effect3.set_effect_name("EX10-042 Digivolve into a [Regulusmon] from hand or trash.")
         effect3.set_effect_description("[Your Turn] [Once Per Turn] When effects add to this Digimon's digivolution cards, this Digimon may digivolve into [Regulusmon] in the hand or trash with the digivolution cost reduced by 1.")
         effect3.is_optional = True

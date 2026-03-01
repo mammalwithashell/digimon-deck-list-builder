@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -28,6 +29,7 @@ class BT19_023(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [On Play] 1 of your Digimon can't be deleted by battle until the end of your opponent's turn.
         effect1 = ICardEffect()
+        effect1.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect1.set_effect_name("BT19-023 Select 1 of your Digimon to gain battle protection")
         effect1.set_effect_description("[On Play] 1 of your Digimon can't be deleted by battle until the end of your opponent's turn.")
         effect1.is_on_play = True
@@ -60,6 +62,7 @@ class BT19_023(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [When Digivolving] 1 of your Digimon can't be deleted by battle until the end of your opponent's turn.
         effect2 = ICardEffect()
+        effect2.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect2.set_effect_name("BT19-023 Select 1 of your Digimon to gain battle protection")
         effect2.set_effect_description("[When Digivolving] 1 of your Digimon can't be deleted by battle until the end of your opponent's turn.")
         effect2.is_when_digivolving = True

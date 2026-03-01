@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -33,6 +34,7 @@ class EX8_027(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [When Digivolving] You may play 1 level 4 or lower Digimon card from this Digimon's digivolution cards without paying the cost.
         effect1 = ICardEffect()
+        effect1.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect1.set_effect_name("EX8-027 Play 1 digivolution card")
         effect1.set_effect_description("[When Digivolving] You may play 1 level 4 or lower Digimon card from this Digimon's digivolution cards without paying the cost.")
         effect1.is_optional = True
@@ -69,6 +71,7 @@ class EX8_027(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [Your Turn] [Once Per Turn] When any of your Digimon are played or digivolve, if any of them have the [DS] trait, 2 of your Digimon may DNA digivolve into a Digimon card with the [DS] trait in the hand. Then, that DNA digivolved Digimon may attack.
         effect2 = ICardEffect()
+        effect2.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect2.set_effect_name("EX8-027 DNA Digivole into [DS] trait, then attack")
         effect2.set_effect_description("[Your Turn] [Once Per Turn] When any of your Digimon are played or digivolve, if any of them have the [DS] trait, 2 of your Digimon may DNA digivolve into a Digimon card with the [DS] trait in the hand. Then, that DNA digivolved Digimon may attack.")
         effect2.is_optional = True

@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -29,6 +30,7 @@ class BT16_016(CardScript):
         # Timing: EffectTiming.OnStartMainPhase
         # [Start of your Main Phase] If it's your turn, 1 of your Digimon may digivolve into a level 4 Digimon card with the [Angel] or [Free] trait from your hand with the digivolution cost reduced by 1.
         effect1 = ICardEffect()
+        effect1.set_timing(EffectTiming.OnStartMainPhase)
         effect1.set_effect_name("BT16-016 1 of your Digimon may Digivolve")
         effect1.set_effect_description("[Start of your Main Phase] If it's your turn, 1 of your Digimon may digivolve into a level 4 Digimon card with the [Angel] or [Free] trait from your hand with the digivolution cost reduced by 1.")
         effect1.is_optional = True
@@ -65,6 +67,7 @@ class BT16_016(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [On Play] If it's your turn, 1 of your Digimon may digivolve into a level 4 Digimon card with the [Angel] or [Free] trait from your hand with the digivolution cost reduced by 1.
         effect2 = ICardEffect()
+        effect2.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect2.set_effect_name("BT16-016 1 of your Digimon may Digivolve")
         effect2.set_effect_description("[On Play] If it's your turn, 1 of your Digimon may digivolve into a level 4 Digimon card with the [Angel] or [Free] trait from your hand with the digivolution cost reduced by 1.")
         effect2.is_optional = True
@@ -103,6 +106,7 @@ class BT16_016(CardScript):
         # Timing: EffectTiming.OnAllyAttack
         # [When Attacking] Trash the top digivolution card of 1 of your opponent's Digimon.
         effect3 = ICardEffect()
+        effect3.set_timing(EffectTiming.OnAllyAttack)
         effect3.set_effect_name("BT16-016 Trash 1 digivolution card")
         effect3.set_effect_description("[When Attacking] Trash the top digivolution card of 1 of your opponent's Digimon.")
         effect3.is_inherited_effect = True

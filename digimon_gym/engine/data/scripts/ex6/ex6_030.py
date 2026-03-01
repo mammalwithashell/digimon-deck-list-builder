@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -16,6 +17,7 @@ class EX6_030(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [When Digivolving] Search your security stack. You may play 1 level 5 or lower Digimon card with the [Angel]/[Archangel] trait among them without paying the cost. Then, shuffle your security stack, and 1 of your opponent's Digimon gets -7000 DP until the end of the turn.
         effect0 = ICardEffect()
+        effect0.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect0.set_effect_name("EX6-030 Play 1 level 5 or lower Digimon from security, then 1 of your opponent's Digimon gets -7000 DP until the end of the turn")
         effect0.set_effect_description("[When Digivolving] Search your security stack. You may play 1 level 5 or lower Digimon card with the [Angel]/[Archangel] trait among them without paying the cost. Then, shuffle your security stack, and 1 of your opponent's Digimon gets -7000 DP until the end of the turn.")
         effect0.is_when_digivolving = True
@@ -65,6 +67,7 @@ class EX6_030(CardScript):
         # Timing: EffectTiming.WhenRemoveField
         # [All Turns] When one of your Digimon with the [Angel]/[Archangel]/[Three Great Angels] trait would leave the battle area other than in battle, by trashing the top card of your security stack, prevent it from leaving.
         effect1 = ICardEffect()
+        effect1.set_timing(EffectTiming.WhenRemoveField)
         effect1.set_effect_name("EX6-030 By trashing the top card of your security stack, prevent one Digimon from leaving the battle area")
         effect1.set_effect_description("[All Turns] When one of your Digimon with the [Angel]/[Archangel]/[Three Great Angels] trait would leave the battle area other than in battle, by trashing the top card of your security stack, prevent it from leaving.")
         effect1.is_optional = True

@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -53,6 +54,7 @@ class BT21_074(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [On Play] By placing 1 [Appmon] or [Three Musketeers] trait card from your hand or trash as any of your Digimon's bottom digivolution cards, until your opponent's turn ends, their effects can't return that Digimon to hand or decks or affect it with <De-Digivolve> effects.
         effect2 = ICardEffect()
+        effect2.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect2.set_effect_name("BT21-074 Tuck to get protections")
         effect2.set_effect_description("[On Play] By placing 1 [Appmon] or [Three Musketeers] trait card from your hand or trash as any of your Digimon's bottom digivolution cards, until your opponent's turn ends, their effects can't return that Digimon to hand or decks or affect it with <De-Digivolve> effects.")
         effect2.is_on_play = True
@@ -87,6 +89,7 @@ class BT21_074(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [When Digivolving] By placing 1 [Appmon] or [Three Musketeers] trait card from your hand or trash as any of your Digimon's bottom digivolution cards, until your opponent's turn ends, their effects can't return that Digimon to hand or decks or affect it with <De-Digivolve> effects.
         effect3 = ICardEffect()
+        effect3.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect3.set_effect_name("BT21-074 Tuck to get protections")
         effect3.set_effect_description("[When Digivolving] By placing 1 [Appmon] or [Three Musketeers] trait card from your hand or trash as any of your Digimon's bottom digivolution cards, until your opponent's turn ends, their effects can't return that Digimon to hand or decks or affect it with <De-Digivolve> effects.")
         effect3.is_when_digivolving = True
@@ -121,6 +124,7 @@ class BT21_074(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [When Digivolving][Once Per Turn] By trashing 1 card with the [Appmon] or [Three Musketeers] trait from your Digimon's digivolution cards, <De-Digivolve 1> 1 of your opponent's Digimon.
         effect4 = ICardEffect()
+        effect4.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect4.set_effect_name("BT21-074 Trash source to de-digivolve")
         effect4.set_effect_description("[When Digivolving][Once Per Turn] By trashing 1 card with the [Appmon] or [Three Musketeers] trait from your Digimon's digivolution cards, <De-Digivolve 1> 1 of your opponent's Digimon.")
         effect4.is_optional = True
@@ -161,6 +165,7 @@ class BT21_074(CardScript):
         # Timing: EffectTiming.OnAllyAttack
         # [When Digivolving][Once Per Turn] By trashing 1 card with the [Appmon] or [Three Musketeers] trait from your Digimon's digivolution cards, <De-Digivolve 1> 1 of your opponent's Digimon.
         effect5 = ICardEffect()
+        effect5.set_timing(EffectTiming.OnAllyAttack)
         effect5.set_effect_name("BT21-074 Trash source to de-digivolve")
         effect5.set_effect_description("[When Digivolving][Once Per Turn] By trashing 1 card with the [Appmon] or [Three Musketeers] trait from your Digimon's digivolution cards, <De-Digivolve 1> 1 of your opponent's Digimon.")
         effect5.is_optional = True
@@ -201,6 +206,7 @@ class BT21_074(CardScript):
         # Timing: EffectTiming.WhenLinked
         # [When Linking] Delete 1 of your opponent's level 4 or lower Digimon.
         effect6 = ICardEffect()
+        effect6.set_timing(EffectTiming.WhenLinked)
         effect6.set_effect_name("BT21-074 Delete level 4")
         effect6.set_effect_description("[When Linking] Delete 1 of your opponent's level 4 or lower Digimon.")
 

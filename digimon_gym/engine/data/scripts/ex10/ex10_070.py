@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -39,6 +40,7 @@ class EX10_070(CardScript):
         # Timing: EffectTiming.OptionSkill
         # [Main] <Draw 1>. Then, place this card in the battle area.
         effect1 = ICardEffect()
+        effect1.set_timing(EffectTiming.OptionSkill)
         effect1.set_effect_name("EX10-070 Draw 1")
         effect1.set_effect_description("[Main] <Draw 1>. Then, place this card in the battle area.")
 
@@ -77,6 +79,7 @@ class EX10_070(CardScript):
         # Timing: EffectTiming.OnLinkCardDiscarded
         # [All Turns] When effects trash any of your Digimon's link cards, <Delay>.\r\n � You may link 1 Digimon card with the [Appmon] trait from your trash to 1 of those Digimon without paying the cost.
         effect3 = ICardEffect()
+        effect3.set_timing(EffectTiming.OnLinkCardDiscarded)
         effect3.set_effect_name("EX10-070 Effect")
         effect3.set_effect_description("[All Turns] When effects trash any of your Digimon's link cards, <Delay>.\\r\\n � You may link 1 Digimon card with the [Appmon] trait from your trash to 1 of those Digimon without paying the cost.")
         effect3.is_optional = True
@@ -93,6 +96,7 @@ class EX10_070(CardScript):
         # Timing: EffectTiming.SecuritySkill
         # [Security] place this card in the battle area.
         effect4 = ICardEffect()
+        effect4.set_timing(EffectTiming.SecuritySkill)
         effect4.set_effect_name("EX10-070 place in battle area")
         effect4.set_effect_description("[Security] place this card in the battle area.")
         effect4.is_security_effect = True

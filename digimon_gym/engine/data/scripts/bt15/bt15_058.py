@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -41,6 +42,7 @@ class BT15_058(CardScript):
         # Timing: EffectTiming.OnTappedAnyone
         # [All Turns] [Once Per Turn] When this Digimon becomes suspended, suspend 1 of your opponent's Digimon or Tamers with a play cost less than or equal to this Digimon's play cost.
         effect2 = ICardEffect()
+        effect2.set_timing(EffectTiming.OnTappedAnyone)
         effect2.set_effect_name("BT15-058 Suspend opponent's Digimon or Tamers with play cost less than this Digimon.")
         effect2.set_effect_description("[All Turns] [Once Per Turn] When this Digimon becomes suspended, suspend 1 of your opponent's Digimon or Tamers with a play cost less than or equal to this Digimon's play cost.")
         effect2.is_inherited_effect = True
@@ -75,6 +77,7 @@ class BT15_058(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [On Play] Suspend 1 of your opponent's Digimon. If a Tamer card with the [Digipolice] trait is in this Digimon's digivolution cards, that Digimon can't unsuspend until the end of their turn.
         effect3 = ICardEffect()
+        effect3.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect3.set_effect_name("BT15-058 Suspend 1 of your opponent's Digimon.")
         effect3.set_effect_description("[On Play] Suspend 1 of your opponent's Digimon. If a Tamer card with the [Digipolice] trait is in this Digimon's digivolution cards, that Digimon can't unsuspend until the end of their turn.")
         effect3.is_on_play = True
@@ -123,6 +126,7 @@ class BT15_058(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [When Digivolving] Suspend 1 of your opponent's Digimon. If a Tamer card with the [Digipolice] trait is in this Digimon's digivolution cards, that Digimon can't unsuspend until the end of their turn.
         effect4 = ICardEffect()
+        effect4.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect4.set_effect_name("BT15-058 Suspend 1 of your opponent's Digimon.")
         effect4.set_effect_description("[When Digivolving] Suspend 1 of your opponent's Digimon. If a Tamer card with the [Digipolice] trait is in this Digimon's digivolution cards, that Digimon can't unsuspend until the end of their turn.")
         effect4.is_when_digivolving = True

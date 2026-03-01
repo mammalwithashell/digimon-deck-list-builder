@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -16,6 +17,7 @@ class BT11_045(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [When Digivolving] If you have 5 or fewer cards in your security stack, <Recovery +1 (Deck)>. (Place the top card of your deck on top of your security stack.)
         effect0 = ICardEffect()
+        effect0.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect0.set_effect_name("BT11-045 Recovery +1 (Deck)")
         effect0.set_effect_description("[When Digivolving] If you have 5 or fewer cards in your security stack, <Recovery +1 (Deck)>. (Place the top card of your deck on top of your security stack.)")
         effect0.is_when_digivolving = True
@@ -43,6 +45,7 @@ class BT11_045(CardScript):
         # Timing: EffectTiming.OnLoseSecurity
         # [Opponent's Turn] When a card is removed from your security stack, 1 of your opponent's Digimon gets -4000 DP for the turn.
         effect1 = ICardEffect()
+        effect1.set_timing(EffectTiming.OnLoseSecurity)
         effect1.set_effect_name("BT11-045 DP -4000")
         effect1.set_effect_description("[Opponent's Turn] When a card is removed from your security stack, 1 of your opponent's Digimon gets -4000 DP for the turn.")
         effect1.dp_modifier = -4000

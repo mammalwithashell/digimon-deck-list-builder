@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -30,6 +31,7 @@ class BT23_046(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # Suspend, Gain Keyword Cannot Unsuspend
         effect1 = ICardEffect()
+        effect1.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect1.set_effect_name("BT23-046 By suspending 1 digimon/tamer, 1 can't unsuspend")
         effect1.set_effect_description("Suspend, Gain Keyword Cannot Unsuspend")
         effect1.is_on_play = True
@@ -66,6 +68,7 @@ class BT23_046(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # Suspend, Gain Keyword Cannot Unsuspend
         effect2 = ICardEffect()
+        effect2.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect2.set_effect_name("BT23-046 By suspending 1 digimon/tamer, 1 can't unsuspend")
         effect2.set_effect_description("Suspend, Gain Keyword Cannot Unsuspend")
         effect2.is_when_digivolving = True
@@ -102,6 +105,7 @@ class BT23_046(CardScript):
         # Timing: EffectTiming.OnAllyAttack
         # [Opponent's Turn] [Once Per Turn] When one of your opponent's Digimon attacks, you may change the attack target to 1 of your suspended Digimon with [Vegetation], [Plant] or [Fairy] in any of its traits or the [CS] trait.
         effect3 = ICardEffect()
+        effect3.set_timing(EffectTiming.OnAllyAttack)
         effect3.set_effect_name("BT23-046 Switch attack target")
         effect3.set_effect_description("[Opponent's Turn] [Once Per Turn] When one of your opponent's Digimon attacks, you may change the attack target to 1 of your suspended Digimon with [Vegetation], [Plant] or [Fairy] in any of its traits or the [CS] trait.")
         effect3.is_optional = True

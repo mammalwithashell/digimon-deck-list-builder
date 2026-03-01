@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -79,6 +80,7 @@ class BT20_045(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [When Digivolving] If DNA digivolving, return all of your opponent's Digimon with the highest DP to the bottom of the deck.
         effect5 = ICardEffect()
+        effect5.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect5.set_effect_name("BT20-045 Return opponent's Digimon with the highest DP to the bottom of deck")
         effect5.set_effect_description("[When Digivolving] If DNA digivolving, return all of your opponent's Digimon with the highest DP to the bottom of the deck.")
         effect5.is_when_digivolving = True
@@ -96,6 +98,7 @@ class BT20_045(CardScript):
         # Timing: EffectTiming.OnTappedAnyone
         # [Your Turn] (Once Per Turn) When any Digimon suspend, this Digimon may unsuspend.
         effect6 = ICardEffect()
+        effect6.set_timing(EffectTiming.OnTappedAnyone)
         effect6.set_effect_name("BT20-045 Unsuspend this Digimon")
         effect6.set_effect_description("[Your Turn] (Once Per Turn) When any Digimon suspend, this Digimon may unsuspend.")
         effect6.is_optional = True

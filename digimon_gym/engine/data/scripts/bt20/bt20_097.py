@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -16,6 +17,7 @@ class BT20_097(CardScript):
         # Timing: EffectTiming.OptionSkill
         # [Main] 1 of your Digimon may digivolve into a level 6 or lower Digimon card with [Dex] or [DeathX] in its name in the trash with the digivolution cost reduced by 4. Then, place this card in the battle area.
         effect0 = ICardEffect()
+        effect0.set_timing(EffectTiming.OptionSkill)
         effect0.set_effect_name("BT20-097 May Digivolve into level 6 or lower, then place in battle area")
         effect0.set_effect_description("[Main] 1 of your Digimon may digivolve into a level 6 or lower Digimon card with [Dex] or [DeathX] in its name in the trash with the digivolution cost reduced by 4. Then, place this card in the battle area.")
 
@@ -65,6 +67,7 @@ class BT20_097(CardScript):
         # Timing: EffectTiming.WhenRemoveField
         # [All Turns] When any of your [DexDorugoramon] would leave the battle area, <Delay>.\r\n� By return 1 [Dorumon] from those Digimon's digivolution cards to the hand, you may play 1 [DeathXmon] from your trash without paying the cost.
         effect2 = ICardEffect()
+        effect2.set_timing(EffectTiming.WhenRemoveField)
         effect2.set_effect_name("BT20-097 Play 1 [DeathXmon]")
         effect2.set_effect_description("[All Turns] When any of your [DexDorugoramon] would leave the battle area, <Delay>.\\r\\n� By return 1 [Dorumon] from those Digimon's digivolution cards to the hand, you may play 1 [DeathXmon] from your trash without paying the cost.")
         effect2.is_optional = True
@@ -106,6 +109,7 @@ class BT20_097(CardScript):
         # Timing: EffectTiming.SecuritySkill
         # [Security] You may play 1 [Dorumon] from your hand or trash without paying the cost. Then, place this card in the battle area.
         effect3 = ICardEffect()
+        effect3.set_timing(EffectTiming.SecuritySkill)
         effect3.set_effect_name("BT20-097 Play Card, Add To Hand")
         effect3.set_effect_description("[Security] You may play 1 [Dorumon] from your hand or trash without paying the cost. Then, place this card in the battle area.")
         effect3.is_security_effect = True

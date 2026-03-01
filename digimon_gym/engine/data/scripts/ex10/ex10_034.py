@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -65,6 +66,7 @@ class EX10_034(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # Effect
         effect4 = ICardEffect()
+        effect4.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect4.set_effect_name("EX10-034 1 digimon gains attack on Start of your main phase")
         effect4.set_effect_description("Effect")
         effect4.is_on_play = True
@@ -82,6 +84,7 @@ class EX10_034(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [Start of Your Main Phase] This Digimon attacks.
         effect5 = ICardEffect()
+        effect5.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect5.set_effect_name("EX10-034 [Start of Your Main Phase] This Digimon attacks.")
         effect5.set_effect_description("[Start of Your Main Phase] This Digimon attacks.")
         effect5.is_on_play = True
@@ -112,6 +115,7 @@ class EX10_034(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # Effect
         effect6 = ICardEffect()
+        effect6.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect6.set_effect_name("EX10-034 1 digimon gains attack on Start of your main phase")
         effect6.set_effect_description("Effect")
         effect6.is_when_digivolving = True
@@ -129,6 +133,7 @@ class EX10_034(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [Start of Your Main Phase] This Digimon attacks.
         effect7 = ICardEffect()
+        effect7.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect7.set_effect_name("EX10-034 [Start of Your Main Phase] This Digimon attacks.")
         effect7.set_effect_description("[Start of Your Main Phase] This Digimon attacks.")
         effect7.is_on_play = True
@@ -159,6 +164,7 @@ class EX10_034(CardScript):
         # Timing: EffectTiming.OnAllyAttack
         # [All Turns] [Once Per Turn] When Digimon attack, by trashing any 2 of this Digimon's digivolution cards, this Digimon gains <Security A. +1> and +3000 DP until your turn ends.
         effect8 = ICardEffect()
+        effect8.set_timing(EffectTiming.OnAllyAttack)
         effect8.set_effect_name("EX10-034 Trash 2 source cards, gain <Security A. +1> and +3000 DP")
         effect8.set_effect_description("[All Turns] [Once Per Turn] When Digimon attack, by trashing any 2 of this Digimon's digivolution cards, this Digimon gains <Security A. +1> and +3000 DP until your turn ends.")
         effect8.is_optional = True

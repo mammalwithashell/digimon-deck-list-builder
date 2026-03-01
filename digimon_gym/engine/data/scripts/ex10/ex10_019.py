@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -29,6 +30,7 @@ class EX10_019(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [On Play] You may link 1 level 4 or lower Digimon card from your trash or this Digimon's digivolution cards to this Digimon without paying the cost.
         effect1 = ICardEffect()
+        effect1.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect1.set_effect_name("EX10-019 Link from trash or sources")
         effect1.set_effect_description("[On Play] You may link 1 level 4 or lower Digimon card from your trash or this Digimon's digivolution cards to this Digimon without paying the cost.")
         effect1.is_optional = True
@@ -45,6 +47,7 @@ class EX10_019(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [When Digivolving] You may link 1 level 4 or lower Digimon card from your trash or this Digimon's digivolution cards to this Digimon without paying the cost.
         effect2 = ICardEffect()
+        effect2.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect2.set_effect_name("EX10-019 Link from trash or sources")
         effect2.set_effect_description("[When Digivolving] You may link 1 level 4 or lower Digimon card from your trash or this Digimon's digivolution cards to this Digimon without paying the cost.")
         effect2.is_optional = True
@@ -61,6 +64,7 @@ class EX10_019(CardScript):
         # Timing: EffectTiming.WhenLinked
         # [All Turns] [Once Per Turn] When this Digimon gets linked, you may suspend 1 of your opponent's Digimon or Tamers. It can't unsuspend in their next unsuspend phase.
         effect3 = ICardEffect()
+        effect3.set_timing(EffectTiming.WhenLinked)
         effect3.set_effect_name("EX10-019 Suspend 1 Digimon/Tamer, Can't Unsuspend")
         effect3.set_effect_description("[All Turns] [Once Per Turn] When this Digimon gets linked, you may suspend 1 of your opponent's Digimon or Tamers. It can't unsuspend in their next unsuspend phase.")
         effect3.is_optional = True
@@ -108,6 +112,7 @@ class EX10_019(CardScript):
         # Timing: EffectTiming.OnTappedAnyone
         # [All Turns] When any of your opponent's Digimon suspend, by trashing 1 of this Digimon's link cards, trash your opponent's top security card.
         effect4 = ICardEffect()
+        effect4.set_timing(EffectTiming.OnTappedAnyone)
         effect4.set_effect_name("EX10-019 By trashing 1 link card, trash opponents security")
         effect4.set_effect_description("[All Turns] When any of your opponent's Digimon suspend, by trashing 1 of this Digimon's link cards, trash your opponent's top security card.")
 

@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -40,6 +41,7 @@ class BT11_012(CardScript):
         # Timing: EffectTiming.OnStartTurn
         # [Start of Your Turn] By deleting this Digimon, gain 1 memory.
         effect2 = ICardEffect()
+        effect2.set_timing(EffectTiming.OnStartTurn)
         effect2.set_effect_name("BT11-012 Delete this Digimon to gain Memory +1")
         effect2.set_effect_description("[Start of Your Turn] By deleting this Digimon, gain 1 memory.")
         effect2.is_optional = True
@@ -68,6 +70,7 @@ class BT11_012(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [On Play] Reveal the top 3 cards of your deck. Add 2 cards with [Xros Heart] and [Blue Flare] in their traits among them to your hand. Place the rest at the bottom of your deck in any order.
         effect3 = ICardEffect()
+        effect3.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect3.set_effect_name("BT11-012 Reveal the top 3 cards of deck")
         effect3.set_effect_description("[On Play] Reveal the top 3 cards of your deck. Add 2 cards with [Xros Heart] and [Blue Flare] in their traits among them to your hand. Place the rest at the bottom of your deck in any order.")
         effect3.is_on_play = True

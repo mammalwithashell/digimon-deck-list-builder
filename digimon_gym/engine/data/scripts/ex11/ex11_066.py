@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -39,6 +40,7 @@ class EX11_066(CardScript):
         # Timing: EffectTiming.OnStartMainPhase
         # Draw 1, Gain 1 memory, Trash From Hand
         effect1 = ICardEffect()
+        effect1.set_timing(EffectTiming.OnStartMainPhase)
         effect1.set_effect_name("EX11-066 Draw 1, Gain 1 memory, Trash From Hand")
         effect1.set_effect_description("Draw 1, Gain 1 memory, Trash From Hand")
 
@@ -78,6 +80,7 @@ class EX11_066(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # Draw 1, Gain 1 memory, Trash From Hand
         effect2 = ICardEffect()
+        effect2.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect2.set_effect_name("EX11-066 Draw 1, Gain 1 memory, Trash From Hand")
         effect2.set_effect_description("Draw 1, Gain 1 memory, Trash From Hand")
         effect2.is_on_play = True
@@ -117,6 +120,7 @@ class EX11_066(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # Suspend, Reveal And Select
         effect3 = ICardEffect()
+        effect3.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect3.set_effect_name("EX11-066 Reveal 2. Place All Vemmon under played or Digivolved digimon, trash the rest.")
         effect3.set_effect_description("Suspend, Reveal And Select")
         effect3.is_optional = True

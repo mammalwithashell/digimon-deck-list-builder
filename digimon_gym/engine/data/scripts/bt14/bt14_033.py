@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -16,6 +17,7 @@ class BT14_033(CardScript):
         # Timing: EffectTiming.OnStartMainPhase
         # [Start of Your Main Phase] Search your security stack. This Digimon may digivolve into a yellow Digimon card with the [Vaccine] trait among them without paying the cost. Then, shuffle your security stack. If digivolved by this effect, you may place 1 yellow card with the [Vaccine] trait from your hand at the bottom of your security stack.
         effect0 = ICardEffect()
+        effect0.set_timing(EffectTiming.OnStartMainPhase)
         effect0.set_effect_name("BT14-033 This Digimon digivolves into Digimon card in security")
         effect0.set_effect_description("[Start of Your Main Phase] Search your security stack. This Digimon may digivolve into a yellow Digimon card with the [Vaccine] trait among them without paying the cost. Then, shuffle your security stack. If digivolved by this effect, you may place 1 yellow card with the [Vaccine] trait from your hand at the bottom of your security stack.")
 
@@ -52,6 +54,7 @@ class BT14_033(CardScript):
         # Timing: EffectTiming.OnAddSecurity
         # [Your Turn][Once Per Turn] When a card is added to your security stack, gain 1 memory.
         effect1 = ICardEffect()
+        effect1.set_timing(EffectTiming.OnAddSecurity)
         effect1.set_effect_name("BT14-033 Memory +1")
         effect1.set_effect_description("[Your Turn][Once Per Turn] When a card is added to your security stack, gain 1 memory.")
         effect1.is_inherited_effect = True

@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -52,6 +53,7 @@ class EX5_030(CardScript):
         # Timing: EffectTiming.OnAllyAttack
         # [When Attacking] This Digimon may digivolve into a Digimon card with [Leomon] in its name in your hand with the digivolution cost reduced by 1.
         effect2 = ICardEffect()
+        effect2.set_timing(EffectTiming.OnAllyAttack)
         effect2.set_effect_name("EX5-030 This Digimon digivolves")
         effect2.set_effect_description("[When Attacking] This Digimon may digivolve into a Digimon card with [Leomon] in its name in your hand with the digivolution cost reduced by 1.")
         effect2.is_optional = True
@@ -88,6 +90,7 @@ class EX5_030(CardScript):
         # Timing: EffectTiming.OnDestroyedAnyone
         # [On Deletion] 1 of your opponent's Digimon gets -2000 DP until the end of their turn.
         effect3 = ICardEffect()
+        effect3.set_timing(EffectTiming.OnDestroyedAnyone)
         effect3.set_effect_name("EX5-030 DP -2000")
         effect3.set_effect_description("[On Deletion] 1 of your opponent's Digimon gets -2000 DP until the end of their turn.")
         effect3.is_inherited_effect = True

@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -46,6 +47,7 @@ class BT19_064(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [On Play] This Digimon gains <Blocker> and isn't affected by your opponent's Digimon's effects until the end of your opponent's turn.
         effect2 = ICardEffect()
+        effect2.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect2.set_effect_name("BT19-064 This Digimon gains Blocker and isn't affected by digimon effects")
         effect2.set_effect_description("[On Play] This Digimon gains <Blocker> and isn't affected by your opponent's Digimon's effects until the end of your opponent's turn.")
         effect2.is_on_play = True
@@ -80,6 +82,7 @@ class BT19_064(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [When Digivolving] This Digimon gains <Blocker> and isn't affected by your opponent's Digimon's effects until the end of your opponent's turn.
         effect3 = ICardEffect()
+        effect3.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect3.set_effect_name("BT19-064 This Digimon gains Blocker and isn't affected by digimon effects")
         effect3.set_effect_description("[When Digivolving] This Digimon gains <Blocker> and isn't affected by your opponent's Digimon's effects until the end of your opponent's turn.")
         effect3.is_when_digivolving = True
@@ -114,6 +117,7 @@ class BT19_064(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [When Digivolving] (Once Per Turn) By trashing 1 Option card in the battle area, unsuspend this Digimon.
         effect4 = ICardEffect()
+        effect4.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect4.set_effect_name("BT19-064 By trashing 1 option card, unsuspend")
         effect4.set_effect_description("[When Digivolving] (Once Per Turn) By trashing 1 Option card in the battle area, unsuspend this Digimon.")
         effect4.is_optional = True
@@ -150,6 +154,7 @@ class BT19_064(CardScript):
         # Timing: EffectTiming.OnAllyAttack
         # [When Attacking] (Once Per Turn) By trashing 1 Option card in the battle area, unsuspend this Digimon.
         effect5 = ICardEffect()
+        effect5.set_timing(EffectTiming.OnAllyAttack)
         effect5.set_effect_name("BT19-064 By trashing 1 option card, unsuspend")
         effect5.set_effect_description("[When Attacking] (Once Per Turn) By trashing 1 Option card in the battle area, unsuspend this Digimon.")
         effect5.is_optional = True

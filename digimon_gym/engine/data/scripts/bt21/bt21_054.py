@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -41,6 +42,7 @@ class BT21_054(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [On Play] By trashing 1 card with the [Appmon] or [Three Musketeers] trait from any of your Digimon's digivolution cards, <De-Digivolve 1> 1 of your opponent's Digimon.
         effect1 = ICardEffect()
+        effect1.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect1.set_effect_name("BT21-054 Trash 1 source and de-digivolve 1.")
         effect1.set_effect_description("[On Play] By trashing 1 card with the [Appmon] or [Three Musketeers] trait from any of your Digimon's digivolution cards, <De-Digivolve 1> 1 of your opponent's Digimon.")
         effect1.is_optional = True
@@ -81,6 +83,7 @@ class BT21_054(CardScript):
         # Timing: EffectTiming.WhenLinked
         # [When Linking] Delete 1 of your opponent's Digimon with a play cost of 3 or less.
         effect2 = ICardEffect()
+        effect2.set_timing(EffectTiming.WhenLinked)
         effect2.set_effect_name("BT21-054 Delete 1 Digimon with 3 or less Cost")
         effect2.set_effect_description("[When Linking] Delete 1 of your opponent's Digimon with a play cost of 3 or less.")
 

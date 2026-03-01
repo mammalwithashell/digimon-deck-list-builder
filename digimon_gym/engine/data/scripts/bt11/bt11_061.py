@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -16,6 +17,7 @@ class BT11_061(CardScript):
         # Timing: EffectTiming.OnDeclaration
         # [Main] By suspending this Digimon, reveal the top 3 cards of your deck. Add 1 [Snatchmon], [Destromon], [Galacticmon], or [Fusionize] among them to your hand, and place 1 [Vemmon] among them under this Digimon as its bottom digivolution card. Place the rest at the bottom of your deck in any order.
         effect0 = ICardEffect()
+        effect0.set_timing(EffectTiming.OnDeclaration)
         effect0.set_effect_name("BT11-061 Reveal the top 3 cards of deck")
         effect0.set_effect_description("[Main] By suspending this Digimon, reveal the top 3 cards of your deck. Add 1 [Snatchmon], [Destromon], [Galacticmon], or [Fusionize] among them to your hand, and place 1 [Vemmon] among them under this Digimon as its bottom digivolution card. Place the rest at the bottom of your deck in any order.")
 

@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -43,6 +44,7 @@ class BT23_032(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [When Digivolving] Until your opponent's turn ends, give 1 of their Digimon '[Start of Your Main Phase] This Digimon attacks.'. Then, if DNA digivolving, <De-Digivolve 1> 1 of your opponent's Digimon.
         effect2 = ICardEffect()
+        effect2.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect2.set_effect_name("BT23-032 1 digimon gains [This digimon attacks at start of main phase]. then if DNA digivolved, <De-Digivolve 1>")
         effect2.set_effect_description("[When Digivolving] Until your opponent's turn ends, give 1 of their Digimon '[Start of Your Main Phase] This Digimon attacks.'. Then, if DNA digivolving, <De-Digivolve 1> 1 of your opponent's Digimon.")
         effect2.is_when_digivolving = True
@@ -55,50 +57,52 @@ class BT23_032(CardScript):
             return True
 
         effect2.set_can_use_condition(condition2)
-        effects.append(effect2)
 
-        # Timing: EffectTiming.OnEnterFieldAnyone
-        # [Start of Your Main Phase] Attack with this Digimon.
-        effect3 = ICardEffect()
-        effect3.set_effect_name("BT23-032 Attack with this Digimon")
-        effect3.set_effect_description("[Start of Your Main Phase] Attack with this Digimon.")
-        effect3.is_on_play = True
-
-        effect = effect3  # alias for condition closure
-        def condition3(context: Dict[str, Any]) -> bool:
-            return True
-
-        effect3.set_can_use_condition(condition3)
-
-        def process3(ctx: Dict[str, Any]):
-            """Action: De Digivolve, Force Attack, Effect Immunity"""
+        def process2(ctx: Dict[str, Any]):
+            """Action: Give 1 opponent Digimon forced attack; if DNA, de-digivolve 1."""
             player = ctx.get('player')
             perm = ctx.get('permanent')
             game = ctx.get('game')
-            if not (player and game):
+            if not (player and perm and game):
                 return
-            def on_de_digivolve(target_perm):
-                removed = target_perm.de_digivolve(1)
-                enemy = player.enemy if player else None
-                if enemy:
-                    enemy.trash_cards.extend(removed)
-            game.effect_select_opponent_permanent(
-                player, on_de_digivolve, filter_fn=lambda p: p.is_digimon, is_optional=False)
-            # Force attack — target Digimon may attack (requires engine SelectAttack)
-            pass  # descriptive-tagged: force_attack
-            # Grant effect immunity via modifier system
-            if perm and game:
-                from digimon_gym.engine.interfaces.modifiers import ModifierType
-                game.register_modifier(
-                    ModifierType.CANNOT_BE_SELECTED_BY_EFFECT, perm,
-                    value_fn=lambda: True, expiry='end_of_turn')
 
-        effect3.set_on_process_callback(process3)
-        effects.append(effect3)
+            from ....interfaces.modifiers import ModifierType
+
+            def on_select_force(target_perm):
+                # Register FORCE_ATTACK modifier until opponent's turn ends
+                # Condition ensures it only matches the specific target permanent
+                game.register_modifier(
+                    target_perm, ModifierType.FORCE_ATTACK,
+                    condition=lambda perm, ctx: perm is target_perm,
+                    expiry='end_of_opponent_turn')
+
+                # If DNA digivolving, de-digivolve 1 from an opponent Digimon
+                is_dna = ctx.get('is_dna_digivolve', False)
+                if is_dna:
+                    def on_de_digivolve(dedigivolve_target):
+                        removed = dedigivolve_target.de_digivolve(1)
+                        enemy = player.enemy if player else None
+                        if enemy:
+                            enemy.trash_cards.extend(removed)
+                    game.effect_select_opponent_permanent(
+                        player, on_de_digivolve,
+                        filter_fn=lambda p: p.is_digimon,
+                        is_optional=False,
+                        prompt="Select 1 opponent Digimon to De-Digivolve 1.")
+
+            game.effect_select_opponent_permanent(
+                player, on_select_force,
+                filter_fn=lambda p: p.is_digimon,
+                is_optional=False,
+                prompt="Select 1 opponent Digimon to gain forced attack.")
+
+        effect2.set_on_process_callback(process2)
+        effects.append(effect2)
 
         # Timing: EffectTiming.WhenRemoveField
         # Play Card
         effect4 = ICardEffect()
+        effect4.set_timing(EffectTiming.WhenRemoveField)
         effect4.set_effect_name("BT23-032 Play Card")
         effect4.set_effect_description("Play Card")
         effect4.set_hash_string("BT23_032_AT")
@@ -137,6 +141,7 @@ class BT23_032(CardScript):
         # Timing: EffectTiming.WhenRemoveField
         # Play Card
         effect5 = ICardEffect()
+        effect5.set_timing(EffectTiming.WhenRemoveField)
         effect5.set_effect_name("BT23-032 Play Card")
         effect5.set_effect_description("Play Card")
         effect5.is_inherited_effect = True

@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -29,6 +30,7 @@ class P_092(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [Your Turn] When you play a [Groundramon], this Digimon may digivolve into a [Wingdramon] from your hand for a cost of 3, ignoring its digivolution requirements.
         effect1 = ICardEffect()
+        effect1.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect1.set_effect_name("P-092 This Digimon digivolves into [Wingdramon]")
         effect1.set_effect_description("[Your Turn] When you play a [Groundramon], this Digimon may digivolve into a [Wingdramon] from your hand for a cost of 3, ignoring its digivolution requirements.")
         effect1.is_optional = True
@@ -62,6 +64,7 @@ class P_092(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [Your Turn] When you play a [Groundramon], this Digimon may digivolve into a [Wingdramon] from your hand without paying its cost.
         effect2 = ICardEffect()
+        effect2.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect2.set_effect_name("P-092 This Digimon digivolves into [Wingdramon]")
         effect2.set_effect_description("[Your Turn] When you play a [Groundramon], this Digimon may digivolve into a [Wingdramon] from your hand without paying its cost.")
         effect2.is_inherited_effect = True

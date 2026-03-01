@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -29,6 +30,7 @@ class BT15_020(CardScript):
         # Timing: EffectTiming.OnStartMainPhase
         # [Start of Your Main Phase] 1 of your Digimon gains <Blocker> until the end of your opponent's turn. Then, if you have a Tamer with [Matt Ishida] in its name, <Draw 1>.
         effect1 = ICardEffect()
+        effect1.set_timing(EffectTiming.OnStartMainPhase)
         effect1.set_effect_name("BT15-020 Your 1 Digimon gains Blocker and Draw 1")
         effect1.set_effect_description("[Start of Your Main Phase] 1 of your Digimon gains <Blocker> until the end of your opponent's turn. Then, if you have a Tamer with [Matt Ishida] in its name, <Draw 1>.")
         effect1._is_blocker = True
@@ -67,6 +69,7 @@ class BT15_020(CardScript):
         # Timing: EffectTiming.OnAllyAttack
         # [When Attacking][Once Per Turn] When this Digimon attacks a player, <Draw 1>. (Draw 1 card from your deck.)
         effect2 = ICardEffect()
+        effect2.set_timing(EffectTiming.OnAllyAttack)
         effect2.set_effect_name("BT15-020 Draw 1")
         effect2.set_effect_description("[When Attacking][Once Per Turn] When this Digimon attacks a player, <Draw 1>. (Draw 1 card from your deck.)")
         effect2.is_inherited_effect = True

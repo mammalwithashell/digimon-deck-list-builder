@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -16,6 +17,7 @@ class P_054(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [When Digivolving] If you have a Tamer in play, <Recovery +1 (Deck)>. (Place the top card of your deck on top of your security stack.)
         effect0 = ICardEffect()
+        effect0.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect0.set_effect_name("P-054 Recovery +1 (Deck)")
         effect0.set_effect_description("[When Digivolving] If you have a Tamer in play, <Recovery +1 (Deck)>. (Place the top card of your deck on top of your security stack.)")
         effect0.is_when_digivolving = True
@@ -43,6 +45,7 @@ class P_054(CardScript):
         # Timing: EffectTiming.OnDestroyedAnyone
         # [On Deletion] <Recovery +1 (Deck)>. (Place the top card of your deck on top of your security stack.)
         effect1 = ICardEffect()
+        effect1.set_timing(EffectTiming.OnDestroyedAnyone)
         effect1.set_effect_name("P-054 Recovery +1 (Deck)")
         effect1.set_effect_description("[On Deletion] <Recovery +1 (Deck)>. (Place the top card of your deck on top of your security stack.)")
         effect1.is_on_deletion = True

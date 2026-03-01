@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -16,6 +17,7 @@ class BT13_089(CardScript):
         # Timing: EffectTiming.OnEndTurn
         #  [End of Your Turn] By deleting this Digimon that has a digivolution card with [Bird] or [Avian] in one of its traits, at the end of your opponent's turn, you may play 1 [Ravemon] from your trash without paying the cost.
         effect0 = ICardEffect()
+        effect0.set_timing(EffectTiming.OnEndTurn)
         effect0.set_effect_name("BT13-089 Delete this Digimon to play 1 [Ravemon] from trash at the end of opponent's turn")
         effect0.set_effect_description(" [End of Your Turn] By deleting this Digimon that has a digivolution card with [Bird] or [Avian] in one of its traits, at the end of your opponent's turn, you may play 1 [Ravemon] from your trash without paying the cost.")
         effect0.is_optional = True
@@ -34,6 +36,7 @@ class BT13_089(CardScript):
         # Timing: EffectTiming.OnEndTurn
         # Play Card
         effect1 = ICardEffect()
+        effect1.set_timing(EffectTiming.OnEndTurn)
         effect1.set_effect_name("BT13-089 Play 1 [Ravemon] from trash")
         effect1.set_effect_description("Play Card")
         effect1.is_optional = True
@@ -64,6 +67,7 @@ class BT13_089(CardScript):
         # Timing: EffectTiming.OnDestroyedAnyone
         # [On Deletion] You may play 1 [Falcomon] or [Keenan Crier] from your hand or trash without paying the cost.
         effect2 = ICardEffect()
+        effect2.set_timing(EffectTiming.OnDestroyedAnyone)
         effect2.set_effect_name("BT13-089 Play 1 [Falcomon] or [Keenan Crier] from hand or trash")
         effect2.set_effect_description("[On Deletion] You may play 1 [Falcomon] or [Keenan Crier] from your hand or trash without paying the cost.")
         effect2.is_optional = True

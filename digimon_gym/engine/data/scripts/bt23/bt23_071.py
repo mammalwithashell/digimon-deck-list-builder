@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -57,6 +58,7 @@ class BT23_071(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [When Digivolving] Delete 1 of your opponent's Digimon with the highest level. If this effect didn't delete, this Digimon gets +5000 DP for the turn.
         effect3 = ICardEffect()
+        effect3.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect3.set_effect_name("BT23-071 Delete 1 opponent Digimon with highest level. If not delete, +5000 DP for the turn.")
         effect3.set_effect_description("[When Digivolving] Delete 1 of your opponent's Digimon with the highest level. If this effect didn't delete, this Digimon gets +5000 DP for the turn.")
         effect3.is_when_digivolving = True
@@ -85,6 +87,7 @@ class BT23_071(CardScript):
         # Timing: EffectTiming.OnDestroyedAnyone
         # [On Deletion] You may play 1 level 6 or lower Digimon card with the [Ghost] trait from your trash without paying the cost.
         effect4 = ICardEffect()
+        effect4.set_timing(EffectTiming.OnDestroyedAnyone)
         effect4.set_effect_name("BT23-071 You may play 1 level 6 or lower Ghost Digimon")
         effect4.set_effect_description("[On Deletion] You may play 1 level 6 or lower Digimon card with the [Ghost] trait from your trash without paying the cost.")
         effect4.is_on_deletion = True

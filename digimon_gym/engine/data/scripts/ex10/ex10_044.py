@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -16,6 +17,7 @@ class EX10_044(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # Draw 1
         effect0 = ICardEffect()
+        effect0.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect0.set_effect_name("EX10-044 Place 1 [Bagra Army] digimon under tamer, Then draw 1")
         effect0.set_effect_description("Draw 1")
         effect0.is_optional = True
@@ -44,6 +46,7 @@ class EX10_044(CardScript):
         # Timing: EffectTiming.OnDestroyedAnyone
         # Play Card
         effect1 = ICardEffect()
+        effect1.set_timing(EffectTiming.OnDestroyedAnyone)
         effect1.set_effect_name("EX10-044 Play 1 [Tuwarmon] with a play cost of 7 or less under tamer, then <Save>")
         effect1.set_effect_description("Play Card")
         effect1.is_on_deletion = True
@@ -75,6 +78,7 @@ class EX10_044(CardScript):
         # Timing: EffectTiming.OnDigivolutionCardDiscarded
         # When effects trash this card from a [Bagra Army] trait Digimon's digivolution cards, <Draw 1>
         effect2 = ICardEffect()
+        effect2.set_timing(EffectTiming.OnDigivolutionCardDiscarded)
         effect2.set_effect_name("EX10-044 <Draw 1>")
         effect2.set_effect_description("When effects trash this card from a [Bagra Army] trait Digimon's digivolution cards, <Draw 1>")
         effect2.is_inherited_effect = True

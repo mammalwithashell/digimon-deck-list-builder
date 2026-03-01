@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -16,6 +17,7 @@ class BT23_088(CardScript):
         # Timing: EffectTiming.OnStartMainPhase
         # [Start of Your Main Phase] By trashing 1 card with the [Undead], [Dark Animal] or [CS] trait from your hand, gain 1 memory.
         effect0 = ICardEffect()
+        effect0.set_timing(EffectTiming.OnStartMainPhase)
         effect0.set_effect_name("BT23-088 By trashing 1 [Undead]/[Dark Animal]/[CS] card from hand, Gain 1 memory")
         effect0.set_effect_description("[Start of Your Main Phase] By trashing 1 card with the [Undead], [Dark Animal] or [CS] trait from your hand, gain 1 memory.")
         effect0.is_optional = True
@@ -54,6 +56,7 @@ class BT23_088(CardScript):
         # Timing: EffectTiming.OnEndTurn
         # [End of Your Turn] By deleting this Tamer, 1 of your Digimon may digivolve into a level 5 or lower Digimon card with the [Undead] or [Dark Animal] trait in the trash without paying the cost.
         effect1 = ICardEffect()
+        effect1.set_timing(EffectTiming.OnEndTurn)
         effect1.set_effect_name("BT23-088 By deleting this tamer, digivolve into a level 5 or lower [Undead]/[Dark Animal] in trash")
         effect1.set_effect_description("[End of Your Turn] By deleting this Tamer, 1 of your Digimon may digivolve into a level 5 or lower Digimon card with the [Undead] or [Dark Animal] trait in the trash without paying the cost.")
         effect1.is_optional = True

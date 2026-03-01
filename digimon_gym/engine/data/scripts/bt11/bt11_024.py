@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -16,6 +17,7 @@ class BT11_024(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [On Play] By placing 1 blue level 3 Digimon card or 1 Digimon card with [Aqua] or [Sea Animal] in one of its traits from your hand under this Digimon as its bottom digivolution card, <Draw 1>.
         effect0 = ICardEffect()
+        effect0.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect0.set_effect_name("BT11-024 Place 1 card to digivolution cards to Draw 1")
         effect0.set_effect_description("[On Play] By placing 1 blue level 3 Digimon card or 1 Digimon card with [Aqua] or [Sea Animal] in one of its traits from your hand under this Digimon as its bottom digivolution card, <Draw 1>.")
         effect0.is_optional = True

@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -57,6 +58,7 @@ class EX11_074(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # Suspend, Effect Immunity
         effect3 = ICardEffect()
+        effect3.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect3.set_effect_name("EX11-074 Suspend, Effect Immunity")
         effect3.set_effect_description("Suspend, Effect Immunity")
         effect3.is_when_digivolving = True
@@ -96,6 +98,7 @@ class EX11_074(CardScript):
         # Timing: EffectTiming.OnAllyAttack
         # Suspend, Effect Immunity
         effect4 = ICardEffect()
+        effect4.set_timing(EffectTiming.OnAllyAttack)
         effect4.set_effect_name("EX11-074 Suspend, Effect Immunity")
         effect4.set_effect_description("Suspend, Effect Immunity")
         effect4.is_on_attack = True
@@ -135,6 +138,7 @@ class EX11_074(CardScript):
         # Timing: EffectTiming.OnTappedAnyone
         # Unsuspend
         effect5 = ICardEffect()
+        effect5.set_timing(EffectTiming.OnTappedAnyone)
         effect5.set_effect_name("EX11-074 This Digimon may unsuspend. Then may battle 1 opponent's Digimon")
         effect5.set_effect_description("Unsuspend")
         effect5.is_optional = True

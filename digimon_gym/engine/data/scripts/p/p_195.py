@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -16,6 +17,7 @@ class P_195(CardScript):
         # Timing: EffectTiming.OnStartMainPhase
         # [Start of Your Main Phase] If your opponent has a Digimon, gain 1 memory.
         effect0 = ICardEffect()
+        effect0.set_timing(EffectTiming.OnStartMainPhase)
         effect0.set_effect_name("P-195 Memory +1")
         effect0.set_effect_description("[Start of Your Main Phase] If your opponent has a Digimon, gain 1 memory.")
 
@@ -43,6 +45,7 @@ class P_195(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [On Play] Activate 1 of the effects below:\r\n・You may play 1 [Elecmon] from your hand without paying the cost.\r\n・1 of your Digimon may digivolve into [Aegiomon] in the hand without paying the cost.
         effect1 = ICardEffect()
+        effect1.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect1.set_effect_name("P-195 Play 1 [Elecmon] or digivolve into [Aegiomon]")
         effect1.set_effect_description("[On Play] Activate 1 of the effects below:\\r\\n・You may play 1 [Elecmon] from your hand without paying the cost.\\r\\n・1 of your Digimon may digivolve into [Aegiomon] in the hand without paying the cost.")
         effect1.is_on_play = True

@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -29,6 +30,7 @@ class BT16_069(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [On Play] If [Gesomon] or [X-Antibody] is in this Digimon's digivolution cards, trash the bottom 3 cards under 1 of your opponent's Digimon or Tamers. Then, 1 of their Digimon or Tamers without cards under it can't suspend until the end of their turn.
         effect1 = ICardEffect()
+        effect1.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect1.set_effect_name("BT16-069 Trash sources and give effects.")
         effect1.set_effect_description("[On Play] If [Gesomon] or [X-Antibody] is in this Digimon's digivolution cards, trash the bottom 3 cards under 1 of your opponent's Digimon or Tamers. Then, 1 of their Digimon or Tamers without cards under it can't suspend until the end of their turn.")
         effect1.is_on_play = True
@@ -65,6 +67,7 @@ class BT16_069(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [When Digivolving] If [Gesomon] or [X-Antibody] is in this Digimon's digivolution cards, trash the bottom 3 cards under 1 of your opponent's Digimon or Tamers. Then, 1 of their Digimon or Tamers without cards under it can't suspend until the end of their turn.
         effect2 = ICardEffect()
+        effect2.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect2.set_effect_name("BT16-069 Trash sources and give effects.")
         effect2.set_effect_description("[When Digivolving] If [Gesomon] or [X-Antibody] is in this Digimon's digivolution cards, trash the bottom 3 cards under 1 of your opponent's Digimon or Tamers. Then, 1 of their Digimon or Tamers without cards under it can't suspend until the end of their turn.")
         effect2.is_when_digivolving = True
@@ -101,6 +104,7 @@ class BT16_069(CardScript):
         # Timing: EffectTiming.OnAllyAttack
         # [When Attacking] [Once Per Turn] Trigger <Draw 1>. (Draw 1 cards from your deck.) Then trash 1 card from your hand.
         effect3 = ICardEffect()
+        effect3.set_timing(EffectTiming.OnAllyAttack)
         effect3.set_effect_name("BT16-069 Draw 1 and trash 1 card from hand")
         effect3.set_effect_description("[When Attacking] [Once Per Turn] Trigger <Draw 1>. (Draw 1 cards from your deck.) Then trash 1 card from your hand.")
         effect3.is_inherited_effect = True

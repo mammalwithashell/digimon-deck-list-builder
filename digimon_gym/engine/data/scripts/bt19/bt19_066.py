@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -33,6 +34,7 @@ class BT19_066(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [On Play] By trashing 1 card with the [Composite]/[Wicked God] trait in your hand, <Draw 2>.
         effect1 = ICardEffect()
+        effect1.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect1.set_effect_name("BT19-066 Trash 1 [Composite]/[Wicked God], <Draw 2>")
         effect1.set_effect_description("[On Play] By trashing 1 card with the [Composite]/[Wicked God] trait in your hand, <Draw 2>.")
         effect1.is_optional = True

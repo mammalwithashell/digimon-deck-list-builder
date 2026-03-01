@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -42,6 +43,7 @@ class BT19_098(CardScript):
         # Timing: EffectTiming.OnDestroyedAnyone
         # When this card is trashed in your battle area, place 1 [Device] trait Option card with cost of 3 from your trash to the battle area.
         effect1 = ICardEffect()
+        effect1.set_timing(EffectTiming.OnDestroyedAnyone)
         effect1.set_effect_name("BT19-098 place 1 [Device] trait Option card from trash to battle area")
         effect1.set_effect_description("When this card is trashed in your battle area, place 1 [Device] trait Option card with cost of 3 from your trash to the battle area.")
         effect1.is_on_deletion = True
@@ -57,6 +59,7 @@ class BT19_098(CardScript):
         # Timing: EffectTiming.OptionSkill
         # [Main] Place 1 [Device] trait Option card with cost of 3 from your trash to the battle area. Then, place this card in the battle area.
         effect2 = ICardEffect()
+        effect2.set_timing(EffectTiming.OptionSkill)
         effect2.set_effect_name("BT19-098 Place 1 [Device] trait Option card from trash in battle area, then place this card in battle area")
         effect2.set_effect_description("[Main] Place 1 [Device] trait Option card with cost of 3 from your trash to the battle area. Then, place this card in the battle area.")
 
@@ -71,6 +74,7 @@ class BT19_098(CardScript):
         # Timing: EffectTiming.SecuritySkill
         # [Security] You may place 1 [Device] trait Option card from your hand to the battle area. Then, add this card to the hand.
         effect3 = ICardEffect()
+        effect3.set_timing(EffectTiming.SecuritySkill)
         effect3.set_effect_name("BT19-098 Add To Hand")
         effect3.set_effect_description("[Security] You may place 1 [Device] trait Option card from your hand to the battle area. Then, add this card to the hand.")
         effect3.is_security_effect = True

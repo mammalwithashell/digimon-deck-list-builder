@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -29,6 +30,7 @@ class EX5_054(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [On Play] Delete 1 of your opponent's play cost 3 or lower Digimon or Tamers. For each card with [Etemon]/[Sukamon] in its name in your trash, add 1 to the maximum play cost this effect can choose.
         effect1 = ICardEffect()
+        effect1.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect1.set_effect_name("EX5-054 Delete 1 Digimon or Tamer")
         effect1.set_effect_description("[On Play] Delete 1 of your opponent's play cost 3 or lower Digimon or Tamers. For each card with [Etemon]/[Sukamon] in its name in your trash, add 1 to the maximum play cost this effect can choose.")
         effect1.is_on_play = True
@@ -66,6 +68,7 @@ class EX5_054(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [When Digivolving] Delete 1 of your opponent's play cost 3 or lower Digimon or Tamers. For each card with [Etemon]/[Sukamon] in its name in your trash, add 1 to the maximum play cost this effect can choose.
         effect2 = ICardEffect()
+        effect2.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect2.set_effect_name("EX5-054 Delete 1 Digimon or Tamer")
         effect2.set_effect_description("[When Digivolving] Delete 1 of your opponent's play cost 3 or lower Digimon or Tamers. For each card with [Etemon]/[Sukamon] in its name in your trash, add 1 to the maximum play cost this effect can choose.")
         effect2.is_when_digivolving = True
@@ -103,6 +106,7 @@ class EX5_054(CardScript):
         # Timing: EffectTiming.OnAllyAttack
         # [Opponent's Turn] [Once Per Turn] When an opponent's Digimon attacks, by placing 1 card with [Etemon]/[Sukamon] in its name from your hand on top of your security stack, you may switch the target of attack to this Digimon or the player.
         effect3 = ICardEffect()
+        effect3.set_timing(EffectTiming.OnAllyAttack)
         effect3.set_effect_name("EX5-054 Place 1 card from hand at the top of security to switch attack target")
         effect3.set_effect_description("[Opponent's Turn] [Once Per Turn] When an opponent's Digimon attacks, by placing 1 card with [Etemon]/[Sukamon] in its name from your hand on top of your security stack, you may switch the target of attack to this Digimon or the player.")
         effect3.is_optional = True

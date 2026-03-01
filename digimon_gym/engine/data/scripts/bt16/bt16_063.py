@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -29,6 +30,7 @@ class BT16_063(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [When Digivolving] This Digimon isn't affected by the effects of your opponent's Digimon until the end of their turn. Then, if DNA digivolving, place 1 of your opponent's Digimon whose level is less than or equal to the number of cards in yours or your opponent's security stack at the bottom of your opponent's security stack.
         effect1 = ICardEffect()
+        effect1.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect1.set_effect_name("BT16-063 Unaffected by effects of your opponent's Digimon")
         effect1.set_effect_description("[When Digivolving] This Digimon isn't affected by the effects of your opponent's Digimon until the end of their turn. Then, if DNA digivolving, place 1 of your opponent's Digimon whose level is less than or equal to the number of cards in yours or your opponent's security stack at the bottom of your opponent's security stack.")
         effect1.is_when_digivolving = True

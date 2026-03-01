@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -42,6 +43,7 @@ class BT23_070(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [When Digivolving] Delete all of your opponent's Digimon with the highest level. Then, if a card with [Belphemon] in its name is in this Digimon's digivolution cards, this Digimon attacks without suspending.
         effect2 = ICardEffect()
+        effect2.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect2.set_effect_name("BT23-070 Delete all highest level digimon, then if with [Belphemon] in name is in sources, atttack without suspending")
         effect2.set_effect_description("[When Digivolving] Delete all of your opponent's Digimon with the highest level. Then, if a card with [Belphemon] in its name is in this Digimon's digivolution cards, this Digimon attacks without suspending.")
         effect2.is_when_digivolving = True
@@ -69,6 +71,7 @@ class BT23_070(CardScript):
         # Timing: EffectTiming.OnEndAttack
         # [End of Attack] This Digimon may digivolve into [Belphemon: Sleep Mode] in the trash, ignoring digivolution requirements and without paying the cost.
         effect3 = ICardEffect()
+        effect3.set_timing(EffectTiming.OnEndAttack)
         effect3.set_effect_name("BT23-070 Digivolve into [Belphemon: Sleep Mode] in trash")
         effect3.set_effect_description("[End of Attack] This Digimon may digivolve into [Belphemon: Sleep Mode] in the trash, ignoring digivolution requirements and without paying the cost.")
         effect3.is_optional = True

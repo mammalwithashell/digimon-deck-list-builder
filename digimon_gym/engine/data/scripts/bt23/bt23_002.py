@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -16,6 +17,7 @@ class BT23_002(CardScript):
         # Timing: EffectTiming.OnAllyAttack
         # [When Attacking] [Once Per Turn] If this Digimon has the [CS] trait, <Draw 1>
         effect0 = ICardEffect()
+        effect0.set_timing(EffectTiming.OnAllyAttack)
         effect0.set_effect_name("BT23-002 Draw 1")
         effect0.set_effect_description("[When Attacking] [Once Per Turn] If this Digimon has the [CS] trait, <Draw 1>")
         effect0.is_inherited_effect = True
@@ -25,7 +27,12 @@ class BT23_002(CardScript):
 
         effect = effect0  # alias for condition closure
         def condition0(context: Dict[str, Any]) -> bool:
-            # Triggered on attack — validated by engine timing
+            perm = context.get('permanent')
+            if not perm:
+                return False
+            traits = getattr(perm.top_card, 'card_traits', []) or []
+            if not any('CS' in t for t in traits):
+                return False
             return True
 
         effect0.set_can_use_condition(condition0)

@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -34,6 +35,7 @@ class BT20_032(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [On Play] If you have 3 or more security cards, you may add your top security card to the hand. Then, if you have 2 or fewer security cards, <Recovery +1(Deck)>.
         effect1 = ICardEffect()
+        effect1.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect1.set_effect_name("BT20-032 Add top security to hand, Recovery +1")
         effect1.set_effect_description("[On Play] If you have 3 or more security cards, you may add your top security card to the hand. Then, if you have 2 or fewer security cards, <Recovery +1(Deck)>.")
         effect1.is_on_play = True
@@ -72,6 +74,7 @@ class BT20_032(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [When Digivolving] If you have 3 or more security cards, you may add your top security card to the hand. Then, if you have 2 or fewer security cards, <Recovery +1(Deck)>.
         effect2 = ICardEffect()
+        effect2.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect2.set_effect_name("BT20-032 Add top security to hand, Recovery +1")
         effect2.set_effect_description("[When Digivolving] If you have 3 or more security cards, you may add your top security card to the hand. Then, if you have 2 or fewer security cards, <Recovery +1(Deck)>.")
         effect2.is_when_digivolving = True
@@ -110,6 +113,7 @@ class BT20_032(CardScript):
         # Timing: EffectTiming.OnEndBattle
         # [All Turns] [Once Per Turn] When this Digimon deletes your opponent's Digimon in battle, gain 1 memory.
         effect3 = ICardEffect()
+        effect3.set_timing(EffectTiming.OnEndBattle)
         effect3.set_effect_name("BT20-032 Gain 1 memory")
         effect3.set_effect_description("[All Turns] [Once Per Turn] When this Digimon deletes your opponent's Digimon in battle, gain 1 memory.")
         effect3.is_inherited_effect = True

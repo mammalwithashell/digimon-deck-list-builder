@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -16,6 +17,7 @@ class BT13_038(CardScript):
         # Timing: EffectTiming.OnAllyAttack
         # [When Attacking] By trashing the top card of your security stack, 1 of your opponent's Digimon gains <Security Attack -2> until the end of your opponent's turn.
         effect0 = ICardEffect()
+        effect0.set_timing(EffectTiming.OnAllyAttack)
         effect0.set_effect_name("BT13-038 Trash your 1 security and Security Attack -2")
         effect0.set_effect_description("[When Attacking] By trashing the top card of your security stack, 1 of your opponent's Digimon gains <Security Attack -2> until the end of your opponent's turn.")
         effect0.is_optional = True
@@ -51,6 +53,7 @@ class BT13_038(CardScript):
         # Timing: EffectTiming.OnAllyAttack
         # [When Attacking][Once per Turn] If there're 6 or fewer total cards in both players' security stacks, 1 of your opponent's Digimon gets -2000 DP for the turn.
         effect1 = ICardEffect()
+        effect1.set_timing(EffectTiming.OnAllyAttack)
         effect1.set_effect_name("BT13-038 DP -2000")
         effect1.set_effect_description("[When Attacking][Once per Turn] If there're 6 or fewer total cards in both players' security stacks, 1 of your opponent's Digimon gets -2000 DP for the turn.")
         effect1.is_inherited_effect = True

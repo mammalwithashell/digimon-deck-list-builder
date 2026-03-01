@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -28,6 +29,7 @@ class EX6_056(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [On Play] Trash the top 4 cards of your deck. Then, if you have 10 or more cards in your trash, <De-Digivolve 2> 1 of your opponent's Digimon.
         effect1 = ICardEffect()
+        effect1.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect1.set_effect_name("EX6-056 Trash 4 from the top of your deck & De-Digivolve 2")
         effect1.set_effect_description("[On Play] Trash the top 4 cards of your deck. Then, if you have 10 or more cards in your trash, <De-Digivolve 2> 1 of your opponent's Digimon.")
         effect1.is_on_play = True
@@ -68,6 +70,7 @@ class EX6_056(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [When Digivolving] Trash the top 4 cards of your deck. Then, if you have 10 or more cards in your trash, <De-Digivolve 2> 1 of your opponent's Digimon.
         effect2 = ICardEffect()
+        effect2.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect2.set_effect_name("EX6-056 Trash 4 from the top of your deck & De-Digivolve 2")
         effect2.set_effect_description("[When Digivolving] Trash the top 4 cards of your deck. Then, if you have 10 or more cards in your trash, <De-Digivolve 2> 1 of your opponent's Digimon.")
         effect2.is_when_digivolving = True
@@ -108,6 +111,7 @@ class EX6_056(CardScript):
         # Timing: EffectTiming.WhenRemoveField
         # [All Turns] When this Digimon would leave the battle area other than in battle, place 1 card with the [Seven Great Demon Lord] trait from your trash as the bottom digivolution cards of one of your [Gate of Deadly Sins] in your breeding area.
         effect3 = ICardEffect()
+        effect3.set_timing(EffectTiming.WhenRemoveField)
         effect3.set_effect_name("EX6-056 Place 1 7GDL from trash to bottom of [Gate of Deadly Sins]")
         effect3.set_effect_description("[All Turns] When this Digimon would leave the battle area other than in battle, place 1 card with the [Seven Great Demon Lord] trait from your trash as the bottom digivolution cards of one of your [Gate of Deadly Sins] in your breeding area.")
 

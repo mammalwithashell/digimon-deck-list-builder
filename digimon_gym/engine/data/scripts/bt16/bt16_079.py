@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -42,6 +43,7 @@ class BT16_079(CardScript):
         # Timing: EffectTiming.OnAllyAttack
         # [When Attacking] [Once Per Turn] You may play 1 level 4 or lower yellow or green Digimon from your hand or trash without paying the cost.
         effect2 = ICardEffect()
+        effect2.set_timing(EffectTiming.OnAllyAttack)
         effect2.set_effect_name("BT16-079 Play a level 4 or lower Digimon from your hand or trash.")
         effect2.set_effect_description("[When Attacking] [Once Per Turn] You may play 1 level 4 or lower yellow or green Digimon from your hand or trash without paying the cost.")
         effect2.is_optional = True
@@ -82,6 +84,7 @@ class BT16_079(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [When Digivolving] [Once Per Turn] You may play 1 level 4 or lower yellow or green Digimon from your hand or trash without paying the cost.
         effect3 = ICardEffect()
+        effect3.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect3.set_effect_name("BT16-079 Play a level 4 or lower Digimon from your hand or trash.")
         effect3.set_effect_description("[When Digivolving] [Once Per Turn] You may play 1 level 4 or lower yellow or green Digimon from your hand or trash without paying the cost.")
         effect3.is_optional = True
@@ -122,6 +125,7 @@ class BT16_079(CardScript):
         # Timing: EffectTiming.OnEndTurn
         # [End of Your Turn] [Once Per Turn] If [Cherubimon] or [X-Antibody] is in this Digimon's digivolution cards, delete 1 of your opponent's level 4 or lower Digimon. For each of your other Digimon, add 1 to the maximum level this effect can choose.
         effect4 = ICardEffect()
+        effect4.set_timing(EffectTiming.OnEndTurn)
         effect4.set_effect_name("BT16-079 Delete 1 Digimon")
         effect4.set_effect_description("[End of Your Turn] [Once Per Turn] If [Cherubimon] or [X-Antibody] is in this Digimon's digivolution cards, delete 1 of your opponent's level 4 or lower Digimon. For each of your other Digimon, add 1 to the maximum level this effect can choose.")
         effect4.is_optional = True

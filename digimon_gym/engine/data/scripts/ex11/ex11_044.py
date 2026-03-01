@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -40,6 +41,7 @@ class EX11_044(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # Delete, Trash Digivolution Cards
         effect2 = ICardEffect()
+        effect2.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect2.set_effect_name("EX11-044 Delete, Trash Digivolution Cards")
         effect2.set_effect_description("Delete, Trash Digivolution Cards")
         effect2.is_on_play = True
@@ -80,6 +82,7 @@ class EX11_044(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # Delete, Trash Digivolution Cards
         effect3 = ICardEffect()
+        effect3.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect3.set_effect_name("EX11-044 Delete, Trash Digivolution Cards")
         effect3.set_effect_description("Delete, Trash Digivolution Cards")
         effect3.is_when_digivolving = True
@@ -120,6 +123,7 @@ class EX11_044(CardScript):
         # Timing: EffectTiming.OnAllyAttack
         # Delete, Trash Digivolution Cards
         effect4 = ICardEffect()
+        effect4.set_timing(EffectTiming.OnAllyAttack)
         effect4.set_effect_name("EX11-044 Delete, Trash Digivolution Cards")
         effect4.set_effect_description("Delete, Trash Digivolution Cards")
         effect4.is_on_attack = True
@@ -160,6 +164,7 @@ class EX11_044(CardScript):
         # Timing: EffectTiming.OnDigivolutionCardDiscarded
         # [All Turns] [Once Per Turn] When effects trash any of this Digimon's digivolution cards, you may place 3 [Mineral] or [Rock] trait cards from your trash as this Digimon's bottom digivolution cards.
         effect5 = ICardEffect()
+        effect5.set_timing(EffectTiming.OnDigivolutionCardDiscarded)
         effect5.set_effect_name("EX11-044 May place 3 [Mineral]/[Rock] trait cards from trash under this Digimon.")
         effect5.set_effect_description("[All Turns] [Once Per Turn] When effects trash any of this Digimon's digivolution cards, you may place 3 [Mineral] or [Rock] trait cards from your trash as this Digimon's bottom digivolution cards.")
         effect5.is_optional = True

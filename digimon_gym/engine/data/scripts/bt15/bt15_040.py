@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -29,6 +30,7 @@ class BT15_040(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [When Digivolving] If a card with [Monzaemon] in its name or [X Antibody] is in this Digimon's digivolution cards, you may play 1 [Numemon] or 1 level 3 Digimon card from your hand without paying the cost.
         effect1 = ICardEffect()
+        effect1.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect1.set_effect_name("BT15-040 Play 1 Numemon or level 3 from your hand.")
         effect1.set_effect_description("[When Digivolving] If a card with [Monzaemon] in its name or [X Antibody] is in this Digimon's digivolution cards, you may play 1 [Numemon] or 1 level 3 Digimon card from your hand without paying the cost.")
         effect1.is_optional = True
@@ -63,6 +65,7 @@ class BT15_040(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [All Turns][Once per turn] When another of your Digimon is played, for each of your Digimon, 1 of your opponent's Digimon gets -2000 DP unti the end of your opponent's turn
         effect2 = ICardEffect()
+        effect2.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect2.set_effect_name("BT15-040 Give opponent's Digimon -2000 DP for each Digimon")
         effect2.set_effect_description("[All Turns][Once per turn] When another of your Digimon is played, for each of your Digimon, 1 of your opponent's Digimon gets -2000 DP unti the end of your opponent's turn")
         effect2.set_max_count_per_turn(1)

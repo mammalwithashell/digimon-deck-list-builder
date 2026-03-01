@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -16,6 +17,7 @@ class EX5_065(CardScript):
         # Timing: EffectTiming.OnAddDigivolutionCards
         # [Your Turn] When an effect places the top card of one of your Digimon in a Digimon's digivolution cards, by suspending this Tamer, gain 1 memory.
         effect0 = ICardEffect()
+        effect0.set_timing(EffectTiming.OnAddDigivolutionCards)
         effect0.set_effect_name("EX5-065 Memory +1")
         effect0.set_effect_description("[Your Turn] When an effect places the top card of one of your Digimon in a Digimon's digivolution cards, by suspending this Tamer, gain 1 memory.")
         effect0.is_optional = True
@@ -52,6 +54,7 @@ class EX5_065(CardScript):
         # Timing: EffectTiming.OnStartTurn
         # [Start of Opponent's Turn] By playing 1 card with the same level as one of your [Night Claw]/[Light Fang] trait Digimon from that Digimon's digivolution cards withotu paying the cost, 2 of your Digimon may DNA Digivolve into a Digimon card in your hand. At the end of the turn, return the Digimon played by this effect to hand.
         effect1 = ICardEffect()
+        effect1.set_timing(EffectTiming.OnStartTurn)
         effect1.set_effect_name("EX5-065 Play Digimon from digivolution cards to DNA digivolve")
         effect1.set_effect_description("[Start of Opponent's Turn] By playing 1 card with the same level as one of your [Night Claw]/[Light Fang] trait Digimon from that Digimon's digivolution cards withotu paying the cost, 2 of your Digimon may DNA Digivolve into a Digimon card in your hand. At the end of the turn, return the Digimon played by this effect to hand.")
         effect1.is_optional = True
@@ -84,6 +87,7 @@ class EX5_065(CardScript):
         # Timing: EffectTiming.OnStartTurn
         # Play Card, Bounce, Effect Immunity
         effect2 = ICardEffect()
+        effect2.set_timing(EffectTiming.OnStartTurn)
         effect2.set_effect_name("EX5-065 Return the Digimon to hand")
         effect2.set_effect_description("Play Card, Bounce, Effect Immunity")
 

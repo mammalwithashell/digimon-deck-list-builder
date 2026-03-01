@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -86,6 +87,7 @@ class BT15_012(CardScript):
         # Timing: EffectTiming.OnStartTurn
         # [Start of Your Turn] By deleting this Digimon, gain 1 memory.
         effect4 = ICardEffect()
+        effect4.set_timing(EffectTiming.OnStartTurn)
         effect4.set_effect_name("BT15-012 Delete this Digimon to gain Memory +1")
         effect4.set_effect_description("[Start of Your Turn] By deleting this Digimon, gain 1 memory.")
         effect4.is_optional = True
@@ -114,6 +116,7 @@ class BT15_012(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [On Play] Suspend 1 of your opponent's Digimon. If DigiXrosing with 2 cards, that Digimon can't unsuspend during your opponent's next unsuspend phase.
         effect5 = ICardEffect()
+        effect5.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect5.set_effect_name("BT15-012 Suspend 1 Digimon and it can't unsuspend")
         effect5.set_effect_description("[On Play] Suspend 1 of your opponent's Digimon. If DigiXrosing with 2 cards, that Digimon can't unsuspend during your opponent's next unsuspend phase.")
         effect5.is_on_play = True

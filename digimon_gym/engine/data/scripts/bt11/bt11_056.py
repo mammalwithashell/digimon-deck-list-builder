@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -16,6 +17,7 @@ class BT11_056(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [When Digivolving] Reveal the top 3 cards of your deck. You may play 1 Tamer card among them without paying the cost. Place the rest at the top or bottom of your deck in any order.
         effect0 = ICardEffect()
+        effect0.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect0.set_effect_name("BT11-056 Reveal the top 3 cards of deck")
         effect0.set_effect_description("[When Digivolving] Reveal the top 3 cards of your deck. You may play 1 Tamer card among them without paying the cost. Place the rest at the top or bottom of your deck in any order.")
         effect0.is_when_digivolving = True
@@ -61,6 +63,7 @@ class BT11_056(CardScript):
         # Timing: EffectTiming.OnAllyAttack
         # [When Attacking][Once Per Turn] For each green or black Tamer you have in play, reveal 1 card from the top of your deck. You may play any number of green or black Digimon cards whose total play costs add up to 10 or less among them without paying the costs. Place the rest at the bottom of your deck in any order.
         effect1 = ICardEffect()
+        effect1.set_timing(EffectTiming.OnAllyAttack)
         effect1.set_effect_name("BT11-056 Reveal the top cards of deck and play Digimon")
         effect1.set_effect_description("[When Attacking][Once Per Turn] For each green or black Tamer you have in play, reveal 1 card from the top of your deck. You may play any number of green or black Digimon cards whose total play costs add up to 10 or less among them without paying the costs. Place the rest at the bottom of your deck in any order.")
         effect1.set_max_count_per_turn(1)

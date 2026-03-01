@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -30,6 +31,7 @@ class BT23_044(CardScript):
         # Timing: EffectTiming.BeforePayCost
         # When this card would be played from the hand, if you have [Yuuko Kamishiro] or a [CS] trait Digimon, reduce the play cost by 3.
         effect1 = ICardEffect()
+        effect1.set_timing(EffectTiming.BeforePayCost)
         effect1.set_effect_name("BT23-044 Play cost reduction -3")
         effect1.set_effect_description("When this card would be played from the hand, if you have [Yuuko Kamishiro] or a [CS] trait Digimon, reduce the play cost by 3.")
         effect1.set_hash_string("BT23_031_ReducePlayCost")
@@ -79,6 +81,7 @@ class BT23_044(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [On Play] By suspending 1 Digimon, until your opponent's turn ends, their effects can't return 1 of your Digimon with [Vegetation], [Plant] or [Fairy] in any of its traits or the [CS] trait to hands or decks.
         effect3 = ICardEffect()
+        effect3.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect3.set_effect_name("BT23-044 By suspending 1 digimon, 1 digimon cant be bounced to hand & deck")
         effect3.set_effect_description("[On Play] By suspending 1 Digimon, until your opponent's turn ends, their effects can't return 1 of your Digimon with [Vegetation], [Plant] or [Fairy] in any of its traits or the [CS] trait to hands or decks.")
         effect3.is_on_play = True
@@ -123,6 +126,7 @@ class BT23_044(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [When Digivolving] By suspending 1 Digimon, until your opponent's turn ends, their effects can't return 1 of your Digimon with [Vegetation], [Plant] or [Fairy] in any of its traits or the [CS] trait to hands or decks.
         effect4 = ICardEffect()
+        effect4.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect4.set_effect_name("BT23-044 By suspending 1 digimon, 1 digimon cant be bounced to hand & deck")
         effect4.set_effect_description("[When Digivolving] By suspending 1 Digimon, until your opponent's turn ends, their effects can't return 1 of your Digimon with [Vegetation], [Plant] or [Fairy] in any of its traits or the [CS] trait to hands or decks.")
         effect4.is_when_digivolving = True
@@ -167,6 +171,7 @@ class BT23_044(CardScript):
         # Timing: EffectTiming.OnEndBattle
         # [All Turns] [Once Per Turn] When this Digimon deletes your opponent's Digimon in battle, trash their top security card.
         effect5 = ICardEffect()
+        effect5.set_timing(EffectTiming.OnEndBattle)
         effect5.set_effect_name("BT23-044 Trash opponent top security")
         effect5.set_effect_description("[All Turns] [Once Per Turn] When this Digimon deletes your opponent's Digimon in battle, trash their top security card.")
         effect5.is_inherited_effect = True

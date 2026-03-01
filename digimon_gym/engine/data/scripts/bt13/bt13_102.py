@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -16,6 +17,7 @@ class BT13_102(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [On Play] Your opponent may trash 1 Tamer card or Option card in their hand. If they don't, gain 1 memory and <Draw 1>.
         effect0 = ICardEffect()
+        effect0.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect0.set_effect_name("BT13-102 Opponent trashes 1 Tamer card or 1 option card from hand, or you gain Memory +1 and Draw 1")
         effect0.set_effect_description("[On Play] Your opponent may trash 1 Tamer card or Option card in their hand. If they don't, gain 1 memory and <Draw 1>.")
         effect0.is_on_play = True
@@ -55,6 +57,7 @@ class BT13_102(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [Opponent's Turn] When an effect plays a Digimon, by suspending this Tamer, gain 1 memory.
         effect1 = ICardEffect()
+        effect1.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect1.set_effect_name("BT13-102 Memory +1")
         effect1.set_effect_description("[Opponent's Turn] When an effect plays a Digimon, by suspending this Tamer, gain 1 memory.")
         effect1.is_optional = True

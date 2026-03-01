@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -16,6 +17,7 @@ class EX6_048(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [On Play] By trashing 1 card in your hand, until the end of your opponent's turn, 1 of your opponent's Digimon gains [End of Attack] Delete this Digimon.
         effect0 = ICardEffect()
+        effect0.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect0.set_effect_name("EX6-048 Trash 1 card in your hand to give effects.")
         effect0.set_effect_description("[On Play] By trashing 1 card in your hand, until the end of your opponent's turn, 1 of your opponent's Digimon gains [End of Attack] Delete this Digimon.")
         effect0.is_optional = True
@@ -52,6 +54,7 @@ class EX6_048(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [End of Attack] Delete this Digimon.
         effect1 = ICardEffect()
+        effect1.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect1.set_effect_name("EX6-048 Delete this Digimon")
         effect1.set_effect_description("[End of Attack] Delete this Digimon.")
         effect1.is_on_play = True
@@ -90,6 +93,7 @@ class EX6_048(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [When Digivolving] By trashing 1 card in your hand, until the end of your opponent's turn, 1 of your opponent's Digimon gains [End of Attack] Delete this Digimon.
         effect2 = ICardEffect()
+        effect2.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect2.set_effect_name("EX6-048 Trash 1 card in your hand to give effects.")
         effect2.set_effect_description("[When Digivolving] By trashing 1 card in your hand, until the end of your opponent's turn, 1 of your opponent's Digimon gains [End of Attack] Delete this Digimon.")
         effect2.is_optional = True
@@ -126,6 +130,7 @@ class EX6_048(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [End of Attack] Delete this Digimon.
         effect3 = ICardEffect()
+        effect3.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect3.set_effect_name("EX6-048 Delete this Digimon")
         effect3.set_effect_description("[End of Attack] Delete this Digimon.")
         effect3.is_on_play = True
@@ -164,6 +169,7 @@ class EX6_048(CardScript):
         # Timing: EffectTiming.OnAllyAttack
         # [Opponent's Turn][Once Per Turn] When an opponent's Digimon attacks, by deleting 1 of your other Digimon, end the attack.
         effect4 = ICardEffect()
+        effect4.set_timing(EffectTiming.OnAllyAttack)
         effect4.set_effect_name("EX6-048 End the attack by deleting 1 of your Digimon")
         effect4.set_effect_description("[Opponent's Turn][Once Per Turn] When an opponent's Digimon attacks, by deleting 1 of your other Digimon, end the attack.")
         effect4.is_inherited_effect = True

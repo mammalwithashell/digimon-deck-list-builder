@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -29,6 +30,7 @@ class EX6_053(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [On Play] If you have a [Mirei Mikagura], delete 1 of your opponent's level 4 or lower Digimon. If you don't have a [Mirei Mikagura], you may play 1 [Mirei Mikagura] from your trash without paying the cost.
         effect1 = ICardEffect()
+        effect1.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect1.set_effect_name("EX6-053 Delete 1 of your opponent's level 4 or lower Digimon/Play 1 [Mirei Mikagura]")
         effect1.set_effect_description("[On Play] If you have a [Mirei Mikagura], delete 1 of your opponent's level 4 or lower Digimon. If you don't have a [Mirei Mikagura], you may play 1 [Mirei Mikagura] from your trash without paying the cost.")
         effect1.is_on_play = True
@@ -74,6 +76,7 @@ class EX6_053(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [When Digivolving] If you have a [Mirei Mikagura], delete 1 of your opponent's level 4 or lower Digimon. If you don't have a [Mirei Mikagura], you may play 1 [Mirei Mikagura] from your trash without paying the cost.
         effect2 = ICardEffect()
+        effect2.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect2.set_effect_name("EX6-053 Delete 1 of your opponent's level 4 or lower Digimon/Play 1 [Mirei Mikagura]")
         effect2.set_effect_description("[When Digivolving] If you have a [Mirei Mikagura], delete 1 of your opponent's level 4 or lower Digimon. If you don't have a [Mirei Mikagura], you may play 1 [Mirei Mikagura] from your trash without paying the cost.")
         effect2.is_when_digivolving = True

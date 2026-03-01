@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -16,6 +17,7 @@ class EX8_046(CardScript):
         # Timing: EffectTiming.OnDestroyedAnyone
         # [On Deletion] By trashing 1 card with the [Mineral] or [Rock] trait in your hand, <Draw 2>.
         effect0 = ICardEffect()
+        effect0.set_timing(EffectTiming.OnDestroyedAnyone)
         effect0.set_effect_name("EX8-046 By trashing 1 card, Draw 2")
         effect0.set_effect_description("[On Deletion] By trashing 1 card with the [Mineral] or [Rock] trait in your hand, <Draw 2>.")
         effect0.is_optional = True

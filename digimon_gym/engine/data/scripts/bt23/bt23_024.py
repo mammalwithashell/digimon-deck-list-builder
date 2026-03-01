@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -67,6 +68,7 @@ class BT23_024(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [When Digivolving] [When Attacking] You may link 1 Digimon card with the [Appmon] trait from your hand or this Digimon's digivolution cards to this Digimon without paying the cost.
         effect3 = ICardEffect()
+        effect3.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect3.set_effect_name("BT23-024 Link 1 digimon with [Appmon] trait from hand or this card's digivolution cards")
         effect3.set_effect_description("[When Digivolving] [When Attacking] You may link 1 Digimon card with the [Appmon] trait from your hand or this Digimon's digivolution cards to this Digimon without paying the cost.")
         effect3.is_when_digivolving = True
@@ -84,6 +86,7 @@ class BT23_024(CardScript):
         # Timing: EffectTiming.OnAllyAttack
         # [When Attacking] You may link 1 Digimon card with the [Appmon] trait from your hand or this Digimon's digivolution cards to this Digimon without paying the cost.
         effect4 = ICardEffect()
+        effect4.set_timing(EffectTiming.OnAllyAttack)
         effect4.set_effect_name("BT23-024 Link 1 digimon with [Appmon] trait from hand or this card's digivolution cards")
         effect4.set_effect_description("[When Attacking] You may link 1 Digimon card with the [Appmon] trait from your hand or this Digimon's digivolution cards to this Digimon without paying the cost.")
         effect4.is_on_attack = True
@@ -101,6 +104,7 @@ class BT23_024(CardScript):
         # Timing: EffectTiming.WhenLinked
         # [All Turns] [Once Per Turn] When this Digimon gets linked, by unsuspending it, other than their highest play cost Digimon, none of your opponent's Digimon can suspend until their turn ends.
         effect5 = ICardEffect()
+        effect5.set_timing(EffectTiming.WhenLinked)
         effect5.set_effect_name("BT23-024 By unsuspending this digimon, all but their highest play cost digimon cant suspend")
         effect5.set_effect_description("[All Turns] [Once Per Turn] When this Digimon gets linked, by unsuspending it, other than their highest play cost Digimon, none of your opponent's Digimon can suspend until their turn ends.")
         effect5.is_optional = True

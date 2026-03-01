@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -29,6 +30,7 @@ class BT14_063(CardScript):
         # Timing: EffectTiming.OnDestroyedAnyone
         # [On Deletion] Reveal the top 3 cards of your deck. From among them, add 1 card with [Monzaemon] in its name to your hand and play 1 Digimon card with [Numemon] in its name without paying the cost. Return the rest to the bottom of the deck.
         effect1 = ICardEffect()
+        effect1.set_timing(EffectTiming.OnDestroyedAnyone)
         effect1.set_effect_name("BT14-063 Reveal the top 3 cards of deck")
         effect1.set_effect_description("[On Deletion] Reveal the top 3 cards of your deck. From among them, add 1 card with [Monzaemon] in its name to your hand and play 1 Digimon card with [Numemon] in its name without paying the cost. Return the rest to the bottom of the deck.")
         effect1.is_on_deletion = True

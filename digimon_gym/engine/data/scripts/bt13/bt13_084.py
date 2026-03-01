@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -16,6 +17,7 @@ class BT13_084(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [On Play] By deleting 1 of your other purple Digimon, this Digimon may digivolve into a Digimon card with [Belphemon] in its name in your hand without paying the cost.
         effect0 = ICardEffect()
+        effect0.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect0.set_effect_name("BT13-084 Delete your another Digimon to digivolve")
         effect0.set_effect_description("[On Play] By deleting 1 of your other purple Digimon, this Digimon may digivolve into a Digimon card with [Belphemon] in its name in your hand without paying the cost.")
         effect0.is_optional = True
@@ -52,6 +54,7 @@ class BT13_084(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [When Digivolving] By deleting 1 of your other purple Digimon, this Digimon may digivolve into a Digimon card with [Belphemon] in its name in your hand without paying the cost.
         effect1 = ICardEffect()
+        effect1.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect1.set_effect_name("BT13-084 Delete your another Digimon to digivolve")
         effect1.set_effect_description("[When Digivolving] By deleting 1 of your other purple Digimon, this Digimon may digivolve into a Digimon card with [Belphemon] in its name in your hand without paying the cost.")
         effect1.is_optional = True
@@ -88,6 +91,7 @@ class BT13_084(CardScript):
         # Timing: EffectTiming.OnDiscardHand
         # [Opponent's Turn][Once Per Turn] When a card is trashed from your hand, you may play 1 level 4 or lower purple Digimon card from your trash without paying the cost.
         effect2 = ICardEffect()
+        effect2.set_timing(EffectTiming.OnDiscardHand)
         effect2.set_effect_name("BT13-084 Play 1 level 4 or lower Digimon from trash")
         effect2.set_effect_description("[Opponent's Turn][Once Per Turn] When a card is trashed from your hand, you may play 1 level 4 or lower purple Digimon card from your trash without paying the cost.")
         effect2.is_inherited_effect = True

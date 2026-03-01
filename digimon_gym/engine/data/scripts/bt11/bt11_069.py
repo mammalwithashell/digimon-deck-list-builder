@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -29,6 +30,7 @@ class BT11_069(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [When Digivolving] Until the end of your opponent's turn, this Digimon can't have its DP reduced by your opponent's effects, and isn't affected by <De-Digivolve> effects. Then, if [MetalGreymon] or [X Antibody] is in this Digimon's digivolution cards, delete 1 of your opponent's Digimon with 6000 DP or less.
         effect1 = ICardEffect()
+        effect1.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect1.set_effect_name("BT11-069 This Digimon gets effects and delete 1 Digimon with 6000 DP or less")
         effect1.set_effect_description("[When Digivolving] Until the end of your opponent's turn, this Digimon can't have its DP reduced by your opponent's effects, and isn't affected by <De-Digivolve> effects. Then, if [MetalGreymon] or [X Antibody] is in this Digimon's digivolution cards, delete 1 of your opponent's Digimon with 6000 DP or less.")
         effect1.is_when_digivolving = True
@@ -69,6 +71,7 @@ class BT11_069(CardScript):
         # Timing: EffectTiming.OnUnTappedAnyone
         # [Opponent's Turn][Once Per Turn] When a Digimon becomes unsuspended, if this Digimon has [Greymon] or [Omnimon] in its name, trash the top card of your opponent's security stack.
         effect2 = ICardEffect()
+        effect2.set_timing(EffectTiming.OnUnTappedAnyone)
         effect2.set_effect_name("BT11-069 Trash the top card of opponent's security")
         effect2.set_effect_description("[Opponent's Turn][Once Per Turn] When a Digimon becomes unsuspended, if this Digimon has [Greymon] or [Omnimon] in its name, trash the top card of your opponent's security stack.")
         effect2.is_inherited_effect = True

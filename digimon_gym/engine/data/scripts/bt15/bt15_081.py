@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -41,6 +42,7 @@ class BT15_081(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [Trash] [All Turns] When an effect play an opponent's Digimon or Tamer, 1 of your [Leviamon] or 1 of your Digimon with [X Antibody] in its digivolution cards may digivolve into this card without paying the cost.
         effect2 = ICardEffect()
+        effect2.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect2.set_effect_name("BT15-081 Digivolve 1 [Leviamon (X Antibody)] from trash")
         effect2.set_effect_description("[Trash] [All Turns] When an effect play an opponent's Digimon or Tamer, 1 of your [Leviamon] or 1 of your Digimon with [X Antibody] in its digivolution cards may digivolve into this card without paying the cost.")
         effect2.is_optional = True
@@ -72,6 +74,7 @@ class BT15_081(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [When Digivolving] If your opponent has as many or more total Digimon and Tamers as you, delete 1 of your opponent's Tamers. Then, delete 1 of your opponent's level 3, 1 of their level 5 and 1 of their level 7 Digimon.
         effect3 = ICardEffect()
+        effect3.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect3.set_effect_name("BT15-081 Delete 1 Tamer and 1 level 3, 5, and 7  Digimon")
         effect3.set_effect_description("[When Digivolving] If your opponent has as many or more total Digimon and Tamers as you, delete 1 of your opponent's Tamers. Then, delete 1 of your opponent's level 3, 1 of their level 5 and 1 of their level 7 Digimon.")
         effect3.is_when_digivolving = True

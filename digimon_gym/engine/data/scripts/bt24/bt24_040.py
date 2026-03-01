@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -31,6 +32,7 @@ class BT24_040(CardScript):
         # Timing: EffectTiming.BeforePayCost
         # When this card would be played, if you have 3 or fewer security cards, reduce the play cost by 5.
         effect1 = ICardEffect()
+        effect1.set_timing(EffectTiming.BeforePayCost)
         effect1.set_effect_name("BT24-040 Reduce play cost (5)")
         effect1.set_effect_description("When this card would be played, if you have 3 or fewer security cards, reduce the play cost by 5.")
 
@@ -77,6 +79,7 @@ class BT24_040(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # Trash Digivolution Cards, Gain Keyword Cannot Suspend Player, Disable Effect, Effect Immunity
         effect3 = ICardEffect()
+        effect3.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect3.set_effect_name("BT24-040 Trash Digivolution Cards, Gain Keyword Cannot Suspend Player, Disable Effect, Effect Immunity")
         effect3.set_effect_description("Trash Digivolution Cards, Gain Keyword Cannot Suspend Player, Disable Effect, Effect Immunity")
         effect3.is_on_play = True
@@ -118,6 +121,7 @@ class BT24_040(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # Trash Digivolution Cards, Gain Keyword Cannot Suspend Player, Disable Effect, Effect Immunity
         effect4 = ICardEffect()
+        effect4.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect4.set_effect_name("BT24-040 Trash Digivolution Cards, Gain Keyword Cannot Suspend Player, Disable Effect, Effect Immunity")
         effect4.set_effect_description("Trash Digivolution Cards, Gain Keyword Cannot Suspend Player, Disable Effect, Effect Immunity")
         effect4.is_when_digivolving = True
@@ -159,6 +163,7 @@ class BT24_040(CardScript):
         # Timing: EffectTiming.WhenRemoveField
         # [All Turns] [Once Per Turn] When any of your [TS] trait Digimon would leave the battle area other than by your effects, by placing 1 other Digimon with no digivolution cards as the bottom security card, they don't leave.
         effect5 = ICardEffect()
+        effect5.set_timing(EffectTiming.WhenRemoveField)
         effect5.set_effect_name("BT24-040 By placing a sourceless Digimon to Security, your [TS] digimon won't leave the field")
         effect5.set_effect_description("[All Turns] [Once Per Turn] When any of your [TS] trait Digimon would leave the battle area other than by your effects, by placing 1 other Digimon with no digivolution cards as the bottom security card, they don't leave.")
         effect5.is_optional = True

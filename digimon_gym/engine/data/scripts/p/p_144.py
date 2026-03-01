@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -43,6 +44,7 @@ class P_144(CardScript):
         # Timing: EffectTiming.OnAttackTargetChanged
         # [Opponent's Turn] (Once Per Turn) When an attack target is switched, you may unsuspend 1 of your Digimon with <Blocker>.
         effect2 = ICardEffect()
+        effect2.set_timing(EffectTiming.OnAttackTargetChanged)
         effect2.set_effect_name("P-144 Unsuspend 1 of your Digimon with <Blocker>")
         effect2.set_effect_description("[Opponent's Turn] (Once Per Turn) When an attack target is switched, you may unsuspend 1 of your Digimon with <Blocker>.")
         effect2.is_optional = True

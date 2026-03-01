@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -16,6 +17,7 @@ class BT11_102(CardScript):
         # Timing: EffectTiming.OptionSkill
         # [Main] Choose 1 of your Digimon with [Insect] in one of its traits. Suspend 2 of your opponent's Digimon with DP less than or equal to the DP of the chosen Digimon. Then, 1 of your opponent's suspended Digimon can't unsuspend during your opponent's next unsuspend phase.
         effect0 = ICardEffect()
+        effect0.set_timing(EffectTiming.OptionSkill)
         effect0.set_effect_name("BT11-102 Suspend, Gain Keyword Cannot Unsuspend")
         effect0.set_effect_description("[Main] Choose 1 of your Digimon with [Insect] in one of its traits. Suspend 2 of your opponent's Digimon with DP less than or equal to the DP of the chosen Digimon. Then, 1 of your opponent's suspended Digimon can't unsuspend during your opponent's next unsuspend phase.")
         effect0._is_cannot_unsuspend = True
@@ -49,6 +51,7 @@ class BT11_102(CardScript):
         # Timing: EffectTiming.SecuritySkill
         # [Security] Suspend 2 of your opponent's Digimon.
         effect1 = ICardEffect()
+        effect1.set_timing(EffectTiming.SecuritySkill)
         effect1.set_effect_name("BT11-102 Suspend")
         effect1.set_effect_description("[Security] Suspend 2 of your opponent's Digimon.")
         effect1.is_security_effect = True

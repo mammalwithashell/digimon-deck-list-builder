@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -16,6 +17,7 @@ class BT11_083(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [When Digivolving] You may trash 1 card in your hand. If you do, return 1 [Mirei Mikagura] or 1 card with [Angel], [Archangel], or [Fallen Angel] in its traits from your trash to your hand.
         effect0 = ICardEffect()
+        effect0.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect0.set_effect_name("BT11-083 Trash 1 card from hand to return 1 card from trash to hand")
         effect0.set_effect_description("[When Digivolving] You may trash 1 card in your hand. If you do, return 1 [Mirei Mikagura] or 1 card with [Angel], [Archangel], or [Fallen Angel] in its traits from your trash to your hand.")
         effect0.is_optional = True
@@ -58,6 +60,7 @@ class BT11_083(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [Your Turn][Once Per Turn] When you play [Angewomon] or [Mirei Mikagura], gain 1 memory.
         effect1 = ICardEffect()
+        effect1.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect1.set_effect_name("BT11-083 Memory +1")
         effect1.set_effect_description("[Your Turn][Once Per Turn] When you play [Angewomon] or [Mirei Mikagura], gain 1 memory.")
         effect1.set_max_count_per_turn(1)

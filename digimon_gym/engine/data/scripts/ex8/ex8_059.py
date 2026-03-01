@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -34,6 +35,7 @@ class EX8_059(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # Trash From Hand
         effect1 = ICardEffect()
+        effect1.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect1.set_effect_name("EX8-059 Give effects to opponent's Digimon")
         effect1.set_effect_description("Trash From Hand")
         effect1.is_on_play = True
@@ -69,6 +71,7 @@ class EX8_059(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [On Deletion] Trash 1 card in your hand.
         effect2 = ICardEffect()
+        effect2.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect2.set_effect_name("EX8-059 Trash 1 card")
         effect2.set_effect_description("[On Deletion] Trash 1 card in your hand.")
         effect2.is_on_play = True
@@ -109,6 +112,7 @@ class EX8_059(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # Trash From Hand
         effect3 = ICardEffect()
+        effect3.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect3.set_effect_name("EX8-059 Give effects to opponent's Digimon")
         effect3.set_effect_description("Trash From Hand")
         effect3.is_when_digivolving = True
@@ -144,6 +148,7 @@ class EX8_059(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [On Deletion] Trash 1 card in your hand.
         effect4 = ICardEffect()
+        effect4.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect4.set_effect_name("EX8-059 Trash 1 card")
         effect4.set_effect_description("[On Deletion] Trash 1 card in your hand.")
         effect4.is_on_play = True
@@ -184,6 +189,7 @@ class EX8_059(CardScript):
         # Timing: EffectTiming.OnAllyAttack
         # [When Attacking] [Once Per Turn] <Draw 1> and trash 1 card in your hand.
         effect5 = ICardEffect()
+        effect5.set_timing(EffectTiming.OnAllyAttack)
         effect5.set_effect_name("EX8-059 Draw 1 and trash 1 card from hand")
         effect5.set_effect_description("[When Attacking] [Once Per Turn] <Draw 1> and trash 1 card in your hand.")
         effect5.is_inherited_effect = True

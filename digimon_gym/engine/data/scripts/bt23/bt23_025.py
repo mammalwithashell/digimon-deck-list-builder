@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -30,6 +31,7 @@ class BT23_025(CardScript):
         # Timing: EffectTiming.OnDeclaration
         # [Hand] [Main] If you have a Digimon or Tamer with the [CS] trait, by paying 5 cost, give 3 of your opponent's Digimon <Security A. -1> until their turn ends. Then, place this card as the top security card.
         effect1 = ICardEffect()
+        effect1.set_timing(EffectTiming.OnDeclaration)
         effect1.set_effect_name("BT23-025 Give 3 Digimon Sec-1")
         effect1.set_effect_description("[Hand] [Main] If you have a Digimon or Tamer with the [CS] trait, by paying 5 cost, give 3 of your opponent's Digimon <Security A. -1> until their turn ends. Then, place this card as the top security card.")
         effect1.is_optional = True
@@ -59,6 +61,7 @@ class BT23_025(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [On Play] Return 1 of your opponent's Digimon with the lowest level to the hand.
         effect2 = ICardEffect()
+        effect2.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect2.set_effect_name("BT23-025 Return 1 of your opponent's Digimon to hand")
         effect2.set_effect_description("[On Play] Return 1 of your opponent's Digimon with the lowest level to the hand.")
         effect2.is_on_play = True
@@ -94,6 +97,7 @@ class BT23_025(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [When Digivolving] Return 1 of your opponent's Digimon with the lowest level to the hand.
         effect3 = ICardEffect()
+        effect3.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect3.set_effect_name("BT23-025 Return 1 of your opponent's Digimon to hand")
         effect3.set_effect_description("[When Digivolving] Return 1 of your opponent's Digimon with the lowest level to the hand.")
         effect3.is_when_digivolving = True

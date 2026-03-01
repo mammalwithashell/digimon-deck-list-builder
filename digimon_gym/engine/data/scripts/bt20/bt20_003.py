@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -16,6 +17,7 @@ class BT20_003(CardScript):
         # Timing: EffectTiming.OnEndTurn
         # [End of Your Turn] [Once Per Turn] You may place 1 of your Tamers with [Pulsemon] in its text or the [SoC] or [SEEKERS] trait as the bottom digivolution card of this Digimon with no Tamer cards in its digivolution cards.
         effect0 = ICardEffect()
+        effect0.set_timing(EffectTiming.OnEndTurn)
         effect0.set_effect_name("BT20-003 If this has no tamers in source, you may place 1 tamer with Pulsemon in text, or Soc or SEEKERS trait as a source")
         effect0.set_effect_description("[End of Your Turn] [Once Per Turn] You may place 1 of your Tamers with [Pulsemon] in its text or the [SoC] or [SEEKERS] trait as the bottom digivolution card of this Digimon with no Tamer cards in its digivolution cards.")
         effect0.is_inherited_effect = True

@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -33,6 +34,7 @@ class BT11_036(CardScript):
         # Timing: EffectTiming.OnDestroyedAnyone
         # [On Deletion] If this Digimon has [Sukamon] or [Etemon] in its name, you may play 1 [Chuumon] from your trash suspended without paying the cost.
         effect1 = ICardEffect()
+        effect1.set_timing(EffectTiming.OnDestroyedAnyone)
         effect1.set_effect_name("BT11-036 Play 1 [Chuumon] from trash")
         effect1.set_effect_description("[On Deletion] If this Digimon has [Sukamon] or [Etemon] in its name, you may play 1 [Chuumon] from your trash suspended without paying the cost.")
         effect1.is_inherited_effect = True

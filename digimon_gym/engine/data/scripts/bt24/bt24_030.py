@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -31,6 +32,7 @@ class BT24_030(CardScript):
         # Timing: EffectTiming.BeforePayCost
         # When this card would be played, if your opponent has 2 or more Digimon, reduce the play cost by 5.
         effect1 = ICardEffect()
+        effect1.set_timing(EffectTiming.BeforePayCost)
         effect1.set_effect_name("BT24-030 Reduce play cost (5)")
         effect1.set_effect_description("When this card would be played, if your opponent has 2 or more Digimon, reduce the play cost by 5.")
 
@@ -77,6 +79,7 @@ class BT24_030(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [On Play] Return all of your opponent's Digimon with the fewest digivolution cards to the bottom of the deck.
         effect3 = ICardEffect()
+        effect3.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect3.set_effect_name("BT24-030 Bottom deck all opponent digimon with lowest digivolution cards")
         effect3.set_effect_description("[On Play] Return all of your opponent's Digimon with the fewest digivolution cards to the bottom of the deck.")
         effect3.is_on_play = True
@@ -94,6 +97,7 @@ class BT24_030(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [When Digivolving] Return all of your opponent's Digimon with the fewest digivolution cards to the bottom of the deck.
         effect4 = ICardEffect()
+        effect4.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect4.set_effect_name("BT24-030 Bottom deck all opponent digimon with lowest digivolution cards")
         effect4.set_effect_description("[When Digivolving] Return all of your opponent's Digimon with the fewest digivolution cards to the bottom of the deck.")
         effect4.is_when_digivolving = True
@@ -111,6 +115,7 @@ class BT24_030(CardScript):
         # Timing: EffectTiming.OnTappedAnyone
         # [All Turns] [Once Per Turn] When this Digimon suspends, it may unsuspend.
         effect5 = ICardEffect()
+        effect5.set_timing(EffectTiming.OnTappedAnyone)
         effect5.set_effect_name("BT24-030 Unsuspend this digimon")
         effect5.set_effect_description("[All Turns] [Once Per Turn] When this Digimon suspends, it may unsuspend.")
         effect5.is_optional = True
@@ -145,6 +150,7 @@ class BT24_030(CardScript):
         # Timing: EffectTiming.WhenRemoveField
         # [All Turns] When any of your Digimon with the [TS] trait or [Aqua] or [Sea Animal] in any of their traits would leave the battle area by your opponent's effects, by suspending this Digimon, they don't leave.
         effect6 = ICardEffect()
+        effect6.set_timing(EffectTiming.WhenRemoveField)
         effect6.set_effect_name("BT24-030 By suspending this digimon, your [TS]/[Aqua]/[Sea Animal] digimon wont leave the field")
         effect6.set_effect_description("[All Turns] When any of your Digimon with the [TS] trait or [Aqua] or [Sea Animal] in any of their traits would leave the battle area by your opponent's effects, by suspending this Digimon, they don't leave.")
         effect6.is_optional = True

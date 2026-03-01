@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -16,6 +17,7 @@ class BT10_094(CardScript):
         # Timing: EffectTiming.OptionSkill
         # [Main] 1 of your Digimon gets +2000 DP for the turn. Then, by placing 1 Digimon card with [Gammamon] in its name from your hand under 1 of your Digimon as its bottom digivolution card, <Draw 1>. (Draw 1 card from your deck.)
         effect0 = ICardEffect()
+        effect0.set_timing(EffectTiming.OptionSkill)
         effect0.set_effect_name("BT10-094 Draw 1, DP +2000")
         effect0.set_effect_description("[Main] 1 of your Digimon gets +2000 DP for the turn. Then, by placing 1 Digimon card with [Gammamon] in its name from your hand under 1 of your Digimon as its bottom digivolution card, <Draw 1>. (Draw 1 card from your deck.)")
 
@@ -42,6 +44,7 @@ class BT10_094(CardScript):
         # Timing: EffectTiming.SecuritySkill
         # [Security] You may play 1 [Gammamon] from your hand or trash without payings its memory cost.
         effect1 = ICardEffect()
+        effect1.set_timing(EffectTiming.SecuritySkill)
         effect1.set_effect_name("BT10-094 Play Card")
         effect1.set_effect_description("[Security] You may play 1 [Gammamon] from your hand or trash without payings its memory cost.")
         effect1.is_security_effect = True

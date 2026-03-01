@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -30,6 +31,7 @@ class BT23_034(CardScript):
         # Timing: EffectTiming.BeforePayCost
         # When this card would be played, if you have a Tamer with the [Zaxon] trait, reduce the play cost by 5.
         effect1 = ICardEffect()
+        effect1.set_timing(EffectTiming.BeforePayCost)
         effect1.set_effect_name("BT23-034 Reduce play cost by 5")
         effect1.set_effect_description("When this card would be played, if you have a Tamer with the [Zaxon] trait, reduce the play cost by 5.")
         effect1.set_hash_string("BT23_015_ReducePlayCost")
@@ -79,6 +81,7 @@ class BT23_034(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [On Play] [Once Per Turn] Until your opponent's turn ends, 1 of their Digimon can't activate [When Digivolving] effects and gets -6000 DP.
         effect3 = ICardEffect()
+        effect3.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect3.set_effect_name("BT23-034 1 digimon gains 'cant activate [When Digivolving] effects' and -6K DP")
         effect3.set_effect_description("[On Play] [Once Per Turn] Until your opponent's turn ends, 1 of their Digimon can't activate [When Digivolving] effects and gets -6000 DP.")
         effect3.set_hash_string("BT23_034_OP_WD_WA")
@@ -120,6 +123,7 @@ class BT23_034(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [When Digivolving] [Once Per Turn] Until your opponent's turn ends, 1 of their Digimon can't activate [When Digivolving] effects and gets -6000 DP.
         effect4 = ICardEffect()
+        effect4.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect4.set_effect_name("BT23-034 1 digimon gains 'cant activate [When Digivolving] effects' and -6K DP")
         effect4.set_effect_description("[When Digivolving] [Once Per Turn] Until your opponent's turn ends, 1 of their Digimon can't activate [When Digivolving] effects and gets -6000 DP.")
         effect4.set_hash_string("BT23_034_OP_WD_WA")
@@ -161,6 +165,7 @@ class BT23_034(CardScript):
         # Timing: EffectTiming.OnAllyAttack
         # [When Attacking] [Once Per Turn] Until your opponent's turn ends, 1 of their Digimon can't activate [When Digivolving] effects and gets -6000 DP.
         effect5 = ICardEffect()
+        effect5.set_timing(EffectTiming.OnAllyAttack)
         effect5.set_effect_name("BT23-034 1 digimon gains 'cant activate [When Digivolving] effects' and -6K DP")
         effect5.set_effect_description("[When Attacking] [Once Per Turn] Until your opponent's turn ends, 1 of their Digimon can't activate [When Digivolving] effects and gets -6000 DP.")
         effect5.set_hash_string("BT23_034_OP_WD_WA")
@@ -202,6 +207,7 @@ class BT23_034(CardScript):
         # Timing: EffectTiming.OnDestroyedAnyone
         # [On Deletion] Place this card face up as the bottom security card.
         effect6 = ICardEffect()
+        effect6.set_timing(EffectTiming.OnDestroyedAnyone)
         effect6.set_effect_name("BT23-034 Place face up as bottom security")
         effect6.set_effect_description("[On Deletion] Place this card face up as the bottom security card.")
         effect6.is_on_deletion = True

@@ -263,6 +263,33 @@ cp data/run/ai_worktrees/task-{TASK_ID}/digimon_gym/engine/data/scripts/generate
 
 Scripts in `generated/` are the staging area. The game engine runs from the frozen lane at `digimon_gym/engine/data/scripts/{set_lower}/`.
 
+### 9-pre. Check for QA-validated cards
+
+Before promoting, check if any cards have been QA-validated through gameplay testing. **Do not overwrite QA-validated scripts** unless the user explicitly passes `--force`.
+
+```python
+import json
+from pathlib import Path
+
+validated_path = Path('docs/qa-reports/validated_cards.json')
+if validated_path.exists():
+    validated = json.loads(validated_path.read_text())
+    validated_ids = {k for k, v in validated.get('cards', {}).items() if v['status'] in ('PASS', 'PARTIAL')}
+    will_overwrite = [c for c, _, _ in cards_to_promote if c in validated_ids]
+    if will_overwrite:
+        print(f"WARNING: {len(will_overwrite)} QA-validated cards would be overwritten:")
+        for c in will_overwrite:
+            v = validated['cards'][c]
+            print(f"  {c} ({v['card_name']}) - validated {v['validated_date']} in {v['report']}")
+        print("\nThese cards have been confirmed working through gameplay QA.")
+        print("To overwrite, re-run with --force. Otherwise, remove them from the promote list.")
+```
+
+**Rules:**
+- If a QA-validated card would be overwritten, **skip it** unless `--force` is explicitly passed
+- If `--force` is used, after promotion update `validated_cards.json`: change the card's status to `PARTIAL` and set notes to `"Re-promoted from transpiler — needs re-validation"`
+- Cards with status `FAIL` in validated_cards.json CAN be freely promoted (they're known broken)
+
 ### 9a. Promote scripts
 
 ```python

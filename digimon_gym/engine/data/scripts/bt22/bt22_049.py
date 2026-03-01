@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -30,6 +31,7 @@ class BT22_049(CardScript):
         # Timing: EffectTiming.OnEndTurn
         # [End Of Your Turn] [Once Per Turn] By placing 3 Digimon cards with the [Ver.2] trait from your trash face down as this Digimon's bottom digivolution cards, it may digivolve into a Digimon card with the [Ver.2] trait in the hand or trash.
         effect1 = ICardEffect()
+        effect1.set_timing(EffectTiming.OnEndTurn)
         effect1.set_effect_name("BT22-049 Digivolve into a [Ver.2]")
         effect1.set_effect_description("[End Of Your Turn] [Once Per Turn] By placing 3 Digimon cards with the [Ver.2] trait from your trash face down as this Digimon's bottom digivolution cards, it may digivolve into a Digimon card with the [Ver.2] trait in the hand or trash.")
         effect1.is_optional = True

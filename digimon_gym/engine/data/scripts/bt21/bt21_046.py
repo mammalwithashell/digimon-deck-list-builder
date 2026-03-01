@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -33,6 +34,7 @@ class BT21_046(CardScript):
         # Timing: EffectTiming.OnStartMainPhase
         # [Start of Your Main Phase] This Digimon may digivolve into [Coredramon] in the hand without paying the cost.
         effect1 = ICardEffect()
+        effect1.set_timing(EffectTiming.OnStartMainPhase)
         effect1.set_effect_name("BT21-046 This Digimon may digivolve in the hand without paying the cost.")
         effect1.set_effect_description("[Start of Your Main Phase] This Digimon may digivolve into [Coredramon] in the hand without paying the cost.")
         effect1.is_optional = True
@@ -67,6 +69,7 @@ class BT21_046(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [When Digivolving] This Digimon may digivolve into [Coredramon] in the hand without paying the cost.
         effect2 = ICardEffect()
+        effect2.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect2.set_effect_name("BT21-046 This Digimon may digivolve in the hand without paying the cost.")
         effect2.set_effect_description("[When Digivolving] This Digimon may digivolve into [Coredramon] in the hand without paying the cost.")
         effect2.is_optional = True
@@ -101,6 +104,7 @@ class BT21_046(CardScript):
         # Timing: EffectTiming.OnEndTurn
         # [End of Your Turn] This Digimon and any of your other Digimon may DNA digivolve into a Digimon card in the hand.
         effect3 = ICardEffect()
+        effect3.set_timing(EffectTiming.OnEndTurn)
         effect3.set_effect_name("BT21-046 DNA digivolve this Digimon")
         effect3.set_effect_description("[End of Your Turn] This Digimon and any of your other Digimon may DNA digivolve into a Digimon card in the hand.")
         effect3.is_inherited_effect = True

@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -16,6 +17,7 @@ class P_200(CardScript):
         # Timing: EffectTiming.OnStartMainPhase
         # [Start of Your Main Phase] If you have 4 or less memory, suspend 1 of your opponent's Digimon.
         effect0 = ICardEffect()
+        effect0.set_timing(EffectTiming.OnStartMainPhase)
         effect0.set_effect_name("P-200 Suspend 1 digimon")
         effect0.set_effect_description("[Start of Your Main Phase] If you have 4 or less memory, suspend 1 of your opponent's Digimon.")
 
@@ -49,6 +51,7 @@ class P_200(CardScript):
         # Timing: EffectTiming.BeforePayCost
         # [Your Turn] When any of your Digimon would digivolve into a Digimon card with the [TS] trait, by suspending this Tamer, reduce the digivolution cost by 1.
         effect1 = ICardEffect()
+        effect1.set_timing(EffectTiming.BeforePayCost)
         effect1.set_effect_name("P-200 Digivolution Cost -1")
         effect1.set_effect_description("[Your Turn] When any of your Digimon would digivolve into a Digimon card with the [TS] trait, by suspending this Tamer, reduce the digivolution cost by 1.")
         effect1.is_optional = True

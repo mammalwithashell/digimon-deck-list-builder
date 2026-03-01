@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -31,6 +32,7 @@ class BT22_030(CardScript):
         # Timing: EffectTiming.WhenLinked
         # [Your Turn] [Once Per Turn] When this Digimon gets linked, if you have 1 or fewer Tamers, you may play 1 [Torajiro Asuka] from your hand without paying the cost.
         effect1 = ICardEffect()
+        effect1.set_timing(EffectTiming.WhenLinked)
         effect1.set_effect_name("BT22-030 Play 1 [Torajiro Asuka]")
         effect1.set_effect_description("[Your Turn] [Once Per Turn] When this Digimon gets linked, if you have 1 or fewer Tamers, you may play 1 [Torajiro Asuka] from your hand without paying the cost.")
         effect1.is_optional = True
@@ -65,6 +67,7 @@ class BT22_030(CardScript):
         # Timing: EffectTiming.OnAllyAttack
         # [When Attacking] [Once Per Turn] 1 of your opponent's Digimon gets -2000 DP for the turn.
         effect2 = ICardEffect()
+        effect2.set_timing(EffectTiming.OnAllyAttack)
         effect2.set_effect_name("BT22-030 -2K DP")
         effect2.set_effect_description("[When Attacking] [Once Per Turn] 1 of your opponent's Digimon gets -2000 DP for the turn.")
         effect2.set_max_count_per_turn(1)

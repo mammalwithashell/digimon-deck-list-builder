@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -16,6 +17,7 @@ class BT15_100(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [Trash] [All Turns] When one of your Digimon digivolves into [Leviamon (X Antibody)], by returning this card to the bottom of the deck, delete 1 of your opponent's level 4 and 1 of their level 6 Digimon.
         effect0 = ICardEffect()
+        effect0.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect0.set_effect_name("BT15-100 Delete 1 level 4 Digimon and 1 level 6 Digimon")
         effect0.set_effect_description("[Trash] [All Turns] When one of your Digimon digivolves into [Leviamon (X Antibody)], by returning this card to the bottom of the deck, delete 1 of your opponent's level 4 and 1 of their level 6 Digimon.")
         effect0.is_optional = True
@@ -59,6 +61,7 @@ class BT15_100(CardScript):
         # Timing: EffectTiming.OptionSkill
         # [Main] By trashing 1 card in your hand, delete 1 of your opponent's level 4 and 1 of their level 6 Digimon.
         effect1 = ICardEffect()
+        effect1.set_timing(EffectTiming.OptionSkill)
         effect1.set_effect_name("BT15-100 Delete, Trash From Hand")
         effect1.set_effect_description("[Main] By trashing 1 card in your hand, delete 1 of your opponent's level 4 and 1 of their level 6 Digimon.")
 

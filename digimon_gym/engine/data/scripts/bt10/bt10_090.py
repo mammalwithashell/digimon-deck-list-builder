@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -16,6 +17,7 @@ class BT10_090(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [On Play] You may play 1 [Ballistamon] from your hand or from under one of your Tamers without paying its memory cost.
         effect0 = ICardEffect()
+        effect0.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect0.set_effect_name("BT10-090 Play 1 [Ballistamon] from hand or under your Tamer")
         effect0.set_effect_description("[On Play] You may play 1 [Ballistamon] from your hand or from under one of your Tamers without paying its memory cost.")
         effect0.is_optional = True
@@ -48,6 +50,7 @@ class BT10_090(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [Your Turn] When you play a Digimon with [Xros Heart] in its traits, by suspending this Tamer, gain 1 memory.
         effect1 = ICardEffect()
+        effect1.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect1.set_effect_name("BT10-090 Memory +1")
         effect1.set_effect_description("[Your Turn] When you play a Digimon with [Xros Heart] in its traits, by suspending this Tamer, gain 1 memory.")
         effect1.is_optional = True

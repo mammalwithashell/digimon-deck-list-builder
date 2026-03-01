@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -16,6 +17,7 @@ class BT24_085(CardScript):
         # Timing: EffectTiming.OnStartMainPhase
         # Gain 1 memory
         effect0 = ICardEffect()
+        effect0.set_timing(EffectTiming.OnStartMainPhase)
         effect0.set_effect_name("BT24-085 Memory +1")
         effect0.set_effect_description("Gain 1 memory")
 
@@ -43,6 +45,7 @@ class BT24_085(CardScript):
         # Timing: EffectTiming.OnEndTurn
         # Suspend, Force Attack
         effect1 = ICardEffect()
+        effect1.set_timing(EffectTiming.OnEndTurn)
         effect1.set_effect_name("BT24-085 Use a [TS] Option that costs less than your opponent's memory, 1 [TS] Digimon may attack")
         effect1.set_effect_description("Suspend, Force Attack")
         effect1.is_optional = True

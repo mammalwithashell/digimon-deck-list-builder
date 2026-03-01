@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -39,6 +40,7 @@ class BT10_106(CardScript):
         # Timing: EffectTiming.OptionSkill
         # [Main] You may play 1 Digimon card with [Justimon] in its name from your hand without paying its memory cost. If you do, delete 1 of your opponent's Digimon with a play cost less than or equal to the Digimon you played.
         effect1 = ICardEffect()
+        effect1.set_timing(EffectTiming.OptionSkill)
         effect1.set_effect_name("BT10-106 Delete, Play Card")
         effect1.set_effect_description("[Main] You may play 1 Digimon card with [Justimon] in its name from your hand without paying its memory cost. If you do, delete 1 of your opponent's Digimon with a play cost less than or equal to the Digimon you played.")
 
@@ -81,6 +83,7 @@ class BT10_106(CardScript):
         # Timing: EffectTiming.SecuritySkill
         # [Security] You may play 1 black Tamer card from your hand without paying its memory cost. Then, add this card to its owner's hand.
         effect2 = ICardEffect()
+        effect2.set_timing(EffectTiming.SecuritySkill)
         effect2.set_effect_name("BT10-106 Play Card, Add To Hand")
         effect2.set_effect_description("[Security] You may play 1 black Tamer card from your hand without paying its memory cost. Then, add this card to its owner's hand.")
         effect2.is_security_effect = True

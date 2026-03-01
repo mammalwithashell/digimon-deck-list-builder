@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -42,6 +43,7 @@ class EX5_053(CardScript):
         # Timing: EffectTiming.OnSecurityCheck
         # [Opponent's Turn] [Once Per Turn] When your security is checked, if that card is a Digimon card with the [Deva] trait, play it without battling and without paying the cost.
         effect2 = ICardEffect()
+        effect2.set_timing(EffectTiming.OnSecurityCheck)
         effect2.set_effect_name("EX5-053 Play the security Digimon without battle")
         effect2.set_effect_description("[Opponent's Turn] [Once Per Turn] When your security is checked, if that card is a Digimon card with the [Deva] trait, play it without battling and without paying the cost.")
         effect2.set_max_count_per_turn(1)
@@ -81,6 +83,7 @@ class EX5_053(CardScript):
         # Timing: EffectTiming.OnDestroyedAnyone
         # [On Deletion] Delete 1 of your opponent's highest play cost Digimon.
         effect3 = ICardEffect()
+        effect3.set_timing(EffectTiming.OnDestroyedAnyone)
         effect3.set_effect_name("EX5-053 Delete opponent's all Digimons with the highest DP")
         effect3.set_effect_description("[On Deletion] Delete 1 of your opponent's highest play cost Digimon.")
         effect3.is_on_deletion = True

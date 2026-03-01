@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -16,6 +17,7 @@ class EX11_072(CardScript):
         # Timing: EffectTiming.OptionSkill
         # [Main] You may play 1 [Pteromon], [Muchomon] or [Shoto Kazama] from your hand or trash without paying the cost. Then, place this card in the battle area.
         effect0 = ICardEffect()
+        effect0.set_timing(EffectTiming.OptionSkill)
         effect0.set_effect_name("EX11-072 Play 1 [Pteromon]/[Muchomon]/[Shoto Kazama] from hand or trash, then place in battle area")
         effect0.set_effect_description("[Main] You may play 1 [Pteromon], [Muchomon] or [Shoto Kazama] from your hand or trash without paying the cost. Then, place this card in the battle area.")
 
@@ -68,6 +70,7 @@ class EX11_072(CardScript):
         # Timing: EffectTiming.OnTappedAnyone
         # [Your Turn] When any of your [Shoto Kazama]s suspend, <Delay>.\r\n• 1 of your Digimon with [Avian] or [Bird] in any of its traits or the [Vortex Warriors] trait may digivolve into a [Bird Dragon] and the [LIBERATOR] trait Digimon card in the hand with the digivolution cost reduced by 3.
         effect2 = ICardEffect()
+        effect2.set_timing(EffectTiming.OnTappedAnyone)
         effect2.set_effect_name("EX11-072 1 of your [Avian]/[Bird] in traits or [Vortex Warriors] trait may digivolve into [Bird Dragon]&[LIBERATOR] trait")
         effect2.set_effect_description("[Your Turn] When any of your [Shoto Kazama]s suspend, <Delay>.\\r\\n• 1 of your Digimon with [Avian] or [Bird] in any of its traits or the [Vortex Warriors] trait may digivolve into a [Bird Dragon] and the [LIBERATOR] trait Digimon card in the hand with the digivolution cost reduced by 3.")
         effect2.is_optional = True

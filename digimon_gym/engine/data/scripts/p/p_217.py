@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -16,6 +17,7 @@ class P_217(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [On Play] Reveal the top 3 cards of your deck, Add 1 [Social] trait card and 1 [Creation], [Navi] or [Tool] trait card among them to the hand. Return the rest to the bottom of the deck.
         effect0 = ICardEffect()
+        effect0.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect0.set_effect_name("P-217 Reveal 3, add 2, bot deck rest")
         effect0.set_effect_description("[On Play] Reveal the top 3 cards of your deck, Add 1 [Social] trait card and 1 [Creation], [Navi] or [Tool] trait card among them to the hand. Return the rest to the bottom of the deck.")
         effect0.is_on_play = True
@@ -58,6 +60,7 @@ class P_217(CardScript):
         # Timing: EffectTiming.WhenLinked
         # [Your Turn] When any of your Digimon get linked to a [Social], [Navi], or [Tool] trait card, by suspending this Tamer, gain 1 memory.
         effect1 = ICardEffect()
+        effect1.set_timing(EffectTiming.WhenLinked)
         effect1.set_effect_name("P-217 Suspend to gain 1 memory")
         effect1.set_effect_description("[Your Turn] When any of your Digimon get linked to a [Social], [Navi], or [Tool] trait card, by suspending this Tamer, gain 1 memory.")
         effect1.is_optional = True

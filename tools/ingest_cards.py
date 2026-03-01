@@ -43,33 +43,54 @@ def parse_evo_costs(api_card):
 
     Handles multiple evo costs (e.g. X-Antibody cards with 2+ evo lines).
     The API provides evolution_cost, evolution_cost_2, etc.
+
+    When evolution_color or evolution_level are missing from the API
+    (common for newer sets), infers them from the card's own color and
+    level using standard Digimon TCG rules (digivolve from level - 1
+    of the same color).
     """
     costs = []
+    card_level = api_card.get("level")
+    card_color = api_card.get("color")
+
     # Primary evo cost
     evo_cost = api_card.get("evolution_cost")
     evo_color = api_card.get("evolution_color")
     evo_level = api_card.get("evolution_level")
 
-    if evo_cost and evo_color and evo_level:
-        color_val = COLOR_MAP.get(evo_color, 0)
-        costs.append({
-            "card_color": color_val,
-            "level": evo_level,
-            "memory_cost": evo_cost,
-        })
+    if evo_cost is not None and card_level and card_level >= 3:
+        # Infer missing color/level from card's own attributes
+        if not evo_color and card_color:
+            evo_color = card_color
+        if not evo_level and card_level:
+            evo_level = card_level - 1
+
+        if evo_color and evo_level:
+            color_val = COLOR_MAP.get(evo_color, 0)
+            costs.append({
+                "card_color": color_val,
+                "level": evo_level,
+                "memory_cost": evo_cost,
+            })
 
     # Secondary evo cost (common for X-Antibody and dual-color cards)
     evo_cost2 = api_card.get("evolution_cost_2")
     evo_color2 = api_card.get("evolution_color_2")
     evo_level2 = api_card.get("evolution_level_2")
 
-    if evo_cost2 and evo_color2 and evo_level2:
-        color_val2 = COLOR_MAP.get(evo_color2, 0)
-        costs.append({
-            "card_color": color_val2,
-            "level": evo_level2,
-            "memory_cost": evo_cost2,
-        })
+    if evo_cost2 is not None and card_level and card_level >= 3:
+        if not evo_color2 and api_card.get("color2"):
+            evo_color2 = api_card.get("color2")
+        if not evo_level2 and card_level:
+            evo_level2 = card_level - 1
+
+        if evo_color2 and evo_level2:
+            color_val2 = COLOR_MAP.get(evo_color2, 0)
+            costs.append({
+                "card_color": color_val2,
+                "level": evo_level2,
+                "memory_cost": evo_cost2,
+            })
 
     return costs
 
@@ -122,6 +143,7 @@ def convert_card(api_card):
         "inherited_effect_description_eng": api_card.get("source_effect") or "",
         "security_effect_description_eng": "",
         "evo_costs": parse_evo_costs(api_card),
+        "xros_req": api_card.get("xros_req") or "",
     }
 
 

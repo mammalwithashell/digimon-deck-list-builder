@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -46,6 +47,7 @@ class EX10_013(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [Breeding] [When Digivolving] This Digimon may move.
         effect2 = ICardEffect()
+        effect2.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect2.set_effect_name("EX10-013 Move digimon to battle area")
         effect2.set_effect_description("[Breeding] [When Digivolving] This Digimon may move.")
         effect2.is_optional = True
@@ -62,6 +64,7 @@ class EX10_013(CardScript):
         # Timing: EffectTiming.OnEndTurn
         # [End of Your Turn] By returning 5 cards with [Lucemon] in their texts from your trash to the bottom of the deck, this Digimon may digivolve into [Lucemon: Chaos Mode] in the trash without paying the cost.
         effect3 = ICardEffect()
+        effect3.set_timing(EffectTiming.OnEndTurn)
         effect3.set_effect_name("EX10-013 By returning 5 [lucemon] in text cards from trash to bottom of deck, digivolve into [Lucemon: Chaos Mode] in trash")
         effect3.set_effect_description("[End of Your Turn] By returning 5 cards with [Lucemon] in their texts from your trash to the bottom of the deck, this Digimon may digivolve into [Lucemon: Chaos Mode] in the trash without paying the cost.")
         effect3.is_optional = True

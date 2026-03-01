@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -16,6 +17,7 @@ class EX8_074(CardScript):
         # Timing: EffectTiming.BeforePayCost
         # When this card would be played, by suspending 2 Digimon, reduce the play cost by 4.
         effect0 = ICardEffect()
+        effect0.set_timing(EffectTiming.BeforePayCost)
         effect0.set_effect_name("EX8-074 Suspend 2 Digimon to get Play Cost -4")
         effect0.set_effect_description("When this card would be played, by suspending 2 Digimon, reduce the play cost by 4.")
         effect0.set_hash_string("PlayCost-4_EX8_074")
@@ -108,6 +110,7 @@ class EX8_074(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [When Digivolving] You may suspend 1 Digimon. Then, you may delete 1 of your opponent's 8000 DP or lower Digimon. For each other suspended Digimon, add 3000 to this DP deletion effect's maximum.
         effect4 = ICardEffect()
+        effect4.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect4.set_effect_name("EX8-074 Suspend 1 Digimon then Delete 1 Digimon")
         effect4.set_effect_description("[When Digivolving] You may suspend 1 Digimon. Then, you may delete 1 of your opponent's 8000 DP or lower Digimon. For each other suspended Digimon, add 3000 to this DP deletion effect's maximum.")
         effect4.is_when_digivolving = True
@@ -151,6 +154,7 @@ class EX8_074(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [All Turns] (Once Per Turn) When Digimon are played, you may activate 1 of this Digimon's [When Digivolving] effects.
         effect5 = ICardEffect()
+        effect5.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect5.set_effect_name("EX8-074 Activate 1 of this Digimon's [When Digivolving] effects")
         effect5.set_effect_description("[All Turns] (Once Per Turn) When Digimon are played, you may activate 1 of this Digimon's [When Digivolving] effects.")
         effect5.is_optional = True

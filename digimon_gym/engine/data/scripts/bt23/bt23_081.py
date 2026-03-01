@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -16,6 +17,7 @@ class BT23_081(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [On Play] You may play 1 play cost 5 or lower Digimon card with the [Hudie] trait from your hand without paying the cost.
         effect0 = ICardEffect()
+        effect0.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect0.set_effect_name("BT23-081 play 1 play cost 5- [Hudie] trait digimon from hand")
         effect0.set_effect_description("[On Play] You may play 1 play cost 5 or lower Digimon card with the [Hudie] trait from your hand without paying the cost.")
         effect0.is_on_play = True
@@ -55,38 +57,54 @@ class BT23_081(CardScript):
         # Timing: EffectTiming.OnTappedAnyone
         # [All Turns] When any of your [Hudie] trait Digimon suspend, by suspending this Tamer, 1 of your opponent's Digimon gets -3000 DP for the turn.
         effect1 = ICardEffect()
+        effect1.set_timing(EffectTiming.OnTappedAnyone)
         effect1.set_effect_name("BT23-081 By suspending this tamer, -3K DP 1 digimon")
         effect1.set_effect_description("[All Turns] When any of your [Hudie] trait Digimon suspend, by suspending this Tamer, 1 of your opponent's Digimon gets -3000 DP for the turn.")
         effect1.is_optional = True
 
         effect = effect1  # alias for condition closure
         def condition1(context: Dict[str, Any]) -> bool:
-            if card and card.permanent_of_this_card() is None:
+            tamer_perm = card.permanent_of_this_card() if card else None
+            if not tamer_perm:
+                return False
+            # Chitose must be unsuspended (suspending is the cost)
+            if tamer_perm.is_suspended:
+                return False
+            # The suspended permanent must be one of your [Hudie] trait Digimon
+            tapped_perm = context.get('permanent')
+            if not tapped_perm:
+                return False
+            # Must be our Digimon, not opponent's
+            player = card.owner
+            if player and tapped_perm not in player.battle_area:
+                return False
+            if not tapped_perm.is_digimon:
+                return False
+            traits = getattr(tapped_perm.top_card, 'card_traits', []) or []
+            if not any('Hudie' in t for t in traits):
                 return False
             return True
 
         effect1.set_can_use_condition(condition1)
 
         def process1(ctx: Dict[str, Any]):
-            """Action: DP -3000, Suspend"""
+            """Action: Suspend Chitose as cost, then give -3000 DP to 1 opponent Digimon."""
             player = ctx.get('player')
-            perm = ctx.get('permanent')
             game = ctx.get('game')
-            # DP change targets opponent digimon
-            enemy = player.enemy if player else None
-            if enemy and enemy.battle_area:
-                dp_targets = [p for p in enemy.battle_area if p.is_digimon and p.dp is not None]
-                if dp_targets:
-                    target = min(dp_targets, key=lambda p: p.dp)
-                    target.change_dp(-3000)
             if not (player and game):
                 return
-            def target_filter(p):
-                return True
-            def on_suspend(target_perm):
-                target_perm.suspend()
+            # Suspend Chitose as cost
+            tamer_perm = card.permanent_of_this_card() if card else None
+            if tamer_perm and not tamer_perm.is_suspended:
+                tamer_perm.suspend()
+            # Select 1 opponent Digimon to give -3000 DP
+            def dp_filter(p):
+                return p.is_digimon and p.dp is not None
+            def on_dp_reduce(target_perm):
+                target_perm.change_dp(-3000)
             game.effect_select_opponent_permanent(
-                player, on_suspend, filter_fn=target_filter, is_optional=True)
+                player, on_dp_reduce, filter_fn=dp_filter, is_optional=False,
+                prompt="Select 1 opponent Digimon to give -3000 DP.")
 
         effect1.set_on_process_callback(process1)
         effects.append(effect1)

@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -59,6 +60,7 @@ class EX6_035(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [On Play] You may play 1 level 4 or lower green or yellow Digimon card from your hand without paying the cost. Then, 1 of your opponent's Digimon gets -4000 DP for each of your other Digimon until the end of their turn.
         effect3 = ICardEffect()
+        effect3.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect3.set_effect_name("EX6-035 Play 1 Digimon from hand, Then -4k DP for each digimon")
         effect3.set_effect_description("[On Play] You may play 1 level 4 or lower green or yellow Digimon card from your hand without paying the cost. Then, 1 of your opponent's Digimon gets -4000 DP for each of your other Digimon until the end of their turn.")
         effect3.set_hash_string("Play1Digimon_EX6_035")
@@ -97,6 +99,7 @@ class EX6_035(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [When Digivolving] You may play 1 level 4 or lower green or yellow Digimon card from your hand without paying the cost. Then, 1 of your opponent's Digimon gets -4000 DP for each of your other Digimon until the end of their turn.
         effect4 = ICardEffect()
+        effect4.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect4.set_effect_name("EX6-035 Play 1 Digimon from hand, Then -4k DP for each digimon")
         effect4.set_effect_description("[When Digivolving] You may play 1 level 4 or lower green or yellow Digimon card from your hand without paying the cost. Then, 1 of your opponent's Digimon gets -4000 DP for each of your other Digimon until the end of their turn.")
         effect4.set_hash_string("Play1Digimon_EX6_035")

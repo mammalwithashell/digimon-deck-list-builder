@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -16,6 +17,7 @@ class BT11_098(CardScript):
         # Timing: EffectTiming.OptionSkill
         # [Main] You may play 1 blue Digimon card from one of your blue Digimon's digivolution cards without paying the cost. Then, if you have a Digimon with [Seadramon] in its name in play, return 1 of your opponent's level 4 or lower Digimon to the bottom of its owner's deck.
         effect0 = ICardEffect()
+        effect0.set_timing(EffectTiming.OptionSkill)
         effect0.set_effect_name("BT11-098 Play Card, Bounce")
         effect0.set_effect_description("[Main] You may play 1 blue Digimon card from one of your blue Digimon's digivolution cards without paying the cost. Then, if you have a Digimon with [Seadramon] in its name in play, return 1 of your opponent's level 4 or lower Digimon to the bottom of its owner's deck.")
 

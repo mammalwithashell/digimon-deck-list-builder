@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -38,6 +39,7 @@ class BT24_054(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [Your Turn] When any of your [Shuu Yulin]s are played, this Digimon may digivolve into [Hisyaryumon] in the hand for a digivolution cost of 3, ignoring digivolution requirements.
         effect1 = ICardEffect()
+        effect1.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect1.set_effect_name("BT24-054 Digivolve into a [Hisyaryumon]] in the hand")
         effect1.set_effect_description("[Your Turn] When any of your [Shuu Yulin]s are played, this Digimon may digivolve into [Hisyaryumon] in the hand for a digivolution cost of 3, ignoring digivolution requirements.")
         effect1.is_optional = True
@@ -76,6 +78,7 @@ class BT24_054(CardScript):
         # Timing: EffectTiming.OnTappedAnyone
         # [All Turns] [Once Per Turn] When this Digimon suspendeds, suspend 1 of your opponent's Digimon or Tamers with as high or lower a play cost as this Digimon.
         effect2 = ICardEffect()
+        effect2.set_timing(EffectTiming.OnTappedAnyone)
         effect2.set_effect_name("BT24-054 Suspend opponent's Digimon or Tamers with play cost less than this Digimon.")
         effect2.set_effect_description("[All Turns] [Once Per Turn] When this Digimon suspendeds, suspend 1 of your opponent's Digimon or Tamers with as high or lower a play cost as this Digimon.")
         effect2.is_inherited_effect = True

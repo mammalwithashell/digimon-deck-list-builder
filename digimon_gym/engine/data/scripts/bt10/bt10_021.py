@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -16,6 +17,7 @@ class BT10_021(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [On Play] If you have a [Kiriha Aonuma] in play, you may return 1 [MetalGreymon] from your trash to your hand. If you don't have a [Kiriha Aonuma] in play, you may play 1 [Kiriha Aonuma] from your hand without paying its memory cost.
         effect0 = ICardEffect()
+        effect0.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect0.set_effect_name("BT10-021 Return a [MetalGreymon] from trash to hand or play [Kiriha Aonuma] from hand")
         effect0.set_effect_description("[On Play] If you have a [Kiriha Aonuma] in play, you may return 1 [MetalGreymon] from your trash to your hand. If you don't have a [Kiriha Aonuma] in play, you may play 1 [Kiriha Aonuma] from your hand without paying its memory cost.")
         effect0.is_optional = True
@@ -65,6 +67,7 @@ class BT10_021(CardScript):
         # Timing: EffectTiming.OnAllyAttack
         # [When Attacking][Once Per Turn] If this Digimon has [Blue Flare] in its traits and your opponent has 2 or more Digimon in play, 1 of your opponent's Digimon can't attack or block until the end of your opponent's turn.
         effect2 = ICardEffect()
+        effect2.set_timing(EffectTiming.OnAllyAttack)
         effect2.set_effect_name("BT10-021 Opponent's 1 Digimon can't attack and block")
         effect2.set_effect_description("[When Attacking][Once Per Turn] If this Digimon has [Blue Flare] in its traits and your opponent has 2 or more Digimon in play, 1 of your opponent's Digimon can't attack or block until the end of your opponent's turn.")
         effect2.is_inherited_effect = True

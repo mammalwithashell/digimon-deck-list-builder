@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -16,6 +17,7 @@ class BT15_083(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [On Play] Reveal the top 3 cards of your deck. Add 1 card with [Gabumon] or [Garurumon] in its name among them to the hand. Return the rest to the bottom of the deck.
         effect0 = ICardEffect()
+        effect0.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect0.set_effect_name("BT15-083 Reveal the top 3 cards of deck")
         effect0.set_effect_description("[On Play] Reveal the top 3 cards of your deck. Add 1 card with [Gabumon] or [Garurumon] in its name among them to the hand. Return the rest to the bottom of the deck.")
         effect0.is_on_play = True
@@ -57,6 +59,7 @@ class BT15_083(CardScript):
         # Timing: EffectTiming.OnAddHand
         # [Your Turn] When one of your Digimon's effects adds cards to your hand, by suspending this Tamer, gain 1 memory.
         effect1 = ICardEffect()
+        effect1.set_timing(EffectTiming.OnAddHand)
         effect1.set_effect_name("BT15-083 Memory +1")
         effect1.set_effect_description("[Your Turn] When one of your Digimon's effects adds cards to your hand, by suspending this Tamer, gain 1 memory.")
         effect1.is_optional = True

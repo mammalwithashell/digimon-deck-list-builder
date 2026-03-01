@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -46,6 +47,7 @@ class BT19_061(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [On Play] Reveal the top 3 cards of your deck. Add 1 card with the [Xros Heart]/[Blue Flare] trait among them to the hand. Trash the rest.
         effect2 = ICardEffect()
+        effect2.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect2.set_effect_name("BT19-061 Reveal the top 3 cards of deck")
         effect2.set_effect_description("[On Play] Reveal the top 3 cards of your deck. Add 1 card with the [Xros Heart]/[Blue Flare] trait among them to the hand. Trash the rest.")
         effect2.is_on_play = True
@@ -83,6 +85,7 @@ class BT19_061(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [When Digivolving] Reveal the top 3 cards of your deck. Add 1 card with the [Xros Heart]/[Blue Flare] trait among them to the hand. Trash the rest.
         effect3 = ICardEffect()
+        effect3.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect3.set_effect_name("BT19-061 Reveal the top 3 cards of deck")
         effect3.set_effect_description("[When Digivolving] Reveal the top 3 cards of your deck. Add 1 card with the [Xros Heart]/[Blue Flare] trait among them to the hand. Trash the rest.")
         effect3.is_when_digivolving = True
@@ -120,6 +123,7 @@ class BT19_061(CardScript):
         # Timing: EffectTiming.OnDestroyedAnyone
         # [On Deletion] Place 1 Digimon card with the [Xros Heart]/[Blue Flare] trait from your hand or trash under your Tamers.
         effect4 = ICardEffect()
+        effect4.set_timing(EffectTiming.OnDestroyedAnyone)
         effect4.set_effect_name("BT19-061 Place 1 [Xros Heart]/[Blue Flare] card from trash under 1 of your Tamers, then <Save>")
         effect4.set_effect_description("[On Deletion] Place 1 Digimon card with the [Xros Heart]/[Blue Flare] trait from your hand or trash under your Tamers.")
         effect4.is_on_deletion = True

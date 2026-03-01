@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -29,6 +30,7 @@ class BT10_083(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [Opponent's Turn] When an opponent plays a Digimon, you may play 1 purple level 4 or lower Digimon card from your trash without paying its memory cost. Any [On Play] effects on Digimon played by this effect don't activate.
         effect1 = ICardEffect()
+        effect1.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect1.set_effect_name("BT10-083 Play 1 level 4 or lower Digimon from trash")
         effect1.set_effect_description("[Opponent's Turn] When an opponent plays a Digimon, you may play 1 purple level 4 or lower Digimon card from your trash without paying its memory cost. Any [On Play] effects on Digimon played by this effect don't activate.")
         effect1.is_optional = True
@@ -66,6 +68,7 @@ class BT10_083(CardScript):
         # Timing: EffectTiming.OnDestroyedAnyone
         # [On Deletion] If your opponent has 2 or fewer Digimon in play, you may play 1 purple level 5 or lower Digimon card or 1 [Mervamon] from your trash without paying its memory cost.
         effect2 = ICardEffect()
+        effect2.set_timing(EffectTiming.OnDestroyedAnyone)
         effect2.set_effect_name("BT10-083 Play 1 Digimon from trash")
         effect2.set_effect_description("[On Deletion] If your opponent has 2 or fewer Digimon in play, you may play 1 purple level 5 or lower Digimon card or 1 [Mervamon] from your trash without paying its memory cost.")
         effect2.is_optional = True

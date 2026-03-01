@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -29,6 +30,7 @@ class EX6_054(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [On Play] Your opponent may delete 1 of their Digimon or Tamers. If this effect didn't delete, trash the top card of your opponents security stack and <Recovery +1>.
         effect1 = ICardEffect()
+        effect1.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect1.set_effect_name("EX6-054 Opponent deletes 1 Digimon or Tamer/Trash and Recover")
         effect1.set_effect_description("[On Play] Your opponent may delete 1 of their Digimon or Tamers. If this effect didn't delete, trash the top card of your opponents security stack and <Recovery +1>.")
         effect1.is_on_play = True
@@ -63,6 +65,7 @@ class EX6_054(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [When Digivolving] Your opponent may delete 1 of their Digimon or Tamers. If this effect didn't delete, trash the top card of your opponents security stack and <Recovery +1>.
         effect2 = ICardEffect()
+        effect2.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect2.set_effect_name("EX6-054 Opponent deletes 1 Digimon or Tamer/Trash and Recover")
         effect2.set_effect_description("[When Digivolving] Your opponent may delete 1 of their Digimon or Tamers. If this effect didn't delete, trash the top card of your opponents security stack and <Recovery +1>.")
         effect2.is_when_digivolving = True
@@ -97,6 +100,7 @@ class EX6_054(CardScript):
         # Timing: EffectTiming.WhenRemoveField
         # [All Turns] When this Digimon would leave the battle area; by returning 1 [Lucemon] from this Digimon's digivolution cards or from your trash to the bottom of the deck, you may play 1 [Lucemon: Satan Mode] or 1 level 6 Digimon card with the [Seven Great Demon Lords] trait from your trash without paying the cost.
         effect3 = ICardEffect()
+        effect3.set_timing(EffectTiming.WhenRemoveField)
         effect3.set_effect_name("EX6-054 Play 1 [Lucemon: Satan Mode] or level 6 with [Seven Great Demon Lords] trait")
         effect3.set_effect_description("[All Turns] When this Digimon would leave the battle area; by returning 1 [Lucemon] from this Digimon's digivolution cards or from your trash to the bottom of the deck, you may play 1 [Lucemon: Satan Mode] or 1 level 6 Digimon card with the [Seven Great Demon Lords] trait from your trash without paying the cost.")
         effect3.is_optional = True

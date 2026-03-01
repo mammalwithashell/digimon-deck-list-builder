@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -31,6 +32,7 @@ class BT24_028(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [On Play] By placing 1 level 5 or lower blue [TS] trait Digimon card from your hand as this Digimon's bottom digivolution card, until your opponent's turn ends, this Digimon can't be deleted in battle and gains <Blocker>
         effect1 = ICardEffect()
+        effect1.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect1.set_effect_name("BT24-028 By placing 1 level 5 or lower [TS digimon] as bottom source card, gain battle immunity & <Blocker>")
         effect1.set_effect_description("[On Play] By placing 1 level 5 or lower blue [TS] trait Digimon card from your hand as this Digimon's bottom digivolution card, until your opponent's turn ends, this Digimon can't be deleted in battle and gains <Blocker>")
         effect1.is_on_play = True
@@ -61,6 +63,7 @@ class BT24_028(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [When Digivolving] By placing 1 level 5 or lower blue [TS] trait Digimon card from your hand as this Digimon's bottom digivolution card, until your opponent's turn ends, this Digimon can't be deleted in battle and gains <Blocker>
         effect2 = ICardEffect()
+        effect2.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect2.set_effect_name("BT24-028 By placing 1 level 5 or lower [TS digimon] as bottom source card, gain battle immunity & <Blocker>")
         effect2.set_effect_description("[When Digivolving] By placing 1 level 5 or lower blue [TS] trait Digimon card from your hand as this Digimon's bottom digivolution card, until your opponent's turn ends, this Digimon can't be deleted in battle and gains <Blocker>")
         effect2.is_when_digivolving = True
@@ -91,6 +94,7 @@ class BT24_028(CardScript):
         # Timing: EffectTiming.OnUnTappedAnyone
         # [Your Turn] When this Digimon unsuspends, it may digivolve into [Neptunemon] in the hand without paying the cost.
         effect3 = ICardEffect()
+        effect3.set_timing(EffectTiming.OnUnTappedAnyone)
         effect3.set_effect_name("BT24-028 You may digivolve into [Neptunemon]")
         effect3.set_effect_description("[Your Turn] When this Digimon unsuspends, it may digivolve into [Neptunemon] in the hand without paying the cost.")
 
@@ -124,6 +128,7 @@ class BT24_028(CardScript):
         # Timing: EffectTiming.OnAllyAttack
         # [When Attacking] [Once Per Turn] You may play 1 level 4 or lower blue Digimon card with the [TS] trait from this Digimon's digivolution cards without paying the cost.
         effect4 = ICardEffect()
+        effect4.set_timing(EffectTiming.OnAllyAttack)
         effect4.set_effect_name("BT24-028 Play 1 level 4 or lower blue [TS] digimon in digivolution sources")
         effect4.set_effect_description("[When Attacking] [Once Per Turn] You may play 1 level 4 or lower blue Digimon card with the [TS] trait from this Digimon's digivolution cards without paying the cost.")
         effect4.is_inherited_effect = True

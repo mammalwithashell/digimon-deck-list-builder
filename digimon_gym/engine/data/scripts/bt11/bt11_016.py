@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -16,6 +17,7 @@ class BT11_016(CardScript):
         # Timing: EffectTiming.OnLoseSecurity
         # [Your Turn][Once Per Turn] When a card is removed from your opponent's security stack, you may activate 1 of this Digimon's [On Deletion] effects.
         effect0 = ICardEffect()
+        effect0.set_timing(EffectTiming.OnLoseSecurity)
         effect0.set_effect_name("BT11-016 Activate 1 [On Deletion] effect")
         effect0.set_effect_description("[Your Turn][Once Per Turn] When a card is removed from your opponent's security stack, you may activate 1 of this Digimon's [On Deletion] effects.")
         effect0.is_optional = True
@@ -36,6 +38,7 @@ class BT11_016(CardScript):
         # Timing: EffectTiming.OnDestroyedAnyone
         # [On Deletion] You may play 1 red Digimon with [Avian], [Bird], [Beast], [Animal], or [Sovereign] in one of its traits and 3000 DP or less from your hand without paying the cost. For each red Tamer you have in play, add 2000 to the maximum DP of the card you can play by this effect.
         effect1 = ICardEffect()
+        effect1.set_timing(EffectTiming.OnDestroyedAnyone)
         effect1.set_effect_name("BT11-016 Play 1 red Digimon from hand")
         effect1.set_effect_description("[On Deletion] You may play 1 red Digimon with [Avian], [Bird], [Beast], [Animal], or [Sovereign] in one of its traits and 3000 DP or less from your hand without paying the cost. For each red Tamer you have in play, add 2000 to the maximum DP of the card you can play by this effect.")
         effect1.is_optional = True

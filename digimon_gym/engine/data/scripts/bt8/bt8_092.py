@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -16,6 +17,7 @@ class BT8_092(CardScript):
         # Timing: EffectTiming.OnMove
         # [Your Turn] When one of your Digimon with [X-Antibody] in its traits is moved from your breeding area to your battle area, gain 1 memory and <Draw 1��.
         effect0 = ICardEffect()
+        effect0.set_timing(EffectTiming.OnMove)
         effect0.set_effect_name("BT8-092 Memory +1 and Draw 1")
         effect0.set_effect_description("[Your Turn] When one of your Digimon with [X-Antibody] in its traits is moved from your breeding area to your battle area, gain 1 memory and <Draw 1��.")
 
@@ -45,6 +47,7 @@ class BT8_092(CardScript):
         # Timing: EffectTiming.OnAllyAttack
         # [Your Turn] When one of your black Digimon with [X-Antibody] in its traits attacks, you may suspend this Tamer to place 1 card with [X-Antibody] in its traits from your hand under that Digimon as its bottom digivolution card.
         effect1 = ICardEffect()
+        effect1.set_timing(EffectTiming.OnAllyAttack)
         effect1.set_effect_name("BT8-092 Place a Card to digivolution cards")
         effect1.set_effect_description("[Your Turn] When one of your black Digimon with [X-Antibody] in its traits attacks, you may suspend this Tamer to place 1 card with [X-Antibody] in its traits from your hand under that Digimon as its bottom digivolution card.")
         effect1.is_optional = True

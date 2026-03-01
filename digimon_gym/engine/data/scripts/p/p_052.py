@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -16,6 +17,7 @@ class P_052(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [When Digivolving] If you have a Tamer in play, up to 3 of your opponent's Digimon with no digivolution cards can't attack until the end of your opponent's next turn.
         effect0 = ICardEffect()
+        effect0.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect0.set_effect_name("P-052 Opponent's Digimons with no Digivolution cards can't attack")
         effect0.set_effect_description("[When Digivolving] If you have a Tamer in play, up to 3 of your opponent's Digimon with no digivolution cards can't attack until the end of your opponent's next turn.")
         effect0.is_when_digivolving = True
@@ -50,6 +52,7 @@ class P_052(CardScript):
         # Timing: EffectTiming.OnAllyAttack
         # [When Attacking][Once Per Turn] Return 1 of your opponent's Digimon with no digivolution cards to its owner's hand.
         effect1 = ICardEffect()
+        effect1.set_timing(EffectTiming.OnAllyAttack)
         effect1.set_effect_name("P-052 Return 1 Digimon  with no Digivolution cards to hand")
         effect1.set_effect_description("[When Attacking][Once Per Turn] Return 1 of your opponent's Digimon with no digivolution cards to its owner's hand.")
         effect1.set_max_count_per_turn(1)

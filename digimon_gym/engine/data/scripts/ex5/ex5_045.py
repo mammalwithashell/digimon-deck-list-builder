@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -16,6 +17,7 @@ class EX5_045(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [On Play] If it's your opponent's turn, reveal the top 3 cards of your deck. You may play 1 Digimon card with [Sukamon] in its name among them without paying the cost. Trash the rest.
         effect0 = ICardEffect()
+        effect0.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect0.set_effect_name("EX5-045 Reveal the top 3 cards of deck")
         effect0.set_effect_description("[On Play] If it's your opponent's turn, reveal the top 3 cards of your deck. You may play 1 Digimon card with [Sukamon] in its name among them without paying the cost. Trash the rest.")
         effect0.is_on_play = True
@@ -61,6 +63,7 @@ class EX5_045(CardScript):
         # Timing: EffectTiming.OnDestroyedAnyone
         # [On Deletion] If this Digimon had [Sukamon]/[Etemon] in its name, you may play 1 [Chuumon] from your trash suspended without paying the cost.
         effect1 = ICardEffect()
+        effect1.set_timing(EffectTiming.OnDestroyedAnyone)
         effect1.set_effect_name("EX5-045 Play 1 [Chuumon] from trash")
         effect1.set_effect_description("[On Deletion] If this Digimon had [Sukamon]/[Etemon] in its name, you may play 1 [Chuumon] from your trash suspended without paying the cost.")
         effect1.is_inherited_effect = True

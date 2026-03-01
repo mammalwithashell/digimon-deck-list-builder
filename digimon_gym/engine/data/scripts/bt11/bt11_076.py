@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -29,6 +30,7 @@ class BT11_076(CardScript):
         # Timing: EffectTiming.OnAllyAttack
         # [When Attacking] By deleting 1 of your other Digimon, delete 1 of your opponent's unsuspended Digimon with a level less than or equal to the deleted Digimon's level.
         effect1 = ICardEffect()
+        effect1.set_timing(EffectTiming.OnAllyAttack)
         effect1.set_effect_name("BT11-076 Delete your 1 Digimon and delete 1 unsuspended Digimon")
         effect1.set_effect_description("[When Attacking] By deleting 1 of your other Digimon, delete 1 of your opponent's unsuspended Digimon with a level less than or equal to the deleted Digimon's level.")
         effect1.is_optional = True
@@ -65,6 +67,7 @@ class BT11_076(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [All Turns][Once Per Turn] When you play a Digimon by an effect, gain 1 memory.
         effect2 = ICardEffect()
+        effect2.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect2.set_effect_name("BT11-076 Memory +1")
         effect2.set_effect_description("[All Turns][Once Per Turn] When you play a Digimon by an effect, gain 1 memory.")
         effect2.is_inherited_effect = True

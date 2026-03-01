@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -29,6 +30,7 @@ class EX6_042(CardScript):
         # Timing: EffectTiming.OnDeclaration
         # Effect
         effect1 = ICardEffect()
+        effect1.set_timing(EffectTiming.OnDeclaration)
         effect1.set_effect_name("EX6-042 One of your opponents Digimon must attack")
         effect1.set_effect_description("Effect")
         effect1.is_optional = True
@@ -43,6 +45,7 @@ class EX6_042(CardScript):
         # Timing: EffectTiming.OnDeclaration
         # [Start of Your Main Phase] Attack with this Digimon.
         effect2 = ICardEffect()
+        effect2.set_timing(EffectTiming.OnDeclaration)
         effect2.set_effect_name("EX6-042 Attack with this Digimon")
         effect2.set_effect_description("[Start of Your Main Phase] Attack with this Digimon.")
 
@@ -72,6 +75,7 @@ class EX6_042(CardScript):
         # Timing: EffectTiming.OnAddDigivolutionCards
         # [Your Turn] [Once Per Turn] When an effect places a digivolution card under this Digimon, it gains <Blocker> and <Reboot> until the end of your opponent's turn.
         effect3 = ICardEffect()
+        effect3.set_timing(EffectTiming.OnAddDigivolutionCards)
         effect3.set_effect_name("EX6-042 Gain <Blocker> and <Reboot>")
         effect3.set_effect_description("[Your Turn] [Once Per Turn] When an effect places a digivolution card under this Digimon, it gains <Blocker> and <Reboot> until the end of your opponent's turn.")
         effect3.set_max_count_per_turn(1)
@@ -104,6 +108,7 @@ class EX6_042(CardScript):
         # Timing: EffectTiming.WhenPermanentWouldBeDeleted
         # [All Turns] [Once Per Turn] When this Digimon would be deleted other than by one of your effects, by trashing 1 card with the [Legend-Arms] trait in this Digimon's digivolution cards, prevent that deletion.
         effect4 = ICardEffect()
+        effect4.set_timing(EffectTiming.WhenPermanentWouldBeDeleted)
         effect4.set_effect_name("EX6-042 Prevent Deletion")
         effect4.set_effect_description("[All Turns] [Once Per Turn] When this Digimon would be deleted other than by one of your effects, by trashing 1 card with the [Legend-Arms] trait in this Digimon's digivolution cards, prevent that deletion.")
         effect4.is_inherited_effect = True

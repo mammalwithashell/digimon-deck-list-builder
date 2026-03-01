@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -16,6 +17,7 @@ class BT19_100(CardScript):
         # Timing: EffectTiming.OnAllyAttack
         # [Security] [Opponent's Turn] When an opponent's Digimon attacks, if all of your Digimon and Tamers have the [D-Reaper] trait, for each of 1 of your [Mother D-Reaper]'s digivolution cards, the attacking Digimon get -1000 DP for the turn.
         effect0 = ICardEffect()
+        effect0.set_timing(EffectTiming.OnAllyAttack)
         effect0.set_effect_name("BT19-100 -1000DP for each digivolution source")
         effect0.set_effect_description("[Security] [Opponent's Turn] When an opponent's Digimon attacks, if all of your Digimon and Tamers have the [D-Reaper] trait, for each of 1 of your [Mother D-Reaper]'s digivolution cards, the attacking Digimon get -1000 DP for the turn.")
         effect0.is_on_attack = True
@@ -49,6 +51,7 @@ class BT19_100(CardScript):
         # Timing: EffectTiming.OptionSkill
         # [Main] If you have no face-up security cards, by trashing your top security card, place this card face up as your top security card.
         effect1 = ICardEffect()
+        effect1.set_timing(EffectTiming.OptionSkill)
         effect1.set_effect_name("BT19-100 Trash top security, place this as faceup top of security")
         effect1.set_effect_description("[Main] If you have no face-up security cards, by trashing your top security card, place this card face up as your top security card.")
 
@@ -81,6 +84,7 @@ class BT19_100(CardScript):
         # Timing: EffectTiming.SecuritySkill
         # [Security] You may play 1 [D-Reaper] trait card with a play cost equal to or lower than the number of digivolution cards of 1 of your [Mother D-Reaper]'s from your hand without paying the cost.
         effect2 = ICardEffect()
+        effect2.set_timing(EffectTiming.SecuritySkill)
         effect2.set_effect_name("BT19-100 Play Card")
         effect2.set_effect_description("[Security] You may play 1 [D-Reaper] trait card with a play cost equal to or lower than the number of digivolution cards of 1 of your [Mother D-Reaper]'s from your hand without paying the cost.")
         effect2.is_security_effect = True

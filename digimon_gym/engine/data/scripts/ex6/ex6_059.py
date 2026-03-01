@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -28,6 +29,7 @@ class EX6_059(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [On Play] Trash 1 card in your opponent's hand without looking.
         effect1 = ICardEffect()
+        effect1.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect1.set_effect_name("EX6-059 Trash 1 card in your opponent's hand")
         effect1.set_effect_description("[On Play] Trash 1 card in your opponent's hand without looking.")
         effect1.is_on_play = True
@@ -63,6 +65,7 @@ class EX6_059(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [When Digivolving] Trash 1 card in your opponent's hand without looking.
         effect2 = ICardEffect()
+        effect2.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect2.set_effect_name("EX6-059 Trash 1 card in your opponent's hand")
         effect2.set_effect_description("[When Digivolving] Trash 1 card in your opponent's hand without looking.")
         effect2.is_when_digivolving = True
@@ -98,6 +101,7 @@ class EX6_059(CardScript):
         # Timing: EffectTiming.OnDiscardHand
         # [All Turns] [Once Per Turn] When a card is trashed from your opponent's hand, you may play 1 purple card with a play cost of 10 or less from your trash without paying the cost. For each card in your opponent's hand, reduce this effect's play cost maximum by 1.
         effect3 = ICardEffect()
+        effect3.set_timing(EffectTiming.OnDiscardHand)
         effect3.set_effect_name("EX6-059 Play 1 purple card with a play cost of 10 or less from your trash")
         effect3.set_effect_description("[All Turns] [Once Per Turn] When a card is trashed from your opponent's hand, you may play 1 purple card with a play cost of 10 or less from your trash without paying the cost. For each card in your opponent's hand, reduce this effect's play cost maximum by 1.")
         effect3.is_optional = True

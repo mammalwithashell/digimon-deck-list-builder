@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -16,6 +17,7 @@ class BT13_105(CardScript):
         # Timing: EffectTiming.OptionSkill
         # [Main] Return 1 of your opponent's Digimon to the hand. Then, gain 1 memory for every 4 cards in your opponent's hand.
         effect0 = ICardEffect()
+        effect0.set_timing(EffectTiming.OptionSkill)
         effect0.set_effect_name("BT13-105 Bounce")
         effect0.set_effect_description("[Main] Return 1 of your opponent's Digimon to the hand. Then, gain 1 memory for every 4 cards in your opponent's hand.")
 
@@ -48,6 +50,7 @@ class BT13_105(CardScript):
         # Timing: EffectTiming.SecuritySkill
         # [Security] Return 1 of your opponent's Digimon to the hand.
         effect1 = ICardEffect()
+        effect1.set_timing(EffectTiming.SecuritySkill)
         effect1.set_effect_name("BT13-105 Bounce")
         effect1.set_effect_description("[Security] Return 1 of your opponent's Digimon to the hand.")
         effect1.is_security_effect = True

@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -16,6 +17,7 @@ class P_189(CardScript):
         # Timing: EffectTiming.SecuritySkill
         # [Security] You may play 1 card with the [LIBERATOR] trait and a play cost of 4 or less from your hand or trash without paying the cost.
         effect0 = ICardEffect()
+        effect0.set_timing(EffectTiming.SecuritySkill)
         effect0.set_effect_name("P-189 Play a card from your hand or trash.")
         effect0.set_effect_description("[Security] You may play 1 card with the [LIBERATOR] trait and a play cost of 4 or less from your hand or trash without paying the cost.")
         effect0.is_optional = True
@@ -67,6 +69,7 @@ class P_189(CardScript):
         # Timing: EffectTiming.OnLoseSecurity
         # Gain 1 memory
         effect2 = ICardEffect()
+        effect2.set_timing(EffectTiming.OnLoseSecurity)
         effect2.set_effect_name("P-189 Gain 1 memory")
         effect2.set_effect_description("Gain 1 memory")
         effect2.is_inherited_effect = True

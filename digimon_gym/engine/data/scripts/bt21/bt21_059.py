@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -71,6 +72,7 @@ class BT21_059(CardScript):
         # Timing: EffectTiming.WhenLinked
         # [Your Turn] [Once Per Turn] When this Digimon gets linked, <De-Digivolve 1> 1 of your opponent's Digimon.
         effect3 = ICardEffect()
+        effect3.set_timing(EffectTiming.WhenLinked)
         effect3.set_effect_name("BT21-059 <De-Digivolve 1>")
         effect3.set_effect_description("[Your Turn] [Once Per Turn] When this Digimon gets linked, <De-Digivolve 1> 1 of your opponent's Digimon.")
         effect3.set_max_count_per_turn(1)
@@ -106,6 +108,7 @@ class BT21_059(CardScript):
         # Timing: EffectTiming.WhenLinked
         # [When Linking] <De-Digivolve 1> 1 of your opponent's Digimon.
         effect4 = ICardEffect()
+        effect4.set_timing(EffectTiming.WhenLinked)
         effect4.set_effect_name("BT21-059 <De-Digivolve 1>")
         effect4.set_effect_description("[When Linking] <De-Digivolve 1> 1 of your opponent's Digimon.")
 

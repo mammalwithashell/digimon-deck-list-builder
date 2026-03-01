@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -62,6 +63,7 @@ class BT11_071(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [On Play] You may place 1 Digimon card with [Knightmon] in its name or [Bagra Army] in its traits from your hand or trash under this Digimon as its top digivolution card. Then, if [Tuwarmon] is in this Digimon's digivolution cards, <De-Digivolve 1> 3 of your opponent's Digimon.
         effect2 = ICardEffect()
+        effect2.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect2.set_effect_name("BT11-071 Place 1 card to digivolution cards and De-Digivolve 1")
         effect2.set_effect_description("[On Play] You may place 1 Digimon card with [Knightmon] in its name or [Bagra Army] in its traits from your hand or trash under this Digimon as its top digivolution card. Then, if [Tuwarmon] is in this Digimon's digivolution cards, <De-Digivolve 1> 3 of your opponent's Digimon.")
         effect2.is_on_play = True
@@ -96,6 +98,7 @@ class BT11_071(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [When Digivolving] You may place 1 Digimon card with [Knightmon] in its name or [Bagra Army] in its traits from your hand or trash under this Digimon as its top digivolution card. Then, if [Tuwarmon] is in this Digimon's digivolution cards, <De-Digivolve 1> 3 of your opponent's Digimon.
         effect3 = ICardEffect()
+        effect3.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect3.set_effect_name("BT11-071 Place 1 card to digivolution cards and De-Digivolve 1")
         effect3.set_effect_description("[When Digivolving] You may place 1 Digimon card with [Knightmon] in its name or [Bagra Army] in its traits from your hand or trash under this Digimon as its top digivolution card. Then, if [Tuwarmon] is in this Digimon's digivolution cards, <De-Digivolve 1> 3 of your opponent's Digimon.")
         effect3.is_when_digivolving = True
@@ -130,6 +133,7 @@ class BT11_071(CardScript):
         # Timing: EffectTiming.OnDestroyedAnyone
         # [On Deletion] Return up to 2 black and purple Digimon cards from your Trash to your hand.
         effect4 = ICardEffect()
+        effect4.set_timing(EffectTiming.OnDestroyedAnyone)
         effect4.set_effect_name("BT11-071 Return cards from trash to hand")
         effect4.set_effect_description("[On Deletion] Return up to 2 black and purple Digimon cards from your Trash to your hand.")
         effect4.is_optional = True

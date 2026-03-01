@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -41,6 +42,7 @@ class BT16_031(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [On Play] By trashing 1 card in your hand, return 1 level 6 of lower 2-color Digimon card with red or purple from your trash to your hand.
         effect2 = ICardEffect()
+        effect2.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect2.set_effect_name("BT16-031 Trash 1 card to return 1 card back to you hand.")
         effect2.set_effect_description("[On Play] By trashing 1 card in your hand, return 1 level 6 of lower 2-color Digimon card with red or purple from your trash to your hand.")
         effect2.is_optional = True
@@ -84,6 +86,7 @@ class BT16_031(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [When Digivolving] By trashing 1 card in your hand, return 1 level 6 of lower 2-color Digimon card with red or purple from your trash to your hand.
         effect3 = ICardEffect()
+        effect3.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect3.set_effect_name("BT16-031 Trash 1 card to return 1 card back to you hand.")
         effect3.set_effect_description("[When Digivolving] By trashing 1 card in your hand, return 1 level 6 of lower 2-color Digimon card with red or purple from your trash to your hand.")
         effect3.is_optional = True

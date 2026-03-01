@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -72,6 +73,7 @@ class BT22_067(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [On Play] 1 of your Digimon gets +3000 DP until your opponent's turn ends. Then, 1 of your Digimon may attack a player.
         effect4 = ICardEffect()
+        effect4.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect4.set_effect_name("BT22-067 +3K DP, then 1 digimon may attack")
         effect4.set_effect_description("[On Play] 1 of your Digimon gets +3000 DP until your opponent's turn ends. Then, 1 of your Digimon may attack a player.")
         effect4.is_on_play = True
@@ -99,6 +101,7 @@ class BT22_067(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [When Digivolving] 1 of your Digimon gets +3000 DP until your opponent's turn ends. Then, 1 of your Digimon may attack a player.
         effect5 = ICardEffect()
+        effect5.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect5.set_effect_name("BT22-067 +3K DP, then 1 digimon may attack")
         effect5.set_effect_description("[When Digivolving] 1 of your Digimon gets +3000 DP until your opponent's turn ends. Then, 1 of your Digimon may attack a player.")
         effect5.is_when_digivolving = True
@@ -126,6 +129,7 @@ class BT22_067(CardScript):
         # Timing: EffectTiming.OnAllyAttack
         # [All Turns] [Once Per Turn] When Digimon attack players, reveal the top 3 cards of your deck. You may play 1 play cost 4 or lower black or red card among them without paying the cost. Trash the rest.
         effect6 = ICardEffect()
+        effect6.set_timing(EffectTiming.OnAllyAttack)
         effect6.set_effect_name("BT22-067 Reveal top 3, Play 1 4 cost or lower Black or Red card")
         effect6.set_effect_description("[All Turns] [Once Per Turn] When Digimon attack players, reveal the top 3 cards of your deck. You may play 1 play cost 4 or lower black or red card among them without paying the cost. Trash the rest.")
         effect6.set_max_count_per_turn(1)

@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -41,6 +42,7 @@ class EX8_011(CardScript):
         # Timing: EffectTiming.OnStartMainPhase
         # [Start of Your Main Phase] This Digimon gets +3000 DP until the end of your opponent's turn.
         effect2 = ICardEffect()
+        effect2.set_timing(EffectTiming.OnStartMainPhase)
         effect2.set_effect_name("EX8-011 DP +3000")
         effect2.set_effect_description("[Start of Your Main Phase] This Digimon gets +3000 DP until the end of your opponent's turn.")
         effect2.dp_modifier = 3000
@@ -69,6 +71,7 @@ class EX8_011(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [When Digivolving] This Digimon gets +3000 DP until the end of your opponent's turn.
         effect3 = ICardEffect()
+        effect3.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect3.set_effect_name("EX8-011 DP +3000")
         effect3.set_effect_description("[When Digivolving] This Digimon gets +3000 DP until the end of your opponent's turn.")
         effect3.is_when_digivolving = True

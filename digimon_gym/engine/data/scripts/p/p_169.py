@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -16,6 +17,7 @@ class P_169(CardScript):
         # Timing: EffectTiming.OnStartMainPhase
         # [Start of Your Main Phase] If your opponent has a Digimon, gain 1 memory.
         effect0 = ICardEffect()
+        effect0.set_timing(EffectTiming.OnStartMainPhase)
         effect0.set_effect_name("P-169 Memory +1")
         effect0.set_effect_description("[Start of Your Main Phase] If your opponent has a Digimon, gain 1 memory.")
 
@@ -43,6 +45,7 @@ class P_169(CardScript):
         # Timing: EffectTiming.OnDigivolutionCardDiscarded
         # [All Turns] When effects trash digivolution cards from any of your [Mineral] or [Rock] trait Digimon, by suspending this Tamer, place 1 card with the [Mineral] or [Rock] trait from your trash as any of those Digimon's bottom digivolution card.
         effect1 = ICardEffect()
+        effect1.set_timing(EffectTiming.OnDigivolutionCardDiscarded)
         effect1.set_effect_name("P-169 Place 1 digivolution card")
         effect1.set_effect_description("[All Turns] When effects trash digivolution cards from any of your [Mineral] or [Rock] trait Digimon, by suspending this Tamer, place 1 card with the [Mineral] or [Rock] trait from your trash as any of those Digimon's bottom digivolution card.")
         effect1.is_optional = True

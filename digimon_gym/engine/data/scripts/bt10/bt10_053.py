@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -16,6 +17,7 @@ class BT10_053(CardScript):
         # Timing: EffectTiming.OnDeclaration
         # [Main][Once Per Turn] By suspending 1 of your green Digimon, you may play 1 Digimon card with [Vegetation], [Plant] or [Fairy] in its traits and 3000 DP or less from your hand without paying its memory cost.
         effect0 = ICardEffect()
+        effect0.set_timing(EffectTiming.OnDeclaration)
         effect0.set_effect_name("BT10-053 Suspend your Digimon to play a Digimon from hand")
         effect0.set_effect_description("[Main][Once Per Turn] By suspending 1 of your green Digimon, you may play 1 Digimon card with [Vegetation], [Plant] or [Fairy] in its traits and 3000 DP or less from your hand without paying its memory cost.")
         effect0.set_max_count_per_turn(1)
@@ -65,6 +67,7 @@ class BT10_053(CardScript):
         # Timing: EffectTiming.OnTappedAnyone
         # [Your Turn][Once Per Turn] When an effect suspends one of your Digimon, gain 1 memory.
         effect1 = ICardEffect()
+        effect1.set_timing(EffectTiming.OnTappedAnyone)
         effect1.set_effect_name("BT10-053 Memory +1")
         effect1.set_effect_description("[Your Turn][Once Per Turn] When an effect suspends one of your Digimon, gain 1 memory.")
         effect1.is_inherited_effect = True

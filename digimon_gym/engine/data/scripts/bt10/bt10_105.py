@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -39,6 +40,7 @@ class BT10_105(CardScript):
         # Timing: EffectTiming.OptionSkill
         # [Main] Until the end of your opponent's turn, 1 of your Digimon gains <Blocker> (When an opponent's Digimon attacks, you may suspend this Digimon to force the opponent to attack it instead), and <Reboot> (Unsuspend this Digimon during your opponent's unsuspend phase), and can't be deleted by your opponent's effects.
         effect1 = ICardEffect()
+        effect1.set_timing(EffectTiming.OptionSkill)
         effect1.set_effect_name("BT10-105 Gain Keyword Blocker, Gain Keyword Reboot")
         effect1.set_effect_description("[Main] Until the end of your opponent's turn, 1 of your Digimon gains <Blocker> (When an opponent's Digimon attacks, you may suspend this Digimon to force the opponent to attack it instead), and <Reboot> (Unsuspend this Digimon during your opponent's unsuspend phase), and can't be deleted by your opponent's effects.")
         effect1._is_blocker = True
@@ -72,6 +74,7 @@ class BT10_105(CardScript):
         # Timing: EffectTiming.SecuritySkill
         # [Security] Reveal the top 3 cards of your deck. You may play 1 Digimon card with a play cost of 4 or less among them without paying its memory cost. Place the rest at the bottom of your deck in any order. Then, add this card to its owner's hand.
         effect2 = ICardEffect()
+        effect2.set_timing(EffectTiming.SecuritySkill)
         effect2.set_effect_name("BT10-105 Play Card, Add To Hand, Reveal And Select")
         effect2.set_effect_description("[Security] Reveal the top 3 cards of your deck. You may play 1 Digimon card with a play cost of 4 or less among them without paying its memory cost. Place the rest at the bottom of your deck in any order. Then, add this card to its owner's hand.")
         effect2.is_security_effect = True

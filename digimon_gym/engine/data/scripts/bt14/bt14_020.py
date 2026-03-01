@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -16,6 +17,7 @@ class BT14_020(CardScript):
         # Timing: EffectTiming.OnStartMainPhase
         # [Start of Your Main Phase] Trash any 1 digivolution card of 1 of your opponent's Digimon. This Digimon can't be blocked for the turn.
         effect0 = ICardEffect()
+        effect0.set_timing(EffectTiming.OnStartMainPhase)
         effect0.set_effect_name("BT14-020 Trash digivolution cards and this Digimon gains unblockable")
         effect0.set_effect_description("[Start of Your Main Phase] Trash any 1 digivolution card of 1 of your opponent's Digimon. This Digimon can't be blocked for the turn.")
         effect0._is_cannot_be_blocked = True
@@ -49,6 +51,7 @@ class BT14_020(CardScript):
         # Timing: EffectTiming.WhenPermanentWouldBeDeleted
         # [Opponent's Turn] When this Digimon would be deleted, you may play 1 [Gomamon] from its digivolution cards without paying the cost.
         effect1 = ICardEffect()
+        effect1.set_timing(EffectTiming.WhenPermanentWouldBeDeleted)
         effect1.set_effect_name("BT14-020 Play [Gomamon] from digivolution cards")
         effect1.set_effect_description("[Opponent's Turn] When this Digimon would be deleted, you may play 1 [Gomamon] from its digivolution cards without paying the cost.")
         effect1.is_inherited_effect = True

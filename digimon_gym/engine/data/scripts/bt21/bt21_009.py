@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -34,6 +35,7 @@ class BT21_009(CardScript):
         # Timing: EffectTiming.WhenLinked
         # Play Card
         effect1 = ICardEffect()
+        effect1.set_timing(EffectTiming.WhenLinked)
         effect1.set_effect_name("BT21-009 Play 1 [Haru Shinkai]")
         effect1.set_effect_description("Play Card")
         effect1.is_optional = True

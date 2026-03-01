@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -42,6 +43,7 @@ class BT24_064(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [When Digivolving] Reveal the top 3 cards of your deck. You may play 1 play cost 7 or lower [Digi] or [SEEKERS] trait card among them without paying the cost. Return the rest to the top or bottom of the deck.
         effect2 = ICardEffect()
+        effect2.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect2.set_effect_name("BT24-064 Reveal the top 3 cards of deck, play 1")
         effect2.set_effect_description("[When Digivolving] Reveal the top 3 cards of your deck. You may play 1 play cost 7 or lower [Digi] or [SEEKERS] trait card among them without paying the cost. Return the rest to the top or bottom of the deck.")
         effect2.is_when_digivolving = True
@@ -95,6 +97,7 @@ class BT24_064(CardScript):
         # Timing: EffectTiming.OnTappedAnyone
         # [All Turns] [Once Per Turn] When any Digimon or Tamers suspend, <De-Digivolve 2> 1 of your opponent's Digimon.
         effect3 = ICardEffect()
+        effect3.set_timing(EffectTiming.OnTappedAnyone)
         effect3.set_effect_name("BT24-064 De-Digivolve 2")
         effect3.set_effect_description("[All Turns] [Once Per Turn] When any Digimon or Tamers suspend, <De-Digivolve 2> 1 of your opponent's Digimon.")
         effect3.set_max_count_per_turn(1)

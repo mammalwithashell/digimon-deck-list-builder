@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -34,6 +35,7 @@ class BT19_048(CardScript):
         # Timing: EffectTiming.WhenRemoveField
         # [All Turns] When any of your other Digimon with the [Royal Base] trait would leave the battle area by effects, by placing this Digimon face up as the bottom security card, they don't leave.
         effect1 = ICardEffect()
+        effect1.set_timing(EffectTiming.WhenRemoveField)
         effect1.set_effect_name("BT19-048 Place face up on bottom of security, to prevent other [Royal Base] trait digimon from leaving the battle area")
         effect1.set_effect_description("[All Turns] When any of your other Digimon with the [Royal Base] trait would leave the battle area by effects, by placing this Digimon face up as the bottom security card, they don't leave.")
         effect1.is_optional = True

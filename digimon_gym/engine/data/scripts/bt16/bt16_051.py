@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -29,6 +30,7 @@ class BT16_051(CardScript):
         # Timing: EffectTiming.OnStartMainPhase
         # [Start of Your Main Phase] By placing 1 [Kosuke Kisakata] from your hand as this Digimon's bottom digivolution card, this Digimon can't leave the battle area other than by deletion until the end of your opponent's turn.
         effect1 = ICardEffect()
+        effect1.set_timing(EffectTiming.OnStartMainPhase)
         effect1.set_effect_name("BT16-051 Place cards under this Digimon's digivolution cards to make this Digimon unable to leave the battle area except by battle until the end of your opponent's turn.")
         effect1.set_effect_description("[Start of Your Main Phase] By placing 1 [Kosuke Kisakata] from your hand as this Digimon's bottom digivolution card, this Digimon can't leave the battle area other than by deletion until the end of your opponent's turn.")
         effect1.is_optional = True

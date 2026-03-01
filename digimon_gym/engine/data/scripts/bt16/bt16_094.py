@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -16,6 +17,7 @@ class BT16_094(CardScript):
         # Timing: EffectTiming.OptionSkill
         # [Main] Reveal the top 4 cards of your deck. Add 1 yellow card or 1 card with the [Four Great Dragons] trait among them to your hand. Place the remaining cards at the bottom of your deck in any order. Then, place this card in your battle area.
         effect0 = ICardEffect()
+        effect0.set_timing(EffectTiming.OptionSkill)
         effect0.set_effect_name("BT16-094 Add To Hand")
         effect0.set_effect_description("[Main] Reveal the top 4 cards of your deck. Add 1 yellow card or 1 card with the [Four Great Dragons] trait among them to your hand. Place the remaining cards at the bottom of your deck in any order. Then, place this card in your battle area.")
 
@@ -54,6 +56,7 @@ class BT16_094(CardScript):
         # Timing: EffectTiming.OnDeclaration
         # [Main] <Delay>\r\n� Place 1 [Trial of the Four Great Dragons] from your hand in the battle area, or you may trash 1 card with the [Four Great Dragons] trait in your hand. If you did either, 1 of your opponent's Digimon gets -7000 DP for the turn.
         effect2 = ICardEffect()
+        effect2.set_timing(EffectTiming.OnDeclaration)
         effect2.set_effect_name("BT16-094 Play 1 [Trial of the Four Great Dragons] or trash 1 card and apply effects.")
         effect2.set_effect_description("[Main] <Delay>\r\n� Place 1 [Trial of the Four Great Dragons] from your hand in the battle area, or you may trash 1 card with the [Four Great Dragons] trait in your hand. If you did either, 1 of your opponent's Digimon gets -7000 DP for the turn.")
 
@@ -85,6 +88,7 @@ class BT16_094(CardScript):
         # Timing: EffectTiming.SecuritySkill
         # [Security] 1 of your opponent's Digimon gets -7000 DP for the turn. Then, place this card in the battle area.
         effect3 = ICardEffect()
+        effect3.set_timing(EffectTiming.SecuritySkill)
         effect3.set_effect_name("BT16-094 Effect")
         effect3.set_effect_description("[Security] 1 of your opponent's Digimon gets -7000 DP for the turn. Then, place this card in the battle area.")
         effect3.is_security_effect = True

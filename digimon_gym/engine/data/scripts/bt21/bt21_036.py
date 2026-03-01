@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -62,6 +63,7 @@ class BT21_036(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [When Digivolving] This Digimon unsuspends. Then, to 1 of your opponent's Digimon give -2000 DP for the turn for each card with the [Armor Form] trait in your trash.
         effect3 = ICardEffect()
+        effect3.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect3.set_effect_name("BT21-036 Unsuspend this Digimon and gain DP+")
         effect3.set_effect_description("[When Digivolving] This Digimon unsuspends. Then, to 1 of your opponent's Digimon give -2000 DP for the turn for each card with the [Armor Form] trait in your trash.")
         effect3.is_when_digivolving = True

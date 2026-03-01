@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -30,6 +31,7 @@ class BT22_056(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [On Play] 1 of your opponent's Digimon gets -3000 DP for the turn. Then, if this Digimon's stack has 2 or more same-level cards, <De-Digivolve 1> 1 of your opponent's Digimon. (Trash the top card. You can't trash past level 3 cards.)
         effect1 = ICardEffect()
+        effect1.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect1.set_effect_name("BT22-056 Give 1 digimon -3k DP. if 2 or more same level in sources, De-Digivolve 1")
         effect1.set_effect_description("[On Play] 1 of your opponent's Digimon gets -3000 DP for the turn. Then, if this Digimon's stack has 2 or more same-level cards, <De-Digivolve 1> 1 of your opponent's Digimon. (Trash the top card. You can't trash past level 3 cards.)")
         effect1.is_on_play = True
@@ -62,6 +64,7 @@ class BT22_056(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [When Digivolving] 1 of your opponent's Digimon gets -3000 DP for the turn. Then, if this Digimon's stack has 2 or more same-level cards, <De-Digivolve 1> 1 of your opponent's Digimon. (Trash the top card. You can't trash past level 3 cards.)
         effect2 = ICardEffect()
+        effect2.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect2.set_effect_name("BT22-056 Give 1 digimon -3k DP. if 2 or more same level in sources, De-Digivolve 1")
         effect2.set_effect_description("[When Digivolving] 1 of your opponent's Digimon gets -3000 DP for the turn. Then, if this Digimon's stack has 2 or more same-level cards, <De-Digivolve 1> 1 of your opponent's Digimon. (Trash the top card. You can't trash past level 3 cards.)")
         effect2.is_when_digivolving = True

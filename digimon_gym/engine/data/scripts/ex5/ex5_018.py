@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -29,6 +30,7 @@ class EX5_018(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [When Digivolving] <Draw 2> (Draw 2 cards from your deck). Then, trash 2 cards in your hand. If [Garurumon] or [X Antibody] is in this Digimon's digivolution cards, gain 1 memory.
         effect1 = ICardEffect()
+        effect1.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect1.set_effect_name("EX5-018 Draw 2, trash 2 cards from hand and gain Memory +1")
         effect1.set_effect_description("[When Digivolving] <Draw 2> (Draw 2 cards from your deck). Then, trash 2 cards in your hand. If [Garurumon] or [X Antibody] is in this Digimon's digivolution cards, gain 1 memory.")
         effect1.is_when_digivolving = True
@@ -68,6 +70,7 @@ class EX5_018(CardScript):
         # Timing: EffectTiming.WhenPermanentWouldBeDeleted
         # [All Turns] [Once Per Turn] When this Digimon with [Garurumon]/[Omnimon] in its name would be deleted in battle, by returning 2 non-Digi-Egg cards from your trash to the bottom of the deck, prevent that deletion.
         effect2 = ICardEffect()
+        effect2.set_timing(EffectTiming.WhenPermanentWouldBeDeleted)
         effect2.set_effect_name("EX5-018 Prevent this Digimon from being deleted")
         effect2.set_effect_description("[All Turns] [Once Per Turn] When this Digimon with [Garurumon]/[Omnimon] in its name would be deleted in battle, by returning 2 non-Digi-Egg cards from your trash to the bottom of the deck, prevent that deletion.")
         effect2.is_inherited_effect = True

@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -39,6 +40,7 @@ class P_095(CardScript):
         # Timing: EffectTiming.OptionSkill
         # [Main] 1 of your opponent's Digimon gets -6000 DP and cannot activate its [When Digivolving] effects until the end of your opponent's turn.
         effect1 = ICardEffect()
+        effect1.set_timing(EffectTiming.OptionSkill)
         effect1.set_effect_name("P-095 Ignore [When Digivolving] Effect")
         effect1.set_effect_description("[Main] 1 of your opponent's Digimon gets -6000 DP and cannot activate its [When Digivolving] effects until the end of your opponent's turn.")
 
@@ -76,6 +78,7 @@ class P_095(CardScript):
         # Timing: EffectTiming.SecuritySkill
         # [Security] 1 of your opponent's Digimon gets -6000 DP until the end of this turn. Then, add this card to your hand.
         effect2 = ICardEffect()
+        effect2.set_timing(EffectTiming.SecuritySkill)
         effect2.set_effect_name("P-095 DP -6000, Add To Hand")
         effect2.set_effect_description("[Security] 1 of your opponent's Digimon gets -6000 DP until the end of this turn. Then, add this card to your hand.")
         effect2.is_security_effect = True

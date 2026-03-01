@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -16,6 +17,7 @@ class BT8_055(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [When Digivolving] If this Digimon is suspended, return 1 of your opponent's suspended Digimon with DP less than or equal to this Digimon's DP to its owner's hand.
         effect0 = ICardEffect()
+        effect0.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect0.set_effect_name("BT8-055 Return a suspended Digimon to hand")
         effect0.set_effect_description("[When Digivolving] If this Digimon is suspended, return 1 of your opponent's suspended Digimon with DP less than or equal to this Digimon's DP to its owner's hand.")
         effect0.is_when_digivolving = True
@@ -51,6 +53,7 @@ class BT8_055(CardScript):
         # Timing: EffectTiming.OnUnTappedAnyone
         # [Your Turn] When this Digimon becomes unsuspended during your unsuspend phase, suspend 1 of your opponent's Digimon.
         effect1 = ICardEffect()
+        effect1.set_timing(EffectTiming.OnUnTappedAnyone)
         effect1.set_effect_name("BT8-055 Suspend 1 Digimon")
         effect1.set_effect_description("[Your Turn] When this Digimon becomes unsuspended during your unsuspend phase, suspend 1 of your opponent's Digimon.")
         effect1.is_inherited_effect = True

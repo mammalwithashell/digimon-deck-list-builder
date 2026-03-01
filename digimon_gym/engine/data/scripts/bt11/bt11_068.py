@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -16,6 +17,7 @@ class BT11_068(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [On Play] Reveal the top 5 cards of your deck. You may play 1 Tamer card with a play cost of 4 or less among them without paying the cost. Place the rest at the top or bottom of your deck in any order.
         effect0 = ICardEffect()
+        effect0.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect0.set_effect_name("BT11-068 Reveal the top 5 cards of deck")
         effect0.set_effect_description("[On Play] Reveal the top 5 cards of your deck. You may play 1 Tamer card with a play cost of 4 or less among them without paying the cost. Place the rest at the top or bottom of your deck in any order.")
         effect0.is_on_play = True
@@ -69,6 +71,7 @@ class BT11_068(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [When Digivolving] Reveal the top 5 cards of your deck. You may play 1 Tamer card with a play cost of 4 or less among them without paying the cost. Place the rest at the top or bottom of your deck in any order.
         effect1 = ICardEffect()
+        effect1.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect1.set_effect_name("BT11-068 Reveal the top 5 cards of deck")
         effect1.set_effect_description("[When Digivolving] Reveal the top 5 cards of your deck. You may play 1 Tamer card with a play cost of 4 or less among them without paying the cost. Place the rest at the top or bottom of your deck in any order.")
         effect1.is_when_digivolving = True
@@ -122,6 +125,7 @@ class BT11_068(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [Your Turn][Once Per Turn] When you play another Digimon by an effect, 1 of your Digimon gains <Blocker> until the end of your opponent's turn.
         effect2 = ICardEffect()
+        effect2.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect2.set_effect_name("BT11-068 Your 1 Digimon gains Blocker")
         effect2.set_effect_description("[Your Turn][Once Per Turn] When you play another Digimon by an effect, 1 of your Digimon gains <Blocker> until the end of your opponent's turn.")
         effect2.is_inherited_effect = True

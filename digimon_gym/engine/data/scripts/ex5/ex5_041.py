@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -42,6 +43,7 @@ class EX5_041(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [On Play] For each of your Digimon with the [Deva]/[Four Sovereigns] trait, suspend 1 of your opponent's Digimon. Then, during your opponent's next unsuspend phase, all of their Digimon can't unsuspend .
         effect2 = ICardEffect()
+        effect2.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect2.set_effect_name("EX5-041 Suspend Digimons and opponent's Digimon can't unsuspend")
         effect2.set_effect_description("[On Play] For each of your Digimon with the [Deva]/[Four Sovereigns] trait, suspend 1 of your opponent's Digimon. Then, during your opponent's next unsuspend phase, all of their Digimon can't unsuspend .")
         effect2.is_on_play = True
@@ -96,6 +98,7 @@ class EX5_041(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [When Digivolving] For each of your Digimon with the [Deva]/[Four Sovereigns] trait, suspend 1 of your opponent's Digimon. Then, during your opponent's next unsuspend phase, all of their Digimon can't unsuspend .
         effect3 = ICardEffect()
+        effect3.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect3.set_effect_name("EX5-041 Suspend Digimons and opponent's Digimon can't unsuspend")
         effect3.set_effect_description("[When Digivolving] For each of your Digimon with the [Deva]/[Four Sovereigns] trait, suspend 1 of your opponent's Digimon. Then, during your opponent's next unsuspend phase, all of their Digimon can't unsuspend .")
         effect3.is_when_digivolving = True
@@ -150,6 +153,7 @@ class EX5_041(CardScript):
         # Timing: EffectTiming.OnDestroyedAnyone
         # [On Deletion] Delete 1 of your opponent's suspended Digimon.
         effect4 = ICardEffect()
+        effect4.set_timing(EffectTiming.OnDestroyedAnyone)
         effect4.set_effect_name("EX5-041 Delete 1 suspended Digimon")
         effect4.set_effect_description("[On Deletion] Delete 1 of your opponent's suspended Digimon.")
         effect4.is_on_deletion = True

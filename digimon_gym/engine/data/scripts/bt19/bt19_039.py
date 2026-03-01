@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -16,6 +17,7 @@ class BT19_039(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [On Play] By trashing your top security card, delete 1 of your opponent's level 4 or lower Digimon and gain 1 memory.
         effect0 = ICardEffect()
+        effect0.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect0.set_effect_name("BT19-039 Trash your top security, delete a Digimon and get 1 memory")
         effect0.set_effect_description("[On Play] By trashing your top security card, delete 1 of your opponent's level 4 or lower Digimon and gain 1 memory.")
         effect0.is_optional = True
@@ -63,6 +65,7 @@ class BT19_039(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [When Digivolving] By trashing your top security card, delete 1 of your opponent's level 4 or lower Digimon and gain 1 memory.
         effect1 = ICardEffect()
+        effect1.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect1.set_effect_name("BT19-039 Trash your top security, delete a Digimon and get 1 memory")
         effect1.set_effect_description("[When Digivolving] By trashing your top security card, delete 1 of your opponent's level 4 or lower Digimon and gain 1 memory.")
         effect1.is_optional = True
@@ -110,6 +113,7 @@ class BT19_039(CardScript):
         # Timing: EffectTiming.OnDestroyedAnyone
         # [On Deletion] <Recovery +1>.
         effect2 = ICardEffect()
+        effect2.set_timing(EffectTiming.OnDestroyedAnyone)
         effect2.set_effect_name("BT19-039 Recovery +1")
         effect2.set_effect_description("[On Deletion] <Recovery +1>.")
         effect2.is_on_deletion = True
@@ -135,6 +139,7 @@ class BT19_039(CardScript):
         # Timing: EffectTiming.OnLoseSecurity
         # [All Turns][Once Per Turn] When your security is reduced, you may unsuspend this Digimon.
         effect3 = ICardEffect()
+        effect3.set_timing(EffectTiming.OnLoseSecurity)
         effect3.set_effect_name("BT19-039 Unsuspend this Digimon")
         effect3.set_effect_description("[All Turns][Once Per Turn] When your security is reduced, you may unsuspend this Digimon.")
         effect3.is_inherited_effect = True

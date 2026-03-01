@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -49,6 +50,7 @@ class EX10_031(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [On Play] Until your opponent's turn ends, their <De-Digivolve> effects don't affect 1 of your Digimon, and it gets +3000 DP.
         effect2 = ICardEffect()
+        effect2.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect2.set_effect_name("EX10-031 Gain immunity to De-Digivolve & gain 3k DP")
         effect2.set_effect_description("[On Play] Until your opponent's turn ends, their <De-Digivolve> effects don't affect 1 of your Digimon, and it gets +3000 DP.")
         effect2.is_on_play = True
@@ -77,6 +79,7 @@ class EX10_031(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [When Digivolving] Until your opponent's turn ends, their <De-Digivolve> effects don't affect 1 of your Digimon, and it gets +3000 DP.
         effect3 = ICardEffect()
+        effect3.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect3.set_effect_name("EX10-031 Gain immunity to De-Digivolve & gain 3k DP")
         effect3.set_effect_description("[When Digivolving] Until your opponent's turn ends, their <De-Digivolve> effects don't affect 1 of your Digimon, and it gets +3000 DP.")
         effect3.is_when_digivolving = True
@@ -105,6 +108,7 @@ class EX10_031(CardScript):
         # Timing: EffectTiming.WhenPermanentWouldBeDeleted
         # [All Turns] [Once Per Turn] When this Digimon would leave the battle area, you may play 1 play cost 4 or lower card from its digivolution cards without paying the cost.
         effect4 = ICardEffect()
+        effect4.set_timing(EffectTiming.WhenPermanentWouldBeDeleted)
         effect4.set_effect_name("EX10-031 Play a Digimon from digivolution cards")
         effect4.set_effect_description("[All Turns] [Once Per Turn] When this Digimon would leave the battle area, you may play 1 play cost 4 or lower card from its digivolution cards without paying the cost.")
         effect4.is_optional = True
@@ -142,6 +146,7 @@ class EX10_031(CardScript):
         # Timing: EffectTiming.OnAllyAttack
         # [Opponent's Turn] [Once Per Turn] When one of your opponent's Digimon attacks, you may change the attack target to this Digimon.
         effect5 = ICardEffect()
+        effect5.set_timing(EffectTiming.OnAllyAttack)
         effect5.set_effect_name("EX10-031 Change attack target to this card")
         effect5.set_effect_description("[Opponent's Turn] [Once Per Turn] When one of your opponent's Digimon attacks, you may change the attack target to this Digimon.")
         effect5.is_inherited_effect = True

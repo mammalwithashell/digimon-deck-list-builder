@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -30,6 +31,7 @@ class BT23_068(CardScript):
         # Timing: EffectTiming.OnStartMainPhase
         # Digivolve
         effect1 = ICardEffect()
+        effect1.set_timing(EffectTiming.OnStartMainPhase)
         effect1.set_effect_name("BT23-068 Digivolve into level 6 or lower")
         effect1.set_effect_description("Digivolve")
 
@@ -67,6 +69,7 @@ class BT23_068(CardScript):
         # Timing: EffectTiming.OnDestroyedAnyone
         # Digivolve
         effect2 = ICardEffect()
+        effect2.set_timing(EffectTiming.OnDestroyedAnyone)
         effect2.set_effect_name("BT23-068 Digivolve into level 6 or lower")
         effect2.set_effect_description("Digivolve")
         effect2.is_on_deletion = True
@@ -102,6 +105,7 @@ class BT23_068(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [When Digivolving] You may play 1 level 4 or lower purple Digimon card from your trash without paying the cost.
         effect3 = ICardEffect()
+        effect3.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect3.set_effect_name("BT23-068 Play 1 level 4 or lower Digimon from trash")
         effect3.set_effect_description("[When Digivolving] You may play 1 level 4 or lower purple Digimon card from your trash without paying the cost.")
         effect3.is_optional = True
@@ -140,6 +144,7 @@ class BT23_068(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [All Turns][Once Per Turn] When any of your Digimon digivolve from the trash, delete all of your opponent's lowest level Digimon.
         effect4 = ICardEffect()
+        effect4.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect4.set_effect_name("BT23-068 Delete opponent's lowest level Digimon")
         effect4.set_effect_description("[All Turns][Once Per Turn] When any of your Digimon digivolve from the trash, delete all of your opponent's lowest level Digimon.")
         effect4.set_max_count_per_turn(1)

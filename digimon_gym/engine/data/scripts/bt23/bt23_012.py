@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -30,6 +31,7 @@ class BT23_012(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [On Play] 1 of your Digimon gains <Raid> for the turn.
         effect1 = ICardEffect()
+        effect1.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect1.set_effect_name("BT23-012 Give 1 digimon Raid")
         effect1.set_effect_description("[On Play] 1 of your Digimon gains <Raid> for the turn.")
         effect1.is_on_play = True
@@ -64,6 +66,7 @@ class BT23_012(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [When Digivolving] 1 of your Digimon gains <Raid> for the turn.
         effect2 = ICardEffect()
+        effect2.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect2.set_effect_name("BT23-012 Give 1 digimon Raid")
         effect2.set_effect_description("[When Digivolving] 1 of your Digimon gains <Raid> for the turn.")
         effect2.is_when_digivolving = True
@@ -98,6 +101,7 @@ class BT23_012(CardScript):
         # Timing: EffectTiming.OnDestroyedAnyone
         # [On Deletion] You may play 1 level 4 or lower Digimon card with the [CS] trait or [Avian], [Bird], [Beast], [Animal] or [Sovereign] in any of its traits (other than [Sea Animal]) from your hand without paying the cost.
         effect3 = ICardEffect()
+        effect3.set_timing(EffectTiming.OnDestroyedAnyone)
         effect3.set_effect_name("BT23-012 Play 1 level 4 or lower digimon from hand")
         effect3.set_effect_description("[On Deletion] You may play 1 level 4 or lower Digimon card with the [CS] trait or [Avian], [Bird], [Beast], [Animal] or [Sovereign] in any of its traits (other than [Sea Animal]) from your hand without paying the cost.")
         effect3.is_on_deletion = True
@@ -127,6 +131,7 @@ class BT23_012(CardScript):
         # Timing: EffectTiming.OnDestroyedAnyone
         # [On Deletion] You may play 1 level 4 or lower Digimon card with the [CS] trait or [Avian], [Bird], [Beast], [Animal] or [Sovereign] in any of its traits (other than [Sea Animal]) from your hand without paying the cost.
         effect4 = ICardEffect()
+        effect4.set_timing(EffectTiming.OnDestroyedAnyone)
         effect4.set_effect_name("BT23-012 Play 1 level 4 or lower digimon from hand")
         effect4.set_effect_description("[On Deletion] You may play 1 level 4 or lower Digimon card with the [CS] trait or [Avian], [Bird], [Beast], [Animal] or [Sovereign] in any of its traits (other than [Sea Animal]) from your hand without paying the cost.")
         effect4.is_inherited_effect = True

@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -16,6 +17,7 @@ class P_043(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [On Play] You may return 1 [Kentaurosmon] from your trash to the bottom of your deck to trigger <Recovery +1 (Deck)>. (Place the top card of your deck on top of your security stack.)
         effect0 = ICardEffect()
+        effect0.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect0.set_effect_name("P-043 Return 1 [Kentaurosmon] from trash to the bottom of deck to trigger Recovery +1 (Deck)")
         effect0.set_effect_description("[On Play] You may return 1 [Kentaurosmon] from your trash to the bottom of your deck to trigger <Recovery +1 (Deck)>. (Place the top card of your deck on top of your security stack.)")
         effect0.is_optional = True
@@ -54,6 +56,7 @@ class P_043(CardScript):
         # Timing: EffectTiming.OnDestroyedAnyone
         # [On Deletion] 1 of your opponent's Digimon gets -1000 DP for the turn.
         effect1 = ICardEffect()
+        effect1.set_timing(EffectTiming.OnDestroyedAnyone)
         effect1.set_effect_name("P-043 DP -1000")
         effect1.set_effect_description("[On Deletion] 1 of your opponent's Digimon gets -1000 DP for the turn.")
         effect1.is_inherited_effect = True

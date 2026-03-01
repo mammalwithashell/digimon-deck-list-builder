@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -41,6 +42,7 @@ class EX11_024(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # Effect
         effect2 = ICardEffect()
+        effect2.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect2.set_effect_name("EX11-024 Effect")
         effect2.set_effect_description("Effect")
         effect2.is_on_play = True
@@ -58,6 +60,7 @@ class EX11_024(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # Effect
         effect3 = ICardEffect()
+        effect3.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect3.set_effect_name("EX11-024 Effect")
         effect3.set_effect_description("Effect")
         effect3.is_when_digivolving = True
@@ -75,6 +78,7 @@ class EX11_024(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # Effect
         effect4 = ICardEffect()
+        effect4.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect4.set_effect_name("EX11-024 Effect")
         effect4.set_effect_description("Effect")
         effect4.is_when_digivolving = True
@@ -92,6 +96,7 @@ class EX11_024(CardScript):
         # Timing: EffectTiming.OnAllyAttack
         # Effect
         effect5 = ICardEffect()
+        effect5.set_timing(EffectTiming.OnAllyAttack)
         effect5.set_effect_name("EX11-024 Effect")
         effect5.set_effect_description("Effect")
         effect5.is_on_attack = True

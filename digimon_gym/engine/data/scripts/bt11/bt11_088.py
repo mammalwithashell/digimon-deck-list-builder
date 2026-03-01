@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -16,6 +17,7 @@ class BT11_088(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [On Play] If your opponent has 1 or fewer Digimon in play, look at your opponent's hand and trash 1 card in it. If your opponent has 2 or more Digimon in play, place 1 of your opponent's Digimon under 1 of your opponent's other Digimon as its bottom digivolution card.
         effect0 = ICardEffect()
+        effect0.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect0.set_effect_name("BT11-088 Look at opponent's hand or place 1 Digimon under other Digimon as its bottom digivolution card.")
         effect0.set_effect_description("[On Play] If your opponent has 1 or fewer Digimon in play, look at your opponent's hand and trash 1 card in it. If your opponent has 2 or more Digimon in play, place 1 of your opponent's Digimon under 1 of your opponent's other Digimon as its bottom digivolution card.")
         effect0.is_on_play = True
@@ -51,6 +53,7 @@ class BT11_088(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [When Digivolving] If your opponent has 1 or fewer Digimon in play, look at your opponent's hand and trash 1 card in it. If your opponent has 2 or more Digimon in play, place 1 of your opponent's Digimon under 1 of your opponent's other Digimon as its bottom digivolution card.
         effect1 = ICardEffect()
+        effect1.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect1.set_effect_name("BT11-088 Look at opponent's hand or place 1 Digimon under other Digimon as its bottom digivolution card.")
         effect1.set_effect_description("[When Digivolving] If your opponent has 1 or fewer Digimon in play, look at your opponent's hand and trash 1 card in it. If your opponent has 2 or more Digimon in play, place 1 of your opponent's Digimon under 1 of your opponent's other Digimon as its bottom digivolution card.")
         effect1.is_when_digivolving = True
@@ -86,6 +89,7 @@ class BT11_088(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [All Turns][Once Per Turn] When an opponent's Digimon digivolves or an effect adds cards to the digivolution cards of an opponent's Digimon, by trashing 1 card in this Digimon's digivolution cards, trash the top card of your opponent's security stack.
         effect2 = ICardEffect()
+        effect2.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect2.set_effect_name("BT11-088 Trash the top card of opponent's security")
         effect2.set_effect_description("[All Turns][Once Per Turn] When an opponent's Digimon digivolves or an effect adds cards to the digivolution cards of an opponent's Digimon, by trashing 1 card in this Digimon's digivolution cards, trash the top card of your opponent's security stack.")
         effect2.is_optional = True
@@ -125,6 +129,7 @@ class BT11_088(CardScript):
         # Timing: EffectTiming.OnAddDigivolutionCards
         # [All Turns][Once Per Turn] When an opponent's Digimon digivolves or an effect adds cards to the digivolution cards of an opponent's Digimon, by trashing 1 card in this Digimon's digivolution cards, trash the top card of your opponent's security stack.
         effect3 = ICardEffect()
+        effect3.set_timing(EffectTiming.OnAddDigivolutionCards)
         effect3.set_effect_name("BT11-088 Trash the top card of opponent's security")
         effect3.set_effect_description("[All Turns][Once Per Turn] When an opponent's Digimon digivolves or an effect adds cards to the digivolution cards of an opponent's Digimon, by trashing 1 card in this Digimon's digivolution cards, trash the top card of your opponent's security stack.")
         effect3.is_optional = True

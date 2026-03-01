@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -42,6 +43,7 @@ class BT22_062(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [When Digivolving] This Digimon gets +4000 DP until your opponent's turn ends. Then, if [MetalTyrannomon] or [X Antibody] is in this Digimon's digivolution cards, 1 of your opponent's Digimon can't digivolve until their turn ends.
         effect2 = ICardEffect()
+        effect2.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect2.set_effect_name("BT22-062 Gain 4K DP, then if [MetalTyrannomon]/[X Antibody] in sources, 1 digimon cant digivolve")
         effect2.set_effect_description("[When Digivolving] This Digimon gets +4000 DP until your opponent's turn ends. Then, if [MetalTyrannomon] or [X Antibody] is in this Digimon's digivolution cards, 1 of your opponent's Digimon can't digivolve until their turn ends.")
         effect2.is_when_digivolving = True
@@ -73,6 +75,7 @@ class BT22_062(CardScript):
         # Timing: EffectTiming.OnEndTurn
         # [End of Opponent's Turn] [Once Per Turn] You may choose 1 of your opponent's Digimon. Your opponent attacks with the chosen Digimon.
         effect3 = ICardEffect()
+        effect3.set_timing(EffectTiming.OnEndTurn)
         effect3.set_effect_name("BT22-062 1 of your opponent's digimon attacks")
         effect3.set_effect_description("[End of Opponent's Turn] [Once Per Turn] You may choose 1 of your opponent's Digimon. Your opponent attacks with the chosen Digimon.")
         effect3.is_inherited_effect = True

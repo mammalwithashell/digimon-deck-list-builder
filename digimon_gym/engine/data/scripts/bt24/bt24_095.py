@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -51,6 +52,7 @@ class BT24_095(CardScript):
         # Timing: EffectTiming.OptionSkill
         # Suspend, Gain Keyword Cannot Unsuspend
         effect2 = ICardEffect()
+        effect2.set_timing(EffectTiming.OptionSkill)
         effect2.set_effect_name("BT24-095 Suspend 1 of opponent's Digimon or Tamers. It can't unsuspend in their next unsuspend phase. Then, you may link this card.")
         effect2.set_effect_description("Suspend, Gain Keyword Cannot Unsuspend")
         effect2._is_cannot_unsuspend = True
@@ -84,6 +86,7 @@ class BT24_095(CardScript):
         # Timing: EffectTiming.OnAllyAttack
         # [When Attacking] [Once Per Turn] Return 1 of your opponent's suspended Digimon to the hand.
         effect3 = ICardEffect()
+        effect3.set_timing(EffectTiming.OnAllyAttack)
         effect3.set_effect_name("BT24-095 Bounce 1 opponent's suspended Digimon.")
         effect3.set_effect_description("[When Attacking] [Once Per Turn] Return 1 of your opponent's suspended Digimon to the hand.")
         effect3.set_max_count_per_turn(1)

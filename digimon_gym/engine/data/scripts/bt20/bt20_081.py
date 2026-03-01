@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -45,6 +46,7 @@ class BT20_081(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [On Play] 2 of your opponent's Digimon get -10000 DP for the turn. then, if a Tamer card is in this Digimon's digivolution cards, delete 1 of your opponent's 10000 DP or lower Digimon.
         effect2 = ICardEffect()
+        effect2.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect2.set_effect_name("BT20-081 2 Digimon get -10000DP, then delete 1 with 10000DP or less")
         effect2.set_effect_description("[On Play] 2 of your opponent's Digimon get -10000 DP for the turn. then, if a Tamer card is in this Digimon's digivolution cards, delete 1 of your opponent's 10000 DP or lower Digimon.")
         effect2.is_on_play = True
@@ -89,6 +91,7 @@ class BT20_081(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [When Digivolving] 2 of your opponent's Digimon get -10000 DP for the turn. then, if a Tamer card is in this Digimon's digivolution cards, delete 1 of your opponent's 10000 DP or lower Digimon.
         effect3 = ICardEffect()
+        effect3.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect3.set_effect_name("BT20-081 2 Digimon get -10000DP, then delete 1 with 10000DP or less")
         effect3.set_effect_description("[When Digivolving] 2 of your opponent's Digimon get -10000 DP for the turn. then, if a Tamer card is in this Digimon's digivolution cards, delete 1 of your opponent's 10000 DP or lower Digimon.")
         effect3.is_when_digivolving = True
@@ -133,6 +136,7 @@ class BT20_081(CardScript):
         # Timing: EffectTiming.OnAllyAttack
         # [When Attacking] By trashing your top security card, activate 1 of this Digimon's [When Digivolving] effects.
         effect4 = ICardEffect()
+        effect4.set_timing(EffectTiming.OnAllyAttack)
         effect4.set_effect_name("BT20-081 Activate 1 of this Digimon's [When Digivolving] effects")
         effect4.set_effect_description("[When Attacking] By trashing your top security card, activate 1 of this Digimon's [When Digivolving] effects.")
         effect4.is_optional = True

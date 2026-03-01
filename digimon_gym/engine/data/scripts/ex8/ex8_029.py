@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -45,6 +46,7 @@ class EX8_029(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [When Digivolving] Return 14 play cost's total worth of your opponent's Digimon to the bottom of the deck. If DNA digivolving, you may play 12 play cost's total worth of [DS] trait Digimon from this Digimon's digivolution cards without paying the cost.
         effect2 = ICardEffect()
+        effect2.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect2.set_effect_name("EX8-029 Return 14 play cost of Digimon")
         effect2.set_effect_description("[When Digivolving] Return 14 play cost's total worth of your opponent's Digimon to the bottom of the deck. If DNA digivolving, you may play 12 play cost's total worth of [DS] trait Digimon from this Digimon's digivolution cards without paying the cost.")
         effect2.is_when_digivolving = True

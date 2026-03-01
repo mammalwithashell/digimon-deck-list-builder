@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -76,6 +77,7 @@ class BT23_013(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [When Digivolving] You may play 1 [Atho, Ren� & Por] Token or, from your hand or trash, 1 Digimon card with [Sistermon] in its name without paying the cost. This effect can't play cards with the same names as any of your Digimon.
         effect4 = ICardEffect()
+        effect4.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect4.set_effect_name("BT23-013 Play 1 [Atho, Ren� & Por] token or 1 [Sistermon] in name digimon from hand or trash")
         effect4.set_effect_description("[When Digivolving] You may play 1 [Atho, Ren� & Por] Token or, from your hand or trash, 1 Digimon card with [Sistermon] in its name without paying the cost. This effect can't play cards with the same names as any of your Digimon.")
         effect4.is_when_digivolving = True
@@ -109,6 +111,7 @@ class BT23_013(CardScript):
         # Timing: EffectTiming.OnAllyAttack
         # [When Attacking] You may play 1 [Atho, Ren� & Por] Token or, from your hand or trash, 1 Digimon card with [Sistermon] in its name without paying the cost. This effect can't play cards with the same names as any of your Digimon.
         effect5 = ICardEffect()
+        effect5.set_timing(EffectTiming.OnAllyAttack)
         effect5.set_effect_name("BT23-013 Play 1 [Atho, Ren� & Por] token or 1 [Sistermon] in name digimon from hand or trash")
         effect5.set_effect_description("[When Attacking] You may play 1 [Atho, Ren� & Por] Token or, from your hand or trash, 1 Digimon card with [Sistermon] in its name without paying the cost. This effect can't play cards with the same names as any of your Digimon.")
         effect5.is_on_attack = True
@@ -142,6 +145,7 @@ class BT23_013(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [Your Turn] [Once Per Turn] When any of your other Digimon are played, this Digimon may attack.
         effect6 = ICardEffect()
+        effect6.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect6.set_effect_name("BT23-013 This digimon may attack")
         effect6.set_effect_description("[Your Turn] [Once Per Turn] When any of your other Digimon are played, this Digimon may attack.")
         effect6.is_optional = True

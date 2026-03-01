@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -29,6 +30,7 @@ class EX5_044(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [On Play] Reveal the top 5 cards of your deck. Add 1 card with [Leomon] in its name among them to the hand. Return the rest to the bottom of the deck.
         effect1 = ICardEffect()
+        effect1.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect1.set_effect_name("EX5-044 Reveal the top 5 cards of deck")
         effect1.set_effect_description("[On Play] Reveal the top 5 cards of your deck. Add 1 card with [Leomon] in its name among them to the hand. Return the rest to the bottom of the deck.")
         effect1.is_on_play = True
@@ -70,6 +72,7 @@ class EX5_044(CardScript):
         # Timing: EffectTiming.OnDestroyedAnyone
         # [On Deletion] ��De-Digivolve  1��n 1 of your opponent's Digimon (Trash up to 1 card from the top of one of your opponent's Digimon. If it has no digivolution cards, or becomes a level 3 Digimon, you can't trash any more cards).
         effect2 = ICardEffect()
+        effect2.set_timing(EffectTiming.OnDestroyedAnyone)
         effect2.set_effect_name("EX5-044 De-Digivolve 1 on 1 Digimon")
         effect2.set_effect_description("[On Deletion] ��De-Digivolve  1��n 1 of your opponent's Digimon (Trash up to 1 card from the top of one of your opponent's Digimon. If it has no digivolution cards, or becomes a level 3 Digimon, you can't trash any more cards).")
         effect2.is_inherited_effect = True

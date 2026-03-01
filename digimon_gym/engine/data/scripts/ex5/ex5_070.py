@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -62,6 +63,7 @@ class EX5_070(CardScript):
         # Timing: EffectTiming.SecuritySkill
         # [Security] Add this card to its owner's hand.
         effect2 = ICardEffect()
+        effect2.set_timing(EffectTiming.SecuritySkill)
         effect2.set_effect_name("EX5-070 Add To Hand")
         effect2.set_effect_description("[Security] Add this card to its owner's hand.")
         effect2.is_security_effect = True
@@ -90,6 +92,7 @@ class EX5_070(CardScript):
         # Timing: EffectTiming.OptionSkill
         # [Main] 1 of your Digimon without [X Antibody] in its digivolution cards may digivolve into a Digimon card with the [X Antibody] trait in your hand with the digivolution cost reduced by 1. If it did, place this card as its bottom digivolution card.
         effect3 = ICardEffect()
+        effect3.set_timing(EffectTiming.OptionSkill)
         effect3.set_effect_name("EX5-070 Digivolve")
         effect3.set_effect_description("[Main] 1 of your Digimon without [X Antibody] in its digivolution cards may digivolve into a Digimon card with the [X Antibody] trait in your hand with the digivolution cost reduced by 1. If it did, place this card as its bottom digivolution card.")
 
@@ -120,6 +123,7 @@ class EX5_070(CardScript):
         # Timing: EffectTiming.WhenRemoveField
         # [All Turns] When this Digimon would leave the battle area other than by one of your effects, from this Digimon's digivolution cards, return 1 Digimon card to the hand and place 1 [X Antibody] on top of your security stack.
         effect4 = ICardEffect()
+        effect4.set_timing(EffectTiming.WhenRemoveField)
         effect4.set_effect_name("EX5-070 Return 1 card from digivolution cards and place 1 [XAntibody] to the top of security")
         effect4.set_effect_description("[All Turns] When this Digimon would leave the battle area other than by one of your effects, from this Digimon's digivolution cards, return 1 Digimon card to the hand and place 1 [X Antibody] on top of your security stack.")
         effect4.is_inherited_effect = True

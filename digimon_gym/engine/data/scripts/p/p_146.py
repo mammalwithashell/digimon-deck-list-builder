@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -39,6 +40,7 @@ class P_146(CardScript):
         # Timing: EffectTiming.SecuritySkill
         # [Security] 1 of your opponent's Digimon gains <Security A. -1> for the turn.
         effect1 = ICardEffect()
+        effect1.set_timing(EffectTiming.SecuritySkill)
         effect1.set_effect_name("P-146 1 opponent's digimon gains <Security A. -1> for the turn")
         effect1.set_effect_description("[Security] 1 of your opponent's Digimon gains <Security A. -1> for the turn.")
         effect1.is_security_effect = True
@@ -65,6 +67,7 @@ class P_146(CardScript):
         # Timing: EffectTiming.OptionSkill
         # [Main] Place this card as 1 of your non-white Digimon's bottom digivolution card.
         effect2 = ICardEffect()
+        effect2.set_timing(EffectTiming.OptionSkill)
         effect2.set_effect_name("P-146 Place as bottom Digivolution source")
         effect2.set_effect_description("[Main] Place this card as 1 of your non-white Digimon's bottom digivolution card.")
 
@@ -79,6 +82,7 @@ class P_146(CardScript):
         # Timing: EffectTiming.WhenPermanentWouldBeDeleted
         # [All Turns] When this Digimon would be deleted by battle, by placing 1 [Reload Plug-In Q] from this Digimon's digivolution cards at the bottom of your security stack, prevent that deletion.
         effect3 = ICardEffect()
+        effect3.set_timing(EffectTiming.WhenPermanentWouldBeDeleted)
         effect3.set_effect_name("P-146 Place card from digivolution sources to security, to prevent deletion by battle")
         effect3.set_effect_description("[All Turns] When this Digimon would be deleted by battle, by placing 1 [Reload Plug-In Q] from this Digimon's digivolution cards at the bottom of your security stack, prevent that deletion.")
         effect3.is_inherited_effect = True

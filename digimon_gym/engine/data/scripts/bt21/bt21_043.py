@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -45,6 +46,7 @@ class BT21_043(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [On Play] 1 of your opponent's Digimon gets -2000 DP until their turn ends.
         effect2 = ICardEffect()
+        effect2.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect2.set_effect_name("BT21-043 DP -2000")
         effect2.set_effect_description("[On Play] 1 of your opponent's Digimon gets -2000 DP until their turn ends.")
         effect2.is_on_play = True
@@ -78,6 +80,7 @@ class BT21_043(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [When Digivolving] 1 of your opponent's Digimon gets -2000 DP until their turn ends.
         effect3 = ICardEffect()
+        effect3.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect3.set_effect_name("BT21-043 DP -2000")
         effect3.set_effect_description("[When Digivolving] 1 of your opponent's Digimon gets -2000 DP until their turn ends.")
         effect3.is_when_digivolving = True
@@ -111,6 +114,7 @@ class BT21_043(CardScript):
         # Timing: EffectTiming.WhenLinked
         # [When linked] 1 of your opponent's Digimon gets -2000 DP until their turn ends.
         effect4 = ICardEffect()
+        effect4.set_timing(EffectTiming.WhenLinked)
         effect4.set_effect_name("BT21-043 -2000 DP")
         effect4.set_effect_description("[When linked] 1 of your opponent's Digimon gets -2000 DP until their turn ends.")
         effect4.dp_modifier = -2000

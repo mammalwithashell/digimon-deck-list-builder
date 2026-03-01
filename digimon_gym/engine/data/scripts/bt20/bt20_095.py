@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -16,6 +17,7 @@ class BT20_095(CardScript):
         # Timing: EffectTiming.OptionSkill
         # [Main] Reveal the top 3 cards of your deck. Add 1 [Chronicle] trait card among them to the hand. Return the rest to the top or bottom of the deck. Then, place this card in the battle area.
         effect0 = ICardEffect()
+        effect0.set_timing(EffectTiming.OptionSkill)
         effect0.set_effect_name("BT20-095 Add To Hand, Reveal And Select")
         effect0.set_effect_description("[Main] Reveal the top 3 cards of your deck. Add 1 [Chronicle] trait card among them to the hand. Return the rest to the top or bottom of the deck. Then, place this card in the battle area.")
 
@@ -73,6 +75,7 @@ class BT20_095(CardScript):
         # Timing: EffectTiming.OnDestroyedAnyone
         # [All Turns] When any of your [Chronicle] trait Digimon are deleted, <Delay>.\n・By moving your level 3 or higher Digimon from the breeding area to the battle area, it may digivolve into a [Chronicle] trait Digimon card in the hand or trash without paying the cost.
         effect2 = ICardEffect()
+        effect2.set_timing(EffectTiming.OnDestroyedAnyone)
         effect2.set_effect_name("BT20-095 Move 1 Digimon")
         effect2.set_effect_description("[All Turns] When any of your [Chronicle] trait Digimon are deleted, <Delay>.\\n・By moving your level 3 or higher Digimon from the breeding area to the battle area, it may digivolve into a [Chronicle] trait Digimon card in the hand or trash without paying the cost.")
         effect2.is_optional = True
@@ -110,6 +113,7 @@ class BT20_095(CardScript):
         # Timing: EffectTiming.SecuritySkill
         # [Security] You may play 1 [Chronicle] trait card with a play cost of 5 or less from your hand or trash without paying the cost. Then, place this card in the battle area.
         effect3 = ICardEffect()
+        effect3.set_timing(EffectTiming.SecuritySkill)
         effect3.set_effect_name("BT20-095 Play 1 [Chronicle] trait card from hand or trash")
         effect3.set_effect_description("[Security] You may play 1 [Chronicle] trait card with a play cost of 5 or less from your hand or trash without paying the cost. Then, place this card in the battle area.")
         effect3.is_security_effect = True

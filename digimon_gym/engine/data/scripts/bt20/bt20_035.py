@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -37,6 +38,7 @@ class BT20_035(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [When Digivolving] Suspend 1 of your opponent's Digimon or Tamers. Then, 1 of their Digimon or Tamers can't unsuspend until the end of their turn.
         effect1 = ICardEffect()
+        effect1.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect1.set_effect_name("BT20-035 Suspend 1 Digimon or Tamer")
         effect1.set_effect_description("[When Digivolving] Suspend 1 of your opponent's Digimon or Tamers. Then, 1 of their Digimon or Tamers can't unsuspend until the end of their turn.")
         effect1.is_when_digivolving = True
@@ -73,6 +75,7 @@ class BT20_035(CardScript):
         # Timing: EffectTiming.OnAddDigivolutionCards
         # [All Turns] When Tamer cards are placed in this Digimon's digivolution cards, activate 1 of this Digimon's [When Digivolving] effects. Then, 1 of your Digimon may attack your opponent's Digimon.
         effect2 = ICardEffect()
+        effect2.set_timing(EffectTiming.OnAddDigivolutionCards)
         effect2.set_effect_name("BT20-035 Activate [When Digiolving] effect, Then may attack")
         effect2.set_effect_description("[All Turns] When Tamer cards are placed in this Digimon's digivolution cards, activate 1 of this Digimon's [When Digivolving] effects. Then, 1 of your Digimon may attack your opponent's Digimon.")
 
@@ -98,6 +101,7 @@ class BT20_035(CardScript):
         # Timing: EffectTiming.OnLoseSecurity
         # [All Turns] [Once Per Turn] When your security stack is removed from, if this Digimon has [Fenriloogamon] in its name, <Recovery +1(Deck)>.
         effect3 = ICardEffect()
+        effect3.set_timing(EffectTiming.OnLoseSecurity)
         effect3.set_effect_name("BT20-035 <Recovery +1(Deck)>")
         effect3.set_effect_description("[All Turns] [Once Per Turn] When your security stack is removed from, if this Digimon has [Fenriloogamon] in its name, <Recovery +1(Deck)>.")
         effect3.is_inherited_effect = True

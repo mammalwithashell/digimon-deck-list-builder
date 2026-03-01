@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -29,6 +30,7 @@ class BT15_064(CardScript):
         # Timing: EffectTiming.OnAllyAttack
         # [When Attacking] [Once Per Turn] <De-Digivolve 1> 1 of your opponent's Digimon.
         effect1 = ICardEffect()
+        effect1.set_timing(EffectTiming.OnAllyAttack)
         effect1.set_effect_name("BT15-064 De-Digivolve 1 on 1 Digimon")
         effect1.set_effect_description("[When Attacking] [Once Per Turn] <De-Digivolve 1> 1 of your opponent's Digimon.")
         effect1.is_inherited_effect = True
@@ -66,6 +68,7 @@ class BT15_064(CardScript):
         # Timing: EffectTiming.OnAllyAttack
         # [When Attacking] If this Digimon has a Tamer card with the [SoC] trait in it's digivolution cards, delete 1 of your opponent's Digimon or Tamers with a play cost of 3 or less.
         effect2 = ICardEffect()
+        effect2.set_timing(EffectTiming.OnAllyAttack)
         effect2.set_effect_name("BT15-064 Delete 1 Digimon or Tamer  with play cost 3 or less")
         effect2.set_effect_description("[When Attacking] If this Digimon has a Tamer card with the [SoC] trait in it's digivolution cards, delete 1 of your opponent's Digimon or Tamers with a play cost of 3 or less.")
         effect2.set_max_count_per_turn(1)
@@ -105,6 +108,7 @@ class BT15_064(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [On Play] Reveal the top 3 cards of your deck. Place 1 card with the [Machine],[Cyborg] or [SoC] trait among them as this Digimon's bottom digivolution card and add 1 such card to the hand. Trash the rest.
         effect3 = ICardEffect()
+        effect3.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect3.set_effect_name("BT15-064 Reveal the top 3 cards of deck")
         effect3.set_effect_description("[On Play] Reveal the top 3 cards of your deck. Place 1 card with the [Machine],[Cyborg] or [SoC] trait among them as this Digimon's bottom digivolution card and add 1 such card to the hand. Trash the rest.")
         effect3.is_on_play = True
@@ -143,6 +147,7 @@ class BT15_064(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [When Digivolving] Reveal the top 3 cards of your deck. Place 1 card with the [Machine],[Cyborg] or [SoC] trait among them as this Digimon's bottom digivolution card and add 1 such card to the hand. Trash the rest.
         effect4 = ICardEffect()
+        effect4.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect4.set_effect_name("BT15-064 Reveal the top 3 cards of deck")
         effect4.set_effect_description("[When Digivolving] Reveal the top 3 cards of your deck. Place 1 card with the [Machine],[Cyborg] or [SoC] trait among them as this Digimon's bottom digivolution card and add 1 such card to the hand. Trash the rest.")
         effect4.is_when_digivolving = True

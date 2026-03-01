@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -16,6 +17,7 @@ class BT13_010(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [On Play] If played by an effect, by returning 1 of your [Kristy Damon]s to the hand, this Digimon may digivolve into [Garudamon] in the hand, ignoring its digivolution requirements and without paying the cost.
         effect0 = ICardEffect()
+        effect0.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect0.set_effect_name("BT13-010 Return 1 [Kristy Damon] to hand and this Digimon digivolves to [Garudamon]")
         effect0.set_effect_description("[On Play] If played by an effect, by returning 1 of your [Kristy Damon]s to the hand, this Digimon may digivolve into [Garudamon] in the hand, ignoring its digivolution requirements and without paying the cost.")
         effect0.is_optional = True
@@ -48,6 +50,7 @@ class BT13_010(CardScript):
         # Timing: EffectTiming.OnDestroyedAnyone
         # [On Deletion] <Draw 1> (Draw 1 card from your deck.)
         effect1 = ICardEffect()
+        effect1.set_timing(EffectTiming.OnDestroyedAnyone)
         effect1.set_effect_name("BT13-010 Draw 1")
         effect1.set_effect_description("[On Deletion] <Draw 1> (Draw 1 card from your deck.)")
         effect1.is_inherited_effect = True

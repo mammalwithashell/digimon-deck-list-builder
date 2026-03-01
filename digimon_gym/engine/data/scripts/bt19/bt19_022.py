@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -28,6 +29,7 @@ class BT19_022(CardScript):
         # Timing: EffectTiming.OnDestroyedAnyone
         # [On Deletion] You may place 1 Digimon card with the [Blue Flare] from your trash under any of your Tamers. Then, <Save>.
         effect1 = ICardEffect()
+        effect1.set_timing(EffectTiming.OnDestroyedAnyone)
         effect1.set_effect_name("BT19-022 Place 1 [Blue Flare] card from trash under 1 of your Tamers, then <Save>")
         effect1.set_effect_description("[On Deletion] You may place 1 Digimon card with the [Blue Flare] from your trash under any of your Tamers. Then, <Save>.")
         effect1.is_on_deletion = True

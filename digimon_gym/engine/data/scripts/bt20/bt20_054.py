@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -28,6 +29,7 @@ class BT20_054(CardScript):
         # Timing: EffectTiming.WhenRemoveField
         # [Opponent's Turn] When this Digimon would leave the battle area, you may play 1 play cost 4 or lower Digimon card from this Digimon's digivolution cards without paying the cost.
         effect1 = ICardEffect()
+        effect1.set_timing(EffectTiming.WhenRemoveField)
         effect1.set_effect_name("BT20-054 Play 1 play cost 4 or lower Digimon")
         effect1.set_effect_description("[Opponent's Turn] When this Digimon would leave the battle area, you may play 1 play cost 4 or lower Digimon card from this Digimon's digivolution cards without paying the cost.")
 
@@ -63,6 +65,7 @@ class BT20_054(CardScript):
         # Timing: EffectTiming.OnAllyAttack
         # [Opponent's Turn] [Once Per Turn] When any of your opponent's Digimon attack, you may change the attack target to this Digimon.
         effect2 = ICardEffect()
+        effect2.set_timing(EffectTiming.OnAllyAttack)
         effect2.set_effect_name("BT20-054 You may change the attack target to this Digimon.")
         effect2.set_effect_description("[Opponent's Turn] [Once Per Turn] When any of your opponent's Digimon attack, you may change the attack target to this Digimon.")
         effect2.is_inherited_effect = True

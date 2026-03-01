@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -16,6 +17,7 @@ class BT13_098(CardScript):
         # Timing: EffectTiming.OnDiscardSecurity
         # When an effect trashes this card from the security stack, you may play this card without paying the cost.
         effect0 = ICardEffect()
+        effect0.set_timing(EffectTiming.OnDiscardSecurity)
         effect0.set_effect_name("BT13-098 Play this card")
         effect0.set_effect_description("When an effect trashes this card from the security stack, you may play this card without paying the cost.")
         effect0.is_optional = True
@@ -44,6 +46,7 @@ class BT13_098(CardScript):
         # Timing: EffectTiming.OnStartMainPhase
         # [Start of Your Main Phase] If there're 6 or fewer total cards in both players' security stacks, gain 1 memory.
         effect1 = ICardEffect()
+        effect1.set_timing(EffectTiming.OnStartMainPhase)
         effect1.set_effect_name("BT13-098 Memory +1")
         effect1.set_effect_description("[Start of Your Main Phase] If there're 6 or fewer total cards in both players' security stacks, gain 1 memory.")
 
@@ -71,6 +74,7 @@ class BT13_098(CardScript):
         # Timing: EffectTiming.OnDeclaration
         # [Main] If there're 6 or fewer total cards in both players' security stacks, by suspending this Tamer, 1 of your [Kudamon] may digivolve into [Kentaurosmon] in the hand for the digivolution cost, ignoring its level.
         effect2 = ICardEffect()
+        effect2.set_timing(EffectTiming.OnDeclaration)
         effect2.set_effect_name("BT13-098 Your [Kudamon] digivolves into [Kentaurosmon]")
         effect2.set_effect_description("[Main] If there're 6 or fewer total cards in both players' security stacks, by suspending this Tamer, 1 of your [Kudamon] may digivolve into [Kentaurosmon] in the hand for the digivolution cost, ignoring its level.")
 

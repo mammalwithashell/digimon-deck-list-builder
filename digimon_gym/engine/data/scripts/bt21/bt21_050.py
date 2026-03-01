@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -34,6 +35,7 @@ class BT21_050(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [On Play] You may suspend 1 Digimon.
         effect1 = ICardEffect()
+        effect1.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect1.set_effect_name("BT21-050 Suspend")
         effect1.set_effect_description("[On Play] You may suspend 1 Digimon.")
         effect1.is_on_play = True
@@ -67,6 +69,7 @@ class BT21_050(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [When Digivolving] You may suspend 1 Digimon.
         effect2 = ICardEffect()
+        effect2.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect2.set_effect_name("BT21-050 Suspend")
         effect2.set_effect_description("[When Digivolving] You may suspend 1 Digimon.")
         effect2.is_when_digivolving = True
@@ -100,6 +103,7 @@ class BT21_050(CardScript):
         # Timing: EffectTiming.OnAllyAttack
         # [Opponent's Turn][Once Per Turn] When one of your opponent's Digimon attacks, if this Digimon is suspended, you may change the attack target to 1 of your Digimon with the [WG] trait.
         effect3 = ICardEffect()
+        effect3.set_timing(EffectTiming.OnAllyAttack)
         effect3.set_effect_name("BT21-050 Switch attack target")
         effect3.set_effect_description("[Opponent's Turn][Once Per Turn] When one of your opponent's Digimon attacks, if this Digimon is suspended, you may change the attack target to 1 of your Digimon with the [WG] trait.")
         effect3.is_optional = True
@@ -129,6 +133,7 @@ class BT21_050(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [All Turns][Once Per Turn] When any of your [WG] trait Digimon are played, you may Suspend 1 of your opponent's Digimon.
         effect4 = ICardEffect()
+        effect4.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect4.set_effect_name("BT21-050 Suspend an opponent's Digimon")
         effect4.set_effect_description("[All Turns][Once Per Turn] When any of your [WG] trait Digimon are played, you may Suspend 1 of your opponent's Digimon.")
         effect4.is_inherited_effect = True

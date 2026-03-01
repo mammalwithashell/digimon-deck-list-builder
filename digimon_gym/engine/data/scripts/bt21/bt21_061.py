@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -33,6 +34,7 @@ class BT21_061(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [On Play] To 1 of your opponent's Digimon, <De-Digivolve 1> for every 2 of your Tamers' colors.
         effect1 = ICardEffect()
+        effect1.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect1.set_effect_name("BT21-061 De-Digivolve 1 of your opponents digimon")
         effect1.set_effect_description("[On Play] To 1 of your opponent's Digimon, <De-Digivolve 1> for every 2 of your Tamers' colors.")
         effect1.is_on_play = True
@@ -67,6 +69,7 @@ class BT21_061(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [When Digivolving] To 1 of your opponent's Digimon, <De-Digivolve 1> for every 2 of your Tamers' colors.
         effect2 = ICardEffect()
+        effect2.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect2.set_effect_name("BT21-061 De-Digivolve 1 of your opponents digimon")
         effect2.set_effect_description("[When Digivolving] To 1 of your opponent's Digimon, <De-Digivolve 1> for every 2 of your Tamers' colors.")
         effect2.is_when_digivolving = True
@@ -101,6 +104,7 @@ class BT21_061(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [Your Turn][Once Per Turn] When your other Digimon are played or digivolve, if any of them have the [ADVENTURE] trait, 1 of your Digimon gains <Alliance> for the turn. Then, 1 of your Digimon may attack.
         effect3 = ICardEffect()
+        effect3.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect3.set_effect_name("BT21-061 Gain alliance then attack")
         effect3.set_effect_description("[Your Turn][Once Per Turn] When your other Digimon are played or digivolve, if any of them have the [ADVENTURE] trait, 1 of your Digimon gains <Alliance> for the turn. Then, 1 of your Digimon may attack.")
         effect3.set_max_count_per_turn(1)

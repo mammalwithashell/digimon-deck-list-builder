@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -16,6 +17,7 @@ class BT13_072(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [When Digivolving] Reveal the top 3 cards of your deck. Place 1 card with the [X Antibody] trait among them as this Digimon's bottom digivolution card. If a card was placed by this effect, this Digimon's DP can't be reduced until the end of your opponent's turn. Trash the rest.
         effect0 = ICardEffect()
+        effect0.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect0.set_effect_name("BT13-072 Reveal the top 3 cards of deck")
         effect0.set_effect_description("[When Digivolving] Reveal the top 3 cards of your deck. Place 1 card with the [X Antibody] trait among them as this Digimon's bottom digivolution card. If a card was placed by this effect, this Digimon's DP can't be reduced until the end of your opponent's turn. Trash the rest.")
         effect0.is_when_digivolving = True
@@ -54,6 +56,7 @@ class BT13_072(CardScript):
         # Timing: EffectTiming.OnEndTurn
         #  [End of Your Turn][Once Per Turn] You may place 1 Digimon card with the [X Antibody] trait from your hand as this Digimon's bottom digivolution card.
         effect1 = ICardEffect()
+        effect1.set_timing(EffectTiming.OnEndTurn)
         effect1.set_effect_name("BT13-072 Place 1 card to digivolution cards")
         effect1.set_effect_description(" [End of Your Turn][Once Per Turn] You may place 1 Digimon card with the [X Antibody] trait from your hand as this Digimon's bottom digivolution card.")
         effect1.is_inherited_effect = True

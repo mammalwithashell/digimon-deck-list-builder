@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -43,6 +44,7 @@ class BT23_020(CardScript):
         # Timing: EffectTiming.OnTappedAnyone
         # [All Turns] [Once Per Turn] When this Digimon suspends, <Draw 1> (Draw 1 card from your deck.)
         effect2 = ICardEffect()
+        effect2.set_timing(EffectTiming.OnTappedAnyone)
         effect2.set_effect_name("BT23-020 Draw 1")
         effect2.set_effect_description("[All Turns] [Once Per Turn] When this Digimon suspends, <Draw 1> (Draw 1 card from your deck.)")
         effect2.set_max_count_per_turn(1)

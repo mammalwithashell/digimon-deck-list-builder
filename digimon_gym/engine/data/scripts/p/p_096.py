@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -39,6 +40,7 @@ class P_096(CardScript):
         # Timing: EffectTiming.OptionSkill
         # [Main] By placing up to 2 Digimon cards with <Save> in their text from under your Tamers or your trash under 1 of your Digimon with <Save> in its text as its bottom digivolution cards, that Digimon gains +1000 DP for each card placed by this effect.
         effect1 = ICardEffect()
+        effect1.set_timing(EffectTiming.OptionSkill)
         effect1.set_effect_name("P-096 Effect")
         effect1.set_effect_description("[Main] By placing up to 2 Digimon cards with <Save> in their text from under your Tamers or your trash under 1 of your Digimon with <Save> in its text as its bottom digivolution cards, that Digimon gains +1000 DP for each card placed by this effect.")
 
@@ -53,6 +55,7 @@ class P_096(CardScript):
         # Timing: EffectTiming.SecuritySkill
         # [Security] Add this card to its owner's hand.
         effect2 = ICardEffect()
+        effect2.set_timing(EffectTiming.SecuritySkill)
         effect2.set_effect_name("P-096 Add To Hand")
         effect2.set_effect_description("[Security] Add this card to its owner's hand.")
         effect2.is_security_effect = True

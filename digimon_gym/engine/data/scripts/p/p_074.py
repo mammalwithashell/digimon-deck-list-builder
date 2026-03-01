@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -16,6 +17,7 @@ class P_074(CardScript):
         # Timing: EffectTiming.BeforePayCost
         # [Your Turn] When this Digimon would digivolve into a card with [Shaman] or [Wizard] in its traits, you may trash up to 3 of your security cards. For each security card trashed with this effect, reduce the digivolution cost by 1.
         effect0 = ICardEffect()
+        effect0.set_timing(EffectTiming.BeforePayCost)
         effect0.set_effect_name("P-074 Trash your Security to reduce digivolution cost")
         effect0.set_effect_description("[Your Turn] When this Digimon would digivolve into a card with [Shaman] or [Wizard] in its traits, you may trash up to 3 of your security cards. For each security card trashed with this effect, reduce the digivolution cost by 1.")
         effect0.is_optional = True
@@ -72,6 +74,7 @@ class P_074(CardScript):
         # Timing: EffectTiming.OnAllyAttack
         # [When Attacking][Once Per Turn] If you have exactly 3 security cards, unsuspend this Digimon.
         effect2 = ICardEffect()
+        effect2.set_timing(EffectTiming.OnAllyAttack)
         effect2.set_effect_name("P-074 Unsuspend this Digimon")
         effect2.set_effect_description("[When Attacking][Once Per Turn] If you have exactly 3 security cards, unsuspend this Digimon.")
         effect2.is_inherited_effect = True

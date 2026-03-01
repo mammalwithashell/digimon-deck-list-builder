@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -16,6 +17,7 @@ class BT14_061(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [On Play] By returning 1 Digimon card from your opponent's trash to the top of the deck, gain 1 memory.
         effect0 = ICardEffect()
+        effect0.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect0.set_effect_name("BT14-061 Return 1 card from opponent's trash to deck top to gain Memory +1")
         effect0.set_effect_description("[On Play] By returning 1 Digimon card from your opponent's trash to the top of the deck, gain 1 memory.")
         effect0.is_optional = True
@@ -44,6 +46,7 @@ class BT14_061(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [When Digivolving] By returning 1 Digimon card from your opponent's trash to the top of the deck, gain 1 memory.
         effect1 = ICardEffect()
+        effect1.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect1.set_effect_name("BT14-061 Return 1 card from opponent's trash to deck top to gain Memory +1")
         effect1.set_effect_description("[When Digivolving] By returning 1 Digimon card from your opponent's trash to the top of the deck, gain 1 memory.")
         effect1.is_optional = True

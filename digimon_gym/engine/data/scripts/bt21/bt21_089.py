@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -16,6 +17,7 @@ class BT21_089(CardScript):
         # Timing: EffectTiming.OnStartMainPhase
         # [Start of Your Main Phase] If your opponent has a Digimon, gain 1 memory.
         effect0 = ICardEffect()
+        effect0.set_timing(EffectTiming.OnStartMainPhase)
         effect0.set_effect_name("BT21-089 Memory +1")
         effect0.set_effect_description("[Start of Your Main Phase] If your opponent has a Digimon, gain 1 memory.")
 
@@ -43,6 +45,7 @@ class BT21_089(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [All Turns] When any of your Digimon are played or digivolve, by suspending this Tamer, until your opponent's turn ends, 1 of your Digimon with [Guilmon], [Growlmon], [Gallantmon], or [Megidramon] in its name or the [Hero] trait gains <Blocker> and, it here are 10 or more total cards in both players' trashes, gets +2000 DP.
         effect1 = ICardEffect()
+        effect1.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect1.set_effect_name("BT21-089 Gain blocker and maybe +2k")
         effect1.set_effect_description("[All Turns] When any of your Digimon are played or digivolve, by suspending this Tamer, until your opponent's turn ends, 1 of your Digimon with [Guilmon], [Growlmon], [Gallantmon], or [Megidramon] in its name or the [Hero] trait gains <Blocker> and, it here are 10 or more total cards in both players' trashes, gets +2000 DP.")
         effect1.is_optional = True

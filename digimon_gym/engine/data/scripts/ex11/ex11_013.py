@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -16,6 +17,7 @@ class EX11_013(CardScript):
         # Timing: EffectTiming.OnMove
         # Draw 1
         effect0 = ICardEffect()
+        effect0.set_timing(EffectTiming.OnMove)
         effect0.set_effect_name("EX11-013 Draw 1")
         effect0.set_effect_description("Draw 1")
 
@@ -41,6 +43,7 @@ class EX11_013(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # Draw 1
         effect1 = ICardEffect()
+        effect1.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect1.set_effect_name("EX11-013 Draw 1")
         effect1.set_effect_description("Draw 1")
         effect1.is_on_play = True
@@ -68,6 +71,7 @@ class EX11_013(CardScript):
         # Timing: EffectTiming.OnEndAttack
         # [End of Attack] (Once Per Turn) Gain 1 memory.
         effect2 = ICardEffect()
+        effect2.set_timing(EffectTiming.OnEndAttack)
         effect2.set_effect_name("EX11-013 Memory +1")
         effect2.set_effect_description("[End of Attack] (Once Per Turn) Gain 1 memory.")
         effect2.is_inherited_effect = True

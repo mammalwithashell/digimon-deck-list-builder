@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -39,6 +40,7 @@ class BT23_100(CardScript):
         # Timing: EffectTiming.OptionSkill
         # [Main] <Draw 1> Then, place this card in the battle area.
         effect1 = ICardEffect()
+        effect1.set_timing(EffectTiming.OptionSkill)
         effect1.set_effect_name("BT23-100 Draw 1, then place in battle area")
         effect1.set_effect_description("[Main] <Draw 1> Then, place this card in the battle area.")
 
@@ -77,6 +79,7 @@ class BT23_100(CardScript):
         # Timing: EffectTiming.OnDeclaration
         # [Main] <Delay>, You may play 1 Tamer card with the [CS] trait from your hand without paying the cost.
         effect3 = ICardEffect()
+        effect3.set_timing(EffectTiming.OnDeclaration)
         effect3.set_effect_name("BT23-100 Play 1 tamer with [CS] trait in hand")
         effect3.set_effect_description("[Main] <Delay>, You may play 1 Tamer card with the [CS] trait from your hand without paying the cost.")
 
@@ -89,14 +92,17 @@ class BT23_100(CardScript):
         effect3.set_can_use_condition(condition3)
 
         def process3(ctx: Dict[str, Any]):
-            """Action: Play Card"""
+            """Action: Play 1 CS Tamer from hand free"""
             player = ctx.get('player')
             perm = ctx.get('permanent')
             game = ctx.get('game')
             if not (player and game):
                 return
             def play_filter(c):
-                return True
+                if not getattr(c, 'is_tamer', False):
+                    return False
+                traits = getattr(c, 'card_traits', []) or []
+                return any('CS' in t for t in traits)
             game.effect_play_from_zone(
                 player, 'hand', play_filter, free=True, is_optional=True)
 
@@ -106,9 +112,9 @@ class BT23_100(CardScript):
         # Timing: EffectTiming.SecuritySkill
         # [Security] You may play 1 level 3 Digimon card with the [CS] trait from your hand or trash without paying the cost. Then, place this card in the battle area.
         effect4 = ICardEffect()
+        effect4.set_timing(EffectTiming.SecuritySkill)
         effect4.set_effect_name("BT23-100 Play 1 level 3 [CS] digimon from hand or trash, then place in battle area")
         effect4.set_effect_description("[Security] You may play 1 level 3 Digimon card with the [CS] trait from your hand or trash without paying the cost. Then, place this card in the battle area.")
-        effect4.is_security_effect = True
         effect4.is_security_effect = True
 
         effect = effect4  # alias for condition closure
@@ -119,14 +125,19 @@ class BT23_100(CardScript):
         effect4.set_can_use_condition(condition4)
 
         def process4(ctx: Dict[str, Any]):
-            """Action: Play Card"""
+            """Action: Play 1 level 3 CS Digimon from hand/trash free (security)"""
             player = ctx.get('player')
             perm = ctx.get('permanent')
             game = ctx.get('game')
             if not (player and game):
                 return
             def play_filter(c):
-                return True
+                if not getattr(c, 'is_digimon', False):
+                    return False
+                if (getattr(c, 'level', None) or 0) != 3:
+                    return False
+                traits = getattr(c, 'card_traits', []) or []
+                return any('CS' in t for t in traits)
             game.effect_play_from_zone(
                 player, 'hand_or_trash', play_filter, free=True, is_optional=True)
 

@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -30,6 +31,7 @@ class BT16_023(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # Unsuspend, Bounce
         effect1 = ICardEffect()
+        effect1.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect1.set_effect_name("BT16-023 Unsuspend 1 Digimon and/or bottom deck an opponent's Level 4 or lower Digimon")
         effect1.set_effect_description("Unsuspend, Bounce")
         effect1.is_on_play = True
@@ -75,6 +77,7 @@ class BT16_023(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # Unsuspend, Bounce
         effect2 = ICardEffect()
+        effect2.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect2.set_effect_name("BT16-023 Unsuspend 1 Digimon and/or bottom deck an opponent's Level 4 or lower Digimon")
         effect2.set_effect_description("Unsuspend, Bounce")
         effect2.is_when_digivolving = True
@@ -120,6 +123,7 @@ class BT16_023(CardScript):
         # Timing: EffectTiming.OnEndAttack
         # [End of Attack][Once per turn] If this Digimon has [Pulsemon] in its text, by trashing the top card of your security stack, unsuspend this Digimon.
         effect3 = ICardEffect()
+        effect3.set_timing(EffectTiming.OnEndAttack)
         effect3.set_effect_name("BT16-023 Unsuspend this Digimon.")
         effect3.set_effect_description("[End of Attack][Once per turn] If this Digimon has [Pulsemon] in its text, by trashing the top card of your security stack, unsuspend this Digimon.")
         effect3.is_inherited_effect = True

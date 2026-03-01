@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -29,6 +30,7 @@ class BT8_082(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [When Digivolving] If this Digimon has a purple card in its digivolution cards, delete 1 of your opponent's level 4 or lower Digimon. If this Digimon has a yellow card in its digivolution cards, <Recovery +1 (Deck)>. (Place the top card of your deck on top of your security stack.)
         effect1 = ICardEffect()
+        effect1.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect1.set_effect_name("BT8-082 Delete 1 level 4 or lower Digimon and Recovery +1 (Deck)")
         effect1.set_effect_description("[When Digivolving] If this Digimon has a purple card in its digivolution cards, delete 1 of your opponent's level 4 or lower Digimon. If this Digimon has a yellow card in its digivolution cards, <Recovery +1 (Deck)>. (Place the top card of your deck on top of your security stack.)")
         effect1.is_when_digivolving = True
@@ -68,6 +70,7 @@ class BT8_082(CardScript):
         # Timing: EffectTiming.OnDestroyedAnyone
         # [On Deletion] You may play 1 purple or yellow level 4 or lower Digimon card from your trash without paying its memory cost.
         effect2 = ICardEffect()
+        effect2.set_timing(EffectTiming.OnDestroyedAnyone)
         effect2.set_effect_name("BT8-082 Play 1 level 4 or lower Digimon from trash")
         effect2.set_effect_description("[On Deletion] You may play 1 purple or yellow level 4 or lower Digimon card from your trash without paying its memory cost.")
         effect2.is_optional = True

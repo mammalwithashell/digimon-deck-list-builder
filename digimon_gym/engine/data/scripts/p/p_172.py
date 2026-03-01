@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -46,6 +47,7 @@ class P_172(CardScript):
         # Timing: EffectTiming.BeforePayCost
         # When this card would be played, if [Nature Spirits] is in your face up security cards, reduce the play cost by 4.
         effect2 = ICardEffect()
+        effect2.set_timing(EffectTiming.BeforePayCost)
         effect2.set_effect_name("P-172 If [Nature Spirits] is in your face up security cards get Play Cost -4")
         effect2.set_effect_description("When this card would be played, if [Nature Spirits] is in your face up security cards, reduce the play cost by 4.")
         effect2.set_hash_string("PlayCost-4_P_172")
@@ -107,6 +109,7 @@ class P_172(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [On Play] 1 of your opponent's Digimon gets -5000 DP for the turn. Then, delete 1 of their Digimon with 5000 DP or less.
         effect5 = ICardEffect()
+        effect5.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect5.set_effect_name("P-172 1 Digimon gets -5000DP, then delete 1 with 5000DP or less")
         effect5.set_effect_description("[On Play] 1 of your opponent's Digimon gets -5000 DP for the turn. Then, delete 1 of their Digimon with 5000 DP or less.")
         effect5.is_on_play = True
@@ -151,6 +154,7 @@ class P_172(CardScript):
         # Timing: EffectTiming.OnDestroyedAnyone
         # [On Deletion] 1 of your opponent's Digimon gets -5000 DP for the turn. Then, delete 1 of their Digimon with 5000 DP or less.
         effect6 = ICardEffect()
+        effect6.set_timing(EffectTiming.OnDestroyedAnyone)
         effect6.set_effect_name("P-172 1 Digimon gets -5000DP, then delete 1 with 5000DP or less")
         effect6.set_effect_description("[On Deletion] 1 of your opponent's Digimon gets -5000 DP for the turn. Then, delete 1 of their Digimon with 5000 DP or less.")
         effect6.is_on_deletion = True

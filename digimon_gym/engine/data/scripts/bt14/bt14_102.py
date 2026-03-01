@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -29,6 +30,7 @@ class BT14_102(CardScript):
         # Timing: EffectTiming.OnAllyAttack
         # [When Attacking] By deleting this Digimon, activate 1 of the effects below: - Place 1 of your opponent's Digimon with the [Virus] trait at the bottom of their security stack. - 1 of your opponent's Digimon gets -5000 DP for the turn.
         effect1 = ICardEffect()
+        effect1.set_timing(EffectTiming.OnAllyAttack)
         effect1.set_effect_name("BT14-102 Delete this Digimon to select effects")
         effect1.set_effect_description("[When Attacking] By deleting this Digimon, activate 1 of the effects below: - Place 1 of your opponent's Digimon with the [Virus] trait at the bottom of their security stack. - 1 of your opponent's Digimon gets -5000 DP for the turn.")
         effect1.is_optional = True
@@ -72,6 +74,7 @@ class BT14_102(CardScript):
         # Timing: EffectTiming.OnDestroyedAnyone
         # [On Deletion] Place this card at the bottom of your security stack. Then, if you have a Tamer, you may hatch in your breeding area.
         effect2 = ICardEffect()
+        effect2.set_timing(EffectTiming.OnDestroyedAnyone)
         effect2.set_effect_name("BT14-102 Place this card at the bottom of security and hatch")
         effect2.set_effect_description("[On Deletion] Place this card at the bottom of your security stack. Then, if you have a Tamer, you may hatch in your breeding area.")
         effect2.is_on_deletion = True
@@ -98,6 +101,7 @@ class BT14_102(CardScript):
         # Timing: EffectTiming.OnDestroyedAnyone
         # [On Deletion] Place 1 yellow card with the [Vaccine] trait from your hand at the bottom of your security stack. 
         effect3 = ICardEffect()
+        effect3.set_timing(EffectTiming.OnDestroyedAnyone)
         effect3.set_effect_name("BT14-102 Place 1 card from hand at the bottom security")
         effect3.set_effect_description("[On Deletion] Place 1 yellow card with the [Vaccine] trait from your hand at the bottom of your security stack. ")
         effect3.is_inherited_effect = True

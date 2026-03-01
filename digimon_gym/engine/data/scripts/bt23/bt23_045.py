@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -43,6 +44,7 @@ class BT23_045(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [On Play] By placing 1 [Royal Base] or [Zaxon] trait Digimon card from your hand or trash face up as the bottom security card, return 1 of your opponent's Digimon with as much or less DP as this Digimon to the hand.
         effect2 = ICardEffect()
+        effect2.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect2.set_effect_name("BT23-045 By placing 1 [Royal Base]/[Zaxon] as bottom security card, bounce 1 digimon to hand")
         effect2.set_effect_description("[On Play] By placing 1 [Royal Base] or [Zaxon] trait Digimon card from your hand or trash face up as the bottom security card, return 1 of your opponent's Digimon with as much or less DP as this Digimon to the hand.")
         effect2.is_on_play = True
@@ -71,6 +73,7 @@ class BT23_045(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [When Digivolving] By placing 1 [Royal Base] or [Zaxon] trait Digimon card from your hand or trash face up as the bottom security card, return 1 of your opponent's Digimon with as much or less DP as this Digimon to the hand.
         effect3 = ICardEffect()
+        effect3.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect3.set_effect_name("BT23-045 By placing 1 [Royal Base]/[Zaxon] as bottom security card, bounce 1 digimon to hand")
         effect3.set_effect_description("[When Digivolving] By placing 1 [Royal Base] or [Zaxon] trait Digimon card from your hand or trash face up as the bottom security card, return 1 of your opponent's Digimon with as much or less DP as this Digimon to the hand.")
         effect3.is_when_digivolving = True
@@ -99,6 +102,7 @@ class BT23_045(CardScript):
         # Timing: EffectTiming.OnTappedAnyone
         # [All Turns] When this Digimon suspends, by flipping your top face-up security card face down, 1 of your Digimon unsuspends.
         effect4 = ICardEffect()
+        effect4.set_timing(EffectTiming.OnTappedAnyone)
         effect4.set_effect_name("BT23-045 By flipping your top face up security card face down, unsuspend 1 digimon")
         effect4.set_effect_description("[All Turns] When this Digimon suspends, by flipping your top face-up security card face down, 1 of your Digimon unsuspends.")
         effect4.is_optional = True

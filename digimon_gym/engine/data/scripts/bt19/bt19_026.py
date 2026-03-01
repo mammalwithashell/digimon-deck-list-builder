@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -16,6 +17,7 @@ class BT19_026(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [On Play] <De-Digivolve 2> 1 of your opponent's Digimon. Then, if your opponent has 2 or more Digimon, return 1 of your opponent's level 4 or lower Digimon to the hand.
         effect0 = ICardEffect()
+        effect0.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect0.set_effect_name("BT19-026 <De-Digivolve 2> and return 1 of your opponent's Digimon to hand")
         effect0.set_effect_description("[On Play] <De-Digivolve 2> 1 of your opponent's Digimon. Then, if your opponent has 2 or more Digimon, return 1 of your opponent's level 4 or lower Digimon to the hand.")
         effect0.is_on_play = True
@@ -58,6 +60,7 @@ class BT19_026(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [When Digivolving] <De-Digivolve 2> 1 of your opponent's Digimon. Then, if your opponent has 2 or more Digimon, return 1 of your opponent's level 4 or lower Digimon to the hand.
         effect1 = ICardEffect()
+        effect1.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect1.set_effect_name("BT19-026 <De-Digivolve 2> and return 1 of your opponent's Digimon to hand")
         effect1.set_effect_description("[When Digivolving] <De-Digivolve 2> 1 of your opponent's Digimon. Then, if your opponent has 2 or more Digimon, return 1 of your opponent's level 4 or lower Digimon to the hand.")
         effect1.is_when_digivolving = True
@@ -100,6 +103,7 @@ class BT19_026(CardScript):
         # Timing: EffectTiming.OnDestroyedAnyone
         # [On Deletion] You may place 1 Digimon card with the [Blue Flare] from your trash under any of your Tamers. Then, <Save>.
         effect2 = ICardEffect()
+        effect2.set_timing(EffectTiming.OnDestroyedAnyone)
         effect2.set_effect_name("BT19-026 Play 1 [Blue Flare]/[Xros Heart] card from under 1 of your Tamers, then <Save>")
         effect2.set_effect_description("[On Deletion] You may place 1 Digimon card with the [Blue Flare] from your trash under any of your Tamers. Then, <Save>.")
         effect2.is_on_deletion = True

@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -39,6 +40,7 @@ class BT8_110(CardScript):
         # Timing: EffectTiming.OptionSkill
         # [Main] Trash the top card of 1 of your Digimon with [Armor Form] in its traits. Then, you may digivolve 1 of your Digimon into a Digimon card in your hand with [Armor Form] in its traits for its digivolution cost. If you do, unsuspend that Digimon.
         effect1 = ICardEffect()
+        effect1.set_timing(EffectTiming.OptionSkill)
         effect1.set_effect_name("BT8-110 Digivolve, Unsuspend")
         effect1.set_effect_description("[Main] Trash the top card of 1 of your Digimon with [Armor Form] in its traits. Then, you may digivolve 1 of your Digimon into a Digimon card in your hand with [Armor Form] in its traits for its digivolution cost. If you do, unsuspend that Digimon.")
 
@@ -80,6 +82,7 @@ class BT8_110(CardScript):
         # Timing: EffectTiming.SecuritySkill
         # [Security] You may play 1 level 3 Digimon card with [Free] in its traits from your hand or trash without paying its memory cost.
         effect2 = ICardEffect()
+        effect2.set_timing(EffectTiming.SecuritySkill)
         effect2.set_effect_name("BT8-110 Play Card")
         effect2.set_effect_description("[Security] You may play 1 level 3 Digimon card with [Free] in its traits from your hand or trash without paying its memory cost.")
         effect2.is_security_effect = True

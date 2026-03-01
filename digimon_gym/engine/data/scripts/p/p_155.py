@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -42,6 +43,7 @@ class P_155(CardScript):
         # Timing: EffectTiming.OptionSkill
         # [Main] <Draw 1>. Then, place this card in the battle area.
         effect1 = ICardEffect()
+        effect1.set_timing(EffectTiming.OptionSkill)
         effect1.set_effect_name("P-155 Draw 1, then place in battle area")
         effect1.set_effect_description("[Main] <Draw 1>. Then, place this card in the battle area.")
 
@@ -78,6 +80,7 @@ class P_155(CardScript):
         # Timing: EffectTiming.OnDeclaration
         # [Main] <Delay> (By trashing this card after the placing turn, active the effect.)\r\n� By trashing 1 of your non-red option cards in your battle area, gain 1 memory.
         effect3 = ICardEffect()
+        effect3.set_timing(EffectTiming.OnDeclaration)
         effect3.set_effect_name("P-155 Memory +1")
         effect3.set_effect_description("[Main] <Delay> (By trashing this card after the placing turn, active the effect.)\\r\\n� By trashing 1 of your non-red option cards in your battle area, gain 1 memory.")
 
@@ -101,6 +104,7 @@ class P_155(CardScript):
         # Timing: EffectTiming.SecuritySkill
         # [Security] Delete 1 of your opponent's Digimon with 11000 DP or less. Then, add this card to the hand.
         effect4 = ICardEffect()
+        effect4.set_timing(EffectTiming.SecuritySkill)
         effect4.set_effect_name("P-155 Delete 1 of your opponents Digimon with 11000 DP or less, then add this to hand")
         effect4.set_effect_description("[Security] Delete 1 of your opponent's Digimon with 11000 DP or less. Then, add this card to the hand.")
         effect4.is_security_effect = True

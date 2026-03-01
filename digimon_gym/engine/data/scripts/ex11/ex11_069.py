@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -28,6 +29,7 @@ class EX11_069(CardScript):
         # Timing: EffectTiming.OnStartMainPhase
         # Gain 1 memory, Trash From Hand
         effect1 = ICardEffect()
+        effect1.set_timing(EffectTiming.OnStartMainPhase)
         effect1.set_effect_name("EX11-069 Gain 1 memory, Trash From Hand")
         effect1.set_effect_description("Gain 1 memory, Trash From Hand")
 
@@ -65,6 +67,7 @@ class EX11_069(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # Gain 1 memory, Trash From Hand
         effect2 = ICardEffect()
+        effect2.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect2.set_effect_name("EX11-069 Gain 1 memory, Trash From Hand")
         effect2.set_effect_description("Gain 1 memory, Trash From Hand")
         effect2.is_on_play = True
@@ -102,6 +105,7 @@ class EX11_069(CardScript):
         # Timing: EffectTiming.OnAllyAttack
         # Digivolve
         effect3 = ICardEffect()
+        effect3.set_timing(EffectTiming.OnAllyAttack)
         effect3.set_effect_name("EX11-069 Digivolve attacking digimon to [Dark Dragon]/[Evil Dragon] trait for 1 less.")
         effect3.set_effect_description("Digivolve")
         effect3.is_optional = True
@@ -137,6 +141,7 @@ class EX11_069(CardScript):
         # Timing: EffectTiming.OnEndTurn
         # [End of All Turns] If you have 4 or fewer cards in your hand, by suspending this Tamer, you may return 1 [Evil], [Dark Dragon] or [Evil Dragon] trait card from your trash to the hand.
         effect4 = ICardEffect()
+        effect4.set_timing(EffectTiming.OnEndTurn)
         effect4.set_effect_name("EX11-069 Suspend tamer to recover 1 [Evil], [Dark Dragon] or [Evil Dragon] trait card.")
         effect4.set_effect_description("[End of All Turns] If you have 4 or fewer cards in your hand, by suspending this Tamer, you may return 1 [Evil], [Dark Dragon] or [Evil Dragon] trait card from your trash to the hand.")
         effect4.is_optional = True

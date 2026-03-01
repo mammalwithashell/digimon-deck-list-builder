@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -16,6 +17,7 @@ class BT10_040(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [When Digivolving] If you have 2 or fewer security cards, <Recovery +1 (Deck)>. (Place the top card of your deck on top of your security stack.)
         effect0 = ICardEffect()
+        effect0.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect0.set_effect_name("BT10-040 Recovery +1 (Deck)")
         effect0.set_effect_description("[When Digivolving] If you have 2 or fewer security cards, <Recovery +1 (Deck)>. (Place the top card of your deck on top of your security stack.)")
         effect0.is_when_digivolving = True
@@ -43,6 +45,7 @@ class BT10_040(CardScript):
         # Timing: EffectTiming.OnAllyAttack
         # [When Attacking][Once Per Turn] If you have 3 or more security cards, 1 of your opponent's Digimon gets -5000 DP for the turn. If you have 3 or fewer security cards, gain 2 memory.
         effect1 = ICardEffect()
+        effect1.set_timing(EffectTiming.OnAllyAttack)
         effect1.set_effect_name("BT10-040 Opponent's 1 Digimon gets DP -5000 or get Memory +2")
         effect1.set_effect_description("[When Attacking][Once Per Turn] If you have 3 or more security cards, 1 of your opponent's Digimon gets -5000 DP for the turn. If you have 3 or fewer security cards, gain 2 memory.")
         effect1.set_max_count_per_turn(1)

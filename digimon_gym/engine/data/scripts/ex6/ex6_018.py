@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -52,6 +53,7 @@ class EX6_018(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [On Play] Reveal the top 3 cards of your deck. Add 1 card with the [Angel]/[Archangel]/[Three Great Angels]/[Seven Great Demon Lords] trait among them to your hand. Trash the rest.
         effect2 = ICardEffect()
+        effect2.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect2.set_effect_name("EX6-018 Reveal the top 3 cards of deck")
         effect2.set_effect_description("[On Play] Reveal the top 3 cards of your deck. Add 1 card with the [Angel]/[Archangel]/[Three Great Angels]/[Seven Great Demon Lords] trait among them to your hand. Trash the rest.")
         effect2.is_on_play = True
@@ -89,6 +91,7 @@ class EX6_018(CardScript):
         # Timing: EffectTiming.OnStartMainPhase
         # [Start of Your Main Phase] Reveal the top 3 cards of your deck. Add 1 card with the [Angel]/[Archangel]/[Three Great Angels]/[Seven Great Demon Lords] trait among them to your hand. Trash the rest.
         effect3 = ICardEffect()
+        effect3.set_timing(EffectTiming.OnStartMainPhase)
         effect3.set_effect_name("EX6-018 Reveal the top 3 cards of deck")
         effect3.set_effect_description("[Start of Your Main Phase] Reveal the top 3 cards of your deck. Add 1 card with the [Angel]/[Archangel]/[Three Great Angels]/[Seven Great Demon Lords] trait among them to your hand. Trash the rest.")
 
@@ -128,6 +131,7 @@ class EX6_018(CardScript):
         # Timing: EffectTiming.OnEndTurn
         # [End of Your Turn] [Once Per Turn] By placing one of your level 6 Digimon on top of your security stack, this Digimon may digivolve into [Lucemon: Chaos Mode] in the trash without paying the cost.
         effect4 = ICardEffect()
+        effect4.set_timing(EffectTiming.OnEndTurn)
         effect4.set_effect_name("EX6-018 Place one of your level 6 Digimon on top of your security stack to digivolve into [Lucemon: Chaos Mode] in the trash without paying the cost.")
         effect4.set_effect_description("[End of Your Turn] [Once Per Turn] By placing one of your level 6 Digimon on top of your security stack, this Digimon may digivolve into [Lucemon: Chaos Mode] in the trash without paying the cost.")
         effect4.is_optional = True

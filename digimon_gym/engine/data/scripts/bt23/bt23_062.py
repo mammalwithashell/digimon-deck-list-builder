@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -30,6 +31,7 @@ class BT23_062(CardScript):
         # Timing: EffectTiming.OnStartMainPhase
         # [Start of Your Main Phase] By trashing 1 card with the [Undead], [Dark Animal], or [CS] trait from your hand, gain 1 memory.
         effect1 = ICardEffect()
+        effect1.set_timing(EffectTiming.OnStartMainPhase)
         effect1.set_effect_name("BT23-062 Trash 1 card from hand to gain 1 memory")
         effect1.set_effect_description("[Start of Your Main Phase] By trashing 1 card with the [Undead], [Dark Animal], or [CS] trait from your hand, gain 1 memory.")
         effect1.is_optional = True
@@ -68,6 +70,7 @@ class BT23_062(CardScript):
         # Timing: EffectTiming.OnAllyAttack
         # [When Attacking][Once Per Turn] 1 of your Digimon may digivolve into a Digimon card with the [Undead] or [Dark Animal] trait in the trash.
         effect2 = ICardEffect()
+        effect2.set_timing(EffectTiming.OnAllyAttack)
         effect2.set_effect_name("BT23-062 Digivolve 1 of your Digimon into [Undead] or [Dark Animal] Digimon in trash")
         effect2.set_effect_description("[When Attacking][Once Per Turn] 1 of your Digimon may digivolve into a Digimon card with the [Undead] or [Dark Animal] trait in the trash.")
         effect2.is_inherited_effect = True

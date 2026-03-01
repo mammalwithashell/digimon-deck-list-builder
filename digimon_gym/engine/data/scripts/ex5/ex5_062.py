@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -16,6 +17,7 @@ class EX5_062(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [When Digivolving] [Once Per Turn] You may trash up to 3 cards from your hand. Then, play 1 purple Digimon card from your trash with the play cost reduced by 3. For each card trashed by this effect, further reduce it by 1.
         effect0 = ICardEffect()
+        effect0.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect0.set_effect_name("EX5-062 Trash cards from hand and play 1 Digimon from trash")
         effect0.set_effect_description("[When Digivolving] [Once Per Turn] You may trash up to 3 cards from your hand. Then, play 1 purple Digimon card from your trash with the play cost reduced by 3. For each card trashed by this effect, further reduce it by 1.")
         effect0.set_max_count_per_turn(1)
@@ -69,6 +71,7 @@ class EX5_062(CardScript):
         # Timing: EffectTiming.OnDeclaration
         # [Main] [Once Per Turn] You may trash up to 3 cards from your hand. Then, play 1 purple Digimon card from your trash with the play cost reduced by 3. For each card trashed by this effect, further reduce it by 1.
         effect1 = ICardEffect()
+        effect1.set_timing(EffectTiming.OnDeclaration)
         effect1.set_effect_name("EX5-062 Trash cards from hand and play 1 Digimon from trash")
         effect1.set_effect_description("[Main] [Once Per Turn] You may trash up to 3 cards from your hand. Then, play 1 purple Digimon card from your trash with the play cost reduced by 3. For each card trashed by this effect, further reduce it by 1.")
         effect1.set_max_count_per_turn(1)
@@ -120,6 +123,7 @@ class EX5_062(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [Your Turn] When an effect plays one of your Digimon, delete 1 of your opponent's level 5 or lower Digimon. If this effect didn't delete, <Draw 1> (Draw 1 card from your deck).
         effect2 = ICardEffect()
+        effect2.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect2.set_effect_name("EX5-062 Delete 1 level 5 or lower Digimon or Draw 1")
         effect2.set_effect_description("[Your Turn] When an effect plays one of your Digimon, delete 1 of your opponent's level 5 or lower Digimon. If this effect didn't delete, <Draw 1> (Draw 1 card from your deck).")
         effect2.is_on_play = True

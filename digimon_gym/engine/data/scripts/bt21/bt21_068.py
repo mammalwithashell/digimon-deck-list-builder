@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -29,6 +30,7 @@ class BT21_068(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [On Play] Delete 1 of your opponent's Digimon with 4000 DP or less. If this effect didn't delete, trash the top 2 cards of your deck.
         effect1 = ICardEffect()
+        effect1.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect1.set_effect_name("BT21-068 Delete 4k or mill 2")
         effect1.set_effect_description("[On Play] Delete 1 of your opponent's Digimon with 4000 DP or less. If this effect didn't delete, trash the top 2 cards of your deck.")
         effect1.is_on_play = True
@@ -58,6 +60,7 @@ class BT21_068(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [On Play] Delete 1 of your opponent's Digimon with 4000 DP or less. If this effect didn't delete, trash the top 2 cards of your deck.
         effect2 = ICardEffect()
+        effect2.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect2.set_effect_name("BT21-068 Delete 4k or mill 2")
         effect2.set_effect_description("[On Play] Delete 1 of your opponent's Digimon with 4000 DP or less. If this effect didn't delete, trash the top 2 cards of your deck.")
         effect2.is_when_digivolving = True
@@ -87,6 +90,7 @@ class BT21_068(CardScript):
         # Timing: EffectTiming.OnDestroyedAnyone
         # [On Deletion] Gain 1 memory.
         effect3 = ICardEffect()
+        effect3.set_timing(EffectTiming.OnDestroyedAnyone)
         effect3.set_effect_name("BT21-068 Memory +1")
         effect3.set_effect_description("[On Deletion] Gain 1 memory.")
         effect3.is_inherited_effect = True

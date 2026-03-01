@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -29,6 +30,7 @@ class EX5_043(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [When Digivolving] [Once Per Turn] You may play 1 green Digimon card from your hand with the play cost reduced by 4. If a card with [Leopardmon] in its name or [X Antibody] is in this Digimon's digivolution cards, further reduce it by 3.
         effect1 = ICardEffect()
+        effect1.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect1.set_effect_name("EX5-043 Play 1 Digimon from hand")
         effect1.set_effect_description("[When Digivolving] [Once Per Turn] You may play 1 green Digimon card from your hand with the play cost reduced by 4. If a card with [Leopardmon] in its name or [X Antibody] is in this Digimon's digivolution cards, further reduce it by 3.")
         effect1.is_optional = True
@@ -69,6 +71,7 @@ class EX5_043(CardScript):
         # Timing: EffectTiming.OnDeclaration
         # [Main] [Once Per Turn] You may play 1 green Digimon card from your hand with the play cost reduced by 4. If a card with [Leopardmon] in its name or [X Antibody] is in this Digimon's digivolution cards, further reduce it by 3.
         effect2 = ICardEffect()
+        effect2.set_timing(EffectTiming.OnDeclaration)
         effect2.set_effect_name("EX5-043 Play 1 Digimon from hand")
         effect2.set_effect_description("[Main] [Once Per Turn] You may play 1 green Digimon card from your hand with the play cost reduced by 4. If a card with [Leopardmon] in its name or [X Antibody] is in this Digimon's digivolution cards, further reduce it by 3.")
         effect2.set_max_count_per_turn(1)
@@ -108,6 +111,7 @@ class EX5_043(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [Your Turn] [Once Per Turn] When one of your Digimon is played, you may return 1 of your opponent�fs 5000 DP or lower Digimon to the hand. For each of your other Digimon, add 3000 to the maximum DP this effect can choose.
         effect3 = ICardEffect()
+        effect3.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect3.set_effect_name("EX5-043 Return 1 Digimon to hand")
         effect3.set_effect_description("[Your Turn] [Once Per Turn] When one of your Digimon is played, you may return 1 of your opponent�fs 5000 DP or lower Digimon to the hand. For each of your other Digimon, add 3000 to the maximum DP this effect can choose.")
         effect3.is_optional = True

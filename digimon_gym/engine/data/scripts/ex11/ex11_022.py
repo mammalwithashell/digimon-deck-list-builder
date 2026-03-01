@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -46,6 +47,7 @@ class EX11_022(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # Delete, Play Card, Effect Immunity
         effect2 = ICardEffect()
+        effect2.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect2.set_effect_name("EX11-022 Delete, Play Card, Effect Immunity")
         effect2.set_effect_description("Delete, Play Card, Effect Immunity")
         effect2.is_on_play = True
@@ -97,6 +99,7 @@ class EX11_022(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # Delete, Play Card, Effect Immunity
         effect3 = ICardEffect()
+        effect3.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect3.set_effect_name("EX11-022 Delete, Play Card, Effect Immunity")
         effect3.set_effect_description("Delete, Play Card, Effect Immunity")
         effect3.is_when_digivolving = True
@@ -148,6 +151,7 @@ class EX11_022(CardScript):
         # Timing: EffectTiming.WhenRemoveField
         # [All Turns] [Once Per Turn] When this Digimon would leave the battle area other than by your effects, by deleting 1 of your Tokens or other [Puppet] trait trait Digimon, prevent it from leaving.
         effect4 = ICardEffect()
+        effect4.set_timing(EffectTiming.WhenRemoveField)
         effect4.set_effect_name("EX11-022 Delete your 1 other token or [Puppet] Digimon to prevent this Digimon from leaving Battle Area")
         effect4.set_effect_description("[All Turns] [Once Per Turn] When this Digimon would leave the battle area other than by your effects, by deleting 1 of your Tokens or other [Puppet] trait trait Digimon, prevent it from leaving.")
         effect4.is_inherited_effect = True

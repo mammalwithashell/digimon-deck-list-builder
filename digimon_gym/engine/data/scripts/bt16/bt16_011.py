@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -29,6 +30,7 @@ class BT16_011(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [On Play] You may return 1 red Digimon card from your trash to the hand. Then, if [Garudamon] or [X-Antibody] is in this Digimon's digivolution cards, delete 1 of your opponent's Digimon with DP less than or equal to this Digimon's DP.
         effect1 = ICardEffect()
+        effect1.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect1.set_effect_name("BT16-011 Return 1 red Digimon card from the trash to your hand and delete a Digimon.")
         effect1.set_effect_description("[On Play] You may return 1 red Digimon card from your trash to the hand. Then, if [Garudamon] or [X-Antibody] is in this Digimon's digivolution cards, delete 1 of your opponent's Digimon with DP less than or equal to this Digimon's DP.")
         effect1.is_on_play = True
@@ -68,6 +70,7 @@ class BT16_011(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [When Digivolving] You may return 1 red Digimon card from your trash to the hand. Then, if [Garudamon] or [X-Antibody] is in this Digimon's digivolution cards, delete 1 of your opponent's Digimon with DP less than or equal to this Digimon's DP.
         effect2 = ICardEffect()
+        effect2.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect2.set_effect_name("BT16-011 Return 1 red Digimon card from the trash to your hand and delete a Digimon.")
         effect2.set_effect_description("[When Digivolving] You may return 1 red Digimon card from your trash to the hand. Then, if [Garudamon] or [X-Antibody] is in this Digimon's digivolution cards, delete 1 of your opponent's Digimon with DP less than or equal to this Digimon's DP.")
         effect2.is_when_digivolving = True
@@ -107,6 +110,7 @@ class BT16_011(CardScript):
         # Timing: EffectTiming.OnDestroyedAnyone
         # [On Deletion] Trash the top card of your opponent's security stack.
         effect3 = ICardEffect()
+        effect3.set_timing(EffectTiming.OnDestroyedAnyone)
         effect3.set_effect_name("BT16-011 Trash the top card of your opponent's security stack.")
         effect3.set_effect_description("[On Deletion] Trash the top card of your opponent's security stack.")
         effect3.is_inherited_effect = True
@@ -138,6 +142,7 @@ class BT16_011(CardScript):
         # Timing: EffectTiming.OnReturnCardsToHandFromTrash
         # [Your Turn] [Once Per Turn] When a red Digimon card returns from your trash to the hand, 1 of your Digimon gains <Rush> for the turn.
         effect4 = ICardEffect()
+        effect4.set_timing(EffectTiming.OnReturnCardsToHandFromTrash)
         effect4.set_effect_name("BT16-011 1 of your Digimon gains <Rush>.")
         effect4.set_effect_description("[Your Turn] [Once Per Turn] When a red Digimon card returns from your trash to the hand, 1 of your Digimon gains <Rush> for the turn.")
         effect4.set_max_count_per_turn(1)

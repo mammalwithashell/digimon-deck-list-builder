@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -30,6 +31,7 @@ class BT23_014(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [On Play] Until your opponent's turn ends, their effects can't play Digimon or Tamers from the trash.
         effect1 = ICardEffect()
+        effect1.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect1.set_effect_name("BT23-014 Your opponent effects cannot play digimon or tamers from trash until their turn ends")
         effect1.set_effect_description("[On Play] Until your opponent's turn ends, their effects can't play Digimon or Tamers from the trash.")
         effect1.is_on_play = True
@@ -57,6 +59,7 @@ class BT23_014(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [When Digivolving] Until your opponent's turn ends, their effects can't play Digimon or Tamers from the trash.
         effect2 = ICardEffect()
+        effect2.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect2.set_effect_name("BT23-014 Your opponent effects cannot play digimon or tamers from trash until their turn ends")
         effect2.set_effect_description("[When Digivolving] Until your opponent's turn ends, their effects can't play Digimon or Tamers from the trash.")
         effect2.is_when_digivolving = True
@@ -84,6 +87,7 @@ class BT23_014(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [On Play] Delete 1 of your opponent's Digimon with 8000 DP or less. For each of their Digimon and Tamers, add 2000 to this DP deletion effect's maximum.
         effect3 = ICardEffect()
+        effect3.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect3.set_effect_name("BT23-014 Delete")
         effect3.set_effect_description("[On Play] Delete 1 of your opponent's Digimon with 8000 DP or less. For each of their Digimon and Tamers, add 2000 to this DP deletion effect's maximum.")
         effect3.is_on_play = True
@@ -119,6 +123,7 @@ class BT23_014(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [When Digivolving] Delete 1 of your opponent's Digimon with 8000 DP or less. For each of their Digimon and Tamers, add 2000 to this DP deletion effect's maximum.
         effect4 = ICardEffect()
+        effect4.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect4.set_effect_name("BT23-014 Delete")
         effect4.set_effect_description("[When Digivolving] Delete 1 of your opponent's Digimon with 8000 DP or less. For each of their Digimon and Tamers, add 2000 to this DP deletion effect's maximum.")
         effect4.is_when_digivolving = True
@@ -154,6 +159,7 @@ class BT23_014(CardScript):
         # Timing: EffectTiming.OnAllyAttack
         # [When Attacking] Delete 1 of your opponent's Digimon with 8000 DP or less. For each of their Digimon and Tamers, add 2000 to this DP deletion effect's maximum.
         effect5 = ICardEffect()
+        effect5.set_timing(EffectTiming.OnAllyAttack)
         effect5.set_effect_name("BT23-014 Delete")
         effect5.set_effect_description("[When Attacking] Delete 1 of your opponent's Digimon with 8000 DP or less. For each of their Digimon and Tamers, add 2000 to this DP deletion effect's maximum.")
         effect5.is_on_attack = True

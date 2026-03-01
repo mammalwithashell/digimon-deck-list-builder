@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -28,6 +29,7 @@ class BT8_029(CardScript):
         # Timing: EffectTiming.OnDigivolutionCardDiscarded
         # [All Turns][Once Per Turn] When a digivolution card of an opponent's Digimon is trashed, return 1 of your opponent's level 3 Digimon to its owner's hand.
         effect1 = ICardEffect()
+        effect1.set_timing(EffectTiming.OnDigivolutionCardDiscarded)
         effect1.set_effect_name("BT8-029 Return 1 level 3 Digimon to hand")
         effect1.set_effect_description("[All Turns][Once Per Turn] When a digivolution card of an opponent's Digimon is trashed, return 1 of your opponent's level 3 Digimon to its owner's hand.")
         effect1.is_inherited_effect = True

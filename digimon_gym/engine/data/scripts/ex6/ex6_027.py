@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -46,6 +47,7 @@ class EX6_027(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [On Play] By trashing the top or bottom card of your security stack, 1 of your opponent's Digimon gets -8000 DP until the end of your opponents turn.
         effect2 = ICardEffect()
+        effect2.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect2.set_effect_name("EX6-027 By trashing the top or bottom card of your security stack, 1 of your opponent's Digimon gets -8000 DP until the end of your opponents turn.")
         effect2.set_effect_description("[On Play] By trashing the top or bottom card of your security stack, 1 of your opponent's Digimon gets -8000 DP until the end of your opponents turn.")
         effect2.is_optional = True
@@ -84,6 +86,7 @@ class EX6_027(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [When Digivolving] By trashing the top or bottom card of your security stack, 1 of your opponent's Digimon gets -8000 DP until the end of your opponents turn.
         effect3 = ICardEffect()
+        effect3.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect3.set_effect_name("EX6-027  By trashing the top or bottom card of your security stack, 1 of your opponent's Digimon gets -8000 DP until the end of your opponents turn.")
         effect3.set_effect_description("[When Digivolving] By trashing the top or bottom card of your security stack, 1 of your opponent's Digimon gets -8000 DP until the end of your opponents turn.")
         effect3.is_optional = True
@@ -122,6 +125,7 @@ class EX6_027(CardScript):
         # Timing: EffectTiming.OnLoseSecurity
         # [All Turns][Once Per Turn] When a card is removed from your security stack, if it's your turn, this Digimon may gain [Security Attack +1] for the turn and attack. If it's your opponent's turn, [Recovery +1 <Deck>].
         effect4 = ICardEffect()
+        effect4.set_timing(EffectTiming.OnLoseSecurity)
         effect4.set_effect_name("EX6-027 If it's your turn, this Digimon may gain [Security Attack +1] for the turn and attack")
         effect4.set_effect_description("[All Turns][Once Per Turn] When a card is removed from your security stack, if it's your turn, this Digimon may gain [Security Attack +1] for the turn and attack. If it's your opponent's turn, [Recovery +1 <Deck>].")
         effect4.is_optional = True
@@ -154,6 +158,7 @@ class EX6_027(CardScript):
         # Timing: EffectTiming.OnLoseSecurity
         # [All Turns][Once Per Turn] When a card is removed from your security stack, if it's your turn, this Digimon may gain [Security Attack +1] for the turn and attack. If it's your opponent's turn, [Recovery +1 <Deck>].
         effect5 = ICardEffect()
+        effect5.set_timing(EffectTiming.OnLoseSecurity)
         effect5.set_effect_name("EX6-027 If it's your opponent's turn, [Recovery +1 <Deck>]")
         effect5.set_effect_description("[All Turns][Once Per Turn] When a card is removed from your security stack, if it's your turn, this Digimon may gain [Security Attack +1] for the turn and attack. If it's your opponent's turn, [Recovery +1 <Deck>].")
         effect5.set_max_count_per_turn(1)

@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -16,6 +17,7 @@ class BT24_083(CardScript):
         # Timing: EffectTiming.OnStartTurn
         # Play Card
         effect0 = ICardEffect()
+        effect0.set_timing(EffectTiming.OnStartTurn)
         effect0.set_effect_name("BT24-083 Return to deck to play another or a 5k- [TS]")
         effect0.set_effect_description("Play Card")
         effect0.is_optional = True
@@ -52,6 +54,7 @@ class BT24_083(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # Add To Hand, Reveal And Select
         effect1 = ICardEffect()
+        effect1.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect1.set_effect_name("BT24-083 Reveal 3, Add 1, Bottom Deck the rest")
         effect1.set_effect_description("Add To Hand, Reveal And Select")
         effect1.is_on_play = True

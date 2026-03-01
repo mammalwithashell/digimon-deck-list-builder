@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -30,6 +31,7 @@ class BT21_078(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [On Play] Delete 1 of your opponent's level 4 or lower Digimon. If your Tamers have 2 or more total colors, add 1 to this effect's level maximum.
         effect1 = ICardEffect()
+        effect1.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect1.set_effect_name("BT21-078 Delete a level 4 digimon, or 5 if tamers have 2+ colour")
         effect1.set_effect_description("[On Play] Delete 1 of your opponent's level 4 or lower Digimon. If your Tamers have 2 or more total colors, add 1 to this effect's level maximum.")
         effect1.is_on_play = True
@@ -63,6 +65,7 @@ class BT21_078(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [When Digivolving] Delete 1 of your opponent's level 4 or lower Digimon. If your Tamers have 2 or more total colors, add 1 to this effect's level maximum.
         effect2 = ICardEffect()
+        effect2.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect2.set_effect_name("BT21-078 Delete a level 4 digimon, or 5 if tamers have 2+ colour")
         effect2.set_effect_description("[When Digivolving] Delete 1 of your opponent's level 4 or lower Digimon. If your Tamers have 2 or more total colors, add 1 to this effect's level maximum.")
         effect2.is_when_digivolving = True
@@ -96,6 +99,7 @@ class BT21_078(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [Your Turn][Once Per Turn] When your other Digimon are played or digivolve, if any of them have the [ADVENTURE] trait, 1 of your Digimon gains <Alliance> for the turn. Then, 1 of your Digimon may attack.
         effect3 = ICardEffect()
+        effect3.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect3.set_effect_name("BT21-078 Gain alliance then attack")
         effect3.set_effect_description("[Your Turn][Once Per Turn] When your other Digimon are played or digivolve, if any of them have the [ADVENTURE] trait, 1 of your Digimon gains <Alliance> for the turn. Then, 1 of your Digimon may attack.")
         effect3.set_max_count_per_turn(1)

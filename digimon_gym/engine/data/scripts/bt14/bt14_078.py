@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -16,6 +17,7 @@ class BT14_078(CardScript):
         # Timing: EffectTiming.OnEndTurn
         # [End of Your Turn] Delete this Digimon and <Draw 2>. Then, you may return 1 [Loogamon] from your trash to the hand.
         effect0 = ICardEffect()
+        effect0.set_timing(EffectTiming.OnEndTurn)
         effect0.set_effect_name("BT14-078 Delete this Digimon, Draw 2 and return 1 card from trash to hand")
         effect0.set_effect_description("[End of Your Turn] Delete this Digimon and <Draw 2>. Then, you may return 1 [Loogamon] from your trash to the hand.")
 
@@ -57,6 +59,7 @@ class BT14_078(CardScript):
         # Timing: EffectTiming.OnDestroyedAnyone
         # [On Deletion] You may trash up to 3 cards with the [Dark Animal] or [SoC] trait in your hand. Then, delete 1 of your opponent's level 3 or lower Digimon. For each card trashed by this effect, add 1 to the level this effect may choose.
         effect1 = ICardEffect()
+        effect1.set_timing(EffectTiming.OnDestroyedAnyone)
         effect1.set_effect_name("BT14-078 Trash cards from hand and delete 1 Digimon")
         effect1.set_effect_description("[On Deletion] You may trash up to 3 cards with the [Dark Animal] or [SoC] trait in your hand. Then, delete 1 of your opponent's level 3 or lower Digimon. For each card trashed by this effect, add 1 to the level this effect may choose.")
         effect1.is_on_deletion = True

@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -33,6 +34,7 @@ class EX8_052(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [When Digivolving] If [Cyberdramon] or [X Antibody] is in this Digimon's digivolution cards, you may place 1 [Device] trait Option card from your hand or trash in the battle area.
         effect1 = ICardEffect()
+        effect1.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect1.set_effect_name("EX8-052 Place 1 [Device] trait Option in battle area")
         effect1.set_effect_description("[When Digivolving] If [Cyberdramon] or [X Antibody] is in this Digimon's digivolution cards, you may place 1 [Device] trait Option card from your hand or trash in the battle area.")
         effect1.is_optional = True
@@ -51,6 +53,7 @@ class EX8_052(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [When Digivolving] By trashing 1 of your Option cards in the battle area, <De-Digivolve 2> 1 of your opponent's Digimon.
         effect2 = ICardEffect()
+        effect2.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect2.set_effect_name("EX8-052 Trash 1 Option card in battle area, De-Digivolve 2 1 opponent's Digimon")
         effect2.set_effect_description("[When Digivolving] By trashing 1 of your Option cards in the battle area, <De-Digivolve 2> 1 of your opponent's Digimon.")
         effect2.is_optional = True
@@ -86,6 +89,7 @@ class EX8_052(CardScript):
         # Timing: EffectTiming.OnAllyAttack
         # [When Attacking] [Once Per Turn] By trashing 1 of your Option cards in the battle area, trash your opponent's top security card.
         effect3 = ICardEffect()
+        effect3.set_timing(EffectTiming.OnAllyAttack)
         effect3.set_effect_name("EX8-052 By trashing 1 of your Option cards in the battle area, trash your opponent's top security card")
         effect3.set_effect_description("[When Attacking] [Once Per Turn] By trashing 1 of your Option cards in the battle area, trash your opponent's top security card.")
         effect3.is_inherited_effect = True

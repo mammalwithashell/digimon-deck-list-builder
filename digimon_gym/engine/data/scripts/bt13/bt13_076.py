@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -29,6 +30,7 @@ class BT13_076(CardScript):
         # Timing: EffectTiming.OnDestroyedAnyone
         # [All Turns][Once Per Turn] When another Digimon with [Etemon] or [Sukamon] in its name is deleted, 1 of your opponent's Digimon gets -3000 DP and gains <Security Attack -1> until the end of your opponent's turn.
         effect1 = ICardEffect()
+        effect1.set_timing(EffectTiming.OnDestroyedAnyone)
         effect1.set_effect_name("BT13-076 DP -3000 and Security Attack -1")
         effect1.set_effect_description("[All Turns][Once Per Turn] When another Digimon with [Etemon] or [Sukamon] in its name is deleted, 1 of your opponent's Digimon gets -3000 DP and gains <Security Attack -1> until the end of your opponent's turn.")
         effect1.set_max_count_per_turn(1)

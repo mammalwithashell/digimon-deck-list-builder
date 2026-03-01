@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -78,6 +79,7 @@ class BT22_014(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [When Digivolving] You may unsuspend 1 of your opponent's Digimon. Then, this Digimon may attack.
         effect4 = ICardEffect()
+        effect4.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect4.set_effect_name("BT22-014 Unsuspend 1, then attack")
         effect4.set_effect_description("[When Digivolving] You may unsuspend 1 of your opponent's Digimon. Then, this Digimon may attack.")
         effect4.is_optional = True
@@ -114,6 +116,7 @@ class BT22_014(CardScript):
         # Timing: EffectTiming.OnAttackTargetChanged
         # [All Turns] [Once Per Turn] When attack targets change, this Digimon gains <Piercing> (When this Digimon attacks and deletes an opponent's Digimon and survives the battle, it performs any security checks it normally would.) and +5000 DP for the turn.
         effect5 = ICardEffect()
+        effect5.set_timing(EffectTiming.OnAttackTargetChanged)
         effect5.set_effect_name("BT22-014 Gain Piercing, +5000 DP")
         effect5.set_effect_description("[All Turns] [Once Per Turn] When attack targets change, this Digimon gains <Piercing> (When this Digimon attacks and deletes an opponent's Digimon and survives the battle, it performs any security checks it normally would.) and +5000 DP for the turn.")
         effect5.set_max_count_per_turn(1)

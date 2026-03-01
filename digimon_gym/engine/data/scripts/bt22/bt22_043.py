@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -30,6 +31,7 @@ class BT22_043(CardScript):
         # Timing: EffectTiming.OnAddDigivolutionCards
         # [Your Turn] [Once Per Turn] When effects place Digimon cards with the [CS] trait in this Digimon's digivolution cards, if you have 1 or fewer Tamers, you may play 1 Tamer card with the [CS] trait from your hand without paying the cost.
         effect1 = ICardEffect()
+        effect1.set_timing(EffectTiming.OnAddDigivolutionCards)
         effect1.set_effect_name("BT22-043 Play 1 [CS] Tamer")
         effect1.set_effect_description("[Your Turn] [Once Per Turn] When effects place Digimon cards with the [CS] trait in this Digimon's digivolution cards, if you have 1 or fewer Tamers, you may play 1 Tamer card with the [CS] trait from your hand without paying the cost.")
         effect1.is_optional = True
@@ -64,6 +66,7 @@ class BT22_043(CardScript):
         # Timing: EffectTiming.OnDeclaration
         # [Main] [Once Per Turn] By placing this [CS] trait Digimon's top stacked card as its bottom digivolution card, <Draw 1> (Draw 1 card from your deck).
         effect2 = ICardEffect()
+        effect2.set_timing(EffectTiming.OnDeclaration)
         effect2.set_effect_name("BT22-043 Place the top card of this Digimon at the bottom of digivolution cards to Draw 1")
         effect2.set_effect_description("[Main] [Once Per Turn] By placing this [CS] trait Digimon's top stacked card as its bottom digivolution card, <Draw 1> (Draw 1 card from your deck).")
         effect2.is_inherited_effect = True

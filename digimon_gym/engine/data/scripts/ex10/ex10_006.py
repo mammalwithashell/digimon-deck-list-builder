@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -33,6 +34,7 @@ class EX10_006(CardScript):
         # Timing: EffectTiming.OnStartMainPhase
         # [Start of Your Main Phase] You may return 1 [Virus] trait Digimon card with [Greymon] in its name in its name from your trash to the hand.
         effect1 = ICardEffect()
+        effect1.set_timing(EffectTiming.OnStartMainPhase)
         effect1.set_effect_name("EX10-006 Return 1 card from trash to hand")
         effect1.set_effect_description("[Start of Your Main Phase] You may return 1 [Virus] trait Digimon card with [Greymon] in its name in its name from your trash to the hand.")
         effect1.is_optional = True

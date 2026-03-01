@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -39,6 +40,7 @@ class BT8_095(CardScript):
         # Timing: EffectTiming.OptionSkill
         # [Main] 1 of your Digimon with 2 or more colors gains <Security Attack +1> for the turn. (This Digimon checks 1 additional security card.)
         effect1 = ICardEffect()
+        effect1.set_timing(EffectTiming.OptionSkill)
         effect1.set_effect_name("BT8-095 Change Security Attack")
         effect1.set_effect_description("[Main] 1 of your Digimon with 2 or more colors gains <Security Attack +1> for the turn. (This Digimon checks 1 additional security card.)")
 
@@ -63,6 +65,7 @@ class BT8_095(CardScript):
         # Timing: EffectTiming.SecuritySkill
         # [Security] Delete 1 of your opponent's Digimon with <Blocker>.
         effect2 = ICardEffect()
+        effect2.set_timing(EffectTiming.SecuritySkill)
         effect2.set_effect_name("BT8-095 Delete")
         effect2.set_effect_description("[Security] Delete 1 of your opponent's Digimon with <Blocker>.")
         effect2.is_security_effect = True

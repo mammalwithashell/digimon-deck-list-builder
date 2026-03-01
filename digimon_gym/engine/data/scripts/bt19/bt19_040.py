@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -33,6 +34,7 @@ class BT19_040(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [When Digivolving] <Draw 2>. Then, you may use 1 single-color Option card with a cost of 5 or less from your hand without paying the cost.
         effect1 = ICardEffect()
+        effect1.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect1.set_effect_name("BT19-040 Draw 2 and you may use 1 single-color Option")
         effect1.set_effect_description("[When Digivolving] <Draw 2>. Then, you may use 1 single-color Option card with a cost of 5 or less from your hand without paying the cost.")
         effect1.is_when_digivolving = True
@@ -60,6 +62,7 @@ class BT19_040(CardScript):
         # Timing: EffectTiming.OnUseOption
         # [Your Turn][Once Per Turn] When you use an Option card with a cost of 2 or more, play 1 [Pipe Fox] Token (Digimon/Yellow/6000 DP/<Blocker>).
         effect2 = ICardEffect()
+        effect2.set_timing(EffectTiming.OnUseOption)
         effect2.set_effect_name("BT19-040 Play a [Pipe Fox] Token")
         effect2.set_effect_description("[Your Turn][Once Per Turn] When you use an Option card with a cost of 2 or more, play 1 [Pipe Fox] Token (Digimon/Yellow/6000 DP/<Blocker>).")
         effect2.set_max_count_per_turn(1)

@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -16,6 +17,7 @@ class BT20_057(CardScript):
         # Timing: EffectTiming.BeforePayCost
         # When this card would be played, if you have a Digimon with [Huckmon], [Jesmon], or [Sistermon] in its name, reduce the play cost by 4.
         effect0 = ICardEffect()
+        effect0.set_timing(EffectTiming.BeforePayCost)
         effect0.set_effect_name("BT20-057 Reduce the play cost by 4")
         effect0.set_effect_description("When this card would be played, if you have a Digimon with [Huckmon], [Jesmon], or [Sistermon] in its name, reduce the play cost by 4.")
         effect0.set_hash_string("PlayCost-4_BT20_057")
@@ -89,6 +91,7 @@ class BT20_057(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [On Play] 1 of your Digimon may digivolve into a level 6 or lower Digimon card with [Huckmon] in its name or the [Royal Knight] trait in the hand or trash without paying the cost.
         effect4 = ICardEffect()
+        effect4.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect4.set_effect_name("BT20-057 Digivolve into level 6")
         effect4.set_effect_description("[On Play] 1 of your Digimon may digivolve into a level 6 or lower Digimon card with [Huckmon] in its name or the [Royal Knight] trait in the hand or trash without paying the cost.")
         effect4.is_on_play = True
@@ -126,6 +129,7 @@ class BT20_057(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [When Digivolving] 1 of your Digimon may digivolve into a level 6 or lower Digimon card with [Huckmon] in its name or the [Royal Knight] trait in the hand or trash without paying the cost.
         effect5 = ICardEffect()
+        effect5.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect5.set_effect_name("BT20-057 Digivolve into level 6")
         effect5.set_effect_description("[When Digivolving] 1 of your Digimon may digivolve into a level 6 or lower Digimon card with [Huckmon] in its name or the [Royal Knight] trait in the hand or trash without paying the cost.")
         effect5.is_when_digivolving = True

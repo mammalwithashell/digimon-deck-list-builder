@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -29,6 +30,7 @@ class EX6_060(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [On Play] You may trash up to 3 cards in your hand. For each card trashed by this effect, suspend 1 of your opponent's level 5 or lower Digimon. Then, delete all of your opponent's suspended Digimon with the lowest play cost.
         effect1 = ICardEffect()
+        effect1.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect1.set_effect_name("EX6-060 Trash up to 3 cards, suspend 1 opponent's digimon. Then delete all opponents suspended digimon with lowest play cost.")
         effect1.set_effect_description("[On Play] You may trash up to 3 cards in your hand. For each card trashed by this effect, suspend 1 of your opponent's level 5 or lower Digimon. Then, delete all of your opponent's suspended Digimon with the lowest play cost.")
         effect1.is_on_play = True
@@ -88,6 +90,7 @@ class EX6_060(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [When Digivolving] You may trash up to 3 cards in your hand. For each card trashed by this effect, suspend 1 of your opponent's level 5 or lower Digimon. Then, delete all of your opponent's suspended Digimon with the lowest play cost.
         effect2 = ICardEffect()
+        effect2.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect2.set_effect_name("EX6-060 Trash up to 3 cards, suspend 1 opponent's digimon. Then delete all opponents suspended digimon with lowest play cost.")
         effect2.set_effect_description("[When Digivolving] You may trash up to 3 cards in your hand. For each card trashed by this effect, suspend 1 of your opponent's level 5 or lower Digimon. Then, delete all of your opponent's suspended Digimon with the lowest play cost.")
         effect2.is_when_digivolving = True
@@ -147,6 +150,7 @@ class EX6_060(CardScript):
         # Timing: EffectTiming.WhenRemoveField
         # [All Turns] When this Digimon would leave the battle area other than in battle, place 1 card with the [Seven Great Demon Lord] trait from your trash as the bottom digivolution cards of one of your [Gate of Deadly Sins] in your breeding area.
         effect3 = ICardEffect()
+        effect3.set_timing(EffectTiming.WhenRemoveField)
         effect3.set_effect_name("EX6-060 Place 1 7GDL from trash to bottom of [Gate of Deadly Sins]")
         effect3.set_effect_description("[All Turns] When this Digimon would leave the battle area other than in battle, place 1 card with the [Seven Great Demon Lord] trait from your trash as the bottom digivolution cards of one of your [Gate of Deadly Sins] in your breeding area.")
 

@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -16,6 +17,7 @@ class P_204(CardScript):
         # Timing: EffectTiming.OptionSkill
         # [Main] By trashing 1 card with the [X Antibody] or [Chronicle] trait from your hand, <Draw 2> (Draw 2 cards from your deck). Then, place this card in the battle area.
         effect0 = ICardEffect()
+        effect0.set_timing(EffectTiming.OptionSkill)
         effect0.set_effect_name("P-204 Trash 1 [X Antibody]/[Chronicle] from hand, draw 2")
         effect0.set_effect_description("[Main] By trashing 1 card with the [X Antibody] or [Chronicle] trait from your hand, <Draw 2> (Draw 2 cards from your deck). Then, place this card in the battle area.")
 
@@ -66,6 +68,7 @@ class P_204(CardScript):
         # Timing: EffectTiming.OnAllyAttack
         # [All Turns] When Digimon attack players, <Delay>. 1 of your [Grademon] or Digimon with the [Chronicle] trait may digivolve into [Alphamon] or a level 6 or lower Digimon card with the [Chronicle] trait in the hand without paying the cost.
         effect2 = ICardEffect()
+        effect2.set_timing(EffectTiming.OnAllyAttack)
         effect2.set_effect_name("P-204 1 [Grademon]/[Chronicle] digimon digivoles into [Alphamon]/ level 6 or lower [Chronicle] digimon")
         effect2.set_effect_description("[All Turns] When Digimon attack players, <Delay>. 1 of your [Grademon] or Digimon with the [Chronicle] trait may digivolve into [Alphamon] or a level 6 or lower Digimon card with the [Chronicle] trait in the hand without paying the cost.")
         effect2.is_optional = True

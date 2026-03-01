@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -45,6 +46,7 @@ class BT22_082(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [On Play] Delete 1 of your opponent's play cost 7 or lower Digimon. Then, if this Digimon has no digivolution cards, you may place 1 [Arata Sanada] from your hand or trash as this Digimon's bottom digivolution card.
         effect2 = ICardEffect()
+        effect2.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect2.set_effect_name("BT22-082 delete digimon, then if no sources, place [Arata Sanada] from hand or trash")
         effect2.set_effect_description("[On Play] Delete 1 of your opponent's play cost 7 or lower Digimon. Then, if this Digimon has no digivolution cards, you may place 1 [Arata Sanada] from your hand or trash as this Digimon's bottom digivolution card.")
         effect2.is_on_play = True
@@ -80,6 +82,7 @@ class BT22_082(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [When Digivolving] Delete 1 of your opponent's play cost 7 or lower Digimon. Then, if this Digimon has no digivolution cards, you may place 1 [Arata Sanada] from your hand or trash as this Digimon's bottom digivolution card.
         effect3 = ICardEffect()
+        effect3.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect3.set_effect_name("BT22-082 delete digimon, then if no sources, place [Arata Sanada] from hand or trash")
         effect3.set_effect_description("[When Digivolving] Delete 1 of your opponent's play cost 7 or lower Digimon. Then, if this Digimon has no digivolution cards, you may place 1 [Arata Sanada] from your hand or trash as this Digimon's bottom digivolution card.")
         effect3.is_when_digivolving = True
@@ -115,6 +118,7 @@ class BT22_082(CardScript):
         # Timing: EffectTiming.WhenRemoveField
         # [All Turns] When this Digimon would leave the battle area, you may play 1 [Arata Sanada] from its digivolution cards without paying the cost.
         effect4 = ICardEffect()
+        effect4.set_timing(EffectTiming.WhenRemoveField)
         effect4.set_effect_name("BT22-082 Play [Arata Sanada]")
         effect4.set_effect_description("[All Turns] When this Digimon would leave the battle area, you may play 1 [Arata Sanada] from its digivolution cards without paying the cost.")
         effect4.is_optional = True

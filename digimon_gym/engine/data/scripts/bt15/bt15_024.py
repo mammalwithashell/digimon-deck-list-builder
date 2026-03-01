@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -29,6 +30,7 @@ class BT15_024(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [When Digivolving] If you have a Tamer with [Matt Ishida] in its name, <Draw 1>. If you don't have a Tamer with [Matt Ishida] in its name, you may play 1 Tamer card with [Matt Ishida] in its name from your hand with the play cost reduced by 3.
         effect1 = ICardEffect()
+        effect1.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect1.set_effect_name("BT15-024 Draw 1 or Play 1 tamer")
         effect1.set_effect_description("[When Digivolving] If you have a Tamer with [Matt Ishida] in its name, <Draw 1>. If you don't have a Tamer with [Matt Ishida] in its name, you may play 1 Tamer card with [Matt Ishida] in its name from your hand with the play cost reduced by 3.")
         effect1.is_when_digivolving = True
@@ -69,6 +71,7 @@ class BT15_024(CardScript):
         # Timing: EffectTiming.OnAllyAttack
         # [When Attacking][Once Per Turn] When this Digimon attacks a player, <Draw 1>. (Draw 1 card from your deck.)
         effect2 = ICardEffect()
+        effect2.set_timing(EffectTiming.OnAllyAttack)
         effect2.set_effect_name("BT15-024 Draw 1")
         effect2.set_effect_description("[When Attacking][Once Per Turn] When this Digimon attacks a player, <Draw 1>. (Draw 1 card from your deck.)")
         effect2.is_inherited_effect = True

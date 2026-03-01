@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -34,6 +35,7 @@ class EX11_049(CardScript):
         # Timing: EffectTiming.OnAllyAttack
         # [When Attacking] Trash 2 cards in your hand. Then, this Digimon may digivolve into a [Dark Dragon] or [Evil Dragon] trait Digimon card in the trash with the digivolution cost reduced by 2.
         effect1 = ICardEffect()
+        effect1.set_timing(EffectTiming.OnAllyAttack)
         effect1.set_effect_name("EX11-049 Discard 2, then may digivolve into [Dark Dragon]/[Evil Dragon] for 2 less.")
         effect1.set_effect_description("[When Attacking] Trash 2 cards in your hand. Then, this Digimon may digivolve into a [Dark Dragon] or [Evil Dragon] trait Digimon card in the trash with the digivolution cost reduced by 2.")
         effect1.is_on_attack = True

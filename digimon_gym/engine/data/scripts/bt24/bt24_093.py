@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -16,6 +17,7 @@ class BT24_093(CardScript):
         # Timing: EffectTiming.OptionSkill
         # [Main] Add your top security card to the hand and <Recovery +1 (Deck)>. Then, place this card in the battle area.
         effect0 = ICardEffect()
+        effect0.set_timing(EffectTiming.OptionSkill)
         effect0.set_effect_name("BT24-093 Top sec to hand, Recovery +1, place in battle area.")
         effect0.set_effect_description("[Main] Add your top security card to the hand and <Recovery +1 (Deck)>. Then, place this card in the battle area.")
 
@@ -68,6 +70,7 @@ class BT24_093(CardScript):
         # Timing: EffectTiming.OnLoseSecurity
         # [All Turns] When your security stack is removed, <Delay>.\r\n• You may place the top stacked card of any your Digimon with [Aegiochusmon] or [Jupitermon] in their names as the top security card.
         effect2 = ICardEffect()
+        effect2.set_timing(EffectTiming.OnLoseSecurity)
         effect2.set_effect_name("BT24-093 Place top card [Aegiochusmon] or [Jupitermon] on top sec.")
         effect2.set_effect_description("[All Turns] When your security stack is removed, <Delay>.\\r\\n• You may place the top stacked card of any your Digimon with [Aegiochusmon] or [Jupitermon] in their names as the top security card.")
         effect2.is_optional = True
@@ -98,6 +101,7 @@ class BT24_093(CardScript):
         # Timing: EffectTiming.SecuritySkill
         # [Security] You may play 1 [Aegiomon] or [Elecmon] from your hand or trash without paying the cost.
         effect3 = ICardEffect()
+        effect3.set_timing(EffectTiming.SecuritySkill)
         effect3.set_effect_name("BT24-093 Play 1 [Aegiomon]/[Elecmon] from hand or trash.")
         effect3.set_effect_description("[Security] You may play 1 [Aegiomon] or [Elecmon] from your hand or trash without paying the cost.")
         effect3.is_security_effect = True

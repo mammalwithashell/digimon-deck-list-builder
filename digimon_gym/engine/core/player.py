@@ -172,14 +172,20 @@ class Player:
                 self._log(f"{perm.top_card.card_names[0] if perm.top_card else 'Unknown'} unsuspends (Reboot).")
 
     def digivolve(self, permanent: 'Permanent', card_source: 'CardSource'):
-        # 1. Determine Base Cost
-        base_cost = 0
-        if card_source.c_entity_base and card_source.c_entity_base.evo_costs and len(card_source.c_entity_base.evo_costs) > 0:
-             base_cost = card_source.c_entity_base.evo_costs[0].memory_cost
-        else:
-             # Alt digi: get cost from card script effects
-             from ..validation.digivolve_validator import get_alt_digi_cost
-             base_cost = get_alt_digi_cost(card_source, permanent)
+        # 1. Determine Base Cost (cheapest matching route)
+        from ..validation.digivolve_validator import get_alt_digi_cost, _check_alt_digivolve
+        candidates = []
+        # Standard evo costs: find matching ones for this base permanent
+        if card_source.c_entity_base and card_source.c_entity_base.evo_costs:
+            base_colors = set(permanent.top_card.card_colors) if permanent.top_card else set()
+            base_level = permanent.level
+            for evo_cost in card_source.c_entity_base.evo_costs:
+                if evo_cost.level == base_level and evo_cost.card_color in base_colors:
+                    candidates.append(evo_cost.memory_cost)
+        # Alt evo cost
+        if _check_alt_digivolve(card_source, permanent):
+            candidates.append(get_alt_digi_cost(card_source, permanent))
+        base_cost = min(candidates) if candidates else 0
 
         # 2. Trigger WhenWouldDigivolve
         reduction = 0

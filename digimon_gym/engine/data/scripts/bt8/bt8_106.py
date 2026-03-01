@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -16,6 +17,7 @@ class BT8_106(CardScript):
         # Timing: EffectTiming.OptionSkill
         # [Main] Reveal the top 3 cards of your deck. You may play any number of Digimon cards with [Mamemon] in their names whose play costs add up to 15 or less among them without paying their memory costs. Delete 1 of your opponent's Digimon with a memory cost of 6 or less for each Digimon played with this effect. Trash the remaining cards.
         effect0 = ICardEffect()
+        effect0.set_timing(EffectTiming.OptionSkill)
         effect0.set_effect_name("BT8-106 Delete, Play Card, Reveal And Select")
         effect0.set_effect_description("[Main] Reveal the top 3 cards of your deck. You may play any number of Digimon cards with [Mamemon] in their names whose play costs add up to 15 or less among them without paying their memory costs. Delete 1 of your opponent's Digimon with a memory cost of 6 or less for each Digimon played with this effect. Trash the remaining cards.")
 

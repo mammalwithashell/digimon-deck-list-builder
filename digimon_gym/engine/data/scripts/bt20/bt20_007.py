@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -29,6 +30,7 @@ class BT20_007(CardScript):
         # Timing: EffectTiming.OnStartMainPhase
         # [Start of Your Main Phase] By trashing 1 card with [Dracomon]/[Examon] in its text in your hand, <Draw 1> and gain 1 memory.
         effect1 = ICardEffect()
+        effect1.set_timing(EffectTiming.OnStartMainPhase)
         effect1.set_effect_name("BT20-007 Trash 1 [Dracomon]/[Examon] text card, <Draw 1> and gain 1 memory")
         effect1.set_effect_description("[Start of Your Main Phase] By trashing 1 card with [Dracomon]/[Examon] in its text in your hand, <Draw 1> and gain 1 memory.")
         effect1.is_optional = True

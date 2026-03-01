@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -29,6 +30,7 @@ class BT13_092(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [When Digivolving] Search your opponent's hand, and trash 1 card among it. Then, if they have 7 or fewer cards in their hand, they add the top card of their security stack to the hand.
         effect1 = ICardEffect()
+        effect1.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect1.set_effect_name("BT13-092 Trash 1 opponent's hand and add the top card of opponent's security to hand")
         effect1.set_effect_description("[When Digivolving] Search your opponent's hand, and trash 1 card among it. Then, if they have 7 or fewer cards in their hand, they add the top card of their security stack to the hand.")
         effect1.is_when_digivolving = True
@@ -75,6 +77,7 @@ class BT13_092(CardScript):
         # Timing: EffectTiming.OnAllyAttack
         # [When Attacking] By returning 1 Digimon card from your opponent's trash to the bottom of the deck, delete all of your opponent's Digimon with the same name as that card.
         effect2 = ICardEffect()
+        effect2.set_timing(EffectTiming.OnAllyAttack)
         effect2.set_effect_name("BT13-092 Return opponent's 1 card from trash to the bottom of deck to delete opponent's Digimon")
         effect2.set_effect_description("[When Attacking] By returning 1 Digimon card from your opponent's trash to the bottom of the deck, delete all of your opponent's Digimon with the same name as that card.")
         effect2.is_optional = True

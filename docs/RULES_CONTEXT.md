@@ -5,6 +5,8 @@ Sources:
   - Web: https://world.digimoncard.com/rule/pdf/general_rule.pdf?20251225
 - Official Rule Manual for Web Ver.5.0 — `Digimon TCG resources/manual.pdf`
   - Web: https://world.digimoncard.com/rule/pdf/manual.pdf?20250711
+- Glossary — `Digimon TCG resources/glossary.pdf`
+  - Web: https://world.digimoncard.com/rule/pdf/glossary.pdf?20220422
 
 Rule numbers (e.g. 16-3) reference the Comprehensive Rules Manual sections.
 

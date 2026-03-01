@@ -185,7 +185,7 @@ class TestBT24EffectsExecute:
 
         for i in range(5):
             p1.library_cards.append(make_card(f"LIB-{i}", f"Lib{i}", owner=p1))
-        p1.hand_cards.append(make_card("HAND-0", "HandCard", owner=p1))
+        p1.hand_cards.append(make_card("HAND-0", "HandCard", traits=["Reptile"], owner=p1))
 
         script = BT24_008()
         effects = script.get_card_effects(card)

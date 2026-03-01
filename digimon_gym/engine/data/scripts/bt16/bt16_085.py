@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -28,6 +29,7 @@ class BT16_085(CardScript):
         # Timing: EffectTiming.OnStartMainPhase
         # [Start of Your Main Phase] You may play 1 [Veemon] or [Wormmon] from your hand without paying the cost. At the next end of your opponent's turn, return that Digimon to the hand.
         effect1 = ICardEffect()
+        effect1.set_timing(EffectTiming.OnStartMainPhase)
         effect1.set_effect_name("BT16-085 Play 1 [Veemon] or [Wormmon]")
         effect1.set_effect_description("[Start of Your Main Phase] You may play 1 [Veemon] or [Wormmon] from your hand without paying the cost. At the next end of your opponent's turn, return that Digimon to the hand.")
         effect1.is_optional = True
@@ -60,6 +62,7 @@ class BT16_085(CardScript):
         # Timing: EffectTiming.OnStartMainPhase
         # [End of Opponent's Turn] Return this Digimon to the hand.
         effect2 = ICardEffect()
+        effect2.set_timing(EffectTiming.OnStartMainPhase)
         effect2.set_effect_name("BT16-085 Return this Digimon to the hand")
         effect2.set_effect_description("[End of Opponent's Turn] Return this Digimon to the hand.")
 
@@ -87,6 +90,7 @@ class BT16_085(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [Your Turn] When one of your Digimon digivolves into a blue or green Digimon, by suspending this Tamer, gain 1 memory. If DNA digivolving, trash any 3 digivolution cards under your opponent's Digimon.
         effect3 = ICardEffect()
+        effect3.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect3.set_effect_name("BT16-085 Memory +1")
         effect3.set_effect_description("[Your Turn] When one of your Digimon digivolves into a blue or green Digimon, by suspending this Tamer, gain 1 memory. If DNA digivolving, trash any 3 digivolution cards under your opponent's Digimon.")
         effect3.is_optional = True

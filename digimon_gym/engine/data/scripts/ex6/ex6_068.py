@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -16,6 +17,7 @@ class EX6_068(CardScript):
         # Timing: EffectTiming.OptionSkill
         # [Main] You may place 1 Digimon card with the [Angel]/[Archangel]/[Three Great Angels] trait from your hand at the bottom of your security stack. Then, place this card in your battle area.
         effect0 = ICardEffect()
+        effect0.set_timing(EffectTiming.OptionSkill)
         effect0.set_effect_name("EX6-068 Add To Security")
         effect0.set_effect_description("[Main] You may place 1 Digimon card with the [Angel]/[Archangel]/[Three Great Angels] trait from your hand at the bottom of your security stack. Then, place this card in your battle area.")
 
@@ -54,6 +56,7 @@ class EX6_068(CardScript):
         # Timing: EffectTiming.OnDestroyedAnyone
         # [All Turns] When one of your Digimon with the [Angel] or [Archangel] trait is deleted, <Delay>.\r\n• Search your security stack. You may play 1 Digimon card with the [Three Great Angels] trait among it without paying the cost. Shuffle your security stack.
         effect2 = ICardEffect()
+        effect2.set_timing(EffectTiming.OnDestroyedAnyone)
         effect2.set_effect_name("EX6-068 Play 1 card with the [Three Great Angels] trait from your security stack without paying the cost")
         effect2.set_effect_description("[All Turns] When one of your Digimon with the [Angel] or [Archangel] trait is deleted, <Delay>.\r\n• Search your security stack. You may play 1 Digimon card with the [Three Great Angels] trait among it without paying the cost. Shuffle your security stack.")
         effect2.is_optional = True

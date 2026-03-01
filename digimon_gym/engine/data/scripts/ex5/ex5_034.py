@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -53,6 +54,7 @@ class EX5_034(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [On Play] Suspend 1 of your opponent's Digimon.
         effect2 = ICardEffect()
+        effect2.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect2.set_effect_name("EX5-034 Suspend 1 Digimon")
         effect2.set_effect_description("[On Play] Suspend 1 of your opponent's Digimon.")
         effect2.is_on_play = True
@@ -86,6 +88,7 @@ class EX5_034(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [When Digivolving] Suspend 1 of your opponent's Digimon.
         effect3 = ICardEffect()
+        effect3.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect3.set_effect_name("EX5-034 Suspend 1 Digimon")
         effect3.set_effect_description("[When Digivolving] Suspend 1 of your opponent's Digimon.")
         effect3.is_when_digivolving = True
@@ -119,6 +122,7 @@ class EX5_034(CardScript):
         # Timing: EffectTiming.OnTappedAnyone
         # [All Turns] [Once Per Turn] When a Digimon becomes suspended, you may have 1 of your opponent's Digimon get -4000 DP and gain <Security Attack -1> (This Digimon checks 1 fewer security card) until the end of their turn.
         effect4 = ICardEffect()
+        effect4.set_timing(EffectTiming.OnTappedAnyone)
         effect4.set_effect_name("EX5-034 Opponent's 1 Digimon gains DP -4000 and Security Attack -1")
         effect4.set_effect_description("[All Turns] [Once Per Turn] When a Digimon becomes suspended, you may have 1 of your opponent's Digimon get -4000 DP and gain <Security Attack -1> (This Digimon checks 1 fewer security card) until the end of their turn.")
         effect4.is_optional = True

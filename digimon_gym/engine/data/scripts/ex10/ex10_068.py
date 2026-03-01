@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -39,6 +40,7 @@ class EX10_068(CardScript):
         # Timing: EffectTiming.OnStartMainPhase
         # [Start of Your Main Phase] For every 2 colors your opponent's Digimon and Tamers have, gain 1 memory.
         effect1 = ICardEffect()
+        effect1.set_timing(EffectTiming.OnStartMainPhase)
         effect1.set_effect_name("EX10-068 Gain Memory")
         effect1.set_effect_description("[Start of Your Main Phase] For every 2 colors your opponent's Digimon and Tamers have, gain 1 memory.")
 
@@ -54,6 +56,7 @@ class EX10_068(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [On Play] Delete 1 of your opponent's play cost 5 or lower Digimon. Then, by returning 1 Digimon card from your opponent's trash to the bottom of the deck, from your hand or trash and without paying the cost, you may play 1 level 4 or lower Digimon card with the same color as the card this effect returned.
         effect2 = ICardEffect()
+        effect2.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect2.set_effect_name("EX10-068 Delete 1 Digimon, Return 1 Digimon, Play 1 Digimon")
         effect2.set_effect_description("[On Play] Delete 1 of your opponent's play cost 5 or lower Digimon. Then, by returning 1 Digimon card from your opponent's trash to the bottom of the deck, from your hand or trash and without paying the cost, you may play 1 level 4 or lower Digimon card with the same color as the card this effect returned.")
         effect2.is_on_play = True

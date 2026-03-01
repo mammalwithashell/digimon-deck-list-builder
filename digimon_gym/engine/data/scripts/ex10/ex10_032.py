@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -16,6 +17,7 @@ class EX10_032(CardScript):
         # Timing: EffectTiming.OnDeclaration
         # [Hand] [Main] If you have [Close], by placing 1 [Landramon] from your trash as any of your [Sunarizamon]'s bottom digivolution card, it digivolves into this card for a digivolution cost of 3, ignoring digivolution requirements.
         effect0 = ICardEffect()
+        effect0.set_timing(EffectTiming.OnDeclaration)
         effect0.set_effect_name("EX10-032 Place 1 [Landramon] from trash under 1 [Sunarizamon], to digivolve for 3")
         effect0.set_effect_description("[Hand] [Main] If you have [Close], by placing 1 [Landramon] from your trash as any of your [Sunarizamon]'s bottom digivolution card, it digivolves into this card for a digivolution cost of 3, ignoring digivolution requirements.")
 
@@ -48,6 +50,7 @@ class EX10_032(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # DP +3000, Trash Digivolution Cards, Gain Keyword Piercing
         effect1 = ICardEffect()
+        effect1.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect1.set_effect_name("EX10-032 By trashing 1 source, 1 digimon gains Collision, Piercing, +3K DP")
         effect1.set_effect_description("DP +3000, Trash Digivolution Cards, Gain Keyword Piercing")
         effect1.is_on_play = True
@@ -83,6 +86,7 @@ class EX10_032(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # DP +3000, Trash Digivolution Cards, Gain Keyword Piercing
         effect2 = ICardEffect()
+        effect2.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect2.set_effect_name("EX10-032 By trashing 1 source, 1 digimon gains Collision, Piercing, +3K DP")
         effect2.set_effect_description("DP +3000, Trash Digivolution Cards, Gain Keyword Piercing")
         effect2.is_when_digivolving = True
@@ -118,6 +122,7 @@ class EX10_032(CardScript):
         # Timing: EffectTiming.OnAllyAttack
         # DP +3000, Trash Digivolution Cards, Gain Keyword Piercing
         effect3 = ICardEffect()
+        effect3.set_timing(EffectTiming.OnAllyAttack)
         effect3.set_effect_name("EX10-032 By trashing 1 source, 1 digimon gains Collision, Piercing, +3K DP")
         effect3.set_effect_description("DP +3000, Trash Digivolution Cards, Gain Keyword Piercing")
         effect3.is_on_attack = True
@@ -153,6 +158,7 @@ class EX10_032(CardScript):
         # Timing: EffectTiming.OnDigivolutionCardDiscarded
         # When effects trash this card from a [Mineral] or [Rock] trait Digimon's digivolution cards, <De-Digivolve 1> 1 of your opponent's Digimon.
         effect4 = ICardEffect()
+        effect4.set_timing(EffectTiming.OnDigivolutionCardDiscarded)
         effect4.set_effect_name("EX10-032 De-Digivolve 1")
         effect4.set_effect_description("When effects trash this card from a [Mineral] or [Rock] trait Digimon's digivolution cards, <De-Digivolve 1> 1 of your opponent's Digimon.")
         effect4.is_inherited_effect = True

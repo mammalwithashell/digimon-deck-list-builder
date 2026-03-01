@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -53,6 +54,7 @@ class BT16_102(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [When Digivolving] If [Magnamon (X-Antibody)] or a card with the [Armor Form] trait is in this Digimon's digivolution cards, this Digimon isn't affected by your opponent's effects and gains +3000 DP until the end of your opponent's turn. Then, unsuspend this Digimon.
         effect3 = ICardEffect()
+        effect3.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect3.set_effect_name("BT16-102 Become unaffected by effects, gain DP and unsuspend.")
         effect3.set_effect_description("[When Digivolving] If [Magnamon (X-Antibody)] or a card with the [Armor Form] trait is in this Digimon's digivolution cards, this Digimon isn't affected by your opponent's effects and gains +3000 DP until the end of your opponent's turn. Then, unsuspend this Digimon.")
         effect3.is_when_digivolving = True
@@ -94,6 +96,7 @@ class BT16_102(CardScript):
         # Timing: EffectTiming.OnLoseSecurity
         # [All Turns][Once per turn] When a card is removed from a security stack, you may activate 1 of this Digimon's [When Digivolving] effects.
         effect4 = ICardEffect()
+        effect4.set_timing(EffectTiming.OnLoseSecurity)
         effect4.set_effect_name("BT16-102 Activate one of this Digimon's [When Digivolving] effects.")
         effect4.set_effect_description("[All Turns][Once per turn] When a card is removed from a security stack, you may activate 1 of this Digimon's [When Digivolving] effects.")
         effect4.is_optional = True

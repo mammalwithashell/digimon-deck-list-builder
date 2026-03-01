@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -16,6 +17,7 @@ class BT15_062(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [On Play] Reveal the top 4 cards of your deck. Add 2 level 6 or higher Digimon cards among them to the hand. Place the rest at the bottom of the deck.
         effect0 = ICardEffect()
+        effect0.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect0.set_effect_name("BT15-062 Reveal the top 4 cards of deck")
         effect0.set_effect_description("[On Play] Reveal the top 4 cards of your deck. Add 2 level 6 or higher Digimon cards among them to the hand. Place the rest at the bottom of the deck.")
         effect0.is_on_play = True
@@ -57,6 +59,7 @@ class BT15_062(CardScript):
         # Timing: EffectTiming.OnEndTurn
         # [End of Your Turn] By deleting 1 of your Digimon, you may play 1 Digimon card with the [Dark Masters] trait from you hand to and empty space in your breeding area without paying the cost.
         effect1 = ICardEffect()
+        effect1.set_timing(EffectTiming.OnEndTurn)
         effect1.set_effect_name("BT15-062 Delete your 1 Digimon to play 1 Digimon from hand")
         effect1.set_effect_description("[End of Your Turn] By deleting 1 of your Digimon, you may play 1 Digimon card with the [Dark Masters] trait from you hand to and empty space in your breeding area without paying the cost.")
         effect1.is_optional = True

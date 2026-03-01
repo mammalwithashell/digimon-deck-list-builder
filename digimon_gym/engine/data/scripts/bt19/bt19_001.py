@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -16,6 +17,7 @@ class BT19_001(CardScript):
         # Timing: EffectTiming.OnAllyAttack
         # [When Attacking] (Once Per Turn) By placing 1 Digimon card with the [Xros Heart]/[Blue Flare] trait from your hand under any of your Tamers.
         effect0 = ICardEffect()
+        effect0.set_timing(EffectTiming.OnAllyAttack)
         effect0.set_effect_name("BT19-001 Place 1 [Xros Heart]/[Blue Flare] card under 1 of your Tamers to <Draw 1>")
         effect0.set_effect_description("[When Attacking] (Once Per Turn) By placing 1 Digimon card with the [Xros Heart]/[Blue Flare] trait from your hand under any of your Tamers.")
         effect0.is_inherited_effect = True

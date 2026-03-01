@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -74,6 +75,7 @@ class EX5_046(CardScript):
         # Timing: EffectTiming.OnDestroyedAnyone
         # [On Deletion] By trashing 1 card with [Etemon]/[Sukamon] in its name in your hand, return this card to the hand.
         effect3 = ICardEffect()
+        effect3.set_timing(EffectTiming.OnDestroyedAnyone)
         effect3.set_effect_name("EX5-046 Trash 1 card from hand to return this card to hand")
         effect3.set_effect_description("[On Deletion] By trashing 1 card with [Etemon]/[Sukamon] in its name in your hand, return this card to the hand.")
         effect3.is_optional = True
@@ -114,6 +116,7 @@ class EX5_046(CardScript):
         # Timing: EffectTiming.WhenPermanentWouldBeDeleted
         # [All Turns] When this Digimon would be deleted, by deleting 1 other Digimon with [Sukamon] in its name, prevent that deletion.
         effect4 = ICardEffect()
+        effect4.set_timing(EffectTiming.WhenPermanentWouldBeDeleted)
         effect4.set_effect_name("EX5-046 Prevent this Digimon from being deleted")
         effect4.set_effect_description("[All Turns] When this Digimon would be deleted, by deleting 1 other Digimon with [Sukamon] in its name, prevent that deletion.")
         effect4.is_inherited_effect = True

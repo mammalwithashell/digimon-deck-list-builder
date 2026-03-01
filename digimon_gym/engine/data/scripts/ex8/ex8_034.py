@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -33,6 +34,7 @@ class EX8_034(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [When Digivolving] You may play 1 [NSo] trait Digimon card with a play cost of 3 or less from your hand without paying the cost.
         effect1 = ICardEffect()
+        effect1.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect1.set_effect_name("EX8-034 Play 1 NSo Digimon card with a play cost 3 or less from your hand")
         effect1.set_effect_description("[When Digivolving] You may play 1 [NSo] trait Digimon card with a play cost of 3 or less from your hand without paying the cost.")
         effect1.is_optional = True
@@ -73,6 +75,7 @@ class EX8_034(CardScript):
         # Timing: EffectTiming.OnDestroyedAnyone
         # [On Deletion] Give 2 of your opponent's Digimon <Security A. -1> until the end of their turn.
         effect2 = ICardEffect()
+        effect2.set_timing(EffectTiming.OnDestroyedAnyone)
         effect2.set_effect_name("EX8-034 2 Opponent's Digimon gain Security Attack -1")
         effect2.set_effect_description("[On Deletion] Give 2 of your opponent's Digimon <Security A. -1> until the end of their turn.")
         effect2.is_on_deletion = True
@@ -98,6 +101,7 @@ class EX8_034(CardScript):
         # Timing: EffectTiming.OnAllyAttack
         # [When Attacking] (Once Per Turn) 1 of your opponent's Digimon gets -4000 DP for the turn.
         effect3 = ICardEffect()
+        effect3.set_timing(EffectTiming.OnAllyAttack)
         effect3.set_effect_name("EX8-034 DP -4000")
         effect3.set_effect_description("[When Attacking] (Once Per Turn) 1 of your opponent's Digimon gets -4000 DP for the turn.")
         effect3.is_inherited_effect = True

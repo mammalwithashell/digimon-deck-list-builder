@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -30,6 +31,7 @@ class BT22_047(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [On Play] Suspend 1 of your opponent's Digimon. Then, if this Digimon's stack has 2 or more same-level cards, 1 of your opponent's Digimon can't unsuspend until their turn ends.
         effect1 = ICardEffect()
+        effect1.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect1.set_effect_name("BT22-047 Suspend 1 of your opponent's Digimon.")
         effect1.set_effect_description("[On Play] Suspend 1 of your opponent's Digimon. Then, if this Digimon's stack has 2 or more same-level cards, 1 of your opponent's Digimon can't unsuspend until their turn ends.")
         effect1.is_on_play = True
@@ -76,6 +78,7 @@ class BT22_047(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [When Digivolving] Suspend 1 of your opponent's Digimon. Then, if this Digimon's stack has 2 or more same-level cards, 1 of your opponent's Digimon can't unsuspend until their turn ends.
         effect2 = ICardEffect()
+        effect2.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect2.set_effect_name("BT22-047 Suspend 1 of your opponent's Digimon.")
         effect2.set_effect_description("[When Digivolving] Suspend 1 of your opponent's Digimon. Then, if this Digimon's stack has 2 or more same-level cards, 1 of your opponent's Digimon can't unsuspend until their turn ends.")
         effect2.is_when_digivolving = True
@@ -122,6 +125,7 @@ class BT22_047(CardScript):
         # Timing: EffectTiming.OnEndBattle
         # [All Turns] [Once Per Turn] When this Digimon deletes your opponent's Digimon in battle, gain 1 memory.
         effect3 = ICardEffect()
+        effect3.set_timing(EffectTiming.OnEndBattle)
         effect3.set_effect_name("BT22-047 Gain 1 memory")
         effect3.set_effect_description("[All Turns] [Once Per Turn] When this Digimon deletes your opponent's Digimon in battle, gain 1 memory.")
         effect3.is_inherited_effect = True

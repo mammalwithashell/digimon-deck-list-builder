@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -16,6 +17,7 @@ class BT14_041(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [When Digivolving] Trigger <Recovery +1 (Deck)>. (Place the top card of your deck on top of your security stack.)
         effect0 = ICardEffect()
+        effect0.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect0.set_effect_name("BT14-041 Recovery +1 (Deck)")
         effect0.set_effect_description("[When Digivolving] Trigger <Recovery +1 (Deck)>. (Place the top card of your deck on top of your security stack.)")
         effect0.is_when_digivolving = True
@@ -43,6 +45,7 @@ class BT14_041(CardScript):
         # Timing: EffectTiming.OnAddSecurity
         # [All Turns][Once Per Turn] When a card is added to your security stack, 1 of your opponent's Digimon gets -7000 DP and this Digimon gains ��Security A. +1��or the turn.
         effect1 = ICardEffect()
+        effect1.set_timing(EffectTiming.OnAddSecurity)
         effect1.set_effect_name("BT14-041 Opponent's 1 Digimon gains DP -7000 and this Digimon gains Security Attack +1")
         effect1.set_effect_description("[All Turns][Once Per Turn] When a card is added to your security stack, 1 of your opponent's Digimon gets -7000 DP and this Digimon gains ��Security A. +1��or the turn.")
         effect1.set_max_count_per_turn(1)

@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -39,6 +40,7 @@ class BT19_089(CardScript):
         # Timing: EffectTiming.OptionSkill
         # [Main] Until the end of your opponent's turn, 1 of your Digimon isn't affected by the effects of your opponent's Option cards and it can't have its DP reduced.
         effect1 = ICardEffect()
+        effect1.set_timing(EffectTiming.OptionSkill)
         effect1.set_effect_name("BT19-089 This Digimon becomes immune to opponent's options, and can't be DP reduced")
         effect1.set_effect_description("[Main] Until the end of your opponent's turn, 1 of your Digimon isn't affected by the effects of your opponent's Option cards and it can't have its DP reduced.")
         effect1._is_immune_dp_minus = True
@@ -70,6 +72,7 @@ class BT19_089(CardScript):
         # Timing: EffectTiming.SecuritySkill
         # [Security] Add this card to the hand.
         effect2 = ICardEffect()
+        effect2.set_timing(EffectTiming.SecuritySkill)
         effect2.set_effect_name("BT19-089 Add To Hand")
         effect2.set_effect_description("[Security] Add this card to the hand.")
         effect2.is_security_effect = True

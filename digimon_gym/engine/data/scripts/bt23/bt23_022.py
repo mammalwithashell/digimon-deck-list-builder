@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -68,6 +69,7 @@ class BT23_022(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [When Digivolving] [When Attacking] [Once Per Turn] You may link 1 level 4 or lower Digimon card from your hand or this Digimon's digivolution cards to this Digimon without paying the cost.
         effect3 = ICardEffect()
+        effect3.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect3.set_effect_name("BT23-022 link 1 level 4 or lower digimon from hand or this cards sources to this card")
         effect3.set_effect_description("[When Digivolving] [When Attacking] [Once Per Turn] You may link 1 level 4 or lower Digimon card from your hand or this Digimon's digivolution cards to this Digimon without paying the cost.")
         effect3.set_hash_string("BT23-022_WD/WA")
@@ -86,6 +88,7 @@ class BT23_022(CardScript):
         # Timing: EffectTiming.OnAllyAttack
         # [When Attacking] [Once Per Turn] You may link 1 level 4 or lower Digimon card from your hand or this Digimon's digivolution cards to this Digimon without paying the cost.
         effect4 = ICardEffect()
+        effect4.set_timing(EffectTiming.OnAllyAttack)
         effect4.set_effect_name("BT23-022 link 1 level 4 or lower digimon from hand or this cards sources to this card")
         effect4.set_effect_description("[When Attacking] [Once Per Turn] You may link 1 level 4 or lower Digimon card from your hand or this Digimon's digivolution cards to this Digimon without paying the cost.")
         effect4.set_hash_string("BT23-022_WD/WA")
@@ -104,6 +107,7 @@ class BT23_022(CardScript):
         # Timing: EffectTiming.WhenLinked
         # [All Turns] [Once Per Turn] When this Digimon gets linked, it may unsuspend.
         effect5 = ICardEffect()
+        effect5.set_timing(EffectTiming.WhenLinked)
         effect5.set_effect_name("BT23-022 Unsuspend this digimon")
         effect5.set_effect_description("[All Turns] [Once Per Turn] When this Digimon gets linked, it may unsuspend.")
         effect5.is_optional = True

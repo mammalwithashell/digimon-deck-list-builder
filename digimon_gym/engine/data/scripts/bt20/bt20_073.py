@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -41,6 +42,7 @@ class BT20_073(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [On Play] By deleting 1 of your Digimon, delete 1 of your opponent's level 5 or lower Digimon.
         effect2 = ICardEffect()
+        effect2.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect2.set_effect_name("BT20-073 Delete 1 of your Digimon to delete your opponent's Digimon")
         effect2.set_effect_description("[On Play] By deleting 1 of your Digimon, delete 1 of your opponent's level 5 or lower Digimon.")
         effect2.is_optional = True
@@ -75,6 +77,7 @@ class BT20_073(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [When Digivolving] By deleting 1 of your Digimon, delete 1 of your opponent's level 5 or lower Digimon.
         effect3 = ICardEffect()
+        effect3.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect3.set_effect_name("BT20-073 Delete 1 of your Digimon to delete your opponent's Digimon")
         effect3.set_effect_description("[When Digivolving] By deleting 1 of your Digimon, delete 1 of your opponent's level 5 or lower Digimon.")
         effect3.is_optional = True
@@ -109,6 +112,7 @@ class BT20_073(CardScript):
         # Timing: EffectTiming.OnDestroyedAnyone
         # [On Deletion] [De-Digivolve] 1 of your opponent's Digimon (Trash up to 1 card from the top of one of your opponent's Digimon. If it has no digivolution cards, or becomes a level 3 Digimon, you can't trash any more cards).
         effect4 = ICardEffect()
+        effect4.set_timing(EffectTiming.OnDestroyedAnyone)
         effect4.set_effect_name("BT20-073 De-Digivolve 1 on 1 Digimon")
         effect4.set_effect_description("[On Deletion] [De-Digivolve] 1 of your opponent's Digimon (Trash up to 1 card from the top of one of your opponent's Digimon. If it has no digivolution cards, or becomes a level 3 Digimon, you can't trash any more cards).")
         effect4.is_inherited_effect = True

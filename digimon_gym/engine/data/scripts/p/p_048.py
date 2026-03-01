@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -16,6 +17,7 @@ class P_048(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [When Digivolving] You may place 3 non-Digi-Egg cards from your trash at the bottom of your deck in any order to unsuspend this Digimon and 1 of your Tamers.
         effect0 = ICardEffect()
+        effect0.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect0.set_effect_name("P-048 Return cards from trash to unsuspend this Digimon and your 1 Tamer")
         effect0.set_effect_description("[When Digivolving] You may place 3 non-Digi-Egg cards from your trash at the bottom of your deck in any order to unsuspend this Digimon and 1 of your Tamers.")
         effect0.is_when_digivolving = True
@@ -59,6 +61,7 @@ class P_048(CardScript):
         # Timing: EffectTiming.OnReturnCardsToLibraryFromTrash
         # [Your Turn][Once Per Turn] When a card is returned from your trash to your deck, gain 1 memory.
         effect1 = ICardEffect()
+        effect1.set_timing(EffectTiming.OnReturnCardsToLibraryFromTrash)
         effect1.set_effect_name("P-048 Memory +1")
         effect1.set_effect_description("[Your Turn][Once Per Turn] When a card is returned from your trash to your deck, gain 1 memory.")
         effect1.set_max_count_per_turn(1)

@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -33,6 +34,7 @@ class BT20_022(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [On Play] 1 of your Digimon can't be deleted in battle until the end of your opponent's turn.
         effect1 = ICardEffect()
+        effect1.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect1.set_effect_name("BT20-022 Select 1 of your Digimon to gain battle protection")
         effect1.set_effect_description("[On Play] 1 of your Digimon can't be deleted in battle until the end of your opponent's turn.")
         effect1.is_on_play = True
@@ -67,6 +69,7 @@ class BT20_022(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [When Digivolving] 1 of your Digimon can't be deleted in battle until the end of your opponent's turn.
         effect2 = ICardEffect()
+        effect2.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect2.set_effect_name("BT20-022 Select 1 of your Digimon to gain battle protection")
         effect2.set_effect_description("[When Digivolving] 1 of your Digimon can't be deleted in battle until the end of your opponent's turn.")
         effect2.is_when_digivolving = True
@@ -101,6 +104,7 @@ class BT20_022(CardScript):
         # Timing: EffectTiming.OnAllyAttack
         # [When Attacking][Once Per Turn] If you have 7 or fewer cards in your hand, <Draw 1>.
         effect3 = ICardEffect()
+        effect3.set_timing(EffectTiming.OnAllyAttack)
         effect3.set_effect_name("BT20-022 Draw 1 card")
         effect3.set_effect_description("[When Attacking][Once Per Turn] If you have 7 or fewer cards in your hand, <Draw 1>.")
         effect3.is_inherited_effect = True

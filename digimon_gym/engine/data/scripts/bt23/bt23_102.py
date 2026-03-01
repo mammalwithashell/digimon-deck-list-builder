@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -67,6 +68,7 @@ class BT23_102(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [When Digivolving] You may play 1 level 5 or lower yellow or purple card from your hand or trash without paying the cost. Then, if this Digimon's stack has 2 or more same-level cards, trash the top cards of both players' security stacks so that they have 3 cards left.
         effect4 = ICardEffect()
+        effect4.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect4.set_effect_name("BT23-102 Play 1 level 5 or lower yellow/purple card from hand or trash. then if digimon has 2+ same level cards in stack, trash both security till 3")
         effect4.set_effect_description("[When Digivolving] You may play 1 level 5 or lower yellow or purple card from your hand or trash without paying the cost. Then, if this Digimon's stack has 2 or more same-level cards, trash the top cards of both players' security stacks so that they have 3 cards left.")
         effect4.is_when_digivolving = True
@@ -100,6 +102,7 @@ class BT23_102(CardScript):
         # Timing: EffectTiming.OnLoseSecurity
         # [All Turns] [Once Per Turn] When security stacks are removed from, you may place 1 Digimon as the bottom security card.
         effect5 = ICardEffect()
+        effect5.set_timing(EffectTiming.OnLoseSecurity)
         effect5.set_effect_name("BT23-102 Place 1 digimon as bottom security")
         effect5.set_effect_description("[All Turns] [Once Per Turn] When security stacks are removed from, you may place 1 Digimon as the bottom security card.")
         effect5.is_optional = True

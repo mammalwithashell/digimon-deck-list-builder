@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -28,6 +29,7 @@ class BT20_056(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [On Play] <Recovery +1 (Deck)>. Then, if during an attack, 1 of your Digimon in the breeding area may digivolve into a level 6 or lower [Chronicle] trait Digimon card in the hand or trash without paying the cost.
         effect1 = ICardEffect()
+        effect1.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect1.set_effect_name("BT20-056 <Recovery +1 (Deck)>")
         effect1.set_effect_description("[On Play] <Recovery +1 (Deck)>. Then, if during an attack, 1 of your Digimon in the breeding area may digivolve into a level 6 or lower [Chronicle] trait Digimon card in the hand or trash without paying the cost.")
         effect1.is_on_play = True
@@ -63,6 +65,7 @@ class BT20_056(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [When Digivolving] <Recovery +1 (Deck)>. Then, if during an attack, 1 of your Digimon in the breeding area may digivolve into a level 6 or lower [Chronicle] trait Digimon card in the hand or trash without paying the cost.
         effect2 = ICardEffect()
+        effect2.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect2.set_effect_name("BT20-056 <Recovery +1 (Deck)>")
         effect2.set_effect_description("[When Digivolving] <Recovery +1 (Deck)>. Then, if during an attack, 1 of your Digimon in the breeding area may digivolve into a level 6 or lower [Chronicle] trait Digimon card in the hand or trash without paying the cost.")
         effect2.is_when_digivolving = True
@@ -98,6 +101,7 @@ class BT20_056(CardScript):
         # Timing: EffectTiming.OnLoseSecurity
         # [All Turns] (Once Per Turn) When security stacks are removed from, 1 of your opponent's Digimon gets -8000 DP for the turn.
         effect3 = ICardEffect()
+        effect3.set_timing(EffectTiming.OnLoseSecurity)
         effect3.set_effect_name("BT20-056 1 of your opponent's Digimon gets -8000 DP")
         effect3.set_effect_description("[All Turns] (Once Per Turn) When security stacks are removed from, 1 of your opponent's Digimon gets -8000 DP for the turn.")
         effect3.set_max_count_per_turn(1)
@@ -131,6 +135,7 @@ class BT20_056(CardScript):
         # Timing: EffectTiming.WhenRemoveField
         # [All Turns] (Once Per Turn) When this Digimon would leave the battle are other than by your effects, if this Digimon is [Alphamon: Ouryuken], by trashing your top security card, it doesn't leave.
         effect4 = ICardEffect()
+        effect4.set_timing(EffectTiming.WhenRemoveField)
         effect4.set_effect_name("BT20-056 Trash your top security card to prevent this Digimon from leaving the battle area")
         effect4.set_effect_description("[All Turns] (Once Per Turn) When this Digimon would leave the battle are other than by your effects, if this Digimon is [Alphamon: Ouryuken], by trashing your top security card, it doesn't leave.")
         effect4.is_inherited_effect = True

@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -16,6 +17,7 @@ class BT13_017(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [On Play] Choose any number of your opponent's Digimon so that their DP total is up to 6000 and delete them. For each of your other Digimon, add 2000 to the maximum this DP-based deletion effect can delete.
         effect0 = ICardEffect()
+        effect0.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect0.set_effect_name("BT13-017 Delete Digimon")
         effect0.set_effect_description("[On Play] Choose any number of your opponent's Digimon so that their DP total is up to 6000 and delete them. For each of your other Digimon, add 2000 to the maximum this DP-based deletion effect can delete.")
         effect0.is_on_play = True
@@ -51,6 +53,7 @@ class BT13_017(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [When Digivolving] Choose any number of your opponent's Digimon so that their DP total is up to 6000 and delete them. For each of your other Digimon, add 2000 to the maximum this DP-based deletion effect can delete.
         effect1 = ICardEffect()
+        effect1.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect1.set_effect_name("BT13-017 Delete Digimon")
         effect1.set_effect_description("[When Digivolving] Choose any number of your opponent's Digimon so that their DP total is up to 6000 and delete them. For each of your other Digimon, add 2000 to the maximum this DP-based deletion effect can delete.")
         effect1.is_when_digivolving = True

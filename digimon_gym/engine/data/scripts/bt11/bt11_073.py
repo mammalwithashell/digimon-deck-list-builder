@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -29,6 +30,7 @@ class BT11_073(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [When Digivolving] By returning 1 level 6 Digimon card without [Justimon: Accel Arm] in its name from this Digimon's digivolution cards to its owner's hand, this Digimon gains <Security Attack +1> and <Piercing> for the turn.
         effect1 = ICardEffect()
+        effect1.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect1.set_effect_name("BT11-073 Return 1 digivolution card to get effects")
         effect1.set_effect_description("[When Digivolving] By returning 1 level 6 Digimon card without [Justimon: Accel Arm] in its name from this Digimon's digivolution cards to its owner's hand, this Digimon gains <Security Attack +1> and <Piercing> for the turn.")
         effect1.is_optional = True
@@ -62,6 +64,7 @@ class BT11_073(CardScript):
         # Timing: EffectTiming.OnAllyAttack
         # [When Attacking] If you have a Tamer in play, this Digimon can digivolve into a Digimon card with [Justimon] in its name other than [Justimon: Accel Arm] in your hand for a digivolution cost of 2, ignoring its digivolution requirements.
         effect2 = ICardEffect()
+        effect2.set_timing(EffectTiming.OnAllyAttack)
         effect2.set_effect_name("BT11-073 This Digimon digivolves into a card with [Justimon] in its name")
         effect2.set_effect_description("[When Attacking] If you have a Tamer in play, this Digimon can digivolve into a Digimon card with [Justimon] in its name other than [Justimon: Accel Arm] in your hand for a digivolution cost of 2, ignoring its digivolution requirements.")
         effect2.is_optional = True

@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -36,6 +37,7 @@ class BT16_047(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [When Digivolving] Suspend 1 of your opponent's Digimon. Then, 1 of your opponent's Digimon can't unsuspend until the end of your opponent's turn.
         effect1 = ICardEffect()
+        effect1.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect1.set_effect_name("BT16-047 Suspend opponent's Digimon and give effects.")
         effect1.set_effect_description("[When Digivolving] Suspend 1 of your opponent's Digimon. Then, 1 of your opponent's Digimon can't unsuspend until the end of your opponent's turn.")
         effect1.is_when_digivolving = True
@@ -72,6 +74,7 @@ class BT16_047(CardScript):
         # Timing: EffectTiming.OnEndBattle
         # [All Turns] When this Digimon deletes and opponent's Digimon by battle, if you have 3 or more security cards, trash the top card of your opponent's security stack. If you have 3 or fewer security cards, gain 2 memory.
         effect2 = ICardEffect()
+        effect2.set_timing(EffectTiming.OnEndBattle)
         effect2.set_effect_name("BT16-047 Trash opponent's security or gain memory.")
         effect2.set_effect_description("[All Turns] When this Digimon deletes and opponent's Digimon by battle, if you have 3 or more security cards, trash the top card of your opponent's security stack. If you have 3 or fewer security cards, gain 2 memory.")
         effect2.set_hash_string("TrashOrGain_BT16_047")

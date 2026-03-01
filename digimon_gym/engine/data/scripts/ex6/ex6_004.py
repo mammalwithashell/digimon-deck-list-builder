@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -16,6 +17,7 @@ class EX6_004(CardScript):
         # Timing: EffectTiming.OnTappedAnyone
         # [Your Turn][Once Per Turn] When an effect suspends one of your Digimon, 1 of your Digimon gets +2000 DP for the turn.
         effect0 = ICardEffect()
+        effect0.set_timing(EffectTiming.OnTappedAnyone)
         effect0.set_effect_name("EX6-004 DP +2000")
         effect0.set_effect_description("[Your Turn][Once Per Turn] When an effect suspends one of your Digimon, 1 of your Digimon gets +2000 DP for the turn.")
         effect0.is_inherited_effect = True

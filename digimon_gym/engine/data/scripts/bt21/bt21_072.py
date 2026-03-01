@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -30,53 +31,59 @@ class BT21_072(CardScript):
         effect0.set_can_use_condition(condition0)
         effects.append(effect0)
 
-        # Factory effect: raid
         # Raid
         effect1 = ICardEffect()
         effect1.set_effect_name("BT21-072 Raid")
         effect1.set_effect_description("Raid")
         effect1.is_on_attack = True
         effect1._is_raid = True
-
         def condition1(context: Dict[str, Any]) -> bool:
             return True
         effect1.set_can_use_condition(condition1)
         effects.append(effect1)
 
-        # Timing: EffectTiming.OnEnterFieldAnyone
+        # Piercing
+        effect_p = ICardEffect()
+        effect_p.set_effect_name("BT21-072 Piercing")
+        effect_p.set_effect_description("Piercing")
+        effect_p._is_piercing = True
+        def condition_p(context: Dict[str, Any]) -> bool:
+            return True
+        effect_p.set_can_use_condition(condition_p)
+        effects.append(effect_p)
+
         # [When Digivolving] This Digimon may attack without suspending.
         effect2 = ICardEffect()
-        effect2.set_effect_name("BT21-072 Attack with this Digimon without suspending")
+        effect2.set_timing(EffectTiming.OnEnterFieldAnyone)
+        effect2.set_effect_name("BT21-072 Attack without suspending")
         effect2.set_effect_description("[When Digivolving] This Digimon may attack without suspending.")
         effect2.is_when_digivolving = True
 
-        effect = effect2  # alias for condition closure
         def condition2(context: Dict[str, Any]) -> bool:
             if card and card.permanent_of_this_card() is None:
                 return False
-            # Triggered when digivolving — validated by engine timing
             return True
-
         effect2.set_can_use_condition(condition2)
 
         def process2(ctx: Dict[str, Any]):
-            """Action: Force Attack"""
-            player = ctx.get('player')
+            """Action: Grant attack-without-suspending via CAN_ATTACK_UNSUSPENDED modifier"""
             perm = ctx.get('permanent')
             game = ctx.get('game')
-            # Force attack — target Digimon may attack (requires engine SelectAttack)
-            pass  # descriptive-tagged: force_attack
-
+            if perm and game:
+                from digimon_gym.engine.interfaces.modifiers import ModifierType
+                game.register_modifier(
+                    ModifierType.CAN_ATTACK_UNSUSPENDED, perm,
+                    value_fn=lambda: True, expiry='persistent')
         effect2.set_on_process_callback(process2)
         effects.append(effect2)
 
-        # Factory effect: dp_modifier
-        # DP modifier
+        # [All Turns] This Digimon gets +1000 DP for each of its digivolution cards.
         effect3 = ICardEffect()
-        effect3.set_effect_name("BT21-072 DP modifier")
-        effect3.set_effect_description("DP modifier")
-        effect3.dp_modifier = 1000
+        effect3.set_effect_name("BT21-072 DP +1000 per evo card")
+        effect3.set_effect_description("[All Turns] This Digimon gets +1000 DP for each of its digivolution cards.")
 
+        # Static +1000 DP (approximation; truly should be dynamic per evo card count)
+        effect3.dp_modifier = 1000
         def condition3(context: Dict[str, Any]) -> bool:
             if card and card.permanent_of_this_card() is None:
                 return False

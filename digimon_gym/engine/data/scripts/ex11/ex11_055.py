@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -16,6 +17,7 @@ class EX11_055(CardScript):
         # Timing: EffectTiming.OnStartMainPhase
         # Draw 1, Gain 1 memory, Trash From Hand
         effect0 = ICardEffect()
+        effect0.set_timing(EffectTiming.OnStartMainPhase)
         effect0.set_effect_name("EX11-055 Draw 1, Gain 1 memory, Trash From Hand")
         effect0.set_effect_description("Draw 1, Gain 1 memory, Trash From Hand")
 
@@ -55,6 +57,7 @@ class EX11_055(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # Draw 1, Gain 1 memory, Trash From Hand
         effect1 = ICardEffect()
+        effect1.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect1.set_effect_name("EX11-055 Draw 1, Gain 1 memory, Trash From Hand")
         effect1.set_effect_description("Draw 1, Gain 1 memory, Trash From Hand")
         effect1.is_on_play = True
@@ -94,6 +97,7 @@ class EX11_055(CardScript):
         # Timing: EffectTiming.OnDestroyedAnyone
         # Suspend, Play Card
         effect2 = ICardEffect()
+        effect2.set_timing(EffectTiming.OnDestroyedAnyone)
         effect2.set_effect_name("EX11-055 By suspending this tamer, play 1 [Gazimon] or [Gizamon] for free.")
         effect2.set_effect_description("Suspend, Play Card")
         effect2.is_optional = True

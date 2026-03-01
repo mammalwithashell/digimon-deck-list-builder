@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -18,13 +19,19 @@ class BT24_018(CardScript):
         effect0 = ICardEffect()
         effect0.set_effect_name("BT24-018 Alternate digivolution requirement")
         effect0.set_effect_description("Alternate digivolution requirement")
-        # Alternate digivolution: from [Owen Dreadnought] for cost 6
+        # Alternate digivolution: from [Lamiamon] for cost 6 while you have [Owen Dreadnought]
         effect0._alt_digi_cost = 6
-        effect0._alt_digi_name = "Owen Dreadnought"
+        effect0._alt_digi_name = "Lamiamon"
 
         def condition0(context: Dict[str, Any]) -> bool:
-            permanent = card.permanent_of_this_card() if card else None
-            if not (permanent and (permanent.contains_card_name('Owen Dreadnought') or permanent.contains_card_name('Lamiamon'))):
+            if not (card and card.owner):
+                return False
+            # Check that Owen Dreadnought is on the player's field
+            has_owen = any(
+                p.contains_card_name('Owen Dreadnought')
+                for p in card.owner.battle_area
+            )
+            if not has_owen:
                 return False
             return True
         effect0.set_can_use_condition(condition0)
@@ -69,6 +76,7 @@ class BT24_018(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # Destroy Security, Unsuspend
         effect4 = ICardEffect()
+        effect4.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect4.set_effect_name("BT24-018 May trash 1 opponent's security. Then, this may unsuspend.")
         effect4.set_effect_description("Destroy Security, Unsuspend")
         effect4.is_when_digivolving = True
@@ -109,6 +117,7 @@ class BT24_018(CardScript):
         # Timing: EffectTiming.OnLoseSecurity
         # Delete
         effect5 = ICardEffect()
+        effect5.set_timing(EffectTiming.OnLoseSecurity)
         effect5.set_effect_name("BT24-018 Delete 1 of your opponent's Digimon?")
         effect5.set_effect_description("Delete")
         effect5.is_optional = True
@@ -145,6 +154,7 @@ class BT24_018(CardScript):
         # Timing: EffectTiming.WhenRemoveField
         # Effect
         effect6 = ICardEffect()
+        effect6.set_timing(EffectTiming.WhenRemoveField)
         effect6.set_effect_name("BT24-018 Delte an opponent's Digimon, to prevent [Reptile] or [Dragonkin] trait digimon from leaving the battle area")
         effect6.set_effect_description("Effect")
         effect6.is_optional = True

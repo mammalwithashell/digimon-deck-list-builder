@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -29,6 +30,7 @@ class BT16_028(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [When Digivolving] 1 of your opponent's Digimon or Tamer can't unsuspend until the end of their turn. Then, by suspending 1 of their Digimon or Tamers, unsuspend 1 of your Digimon.
         effect1 = ICardEffect()
+        effect1.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect1.set_effect_name("BT16-028 1 of your opponent's Digimon/Tamer can't unsuspend.")
         effect1.set_effect_description("[When Digivolving] 1 of your opponent's Digimon or Tamer can't unsuspend until the end of their turn. Then, by suspending 1 of their Digimon or Tamers, unsuspend 1 of your Digimon.")
         effect1.is_when_digivolving = True
@@ -83,6 +85,7 @@ class BT16_028(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [All Turns] When an effect plays or digivolves an opponent's Digimon, if you have a Tamer, this Digimon may digivolve into [Imperialdramon: Fighter Mode] in your hand without paying the cost.
         effect2 = ICardEffect()
+        effect2.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect2.set_effect_name("BT16-028 Digivolve into [Imperialdramon: Fighter Mode]")
         effect2.set_effect_description("[All Turns] When an effect plays or digivolves an opponent's Digimon, if you have a Tamer, this Digimon may digivolve into [Imperialdramon: Fighter Mode] in your hand without paying the cost.")
         effect2.is_optional = True

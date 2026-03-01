@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -29,6 +30,7 @@ class EX5_015(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [On Play] Reveal the top 4 cards of your deck. Add 2 cards with [Garurumon]/[X Antibody] in their names among them to the hand. Place the rest at the bottom of the deck. If you added cards, trash 1 card in your hand.
         effect1 = ICardEffect()
+        effect1.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect1.set_effect_name("EX5-015 Reveal the top 4 cards of deck")
         effect1.set_effect_description("[On Play] Reveal the top 4 cards of your deck. Add 2 cards with [Garurumon]/[X Antibody] in their names among them to the hand. Place the rest at the bottom of the deck. If you added cards, trash 1 card in your hand.")
         effect1.is_on_play = True
@@ -78,6 +80,7 @@ class EX5_015(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [When Digivolving] Reveal the top 4 cards of your deck. Add 2 cards with [Garurumon]/[X Antibody] in their names among them to the hand. Place the rest at the bottom of the deck. If you added cards, trash 1 card in your hand.
         effect2 = ICardEffect()
+        effect2.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect2.set_effect_name("EX5-015 Reveal the top 4 cards of deck")
         effect2.set_effect_description("[When Digivolving] Reveal the top 4 cards of your deck. Add 2 cards with [Garurumon]/[X Antibody] in their names among them to the hand. Place the rest at the bottom of the deck. If you added cards, trash 1 card in your hand.")
         effect2.is_when_digivolving = True
@@ -127,6 +130,7 @@ class EX5_015(CardScript):
         # Timing: EffectTiming.WhenPermanentWouldBeDeleted
         # [All Turns] [Once Per Turn] When this Digimon with [Garurumon]/[Omnimon] in its name would be deleted in battle, by returning 2 non-Digi-Egg cards from your trash to the bottom of the deck, prevent that deletion.
         effect3 = ICardEffect()
+        effect3.set_timing(EffectTiming.WhenPermanentWouldBeDeleted)
         effect3.set_effect_name("EX5-015 Prevent this Digimon from being deleted")
         effect3.set_effect_description("[All Turns] [Once Per Turn] When this Digimon with [Garurumon]/[Omnimon] in its name would be deleted in battle, by returning 2 non-Digi-Egg cards from your trash to the bottom of the deck, prevent that deletion.")
         effect3.is_inherited_effect = True

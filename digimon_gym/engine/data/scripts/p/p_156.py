@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -39,6 +40,7 @@ class P_156(CardScript):
         # Timing: EffectTiming.OptionSkill
         # [Main] Choose 1 Tamer. You may play 1 Digimon card with the same color as that Tamer and with a play cost of 3 or less from your hand or trash without paying the cost.
         effect1 = ICardEffect()
+        effect1.set_timing(EffectTiming.OptionSkill)
         effect1.set_effect_name("P-156 Play 1 Digimon, 3 cost or less")
         effect1.set_effect_description("[Main] Choose 1 Tamer. You may play 1 Digimon card with the same color as that Tamer and with a play cost of 3 or less from your hand or trash without paying the cost.")
 
@@ -71,6 +73,7 @@ class P_156(CardScript):
         # Timing: EffectTiming.SecuritySkill
         # [Security] You may play 1 tamer card from your hand without paying the cost. Then, add this card to the hand.
         effect2 = ICardEffect()
+        effect2.set_timing(EffectTiming.SecuritySkill)
         effect2.set_effect_name("P-156 Play 1 tamer, then add this card to hand")
         effect2.set_effect_description("[Security] You may play 1 tamer card from your hand without paying the cost. Then, add this card to the hand.")
         effect2.is_security_effect = True

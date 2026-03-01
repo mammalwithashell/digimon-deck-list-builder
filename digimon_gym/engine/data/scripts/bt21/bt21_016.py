@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -83,6 +84,7 @@ class BT21_016(CardScript):
         # Timing: EffectTiming.OnDestroyedAnyone
         # Effect
         effect4 = ICardEffect()
+        effect4.set_timing(EffectTiming.OnDestroyedAnyone)
         effect4.set_effect_name("BT21-016 Place 1 [Xros]/[Blue Flare]/[Hero] digimon under tamer, then <Save>")
         effect4.set_effect_description("Effect")
         effect4.is_optional = True

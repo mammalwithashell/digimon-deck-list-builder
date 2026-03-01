@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -16,6 +17,7 @@ class BT15_004(CardScript):
         # Timing: EffectTiming.OnEndTurn
         # [End of Your Turn] If this Digimon has the [Insectoid] trait, it may attack an opponent's Digimon.
         effect0 = ICardEffect()
+        effect0.set_timing(EffectTiming.OnEndTurn)
         effect0.set_effect_name("BT15-004 This Digimon can attack to opponent's 1 Digimon")
         effect0.set_effect_description("[End of Your Turn] If this Digimon has the [Insectoid] trait, it may attack an opponent's Digimon.")
         effect0.is_inherited_effect = True

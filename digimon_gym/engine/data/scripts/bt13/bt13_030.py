@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -16,6 +17,7 @@ class BT13_030(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [On Play] For each of your Digimon with the [Royal Knight] trait and each of your blue Tamers, trash the top 2 digivolution cards of 1 of your opponent's Digimon.
         effect0 = ICardEffect()
+        effect0.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect0.set_effect_name("BT13-030 Trash digivolution cards")
         effect0.set_effect_description("[On Play] For each of your Digimon with the [Royal Knight] trait and each of your blue Tamers, trash the top 2 digivolution cards of 1 of your opponent's Digimon.")
         effect0.is_on_play = True
@@ -46,6 +48,7 @@ class BT13_030(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [When Digivolving] For each of your Digimon with the [Royal Knight] trait and each of your blue Tamers, trash the top 2 digivolution cards of 1 of your opponent's Digimon.
         effect1 = ICardEffect()
+        effect1.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect1.set_effect_name("BT13-030 Trash digivolution cards")
         effect1.set_effect_description("[When Digivolving] For each of your Digimon with the [Royal Knight] trait and each of your blue Tamers, trash the top 2 digivolution cards of 1 of your opponent's Digimon.")
         effect1.is_when_digivolving = True
@@ -76,6 +79,7 @@ class BT13_030(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [Your Turn][Once Per Turn] When you play a Digimon with the [Royal Knight] trait or a blue Tamer, return 1 of your opponent's Digimon with no digivolution cards to the hand.
         effect2 = ICardEffect()
+        effect2.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect2.set_effect_name("BT13-030 Return 1 Digimon with no digivolution cards to hand")
         effect2.set_effect_description("[Your Turn][Once Per Turn] When you play a Digimon with the [Royal Knight] trait or a blue Tamer, return 1 of your opponent's Digimon with no digivolution cards to the hand.")
         effect2.set_max_count_per_turn(1)

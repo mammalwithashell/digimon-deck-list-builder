@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -16,32 +17,29 @@ class BT22_094(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [On Play] Reveal the top 3 cards of your deck. Add 1 card with the [CS] trait among them to the hand. Return the rest to the bottom of the deck.
         effect0 = ICardEffect()
+        effect0.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect0.set_effect_name("BT22-094 Reveal top 3, add 1 [CS] card to hand, bottom deck the rest")
         effect0.set_effect_description("[On Play] Reveal the top 3 cards of your deck. Add 1 card with the [CS] trait among them to the hand. Return the rest to the bottom of the deck.")
         effect0.is_on_play = True
 
         effect = effect0  # alias for condition closure
         def condition0(context: Dict[str, Any]) -> bool:
-            # Triggered on play — validated by engine timing
+            if card and card.permanent_of_this_card() is None:
+                return False
             return True
 
         effect0.set_can_use_condition(condition0)
 
         def process0(ctx: Dict[str, Any]):
-            """Action: Add To Hand, Reveal And Select"""
+            """Action: Reveal top 3, add 1 CS card to hand, bottom deck the rest"""
             player = ctx.get('player')
             perm = ctx.get('permanent')
             game = ctx.get('game')
-            # Add card to hand (from trash/reveal)
-            if player and player.trash_cards:
-                card_to_add = player.trash_cards.pop()
-                player.hand_cards.append(card_to_add)
             if not (player and game):
                 return
             def reveal_filter(c):
-                if not (any('CS' in _t for _t in (getattr(c, 'card_traits', []) or []))):
-                    return False
-                return True
+                traits = getattr(c, 'card_traits', []) or []
+                return any('CS' in t for t in traits)
             def on_revealed(selected, remaining):
                 player.hand_cards.append(selected)
                 for c in remaining:
@@ -55,6 +53,7 @@ class BT22_094(CardScript):
         # Timing: EffectTiming.BeforePayCost
         # [Your Turn] When any of your Digimon or Tamers with the [CS] trait would be played, by returning this Tamer to the bottom of the deck, reduce the play cost by 2.
         effect1 = ICardEffect()
+        effect1.set_timing(EffectTiming.BeforePayCost)
         effect1.set_effect_name("BT22-094 Bottom deck this tamer, reduce play cost by 2")
         effect1.set_effect_description("[Your Turn] When any of your Digimon or Tamers with the [CS] trait would be played, by returning this Tamer to the bottom of the deck, reduce the play cost by 2.")
         effect1.is_optional = True
@@ -64,17 +63,29 @@ class BT22_094(CardScript):
         def condition1(context: Dict[str, Any]) -> bool:
             if not (card and card.owner and card.owner.is_my_turn):
                 return False
+            if card and card.permanent_of_this_card() is None:
+                return False
+            # Only applies when playing a CS-trait Digimon or Tamer
+            target_card = context.get('card_to_play')
+            if target_card:
+                traits = getattr(target_card, 'card_traits', []) or []
+                if not any('CS' in t for t in traits):
+                    return False
             return True
 
         effect1.set_can_use_condition(condition1)
 
         def process1(ctx: Dict[str, Any]):
-            """Action: Cost -2"""
+            """Action: Return this Tamer to deck bottom, reduce play cost by 2"""
             player = ctx.get('player')
-            perm = ctx.get('permanent')
             game = ctx.get('game')
-            # Cost reduction by 2 — handled via cost_reduction property
-            pass  # descriptive-tagged: cost_reduction
+            # Return this Tamer to bottom of deck as cost
+            tamer_perm = card.permanent_of_this_card() if card else None
+            if tamer_perm and player:
+                if tamer_perm in player.battle_area:
+                    player.battle_area.remove(tamer_perm)
+                    for cs in tamer_perm.card_sources:
+                        player.library_cards.append(cs)
 
         effect1.set_on_process_callback(process1)
         effects.append(effect1)

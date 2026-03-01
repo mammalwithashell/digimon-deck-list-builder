@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -16,6 +17,7 @@ class BT21_004(CardScript):
         # Timing: EffectTiming.OnTappedAnyone
         # [Your Turn][Once Per Turn] When any of your yellow or red Tamers suspend, <Draw 1>
         effect0 = ICardEffect()
+        effect0.set_timing(EffectTiming.OnTappedAnyone)
         effect0.set_effect_name("BT21-004 Draw 1")
         effect0.set_effect_description("[Your Turn][Once Per Turn] When any of your yellow or red Tamers suspend, <Draw 1>")
         effect0.is_inherited_effect = True

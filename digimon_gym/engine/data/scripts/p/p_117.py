@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -16,6 +17,7 @@ class P_117(CardScript):
         # Timing: EffectTiming.BeforePayCost
         # [Your Turn] [Once Per Turn] When this Digimon would digivolve into a Digimon card with the [Free] trait, if you have a Tamer, reduce the digivolution cost by 1.
         effect0 = ICardEffect()
+        effect0.set_timing(EffectTiming.BeforePayCost)
         effect0.set_effect_name("P-117 Reduce the digivolution cost by 1")
         effect0.set_effect_description("[Your Turn] [Once Per Turn] When this Digimon would digivolve into a Digimon card with the [Free] trait, if you have a Tamer, reduce the digivolution cost by 1.")
         effect0.set_max_count_per_turn(1)
@@ -46,6 +48,7 @@ class P_117(CardScript):
         # Timing: EffectTiming.OnAllyAttack
         # [When Attacking] If this Digimon has 2 or more colors, <Draw 1> (Draw 1 card from your deck).
         effect1 = ICardEffect()
+        effect1.set_timing(EffectTiming.OnAllyAttack)
         effect1.set_effect_name("P-117 Draw 1")
         effect1.set_effect_description("[When Attacking] If this Digimon has 2 or more colors, <Draw 1> (Draw 1 card from your deck).")
         effect1.is_inherited_effect = True

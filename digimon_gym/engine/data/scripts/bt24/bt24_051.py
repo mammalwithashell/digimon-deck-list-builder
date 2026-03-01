@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -34,6 +35,7 @@ class BT24_051(CardScript):
         # Timing: EffectTiming.BeforePayCost
         # When this card would be played, if there are 3 or more Digimon, reduce the play cost by 5.
         effect1 = ICardEffect()
+        effect1.set_timing(EffectTiming.BeforePayCost)
         effect1.set_effect_name("BT24-051 Reduce play cost (5)")
         effect1.set_effect_description("When this card would be played, if there are 3 or more Digimon, reduce the play cost by 5.")
 
@@ -80,6 +82,7 @@ class BT24_051(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # DP +5000, Suspend, Force Attack
         effect3 = ICardEffect()
+        effect3.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect3.set_effect_name("BT24-051 DP +5000, Suspend, Force Attack")
         effect3.set_effect_description("DP +5000, Suspend, Force Attack")
         effect3.is_on_play = True
@@ -117,6 +120,7 @@ class BT24_051(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # DP +5000, Suspend, Force Attack
         effect4 = ICardEffect()
+        effect4.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect4.set_effect_name("BT24-051 DP +5000, Suspend, Force Attack")
         effect4.set_effect_description("DP +5000, Suspend, Force Attack")
         effect4.is_when_digivolving = True
@@ -154,6 +158,7 @@ class BT24_051(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # Unsuspend
         effect5 = ICardEffect()
+        effect5.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect5.set_effect_name("BT24-051 Unsuspend")
         effect5.set_effect_description("Unsuspend")
         effect5.set_hash_string("BT24_051_WD_WA")
@@ -188,6 +193,7 @@ class BT24_051(CardScript):
         # Timing: EffectTiming.OnAllyAttack
         # Unsuspend
         effect6 = ICardEffect()
+        effect6.set_timing(EffectTiming.OnAllyAttack)
         effect6.set_effect_name("BT24-051 Unsuspend")
         effect6.set_effect_description("Unsuspend")
         effect6.set_hash_string("BT24_051_WD_WA")

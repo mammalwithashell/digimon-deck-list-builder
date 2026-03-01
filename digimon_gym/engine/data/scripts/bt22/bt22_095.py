@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -28,6 +29,7 @@ class BT22_095(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [Your Turn] When any of your Digimon with the [Eater] trait are played, by suspending this Tamer, gain 1 memory. Then, if you have 7 or fewer cards in your hand, <Draw 1> (Draw 1 card from your deck.)
         effect1 = ICardEffect()
+        effect1.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect1.set_effect_name("BT22-095 +1 memory, then if you have 7 or less in hand, draw 1")
         effect1.set_effect_description("[Your Turn] When any of your Digimon with the [Eater] trait are played, by suspending this Tamer, gain 1 memory. Then, if you have 7 or fewer cards in your hand, <Draw 1> (Draw 1 card from your deck.)")
         effect1.is_optional = True
@@ -65,6 +67,7 @@ class BT22_095(CardScript):
         # Timing: EffectTiming.OnDeclaration
         # [Main] Place this Tamer as any of your [Mother Eater]s' bottom digivolution card.
         effect2 = ICardEffect()
+        effect2.set_timing(EffectTiming.OnDeclaration)
         effect2.set_effect_name("BT22-095 Place underneath a [Mother Eater]")
         effect2.set_effect_description("[Main] Place this Tamer as any of your [Mother Eater]s' bottom digivolution card.")
 

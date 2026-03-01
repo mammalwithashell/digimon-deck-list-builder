@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -16,6 +17,7 @@ class BT10_059(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [On Play] By placing this Digimon under 1 of your Digimon with [Legend-Arms] or [Xros Heart] in its traits as its bottom digivolution card, <De-Digivolve 1> 1 of your opponent's Digimon. (Trash 1 card from the top of 1 of your opponent's Digimon. Stop trashing when you would trash a level 3 card or the Digimon's last card.)
         effect0 = ICardEffect()
+        effect0.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect0.set_effect_name("BT10-059 Place this Digimon under your Digimon's digivolution cards to De-Digivolve 1")
         effect0.set_effect_description("[On Play] By placing this Digimon under 1 of your Digimon with [Legend-Arms] or [Xros Heart] in its traits as its bottom digivolution card, <De-Digivolve 1> 1 of your opponent's Digimon. (Trash 1 card from the top of 1 of your opponent's Digimon. Stop trashing when you would trash a level 3 card or the Digimon's last card.)")
         effect0.is_optional = True
@@ -51,6 +53,7 @@ class BT10_059(CardScript):
         # Timing: EffectTiming.OnAllyAttack
         # [When Attacking][Once Per Turn] Reveal the top 3 cards of your deck. Add 1 card with [Legend-Arms] or [Xros Heart] in its traits among them to your hand. Place the rest at the bottom of your deck in any order.
         effect1 = ICardEffect()
+        effect1.set_timing(EffectTiming.OnAllyAttack)
         effect1.set_effect_name("BT10-059 Reveal the top 3 cards of deck")
         effect1.set_effect_description("[When Attacking][Once Per Turn] Reveal the top 3 cards of your deck. Add 1 card with [Legend-Arms] or [Xros Heart] in its traits among them to your hand. Place the rest at the bottom of your deck in any order.")
         effect1.is_inherited_effect = True

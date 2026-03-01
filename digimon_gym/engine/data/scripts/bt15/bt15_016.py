@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -16,6 +17,7 @@ class BT15_016(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [On Play] If your opponent has 4 or less memory, 1 of your opponent's Digimon with 8000 DP or more can't attack until the end of their turn. If they have 4 or more, delete 1 of their Digimon with 6000 DP or less.
         effect0 = ICardEffect()
+        effect0.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect0.set_effect_name("BT15-016 Opponent's 1 Digimon with 8000 DP or more can't attak and delete 1 Digimon with 6000 DP or less")
         effect0.set_effect_description("[On Play] If your opponent has 4 or less memory, 1 of your opponent's Digimon with 8000 DP or more can't attack until the end of their turn. If they have 4 or more, delete 1 of their Digimon with 6000 DP or less.")
         effect0.is_on_play = True
@@ -58,6 +60,7 @@ class BT15_016(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [When Digivolving] If your opponent has 4 or less memory, 1 of your opponent's Digimon with 8000 DP or more can't attack until the end of their turn. If they have 4 or more, delete 1 of their Digimon with 6000 DP or less.
         effect1 = ICardEffect()
+        effect1.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect1.set_effect_name("BT15-016 Opponent's 1 Digimon with 8000 DP or more can't attak and delete 1 Digimon with 6000 DP or less")
         effect1.set_effect_description("[When Digivolving] If your opponent has 4 or less memory, 1 of your opponent's Digimon with 8000 DP or more can't attack until the end of their turn. If they have 4 or more, delete 1 of their Digimon with 6000 DP or less.")
         effect1.is_when_digivolving = True
@@ -100,6 +103,7 @@ class BT15_016(CardScript):
         # Timing: EffectTiming.OnDestroyedAnyone
         # [On Deletion] Return 1 of your opponent's Digimon with 7000 DP or less to the hand.
         effect2 = ICardEffect()
+        effect2.set_timing(EffectTiming.OnDestroyedAnyone)
         effect2.set_effect_name("BT15-016 Return 1 Digimon to hand")
         effect2.set_effect_description("[On Deletion] Return 1 of your opponent's Digimon with 7000 DP or less to the hand.")
         effect2.is_inherited_effect = True

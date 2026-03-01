@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -33,6 +34,7 @@ class EX8_024(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # Unsuspend
         effect1 = ICardEffect()
+        effect1.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect1.set_effect_name("EX8-024 Unsuspend 1 of your Digimon")
         effect1.set_effect_description("Unsuspend")
         effect1.is_on_play = True
@@ -66,6 +68,7 @@ class EX8_024(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # Unsuspend
         effect2 = ICardEffect()
+        effect2.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect2.set_effect_name("EX8-024 Unsuspend 1 of your Digimon")
         effect2.set_effect_description("Unsuspend")
         effect2.is_when_digivolving = True
@@ -99,6 +102,7 @@ class EX8_024(CardScript):
         # Timing: EffectTiming.OnAllyAttack
         # [When Attacking] [Once Per Turn] If you have 1 or more memory, 1 of your opponent's Digimon can't suspend until the end of their turn.
         effect3 = ICardEffect()
+        effect3.set_timing(EffectTiming.OnAllyAttack)
         effect3.set_effect_name("EX8-024 1 opponents digimon can't suspend")
         effect3.set_effect_description("[When Attacking] [Once Per Turn] If you have 1 or more memory, 1 of your opponent's Digimon can't suspend until the end of their turn.")
         effect3.set_max_count_per_turn(1)
@@ -132,6 +136,7 @@ class EX8_024(CardScript):
         # Timing: EffectTiming.OnAllyAttack
         # [When Attacking] [Once Per Turn] By placing 1 of your other Digimon as this Digimon's bottom digivolution card, it unsuspends.
         effect4 = ICardEffect()
+        effect4.set_timing(EffectTiming.OnAllyAttack)
         effect4.set_effect_name("EX8-024 Place 1 of your other Digimon as this Digimon's bottom digivolution card to unsuspend this Digimon.")
         effect4.set_effect_description("[When Attacking] [Once Per Turn] By placing 1 of your other Digimon as this Digimon's bottom digivolution card, it unsuspends.")
         effect4.is_inherited_effect = True

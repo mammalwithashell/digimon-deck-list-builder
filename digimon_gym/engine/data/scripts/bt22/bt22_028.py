@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -45,6 +46,7 @@ class BT22_028(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [When Digivolving] You may play 1 each of level 3, level 4 and level 5 Digimon cards with [Aqua] or [Sea Animal] in any of their traits from this Digimon's digivolution cards without paying the cost.
         effect2 = ICardEffect()
+        effect2.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect2.set_effect_name("BT22-028 Play 1 of each level (3, 4, and 5)")
         effect2.set_effect_description("[When Digivolving] You may play 1 each of level 3, level 4 and level 5 Digimon cards with [Aqua] or [Sea Animal] in any of their traits from this Digimon's digivolution cards without paying the cost.")
         effect2.is_optional = True
@@ -77,6 +79,7 @@ class BT22_028(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [When Digivolving] [Once Per Turn] By placing 1 of your other Digimon as this Digimon's bottom digivolution card, return 1 of your opponent's Digimon to the bottom of the deck and this Digimon unsuspends.
         effect3 = ICardEffect()
+        effect3.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect3.set_effect_name("BT22-028 Place 1 digimon as bottom source, bottom deck 1 digimon & unsuspend")
         effect3.set_effect_description("[When Digivolving] [Once Per Turn] By placing 1 of your other Digimon as this Digimon's bottom digivolution card, return 1 of your opponent's Digimon to the bottom of the deck and this Digimon unsuspends.")
         effect3.is_optional = True
@@ -123,6 +126,7 @@ class BT22_028(CardScript):
         # Timing: EffectTiming.OnAllyAttack
         # [When Attacking] [Once Per Turn] By placing 1 of your other Digimon as this Digimon's bottom digivolution card, return 1 of your opponent's Digimon to the bottom of the deck and this Digimon unsuspends.
         effect4 = ICardEffect()
+        effect4.set_timing(EffectTiming.OnAllyAttack)
         effect4.set_effect_name("BT22-028 Place 1 digimon as bottom source, bottom deck 1 digimon & unsuspend")
         effect4.set_effect_description("[When Attacking] [Once Per Turn] By placing 1 of your other Digimon as this Digimon's bottom digivolution card, return 1 of your opponent's Digimon to the bottom of the deck and this Digimon unsuspends.")
         effect4.is_optional = True

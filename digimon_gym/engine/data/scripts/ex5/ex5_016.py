@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -29,6 +30,7 @@ class EX5_016(CardScript):
         # Timing: EffectTiming.OnStartMainPhase
         # [Start of Your Main Phase] By returning 1 of your Digimon to the hand, gain 2 memory.
         effect1 = ICardEffect()
+        effect1.set_timing(EffectTiming.OnStartMainPhase)
         effect1.set_effect_name("EX5-016 Return your 1 Digimon to hand to gain Memory +2")
         effect1.set_effect_description("[Start of Your Main Phase] By returning 1 of your Digimon to the hand, gain 2 memory.")
         effect1.is_optional = True
@@ -57,6 +59,7 @@ class EX5_016(CardScript):
         # Timing: EffectTiming.OnDeclaration
         # [Main] [Once Per Turn] By placing the top card of this Digimon with the [Night Claw] or [Light Fang] trait as this Digimon's bottom digivolution card, gain 2 memory.
         effect2 = ICardEffect()
+        effect2.set_timing(EffectTiming.OnDeclaration)
         effect2.set_effect_name("EX5-016 Place the top card of this Digimon at the bottom of digivolution cards to gain Memory +2 (Lunamon)")
         effect2.set_effect_description("[Main] [Once Per Turn] By placing the top card of this Digimon with the [Night Claw] or [Light Fang] trait as this Digimon's bottom digivolution card, gain 2 memory.")
         effect2.is_inherited_effect = True

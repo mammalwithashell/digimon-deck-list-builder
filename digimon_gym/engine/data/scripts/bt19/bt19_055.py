@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -16,6 +17,7 @@ class BT19_055(CardScript):
         # Timing: EffectTiming.OnDestroyedAnyone
         # [On Deletion] Reveal the top 3 cards of your deck. Among them, add 1 card with [Knightmon] in its text or the [Twilight] trait to the hand and place 1 such card under any of your Tamers. Return the rest to the bottom of the deck.
         effect0 = ICardEffect()
+        effect0.set_timing(EffectTiming.OnDestroyedAnyone)
         effect0.set_effect_name("BT19-055 Reveal the top 3 cards of your deck, add 1, place 1 under a tamer")
         effect0.set_effect_description("[On Deletion] Reveal the top 3 cards of your deck. Among them, add 1 card with [Knightmon] in its text or the [Twilight] trait to the hand and place 1 such card under any of your Tamers. Return the rest to the bottom of the deck.")
         effect0.is_on_deletion = True

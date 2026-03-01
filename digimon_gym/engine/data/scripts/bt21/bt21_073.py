@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -45,6 +46,7 @@ class BT21_073(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [On Play] You may link 1 level 4 or lower Digimon card from your trash or this Digimon's digivolution cards to this Digimon without paying the cost.
         effect2 = ICardEffect()
+        effect2.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect2.set_effect_name("BT21-073 Link from trash or sources")
         effect2.set_effect_description("[On Play] You may link 1 level 4 or lower Digimon card from your trash or this Digimon's digivolution cards to this Digimon without paying the cost.")
         effect2.is_optional = True
@@ -61,6 +63,7 @@ class BT21_073(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [When Digivolving] You may link 1 level 4 or lower Digimon card from your trash or this Digimon's digivolution cards to this Digimon without paying the cost.
         effect3 = ICardEffect()
+        effect3.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect3.set_effect_name("BT21-073 Link from trash or sources")
         effect3.set_effect_description("[When Digivolving] You may link 1 level 4 or lower Digimon card from your trash or this Digimon's digivolution cards to this Digimon without paying the cost.")
         effect3.is_optional = True
@@ -77,6 +80,7 @@ class BT21_073(CardScript):
         # Timing: EffectTiming.WhenLinked
         # Effect
         effect4 = ICardEffect()
+        effect4.set_timing(EffectTiming.WhenLinked)
         effect4.set_effect_name("BT21-073 Taunt when linked")
         effect4.set_effect_description("Effect")
         effect4.set_max_count_per_turn(1)
@@ -94,6 +98,7 @@ class BT21_073(CardScript):
         # Timing: EffectTiming.WhenLinked
         # [Start of Your Main Phase] Attack with this Digimon.
         effect5 = ICardEffect()
+        effect5.set_timing(EffectTiming.WhenLinked)
         effect5.set_effect_name("BT21-073 Attack with this Digimon")
         effect5.set_effect_description("[Start of Your Main Phase] Attack with this Digimon.")
 
@@ -123,6 +128,7 @@ class BT21_073(CardScript):
         # Timing: EffectTiming.WhenRemoveField
         # [All Turns][Once Per Turn] When this Digimon would leave the battle area, by trashing 1 of this Digimon's link cards, it doesn't leave.
         effect6 = ICardEffect()
+        effect6.set_timing(EffectTiming.WhenRemoveField)
         effect6.set_effect_name("BT21-073 Trash a linked card to prevent this digimon from leaving")
         effect6.set_effect_description("[All Turns][Once Per Turn] When this Digimon would leave the battle area, by trashing 1 of this Digimon's link cards, it doesn't leave.")
         effect6.is_optional = True

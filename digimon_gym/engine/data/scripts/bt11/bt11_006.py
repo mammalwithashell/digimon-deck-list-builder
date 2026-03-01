@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -16,6 +17,7 @@ class BT11_006(CardScript):
         # Timing: EffectTiming.OnDiscardHand
         # [Your Turn][Once Per Turn] When an effect trashes a card in your hand, this Digimon gets +1000 DP for the turn.
         effect0 = ICardEffect()
+        effect0.set_timing(EffectTiming.OnDiscardHand)
         effect0.set_effect_name("BT11-006 DP +1000")
         effect0.set_effect_description("[Your Turn][Once Per Turn] When an effect trashes a card in your hand, this Digimon gets +1000 DP for the turn.")
         effect0.is_inherited_effect = True

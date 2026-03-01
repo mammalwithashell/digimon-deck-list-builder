@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -28,6 +29,7 @@ class BT19_027(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [When Digivolving] You may play 1 level 4 or lower blue Digimon card from this Digimon's digivolution cards without paying the cost.
         effect1 = ICardEffect()
+        effect1.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect1.set_effect_name("BT19-027 Play 1 Digimon from this Digimon's digivolution cards")
         effect1.set_effect_description("[When Digivolving] You may play 1 level 4 or lower blue Digimon card from this Digimon's digivolution cards without paying the cost.")
         effect1.is_optional = True
@@ -62,6 +64,7 @@ class BT19_027(CardScript):
         # Timing: EffectTiming.OnEndTurn
         # [End of Your Turn] (Once Per Turn) By returning 1 of your Digimon to the bottom of the deck, return 1 of your opponent's Digimon with level equal to or lower to your Digimon to the bottom of the deck.
         effect2 = ICardEffect()
+        effect2.set_timing(EffectTiming.OnEndTurn)
         effect2.set_effect_name("BT19-027 Bottom deck 1 of your Digimon to bottom deck and opponent's Digimon with the same level")
         effect2.set_effect_description("[End of Your Turn] (Once Per Turn) By returning 1 of your Digimon to the bottom of the deck, return 1 of your opponent's Digimon with level equal to or lower to your Digimon to the bottom of the deck.")
         effect2.is_optional = True

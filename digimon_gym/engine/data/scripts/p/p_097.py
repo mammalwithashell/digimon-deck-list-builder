@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -16,6 +17,7 @@ class P_097(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [On Play] By placing this card under 1 of your other Digimon in play as its bottom digivolution card, reveal the top 3 cards of your deck. Place those cards at either the top or bottom of your deck in any order. Then, if you have a Digimon with the [Legend-Arms] trait in play, gain 2 memory.
         effect0 = ICardEffect()
+        effect0.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect0.set_effect_name("P-097 Place this Digimon under your Digimon's digivolution cards to reveal deck tops and to gain Memory +2")
         effect0.set_effect_description("[On Play] By placing this card under 1 of your other Digimon in play as its bottom digivolution card, reveal the top 3 cards of your deck. Place those cards at either the top or bottom of your deck in any order. Then, if you have a Digimon with the [Legend-Arms] trait in play, gain 2 memory.")
         effect0.is_on_play = True

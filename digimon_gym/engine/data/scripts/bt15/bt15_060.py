@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -51,6 +52,7 @@ class BT15_060(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [On Play] If it's your turn, 1 of your other Digimon may digivolve into a black Digimon with [Greymon] or [Garurumon] in it's name in your hand with the digivolution cost reduced by 2.
         effect2 = ICardEffect()
+        effect2.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect2.set_effect_name("BT15-060 One of your other Digimon may digivolve into a black Digimon with [Greymon] or [Garurumon] in it's name from your hand.")
         effect2.set_effect_description("[On Play] If it's your turn, 1 of your other Digimon may digivolve into a black Digimon with [Greymon] or [Garurumon] in it's name in your hand with the digivolution cost reduced by 2.")
         effect2.is_optional = True
@@ -89,6 +91,7 @@ class BT15_060(CardScript):
         # Timing: EffectTiming.OnAllyAttack
         # [When Attacking][Once Per Turn][De-Digivolve] 1 of your opponent's Digimon (Trash up to 1 card from the top of one of your opponent's Digimon. If it has no digivolution cards, or becomes a level 3 Digimon, you can't trash any more cards).
         effect3 = ICardEffect()
+        effect3.set_timing(EffectTiming.OnAllyAttack)
         effect3.set_effect_name("BT15-060 De-Digivolve 1 on 1 Digimon")
         effect3.set_effect_description("[When Attacking][Once Per Turn][De-Digivolve] 1 of your opponent's Digimon (Trash up to 1 card from the top of one of your opponent's Digimon. If it has no digivolution cards, or becomes a level 3 Digimon, you can't trash any more cards).")
         effect3.is_inherited_effect = True

@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -16,6 +17,7 @@ class BT20_096(CardScript):
         # Timing: EffectTiming.OnDeclaration
         # [Trash] [Main] If you have 4 or fewer cards in your hand, by paying 6 cost, return this card to the bottom of the deck and delete 1 of your opponent's unsuspended Digimon.
         effect0 = ICardEffect()
+        effect0.set_timing(EffectTiming.OnDeclaration)
         effect0.set_effect_name("BT20-096 Return this card to the bottom of the deck to delete 1 opponent Digimon.")
         effect0.set_effect_description("[Trash] [Main] If you have 4 or fewer cards in your hand, by paying 6 cost, return this card to the bottom of the deck and delete 1 of your opponent's unsuspended Digimon.")
 
@@ -59,6 +61,7 @@ class BT20_096(CardScript):
         # Timing: EffectTiming.OptionSkill
         # [Main] Trash 1 card in your hand. Then, delete 1 of your opponent's level 4 or lower Digimon.
         effect1 = ICardEffect()
+        effect1.set_timing(EffectTiming.OptionSkill)
         effect1.set_effect_name("BT20-096 Trash 1, Delete 1 opponent Level 4< Digimon.")
         effect1.set_effect_description("[Main] Trash 1 card in your hand. Then, delete 1 of your opponent's level 4 or lower Digimon.")
 
@@ -105,6 +108,7 @@ class BT20_096(CardScript):
         # Timing: EffectTiming.SecuritySkill
         # [Security] Delete 1 of your opponent's level 6 or lower Digimon.
         effect2 = ICardEffect()
+        effect2.set_timing(EffectTiming.SecuritySkill)
         effect2.set_effect_name("BT20-096 Delete 1 of your opponent's level 6 or lower Digimon.")
         effect2.set_effect_description("[Security] Delete 1 of your opponent's level 6 or lower Digimon.")
         effect2.is_security_effect = True

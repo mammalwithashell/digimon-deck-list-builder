@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -42,6 +43,7 @@ class P_159(CardScript):
         # Timing: EffectTiming.OnDestroyedAnyone
         # 1 of your Digimon gains <Reboot>, <Blocker> and gets +2000 DP until the end of your opponent's turn.
         effect1 = ICardEffect()
+        effect1.set_timing(EffectTiming.OnDestroyedAnyone)
         effect1.set_effect_name("P-159 Gain Reboot, Blocker, +2000 DP")
         effect1.set_effect_description("1 of your Digimon gains <Reboot>, <Blocker> and gets +2000 DP until the end of your opponent's turn.")
         effect1.is_on_deletion = True
@@ -78,6 +80,7 @@ class P_159(CardScript):
         # Timing: EffectTiming.OptionSkill
         # [Main] 1 of your Digimon gains <Reboot>, <Blocker> and gets +2000 DP until the end of your opponent's turn. Then, place this card in the battle area.
         effect2 = ICardEffect()
+        effect2.set_timing(EffectTiming.OptionSkill)
         effect2.set_effect_name("P-159 Gain Reboot, Blocker, +2000 DP, then place in battle area")
         effect2.set_effect_description("[Main] 1 of your Digimon gains <Reboot>, <Blocker> and gets +2000 DP until the end of your opponent's turn. Then, place this card in the battle area.")
         effect2._is_reboot = True
@@ -113,6 +116,7 @@ class P_159(CardScript):
         # Timing: EffectTiming.SecuritySkill
         # [Security] <De-Digivolve 2> 1 of your opponent's Digimon. Then, add this card to the hand.
         effect3 = ICardEffect()
+        effect3.set_timing(EffectTiming.SecuritySkill)
         effect3.set_effect_name("P-159 De-Digivolve 2, 1 of your opponents Digimon, then add this to hand")
         effect3.set_effect_description("[Security] <De-Digivolve 2> 1 of your opponent's Digimon. Then, add this card to the hand.")
         effect3.is_security_effect = True

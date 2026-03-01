@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -16,6 +17,7 @@ class BT22_001(CardScript):
         # Timing: EffectTiming.OnAddDigivolutionCards
         # [Your Turn] [Once Per Turn] When effects place Digimon cards with [Aqua] or [Sea Animal] in any of their traits in this Digimon's digivolution cards, <Draw 1> (Draw 1 card from your deck.)
         effect0 = ICardEffect()
+        effect0.set_timing(EffectTiming.OnAddDigivolutionCards)
         effect0.set_effect_name("BT22-001 Draw 1")
         effect0.set_effect_description("[Your Turn] [Once Per Turn] When effects place Digimon cards with [Aqua] or [Sea Animal] in any of their traits in this Digimon's digivolution cards, <Draw 1> (Draw 1 card from your deck.)")
         effect0.is_inherited_effect = True

@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -33,6 +34,7 @@ class BT21_066(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [On Play] You may play 1 Tamer card with the [Hunter] or [Hero] trait from your hand without paying the cost.
         effect1 = ICardEffect()
+        effect1.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect1.set_effect_name("BT21-066 Play Hero or Hunter tamer")
         effect1.set_effect_description("[On Play] You may play 1 Tamer card with the [Hunter] or [Hero] trait from your hand without paying the cost.")
         effect1.is_on_play = True
@@ -66,6 +68,7 @@ class BT21_066(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [When Digivolving] You may play 1 Tamer card with the [Hunter] or [Hero] trait from your hand without paying the cost.
         effect2 = ICardEffect()
+        effect2.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect2.set_effect_name("BT21-066 Play Hero or Hunter tamer")
         effect2.set_effect_description("[When Digivolving] You may play 1 Tamer card with the [Hunter] or [Hero] trait from your hand without paying the cost.")
         effect2.is_when_digivolving = True
@@ -99,6 +102,7 @@ class BT21_066(CardScript):
         # Timing: EffectTiming.OnDestroyedAnyone
         # [On Deletion] You may place 1 Digimon card with <Save> in its text or the [Hero] trait from your hand or trash under any of your Tamers. Then, <Save>.
         effect3 = ICardEffect()
+        effect3.set_timing(EffectTiming.OnDestroyedAnyone)
         effect3.set_effect_name("BT21-066 Save and place 1 card under your 1 Tamer from trash")
         effect3.set_effect_description("[On Deletion] You may place 1 Digimon card with <Save> in its text or the [Hero] trait from your hand or trash under any of your Tamers. Then, <Save>.")
         effect3.is_on_deletion = True

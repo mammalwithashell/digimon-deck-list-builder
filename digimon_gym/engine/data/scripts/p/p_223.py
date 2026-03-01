@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -29,6 +30,7 @@ class P_223(CardScript):
         # Timing: EffectTiming.BeforePayCost
         # When this card would be played from the hand, if you have 3 or fewer security, reduce the play cost by 4.
         effect1 = ICardEffect()
+        effect1.set_timing(EffectTiming.BeforePayCost)
         effect1.set_effect_name("P-223 Play cost reduction -4")
         effect1.set_effect_description("When this card would be played from the hand, if you have 3 or fewer security, reduce the play cost by 4.")
         effect1.set_hash_string("P_223_ReducePlayCost")
@@ -101,6 +103,7 @@ class P_223(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # Effect
         effect4 = ICardEffect()
+        effect4.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect4.set_effect_name("P-223 You may use an [Onmyōjutsu] or [Plug-In] Option from hand or trash")
         effect4.set_effect_description("Effect")
         effect4.is_on_play = True
@@ -116,6 +119,7 @@ class P_223(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # Effect
         effect5 = ICardEffect()
+        effect5.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect5.set_effect_name("P-223 You may use an [Onmyōjutsu] or [Plug-In] Option from hand or trash")
         effect5.set_effect_description("Effect")
         effect5.is_when_digivolving = True
@@ -133,6 +137,7 @@ class P_223(CardScript):
         # Timing: EffectTiming.OnUseOption
         # [All Turns][Once Per Turn] When you use Option cards, you may play 1 [Pipe Fox] Token (Digimon/Yellow/6000 DP/<Blocker>).
         effect6 = ICardEffect()
+        effect6.set_timing(EffectTiming.OnUseOption)
         effect6.set_effect_name("P-223 Play a [Pipe Fox] Token")
         effect6.set_effect_description("[All Turns][Once Per Turn] When you use Option cards, you may play 1 [Pipe Fox] Token (Digimon/Yellow/6000 DP/<Blocker>).")
         effect6.is_optional = True

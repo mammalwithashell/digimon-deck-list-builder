@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -16,6 +17,7 @@ class BT13_034(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [On Play] Reveal the top 3 cards of your deck. Add 1 yellow Digimon card with the [Vaccine] trait and 1 yellow Tamer card among them to the hand. Place the rest at the bottom of the deck in any order.
         effect0 = ICardEffect()
+        effect0.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect0.set_effect_name("BT13-034 Reveal the top 3 cards of deck")
         effect0.set_effect_description("[On Play] Reveal the top 3 cards of your deck. Add 1 yellow Digimon card with the [Vaccine] trait and 1 yellow Tamer card among them to the hand. Place the rest at the bottom of the deck in any order.")
         effect0.is_on_play = True
@@ -62,6 +64,7 @@ class BT13_034(CardScript):
         # Timing: EffectTiming.OnAllyAttack
         # [When Attacking][Once per Turn] If there're 6 or fewer total cards in both players' security stacks, 1 of your opponent�f Digimon gets -2000 DP for the turn.
         effect1 = ICardEffect()
+        effect1.set_timing(EffectTiming.OnAllyAttack)
         effect1.set_effect_name("BT13-034 DP -2000")
         effect1.set_effect_description("[When Attacking][Once per Turn] If there're 6 or fewer total cards in both players' security stacks, 1 of your opponent�f Digimon gets -2000 DP for the turn.")
         effect1.is_inherited_effect = True

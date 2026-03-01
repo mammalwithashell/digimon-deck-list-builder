@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -28,6 +29,7 @@ class BT13_071(CardScript):
         # Timing: EffectTiming.OnTappedAnyone
         # [Opponent's Turn][Once Per Turn] When one of your Digimon becomes suspended, trash the top card of your opponent's security stack.
         effect1 = ICardEffect()
+        effect1.set_timing(EffectTiming.OnTappedAnyone)
         effect1.set_effect_name("BT13-071 Trash the top card of opponent's security")
         effect1.set_effect_description("[Opponent's Turn][Once Per Turn] When one of your Digimon becomes suspended, trash the top card of your opponent's security stack.")
         effect1.is_inherited_effect = True

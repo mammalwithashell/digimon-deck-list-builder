@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -60,6 +61,7 @@ class BT24_027(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # Gain Keyword Cannot Be Deleted By Battle
         effect3 = ICardEffect()
+        effect3.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect3.set_effect_name("BT24-027 By tucking, 1 digimon can't be deleted by battle")
         effect3.set_effect_description("Gain Keyword Cannot Be Deleted By Battle")
         effect3.is_on_play = True
@@ -94,6 +96,7 @@ class BT24_027(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # Gain Keyword Cannot Be Deleted By Battle
         effect4 = ICardEffect()
+        effect4.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect4.set_effect_name("BT24-027 By tucking, 1 digimon can't be deleted by battle")
         effect4.set_effect_description("Gain Keyword Cannot Be Deleted By Battle")
         effect4.is_when_digivolving = True
@@ -128,6 +131,7 @@ class BT24_027(CardScript):
         # Timing: EffectTiming.OnAllyAttack
         # [When Attacking][Once Per Turn] If you have 7 or fewer cards in your hand, <Draw 1>.
         effect5 = ICardEffect()
+        effect5.set_timing(EffectTiming.OnAllyAttack)
         effect5.set_effect_name("BT24-027 Draw 1 card")
         effect5.set_effect_description("[When Attacking][Once Per Turn] If you have 7 or fewer cards in your hand, <Draw 1>.")
         effect5.is_inherited_effect = True

@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -52,9 +53,24 @@ class BT23_051(CardScript):
         effect2.set_can_use_condition(condition2)
         effects.append(effect2)
 
+        # [Your Turn] This Digimon can't attack your opponent's Digimon.
+        effect_ca = ICardEffect()
+        effect_ca.set_effect_name("BT23-051 Can't attack Digimon")
+        effect_ca.set_effect_description("[Your Turn] This Digimon can't attack your opponent's Digimon.")
+        effect_ca._is_cannot_attack_digimon = True
+        def condition_ca(context: Dict[str, Any]) -> bool:
+            if card and card.permanent_of_this_card() is None:
+                return False
+            if not (card and card.owner and card.owner.is_my_turn):
+                return False
+            return True
+        effect_ca.set_can_use_condition(condition_ca)
+        effects.append(effect_ca)
+
         # Timing: EffectTiming.OnTappedAnyone
         # [All Turns] [Once Per Turn] When this Digimon suspends, delete 1 of your opponent's Digimon with 4000 DP or less.
         effect3 = ICardEffect()
+        effect3.set_timing(EffectTiming.OnTappedAnyone)
         effect3.set_effect_name("BT23-051 Delete 1 4K DP or less digimon")
         effect3.set_effect_description("[All Turns] [Once Per Turn] When this Digimon suspends, delete 1 of your opponent's Digimon with 4000 DP or less.")
         effect3.set_max_count_per_turn(1)

@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -16,6 +17,7 @@ class BT24_003(CardScript):
         # Timing: EffectTiming.OnLoseSecurity
         # [Your Turn] [Once Per Turn] When your security stack is removed from, this Digimon may digivolve into a [Shaman] trait Digimon card in the hand with the digivolution cost reduced by 1.
         effect0 = ICardEffect()
+        effect0.set_timing(EffectTiming.OnLoseSecurity)
         effect0.set_effect_name("BT24-003 Digivolve into Shaman trait")
         effect0.set_effect_description("[Your Turn] [Once Per Turn] When your security stack is removed from, this Digimon may digivolve into a [Shaman] trait Digimon card in the hand with the digivolution cost reduced by 1.")
         effect0.is_inherited_effect = True

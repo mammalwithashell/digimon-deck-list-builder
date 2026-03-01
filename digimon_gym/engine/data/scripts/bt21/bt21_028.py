@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -66,6 +67,7 @@ class BT21_028(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [When Digivolving] By placing 1 Digimon card with [Gammamon] in its text or the [Hero] trait from your hand as this Digimon's bottom digivolution card, delete 1 of your opponent's lowest DP Digimon.
         effect3 = ICardEffect()
+        effect3.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect3.set_effect_name("BT21-028 Place 1 card to digivolution cards to Delete Digimon")
         effect3.set_effect_description("[When Digivolving] By placing 1 Digimon card with [Gammamon] in its text or the [Hero] trait from your hand as this Digimon's bottom digivolution card, delete 1 of your opponent's lowest DP Digimon.")
         effect3.is_optional = True
@@ -109,6 +111,7 @@ class BT21_028(CardScript):
         # Timing: EffectTiming.OnAllyAttack
         # [When Attacking] By placing 1 Digimon card with [Gammamon] in its text or the [Hero] trait from your hand as this Digimon's bottom digivolution card, delete 1 of your opponent's lowest DP Digimon.
         effect4 = ICardEffect()
+        effect4.set_timing(EffectTiming.OnAllyAttack)
         effect4.set_effect_name("BT21-028 Place 1 card to digivolution cards to Delete Digimon")
         effect4.set_effect_description("[When Attacking] By placing 1 Digimon card with [Gammamon] in its text or the [Hero] trait from your hand as this Digimon's bottom digivolution card, delete 1 of your opponent's lowest DP Digimon.")
         effect4.is_optional = True

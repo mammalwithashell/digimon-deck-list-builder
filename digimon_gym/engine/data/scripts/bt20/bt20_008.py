@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -16,6 +17,7 @@ class BT20_008(CardScript):
         # Timing: EffectTiming.OnStartMainPhase
         # [Start of Your Main Phase] By trashing 1 card with [Huckmon] or [Sistermon] in its name or the [Royal Knight] trait in your hand, <Draw 1> and gain 1 memory.
         effect0 = ICardEffect()
+        effect0.set_timing(EffectTiming.OnStartMainPhase)
         effect0.set_effect_name("BT20-008 Trash a card, draw a card, gain 1 memory")
         effect0.set_effect_description("[Start of Your Main Phase] By trashing 1 card with [Huckmon] or [Sistermon] in its name or the [Royal Knight] trait in your hand, <Draw 1> and gain 1 memory.")
         effect0.is_optional = True

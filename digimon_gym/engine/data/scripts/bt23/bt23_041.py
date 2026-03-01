@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -43,11 +44,11 @@ class BT23_041(CardScript):
         # Timing: EffectTiming.OnTappedAnyone
         # [All Turns] [Once Per Turn] When this Digimon suspends, 1 of your Digimon gains <Piercing> and +3000 DP for the turn.
         effect2 = ICardEffect()
+        effect2.set_timing(EffectTiming.OnTappedAnyone)
         effect2.set_effect_name("BT23-041 1 digimon gains <Piercing> and 3K DP")
         effect2.set_effect_description("[All Turns] [Once Per Turn] When this Digimon suspends, 1 of your Digimon gains <Piercing> and +3000 DP for the turn.")
         effect2.set_max_count_per_turn(1)
         effect2.set_hash_string("BT23_041_AT")
-        effect2._is_piercing = True
 
         effect = effect2  # alias for condition closure
         def condition2(context: Dict[str, Any]) -> bool:
@@ -58,17 +59,16 @@ class BT23_041(CardScript):
         effect2.set_can_use_condition(condition2)
 
         def process2(ctx: Dict[str, Any]):
-            """Action: DP +3000, Gain Keyword Piercing"""
+            """Action: 1 of your Digimon gains Piercing and +3000 DP for the turn"""
             player = ctx.get('player')
             perm = ctx.get('permanent')
             game = ctx.get('game')
-            if perm:
-                perm.change_dp(3000)
             if not (player and game):
                 return
             def target_filter(p):
                 return p.is_digimon
             def on_grant(target_perm):
+                target_perm.change_dp(3000)
                 target_perm.grant_keyword('_is_piercing')
             game.effect_select_own_permanent(
                 player, on_grant, filter_fn=target_filter, is_optional=False)

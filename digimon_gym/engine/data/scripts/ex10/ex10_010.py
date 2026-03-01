@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -63,29 +64,15 @@ class EX10_010(CardScript):
         effect3.set_can_use_condition(condition3)
         effects.append(effect3)
 
-        # Timing: EffectTiming.OnEnterFieldAnyone
-        # Delete
-        effect4 = ICardEffect()
-        effect4.set_effect_name("EX10-010 Delete 1 Digimon/Tamer")
-        effect4.set_effect_description("Delete")
-        effect4.is_on_play = True
-
-        effect = effect4  # alias for condition closure
-        def condition4(context: Dict[str, Any]) -> bool:
-            # Triggered on play — validated by engine timing
-            return True
-
-        effect4.set_can_use_condition(condition4)
-
-        def process4(ctx: Dict[str, Any]):
-            """Action: Delete"""
+        # Shared delete logic for On Play and When Digivolving
+        def _delete_opp_play_cost_7_or_less(ctx: Dict[str, Any]):
+            """Action: Delete 1 opponent's Digimon or Tamer with play cost 7 or less"""
             player = ctx.get('player')
-            perm = ctx.get('permanent')
             game = ctx.get('game')
             if not (player and game):
                 return
             def target_filter(p):
-                return p.is_digimon
+                return (p.is_digimon or p.is_tamer) and (getattr(p.top_card, 'play_cost', 99) or 99) <= 7
             def on_delete(target_perm):
                 enemy = player.enemy if player else None
                 if enemy:
@@ -93,42 +80,36 @@ class EX10_010(CardScript):
             game.effect_select_opponent_permanent(
                 player, on_delete, filter_fn=target_filter, is_optional=False)
 
-        effect4.set_on_process_callback(process4)
+        # Timing: EffectTiming.OnEnterFieldAnyone
+        # [On Play] Delete 1 Digimon/Tamer with play cost 7 or less
+        effect4 = ICardEffect()
+        effect4.set_timing(EffectTiming.OnEnterFieldAnyone)
+        effect4.set_effect_name("EX10-010 Delete 1 Digimon/Tamer play cost 7 or less")
+        effect4.set_effect_description("Delete")
+        effect4.set_hash_string("EX10_010_OP")
+        effect4.is_on_play = True
+
+        def condition4(context: Dict[str, Any]) -> bool:
+            return True
+        effect4.set_can_use_condition(condition4)
+        effect4.set_on_process_callback(_delete_opp_play_cost_7_or_less)
         effects.append(effect4)
 
         # Timing: EffectTiming.OnEnterFieldAnyone
-        # Delete
+        # [When Digivolving] Delete 1 Digimon/Tamer with play cost 7 or less
         effect5 = ICardEffect()
-        effect5.set_effect_name("EX10-010 Delete 1 Digimon/Tamer")
+        effect5.set_timing(EffectTiming.OnEnterFieldAnyone)
+        effect5.set_effect_name("EX10-010 Delete 1 Digimon/Tamer play cost 7 or less")
         effect5.set_effect_description("Delete")
+        effect5.set_hash_string("EX10_010_WD")
         effect5.is_when_digivolving = True
 
-        effect = effect5  # alias for condition closure
         def condition5(context: Dict[str, Any]) -> bool:
             if card and card.permanent_of_this_card() is None:
                 return False
-            # Triggered when digivolving — validated by engine timing
             return True
-
         effect5.set_can_use_condition(condition5)
-
-        def process5(ctx: Dict[str, Any]):
-            """Action: Delete"""
-            player = ctx.get('player')
-            perm = ctx.get('permanent')
-            game = ctx.get('game')
-            if not (player and game):
-                return
-            def target_filter(p):
-                return p.is_digimon
-            def on_delete(target_perm):
-                enemy = player.enemy if player else None
-                if enemy:
-                    enemy.delete_permanent(target_perm)
-            game.effect_select_opponent_permanent(
-                player, on_delete, filter_fn=target_filter, is_optional=False)
-
-        effect5.set_on_process_callback(process5)
+        effect5.set_on_process_callback(_delete_opp_play_cost_7_or_less)
         effects.append(effect5)
 
         # Timing: EffectTiming.None

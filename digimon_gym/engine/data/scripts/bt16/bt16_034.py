@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -36,6 +37,7 @@ class BT16_034(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [On Play] If you have 3 or more security cards, 1 of your opponent's Digimon gets -4000 DP until the end of thier turn. If you have 3 or fewer security cards, 1 of your opponent's Digimon gains [Security A-2] until the end of their turn.
         effect1 = ICardEffect()
+        effect1.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect1.set_effect_name("BT16-034 Minus DP and/or Security -2 to one of your opponent's Digimon.")
         effect1.set_effect_description("[On Play] If you have 3 or more security cards, 1 of your opponent's Digimon gets -4000 DP until the end of thier turn. If you have 3 or fewer security cards, 1 of your opponent's Digimon gains [Security A-2] until the end of their turn.")
         effect1.set_hash_string("OnPlay_BT16_034")
@@ -71,6 +73,7 @@ class BT16_034(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [On Play] If you have 3 or more security cards, 1 of your opponent's Digimon gets -4000 DP until the end of thier turn. If you have 3 or fewer security cards, 1 of your opponent's Digimon gains [Security A-2] until the end of their turn.
         effect2 = ICardEffect()
+        effect2.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect2.set_effect_name("BT16-034 Minus DP and/or Security -2 to one of your opponent's Digimon.")
         effect2.set_effect_description("[On Play] If you have 3 or more security cards, 1 of your opponent's Digimon gets -4000 DP until the end of thier turn. If you have 3 or fewer security cards, 1 of your opponent's Digimon gains [Security A-2] until the end of their turn.")
         effect2.set_hash_string("Digivolving_BT16_034")
@@ -106,6 +109,7 @@ class BT16_034(CardScript):
         # Timing: EffectTiming.OnEndAttack
         # [End of Attack] [Once per turn] If this Digimon has [Pulsemon] in its text, by trashing the top card of your security stack, unsuspend this Digimon.
         effect3 = ICardEffect()
+        effect3.set_timing(EffectTiming.OnEndAttack)
         effect3.set_effect_name("BT16-034 Unsuspend this Digimon by trashing the top card of your security.")
         effect3.set_effect_description("[End of Attack] [Once per turn] If this Digimon has [Pulsemon] in its text, by trashing the top card of your security stack, unsuspend this Digimon.")
         effect3.is_inherited_effect = True

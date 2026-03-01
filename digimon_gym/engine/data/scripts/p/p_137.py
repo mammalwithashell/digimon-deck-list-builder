@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -54,6 +55,7 @@ class P_137(CardScript):
         # Timing: EffectTiming.OnAttackTargetChanged
         # [Your Turn][Once Per Turn] When this Digimon's attack target is switched, your opponent adds the top card of their security stack to the hand.
         effect3 = ICardEffect()
+        effect3.set_timing(EffectTiming.OnAttackTargetChanged)
         effect3.set_effect_name("P-137 Your opponent adds the top card of their security stack to the hand")
         effect3.set_effect_description("[Your Turn][Once Per Turn] When this Digimon's attack target is switched, your opponent adds the top card of their security stack to the hand.")
         effect3.set_max_count_per_turn(1)

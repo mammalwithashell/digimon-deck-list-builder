@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -50,6 +51,7 @@ class P_179(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # DP +3000
         effect2 = ICardEffect()
+        effect2.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect2.set_effect_name("P-179 Place [Device] option from hand or trash")
         effect2.set_effect_description("DP +3000")
         effect2.is_optional = True
@@ -79,6 +81,7 @@ class P_179(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # Delete
         effect3 = ICardEffect()
+        effect3.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect3.set_effect_name("P-179 Trash 1 [Device] Option on field")
         effect3.set_effect_description("Delete")
         effect3.set_hash_string("P_179_Trash&Delete")
@@ -115,6 +118,7 @@ class P_179(CardScript):
         # Timing: EffectTiming.OnAllyAttack
         # Delete
         effect4 = ICardEffect()
+        effect4.set_timing(EffectTiming.OnAllyAttack)
         effect4.set_effect_name("P-179 Trash 1 [Device] Option on field")
         effect4.set_effect_description("Delete")
         effect4.set_hash_string("P_179_Trash&Delete")

@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -33,6 +34,7 @@ class BT19_036(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [On Play] Add your top security card to the hand. Then, if [Wizardmon]/[X Antibody] is in this Digimon's digivolution cards, you may place 1 yellow or purple Option card with cost of 5 or less from your hand as your bottom security card.
         effect1 = ICardEffect()
+        effect1.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect1.set_effect_name("BT19-036 Add top security card to hand and place 1 Option card as bottom security")
         effect1.set_effect_description("[On Play] Add your top security card to the hand. Then, if [Wizardmon]/[X Antibody] is in this Digimon's digivolution cards, you may place 1 yellow or purple Option card with cost of 5 or less from your hand as your bottom security card.")
         effect1.is_on_play = True
@@ -72,6 +74,7 @@ class BT19_036(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [When Digivolving] Add your top security card to the hand. Then, if [Wizardmon]/[X Antibody] is in this Digimon's digivolution cards, you may place 1 yellow or purple Option card with cost of 5 or less from your hand as your bottom security card.
         effect2 = ICardEffect()
+        effect2.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect2.set_effect_name("BT19-036 Add top security card to hand and place 1 Option card as bottom security")
         effect2.set_effect_description("[When Digivolving] Add your top security card to the hand. Then, if [Wizardmon]/[X Antibody] is in this Digimon's digivolution cards, you may place 1 yellow or purple Option card with cost of 5 or less from your hand as your bottom security card.")
         effect2.is_when_digivolving = True
@@ -111,6 +114,7 @@ class BT19_036(CardScript):
         # Timing: EffectTiming.WhenRemoveField
         # [All Turns][Once Per Turn] When this yellow Digimon with the [Data]/[Witchelny] trait would leave the battle area by your opponent's effects, by trashing your top security card, it doesn't leave.
         effect3 = ICardEffect()
+        effect3.set_timing(EffectTiming.WhenRemoveField)
         effect3.set_effect_name("BT19-036 Trash 1 security to prevent this Digimon from leaving Battle Area")
         effect3.set_effect_description("[All Turns][Once Per Turn] When this yellow Digimon with the [Data]/[Witchelny] trait would leave the battle area by your opponent's effects, by trashing your top security card, it doesn't leave.")
         effect3.is_inherited_effect = True

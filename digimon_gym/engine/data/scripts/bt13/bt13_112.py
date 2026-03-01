@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -16,6 +17,7 @@ class BT13_112(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [On Play] You may delete 1 of your opponent's Digimon, or play 1 of each Digimon with the [Royal Knight] trait and different names from the digivolution cards of your Digimon in the breeding area without paying the costs. When a Digimon is played by this effect, trash your Digimon in the breeding area, and all your Digimon gain <Rush> for the turn.
         effect0 = ICardEffect()
+        effect0.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect0.set_effect_name("BT13-112 Delete 1 Digimon or play digivolution cards")
         effect0.set_effect_description("[On Play] You may delete 1 of your opponent's Digimon, or play 1 of each Digimon with the [Royal Knight] trait and different names from the digivolution cards of your Digimon in the breeding area without paying the costs. When a Digimon is played by this effect, trash your Digimon in the breeding area, and all your Digimon gain <Rush> for the turn.")
         effect0.is_optional = True
@@ -70,6 +72,7 @@ class BT13_112(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [When Digivolving] You may delete 1 of your opponent's Digimon, or play 1 of each Digimon with the [Royal Knight] trait and different names from the digivolution cards of your Digimon in the breeding area without paying the costs. When a Digimon is played by this effect, trash your Digimon in the breeding area, and all your Digimon gain <Rush> for the turn.
         effect1 = ICardEffect()
+        effect1.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect1.set_effect_name("BT13-112 Delete 1 Digimon or play digivolution cards")
         effect1.set_effect_description("[When Digivolving] You may delete 1 of your opponent's Digimon, or play 1 of each Digimon with the [Royal Knight] trait and different names from the digivolution cards of your Digimon in the breeding area without paying the costs. When a Digimon is played by this effect, trash your Digimon in the breeding area, and all your Digimon gain <Rush> for the turn.")
         effect1.is_optional = True

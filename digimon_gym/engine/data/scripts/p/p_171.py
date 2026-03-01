@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -46,6 +47,7 @@ class P_171(CardScript):
         # Timing: EffectTiming.BeforePayCost
         # When this card would be played, if [Deep Savers] is in your face up security cards, reduce the play cost by 4.
         effect2 = ICardEffect()
+        effect2.set_timing(EffectTiming.BeforePayCost)
         effect2.set_effect_name("P-171 If [Deep Savers] is in your face up security cards get Play Cost -4")
         effect2.set_effect_description("When this card would be played, if [Deep Savers] is in your face up security cards, reduce the play cost by 4.")
         effect2.set_hash_string("PlayCost-4_P_171")
@@ -107,6 +109,7 @@ class P_171(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [On Play] Trash the top 2 digivolution cards of all of your opponent's Digimon. Then, delete 1 of their Digimon with no digivolution cards.
         effect5 = ICardEffect()
+        effect5.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect5.set_effect_name("P-171 Trash digivolution cards and destory 1 Digimon without digivolution cards")
         effect5.set_effect_description("[On Play] Trash the top 2 digivolution cards of all of your opponent's Digimon. Then, delete 1 of their Digimon with no digivolution cards.")
         effect5.is_on_play = True
@@ -147,6 +150,7 @@ class P_171(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [When Digivolving] Trash the top 2 digivolution cards of all of your opponent's Digimon. Then, delete 1 of their Digimon with no digivolution cards.
         effect6 = ICardEffect()
+        effect6.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect6.set_effect_name("P-171 Trash digivolution cards and destory 1 Digimon without digivolution cards")
         effect6.set_effect_description("[When Digivolving] Trash the top 2 digivolution cards of all of your opponent's Digimon. Then, delete 1 of their Digimon with no digivolution cards.")
         effect6.is_when_digivolving = True

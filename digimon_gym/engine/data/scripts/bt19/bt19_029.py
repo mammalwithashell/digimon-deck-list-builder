@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -16,6 +17,7 @@ class BT19_029(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [On Play] By trashing your top security card, gain 1 memory.
         effect0 = ICardEffect()
+        effect0.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect0.set_effect_name("BT19-029 Trash your top security to gain 1 memory")
         effect0.set_effect_description("[On Play] By trashing your top security card, gain 1 memory.")
         effect0.is_optional = True
@@ -51,6 +53,7 @@ class BT19_029(CardScript):
         # Timing: EffectTiming.WhenRemoveField
         # [All Turns][Once Per Turn] When this yellow Digimon with the [Data] or [Witchelny] trait would leave the battle area by an opponent's effect, by trashing your top security card, it doesn't leave.
         effect1 = ICardEffect()
+        effect1.set_timing(EffectTiming.WhenRemoveField)
         effect1.set_effect_name("BT19-029 Trash 1 security to prevent this Digimon from leaving Battle Area")
         effect1.set_effect_description("[All Turns][Once Per Turn] When this yellow Digimon with the [Data] or [Witchelny] trait would leave the battle area by an opponent's effect, by trashing your top security card, it doesn't leave.")
         effect1.is_inherited_effect = True

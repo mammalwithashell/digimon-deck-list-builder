@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -40,6 +41,7 @@ class EX11_018(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # Unsuspend
         effect2 = ICardEffect()
+        effect2.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect2.set_effect_name("EX11-018 Unsuspend")
         effect2.set_effect_description("Unsuspend")
         effect2.is_on_play = True
@@ -73,6 +75,7 @@ class EX11_018(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # Unsuspend
         effect3 = ICardEffect()
+        effect3.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect3.set_effect_name("EX11-018 Unsuspend")
         effect3.set_effect_description("Unsuspend")
         effect3.is_when_digivolving = True
@@ -106,6 +109,7 @@ class EX11_018(CardScript):
         # Timing: EffectTiming.OnAllyAttack
         # Unsuspend
         effect4 = ICardEffect()
+        effect4.set_timing(EffectTiming.OnAllyAttack)
         effect4.set_effect_name("EX11-018 Unsuspend")
         effect4.set_effect_description("Unsuspend")
         effect4.is_on_attack = True
@@ -139,6 +143,7 @@ class EX11_018(CardScript):
         # Timing: EffectTiming.OnAddDigivolutionCards
         # Bounce
         effect5 = ICardEffect()
+        effect5.set_timing(EffectTiming.OnAddDigivolutionCards)
         effect5.set_effect_name("EX11-018 Bottom deck 1 opponent's digimon with as many or fewer sources")
         effect5.set_effect_description("Bounce")
         effect5.set_max_count_per_turn(1)

@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -42,6 +43,7 @@ class EX8_064(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [When Digivolving] <De-Digivolve 3> 1 of your opponent's Digimon and, for the turn, all of their Digimon get -6000 DP. Then, if DNA digivolving, you may play 10 cost's total worth of [NSo] trait Digimon cards from your trash without paying the cost.
         effect2 = ICardEffect()
+        effect2.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect2.set_effect_name("EX8-064 De-Digivolve 3 on 1 Digimon and DP reduce. Then play digimon from the trash.")
         effect2.set_effect_description("[When Digivolving] <De-Digivolve 3> 1 of your opponent's Digimon and, for the turn, all of their Digimon get -6000 DP. Then, if DNA digivolving, you may play 10 cost's total worth of [NSo] trait Digimon cards from your trash without paying the cost.")
         effect2.is_when_digivolving = True
@@ -82,6 +84,7 @@ class EX8_064(CardScript):
         # Timing: EffectTiming.OnDestroyedAnyone
         # [All Turns] [Once Per Turn] When other Digimon are deleted, trash your opponent's top security card.
         effect3 = ICardEffect()
+        effect3.set_timing(EffectTiming.OnDestroyedAnyone)
         effect3.set_effect_name("EX8-064 Trash your opponent's top security card")
         effect3.set_effect_description("[All Turns] [Once Per Turn] When other Digimon are deleted, trash your opponent's top security card.")
         effect3.set_max_count_per_turn(1)

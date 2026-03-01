@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -30,6 +31,7 @@ class BT23_011(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [On Play] Delete 1 of your opponent's digimon with 4000 DP or less.
         effect1 = ICardEffect()
+        effect1.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect1.set_effect_name("BT23-011 Delete a digimon with 4K DP or less")
         effect1.set_effect_description("[On Play] Delete 1 of your opponent's digimon with 4000 DP or less.")
         effect1.is_on_play = True
@@ -65,6 +67,7 @@ class BT23_011(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [When Digivolving] Delete 1 of your opponent's digimon with 4000 DP or less.
         effect2 = ICardEffect()
+        effect2.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect2.set_effect_name("BT23-011 Delete a digimon with 4K DP or less")
         effect2.set_effect_description("[When Digivolving] Delete 1 of your opponent's digimon with 4000 DP or less.")
         effect2.is_when_digivolving = True
@@ -100,6 +103,7 @@ class BT23_011(CardScript):
         # Timing: EffectTiming.OnDestroyedAnyone
         # [On Deletion] You may play 1 red or [CS] trait tamer card from your hand without paying the cost.
         effect3 = ICardEffect()
+        effect3.set_timing(EffectTiming.OnDestroyedAnyone)
         effect3.set_effect_name("BT23-011 Play 1 Red/[CS] tamer from hand")
         effect3.set_effect_description("[On Deletion] You may play 1 red or [CS] trait tamer card from your hand without paying the cost.")
         effect3.is_inherited_effect = True

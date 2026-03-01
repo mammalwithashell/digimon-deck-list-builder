@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -16,6 +17,7 @@ class P_128(CardScript):
         # Timing: EffectTiming.OnStartMainPhase
         # [Start of Your Main Phase] If you have a Digimon with the [Free] trait, gain 1 memory.
         effect0 = ICardEffect()
+        effect0.set_timing(EffectTiming.OnStartMainPhase)
         effect0.set_effect_name("P-128 Memory +1")
         effect0.set_effect_description("[Start of Your Main Phase] If you have a Digimon with the [Free] trait, gain 1 memory.")
 
@@ -43,6 +45,7 @@ class P_128(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [On Play] Activate 1 of the effects below: - You may play 1 [Armadillomon] from your hand without paying the cost. - 1 of your Digimon may digivolve into [Ankylomon] in the hand without paying the cost.
         effect1 = ICardEffect()
+        effect1.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect1.set_effect_name("P-128 Play 1 [Armadillomon] or your 1 Digimon digivolves into [Ankylomon]")
         effect1.set_effect_description("[On Play] Activate 1 of the effects below: - You may play 1 [Armadillomon] from your hand without paying the cost. - 1 of your Digimon may digivolve into [Ankylomon] in the hand without paying the cost.")
         effect1.is_on_play = True

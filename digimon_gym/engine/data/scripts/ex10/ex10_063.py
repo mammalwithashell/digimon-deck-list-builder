@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -16,6 +17,7 @@ class EX10_063(CardScript):
         # Timing: EffectTiming.OnStartMainPhase
         # [Start of Your Main Phase] By returning this Tamer to the bottom of the deck, you may play 1 [Close] from your hand without paying the cost. Then, if you don't have a Digimon, you may play 1 [Sunarizamon] from your trash without paying the cost.
         effect0 = ICardEffect()
+        effect0.set_timing(EffectTiming.OnStartMainPhase)
         effect0.set_effect_name("EX10-063 By returning this card, Play [Close], Then 1 [Sunarizamon]")
         effect0.set_effect_description("[Start of Your Main Phase] By returning this Tamer to the bottom of the deck, you may play 1 [Close] from your hand without paying the cost. Then, if you don't have a Digimon, you may play 1 [Sunarizamon] from your trash without paying the cost.")
         effect0.is_optional = True
@@ -46,6 +48,7 @@ class EX10_063(CardScript):
         # Timing: EffectTiming.OnDigivolutionCardDiscarded
         # [All Turns] When effects trash any of your [Mineral] or [Rock] trait Digimon's digivolution cards, by suspending this Tamer, gain 1 memory.
         effect1 = ICardEffect()
+        effect1.set_timing(EffectTiming.OnDigivolutionCardDiscarded)
         effect1.set_effect_name("EX10-063 Suspend to +1 Memory")
         effect1.set_effect_description("[All Turns] When effects trash any of your [Mineral] or [Rock] trait Digimon's digivolution cards, by suspending this Tamer, gain 1 memory.")
         effect1.is_optional = True

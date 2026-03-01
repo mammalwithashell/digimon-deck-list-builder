@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -28,6 +29,7 @@ class BT13_061(CardScript):
         # Timing: EffectTiming.OnDestroyedAnyone
         # [On Deletion] If it's your opponent's turn, reveal the top 3 cards of your deck. Add 1 black card among them to the hand. Place the rest at the bottom of the deck in any order.
         effect1 = ICardEffect()
+        effect1.set_timing(EffectTiming.OnDestroyedAnyone)
         effect1.set_effect_name("BT13-061 Reveal the top 3 cards of deck")
         effect1.set_effect_description("[On Deletion] If it's your opponent's turn, reveal the top 3 cards of your deck. Add 1 black card among them to the hand. Place the rest at the bottom of the deck in any order.")
         effect1.is_on_deletion = True

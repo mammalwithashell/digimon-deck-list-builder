@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -16,6 +17,7 @@ class BT19_078(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [On Play] For each digivolution card of 1 of your [Mother D-Reaper]s, 1 of your opponent's Digimon gets -1000 for the turn.
         effect0 = ICardEffect()
+        effect0.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect0.set_effect_name("BT19-078 -1000DP for each digivolution source")
         effect0.set_effect_description("[On Play] For each digivolution card of 1 of your [Mother D-Reaper]s, 1 of your opponent's Digimon gets -1000 for the turn.")
         effect0.is_on_play = True
@@ -52,6 +54,7 @@ class BT19_078(CardScript):
         # Timing: EffectTiming.OnDeclaration
         # [Main] Place this Digimon as the bottom digivolution card of 1 of your [Mother D-Reaper] without [ADR-01 Jeri] in its digivolution cards.
         effect1 = ICardEffect()
+        effect1.set_timing(EffectTiming.OnDeclaration)
         effect1.set_effect_name("BT19-078 Place 1 this card as 1 of your [Mother D-Reaper] digivolution cards")
         effect1.set_effect_description("[Main] Place this Digimon as the bottom digivolution card of 1 of your [Mother D-Reaper] without [ADR-01 Jeri] in its digivolution cards.")
         effect1.set_max_count_per_turn(1)
@@ -78,6 +81,7 @@ class BT19_078(CardScript):
         # Timing: EffectTiming.OnAllyAttack
         # [Opponent's Turn] When any of your opponent's Digimon attack, you may play 1 [ADR-01 Jeri] from this Digimon's digivolution cards without paying the cost. If you played, you may change the attack target to the Digimon played by this effect.
         effect2 = ICardEffect()
+        effect2.set_timing(EffectTiming.OnAllyAttack)
         effect2.set_effect_name("BT19-078 You may play 1 [ADR-01 Jeri] from this Digimon's digivolution cards, then change the attack target to the  Digimon played.")
         effect2.set_effect_description("[Opponent's Turn] When any of your opponent's Digimon attack, you may play 1 [ADR-01 Jeri] from this Digimon's digivolution cards without paying the cost. If you played, you may change the attack target to the Digimon played by this effect.")
         effect2.is_inherited_effect = True

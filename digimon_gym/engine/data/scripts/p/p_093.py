@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -16,6 +17,7 @@ class P_093(CardScript):
         # Timing: EffectTiming.OnTappedAnyone
         # [All Turns] When this Digimon becomes suspended, suspend 1 of your opponent's Digimon.
         effect0 = ICardEffect()
+        effect0.set_timing(EffectTiming.OnTappedAnyone)
         effect0.set_effect_name("P-093 Suspend 1 Digimon")
         effect0.set_effect_description("[All Turns] When this Digimon becomes suspended, suspend 1 of your opponent's Digimon.")
 

@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -56,6 +57,7 @@ class P_152(CardScript):
         # Timing: EffectTiming.OnAllyAttack
         # [When Attacking] 1 of your opponent�s Digimon gets -2000 DP for the turn. Then, by placing 1 Digimon card with the [Xros Heart] trait in this Digimon�s digivolution cards under 1 of your Tamers, delete 1 of their Digimon with 3000 DP or less.
         effect2 = ICardEffect()
+        effect2.set_timing(EffectTiming.OnAllyAttack)
         effect2.set_effect_name("P-152 One of your opponents Digimon gets -2000 DP for the turn, then delete 1 of their Digimon wiht 3000 DP  or less")
         effect2.set_effect_description("[When Attacking] 1 of your opponent�s Digimon gets -2000 DP for the turn. Then, by placing 1 Digimon card with the [Xros Heart] trait in this Digimon�s digivolution cards under 1 of your Tamers, delete 1 of their Digimon with 3000 DP or less.")
         effect2.is_on_attack = True

@@ -1,4 +1,5 @@
-import { useState, useCallback, useRef } from 'react';
+import { useState, useCallback, useRef, useEffect } from 'react';
+import { useParams } from 'react-router-dom';
 import {
   DndContext,
   PointerSensor,
@@ -37,6 +38,7 @@ import {
 import { GamePhase, type PermanentInfo } from '@/types/game';
 
 export function GamePage() {
+  const { id: urlGameId } = useParams<{ id: string }>();
   const store = useGameStore();
   const { sendAction } = useGameActions();
   const parsedMask = useActionMask(store.actionMask);
@@ -47,6 +49,26 @@ export function GamePage() {
   const [opponentDeckId, setOpponentDeckId] = useState<string>('');
   const [agentType, setAgentType] = useState<string>('greedy');
   const [starting, setStarting] = useState(false);
+
+  // Hydrate store from URL param when navigating to /game/:id
+  useEffect(() => {
+    if (urlGameId && !store.gameId) {
+      (async () => {
+        try {
+          const [state, maskData] = await Promise.all([
+            gameApi.getState(urlGameId),
+            gameApi.getMask(urlGameId),
+          ]);
+          store.setGameId(urlGameId);
+          store.setGameState(state);
+          store.setActionMask(maskData);
+          store.clearLogs();
+        } catch (err) {
+          console.error('Failed to load game:', err);
+        }
+      })();
+    }
+  }, [urlGameId]); // eslint-disable-line react-hooks/exhaustive-deps
   const [inspectedPerm, setInspectedPerm] = useState<PermanentInfo | null>(null);
   const [draggedCardId, setDraggedCardId] = useState<string | null>(null);
   const [draggedHandIndex, setDraggedHandIndex] = useState<number | null>(null);

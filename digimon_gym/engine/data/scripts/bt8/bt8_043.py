@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -16,6 +17,7 @@ class BT8_043(CardScript):
         # Timing: EffectTiming.BeforePayCost
         # When you would play this card from your hand, you may delete 1 of your purple [Cherubimon] to reduce this card's play cost by 8.
         effect0 = ICardEffect()
+        effect0.set_timing(EffectTiming.BeforePayCost)
         effect0.set_effect_name("BT8-043 Delete 1 purple [Cherubimon] and Play Cost -8")
         effect0.set_effect_description("When you would play this card from your hand, you may delete 1 of your purple [Cherubimon] to reduce this card's play cost by 8.")
         effect0.set_hash_string("PlayCost-8_BT8_043")
@@ -77,6 +79,7 @@ class BT8_043(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [On Play] For each Tamer you have in play, activate the effect below. - 1 of your opponent's Digimon gets <Security Attack -2> until the end of your opponent's next turn. (This Digimon checks 2 fewer security cards.)
         effect2 = ICardEffect()
+        effect2.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect2.set_effect_name("BT8-043 Security Attack -2 for each your Tamer")
         effect2.set_effect_description("[On Play] For each Tamer you have in play, activate the effect below. - 1 of your opponent's Digimon gets <Security Attack -2> until the end of your opponent's next turn. (This Digimon checks 2 fewer security cards.)")
         effect2.is_on_play = True
@@ -104,6 +107,7 @@ class BT8_043(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [When Digivolving] For each Tamer you have in play, activate the effect below. - 1 of your opponent's Digimon gets <Security Attack -2> until the end of your opponent's next turn. (This Digimon checks 2 fewer security cards.)
         effect3 = ICardEffect()
+        effect3.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect3.set_effect_name("BT8-043 Security Attack -2 for each your Tamer")
         effect3.set_effect_description("[When Digivolving] For each Tamer you have in play, activate the effect below. - 1 of your opponent's Digimon gets <Security Attack -2> until the end of your opponent's next turn. (This Digimon checks 2 fewer security cards.)")
         effect3.is_when_digivolving = True

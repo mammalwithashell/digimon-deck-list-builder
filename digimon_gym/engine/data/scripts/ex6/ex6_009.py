@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -29,6 +30,7 @@ class EX6_009(CardScript):
         # Timing: EffectTiming.OnDeclaration
         # [Hand] [Main] By paying 2 cost and placing this card as the bottom digivolution card of 1 of your Digimon that's level 5 or has the [Legend-Arms] trait, that Digimon gains [Security Attack +1] for the turn.
         effect1 = ICardEffect()
+        effect1.set_timing(EffectTiming.OnDeclaration)
         effect1.set_effect_name("EX6-009 Gain [Security Attack +1]")
         effect1.set_effect_description("[Hand] [Main] By paying 2 cost and placing this card as the bottom digivolution card of 1 of your Digimon that's level 5 or has the [Legend-Arms] trait, that Digimon gains [Security Attack +1] for the turn.")
         effect1.is_optional = True
@@ -53,6 +55,7 @@ class EX6_009(CardScript):
         # Timing: EffectTiming.OnAddDigivolutionCards
         # [Your Turn] [Once Per Turn] When an effect places a digivolution card under this Digimon, it gains <Raid> and <Piercing> for the turn.
         effect2 = ICardEffect()
+        effect2.set_timing(EffectTiming.OnAddDigivolutionCards)
         effect2.set_effect_name("EX6-009 Gain <Raid> and <Piercing>")
         effect2.set_effect_description("[Your Turn] [Once Per Turn] When an effect places a digivolution card under this Digimon, it gains <Raid> and <Piercing> for the turn.")
         effect2.set_max_count_per_turn(1)
@@ -85,6 +88,7 @@ class EX6_009(CardScript):
         # Timing: EffectTiming.OnAttackTargetChanged
         # [Your Turn][Once Per Turn] When this Digimon's attack target is switched, trash the top card of your opponent's security stack.
         effect3 = ICardEffect()
+        effect3.set_timing(EffectTiming.OnAttackTargetChanged)
         effect3.set_effect_name("EX6-009 Trash the top card of opponent's security")
         effect3.set_effect_description("[Your Turn][Once Per Turn] When this Digimon's attack target is switched, trash the top card of your opponent's security stack.")
         effect3.is_inherited_effect = True

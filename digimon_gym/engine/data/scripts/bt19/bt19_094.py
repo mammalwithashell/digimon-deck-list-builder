@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -16,6 +17,7 @@ class BT19_094(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [Trash][Your Turn] When any of your Digimon digivolve into [Lucemon (X Antibody)], by returning this card to the bottom of the deck, your opponent may trash their top security card. If this effect didn't trash, <Recovery +1>
         effect0 = ICardEffect()
+        effect0.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect0.set_effect_name("BT19-094 Trash opponents top security card or Recovery +1")
         effect0.set_effect_description("[Trash][Your Turn] When any of your Digimon digivolve into [Lucemon (X Antibody)], by returning this card to the bottom of the deck, your opponent may trash their top security card. If this effect didn't trash, <Recovery +1>")
         effect0.is_optional = True
@@ -63,6 +65,7 @@ class BT19_094(CardScript):
         # Timing: EffectTiming.OptionSkill
         # [Main] Delete your opponent's Digimon until they have as many as the number of your security cards. If this effect deleted, <Recovery +1>.
         effect1 = ICardEffect()
+        effect1.set_timing(EffectTiming.OptionSkill)
         effect1.set_effect_name("BT19-094 Recovery +1")
         effect1.set_effect_description("[Main] Delete your opponent's Digimon until they have as many as the number of your security cards. If this effect deleted, <Recovery +1>.")
 
@@ -87,6 +90,7 @@ class BT19_094(CardScript):
         # Timing: EffectTiming.SecuritySkill
         # [Security] You may play 1 [Lucemon] from your trash without paying the cost.
         effect2 = ICardEffect()
+        effect2.set_timing(EffectTiming.SecuritySkill)
         effect2.set_effect_name("BT19-094 Play 1 Digimon from trash")
         effect2.set_effect_description("[Security] You may play 1 [Lucemon] from your trash without paying the cost.")
         effect2.is_optional = True

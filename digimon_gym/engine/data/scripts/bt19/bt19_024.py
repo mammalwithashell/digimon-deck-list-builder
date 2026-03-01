@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -28,6 +29,7 @@ class BT19_024(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [On Play] You may place 1 Digimon card with [Aqua]/[Sea Animal] in one of its traits from your hand as 1 of your Digimon's bottom digivolution card.
         effect1 = ICardEffect()
+        effect1.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect1.set_effect_name("BT19-024 Place a card from hand as the bottom digivolution card of 1 of our Digimon")
         effect1.set_effect_description("[On Play] You may place 1 Digimon card with [Aqua]/[Sea Animal] in one of its traits from your hand as 1 of your Digimon's bottom digivolution card.")
         effect1.is_optional = True
@@ -44,6 +46,7 @@ class BT19_024(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [When Digivolving] You may place 1 Digimon card with [Aqua]/[Sea Animal] in one of its traits from your hand as 1 of your Digimon's bottom digivolution card.
         effect2 = ICardEffect()
+        effect2.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect2.set_effect_name("BT19-024 Place a card from hand as the bottom digivolution card of 1 of our Digimon")
         effect2.set_effect_description("[When Digivolving] You may place 1 Digimon card with [Aqua]/[Sea Animal] in one of its traits from your hand as 1 of your Digimon's bottom digivolution card.")
         effect2.is_optional = True
@@ -60,6 +63,7 @@ class BT19_024(CardScript):
         # Timing: EffectTiming.OnEndAttack
         # [End of Attack] (Once Per Turn) You may play 1 level 4 or lower Digimon card with [Aqua]/[Sea Animal] in one of its traits from this Digimon's digivolution cards without paying the cost.
         effect3 = ICardEffect()
+        effect3.set_timing(EffectTiming.OnEndAttack)
         effect3.set_effect_name("BT19-024 Play 1 Digimon from this Digimon's digivolution cards")
         effect3.set_effect_description("[End of Attack] (Once Per Turn) You may play 1 level 4 or lower Digimon card with [Aqua]/[Sea Animal] in one of its traits from this Digimon's digivolution cards without paying the cost.")
         effect3.is_inherited_effect = True

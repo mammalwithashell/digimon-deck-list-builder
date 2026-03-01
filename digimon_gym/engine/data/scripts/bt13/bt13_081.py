@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -16,6 +17,7 @@ class BT13_081(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [On Play] Delete 1 of your opponent's level 3 Digimon.
         effect0 = ICardEffect()
+        effect0.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect0.set_effect_name("BT13-081 Delete 1 level 3 Digimon")
         effect0.set_effect_description("[On Play] Delete 1 of your opponent's level 3 Digimon.")
         effect0.is_on_play = True
@@ -51,6 +53,7 @@ class BT13_081(CardScript):
         # Timing: EffectTiming.OnDestroyedAnyone
         # [On Deletion] Delete 1 of your opponent's level 3 Digimon.
         effect1 = ICardEffect()
+        effect1.set_timing(EffectTiming.OnDestroyedAnyone)
         effect1.set_effect_name("BT13-081 Delete 1 level 3 Digimon")
         effect1.set_effect_description("[On Deletion] Delete 1 of your opponent's level 3 Digimon.")
         effect1.is_on_deletion = True
@@ -84,6 +87,7 @@ class BT13_081(CardScript):
         # Timing: EffectTiming.OnEndTurn
         # [End of Opponent�fs Turn][Once Per Turn] <Draw 1>. Then, trash 1 card in your hand.
         effect2 = ICardEffect()
+        effect2.set_timing(EffectTiming.OnEndTurn)
         effect2.set_effect_name("BT13-081 Draw 1 and trash 1 card from hand")
         effect2.set_effect_description("[End of Opponent�fs Turn][Once Per Turn] <Draw 1>. Then, trash 1 card in your hand.")
         effect2.is_inherited_effect = True

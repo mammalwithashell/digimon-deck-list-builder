@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -16,6 +17,7 @@ class BT13_046(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [On Play] If there're 6 or fewer total cards in both players' security stacks, gain 3 memory, and reveal 1 card in your hand. If it's yellow, place it on top of your security stack face down. If it's not, return it to the hand.
         effect0 = ICardEffect()
+        effect0.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect0.set_effect_name("BT13-046 Gain memory +3 and reveal your 1 card from hand")
         effect0.set_effect_description("[On Play] If there're 6 or fewer total cards in both players' security stacks, gain 3 memory, and reveal 1 card in your hand. If it's yellow, place it on top of your security stack face down. If it's not, return it to the hand.")
         effect0.is_on_play = True
@@ -46,6 +48,7 @@ class BT13_046(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [When Digivolving] If there're 6 or fewer total cards in both players' security stacks, gain 3 memory, and reveal 1 card in your hand. If it's yellow, place it on top of your security stack face down. If it's not, return it to the hand.
         effect1 = ICardEffect()
+        effect1.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect1.set_effect_name("BT13-046 Gain memory +3 and reveal your 1 card from hand")
         effect1.set_effect_description("[When Digivolving] If there're 6 or fewer total cards in both players' security stacks, gain 3 memory, and reveal 1 card in your hand. If it's yellow, place it on top of your security stack face down. If it's not, return it to the hand.")
         effect1.is_when_digivolving = True
@@ -76,6 +79,7 @@ class BT13_046(CardScript):
         # Timing: EffectTiming.OnAllyAttack
         # [When Attacking][Once Per Turn] By trashing the top card of your security stack, unsuspend this Digimon, and 1 of your opponent's Digimon gets -7000 DP for the turn.
         effect2 = ICardEffect()
+        effect2.set_timing(EffectTiming.OnAllyAttack)
         effect2.set_effect_name("BT13-046 Trash your 1 security to unsuspend this Digimon and DP -7000")
         effect2.set_effect_description("[When Attacking][Once Per Turn] By trashing the top card of your security stack, unsuspend this Digimon, and 1 of your opponent's Digimon gets -7000 DP for the turn.")
         effect2.is_optional = True

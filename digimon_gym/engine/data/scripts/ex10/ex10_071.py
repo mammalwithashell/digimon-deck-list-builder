@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -39,6 +40,7 @@ class EX10_071(CardScript):
         # Timing: EffectTiming.OptionSkill
         # [Main] Until your opponent's turn ends, 1 of your Digimon with [Lucemon] in its name in its name gains <Raid>, <Piercing>, <Blocker> and +3000 DP.
         effect1 = ICardEffect()
+        effect1.set_timing(EffectTiming.OptionSkill)
         effect1.set_effect_name("EX10-071 1 Digimon gains <Raid>, <Piercing>, <Blocker>, +3000 DP")
         effect1.set_effect_description("[Main] Until your opponent's turn ends, 1 of your Digimon with [Lucemon] in its name in its name gains <Raid>, <Piercing>, <Blocker> and +3000 DP.")
         effect1._is_raid = True
@@ -78,6 +80,7 @@ class EX10_071(CardScript):
         # Timing: EffectTiming.OnEndTurn
         # [Trash] [End of Your Turn] If you have a Digimon with [Lucemon] in its name, by returning this card to the bottom of the deck, trash your top security card and 1 of your Digimon attacks without suspending.
         effect2 = ICardEffect()
+        effect2.set_timing(EffectTiming.OnEndTurn)
         effect2.set_effect_name("EX10-071 Trash top security, Then one of your Digimon may attack")
         effect2.set_effect_description("[Trash] [End of Your Turn] If you have a Digimon with [Lucemon] in its name, by returning this card to the bottom of the deck, trash your top security card and 1 of your Digimon attacks without suspending.")
         effect2.is_optional = True
@@ -123,6 +126,7 @@ class EX10_071(CardScript):
         # Timing: EffectTiming.SecuritySkill
         # [Security] You may play 1 [Lucemon] from your trash without paying the cost.
         effect3 = ICardEffect()
+        effect3.set_timing(EffectTiming.SecuritySkill)
         effect3.set_effect_name("EX10-071 Play 1 [Lucemon] from trash")
         effect3.set_effect_description("[Security] You may play 1 [Lucemon] from your trash without paying the cost.")
         effect3.is_optional = True

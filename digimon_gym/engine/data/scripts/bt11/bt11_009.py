@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -86,6 +87,7 @@ class BT11_009(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [On Play] 1 of your opponent's Digimon gets -3000 DP for the turn. Then, if DigiXrosing with 2 cards, delete 1 of your opponent's Digimon with 2000 DP or less.
         effect4 = ICardEffect()
+        effect4.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect4.set_effect_name("BT11-009 DP -3000 and delete 1 Digimon with 2000 DP or less")
         effect4.set_effect_description("[On Play] 1 of your opponent's Digimon gets -3000 DP for the turn. Then, if DigiXrosing with 2 cards, delete 1 of your opponent's Digimon with 2000 DP or less.")
         effect4.is_on_play = True

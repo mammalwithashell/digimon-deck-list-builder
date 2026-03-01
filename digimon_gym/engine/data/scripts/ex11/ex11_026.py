@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -16,6 +17,7 @@ class EX11_026(CardScript):
         # Timing: EffectTiming.OnMove
         # DP +3000, Suspend, Effect Immunity
         effect0 = ICardEffect()
+        effect0.set_timing(EffectTiming.OnMove)
         effect0.set_effect_name("EX11-026 DP +3000, Suspend, Effect Immunity")
         effect0.set_effect_description("DP +3000, Suspend, Effect Immunity")
 
@@ -55,6 +57,7 @@ class EX11_026(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # DP +3000, Suspend, Effect Immunity
         effect1 = ICardEffect()
+        effect1.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect1.set_effect_name("EX11-026 DP +3000, Suspend, Effect Immunity")
         effect1.set_effect_description("DP +3000, Suspend, Effect Immunity")
         effect1.is_on_play = True
@@ -96,6 +99,7 @@ class EX11_026(CardScript):
         # Timing: EffectTiming.OnEndBattle
         # [Your Turn] [Once Per Turn] When this Digimon wins a battle, gain 1 memory.
         effect2 = ICardEffect()
+        effect2.set_timing(EffectTiming.OnEndBattle)
         effect2.set_effect_name("EX11-026 Memory +1")
         effect2.set_effect_description("[Your Turn] [Once Per Turn] When this Digimon wins a battle, gain 1 memory.")
         effect2.is_inherited_effect = True

@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -16,6 +17,7 @@ class EX5_029(CardScript):
         # Timing: EffectTiming.OnAllyAttack
         # [When Attacking] By trashing the top card of your security stack, for the turn, when one of your Digimon would next digivolve, reduce the digivolution cost by 2.
         effect0 = ICardEffect()
+        effect0.set_timing(EffectTiming.OnAllyAttack)
         effect0.set_effect_name("EX5-029 Trash the top card of your security to reduce digivolution cost")
         effect0.set_effect_description("[When Attacking] By trashing the top card of your security stack, for the turn, when one of your Digimon would next digivolve, reduce the digivolution cost by 2.")
         effect0.is_optional = True
@@ -51,6 +53,7 @@ class EX5_029(CardScript):
         # Timing: EffectTiming.OnAllyAttack
         # Cost -2
         effect1 = ICardEffect()
+        effect1.set_timing(EffectTiming.OnAllyAttack)
         effect1.set_effect_name("EX5-029 Remove Effect")
         effect1.set_effect_description("Cost -2")
         effect1.is_on_attack = True
@@ -76,6 +79,7 @@ class EX5_029(CardScript):
         # Timing: EffectTiming.OnAllyAttack
         # [When Attacking] [Once Per Turn] If there're 6 or fewer total cards in both players' security stacks, 1 of your opponent's Digimon gets -2000 DP for the turn.
         effect2 = ICardEffect()
+        effect2.set_timing(EffectTiming.OnAllyAttack)
         effect2.set_effect_name("EX5-029 DP -2000")
         effect2.set_effect_description("[When Attacking] [Once Per Turn] If there're 6 or fewer total cards in both players' security stacks, 1 of your opponent's Digimon gets -2000 DP for the turn.")
         effect2.is_inherited_effect = True

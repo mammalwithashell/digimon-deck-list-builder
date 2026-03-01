@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -40,6 +41,7 @@ class BT10_103(CardScript):
         # Timing: EffectTiming.OptionSkill
         # [Main] Suspend 1 of your opponent's Digimon. Then, return 1 of your opponent's suspended Digimon to the bottom of its owner's deck.
         effect1 = ICardEffect()
+        effect1.set_timing(EffectTiming.OptionSkill)
         effect1.set_effect_name("BT10-103 Suspend, Bounce")
         effect1.set_effect_description("[Main] Suspend 1 of your opponent's Digimon. Then, return 1 of your opponent's suspended Digimon to the bottom of its owner's deck.")
 

@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -29,6 +30,7 @@ class EX5_047(CardScript):
         # Timing: EffectTiming.OnAllyAttack
         # [When Attacking] This Digimon may digivolve into a Digimon card with [Leomon] in its name in your hand with the digivolution cost reduced by 1.
         effect1 = ICardEffect()
+        effect1.set_timing(EffectTiming.OnAllyAttack)
         effect1.set_effect_name("EX5-047 This Digimon digivolves")
         effect1.set_effect_description("[When Attacking] This Digimon may digivolve into a Digimon card with [Leomon] in its name in your hand with the digivolution cost reduced by 1.")
         effect1.is_optional = True
@@ -65,6 +67,7 @@ class EX5_047(CardScript):
         # Timing: EffectTiming.OnDestroyedAnyone
         # [On Deletion] <De-Digivolve 1> 1 of your opponent's Digimon (Trash up to 1 card from the top of one of your opponent's Digimon. If it has no digivolution cards, or becomes a level 3 Digimon, you can't trash any more cards).
         effect2 = ICardEffect()
+        effect2.set_timing(EffectTiming.OnDestroyedAnyone)
         effect2.set_effect_name("EX5-047 De-Digivolve 1 on 1 Digimon")
         effect2.set_effect_description("[On Deletion] <De-Digivolve 1> 1 of your opponent's Digimon (Trash up to 1 card from the top of one of your opponent's Digimon. If it has no digivolution cards, or becomes a level 3 Digimon, you can't trash any more cards).")
         effect2.is_inherited_effect = True

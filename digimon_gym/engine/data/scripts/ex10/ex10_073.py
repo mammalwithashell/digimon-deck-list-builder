@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -53,6 +54,7 @@ class EX10_073(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # Effect
         effect3 = ICardEffect()
+        effect3.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect3.set_effect_name("EX10-073 Add new links to tgus digimon")
         effect3.set_effect_description("Effect")
         effect3.is_when_digivolving = True
@@ -70,6 +72,7 @@ class EX10_073(CardScript):
         # Timing: EffectTiming.OnEndTurn
         # Effect
         effect4 = ICardEffect()
+        effect4.set_timing(EffectTiming.OnEndTurn)
         effect4.set_effect_name("EX10-073 Add new links to this digimon")
         effect4.set_effect_description("Effect")
 
@@ -85,6 +88,7 @@ class EX10_073(CardScript):
         # Timing: EffectTiming.OnLinkCardDiscarded
         # Delete
         effect5 = ICardEffect()
+        effect5.set_timing(EffectTiming.OnLinkCardDiscarded)
         effect5.set_effect_name("EX10-073 Delete when trash")
         effect5.set_effect_description("Delete")
         effect5.set_max_count_per_turn(1)

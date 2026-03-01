@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -16,6 +17,7 @@ class EX6_043(CardScript):
         # Timing: EffectTiming.OnStartMainPhase
         # [Start of Your Main Phase] You may play 1 [Diaboromon] (Digimon | 14 Cost | Level 6 | White | Mega | Unknown | Unidentified | DP3000) Token without paying the cost.
         effect0 = ICardEffect()
+        effect0.set_timing(EffectTiming.OnStartMainPhase)
         effect0.set_effect_name("EX6-043 Play 1 Diaboromon Token")
         effect0.set_effect_description("[Start of Your Main Phase] You may play 1 [Diaboromon] (Digimon | 14 Cost | Level 6 | White | Mega | Unknown | Unidentified | DP3000) Token without paying the cost.")
         effect0.is_optional = True
@@ -44,6 +46,7 @@ class EX6_043(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [When Digivolving] You may play 1 [Diaboromon] (Digimon | 14 Cost | Level 6 | White | Mega | Unknown | Unidentified | DP3000) Token without paying the cost.
         effect1 = ICardEffect()
+        effect1.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect1.set_effect_name("EX6-043 Play 1 Diaboromon Token")
         effect1.set_effect_description("[When Digivolving] You may play 1 [Diaboromon] (Digimon | 14 Cost | Level 6 | White | Mega | Unknown | Unidentified | DP3000) Token without paying the cost.")
         effect1.is_optional = True
@@ -72,6 +75,7 @@ class EX6_043(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [All Turns] [Once Per Turn] When an opponent's Digimon is played, you may activate 1 of this Digimon's [When Digivolving] effects.
         effect2 = ICardEffect()
+        effect2.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect2.set_effect_name("EX6-043 Activate 1 [When Digivolving] effect")
         effect2.set_effect_description("[All Turns] [Once Per Turn] When an opponent's Digimon is played, you may activate 1 of this Digimon's [When Digivolving] effects.")
         effect2.is_optional = True

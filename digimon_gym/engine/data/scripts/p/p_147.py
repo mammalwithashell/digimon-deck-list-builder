@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -52,6 +53,7 @@ class P_147(CardScript):
         # Timing: EffectTiming.OnAllyAttack
         # [When Attacking] [Once Per Turn] By placing 1 level 4 card with [Pulsemon] in its text from your hand as this Digimon�s bottom digivolution card, activate one of that card's [When Digivolving] effects as an effect of this Digimon.
         effect2 = ICardEffect()
+        effect2.set_timing(EffectTiming.OnAllyAttack)
         effect2.set_effect_name("P-147 Place 1 level 4 with [Pulsemon] in its text as bottom digivolution source, activate one of that card's [When Digivolving] effects")
         effect2.set_effect_description("[When Attacking] [Once Per Turn] By placing 1 level 4 card with [Pulsemon] in its text from your hand as this Digimon�s bottom digivolution card, activate one of that card's [When Digivolving] effects as an effect of this Digimon.")
         effect2.is_optional = True

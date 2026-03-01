@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -39,6 +40,7 @@ class BT24_080(CardScript):
         # Timing: EffectTiming.OnEndTurn
         # [Trash] [End of Your Turn] If you have 4 or fewer cards in your hand, 1 of your [Dark Dragon] or [Evil Dragon] trait Digimon may digivolve into this card without paying the cost.
         effect1 = ICardEffect()
+        effect1.set_timing(EffectTiming.OnEndTurn)
         effect1.set_effect_name("BT24-080 1 [Dark Dragon] or [Evil Dragon] may digivolve into this")
         effect1.set_effect_description("[Trash] [End of Your Turn] If you have 4 or fewer cards in your hand, 1 of your [Dark Dragon] or [Evil Dragon] trait Digimon may digivolve into this card without paying the cost.")
         effect1.is_optional = True
@@ -81,6 +83,7 @@ class BT24_080(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # Delete
         effect3 = ICardEffect()
+        effect3.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect3.set_effect_name("BT24-080 Delete")
         effect3.set_effect_description("Delete")
         effect3.is_on_play = True
@@ -116,6 +119,7 @@ class BT24_080(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # Delete
         effect4 = ICardEffect()
+        effect4.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect4.set_effect_name("BT24-080 Delete")
         effect4.set_effect_description("Delete")
         effect4.is_when_digivolving = True
@@ -151,6 +155,7 @@ class BT24_080(CardScript):
         # Timing: EffectTiming.OnDestroyedAnyone
         # Delete
         effect5 = ICardEffect()
+        effect5.set_timing(EffectTiming.OnDestroyedAnyone)
         effect5.set_effect_name("BT24-080 Delete")
         effect5.set_effect_description("Delete")
         effect5.is_on_deletion = True

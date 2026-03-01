@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -16,6 +17,7 @@ class BT22_098(CardScript):
         # Timing: EffectTiming.OptionSkill
         # [Main] You may play 1 [Shoemon] or [Arisa Kinosaki] from your hand or trash without paying the cost. Then, place this card in the battle area.
         effect0 = ICardEffect()
+        effect0.set_timing(EffectTiming.OptionSkill)
         effect0.set_effect_name("BT22-098 Play 1 [Shoemon]/[Arisa Kinosaki] from hand or trash, then place in battle area")
         effect0.set_effect_description("[Main] You may play 1 [Shoemon] or [Arisa Kinosaki] from your hand or trash without paying the cost. Then, place this card in the battle area.")
 
@@ -65,6 +67,7 @@ class BT22_098(CardScript):
         # Timing: EffectTiming.OnTappedAnyone
         # [Your Turn] When any of your [Arisa Kinosaki] suspend, <Delay> (By trashing this card after the placing turn, activate the effect below.)\r\n・1 of your [Puppet] trait Digimon may digivolve into a [Puppet] and [LIBERATOR] trait Digimon card in the hand with the digivolution cost reduced by 3.
         effect2 = ICardEffect()
+        effect2.set_timing(EffectTiming.OnTappedAnyone)
         effect2.set_effect_name("BT22-098 1 of your [Puppet] trait Digimon may digivolve")
         effect2.set_effect_description("[Your Turn] When any of your [Arisa Kinosaki] suspend, <Delay> (By trashing this card after the placing turn, activate the effect below.)\r\n・1 of your [Puppet] trait Digimon may digivolve into a [Puppet] and [LIBERATOR] trait Digimon card in the hand with the digivolution cost reduced by 3.")
         effect2.is_optional = True

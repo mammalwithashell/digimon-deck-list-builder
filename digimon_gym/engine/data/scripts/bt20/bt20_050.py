@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -34,6 +35,7 @@ class BT20_050(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [When Digivolving] Flip your opponent's top face-down security card face up.
         effect1 = ICardEffect()
+        effect1.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect1.set_effect_name("BT20-050 Flip security card face up")
         effect1.set_effect_description("[When Digivolving] Flip your opponent's top face-down security card face up.")
         effect1.is_when_digivolving = True
@@ -51,6 +53,7 @@ class BT20_050(CardScript):
         # Timing: EffectTiming.OnEndAttack
         # [End of Attack] [Once Per Turn] <Draw 1>
         effect2 = ICardEffect()
+        effect2.set_timing(EffectTiming.OnEndAttack)
         effect2.set_effect_name("BT20-050 <Draw> 1")
         effect2.set_effect_description("[End of Attack] [Once Per Turn] <Draw 1>")
         effect2.set_max_count_per_turn(1)

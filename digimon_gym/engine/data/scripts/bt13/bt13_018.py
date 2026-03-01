@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -29,6 +30,7 @@ class BT13_018(CardScript):
         # Timing: EffectTiming.OnStartMainPhase
         # [Start of Your Main Phase] Until the end of your opponent's turn, 1 of your [Marcus Damon]s is also treated as a 3000 DP Digimon, can't digivolve, and gains <Blocker>.
         effect1 = ICardEffect()
+        effect1.set_timing(EffectTiming.OnStartMainPhase)
         effect1.set_effect_name("BT13-018 Your 1 [Marcus Damon] becomes Digimon")
         effect1.set_effect_description("[Start of Your Main Phase] Until the end of your opponent's turn, 1 of your [Marcus Damon]s is also treated as a 3000 DP Digimon, can't digivolve, and gains <Blocker>.")
         effect1._is_blocker = True
@@ -63,6 +65,7 @@ class BT13_018(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [When Digivolving] Until the end of your opponent's turn, 1 of your [Marcus Damon]s is also treated as a 3000 DP Digimon, can't digivolve, and gains <Blocker>.
         effect2 = ICardEffect()
+        effect2.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect2.set_effect_name("BT13-018 Your 1 [Marcus Damon] becomes Digimon")
         effect2.set_effect_description("[When Digivolving] Until the end of your opponent's turn, 1 of your [Marcus Damon]s is also treated as a 3000 DP Digimon, can't digivolve, and gains <Blocker>.")
         effect2.is_when_digivolving = True
@@ -97,6 +100,7 @@ class BT13_018(CardScript):
         # Timing: EffectTiming.OnTappedAnyone
         # [All Turns][Once Per Turn] When one of your red or yellow Tamers becomes suspended, 1 of your opponent's Digimon gets -6000 DP for the turn.
         effect3 = ICardEffect()
+        effect3.set_timing(EffectTiming.OnTappedAnyone)
         effect3.set_effect_name("BT13-018 DP -6000")
         effect3.set_effect_description("[All Turns][Once Per Turn] When one of your red or yellow Tamers becomes suspended, 1 of your opponent's Digimon gets -6000 DP for the turn.")
         effect3.set_max_count_per_turn(1)

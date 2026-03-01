@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -46,6 +47,7 @@ class BT23_035(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [On Play] By trashing your top security card, all of your opponent's Digimon get -6000 DP for the turn.
         effect2 = ICardEffect()
+        effect2.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect2.set_effect_name("BT23-035 By trashing your top security, -6000 all opponent digimon")
         effect2.set_effect_description("[On Play] By trashing your top security card, all of your opponent's Digimon get -6000 DP for the turn.")
         effect2.is_on_play = True
@@ -78,6 +80,7 @@ class BT23_035(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [When Digivolving] By trashing your top security card, all of your opponent's Digimon get -6000 DP for the turn.
         effect3 = ICardEffect()
+        effect3.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect3.set_effect_name("BT23-035 By trashing your top security, -6000 all opponent digimon")
         effect3.set_effect_description("[When Digivolving] By trashing your top security card, all of your opponent's Digimon get -6000 DP for the turn.")
         effect3.is_when_digivolving = True
@@ -110,6 +113,7 @@ class BT23_035(CardScript):
         # Timing: EffectTiming.OnLoseSecurity
         # When your security stack is removed from, this Digimon gains <Security A. +1> until your turn ends. Then, if you have 3 or fewer security cards, <Recovery +1 (Deck)>
         effect4 = ICardEffect()
+        effect4.set_timing(EffectTiming.OnLoseSecurity)
         effect4.set_effect_name("BT23-035 Gain Sec +1. then if you are 3- security, Recovery")
         effect4.set_effect_description("When your security stack is removed from, this Digimon gains <Security A. +1> until your turn ends. Then, if you have 3 or fewer security cards, <Recovery +1 (Deck)>")
         effect4.set_max_count_per_turn(1)

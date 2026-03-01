@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -16,6 +17,7 @@ class BT14_047(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [On Play] Suspend 1 of your opponent's Digimon. During your opponent's next unsuspend phase, all of your opponent's Digimon with 5000 DP or less don't unsuspend.
         effect0 = ICardEffect()
+        effect0.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect0.set_effect_name("BT14-047 Suspend 1 Digimon and opponent's Digimons can't unsuspend")
         effect0.set_effect_description("[On Play] Suspend 1 of your opponent's Digimon. During your opponent's next unsuspend phase, all of your opponent's Digimon with 5000 DP or less don't unsuspend.")
         effect0.is_on_play = True
@@ -70,6 +72,7 @@ class BT14_047(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [When Digivolving] Suspend 1 of your opponent's Digimon. During your opponent's next unsuspend phase, all of your opponent's Digimon with 5000 DP or less don't unsuspend.
         effect1 = ICardEffect()
+        effect1.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect1.set_effect_name("BT14-047 Suspend 1 Digimon and opponent's Digimons can't unsuspend")
         effect1.set_effect_description("[When Digivolving] Suspend 1 of your opponent's Digimon. During your opponent's next unsuspend phase, all of your opponent's Digimon with 5000 DP or less don't unsuspend.")
         effect1.is_when_digivolving = True

@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -39,6 +40,7 @@ class P_206(CardScript):
         # Timing: EffectTiming.OptionSkill
         # [Main] Reveal the top 3 cards of your deck. Add 1 Digimon card and 1 Tamer card among them to the hand. Return the rest to the bottom of the deck. Then, place this card in the battle area.
         effect1 = ICardEffect()
+        effect1.set_timing(EffectTiming.OptionSkill)
         effect1.set_effect_name("P-206 Reveal 3")
         effect1.set_effect_description("[Main] Reveal the top 3 cards of your deck. Add 1 Digimon card and 1 Tamer card among them to the hand. Return the rest to the bottom of the deck. Then, place this card in the battle area.")
 
@@ -90,6 +92,7 @@ class P_206(CardScript):
         # Timing: EffectTiming.OnDeclaration
         # [Main] <Delay>. You may play 1 Tamer card with the same color as any of your Digimon on the field from your hand with the play cost reduced by 4.
         effect3 = ICardEffect()
+        effect3.set_timing(EffectTiming.OnDeclaration)
         effect3.set_effect_name("P-206 Play 1 tamer with same colour as any of your digimon on the field, from your hand with 4 reduced cost")
         effect3.set_effect_description("[Main] <Delay>. You may play 1 Tamer card with the same color as any of your Digimon on the field from your hand with the play cost reduced by 4.")
 
@@ -121,6 +124,7 @@ class P_206(CardScript):
         # Timing: EffectTiming.SecuritySkill
         # [Security] You may play 1 Digimon card with a play cost of 3 or less from your hand or trash without paying the cost. Then, add this card to the hand.
         effect4 = ICardEffect()
+        effect4.set_timing(EffectTiming.SecuritySkill)
         effect4.set_effect_name("P-206 you may play 1 3 cost or less digimon from hand or trash, then add this card to hand")
         effect4.set_effect_description("[Security] You may play 1 Digimon card with a play cost of 3 or less from your hand or trash without paying the cost. Then, add this card to the hand.")
         effect4.is_security_effect = True

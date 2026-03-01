@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -16,6 +17,7 @@ class BT15_053(CardScript):
         # Timing: EffectTiming.OnStartMainPhase
         # Suspend, Gain Keyword Piercing
         effect0 = ICardEffect()
+        effect0.set_timing(EffectTiming.OnStartMainPhase)
         effect0.set_effect_name("BT15-053 Suspend 1 Digimon and your 1 Digimon gains Pierce")
         effect0.set_effect_description("Suspend, Gain Keyword Piercing")
         effect0._is_piercing = True
@@ -52,6 +54,7 @@ class BT15_053(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # Suspend, Gain Keyword Piercing
         effect1 = ICardEffect()
+        effect1.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect1.set_effect_name("BT15-053 Suspend 1 Digimon and your 1 Digimon gains Pierce")
         effect1.set_effect_description("Suspend, Gain Keyword Piercing")
         effect1.is_when_digivolving = True

@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -16,6 +17,7 @@ class P_119(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [On Play] Reveal the top 3 cards of your deck. Add 1 red/yellow card with 2 or more colors and 1 Tamer card with [Yolei Inoue] among them to the hand. Return the rest to the bottom of the deck.
         effect0 = ICardEffect()
+        effect0.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect0.set_effect_name("P-119 Reveal the top 3 cards of deck")
         effect0.set_effect_description("[On Play] Reveal the top 3 cards of your deck. Add 1 red/yellow card with 2 or more colors and 1 Tamer card with [Yolei Inoue] among them to the hand. Return the rest to the bottom of the deck.")
         effect0.is_on_play = True
@@ -60,6 +62,7 @@ class P_119(CardScript):
         # Timing: EffectTiming.OnEndTurn
         # [End of Your Turn] You may DNA digivolve this Digimon and one of your other Digimon in play into a Digimon card in your hand by paying its DNA digivolve cost.
         effect1 = ICardEffect()
+        effect1.set_timing(EffectTiming.OnEndTurn)
         effect1.set_effect_name("P-119 DNA digivolve this Digimon")
         effect1.set_effect_description("[End of Your Turn] You may DNA digivolve this Digimon and one of your other Digimon in play into a Digimon card in your hand by paying its DNA digivolve cost.")
         effect1.is_inherited_effect = True

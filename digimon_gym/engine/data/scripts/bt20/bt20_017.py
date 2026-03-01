@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -16,6 +17,7 @@ class BT20_017(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [On Play] Play 1 [Atho, René & Por] Token. (Digimon/White/6000 DP/<Reboot>/<Blocker>/<Decoy Red/Black>)
         effect0 = ICardEffect()
+        effect0.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect0.set_effect_name("BT20-017 Play a token")
         effect0.set_effect_description("[On Play] Play 1 [Atho, René & Por] Token. (Digimon/White/6000 DP/<Reboot>/<Blocker>/<Decoy Red/Black>)")
         effect0.is_optional = True
@@ -44,6 +46,7 @@ class BT20_017(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [When Digivolving] Play 1 [Atho, René & Por] Token. (Digimon/White/6000 DP/<Reboot> <Blocker> <Decoy Red/Black>)
         effect1 = ICardEffect()
+        effect1.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect1.set_effect_name("BT20-017 Play token")
         effect1.set_effect_description("[When Digivolving] Play 1 [Atho, René & Por] Token. (Digimon/White/6000 DP/<Reboot> <Blocker> <Decoy Red/Black>)")
         effect1.is_optional = True
@@ -72,6 +75,7 @@ class BT20_017(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [Your Turn] [Once Per Turn] When any of your other Digimon are played, delete 1 of your opponent's Digimon with 8000 DP or less. Then, 1 of you Digimon may attack.
         effect2 = ICardEffect()
+        effect2.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect2.set_effect_name("BT20-017 Delete 8k DP or less, Then 1 Digimon may attack.")
         effect2.set_effect_description("[Your Turn] [Once Per Turn] When any of your other Digimon are played, delete 1 of your opponent's Digimon with 8000 DP or less. Then, 1 of you Digimon may attack.")
         effect2.set_max_count_per_turn(1)

@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -16,6 +17,7 @@ class BT15_003(CardScript):
         # Timing: EffectTiming.OnAllyAttack
         # [When Attacking][Once Per Turn] By trashing the top or bottom card of your security stack, gain 1 memory.
         effect0 = ICardEffect()
+        effect0.set_timing(EffectTiming.OnAllyAttack)
         effect0.set_effect_name("BT15-003 Trash the top or bottom of your security to gain Memory +1")
         effect0.set_effect_description("[When Attacking][Once Per Turn] By trashing the top or bottom card of your security stack, gain 1 memory.")
         effect0.is_inherited_effect = True

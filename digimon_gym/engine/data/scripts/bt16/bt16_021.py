@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -53,6 +54,7 @@ class BT16_021(CardScript):
         # Timing: EffectTiming.OnTappedAnyone
         # [All Turns] [Once Per Turn] When an opponent's Digimon becomes suspended, trash the top digivolution card of 1 of their Digimon. Then, 1 of their Digimon with no digivolution cards can't attack or block until the end of their turn.
         effect3 = ICardEffect()
+        effect3.set_timing(EffectTiming.OnTappedAnyone)
         effect3.set_effect_name("BT16-021 Trash 1 digivolution card & stun 1 Digimon")
         effect3.set_effect_description("[All Turns] [Once Per Turn] When an opponent's Digimon becomes suspended, trash the top digivolution card of 1 of their Digimon. Then, 1 of their Digimon with no digivolution cards can't attack or block until the end of their turn.")
         effect3.set_max_count_per_turn(1)

@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -45,6 +46,7 @@ class BT20_044(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [On Play] Suspend 2 of your opponent's Digimon or Tamers. Then, 1 of your Digimon may attack.
         effect2 = ICardEffect()
+        effect2.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect2.set_effect_name("BT20-044 Suspend 2 Digimon or Tamers and 1 of your Digimon can attack")
         effect2.set_effect_description("[On Play] Suspend 2 of your opponent's Digimon or Tamers. Then, 1 of your Digimon may attack.")
         effect2.is_on_play = True
@@ -78,6 +80,7 @@ class BT20_044(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [When Digivolving] Suspend 2 of your opponent's Digimon or Tamers. Then, 1 of your Digimon may attack.
         effect3 = ICardEffect()
+        effect3.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect3.set_effect_name("BT20-044 Suspend 2 Digimon or Tamers and 1 of your Digimon can attack")
         effect3.set_effect_description("[When Digivolving] Suspend 2 of your opponent's Digimon or Tamers. Then, 1 of your Digimon may attack.")
         effect3.is_when_digivolving = True
@@ -111,6 +114,7 @@ class BT20_044(CardScript):
         # Timing: EffectTiming.OnEndBattle
         # [All Turns] (Once Per Turn) When any of your Digimon with [Dracomon]/[Examon] in their texts delete 1 your opponent's Digimon in battle, delete 1 of their suspended Digimon or Tamers.
         effect4 = ICardEffect()
+        effect4.set_timing(EffectTiming.OnEndBattle)
         effect4.set_effect_name("BT20-044 Delete 1 of your opponent's suspended Digimon or Tamers")
         effect4.set_effect_description("[All Turns] (Once Per Turn) When any of your Digimon with [Dracomon]/[Examon] in their texts delete 1 your opponent's Digimon in battle, delete 1 of their suspended Digimon or Tamers.")
         effect4.set_max_count_per_turn(1)
@@ -153,6 +157,7 @@ class BT20_044(CardScript):
         # Timing: EffectTiming.OnEndBattle
         # [All Turns] (Once Per Turn) When any of your Digimon with [Dracomon]/[Examon] in their texts delete 1 your opponent's Digimon in battle, delete 1 of their suspended Digimon or Tamers.
         effect5 = ICardEffect()
+        effect5.set_timing(EffectTiming.OnEndBattle)
         effect5.set_effect_name("BT20-044 Delete 1 of your opponent's suspended Digimon or Tamers")
         effect5.set_effect_description("[All Turns] (Once Per Turn) When any of your Digimon with [Dracomon]/[Examon] in their texts delete 1 your opponent's Digimon in battle, delete 1 of their suspended Digimon or Tamers.")
         effect5.is_inherited_effect = True

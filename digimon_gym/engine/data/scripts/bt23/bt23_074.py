@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -58,6 +59,7 @@ class BT23_074(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [On Play] If you have [Mother Eater] in the breeding area, you may play up to 6 play cost's total worth of Digimon cards with the [Eater] trait from your hand without paying the costs.
         effect3 = ICardEffect()
+        effect3.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect3.set_effect_name("BT23-074 Play up to 6 Play cost Digimon")
         effect3.set_effect_description("[On Play] If you have [Mother Eater] in the breeding area, you may play up to 6 play cost's total worth of Digimon cards with the [Eater] trait from your hand without paying the costs.")
         effect3.is_on_play = True
@@ -96,6 +98,7 @@ class BT23_074(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [When Digivolving] If you have [Mother Eater] in the breeding area, you may play up to 6 play cost's total worth of Digimon cards with the [Eater] trait from your hand without paying the costs.
         effect4 = ICardEffect()
+        effect4.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect4.set_effect_name("BT23-074 Play up to 6 Play cost Digimon")
         effect4.set_effect_description("[When Digivolving] If you have [Mother Eater] in the breeding area, you may play up to 6 play cost's total worth of Digimon cards with the [Eater] trait from your hand without paying the costs.")
         effect4.is_when_digivolving = True

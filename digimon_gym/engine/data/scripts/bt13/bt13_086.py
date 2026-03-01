@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -16,6 +17,7 @@ class BT13_086(CardScript):
         # Timing: EffectTiming.BeforePayCost
         # When you would play this card, by deleting 1 of your level 4 Digimon, reduce the play cost by 6.
         effect0 = ICardEffect()
+        effect0.set_timing(EffectTiming.BeforePayCost)
         effect0.set_effect_name("BT13-086 Delete your 1 level 4 Digimon to get Play Cost -6")
         effect0.set_effect_description("When you would play this card, by deleting 1 of your level 4 Digimon, reduce the play cost by 6.")
         effect0.is_optional = True
@@ -96,6 +98,7 @@ class BT13_086(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [On Play] Play 1 [Akihiro Kurata] from your trash without paying the cost.
         effect3 = ICardEffect()
+        effect3.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect3.set_effect_name("BT13-086 Play 1 [Akihiro Kurata] from trash")
         effect3.set_effect_description("[On Play] Play 1 [Akihiro Kurata] from your trash without paying the cost.")
         effect3.is_on_play = True
@@ -127,6 +130,7 @@ class BT13_086(CardScript):
         # Timing: EffectTiming.OnDestroyedAnyone
         # [On Deletion] You may play 1 [ProtoGizmon] from your trash without paying the cost.
         effect4 = ICardEffect()
+        effect4.set_timing(EffectTiming.OnDestroyedAnyone)
         effect4.set_effect_name("BT13-086 Play 1 [ProtoGizmon] from trash")
         effect4.set_effect_description("[On Deletion] You may play 1 [ProtoGizmon] from your trash without paying the cost.")
         effect4.is_optional = True

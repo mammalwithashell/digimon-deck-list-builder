@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -40,6 +41,7 @@ class BT11_105(CardScript):
         # Timing: EffectTiming.OptionSkill
         # [Main] By placing 1 [Vemmon] or [Destromon] from your trash under 1 of your Digimon as its bottom digivolution card, you may digivolve 1 of your Digimon into 1 [Destromon] or [Galacticmon] from your trash for its digivolution cost.
         effect1 = ICardEffect()
+        effect1.set_timing(EffectTiming.OptionSkill)
         effect1.set_effect_name("BT11-105 Digivolve")
         effect1.set_effect_description("[Main] By placing 1 [Vemmon] or [Destromon] from your trash under 1 of your Digimon as its bottom digivolution card, you may digivolve 1 of your Digimon into 1 [Destromon] or [Galacticmon] from your trash for its digivolution cost.")
 
@@ -68,6 +70,7 @@ class BT11_105(CardScript):
         # Timing: EffectTiming.SecuritySkill
         # [Security] You may reveal the top 3 cards of your deck. Play 1 [Vemmon] among them without paying the cost. Trash the rest.
         effect2 = ICardEffect()
+        effect2.set_timing(EffectTiming.SecuritySkill)
         effect2.set_effect_name("BT11-105 Play Card, Reveal And Select")
         effect2.set_effect_description("[Security] You may reveal the top 3 cards of your deck. Play 1 [Vemmon] among them without paying the cost. Trash the rest.")
         effect2.is_security_effect = True

@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -46,6 +47,7 @@ class BT16_100(CardScript):
         # Timing: EffectTiming.BeforePayCost
         # When you would use this card, by trashing the top card of your security stack until you have 3 security cards left, reduce the use cost by 2 for each card trashed.
         effect1 = ICardEffect()
+        effect1.set_timing(EffectTiming.BeforePayCost)
         effect1.set_effect_name("BT16-100 Trash security cards until you have 3 left to reduce the cost of this card by 2 for each card trashed.")
         effect1.set_effect_description("When you would use this card, by trashing the top card of your security stack until you have 3 security cards left, reduce the use cost by 2 for each card trashed.")
         effect1.is_optional = True
@@ -84,6 +86,7 @@ class BT16_100(CardScript):
         # Timing: EffectTiming.OptionSkill
         # [Main] Delete 1 of your opponent's level 5 or lower Digimon. Then, if you have 2 or fewer security cards, place this card at the bottom of your security stack.
         effect2 = ICardEffect()
+        effect2.set_timing(EffectTiming.OptionSkill)
         effect2.set_effect_name("BT16-100 Delete, Add To Security")
         effect2.set_effect_description("[Main] Delete 1 of your opponent's level 5 or lower Digimon. Then, if you have 2 or fewer security cards, place this card at the bottom of your security stack.")
 
@@ -121,6 +124,7 @@ class BT16_100(CardScript):
         # Timing: EffectTiming.SecuritySkill
         # [Main] 1 of your opponent's Digimon gets -15000 DP for the turn.
         effect3 = ICardEffect()
+        effect3.set_timing(EffectTiming.SecuritySkill)
         effect3.set_effect_name("BT16-100 DP -15000")
         effect3.set_effect_description("[Main] 1 of your opponent's Digimon gets -15000 DP for the turn.")
         effect3.is_security_effect = True

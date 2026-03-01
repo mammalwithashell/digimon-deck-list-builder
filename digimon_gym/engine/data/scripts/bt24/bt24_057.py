@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -45,6 +46,7 @@ class BT24_057(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # Gain Keyword Cannot Attack
         effect2 = ICardEffect()
+        effect2.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect2.set_effect_name("BT24-057 Gain Keyword Cannot Attack")
         effect2.set_effect_description("Gain Keyword Cannot Attack")
         effect2.is_on_play = True
@@ -79,6 +81,7 @@ class BT24_057(CardScript):
         # Timing: EffectTiming.OnDestroyedAnyone
         # Gain Keyword Cannot Attack
         effect3 = ICardEffect()
+        effect3.set_timing(EffectTiming.OnDestroyedAnyone)
         effect3.set_effect_name("BT24-057 Gain Keyword Cannot Attack")
         effect3.set_effect_description("Gain Keyword Cannot Attack")
         effect3.is_on_deletion = True
@@ -111,6 +114,7 @@ class BT24_057(CardScript):
         # Timing: EffectTiming.OnDestroyedAnyone
         # [On Deletion] <De-Digivolve 1> 1 of your opponent's Digimon. (Trash 1 card from the top of 1 of your opponent's Digimon. Stop trashing when you would trash a level 3 card or the Digimon's last card.)
         effect4 = ICardEffect()
+        effect4.set_timing(EffectTiming.OnDestroyedAnyone)
         effect4.set_effect_name("BT24-057 De-Digivolve 1 on 1 Digimon")
         effect4.set_effect_description("[On Deletion] <De-Digivolve 1> 1 of your opponent's Digimon. (Trash 1 card from the top of 1 of your opponent's Digimon. Stop trashing when you would trash a level 3 card or the Digimon's last card.)")
         effect4.is_on_deletion = True

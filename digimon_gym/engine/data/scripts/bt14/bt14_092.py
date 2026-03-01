@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -16,6 +17,7 @@ class BT14_092(CardScript):
         # Timing: EffectTiming.OptionSkill
         # [Main] Choose 1 of your Digimon. Until the end of your opponent's turn, 3 of your opponent's Digimon with as many or fewer digivolution cards as that Digimon can't attack or block.
         effect0 = ICardEffect()
+        effect0.set_timing(EffectTiming.OptionSkill)
         effect0.set_effect_name("BT14-092 Gain Keyword Cannot Attack, Gain Keyword Cannot Block, Grant Cannot Block")
         effect0.set_effect_description("[Main] Choose 1 of your Digimon. Until the end of your opponent's turn, 3 of your opponent's Digimon with as many or fewer digivolution cards as that Digimon can't attack or block.")
         effect0._is_cannot_attack = True
@@ -53,6 +55,7 @@ class BT14_092(CardScript):
         # Timing: EffectTiming.SecuritySkill
         # [Security] 1 of your opponent's Digimon can't attack for the turn. Then, add this card to the hand.
         effect1 = ICardEffect()
+        effect1.set_timing(EffectTiming.SecuritySkill)
         effect1.set_effect_name("BT14-092 Add To Hand, Gain Keyword Cannot Attack")
         effect1.set_effect_description("[Security] 1 of your opponent's Digimon can't attack for the turn. Then, add this card to the hand.")
         effect1.is_security_effect = True

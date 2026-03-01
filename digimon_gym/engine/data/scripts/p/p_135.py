@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -16,6 +17,7 @@ class P_135(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [When Digivolving] Until the end of your opponent's turn, 1 of their Digimon can't attack Digimon and gain <Security A. -1>.
         effect0 = ICardEffect()
+        effect0.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect0.set_effect_name("P-135 1 Opponent's Digimon can't attack Digimon, and gain <Security A. -1>")
         effect0.set_effect_description("[When Digivolving] Until the end of your opponent's turn, 1 of their Digimon can't attack Digimon and gain <Security A. -1>.")
         effect0.is_when_digivolving = True
@@ -60,6 +62,7 @@ class P_135(CardScript):
         # Timing: EffectTiming.OnAllyAttack
         # [When Attacking] [Once Per Turn] 1 of your opponent's Digimon gets -2000 DP for the turn.
         effect2 = ICardEffect()
+        effect2.set_timing(EffectTiming.OnAllyAttack)
         effect2.set_effect_name("P-135 Opponent's Digimon gets -2000 DP for the turn")
         effect2.set_effect_description("[When Attacking] [Once Per Turn] 1 of your opponent's Digimon gets -2000 DP for the turn.")
         effect2.is_inherited_effect = True

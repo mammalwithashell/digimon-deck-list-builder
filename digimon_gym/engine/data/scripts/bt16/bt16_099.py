@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -16,6 +17,7 @@ class BT16_099(CardScript):
         # Timing: EffectTiming.OptionSkill
         # [Main] Reveal the top 3 cards of your deck. Add 1 card with the [SoC] trait among them to your hand. Place the remaining cards at the bottom of your deck in any order. Then, place this card in your battle area.
         effect0 = ICardEffect()
+        effect0.set_timing(EffectTiming.OptionSkill)
         effect0.set_effect_name("BT16-099 Trash From Hand, Add To Hand, Reveal And Select")
         effect0.set_effect_description("[Main] Reveal the top 3 cards of your deck. Add 1 card with the [SoC] trait among them to your hand. Place the remaining cards at the bottom of your deck in any order. Then, place this card in your battle area.")
 
@@ -78,6 +80,7 @@ class BT16_099(CardScript):
         # Timing: EffectTiming.OnDeclaration
         # [Main] You may play 1 card with the [SoC] trait from your trash with the play cost reduced by 2.
         effect2 = ICardEffect()
+        effect2.set_timing(EffectTiming.OnDeclaration)
         effect2.set_effect_name("BT16-099 Play 1 card from trash")
         effect2.set_effect_description("[Main] You may play 1 card with the [SoC] trait from your trash with the play cost reduced by 2.")
         effect2.set_max_count_per_turn(1)
@@ -113,6 +116,7 @@ class BT16_099(CardScript):
         # Timing: EffectTiming.SecuritySkill
         # [Main] Reveal the top 3 cards of your deck. Add 1 card with the [SoC] trait among them to your hand. Place the remaining cards at the bottom of your deck in any order. Then, place this card in your battle area.
         effect3 = ICardEffect()
+        effect3.set_timing(EffectTiming.SecuritySkill)
         effect3.set_effect_name("BT16-099 Trash From Hand, Add To Hand, Reveal And Select")
         effect3.set_effect_description("[Main] Reveal the top 3 cards of your deck. Add 1 card with the [SoC] trait among them to your hand. Place the remaining cards at the bottom of your deck in any order. Then, place this card in your battle area.")
         effect3.is_security_effect = True

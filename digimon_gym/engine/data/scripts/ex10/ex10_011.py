@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -30,6 +31,7 @@ class EX10_011(CardScript):
         # Timing: EffectTiming.OnDeclaration
         # [Trash] [Main] By deleting 2 of your level 5 or higher Digimon with [Myotismon] in their texts, play this card with the play cost reduced by 11.
         effect1 = ICardEffect()
+        effect1.set_timing(EffectTiming.OnDeclaration)
         effect1.set_effect_name("EX10-011 Play for reduced cost of 11")
         effect1.set_effect_description("[Trash] [Main] By deleting 2 of your level 5 or higher Digimon with [Myotismon] in their texts, play this card with the play cost reduced by 11.")
         effect1.is_optional = True
@@ -70,6 +72,7 @@ class EX10_011(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [On Play] [Once Per Turn] Delete 2 other unsuspended Digimon.
         effect2 = ICardEffect()
+        effect2.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect2.set_effect_name("EX10-011 Delete 2 unsuspened Digimon")
         effect2.set_effect_description("[On Play] [Once Per Turn] Delete 2 other unsuspended Digimon.")
         effect2.set_hash_string("Delete2_EX10-011")
@@ -104,6 +107,7 @@ class EX10_011(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [When Digivolving] [Once Per Turn] Delete 2 other unsuspended Digimon.
         effect3 = ICardEffect()
+        effect3.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect3.set_effect_name("EX10-011 Delete 2 unsuspened Digimon")
         effect3.set_effect_description("[When Digivolving] [Once Per Turn] Delete 2 other unsuspended Digimon.")
         effect3.set_hash_string("Delete2_EX10-011")
@@ -140,6 +144,7 @@ class EX10_011(CardScript):
         # Timing: EffectTiming.OnAllyAttack
         # [When Attacking] [Once Per Turn] Delete 2 other unsuspended Digimon.
         effect4 = ICardEffect()
+        effect4.set_timing(EffectTiming.OnAllyAttack)
         effect4.set_effect_name("EX10-011 Delete 2 unsuspened Digimon")
         effect4.set_effect_description("[When Attacking] [Once Per Turn] Delete 2 other unsuspended Digimon.")
         effect4.set_hash_string("Delete2_EX10-011")
@@ -174,6 +179,7 @@ class EX10_011(CardScript):
         # Timing: EffectTiming.OnDestroyedAnyone
         # [All Turns] [Once Per Turn] When any of your other Digimon or Tamers are deleted, trash your opponent's top security card and return 1 of their Digimon with the lowest DP to the bottom of the deck.
         effect5 = ICardEffect()
+        effect5.set_timing(EffectTiming.OnDestroyedAnyone)
         effect5.set_effect_name("EX10-011 Trash security, then return 1 to bottom deck")
         effect5.set_effect_description("[All Turns] [Once Per Turn] When any of your other Digimon or Tamers are deleted, trash your opponent's top security card and return 1 of their Digimon with the lowest DP to the bottom of the deck.")
         effect5.set_max_count_per_turn(1)

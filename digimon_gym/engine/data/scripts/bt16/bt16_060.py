@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -16,6 +17,7 @@ class BT16_060(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [On Play] Reveal the top 3 cards of your deck. For each card with the [D-Brigade] or [DigiPolice] trait among them, reduce the play cost of all of your opponent's Digimon by 1 for the turn. Return the revealed cards to the top or bottom of the deck. Then, delete 1 of your opponent's Digimon with a play cost of 4 or less.
         effect0 = ICardEffect()
+        effect0.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect0.set_effect_name("BT16-060 Reduce opponent's Digimon cost, then delete a 6 cost or less Digimon")
         effect0.set_effect_description("[On Play] Reveal the top 3 cards of your deck. For each card with the [D-Brigade] or [DigiPolice] trait among them, reduce the play cost of all of your opponent's Digimon by 1 for the turn. Return the revealed cards to the top or bottom of the deck. Then, delete 1 of your opponent's Digimon with a play cost of 4 or less.")
         effect0.is_on_play = True
@@ -65,6 +67,7 @@ class BT16_060(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [When Digivolving] Reveal the top 3 cards of your deck. For each card with the [D-Brigade] or [DigiPolice] trait among them, reduce the play cost of all of your opponent's Digimon by 1 for the turn. Return the revealed cards to the top or bottom of the deck. Then, delete 1 of your opponent's Digimon with a play cost of 4 or less.
         effect1 = ICardEffect()
+        effect1.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect1.set_effect_name("BT16-060 Reduce opponent's Digimon cost, then delete a 4 cost or less Digimon")
         effect1.set_effect_description("[When Digivolving] Reveal the top 3 cards of your deck. For each card with the [D-Brigade] or [DigiPolice] trait among them, reduce the play cost of all of your opponent's Digimon by 1 for the turn. Return the revealed cards to the top or bottom of the deck. Then, delete 1 of your opponent's Digimon with a play cost of 4 or less.")
         effect1.is_when_digivolving = True
@@ -114,6 +117,7 @@ class BT16_060(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [All Turns] [Once Per Turn] When one of your other Digimon with the [D-Brigade] or [DigiPolice] trait is played, <De-Digivolve 1> 1 of your opponent's Digimon.
         effect2 = ICardEffect()
+        effect2.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect2.set_effect_name("BT16-060 De-Digivolve 1")
         effect2.set_effect_description("[All Turns] [Once Per Turn] When one of your other Digimon with the [D-Brigade] or [DigiPolice] trait is played, <De-Digivolve 1> 1 of your opponent's Digimon.")
         effect2.is_inherited_effect = True

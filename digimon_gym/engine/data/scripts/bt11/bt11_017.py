@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -42,6 +43,7 @@ class BT11_017(CardScript):
         # Timing: EffectTiming.OnAttackTargetChanged
         # [Your Turn][Once Per Turn] When one of your Digimon's attack targets is switched, unsuspend this Digimon, and gain 1 memory for each red Tamer you have in play.
         effect2 = ICardEffect()
+        effect2.set_timing(EffectTiming.OnAttackTargetChanged)
         effect2.set_effect_name("BT11-017 Unsuspend this Digimon and gain Memory")
         effect2.set_effect_description("[Your Turn][Once Per Turn] When one of your Digimon's attack targets is switched, unsuspend this Digimon, and gain 1 memory for each red Tamer you have in play.")
         effect2.set_max_count_per_turn(1)

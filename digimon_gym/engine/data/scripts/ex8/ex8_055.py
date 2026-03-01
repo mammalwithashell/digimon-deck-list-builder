@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -28,6 +29,7 @@ class EX8_055(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [When Digivolving] By trashing any 3 [Mineral] or [Rock] trait cards from any of your Digimon's digivolution cards, this Digimon unsuspends, and it gains <Security A. +1> for the turn.
         effect1 = ICardEffect()
+        effect1.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect1.set_effect_name("EX8-055 By trashing 3 sources, Unsuspend and gain Security A. +1")
         effect1.set_effect_description("[When Digivolving] By trashing any 3 [Mineral] or [Rock] trait cards from any of your Digimon's digivolution cards, this Digimon unsuspends, and it gains <Security A. +1> for the turn.")
         effect1.is_optional = True
@@ -67,6 +69,7 @@ class EX8_055(CardScript):
         # Timing: EffectTiming.OnAllyAttack
         # [When Attacking] By trashing any 3 [Mineral] or [Rock] trait cards from any of your Digimon's digivolution cards, this Digimon unsuspends, and it gains <Security A. +1> for the turn.
         effect2 = ICardEffect()
+        effect2.set_timing(EffectTiming.OnAllyAttack)
         effect2.set_effect_name("EX8-055 By trashing 3 sources, Unsuspend and gain Security A. +1")
         effect2.set_effect_description("[When Attacking] By trashing any 3 [Mineral] or [Rock] trait cards from any of your Digimon's digivolution cards, this Digimon unsuspends, and it gains <Security A. +1> for the turn.")
         effect2.is_optional = True
@@ -106,6 +109,7 @@ class EX8_055(CardScript):
         # Timing: EffectTiming.OnEndTurn
         # [End of Your Turn] [Once Per Turn] You may place up to 3 [Mineral] or [Rock] cards from your trash as this Digimon's bottom digivolution cards.
         effect3 = ICardEffect()
+        effect3.set_timing(EffectTiming.OnEndTurn)
         effect3.set_effect_name("EX8-055 Place 3 cards from trash as bottom sources")
         effect3.set_effect_description("[End of Your Turn] [Once Per Turn] You may place up to 3 [Mineral] or [Rock] cards from your trash as this Digimon's bottom digivolution cards.")
         effect3.is_optional = True

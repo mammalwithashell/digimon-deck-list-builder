@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -60,6 +61,7 @@ class BT21_039(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [When Digivolving] You may play 1 level 4 or lower Digimon card with the [WG] trait from your hand without paying the cost.
         effect3 = ICardEffect()
+        effect3.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect3.set_effect_name("BT21-039 You may play 1 level 4 or lower Digimon card from your hand.")
         effect3.set_effect_description("[When Digivolving] You may play 1 level 4 or lower Digimon card with the [WG] trait from your hand without paying the cost.")
         effect3.is_optional = True
@@ -94,6 +96,7 @@ class BT21_039(CardScript):
         # Timing: EffectTiming.OnAllyAttack
         # [When Attacking] (Once Per Turn) 1 of your other Digimon may digivolve into a Digimon card with the [WG] trait in the hand without paying the cost.
         effect4 = ICardEffect()
+        effect4.set_timing(EffectTiming.OnAllyAttack)
         effect4.set_effect_name("BT21-039 1 of your other Digimon digivolves without paying the cost")
         effect4.set_effect_description("[When Attacking] (Once Per Turn) 1 of your other Digimon may digivolve into a Digimon card with the [WG] trait in the hand without paying the cost.")
         effect4.is_optional = True

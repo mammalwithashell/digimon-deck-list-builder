@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -16,6 +17,7 @@ class BT19_085(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [All Turns] When any of your Digimon digivolve into a green Digimon, by suspending this Tamer, suspend 1 of your opponent's Digimon.
         effect0 = ICardEffect()
+        effect0.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect0.set_effect_name("BT19-085 Suspend 1 opponent Digimon")
         effect0.set_effect_description("[All Turns] When any of your Digimon digivolve into a green Digimon, by suspending this Tamer, suspend 1 of your opponent's Digimon.")
         effect0.is_optional = True
@@ -49,6 +51,7 @@ class BT19_085(CardScript):
         # Timing: EffectTiming.OnStartMainPhase
         # [Start of Your Main Phase] If you have a Digimon with [Terriermon]/[Gargomon]/[Rapidmon] in its name, gain 1 memory.
         effect1 = ICardEffect()
+        effect1.set_timing(EffectTiming.OnStartMainPhase)
         effect1.set_effect_name("BT19-085 Memory +1")
         effect1.set_effect_description("[Start of Your Main Phase] If you have a Digimon with [Terriermon]/[Gargomon]/[Rapidmon] in its name, gain 1 memory.")
 

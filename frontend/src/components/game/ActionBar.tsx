@@ -20,7 +20,7 @@ export function ActionBar({ phase, actionMask, onAction, isGameOver }: ActionBar
   const phaseName = PHASE_NAMES[phase] ?? 'Unknown';
 
   return (
-    <div className="flex items-center gap-2 px-3 py-2 bg-gray-800 border-t border-gray-700">
+    <div data-testid="action-bar" className="flex items-center gap-2 px-3 py-2 bg-gray-800 border-t border-gray-700">
       <span className="text-xs text-gray-500">{phaseName}:</span>
 
       {phase === GamePhase.Mulligan && canKeepHand && (

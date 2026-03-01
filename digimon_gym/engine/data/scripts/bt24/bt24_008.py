@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -16,6 +17,7 @@ class BT24_008(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [On Play] By trashing 1 card with the [Reptile], [Dragonkin] or [LIBERATOR] trait in your hand, <Draw 2>.
         effect0 = ICardEffect()
+        effect0.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect0.set_effect_name("BT24-008 Trash 1 [Reptile], [Dragonkin] or [LIBERATOR] trait to <Draw 2>")
         effect0.set_effect_description("[On Play] By trashing 1 card with the [Reptile], [Dragonkin] or [LIBERATOR] trait in your hand, <Draw 2>.")
         effect0.is_optional = True
@@ -38,15 +40,17 @@ class BT24_008(CardScript):
             if not (player and game):
                 return
             def hand_filter(c):
+                if not (any('Reptile' in _t or 'Dragonkin' in _t or 'LIBERATOR' in _t for _t in (getattr(c, 'card_traits', []) or []))):
+                    return False
                 return True
             def on_trashed(selected):
                 if selected in player.hand_cards:
                     player.hand_cards.remove(selected)
                     player.trash_cards.append(selected)
+                # Draw 2 after trashing (trash is the cost)
+                player.draw_cards(2)
             game.effect_select_hand_card(
                 player, hand_filter, on_trashed, is_optional=True)
-            if player:
-                player.draw_cards(2)
 
         effect0.set_on_process_callback(process0)
         effects.append(effect0)
@@ -54,6 +58,7 @@ class BT24_008(CardScript):
         # Timing: EffectTiming.OnLoseSecurity
         # Gain 1 memory
         effect1 = ICardEffect()
+        effect1.set_timing(EffectTiming.OnLoseSecurity)
         effect1.set_effect_name("BT24-008 Gain 1 memory")
         effect1.set_effect_description("Gain 1 memory")
         effect1.is_inherited_effect = True

@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -16,6 +17,7 @@ class BT14_030(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [On Play] By returning 1 of your opponent's level 3 Digimon or 1 of your Digimon to the hand, return 1 of your opponent's Digimon whose level is less than or equal to the returned Digimon's level to the hand.
         effect0 = ICardEffect()
+        effect0.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect0.set_effect_name("BT14-030 Return Digimons to hand")
         effect0.set_effect_description("[On Play] By returning 1 of your opponent's level 3 Digimon or 1 of your Digimon to the hand, return 1 of your opponent's Digimon whose level is less than or equal to the returned Digimon's level to the hand.")
         effect0.is_optional = True
@@ -52,6 +54,7 @@ class BT14_030(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [When Digivolving] By returning 1 of your opponent's level 3 Digimon or 1 of your Digimon to the hand, return 1 of your opponent's Digimon whose level is less than or equal to the returned Digimon's level to the hand.
         effect1 = ICardEffect()
+        effect1.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect1.set_effect_name("BT14-030 Return Digimons to hand")
         effect1.set_effect_description("[When Digivolving] By returning 1 of your opponent's level 3 Digimon or 1 of your Digimon to the hand, return 1 of your opponent's Digimon whose level is less than or equal to the returned Digimon's level to the hand.")
         effect1.is_optional = True
@@ -88,6 +91,7 @@ class BT14_030(CardScript):
         # Timing: EffectTiming.OnPermamemtReturnedToHand
         # [Your Turn][Once Per Turn] When another Digimon returns to the hand, <Recovery +1 (Deck)>.
         effect2 = ICardEffect()
+        effect2.set_timing(EffectTiming.OnPermamemtReturnedToHand)
         effect2.set_effect_name("BT14-030 Recovery +1 (Deck)")
         effect2.set_effect_description("[Your Turn][Once Per Turn] When another Digimon returns to the hand, <Recovery +1 (Deck)>.")
         effect2.set_max_count_per_turn(1)

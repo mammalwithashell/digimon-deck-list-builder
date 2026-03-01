@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -16,6 +17,7 @@ class BT11_038(CardScript):
         # Timing: EffectTiming.OnDestroyedAnyone
         # [On Deletion] If you have a purple Digimon or purple Tamer in play, you may play 1 [Devimon] from your trash without paying the cost.
         effect0 = ICardEffect()
+        effect0.set_timing(EffectTiming.OnDestroyedAnyone)
         effect0.set_effect_name("BT11-038 Play 1 Digimon from trash")
         effect0.set_effect_description("[On Deletion] If you have a purple Digimon or purple Tamer in play, you may play 1 [Devimon] from your trash without paying the cost.")
         effect0.is_optional = True

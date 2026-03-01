@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -36,6 +37,7 @@ class BT21_077(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # Trash From Hand, Grant Skill, Effect Immunity
         effect1 = ICardEffect()
+        effect1.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect1.set_effect_name("BT21-077 Force attack and give collision")
         effect1.set_effect_description("Trash From Hand, Grant Skill, Effect Immunity")
         effect1.is_on_play = True
@@ -79,6 +81,7 @@ class BT21_077(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [Start of Your Main Phase] Attack with this Digimon.
         effect2 = ICardEffect()
+        effect2.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect2.set_effect_name("BT21-077 Attack with this Digimon")
         effect2.set_effect_description("[Start of Your Main Phase] Attack with this Digimon.")
         effect2.is_on_play = True
@@ -109,6 +112,7 @@ class BT21_077(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # Trash From Hand, Grant Skill, Effect Immunity
         effect3 = ICardEffect()
+        effect3.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect3.set_effect_name("BT21-077 Force attack and give collision")
         effect3.set_effect_description("Trash From Hand, Grant Skill, Effect Immunity")
         effect3.is_when_digivolving = True
@@ -152,6 +156,7 @@ class BT21_077(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [Start of Your Main Phase] Attack with this Digimon.
         effect4 = ICardEffect()
+        effect4.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect4.set_effect_name("BT21-077 Attack with this Digimon")
         effect4.set_effect_description("[Start of Your Main Phase] Attack with this Digimon.")
         effect4.is_on_play = True
@@ -182,6 +187,7 @@ class BT21_077(CardScript):
         # Timing: EffectTiming.OnDestroyedAnyone
         # [On Deletion] You may play 1 [Canoweissmon] or 1 level 4 or lower Digimon card with [Gammamon] in its text from your trash without paying the cost.
         effect5 = ICardEffect()
+        effect5.set_timing(EffectTiming.OnDestroyedAnyone)
         effect5.set_effect_name("BT21-077 Play Cannonweissmon or level 4 or lower gammamon in text digimon")
         effect5.set_effect_description("[On Deletion] You may play 1 [Canoweissmon] or 1 level 4 or lower Digimon card with [Gammamon] in its text from your trash without paying the cost.")
         effect5.is_on_deletion = True
@@ -220,6 +226,7 @@ class BT21_077(CardScript):
         # Timing: EffectTiming.OnDestroyedAnyone
         # [On Deletion] You may play 1 level 4 or lower Digimon card with [Gammamon] in its text from your trash without paying the cost.
         effect6 = ICardEffect()
+        effect6.set_timing(EffectTiming.OnDestroyedAnyone)
         effect6.set_effect_name("BT21-077 Play Cannonweissmon or level 4 or lower gammamon in text digimon")
         effect6.set_effect_description("[On Deletion] You may play 1 level 4 or lower Digimon card with [Gammamon] in its text from your trash without paying the cost.")
         effect6.is_inherited_effect = True

@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -41,6 +42,7 @@ class BT15_037(CardScript):
         # Timing: EffectTiming.OnLoseSecurity
         # [All Turns][Once per turn] When a card is removed from your security stack, gain 1 memory.
         effect2 = ICardEffect()
+        effect2.set_timing(EffectTiming.OnLoseSecurity)
         effect2.set_effect_name("BT15-037 Gain 1 memory.")
         effect2.set_effect_description("[All Turns][Once per turn] When a card is removed from your security stack, gain 1 memory.")
         effect2.set_max_count_per_turn(1)
@@ -67,6 +69,7 @@ class BT15_037(CardScript):
         # Timing: EffectTiming.OnDiscardSecurity
         # When an effect trashes this card from your security stack, you may play this card without paying the cost.
         effect3 = ICardEffect()
+        effect3.set_timing(EffectTiming.OnDiscardSecurity)
         effect3.set_effect_name("BT15-037 Play this card without paying the cost")
         effect3.set_effect_description("When an effect trashes this card from your security stack, you may play this card without paying the cost.")
         effect3.is_optional = True

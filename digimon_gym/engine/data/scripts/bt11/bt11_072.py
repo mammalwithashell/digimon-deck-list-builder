@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -16,6 +17,7 @@ class BT11_072(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [On Play] Reveal the top 5 cards of your deck. Add 1 [Analogman] among them to your hand, and add 1 card with [Cyborg] or [Machine] in its traits to your hand or place it under this Digimon as its bottom digivolution card. Trash the rest.
         effect0 = ICardEffect()
+        effect0.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect0.set_effect_name("BT11-072 Reveal the top 5 cards of deck")
         effect0.set_effect_description("[On Play] Reveal the top 5 cards of your deck. Add 1 [Analogman] among them to your hand, and add 1 card with [Cyborg] or [Machine] in its traits to your hand or place it under this Digimon as its bottom digivolution card. Trash the rest.")
         effect0.is_on_play = True
@@ -54,6 +56,7 @@ class BT11_072(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [When Digivolving] Reveal the top 5 cards of your deck. Add 1 [Analogman] among them to your hand, and add 1 card with [Cyborg] or [Machine] in its traits to your hand or place it under this Digimon as its bottom digivolution card. Trash the rest.
         effect1 = ICardEffect()
+        effect1.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect1.set_effect_name("BT11-072 Reveal the top 5 cards of deck")
         effect1.set_effect_description("[When Digivolving] Reveal the top 5 cards of your deck. Add 1 [Analogman] among them to your hand, and add 1 card with [Cyborg] or [Machine] in its traits to your hand or place it under this Digimon as its bottom digivolution card. Trash the rest.")
         effect1.is_when_digivolving = True
@@ -92,6 +95,7 @@ class BT11_072(CardScript):
         # Timing: EffectTiming.OnDestroyedAnyone
         # [On Deletion] By placing 1 of your [Analogman]s in play at the bottom of its owner's deck, you may play 1 [Machinedramon] from your hand without paying the cost.
         effect2 = ICardEffect()
+        effect2.set_timing(EffectTiming.OnDestroyedAnyone)
         effect2.set_effect_name("BT11-072 Return 1 [Analogman] to the bottom of deck to play 1 [Machinedramon] from hand")
         effect2.set_effect_description("[On Deletion] By placing 1 of your [Analogman]s in play at the bottom of its owner's deck, you may play 1 [Machinedramon] from your hand without paying the cost.")
         effect2.is_optional = True

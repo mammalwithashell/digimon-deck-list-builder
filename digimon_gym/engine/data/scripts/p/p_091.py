@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -42,6 +43,7 @@ class P_091(CardScript):
         # Timing: EffectTiming.OnDestroyedAnyone
         # [On Deletion] Return 1 red or purple Digimon card from your trash to the hand.
         effect2 = ICardEffect()
+        effect2.set_timing(EffectTiming.OnDestroyedAnyone)
         effect2.set_effect_name("P-091 Return 1 card from trash to hand")
         effect2.set_effect_description("[On Deletion] Return 1 red or purple Digimon card from your trash to the hand.")
         effect2.is_inherited_effect = True

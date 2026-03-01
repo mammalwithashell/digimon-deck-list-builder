@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -54,6 +55,7 @@ class EX10_017(CardScript):
         # Timing: EffectTiming.WhenLinked
         # [Your Turn] [Once Per Turn] When this Digimon gets linked, if you have 1 or fewer Tamers, you may play 1 Tamer card with the [Leviathan] trait from your hand without paying the cost.
         effect3 = ICardEffect()
+        effect3.set_timing(EffectTiming.WhenLinked)
         effect3.set_effect_name("EX10-017 Play 1 Tamer with [Leviathan] trait")
         effect3.set_effect_description("[Your Turn] [Once Per Turn] When this Digimon gets linked, if you have 1 or fewer Tamers, you may play 1 Tamer card with the [Leviathan] trait from your hand without paying the cost.")
         effect3.is_optional = True
@@ -90,6 +92,7 @@ class EX10_017(CardScript):
         # Timing: EffectTiming.OnTappedAnyone
         # [All Turns] When any of your opponent's Digimon suspend, by trashing 1 of this Digimon's link cards, <Draw 1> (Draw 1 card from your deck.) and gain 1 memory.
         effect4 = ICardEffect()
+        effect4.set_timing(EffectTiming.OnTappedAnyone)
         effect4.set_effect_name("EX10-017 By trashing 1 link card, draw 1 & gain 1 memory")
         effect4.set_effect_description("[All Turns] When any of your opponent's Digimon suspend, by trashing 1 of this Digimon's link cards, <Draw 1> (Draw 1 card from your deck.) and gain 1 memory.")
 

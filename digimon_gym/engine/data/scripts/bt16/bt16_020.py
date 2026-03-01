@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -43,6 +44,7 @@ class BT16_020(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [When Digivolving] Both players draw 1 card from their decks. Then, if your opponent has 8 or more cards in their hand or this Digimon has 3 or more digivolution cards, gain 1 memory.
         effect2 = ICardEffect()
+        effect2.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect2.set_effect_name("BT16-020 Draw 1 card, then Memory +1")
         effect2.set_effect_description("[When Digivolving] Both players draw 1 card from their decks. Then, if your opponent has 8 or more cards in their hand or this Digimon has 3 or more digivolution cards, gain 1 memory.")
         effect2.set_hash_string("GaoGamon_BT16_020_When_Digivolving")

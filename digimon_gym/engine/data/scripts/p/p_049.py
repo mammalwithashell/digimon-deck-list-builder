@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -16,6 +17,7 @@ class P_049(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [When Digivolving] If you have a Tamer in play, this Digimon gains <Security Attack +1> for the turn. (This Digimon checks 1 additional security card.)
         effect0 = ICardEffect()
+        effect0.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect0.set_effect_name("P-049 This Digimon gains Security Attack +1")
         effect0.set_effect_description("[When Digivolving] If you have a Tamer in play, this Digimon gains <Security Attack +1> for the turn. (This Digimon checks 1 additional security card.)")
         effect0.is_when_digivolving = True
@@ -33,6 +35,7 @@ class P_049(CardScript):
         # Timing: EffectTiming.OnBlockAnyone
         # [Your Turn][Once Per Turn] When this Digimon is blocked, trash the top card of your opponent's security stack.
         effect1 = ICardEffect()
+        effect1.set_timing(EffectTiming.OnBlockAnyone)
         effect1.set_effect_name("P-049 Trash the top card of opponent's security")
         effect1.set_effect_description("[Your Turn][Once Per Turn] When this Digimon is blocked, trash the top card of your opponent's security stack.")
         effect1.set_max_count_per_turn(1)

@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -28,6 +29,7 @@ class BT15_072(CardScript):
         # Timing: EffectTiming.WhenRemoveField
         # [All Turns] When one of your [Apocalymon] or Digimon with the [Dark Masters] trait would leave the battle area other than by one of your effects, by deleting this Digimon, prevent 1 of those Digimon from leaving play.
         effect1 = ICardEffect()
+        effect1.set_timing(EffectTiming.WhenRemoveField)
         effect1.set_effect_name("BT15-072 Delete this Digimon to prevent 1 other Digimon from leaving Battle Area")
         effect1.set_effect_description("[All Turns] When one of your [Apocalymon] or Digimon with the [Dark Masters] trait would leave the battle area other than by one of your effects, by deleting this Digimon, prevent 1 of those Digimon from leaving play.")
         effect1.is_optional = True

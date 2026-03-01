@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -16,6 +17,7 @@ class BT19_081(CardScript):
         # Timing: EffectTiming.OnStartMainPhase
         # [Start of Your Main Phase] By placing 1 Digimon card with the [Blue Flare]/[Xros Heart] trait from your hand under any of your Tamers, gain 1 memory.
         effect0 = ICardEffect()
+        effect0.set_timing(EffectTiming.OnStartMainPhase)
         effect0.set_effect_name("BT19-081 Place 1 [Blue Flare]/[Xros Heart] card under 1 of your Tamers to gain 1 memory")
         effect0.set_effect_description("[Start of Your Main Phase] By placing 1 Digimon card with the [Blue Flare]/[Xros Heart] trait from your hand under any of your Tamers, gain 1 memory.")
         effect0.is_optional = True
@@ -44,6 +46,7 @@ class BT19_081(CardScript):
         # Timing: EffectTiming.BeforePayCost
         # [All Turns] When any of your [Blue Flare] trait Digimon cards with DigiXros requirements would be played, by suspending this Tamer, you may place cards from under your Tamers as digivolution cards for a DigiXros.
         effect1 = ICardEffect()
+        effect1.set_timing(EffectTiming.BeforePayCost)
         effect1.set_effect_name("BT19-081 Can select DigiXros cards from Tamer's digivolution cards")
         effect1.set_effect_description("[All Turns] When any of your [Blue Flare] trait Digimon cards with DigiXros requirements would be played, by suspending this Tamer, you may place cards from under your Tamers as digivolution cards for a DigiXros.")
         effect1.is_optional = True

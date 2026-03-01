@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -40,6 +41,7 @@ class BT10_015(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [On Play] You may place 1 Digimon card with [Xros Heart] in its traits from your hand or from under one of your Tamers under this Digimon as its bottom digivolution card. Then, if [Beelzemon] is in this Digimon's digivolution cards, you may play 1 level 4 or lower Digimon card with [Xros Heart] in its traits from your trash without paying its cost.
         effect2 = ICardEffect()
+        effect2.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect2.set_effect_name("BT10-015 Place 1 card to digivolution cards and play 1 Digimon from trash")
         effect2.set_effect_description("[On Play] You may place 1 Digimon card with [Xros Heart] in its traits from your hand or from under one of your Tamers under this Digimon as its bottom digivolution card. Then, if [Beelzemon] is in this Digimon's digivolution cards, you may play 1 level 4 or lower Digimon card with [Xros Heart] in its traits from your trash without paying its cost.")
         effect2.is_on_play = True
@@ -73,6 +75,7 @@ class BT10_015(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [When Digivolving] You may place 1 Digimon card with [Xros Heart] in its traits from your hand or from under one of your Tamers under this Digimon as its bottom digivolution card. Then, if [Beelzemon] is in this Digimon's digivolution cards, you may play 1 level 4 or lower Digimon card with [Xros Heart] in its traits from your trash without paying its cost.
         effect3 = ICardEffect()
+        effect3.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect3.set_effect_name("BT10-015 Place 1 card to digivolution cards and play 1 Digimon from trash")
         effect3.set_effect_description("[When Digivolving] You may place 1 Digimon card with [Xros Heart] in its traits from your hand or from under one of your Tamers under this Digimon as its bottom digivolution card. Then, if [Beelzemon] is in this Digimon's digivolution cards, you may play 1 level 4 or lower Digimon card with [Xros Heart] in its traits from your trash without paying its cost.")
         effect3.is_when_digivolving = True

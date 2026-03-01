@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -52,6 +53,7 @@ class BT24_042(CardScript):
         # Timing: EffectTiming.OnDiscardHand
         # [Your Turn] [Once Per Turn] When your hand is trashed from, this [Demon] or [Titan] trait Digimon may digivolve into [Titamon] or a [Titan] trait Digimon card in the trash with the digivolution cost reduced by 1.
         effect2 = ICardEffect()
+        effect2.set_timing(EffectTiming.OnDiscardHand)
         effect2.set_effect_name("BT24-042 When your hand is trashed from, digivolve")
         effect2.set_effect_description("[Your Turn] [Once Per Turn] When your hand is trashed from, this [Demon] or [Titan] trait Digimon may digivolve into [Titamon] or a [Titan] trait Digimon card in the trash with the digivolution cost reduced by 1.")
         effect2.is_inherited_effect = True

@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -16,6 +17,7 @@ class BT11_090(CardScript):
         # Timing: EffectTiming.OnStartMainPhase
         # [Start of Your Main Phase] 1 of your Digimon with [Gaomon] or [Gaogamon] in its name gains <Jamming> for the turn.
         effect0 = ICardEffect()
+        effect0.set_timing(EffectTiming.OnStartMainPhase)
         effect0.set_effect_name("BT11-090 Your 1 [Gaomon] or [Gaogamon] gains Jamming")
         effect0.set_effect_description("[Start of Your Main Phase] 1 of your Digimon with [Gaomon] or [Gaogamon] in its name gains <Jamming> for the turn.")
         effect0._is_jamming = True
@@ -52,6 +54,7 @@ class BT11_090(CardScript):
         # Timing: EffectTiming.OnAddHand
         # [Your Turn] When an effect adds cards to your opponent's hand, by suspending this Tamer, gain 1 memory.
         effect1 = ICardEffect()
+        effect1.set_timing(EffectTiming.OnAddHand)
         effect1.set_effect_name("BT11-090 Memory +1")
         effect1.set_effect_description("[Your Turn] When an effect adds cards to your opponent's hand, by suspending this Tamer, gain 1 memory.")
         effect1.is_optional = True

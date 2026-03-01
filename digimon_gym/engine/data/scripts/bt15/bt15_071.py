@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -29,6 +30,7 @@ class BT15_071(CardScript):
         # Timing: EffectTiming.OnAllyAttack
         # [When Attacking] By trashing 1 card in your hand, delete 1 of your opponent's Digimon with 3000 DP or less. If a Tamer card with the [SoC] trait is in this Digimon's digivolution cards, <Draw 1>.
         effect1 = ICardEffect()
+        effect1.set_timing(EffectTiming.OnAllyAttack)
         effect1.set_effect_name("BT15-071 Delete 1 Digimon and Draw 1")
         effect1.set_effect_description("[When Attacking] By trashing 1 card in your hand, delete 1 of your opponent's Digimon with 3000 DP or less. If a Tamer card with the [SoC] trait is in this Digimon's digivolution cards, <Draw 1>.")
         effect1.is_optional = True
@@ -83,6 +85,7 @@ class BT15_071(CardScript):
         # Timing: EffectTiming.OnEndAttack
         # [End of Attack] [Once Per Turn] If your opponent has 1 or more memory, gain 1 memory.
         effect2 = ICardEffect()
+        effect2.set_timing(EffectTiming.OnEndAttack)
         effect2.set_effect_name("BT15-071 Memory +1")
         effect2.set_effect_description("[End of Attack] [Once Per Turn] If your opponent has 1 or more memory, gain 1 memory.")
         effect2.is_inherited_effect = True

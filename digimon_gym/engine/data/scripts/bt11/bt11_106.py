@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -40,6 +41,7 @@ class BT11_106(CardScript):
         # Timing: EffectTiming.OptionSkill
         # Gain Keyword Cannot Be Blocked
         effect1 = ICardEffect()
+        effect1.set_timing(EffectTiming.OptionSkill)
         effect1.set_effect_name("BT11-106 Gain Keyword Cannot Be Blocked")
         effect1.set_effect_description("Gain Keyword Cannot Be Blocked")
         effect1._is_cannot_be_blocked = True
@@ -73,6 +75,7 @@ class BT11_106(CardScript):
         # Timing: EffectTiming.OptionSkill
         # [On Deletion] Gain 3 memory.
         effect2 = ICardEffect()
+        effect2.set_timing(EffectTiming.OptionSkill)
         effect2.set_effect_name("BT11-106 Memory +3")
         effect2.set_effect_description("[On Deletion] Gain 3 memory.")
 
@@ -104,6 +107,7 @@ class BT11_106(CardScript):
         # Timing: EffectTiming.SecuritySkill
         # [Security] Reveal the top 3 cards of your deck. You may play 1 black Digimon card with a play cost of 3 or less among them without paying the cost. Trash the rest.
         effect3 = ICardEffect()
+        effect3.set_timing(EffectTiming.SecuritySkill)
         effect3.set_effect_name("BT11-106 Play Card, Reveal And Select")
         effect3.set_effect_description("[Security] Reveal the top 3 cards of your deck. You may play 1 black Digimon card with a play cost of 3 or less among them without paying the cost. Trash the rest.")
         effect3.is_security_effect = True

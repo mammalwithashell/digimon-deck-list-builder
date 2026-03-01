@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -29,6 +30,7 @@ class EX8_037(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [When Digivolving] If [Sakuyamon] or [X Antibody] is in this Digimon's digivolution cards, play 1 [Uka-no-Mitama] (Digimon/Yellow/9000 DP/<Rush>) Token.
         effect1 = ICardEffect()
+        effect1.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect1.set_effect_name("EX8-037 Play a Token")
         effect1.set_effect_description("[When Digivolving] If [Sakuyamon] or [X Antibody] is in this Digimon's digivolution cards, play 1 [Uka-no-Mitama] (Digimon/Yellow/9000 DP/<Rush>) Token.")
         effect1.is_when_digivolving = True
@@ -46,6 +48,7 @@ class EX8_037(CardScript):
         # Timing: EffectTiming.OnAllyAttack
         # [Your Turn] [Once Per Turn] When any of your Digimon attack, you may use 1 single-color Option card with a cost of 5 or less from your hand without paying the cost. If you did, 1 of your Digimon unsuspends.
         effect2 = ICardEffect()
+        effect2.set_timing(EffectTiming.OnAllyAttack)
         effect2.set_effect_name("EX8-037 Play 1 single-color option card")
         effect2.set_effect_description("[Your Turn] [Once Per Turn] When any of your Digimon attack, you may use 1 single-color Option card with a cost of 5 or less from your hand without paying the cost. If you did, 1 of your Digimon unsuspends.")
         effect2.is_optional = True

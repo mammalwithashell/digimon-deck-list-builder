@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -39,6 +40,7 @@ class BT16_093(CardScript):
         # Timing: EffectTiming.OptionSkill
         # [Main] You may digivolve 1 of your Digimon with [Gargomon] or [Rapidmon] in its name into a Digimon card with [Rapidmon] in its name in your hand, ignoring its digivolution requirements and without paying its memory cost. The Digimon that digivolved with this effect can't have its DP reduced by your opponent's effects until the end of your opponent's turn.
         effect1 = ICardEffect()
+        effect1.set_timing(EffectTiming.OptionSkill)
         effect1.set_effect_name("BT16-093 Digivolve, Gain Keyword Immune Dp Minus")
         effect1.set_effect_description("[Main] You may digivolve 1 of your Digimon with [Gargomon] or [Rapidmon] in its name into a Digimon card with [Rapidmon] in its name in your hand, ignoring its digivolution requirements and without paying its memory cost. The Digimon that digivolved with this effect can't have its DP reduced by your opponent's effects until the end of your opponent's turn.")
         effect1._is_immune_dp_minus = True
@@ -74,6 +76,7 @@ class BT16_093(CardScript):
         # Timing: EffectTiming.SecuritySkill
         # [Security] You may play 1 level 3 Digimon card with [Terriermon] in it's name from you hand or trash without paying the cost. Then, add this card to your hand.
         effect2 = ICardEffect()
+        effect2.set_timing(EffectTiming.SecuritySkill)
         effect2.set_effect_name("BT16-093 Play Card, Add To Hand")
         effect2.set_effect_description("[Security] You may play 1 level 3 Digimon card with [Terriermon] in it's name from you hand or trash without paying the cost. Then, add this card to your hand.")
         effect2.is_security_effect = True

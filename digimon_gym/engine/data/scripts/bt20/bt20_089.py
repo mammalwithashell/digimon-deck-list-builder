@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -39,6 +40,7 @@ class BT20_089(CardScript):
         # Timing: EffectTiming.OnStartMainPhase
         # [Start of Your Main Phase] If your opponent has a Digimon, gain 1 memory.
         effect1 = ICardEffect()
+        effect1.set_timing(EffectTiming.OnStartMainPhase)
         effect1.set_effect_name("BT20-089 Memory +1")
         effect1.set_effect_description("[Start of Your Main Phase] If your opponent has a Digimon, gain 1 memory.")
 
@@ -66,6 +68,7 @@ class BT20_089(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [All Turns] When any of your Digimon are played or digivolve, you may <Mind Link> with 1 of your Digimon with [Pulsemon] in text or the [SoC] or [SEEKERS] trait.
         effect2 = ICardEffect()
+        effect2.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect2.set_effect_name("BT20-089 Mind Link")
         effect2.set_effect_description("[All Turns] When any of your Digimon are played or digivolve, you may <Mind Link> with 1 of your Digimon with [Pulsemon] in text or the [SoC] or [SEEKERS] trait.")
         effect2.is_optional = True
@@ -126,6 +129,7 @@ class BT20_089(CardScript):
         # Timing: EffectTiming.OnEndTurn
         # [End of All Turns] You may play 1 [Eiji Nagasumi] from this Digimon's digivolution cards without paying the cost.
         effect5 = ICardEffect()
+        effect5.set_timing(EffectTiming.OnEndTurn)
         effect5.set_effect_name("BT20-089 Play 1 [Eiji Nagasumi] from this Digimon's digivolution cards")
         effect5.set_effect_description("[End of All Turns] You may play 1 [Eiji Nagasumi] from this Digimon's digivolution cards without paying the cost.")
         effect5.is_inherited_effect = True

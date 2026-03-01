@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -16,6 +17,7 @@ class EX10_025(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [On Play] You may place 2 cards with the [Mineral] or [Rock] trait from your trash as 1 of your [Mineral] or [Rock] trait Digimon's bottom digivolution cards.
         effect0 = ICardEffect()
+        effect0.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect0.set_effect_name("EX10-025 Place 2 as bottom digivolution sources")
         effect0.set_effect_description("[On Play] You may place 2 cards with the [Mineral] or [Rock] trait from your trash as 1 of your [Mineral] or [Rock] trait Digimon's bottom digivolution cards.")
         effect0.is_on_play = True
@@ -33,6 +35,7 @@ class EX10_025(CardScript):
         # Timing: EffectTiming.OnDigivolutionCardDiscarded
         # When effects trash this card from a [Mineral] or [Rock] trait Digimon's digivolution cards, delete 1 of your opponent's Digimon with a play cost of 4 or less.
         effect1 = ICardEffect()
+        effect1.set_timing(EffectTiming.OnDigivolutionCardDiscarded)
         effect1.set_effect_name("EX10-025 Delete 4 cost or less Digimon")
         effect1.set_effect_description("When effects trash this card from a [Mineral] or [Rock] trait Digimon's digivolution cards, delete 1 of your opponent's Digimon with a play cost of 4 or less.")
         effect1.is_inherited_effect = True

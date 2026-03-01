@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -29,6 +30,7 @@ class EX8_063(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [When Digivolving] [Once Per Turn] Your opponent may trash 1 card in their hand. If this effect didn't trash, you may play 1 [Fallen Angel] trait Digimon card with a play cost of 7 or less from your trash without paying the cost.
         effect1 = ICardEffect()
+        effect1.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect1.set_effect_name("EX8-063 Opponent trashes 1 card, or you play a fallen angel")
         effect1.set_effect_description("[When Digivolving] [Once Per Turn] Your opponent may trash 1 card in their hand. If this effect didn't trash, you may play 1 [Fallen Angel] trait Digimon card with a play cost of 7 or less from your trash without paying the cost.")
         effect1.set_max_count_per_turn(1)
@@ -72,6 +74,7 @@ class EX8_063(CardScript):
         # Timing: EffectTiming.OnAllyAttack
         # [When Attacking] [Once Per Turn] Your opponent may trash 1 card in their hand. If this effect didn't trash, you may play 1 [Fallen Angel] trait Digimon card with a play cost of 7 or less from your trash without paying the cost.
         effect2 = ICardEffect()
+        effect2.set_timing(EffectTiming.OnAllyAttack)
         effect2.set_effect_name("EX8-063 Opponent trashes 1 card, or you play a fallen angel")
         effect2.set_effect_description("[When Attacking] [Once Per Turn] Your opponent may trash 1 card in their hand. If this effect didn't trash, you may play 1 [Fallen Angel] trait Digimon card with a play cost of 7 or less from your trash without paying the cost.")
         effect2.set_max_count_per_turn(1)
@@ -115,6 +118,7 @@ class EX8_063(CardScript):
         # Timing: EffectTiming.OnDiscardHand
         # [All Turns] [Once Per Turn] When your opponent's hand is trashed from, if [Barbamon] or [X Antibody] is in this Digimon's digivolution cards, trash their top security card.
         effect3 = ICardEffect()
+        effect3.set_timing(EffectTiming.OnDiscardHand)
         effect3.set_effect_name("EX8-063 Trash opponent's security")
         effect3.set_effect_description("[All Turns] [Once Per Turn] When your opponent's hand is trashed from, if [Barbamon] or [X Antibody] is in this Digimon's digivolution cards, trash their top security card.")
         effect3.set_max_count_per_turn(1)

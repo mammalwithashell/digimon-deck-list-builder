@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -46,6 +47,7 @@ class BT20_080(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [When Digivolving] You may play 1 level 4 or lower [SoC] or [SEEKERS] trait Digimon from your trash without paying the cost.
         effect2 = ICardEffect()
+        effect2.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect2.set_effect_name("BT20-080 Play 1 Digimon from trash")
         effect2.set_effect_description("[When Digivolving] You may play 1 level 4 or lower [SoC] or [SEEKERS] trait Digimon from your trash without paying the cost.")
         effect2.is_when_digivolving = True
@@ -79,6 +81,7 @@ class BT20_080(CardScript):
         # Timing: EffectTiming.OnAddDigivolutionCards
         # [All Turns] When Tamer cards are placed in this Digimon's digivolution cards, activate 1 of this Digimon's [When Digivolving] effects. Then, 1 of your Digimon may attack a player.
         effect3 = ICardEffect()
+        effect3.set_timing(EffectTiming.OnAddDigivolutionCards)
         effect3.set_effect_name("BT20-080 Activate effect, then attack")
         effect3.set_effect_description("[All Turns] When Tamer cards are placed in this Digimon's digivolution cards, activate 1 of this Digimon's [When Digivolving] effects. Then, 1 of your Digimon may attack a player.")
 
@@ -104,6 +107,7 @@ class BT20_080(CardScript):
         # Timing: EffectTiming.OnDestroyedAnyone
         # [All Turns] [Once Per Turn] When any of your opponent's Digimon are deleted, if this Digimon has [Fenriloogamon] in its name, trash your opponent's top security card.
         effect4 = ICardEffect()
+        effect4.set_timing(EffectTiming.OnDestroyedAnyone)
         effect4.set_effect_name("BT20-080 Trash opponent's top security")
         effect4.set_effect_description("[All Turns] [Once Per Turn] When any of your opponent's Digimon are deleted, if this Digimon has [Fenriloogamon] in its name, trash your opponent's top security card.")
         effect4.is_inherited_effect = True

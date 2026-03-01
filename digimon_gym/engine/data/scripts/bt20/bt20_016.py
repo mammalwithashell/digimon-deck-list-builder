@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -29,6 +30,7 @@ class BT20_016(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [On Play] For the turn, 1 of your Digimon gains <Piercing> (When this Digimon attacks and deletes an opponent's Digimon and survives the battle, it performs any security checks it normally would) and gets +4000 DP. Then, this Digimon may attack.
         effect1 = ICardEffect()
+        effect1.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect1.set_effect_name("BT20-016 Piercing and Digivolve into Imperialdramon Dragon Mode")
         effect1.set_effect_description("[On Play] For the turn, 1 of your Digimon gains <Piercing> (When this Digimon attacks and deletes an opponent's Digimon and survives the battle, it performs any security checks it normally would) and gets +4000 DP. Then, this Digimon may attack.")
         effect1.is_on_play = True
@@ -61,6 +63,7 @@ class BT20_016(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [When Digivolving] For the turn, 1 of your Digimon gains <Piercing> (When this Digimon attacks and deletes an opponent's Digimon and survives the battle, it performs any security checks it normally would) and gets +4000 DP. Then, this Digimon may attack.
         effect2 = ICardEffect()
+        effect2.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect2.set_effect_name("BT20-016 1 Digimon gains Piercing and 4000DP, then this digimon may attack")
         effect2.set_effect_description("[When Digivolving] For the turn, 1 of your Digimon gains <Piercing> (When this Digimon attacks and deletes an opponent's Digimon and survives the battle, it performs any security checks it normally would) and gets +4000 DP. Then, this Digimon may attack.")
         effect2.is_when_digivolving = True
@@ -93,6 +96,7 @@ class BT20_016(CardScript):
         # Timing: EffectTiming.WhenPermanentWouldBeDeleted
         # [All Turns] When any of your [Paildramon]/[Dinobeemon] would be deleted, 2 of your Digimon may DNA digivolve into [Imperialdramon: Dragon Mode] in the hand.
         effect3 = ICardEffect()
+        effect3.set_timing(EffectTiming.WhenPermanentWouldBeDeleted)
         effect3.set_effect_name("BT20-016 If would be deleted, DNA Digivolve")
         effect3.set_effect_description("[All Turns] When any of your [Paildramon]/[Dinobeemon] would be deleted, 2 of your Digimon may DNA digivolve into [Imperialdramon: Dragon Mode] in the hand.")
         effect3.is_optional = True

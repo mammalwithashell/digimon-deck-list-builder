@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -30,6 +31,7 @@ class BT23_040(CardScript):
         # Timing: EffectTiming.OnStartMainPhase
         # [Start of Your Main Phase] By placing 1 of your [Erika Mishima] as this Digimon's bottom digivolution card, this Digimon may digivolve into [Hudiemon] in the hand or trash with the digivolution cost reduced by 2.
         effect1 = ICardEffect()
+        effect1.set_timing(EffectTiming.OnStartMainPhase)
         effect1.set_effect_name("BT23-040 By placing 1 [Erika Mishima] as bottom digivolution card, this digimon may digivolve into a [Hudie] digimon in hand/trash for 2 reduced cost")
         effect1.set_effect_description("[Start of Your Main Phase] By placing 1 of your [Erika Mishima] as this Digimon's bottom digivolution card, this Digimon may digivolve into [Hudiemon] in the hand or trash with the digivolution cost reduced by 2.")
         effect1.is_optional = True
@@ -40,24 +42,43 @@ class BT23_040(CardScript):
                 return False
             if not (card and card.owner and card.owner.is_my_turn):
                 return False
-            permanent = effect.effect_source_permanent if hasattr(effect, 'effect_source_permanent') else None
-            if not (permanent and (permanent.contains_card_name('Erika Mishima'))):
-                return False
+            # Check that player has an Erika Mishima tamer on field
+            player = card.owner if card else None
+            if player:
+                has_erika = any(
+                    p.is_tamer and p.contains_card_name('Erika Mishima')
+                    for p in player.battle_area
+                )
+                if not has_erika:
+                    return False
             return True
 
         effect1.set_can_use_condition(condition1)
 
         def process1(ctx: Dict[str, Any]):
-            """Action: Digivolve"""
+            """Action: Place Erika as bottom evo card, digivolve into Hudiemon cost -2"""
             player = ctx.get('player')
             perm = ctx.get('permanent')
             game = ctx.get('game')
             if not (player and perm and game):
                 return
-            def digi_filter(c):
-                return True
-            game.effect_digivolve_from_hand(
-                player, perm, digi_filter, is_optional=True)
+            # Select own Erika Mishima tamer to place as bottom evo card
+            def erika_filter(p):
+                return p.is_tamer and p.contains_card_name('Erika Mishima')
+            def on_erika_selected(erika_perm):
+                # Remove Erika from field, place as bottom evo card
+                if erika_perm in player.battle_area:
+                    player.battle_area.remove(erika_perm)
+                    for cs in erika_perm.card_sources:
+                        perm.card_sources.insert(0, cs)
+                # Then digivolve into Hudiemon from hand with cost -2
+                def digi_filter(c):
+                    names = getattr(c, 'card_names', []) or []
+                    return any('hudiemon' in n.lower() for n in names)
+                game.effect_digivolve_from_hand(
+                    player, perm, digi_filter, cost_reduction=2, is_optional=True)
+            game.effect_select_own_permanent(
+                player, on_erika_selected, filter_fn=erika_filter, is_optional=False)
 
         effect1.set_on_process_callback(process1)
         effects.append(effect1)
@@ -74,6 +95,12 @@ class BT23_040(CardScript):
         def condition2(context: Dict[str, Any]) -> bool:
             if card and card.permanent_of_this_card() is None:
                 return False
+            # Only apply DP boost to Hudie-trait Digimon
+            perm = context.get('permanent')
+            if perm:
+                traits = getattr(perm.top_card, 'card_traits', []) or []
+                if not any('Hudie' in t for t in traits):
+                    return False
             return True
         effect2.set_can_use_condition(condition2)
         effects.append(effect2)

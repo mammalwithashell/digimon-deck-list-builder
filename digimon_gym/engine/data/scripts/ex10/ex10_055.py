@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -29,6 +30,7 @@ class EX10_055(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [On Play] You may choose 1 of your Digimon. Delete the chosen Digimon and 1 of your opponent's Digimon with as high or lower a level as it.
         effect1 = ICardEffect()
+        effect1.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect1.set_effect_name("EX10-055 Choose 1 of your digimon, delete it and 1 opponent digimon with equal or less level")
         effect1.set_effect_description("[On Play] You may choose 1 of your Digimon. Delete the chosen Digimon and 1 of your opponent's Digimon with as high or lower a level as it.")
         effect1.is_optional = True
@@ -65,6 +67,7 @@ class EX10_055(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [When Digivolving] You may choose 1 of your Digimon. Delete the chosen Digimon and 1 of your opponent's Digimon with as high or lower a level as it.
         effect2 = ICardEffect()
+        effect2.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect2.set_effect_name("EX10-055 Choose 1 of your digimon, delete it and 1 opponent digimon with equal or less level")
         effect2.set_effect_description("[When Digivolving] You may choose 1 of your Digimon. Delete the chosen Digimon and 1 of your opponent's Digimon with as high or lower a level as it.")
         effect2.is_optional = True
@@ -101,6 +104,7 @@ class EX10_055(CardScript):
         # Timing: EffectTiming.WhenRemoveField
         # [All Turns] [Once Per Turn] When any of your [Bagra Army] trait Digimon would leave the battle area by effects, by trashing any 2 of this Digimon's digivolution cards, they don't leave.
         effect3 = ICardEffect()
+        effect3.set_timing(EffectTiming.WhenRemoveField)
         effect3.set_effect_name("EX10-055 Trash 2 source cards, prevent deletion")
         effect3.set_effect_description("[All Turns] [Once Per Turn] When any of your [Bagra Army] trait Digimon would leave the battle area by effects, by trashing any 2 of this Digimon's digivolution cards, they don't leave.")
         effect3.is_optional = True

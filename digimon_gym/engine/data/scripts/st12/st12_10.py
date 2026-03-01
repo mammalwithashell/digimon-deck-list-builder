@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -29,6 +30,7 @@ class ST12_10(CardScript):
         # Timing: EffectTiming.OnAllyAttack
         # [When Attacking] You may play 1 Digimon card with [Sistermon] in its name from your hand without paying its memory cost.
         effect1 = ICardEffect()
+        effect1.set_timing(EffectTiming.OnAllyAttack)
         effect1.set_effect_name("ST12-10 Play 1 Digimon card with [Sistermon] in its name from hand")
         effect1.set_effect_description("[When Attacking] You may play 1 Digimon card with [Sistermon] in its name from your hand without paying its memory cost.")
         effect1.is_optional = True
@@ -65,6 +67,7 @@ class ST12_10(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [Your Turn][Once Per Turn] When you play another Digimon by an effect, this Digimon gets +3000 DP and gains <Security Attack +1> for the turn. (This Digimon checks 1 additional security card.)
         effect2 = ICardEffect()
+        effect2.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect2.set_effect_name("ST12-10 This Digimon gains DP +3000 and Security Attack +1")
         effect2.set_effect_description("[Your Turn][Once Per Turn] When you play another Digimon by an effect, this Digimon gets +3000 DP and gains <Security Attack +1> for the turn. (This Digimon checks 1 additional security card.)")
         effect2.set_max_count_per_turn(1)

@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -77,6 +78,7 @@ class EX11_073(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # Effect
         effect4 = ICardEffect()
+        effect4.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect4.set_effect_name("EX11-073 You may link up to 3 [Maquinamon] from hand, trash or digivolution cards")
         effect4.set_effect_description("Effect")
         effect4.is_when_digivolving = True
@@ -94,6 +96,7 @@ class EX11_073(CardScript):
         # Timing: EffectTiming.OnEndTurn
         # Bounce
         effect5 = ICardEffect()
+        effect5.set_timing(EffectTiming.OnEndTurn)
         effect5.set_effect_name("EX11-073 Trash a security and bottom deck a digimon per link card")
         effect5.set_effect_description("Bounce")
         effect5.set_max_count_per_turn(1)

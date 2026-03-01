@@ -20,3 +20,4 @@ data/app.db
 frontend/tsconfig.tsbuildinfo
 .playwright-mcp/
 .worktrees/
+Digimon TCG resources/glossary.pdf

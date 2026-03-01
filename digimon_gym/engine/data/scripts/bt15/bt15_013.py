@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -16,6 +17,7 @@ class BT15_013(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [When Digivolving] Return 1 red Digimon card with [Avian], [Bird], [Beast], [Animal] or [Sovereign], other than [Sea Animal], in one of it's traits from your trash to the hand.
         effect0 = ICardEffect()
+        effect0.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect0.set_effect_name("BT15-013 Return 1 card from trash to hand")
         effect0.set_effect_description("[When Digivolving] Return 1 red Digimon card with [Avian], [Bird], [Beast], [Animal] or [Sovereign], other than [Sea Animal], in one of it's traits from your trash to the hand.")
         effect0.is_when_digivolving = True
@@ -45,6 +47,7 @@ class BT15_013(CardScript):
         # Timing: EffectTiming.OnLoseSecurity
         # [Your Turn] [Once Per Turn] When a card is removed from your opponent's security stack, gain 1 memory.
         effect1 = ICardEffect()
+        effect1.set_timing(EffectTiming.OnLoseSecurity)
         effect1.set_effect_name("BT15-013 Memory +1")
         effect1.set_effect_description("[Your Turn] [Once Per Turn] When a card is removed from your opponent's security stack, gain 1 memory.")
         effect1.is_inherited_effect = True

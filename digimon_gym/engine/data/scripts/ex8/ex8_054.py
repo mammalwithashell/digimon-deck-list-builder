@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -58,6 +59,7 @@ class EX8_054(CardScript):
         # Timing: EffectTiming.OnAllyAttack
         # [When Attacking] [Once Per Turn] Activate 1 [When Digivolving] effect of 1 Digimon card with [Justimon] in its name in this Digimon's digivolution cards as an effect of this Digimon.
         effect3 = ICardEffect()
+        effect3.set_timing(EffectTiming.OnAllyAttack)
         effect3.set_effect_name("EX8-054 Activate 1 [When Digivolving] effect")
         effect3.set_effect_description("[When Attacking] [Once Per Turn] Activate 1 [When Digivolving] effect of 1 Digimon card with [Justimon] in its name in this Digimon's digivolution cards as an effect of this Digimon.")
         effect3.set_max_count_per_turn(1)
@@ -77,6 +79,7 @@ class EX8_054(CardScript):
         # Timing: EffectTiming.OnEndTurn
         # [End of Your Turn] [Once Per Turn] If your opponent has an unsuspended Digimon, this Digimon may attack a player.
         effect4 = ICardEffect()
+        effect4.set_timing(EffectTiming.OnEndTurn)
         effect4.set_effect_name("EX8-054 This Digimon may attack a player")
         effect4.set_effect_description("[End of Your Turn] [Once Per Turn] If your opponent has an unsuspended Digimon, this Digimon may attack a player.")
         effect4.is_optional = True

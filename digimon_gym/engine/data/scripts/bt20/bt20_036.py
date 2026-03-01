@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -34,6 +35,7 @@ class BT20_036(CardScript):
         # Timing: EffectTiming.BeforePayCost
         # When this card would be played, if you have a Digimon with the [ACCEL] trait, reduce the play cost by 5.
         effect1 = ICardEffect()
+        effect1.set_timing(EffectTiming.BeforePayCost)
         effect1.set_effect_name("BT20-036 Reduce the play cost by 5")
         effect1.set_effect_description("When this card would be played, if you have a Digimon with the [ACCEL] trait, reduce the play cost by 5.")
         effect1.set_hash_string("PlayCost-5_BT20_036")
@@ -83,6 +85,7 @@ class BT20_036(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [On Play] <De-Digivolve 2> 1 of your opponent's Digimon. Then, 1 of their Digimon gets -5000 DP until the end of their turn.
         effect3 = ICardEffect()
+        effect3.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect3.set_effect_name("BT20-036 <De-Digivolve 2> 1 of your opponent's Digimon, then 1 gets -5000 DP")
         effect3.set_effect_description("[On Play] <De-Digivolve 2> 1 of your opponent's Digimon. Then, 1 of their Digimon gets -5000 DP until the end of their turn.")
         effect3.is_on_play = True
@@ -124,6 +127,7 @@ class BT20_036(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [When Digivolving] <De-Digivolve 2> 1 of your opponent's Digimon. Then, 1 of their Digimon gets -5000 DP until the end of their turn.
         effect4 = ICardEffect()
+        effect4.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect4.set_effect_name("BT20-036 <De-Digivolve 2> 1 of your opponent's Digimon, then 1 gets -5000 DP")
         effect4.set_effect_description("[When Digivolving] <De-Digivolve 2> 1 of your opponent's Digimon. Then, 1 of their Digimon gets -5000 DP until the end of their turn.")
         effect4.is_when_digivolving = True
@@ -165,6 +169,7 @@ class BT20_036(CardScript):
         # Timing: EffectTiming.OnEndTurn
         # [End of Your Turn] This Digimon and any of your other Digimon may DNA digivolve into a Digimon card with [Chaosmon] in its name in the hand. Then, the DNA digivolved Digimon may attack.
         effect5 = ICardEffect()
+        effect5.set_timing(EffectTiming.OnEndTurn)
         effect5.set_effect_name("BT20-036 DNA digivolve this Digimon")
         effect5.set_effect_description("[End of Your Turn] This Digimon and any of your other Digimon may DNA digivolve into a Digimon card with [Chaosmon] in its name in the hand. Then, the DNA digivolved Digimon may attack.")
         effect5.is_optional = True
@@ -203,6 +208,7 @@ class BT20_036(CardScript):
         # Timing: EffectTiming.OnAllyAttack
         # [Opponent's Turn] [Once Per Turn] When any of your opponent's Digimon attack, you may change the attack target to this Digimon.
         effect6 = ICardEffect()
+        effect6.set_timing(EffectTiming.OnAllyAttack)
         effect6.set_effect_name("BT20-036 You may change the attack target to this Digimon.")
         effect6.set_effect_description("[Opponent's Turn] [Once Per Turn] When any of your opponent's Digimon attack, you may change the attack target to this Digimon.")
         effect6.is_inherited_effect = True

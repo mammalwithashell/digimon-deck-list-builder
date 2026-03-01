@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -16,6 +17,7 @@ class BT13_085(CardScript):
         # Timing: EffectTiming.OnAllyAttack
         # [When Attacking] If you have a Tamer, this Digimon may digivolve into [Ravemon] in your trash for the digivolution cost.
         effect0 = ICardEffect()
+        effect0.set_timing(EffectTiming.OnAllyAttack)
         effect0.set_effect_name("BT13-085 Digivolve this Digimon into [Ravemon] in trash")
         effect0.set_effect_description("[When Attacking] If you have a Tamer, this Digimon may digivolve into [Ravemon] in your trash for the digivolution cost.")
         effect0.is_optional = True
@@ -48,6 +50,7 @@ class BT13_085(CardScript):
         # Timing: EffectTiming.OnDestroyedAnyone
         # [On Deletion] If deleted outside of a battle, you may play 1 level 4 or lower purple Digimon card from your trash without paying the cost.
         effect1 = ICardEffect()
+        effect1.set_timing(EffectTiming.OnDestroyedAnyone)
         effect1.set_effect_name("BT13-085 Play 1 level 4 or lower Digimon from trash")
         effect1.set_effect_description("[On Deletion] If deleted outside of a battle, you may play 1 level 4 or lower purple Digimon card from your trash without paying the cost.")
         effect1.is_inherited_effect = True

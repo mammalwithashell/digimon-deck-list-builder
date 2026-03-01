@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -39,6 +40,7 @@ class EX11_053(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # Draw 1
         effect1 = ICardEffect()
+        effect1.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect1.set_effect_name("EX11-053 By placing a [Royal Knight] under any of your [King Drasil_7D6]s, Draw 1")
         effect1.set_effect_description("Draw 1")
         effect1.is_optional = True
@@ -70,6 +72,7 @@ class EX11_053(CardScript):
         # Timing: EffectTiming.OnDestroyedAnyone
         # Play Card
         effect2 = ICardEffect()
+        effect2.set_timing(EffectTiming.OnDestroyedAnyone)
         effect2.set_effect_name("EX11-053 Play 1 [Omnimon (X Antibody)] and place this card under it.")
         effect2.set_effect_description("Play Card")
         effect2.is_on_deletion = True

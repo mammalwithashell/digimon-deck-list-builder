@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -65,6 +66,7 @@ class BT16_036(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [When Digivolving] [De-Digivolve 3] 1 of your opponent's Digimon. Then, 1 of you your opponent's Digimon gets -8000 DP for the turn.
         effect4 = ICardEffect()
+        effect4.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect4.set_effect_name("BT16-036 De-Digivolve 3 and -8000 DP on one of your opponent's Digimon")
         effect4.set_effect_description("[When Digivolving] [De-Digivolve 3] 1 of your opponent's Digimon. Then, 1 of you your opponent's Digimon gets -8000 DP for the turn.")
         effect4.is_when_digivolving = True
@@ -99,6 +101,7 @@ class BT16_036(CardScript):
         # Timing: EffectTiming.OnEndTurn
         # [End of Opponent's Turn] Trash 1 card from the top of both players' security stacks.
         effect5 = ICardEffect()
+        effect5.set_timing(EffectTiming.OnEndTurn)
         effect5.set_effect_name("BT16-036 Trash 1 security from both players")
         effect5.set_effect_description("[End of Opponent's Turn] Trash 1 card from the top of both players' security stacks.")
 

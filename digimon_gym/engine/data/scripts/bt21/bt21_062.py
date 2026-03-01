@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -33,6 +34,7 @@ class BT21_062(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [When Digivolving] By placing 4 cards with [Vemmon] in their texts from your trash as this Digimon's bottom digivolution cards, you may use 1 [Ragnarok Cannon] from your hand or trash without paying the cost.
         effect1 = ICardEffect()
+        effect1.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect1.set_effect_name("BT21-062 Place 4 cards from trash to digivolution cards to use [Ragnarok Cannon]")
         effect1.set_effect_description("[When Digivolving] By placing 4 cards with [Vemmon] in their texts from your trash as this Digimon's bottom digivolution cards, you may use 1 [Ragnarok Cannon] from your hand or trash without paying the cost.")
         effect1.is_optional = True
@@ -58,6 +60,7 @@ class BT21_062(CardScript):
         # Timing: EffectTiming.OnStartMainPhase
         # [Start of Your Main Phase] Delete 1 of your opponent's Digimon.
         effect2 = ICardEffect()
+        effect2.set_timing(EffectTiming.OnStartMainPhase)
         effect2.set_effect_name("BT21-062 Delete 1 opponent Digimon")
         effect2.set_effect_description("[Start of Your Main Phase] Delete 1 of your opponent's Digimon.")
 
@@ -93,6 +96,7 @@ class BT21_062(CardScript):
         # Timing: EffectTiming.WhenRemoveField
         # [All Turns] When this Digimon would leave the battle area, by placing 4 [Vemmon] from this Digimon's digivolution cards at the bottom of their owners' decks, prevent it from leaving play.
         effect3 = ICardEffect()
+        effect3.set_timing(EffectTiming.WhenRemoveField)
         effect3.set_effect_name("BT21-062 Prevent this Digimon from leaving play")
         effect3.set_effect_description("[All Turns] When this Digimon would leave the battle area, by placing 4 [Vemmon] from this Digimon's digivolution cards at the bottom of their owners' decks, prevent it from leaving play.")
         effect3.is_optional = True

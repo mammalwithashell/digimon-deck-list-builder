@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -29,6 +30,7 @@ class EX6_024(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [On Play] [Once Per Turn] 1 Digimon may gain [Security Attack -1] until the end of your opponent's turn. Then, if DigiXrosing, 1 of your opponent's Digimon or Tamers can't suspend until the end of their turn.
         effect1 = ICardEffect()
+        effect1.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect1.set_effect_name("EX6-024 1 Digimon may gain [Security Attack -1] until the end of your opponent's turn. Then, if DigiXrosing, 1 of your opponent's Digimon or Tamers can't suspend until the end of their turn.")
         effect1.set_effect_description("[On Play] [Once Per Turn] 1 Digimon may gain [Security Attack -1] until the end of your opponent's turn. Then, if DigiXrosing, 1 of your opponent's Digimon or Tamers can't suspend until the end of their turn.")
         effect1.set_max_count_per_turn(1)
@@ -64,6 +66,7 @@ class EX6_024(CardScript):
         # Timing: EffectTiming.OnAllyAttack
         # [When Attacking] [Once Per Turn] 1 Digimon may gain [Security Attack -1] until the end of your opponent's turn. Then, if DigiXrosing, 1 of your opponent's Digimon or Tamers can't suspend until the end of their turn.
         effect2 = ICardEffect()
+        effect2.set_timing(EffectTiming.OnAllyAttack)
         effect2.set_effect_name("EX6-024 1 Digimon may gain [Security Attack -1] until the end of your opponent's turn")
         effect2.set_effect_description("[When Attacking] [Once Per Turn] 1 Digimon may gain [Security Attack -1] until the end of your opponent's turn. Then, if DigiXrosing, 1 of your opponent's Digimon or Tamers can't suspend until the end of their turn.")
         effect2.set_max_count_per_turn(1)
@@ -93,6 +96,7 @@ class EX6_024(CardScript):
         # Timing: EffectTiming.WhenRemoveField
         # [All Turns] When this Digimon would leave the battle area, return 1 yellow Digimon card from this Digimon's digivolution cards to the hand.
         effect3 = ICardEffect()
+        effect3.set_timing(EffectTiming.WhenRemoveField)
         effect3.set_effect_name("EX6-024 Return 1 yellow Digimon card from this Digimon's digivolution cards to the hand")
         effect3.set_effect_description("[All Turns] When this Digimon would leave the battle area, return 1 yellow Digimon card from this Digimon's digivolution cards to the hand.")
         effect3.set_hash_string("AllTurns_EX6_024")
@@ -121,6 +125,7 @@ class EX6_024(CardScript):
         # Timing: EffectTiming.OnAllyAttack
         # [When Attacking][Once Per Turn] 1 Digimon may gain [Security Attack -1] until the end of your opponent's turn.
         effect4 = ICardEffect()
+        effect4.set_timing(EffectTiming.OnAllyAttack)
         effect4.set_effect_name("EX6-024 Security Attack -1")
         effect4.set_effect_description("[When Attacking][Once Per Turn] 1 Digimon may gain [Security Attack -1] until the end of your opponent's turn.")
         effect4.is_inherited_effect = True

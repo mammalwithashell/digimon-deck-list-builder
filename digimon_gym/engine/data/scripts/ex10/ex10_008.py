@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -42,6 +43,7 @@ class EX10_008(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [On Play] Give 1 of your opponent's Digimon <Collision> (During this Digimon's attack, all of your opponent's Digimon gain <Blocker>, and must block if possible.) and '[Start of Your Main Phase] This Digimon attacks.' until their turn ends.
         effect2 = ICardEffect()
+        effect2.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect2.set_effect_name("EX10-008 Give 1 opponent digimon <Collision> and [Start of Your Main Phase] This Digimon attacks")
         effect2.set_effect_description("[On Play] Give 1 of your opponent's Digimon <Collision> (During this Digimon's attack, all of your opponent's Digimon gain <Blocker>, and must block if possible.) and '[Start of Your Main Phase] This Digimon attacks.' until their turn ends.")
         effect2.is_on_play = True
@@ -59,6 +61,7 @@ class EX10_008(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [When Digivolving] Give 1 of your opponent's Digimon <Collision> (During this Digimon's attack, all of your opponent's Digimon gain <Blocker>, and must block if possible.) and '[Start of Your Main Phase] This Digimon attacks.' until their turn ends.
         effect3 = ICardEffect()
+        effect3.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect3.set_effect_name("EX10-008 Give 1 opponent digimon <Collision> and [Start of Your Main Phase] This Digimon attacks")
         effect3.set_effect_description("[When Digivolving] Give 1 of your opponent's Digimon <Collision> (During this Digimon's attack, all of your opponent's Digimon gain <Blocker>, and must block if possible.) and '[Start of Your Main Phase] This Digimon attacks.' until their turn ends.")
         effect3.is_when_digivolving = True
@@ -76,6 +79,7 @@ class EX10_008(CardScript):
         # Timing: EffectTiming.OnAttackTargetChanged
         # [Opponent's Turn] [Once Per Turn] When attack targets change, if this Digimon has [Greymon] in its name, trash your opponent's top security card.
         effect4 = ICardEffect()
+        effect4.set_timing(EffectTiming.OnAttackTargetChanged)
         effect4.set_effect_name("EX10-008 Trash opponent top security")
         effect4.set_effect_description("[Opponent's Turn] [Once Per Turn] When attack targets change, if this Digimon has [Greymon] in its name, trash your opponent's top security card.")
         effect4.is_inherited_effect = True

@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -16,6 +17,7 @@ class BT10_041(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [When Digivolving] You may use 1 Option card with [Plug-In] in its name or that's yellow and has a memory cost of 5 or less from your hand without meeting its color requirements or paying its memory cost. Place the Option card used with this effect on top of your security stack face down instead of placing it in your trash.
         effect0 = ICardEffect()
+        effect0.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect0.set_effect_name("BT10-041 Play 1 Option from hand")
         effect0.set_effect_description("[When Digivolving] You may use 1 Option card with [Plug-In] in its name or that's yellow and has a memory cost of 5 or less from your hand without meeting its color requirements or paying its memory cost. Place the Option card used with this effect on top of your security stack face down instead of placing it in your trash.")
         effect0.is_optional = True
@@ -44,6 +46,7 @@ class BT10_041(CardScript):
         # Timing: EffectTiming.OnAllyAttack
         # [When Attacking] This Digimon may digivolve into a [Sakuyamon] in your hand for a cost of 1, ignoring its digivolution requirements.
         effect1 = ICardEffect()
+        effect1.set_timing(EffectTiming.OnAllyAttack)
         effect1.set_effect_name("BT10-041 This Digimon digivolves")
         effect1.set_effect_description("[When Attacking] This Digimon may digivolve into a [Sakuyamon] in your hand for a cost of 1, ignoring its digivolution requirements.")
         effect1.is_optional = True

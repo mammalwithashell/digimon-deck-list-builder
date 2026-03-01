@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -31,6 +32,7 @@ class BT8_057(CardScript):
         # Timing: EffectTiming.OnUnTappedAnyone
         # [Your Turn] When this Digimon becomes unsuspended during your unsuspend phase, trash the top card of your opponent's security stack.
         effect1 = ICardEffect()
+        effect1.set_timing(EffectTiming.OnUnTappedAnyone)
         effect1.set_effect_name("BT8-057 Trash the top card of opponent's security")
         effect1.set_effect_description("[Your Turn] When this Digimon becomes unsuspended during your unsuspend phase, trash the top card of your opponent's security stack.")
 

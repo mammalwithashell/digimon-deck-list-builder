@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -29,6 +30,7 @@ class BT22_033(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [On Play] 1 of your opponent's Digimon gets -4000 DP for the turn.
         effect1 = ICardEffect()
+        effect1.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect1.set_effect_name("BT22-033 -4K DP")
         effect1.set_effect_description("[On Play] 1 of your opponent's Digimon gets -4000 DP for the turn.")
         effect1.is_on_play = True
@@ -46,6 +48,7 @@ class BT22_033(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [When Digivolving] 1 of your opponent's Digimon gets -4000 DP for the turn.
         effect2 = ICardEffect()
+        effect2.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect2.set_effect_name("BT22-033 -4K DP")
         effect2.set_effect_description("[When Digivolving] 1 of your opponent's Digimon gets -4000 DP for the turn.")
         effect2.is_when_digivolving = True
@@ -63,6 +66,7 @@ class BT22_033(CardScript):
         # Timing: EffectTiming.WhenLinked
         # [Your Turn] [Once Per Turn] When this Digimon gets linked, you may play 1 level 3 Digimon card with the [Appmon] trait from your hand without paying the cost.
         effect3 = ICardEffect()
+        effect3.set_timing(EffectTiming.WhenLinked)
         effect3.set_effect_name("BT22-033 Play 1 level 3 [Appmon] digimon")
         effect3.set_effect_description("[Your Turn] [Once Per Turn] When this Digimon gets linked, you may play 1 level 3 Digimon card with the [Appmon] trait from your hand without paying the cost.")
         effect3.is_optional = True
@@ -97,6 +101,7 @@ class BT22_033(CardScript):
         # Timing: EffectTiming.OnAllyAttack
         # [When Attacking] You may play 1 level 3 Digimon card with the [Appmon] trait from your hand without paying the cost
         effect4 = ICardEffect()
+        effect4.set_timing(EffectTiming.OnAllyAttack)
         effect4.set_effect_name("BT22-033 Play 1 level 3 [Appmon] digimon")
         effect4.set_effect_description("[When Attacking] You may play 1 level 3 Digimon card with the [Appmon] trait from your hand without paying the cost")
         effect4.is_optional = True

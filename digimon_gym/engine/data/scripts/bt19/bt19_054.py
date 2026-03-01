@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -28,6 +29,7 @@ class BT19_054(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [When Digivolving] You may return 1 of your opponent's suspended Digimon to the bottom of its owner's deck.
         effect1 = ICardEffect()
+        effect1.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect1.set_effect_name("BT19-054 Return 1 suspended Digimon to the bottom of deck")
         effect1.set_effect_description("[When Digivolving] You may return 1 of your opponent's suspended Digimon to the bottom of its owner's deck.")
         effect1.is_optional = True
@@ -64,6 +66,7 @@ class BT19_054(CardScript):
         # Timing: EffectTiming.OnAllyAttack
         # [When Attacking] You may return 1 of your opponent's suspended Digimon to the bottom of its owner's deck.
         effect2 = ICardEffect()
+        effect2.set_timing(EffectTiming.OnAllyAttack)
         effect2.set_effect_name("BT19-054 Return 1 suspended Digimon to the bottom of deck")
         effect2.set_effect_description("[When Attacking] You may return 1 of your opponent's suspended Digimon to the bottom of its owner's deck.")
         effect2.is_optional = True

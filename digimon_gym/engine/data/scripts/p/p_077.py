@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -16,6 +17,7 @@ class P_077(CardScript):
         # Timing: EffectTiming.OnDiscardLibrary
         # When this card is trashed from your deck, gain 1 memory.
         effect0 = ICardEffect()
+        effect0.set_timing(EffectTiming.OnDiscardLibrary)
         effect0.set_effect_name("P-077 Memory +1")
         effect0.set_effect_description("When this card is trashed from your deck, gain 1 memory.")
 
@@ -39,6 +41,7 @@ class P_077(CardScript):
         # Timing: EffectTiming.OnAllyAttack
         # [When Attacking] You may reveal 1 purple card from your hand and place it on top of your deck.
         effect1 = ICardEffect()
+        effect1.set_timing(EffectTiming.OnAllyAttack)
         effect1.set_effect_name("P-077 Place 1 card from hand to the top of deck")
         effect1.set_effect_description("[When Attacking] You may reveal 1 purple card from your hand and place it on top of your deck.")
         effect1.is_inherited_effect = True

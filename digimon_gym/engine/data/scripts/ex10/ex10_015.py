@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -56,6 +57,7 @@ class EX10_015(CardScript):
         # Timing: EffectTiming.OnStartMainPhase
         # [Start of Your Main Phase] By trashing 1 card with <Save> in its text from your hand, <Draw 1> (Draw 1 card from your deck.) and suspend 1 of your opponent's Digimon.
         effect3 = ICardEffect()
+        effect3.set_timing(EffectTiming.OnStartMainPhase)
         effect3.set_effect_name("EX10-015 Trash 1, Draw 1, Suspend 1 Digimon")
         effect3.set_effect_description("[Start of Your Main Phase] By trashing 1 card with <Save> in its text from your hand, <Draw 1> (Draw 1 card from your deck.) and suspend 1 of your opponent's Digimon.")
         effect3.is_optional = True

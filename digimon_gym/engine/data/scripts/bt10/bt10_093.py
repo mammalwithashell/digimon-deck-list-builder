@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -16,6 +17,7 @@ class BT10_093(CardScript):
         # Timing: EffectTiming.OnAddDigivolutionCards
         # [All Turns] [Once Per Turn] When a purple card is placed under this Tamer, <Draw 1> (Draw 1 card from your deck.) and memory +1.
         effect0 = ICardEffect()
+        effect0.set_timing(EffectTiming.OnAddDigivolutionCards)
         effect0.set_effect_name("BT10-093 Draw 1 and Memory +1")
         effect0.set_effect_description("[All Turns] [Once Per Turn] When a purple card is placed under this Tamer, <Draw 1> (Draw 1 card from your deck.) and memory +1.")
         effect0.set_max_count_per_turn(1)

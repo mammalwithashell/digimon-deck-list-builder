@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -33,6 +34,7 @@ class BT11_091(CardScript):
         # Timing: EffectTiming.BeforePayCost
         # [Your Turn] When one of your green Digimon would digivolve into a level 5 or higher card, by suspending this Tamer, reduce the digivolution cost by 1.
         effect1 = ICardEffect()
+        effect1.set_timing(EffectTiming.BeforePayCost)
         effect1.set_effect_name("BT11-091 Digivolution Cost -1")
         effect1.set_effect_description("[Your Turn] When one of your green Digimon would digivolve into a level 5 or higher card, by suspending this Tamer, reduce the digivolution cost by 1.")
         effect1.is_optional = True

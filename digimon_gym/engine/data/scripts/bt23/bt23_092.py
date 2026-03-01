@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -39,10 +40,9 @@ class BT23_092(CardScript):
         # Timing: EffectTiming.OptionSkill
         # [Main] Until your opponent's turn ends, 1 of their Digimon and 1 of their Tamers can't suspend. Then, place this card in the battle area.
         effect1 = ICardEffect()
+        effect1.set_timing(EffectTiming.OptionSkill)
         effect1.set_effect_name("BT23-092 1 digimon and tamer cant suspend until their turn ends")
         effect1.set_effect_description("[Main] Until your opponent's turn ends, 1 of their Digimon and 1 of their Tamers can't suspend. Then, place this card in the battle area.")
-        effect1._is_cannot_suspend = True
-
         effect = effect1  # alias for condition closure
         def condition1(context: Dict[str, Any]) -> bool:
             # Option main effect — validated by engine timing
@@ -51,18 +51,26 @@ class BT23_092(CardScript):
         effect1.set_can_use_condition(condition1)
 
         def process1(ctx: Dict[str, Any]):
-            """Action: Gain Keyword Cannot Suspend"""
+            """Action: 1 opp Digimon + 1 opp Tamer can't suspend"""
             player = ctx.get('player')
             perm = ctx.get('permanent')
             game = ctx.get('game')
             if not (player and game):
                 return
-            def target_filter(p):
+            # Step 1: Select 1 opponent Digimon
+            def digi_filter(p):
                 return p.is_digimon
-            def on_grant(target_perm):
+            def on_digi_grant(target_perm):
                 target_perm.grant_keyword('_is_cannot_suspend')
+                # Step 2: Select 1 opponent Tamer
+                def tamer_filter(p):
+                    return p.is_tamer
+                def on_tamer_grant(tamer_perm):
+                    tamer_perm.grant_keyword('_is_cannot_suspend')
+                game.effect_select_opponent_permanent(
+                    player, on_tamer_grant, filter_fn=tamer_filter, is_optional=True)
             game.effect_select_opponent_permanent(
-                player, on_grant, filter_fn=target_filter, is_optional=False)
+                player, on_digi_grant, filter_fn=digi_filter, is_optional=False)
 
         effect1.set_on_process_callback(process1)
         effects.append(effect1)
@@ -85,13 +93,13 @@ class BT23_092(CardScript):
         effects.append(effect2)
 
         # Timing: EffectTiming.OnAllyAttack
-        # [Your Turn] When one of your [CS] trait Digimon attacks <Delay>, Until your opponent's turn ends, 1 of their Digimon and 1 of their Tamers can't suspend.
+        # [Your Turn] When one of your [CS] trait Digimon attacks <Delay>, 1 opp Digimon + 1 opp Tamer can't suspend.
         effect3 = ICardEffect()
-        effect3.set_effect_name("BT23-092 1 digimon and tamer cant suspend until their turn ends")
-        effect3.set_effect_description("[Your Turn] When one of your [CS] trait Digimon attacks <Delay>, Until your opponent's turn ends, 1 of their Digimon and 1 of their Tamers can't suspend.")
+        effect3.set_timing(EffectTiming.OnAllyAttack)
+        effect3.set_effect_name("BT23-092 Delay can't suspend")
+        effect3.set_effect_description("[Your Turn] When one of your [CS] trait Digimon attacks <Delay>, until opponent's turn ends, 1 of their Digimon and 1 of their Tamers can't suspend.")
         effect3.is_optional = True
         effect3.is_on_attack = True
-        effect3._is_cannot_suspend = True
 
         effect = effect3  # alias for condition closure
         def condition3(context: Dict[str, Any]) -> bool:
@@ -99,23 +107,34 @@ class BT23_092(CardScript):
                 return False
             if not (card and card.owner and card.owner.is_my_turn):
                 return False
+            # Check attacking Digimon has CS trait
+            atk_perm = context.get('attacking_permanent') or context.get('permanent')
+            if atk_perm:
+                traits = getattr(atk_perm.top_card, 'card_traits', []) or []
+                if not any('CS' in t for t in traits):
+                    return False
             return True
 
         effect3.set_can_use_condition(condition3)
 
         def process3(ctx: Dict[str, Any]):
-            """Action: Gain Keyword Cannot Suspend"""
+            """Action: 1 opp Digimon + 1 opp Tamer can't suspend (Delay)"""
             player = ctx.get('player')
-            perm = ctx.get('permanent')
             game = ctx.get('game')
             if not (player and game):
                 return
-            def target_filter(p):
+            def digi_filter(p):
                 return p.is_digimon
-            def on_grant(target_perm):
+            def on_digi_grant(target_perm):
                 target_perm.grant_keyword('_is_cannot_suspend')
+                def tamer_filter(p):
+                    return p.is_tamer
+                def on_tamer_grant(tamer_perm):
+                    tamer_perm.grant_keyword('_is_cannot_suspend')
+                game.effect_select_opponent_permanent(
+                    player, on_tamer_grant, filter_fn=tamer_filter, is_optional=True)
             game.effect_select_opponent_permanent(
-                player, on_grant, filter_fn=target_filter, is_optional=True)
+                player, on_digi_grant, filter_fn=digi_filter, is_optional=False)
 
         effect3.set_on_process_callback(process3)
         effects.append(effect3)
@@ -123,11 +142,10 @@ class BT23_092(CardScript):
         # Timing: EffectTiming.SecuritySkill
         # [Security] Until your opponent's turn ends, 1 of their Digimon and 1 of their Tamers can't suspend. Then, place this card in the battle area.
         effect4 = ICardEffect()
+        effect4.set_timing(EffectTiming.SecuritySkill)
         effect4.set_effect_name("BT23-092 1 digimon and tamer cant suspend until their turn ends")
         effect4.set_effect_description("[Security] Until your opponent's turn ends, 1 of their Digimon and 1 of their Tamers can't suspend. Then, place this card in the battle area.")
         effect4.is_security_effect = True
-        effect4.is_security_effect = True
-        effect4._is_cannot_suspend = True
 
         effect = effect4  # alias for condition closure
         def condition4(context: Dict[str, Any]) -> bool:
@@ -137,18 +155,24 @@ class BT23_092(CardScript):
         effect4.set_can_use_condition(condition4)
 
         def process4(ctx: Dict[str, Any]):
-            """Action: Gain Keyword Cannot Suspend"""
+            """Action: 1 opp Digimon + 1 opp Tamer can't suspend (security)"""
             player = ctx.get('player')
             perm = ctx.get('permanent')
             game = ctx.get('game')
             if not (player and game):
                 return
-            def target_filter(p):
+            def digi_filter(p):
                 return p.is_digimon
-            def on_grant(target_perm):
+            def on_digi_grant(target_perm):
                 target_perm.grant_keyword('_is_cannot_suspend')
+                def tamer_filter(p):
+                    return p.is_tamer
+                def on_tamer_grant(tamer_perm):
+                    tamer_perm.grant_keyword('_is_cannot_suspend')
+                game.effect_select_opponent_permanent(
+                    player, on_tamer_grant, filter_fn=tamer_filter, is_optional=True)
             game.effect_select_opponent_permanent(
-                player, on_grant, filter_fn=target_filter, is_optional=False)
+                player, on_digi_grant, filter_fn=digi_filter, is_optional=False)
 
         effect4.set_on_process_callback(process4)
         effects.append(effect4)

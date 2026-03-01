@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -16,6 +17,7 @@ class BT24_088(CardScript):
         # Timing: EffectTiming.OnStartTurn
         # Play Card
         effect0 = ICardEffect()
+        effect0.set_timing(EffectTiming.OnStartTurn)
         effect0.set_effect_name("BT24-088 Return to deck to play another or a lvl 4 or lower [TS] or [Three Musketeers]")
         effect0.set_effect_description("Play Card")
         effect0.is_optional = True
@@ -61,6 +63,7 @@ class BT24_088(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # Draw 2, Trash From Hand
         effect1 = ICardEffect()
+        effect1.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect1.set_effect_name("BT24-088 Trash 1 card from hand to Draw 2")
         effect1.set_effect_description("Draw 2, Trash From Hand")
         effect1.is_optional = True

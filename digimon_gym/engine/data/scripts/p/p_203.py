@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -47,6 +48,7 @@ class P_203(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [On Play] [Once Per Turn] <De-Digivolve 1> 1 of your opponent's Digimon. Then, by trashing 1 Option card in the battle area, this Digimon gains <Piercing> and <Security A. +1> for the turn.
         effect2 = ICardEffect()
+        effect2.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect2.set_effect_name("P-203 De-Digivolve 1, then by trashing 1 option in battle area, gain Piercing & Sec +1 for the turn")
         effect2.set_effect_description("[On Play] [Once Per Turn] <De-Digivolve 1> 1 of your opponent's Digimon. Then, by trashing 1 Option card in the battle area, this Digimon gains <Piercing> and <Security A. +1> for the turn.")
         effect2.set_hash_string("P_203_OP/WD/WA")
@@ -87,6 +89,7 @@ class P_203(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [When Digivolving] [Once Per Turn] <De-Digivolve 1> 1 of your opponent's Digimon. Then, by trashing 1 Option card in the battle area, this Digimon gains <Piercing> and <Security A. +1> for the turn.
         effect3 = ICardEffect()
+        effect3.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect3.set_effect_name("P-203 De-Digivolve 1, then by trashing 1 option in battle area, gain Piercing & Sec +1 for the turn")
         effect3.set_effect_description("[When Digivolving] [Once Per Turn] <De-Digivolve 1> 1 of your opponent's Digimon. Then, by trashing 1 Option card in the battle area, this Digimon gains <Piercing> and <Security A. +1> for the turn.")
         effect3.set_hash_string("P_203_OP/WD/WA")
@@ -127,6 +130,7 @@ class P_203(CardScript):
         # Timing: EffectTiming.OnAllyAttack
         # [When Attacking] [Once Per Turn] <De-Digivolve 1> 1 of your opponent's Digimon. Then, by trashing 1 Option card in the battle area, this Digimon gains <Piercing> and <Security A. +1> for the turn.
         effect4 = ICardEffect()
+        effect4.set_timing(EffectTiming.OnAllyAttack)
         effect4.set_effect_name("P-203 De-Digivolve 1, then by trashing 1 option in battle area, gain Piercing & Sec +1 for the turn")
         effect4.set_effect_description("[When Attacking] [Once Per Turn] <De-Digivolve 1> 1 of your opponent's Digimon. Then, by trashing 1 Option card in the battle area, this Digimon gains <Piercing> and <Security A. +1> for the turn.")
         effect4.set_hash_string("P_203_OP/WD/WA")
@@ -167,6 +171,7 @@ class P_203(CardScript):
         # Timing: EffectTiming.OnDestroyedAnyone
         # [All Turns] [Once Per Turn] When Option cards in the battle area are trashed, 1 of your opponent's Digimon can't digivolve or attack players until their turn ends.
         effect5 = ICardEffect()
+        effect5.set_timing(EffectTiming.OnDestroyedAnyone)
         effect5.set_effect_name("P-203 1 digimon can't attack or digivolve")
         effect5.set_effect_description("[All Turns] [Once Per Turn] When Option cards in the battle area are trashed, 1 of your opponent's Digimon can't digivolve or attack players until their turn ends.")
         effect5.set_max_count_per_turn(1)

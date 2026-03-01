@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -30,6 +31,7 @@ class BT22_023(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [On Play] Return 1 of your opponent's level 4 or lower Digimon to the bottom of the deck.
         effect1 = ICardEffect()
+        effect1.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect1.set_effect_name("BT22-023 Bottom deck 1 level 4 or lower digimon")
         effect1.set_effect_description("[On Play] Return 1 of your opponent's level 4 or lower Digimon to the bottom of the deck.")
         effect1.is_on_play = True
@@ -67,6 +69,7 @@ class BT22_023(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [When Digivolving] Return 1 of your opponent's level 4 or lower Digimon to the bottom of the deck.
         effect2 = ICardEffect()
+        effect2.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect2.set_effect_name("BT22-023 Bottom deck 1 level 4 or lower digimon")
         effect2.set_effect_description("[When Digivolving] Return 1 of your opponent's level 4 or lower Digimon to the bottom of the deck.")
         effect2.is_when_digivolving = True
@@ -104,6 +107,7 @@ class BT22_023(CardScript):
         # Timing: EffectTiming.OnEndTurn
         # [End of Your Turn] [Once Per Turn] 1 of your blue Digimon or Tamers may unsuspend.
         effect3 = ICardEffect()
+        effect3.set_timing(EffectTiming.OnEndTurn)
         effect3.set_effect_name("BT22-023 Unsuspend 1 blue tamer or digimon")
         effect3.set_effect_description("[End of Your Turn] [Once Per Turn] 1 of your blue Digimon or Tamers may unsuspend.")
         effect3.is_optional = True
@@ -140,6 +144,7 @@ class BT22_023(CardScript):
         # Timing: EffectTiming.OnTappedAnyone
         # [All Turns] [Once Per Turn] When this Digimon with [Veedramon] in its name suspends, if you have a blue Tamer, this Digimon may unsuspend.
         effect4 = ICardEffect()
+        effect4.set_timing(EffectTiming.OnTappedAnyone)
         effect4.set_effect_name("BT22-023 Unsuspend this digimon")
         effect4.set_effect_description("[All Turns] [Once Per Turn] When this Digimon with [Veedramon] in its name suspends, if you have a blue Tamer, this Digimon may unsuspend.")
         effect4.is_inherited_effect = True

@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -31,6 +32,7 @@ class BT24_020(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [On Play] Reveal the top 3 cards of your deck. Add 1 Digimon card with the [Sea Beast] or [Shaman] trait or [Aqua] or [Sea Animal] in any of its traits and 1 card with the [TS] trait among them to the hand. Return the rest to the bottom of the deck.
         effect1 = ICardEffect()
+        effect1.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect1.set_effect_name("BT24-020 Reveal 3 from deck. Add 1 [Sea Beast], [Shaman], [Aqua] or [Sea Animal] and 1 [TS].")
         effect1.set_effect_description("[On Play] Reveal the top 3 cards of your deck. Add 1 Digimon card with the [Sea Beast] or [Shaman] trait or [Aqua] or [Sea Animal] in any of its traits and 1 card with the [TS] trait among them to the hand. Return the rest to the bottom of the deck.")
         effect1.is_on_play = True
@@ -75,6 +77,7 @@ class BT24_020(CardScript):
         # Timing: EffectTiming.OnUnTappedAnyone
         # Draw 1
         effect2 = ICardEffect()
+        effect2.set_timing(EffectTiming.OnUnTappedAnyone)
         effect2.set_effect_name("BT24-020 If you have 7 or fewer cards in hand, <Draw 1>.")
         effect2.set_effect_description("Draw 1")
         effect2.is_inherited_effect = True

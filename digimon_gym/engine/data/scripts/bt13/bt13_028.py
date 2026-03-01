@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -16,6 +17,7 @@ class BT13_028(CardScript):
         # Timing: EffectTiming.OnDeclaration
         # [Hand][Main] If you have [Kiyoshiro Higashimitarai], by placing 1 [TeslaJellymon] from your hand as 1 of your [Jellymon]'s bottom digivolution card, that Digimon digivolves into this card for a digivolution cost of 3, ignoring digivolution requirements.
         effect0 = ICardEffect()
+        effect0.set_timing(EffectTiming.OnDeclaration)
         effect0.set_effect_name("BT13-028 Your 1 [Jellymon] digivolves into this card")
         effect0.set_effect_description("[Hand][Main] If you have [Kiyoshiro Higashimitarai], by placing 1 [TeslaJellymon] from your hand as 1 of your [Jellymon]'s bottom digivolution card, that Digimon digivolves into this card for a digivolution cost of 3, ignoring digivolution requirements.")
 
@@ -43,6 +45,7 @@ class BT13_028(CardScript):
         # Timing: EffectTiming.OnEndAttack
         # [End of Attack][Once Per Turn] By returning 3 cards with [Jellymon] in their text from your trash at the bottom of the deck in any order, unsuspend this Digimon.
         effect1 = ICardEffect()
+        effect1.set_timing(EffectTiming.OnEndAttack)
         effect1.set_effect_name("BT13-028 Return cards from trash to the bottom of deck to unsuspend this Digimon")
         effect1.set_effect_description("[End of Attack][Once Per Turn] By returning 3 cards with [Jellymon] in their text from your trash at the bottom of the deck in any order, unsuspend this Digimon.")
         effect1.is_inherited_effect = True

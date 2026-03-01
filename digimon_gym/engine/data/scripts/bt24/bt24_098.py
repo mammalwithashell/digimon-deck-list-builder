@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -16,6 +17,7 @@ class BT24_098(CardScript):
         # Timing: EffectTiming.OptionSkill
         # [Main] <Draw 2> and trash 2 cards in your hand. Then, place this card in the battle area.
         effect0 = ICardEffect()
+        effect0.set_timing(EffectTiming.OptionSkill)
         effect0.set_effect_name("BT24-098 Draw 2, Trash 2")
         effect0.set_effect_description("[Main] <Draw 2> and trash 2 cards in your hand. Then, place this card in the battle area.")
 
@@ -70,6 +72,7 @@ class BT24_098(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # Play Card
         effect2 = ICardEffect()
+        effect2.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect2.set_effect_name("BT24-098 If Opp has 5+ memory, Play a 5- [Titan] from trash")
         effect2.set_effect_description("Play Card")
         effect2.is_optional = True
@@ -105,6 +108,7 @@ class BT24_098(CardScript):
         # Timing: EffectTiming.SecuritySkill
         # [Security] You may play 1 level 4 or lower [Titan] trait Digimon card from your hand or trash without paying the cost. Then, add this card to the hand.
         effect3 = ICardEffect()
+        effect3.set_timing(EffectTiming.SecuritySkill)
         effect3.set_effect_name("BT24-098 Play a 4- [Titan] and add this to hand")
         effect3.set_effect_description("[Security] You may play 1 level 4 or lower [Titan] trait Digimon card from your hand or trash without paying the cost. Then, add this card to the hand.")
         effect3.is_security_effect = True

@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -47,6 +48,7 @@ class P_209(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [When Digivolving] By trashing 1 card in your hand, suspend 1 of your opponent's Digimon or Tamers. Then, 1 of their Digimon or Tamers can't unsuspend until their turn ends.
         effect2 = ICardEffect()
+        effect2.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect2.set_effect_name("P-209 By trashing 1 card from your hand, suspend 1 digimon or tamer, then 1 digimon or tamer cant unsuspend")
         effect2.set_effect_description("[When Digivolving] By trashing 1 card in your hand, suspend 1 of your opponent's Digimon or Tamers. Then, 1 of their Digimon or Tamers can't unsuspend until their turn ends.")
         effect2.is_on_play = True
@@ -103,6 +105,7 @@ class P_209(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [When Digivolving] By trashing 1 card in your hand, suspend 1 of your opponent's Digimon or Tamers. Then, 1 of their Digimon or Tamers can't unsuspend until their turn ends.
         effect3 = ICardEffect()
+        effect3.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect3.set_effect_name("P-209 By trashing 1 card from your hand, suspend 1 digimon or tamer, then 1 digimon or tamer cant unsuspend")
         effect3.set_effect_description("[When Digivolving] By trashing 1 card in your hand, suspend 1 of your opponent's Digimon or Tamers. Then, 1 of their Digimon or Tamers can't unsuspend until their turn ends.")
         effect3.is_when_digivolving = True
@@ -159,6 +162,7 @@ class P_209(CardScript):
         # Timing: EffectTiming.OnDiscardHand
         # [All Turns] [Once Per Turn] When your hand is trashed from, you may play 1 level 4 or lower [Demon] or [Titan] trait card from your trash without paying the cost.
         effect4 = ICardEffect()
+        effect4.set_timing(EffectTiming.OnDiscardHand)
         effect4.set_effect_name("P-209 Play 1 level 4 or lower [Demon] or [Titan] card")
         effect4.set_effect_description("[All Turns] [Once Per Turn] When your hand is trashed from, you may play 1 level 4 or lower [Demon] or [Titan] trait card from your trash without paying the cost.")
         effect4.is_optional = True

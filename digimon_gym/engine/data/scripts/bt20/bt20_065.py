@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -16,6 +17,7 @@ class BT20_065(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [On Play] By trashing 1 card in your hand, give 1 of your opponent's Digimon '[On Deletion] Lose 1 memory.' until the end of their turn.
         effect0 = ICardEffect()
+        effect0.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect0.set_effect_name("BT20-065 Give effects to your opponent's Digimon")
         effect0.set_effect_description("[On Play] By trashing 1 card in your hand, give 1 of your opponent's Digimon '[On Deletion] Lose 1 memory.' until the end of their turn.")
         effect0.is_on_play = True
@@ -51,6 +53,7 @@ class BT20_065(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [On Deletion] Lose 1 memory.
         effect1 = ICardEffect()
+        effect1.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect1.set_effect_name("BT20-065 Memory -1")
         effect1.set_effect_description("[On Deletion] Lose 1 memory.")
         effect1.is_on_play = True

@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -16,6 +17,7 @@ class EX6_063(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [On Play] 1 of your yellow Digimon gains [Barrier] until the end of your opponent's turn.
         effect0 = ICardEffect()
+        effect0.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect0.set_effect_name("EX6-063 1 of your yellow Digimon gains [Barrier] until the end of your opponent's turn.")
         effect0.set_effect_description("[On Play] 1 of your yellow Digimon gains [Barrier] until the end of your opponent's turn.")
         effect0.is_on_play = True
@@ -48,6 +50,7 @@ class EX6_063(CardScript):
         # Timing: EffectTiming.OnStartMainPhase
         # [Start Of Your Main Phase] 1 of your yellow Digimon gains [Barrier] until the end of your opponent's turn.
         effect1 = ICardEffect()
+        effect1.set_timing(EffectTiming.OnStartMainPhase)
         effect1.set_effect_name("EX6-063 1 of your yellow Digimon gains [Barrier] until the end of your opponent's turn.")
         effect1.set_effect_description("[Start Of Your Main Phase] 1 of your yellow Digimon gains [Barrier] until the end of your opponent's turn.")
         effect1._is_barrier = True
@@ -82,6 +85,7 @@ class EX6_063(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [Your Turn] When one of your Digimon is played or digivolves, if it has the [Angel]/[Archangel]/[Three Great Angels] trait, by suspending this Tamer, gain 1 memory.
         effect2 = ICardEffect()
+        effect2.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect2.set_effect_name("EX6-063 Gain 1 Memory")
         effect2.set_effect_description("[Your Turn] When one of your Digimon is played or digivolves, if it has the [Angel]/[Archangel]/[Three Great Angels] trait, by suspending this Tamer, gain 1 memory.")
         effect2.is_optional = True

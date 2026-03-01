@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -34,6 +35,7 @@ class EX10_060(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [On Play] By playing 1 [Lucemon: Larva] from your trash to your empty breeding area without paying the cost, delete all of your opponent's Digimon with the highest level.
         effect1 = ICardEffect()
+        effect1.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect1.set_effect_name("EX10-060 By placing 1 [Lucemon: Larva] from trash in breeding, delete all opponents highest level digimon")
         effect1.set_effect_description("[On Play] By playing 1 [Lucemon: Larva] from your trash to your empty breeding area without paying the cost, delete all of your opponent's Digimon with the highest level.")
         effect1.is_on_play = True
@@ -65,6 +67,7 @@ class EX10_060(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [When Digivolving] By playing 1 [Lucemon: Larva] from your trash to your empty breeding area without paying the cost, delete all of your opponent's Digimon with the highest level.
         effect2 = ICardEffect()
+        effect2.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect2.set_effect_name("EX10-060 By placing 1 [Lucemon: Larva] from trash in breeding, delete all opponents highest level digimon")
         effect2.set_effect_description("[When Digivolving] By playing 1 [Lucemon: Larva] from your trash to your empty breeding area without paying the cost, delete all of your opponent's Digimon with the highest level.")
         effect2.is_when_digivolving = True
@@ -96,6 +99,7 @@ class EX10_060(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [When Digivolving] [Once Per Turn] Your opponent may delete 1 of their Digimon or Tamers. If this effect didn't delete, trash their top security card and this Digimon unsuspends.
         effect3 = ICardEffect()
+        effect3.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect3.set_effect_name("EX10-060 your opponent may delete a digimon or tamer. if they didnt trash their top security & unsuspend")
         effect3.set_effect_description("[When Digivolving] [Once Per Turn] Your opponent may delete 1 of their Digimon or Tamers. If this effect didn't delete, trash their top security card and this Digimon unsuspends.")
         effect3.set_hash_string("EX10_060_WDWA")
@@ -137,6 +141,7 @@ class EX10_060(CardScript):
         # Timing: EffectTiming.OnAllyAttack
         # [When Attacking] [Once Per Turn] Your opponent may delete 1 of their Digimon or Tamers. If this effect didn't delete, trash their top security card and this Digimon unsuspends.
         effect4 = ICardEffect()
+        effect4.set_timing(EffectTiming.OnAllyAttack)
         effect4.set_effect_name("EX10-060 your opponent may delete a digimon or tamer. if they didnt trash their top security & unsuspend")
         effect4.set_effect_description("[When Attacking] [Once Per Turn] Your opponent may delete 1 of their Digimon or Tamers. If this effect didn't delete, trash their top security card and this Digimon unsuspends.")
         effect4.set_hash_string("EX10_060_WDWA")

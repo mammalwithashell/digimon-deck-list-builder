@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -29,6 +30,7 @@ class EX6_040(CardScript):
         # Timing: EffectTiming.OnDeclaration
         # [Hand] [Main] By paying 1 cost and placing this card as the bottom digivolution card of 1 of your Digimon that's level 4 or has the [Legend-Arms] trait, that Digimon gets +2000 DP until the end of your opponent's turn.
         effect1 = ICardEffect()
+        effect1.set_timing(EffectTiming.OnDeclaration)
         effect1.set_effect_name("EX6-040 +2000 DP")
         effect1.set_effect_description("[Hand] [Main] By paying 1 cost and placing this card as the bottom digivolution card of 1 of your Digimon that's level 4 or has the [Legend-Arms] trait, that Digimon gets +2000 DP until the end of your opponent's turn.")
         effect1.is_optional = True
@@ -54,6 +56,7 @@ class EX6_040(CardScript):
         # Timing: EffectTiming.OnAddDigivolutionCards
         # [Your Turn] [Once Per Turn] When an effect places a digivolution card under this Digimon, it gains <Blocker> and <Reboot> until the end of your opponent's turn.
         effect2 = ICardEffect()
+        effect2.set_timing(EffectTiming.OnAddDigivolutionCards)
         effect2.set_effect_name("EX6-040 Gain <Blocker> and <Reboot>")
         effect2.set_effect_description("[Your Turn] [Once Per Turn] When an effect places a digivolution card under this Digimon, it gains <Blocker> and <Reboot> until the end of your opponent's turn.")
         effect2.set_max_count_per_turn(1)

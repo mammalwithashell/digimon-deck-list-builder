@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -16,6 +17,7 @@ class BT8_091(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [On Play] You may hatch 1 Digi-Egg card to an empty space in your breeding area.
         effect0 = ICardEffect()
+        effect0.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect0.set_effect_name("BT8-091 Hatch a Digiegg")
         effect0.set_effect_description("[On Play] You may hatch 1 Digi-Egg card to an empty space in your breeding area.")
         effect0.is_optional = True
@@ -34,6 +36,7 @@ class BT8_091(CardScript):
         # Timing: EffectTiming.BeforePayCost
         # [Your Turn] When one of your Digimon would digivolve into a Digimon with [Gargomon] or [Rapidmon] in its name, you may suspend this Tamer to reduce the digivolution cost by 1.
         effect1 = ICardEffect()
+        effect1.set_timing(EffectTiming.BeforePayCost)
         effect1.set_effect_name("BT8-091 Digivolution Cost -1")
         effect1.set_effect_description("[Your Turn] When one of your Digimon would digivolve into a Digimon with [Gargomon] or [Rapidmon] in its name, you may suspend this Tamer to reduce the digivolution cost by 1.")
         effect1.is_optional = True

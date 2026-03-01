@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -29,6 +30,7 @@ class P_150(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [When Digivolving] If you have 3 or more security cards, suspend 1 of your opponent's Digimon or Tamers. If you have 3 or fewer security cards, 1 of your opponent's Digimon or Tamers can't unsuspend until the end of their turn.
         effect1 = ICardEffect()
+        effect1.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect1.set_effect_name("P-150 Suspend 1 opponent's Digimon/Tamer, 1 of your opponent's Digimon/Tamer can't unsuspend")
         effect1.set_effect_description("[When Digivolving] If you have 3 or more security cards, suspend 1 of your opponent's Digimon or Tamers. If you have 3 or fewer security cards, 1 of your opponent's Digimon or Tamers can't unsuspend until the end of their turn.")
         effect1.is_when_digivolving = True
@@ -75,6 +77,7 @@ class P_150(CardScript):
         # Timing: EffectTiming.OnTappedAnyone
         # [All Turns] [Once Per Turn] When this Digimon becomes suspended, suspend 1 of your opponent's Digimon with as much or less DP as this Digimon.
         effect2 = ICardEffect()
+        effect2.set_timing(EffectTiming.OnTappedAnyone)
         effect2.set_effect_name("P-150 Suspend 1 Opponent's Digimon")
         effect2.set_effect_description("[All Turns] [Once Per Turn] When this Digimon becomes suspended, suspend 1 of your opponent's Digimon with as much or less DP as this Digimon.")
         effect2.is_inherited_effect = True

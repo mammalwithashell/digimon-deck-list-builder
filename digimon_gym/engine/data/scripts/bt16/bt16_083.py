@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -16,6 +17,7 @@ class BT16_083(CardScript):
         # Timing: EffectTiming.OnDestroyedAnyone
         # [On Deletion] Return all Tamers to thier owner's hands. Then, you may play 1 Tamer card from your hand and 1 [Ukkomon] from your trash without paying the cost.
         effect0 = ICardEffect()
+        effect0.set_timing(EffectTiming.OnDestroyedAnyone)
         effect0.set_effect_name("BT16-083 Return all Tamers, then play a Tamer and [Ukkomon] from your trash.")
         effect0.set_effect_description("[On Deletion] Return all Tamers to thier owner's hands. Then, you may play 1 Tamer card from your hand and 1 [Ukkomon] from your trash without paying the cost.")
         effect0.is_on_deletion = True
@@ -61,6 +63,7 @@ class BT16_083(CardScript):
         # Timing: EffectTiming.OnEndTurn
         # [End of Your Turn] [Once Per Turn] By returning 1 Digi-Egg card from your trash to the bottom of your Digi-Egg deck, delete 1 of your opponent's Digimon with the lowest level. Then you may play 1 level 4 or lower Digimon card from your hand to the breeding area without paying the cost.
         effect1 = ICardEffect()
+        effect1.set_timing(EffectTiming.OnEndTurn)
         effect1.set_effect_name("BT16-083 Return 1 Digi-Egg to delete 1 opponent Digimon with the lowest level and play a level 4 Digimon.")
         effect1.set_effect_description("[End of Your Turn] [Once Per Turn] By returning 1 Digi-Egg card from your trash to the bottom of your Digi-Egg deck, delete 1 of your opponent's Digimon with the lowest level. Then you may play 1 level 4 or lower Digimon card from your hand to the breeding area without paying the cost.")
         effect1.is_optional = True

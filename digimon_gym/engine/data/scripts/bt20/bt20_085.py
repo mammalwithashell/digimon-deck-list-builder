@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -16,6 +17,7 @@ class BT20_085(CardScript):
         # Timing: EffectTiming.OnStartMainPhase
         # [Start of Your Main Phase] By returning this Tamer to the bottom of the deck, you may play 1 [Shoto Kazama] from your hand without paying the cost. Then, if you don't have a Digimon, you may play 1 level 3 Digimon card with [Avian] or [Bird] in any of its traits from your trash without paying the cost.
         effect0 = ICardEffect()
+        effect0.set_timing(EffectTiming.OnStartMainPhase)
         effect0.set_effect_name("BT20-085 Play 1 [Shoto Kazama], and 1 level 3 digimon")
         effect0.set_effect_description("[Start of Your Main Phase] By returning this Tamer to the bottom of the deck, you may play 1 [Shoto Kazama] from your hand without paying the cost. Then, if you don't have a Digimon, you may play 1 level 3 Digimon card with [Avian] or [Bird] in any of its traits from your trash without paying the cost.")
         effect0.is_optional = True
@@ -46,6 +48,7 @@ class BT20_085(CardScript):
         # Timing: EffectTiming.OnEndTurn
         # [End of Your Turn] By suspending this Tamer, suspend 1 of your opponent's Digimon and, until the end of their turn, 1 of your Digimon with the [Vortex Warriors] trait gets +2000 DP.
         effect1 = ICardEffect()
+        effect1.set_timing(EffectTiming.OnEndTurn)
         effect1.set_effect_name("BT20-085 Suspend Opponents Digimon, 1 of your digimon get +2000 DP")
         effect1.set_effect_description("[End of Your Turn] By suspending this Tamer, suspend 1 of your opponent's Digimon and, until the end of their turn, 1 of your Digimon with the [Vortex Warriors] trait gets +2000 DP.")
         effect1.is_optional = True

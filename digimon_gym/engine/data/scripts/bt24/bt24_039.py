@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -58,6 +59,7 @@ class BT24_039(CardScript):
         # Timing: EffectTiming.SecuritySkill
         # [Security] If your opponent has a level 6 or higher Digimon, play this card without battling and without paying the cost.
         effect2 = ICardEffect()
+        effect2.set_timing(EffectTiming.SecuritySkill)
         effect2.set_effect_name("BT24-039 Play this card without battling")
         effect2.set_effect_description("[Security] If your opponent has a level 6 or higher Digimon, play this card without battling and without paying the cost.")
         effect2.is_security_effect = True
@@ -112,6 +114,7 @@ class BT24_039(CardScript):
         # Timing: EffectTiming.OnDestroyedAnyone
         # [On Deletion] Trigger <Recovery +1 (Deck)>. (Place the top card of your deck on top of your security stack.)
         effect5 = ICardEffect()
+        effect5.set_timing(EffectTiming.OnDestroyedAnyone)
         effect5.set_effect_name("BT24-039 Recovery +1 (Deck)")
         effect5.set_effect_description("[On Deletion] Trigger <Recovery +1 (Deck)>. (Place the top card of your deck on top of your security stack.)")
         effect5.is_inherited_effect = True

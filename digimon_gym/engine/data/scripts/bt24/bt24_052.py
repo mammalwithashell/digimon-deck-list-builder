@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -33,6 +34,7 @@ class BT24_052(CardScript):
         # Timing: EffectTiming.OnMove
         # Play Token
         effect1 = ICardEffect()
+        effect1.set_timing(EffectTiming.OnMove)
         effect1.set_effect_name("BT24-052 Play Token")
         effect1.set_effect_description("Play Token")
 
@@ -58,6 +60,7 @@ class BT24_052(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # Play Token
         effect2 = ICardEffect()
+        effect2.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect2.set_effect_name("BT24-052 Play Token")
         effect2.set_effect_description("Play Token")
         effect2.is_when_digivolving = True
@@ -85,6 +88,7 @@ class BT24_052(CardScript):
         # Timing: EffectTiming.WhenRemoveField
         # [All Turns] [Once Per Turn] When this Digimon with [Diaboromon] in its text would leave the battle area, by deleting 1 of your other [Diaboromon], it doesn't leave.
         effect3 = ICardEffect()
+        effect3.set_timing(EffectTiming.WhenRemoveField)
         effect3.set_effect_name("BT24-052 Delete 1 of your other [Diaboromon] to prevent this Digimon from leaving")
         effect3.set_effect_description("[All Turns] [Once Per Turn] When this Digimon with [Diaboromon] in its text would leave the battle area, by deleting 1 of your other [Diaboromon], it doesn't leave.")
         effect3.is_inherited_effect = True

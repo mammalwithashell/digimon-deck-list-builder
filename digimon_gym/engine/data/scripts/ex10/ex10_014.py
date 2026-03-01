@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -45,6 +46,7 @@ class EX10_014(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [On Play] [When Digivolving] Give 2 of your opponent's Digimon <Security A. -1> (This Digimon checks 1 fewer security card.) until their turn ends.
         effect2 = ICardEffect()
+        effect2.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect2.set_effect_name("EX10-014 Give 2 of your opponent's Digimon <Security A. -1>")
         effect2.set_effect_description("[On Play] [When Digivolving] Give 2 of your opponent's Digimon <Security A. -1> (This Digimon checks 1 fewer security card.) until their turn ends.")
         effect2.is_on_play = True
@@ -72,6 +74,7 @@ class EX10_014(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [When Digivolving] Give 2 of your opponent's Digimon <Security A. -1> (This Digimon checks 1 fewer security card.) until their turn ends.
         effect3 = ICardEffect()
+        effect3.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect3.set_effect_name("EX10-014 Give 2 of your opponent's Digimon <Security A. -1>")
         effect3.set_effect_description("[When Digivolving] Give 2 of your opponent's Digimon <Security A. -1> (This Digimon checks 1 fewer security card.) until their turn ends.")
         effect3.is_when_digivolving = True
@@ -99,6 +102,7 @@ class EX10_014(CardScript):
         # Timing: EffectTiming.OnAllyAttack
         # [When Attacking] By trashing 1 of this Digimon's link cards, 1 of your opponent's Digimon gets -6000 DP for the turn.
         effect4 = ICardEffect()
+        effect4.set_timing(EffectTiming.OnAllyAttack)
         effect4.set_effect_name("EX10-014 Trash 1 link card, give -6k DP")
         effect4.set_effect_description("[When Attacking] By trashing 1 of this Digimon's link cards, 1 of your opponent's Digimon gets -6000 DP for the turn.")
         effect4.is_on_attack = True

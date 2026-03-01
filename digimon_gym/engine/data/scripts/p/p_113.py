@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -42,6 +43,7 @@ class P_113(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [When Digivolving] Suspend all of your opponent's Digimon with DP less or equal than this Digimon.
         effect2 = ICardEffect()
+        effect2.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect2.set_effect_name("P-113 Suspend Digimons")
         effect2.set_effect_description("[When Digivolving] Suspend all of your opponent's Digimon with DP less or equal than this Digimon.")
         effect2.is_when_digivolving = True
@@ -81,6 +83,7 @@ class P_113(CardScript):
         # Timing: EffectTiming.OnEndBattle
         # [All Turns] [Once Per Turn] When an opponent's Digimon is deleted in battle, trash the top card of your opponent's security stack.
         effect3 = ICardEffect()
+        effect3.set_timing(EffectTiming.OnEndBattle)
         effect3.set_effect_name("P-113 Trash the top card of opponent's security")
         effect3.set_effect_description("[All Turns] [Once Per Turn] When an opponent's Digimon is deleted in battle, trash the top card of your opponent's security stack.")
         effect3.set_max_count_per_turn(1)

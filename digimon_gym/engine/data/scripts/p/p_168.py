@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -16,6 +17,7 @@ class P_168(CardScript):
         # Timing: EffectTiming.OnStartMainPhase
         # [Start of Your Main Phase] If your opponent has a Digimon, gain 1 memory.
         effect0 = ICardEffect()
+        effect0.set_timing(EffectTiming.OnStartMainPhase)
         effect0.set_effect_name("P-168 Memory +1")
         effect0.set_effect_description("[Start of Your Main Phase] If your opponent has a Digimon, gain 1 memory.")
 
@@ -43,6 +45,7 @@ class P_168(CardScript):
         # Timing: EffectTiming.OnAddDigivolutionCards
         # [Your Turn] When effects add digivolution cards to any of your Digimon with [Aqua] or [Sea Animal] in any of their traits, by suspending this Tamer, one of those Digimon may digivolve into a Digimon card with [Aqua] or [Sea Animal] in any of its traits in the hand with the digivolution cost reduced by 1.
         effect1 = ICardEffect()
+        effect1.set_timing(EffectTiming.OnAddDigivolutionCards)
         effect1.set_effect_name("P-168 Digivolve 1 of you Digimon")
         effect1.set_effect_description("[Your Turn] When effects add digivolution cards to any of your Digimon with [Aqua] or [Sea Animal] in any of their traits, by suspending this Tamer, one of those Digimon may digivolve into a Digimon card with [Aqua] or [Sea Animal] in any of its traits in the hand with the digivolution cost reduced by 1.")
         effect1.is_optional = True

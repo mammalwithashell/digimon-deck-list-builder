@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -30,6 +31,7 @@ class BT22_034(CardScript):
         # Timing: EffectTiming.OnDiscardSecurity
         # When effects trash this card from the security stack, you may play this card without paying the cost.
         effect1 = ICardEffect()
+        effect1.set_timing(EffectTiming.OnDiscardSecurity)
         effect1.set_effect_name("BT22-034 Play Card")
         effect1.set_effect_description("When effects trash this card from the security stack, you may play this card without paying the cost.")
 
@@ -57,6 +59,7 @@ class BT22_034(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [On Play] 1 of your opponent's Digimon gets -3000 DP until their turn ends. By trashing your top security card, instead 1 of your opponent's Digimon gets -6000 DP until their turn ends.
         effect2 = ICardEffect()
+        effect2.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect2.set_effect_name("BT22-034 Trash top sec for -6K DP, otherwise -3K DP")
         effect2.set_effect_description("[On Play] 1 of your opponent's Digimon gets -3000 DP until their turn ends. By trashing your top security card, instead 1 of your opponent's Digimon gets -6000 DP until their turn ends.")
         effect2.is_on_play = True
@@ -89,6 +92,7 @@ class BT22_034(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [When Digivolving] 1 of your opponent's Digimon gets -3000 DP until their turn ends. By trashing your top security card, instead 1 of your opponent's Digimon gets -6000 DP until their turn ends.
         effect3 = ICardEffect()
+        effect3.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect3.set_effect_name("BT22-034 Trash top sec for -6K DP, otherwise -3K DP")
         effect3.set_effect_description("[When Digivolving] 1 of your opponent's Digimon gets -3000 DP until their turn ends. By trashing your top security card, instead 1 of your opponent's Digimon gets -6000 DP until their turn ends.")
         effect3.is_when_digivolving = True
@@ -121,6 +125,7 @@ class BT22_034(CardScript):
         # Timing: EffectTiming.OnAllyAttack
         # [When Attacking] [Once Per Turn] 1 of your opponent's Digimon gets -2000 DP for the turn.
         effect4 = ICardEffect()
+        effect4.set_timing(EffectTiming.OnAllyAttack)
         effect4.set_effect_name("BT22-034 -2K DP")
         effect4.set_effect_description("[When Attacking] [Once Per Turn] 1 of your opponent's Digimon gets -2000 DP for the turn.")
         effect4.is_inherited_effect = True

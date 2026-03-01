@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -46,6 +47,7 @@ class BT23_038(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [On Play] Reveal the top 3 cards of your deck. Add 1 card with [Royal Base] in its text and 1 card with the [CS] trait among them to the hand. Return the rest to the bottom of the deck.
         effect2 = ICardEffect()
+        effect2.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect2.set_effect_name("BT23-038 Reveal top 3")
         effect2.set_effect_description("[On Play] Reveal the top 3 cards of your deck. Add 1 card with [Royal Base] in its text and 1 card with the [CS] trait among them to the hand. Return the rest to the bottom of the deck.")
         effect2.is_on_play = True

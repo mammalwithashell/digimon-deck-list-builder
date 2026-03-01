@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -16,6 +17,7 @@ class BT8_069(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [When Digivolving] You may place 1 card with [X-Antibody] in its traits from your hand under this Digimon as its bottom digivolution card to delete 1 of your opponent's Digimon with a play cost of 7 or less.
         effect0 = ICardEffect()
+        effect0.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect0.set_effect_name("BT8-069 Place a Card to digivolution cards to delete 1 Digimon with 7 or less Cost")
         effect0.set_effect_description("[When Digivolving] You may place 1 card with [X-Antibody] in its traits from your hand under this Digimon as its bottom digivolution card to delete 1 of your opponent's Digimon with a play cost of 7 or less.")
         effect0.is_optional = True
@@ -52,6 +54,7 @@ class BT8_069(CardScript):
         # Timing: EffectTiming.OnAddDigivolutionCards
         # [Your Turn][Once Per Turn] When one of your effects places a digivolution card under one of your Digimon, this Digimon gets +2000 DP and can't be deleted by your opponent's effects until the end of your opponent's next turn.
         effect1 = ICardEffect()
+        effect1.set_timing(EffectTiming.OnAddDigivolutionCards)
         effect1.set_effect_name("BT8-069 This Digimon gets DP +2000 and can't be deleted by effects")
         effect1.set_effect_description("[Your Turn][Once Per Turn] When one of your effects places a digivolution card under one of your Digimon, this Digimon gets +2000 DP and can't be deleted by your opponent's effects until the end of your opponent's next turn.")
         effect1.set_max_count_per_turn(1)
@@ -82,6 +85,7 @@ class BT8_069(CardScript):
         # Timing: EffectTiming.OnEndAttack
         # [End of Attack][Once Per Turn] If this Digimon has [Alphamon] in its name, unsuspend it.
         effect2 = ICardEffect()
+        effect2.set_timing(EffectTiming.OnEndAttack)
         effect2.set_effect_name("BT8-069 Unsuspend this Digimon")
         effect2.set_effect_description("[End of Attack][Once Per Turn] If this Digimon has [Alphamon] in its name, unsuspend it.")
         effect2.is_inherited_effect = True

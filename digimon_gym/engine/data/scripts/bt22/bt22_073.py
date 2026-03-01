@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -41,6 +42,7 @@ class BT22_073(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # Draw 1, Trash From Hand, Effect Immunity
         effect2 = ICardEffect()
+        effect2.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect2.set_effect_name("BT22-073 Draw 1 trash 1 freeze 1")
         effect2.set_effect_description("Draw 1, Trash From Hand, Effect Immunity")
         effect2.is_optional = True
@@ -85,6 +87,7 @@ class BT22_073(CardScript):
         # Timing: EffectTiming.WhenPermanentWouldBeDeleted
         # [All Turns] [Once Per Turn] When this Digimon with the [Night Claw], [Light Fang] or [Galaxy] trait would be deleted, by trashing 2 same-level cards from its digivolution cards, it isn't deleted.
         effect3 = ICardEffect()
+        effect3.set_timing(EffectTiming.WhenPermanentWouldBeDeleted)
         effect3.set_effect_name("BT22-073 Prevent this Digimon from being deleted")
         effect3.set_effect_description("[All Turns] [Once Per Turn] When this Digimon with the [Night Claw], [Light Fang] or [Galaxy] trait would be deleted, by trashing 2 same-level cards from its digivolution cards, it isn't deleted.")
         effect3.is_inherited_effect = True

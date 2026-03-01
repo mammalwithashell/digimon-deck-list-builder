@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -40,6 +41,7 @@ class EX11_035(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # Unsuspend, Suspend
         effect2 = ICardEffect()
+        effect2.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect2.set_effect_name("EX11-035 May unsuspend 1. May suspend 1.")
         effect2.set_effect_description("Unsuspend, Suspend")
         effect2.is_when_digivolving = True
@@ -81,6 +83,7 @@ class EX11_035(CardScript):
         # Timing: EffectTiming.OnTappedAnyone
         # Play Card
         effect3 = ICardEffect()
+        effect3.set_timing(EffectTiming.OnTappedAnyone)
         effect3.set_effect_name("EX11-035 You may play 1 Digimon with 3k DP, +2k per suspended Digimon")
         effect3.set_effect_description("Play Card")
         effect3.is_optional = True

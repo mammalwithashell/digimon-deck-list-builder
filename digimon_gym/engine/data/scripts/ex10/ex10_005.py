@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -16,6 +17,7 @@ class EX10_005(CardScript):
         # Timing: EffectTiming.OnDiscardLibrary
         # [Your Turn] [Once Per Turn] When your opponent's deck is trashed from, <Draw 1>.
         effect0 = ICardEffect()
+        effect0.set_timing(EffectTiming.OnDiscardLibrary)
         effect0.set_effect_name("EX10-005 Draw 1")
         effect0.set_effect_description("[Your Turn] [Once Per Turn] When your opponent's deck is trashed from, <Draw 1>.")
         effect0.is_inherited_effect = True

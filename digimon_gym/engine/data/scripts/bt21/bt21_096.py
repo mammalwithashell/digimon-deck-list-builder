@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -16,6 +17,7 @@ class BT21_096(CardScript):
         # Timing: EffectTiming.OptionSkill
         # [Main] For the turn, 1 of your [Marcus Damon]s is also treated as a 12000 DP Digimon, can't digivolve and gains <Rush>. Then, that Digimon may attack your opponent's Digimon. Your opponent's unsuspended Digimon can also be attacked with this effect.
         effect0 = ICardEffect()
+        effect0.set_timing(EffectTiming.OptionSkill)
         effect0.set_effect_name("BT21-096 Can attack unsuspended Digimon")
         effect0.set_effect_description("[Main] For the turn, 1 of your [Marcus Damon]s is also treated as a 12000 DP Digimon, can't digivolve and gains <Rush>. Then, that Digimon may attack your opponent's Digimon. Your opponent's unsuspended Digimon can also be attacked with this effect.")
         effect0._is_rush = True
@@ -52,6 +54,7 @@ class BT21_096(CardScript):
         # Timing: EffectTiming.SecuritySkill
         # [Security]  You may play 1 [Marcus Damon] from your hand or trash without paying the cost. Then, add this card to the hand.
         effect1 = ICardEffect()
+        effect1.set_timing(EffectTiming.SecuritySkill)
         effect1.set_effect_name("BT21-096 Play Card, Add To Hand")
         effect1.set_effect_description("[Security]  You may play 1 [Marcus Damon] from your hand or trash without paying the cost. Then, add this card to the hand.")
         effect1.is_security_effect = True

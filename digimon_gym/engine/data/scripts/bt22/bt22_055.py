@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -31,6 +32,7 @@ class BT22_055(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [On Play] By trashing 1 Digimon card with the [Appmon] trait from your hand, <Draw 2> (Draw 2 cards from your deck).
         effect1 = ICardEffect()
+        effect1.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect1.set_effect_name("BT22-055 Trash 1 [Appmon] trait digimon, Draw 2")
         effect1.set_effect_description("[On Play] By trashing 1 Digimon card with the [Appmon] trait from your hand, <Draw 2> (Draw 2 cards from your deck).")
         effect1.is_optional = True

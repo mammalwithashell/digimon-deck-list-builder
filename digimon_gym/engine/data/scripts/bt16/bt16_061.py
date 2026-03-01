@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -41,6 +42,7 @@ class BT16_061(CardScript):
         # Timing: EffectTiming.OnAttackTargetChanged
         # [All Turns] When an attack target is switched, this Digimon with a Tamer card with the [SoC] trait in its digivolution cards may digivolve into a Digimon card with the [Beast Dragon], [Undead] or [SoC] trait in your hand without paying the cost.
         effect2 = ICardEffect()
+        effect2.set_timing(EffectTiming.OnAttackTargetChanged)
         effect2.set_effect_name("BT16-061 Digivolve this digimon")
         effect2.set_effect_description("[All Turns] When an attack target is switched, this Digimon with a Tamer card with the [SoC] trait in its digivolution cards may digivolve into a Digimon card with the [Beast Dragon], [Undead] or [SoC] trait in your hand without paying the cost.")
         effect2.is_optional = True
@@ -73,6 +75,7 @@ class BT16_061(CardScript):
         # Timing: EffectTiming.OnDestroyedAnyone
         # [All Turns] (Once Per Turn) When this Digimon deletes another Digimon, you may play 1 card with the [X Antibody] or [SoC] trait and a play cost of 5 or less from your trash without paying the cost.
         effect3 = ICardEffect()
+        effect3.set_timing(EffectTiming.OnDestroyedAnyone)
         effect3.set_effect_name("BT16-061 Play 1 card with 5 cost or less")
         effect3.set_effect_description("[All Turns] (Once Per Turn) When this Digimon deletes another Digimon, you may play 1 card with the [X Antibody] or [SoC] trait and a play cost of 5 or less from your trash without paying the cost.")
         effect3.is_inherited_effect = True
@@ -109,6 +112,7 @@ class BT16_061(CardScript):
         # Timing: EffectTiming.OnEndBattle
         # [All Turns] (Once Per Turn) When this Digimon deletes another Digimon, you may play 1 card with the [X Antibody] or [SoC] trait and a play cost of 5 or less from your trash without paying the cost.
         effect4 = ICardEffect()
+        effect4.set_timing(EffectTiming.OnEndBattle)
         effect4.set_effect_name("BT16-061 Play 1 card with 5 cost or less")
         effect4.set_effect_description("[All Turns] (Once Per Turn) When this Digimon deletes another Digimon, you may play 1 card with the [X Antibody] or [SoC] trait and a play cost of 5 or less from your trash without paying the cost.")
         effect4.is_inherited_effect = True

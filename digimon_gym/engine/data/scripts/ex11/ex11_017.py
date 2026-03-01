@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -46,6 +47,7 @@ class EX11_017(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # Play Card
         effect2 = ICardEffect()
+        effect2.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect2.set_effect_name("EX11-017 Play Card")
         effect2.set_effect_description("Play Card")
         effect2.is_on_play = True
@@ -77,6 +79,7 @@ class EX11_017(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # Play Card
         effect3 = ICardEffect()
+        effect3.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect3.set_effect_name("EX11-017 Play Card")
         effect3.set_effect_description("Play Card")
         effect3.is_when_digivolving = True
@@ -108,6 +111,7 @@ class EX11_017(CardScript):
         # Timing: EffectTiming.OnAllyAttack
         # Play Card
         effect4 = ICardEffect()
+        effect4.set_timing(EffectTiming.OnAllyAttack)
         effect4.set_effect_name("EX11-017 Play Card")
         effect4.set_effect_description("Play Card")
         effect4.is_on_attack = True
@@ -139,6 +143,7 @@ class EX11_017(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # Trash Digivolution Cards, Effect Immunity
         effect5 = ICardEffect()
+        effect5.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect5.set_effect_name("EX11-017 Trash any 3 sources from opponent's Digimon. 1 of their Digimon with no sources can't suspend until their turn ends.")
         effect5.set_effect_description("Trash Digivolution Cards, Effect Immunity")
         effect5.set_max_count_per_turn(1)

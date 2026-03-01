@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -45,6 +46,13 @@ class BT22_100(CardScript):
         effect1._applies_to_all_own_digimon = True
 
         def condition1(context: Dict[str, Any]) -> bool:
+            if card and card.permanent_of_this_card() is None:
+                return False
+            perm = context.get('permanent')
+            if perm:
+                traits = getattr(perm.top_card, 'card_traits', []) or []
+                if not any('CS' in t for t in traits):
+                    return False
             return True
         effect1.set_can_use_condition(condition1)
         effects.append(effect1)
@@ -52,10 +60,10 @@ class BT22_100(CardScript):
         # Timing: EffectTiming.SecuritySkill
         # [Security] You may play 1 level 5 or lower card with the [CS] trait from your hand without paying the cost.
         effect2 = ICardEffect()
+        effect2.set_timing(EffectTiming.SecuritySkill)
         effect2.set_effect_name("BT22-100 Play Card")
         effect2.set_effect_description("[Security] You may play 1 level 5 or lower card with the [CS] trait from your hand without paying the cost.")
         effect2.is_optional = True
-        effect2.is_security_effect = True
         effect2.is_security_effect = True
 
         effect = effect2  # alias for condition closure

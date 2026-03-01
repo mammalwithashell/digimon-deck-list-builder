@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -16,6 +17,7 @@ class BT15_001(CardScript):
         # Timing: EffectTiming.OnDestroyedAnyone
         # [On Deletion] Return 1 Digimon card with [Avian], [Bird], [Beast], [Animal], [Sovereign] in one of its traits other than [Sea Animal], from your trash to the hand.
         effect0 = ICardEffect()
+        effect0.set_timing(EffectTiming.OnDestroyedAnyone)
         effect0.set_effect_name("BT15-001 Return 1 card from trash to hand")
         effect0.set_effect_description("[On Deletion] Return 1 Digimon card with [Avian], [Bird], [Beast], [Animal], [Sovereign] in one of its traits other than [Sea Animal], from your trash to the hand.")
         effect0.is_inherited_effect = True

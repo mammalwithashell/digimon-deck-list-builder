@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -16,6 +17,7 @@ class BT8_094(CardScript):
         # Timing: EffectTiming.OnDestroyedAnyone
         # [All Turns] When one of your opponent's level 5 or lower Digimon is deleted, you may suspend this Tamer to <Draw 1��. (Draw 1 card from your deck.)
         effect0 = ICardEffect()
+        effect0.set_timing(EffectTiming.OnDestroyedAnyone)
         effect0.set_effect_name("BT8-094 Draw 1")
         effect0.set_effect_description("[All Turns] When one of your opponent's level 5 or lower Digimon is deleted, you may suspend this Tamer to <Draw 1��. (Draw 1 card from your deck.)")
         effect0.is_optional = True
@@ -53,6 +55,7 @@ class BT8_094(CardScript):
         # Timing: EffectTiming.OnMove
         # [Opponent's Turn] When one of your opponent's level 3 Digimon is moved from their breeding area to their battle area, gain 2 memory.
         effect1 = ICardEffect()
+        effect1.set_timing(EffectTiming.OnMove)
         effect1.set_effect_name("BT8-094 Memory +2")
         effect1.set_effect_description("[Opponent's Turn] When one of your opponent's level 3 Digimon is moved from their breeding area to their battle area, gain 2 memory.")
 

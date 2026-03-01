@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -40,6 +41,7 @@ class BT10_009(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [On Play] Trigger <Draw 2>. (Draw 2 card from your deck.)
         effect2 = ICardEffect()
+        effect2.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect2.set_effect_name("BT10-009 Draw 2")
         effect2.set_effect_description("[On Play] Trigger <Draw 2>. (Draw 2 card from your deck.)")
         effect2.is_on_play = True
@@ -67,6 +69,7 @@ class BT10_009(CardScript):
         # Timing: EffectTiming.OnEndAttack
         # [End of Attack] By placing all digivolution cards from under this Digimon under 1 of your Tamers, unsuspend 1 of your Tamers, and delete this Digimon.
         effect3 = ICardEffect()
+        effect3.set_timing(EffectTiming.OnEndAttack)
         effect3.set_effect_name("BT10-009 Place digivolution cards from this Digimon under your Tamer to unsuspend 1 Tamer and delete this Digimon")
         effect3.set_effect_description("[End of Attack] By placing all digivolution cards from under this Digimon under 1 of your Tamers, unsuspend 1 of your Tamers, and delete this Digimon.")
         effect3.is_optional = True

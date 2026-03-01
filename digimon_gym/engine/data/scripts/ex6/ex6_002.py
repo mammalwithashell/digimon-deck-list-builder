@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -16,6 +17,7 @@ class EX6_002(CardScript):
         # Timing: EffectTiming.OnAllyAttack
         # [When Attacking][Once Per Turn] You may place 1 level 3 blue Digimon card from your hand as this Digimon's bottom digivolution card.
         effect0 = ICardEffect()
+        effect0.set_timing(EffectTiming.OnAllyAttack)
         effect0.set_effect_name("EX6-002 Place 1 level 3 blue Digimon card from your hand as this Digimon's bottom digivolution card.")
         effect0.set_effect_description("[When Attacking][Once Per Turn] You may place 1 level 3 blue Digimon card from your hand as this Digimon's bottom digivolution card.")
         effect0.is_inherited_effect = True

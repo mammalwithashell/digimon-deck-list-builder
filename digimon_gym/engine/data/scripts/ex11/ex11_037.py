@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -33,6 +34,7 @@ class EX11_037(CardScript):
         # Timing: EffectTiming.OnMove
         # Draw 1, Gain 1 memory
         effect1 = ICardEffect()
+        effect1.set_timing(EffectTiming.OnMove)
         effect1.set_effect_name("EX11-037 Draw 1, Gain 1 memory")
         effect1.set_effect_description("Draw 1, Gain 1 memory")
 
@@ -60,6 +62,7 @@ class EX11_037(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # Draw 1, Gain 1 memory
         effect2 = ICardEffect()
+        effect2.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect2.set_effect_name("EX11-037 Draw 1, Gain 1 memory")
         effect2.set_effect_description("Draw 1, Gain 1 memory")
         effect2.is_on_play = True

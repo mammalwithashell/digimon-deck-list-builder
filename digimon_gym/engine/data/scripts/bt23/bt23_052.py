@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -33,6 +34,7 @@ class BT23_052(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [On Play] 1 of your opponent's Digimon can't attack players until their turn ends.
         effect1 = ICardEffect()
+        effect1.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect1.set_effect_name("BT23-052 1 of your opponent's Digimon can't attack players")
         effect1.set_effect_description("[On Play] 1 of your opponent's Digimon can't attack players until their turn ends.")
         effect1.is_on_play = True
@@ -67,6 +69,7 @@ class BT23_052(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [When Digivlving] 1 of your opponent's Digimon can't attack players until their turn ends.
         effect2 = ICardEffect()
+        effect2.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect2.set_effect_name("BT23-052 1 of your opponent's Digimon can't attack players")
         effect2.set_effect_description("[When Digivlving] 1 of your opponent's Digimon can't attack players until their turn ends.")
         effect2.is_when_digivolving = True
@@ -101,6 +104,7 @@ class BT23_052(CardScript):
         # Timing: EffectTiming.WhenLinked
         #  [When Linking] This Digimon gains <Reboot> and <Blocker> until your opponent's turn ends.
         effect3 = ICardEffect()
+        effect3.set_timing(EffectTiming.WhenLinked)
         effect3.set_effect_name("BT23-052 Gain Reboot and Blocker")
         effect3.set_effect_description(" [When Linking] This Digimon gains <Reboot> and <Blocker> until your opponent's turn ends.")
         effect3._is_blocker = True

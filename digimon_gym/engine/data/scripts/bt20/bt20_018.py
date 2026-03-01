@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -16,6 +17,7 @@ class BT20_018(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [On Play] <De-Digivolve 2> 1 of your opponent's Digimon. Then, if during an attack, 1 of your Digimon in the breeding area may digivolve into a level 6 or lower [Chronicle] trait Digimon card in the hand or trash without paying the cost.
         effect0 = ICardEffect()
+        effect0.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect0.set_effect_name("BT20-018 <De-Digivolve 2> 1 of your opponent's Digimon")
         effect0.set_effect_description("[On Play] <De-Digivolve 2> 1 of your opponent's Digimon. Then, if during an attack, 1 of your Digimon in the breeding area may digivolve into a level 6 or lower [Chronicle] trait Digimon card in the hand or trash without paying the cost.")
         effect0.is_on_play = True
@@ -58,6 +60,7 @@ class BT20_018(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [When Digivolving] <De-Digivolve 2> 1 of your opponent's Digimon. Then, if during an attack, 1 of your Digimon in the breeding area may digivolve into a level 6 or lower [Chronicle] trait Digimon card in the hand or trash without paying the cost.
         effect1 = ICardEffect()
+        effect1.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect1.set_effect_name("BT20-018 <De-Digivolve 2> 1 of your opponent's Digimon")
         effect1.set_effect_description("[When Digivolving] <De-Digivolve 2> 1 of your opponent's Digimon. Then, if during an attack, 1 of your Digimon in the breeding area may digivolve into a level 6 or lower [Chronicle] trait Digimon card in the hand or trash without paying the cost.")
         effect1.is_when_digivolving = True
@@ -100,6 +103,7 @@ class BT20_018(CardScript):
         # Timing: EffectTiming.OnLoseSecurity
         # [All Turns] (Once Per Turn) When security stacks are removed from, delete 1 of your opponent's Digimon with the lowest DP.
         effect2 = ICardEffect()
+        effect2.set_timing(EffectTiming.OnLoseSecurity)
         effect2.set_effect_name("BT20-018 Delete 1 of your opponent's Digimon")
         effect2.set_effect_description("[All Turns] (Once Per Turn) When security stacks are removed from, delete 1 of your opponent's Digimon with the lowest DP.")
         effect2.set_max_count_per_turn(1)
@@ -135,6 +139,7 @@ class BT20_018(CardScript):
         # Timing: EffectTiming.OnAllyAttack
         # [When Attacking] (Once Per Turn) If this Digimon is [Alphamon: Ouryuken], trash your opponent's top security card.
         effect3 = ICardEffect()
+        effect3.set_timing(EffectTiming.OnAllyAttack)
         effect3.set_effect_name("BT20-018 Trash your opponent's top security card")
         effect3.set_effect_description("[When Attacking] (Once Per Turn) If this Digimon is [Alphamon: Ouryuken], trash your opponent's top security card.")
         effect3.is_inherited_effect = True

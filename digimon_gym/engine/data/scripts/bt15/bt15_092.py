@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -16,6 +17,7 @@ class BT15_092(CardScript):
         # Timing: EffectTiming.OnDiscardSecurity
         # When an effect trashes this card from the security stack, activate this card's [Security] effect.
         effect0 = ICardEffect()
+        effect0.set_timing(EffectTiming.OnDiscardSecurity)
         effect0.set_effect_name("BT15-092 Activate security effect")
         effect0.set_effect_description("When an effect trashes this card from the security stack, activate this card's [Security] effect.")
 
@@ -29,6 +31,7 @@ class BT15_092(CardScript):
         # Timing: EffectTiming.OptionSkill
         # [Main] Search your security stack. You may play 1 level 4 or lower yellow Digimon card among it without paying the cost. Then, shuffle your security stack. If you have a Tamer with [Kari Kamiya] in its name, place this card on top of your security stack.
         effect1 = ICardEffect()
+        effect1.set_timing(EffectTiming.OptionSkill)
         effect1.set_effect_name("BT15-092 Play 1 Digimon from security")
         effect1.set_effect_description("[Main] Search your security stack. You may play 1 level 4 or lower yellow Digimon card among it without paying the cost. Then, shuffle your security stack. If you have a Tamer with [Kari Kamiya] in its name, place this card on top of your security stack.")
 
@@ -73,6 +76,7 @@ class BT15_092(CardScript):
         # Timing: EffectTiming.SecuritySkill
         # [Security] All of your opponent's Digimon and all of your opponent's Security Digimon get -5000 DP until the end of your turn.
         effect2 = ICardEffect()
+        effect2.set_timing(EffectTiming.SecuritySkill)
         effect2.set_effect_name("BT15-092 Effect")
         effect2.set_effect_description("[Security] All of your opponent's Digimon and all of your opponent's Security Digimon get -5000 DP until the end of your turn.")
         effect2.is_security_effect = True

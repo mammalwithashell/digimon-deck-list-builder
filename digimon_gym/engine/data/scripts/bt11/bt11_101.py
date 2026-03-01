@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -40,6 +41,7 @@ class BT11_101(CardScript):
         # Timing: EffectTiming.OptionSkill
         # [Main] Until the end of your opponent's turn, 3 of your opponent's Digimon get -5000 DP and gain <Security Attack -1>.
         effect1 = ICardEffect()
+        effect1.set_timing(EffectTiming.OptionSkill)
         effect1.set_effect_name("BT11-101 DP -5000, Change Security Attack")
         effect1.set_effect_description("[Main] Until the end of your opponent's turn, 3 of your opponent's Digimon get -5000 DP and gain <Security Attack -1>.")
 

@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -43,6 +44,7 @@ class BT22_011(CardScript):
         # Timing: EffectTiming.OnDeclaration
         # [Main] [Once Per Turn] By paying 3 cost, you may play 1 play cost 5 or lower Digimon card with the [Flame] or [CS] trait from your trash without paying the cost. Then, this Digimon may attack.
         effect2 = ICardEffect()
+        effect2.set_timing(EffectTiming.OnDeclaration)
         effect2.set_effect_name("BT22-011 Pay 3, Play 1 level 5 or lower [Flame]/[CS] digimon from trash. then it may attack")
         effect2.set_effect_description("[Main] [Once Per Turn] By paying 3 cost, you may play 1 play cost 5 or lower Digimon card with the [Flame] or [CS] trait from your trash without paying the cost. Then, this Digimon may attack.")
         effect2.set_max_count_per_turn(1)

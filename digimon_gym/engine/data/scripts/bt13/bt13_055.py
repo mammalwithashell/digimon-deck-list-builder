@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -16,6 +17,7 @@ class BT13_055(CardScript):
         # Timing: EffectTiming.OnDeclaration
         # [Hand][Main] If you have [Ruli Tsukiyono], by placing 1 [SymbareAngoramon] from your hand as 1 of your [Angoramon]'s bottom digivolution card, that Digimon digivolves into this card for a digivolution cost of 3, ignoring digivolution requirements.
         effect0 = ICardEffect()
+        effect0.set_timing(EffectTiming.OnDeclaration)
         effect0.set_effect_name("BT13-055 Your 1 [Angoramon] digivolves into this card")
         effect0.set_effect_description("[Hand][Main] If you have [Ruli Tsukiyono], by placing 1 [SymbareAngoramon] from your hand as 1 of your [Angoramon]'s bottom digivolution card, that Digimon digivolves into this card for a digivolution cost of 3, ignoring digivolution requirements.")
 
@@ -43,6 +45,7 @@ class BT13_055(CardScript):
         # Timing: EffectTiming.OnEndBattle
         # [Your Turn][Once Per Turn] When this Digimon deletes an opponent's Digimon in battle, trash the top card of your opponent's security stack.
         effect1 = ICardEffect()
+        effect1.set_timing(EffectTiming.OnEndBattle)
         effect1.set_effect_name("BT13-055 Trash the top card of opponent's security")
         effect1.set_effect_description("[Your Turn][Once Per Turn] When this Digimon deletes an opponent's Digimon in battle, trash the top card of your opponent's security stack.")
         effect1.is_inherited_effect = True

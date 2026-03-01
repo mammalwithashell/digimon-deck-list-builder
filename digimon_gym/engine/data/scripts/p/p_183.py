@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -63,6 +64,7 @@ class P_183(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [When Digivolving] Until your opponent's turn ends, 1 of your opponent's Digimon gains '[Start of Your Main Phase] This Digimon attacks.' Then, this Digimon may attack.
         effect3 = ICardEffect()
+        effect3.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect3.set_effect_name("P-183 1 digimon gains attack on Start of your main phase")
         effect3.set_effect_description("[When Digivolving] Until your opponent's turn ends, 1 of your opponent's Digimon gains '[Start of Your Main Phase] This Digimon attacks.' Then, this Digimon may attack.")
         effect3.is_when_digivolving = True
@@ -80,6 +82,7 @@ class P_183(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [Start of Your Main Phase] This Digimon attacks.
         effect4 = ICardEffect()
+        effect4.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect4.set_effect_name("P-183 [Start of Your Main Phase] This Digimon attacks.")
         effect4.set_effect_description("[Start of Your Main Phase] This Digimon attacks.")
         effect4.is_on_play = True
@@ -110,6 +113,7 @@ class P_183(CardScript):
         # Timing: EffectTiming.OnAttackTargetChanged
         # [All Turns] [Once Per Turn] When attack targets change, trash your opponent's top security card.
         effect5 = ICardEffect()
+        effect5.set_timing(EffectTiming.OnAttackTargetChanged)
         effect5.set_effect_name("P-183 Trash top secuity card")
         effect5.set_effect_description("[All Turns] [Once Per Turn] When attack targets change, trash your opponent's top security card.")
         effect5.set_max_count_per_turn(1)

@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -41,6 +42,7 @@ class BT22_077(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [When Digivolving] If this Digimon's stack has 2 or more same-level cards, trash any 4 digivolution cards from your opponent's Digimon. Then, return 1 of your opponent's Digimon with 1 or fewer digivolution cards to the bottom of the deck.
         effect2 = ICardEffect()
+        effect2.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect2.set_effect_name("BT22-077 Trash 4 sources, then return 1 digimon.")
         effect2.set_effect_description("[When Digivolving] If this Digimon's stack has 2 or more same-level cards, trash any 4 digivolution cards from your opponent's Digimon. Then, return 1 of your opponent's Digimon with 1 or fewer digivolution cards to the bottom of the deck.")
         effect2.is_when_digivolving = True
@@ -81,6 +83,7 @@ class BT22_077(CardScript):
         # Timing: EffectTiming.OnEndTurn
         # [End of Your Turn] [Once Per Turn] 1 of your Digimon may unsuspend.
         effect3 = ICardEffect()
+        effect3.set_timing(EffectTiming.OnEndTurn)
         effect3.set_effect_name("BT22-077 Unsuspend")
         effect3.set_effect_description("[End of Your Turn] [Once Per Turn] 1 of your Digimon may unsuspend.")
         effect3.is_optional = True
@@ -117,6 +120,7 @@ class BT22_077(CardScript):
         # Timing: EffectTiming.OnEndTurn
         # [End of Your Turn] [Once Per Turn] 1 of your Digimon may unsuspend.
         effect4 = ICardEffect()
+        effect4.set_timing(EffectTiming.OnEndTurn)
         effect4.set_effect_name("BT22-077 Unsuspend")
         effect4.set_effect_description("[End of Your Turn] [Once Per Turn] 1 of your Digimon may unsuspend.")
         effect4.is_inherited_effect = True

@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -30,6 +31,7 @@ class BT23_015(CardScript):
         # Timing: EffectTiming.BeforePayCost
         # When this card would be played, if you have a Tamer with the [Zaxon] trait, reduce the play cost by 5.
         effect1 = ICardEffect()
+        effect1.set_timing(EffectTiming.BeforePayCost)
         effect1.set_effect_name("BT23-015 Reduce play cost by 5")
         effect1.set_effect_description("When this card would be played, if you have a Tamer with the [Zaxon] trait, reduce the play cost by 5.")
         effect1.set_hash_string("BT23_015_ReducePlayCost")
@@ -79,6 +81,7 @@ class BT23_015(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [On Play] [Once Per Turn] Delete 1 of your opponent's Digimon with 9000 DP or less. Then, you may return up to 3 non-Digi-Egg cards from their trash to the bottom of the deck.
         effect3 = ICardEffect()
+        effect3.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect3.set_effect_name("BT23-015 Delete 1 digimon with 9K DP or less. then you may return up to 3 non egg cards from trash to bottom of deck")
         effect3.set_effect_description("[On Play] [Once Per Turn] Delete 1 of your opponent's Digimon with 9000 DP or less. Then, you may return up to 3 non-Digi-Egg cards from their trash to the bottom of the deck.")
         effect3.set_hash_string("BT23_015_OP/WD/WA")
@@ -129,6 +132,7 @@ class BT23_015(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [When Digivolving] [Once Per Turn] Delete 1 of your opponent's Digimon with 9000 DP or less. Then, you may return up to 3 non-Digi-Egg cards from their trash to the bottom of the deck.
         effect4 = ICardEffect()
+        effect4.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect4.set_effect_name("BT23-015 Delete 1 digimon with 9K DP or less. then you may return up to 3 non egg cards from trash to bottom of deck")
         effect4.set_effect_description("[When Digivolving] [Once Per Turn] Delete 1 of your opponent's Digimon with 9000 DP or less. Then, you may return up to 3 non-Digi-Egg cards from their trash to the bottom of the deck.")
         effect4.set_hash_string("BT23_015_OP/WD/WA")
@@ -179,6 +183,7 @@ class BT23_015(CardScript):
         # Timing: EffectTiming.OnAllyAttack
         # [When Attacking] [Once Per Turn] Delete 1 of your opponent's Digimon with 9000 DP or less. Then, you may return up to 3 non-Digi-Egg cards from their trash to the bottom of the deck.
         effect5 = ICardEffect()
+        effect5.set_timing(EffectTiming.OnAllyAttack)
         effect5.set_effect_name("BT23-015 Delete 1 digimon with 9K DP or less. then you may return up to 3 non egg cards from trash to bottom of deck")
         effect5.set_effect_description("[When Attacking] [Once Per Turn] Delete 1 of your opponent's Digimon with 9000 DP or less. Then, you may return up to 3 non-Digi-Egg cards from their trash to the bottom of the deck.")
         effect5.set_hash_string("BT23_015_OP/WD/WA")
@@ -229,6 +234,7 @@ class BT23_015(CardScript):
         # Timing: EffectTiming.OnDestroyedAnyone
         # [On Deletion] Place this card face up as the bottom security card.
         effect6 = ICardEffect()
+        effect6.set_timing(EffectTiming.OnDestroyedAnyone)
         effect6.set_effect_name("BT23-015 Place face up as bottom security card")
         effect6.set_effect_description("[On Deletion] Place this card face up as the bottom security card.")
         effect6.is_on_deletion = True

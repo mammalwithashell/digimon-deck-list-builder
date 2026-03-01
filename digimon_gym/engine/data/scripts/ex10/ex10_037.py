@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -16,6 +17,7 @@ class EX10_037(CardScript):
         # Timing: EffectTiming.OnDiscardLibrary
         # When this card is trashed from the top of the deck, you may delete 1 of your opponent's level 4 or lower Digimon.
         effect0 = ICardEffect()
+        effect0.set_timing(EffectTiming.OnDiscardLibrary)
         effect0.set_effect_name("EX10-037 Delete 1 level 4 or lower digimon")
         effect0.set_effect_description("When this card is trashed from the top of the deck, you may delete 1 of your opponent's level 4 or lower Digimon.")
 
@@ -49,6 +51,7 @@ class EX10_037(CardScript):
         # Timing: EffectTiming.OnStartMainPhase
         # [Start of Your Main Phase] Trash the top 2 cards of your deck.
         effect1 = ICardEffect()
+        effect1.set_timing(EffectTiming.OnStartMainPhase)
         effect1.set_effect_name("EX10-037 Trash top 2 deck cards")
         effect1.set_effect_description("[Start of Your Main Phase] Trash the top 2 cards of your deck.")
 

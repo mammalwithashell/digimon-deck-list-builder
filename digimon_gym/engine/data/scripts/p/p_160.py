@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -47,6 +48,7 @@ class P_160(CardScript):
         # Timing: EffectTiming.OnAllyAttack
         # [When Attacking] If a card with [Tyrannomon] in its name or [X Antibody] is in this Digimon's digivolution cards, this Digimon may digivolve into a Digimon card with [Tyrannomon] in its name or the [Dinosaur] trait in the hand with the digivolution cost reduced by 1.
         effect2 = ICardEffect()
+        effect2.set_timing(EffectTiming.OnAllyAttack)
         effect2.set_effect_name("P-160 This Digimon digivolves")
         effect2.set_effect_description("[When Attacking] If a card with [Tyrannomon] in its name or [X Antibody] is in this Digimon's digivolution cards, this Digimon may digivolve into a Digimon card with [Tyrannomon] in its name or the [Dinosaur] trait in the hand with the digivolution cost reduced by 1.")
         effect2.is_optional = True

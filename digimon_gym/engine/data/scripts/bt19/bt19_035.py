@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -46,6 +47,7 @@ class BT19_035(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [All Turns] (Once Per Turn) When any of your [Xros Heart] trait Digimon are played, give 1 of your opponent's Digimon <Security Attack -1> and it gets -3000 DP until the end of your opponent's turn.
         effect2 = ICardEffect()
+        effect2.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect2.set_effect_name("BT19-035 1 of your opponent's digimon gets <Security Attack -1> and -3000 DP for the turn")
         effect2.set_effect_description("[All Turns] (Once Per Turn) When any of your [Xros Heart] trait Digimon are played, give 1 of your opponent's Digimon <Security Attack -1> and it gets -3000 DP until the end of your opponent's turn.")
         effect2.set_max_count_per_turn(1)
@@ -81,6 +83,7 @@ class BT19_035(CardScript):
         # Timing: EffectTiming.OnDestroyedAnyone
         # [On Deletion] Place 1 Digimon card with the [Xros Heart]/[Blue Flare] trait from your hand or trash under your Tamers.
         effect3 = ICardEffect()
+        effect3.set_timing(EffectTiming.OnDestroyedAnyone)
         effect3.set_effect_name("BT19-035 Place 1 [Xros Heart]/[Blue Flare] card from trash under 1 of your Tamers, then <Save>")
         effect3.set_effect_description("[On Deletion] Place 1 Digimon card with the [Xros Heart]/[Blue Flare] trait from your hand or trash under your Tamers.")
         effect3.is_on_deletion = True
@@ -96,6 +99,7 @@ class BT19_035(CardScript):
         # Timing: EffectTiming.OnAllyAttack
         # [When Attacking] If this Digimon has the [Xros Heart] trait, 1 of your opponent's Digimon gets -2000 DP for the turn.
         effect4 = ICardEffect()
+        effect4.set_timing(EffectTiming.OnAllyAttack)
         effect4.set_effect_name("BT19-035 DP -2000 if this Digimon has [Xros Heart] trait")
         effect4.set_effect_description("[When Attacking] If this Digimon has the [Xros Heart] trait, 1 of your opponent's Digimon gets -2000 DP for the turn.")
         effect4.is_inherited_effect = True

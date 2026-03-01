@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -16,6 +17,7 @@ class BT13_103(CardScript):
         # Timing: EffectTiming.BeforePayCost
         # [Your Turn] When a card with [Belphemon] in its name would be played, by deleting 1 of your Digimon with [Gizmon] in its name, reduce the play cost by the play cost of the deleted Digimon.
         effect0 = ICardEffect()
+        effect0.set_timing(EffectTiming.BeforePayCost)
         effect0.set_effect_name("BT13-103 Delete 1 Digimon to reduce Play Cost")
         effect0.set_effect_description("[Your Turn] When a card with [Belphemon] in its name would be played, by deleting 1 of your Digimon with [Gizmon] in its name, reduce the play cost by the play cost of the deleted Digimon.")
         effect0.is_optional = True
@@ -84,6 +86,7 @@ class BT13_103(CardScript):
         # Timing: EffectTiming.OnEndTurn
         # [End of Opponent's Turn][Once Per Turn] <Draw 1> and trash 1 card in your hand. Then, by placing this Tamer as the bottom digivolution card of 1 of your Digimon with [Belphemon] in its name, delete 1 of your opponent's level 6 Digimon.
         effect2 = ICardEffect()
+        effect2.set_timing(EffectTiming.OnEndTurn)
         effect2.set_effect_name("BT13-103 Draw 1, trash 1 card from hand and Delete Digimon")
         effect2.set_effect_description("[End of Opponent's Turn][Once Per Turn] <Draw 1> and trash 1 card in your hand. Then, by placing this Tamer as the bottom digivolution card of 1 of your Digimon with [Belphemon] in its name, delete 1 of your opponent's level 6 Digimon.")
         effect2.set_max_count_per_turn(1)

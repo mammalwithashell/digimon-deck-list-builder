@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -38,6 +39,7 @@ class BT20_051(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [When Digivolving] If you have 1 or fewer Tamers, you may play 1 [Kota Domoto] from your hand without paying the cost.
         effect1 = ICardEffect()
+        effect1.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect1.set_effect_name("BT20-051 Play 1 Tamer with [Kota Domoto] in its name from hand")
         effect1.set_effect_description("[When Digivolving] If you have 1 or fewer Tamers, you may play 1 [Kota Domoto] from your hand without paying the cost.")
         effect1.is_optional = True

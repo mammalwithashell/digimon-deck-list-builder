@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -16,6 +17,7 @@ class BT10_096(CardScript):
         # Timing: EffectTiming.OptionSkill
         # [Main] Choose 1 of your level 4 or higher Digimon with [Shoutmon] in its name. Delete 1 of your opponent's Digimon with DP less than or equal to the chosen Digimon.
         effect0 = ICardEffect()
+        effect0.set_timing(EffectTiming.OptionSkill)
         effect0.set_effect_name("BT10-096 Delete")
         effect0.set_effect_description("[Main] Choose 1 of your level 4 or higher Digimon with [Shoutmon] in its name. Delete 1 of your opponent's Digimon with DP less than or equal to the chosen Digimon.")
 
@@ -52,6 +54,7 @@ class BT10_096(CardScript):
         # Timing: EffectTiming.SecuritySkill
         # [Security] Reveal the top 3 cards of your deck. You may add 1 Digimon card with [Xros Heart] in its traits among them to your hand and play 1 [Taiki Kudo] among them without paying its memory cost. Place the rest at the bottom of your deck in any order.
         effect1 = ICardEffect()
+        effect1.set_timing(EffectTiming.SecuritySkill)
         effect1.set_effect_name("BT10-096 Play Card, Add To Hand")
         effect1.set_effect_description("[Security] Reveal the top 3 cards of your deck. You may add 1 Digimon card with [Xros Heart] in its traits among them to your hand and play 1 [Taiki Kudo] among them without paying its memory cost. Place the rest at the bottom of your deck in any order.")
         effect1.is_security_effect = True

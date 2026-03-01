@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -16,6 +17,7 @@ class P_123(CardScript):
         # Timing: EffectTiming.OnMove
         # [Your Turn] [Once Per Turn] When one of your Digimon moves from the breeding area to the battle area, you may hatch in your breeding area. Then, gain 1 memory.
         effect0 = ICardEffect()
+        effect0.set_timing(EffectTiming.OnMove)
         effect0.set_effect_name("P-123 Hatch and memory +1")
         effect0.set_effect_description("[Your Turn] [Once Per Turn] When one of your Digimon moves from the breeding area to the battle area, you may hatch in your breeding area. Then, gain 1 memory.")
         effect0.set_max_count_per_turn(1)

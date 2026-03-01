@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -36,6 +37,7 @@ class BT16_059(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [On Play] If you have 3 or more security cards, <De-Digivolve 1> 1 of your opponent's Digimon. If you have 3 or fewer security cards, delete 1 of your opponent's Digimon with a play cost of 6 or less.
         effect1 = ICardEffect()
+        effect1.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect1.set_effect_name("BT16-059 De-Digivolve 1 digimon, then delete 1 digimon ")
         effect1.set_effect_description("[On Play] If you have 3 or more security cards, <De-Digivolve 1> 1 of your opponent's Digimon. If you have 3 or fewer security cards, delete 1 of your opponent's Digimon with a play cost of 6 or less.")
         effect1.is_on_play = True
@@ -80,6 +82,7 @@ class BT16_059(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [When Digivolving] If you have 3 or more security cards, <De-Digivolve 1> 1 of your opponent's Digimon. If you have 3 or fewer security cards, delete 1 of your opponent's Digimon with a play cost of 6 or less.
         effect2 = ICardEffect()
+        effect2.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect2.set_effect_name("BT16-059 De-Digivolve 1 digimon, then delete 1 digimon ")
         effect2.set_effect_description("[When Digivolving] If you have 3 or more security cards, <De-Digivolve 1> 1 of your opponent's Digimon. If you have 3 or fewer security cards, delete 1 of your opponent's Digimon with a play cost of 6 or less.")
         effect2.is_when_digivolving = True
@@ -124,6 +127,7 @@ class BT16_059(CardScript):
         # Timing: EffectTiming.OnEndAttack
         # [End of Attack] [Once per turn] If this Digimon has [Pulsemon] in its text, by trashing the top card of your security stack, unsuspend this Digimon.
         effect3 = ICardEffect()
+        effect3.set_timing(EffectTiming.OnEndAttack)
         effect3.set_effect_name("BT16-059 Unsuspend this Digimon by trashing the top card of your security.")
         effect3.set_effect_description("[End of Attack] [Once per turn] If this Digimon has [Pulsemon] in its text, by trashing the top card of your security stack, unsuspend this Digimon.")
         effect3.is_inherited_effect = True

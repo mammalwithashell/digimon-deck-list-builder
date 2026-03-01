@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -16,6 +17,7 @@ class BT20_014(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [On Play] Delete 1 of your opponent's Digimon with 5000DP or less.
         effect0 = ICardEffect()
+        effect0.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect0.set_effect_name("BT20-014 Delete a Digimon with 5000DP or less")
         effect0.set_effect_description("[On Play] Delete 1 of your opponent's Digimon with 5000DP or less.")
         effect0.is_on_play = True
@@ -53,6 +55,7 @@ class BT20_014(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [When Digivolving] Delete 1 of your opponent's Digimon with 5000DP or less.
         effect1 = ICardEffect()
+        effect1.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect1.set_effect_name("BT20-014 Delete a Digimon with 5000DP or less")
         effect1.set_effect_description("[When Digivolving] Delete 1 of your opponent's Digimon with 5000DP or less.")
         effect1.is_when_digivolving = True
@@ -90,6 +93,7 @@ class BT20_014(CardScript):
         # Timing: EffectTiming.OnEndTurn
         # [End of Your Turn] By suspending 1 of your other Digimon, this Digimon may digivolve into a Digimon card with [Jesmon] in its name in the hand without paying the cost.
         effect2 = ICardEffect()
+        effect2.set_timing(EffectTiming.OnEndTurn)
         effect2.set_effect_name("BT20-014 By suspending a Digimon, this Digimon may digivolve into a Digimon card with [Jesmon] in its name")
         effect2.set_effect_description("[End of Your Turn] By suspending 1 of your other Digimon, this Digimon may digivolve into a Digimon card with [Jesmon] in its name in the hand without paying the cost.")
         effect2.is_optional = True

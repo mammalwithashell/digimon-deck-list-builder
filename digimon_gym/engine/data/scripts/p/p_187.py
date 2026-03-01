@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -29,6 +30,7 @@ class P_187(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [When Digivolving] <Recovery +1 (Deck)> (Place the top card of your deck on top of your security stack). Then, if DNA digivolving, by placing 1 other Digimon or Tamer as the top or bottom security card, trash your opponent's top security card.
         effect1 = ICardEffect()
+        effect1.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect1.set_effect_name("P-187 <Recovery +1 (Deck)>")
         effect1.set_effect_description("[When Digivolving] <Recovery +1 (Deck)> (Place the top card of your deck on top of your security stack). Then, if DNA digivolving, by placing 1 other Digimon or Tamer as the top or bottom security card, trash your opponent's top security card.")
         effect1.is_when_digivolving = True
@@ -73,6 +75,7 @@ class P_187(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # Play Card, Destroy Security
         effect2 = ICardEffect()
+        effect2.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect2.set_effect_name("P-187 Trash top security to play a digimon")
         effect2.set_effect_description("Play Card, Destroy Security")
         effect2.is_optional = True
@@ -118,6 +121,7 @@ class P_187(CardScript):
         # Timing: EffectTiming.OnAllyAttack
         # Play Card, Destroy Security
         effect3 = ICardEffect()
+        effect3.set_timing(EffectTiming.OnAllyAttack)
         effect3.set_effect_name("P-187 Trash top security to play a digimon")
         effect3.set_effect_description("Play Card, Destroy Security")
         effect3.is_optional = True

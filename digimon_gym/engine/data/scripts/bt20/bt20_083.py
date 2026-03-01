@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -51,6 +52,7 @@ class BT20_083(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [On Play] If you have 1 or fewer security cards, this Digimon may digivolve into [Omnimon (X Antibody)] in the hand, ignoring digivolution requirements and without paying the cost.
         effect2 = ICardEffect()
+        effect2.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect2.set_effect_name("BT20-083 Digivolve this Digimon into [Omnimon (X Antibody)]")
         effect2.set_effect_description("[On Play] If you have 1 or fewer security cards, this Digimon may digivolve into [Omnimon (X Antibody)] in the hand, ignoring digivolution requirements and without paying the cost.")
         effect2.is_on_play = True
@@ -86,6 +88,7 @@ class BT20_083(CardScript):
         # Timing: EffectTiming.OnDestroyedAnyone
         # [On Deletion] You may place this card as the bottom digivolution card of your [King Drasil_7D6] in the breeding area.
         effect3 = ICardEffect()
+        effect3.set_timing(EffectTiming.OnDestroyedAnyone)
         effect3.set_effect_name("BT20-083 Place under [King Drasil_7D6] in the breeding area.")
         effect3.set_effect_description("[On Deletion] You may place this card as the bottom digivolution card of your [King Drasil_7D6] in the breeding area.")
         effect3.is_optional = True
@@ -105,6 +108,7 @@ class BT20_083(CardScript):
         # Timing: EffectTiming.OnLoseSecurity
         # [Breeding] [Opponent's Turn] When your security stack is removed from, by suspending this Digimon, play 1 [Omekamon] from this Digimon's digivolution cards without paying the cost.
         effect4 = ICardEffect()
+        effect4.set_timing(EffectTiming.OnLoseSecurity)
         effect4.set_effect_name("BT20-083 play 1 [Omekamon]")
         effect4.set_effect_description("[Breeding] [Opponent's Turn] When your security stack is removed from, by suspending this Digimon, play 1 [Omekamon] from this Digimon's digivolution cards without paying the cost.")
         effect4.is_inherited_effect = True

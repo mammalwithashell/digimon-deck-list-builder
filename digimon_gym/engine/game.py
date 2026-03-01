@@ -275,6 +275,9 @@ class Game:
         self._reset_effect_turn_counts()
         self._clear_temp_dp()
         self.modifiers.clear_expiry('end_of_turn')
+        # "Until opponent's turn ends" modifiers expire at the start of the
+        # granting player's next turn (i.e., after the opponent's turn ended).
+        self.modifiers.clear_opponent_turn_expiry(self.turn_player)
         self.execute_effects(EffectTiming.OnStartTurn)
 
         self.next_phase()
@@ -577,28 +580,38 @@ class Game:
         Effects carry timing flags (is_on_play, is_when_digivolving, etc.)
         set by the transpiler.  If an effect has ANY flag set, it must match
         the requested timing; otherwise it is skipped.  Effects with no
-        timing flags are considered reactive and always pass.
+        timing flags but a ``timing`` field set via ``set_timing()`` are
+        matched exactly.  Effects with neither flags nor a timing field
+        default to **not firing** to prevent cross-timing pollution.
         """
         has_flag = (effect.is_on_play or effect.is_when_digivolving
                     or effect.is_on_attack or effect.is_on_deletion)
 
         if not has_flag:
-            # No timing flag — could be a generic reactive effect.
-            # Only allow it from the affected permanent to prevent cross-fire.
+            # Check the explicit timing field first (set via set_timing()).
+            if getattr(effect, 'timing', None) is not None:
+                if effect.timing == timing:
+                    return True
+                # Map script-side OptionSkill to engine-side OnUseOption
+                if (effect.timing == EffectTiming.OptionSkill
+                        and timing == EffectTiming.OnUseOption):
+                    return True
+                # Map script-side SecuritySkill to engine-side OnSecurityCheck
+                if (effect.timing == EffectTiming.SecuritySkill
+                        and timing == EffectTiming.OnSecurityCheck):
+                    return True
+                return False
+
+            # No timing flag and no timing field — only allow
+            # OnEnterFieldAnyone for the card that just entered.
             if timing == EffectTiming.OnEnterFieldAnyone:
                 return (
                     played_card is not None
                     and perm.top_card is played_card
                     and (effect.effect_source_card is None or effect.effect_source_card is perm.top_card)
                 )
-            if timing == EffectTiming.WhenDigivolving:
-                return False
-            # Phase-transition timings auto-advance; unflagged effects with
-            # callbacks that create selections would break the flow.
-            if timing in (EffectTiming.OnStartTurn, EffectTiming.OnDraw,
-                          EffectTiming.OnStartMainPhase, EffectTiming.OnEndTurn):
-                return False
-            return True
+            # All other timings: unflagged + no timing = do not fire.
+            return False
 
         if timing == EffectTiming.OnEnterFieldAnyone:
             return (
@@ -701,6 +714,7 @@ class Game:
             source_effect=source_effect,
             source_permanent=target_permanent,
             expiry=expiry,
+            granting_player=self.turn_player if expiry == 'end_of_opponent_turn' else None,
         )
         self.modifiers.register(entry)
         return entry
@@ -1106,6 +1120,15 @@ class Game:
 
         # <Progress>: mark attacker as attacking (for effect immunity)
         attacker.is_attacking = True
+
+        # Clear FORCE_ATTACK modifier once the forced Digimon actually attacks
+        if self.modifiers.has_modifier(attacker, ModifierType.FORCE_ATTACK):
+            # Remove all FORCE_ATTACK modifiers on this attacker
+            entries = self.modifiers._modifiers.get(ModifierType.FORCE_ATTACK, [])
+            self.modifiers._modifiers[ModifierType.FORCE_ATTACK] = [
+                e for e in entries
+                if not e.is_active(attacker)
+            ]
 
         if not without_suspend:
             attacker.suspend()
@@ -1655,6 +1678,8 @@ class Game:
                 if attacker.can_attack_player():
                     mask[100 + i * 15 + 12] = 1.0
                 # Digimon attacks (targets 0-11, suspended only per rules)
+                if attacker.has_keyword('_is_cannot_attack_digimon'):
+                    continue
                 has_raid = attacker.has_keyword('_is_raid')
                 for j in range(min(len(opp.battle_area), FIELD_SLOTS)):
                     target = opp.battle_area[j]
@@ -1704,6 +1729,48 @@ class Game:
                 if (self._has_delay_effect(perm)
                         and perm.turn_played < self.turn_count):  # Not same turn placed
                     mask[1000 + i * 10 + 1] = 1.0
+
+            # Force Attack: if any of the turn player's Digimon have
+            # FORCE_ATTACK modifier, restrict the mask to attack actions
+            # for those Digimon only (opponent grants "this Digimon attacks").
+            forced_attackers = []
+            for i in range(min(len(me.battle_area), FIELD_SLOTS)):
+                perm = me.battle_area[i]
+                if (perm.is_digimon
+                        and self.modifiers.has_modifier(perm, ModifierType.FORCE_ATTACK)):
+                    forced_attackers.append(i)
+
+            if forced_attackers:
+                # Only allow attack actions for forced Digimon
+                forced_mask = [0.0] * ACTION_SPACE_SIZE
+                has_any_attack = False
+                for i in forced_attackers:
+                    attacker = me.battle_area[i]
+                    if not attacker.can_attack():
+                        continue
+                    # Security attack
+                    if attacker.can_attack_player():
+                        forced_mask[100 + i * 15 + 12] = 1.0
+                        has_any_attack = True
+                    # Digimon attacks
+                    has_raid = attacker.has_keyword('_is_raid')
+                    for j in range(min(len(opp.battle_area), FIELD_SLOTS)):
+                        target = opp.battle_area[j]
+                        if target.is_suspended:
+                            forced_mask[100 + i * 15 + j] = 1.0
+                            has_any_attack = True
+                        elif has_raid and not target.is_suspended and target.is_digimon:
+                            unsuspended_dps = [
+                                (p.dp or 0) for p in opp.battle_area
+                                if not p.is_suspended and p.is_digimon
+                            ]
+                            if unsuspended_dps and (target.dp or 0) == max(unsuspended_dps):
+                                forced_mask[100 + i * 15 + j] = 1.0
+                                has_any_attack = True
+                if has_any_attack:
+                    return forced_mask
+                # If forced Digimon can't attack (suspended etc), skip force
+                # and fall through to normal mask
 
             # Pass (62) - always valid in main
             mask[62] = 1.0
@@ -2935,6 +3002,125 @@ class Game:
 
     # ─── DNA Digivolve ────────────────────────────────────────────────
 
+    def effect_dna_digivolve_from_hand(
+        self, player: Player,
+        filter_fn: Callable[['CardSource'], bool],
+        is_optional: bool = True,
+        prompt: str = "",
+    ):
+        """Let an effect trigger a DNA digivolve from hand.
+
+        Searches the player's hand for a card matching filter_fn that has
+        dna_costs, then enters the SelectMaterial flow to pick 2 field targets.
+        Requires 2+ valid Digimon on the battle area.
+        """
+        # Find matching DNA cards in hand
+        candidates = []
+        for i, card in enumerate(player.hand_cards):
+            if not filter_fn(card):
+                continue
+            if not card.is_digimon or not card.c_entity_base:
+                continue
+            if not card.c_entity_base.dna_costs:
+                continue
+            if has_valid_dna_targets(card, player.battle_area):
+                candidates.append(i)
+        if not candidates:
+            return
+
+        if len(candidates) == 1:
+            # Only one matching card — go straight to target selection
+            self._effect_dna_pick_first(player, candidates[0])
+        else:
+            # Multiple matching cards — let agent pick which one
+            valid = [SEL_HAND_START + i for i in candidates]
+            if not prompt:
+                prompt = "Select a card from hand to DNA digivolve."
+            def on_pick_card(action_id: int):
+                hand_idx = action_id - SEL_HAND_START
+                self._effect_dna_pick_first(player, hand_idx)
+            self.request_selection(
+                GamePhase.SelectTarget, player, on_pick_card, valid,
+                is_optional, prompt=prompt)
+
+    def _effect_dna_pick_first(self, player: Player, hand_idx: int):
+        """Effect DNA step 1: pick first field target."""
+        if hand_idx >= len(player.hand_cards):
+            return
+        card = player.hand_cards[hand_idx]
+        valid_first = get_valid_dna_first_targets(card, player.battle_area)
+        if not valid_first:
+            return
+
+        # Offset field indices to SEL_MY_FIELD_START range
+        valid = [SEL_MY_FIELD_START + i for i in valid_first]
+
+        def on_first(action_id: int):
+            first_field_idx = action_id - SEL_MY_FIELD_START
+            self._effect_dna_pick_second(player, hand_idx, first_field_idx)
+
+        self.request_selection(
+            GamePhase.SelectMaterial, player, on_first, valid,
+            is_optional=False,
+            prompt="Select first Digimon for DNA digivolve.")
+
+    def _effect_dna_pick_second(self, player: Player, hand_idx: int,
+                                 first_field_idx: int):
+        """Effect DNA step 2: pick second field target."""
+        if hand_idx >= len(player.hand_cards):
+            return
+        if first_field_idx >= len(player.battle_area):
+            return
+        card = player.hand_cards[hand_idx]
+        valid_second = get_valid_dna_second_targets(
+            card, first_field_idx, player.battle_area)
+        if not valid_second:
+            return
+
+        valid = [SEL_MY_FIELD_START + i for i in valid_second]
+
+        def on_second(action_id: int):
+            second_field_idx = action_id - SEL_MY_FIELD_START
+            self._effect_dna_execute(player, hand_idx, first_field_idx,
+                                      second_field_idx)
+
+        self.request_selection(
+            GamePhase.SelectMaterial, player, on_second, valid,
+            is_optional=False,
+            prompt="Select second Digimon for DNA digivolve.")
+
+    def _effect_dna_execute(self, player: Player, hand_idx: int,
+                             first_field_idx: int, second_field_idx: int):
+        """Effect DNA step 3: execute the DNA digivolve."""
+        if hand_idx >= len(player.hand_cards):
+            return
+        if first_field_idx >= len(player.battle_area):
+            return
+        if second_field_idx >= len(player.battle_area):
+            return
+
+        card = player.hand_cards[hand_idx]
+        perm1 = player.battle_area[first_field_idx]
+        perm2 = player.battle_area[second_field_idx]
+
+        stacking = get_dna_stacking_order(card, perm1, perm2)
+        if stacking is None:
+            return
+
+        top_perm, bottom_perm, dna_cost = stacking
+
+        self.logger.log(
+            f"[Effect DNA Digivolve] {self._card_ref(card)} from "
+            f"{self._perm_ref(top_perm)} + {self._perm_ref(bottom_perm)} "
+            f"(cost: {dna_cost.memory_cost})")
+
+        cost = player.dna_digivolve(top_perm, bottom_perm, card, dna_cost)
+        player.lose_memory(cost)
+
+        new_perm = player.battle_area[-1] if player.battle_area else None
+        self.execute_effects(EffectTiming.WhenDigivolving, {
+            "digivolved_permanent": new_perm, "is_dna_digivolve": True})
+
     def _initiate_dna_digivolve(self, hand_idx: int):
         """Start DNA digivolve: enter SelectMaterial to pick first field target."""
         if self.current_phase != GamePhase.Main:
@@ -3012,5 +3198,6 @@ class Game:
         # Find the new permanent (last in battle area after dna_digivolve)
         new_perm = player.battle_area[-1] if player.battle_area else None
 
-        self.execute_effects(EffectTiming.WhenDigivolving, {"digivolved_permanent": new_perm})
+        self.execute_effects(EffectTiming.WhenDigivolving, {
+            "digivolved_permanent": new_perm, "is_dna_digivolve": True})
         self.check_turn_end()

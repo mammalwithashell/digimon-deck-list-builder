@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -16,6 +17,7 @@ class EX11_048(CardScript):
         # Timing: EffectTiming.OnMove
         # Gain Keyword Retaliation
         effect0 = ICardEffect()
+        effect0.set_timing(EffectTiming.OnMove)
         effect0.set_effect_name("EX11-048 Gain Keyword Retaliation")
         effect0.set_effect_description("Gain Keyword Retaliation")
         effect0._is_retaliation = True
@@ -48,6 +50,7 @@ class EX11_048(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # Gain Keyword Retaliation
         effect1 = ICardEffect()
+        effect1.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect1.set_effect_name("EX11-048 Gain Keyword Retaliation")
         effect1.set_effect_description("Gain Keyword Retaliation")
         effect1.is_on_play = True
@@ -82,6 +85,7 @@ class EX11_048(CardScript):
         # Timing: EffectTiming.OnDestroyedAnyone
         # [On Deletion] Gain 1 memory.
         effect2 = ICardEffect()
+        effect2.set_timing(EffectTiming.OnDestroyedAnyone)
         effect2.set_effect_name("EX11-048 Memory +1")
         effect2.set_effect_description("[On Deletion] Gain 1 memory.")
         effect2.is_inherited_effect = True

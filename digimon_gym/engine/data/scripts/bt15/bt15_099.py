@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -16,6 +17,7 @@ class BT15_099(CardScript):
         # Timing: EffectTiming.OptionSkill
         # [Main] By trashing 1 Digimon card in your hand, delete 1 of your opponent's Digimon whose level is less than or equal to the trashed car's level.When a card with [Myotismon] in its text is trashed by this effect, <Draw 2>.
         effect0 = ICardEffect()
+        effect0.set_timing(EffectTiming.OptionSkill)
         effect0.set_effect_name("BT15-099 Draw 2, Delete, Trash From Hand")
         effect0.set_effect_description("[Main] By trashing 1 Digimon card in your hand, delete 1 of your opponent's Digimon whose level is less than or equal to the trashed car's level.When a card with [Myotismon] in its text is trashed by this effect, <Draw 2>.")
 

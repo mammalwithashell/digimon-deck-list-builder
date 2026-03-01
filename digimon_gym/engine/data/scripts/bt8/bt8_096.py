@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -16,6 +17,7 @@ class BT8_096(CardScript):
         # Timing: EffectTiming.OptionSkill
         # [Main] Delete 1 of your opponent's Digimon with 4000 DP or less. If you have a Digimon in play with 2 or more colors, or with 2 or more colors in one of its digivolution cards, delete 1 of your opponent's Digimon with 7000 DP or less instead.
         effect0 = ICardEffect()
+        effect0.set_timing(EffectTiming.OptionSkill)
         effect0.set_effect_name("BT8-096 Delete")
         effect0.set_effect_description("[Main] Delete 1 of your opponent's Digimon with 4000 DP or less. If you have a Digimon in play with 2 or more colors, or with 2 or more colors in one of its digivolution cards, delete 1 of your opponent's Digimon with 7000 DP or less instead.")
 

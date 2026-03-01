@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -29,6 +30,7 @@ class BT15_049(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [On Play] 1 of your Digimon gets +3000 DP until the end of your opponent's turn. Then, if one of their Digimon is attacking, you may switch the target of attack to this Digimon.
         effect1 = ICardEffect()
+        effect1.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect1.set_effect_name("BT15-049 Your 1 Digimon gains DP +3000 and switch attack target")
         effect1.set_effect_description("[On Play] 1 of your Digimon gets +3000 DP until the end of your opponent's turn. Then, if one of their Digimon is attacking, you may switch the target of attack to this Digimon.")
         effect1.is_on_play = True
@@ -58,6 +60,7 @@ class BT15_049(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [When Digivolving] 1 of your Digimon gets +3000 DP until the end of your opponent's turn. Then, if one of their Digimon is attacking, you may switch the target of attack to this Digimon.
         effect2 = ICardEffect()
+        effect2.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect2.set_effect_name("BT15-049 Your 1 Digimon gains DP +3000 and switch attack target")
         effect2.set_effect_description("[When Digivolving] 1 of your Digimon gets +3000 DP until the end of your opponent's turn. Then, if one of their Digimon is attacking, you may switch the target of attack to this Digimon.")
         effect2.is_when_digivolving = True

@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -33,6 +34,7 @@ class EX8_073(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [When Digivolving] If [Gallantmon]/[X Antibody] is in this Digimon's digivolution cards, this Digimon gets +4000 DP and 1 of your opponent's Digimon gets -4000 DP until the end of their turn.
         effect1 = ICardEffect()
+        effect1.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect1.set_effect_name("EX8-073 This Digimon gets +4000 DP and gives -4000 DP to an opponent's Digimon")
         effect1.set_effect_description("[When Digivolving] If [Gallantmon]/[X Antibody] is in this Digimon's digivolution cards, this Digimon gets +4000 DP and 1 of your opponent's Digimon gets -4000 DP until the end of their turn.")
         effect1.is_when_digivolving = True
@@ -61,6 +63,7 @@ class EX8_073(CardScript):
         # Timing: EffectTiming.OnAllyAttack
         # [When Attacking] If [Gallantmon]/[X Antibody] is in this Digimon's digivolution cards, this Digimon gets +4000 DP and 1 of your opponent's Digimon gets -4000 DP until the end of their turn.
         effect2 = ICardEffect()
+        effect2.set_timing(EffectTiming.OnAllyAttack)
         effect2.set_effect_name("EX8-073 This Digimon gets +4000 DP and gives -4000 DP to an opponent's Digimon")
         effect2.set_effect_description("[When Attacking] If [Gallantmon]/[X Antibody] is in this Digimon's digivolution cards, this Digimon gets +4000 DP and 1 of your opponent's Digimon gets -4000 DP until the end of their turn.")
         effect2.is_on_attack = True
@@ -89,6 +92,7 @@ class EX8_073(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [When Digivolving] [Once Per Turn] Delete 1 of your opponent's Digimon with 10000 DP or less. If this didn't delete, trash your opponent's top security card and this Digimon unsuspends.
         effect3 = ICardEffect()
+        effect3.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect3.set_effect_name("EX8-073 Delete 1 Digimon with 10000 DP or less, or trash the opponent's top security and unsuspend")
         effect3.set_effect_description("[When Digivolving] [Once Per Turn] Delete 1 of your opponent's Digimon with 10000 DP or less. If this didn't delete, trash your opponent's top security card and this Digimon unsuspends.")
         effect3.set_max_count_per_turn(1)
@@ -131,6 +135,7 @@ class EX8_073(CardScript):
         # Timing: EffectTiming.OnEndAttack
         # [End of Attack] [Once Per Turn] Delete 1 of your opponent's Digimon with 10000 DP or less. If this didn't delete, trash your opponent's top security card and this Digimon unsuspends.
         effect4 = ICardEffect()
+        effect4.set_timing(EffectTiming.OnEndAttack)
         effect4.set_effect_name("EX8-073 Delete 1 Digimon with 10000 DP or less, or trash the opponent's top security and unsuspend")
         effect4.set_effect_description("[End of Attack] [Once Per Turn] Delete 1 of your opponent's Digimon with 10000 DP or less. If this didn't delete, trash your opponent's top security card and this Digimon unsuspends.")
         effect4.set_max_count_per_turn(1)

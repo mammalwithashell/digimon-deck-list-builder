@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -39,6 +40,7 @@ class BT21_097(CardScript):
         # Timing: EffectTiming.OptionSkill
         # [Main] Reveal the top 3 cards of your deck. Add 1 card with the [Appmon]/[App Driver] trait among them to the hand. Trash the rest. Then, place this card in the battle area.
         effect1 = ICardEffect()
+        effect1.set_timing(EffectTiming.OptionSkill)
         effect1.set_effect_name("BT21-097 Add To Hand, Reveal And Select")
         effect1.set_effect_description("[Main] Reveal the top 3 cards of your deck. Add 1 card with the [Appmon]/[App Driver] trait among them to the hand. Trash the rest. Then, place this card in the battle area.")
 
@@ -91,6 +93,7 @@ class BT21_097(CardScript):
         # Timing: EffectTiming.OnEndTurn
         # [End of Your Turn] You may link 1 card from your hand with 1 of your Digimon without paying the cost.
         effect3 = ICardEffect()
+        effect3.set_timing(EffectTiming.OnEndTurn)
         effect3.set_effect_name("BT21-097 Link 1 card from hand with 1 Digimon")
         effect3.set_effect_description("[End of Your Turn] You may link 1 card from your hand with 1 of your Digimon without paying the cost.")
         effect3.is_optional = True

@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -18,9 +19,10 @@ class BT23_048(CardScript):
         effect0 = ICardEffect()
         effect0.set_effect_name("BT23-048 Alternate digivolution requirement")
         effect0.set_effect_description("Alternate digivolution requirement")
-        # Alternate digivolution: Lv.2 for cost 0
+        # Alternate digivolution: Lv.2 w/[CS] trait for cost 0
         effect0._alt_digi_cost = 0
         effect0._alt_digi_level = 2
+        effect0._alt_digi_trait = "CS"
 
         def condition0(context: Dict[str, Any]) -> bool:
             return True
@@ -30,6 +32,7 @@ class BT23_048(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [On Play] Reveal the top 3 cards of your deck. Add 1 card with the [Hudie] trait and 1 Tamer card or Option card with the [CS] trait among them to the hand. Return the rest to the bottom of the deck..
         effect1 = ICardEffect()
+        effect1.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect1.set_effect_name("BT23-048 Reveal the top 3 cards of deck")
         effect1.set_effect_description("[On Play] Reveal the top 3 cards of your deck. Add 1 card with the [Hudie] trait and 1 Tamer card or Option card with the [CS] trait among them to the hand. Return the rest to the bottom of the deck..")
         effect1.is_on_play = True
@@ -48,10 +51,6 @@ class BT23_048(CardScript):
             player = ctx.get('player')
             perm = ctx.get('permanent')
             game = ctx.get('game')
-            # Add card to hand (from trash/reveal)
-            if player and player.trash_cards:
-                card_to_add = player.trash_cards.pop()
-                player.hand_cards.append(card_to_add)
             if not (player and game):
                 return
             def reveal_filter_0(c):
@@ -59,7 +58,7 @@ class BT23_048(CardScript):
                     return False
                 return True
             def reveal_filter_1(c):
-                if not getattr(c, 'is_tamer', False):
+                if not (getattr(c, 'is_tamer', False) or getattr(c, 'is_option', False)):
                     return False
                 if not (any('CS' in _t for _t in (getattr(c, 'card_traits', []) or []))):
                     return False
@@ -74,6 +73,7 @@ class BT23_048(CardScript):
         # Timing: EffectTiming.OnAllyAttack
         # [When Attacking] [Once Per Turn] You may play 1 play cost 5 or lower Digimon card with the [Hudie] trait from your hand without paying the cost. The Digimon this effect played can't digivolve and is deleted at the end of your opponent's turn.
         effect2 = ICardEffect()
+        effect2.set_timing(EffectTiming.OnAllyAttack)
         effect2.set_effect_name("BT23-048 Play 1 5 cost or less [Hudie] digimon from hand")
         effect2.set_effect_description("[When Attacking] [Once Per Turn] You may play 1 play cost 5 or lower Digimon card with the [Hudie] trait from your hand without paying the cost. The Digimon this effect played can't digivolve and is deleted at the end of your opponent's turn.")
         effect2.is_inherited_effect = True
@@ -117,6 +117,7 @@ class BT23_048(CardScript):
         # Timing: EffectTiming.OnAllyAttack
         # [End of Opponents Turn] Delete this Digimon.
         effect3 = ICardEffect()
+        effect3.set_timing(EffectTiming.OnAllyAttack)
         effect3.set_effect_name("BT23-048 Delete the Digimon")
         effect3.set_effect_description("[End of Opponents Turn] Delete this Digimon.")
         effect3.is_on_attack = True

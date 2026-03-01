@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -16,6 +17,7 @@ class BT15_041(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [On Play] 1 of your opponent's Digimon gets -6000 DP until the end of your opponent's turn.
         effect0 = ICardEffect()
+        effect0.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect0.set_effect_name("BT15-041 Give opponent's Digimon -6000 DP.")
         effect0.set_effect_description("[On Play] 1 of your opponent's Digimon gets -6000 DP until the end of your opponent's turn.")
         effect0.is_on_play = True
@@ -49,6 +51,7 @@ class BT15_041(CardScript):
         # Timing: EffectTiming.OnDestroyedAnyone
         # [On Deletion] 1 of your opponent's Digimon gets -6000 DP until the end of your opponent's turn.
         effect1 = ICardEffect()
+        effect1.set_timing(EffectTiming.OnDestroyedAnyone)
         effect1.set_effect_name("BT15-041 Give opponent's Digimon -6000 DP.")
         effect1.set_effect_description("[On Deletion] 1 of your opponent's Digimon gets -6000 DP until the end of your opponent's turn.")
         effect1.is_on_deletion = True
@@ -80,6 +83,7 @@ class BT15_041(CardScript):
         # Timing: EffectTiming.OnEndTurn
         # [End of Opponent�'s Turn] By deleting this Digimon, you may play 1 [Rosemon] or [Jijimon] from your hand without paying the cost. Then activate the [When Digivolving] effect of the Digimon played by this effect.
         effect2 = ICardEffect()
+        effect2.set_timing(EffectTiming.OnEndTurn)
         effect2.set_effect_name("BT15-041 Delete this Digimon to play [Rosemon] or [Jijimon] from hand.")
         effect2.set_effect_description("[End of Opponent�'s Turn] By deleting this Digimon, you may play 1 [Rosemon] or [Jijimon] from your hand without paying the cost. Then activate the [When Digivolving] effect of the Digimon played by this effect.")
         effect2.is_optional = True

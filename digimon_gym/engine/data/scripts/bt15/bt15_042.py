@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -16,6 +17,7 @@ class BT15_042(CardScript):
         # Timing: EffectTiming.OnLoseSecurity
         # [All Turns][Once per turn] When a card is removed from your security stack, if you have 3 or less security cards, you may place 1 yellow card from your hand at the top or bottom of your security stack.
         effect0 = ICardEffect()
+        effect0.set_timing(EffectTiming.OnLoseSecurity)
         effect0.set_effect_name("BT15-042 Place 1 yellow card from your hand to the top or bottom of your security stack.")
         effect0.set_effect_description("[All Turns][Once per turn] When a card is removed from your security stack, if you have 3 or less security cards, you may place 1 yellow card from your hand at the top or bottom of your security stack.")
         effect0.set_max_count_per_turn(1)
@@ -43,6 +45,7 @@ class BT15_042(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [On Play] By trashing the top or bottom card of your security stack, 1 of your opponent's Digimon gets -9000 DP until the end of your opponent's turn.
         effect1 = ICardEffect()
+        effect1.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect1.set_effect_name("BT15-042 Trash the top or bottom of your security to reduce opponent's Digimon DP.")
         effect1.set_effect_description("[On Play] By trashing the top or bottom card of your security stack, 1 of your opponent's Digimon gets -9000 DP until the end of your opponent's turn.")
         effect1.is_optional = True
@@ -78,6 +81,7 @@ class BT15_042(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [When Digivolving] By trashing the top or bottom card of your security stack, 1 of your opponent's Digimon gets -9000 DP until the end of your opponent's turn.
         effect2 = ICardEffect()
+        effect2.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect2.set_effect_name("BT15-042 Trash the top or bottom of your security to reduce opponent's Digimon DP.")
         effect2.set_effect_description("[When Digivolving] By trashing the top or bottom card of your security stack, 1 of your opponent's Digimon gets -9000 DP until the end of your opponent's turn.")
         effect2.is_optional = True

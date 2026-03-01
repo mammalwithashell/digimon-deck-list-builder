@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -28,6 +29,7 @@ class BT15_086(CardScript):
         # Timing: EffectTiming.OnStartMainPhase
         # [Start of Your Main Phase] If your opponent has a Digimon, gain 1 memory.
         effect1 = ICardEffect()
+        effect1.set_timing(EffectTiming.OnStartMainPhase)
         effect1.set_effect_name("BT15-086 Memory +1")
         effect1.set_effect_description("[Start of Your Main Phase] If your opponent has a Digimon, gain 1 memory.")
 
@@ -55,6 +57,7 @@ class BT15_086(CardScript):
         # Timing: EffectTiming.OnDeclaration
         # [Main] <Mind Link> with 1 of your Digimon with [Numemon] or [Monzaemon] in its name, or the [DigiPolice] trait. (Place this Tamer as that Digimon's bottom digivolution card if there are no Tamer cards in its digivolution cards.)
         effect2 = ICardEffect()
+        effect2.set_timing(EffectTiming.OnDeclaration)
         effect2.set_effect_name("BT15-086 Mind Link")
         effect2.set_effect_description("[Main] <Mind Link> with 1 of your Digimon with [Numemon] or [Monzaemon] in its name, or the [DigiPolice] trait. (Place this Tamer as that Digimon's bottom digivolution card if there are no Tamer cards in its digivolution cards.)")
 
@@ -111,6 +114,7 @@ class BT15_086(CardScript):
         # Timing: EffectTiming.OnEndTurn
         # [End of All Turns] You may play 1 [Satsuki Tamahime] from this Digimon's digivolution cards without paying the cost.
         effect5 = ICardEffect()
+        effect5.set_timing(EffectTiming.OnEndTurn)
         effect5.set_effect_name("BT15-086 Play 1 [AA BB] from this Digimon's digivolution cards")
         effect5.set_effect_description("[End of All Turns] You may play 1 [Satsuki Tamahime] from this Digimon's digivolution cards without paying the cost.")
         effect5.is_inherited_effect = True

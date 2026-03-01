@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -29,6 +30,7 @@ class BT15_075(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # Draw 1, DP +2000, Trash From Hand
         effect1 = ICardEffect()
+        effect1.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect1.set_effect_name("BT15-075 DP +2000 and Draw 1")
         effect1.set_effect_description("Draw 1, DP +2000, Trash From Hand")
         effect1.is_optional = True
@@ -71,6 +73,7 @@ class BT15_075(CardScript):
         # Timing: EffectTiming.OnAllyAttack
         # Draw 1, DP +2000, Trash From Hand
         effect2 = ICardEffect()
+        effect2.set_timing(EffectTiming.OnAllyAttack)
         effect2.set_effect_name("BT15-075 DP +2000 and Draw 1")
         effect2.set_effect_description("Draw 1, DP +2000, Trash From Hand")
         effect2.is_optional = True
@@ -113,6 +116,7 @@ class BT15_075(CardScript):
         # Timing: EffectTiming.OnEndAttack
         # [End of Attack] [Once Per Turn] If your opponent has 1 or more memory, gain 1 memory.
         effect3 = ICardEffect()
+        effect3.set_timing(EffectTiming.OnEndAttack)
         effect3.set_effect_name("BT15-075 Memory +1")
         effect3.set_effect_description("[End of Attack] [Once Per Turn] If your opponent has 1 or more memory, gain 1 memory.")
         effect3.is_inherited_effect = True

@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -28,6 +29,7 @@ class EX5_063(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [On Play] If your opponent has as many or more total Digimon and Tamers as you, delete 1 of your opponent's Digimon with the highest level. Then, delete 1 of your opponent's Digimon with the lowest level.
         effect1 = ICardEffect()
+        effect1.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect1.set_effect_name("EX5-063 Delete 1 Digimon with the highest level and 1 Digimon with the lowest level")
         effect1.set_effect_description("[On Play] If your opponent has as many or more total Digimon and Tamers as you, delete 1 of your opponent's Digimon with the highest level. Then, delete 1 of your opponent's Digimon with the lowest level.")
         effect1.is_on_play = True
@@ -63,6 +65,7 @@ class EX5_063(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [When Digivolving] If your opponent has as many or more total Digimon and Tamers as you, delete 1 of your opponent's Digimon with the highest level. Then, delete 1 of your opponent's Digimon with the lowest level.
         effect2 = ICardEffect()
+        effect2.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect2.set_effect_name("EX5-063 Delete 1 Digimon with the highest level and 1 Digimon with the lowest level")
         effect2.set_effect_description("[When Digivolving] If your opponent has as many or more total Digimon and Tamers as you, delete 1 of your opponent's Digimon with the highest level. Then, delete 1 of your opponent's Digimon with the lowest level.")
         effect2.is_when_digivolving = True
@@ -98,6 +101,7 @@ class EX5_063(CardScript):
         # Timing: EffectTiming.OnDestroyedAnyone
         # [All Turns] When an opponent's Digimon is deleted, gain 1 memory for each Digimon.
         effect3 = ICardEffect()
+        effect3.set_timing(EffectTiming.OnDestroyedAnyone)
         effect3.set_effect_name("EX5-063 Gain Memory")
         effect3.set_effect_description("[All Turns] When an opponent's Digimon is deleted, gain 1 memory for each Digimon.")
         effect3.is_on_deletion = True

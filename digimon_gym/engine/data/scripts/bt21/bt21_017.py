@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -16,6 +17,7 @@ class BT21_017(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # Play Card
         effect0 = ICardEffect()
+        effect0.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect0.set_effect_name("BT21-017 Play 1 Tamer with [Owen Dreadnought] in its name from hand")
         effect0.set_effect_description("Play Card")
         effect0.is_optional = True
@@ -52,6 +54,7 @@ class BT21_017(CardScript):
         # Timing: EffectTiming.OnLoseSecurity
         # Gain 1 memory
         effect1 = ICardEffect()
+        effect1.set_timing(EffectTiming.OnLoseSecurity)
         effect1.set_effect_name("BT21-017 Gain 1 memory")
         effect1.set_effect_description("Gain 1 memory")
         effect1.is_inherited_effect = True

@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -28,6 +29,7 @@ class BT15_061(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [On Play] You may trash 1 Digimon card with [Machine] or [Cyborg] in its traits in your hand, 1 of your Digimon can't be deleted by your opponent's effects until the end of your opponent's turn
         effect1 = ICardEffect()
+        effect1.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect1.set_effect_name("BT15-061 Trash 1 card from hand so that your 1 Digimon gains effects")
         effect1.set_effect_description("[On Play] You may trash 1 Digimon card with [Machine] or [Cyborg] in its traits in your hand, 1 of your Digimon can't be deleted by your opponent's effects until the end of your opponent's turn")
         effect1.is_optional = True
@@ -66,6 +68,7 @@ class BT15_061(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [When Digivolving] You may trash 1 Digimon card with [Machine] or [Cyborg] in its traits in your hand, 1 of your Digimon can't be deleted by your opponent's effects until the end of your opponent's turn
         effect2 = ICardEffect()
+        effect2.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect2.set_effect_name("BT15-061 Trash 1 card from hand so that your 1 Digimon gains effects")
         effect2.set_effect_description("[When Digivolving] You may trash 1 Digimon card with [Machine] or [Cyborg] in its traits in your hand, 1 of your Digimon can't be deleted by your opponent's effects until the end of your opponent's turn")
         effect2.is_optional = True

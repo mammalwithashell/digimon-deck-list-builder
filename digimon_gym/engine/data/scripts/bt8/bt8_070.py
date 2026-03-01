@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -16,6 +17,7 @@ class BT8_070(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [When Digivolving] If this Digimon has a red digivolution card, choose any number of your opponent's Digimon. If this Digimon has a black digivolution card, choose any number of your opponent's Tamers. The chosen cards' play costs must add up to 6 or less. Delete the chosen cards.
         effect0 = ICardEffect()
+        effect0.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect0.set_effect_name("BT8-070 Delete Digimons and Tamers")
         effect0.set_effect_description("[When Digivolving] If this Digimon has a red digivolution card, choose any number of your opponent's Digimon. If this Digimon has a black digivolution card, choose any number of your opponent's Tamers. The chosen cards' play costs must add up to 6 or less. Delete the chosen cards.")
         effect0.is_when_digivolving = True
@@ -51,6 +53,7 @@ class BT8_070(CardScript):
         # Timing: EffectTiming.OnDestroyedAnyone
         # [All Turns][Once Per Turn] When an opponent's Digimon is deleted, you may unsuspend this Digimon.
         effect1 = ICardEffect()
+        effect1.set_timing(EffectTiming.OnDestroyedAnyone)
         effect1.set_effect_name("BT8-070 Unsuspend this Digimon")
         effect1.set_effect_description("[All Turns][Once Per Turn] When an opponent's Digimon is deleted, you may unsuspend this Digimon.")
         effect1.is_optional = True

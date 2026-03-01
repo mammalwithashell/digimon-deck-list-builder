@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -29,6 +30,7 @@ class BT13_069(CardScript):
         # Timing: EffectTiming.OnAllyAttack
         # [When Attacking] You may play 1 level 4 or lower Digimon card with [Sukamon] in its name from your hand without paying the cost.
         effect1 = ICardEffect()
+        effect1.set_timing(EffectTiming.OnAllyAttack)
         effect1.set_effect_name("BT13-069 Play 1 Digimon card with [Sukamon] in its name from hand")
         effect1.set_effect_description("[When Attacking] You may play 1 level 4 or lower Digimon card with [Sukamon] in its name from your hand without paying the cost.")
         effect1.is_optional = True
@@ -67,6 +69,7 @@ class BT13_069(CardScript):
         # Timing: EffectTiming.WhenPermanentWouldBeDeleted
         # [All Turns] When this Digimon would be deleted, by deleting 1 other Digimon with [Sukamon] in its name, prevent that deletion.
         effect2 = ICardEffect()
+        effect2.set_timing(EffectTiming.WhenPermanentWouldBeDeleted)
         effect2.set_effect_name("BT13-069 Prevent this Digimon from being deleted")
         effect2.set_effect_description("[All Turns] When this Digimon would be deleted, by deleting 1 other Digimon with [Sukamon] in its name, prevent that deletion.")
         effect2.is_inherited_effect = True

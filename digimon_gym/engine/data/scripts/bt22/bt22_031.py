@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -30,6 +31,7 @@ class BT22_031(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [On Play] Give 1 of your opponent's Digimon <Security A. -2> (This Digimon checks 2 additional security cards.) until their turn ends. Then, if this Digimon's stack has 2 or more same-level cards, this Digimon may digivolve into [PlatinumNumemon] in the hand for a digivolution cost of 4, ignoring digivolution requirements.
         effect1 = ICardEffect()
+        effect1.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect1.set_effect_name("BT22-031 Give 1 digimon -2 Sec Atk. then if sources has 2 same level digimon, digivolve into [PlatinumNumemon]")
         effect1.set_effect_description("[On Play] Give 1 of your opponent's Digimon <Security A. -2> (This Digimon checks 2 additional security cards.) until their turn ends. Then, if this Digimon's stack has 2 or more same-level cards, this Digimon may digivolve into [PlatinumNumemon] in the hand for a digivolution cost of 4, ignoring digivolution requirements.")
         effect1.is_on_play = True
@@ -61,6 +63,7 @@ class BT22_031(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [When Digivolving] Give 1 of your opponent's Digimon <Security A. -2> (This Digimon checks 2 additional security cards.) until their turn ends. Then, if this Digimon's stack has 2 or more same-level cards, this Digimon may digivolve into [PlatinumNumemon] in the hand for a digivolution cost of 4, ignoring digivolution requirements.
         effect2 = ICardEffect()
+        effect2.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect2.set_effect_name("BT22-031 Give 1 digimon -2 Sec Atk. then if sources has 2 same level digimon, digivolve into [PlatinumNumemon]")
         effect2.set_effect_description("[When Digivolving] Give 1 of your opponent's Digimon <Security A. -2> (This Digimon checks 2 additional security cards.) until their turn ends. Then, if this Digimon's stack has 2 or more same-level cards, this Digimon may digivolve into [PlatinumNumemon] in the hand for a digivolution cost of 4, ignoring digivolution requirements.")
         effect2.is_when_digivolving = True

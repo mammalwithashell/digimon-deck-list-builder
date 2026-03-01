@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -33,6 +34,7 @@ class BT20_075(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [On Play] Trash 2 cards in your hand. Then, for the turn, 1 of your Digimon gains <Raid> and <Piercing> and +4000 DP.
         effect1 = ICardEffect()
+        effect1.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect1.set_effect_name("BT20-075 Trash 2 cards then, gain Raid, Piercing, and +4000 DP.")
         effect1.set_effect_description("[On Play] Trash 2 cards in your hand. Then, for the turn, 1 of your Digimon gains <Raid> and <Piercing> and +4000 DP.")
         effect1.is_on_play = True
@@ -75,6 +77,7 @@ class BT20_075(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [When Digivolving] Trash 2 cards in your hand. Then, for the turn, 1 of your Digimon gains <Raid> and <Piercing> and +4000 DP.
         effect2 = ICardEffect()
+        effect2.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect2.set_effect_name("BT20-075 Trash 2 cards then, gain Raid, Piercing, and +4000 DP.")
         effect2.set_effect_description("[When Digivolving] Trash 2 cards in your hand. Then, for the turn, 1 of your Digimon gains <Raid> and <Piercing> and +4000 DP.")
         effect2.is_when_digivolving = True

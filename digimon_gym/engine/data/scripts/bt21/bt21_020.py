@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -16,6 +17,7 @@ class BT21_020(CardScript):
         # Timing: EffectTiming.BeforePayCost
         # Cost -1
         effect0 = ICardEffect()
+        effect0.set_timing(EffectTiming.BeforePayCost)
         effect0.set_effect_name("BT21-020 Reduce the digivolution cost by 1")
         effect0.set_effect_description("Cost -1")
         effect0.cost_reduction = 1
@@ -52,6 +54,7 @@ class BT21_020(CardScript):
         # Timing: EffectTiming.OnDestroyedAnyone
         # Play Card
         effect2 = ICardEffect()
+        effect2.set_timing(EffectTiming.OnDestroyedAnyone)
         effect2.set_effect_name("BT21-020 Play a Red tamer from hand or trash")
         effect2.set_effect_description("Play Card")
         effect2.is_optional = True
@@ -81,6 +84,7 @@ class BT21_020(CardScript):
         # Timing: EffectTiming.OnDestroyedAnyone
         # Play Card
         effect3 = ICardEffect()
+        effect3.set_timing(EffectTiming.OnDestroyedAnyone)
         effect3.set_effect_name("BT21-020 Play a Red tamer from hand or trash")
         effect3.set_effect_description("Play Card")
         effect3.is_inherited_effect = True

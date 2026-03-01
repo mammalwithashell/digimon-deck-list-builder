@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -71,6 +72,7 @@ class BT24_062(CardScript):
         # Timing: EffectTiming.OnEndAttack
         # Play Card
         effect4 = ICardEffect()
+        effect4.set_timing(EffectTiming.OnEndAttack)
         effect4.set_effect_name("BT24-062 Play Card")
         effect4.set_effect_description("Play Card")
 
@@ -105,6 +107,7 @@ class BT24_062(CardScript):
         # Timing: EffectTiming.OnEndTurn
         # Play Card
         effect5 = ICardEffect()
+        effect5.set_timing(EffectTiming.OnEndTurn)
         effect5.set_effect_name("BT24-062 Play Card")
         effect5.set_effect_description("Play Card")
 

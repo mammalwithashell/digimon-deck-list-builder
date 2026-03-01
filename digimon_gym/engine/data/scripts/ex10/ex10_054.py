@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -16,6 +17,7 @@ class EX10_054(CardScript):
         # Timing: EffectTiming.OnDeclaration
         # [Trash] [Main] By deleting 1 of your level 5 Digimon with [Myotismon] in its text, play this card with the play cost reduced by 7.
         effect0 = ICardEffect()
+        effect0.set_timing(EffectTiming.OnDeclaration)
         effect0.set_effect_name("EX10-054 Play for reduced cost of 7")
         effect0.set_effect_description("[Trash] [Main] By deleting 1 of your level 5 Digimon with [Myotismon] in its text, play this card with the play cost reduced by 7.")
         effect0.is_optional = True
@@ -54,6 +56,7 @@ class EX10_054(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # Suspend, Gain Keyword Cannot Unsuspend
         effect1 = ICardEffect()
+        effect1.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect1.set_effect_name("EX10-054 Suspend 2 opponent Digimon or Tamers")
         effect1.set_effect_description("Suspend, Gain Keyword Cannot Unsuspend")
         effect1.is_on_play = True
@@ -88,6 +91,7 @@ class EX10_054(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # Suspend, Gain Keyword Cannot Unsuspend
         effect2 = ICardEffect()
+        effect2.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect2.set_effect_name("EX10-054 Suspend 2 opponent Digimon or Tamers")
         effect2.set_effect_description("Suspend, Gain Keyword Cannot Unsuspend")
         effect2.is_when_digivolving = True
@@ -122,6 +126,7 @@ class EX10_054(CardScript):
         # Timing: EffectTiming.OnDestroyedAnyone
         # [On Deletion] Delete 1 of your opponent's suspended Digimon.
         effect3 = ICardEffect()
+        effect3.set_timing(EffectTiming.OnDestroyedAnyone)
         effect3.set_effect_name("EX10-054 Delete 1 suspended Digimon")
         effect3.set_effect_description("[On Deletion] Delete 1 of your opponent's suspended Digimon.")
         effect3.is_on_deletion = True

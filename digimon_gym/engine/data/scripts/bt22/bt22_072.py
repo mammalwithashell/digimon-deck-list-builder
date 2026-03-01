@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -29,6 +30,7 @@ class BT22_072(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # Play Card
         effect1 = ICardEffect()
+        effect1.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect1.set_effect_name("BT22-072 Play tamer")
         effect1.set_effect_description("Play Card")
         effect1.is_when_digivolving = True
@@ -62,6 +64,7 @@ class BT22_072(CardScript):
         # Timing: EffectTiming.WhenPermanentWouldBeDeleted
         # [All Turns] [Once Per Turn] When this Digimon with the [Night Claw], [Light Fang] or [Galaxy] trait would be deleted, by trashing 2 same-level cards from its digivolution cards, it isn't deleted.
         effect2 = ICardEffect()
+        effect2.set_timing(EffectTiming.WhenPermanentWouldBeDeleted)
         effect2.set_effect_name("BT22-072 Prevent this Digimon from being deleted")
         effect2.set_effect_description("[All Turns] [Once Per Turn] When this Digimon with the [Night Claw], [Light Fang] or [Galaxy] trait would be deleted, by trashing 2 same-level cards from its digivolution cards, it isn't deleted.")
         effect2.is_inherited_effect = True

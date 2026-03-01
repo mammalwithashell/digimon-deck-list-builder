@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -29,6 +30,7 @@ class BT15_038(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [On Play] By trashing the top or bottom card of your security stack, 1 of your opponent's Digimon gets -6000 DP until the end of your opponent's turn.
         effect1 = ICardEffect()
+        effect1.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect1.set_effect_name("BT15-038 Trash the top card of your security so that opponent's 1 Digimon gains DP -6000")
         effect1.set_effect_description("[On Play] By trashing the top or bottom card of your security stack, 1 of your opponent's Digimon gets -6000 DP until the end of your opponent's turn.")
         effect1.is_optional = True
@@ -63,6 +65,7 @@ class BT15_038(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [On Play] By trashing the top or bottom card of your security stack, 1 of your opponent's Digimon gets -6000 DP until the end of your opponent's turn.
         effect2 = ICardEffect()
+        effect2.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect2.set_effect_name("BT15-038 Trash the top card of your security so that opponent's 1 Digimon gains DP -6000")
         effect2.set_effect_description("[On Play] By trashing the top or bottom card of your security stack, 1 of your opponent's Digimon gets -6000 DP until the end of your opponent's turn.")
         effect2.is_optional = True
@@ -97,6 +100,7 @@ class BT15_038(CardScript):
         # Timing: EffectTiming.OnLoseSecurity
         # [All Turns][Once Per Turn] When a card is removed from your security stack, if you have 3 or fewer security cards, trigger <Recovery +1 (Deck)>. (Place the top card of your deck on top of your security stack.)
         effect3 = ICardEffect()
+        effect3.set_timing(EffectTiming.OnLoseSecurity)
         effect3.set_effect_name("BT15-038 Recovery +1 (Deck)")
         effect3.set_effect_description("[All Turns][Once Per Turn] When a card is removed from your security stack, if you have 3 or fewer security cards, trigger <Recovery +1 (Deck)>. (Place the top card of your deck on top of your security stack.)")
         effect3.set_max_count_per_turn(1)

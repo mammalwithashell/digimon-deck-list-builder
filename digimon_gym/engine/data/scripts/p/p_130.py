@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -16,6 +17,7 @@ class P_130(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [On Play] You may move 1 of your level 3 or higher Digimon from the breeding area to the battle area.
         effect0 = ICardEffect()
+        effect0.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect0.set_effect_name("P-130 Move your Digimon to Battle Area")
         effect0.set_effect_description("[On Play] You may move 1 of your level 3 or higher Digimon from the breeding area to the battle area.")
         effect0.is_optional = True
@@ -34,6 +36,7 @@ class P_130(CardScript):
         # Timing: EffectTiming.OnMove
         # [Your Turn] When one of your Digimon moves from the breeding area to the battle area, by suspending this Tamer, gain 1 memory.
         effect1 = ICardEffect()
+        effect1.set_timing(EffectTiming.OnMove)
         effect1.set_effect_name("P-130 Memory +1")
         effect1.set_effect_description("[Your Turn] When one of your Digimon moves from the breeding area to the battle area, by suspending this Tamer, gain 1 memory.")
         effect1.is_optional = True

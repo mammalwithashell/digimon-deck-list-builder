@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -16,6 +17,7 @@ class BT13_091(CardScript):
         # Timing: EffectTiming.OnStartMainPhase
         # [Start of Your Main Phase] Delete all of your opponent's level 5 or lower Digimon. Then, if you have 6 or fewer cards in your hand, this Digimon gets +3000 DP and gains <Security Attack +1> for the turn.
         effect0 = ICardEffect()
+        effect0.set_timing(EffectTiming.OnStartMainPhase)
         effect0.set_effect_name("BT13-091 Delete opponent's all level 5 or lower Digimons and this Digimon gets effects")
         effect0.set_effect_description("[Start of Your Main Phase] Delete all of your opponent's level 5 or lower Digimon. Then, if you have 6 or fewer cards in your hand, this Digimon gets +3000 DP and gains <Security Attack +1> for the turn.")
 
@@ -61,6 +63,7 @@ class BT13_091(CardScript):
         # Timing: EffectTiming.OnEndAttack
         # [End of Attack][Once Per Turn] By deleting 1 of your other Digimon, unsuspend this Digimon.
         effect1 = ICardEffect()
+        effect1.set_timing(EffectTiming.OnEndAttack)
         effect1.set_effect_name("BT13-091 Delete your another Digimon to unsuspend this Digimon")
         effect1.set_effect_description("[End of Attack][Once Per Turn] By deleting 1 of your other Digimon, unsuspend this Digimon.")
         effect1.is_optional = True
@@ -96,6 +99,7 @@ class BT13_091(CardScript):
         # Timing: EffectTiming.OnEndTurn
         # [End of Opponent�f Turn] If this Digimon is [Belphemon: Sleep Mode], trash the top card of this Digimon. 
         effect2 = ICardEffect()
+        effect2.set_timing(EffectTiming.OnEndTurn)
         effect2.set_effect_name("BT13-091 Trash the top card of this Digimon")
         effect2.set_effect_description("[End of Opponent�f Turn] If this Digimon is [Belphemon: Sleep Mode], trash the top card of this Digimon. ")
         effect2.is_inherited_effect = True

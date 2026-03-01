@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -16,6 +17,7 @@ class BT15_078(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # Grant Skill, Effect Immunity
         effect0 = ICardEffect()
+        effect0.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect0.set_effect_name("BT15-078 All Opponents digimon, gain Memory -1")
         effect0.set_effect_description("Grant Skill, Effect Immunity")
         effect0.set_max_count_per_turn(1)
@@ -50,6 +52,7 @@ class BT15_078(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [On Deletion] Lose 1 memory.
         effect1 = ICardEffect()
+        effect1.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect1.set_effect_name("BT15-078 Memory -1")
         effect1.set_effect_description("[On Deletion] Lose 1 memory.")
         effect1.is_on_play = True
@@ -65,6 +68,7 @@ class BT15_078(CardScript):
         # Timing: EffectTiming.OnAllyAttack
         # [When Attacking] Your opponent plays 1 level 4 or lower Digimon card from their trash suspended without paying the cost. [On Play] effects on Digimon played by this effect don't activate. Then, you may switch the target of attack to that Digimon.
         effect2 = ICardEffect()
+        effect2.set_timing(EffectTiming.OnAllyAttack)
         effect2.set_effect_name("BT15-078 Opponent plays 1  Digimon from trash")
         effect2.set_effect_description("[When Attacking] Your opponent plays 1 level 4 or lower Digimon card from their trash suspended without paying the cost. [On Play] effects on Digimon played by this effect don't activate. Then, you may switch the target of attack to that Digimon.")
         effect2.is_on_attack = True

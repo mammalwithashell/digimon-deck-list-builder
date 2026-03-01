@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -16,6 +17,7 @@ class P_029(CardScript):
         # Timing: EffectTiming.OnAllyAttack
         # [When Attacking] This Digimon can digivolve into an [AncientGreymon] in your hand for a memory cost of 2, ignoring its digivolution requirements. If it does, delete this Digimon at the end of the turn.
         effect0 = ICardEffect()
+        effect0.set_timing(EffectTiming.OnAllyAttack)
         effect0.set_effect_name("P-029 This Digimon digivolves into 1 [AncientGreymon]")
         effect0.set_effect_description("[When Attacking] This Digimon can digivolve into an [AncientGreymon] in your hand for a memory cost of 2, ignoring its digivolution requirements. If it does, delete this Digimon at the end of the turn.")
         effect0.is_optional = True
@@ -48,6 +50,7 @@ class P_029(CardScript):
         # Timing: EffectTiming.OnAllyAttack
         # Delete, Effect Immunity
         effect1 = ICardEffect()
+        effect1.set_timing(EffectTiming.OnAllyAttack)
         effect1.set_effect_name("P-029 Delete this Digimon")
         effect1.set_effect_description("Delete, Effect Immunity")
         effect1.is_on_attack = True

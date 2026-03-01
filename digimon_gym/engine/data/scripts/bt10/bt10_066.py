@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -16,6 +17,7 @@ class BT10_066(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [On Play] <De-Digivolve 1> 1 of your opponent's Digimon. Then, if DigiXrosing with 2 cards, delete 1 of your opponent's Digimon with a play cost of 5 or less.
         effect0 = ICardEffect()
+        effect0.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect0.set_effect_name("BT10-066 De-Digivolve 1 to 1 Digimon and delete 1 Digimon with 5 or less Cost")
         effect0.set_effect_description("[On Play] <De-Digivolve 1> 1 of your opponent's Digimon. Then, if DigiXrosing with 2 cards, delete 1 of your opponent's Digimon with a play cost of 5 or less.")
         effect0.is_on_play = True
@@ -60,6 +62,7 @@ class BT10_066(CardScript):
         # Timing: EffectTiming.WhenPermanentWouldBeDeleted
         # [All Turns] When this Digimon would be deleted, by returning 1 black level 4 or lower Digimon card from this Digimon's digivolution cards to its owner's hand, you may play 1 [SkullKnightmon] or [DeadlyAxemon] from this Digimon's digivolution cards without paying its memory cost.
         effect1 = ICardEffect()
+        effect1.set_timing(EffectTiming.WhenPermanentWouldBeDeleted)
         effect1.set_effect_name("BT10-066 Return 1 digivolution card to play a Digimon from digivolution cards")
         effect1.set_effect_description("[All Turns] When this Digimon would be deleted, by returning 1 black level 4 or lower Digimon card from this Digimon's digivolution cards to its owner's hand, you may play 1 [SkullKnightmon] or [DeadlyAxemon] from this Digimon's digivolution cards without paying its memory cost.")
         effect1.is_optional = True

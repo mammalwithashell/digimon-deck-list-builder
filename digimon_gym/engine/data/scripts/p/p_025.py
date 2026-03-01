@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -16,6 +17,7 @@ class P_025(CardScript):
         # Timing: EffectTiming.OnDeclaration
         # [Main] <Digi-Burst 2> (Trash 2 of this Digimon's digivolution cards to activate the effect below.) - 1 of your Digimon gains <Security Attack +1> (This Digimon checks 1 additional security card) for the turn.
         effect0 = ICardEffect()
+        effect0.set_timing(EffectTiming.OnDeclaration)
         effect0.set_effect_name("P-025 Security Attack +1")
         effect0.set_effect_description("[Main] <Digi-Burst 2> (Trash 2 of this Digimon's digivolution cards to activate the effect below.) - 1 of your Digimon gains <Security Attack +1> (This Digimon checks 1 additional security card) for the turn.")
 

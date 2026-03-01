@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -16,6 +17,7 @@ class BT19_077(CardScript):
         # Timing: EffectTiming.OnDeclaration
         # [Main] By suspending this Digimon, 1 of your Digimon may digivolve into a Digimon card in the hand with the digivolution cost reduced by 2.
         effect0 = ICardEffect()
+        effect0.set_timing(EffectTiming.OnDeclaration)
         effect0.set_effect_name("BT19-077 Your Digimon digivolves")
         effect0.set_effect_description("[Main] By suspending this Digimon, 1 of your Digimon may digivolve into a Digimon card in the hand with the digivolution cost reduced by 2.")
 
@@ -55,6 +57,7 @@ class BT19_077(CardScript):
         # Timing: EffectTiming.OnDestroyedAnyone
         # [On Deletion] Place this card on top of your security stack.
         effect1 = ICardEffect()
+        effect1.set_timing(EffectTiming.OnDestroyedAnyone)
         effect1.set_effect_name("BT19-077 Place on top of security")
         effect1.set_effect_description("[On Deletion] Place this card on top of your security stack.")
         effect1.is_on_deletion = True
@@ -81,6 +84,7 @@ class BT19_077(CardScript):
         # Timing: EffectTiming.SecuritySkill
         # [Security] You may play 1 Digimon card with 2000 DP or less from your hand without paying the cost.
         effect2 = ICardEffect()
+        effect2.set_timing(EffectTiming.SecuritySkill)
         effect2.set_effect_name("BT19-077 Play Card")
         effect2.set_effect_description("[Security] You may play 1 Digimon card with 2000 DP or less from your hand without paying the cost.")
         effect2.is_security_effect = True

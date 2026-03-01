@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -29,6 +30,7 @@ class BT14_038(CardScript):
         # Timing: EffectTiming.SecuritySkill
         # [Security] If you have 3 or more cards with [Sukamon] in their names in your trash, you may play 1 level 6 Digimon card with [Etemon] in its name from your hand without paying the cost.
         effect1 = ICardEffect()
+        effect1.set_timing(EffectTiming.SecuritySkill)
         effect1.set_effect_name("BT14-038 Play 1 Digimon from hand")
         effect1.set_effect_description("[Security] If you have 3 or more cards with [Sukamon] in their names in your trash, you may play 1 level 6 Digimon card with [Etemon] in its name from your hand without paying the cost.")
         effect1.is_optional = True
@@ -63,6 +65,7 @@ class BT14_038(CardScript):
         # Timing: EffectTiming.OnDestroyedAnyone
         # [On Deletion] Place this card at the bottom of your security stack.
         effect2 = ICardEffect()
+        effect2.set_timing(EffectTiming.OnDestroyedAnyone)
         effect2.set_effect_name("BT14-038 Place this card at the bottom of security")
         effect2.set_effect_description("[On Deletion] Place this card at the bottom of your security stack.")
         effect2.is_on_deletion = True
@@ -89,6 +92,7 @@ class BT14_038(CardScript):
         # Timing: EffectTiming.OnDestroyedAnyone
         # [On Deletion] Place 1 [Etemon] from your trash at the bottom of your security stack.
         effect3 = ICardEffect()
+        effect3.set_timing(EffectTiming.OnDestroyedAnyone)
         effect3.set_effect_name("BT14-038 Place 1 [Etemon] from trash at the bottom of security")
         effect3.set_effect_description("[On Deletion] Place 1 [Etemon] from your trash at the bottom of your security stack.")
         effect3.is_inherited_effect = True

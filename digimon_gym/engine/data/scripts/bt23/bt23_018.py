@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -42,6 +43,7 @@ class BT23_018(CardScript):
         # Timing: EffectTiming.OnDeclaration
         # [Main] [Once Per Turn] By placing this Digimon's top stacked card as its bottom digivolution card, you may play 1 [Agumon] or [Nokia Shiramine] from your hand with the play cost reduced by 2.
         effect2 = ICardEffect()
+        effect2.set_timing(EffectTiming.OnDeclaration)
         effect2.set_effect_name("BT23-018 By placing this card as bottom digivolution card, play 1 [Agumon]/[Nokia Shiramine] from hand for 2 reduce cost")
         effect2.set_effect_description("[Main] [Once Per Turn] By placing this Digimon's top stacked card as its bottom digivolution card, you may play 1 [Agumon] or [Nokia Shiramine] from your hand with the play cost reduced by 2.")
         effect2.is_optional = True

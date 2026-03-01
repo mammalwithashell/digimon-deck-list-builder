@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -16,6 +17,7 @@ class BT10_035(CardScript):
         # Timing: EffectTiming.OnAllyAttack
         # [When Attacking][Once Per Turn] 1 of your opponent's Digimon gains <Security Attack -1> until the end of your opponent's turn. (This Digimon checks 1 fewer security cards.)
         effect0 = ICardEffect()
+        effect0.set_timing(EffectTiming.OnAllyAttack)
         effect0.set_effect_name("BT10-035 Security Attack -1")
         effect0.set_effect_description("[When Attacking][Once Per Turn] 1 of your opponent's Digimon gains <Security Attack -1> until the end of your opponent's turn. (This Digimon checks 1 fewer security cards.)")
         effect0.is_inherited_effect = True

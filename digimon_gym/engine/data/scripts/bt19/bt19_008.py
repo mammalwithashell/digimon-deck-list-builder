@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -33,6 +34,7 @@ class BT19_008(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [On Play] This Digimon may digivolve into [OmniShoutmon] under your Tamers without paying the cost.
         effect1 = ICardEffect()
+        effect1.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect1.set_effect_name("BT19-008 Digivolve into [OmniShoutmon] from under your Tamers")
         effect1.set_effect_description("[On Play] This Digimon may digivolve into [OmniShoutmon] under your Tamers without paying the cost.")
         effect1.is_optional = True
@@ -65,6 +67,7 @@ class BT19_008(CardScript):
         # Timing: EffectTiming.OnDestroyedAnyone
         # [On Deletion] Reveal the top 3 cards of your deck. Play 1 Tamer card with the [Xros Heart] trait among them without paying the cost. Return the rest to the bottom of the deck. Then, <Save>.
         effect2 = ICardEffect()
+        effect2.set_timing(EffectTiming.OnDestroyedAnyone)
         effect2.set_effect_name("BT19-008 Reveal top 3 cards of the deck and play 1 [Xros Heart] Tamer from them, then <Save>")
         effect2.set_effect_description("[On Deletion] Reveal the top 3 cards of your deck. Play 1 Tamer card with the [Xros Heart] trait among them without paying the cost. Return the rest to the bottom of the deck. Then, <Save>.")
         effect2.is_on_deletion = True

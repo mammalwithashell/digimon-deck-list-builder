@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -62,6 +63,7 @@ class EX10_064(CardScript):
         # Timing: EffectTiming.OnStartMainPhase
         # [Start of Your Main Phase] By placing 1 [Bagra Army] or [Twilight] trait Digimon card from your hand or trash under this Tamer, <Draw 1>.
         effect2 = ICardEffect()
+        effect2.set_timing(EffectTiming.OnStartMainPhase)
         effect2.set_effect_name("EX10-064 Place 1 card under this Tamer from hand or trash to Draw 1")
         effect2.set_effect_description("[Start of Your Main Phase] By placing 1 [Bagra Army] or [Twilight] trait Digimon card from your hand or trash under this Tamer, <Draw 1>.")
         effect2.is_optional = True
@@ -90,6 +92,7 @@ class EX10_064(CardScript):
         # Timing: EffectTiming.BeforePayCost
         # [All Turns] When any of your [Bagra Army] or [Twilight] trait Digimon cards with DigiXros requirements would be played, by suspending this Tamer, 1 card from under your Tamers and 1 card in your trash can also be placed for their DigiXros.
         effect3 = ICardEffect()
+        effect3.set_timing(EffectTiming.BeforePayCost)
         effect3.set_effect_name("EX10-064 Can select DigiXros cards from Tamer's digivolution cards from trash")
         effect3.set_effect_description("[All Turns] When any of your [Bagra Army] or [Twilight] trait Digimon cards with DigiXros requirements would be played, by suspending this Tamer, 1 card from under your Tamers and 1 card in your trash can also be placed for their DigiXros.")
         effect3.is_optional = True

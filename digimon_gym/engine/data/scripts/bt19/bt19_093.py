@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -42,6 +43,7 @@ class BT19_093(CardScript):
         # Timing: EffectTiming.OnDestroyedAnyone
         # When this card is trashed in your battle area, until the end of your opponent's turn, 1 of your opponent's Digimon gets -3000 DP and that Digimon's [When Digivolving] effects don't activate.
         effect1 = ICardEffect()
+        effect1.set_timing(EffectTiming.OnDestroyedAnyone)
         effect1.set_effect_name("BT19-093 Give -3000 DP and Cannot activate When Digivolving effects.")
         effect1.set_effect_description("When this card is trashed in your battle area, until the end of your opponent's turn, 1 of your opponent's Digimon gets -3000 DP and that Digimon's [When Digivolving] effects don't activate.")
         effect1.is_on_deletion = True
@@ -80,6 +82,7 @@ class BT19_093(CardScript):
         # Timing: EffectTiming.OptionSkill
         # [Main] Until the end of your opponent's turn, 1 of your opponent's Digimon gets -3000 DP and that Digimon's [When Digivolving] effects don't activate. Then, place this card in the battle area.
         effect2 = ICardEffect()
+        effect2.set_timing(EffectTiming.OptionSkill)
         effect2.set_effect_name("BT19-093 Give -3000 DP and Cannot activate When Digivolving effects.")
         effect2.set_effect_description("[Main] Until the end of your opponent's turn, 1 of your opponent's Digimon gets -3000 DP and that Digimon's [When Digivolving] effects don't activate. Then, place this card in the battle area.")
 
@@ -117,6 +120,7 @@ class BT19_093(CardScript):
         # Timing: EffectTiming.SecuritySkill
         # [Security] 2 of your opponent's Digimon gain <Security A. -2> for the turn. Then, add this card to the hand.
         effect3 = ICardEffect()
+        effect3.set_timing(EffectTiming.SecuritySkill)
         effect3.set_effect_name("BT19-093 Security Attack -2 for 2 of your opponents Digimon, then add this to hand")
         effect3.set_effect_description("[Security] 2 of your opponent's Digimon gain <Security A. -2> for the turn. Then, add this card to the hand.")
         effect3.is_security_effect = True

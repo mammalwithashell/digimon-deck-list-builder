@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -57,6 +58,7 @@ class BT21_052(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [When Digivolving] Suspend all of your opponent's Digimon and Tamers. Then, delete 1 of their suspended Digimon or Tamers.
         effect3 = ICardEffect()
+        effect3.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect3.set_effect_name("BT21-052 Suspend all of you opponent's Digimon and Tamers and delete 1 of their suspended Digimon or Tamers")
         effect3.set_effect_description("[When Digivolving] Suspend all of your opponent's Digimon and Tamers. Then, delete 1 of their suspended Digimon or Tamers.")
         effect3.is_when_digivolving = True
@@ -106,6 +108,7 @@ class BT21_052(CardScript):
         # Timing: EffectTiming.OnTappedAnyone
         # [All Turns] [Once Per Turn] When this Digimon suspends, it unsuspends. Then, if [Examon] or [X Antibody] is in this Digimon's digivolution cards, trash your opponent's top security card.
         effect4 = ICardEffect()
+        effect4.set_timing(EffectTiming.OnTappedAnyone)
         effect4.set_effect_name("BT21-052 Unsuspend this Digimon when it suspends and trash the opponent's top security card")
         effect4.set_effect_description("[All Turns] [Once Per Turn] When this Digimon suspends, it unsuspends. Then, if [Examon] or [X Antibody] is in this Digimon's digivolution cards, trash your opponent's top security card.")
         effect4.set_max_count_per_turn(1)

@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -28,6 +29,7 @@ class P_216(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [On Play] You may play 1 [Dark Master] trait Digimon card from your hand without paying the cost. The Digimon this effect played can't digivolve and is deleted at turn end.
         effect1 = ICardEffect()
+        effect1.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect1.set_effect_name("P-216 Play a Dark Master from Hand.")
         effect1.set_effect_description("[On Play] You may play 1 [Dark Master] trait Digimon card from your hand without paying the cost. The Digimon this effect played can't digivolve and is deleted at turn end.")
         effect1.is_optional = True
@@ -64,6 +66,7 @@ class P_216(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # Delete, Effect Immunity
         effect2 = ICardEffect()
+        effect2.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect2.set_effect_name("P-216 Delete this Digimon")
         effect2.set_effect_description("Delete, Effect Immunity")
         effect2.is_on_play = True
@@ -102,6 +105,7 @@ class P_216(CardScript):
         # Timing: EffectTiming.OnDestroyedAnyone
         # [On Deletion] You may play 1 face-up [Dark Masters] trait Digimon card from your security stack without paying the cost. At the end of your turn, delete the Digimon this effect played.
         effect3 = ICardEffect()
+        effect3.set_timing(EffectTiming.OnDestroyedAnyone)
         effect3.set_effect_name("P-216 Play a Dark Master from Security")
         effect3.set_effect_description("[On Deletion] You may play 1 face-up [Dark Masters] trait Digimon card from your security stack without paying the cost. At the end of your turn, delete the Digimon this effect played.")
         effect3.is_optional = True
@@ -136,6 +140,7 @@ class P_216(CardScript):
         # Timing: EffectTiming.OnDestroyedAnyone
         # Delete, Effect Immunity
         effect4 = ICardEffect()
+        effect4.set_timing(EffectTiming.OnDestroyedAnyone)
         effect4.set_effect_name("P-216 Delete this Digimon")
         effect4.set_effect_description("Delete, Effect Immunity")
         effect4.is_on_deletion = True

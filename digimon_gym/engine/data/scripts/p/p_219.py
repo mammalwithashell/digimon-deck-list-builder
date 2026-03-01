@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -16,6 +17,7 @@ class P_219(CardScript):
         # Timing: EffectTiming.BeforePayCost
         # When this card would be used, if your opponent has 10 or more cards in their trash, reduce the use cost by 3
         effect0 = ICardEffect()
+        effect0.set_timing(EffectTiming.BeforePayCost)
         effect0.set_effect_name("P-219 Reduce Use Cost -3")
         effect0.set_effect_description("When this card would be used, if your opponent has 10 or more cards in their trash, reduce the use cost by 3")
         effect0.cost_reduction = 3
@@ -40,6 +42,7 @@ class P_219(CardScript):
         # Timing: EffectTiming.OptionSkill
         # [Main] Delete 1 of your opponent's level 6 or lower Digimon. Then, by deleting 1 of your [Evil] or [Fallen Angel] trait Digimon, you may play 1 [Creepymon] from your trash without paying the cost. The Digimon this effect played gains <Rush> and <Blocker> until your opponent's turn ends.
         effect1 = ICardEffect()
+        effect1.set_timing(EffectTiming.OptionSkill)
         effect1.set_effect_name("P-219 Delete opponent's Digimon. Delete 1 of your own to play [Creepymon] from Trash")
         effect1.set_effect_description("[Main] Delete 1 of your opponent's level 6 or lower Digimon. Then, by deleting 1 of your [Evil] or [Fallen Angel] trait Digimon, you may play 1 [Creepymon] from your trash without paying the cost. The Digimon this effect played gains <Rush> and <Blocker> until your opponent's turn ends.")
         effect1._is_rush = True

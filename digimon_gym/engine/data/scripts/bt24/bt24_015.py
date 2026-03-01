@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -43,6 +44,7 @@ class BT24_015(CardScript):
         # Timing: EffectTiming.SecuritySkill
         # [Security] If your opponent has a level 6 or higher Digimon, play this card without battling and without paying the cost.
         effect2 = ICardEffect()
+        effect2.set_timing(EffectTiming.SecuritySkill)
         effect2.set_effect_name("BT24-015 Play this card without battling")
         effect2.set_effect_description("[Security] If your opponent has a level 6 or higher Digimon, play this card without battling and without paying the cost.")
         effect2.is_security_effect = True
@@ -75,6 +77,7 @@ class BT24_015(CardScript):
         # Timing: EffectTiming.OnAttackTargetChanged
         # [All Turns] [Once Per Turn] When attack targets change, delete 1 of your opponent's Digimon with the lowest DP.
         effect3 = ICardEffect()
+        effect3.set_timing(EffectTiming.OnAttackTargetChanged)
         effect3.set_effect_name("BT24-015 Delete lowest DP")
         effect3.set_effect_description("[All Turns] [Once Per Turn] When attack targets change, delete 1 of your opponent's Digimon with the lowest DP.")
         effect3.set_max_count_per_turn(1)
@@ -110,6 +113,7 @@ class BT24_015(CardScript):
         # Timing: EffectTiming.OnAllyAttack
         # [When Attacking] [Once Per Turn] Delete 1 of your opponent's Digimon with ＜Blocker＞
         effect4 = ICardEffect()
+        effect4.set_timing(EffectTiming.OnAllyAttack)
         effect4.set_effect_name("BT24-015 Delete 1 <Blocker>")
         effect4.set_effect_description("[When Attacking] [Once Per Turn] Delete 1 of your opponent's Digimon with ＜Blocker＞")
         effect4.is_inherited_effect = True

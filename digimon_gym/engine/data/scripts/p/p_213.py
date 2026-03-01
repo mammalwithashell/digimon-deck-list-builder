@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -58,6 +59,7 @@ class P_213(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [When Digivolving] If you have 3 or fewer security cards, this Digimon gains <Rush> and +3000 DP until your opponent's turn ends. Then, this Digimon may attack.
         effect3 = ICardEffect()
+        effect3.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect3.set_effect_name("P-213 Gain <Rush> and +3000 DP, then you may attack")
         effect3.set_effect_description("[When Digivolving] If you have 3 or fewer security cards, this Digimon gains <Rush> and +3000 DP until your opponent's turn ends. Then, this Digimon may attack.")
         effect3.is_when_digivolving = True

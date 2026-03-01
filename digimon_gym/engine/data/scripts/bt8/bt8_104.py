@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -16,6 +17,7 @@ class BT8_104(CardScript):
         # Timing: EffectTiming.OptionSkill
         # [Main] <De-Digivolve 1> 1 of your opponent's Digimon. (Trash 1 card from the top of one of your opponent's Digimon. If it has no digivolution cards, or becomes a level 3 Digimon, you can't trash any more cards.) Then, you may place 1 card with [X-Antibody] in its traits from your hand as the bottom digivolution card of 1 of your black Digimon with [X-Antibody] in its traits to delete 1 of your opponent's Digimon with a play cost of 4 or less.
         effect0 = ICardEffect()
+        effect0.set_timing(EffectTiming.OptionSkill)
         effect0.set_effect_name("BT8-104 Delete, De Digivolve")
         effect0.set_effect_description("[Main] <De-Digivolve 1> 1 of your opponent's Digimon. (Trash 1 card from the top of one of your opponent's Digimon. If it has no digivolution cards, or becomes a level 3 Digimon, you can't trash any more cards.) Then, you may place 1 card with [X-Antibody] in its traits from your hand as the bottom digivolution card of 1 of your black Digimon with [X-Antibody] in its traits to delete 1 of your opponent's Digimon with a play cost of 4 or less.")
 
@@ -57,6 +59,7 @@ class BT8_104(CardScript):
         # Timing: EffectTiming.SecuritySkill
         # [Security] <De-Digivolve 1> 1 of your opponent's Digimon. Then, delete 1 of your opponent's Digimon with a play cost of 4 or less.
         effect1 = ICardEffect()
+        effect1.set_timing(EffectTiming.SecuritySkill)
         effect1.set_effect_name("BT8-104 Delete, De Digivolve")
         effect1.set_effect_description("[Security] <De-Digivolve 1> 1 of your opponent's Digimon. Then, delete 1 of your opponent's Digimon with a play cost of 4 or less.")
         effect1.is_security_effect = True

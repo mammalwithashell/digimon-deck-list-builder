@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -39,6 +40,7 @@ class BT23_094(CardScript):
         # Timing: EffectTiming.OptionSkill
         # [Main] Until your opponent's turn ends, give 1 of their Digimon <Security A. -1> and it can't activate [When Digivolving] or [When Attacking] effects. Then, place this card in the battle area.
         effect1 = ICardEffect()
+        effect1.set_timing(EffectTiming.OptionSkill)
         effect1.set_effect_name("BT23-094 1 digimon gains Sec Atk -1 and cant use [When Digivolving] & [When Attacking effects]. then place is battle area")
         effect1.set_effect_description("[Main] Until your opponent's turn ends, give 1 of their Digimon <Security A. -1> and it can't activate [When Digivolving] or [When Attacking] effects. Then, place this card in the battle area.")
 
@@ -88,6 +90,7 @@ class BT23_094(CardScript):
         # Timing: EffectTiming.OnAllyAttack
         # When one of your [CS] trait Digimon attacks <Delay>. Until your opponent's turn ends, give 1 of their Digimon <Security A. -1> and it can't activate [When Digivolving] or [When Attacking] effects.
         effect3 = ICardEffect()
+        effect3.set_timing(EffectTiming.OnAllyAttack)
         effect3.set_effect_name("BT23-094 1 digimon gains Sec Atk -1 and cant use [When Digivolving] & [When Attacking effects].")
         effect3.set_effect_description("When one of your [CS] trait Digimon attacks <Delay>. Until your opponent's turn ends, give 1 of their Digimon <Security A. -1> and it can't activate [When Digivolving] or [When Attacking] effects.")
         effect3.is_optional = True
@@ -125,6 +128,7 @@ class BT23_094(CardScript):
         # Timing: EffectTiming.SecuritySkill
         # [Security] Until your opponent's turn ends, give 1 of their Digimon <Security A. -1> and it can't activate [When Digivolving] or [When Attacking] effects. Then, place this card in the battle area.
         effect4 = ICardEffect()
+        effect4.set_timing(EffectTiming.SecuritySkill)
         effect4.set_effect_name("BT23-094 1 digimon gains Sec Atk -1 and cant use [When Digivolving] & [When Attacking effects]. then place is battle area")
         effect4.set_effect_description("[Security] Until your opponent's turn ends, give 1 of their Digimon <Security A. -1> and it can't activate [When Digivolving] or [When Attacking] effects. Then, place this card in the battle area.")
         effect4.is_security_effect = True

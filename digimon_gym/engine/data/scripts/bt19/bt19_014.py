@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -65,6 +66,7 @@ class BT19_014(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [On Play] For each color in this Digimon's digivolution cards, all of your opponent's Digimon get -1000 DP for the turn. Then, you may play 1 [ShootingStarmon] from under your Tamers without paying the cost.
         effect4 = ICardEffect()
+        effect4.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect4.set_effect_name("BT19-014 All of your opponent's Digimon get -DP for the turn then, play 1 [ShootingStarmon] from under your Tamers")
         effect4.set_effect_description("[On Play] For each color in this Digimon's digivolution cards, all of your opponent's Digimon get -1000 DP for the turn. Then, you may play 1 [ShootingStarmon] from under your Tamers without paying the cost.")
         effect4.is_on_play = True
@@ -96,6 +98,7 @@ class BT19_014(CardScript):
         # Timing: EffectTiming.OnAllyAttack
         # [When Attacking] Delete 1 of your opponent's Digimon with as much or less DP than this Digimon.
         effect5 = ICardEffect()
+        effect5.set_timing(EffectTiming.OnAllyAttack)
         effect5.set_effect_name("BT19-014 Delete 1 Digimon")
         effect5.set_effect_description("[When Attacking] Delete 1 of your opponent's Digimon with as much or less DP than this Digimon.")
         effect5.is_on_attack = True

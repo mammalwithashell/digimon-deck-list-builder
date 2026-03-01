@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -16,6 +17,7 @@ class BT20_058(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [On Play] Delete 1 of your opponent's Digimon with a play cost of 7 or less.
         effect0 = ICardEffect()
+        effect0.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect0.set_effect_name("BT20-058 Delete 1 Digimon")
         effect0.set_effect_description("[On Play] Delete 1 of your opponent's Digimon with a play cost of 7 or less.")
         effect0.is_on_play = True
@@ -51,6 +53,7 @@ class BT20_058(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [When Digivolving] Delete 1 of your opponent's Digimon with a play cost of 7 or less.
         effect1 = ICardEffect()
+        effect1.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect1.set_effect_name("BT20-058 Delete 1 Digimon")
         effect1.set_effect_description("[When Digivolving] Delete 1 of your opponent's Digimon with a play cost of 7 or less.")
         effect1.is_when_digivolving = True
@@ -86,6 +89,7 @@ class BT20_058(CardScript):
         # Timing: EffectTiming.WhenRemoveField
         # [All Turns] When this Digimon would leave the battle area, you may play 1 play cost 11 or lower Digimon card with the [Machine] or [Cyborg] trait from this Digimon's digivolution cards without paying the cost.
         effect2 = ICardEffect()
+        effect2.set_timing(EffectTiming.WhenRemoveField)
         effect2.set_effect_name("BT20-058 Play 11 cost or lower Digimon from sources")
         effect2.set_effect_description("[All Turns] When this Digimon would leave the battle area, you may play 1 play cost 11 or lower Digimon card with the [Machine] or [Cyborg] trait from this Digimon's digivolution cards without paying the cost.")
 

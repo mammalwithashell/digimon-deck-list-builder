@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -16,6 +17,7 @@ class BT13_094(CardScript):
         # Timing: EffectTiming.OnStartMainPhase
         # [Start of Your Main Phase] If you have a Digimon with [Avian] or [Bird] in one of its traits, gain 1 memory.
         effect0 = ICardEffect()
+        effect0.set_timing(EffectTiming.OnStartMainPhase)
         effect0.set_effect_name("BT13-094 Memory +1")
         effect0.set_effect_description("[Start of Your Main Phase] If you have a Digimon with [Avian] or [Bird] in one of its traits, gain 1 memory.")
 
@@ -43,6 +45,7 @@ class BT13_094(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # Effect
         effect1 = ICardEffect()
+        effect1.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect1.set_effect_name("BT13-094 Your 1 Digimon gets effects")
         effect1.set_effect_description("Effect")
         effect1.is_on_play = True
@@ -58,6 +61,7 @@ class BT13_094(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [On Deletion] You may play 1[Biyomon] from your hand or trash without paying the cost
         effect2 = ICardEffect()
+        effect2.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect2.set_effect_name("BT13-094 Play 1 [Biyomon] from trash")
         effect2.set_effect_description("[On Deletion] You may play 1[Biyomon] from your hand or trash without paying the cost")
         effect2.is_optional = True

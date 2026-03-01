@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -16,6 +17,7 @@ class BT20_055(CardScript):
         # Timing: EffectTiming.OnEndTurn
         # (Security) [End of Opponent's Turn] Play this card without paying the cost.
         effect0 = ICardEffect()
+        effect0.set_timing(EffectTiming.OnEndTurn)
         effect0.set_effect_name("BT20-055 Play this card")
         effect0.set_effect_description("(Security) [End of Opponent's Turn] Play this card without paying the cost.")
 
@@ -43,6 +45,7 @@ class BT20_055(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [On Play] <De-Digivolve 2> 1 of your opponent's Digimon and flip your opponent's top face-down security card face up. Then, delete 1 of their Digimon with 1 or fewer digivolution cards.
         effect1 = ICardEffect()
+        effect1.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect1.set_effect_name("BT20-055 <De-Digivolve 2> 1 opponent's Digimon, flip their security card faceup, then delete 1 Digimon")
         effect1.set_effect_description("[On Play] <De-Digivolve 2> 1 of your opponent's Digimon and flip your opponent's top face-down security card face up. Then, delete 1 of their Digimon with 1 or fewer digivolution cards.")
         effect1.is_on_play = True
@@ -91,6 +94,7 @@ class BT20_055(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [When Digivolving] <De-Digivolve 2> 1 of your opponent's Digimon and flip your opponent's top face-down security card face up. Then, delete 1 of their Digimon with 1 or fewer digivolution cards.
         effect2 = ICardEffect()
+        effect2.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect2.set_effect_name("BT20-055 <De-Digivolve 2> 1 opponent's Digimon, flip their security card faceup, then delete 1 Digimon")
         effect2.set_effect_description("[When Digivolving] <De-Digivolve 2> 1 of your opponent's Digimon and flip your opponent's top face-down security card face up. Then, delete 1 of their Digimon with 1 or fewer digivolution cards.")
         effect2.is_when_digivolving = True
@@ -135,6 +139,7 @@ class BT20_055(CardScript):
         # Timing: EffectTiming.OnSecurityCheck
         # [Your Turn] When your Digimon check face-up security cards, you may place this Digimon's top stacked card face up as the bottom security card.
         effect3 = ICardEffect()
+        effect3.set_timing(EffectTiming.OnSecurityCheck)
         effect3.set_effect_name("BT20-055 Place top card face up as bottom security")
         effect3.set_effect_description("[Your Turn] When your Digimon check face-up security cards, you may place this Digimon's top stacked card face up as the bottom security card.")
         effect3.is_optional = True

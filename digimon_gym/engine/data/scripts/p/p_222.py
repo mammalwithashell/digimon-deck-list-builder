@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -34,6 +35,7 @@ class P_222(CardScript):
         # Timing: EffectTiming.BeforePayCost
         # When this card would be played, if you have a face-up [Wind Guardians] security card, reduce the play cost by 4.
         effect1 = ICardEffect()
+        effect1.set_timing(EffectTiming.BeforePayCost)
         effect1.set_effect_name("P-222 If [Wind Guardians] is in your face up security cards get Play Cost -4")
         effect1.set_effect_description("When this card would be played, if you have a face-up [Wind Guardians] security card, reduce the play cost by 4.")
         effect1.cost_reduction = 4
@@ -82,6 +84,7 @@ class P_222(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # Effect
         effect3 = ICardEffect()
+        effect3.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect3.set_effect_name("P-222 Effect")
         effect3.set_effect_description("Effect")
         effect3.is_on_play = True
@@ -99,6 +102,7 @@ class P_222(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # Effect
         effect4 = ICardEffect()
+        effect4.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect4.set_effect_name("P-222 Effect")
         effect4.set_effect_description("Effect")
         effect4.is_when_digivolving = True
@@ -116,6 +120,7 @@ class P_222(CardScript):
         # Timing: EffectTiming.OnTappedAnyone
         # [All Turns] [Once Per Turn] When any Digimon suspend, you may delete 1 of your opponent's lowest DP Digimon
         effect5 = ICardEffect()
+        effect5.set_timing(EffectTiming.OnTappedAnyone)
         effect5.set_effect_name("P-222 Delete opponent's lowest DP Digimon")
         effect5.set_effect_description("[All Turns] [Once Per Turn] When any Digimon suspend, you may delete 1 of your opponent's lowest DP Digimon")
         effect5.is_optional = True

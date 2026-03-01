@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -33,6 +34,7 @@ class EX8_018(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [On Play] Reveal the top 3 cards of your deck. Add 1 card with the [DS] trait and 1 card with the [Sea Beast] or [Plesiosaur] trait among them to the hand. Return the rest to the bottom of the deck.
         effect1 = ICardEffect()
+        effect1.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect1.set_effect_name("EX8-018 Reveal top 3 cards. Add 1 card with [DS] and 1 card with [Sea Beast] or [Plesiosaur] trait.")
         effect1.set_effect_description("[On Play] Reveal the top 3 cards of your deck. Add 1 card with the [DS] trait and 1 card with the [Sea Beast] or [Plesiosaur] trait among them to the hand. Return the rest to the bottom of the deck.")
         effect1.is_on_play = True
@@ -72,6 +74,7 @@ class EX8_018(CardScript):
         # Timing: EffectTiming.OnAllyAttack
         # [When Attacking] [Once Per Turn] If you have 7 or fewer cards in your hand, <Draw 1>.
         effect2 = ICardEffect()
+        effect2.set_timing(EffectTiming.OnAllyAttack)
         effect2.set_effect_name("EX8-018 Draw 1")
         effect2.set_effect_description("[When Attacking] [Once Per Turn] If you have 7 or fewer cards in your hand, <Draw 1>.")
         effect2.is_inherited_effect = True

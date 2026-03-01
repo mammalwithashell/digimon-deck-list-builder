@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -16,6 +17,7 @@ class BT13_101(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [On Play] You may play 1 Digimon card with [PawnChessmon] in its name from your hand without paying the cost.
         effect0 = ICardEffect()
+        effect0.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect0.set_effect_name("BT13-101 Play 1 Digimon card with [PawnChessmon] in its name from hand")
         effect0.set_effect_description("[On Play] You may play 1 Digimon card with [PawnChessmon] in its name from your hand without paying the cost.")
         effect0.is_optional = True
@@ -52,6 +54,7 @@ class BT13_101(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [All Turns] When you play a 2-color black and yellow Digimon, by suspending this Tamer, <Draw 1> and gain 1 memory.
         effect1 = ICardEffect()
+        effect1.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect1.set_effect_name("BT13-101 Draw 1 and Memory +1")
         effect1.set_effect_description("[All Turns] When you play a 2-color black and yellow Digimon, by suspending this Tamer, <Draw 1> and gain 1 memory.")
         effect1.is_optional = True

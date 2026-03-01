@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -52,6 +53,7 @@ class BT20_082(CardScript):
         # Timing: EffectTiming.WhenRemoveField
         # [All Turns] When this Digimon would leave the battle area by effects, by returning 3 cards with [Dex] or [DeathX] in their names from your trash to the bottom of the deck, it doesn't leave.
         effect3 = ICardEffect()
+        effect3.set_timing(EffectTiming.WhenRemoveField)
         effect3.set_effect_name("BT20-082 Bottom deck 3 cards with [Dex] or [DeathX] in their names to prevent this Digimon from leaving Battle Area")
         effect3.set_effect_description("[All Turns] When this Digimon would leave the battle area by effects, by returning 3 cards with [Dex] or [DeathX] in their names from your trash to the bottom of the deck, it doesn't leave.")
         effect3.is_optional = True
@@ -89,6 +91,7 @@ class BT20_082(CardScript):
         # Timing: EffectTiming.OnEndTurn
         # [End of All Turns] [Once Per Turn] Delete all Digimon with the lowest level.
         effect4 = ICardEffect()
+        effect4.set_timing(EffectTiming.OnEndTurn)
         effect4.set_effect_name("BT20-082 Delete all Digimon with the lowest level")
         effect4.set_effect_description("[End of All Turns] [Once Per Turn] Delete all Digimon with the lowest level.")
         effect4.set_max_count_per_turn(1)

@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -16,6 +17,7 @@ class EX6_071(CardScript):
         # Timing: EffectTiming.OptionSkill
         # [Main] If your opponent has 5 or more cards in their hand, your opponent trashes 1 card in their hand. Then, delete 1 of your opponent�s Digimon with a level greater than or equal to the cards in their hand.
         effect0 = ICardEffect()
+        effect0.set_timing(EffectTiming.OptionSkill)
         effect0.set_effect_name("EX6-071 Opponent Trashes 1 card, Then Delete 1 digimon with level less than or equal to cards in opponents hand.")
         effect0.set_effect_description("[Main] If your opponent has 5 or more cards in their hand, your opponent trashes 1 card in their hand. Then, delete 1 of your opponent�s Digimon with a level greater than or equal to the cards in their hand.")
 

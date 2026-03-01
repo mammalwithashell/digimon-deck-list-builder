@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -39,6 +40,7 @@ class EX5_068(CardScript):
         # Timing: EffectTiming.OptionSkill
         # [Main] Suspend 1 of your opponent's Digimon, and 1 of your opponent's Digimon gets -12000 DP for the turn. Then, 1 of your Digimon with [Leomon]/[Bancho] in its name may attack.
         effect1 = ICardEffect()
+        effect1.set_timing(EffectTiming.OptionSkill)
         effect1.set_effect_name("EX5-068 DP -12000, Suspend, Force Attack")
         effect1.set_effect_description("[Main] Suspend 1 of your opponent's Digimon, and 1 of your opponent's Digimon gets -12000 DP for the turn. Then, 1 of your Digimon with [Leomon]/[Bancho] in its name may attack.")
 
@@ -80,6 +82,7 @@ class EX5_068(CardScript):
         # Timing: EffectTiming.SecuritySkill
         # [Security] Suspend 1 of your opponent's Digimon, and give 1 of your opponent's Digimon -12000 DP for the turn.
         effect2 = ICardEffect()
+        effect2.set_timing(EffectTiming.SecuritySkill)
         effect2.set_effect_name("EX5-068 DP -12000, Suspend")
         effect2.set_effect_description("[Security] Suspend 1 of your opponent's Digimon, and give 1 of your opponent's Digimon -12000 DP for the turn.")
         effect2.is_security_effect = True

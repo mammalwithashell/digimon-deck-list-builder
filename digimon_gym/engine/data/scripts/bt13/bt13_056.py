@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -16,6 +17,7 @@ class BT13_056(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [When Digivolving][Once Per Turn] You may play 1 green or [Royal Knight] trait Digimon card from your hand for the cost. When it would be played by this effect, reduce the play cost by 4.
         effect0 = ICardEffect()
+        effect0.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect0.set_effect_name("BT13-056 Play 1 Digimon from hand")
         effect0.set_effect_description("[When Digivolving][Once Per Turn] You may play 1 green or [Royal Knight] trait Digimon card from your hand for the cost. When it would be played by this effect, reduce the play cost by 4.")
         effect0.is_optional = True
@@ -59,6 +61,7 @@ class BT13_056(CardScript):
         # Timing: EffectTiming.OnDeclaration
         # [Main][Once Per Turn] You may play 1 green or [Royal Knight] trait Digimon card from your hand for the cost. When it would be played by this effect, reduce the play cost by 4.
         effect1 = ICardEffect()
+        effect1.set_timing(EffectTiming.OnDeclaration)
         effect1.set_effect_name("BT13-056 Play 1 Digimon from hand")
         effect1.set_effect_description("[Main][Once Per Turn] You may play 1 green or [Royal Knight] trait Digimon card from your hand for the cost. When it would be played by this effect, reduce the play cost by 4.")
         effect1.set_max_count_per_turn(1)
@@ -99,6 +102,7 @@ class BT13_056(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [All Turns] When you play another Digimon, all of your green and [Royal Knight] trait Digimon gain <Blocker> until the end of your opponent's turn.
         effect2 = ICardEffect()
+        effect2.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect2.set_effect_name("BT13-056 Your Digimons gain Blocker")
         effect2.set_effect_description("[All Turns] When you play another Digimon, all of your green and [Royal Knight] trait Digimon gain <Blocker> until the end of your opponent's turn.")
         effect2.set_max_count_per_turn(1)

@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -16,6 +17,7 @@ class BT23_087(CardScript):
         # Timing: EffectTiming.OnStartMainPhase
         # [Start of Your Main Phase] By returning this Tamer to the bottom of the deck, you may play 1 [Violet Inboots] from your hand without paying the cost. Then, if you don't have a Digimon, you may play 1 [Ghostmon] from your trash without paying the cost.
         effect0 = ICardEffect()
+        effect0.set_timing(EffectTiming.OnStartMainPhase)
         effect0.set_effect_name("BT23-087 By returning this card, Play [Violet Inboots], Then 1 [Ghostmon]")
         effect0.set_effect_description("[Start of Your Main Phase] By returning this Tamer to the bottom of the deck, you may play 1 [Violet Inboots] from your hand without paying the cost. Then, if you don't have a Digimon, you may play 1 [Ghostmon] from your trash without paying the cost.")
         effect0.is_optional = True
@@ -46,6 +48,7 @@ class BT23_087(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [Your Turn] When any of your Digimon digivolve into a Digimon with the [Ghost] trait, by suspending this Tamer, that Digimon gains <Rush> for the turn.
         effect1 = ICardEffect()
+        effect1.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect1.set_effect_name("BT23-087 By suspending this tamer, gain <Rush>")
         effect1.set_effect_description("[Your Turn] When any of your Digimon digivolve into a Digimon with the [Ghost] trait, by suspending this Tamer, that Digimon gains <Rush> for the turn.")
         effect1.is_optional = True

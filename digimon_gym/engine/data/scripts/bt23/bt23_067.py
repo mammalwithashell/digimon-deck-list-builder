@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -30,6 +31,7 @@ class BT23_067(CardScript):
         # Timing: EffectTiming.BeforePayCost
         # When this card would be played from the hand, if you have [Angewomon] or [Mirei Mikagura], reduce the play cost by 3.
         effect1 = ICardEffect()
+        effect1.set_timing(EffectTiming.BeforePayCost)
         effect1.set_effect_name("BT23-067 Play cost reduction -3")
         effect1.set_effect_description("When this card would be played from the hand, if you have [Angewomon] or [Mirei Mikagura], reduce the play cost by 3.")
         effect1.set_hash_string("BT23_067_ReducePlayCost")
@@ -91,6 +93,7 @@ class BT23_067(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [On Play] Delete 1 of your opponent's level 4 or lower Digimon.
         effect4 = ICardEffect()
+        effect4.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect4.set_effect_name("BT23-067 Delete 1 of your opponent's level 4 or lower Digimon")
         effect4.set_effect_description("[On Play] Delete 1 of your opponent's level 4 or lower Digimon.")
         effect4.is_on_play = True
@@ -124,6 +127,7 @@ class BT23_067(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [When Digivolving] Delete 1 of your opponent's level 4 or lower Digimon.
         effect5 = ICardEffect()
+        effect5.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect5.set_effect_name("BT23-067 Delete 1 of your opponent's level 4 or lower Digimon")
         effect5.set_effect_description("[When Digivolving] Delete 1 of your opponent's level 4 or lower Digimon.")
         effect5.is_when_digivolving = True

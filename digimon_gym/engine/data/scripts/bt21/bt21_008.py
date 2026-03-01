@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -16,6 +17,7 @@ class BT21_008(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # Add To Hand, Reveal And Select
         effect0 = ICardEffect()
+        effect0.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect0.set_effect_name("BT21-008 Reveal top 3, Add Reptile/Dragonkin & 1 Liberator")
         effect0.set_effect_description("Add To Hand, Reveal And Select")
         effect0.is_on_play = True
@@ -34,10 +36,6 @@ class BT21_008(CardScript):
             player = ctx.get('player')
             perm = ctx.get('permanent')
             game = ctx.get('game')
-            # Add card to hand (from trash/reveal)
-            if player and player.trash_cards:
-                card_to_add = player.trash_cards.pop()
-                player.hand_cards.append(card_to_add)
             if not (player and game):
                 return
             def reveal_filter(c):
@@ -57,6 +55,7 @@ class BT21_008(CardScript):
         # Timing: EffectTiming.OnLoseSecurity
         # Gain 1 memory
         effect1 = ICardEffect()
+        effect1.set_timing(EffectTiming.OnLoseSecurity)
         effect1.set_effect_name("BT21-008 Gain 1 memory")
         effect1.set_effect_description("Gain 1 memory")
         effect1.is_inherited_effect = True

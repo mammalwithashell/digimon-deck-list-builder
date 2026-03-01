@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -16,6 +17,7 @@ class BT11_020(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [On Play] Reveal the top 3 cards of your deck. Add 1 Digimon card with [Gaogamon] in its name and 1 blue Tamer card among them to your hand. Trash the rest.
         effect0 = ICardEffect()
+        effect0.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect0.set_effect_name("BT11-020 Reveal the top 3 cards of deck")
         effect0.set_effect_description("[On Play] Reveal the top 3 cards of your deck. Add 1 Digimon card with [Gaogamon] in its name and 1 blue Tamer card among them to your hand. Trash the rest.")
         effect0.is_on_play = True
@@ -62,6 +64,7 @@ class BT11_020(CardScript):
         # Timing: EffectTiming.OnAllyAttack
         # [When Attacking][Once Per Turn] If you have a Tamer in play, return 1 of your opponent's level 3 Digimon to its owner's hand.
         effect1 = ICardEffect()
+        effect1.set_timing(EffectTiming.OnAllyAttack)
         effect1.set_effect_name("BT11-020 Return 1 level 3 Digimon to hand")
         effect1.set_effect_description("[When Attacking][Once Per Turn] If you have a Tamer in play, return 1 of your opponent's level 3 Digimon to its owner's hand.")
         effect1.is_inherited_effect = True

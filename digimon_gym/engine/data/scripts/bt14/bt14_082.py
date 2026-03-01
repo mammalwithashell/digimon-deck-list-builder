@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -16,6 +17,7 @@ class BT14_082(CardScript):
         # Timing: EffectTiming.OnStartMainPhase
         # [Start of Your Main Phase] 1 of your Digimon with the [Vaccine] trait gets +2000 DP for the turn.
         effect0 = ICardEffect()
+        effect0.set_timing(EffectTiming.OnStartMainPhase)
         effect0.set_effect_name("BT14-082 DP +2000")
         effect0.set_effect_description("[Start of Your Main Phase] 1 of your Digimon with the [Vaccine] trait gets +2000 DP for the turn.")
         effect0.dp_modifier = 2000
@@ -44,6 +46,7 @@ class BT14_082(CardScript):
         # Timing: EffectTiming.OnLoseSecurity
         # [Your Turn] When a card is removed from your opponent's security stack, by suspending this Tamer, gain 1 memory.
         effect1 = ICardEffect()
+        effect1.set_timing(EffectTiming.OnLoseSecurity)
         effect1.set_effect_name("BT14-082 Memory +1")
         effect1.set_effect_description("[Your Turn] When a card is removed from your opponent's security stack, by suspending this Tamer, gain 1 memory.")
         effect1.is_optional = True

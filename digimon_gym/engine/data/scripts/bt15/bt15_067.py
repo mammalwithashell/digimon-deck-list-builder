@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -41,6 +42,7 @@ class BT15_067(CardScript):
         # Timing: EffectTiming.OnTappedAnyone
         # [All Turns][Once per turn] When this Digimon becomes suspeneded, you may play 1 Digimon card with the [Beast Dragon] or [DigiPolice] trait and 5000DP or less from your hand without paying the cost
         effect2 = ICardEffect()
+        effect2.set_timing(EffectTiming.OnTappedAnyone)
         effect2.set_effect_name("BT15-067 Play 1 Digimon card with the [Beast Dragon] or [DigiPolice] trait with 5000DP or less from your hand.")
         effect2.set_effect_description("[All Turns][Once per turn] When this Digimon becomes suspeneded, you may play 1 Digimon card with the [Beast Dragon] or [DigiPolice] trait and 5000DP or less from your hand without paying the cost")
         effect2.is_optional = True
@@ -77,6 +79,7 @@ class BT15_067(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [When Digivolving] If a Tamer card with the [DigiPolice] trait is in this Digimon's digivolution cards, return 1 of your opponent's suspended Digimon or Tamers to the bottom of the deck.
         effect3 = ICardEffect()
+        effect3.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect3.set_effect_name("BT15-067 Return 1 of your opponent's suspended Digimon or Tamers to the bottom of the deck.")
         effect3.set_effect_description("[When Digivolving] If a Tamer card with the [DigiPolice] trait is in this Digimon's digivolution cards, return 1 of your opponent's suspended Digimon or Tamers to the bottom of the deck.")
         effect3.is_optional = True

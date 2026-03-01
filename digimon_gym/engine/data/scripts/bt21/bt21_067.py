@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -45,6 +46,7 @@ class BT21_067(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [On Play] You may return 1 Digimon card with the [ADVENTURE] trait from your trash to the hand.
         effect2 = ICardEffect()
+        effect2.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect2.set_effect_name("BT21-067 Return adventure trait")
         effect2.set_effect_description("[On Play] You may return 1 Digimon card with the [ADVENTURE] trait from your trash to the hand.")
         effect2.is_on_play = True
@@ -72,6 +74,7 @@ class BT21_067(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [When Digivolving] You may return 1 Digimon card with the [ADVENTURE] trait from your trash to the hand.
         effect3 = ICardEffect()
+        effect3.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect3.set_effect_name("BT21-067 Return adventure trait")
         effect3.set_effect_description("[When Digivolving] You may return 1 Digimon card with the [ADVENTURE] trait from your trash to the hand.")
         effect3.is_when_digivolving = True
@@ -99,6 +102,7 @@ class BT21_067(CardScript):
         # Timing: EffectTiming.OnAllyAttack
         # [When Attacking] [Once Per Turn] <Draw 1> and trash 1 card in your hand.
         effect4 = ICardEffect()
+        effect4.set_timing(EffectTiming.OnAllyAttack)
         effect4.set_effect_name("BT21-067 Draw 1 and trash 1 card from hand")
         effect4.set_effect_description("[When Attacking] [Once Per Turn] <Draw 1> and trash 1 card in your hand.")
         effect4.is_inherited_effect = True

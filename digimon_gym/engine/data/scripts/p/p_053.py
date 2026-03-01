@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -16,6 +17,7 @@ class P_053(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [When Digivolving] If you have a Tamer in play, 1 of your opponent's Digimon gets -5000 DP for the turn.
         effect0 = ICardEffect()
+        effect0.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect0.set_effect_name("P-053 DP -5000")
         effect0.set_effect_description("[When Digivolving] If you have a Tamer in play, 1 of your opponent's Digimon gets -5000 DP for the turn.")
         effect0.is_when_digivolving = True
@@ -49,6 +51,7 @@ class P_053(CardScript):
         # Timing: EffectTiming.OnAllyAttack
         # [When Attacking] 1 of your opponent's Digimon and all of your opponent's Security Digimon get -2000 DP for the turn.
         effect1 = ICardEffect()
+        effect1.set_timing(EffectTiming.OnAllyAttack)
         effect1.set_effect_name("P-053 Opponent's Digimon and Security Digimon get DP -2000")
         effect1.set_effect_description("[When Attacking] 1 of your opponent's Digimon and all of your opponent's Security Digimon get -2000 DP for the turn.")
         effect1.is_on_attack = True

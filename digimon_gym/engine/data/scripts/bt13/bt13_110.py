@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -16,6 +17,7 @@ class BT13_110(CardScript):
         # Timing: EffectTiming.OptionSkill
         # [Main] <Draw 1>. You may place 1 Digimon card from your hand as the bottom digivolution card of 1 of your [King Drasil_7D6] in the breeding area. Then, place this card in the battle area.
         effect0 = ICardEffect()
+        effect0.set_timing(EffectTiming.OptionSkill)
         effect0.set_effect_name("BT13-110 Draw 1")
         effect0.set_effect_description("[Main] <Draw 1>. You may place 1 Digimon card from your hand as the bottom digivolution card of 1 of your [King Drasil_7D6] in the breeding area. Then, place this card in the battle area.")
 
@@ -55,6 +57,7 @@ class BT13_110(CardScript):
         # Timing: EffectTiming.OnDeclaration
         # [Main] <Delay> - Play 1 [Royal Knight] trait card from the digivolution cards of your Digimon in the breeding area without paying the cost. [On Play] effects on Digimon played by this effect don't activate, and they gain <Rush> for the turn.
         effect2 = ICardEffect()
+        effect2.set_timing(EffectTiming.OnDeclaration)
         effect2.set_effect_name("BT13-110 Play 1 Digimon from breeding area")
         effect2.set_effect_description("[Main] <Delay> - Play 1 [Royal Knight] trait card from the digivolution cards of your Digimon in the breeding area without paying the cost. [On Play] effects on Digimon played by this effect don't activate, and they gain <Rush> for the turn.")
         effect2._is_rush = True

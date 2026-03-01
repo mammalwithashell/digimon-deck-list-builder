@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -58,6 +59,7 @@ class P_184(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [When Digivolving] This Digimon gets +3000 DP until your opponent's turn ends. Then, if [Kosuke Kisakata] is in this Digimon's digivolution cards, all of your Digimon with the [SoC] trait unsuspend.
         effect3 = ICardEffect()
+        effect3.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect3.set_effect_name("P-184 Gain 3k DP")
         effect3.set_effect_description("[When Digivolving] This Digimon gets +3000 DP until your opponent's turn ends. Then, if [Kosuke Kisakata] is in this Digimon's digivolution cards, all of your Digimon with the [SoC] trait unsuspend.")
         effect3.is_when_digivolving = True

@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -41,6 +42,7 @@ class BT24_056(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # Gain Keyword Cannot Return To Deck, Gain Keyword Cannot Return To Hand, Grant Bounce Immunity
         effect2 = ICardEffect()
+        effect2.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect2.set_effect_name("BT24-056 Gain Keyword Cannot Return To Deck, Gain Keyword Cannot Return To Hand, Grant Bounce Immunity")
         effect2.set_effect_description("Gain Keyword Cannot Return To Deck, Gain Keyword Cannot Return To Hand, Grant Bounce Immunity")
         effect2.is_on_play = True
@@ -77,6 +79,7 @@ class BT24_056(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # Gain Keyword Cannot Return To Deck, Gain Keyword Cannot Return To Hand, Grant Bounce Immunity
         effect3 = ICardEffect()
+        effect3.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect3.set_effect_name("BT24-056 Gain Keyword Cannot Return To Deck, Gain Keyword Cannot Return To Hand, Grant Bounce Immunity")
         effect3.set_effect_description("Gain Keyword Cannot Return To Deck, Gain Keyword Cannot Return To Hand, Grant Bounce Immunity")
         effect3.is_when_digivolving = True
@@ -113,6 +116,7 @@ class BT24_056(CardScript):
         # Timing: EffectTiming.WhenLinked
         # [When Linking] Delete 1 of your opponent's play cost 5 or lower Digimon.
         effect4 = ICardEffect()
+        effect4.set_timing(EffectTiming.WhenLinked)
         effect4.set_effect_name("BT24-056 Delete 1 Digimon with 5 or less Cost")
         effect4.set_effect_description("[When Linking] Delete 1 of your opponent's play cost 5 or lower Digimon.")
 

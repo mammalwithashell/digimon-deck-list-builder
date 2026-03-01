@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -36,6 +37,7 @@ class BT16_080(CardScript):
         # Timing: EffectTiming.WhenRemoveField
         # [All Turns] When this Digimon would leave the battle area by your opponent's effects, if you have 3 or more security cards, by trashing the top card of your security stack, prevent it from leaving.
         effect1 = ICardEffect()
+        effect1.set_timing(EffectTiming.WhenRemoveField)
         effect1.set_effect_name("BT16-080 Trash a security to prevent this Digimon from leaving Battle Area")
         effect1.set_effect_description("[All Turns] When this Digimon would leave the battle area by your opponent's effects, if you have 3 or more security cards, by trashing the top card of your security stack, prevent it from leaving.")
         effect1.is_optional = True
@@ -53,6 +55,7 @@ class BT16_080(CardScript):
         # Timing: EffectTiming.OnDestroyedAnyone
         # [On Deletion] <Recovery +1> until you have 3 security cards.)
         effect2 = ICardEffect()
+        effect2.set_timing(EffectTiming.OnDestroyedAnyone)
         effect2.set_effect_name("BT16-080 Recovery +1 until you have 3 security cards.")
         effect2.set_effect_description("[On Deletion] <Recovery +1> until you have 3 security cards.)")
         effect2.is_on_deletion = True

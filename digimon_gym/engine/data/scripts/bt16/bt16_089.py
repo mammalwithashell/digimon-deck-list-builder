@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -16,6 +17,7 @@ class BT16_089(CardScript):
         # Timing: EffectTiming.BeforePayCost
         # [Your Turn] When [Arukenimon] or [Mummymon] would be played from your hand, by deleting 1 of this Tamer, reduce the play cost by 3.
         effect0 = ICardEffect()
+        effect0.set_timing(EffectTiming.BeforePayCost)
         effect0.set_effect_name("BT16-089 Delete this Tamer to reduce Play Cost")
         effect0.set_effect_description("[Your Turn] When [Arukenimon] or [Mummymon] would be played from your hand, by deleting 1 of this Tamer, reduce the play cost by 3.")
         effect0.is_optional = True
@@ -49,6 +51,7 @@ class BT16_089(CardScript):
         # Timing: EffectTiming.OnDestroyedAnyone
         # [On Deletion] You may play 1 level 5 or lower Digimon card with [Myotismon] in it's text from your trash without paying the cost.
         effect1 = ICardEffect()
+        effect1.set_timing(EffectTiming.OnDestroyedAnyone)
         effect1.set_effect_name("BT16-089 Play 1 Digimon from trash")
         effect1.set_effect_description("[On Deletion] You may play 1 level 5 or lower Digimon card with [Myotismon] in it's text from your trash without paying the cost.")
         effect1.is_optional = True
@@ -90,6 +93,7 @@ class BT16_089(CardScript):
         # Timing: EffectTiming.OnDestroyedAnyone
         # Delete, Effect Immunity
         effect2 = ICardEffect()
+        effect2.set_timing(EffectTiming.OnDestroyedAnyone)
         effect2.set_effect_name("BT16-089 Delete the Digimon")
         effect2.set_effect_description("Delete, Effect Immunity")
         effect2.is_on_deletion = True

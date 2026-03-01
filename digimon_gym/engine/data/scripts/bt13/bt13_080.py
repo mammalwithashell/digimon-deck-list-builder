@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -16,6 +17,7 @@ class BT13_080(CardScript):
         # Timing: EffectTiming.BeforePayCost
         # When you would play this card, by deleting 1 of your level 2 Digimon in the breeding area, reduce the play cost by 2.
         effect0 = ICardEffect()
+        effect0.set_timing(EffectTiming.BeforePayCost)
         effect0.set_effect_name("BT13-080 Delete your 1 Digimon in breeding area to get Play Cost -2")
         effect0.set_effect_description("When you would play this card, by deleting 1 of your level 2 Digimon in the breeding area, reduce the play cost by 2.")
         effect0.is_optional = True
@@ -86,6 +88,7 @@ class BT13_080(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [On Play] <Draw 1>. Then, trash 1 card in your hand.
         effect2 = ICardEffect()
+        effect2.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect2.set_effect_name("BT13-080 Draw 1 and trash 1 card from hand")
         effect2.set_effect_description("[On Play] <Draw 1>. Then, trash 1 card in your hand.")
         effect2.is_on_play = True
@@ -123,6 +126,7 @@ class BT13_080(CardScript):
         # Timing: EffectTiming.OnDestroyedAnyone
         # [On Deletion] By returning 2 cards with [Gizmon] in their names from your trash to the bottom of the deck in any order, you may play 1 [Gizmon: AT] from your trash without paying the cost.
         effect3 = ICardEffect()
+        effect3.set_timing(EffectTiming.OnDestroyedAnyone)
         effect3.set_effect_name("BT13-080 Play 1 [Gizmon: AT] from trash")
         effect3.set_effect_description("[On Deletion] By returning 2 cards with [Gizmon] in their names from your trash to the bottom of the deck in any order, you may play 1 [Gizmon: AT] from your trash without paying the cost.")
         effect3.is_optional = True

@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -30,6 +31,7 @@ class BT24_060(CardScript):
         # Timing: EffectTiming.OnAllyAttack
         # [When Attacking] Reveal the top 3 cards of your deck. This Digimon may digivolve into a [DigiPolice] or [SEEKERS] trait Digimon card among them without paying the cost. Return the rest to the top or bottom of the deck.
         effect1 = ICardEffect()
+        effect1.set_timing(EffectTiming.OnAllyAttack)
         effect1.set_effect_name("BT24-060 Reveal the top 3 cards of deck, digivolve into 1")
         effect1.set_effect_description("[When Attacking] Reveal the top 3 cards of your deck. This Digimon may digivolve into a [DigiPolice] or [SEEKERS] trait Digimon card among them without paying the cost. Return the rest to the top or bottom of the deck.")
         effect1.is_on_attack = True
@@ -79,6 +81,7 @@ class BT24_060(CardScript):
         # Timing: EffectTiming.OnAddDigivolutionCards
         # [All Turns] When Tamer cards are placed in this Digimon's digivolution cards, suspend 1 of your opponent's Digimon. Then, this Digimon may attack your opponent's Digimon.
         effect2 = ICardEffect()
+        effect2.set_timing(EffectTiming.OnAddDigivolutionCards)
         effect2.set_effect_name("BT24-060 Suspend 1 opp then this may attack digimon")
         effect2.set_effect_description("[All Turns] When Tamer cards are placed in this Digimon's digivolution cards, suspend 1 of your opponent's Digimon. Then, this Digimon may attack your opponent's Digimon.")
 
@@ -112,6 +115,7 @@ class BT24_060(CardScript):
         # Timing: EffectTiming.WhenRemoveField
         # [All Turns] [Once Per Turn] When any of your [DigiPolice] or [SEEKERS] trait Digimon would leave the battle area, by playing 1 [DigiPolice] or [SEEKERS] trait Tamer card from this Digimon's digivolution cards without paying the cost, they don't leave.
         effect3 = ICardEffect()
+        effect3.set_timing(EffectTiming.WhenRemoveField)
         effect3.set_effect_name("BT24-060 By playing tamer, card doesn't leave")
         effect3.set_effect_description("[All Turns] [Once Per Turn] When any of your [DigiPolice] or [SEEKERS] trait Digimon would leave the battle area, by playing 1 [DigiPolice] or [SEEKERS] trait Tamer card from this Digimon's digivolution cards without paying the cost, they don't leave.")
         effect3.is_inherited_effect = True

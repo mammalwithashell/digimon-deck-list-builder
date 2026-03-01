@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -16,6 +17,7 @@ class BT20_013(CardScript):
         # Timing: EffectTiming.OnDeclaration
         # [Main] [Once Per Turn] You may play 1 Digimon card with [Sistermon] or [Gankoomon] in its name from you hand with the play cost reduced by 2.
         effect0 = ICardEffect()
+        effect0.set_timing(EffectTiming.OnDeclaration)
         effect0.set_effect_name("BT20-013 Play a Digimon with the cost reduced by 2")
         effect0.set_effect_description("[Main] [Once Per Turn] You may play 1 Digimon card with [Sistermon] or [Gankoomon] in its name from you hand with the play cost reduced by 2.")
         effect0.set_max_count_per_turn(1)

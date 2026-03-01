@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -16,6 +17,7 @@ class BT15_086(CardScript):
         # Timing: EffectTiming.OnStartMainPhase
         # [Start of Your Main Phase] By trashing 1 card with [Machine], [Cyborg], or [SoC] in its traits in your hand, gain 1 memory.
         effect0 = ICardEffect()
+        effect0.set_timing(EffectTiming.OnStartMainPhase)
         effect0.set_effect_name("BT15-086 Trash 1 card from hand to gain Memory +1")
         effect0.set_effect_description("[Start of Your Main Phase] By trashing 1 card with [Machine], [Cyborg], or [SoC] in its traits in your hand, gain 1 memory.")
         effect0.is_optional = True
@@ -68,6 +70,7 @@ class BT15_086(CardScript):
         # Timing: EffectTiming.OnDeclaration
         # [Main] <Mind Link> with 1 of your Digimon with the [Machine] or the [Cyborg] or [SoC] trait. (Place this Tamer as that Digimon's bottom digivolution card if there are no Tamer cards in its digivolution cards.)
         effect2 = ICardEffect()
+        effect2.set_timing(EffectTiming.OnDeclaration)
         effect2.set_effect_name("BT15-086 Mind Link")
         effect2.set_effect_description("[Main] <Mind Link> with 1 of your Digimon with the [Machine] or the [Cyborg] or [SoC] trait. (Place this Tamer as that Digimon's bottom digivolution card if there are no Tamer cards in its digivolution cards.)")
 
@@ -124,6 +127,7 @@ class BT15_086(CardScript):
         # Timing: EffectTiming.OnEndTurn
         # [End of All Turns] You may play 1 [Marvin Jackson] from this Digimon's digivolution cards without paying the cost.
         effect5 = ICardEffect()
+        effect5.set_timing(EffectTiming.OnEndTurn)
         effect5.set_effect_name("BT15-086 Play 1 [Marvin Jackson] from this Digimon's digivolution cards")
         effect5.set_effect_description("[End of All Turns] You may play 1 [Marvin Jackson] from this Digimon's digivolution cards without paying the cost.")
         effect5.is_inherited_effect = True

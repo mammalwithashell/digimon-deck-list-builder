@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -16,6 +17,7 @@ class BT8_081(CardScript):
         # Timing: EffectTiming.OnEndAttack
         # [End of Attack] You may digivolve this Digimon into a [Rasenmon] in your hand, ignoring its digivolution requirements and without paying its digivolution cost.
         effect0 = ICardEffect()
+        effect0.set_timing(EffectTiming.OnEndAttack)
         effect0.set_effect_name("BT8-081 This Digimon digivolves")
         effect0.set_effect_description("[End of Attack] You may digivolve this Digimon into a [Rasenmon] in your hand, ignoring its digivolution requirements and without paying its digivolution cost.")
         effect0.is_optional = True
@@ -47,6 +49,7 @@ class BT8_081(CardScript):
         # Timing: EffectTiming.OnEndTurn
         # [End of Your Turn] Trash the top card of your security stack.
         effect1 = ICardEffect()
+        effect1.set_timing(EffectTiming.OnEndTurn)
         effect1.set_effect_name("BT8-081 Trash the top card of your security")
         effect1.set_effect_description("[End of Your Turn] Trash the top card of your security stack.")
 
@@ -79,6 +82,7 @@ class BT8_081(CardScript):
         # Timing: EffectTiming.OnDigivolutionCardDiscarded
         # [Your Turn] When this card is trashed as a digivolution card by [Rasenmon]'s effect, unsuspend 1 of your Digimon and it gets +3000 DP for the turn.
         effect2 = ICardEffect()
+        effect2.set_timing(EffectTiming.OnDigivolutionCardDiscarded)
         effect2.set_effect_name("BT8-081 Unsuspend 1 Digimon and DP +3000")
         effect2.set_effect_description("[Your Turn] When this card is trashed as a digivolution card by [Rasenmon]'s effect, unsuspend 1 of your Digimon and it gets +3000 DP for the turn.")
         effect2.is_inherited_effect = True

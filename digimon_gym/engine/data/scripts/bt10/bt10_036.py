@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -16,6 +17,7 @@ class BT10_036(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [When Digivolving] You may activate 1 of the effects below. - Return 1 Option card with [Plug-In] in its name from your trash to your hand. - By trashing 1 Option card with [Plug-In] in its name in your hand, <Draw 2>. (Draw 2 cards from your deck.)
         effect0 = ICardEffect()
+        effect0.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect0.set_effect_name("BT10-036 Select effects")
         effect0.set_effect_description("[When Digivolving] You may activate 1 of the effects below. - Return 1 Option card with [Plug-In] in its name from your trash to your hand. - By trashing 1 Option card with [Plug-In] in its name in your hand, <Draw 2>. (Draw 2 cards from your deck.)")
         effect0.is_optional = True

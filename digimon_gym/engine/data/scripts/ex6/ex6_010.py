@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -42,6 +43,7 @@ class EX6_010(CardScript):
         # Timing: EffectTiming.OnDeclaration
         # [Hand] [Main] By paying 3 cost and placing this card as the bottom digivolution card of 1 of your Digimon that's level 6 or has the [Legend-Arms] trait, delete 1 of your opponent's Digimon with as much or less DP as that Digimon.
         effect2 = ICardEffect()
+        effect2.set_timing(EffectTiming.OnDeclaration)
         effect2.set_effect_name("EX6-010 Delete 1 of your opponent's Digimon with as much or less DP as that Digimon")
         effect2.set_effect_description("[Hand] [Main] By paying 3 cost and placing this card as the bottom digivolution card of 1 of your Digimon that's level 6 or has the [Legend-Arms] trait, delete 1 of your opponent's Digimon with as much or less DP as that Digimon.")
         effect2.is_optional = True
@@ -76,6 +78,7 @@ class EX6_010(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [When Digivolving]  1 of your Digimon may attack.
         effect3 = ICardEffect()
+        effect3.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect3.set_effect_name("EX6-010 May attack")
         effect3.set_effect_description("[When Digivolving]  1 of your Digimon may attack.")
         effect3.is_optional = True

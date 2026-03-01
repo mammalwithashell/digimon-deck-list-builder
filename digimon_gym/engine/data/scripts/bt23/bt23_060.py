@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -54,6 +55,7 @@ class BT23_060(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [On Play] <De-Digivolve 1> 1 of your opponent's Digimon. Then, delete 1 of their Digimon with 8000 DP or less.
         effect3 = ICardEffect()
+        effect3.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect3.set_effect_name("BT23-060 <De-Digivolve 1>, then delete 1 with 8000DP or less")
         effect3.set_effect_description("[On Play] <De-Digivolve 1> 1 of your opponent's Digimon. Then, delete 1 of their Digimon with 8000 DP or less.")
         effect3.is_on_play = True
@@ -100,6 +102,7 @@ class BT23_060(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [When Digivolving] <De-Digivolve 1> 1 of your opponent's Digimon. Then, delete 1 of their Digimon with 8000 DP or less.
         effect4 = ICardEffect()
+        effect4.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect4.set_effect_name("BT23-060 <De-Digivolve 1>, then delete 1 with 8000DP or less")
         effect4.set_effect_description("[When Digivolving] <De-Digivolve 1> 1 of your opponent's Digimon. Then, delete 1 of their Digimon with 8000 DP or less.")
         effect4.is_when_digivolving = True
@@ -146,6 +149,7 @@ class BT23_060(CardScript):
         # Timing: EffectTiming.OnAllyAttack
         # [When Attacking] [Once Per Turn] Activate 1 [On Play] effect on a face-up [Zaxon] trait Digimon card in your security stack as an effect of this Digimon.
         effect5 = ICardEffect()
+        effect5.set_timing(EffectTiming.OnAllyAttack)
         effect5.set_effect_name("BT23-060 Activate 1 [On Play] as an effect of this Digimon")
         effect5.set_effect_description("[When Attacking] [Once Per Turn] Activate 1 [On Play] effect on a face-up [Zaxon] trait Digimon card in your security stack as an effect of this Digimon.")
         effect5.set_max_count_per_turn(1)

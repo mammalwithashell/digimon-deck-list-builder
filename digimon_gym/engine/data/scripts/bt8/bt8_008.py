@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -16,6 +17,7 @@ class BT8_008(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [Your Turn][Once Per Turn] When you play a red Tamer, <Draw 1>. (Draw 1 card from your deck.)
         effect0 = ICardEffect()
+        effect0.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect0.set_effect_name("BT8-008 Draw 1")
         effect0.set_effect_description("[Your Turn][Once Per Turn] When you play a red Tamer, <Draw 1>. (Draw 1 card from your deck.)")
         effect0.set_max_count_per_turn(1)
@@ -46,6 +48,7 @@ class BT8_008(CardScript):
         # Timing: EffectTiming.OnAllyAttack
         # [When Attacking] If this Digimon has 6000 DP or more, delete 1 of your opponent's Digimon with 3000 DP or less.
         effect1 = ICardEffect()
+        effect1.set_timing(EffectTiming.OnAllyAttack)
         effect1.set_effect_name("BT8-008 Delete 1 Digimon with 3000 DP or less")
         effect1.set_effect_description("[When Attacking] If this Digimon has 6000 DP or more, delete 1 of your opponent's Digimon with 3000 DP or less.")
         effect1.is_inherited_effect = True

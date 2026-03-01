@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -16,6 +17,7 @@ class BT15_018(CardScript):
         # Timing: EffectTiming.OnEndTurn
         # [End of Your Turn] [Once Per Turn] If your opponent has 4 or more memory, delete 1 of their Digimon with the lowest DP.
         effect0 = ICardEffect()
+        effect0.set_timing(EffectTiming.OnEndTurn)
         effect0.set_effect_name("BT15-018 Delete 1 Digimon with the lowest DP")
         effect0.set_effect_description("[End of Your Turn] [Once Per Turn] If your opponent has 4 or more memory, delete 1 of their Digimon with the lowest DP.")
         effect0.set_max_count_per_turn(1)
@@ -53,6 +55,7 @@ class BT15_018(CardScript):
         # Timing: EffectTiming.OnEndTurn
         # [End of Opponent's Turn] [Once Per Turn] If you have 4 or less memory, delete 1 of your opponent's Digimon with the highest play cost.
         effect1 = ICardEffect()
+        effect1.set_timing(EffectTiming.OnEndTurn)
         effect1.set_effect_name("BT15-018 Delete 1 Digimon with the highest Cost")
         effect1.set_effect_description("[End of Opponent's Turn] [Once Per Turn] If you have 4 or less memory, delete 1 of your opponent's Digimon with the highest play cost.")
         effect1.set_max_count_per_turn(1)

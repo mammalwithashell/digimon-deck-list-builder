@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -34,6 +35,7 @@ class BT22_008(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # Add To Hand
         effect1 = ICardEffect()
+        effect1.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect1.set_effect_name("BT22-008 Return a card from trash")
         effect1.set_effect_description("Add To Hand")
         effect1.is_optional = True
@@ -64,6 +66,7 @@ class BT22_008(CardScript):
         # Timing: EffectTiming.OnEndTurn
         # [End of Your Turn] This Digimon and any of your other Digimon may DNA digivolve into a Digimon card in the hand.
         effect2 = ICardEffect()
+        effect2.set_timing(EffectTiming.OnEndTurn)
         effect2.set_effect_name("BT22-008 DNA digivolve this Digimon")
         effect2.set_effect_description("[End of Your Turn] This Digimon and any of your other Digimon may DNA digivolve into a Digimon card in the hand.")
         effect2.is_inherited_effect = True

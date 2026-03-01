@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -16,6 +17,7 @@ class EX6_036(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [On Play] Reveal the top 3 cards of your deck. Add 1 Tamer or Option card with [Diaboromon] in its text and 1 card with the [Unidentified] trait among them to the hand. Trash the rest.
         effect0 = ICardEffect()
+        effect0.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect0.set_effect_name("EX6-036 Reveal 3, add 1 tamer/option and 1 [Unidentified] trait")
         effect0.set_effect_description("[On Play] Reveal the top 3 cards of your deck. Add 1 Tamer or Option card with [Diaboromon] in its text and 1 card with the [Unidentified] trait among them to the hand. Trash the rest.")
         effect0.is_on_play = True
@@ -62,6 +64,7 @@ class EX6_036(CardScript):
         # Timing: EffectTiming.OnDestroyedAnyone
         # [On Deletion] If this card has the [Unidentified] trait, you may play 1 [Diaboromon] (Digimon | 14 Cost | Level 6 | White | Mega | Unknown | Unidentified | DP3000) Token without paying the cost.
         effect1 = ICardEffect()
+        effect1.set_timing(EffectTiming.OnDestroyedAnyone)
         effect1.set_effect_name("EX6-036 Play 1 [Diaboromon] Token")
         effect1.set_effect_description("[On Deletion] If this card has the [Unidentified] trait, you may play 1 [Diaboromon] (Digimon | 14 Cost | Level 6 | White | Mega | Unknown | Unidentified | DP3000) Token without paying the cost.")
         effect1.is_inherited_effect = True

@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -46,6 +47,7 @@ class BT21_030(CardScript):
         # Timing: EffectTiming.BeforePayCost
         # When you would play this card from your hand, by placing 1 of your [Shoutmon] as a digivolution card under this Digimon, reduce its play cost by 1 and place the cards in your trash as digivolution cards for a DigiXros.
         effect2 = ICardEffect()
+        effect2.set_timing(EffectTiming.BeforePayCost)
         effect2.set_effect_name("BT21-030 Play Cost -1 and select trash cards for a DigiXros")
         effect2.set_effect_description("When you would play this card from your hand, by placing 1 of your [Shoutmon] as a digivolution card under this Digimon, reduce its play cost by 1 and place the cards in your trash as digivolution cards for a DigiXros.")
         effect2.is_optional = True
@@ -78,6 +80,7 @@ class BT21_030(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [On Play] Trash the top 10 stacked cards of 1 of your opponent's Digimon.
         effect3 = ICardEffect()
+        effect3.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect3.set_effect_name("BT21-030 Trash top 10 stack cards")
         effect3.set_effect_description("[On Play] Trash the top 10 stacked cards of 1 of your opponent's Digimon.")
         effect3.is_on_play = True
@@ -95,6 +98,7 @@ class BT21_030(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [When Digivolving] Trash the top 10 stacked cards of 1 of your opponent's Digimon.
         effect4 = ICardEffect()
+        effect4.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect4.set_effect_name("BT21-030 Trash top 10 stack cards")
         effect4.set_effect_description("[When Digivolving] Trash the top 10 stacked cards of 1 of your opponent's Digimon.")
         effect4.is_when_digivolving = True
@@ -112,6 +116,7 @@ class BT21_030(CardScript):
         # Timing: EffectTiming.OnAllyAttack
         # [When Attacking] [Once Per Turn] You may return 1 of your opponent's Digimon with no digivolution cards to the bottom of the deck.
         effect5 = ICardEffect()
+        effect5.set_timing(EffectTiming.OnAllyAttack)
         effect5.set_effect_name("BT21-030 Bottom deck digimon with no digivolution cards")
         effect5.set_effect_description("[When Attacking] [Once Per Turn] You may return 1 of your opponent's Digimon with no digivolution cards to the bottom of the deck.")
         effect5.is_optional = True

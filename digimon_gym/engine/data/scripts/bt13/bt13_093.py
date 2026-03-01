@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -16,6 +17,7 @@ class BT13_093(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [On Play] Trigger <Draw 1>. (Draw 1 card from your deck.)
         effect0 = ICardEffect()
+        effect0.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect0.set_effect_name("BT13-093 Draw 1")
         effect0.set_effect_description("[On Play] Trigger <Draw 1>. (Draw 1 card from your deck.)")
         effect0.is_on_play = True
@@ -43,6 +45,7 @@ class BT13_093(CardScript):
         # Timing: EffectTiming.OnDestroyedAnyone
         # [On Deletion] Place 1 Digimon card with the [Royal Knight] trait from your hand as the bottom digivolution card of one of your [King Drasil_7D6] in the breeding area.
         effect1 = ICardEffect()
+        effect1.set_timing(EffectTiming.OnDestroyedAnyone)
         effect1.set_effect_name("BT13-093 Place 1 card to your [King Drasil_7D6]'s digivolution cards")
         effect1.set_effect_description("[On Deletion] Place 1 Digimon card with the [Royal Knight] trait from your hand as the bottom digivolution card of one of your [King Drasil_7D6] in the breeding area.")
         effect1.is_optional = True

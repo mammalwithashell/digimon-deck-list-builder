@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -16,6 +17,7 @@ class EX5_057(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [On Play] By trashing 1 card in your hand, you may return 1 Digimon card with the [Dark Animal]/[Shaman] trait from your trash to the hand.
         effect0 = ICardEffect()
+        effect0.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect0.set_effect_name("EX5-057 Trash 1 card from hand to return 1 card from trash to hand")
         effect0.set_effect_description("[On Play] By trashing 1 card in your hand, you may return 1 Digimon card with the [Dark Animal]/[Shaman] trait from your trash to the hand.")
         effect0.is_optional = True
@@ -58,6 +60,7 @@ class EX5_057(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [Your Turn] [Once Per Turn] When an effect plays one of your Digimon, gain 1 memory.
         effect1 = ICardEffect()
+        effect1.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect1.set_effect_name("EX5-057 Memory +1")
         effect1.set_effect_description("[Your Turn] [Once Per Turn] When an effect plays one of your Digimon, gain 1 memory.")
         effect1.is_inherited_effect = True

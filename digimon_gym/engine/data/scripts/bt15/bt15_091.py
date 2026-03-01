@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -39,6 +40,7 @@ class BT15_091(CardScript):
         # Timing: EffectTiming.OptionSkill
         # [Main] By placing 1 [Garurumon] and 1 [WereGarurumon] from your trash as 1 of your [Gabumon]'s bottom digivolution cards, that Digimon may digivolve into [MetalGarurumon] in your hand, ignoring its digivolution requirements and without paying the cost.
         effect1 = ICardEffect()
+        effect1.set_timing(EffectTiming.OptionSkill)
         effect1.set_effect_name("BT15-091 Digivolve")
         effect1.set_effect_description("[Main] By placing 1 [Garurumon] and 1 [WereGarurumon] from your trash as 1 of your [Gabumon]'s bottom digivolution cards, that Digimon may digivolve into [MetalGarurumon] in your hand, ignoring its digivolution requirements and without paying the cost.")
 
@@ -67,6 +69,7 @@ class BT15_091(CardScript):
         # Timing: EffectTiming.SecuritySkill
         # [Security] You may play 1 [Gabumon] from your hand or trash without paying the cost. Then, add this card to the hand.
         effect2 = ICardEffect()
+        effect2.set_timing(EffectTiming.SecuritySkill)
         effect2.set_effect_name("BT15-091 Play Card, Add To Hand")
         effect2.set_effect_description("[Security] You may play 1 [Gabumon] from your hand or trash without paying the cost. Then, add this card to the hand.")
         effect2.is_security_effect = True

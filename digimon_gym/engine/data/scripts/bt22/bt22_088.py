@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -16,6 +17,7 @@ class BT22_088(CardScript):
         # Timing: EffectTiming.OnStartMainPhase
         # [Start of Your Main Phase] By returning this Tamer to the bottom of the deck, you may play 1 [Arisa Kinosaki] from your hand without paying the cost. Then, if you don't have a Digimon, you may play 1 [Shoemon] from your trash without paying the cost.
         effect0 = ICardEffect()
+        effect0.set_timing(EffectTiming.OnStartMainPhase)
         effect0.set_effect_name("BT22-088 By bottom decking, Play 1 [Arisa Kinosaki] from hand. then if you have no digimon, Play 1 [Shoemon] from trash")
         effect0.set_effect_description("[Start of Your Main Phase] By returning this Tamer to the bottom of the deck, you may play 1 [Arisa Kinosaki] from your hand without paying the cost. Then, if you don't have a Digimon, you may play 1 [Shoemon] from your trash without paying the cost.")
         effect0.is_optional = True
@@ -48,6 +50,7 @@ class BT22_088(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [All Turns] When any of your Tokens or [Puppet] trait Digimon are played, by suspending this Tamer, <Draw 1> (Draw 1 card from your deck.)
         effect1 = ICardEffect()
+        effect1.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect1.set_effect_name("BT22-088 Draw 1")
         effect1.set_effect_description("[All Turns] When any of your Tokens or [Puppet] trait Digimon are played, by suspending this Tamer, <Draw 1> (Draw 1 card from your deck.)")
         effect1.is_optional = True

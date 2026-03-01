@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -42,6 +43,7 @@ class EX6_028(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [On Play] Trigger <Recovery +1 (Deck)>. (Place the top card of your deck on top of your security stack.)
         effect2 = ICardEffect()
+        effect2.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect2.set_effect_name("EX6-028 Recovery +1 (Deck)")
         effect2.set_effect_description("[On Play] Trigger <Recovery +1 (Deck)>. (Place the top card of your deck on top of your security stack.)")
         effect2.is_on_play = True
@@ -69,6 +71,7 @@ class EX6_028(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [When Digivolving] Trigger <Recovery +1 (Deck)>. (Place the top card of your deck on top of your security stack.)
         effect3 = ICardEffect()
+        effect3.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect3.set_effect_name("EX6-028 Recovery +1 (Deck)")
         effect3.set_effect_description("[When Digivolving] Trigger <Recovery +1 (Deck)>. (Place the top card of your deck on top of your security stack.)")
         effect3.is_when_digivolving = True
@@ -96,6 +99,7 @@ class EX6_028(CardScript):
         # Timing: EffectTiming.OnAddSecurity
         # [All Turns] [Once per Turn] When a card is added to your security stack, return 1 of your opponent's Digimon with as high or lower a level as the number of your security cards to the hand.
         effect4 = ICardEffect()
+        effect4.set_timing(EffectTiming.OnAddSecurity)
         effect4.set_effect_name("EX6-028 Return 1 of your opponent's Digimon to the hand")
         effect4.set_effect_description("[All Turns] [Once per Turn] When a card is added to your security stack, return 1 of your opponent's Digimon with as high or lower a level as the number of your security cards to the hand.")
         effect4.set_max_count_per_turn(1)

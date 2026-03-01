@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -16,6 +17,7 @@ class P_011(CardScript):
         # Timing: EffectTiming.OnAllyAttack
         # [When Attacking] If you have a blue Tamer�Cou may trash the top 3 cards of your deck to give this Digimon +2000 DP for the turn.
         effect0 = ICardEffect()
+        effect0.set_timing(EffectTiming.OnAllyAttack)
         effect0.set_effect_name("P-011 Trash 3 cards from deck top to gain DP +2000")
         effect0.set_effect_description("[When Attacking] If you have a blue Tamer�Cou may trash the top 3 cards of your deck to give this Digimon +2000 DP for the turn.")
         effect0.is_optional = True
@@ -50,6 +52,7 @@ class P_011(CardScript):
         # Timing: EffectTiming.OnAllyAttack
         # [When Attacking] You may place 3 non-Digi-Egg cards from your trash at the bottom of your deck in any order to activate <Draw 1>. (Draw 1 card from your deck.)
         effect1 = ICardEffect()
+        effect1.set_timing(EffectTiming.OnAllyAttack)
         effect1.set_effect_name("P-011 Return cards from trash to the bottom of deck to Draw 1")
         effect1.set_effect_description("[When Attacking] You may place 3 non-Digi-Egg cards from your trash at the bottom of your deck in any order to activate <Draw 1>. (Draw 1 card from your deck.)")
         effect1.is_inherited_effect = True

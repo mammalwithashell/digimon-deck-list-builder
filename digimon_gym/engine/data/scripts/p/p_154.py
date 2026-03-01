@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -16,6 +17,7 @@ class P_154(CardScript):
         # Timing: EffectTiming.WhenRemoveField
         # [All Turns] When another of your Digimon with [Knightmon] in its text would leave the battle area by an opponent's effect, by placing this Digimon as its bottom digivolution card, it doesn't leave.
         effect0 = ICardEffect()
+        effect0.set_timing(EffectTiming.WhenRemoveField)
         effect0.set_effect_name("P-154 Add as bottom source to prevent deletion")
         effect0.set_effect_description("[All Turns] When another of your Digimon with [Knightmon] in its text would leave the battle area by an opponent's effect, by placing this Digimon as its bottom digivolution card, it doesn't leave.")
         effect0.is_optional = True

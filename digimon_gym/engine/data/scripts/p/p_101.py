@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -16,6 +17,7 @@ class P_101(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [On Play] By trashing 1 card from your hand, <Draw 2> (Draw 2 cards from your deck).
         effect0 = ICardEffect()
+        effect0.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect0.set_effect_name("P-101 Trash 1 card from hand to Draw 2")
         effect0.set_effect_description("[On Play] By trashing 1 card from your hand, <Draw 2> (Draw 2 cards from your deck).")
         effect0.is_optional = True
@@ -54,6 +56,7 @@ class P_101(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [When Digivolving] By trashing 1 card from your hand, <Draw 2> (Draw 2 cards from your deck).
         effect1 = ICardEffect()
+        effect1.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect1.set_effect_name("P-101 Trash 1 card from hand to Draw 2")
         effect1.set_effect_description("[When Digivolving] By trashing 1 card from your hand, <Draw 2> (Draw 2 cards from your deck).")
         effect1.is_optional = True
@@ -92,6 +95,7 @@ class P_101(CardScript):
         # Timing: EffectTiming.OnAllyAttack
         # [When Attacking] By trashing 1 card from your hand, delete 1 of your opponent's level 3 Digimon.
         effect2 = ICardEffect()
+        effect2.set_timing(EffectTiming.OnAllyAttack)
         effect2.set_effect_name("P-101 Trash 1 card from hand to delete 1 level 3 Digimon")
         effect2.set_effect_description("[When Attacking] By trashing 1 card from your hand, delete 1 of your opponent's level 3 Digimon.")
         effect2.is_inherited_effect = True

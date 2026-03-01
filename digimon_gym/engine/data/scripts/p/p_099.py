@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -29,6 +30,7 @@ class P_099(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [On Play] ��De-Digivolve  1��1 of your opponent's Digimon (Trash up to 1 card from the top of one of your opponent's Digimon. If it has no digivolution cards, or becomes a level 3 Digimon, you can't trash any more cards).
         effect1 = ICardEffect()
+        effect1.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect1.set_effect_name("P-099 De-Digivolve 1 on 1 Digimon")
         effect1.set_effect_description("[On Play] ��De-Digivolve  1��1 of your opponent's Digimon (Trash up to 1 card from the top of one of your opponent's Digimon. If it has no digivolution cards, or becomes a level 3 Digimon, you can't trash any more cards).")
         effect1.is_on_play = True
@@ -63,6 +65,7 @@ class P_099(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [When Digivolving] ��De-Digivolve  1��1 of your opponent's Digimon (Trash up to 1 card from the top of one of your opponent's Digimon. If it has no digivolution cards, or becomes a level 3 Digimon, you can't trash any more cards).
         effect2 = ICardEffect()
+        effect2.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect2.set_effect_name("P-099 De-Digivolve 1 on 1 Digimon")
         effect2.set_effect_description("[When Digivolving] ��De-Digivolve  1��1 of your opponent's Digimon (Trash up to 1 card from the top of one of your opponent's Digimon. If it has no digivolution cards, or becomes a level 3 Digimon, you can't trash any more cards).")
         effect2.is_when_digivolving = True
@@ -97,6 +100,7 @@ class P_099(CardScript):
         # Timing: EffectTiming.OnDestroyedAnyone
         # [On Deletion] You may play 1 yellow or black Digimon card with a play cost of 3 or less from your hand without paying the cost.
         effect3 = ICardEffect()
+        effect3.set_timing(EffectTiming.OnDestroyedAnyone)
         effect3.set_effect_name("P-099 Play 1 Digimon from hand")
         effect3.set_effect_description("[On Deletion] You may play 1 yellow or black Digimon card with a play cost of 3 or less from your hand without paying the cost.")
         effect3.is_inherited_effect = True

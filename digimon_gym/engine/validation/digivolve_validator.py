@@ -81,6 +81,11 @@ def _check_alt_digivolve(evo_card: 'CardSource', base_perm: 'Permanent') -> bool
         if req_name is not None:
             if not base_perm.contains_card_name(req_name):
                 continue
+        # Condition check (e.g., "while you have [Owen Dreadnought]")
+        if effect.can_use_condition is not None:
+            ctx = {}
+            if not effect.can_use_condition(ctx):
+                continue
         return True
     return False
 
@@ -105,6 +110,11 @@ def get_alt_digi_cost(evo_card: 'CardSource', base_perm: 'Permanent') -> int:
         req_name = getattr(effect, '_alt_digi_name', None)
         if req_name is not None:
             if not base_perm.contains_card_name(req_name):
+                continue
+        # Condition check (e.g., "while you have [Owen Dreadnought]")
+        if effect.can_use_condition is not None:
+            ctx = {}
+            if not effect.can_use_condition(ctx):
                 continue
         return cost
     return 0

@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -16,6 +17,7 @@ class EX8_070(CardScript):
         # Timing: EffectTiming.OptionSkill
         # [Main] By trashing any 1 digivolution card of 1 of your [Mineral] or [Rock] trait Digimon, until the end of your opponent's turn, it gains <Collision>, <Piercing> and <Reboot>, gets +3000 DP, and can't be returned to the hand or deck by your opponent's effects.
         effect0 = ICardEffect()
+        effect0.set_timing(EffectTiming.OptionSkill)
         effect0.set_effect_name("EX8-070 By trashing 1 source, gain collision, piercing, reboot, +3000 DP, and can't be returned to hand or deck by opponent")
         effect0.set_effect_description("[Main] By trashing any 1 digivolution card of 1 of your [Mineral] or [Rock] trait Digimon, until the end of your opponent's turn, it gains <Collision>, <Piercing> and <Reboot>, gets +3000 DP, and can't be returned to the hand or deck by your opponent's effects.")
         effect0._is_piercing = True
@@ -66,6 +68,7 @@ class EX8_070(CardScript):
         # Timing: EffectTiming.SecuritySkill
         # [Security] Delete 1 of your opponent's Digimon with the lowest play cost.
         effect1 = ICardEffect()
+        effect1.set_timing(EffectTiming.SecuritySkill)
         effect1.set_effect_name("EX8-070 Delete")
         effect1.set_effect_description("[Security] Delete 1 of your opponent's Digimon with the lowest play cost.")
         effect1.is_security_effect = True

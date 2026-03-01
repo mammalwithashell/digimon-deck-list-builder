@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -40,6 +41,7 @@ class BT11_108(CardScript):
         # Timing: EffectTiming.OptionSkill
         # [Main] <De-Digivolve 1> 3 of your opponent's Digimon. (Trash 1 card from the top of 3 of your opponent's Digimon. Stop trashing when you would trash a level 3 card or the Digimon's last card.) Then, delete 3 of your opponent's Digimon with play costs of 6 or less.
         effect1 = ICardEffect()
+        effect1.set_timing(EffectTiming.OptionSkill)
         effect1.set_effect_name("BT11-108 Delete, De Digivolve")
         effect1.set_effect_description("[Main] <De-Digivolve 1> 3 of your opponent's Digimon. (Trash 1 card from the top of 3 of your opponent's Digimon. Stop trashing when you would trash a level 3 card or the Digimon's last card.) Then, delete 3 of your opponent's Digimon with play costs of 6 or less.")
 

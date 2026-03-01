@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -33,6 +34,7 @@ class BT23_075(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [On Play] [When Digivolving] Return 1 of your opponent's play cost 6 or lower Digimon or Tamers to the bottom of the deck. For each of your [Mother Eater]'s digivolution cards in the breeding area, add 1 to this effect's play cost maximum.
         effect1 = ICardEffect()
+        effect1.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect1.set_effect_name("BT23-075 Return 1 of your opponent's Digimon or Tamers to the bottom of the deck.")
         effect1.set_effect_description("[On Play] [When Digivolving] Return 1 of your opponent's play cost 6 or lower Digimon or Tamers to the bottom of the deck. For each of your [Mother Eater]'s digivolution cards in the breeding area, add 1 to this effect's play cost maximum.")
         effect1.is_on_play = True
@@ -71,6 +73,7 @@ class BT23_075(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [When Digivolving] Return 1 of your opponent's play cost 6 or lower Digimon or Tamers to the bottom of the deck. For each of your [Mother Eater]'s digivolution cards in the breeding area, add 1 to this effect's play cost maximum.
         effect2 = ICardEffect()
+        effect2.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect2.set_effect_name("BT23-075 Return 1 of your opponent's Digimon or Tamers to the bottom of the deck.")
         effect2.set_effect_description("[When Digivolving] Return 1 of your opponent's play cost 6 or lower Digimon or Tamers to the bottom of the deck. For each of your [Mother Eater]'s digivolution cards in the breeding area, add 1 to this effect's play cost maximum.")
         effect2.is_when_digivolving = True
@@ -109,6 +112,7 @@ class BT23_075(CardScript):
         # Timing: EffectTiming.WhenRemoveField
         # [All Turns] When this Digimon would leave the battle area other than by your effects, you may play 1 [Eater] trait Digimon card from your hand without paying the cost.
         effect3 = ICardEffect()
+        effect3.set_timing(EffectTiming.WhenRemoveField)
         effect3.set_effect_name("BT23-075 Play 1 [Eater] digimon from hand")
         effect3.set_effect_description("[All Turns] When this Digimon would leave the battle area other than by your effects, you may play 1 [Eater] trait Digimon card from your hand without paying the cost.")
 
@@ -142,6 +146,7 @@ class BT23_075(CardScript):
         # Timing: EffectTiming.OnEndTurn
         # [End of Opponent's Turn] [Once Per Turn] Delete 1 of your opponent's lowest play cost Digimon.
         effect4 = ICardEffect()
+        effect4.set_timing(EffectTiming.OnEndTurn)
         effect4.set_effect_name("BT23-075 Delete 1 Digimon with the lowest play cost")
         effect4.set_effect_description("[End of Opponent's Turn] [Once Per Turn] Delete 1 of your opponent's lowest play cost Digimon.")
         effect4.set_max_count_per_turn(1)

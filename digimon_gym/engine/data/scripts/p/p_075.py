@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -16,6 +17,7 @@ class P_075(CardScript):
         # Timing: EffectTiming.BeforePayCost
         # Grant Skill
         effect0 = ICardEffect()
+        effect0.set_timing(EffectTiming.BeforePayCost)
         effect0.set_effect_name("P-075 Opponent's Digimons gain effect")
         effect0.set_effect_description("Grant Skill")
         effect0.set_hash_string("Debuff_P_075")
@@ -44,6 +46,7 @@ class P_075(CardScript):
         # Timing: EffectTiming.BeforePayCost
         # [All Turns] When this Digimon is suspended, lose 1 memory.
         effect1 = ICardEffect()
+        effect1.set_timing(EffectTiming.BeforePayCost)
         effect1.set_effect_name("P-075 Memory -1")
         effect1.set_effect_description("[All Turns] When this Digimon is suspended, lose 1 memory.")
 

@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -39,6 +40,7 @@ class BT21_092(CardScript):
         # Timing: EffectTiming.OptionSkill
         # [Main] Place all Digimon cards in 1 of your [Xros Heart] trait Digimon's digivolution cards under 1 of your Tamers. Then, you may play 1 Digimon card with the [Xros Heart] trait from your hand with the play cost reduced by 1 for each card this effect placed.
         effect1 = ICardEffect()
+        effect1.set_timing(EffectTiming.OptionSkill)
         effect1.set_effect_name("BT21-092 Place all sources from 1 [Xros Heart] under a tamer")
         effect1.set_effect_description("[Main] Place all Digimon cards in 1 of your [Xros Heart] trait Digimon's digivolution cards under 1 of your Tamers. Then, you may play 1 Digimon card with the [Xros Heart] trait from your hand with the play cost reduced by 1 for each card this effect placed.")
 
@@ -75,6 +77,7 @@ class BT21_092(CardScript):
         # Timing: EffectTiming.SecuritySkill
         # [Security] You may play 1 [Xros Heart] trait card with a play cost of 5 or less from your hand or trash without paying the cost.
         effect2 = ICardEffect()
+        effect2.set_timing(EffectTiming.SecuritySkill)
         effect2.set_effect_name("BT21-092 Play 1 [Xros Heart] trait card with a play cost of 5 or less")
         effect2.set_effect_description("[Security] You may play 1 [Xros Heart] trait card with a play cost of 5 or less from your hand or trash without paying the cost.")
         effect2.is_optional = True

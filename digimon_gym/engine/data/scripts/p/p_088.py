@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -16,6 +17,7 @@ class P_088(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [When Digivolving] By placing a card with [Gammamon] in its name under this Digimon as its bottom digivolution card, this Digimon gets +2000 DP, for the turn.
         effect0 = ICardEffect()
+        effect0.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect0.set_effect_name("P-088 Place 1 card to digivolution cards to gain DP +2000")
         effect0.set_effect_description("[When Digivolving] By placing a card with [Gammamon] in its name under this Digimon as its bottom digivolution card, this Digimon gets +2000 DP, for the turn.")
         effect0.is_optional = True
@@ -45,6 +47,7 @@ class P_088(CardScript):
         # Timing: EffectTiming.OnAllyAttack
         # [When Attacking] Delete 1 of your opponent's Digimon with 6000 DP or less. If this Digimon has 12000 DP or more, Delete 2 of your opponent's Digimon with 6000 DP or less instead.
         effect1 = ICardEffect()
+        effect1.set_timing(EffectTiming.OnAllyAttack)
         effect1.set_effect_name("P-088 Delete Digimon with 6000 DP or less")
         effect1.set_effect_description("[When Attacking] Delete 1 of your opponent's Digimon with 6000 DP or less. If this Digimon has 12000 DP or more, Delete 2 of your opponent's Digimon with 6000 DP or less instead.")
         effect1.is_on_attack = True

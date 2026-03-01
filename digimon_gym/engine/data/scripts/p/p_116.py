@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -39,6 +40,7 @@ class P_116(CardScript):
         # Timing: EffectTiming.OptionSkill
         # [Main] Reveal the top 2 cards of your deck. Add all Tamer cards with a play cost of 3 or less among them to your hand. Return the rest to the top of the deck.
         effect1 = ICardEffect()
+        effect1.set_timing(EffectTiming.OptionSkill)
         effect1.set_effect_name("P-116 Add To Hand, Reveal And Select")
         effect1.set_effect_description("[Main] Reveal the top 2 cards of your deck. Add all Tamer cards with a play cost of 3 or less among them to your hand. Return the rest to the top of the deck.")
 

@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -71,6 +72,7 @@ class BT22_063(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [On Play] 1 of your opponent's Digimon gets -5000 DP for the turn.
         effect4 = ICardEffect()
+        effect4.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect4.set_effect_name("BT22-063 -5K DP to 1 digimon")
         effect4.set_effect_description("[On Play] 1 of your opponent's Digimon gets -5000 DP for the turn.")
         effect4.is_on_play = True
@@ -88,6 +90,7 @@ class BT22_063(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [When Digivolving] 1 of your opponent's Digimon gets -5000 DP for the turn.
         effect5 = ICardEffect()
+        effect5.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect5.set_effect_name("BT22-063 -5K DP to 1 digimon")
         effect5.set_effect_description("[When Digivolving] 1 of your opponent's Digimon gets -5000 DP for the turn.")
         effect5.is_when_digivolving = True
@@ -105,6 +108,7 @@ class BT22_063(CardScript):
         # Timing: EffectTiming.OnAllyAttack
         # [When Attacking] 1 of your opponent's Digimon gets -5000 DP for the turn.
         effect6 = ICardEffect()
+        effect6.set_timing(EffectTiming.OnAllyAttack)
         effect6.set_effect_name("BT22-063 -5K DP to 1 digimon")
         effect6.set_effect_description("[When Attacking] 1 of your opponent's Digimon gets -5000 DP for the turn.")
         effect6.is_on_attack = True
@@ -122,6 +126,7 @@ class BT22_063(CardScript):
         # Timing: EffectTiming.OnTappedAnyone
         # [All Turns] [Once Per Turn] When this Digimon suspends, if [Kyoko Kuremi] is in this Digimon's digivolution cards or if this Digimon's stack has 2 or more same-level cards, it gets +3000 DP until your opponent's turn ends. Then, this Digimon unsuspends.
         effect7 = ICardEffect()
+        effect7.set_timing(EffectTiming.OnTappedAnyone)
         effect7.set_effect_name("BT22-063 Gain 3K DP & Unsuspend")
         effect7.set_effect_description("[All Turns] [Once Per Turn] When this Digimon suspends, if [Kyoko Kuremi] is in this Digimon's digivolution cards or if this Digimon's stack has 2 or more same-level cards, it gets +3000 DP until your opponent's turn ends. Then, this Digimon unsuspends.")
         effect7.set_max_count_per_turn(1)

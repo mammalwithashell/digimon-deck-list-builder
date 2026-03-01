@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -37,6 +38,7 @@ class EX11_027(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # Add To Hand, Reveal And Select
         effect1 = ICardEffect()
+        effect1.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect1.set_effect_name("EX11-027 Reveal top 3, Add [Maquinamon] & 1 [Maquinamon] in text, then may link")
         effect1.set_effect_description("Add To Hand, Reveal And Select")
         effect1.is_on_play = True
@@ -83,6 +85,7 @@ class EX11_027(CardScript):
         # Timing: EffectTiming.WhenRemoveField
         # [All Turns] When this Digimon would leave the battle area, by placing 1 of its link cards as its bottom digivolution card, it doesn't leave.
         effect2 = ICardEffect()
+        effect2.set_timing(EffectTiming.WhenRemoveField)
         effect2.set_effect_name("EX11-027 Place a linked card into digivolution cards to prevent this digimon from leaving")
         effect2.set_effect_description("[All Turns] When this Digimon would leave the battle area, by placing 1 of its link cards as its bottom digivolution card, it doesn't leave.")
         effect2.is_optional = True

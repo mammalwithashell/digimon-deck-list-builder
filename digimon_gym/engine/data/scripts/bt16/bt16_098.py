@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -16,6 +17,7 @@ class BT16_098(CardScript):
         # Timing: EffectTiming.OptionSkill
         # [Main] If you have a Digimon with [Dorugoramon] in its name, delete 1 of your opponent's Digimon or Tamers with a play cost of 4 or less. Then, delete all of your opponent's Digimon with the lowest play cost.
         effect0 = ICardEffect()
+        effect0.set_timing(EffectTiming.OptionSkill)
         effect0.set_effect_name("BT16-098 Delete all opponent's digimon with lowest play cost")
         effect0.set_effect_description("[Main] If you have a Digimon with [Dorugoramon] in its name, delete 1 of your opponent's Digimon or Tamers with a play cost of 4 or less. Then, delete all of your opponent's Digimon with the lowest play cost.")
 

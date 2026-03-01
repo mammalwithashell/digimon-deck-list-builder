@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -40,6 +41,7 @@ class BT11_110(CardScript):
         # Timing: EffectTiming.OptionSkill
         # [Main] Delete 3 of your opponent's unsuspended level 5 or lower Digimon.
         effect1 = ICardEffect()
+        effect1.set_timing(EffectTiming.OptionSkill)
         effect1.set_effect_name("BT11-110 Delete")
         effect1.set_effect_description("[Main] Delete 3 of your opponent's unsuspended level 5 or lower Digimon.")
 

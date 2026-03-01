@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -34,6 +35,7 @@ class BT20_029(CardScript):
         # Timing: EffectTiming.BeforePayCost
         # [Your Turn] When this Digimon would digivolve into a Digimon card with [Pulsemon] in its text or the [SEEKERS] trait, reduce the digivolution cost by 1.
         effect1 = ICardEffect()
+        effect1.set_timing(EffectTiming.BeforePayCost)
         effect1.set_effect_name("BT20-029 Digivolution Cost -1")
         effect1.set_effect_description("[Your Turn] When this Digimon would digivolve into a Digimon card with [Pulsemon] in its text or the [SEEKERS] trait, reduce the digivolution cost by 1.")
         effect1.set_hash_string("DigivoltuionCost-1_BT20_029")
@@ -70,6 +72,7 @@ class BT20_029(CardScript):
         # Timing: EffectTiming.OnEndBattle
         # [All Turns] [Once Per Turn] When this Digimon deletes your opponent's Digimon in battle, gain 1 memory.
         effect2 = ICardEffect()
+        effect2.set_timing(EffectTiming.OnEndBattle)
         effect2.set_effect_name("BT20-029 Gain 1 memory")
         effect2.set_effect_description("[All Turns] [Once Per Turn] When this Digimon deletes your opponent's Digimon in battle, gain 1 memory.")
         effect2.is_inherited_effect = True

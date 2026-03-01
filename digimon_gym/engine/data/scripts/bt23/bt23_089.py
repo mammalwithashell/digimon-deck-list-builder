@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -16,6 +17,7 @@ class BT23_089(CardScript):
         # Timing: EffectTiming.OnStartMainPhase
         # [Start of Your Main Phase] If your opponent has a Digimon, gain 1 memory.
         effect0 = ICardEffect()
+        effect0.set_timing(EffectTiming.OnStartMainPhase)
         effect0.set_effect_name("BT23-089 Memory +1")
         effect0.set_effect_description("[Start of Your Main Phase] If your opponent has a Digimon, gain 1 memory.")
 
@@ -43,6 +45,7 @@ class BT23_089(CardScript):
         # Timing: EffectTiming.WhenRemoveField
         # [All Turns] When any of your Digimon with the [CS] trait would leave the battle area, by suspending this Tamer and trash 2 same-level cards from 1 of your [CS] trait Digimon's digivolution cards, they don't leave.
         effect1 = ICardEffect()
+        effect1.set_timing(EffectTiming.WhenRemoveField)
         effect1.set_effect_name("BT23-089 Prevent Digimon from leaving play")
         effect1.set_effect_description("[All Turns] When any of your Digimon with the [CS] trait would leave the battle area, by suspending this Tamer and trash 2 same-level cards from 1 of your [CS] trait Digimon's digivolution cards, they don't leave.")
         effect1.is_optional = True
@@ -63,12 +66,15 @@ class BT23_089(CardScript):
             game = ctx.get('game')
             if not (player and game):
                 return
+            # Suspend this Tamer as cost
+            if perm:
+                perm.suspend()
             def target_filter(p):
                 return True
-            def on_suspend(target_perm):
-                target_perm.suspend()
-            game.effect_select_opponent_permanent(
-                player, on_suspend, filter_fn=target_filter, is_optional=True)
+            def on_select(target_perm):
+                pass  # selected Digimon is prevented from leaving (handled by timing)
+            game.effect_select_own_permanent(
+                player, on_select, filter_fn=target_filter, is_optional=True)
             # Trash digivolution cards from this permanent
             if perm and not perm.has_no_digivolution_cards:
                 trashed = perm.trash_digivolution_cards(1)

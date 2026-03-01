@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -39,6 +40,7 @@ class EX8_068(CardScript):
         # Timing: EffectTiming.SecuritySkill
         # [Security] You may play 1 level 5 or lower [DS] trait Digimon card from your hand without paying the cost.
         effect1 = ICardEffect()
+        effect1.set_timing(EffectTiming.SecuritySkill)
         effect1.set_effect_name("EX8-068 Play Card")
         effect1.set_effect_description("[Security] You may play 1 level 5 or lower [DS] trait Digimon card from your hand without paying the cost.")
         effect1.is_security_effect = True

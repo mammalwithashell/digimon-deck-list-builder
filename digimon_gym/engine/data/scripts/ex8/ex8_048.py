@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -16,6 +17,7 @@ class EX8_048(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [When Digivolving] If you have 1 or fewer Tamers, you may play 1 [Close] from your hand without paying the cost.
         effect0 = ICardEffect()
+        effect0.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect0.set_effect_name("EX8-048 Play 1 [Close] from your hand")
         effect0.set_effect_description("[When Digivolving] If you have 1 or fewer Tamers, you may play 1 [Close] from your hand without paying the cost.")
         effect0.is_optional = True
@@ -48,6 +50,7 @@ class EX8_048(CardScript):
         # Timing: EffectTiming.OnDigivolutionCardDiscarded
         # When effects trash this card from a [Mineral] or [Rock] trait Digimon's digivolution cards, delete 1 of your opponent's Digimon with a play cost of 4 or less.
         effect1 = ICardEffect()
+        effect1.set_timing(EffectTiming.OnDigivolutionCardDiscarded)
         effect1.set_effect_name("EX8-048 Delete 4 cost or less Digimon")
         effect1.set_effect_description("When effects trash this card from a [Mineral] or [Rock] trait Digimon's digivolution cards, delete 1 of your opponent's Digimon with a play cost of 4 or less.")
         effect1.is_inherited_effect = True

@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -33,6 +34,7 @@ class EX11_020(CardScript):
         # Timing: EffectTiming.OnDestroyedAnyone
         # [On Deletion] If delete other than in battle, you may play 1 [Shoemon] from your hand without paying the cost.
         effect1 = ICardEffect()
+        effect1.set_timing(EffectTiming.OnDestroyedAnyone)
         effect1.set_effect_name("EX11-020 Play 1 [Shoemon] from hand for free.")
         effect1.set_effect_description("[On Deletion] If delete other than in battle, you may play 1 [Shoemon] from your hand without paying the cost.")
         effect1.is_on_deletion = True
@@ -64,6 +66,7 @@ class EX11_020(CardScript):
         # Timing: EffectTiming.OnAllyAttack
         # [Opponent's Turn][Once Per Turn] When one of your opponent's Digimon attacks, by deleting 1 of your other Digimon, end that attack.
         effect2 = ICardEffect()
+        effect2.set_timing(EffectTiming.OnAllyAttack)
         effect2.set_effect_name("EX11-020 End the attack by deleting 1 of your Digimon")
         effect2.set_effect_description("[Opponent's Turn][Once Per Turn] When one of your opponent's Digimon attacks, by deleting 1 of your other Digimon, end that attack.")
         effect2.is_inherited_effect = True

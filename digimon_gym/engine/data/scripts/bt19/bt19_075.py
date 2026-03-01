@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -33,6 +34,7 @@ class BT19_075(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [On Play] Your opponent trashes cards in their hand so that 5 remain. For every 2 trashed by this effect, delete 1 of their Tamers.
         effect1 = ICardEffect()
+        effect1.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect1.set_effect_name("BT19-075 Your opponent trashes cards in their hand so that 5 remain")
         effect1.set_effect_description("[On Play] Your opponent trashes cards in their hand so that 5 remain. For every 2 trashed by this effect, delete 1 of their Tamers.")
         effect1.is_on_play = True
@@ -78,6 +80,7 @@ class BT19_075(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [When Digivolving] Your opponent trashes cards in their hand so that 5 remain. For every 2 trashed by this effect, delete 1 of their Tamers.
         effect2 = ICardEffect()
+        effect2.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect2.set_effect_name("BT19-075 Your opponent trashes cards in their hand so that 5 remain")
         effect2.set_effect_description("[When Digivolving] Your opponent trashes cards in their hand so that 5 remain. For every 2 trashed by this effect, delete 1 of their Tamers.")
         effect2.is_when_digivolving = True
@@ -123,6 +126,7 @@ class BT19_075(CardScript):
         # Timing: EffectTiming.WhenRemoveField
         # [All Turns] When this Digimon would leave the battle area, by deleting 1 of your Digimon with the [Composite] trait, it doesn't leave.
         effect3 = ICardEffect()
+        effect3.set_timing(EffectTiming.WhenRemoveField)
         effect3.set_effect_name("BT19-075 Delete [Composite] trait digimon to prevent removal")
         effect3.set_effect_description("[All Turns] When this Digimon would leave the battle area, by deleting 1 of your Digimon with the [Composite] trait, it doesn't leave.")
         effect3.is_optional = True
@@ -139,6 +143,7 @@ class BT19_075(CardScript):
         # Timing: EffectTiming.OnDestroyedAnyone
         # [All Turns] [Once Per Turn] When other Digimon or Tamers are deleted, trash your opponent's top security card.
         effect4 = ICardEffect()
+        effect4.set_timing(EffectTiming.OnDestroyedAnyone)
         effect4.set_effect_name("BT19-075 Trash your opponent's top security card")
         effect4.set_effect_description("[All Turns] [Once Per Turn] When other Digimon or Tamers are deleted, trash your opponent's top security card.")
         effect4.set_max_count_per_turn(1)
