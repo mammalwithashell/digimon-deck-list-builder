@@ -13,7 +13,16 @@
 | [medusa-hudie-coverage](2026-03-01-medusa-hudie-coverage.md) | 5 | 5 | 0 | 0 |
 | [partial-fixes](2026-03-01-partial-fixes.md) | 28 | 28 | 0 | 0 |
 | [medusa-v2](2026-03-01-medusa-v2.md) | 5 | 5 | 0 | 0 |
-| **Total** | **82** | **74** | **7** | **1** |
+| [cs-hudiemon-partial-retest](2026-03-01-cs-hudiemon-partial-retest.md) | 5 | 2 | 0 | 3 |
+| [medusa-partial-retest](2026-03-01-medusa-partial-retest.md) | 5 | 3 | 0 | 2 |
+| [ts-neptune](2026-03-01-ts-neptune.md) | 8 | 0 | 0 | 8 |
+| [rocks](2026-03-01-rocks.md) | 12 | 0 | 0 | 12 |
+| [royal-knights](2026-03-01-royal-knights.md) | 12 | 0 | 0 | 12 |
+| [diaboromon](2026-03-01-diaboromon.md) | 12 | 0 | 0 | 12 |
+| [cs-mastemon](2026-03-01-cs-mastemon.md) | 5 | 0 | 0 | 5 |
+| [millennium](2026-03-01-millennium.md) | 10 | 0 | 0 | 10 |
+| [cross-archetype-matchups](2026-03-01-cross-archetype-matchups.md) | 1 | 0 | 0 | 1 |
+| **Total** | **152** | **79** | **7** | **66** |
 
 ---
 
@@ -147,6 +156,102 @@ Cross-archetype matchup test. 11 issues found across 2 games (~9 turns each).
 | 3 | Petrification Tokens not implemented | med | FIXED | Token system implemented — `token_registry.py`, `effect_play_token()`, lifecycle intercepts |
 | 4 | OnLoseSecurity inherited adds memory to wrong player | high | FIXED | Use `card.owner` instead of `ctx.get('player')` |
 | 5 | Lamiamon WhenDigivolving incorrect condition | high | FIXED | Removed spurious Reptile/Dragonkin ally check |
+
+## Report 8: CS Hudiemon PARTIAL Re-test (2026-03-01)
+
+Re-tested 5 PARTIAL cards from CS Hudiemon archetype. 2 upgraded to PASS, 3 remain PARTIAL (engine limitations).
+
+| # | Card | Previous | New Status | Reason |
+|---|------|----------|------------|--------|
+| 1 | BT1-090 Gravity Crush | PARTIAL | PASS | Core +2 memory works; end-of-turn -2 is rules contradiction (Option trashes before EOT) |
+| 2 | BT22-099 Kuremi Detective Agency | PARTIAL | PASS | Reveal, CS filter, add-to-hand, Delay all work; cosmetic action label is systemic WONTFIX |
+| 3 | BT3-103 Hidden Potential Discovered! | PARTIAL | PARTIAL | Conditional cost reduction (suspend-as-cost, green-only) not modelable in engine |
+| 4 | EX1-068 Ice Wall! | PARTIAL | PARTIAL | Granting opponent WhenAttacking effects with turn expiry not supported by engine |
+| 5 | EX1-071 Win Rate: 60%! | PARTIAL | PARTIAL | Conditional cost reduction (trash-as-cost, color-match) not modelable in engine |
+
+## Report 9: Medusa PARTIAL Re-test (2026-03-01)
+
+Re-tested 5 PARTIAL Medusa cards after token system implementation. 3 upgraded to PASS, 2 remain PARTIAL. Current totals: 66 PASS / 5 PARTIAL (93% pass rate).
+
+| # | Card | Previous | New Status | Reason |
+|---|------|----------|------------|--------|
+| 1 | BT21-029 Medusamon | PARTIAL | PARTIAL | Token on deletion/security loss still stubbed (process callbacks are `pass`, not `game.effect_play_token()`) |
+| 2 | BT24-017 Medusamon | PARTIAL | PASS | Token play working via `game.effect_play_token()`. DP scaling, Raid, Progress all verified. |
+| 3 | BT24-018 Styracomon | PARTIAL | PASS | Armor Purge verified: engine trashes top digivolution card to survive deletion. All other effects functional. |
+| 4 | BT5-008 Gaossmon | PARTIAL | PARTIAL | Unchanged. DP modifier over-applied to all Digimon; opponent cost block not modelable. |
+| 5 | EX11-012 Medusamon | PARTIAL | PASS | Token play working for both WhenDigivolving and EndOfAttack. Rush, Progress verified. |
+
+## Report 10: TS Neptune (2026-03-01)
+
+Full archetype QA for TS Neptune (30 unique cards, 10 decklists). 16 PASS, 14 PARTIAL. 8 issues found, all outstanding.
+
+| # | Issue | Sev | Status | Notes |
+|---|-------|-----|--------|-------|
+| 1 | Persistent pending selection causes game deadlock | high | OUTSTANDING | "Play from hand without cost" selection loops across turns, eventually deadlocks at phase 0 |
+| 2 | Play cost reduction ("When this card would be played") not applied | high | OUTSTANDING | Affects Neptunemon, Venusmon, Merukimon, Minervamon -- all charge full 12 cost instead of reduced 7 |
+| 3 | Homeros +1000 DP to TS Digimon not applied | med | OUTSTANDING | DP breakdown shows no modifier from Homeros All Turns effect |
+| 4 | Lanamon When Digivolving skips hand-card placement | med | OUTSTANDING | "By placing" cost step not implemented |
+| 5 | Asuna Shiroki On Play trash-to-draw not triggered | med | OUTSTANDING | No selection prompt for optional trash/draw effect |
+| 6 | Tidal Stream Link mechanic not functional | med | OUTSTANDING | Card remains separate permanent; linkedCardIds empty on target |
+| 7 | Divermon has no DP in card database | low | OUTSTANDING | play_cost=0, dp=None for Lv5 Digimon |
+| 8 | Davis Motomiya On Play reveal not triggered | med | OUTSTANDING | Legacy card; reveal top 3 effect does not fire |
+
+## Report 11: Rocks (2026-03-01)
+
+Full archetype QA for Rocks (28 unique cards, 8 decklists). 15 PASS, 13 PARTIAL. 12 issues found, all outstanding.
+
+| # | Issue | Sev | Status | Notes |
+|---|-------|-----|--------|-------|
+| 1 | Empty evo_costs for 15 of 17 Digimon in EX7/EX8/EX10 sets | crit | OUTSTANDING | Prevents digivolving for nearly all Rocks cards. Only P-167 and BT16-082 have valid evo_costs. |
+| 2 | Spurious trash_cards.pop() before reveal in 4 scripts | med | OUTSTANDING | EX8-047, P-107, P-039, P-206 take last trash card to hand before reveal begins |
+| 3 | EX10-025 On Play has no process callback | med | OUTSTANDING | Place-from-trash effect registered but no action code |
+| 4 | EX8-070 Zofr Kabus crashes server on play | high | OUTSTANDING | JSON decode error when executing Option play |
+| 5 | EX8-070, EX10-032 missing Collision keyword from grant | med | OUTSTANDING | grant_keyword calls omit _is_collision |
+| 6 | EX8-048/EX10-028 play_filter too broad (no name/trait filter) | med | OUTSTANDING | Accepts all cards instead of filtering for Close/Mineral/Rock |
+| 7 | EX10-033/EX10-036/EX8-055 trash wrong count (1 instead of 3) | med | OUTSTANDING | trash_digivolution_cards(1) should be trash_digivolution_cards(3) |
+| 8 | EX10-034 WhenAttacking trashes 1 (should be 2), no SecA+1 grant | med | OUTSTANDING | Missing Security Attack +1 keyword grant |
+| 9 | EX10-063/P-169 suspend targets opponent instead of self | med | OUTSTANDING | Uses effect_select_opponent_permanent instead of suspending own tamer |
+| 10 | BT20-055 effect order wrong (delete before de-digivolve) | med | OUTSTANDING | Should de-digivolve first, then delete |
+| 11 | P-206 Delay plays tamer free instead of cost-4 reduction | low | OUTSTANDING | Should reduce cost by 4, not play free |
+| 12 | EX10-033/EX8-055 place-from-trash effects missing process callbacks | med | OUTSTANDING | Effects registered with no implementation code |
+
+## Report 12: Royal Knights (2026-03-01)
+
+Full archetype QA for Royal Knights (SPECIAL ATTENTION). 35 unique cards across 9 decklists. 21 PASS, 14 PARTIAL. 12 issues found, all outstanding. 8 debug games run.
+
+| # | Issue | Sev | Status | Notes |
+|---|-------|-----|--------|-------|
+| 1 | BT13-007 King Drasil_7D6 breeding cost reduction not applied | high | OUTSTANDING | "When Royal Knight would be played, reduce cost by 4 + 1 per evo card" never triggers |
+| 2 | BT20-017 Jesmon On Play token not created | high | OUTSTANDING | [Atho, Rene & Por] Token not generated; token template may not be registered |
+| 3 | BT6-082 Sistermon Blanc On Play Draw 1 not triggered | high | OUTSTANDING | Hand decreases by 1 on play with no draw |
+| 4 | BT6-082 Sistermon Blanc continuous Blocker grant not working | high | OUTSTANDING | Blocker not granted to Sistermons even with Royal Knight in play |
+| 5 | ST12-12 Sistermon Blanc Decoy granted without condition check | med | OUTSTANDING | Decoy shows without Huckmon/Royal Knight in play |
+| 6 | BT9-103 Kongou stays in battle area instead of trash | med | OUTSTANDING | Non-Delay Option placed as permanent |
+| 7 | BT8-097 Crimson Blaze stays in battle area instead of trash | med | OUTSTANDING | Non-Delay Option placed as permanent |
+| 8 | BT13-111 Gallantmon missing innate Rush keyword | med | OUTSTANDING | Rush not in keywords list despite being in card text |
+| 9 | BT23-047 Examon missing Piercing and Security A. +1 | med | OUTSTANDING | Both innate keywords absent |
+| 10 | BT23-072 King Drasil_7D6 Digimon grants keywords to self | med | OUTSTANDING | Rush/Raid/Reboot/Blocker on self instead of played Digimon |
+| 11 | BT20-056 Alphamon missing Barrier keyword | low | OUTSTANDING | Barrier not in keywords list |
+| 12 | BT23-057 Gankoomon CS On Play Hinukamuy Token not created | med | OUTSTANDING | Same token system issue as Jesmon |
+
+## Report 13: Diaboromon (2026-03-01)
+
+Full archetype QA for Diaboromon (Token/Swarm). 26 unique cards across 6 decklists. 7 PASS, 15 PARTIAL (+ 4 previously validated). 12 issues found, all outstanding. 3 debug games run.
+
+| # | Issue | Sev | Status | Notes |
+|---|-------|-----|--------|-------|
+| 1 | Diaboromon Token play callbacks stubbed in 8 scripts | high | OUTSTANDING | EX6-043, BT22-064, BT24-052, BT22-059, EX6-036, EX6-039 have `pass` instead of `game.effect_play_token(player, 'diaboromon')` |
+| 2 | BT22-053 On Play process has spurious trash pop | high | OUTSTANDING | Steals card from trash before reveal; filter too broad |
+| 3 | EX6-036 On Play condition incorrectly blocks effect | high | OUTSTANDING | Checks "Diaboromon" in own card text which fails; reveal never fires |
+| 4 | EX6-039 cost reduction not functional | med | OUTSTANDING | Deletion cost not implemented; reduction property not consumed |
+| 5 | EX6-041 On Play/When Digivolving missing deletion cost | med | OUTSTANDING | Free digivolve fires without deleting own Diaboromon |
+| 6 | BT22-057 missing tamer count check | low | OUTSTANDING | Always allows Arata Sanada play regardless of tamer count |
+| 7 | BT22-091 attack redirect not functional | med | OUTSTANDING | SwitchDefender mechanic not in engine |
+| 8 | Overclock keyword not triggering at end of turn | med | OUTSTANDING | _is_overclock flag present but no EOT attack occurs |
+| 9 | BT19-101 uses bounce to hand instead of deck-bottom return | med | OUTSTANDING | Also missing trash-to-deck cost |
+| 10 | BT24-065 When Digivolving not scaled per own Digimon | med | OUTSTANDING | Single de-digivolve instead of N per own Digimon |
+| 11 | BT5-085 cost reduction untested | low | OUTSTANDING | _temp_play_cost_reduction pattern may not be consumed by engine |
+| 12 | EX6-043 Jamming/Blocker grant is self-only | low | OUTSTANDING | Should grant to all other Diaboromon-named Digimon |
 
 ## Systemic Issues (Backlog)
 

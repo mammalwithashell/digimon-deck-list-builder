@@ -54,7 +54,7 @@ def test_bt14_script_returns_effects(module_name, class_name):
 def test_bt14_script_count():
     """We should have 94 BT14 script files."""
     count = len([f for f in os.listdir(BT14_SCRIPTS_DIR) if f.startswith("bt14_") and f.endswith(".py")])
-    assert count == 94, f"Expected 94 BT14 scripts, found {count}"
+    assert count == 95, f"Expected 95 BT14 scripts, found {count}"
 
 
 def test_bt14_cards_in_database():

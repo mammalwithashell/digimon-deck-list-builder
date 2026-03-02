@@ -62,10 +62,23 @@ class ST12_12(CardScript):
         def condition1(context: Dict[str, Any]) -> bool:
             if card and card.permanent_of_this_card() is None:
                 return False
-            permanent = card.permanent_of_this_card() if card else None
-            if not (permanent and permanent.top_card and (any('Royal Knight' in tr for tr in (getattr(permanent.top_card, 'card_traits', []) or [])))):
+            player = card.owner if card else None
+            if not player:
                 return False
-            return True
+            # Check if any allied Digimon has [Huckmon] in name or [Royal Knight] trait
+            has_huckmon_or_rk = False
+            for p in player.battle_area:
+                if not p.is_digimon:
+                    continue
+                name = getattr(p.top_card, 'card_name_eng', '') or ''
+                if 'Huckmon' in name:
+                    has_huckmon_or_rk = True
+                    break
+                traits = getattr(p.top_card, 'card_traits', []) or []
+                if any('Royal Knight' in t for t in traits):
+                    has_huckmon_or_rk = True
+                    break
+            return has_huckmon_or_rk
         effect1.set_can_use_condition(condition1)
         effects.append(effect1)
 

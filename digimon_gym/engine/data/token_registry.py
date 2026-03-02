@@ -28,6 +28,18 @@ TOKENS = {
         'level': None,
         'traits': [],
     },
+    'diaboromon': {
+        'card_id': 'TOKEN_DIABOROMON',
+        'card_name': 'Diaboromon',
+        'card_kind': CardKind.Digimon,
+        'colors': [CardColor.White],
+        'dp': 3000,
+        'play_cost': 14,
+        'level': 6,
+        'traits': ['Unidentified'],
+        'form': ['Mega'],
+        'attribute': ['Unknown'],
+    },
 }
 
 
@@ -91,6 +103,12 @@ def create_token_card_source(token_type: str, owner: 'Player') -> CardSource:
     entity.dp = template['dp']
     entity.level = template['level']
     entity.type_eng = list(template['traits'])
+    if 'play_cost' in template:
+        entity.play_cost = template['play_cost']
+    if 'form' in template:
+        entity.form_eng = list(template['form'])
+    if 'attribute' in template:
+        entity.attribute_eng = list(template['attribute'])
 
     card_source = CardSource()
     card_source.set_base_data(entity, owner)
