@@ -70,6 +70,12 @@ def _check_alt_digivolve(evo_card: 'CardSource', base_perm: 'Permanent') -> bool
         req_level = getattr(effect, '_alt_digi_level', None)
         if req_level is not None and base_perm.level != req_level:
             continue
+        # Color check
+        req_color = getattr(effect, '_alt_digi_color', None)
+        if req_color is not None:
+            base_colors = getattr(base_perm.top_card, 'card_colors', []) or []
+            if req_color not in base_colors:
+                continue
         # Trait check
         req_trait = getattr(effect, '_alt_digi_trait', None)
         if req_trait is not None:
@@ -102,6 +108,11 @@ def get_alt_digi_cost(evo_card: 'CardSource', base_perm: 'Permanent') -> int:
         req_level = getattr(effect, '_alt_digi_level', None)
         if req_level is not None and base_perm.level != req_level:
             continue
+        req_color = getattr(effect, '_alt_digi_color', None)
+        if req_color is not None:
+            base_colors = getattr(base_perm.top_card, 'card_colors', []) or []
+            if req_color not in base_colors:
+                continue
         req_trait = getattr(effect, '_alt_digi_trait', None)
         if req_trait is not None:
             traits = getattr(base_perm.top_card, 'card_traits', []) or []
@@ -132,8 +143,8 @@ def _perm_matches_dna_req(perm: 'Permanent', req: 'DnaRequirement') -> bool:
     if not perm.top_card:
         return False
 
-    # Level must match
-    if perm.level != req.level:
+    # Level must match (0 means any level, used for bare [Name] DNA reqs)
+    if req.level != 0 and perm.level != req.level:
         return False
 
     # Color must match (if specified)

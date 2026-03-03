@@ -53,14 +53,7 @@ class EX10_069(CardScript):
         effect1._is_delay = True
 
         def condition1(context: Dict[str, Any]) -> bool:
-            if not (card and card.owner and card.owner.is_my_turn):
-                return False
-            if card and card.permanent_of_this_card() is None:
-                return False
-            permanent = card.permanent_of_this_card() if card else None
-            if not (permanent and (permanent.contains_card_name('Close'))):
-                return False
-            return True
+            return bool(card and card.permanent_of_this_card() is not None)
         effect1.set_can_use_condition(condition1)
         effects.append(effect1)
 
@@ -78,8 +71,10 @@ class EX10_069(CardScript):
                 return False
             if not (card and card.owner and card.owner.is_my_turn):
                 return False
-            permanent = effect.effect_source_permanent if hasattr(effect, 'effect_source_permanent') else None
-            if not (permanent and (permanent.contains_card_name('Close'))):
+            event_perm = context.get('event_permanent')
+            if not (event_perm and event_perm in card.owner.battle_area):
+                return False
+            if not event_perm.contains_card_name('Close'):
                 return False
             return True
 
@@ -88,16 +83,36 @@ class EX10_069(CardScript):
         def process2(ctx: Dict[str, Any]):
             """Action: Digivolve"""
             player = ctx.get('player')
-            perm = ctx.get('permanent')
             game = ctx.get('game')
-            if not (player and perm and game):
+            if not (player and game):
                 return
-            def digi_filter(c):
-                if not (any('Sunarizamon' in _n or 'Close' in _n for _n in getattr(c, 'card_names', []))):
-                    return False
-                return True
-            game.effect_digivolve_from_hand(
-                player, perm, digi_filter, is_optional=True)
+
+            def base_filter(target_perm):
+                return target_perm.has_trait('Rock') or target_perm.has_trait('Mineral')
+
+            def on_target(target_perm):
+                def digi_filter(c):
+                    if not getattr(c, 'is_digimon', False):
+                        return False
+                    traits = set(getattr(c, 'card_traits', []))
+                    has_rock_or_mineral = 'Rock' in traits or 'Mineral' in traits
+                    return has_rock_or_mineral and 'LIBERATOR' in traits
+
+                game.effect_digivolve_from_hand(
+                    player,
+                    target_perm,
+                    digi_filter,
+                    cost_reduction=3,
+                    is_optional=True,
+                )
+
+            game.effect_select_own_permanent(
+                player,
+                on_target,
+                base_filter,
+                is_optional=True,
+                prompt="Select 1 of your [Rock] or [Mineral] Digimon to digivolve.",
+            )
 
         effect2.set_on_process_callback(process2)
         effects.append(effect2)

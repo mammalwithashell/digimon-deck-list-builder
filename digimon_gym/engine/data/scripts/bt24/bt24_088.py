@@ -14,24 +14,21 @@ class BT24_088(CardScript):
     def get_card_effects(self, card: 'CardSource') -> List['ICardEffect']:
         effects = []
 
-        # Timing: EffectTiming.OnStartTurn
-        # Play Card
         effect0 = ICardEffect()
         effect0.set_timing(EffectTiming.OnStartTurn)
         effect0.set_effect_name("BT24-088 Return to deck to play another or a lvl 4 or lower [TS] or [Three Musketeers]")
         effect0.set_effect_description("Play Card")
         effect0.is_optional = True
 
-        effect = effect0  # alias for condition closure
         def condition0(context: Dict[str, Any]) -> bool:
             if card and card.permanent_of_this_card() is None:
                 return False
             if not (card and card.owner and card.owner.is_my_turn):
                 return False
-            permanent = effect.effect_source_permanent if hasattr(effect, 'effect_source_permanent') else None
+            permanent = effect0.effect_source_permanent if hasattr(effect0, 'effect_source_permanent') else None
             if permanent and permanent.top_card:
                 text = permanent.top_card.card_text
-                if not ('Three Musketeers' in text):
+                if 'Three Musketeers' not in text:
                     return False
             else:
                 return False
@@ -40,28 +37,29 @@ class BT24_088(CardScript):
         effect0.set_can_use_condition(condition0)
 
         def process0(ctx: Dict[str, Any]):
-            """Action: Play Card"""
             player = ctx.get('player')
-            perm = ctx.get('permanent')
             game = ctx.get('game')
             if not (player and game):
                 return
+
             def play_filter(c):
                 if not getattr(c, 'is_digimon', False):
                     return False
                 if getattr(c, 'level', None) is None or c.level > 4:
                     return False
-                if not (any('Asuna Shiroki' in _n for _n in getattr(c, 'card_names', [])) or any('TS' in _t for _t in (getattr(c, 'card_traits', []) or []))):
+                if not (
+                    any('Asuna Shiroki' in _n for _n in getattr(c, 'card_names', []))
+                    or any('TS' in _t for _t in (getattr(c, 'card_traits', []) or []))
+                ):
                     return False
                 return True
+
             game.effect_play_from_zone(
                 player, 'trash', play_filter, free=True, is_optional=True)
 
         effect0.set_on_process_callback(process0)
         effects.append(effect0)
 
-        # Timing: EffectTiming.OnEnterFieldAnyone
-        # Draw 2, Trash From Hand
         effect1 = ICardEffect()
         effect1.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect1.set_effect_name("BT24-088 Trash 1 card from hand to Draw 2")
@@ -69,15 +67,11 @@ class BT24_088(CardScript):
         effect1.is_optional = True
         effect1.is_on_play = True
 
-        effect = effect1  # alias for condition closure
         def condition1(context: Dict[str, Any]) -> bool:
-            if card and card.permanent_of_this_card() is None:
-                return False
-            # Triggered on play — validated by engine timing
-            permanent = effect.effect_source_permanent if hasattr(effect, 'effect_source_permanent') else None
+            permanent = effect1.effect_source_permanent if hasattr(effect1, 'effect_source_permanent') else None
             if permanent and permanent.top_card:
                 text = permanent.top_card.card_text
-                if not ('Three Musketeers' in text):
+                if 'Three Musketeers' not in text:
                     return False
             else:
                 return False
@@ -86,28 +80,26 @@ class BT24_088(CardScript):
         effect1.set_can_use_condition(condition1)
 
         def process1(ctx: Dict[str, Any]):
-            """Action: Draw 2, Trash From Hand"""
             player = ctx.get('player')
-            perm = ctx.get('permanent')
             game = ctx.get('game')
-            if player:
-                player.draw_cards(2)
             if not (player and game):
                 return
+
             def hand_filter(c):
                 return True
+
             def on_trashed(selected):
                 if selected in player.hand_cards:
                     player.hand_cards.remove(selected)
                     player.trash_cards.append(selected)
+                    player.draw_cards(2)
+
             game.effect_select_hand_card(
                 player, hand_filter, on_trashed, is_optional=True)
 
         effect1.set_on_process_callback(process1)
         effects.append(effect1)
 
-        # Factory effect: security_play
-        # Security: Play this card
         effect2 = ICardEffect()
         effect2.set_effect_name("BT24-088 Security: Play this card")
         effect2.set_effect_description("Security: Play this card")
@@ -115,6 +107,7 @@ class BT24_088(CardScript):
 
         def condition2(context: Dict[str, Any]) -> bool:
             return True
+
         effect2.set_can_use_condition(condition2)
         effects.append(effect2)
 

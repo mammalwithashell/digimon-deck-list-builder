@@ -33,23 +33,26 @@ class BT11_042(CardScript):
         effect0.set_can_use_condition(condition0)
 
         def process0(ctx: Dict[str, Any]):
-            """Action: Recovery +1, Add To Hand, Destroy Security"""
+            """Action: Add a matching security card to hand, then recover."""
             player = ctx.get('player')
-            perm = ctx.get('permanent')
             game = ctx.get('game')
-            if player:
-                player.recovery(1)
-            # Add card to hand (from trash/reveal)
-            if player and player.trash_cards:
-                card_to_add = player.trash_cards.pop()
-                player.hand_cards.append(card_to_add)
-            # Trash opponent's top security card(s)
-            enemy = player.enemy if player else None
-            if enemy:
-                for _ in range(1):
-                    if enemy.security_cards:
-                        trashed = enemy.security_cards.pop(0)
-                        enemy.trash_cards.append(trashed)
+            if not (player and game):
+                return
+            def security_filter(c):
+                traits = getattr(c, 'card_traits', []) or []
+                return any(
+                    'Angel' in trait or 'Archangel' in trait
+                    or 'Fallen Angel' in trait or 'FallenAngel' in trait
+                    for trait in traits
+                )
+            def on_add(selected):
+                if selected in player.security_cards:
+                    player.security_cards.remove(selected)
+                    player.hand_cards.append(selected)
+                    player.recovery(1)
+            game.effect_select_own_security(
+                player, security_filter, on_add, is_optional=True,
+                prompt="Select a security card to add to your hand.")
 
         effect0.set_on_process_callback(process0)
         effects.append(effect0)
@@ -62,15 +65,21 @@ class BT11_042(CardScript):
         effect1.set_effect_description("[Your Turn][Once Per Turn] When you play [LadyDevimon] or [Mirei Mikagura], gain 1 memory.")
         effect1.set_max_count_per_turn(1)
         effect1.set_hash_string("Memory+1_BT11_042")
-        effect1.is_on_play = True
-
         effect = effect1  # alias for condition closure
         def condition1(context: Dict[str, Any]) -> bool:
             if card and card.permanent_of_this_card() is None:
                 return False
             if not (card and card.owner and card.owner.is_my_turn):
                 return False
-            return True
+            if context.get('event_player') is not card.owner:
+                return False
+            played_card = context.get('played_card')
+            if not played_card:
+                return False
+            return (
+                played_card.contains_card_name('LadyDevimon')
+                or played_card.contains_card_name('Mirei Mikagura')
+            )
 
         effect1.set_can_use_condition(condition1)
 

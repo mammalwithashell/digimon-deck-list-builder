@@ -37,9 +37,14 @@ class BT19_099(CardScript):
             if not (player and game):
                 return
             def play_filter(c):
-                return True
+                if not getattr(c, 'is_digimon', False):
+                    return False
+                return any(
+                    'Composite' in trait for trait in (getattr(c, 'card_traits', []) or [])
+                )
             game.effect_play_from_zone(
-                player, 'hand', play_filter, free=True, is_optional=True)
+                player, 'trash', play_filter, free=False,
+                manual_reduction=4, is_optional=True)
             # Cost reduction by 4 — handled via cost_reduction property
             pass  # descriptive-tagged: cost_reduction
 
@@ -84,11 +89,14 @@ class BT19_099(CardScript):
             if not (player and game):
                 return
             def play_filter(c):
-                if not (any('Millenniummon' in _n for _n in getattr(c, 'card_names', []))):
+                if not getattr(c, 'is_digimon', False):
                     return False
-                return True
+                return any(
+                    'Wicked God' in trait or 'WickedGod' in trait
+                    for trait in (getattr(c, 'card_traits', []) or [])
+                )
             game.effect_play_from_zone(
-                player, 'trash', play_filter, free=True, is_optional=True)
+                player, 'hand_or_trash', play_filter, free=True, is_optional=True)
 
         effect2.set_on_process_callback(process2)
         effects.append(effect2)

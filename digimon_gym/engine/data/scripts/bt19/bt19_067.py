@@ -22,32 +22,34 @@ class BT19_067(CardScript):
         effect0.set_effect_description("[On Play] If you have 1 or fewer Tamers, you may play 1 purple Tamer with a play cost of 4 or less from your trash without paying the cost.")
         effect0.is_on_play = True
 
-        effect = effect0  # alias for condition closure
         def condition0(context: Dict[str, Any]) -> bool:
             if card and card.permanent_of_this_card() is None:
                 return False
-            # Triggered on play — validated by engine timing
-            return True
+            owner = getattr(card, 'owner', None)
+            if not owner:
+                return False
+            tamer_count = sum(1 for p in owner.battle_area if p.is_tamer)
+            return tamer_count <= 1
 
         effect0.set_can_use_condition(condition0)
 
         def process0(ctx: Dict[str, Any]):
             """Action: Play Card"""
             player = ctx.get('player')
-            perm = ctx.get('permanent')
             game = ctx.get('game')
             if not (player and game):
                 return
+
             def play_filter(c):
                 if not getattr(c, 'is_tamer', False):
                     return False
-                if getattr(c, 'get_cost_itself', 0) > 4:
+                play_cost = getattr(c, 'play_cost', getattr(c, 'get_cost_itself', 0))
+                if play_cost > 4:
                     return False
-                if not ('Purple' in [col.name for col in getattr(c, 'card_colors', [])]):
-                    return False
-                return True
+                return 'Purple' in [col.name for col in getattr(c, 'card_colors', [])]
+
             game.effect_play_from_zone(
-                player, 'hand', play_filter, free=True, is_optional=True)
+                player, 'trash', play_filter, free=True, is_optional=True)
 
         effect0.set_on_process_callback(process0)
         effects.append(effect0)

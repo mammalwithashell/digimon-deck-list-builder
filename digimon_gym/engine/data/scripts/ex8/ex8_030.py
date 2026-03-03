@@ -19,14 +19,10 @@ class EX8_030(CardScript):
         effect0 = ICardEffect()
         effect0.set_effect_name("EX8-030 Alternate digivolution requirement")
         effect0.set_effect_description("Alternate digivolution requirement")
-        # Alternate digivolution: with [NSo] trait for cost 0
+        # Alternate digivolution requirement removed pending confirmed source text
         effect0._alt_digi_cost = 0
-        effect0._alt_digi_trait = "NSo"
 
         def condition0(context: Dict[str, Any]) -> bool:
-            permanent = card.permanent_of_this_card() if card else None
-            if not (permanent and permanent.top_card and (any('NSo' in tr for tr in (getattr(permanent.top_card, 'card_traits', []) or [])))):
-                return False
             return True
         effect0.set_can_use_condition(condition0)
         effects.append(effect0)

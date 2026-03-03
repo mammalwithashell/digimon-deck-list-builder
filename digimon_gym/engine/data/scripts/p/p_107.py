@@ -29,14 +29,9 @@ class P_107(CardScript):
         effect0.set_can_use_condition(condition0)
 
         def process0(ctx: Dict[str, Any]):
-            """Action: Add To Hand, Reveal And Select"""
+            """Action: Reveal And Select"""
             player = ctx.get('player')
-            perm = ctx.get('permanent')
             game = ctx.get('game')
-            # Add card to hand (from trash/reveal)
-            if player and player.trash_cards:
-                card_to_add = player.trash_cards.pop()
-                player.hand_cards.append(card_to_add)
             if not (player and game):
                 return
             def reveal_filter(c):

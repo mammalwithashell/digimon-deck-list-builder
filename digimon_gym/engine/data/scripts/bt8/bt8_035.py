@@ -15,11 +15,11 @@ class BT8_035(CardScript):
         effects = []
 
         # Timing: EffectTiming.OnEnterFieldAnyone
-        # [Your Turn][Once Per Turn] When you play a Tamer, gain 1 memory.
+        # [Your Turn][Once Per Turn] When you play another purple Digimon, gain 1 memory.
         effect0 = ICardEffect()
         effect0.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect0.set_effect_name("BT8-035 Memory +1")
-        effect0.set_effect_description("[Your Turn][Once Per Turn] When you play a Tamer, gain 1 memory.")
+        effect0.set_effect_description("[Your Turn][Once Per Turn] When you play another purple Digimon, gain 1 memory.")
         effect0.is_inherited_effect = True
         effect0.set_max_count_per_turn(1)
         effect0.set_hash_string("Memory+1_BT8_035")
@@ -31,7 +31,14 @@ class BT8_035(CardScript):
                 return False
             if not (card and card.owner and card.owner.is_my_turn):
                 return False
-            return True
+            if context.get('event_player') is not card.owner:
+                return False
+            played_card = context.get('played_card')
+            if not played_card or not getattr(played_card, 'is_digimon', False):
+                return False
+            if played_card is card:
+                return False
+            return 'Purple' in [col.name for col in getattr(played_card, 'card_colors', [])]
 
         effect0.set_can_use_condition(condition0)
 

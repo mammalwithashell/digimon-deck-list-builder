@@ -71,7 +71,7 @@ class EX6_039(CardScript):
             if not (player and game):
                 return
             def target_filter(p):
-                return p.is_digimon
+                return p.is_digimon and getattr(p.top_card, 'get_cost_itself', 0) <= 3
             def on_delete(target_perm):
                 enemy = player.enemy if player else None
                 if enemy:
@@ -107,7 +107,7 @@ class EX6_039(CardScript):
             if not (player and game):
                 return
             def target_filter(p):
-                return p.is_digimon
+                return p.is_digimon and getattr(p.top_card, 'get_cost_itself', 0) <= 3
             def on_delete(target_perm):
                 enemy = player.enemy if player else None
                 if enemy:
@@ -141,7 +141,8 @@ class EX6_039(CardScript):
             perm = ctx.get('permanent')
             game = ctx.get('game')
             # Play Diaboromon Token — token play not yet supported in engine
-            pass  # descriptive-tagged: play_token
+            if player and game:
+                game.effect_play_token(player, 'diaboromon')
 
         effect3.set_on_process_callback(process3)
         effects.append(effect3)

@@ -150,7 +150,7 @@ class BT18_015(CardScript):
         effect2.set_effect_name("BT18-015 Security Attack +1 (Inherited)")
         effect2.set_effect_description("Inherited: <Security A. +1>")
         effect2.is_inherited_effect = True
-        effect2._is_security_attack_plus = True
+        effect2._security_attack_modifier = 1
 
         def condition2(context: Dict[str, Any]) -> bool:
             return True

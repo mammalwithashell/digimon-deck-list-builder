@@ -31,14 +31,23 @@ class BT3_006(CardScript):
         def process0(ctx: Dict[str, Any]):
             """Action: Draw 1, then trash 1 from hand"""
             player = ctx.get('player')
+            game = ctx.get('game')
             if not player:
                 return
             # Draw 1
             player.draw_cards(1)
             # Trash 1 from hand
-            if player.hand_cards:
-                trashed = player.hand_cards.pop()
-                player.trash_cards.append(trashed)
+            if not (player.hand_cards and game):
+                return
+            def hand_filter(c):
+                return True
+            def on_trashed(selected):
+                if selected in player.hand_cards:
+                    player.hand_cards.remove(selected)
+                    player.trash_cards.append(selected)
+            game.effect_select_hand_card(
+                player, hand_filter, on_trashed, is_optional=False,
+                prompt="Select a card to trash.")
 
         effect0.set_on_process_callback(process0)
         effects.append(effect0)

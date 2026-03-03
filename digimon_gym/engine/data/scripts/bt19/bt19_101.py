@@ -69,11 +69,11 @@ class BT19_101(CardScript):
             if not (player and game):
                 return
             def target_filter(p):
-                return True
+                return p.is_digimon
             def on_bounce(target_perm):
                 enemy = player.enemy if player else None
                 if enemy:
-                    enemy.bounce_permanent_to_hand(target_perm)
+                    enemy.return_permanent_to_deck_bottom(target_perm)
             game.effect_select_opponent_permanent(
                 player, on_bounce, filter_fn=target_filter, is_optional=True)
 
@@ -106,11 +106,11 @@ class BT19_101(CardScript):
             if not (player and game):
                 return
             def target_filter(p):
-                return True
+                return p.is_digimon
             def on_bounce(target_perm):
                 enemy = player.enemy if player else None
                 if enemy:
-                    enemy.bounce_permanent_to_hand(target_perm)
+                    enemy.return_permanent_to_deck_bottom(target_perm)
             game.effect_select_opponent_permanent(
                 player, on_bounce, filter_fn=target_filter, is_optional=True)
 
@@ -143,11 +143,11 @@ class BT19_101(CardScript):
             if not (player and game):
                 return
             def target_filter(p):
-                return True
+                return p.is_digimon
             def on_bounce(target_perm):
                 enemy = player.enemy if player else None
                 if enemy:
-                    enemy.bounce_permanent_to_hand(target_perm)
+                    enemy.return_permanent_to_deck_bottom(target_perm)
             game.effect_select_opponent_permanent(
                 player, on_bounce, filter_fn=target_filter, is_optional=True)
 

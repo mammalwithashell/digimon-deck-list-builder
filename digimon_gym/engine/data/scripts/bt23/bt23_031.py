@@ -2,7 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
-from ....data.enums import EffectTiming
+from ....data.enums import EffectTiming, CardColor
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -22,6 +22,7 @@ class BT23_031(CardScript):
         # Alternate digivolution: Lv.4 for cost 3
         effect0._alt_digi_cost = 3
         effect0._alt_digi_level = 4
+        effect0._alt_digi_color = CardColor.Yellow
 
         def condition0(context: Dict[str, Any]) -> bool:
             return True
@@ -39,7 +40,18 @@ class BT23_031(CardScript):
 
         effect = effect1  # alias for condition closure
         def condition1(context: Dict[str, Any]) -> bool:
-            return True
+            if context.get('card_source') is not card:
+                return False
+            owner = getattr(card, 'owner', None)
+            if not owner:
+                return False
+            return any(
+                p.top_card and (
+                    p.top_card.contains_card_name('LadyDevimon')
+                    or p.top_card.contains_card_name('Mirei Mikagura')
+                )
+                for p in owner.battle_area
+            )
 
         effect1.set_can_use_condition(condition1)
 
@@ -96,23 +108,14 @@ class BT23_031(CardScript):
         effect3.set_can_use_condition(condition3)
 
         def process3(ctx: Dict[str, Any]):
-            """Action: Recovery +1, Add To Hand, Destroy Security"""
+            """Action: Add top security to hand, then recover if at 3 or fewer."""
             player = ctx.get('player')
-            perm = ctx.get('permanent')
-            game = ctx.get('game')
-            if player:
+            if not player or not player.security_cards:
+                return
+            card_to_add = player.security_cards.pop(0)
+            player.hand_cards.append(card_to_add)
+            if len(player.security_cards) <= 3:
                 player.recovery(1)
-            # Add card to hand (from trash/reveal)
-            if player and player.trash_cards:
-                card_to_add = player.trash_cards.pop()
-                player.hand_cards.append(card_to_add)
-            # Trash opponent's top security card(s)
-            enemy = player.enemy if player else None
-            if enemy:
-                for _ in range(1):
-                    if enemy.security_cards:
-                        trashed = enemy.security_cards.pop(0)
-                        enemy.trash_cards.append(trashed)
 
         effect3.set_on_process_callback(process3)
         effects.append(effect3)
@@ -135,23 +138,14 @@ class BT23_031(CardScript):
         effect4.set_can_use_condition(condition4)
 
         def process4(ctx: Dict[str, Any]):
-            """Action: Recovery +1, Add To Hand, Destroy Security"""
+            """Action: Add top security to hand, then recover if at 3 or fewer."""
             player = ctx.get('player')
-            perm = ctx.get('permanent')
-            game = ctx.get('game')
-            if player:
+            if not player or not player.security_cards:
+                return
+            card_to_add = player.security_cards.pop(0)
+            player.hand_cards.append(card_to_add)
+            if len(player.security_cards) <= 3:
                 player.recovery(1)
-            # Add card to hand (from trash/reveal)
-            if player and player.trash_cards:
-                card_to_add = player.trash_cards.pop()
-                player.hand_cards.append(card_to_add)
-            # Trash opponent's top security card(s)
-            enemy = player.enemy if player else None
-            if enemy:
-                for _ in range(1):
-                    if enemy.security_cards:
-                        trashed = enemy.security_cards.pop(0)
-                        enemy.trash_cards.append(trashed)
 
         effect4.set_on_process_callback(process4)
         effects.append(effect4)

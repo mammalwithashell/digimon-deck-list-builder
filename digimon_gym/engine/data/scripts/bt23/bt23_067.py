@@ -2,7 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
-from ....data.enums import EffectTiming
+from ....data.enums import EffectTiming, CardColor
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -22,6 +22,7 @@ class BT23_067(CardScript):
         # Alternate digivolution: Lv.4 for cost 3
         effect0._alt_digi_cost = 3
         effect0._alt_digi_level = 4
+        effect0._alt_digi_color = CardColor.Purple
 
         def condition0(context: Dict[str, Any]) -> bool:
             return True
@@ -39,7 +40,18 @@ class BT23_067(CardScript):
 
         effect = effect1  # alias for condition closure
         def condition1(context: Dict[str, Any]) -> bool:
-            return True
+            if context.get('card_source') is not card:
+                return False
+            owner = getattr(card, 'owner', None)
+            if not owner:
+                return False
+            return any(
+                p.top_card and (
+                    p.top_card.contains_card_name('Angewomon')
+                    or p.top_card.contains_card_name('Mirei Mikagura')
+                )
+                for p in owner.battle_area
+            )
 
         effect1.set_can_use_condition(condition1)
 
@@ -113,7 +125,7 @@ class BT23_067(CardScript):
             if not (player and game):
                 return
             def target_filter(p):
-                return p.is_digimon
+                return p.is_digimon and p.level is not None and p.level <= 4
             def on_delete(target_perm):
                 enemy = player.enemy if player else None
                 if enemy:
@@ -147,7 +159,7 @@ class BT23_067(CardScript):
             if not (player and game):
                 return
             def target_filter(p):
-                return p.is_digimon
+                return p.is_digimon and p.level is not None and p.level <= 4
             def on_delete(target_perm):
                 enemy = player.enemy if player else None
                 if enemy:

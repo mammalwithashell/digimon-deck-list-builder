@@ -1,6 +1,6 @@
 {
-  "version": 15,
-  "last_updated": "2026-03-01",
+  "version": 16,
+  "last_updated": "2026-03-02",
   "cards": {
     "BT1-087": {
       "card_name": "T.K. Takaishi",
@@ -46,10 +46,10 @@
     },
     "BT13-007": {
       "card_name": "King Drasil_7D6",
-      "validated_date": "2026-03-01",
-      "report": "2026-03-01-royal-knights.md",
+      "validated_date": "2026-03-02",
+      "report": "2026-03-02-royal-knights-retest.md",
       "status": "PARTIAL",
-      "notes": "Hatches correctly. Breeding cost reduction for Royal Knight plays NOT applied. Start of Main Phase reveal+absorb untested."
+      "notes": "Script rewritten on 2026-03-02: breeding play-cost reduction and start-of-main absorb effect implemented. Live gameplay verification still pending."
     },
     "BT13-019": {
       "card_name": "Gankoomon",
@@ -417,10 +417,10 @@
     },
     "BT20-017": {
       "card_name": "Jesmon",
-      "validated_date": "2026-03-01",
-      "report": "2026-03-01-royal-knights.md",
+      "validated_date": "2026-03-02",
+      "report": "2026-03-02-royal-knights-retest.md",
       "status": "PARTIAL",
-      "notes": "Play cost 11 PASS. On Play [Atho, Rene & Por] Token NOT created. Token system integration missing."
+      "notes": "Token callback now calls game.effect_play_token('atho_rene_por'). Live gameplay verification still pending."
     },
     "BT20-055": {
       "card_name": "Invisimon",
@@ -753,10 +753,10 @@
     },
     "BT23-047": {
       "card_name": "Examon",
-      "validated_date": "2026-03-01",
-      "report": "2026-03-01-royal-knights.md",
+      "validated_date": "2026-03-02",
+      "report": "2026-03-02-royal-knights-retest.md",
       "status": "PARTIAL",
-      "notes": "Play cost 15 PASS. Piercing keyword NOT present. Security A. +1 keyword NOT present."
+      "notes": "Static script review updated innate keyword coverage (Piercing added in code). Live gameplay verification still pending."
     },
     "BT23-048": {
       "card_name": "Gotsumon",
@@ -788,10 +788,10 @@
     },
     "BT23-057": {
       "card_name": "Gankoomon",
-      "validated_date": "2026-03-01",
-      "report": "2026-03-01-royal-knights.md",
+      "validated_date": "2026-03-02",
+      "report": "2026-03-02-royal-knights-retest.md",
       "status": "PARTIAL",
-      "notes": "Play cost 11 PASS. On Play Hinukamuy Token likely not created (same issue as Jesmon)."
+      "notes": "Token callback now calls game.effect_play_token('hinukamuy') and delete cap logic was tightened. Live gameplay verification still pending."
     },
     "BT23-058": {
       "card_name": "Craniamon",
@@ -816,10 +816,10 @@
     },
     "BT23-072": {
       "card_name": "King Drasil_7D6",
-      "validated_date": "2026-03-01",
-      "report": "2026-03-01-royal-knights.md",
+      "validated_date": "2026-03-02",
+      "report": "2026-03-02-royal-knights-retest.md",
       "status": "PARTIAL",
-      "notes": "Play cost 6 PASS. DP 9000 PASS. Keywords granted to self instead of to played Royal Knight/CS Digimon."
+      "notes": "Script rewritten on 2026-03-02 so keyword grants target the played Digimon and the source suspends itself. Live gameplay verification still pending."
     },
     "BT23-077": {
       "card_name": "Sistermon Ciel",
@@ -1250,10 +1250,10 @@
     },
     "BT6-082": {
       "card_name": "Sistermon Blanc",
-      "validated_date": "2026-03-01",
-      "report": "2026-03-01-royal-knights.md",
+      "validated_date": "2026-03-02",
+      "report": "2026-03-02-royal-knights-retest.md",
       "status": "PARTIAL",
-      "notes": "Play cost 3 PASS. On Play Draw 1 NOT triggered. Continuous Blocker grant for Sistermons while Royal Knight in play NOT working."
+      "notes": "Name checks and passive keyword evaluation path were corrected in code. Live gameplay verification still pending."
     },
     "BT8-035": {
       "card_name": "Candlemon",
@@ -1803,10 +1803,10 @@
     },
     "ST12-12": {
       "card_name": "Sistermon Blanc",
-      "validated_date": "2026-03-01",
-      "report": "2026-03-01-royal-knights.md",
+      "validated_date": "2026-03-02",
+      "report": "2026-03-02-royal-knights-retest.md",
       "status": "PARTIAL",
-      "notes": "Play cost 3 PASS. On Play trash+Draw 2 PASS. Decoy keyword shows without condition check (no Huckmon/Royal Knight required)."
+      "notes": "Passive keyword evaluation now honors can_use_condition(); live gameplay verification of Decoy gating is still pending."
     },
     "ST20-05": {
       "card_name": "Gatomon",

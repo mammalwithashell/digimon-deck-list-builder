@@ -87,7 +87,19 @@ def _parse_dna_requirement(text: str) -> Optional[DnaRequirement]:
       "Blue/Purple Lv.6"
       "Lv.6 w/[Greymon] in name"   → stored as name_contains
       "Lv.6 w/[Greymon] in text"   → stored as text_contains
+      "[Plesiomon]"                 → bare name, any level (level=0)
     """
+    # Check for bare [Name] pattern (e.g., "[Plesiomon]", "[Piedmon]")
+    # This means "any Digimon named <Name>" without level restriction.
+    bare_name_match = re.fullmatch(r'\[([^\]]+)\]', text.strip())
+    if bare_name_match:
+        return DnaRequirement(
+            level=0,
+            card_color=None,
+            name_contains=bare_name_match.group(1).strip(),
+            text_contains="",
+        )
+
     # Extract constraint: w/[Name] in name OR w/[Name] in text
     name_contains = ""
     text_contains = ""

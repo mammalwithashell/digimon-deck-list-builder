@@ -69,7 +69,8 @@ class BT22_064(CardScript):
             perm = ctx.get('permanent')
             game = ctx.get('game')
             # Play Diaboromon Token — token play not yet supported in engine
-            pass  # descriptive-tagged: play_token
+            if player and game:
+                game.effect_play_token(player, 'diaboromon')
 
         effect2.set_on_process_callback(process2)
         effects.append(effect2)
@@ -98,7 +99,8 @@ class BT22_064(CardScript):
             perm = ctx.get('permanent')
             game = ctx.get('game')
             # Play Diaboromon Token — token play not yet supported in engine
-            pass  # descriptive-tagged: play_token
+            if player and game:
+                game.effect_play_token(player, 'diaboromon')
 
         effect3.set_on_process_callback(process3)
         effects.append(effect3)
@@ -128,8 +130,15 @@ class BT22_064(CardScript):
             game = ctx.get('game')
             if not (player and game):
                 return
+            enemy = player.enemy if player else None
+            if not enemy:
+                return
+            digimon = [p for p in enemy.battle_area if p.is_digimon]
+            if not digimon:
+                return
+            min_cost = min(getattr(p.top_card, 'get_cost_itself', 0) for p in digimon)
             def target_filter(p):
-                return p.is_digimon
+                return p.is_digimon and getattr(p.top_card, 'get_cost_itself', 0) == min_cost
             def on_delete(target_perm):
                 enemy = player.enemy if player else None
                 if enemy:

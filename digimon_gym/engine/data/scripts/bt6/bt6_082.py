@@ -43,7 +43,8 @@ class BT6_082(CardScript):
             # Check if this permanent is a Sistermon
             perm = card.permanent_of_this_card() if card else None
             if perm:
-                name = getattr(perm.top_card, 'card_name_eng', '') or ''
+                names = getattr(perm.top_card, 'card_names', []) or []
+                name = names[0] if names else ''
                 if 'Sistermon' not in name:
                     return False
             # Check for Huckmon-name or Royal Knight trait ally
@@ -51,7 +52,8 @@ class BT6_082(CardScript):
             for p in player.battle_area:
                 if not p.is_digimon:
                     continue
-                name = getattr(p.top_card, 'card_name_eng', '') or ''
+                names = getattr(p.top_card, 'card_names', []) or []
+                name = names[0] if names else ''
                 if 'Huckmon' in name:
                     has_huckmon_or_rk = True
                     break
@@ -71,8 +73,6 @@ class BT6_082(CardScript):
         effect1.is_on_play = True
 
         def condition1(context: Dict[str, Any]) -> bool:
-            if card and card.permanent_of_this_card() is None:
-                return False
             return True
         effect1.set_can_use_condition(condition1)
 

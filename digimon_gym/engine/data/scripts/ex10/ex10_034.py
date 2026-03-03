@@ -171,6 +171,7 @@ class EX10_034(CardScript):
         effect8.set_max_count_per_turn(1)
         effect8.set_hash_string("AT_EX10_034")
         effect8.is_on_attack = True
+        effect8._security_attack_modifier = 1
 
         effect = effect8  # alias for condition closure
         def condition8(context: Dict[str, Any]) -> bool:
@@ -190,9 +191,10 @@ class EX10_034(CardScript):
             game = ctx.get('game')
             if perm:
                 perm.change_dp(3000)
+                perm._temp_sa_modifier += 1
             # Trash digivolution cards from this permanent
             if perm and not perm.has_no_digivolution_cards:
-                trashed = perm.trash_digivolution_cards(1)
+                trashed = perm.trash_digivolution_cards(2)
                 if player:
                     player.trash_cards.extend(trashed)
 

@@ -50,8 +50,6 @@ class BT18_073(CardScript):
         effect1.is_when_digivolving = True
 
         def condition1(context: Dict[str, Any]) -> bool:
-            if card and card.permanent_of_this_card() is None:
-                return False
             return True
         effect1.set_can_use_condition(condition1)
 

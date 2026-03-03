@@ -1,5 +1,6 @@
 from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
+
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
 from ....data.enums import EffectTiming
@@ -14,142 +15,81 @@ class BT23_057(CardScript):
     def get_card_effects(self, card: 'CardSource') -> List['ICardEffect']:
         effects = []
 
-        # Factory effect: alt_digivolve_req
-        # Alternate digivolution requirement
         effect0 = ICardEffect()
         effect0.set_effect_name("BT23-057 Alternate digivolution requirement")
         effect0.set_effect_description("Alternate digivolution requirement")
-        # Alternate digivolution: Lv.5 for cost 3
         effect0._alt_digi_cost = 3
         effect0._alt_digi_level = 5
 
         def condition0(context: Dict[str, Any]) -> bool:
             return True
+
         effect0.set_can_use_condition(condition0)
         effects.append(effect0)
 
-        # Timing: EffectTiming.BeforePayCost
-        # When this card would be played, by returning 3 cards with [Huckmon], [Sistermon] or [Jesmon] in their names from your trash to the top or bottom of the deck, reduce the play cost by 5.
         effect1 = ICardEffect()
         effect1.set_timing(EffectTiming.BeforePayCost)
-        effect1.set_effect_name("BT23-057 Return 3 cards with [Huckmon], [Sistermon] or [Jesmon] in their names to get Play Cost -5")
-        effect1.set_effect_description("When this card would be played, by returning 3 cards with [Huckmon], [Sistermon] or [Jesmon] in their names from your trash to the top or bottom of the deck, reduce the play cost by 5.")
-        effect1.set_hash_string("PlayCost-5_BT12_057")
+        effect1.set_effect_name("BT23-057 play cost -5")
+        effect1.set_effect_description(
+            "When this card would be played, by returning 3 cards with [Huckmon], [Sistermon] or [Jesmon] in their names from your trash to the top or bottom of the deck, reduce the play cost by 5."
+        )
+        effect1.set_hash_string("PlayCost-5_BT23_057")
         effect1.cost_reduction = 5
 
-        effect = effect1  # alias for condition closure
         def condition1(context: Dict[str, Any]) -> bool:
             return True
 
         effect1.set_can_use_condition(condition1)
 
         def process1(ctx: Dict[str, Any]):
-            """Action: Cost -5"""
-            player = ctx.get('player')
-            perm = ctx.get('permanent')
-            game = ctx.get('game')
-            # Cost reduction by 5 — handled via cost_reduction property
-            pass  # descriptive-tagged: cost_reduction
+            return
 
         effect1.set_on_process_callback(process1)
         effects.append(effect1)
 
-        # Timing: EffectTiming.None
-        # Cost -5
-        effect2 = ICardEffect()
-        effect2.set_effect_name("BT23-057 Play Cost -5")
-        effect2.set_effect_description("Cost -5")
-        effect2.cost_reduction = 5
+        def make_token_delete_effect(name: str, when_digivolving: bool) -> ICardEffect:
+            effect = ICardEffect()
+            effect.set_timing(EffectTiming.OnEnterFieldAnyone)
+            effect.set_effect_name(name)
+            effect.set_effect_description(
+                "Play 1 [Hinukamuy] Token. Then, delete 1 of your opponent's Digimon within the effect's play-cost cap."
+            )
+            if when_digivolving:
+                effect.is_when_digivolving = True
+            else:
+                effect.is_on_play = True
 
-        effect = effect2  # alias for condition closure
-        def condition2(context: Dict[str, Any]) -> bool:
-            return True
+            def condition(context: Dict[str, Any]) -> bool:
+                return bool(card and card.permanent_of_this_card() is not None)
 
-        effect2.set_can_use_condition(condition2)
+            effect.set_can_use_condition(condition)
 
-        def process2(ctx: Dict[str, Any]):
-            """Action: Cost -5"""
-            player = ctx.get('player')
-            perm = ctx.get('permanent')
-            game = ctx.get('game')
-            # Cost reduction by 5 — handled via cost_reduction property
-            pass  # descriptive-tagged: cost_reduction
+            def process(ctx: Dict[str, Any]):
+                player = ctx.get("player")
+                game = ctx.get("game")
+                owner_perm = ctx.get("permanent")
+                if not (player and game and owner_perm):
+                    return
 
-        effect2.set_on_process_callback(process2)
-        effects.append(effect2)
+                game.effect_play_token(player, "hinukamuy")
+                max_play_cost = 6 + (3 * sum(1 for p in player.battle_area if p is not owner_perm and p.is_digimon))
 
-        # Timing: EffectTiming.OnEnterFieldAnyone
-        # Delete, Play Token
-        effect3 = ICardEffect()
-        effect3.set_timing(EffectTiming.OnEnterFieldAnyone)
-        effect3.set_effect_name("BT23-057 Play token")
-        effect3.set_effect_description("Delete, Play Token")
-        effect3.is_on_play = True
+                def target_filter(p):
+                    if not p.is_digimon or not p.top_card:
+                        return False
+                    return p.top_card.get_cost_itself <= max_play_cost
 
-        effect = effect3  # alias for condition closure
-        def condition3(context: Dict[str, Any]) -> bool:
-            # Triggered on play — validated by engine timing
-            return True
+                def on_delete(target_perm):
+                    enemy = player.enemy if player else None
+                    if enemy:
+                        enemy.delete_permanent(target_perm)
 
-        effect3.set_can_use_condition(condition3)
+                game.effect_select_opponent_permanent(player, on_delete, filter_fn=target_filter, is_optional=False)
 
-        def process3(ctx: Dict[str, Any]):
-            """Action: Delete, Play Token"""
-            player = ctx.get('player')
-            perm = ctx.get('permanent')
-            game = ctx.get('game')
-            if not (player and game):
-                return
-            def target_filter(p):
-                return p.is_digimon
-            def on_delete(target_perm):
-                enemy = player.enemy if player else None
-                if enemy:
-                    enemy.delete_permanent(target_perm)
-            game.effect_select_opponent_permanent(
-                player, on_delete, filter_fn=target_filter, is_optional=False)
-            # Play Hinukamuy Token — token play not yet supported in engine
-            pass  # descriptive-tagged: play_token
+            effect.set_on_process_callback(process)
+            return effect
 
-        effect3.set_on_process_callback(process3)
-        effects.append(effect3)
-
-        # Timing: EffectTiming.OnEnterFieldAnyone
-        # Delete, Play Token
-        effect4 = ICardEffect()
-        effect4.set_timing(EffectTiming.OnEnterFieldAnyone)
-        effect4.set_effect_name("BT23-057 Play token")
-        effect4.set_effect_description("Delete, Play Token")
-        effect4.is_when_digivolving = True
-
-        effect = effect4  # alias for condition closure
-        def condition4(context: Dict[str, Any]) -> bool:
-            if card and card.permanent_of_this_card() is None:
-                return False
-            # Triggered when digivolving — validated by engine timing
-            return True
-
-        effect4.set_can_use_condition(condition4)
-
-        def process4(ctx: Dict[str, Any]):
-            """Action: Delete, Play Token"""
-            player = ctx.get('player')
-            perm = ctx.get('permanent')
-            game = ctx.get('game')
-            if not (player and game):
-                return
-            def target_filter(p):
-                return p.is_digimon
-            def on_delete(target_perm):
-                enemy = player.enemy if player else None
-                if enemy:
-                    enemy.delete_permanent(target_perm)
-            game.effect_select_opponent_permanent(
-                player, on_delete, filter_fn=target_filter, is_optional=False)
-            # Play Hinukamuy Token — token play not yet supported in engine
-            pass  # descriptive-tagged: play_token
-
-        effect4.set_on_process_callback(process4)
-        effects.append(effect4)
+        effects.append(make_token_delete_effect("BT23-057 play Hinukamuy Token", when_digivolving=False))
+        effects.append(make_token_delete_effect("BT23-057 play Hinukamuy Token", when_digivolving=True))
 
         return effects

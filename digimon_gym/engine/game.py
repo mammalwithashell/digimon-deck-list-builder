@@ -420,6 +420,106 @@ class Game:
 
     # ─── Effect Execution ────────────────────────────────────────────
 
+    def _option_stays_on_field(self, card: 'CardSource') -> bool:
+        if not card.is_option:
+            return False
+        for effect in card.effect_list(EffectTiming.NoTiming):
+            if getattr(effect, '_is_delay', False) or getattr(effect, '_is_training', False):
+                return True
+        return False
+
+    def _trash_option_after_resolution(self, owner: Player, perm: Optional[Permanent]) -> None:
+        if perm is None or perm not in owner.battle_area:
+            return
+        owner.battle_area.remove(perm)
+        self.cleanup_modifiers_for_permanent(perm)
+        owner.trash_cards.extend(perm.card_sources)
+        self.logger.log(f"[Option] {self._perm_ref(perm)} trashed after resolving")
+
+    def calculate_play_cost(
+        self,
+        player: Player,
+        card: 'CardSource',
+        *,
+        source_zone: str = "hand",
+        free: bool = False,
+        manual_reduction: int = 0,
+    ) -> int:
+        if free:
+            return 0
+
+        base_cost = card.get_cost_itself
+        reduction = max(0, manual_reduction)
+
+        def apply_effect(effect, context: Dict[str, Any]) -> None:
+            nonlocal reduction
+            if getattr(effect, 'timing', None) != EffectTiming.BeforePayCost:
+                return
+            if not effect.can_activate_this_turn():
+                return
+            if effect.can_use_condition is not None and not effect.can_use_condition(context):
+                return
+            dynamic_reduction = getattr(effect, '_cost_reduction_value_fn', None)
+            if callable(dynamic_reduction):
+                try:
+                    reduction += max(0, int(dynamic_reduction(context)))
+                except Exception:
+                    return
+                return
+            effect_reduction = getattr(effect, 'cost_reduction', 0)
+            if effect_reduction:
+                reduction += max(0, int(effect_reduction))
+
+        for perm in list(player.battle_area):
+            for effect in perm.effect_list(EffectTiming.NoTiming):
+                apply_effect(
+                    effect,
+                    {
+                        "game": self,
+                        "player": player,
+                        "permanent": perm,
+                        "card_source": card,
+                        "played_card": card,
+                        "source_zone": source_zone,
+                        "free": free,
+                    },
+                )
+
+        if player.breeding_area is not None:
+            breeding_perm = player.breeding_area
+            for effect in breeding_perm.effect_list(EffectTiming.NoTiming):
+                if not getattr(effect, '_allow_breeding_source', False):
+                    continue
+                apply_effect(
+                    effect,
+                    {
+                        "game": self,
+                        "player": player,
+                        "permanent": breeding_perm,
+                        "card_source": card,
+                        "played_card": card,
+                        "source_zone": source_zone,
+                        "free": free,
+                    },
+                )
+
+        for effect in card.effect_list(EffectTiming.NoTiming):
+            apply_effect(
+                effect,
+                {
+                    "game": self,
+                    "player": player,
+                    "permanent": card.permanent_of_this_card(),
+                    "card_source": card,
+                    "played_card": card,
+                    "source_zone": source_zone,
+                    "free": free,
+                },
+            )
+
+        reduction += max(0, int(getattr(player, "_temp_play_cost_reduction", 0)))
+        return max(0, base_cost - reduction)
+
     def execute_effects(self, timing: EffectTiming, extra_context: Optional[dict] = None):
         """Execute all effects matching the given timing with stack-based resolution.
 
@@ -447,9 +547,11 @@ class Game:
         3. Non-turn player mandatory effects
         4. Non-turn player optional effects
         """
-        all_perms: List[Permanent] = (
-            list(self.turn_player.battle_area) + list(self.opponent_player.battle_area)
-        )
+        all_perms: List[Permanent] = list(self.turn_player.battle_area) + list(self.opponent_player.battle_area)
+        if self.turn_player.breeding_area is not None:
+            all_perms.append(self.turn_player.breeding_area)
+        if self.opponent_player.breeding_area is not None:
+            all_perms.append(self.opponent_player.breeding_area)
 
         played_card = extra_context.get('played_card') if extra_context else None
         digivolved_perm = extra_context.get('digivolved_permanent') if extra_context else None
@@ -476,7 +578,16 @@ class Game:
                     "opponent_player": self.opponent_player,
                 }
                 if extra_context:
-                    context.update(extra_context)
+                    if "player" in extra_context:
+                        context["event_player"] = extra_context["player"]
+                    if "permanent" in extra_context:
+                        context["event_permanent"] = extra_context["permanent"]
+                        if "played_permanent" not in extra_context and "played_card" in extra_context:
+                            context["played_permanent"] = extra_context["permanent"]
+                    for key, value in extra_context.items():
+                        if key in {"player", "permanent"}:
+                            continue
+                        context[key] = value
 
                 is_tp = (owner is self.turn_player)
 
@@ -1322,16 +1433,26 @@ class Game:
             return
 
         card = self.turn_player.hand_cards[card_index]
-        cost = card.get_cost_itself
+        cost = self.calculate_play_cost(self.turn_player, card)
 
         self.logger.log(f"[Play] {self.turn_player.player_name} plays {self._card_ref(card)} (cost: {cost})")
         is_option = card.is_option
-        self.turn_player.play_card(card)
+        played_perm = self.turn_player.play_card(card)
         self.turn_player.lose_memory(cost)
+        if hasattr(self.turn_player, "_temp_play_cost_reduction"):
+            self.turn_player._temp_play_cost_reduction = 0
 
         if is_option:
-            self.execute_effects(EffectTiming.OnUseOption, {"played_card": card})
-        self.execute_effects(EffectTiming.OnEnterFieldAnyone, {"played_card": card})
+            self.execute_effects(
+                EffectTiming.OnUseOption,
+                {"played_card": card, "played_permanent": played_perm, "event_player": self.turn_player},
+            )
+        self.execute_effects(
+            EffectTiming.OnEnterFieldAnyone,
+            {"played_card": card, "played_permanent": played_perm, "event_player": self.turn_player},
+        )
+        if is_option and not self._option_stays_on_field(card):
+            self._trash_option_after_resolution(self.turn_player, played_perm)
         self.check_turn_end()
 
     def action_digivolve(self, permanent_index: int, card_index: int):
@@ -1643,7 +1764,8 @@ class Game:
             # Play cards (0-29)
             for i in range(min(len(me.hand_cards), 30)):
                 card = me.hand_cards[i]
-                if self.memory >= 0 and card.get_cost_itself <= self.memory + 10:
+                play_cost = self.calculate_play_cost(me, card)
+                if self.memory >= 0 and play_cost <= self.memory + 10:
                     # Option color requirement: must have a matching-color
                     # Digimon or Tamer on the field to play an Option card
                     if card.is_option:
@@ -2801,13 +2923,20 @@ class Game:
 
             self.execute_effects(
                 EffectTiming.OnEnterFieldAnyone,
-                {"played_card": card_source, "permanent": perm, "player": target_player})
+                {
+                    "played_card": card_source,
+                    "played_permanent": perm,
+                    "event_permanent": perm,
+                    "event_player": target_player,
+                },
+            )
 
     def effect_play_from_zone(
         self, player: Player,
         zone: str,
         filter_fn: Callable[['CardSource'], bool],
         free: bool = True,
+        manual_reduction: int = 0,
         is_optional: bool = True,
         prompt: str = "",
     ):
@@ -2838,11 +2967,33 @@ class Game:
                     src_name = 'hand'
                 if 0 <= idx < len(source):
                     card = source[idx]
-                    player.play_card_from_source(card, pay_cost=not free)
+                    played_perm = player.play_card_from_source(card, pay_cost=not free)
+                    if free:
+                        cost = 0
+                    else:
+                        cost = self.calculate_play_cost(
+                            player,
+                            card,
+                            source_zone=src_name,
+                            free=False,
+                            manual_reduction=manual_reduction,
+                        )
+                        player.lose_memory(cost)
+                        if hasattr(player, "_temp_play_cost_reduction"):
+                            player._temp_play_cost_reduction = 0
                     self.logger.log(f"[Effect] {player.player_name} played "
                                     f"{self._card_ref(card)} from {src_name}")
-                    self.execute_effects(EffectTiming.OnEnterFieldAnyone,
-                                         {"played_card": card})
+                    if card.is_option:
+                        self.execute_effects(
+                            EffectTiming.OnUseOption,
+                            {"played_card": card, "played_permanent": played_perm, "event_player": player},
+                        )
+                    self.execute_effects(
+                        EffectTiming.OnEnterFieldAnyone,
+                        {"played_card": card, "played_permanent": played_perm, "event_player": player},
+                    )
+                    if card.is_option and not self._option_stays_on_field(card):
+                        self._trash_option_after_resolution(player, played_perm)
 
             self.request_selection(GamePhase.SelectTarget, player,
                                    on_select_hot, valid, is_optional,
@@ -2872,11 +3023,33 @@ class Game:
             idx = action_id - offset
             if 0 <= idx < len(source_list):
                 card = source_list[idx]
-                player.play_card_from_source(card, pay_cost=not free)
+                played_perm = player.play_card_from_source(card, pay_cost=not free)
+                if free:
+                    cost = 0
+                else:
+                    cost = self.calculate_play_cost(
+                        player,
+                        card,
+                        source_zone=zone,
+                        free=False,
+                        manual_reduction=manual_reduction,
+                    )
+                    player.lose_memory(cost)
+                    if hasattr(player, "_temp_play_cost_reduction"):
+                        player._temp_play_cost_reduction = 0
                 self.logger.log(f"[Effect] {player.player_name} played "
                                 f"{self._card_ref(card)} from {zone}")
-                self.execute_effects(EffectTiming.OnEnterFieldAnyone,
-                                     {"played_card": card})
+                if card.is_option:
+                    self.execute_effects(
+                        EffectTiming.OnUseOption,
+                        {"played_card": card, "played_permanent": played_perm, "event_player": player},
+                    )
+                self.execute_effects(
+                    EffectTiming.OnEnterFieldAnyone,
+                    {"played_card": card, "played_permanent": played_perm, "event_player": player},
+                )
+                if card.is_option and not self._option_stays_on_field(card):
+                    self._trash_option_after_resolution(player, played_perm)
 
         phase = GamePhase.SelectReveal if zone == 'revealed' else GamePhase.SelectTarget
         self.request_selection(phase, player, on_select, valid, is_optional,

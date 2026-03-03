@@ -72,29 +72,49 @@ def card_sort_key(card_id: str) -> tuple:
 
 
 def parse_evo_costs(api_card):
-    """Parse evolution costs from the API card data."""
+    """Parse evolution costs from the API card data.
+
+    Mirrors ``tools.ingest_cards`` so partial set refreshes do not drop
+    inferred evo lines for newer sets whose API rows omit explicit
+    evolution_color / evolution_level fields.
+    """
     costs = []
+    card_level = api_card.get("level")
+    card_color = api_card.get("color")
+
     evo_cost = api_card.get("evolution_cost")
     evo_color = api_card.get("evolution_color")
     evo_level = api_card.get("evolution_level")
 
-    if evo_cost and evo_color and evo_level:
-        costs.append({
-            "card_color": COLOR_MAP.get(evo_color, 0),
-            "level": evo_level,
-            "memory_cost": evo_cost,
-        })
+    if evo_cost is not None and card_level and card_level >= 3:
+        if not evo_color and card_color:
+            evo_color = card_color
+        if not evo_level and card_level:
+            evo_level = card_level - 1
+
+        if evo_color and evo_level:
+            costs.append({
+                "card_color": COLOR_MAP.get(evo_color, 0),
+                "level": evo_level,
+                "memory_cost": evo_cost,
+            })
 
     evo_cost2 = api_card.get("evolution_cost_2")
     evo_color2 = api_card.get("evolution_color_2")
     evo_level2 = api_card.get("evolution_level_2")
 
-    if evo_cost2 and evo_color2 and evo_level2:
-        costs.append({
-            "card_color": COLOR_MAP.get(evo_color2, 0),
-            "level": evo_level2,
-            "memory_cost": evo_cost2,
-        })
+    if evo_cost2 is not None and card_level and card_level >= 3:
+        if not evo_color2 and api_card.get("color2"):
+            evo_color2 = api_card.get("color2")
+        if not evo_level2 and card_level:
+            evo_level2 = card_level - 1
+
+        if evo_color2 and evo_level2:
+            costs.append({
+                "card_color": COLOR_MAP.get(evo_color2, 0),
+                "level": evo_level2,
+                "memory_cost": evo_cost2,
+            })
 
     return costs
 

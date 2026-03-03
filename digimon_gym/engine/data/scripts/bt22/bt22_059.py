@@ -56,19 +56,23 @@ class BT22_059(CardScript):
             if not (player and game):
                 return
             def target_filter(p):
-                return p.is_digimon
+                return p.is_digimon and getattr(p.top_card, 'get_cost_itself', 0) <= 5
             def on_delete(target_perm):
                 enemy = player.enemy if player else None
                 if enemy:
                     enemy.delete_permanent(target_perm)
             game.effect_select_opponent_permanent(
                 player, on_delete, filter_fn=target_filter, is_optional=False)
-            if perm:
+            has_support = any(
+                any('Arata Sanada' in name or 'Eater Adam' in name for name in getattr(p.top_card, 'card_names', []))
+                for p in player.battle_area
+            )
+            if perm and has_support:
                 perm.grant_keyword('_is_immune_dp_minus')
                 perm.grant_keyword('_is_cannot_return_to_deck')
                 perm.grant_keyword('_is_cannot_return_to_hand')
             # Prevent return to hand/deck via modifier system
-            if perm and game:
+            if perm and game and has_support:
                 from digimon_gym.engine.interfaces.modifiers import ModifierType
                 game.register_modifier(
                     ModifierType.CANNOT_BE_RETURNED, perm,
@@ -105,19 +109,23 @@ class BT22_059(CardScript):
             if not (player and game):
                 return
             def target_filter(p):
-                return p.is_digimon
+                return p.is_digimon and getattr(p.top_card, 'get_cost_itself', 0) <= 5
             def on_delete(target_perm):
                 enemy = player.enemy if player else None
                 if enemy:
                     enemy.delete_permanent(target_perm)
             game.effect_select_opponent_permanent(
                 player, on_delete, filter_fn=target_filter, is_optional=False)
-            if perm:
+            has_support = any(
+                any('Arata Sanada' in name or 'Eater Adam' in name for name in getattr(p.top_card, 'card_names', []))
+                for p in player.battle_area
+            )
+            if perm and has_support:
                 perm.grant_keyword('_is_immune_dp_minus')
                 perm.grant_keyword('_is_cannot_return_to_deck')
                 perm.grant_keyword('_is_cannot_return_to_hand')
             # Prevent return to hand/deck via modifier system
-            if perm and game:
+            if perm and game and has_support:
                 from digimon_gym.engine.interfaces.modifiers import ModifierType
                 game.register_modifier(
                     ModifierType.CANNOT_BE_RETURNED, perm,
@@ -152,7 +160,8 @@ class BT22_059(CardScript):
             perm = ctx.get('permanent')
             game = ctx.get('game')
             # Play Diaboromon Token — token play not yet supported in engine
-            pass  # descriptive-tagged: play_token
+            if player and game:
+                game.effect_play_token(player, 'diaboromon')
 
         effect3.set_on_process_callback(process3)
         effects.append(effect3)

@@ -139,7 +139,7 @@ class Player:
         self._log(f"{self.player_name} moved {perm.top_card.card_names[0]} from Breeding to Battle Area.")
         # OnMove timing is fired by game.py after verifying the move succeeded
 
-    def play_card(self, card_source: 'CardSource'):
+    def play_card(self, card_source: 'CardSource') -> Optional['Permanent']:
         if card_source in self.hand_cards:
             self.hand_cards.remove(card_source)
             new_permanent = Permanent([card_source])
@@ -149,6 +149,8 @@ class Player:
                 new_permanent._owner_game = self.game
             self.battle_area.append(new_permanent)
             self._log(f"{self.player_name} played {card_source.card_names[0]}.")
+            return new_permanent
+        return None
 
     def unsuspend_all(self, skip_reboot: bool = False):
         """Unsuspend all permanents. If skip_reboot=True, skip those with <Reboot>

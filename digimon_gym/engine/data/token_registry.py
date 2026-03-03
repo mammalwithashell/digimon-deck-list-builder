@@ -40,6 +40,26 @@ TOKENS = {
         'form': ['Mega'],
         'attribute': ['Unknown'],
     },
+    'atho_rene_por': {
+        'card_id': 'TOKEN_ATHO_RENE_POR',
+        'card_name': 'Atho, Rene & Por Token',
+        'card_kind': CardKind.Digimon,
+        'colors': [CardColor.White],
+        'dp': 6000,
+        'level': None,
+        'traits': [],
+        'keywords': ['_is_reboot', '_is_blocker', '_is_decoy'],
+    },
+    'hinukamuy': {
+        'card_id': 'TOKEN_HINUKAMUY',
+        'card_name': 'Hinukamuy Token',
+        'card_kind': CardKind.Digimon,
+        'colors': [CardColor.White],
+        'dp': 6000,
+        'level': None,
+        'traits': [],
+        'keywords': ['_is_alliance', '_is_reboot', '_is_blocker'],
+    },
 }
 
 
@@ -73,6 +93,20 @@ def _build_petrification_effects(card_source: CardSource) -> List[ICardEffect]:
     effects.append(effect0)
 
     return effects
+
+
+def _build_keyword_effects(keyword_attrs: List[str], label: str) -> List[ICardEffect]:
+    effect = ICardEffect()
+    effect.set_effect_name(f"{label} Keywords")
+    effect.set_effect_description(f"{label} token innate keywords")
+
+    def condition0(context: Dict[str, Any]) -> bool:
+        return True
+
+    effect.set_can_use_condition(condition0)
+    for keyword_attr in keyword_attrs:
+        setattr(effect, keyword_attr, True)
+    return [effect]
 
 
 # Map token type -> effect builder
@@ -114,10 +148,12 @@ def create_token_card_source(token_type: str, owner: 'Player') -> CardSource:
     card_source.set_base_data(entity, owner)
     card_source.is_token = True
 
+    effects: List[ICardEffect] = []
     builder = _EFFECT_BUILDERS.get(token_type)
     if builder:
-        card_source._cached_effects = builder(card_source)
-    else:
-        card_source._cached_effects = []
+        effects.extend(builder(card_source))
+    if template.get('keywords'):
+        effects.extend(_build_keyword_effects(template['keywords'], template['card_name']))
+    card_source._cached_effects = effects
 
     return card_source

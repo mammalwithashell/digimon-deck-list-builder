@@ -27,7 +27,8 @@ class BT22_093(CardScript):
                 return False
             if not (card and card.owner and card.owner.is_my_turn):
                 return False
-            return True
+            enemy = card.owner.enemy if card and card.owner else None
+            return bool(enemy and any(p.is_digimon for p in enemy.battle_area))
 
         effect0.set_can_use_condition(condition0)
 

@@ -2,7 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
-from ....data.enums import EffectTiming
+from ....data.enums import EffectTiming, CardColor
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -21,6 +21,8 @@ class BT16_030(CardScript):
         effect0.set_effect_description("Alternate digivolution requirement")
         # Alternate digivolution: alternate source for cost 0
         effect0._alt_digi_cost = 0
+        effect0._alt_digi_level = 2
+        effect0._alt_digi_color = CardColor.Yellow
 
         def condition0(context: Dict[str, Any]) -> bool:
             return True

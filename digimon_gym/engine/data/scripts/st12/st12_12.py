@@ -70,7 +70,8 @@ class ST12_12(CardScript):
             for p in player.battle_area:
                 if not p.is_digimon:
                     continue
-                name = getattr(p.top_card, 'card_name_eng', '') or ''
+                names = getattr(p.top_card, 'card_names', []) or []
+                name = names[0] if names else ''
                 if 'Huckmon' in name:
                     has_huckmon_or_rk = True
                     break

@@ -60,17 +60,10 @@ class BT8_090(CardScript):
             """Action: Gain 1 memory, Suspend"""
             player = ctx.get('player')
             perm = ctx.get('permanent')
-            game = ctx.get('game')
+            if perm:
+                perm.suspend()
             if player:
                 player.add_memory(1)
-            if not (player and game):
-                return
-            def target_filter(p):
-                return True
-            def on_suspend(target_perm):
-                target_perm.suspend()
-            game.effect_select_opponent_permanent(
-                player, on_suspend, filter_fn=target_filter, is_optional=True)
 
         effect1.set_on_process_callback(process1)
         effects.append(effect1)

@@ -35,12 +35,17 @@ class BT23_088(CardScript):
         def process0(ctx: Dict[str, Any]):
             """Action: Gain 1 memory, Trash From Hand"""
             player = ctx.get('player')
-            perm = ctx.get('permanent')
             game = ctx.get('game')
             if not (player and game):
                 return
             def hand_filter(c):
-                return True
+                traits = getattr(c, 'card_traits', []) or []
+                return any(
+                    'Undead' in trait
+                    or 'Dark Animal' in trait or 'DarkAnimal' in trait
+                    or 'CS' in trait
+                    for trait in traits
+                )
             def on_trashed(selected):
                 if selected in player.hand_cards:
                     player.hand_cards.remove(selected)

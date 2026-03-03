@@ -14,14 +14,13 @@ class BT14_033(CardScript):
     def get_card_effects(self, card: 'CardSource') -> List['ICardEffect']:
         effects = []
 
-        # Timing: EffectTiming.OnStartMainPhase
-        # [Start of Your Main Phase] Search your security stack. This Digimon may digivolve into a yellow Digimon card with the [Vaccine] trait among them without paying the cost. Then, shuffle your security stack. If digivolved by this effect, you may place 1 yellow card with the [Vaccine] trait from your hand at the bottom of your security stack.
         effect0 = ICardEffect()
         effect0.set_timing(EffectTiming.OnStartMainPhase)
         effect0.set_effect_name("BT14-033 This Digimon digivolves into Digimon card in security")
-        effect0.set_effect_description("[Start of Your Main Phase] Search your security stack. This Digimon may digivolve into a yellow Digimon card with the [Vaccine] trait among them without paying the cost. Then, shuffle your security stack. If digivolved by this effect, you may place 1 yellow card with the [Vaccine] trait from your hand at the bottom of your security stack.")
+        effect0.set_effect_description(
+            "[Start of Your Main Phase] Search your security stack. This Digimon may digivolve into a yellow Digimon card with the [Vaccine] trait among them without paying the cost. Then, shuffle your security stack. If digivolved by this effect, you may place 1 yellow card with the [Vaccine] trait from your hand at the bottom of your security stack."
+        )
 
-        effect = effect0  # alias for condition closure
         def condition0(context: Dict[str, Any]) -> bool:
             if card and card.permanent_of_this_card() is None:
                 return False
@@ -32,27 +31,61 @@ class BT14_033(CardScript):
         effect0.set_can_use_condition(condition0)
 
         def process0(ctx: Dict[str, Any]):
-            """Action: Play Card, Add To Security"""
             player = ctx.get('player')
             perm = ctx.get('permanent')
             game = ctx.get('game')
-            if not (player and game):
+            if not (player and perm and game):
                 return
-            def play_filter(c):
-                if not ('Yellow' in [col.name for col in getattr(c, 'card_colors', [])]):
+
+            def security_filter(sec_card):
+                if not getattr(sec_card, 'is_digimon', False):
                     return False
-                return True
-            game.effect_play_from_zone(
-                player, 'hand', play_filter, free=True, is_optional=True)
-            # Add top card of deck to security
-            if player:
-                player.recovery(1)
+                colors = [col.name for col in (getattr(sec_card, 'card_colors', []) or [])]
+                if 'Yellow' not in colors:
+                    return False
+                return 'Vaccine' in getattr(sec_card, 'card_traits', [])
+
+            def on_selected(sec_card):
+                if sec_card not in player.security_cards:
+                    return
+                player.security_cards.remove(sec_card)
+                perm.add_card_source(sec_card)
+                perm.turn_digivolved = game.turn_count
+                player.draw()
+                game.execute_effects(
+                    EffectTiming.WhenDigivolving,
+                    {"digivolved_permanent": perm},
+                )
+
+                def hand_filter(hand_card):
+                    colors = [col.name for col in (getattr(hand_card, 'card_colors', []) or [])]
+                    if 'Yellow' not in colors:
+                        return False
+                    return 'Vaccine' in getattr(hand_card, 'card_traits', [])
+
+                def on_hand_selected(hand_card):
+                    if hand_card in player.hand_cards:
+                        player.add_to_security_from_hand(hand_card, to_top=False)
+
+                game.effect_select_hand_card(
+                    player,
+                    hand_filter,
+                    on_hand_selected,
+                    is_optional=True,
+                    prompt="Select a yellow [Vaccine] card to place on the bottom of your security.",
+                )
+
+            game.effect_select_own_security(
+                player,
+                security_filter,
+                on_selected,
+                is_optional=True,
+                prompt="Select a yellow [Vaccine] Digimon in your security to digivolve into.",
+            )
 
         effect0.set_on_process_callback(process0)
         effects.append(effect0)
 
-        # Timing: EffectTiming.OnAddSecurity
-        # [Your Turn][Once Per Turn] When a card is added to your security stack, gain 1 memory.
         effect1 = ICardEffect()
         effect1.set_timing(EffectTiming.OnAddSecurity)
         effect1.set_effect_name("BT14-033 Memory +1")
@@ -61,7 +94,6 @@ class BT14_033(CardScript):
         effect1.set_max_count_per_turn(1)
         effect1.set_hash_string("Memory+1_BT14_033")
 
-        effect = effect1  # alias for condition closure
         def condition1(context: Dict[str, Any]) -> bool:
             if card and card.permanent_of_this_card() is None:
                 return False
@@ -72,10 +104,7 @@ class BT14_033(CardScript):
         effect1.set_can_use_condition(condition1)
 
         def process1(ctx: Dict[str, Any]):
-            """Action: Gain 1 memory"""
             player = ctx.get('player')
-            perm = ctx.get('permanent')
-            game = ctx.get('game')
             if player:
                 player.add_memory(1)
 

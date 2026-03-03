@@ -33,24 +33,31 @@ class BT14_084(CardScript):
         effect0.set_can_use_condition(condition0)
 
         def process0(ctx: Dict[str, Any]):
-            """Action: Add To Hand, Add To Security, Destroy Security"""
+            """Action: Return top security to hand, then optionally place Vaccine card from hand into security."""
             player = ctx.get('player')
-            perm = ctx.get('permanent')
             game = ctx.get('game')
-            # Add card to hand (from trash/reveal)
-            if player and player.trash_cards:
-                card_to_add = player.trash_cards.pop()
-                player.hand_cards.append(card_to_add)
-            # Add top card of deck to security
-            if player:
-                player.recovery(1)
-            # Trash opponent's top security card(s)
-            enemy = player.enemy if player else None
-            if enemy:
-                for _ in range(1):
-                    if enemy.security_cards:
-                        trashed = enemy.security_cards.pop(0)
-                        enemy.trash_cards.append(trashed)
+            if not (player and game and player.security_cards):
+                return
+            card_to_add = player.security_cards.pop(0)
+            player.hand_cards.append(card_to_add)
+
+            def hand_filter(c):
+                if not (getattr(c, 'is_tamer', False) or getattr(c, 'is_digimon', False)):
+                    return False
+                if 'Yellow' not in [col.name for col in getattr(c, 'card_colors', [])]:
+                    return False
+                return any('Vaccine' in trait for trait in (getattr(c, 'card_traits', []) or []))
+
+            def on_put_security(selected):
+                player.add_to_security_from_hand(selected, to_top=True)
+
+            game.effect_select_hand_card(
+                player,
+                hand_filter,
+                on_put_security,
+                is_optional=True,
+                prompt="Select a yellow Vaccine card from your hand to place at the bottom of your security.",
+            )
 
         effect0.set_on_process_callback(process0)
         effects.append(effect0)

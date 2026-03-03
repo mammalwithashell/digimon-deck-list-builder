@@ -127,21 +127,43 @@ class Permanent:
             # Expired — clean up
             del self._granted_keywords[keyword_attr]
 
+        def effect_is_active(effect, source_card) -> bool:
+            if effect.can_use_condition is None:
+                return True
+            ctx = {
+                "game": self._owner_game,
+                "player": source_card.owner if source_card else None,
+                "permanent": self,
+            }
+            return bool(effect.can_use_condition(ctx))
+
         for source in self.card_sources[:-1]:
             effects = source.effect_list(EffectTiming.NoTiming)
             for effect in effects:
-                if effect.is_inherited_effect and getattr(effect, keyword_attr, False):
+                if (
+                    effect.is_inherited_effect
+                    and getattr(effect, keyword_attr, False)
+                    and effect_is_active(effect, source)
+                ):
                     return True
         if self.top_card:
             effects = self.top_card.effect_list(EffectTiming.NoTiming)
             for effect in effects:
-                if not effect.is_inherited_effect and getattr(effect, keyword_attr, False):
+                if (
+                    not effect.is_inherited_effect
+                    and getattr(effect, keyword_attr, False)
+                    and effect_is_active(effect, self.top_card)
+                ):
                     return True
         # Effects from linked option cards (non-inherited)
         for linked in self.linked_cards:
             effects = linked.effect_list(EffectTiming.NoTiming)
             for effect in effects:
-                if not effect.is_inherited_effect and getattr(effect, keyword_attr, False):
+                if (
+                    not effect.is_inherited_effect
+                    and getattr(effect, keyword_attr, False)
+                    and effect_is_active(effect, linked)
+                ):
                     return True
         return False
 

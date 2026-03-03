@@ -57,8 +57,6 @@ class BT3_093(CardScript):
         effect1.is_on_play = True
 
         def condition1(context: Dict[str, Any]) -> bool:
-            if card and card.permanent_of_this_card() is None:
-                return False
             return True
         effect1.set_can_use_condition(condition1)
 

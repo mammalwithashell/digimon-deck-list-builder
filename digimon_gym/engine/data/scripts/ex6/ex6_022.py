@@ -14,8 +14,6 @@ class EX6_022(CardScript):
     def get_card_effects(self, card: 'CardSource') -> List['ICardEffect']:
         effects = []
 
-        # Factory effect: barrier
-        # Barrier
         effect0 = ICardEffect()
         effect0.set_effect_name("EX6-022 Barrier")
         effect0.set_effect_description("Barrier")
@@ -23,79 +21,68 @@ class EX6_022(CardScript):
 
         def condition0(context: Dict[str, Any]) -> bool:
             return True
+
         effect0.set_can_use_condition(condition0)
         effects.append(effect0)
 
-        # Timing: EffectTiming.OnEnterFieldAnyone
-        # [On Play] If you have a [Mirei Mikagura], 1 of your opponent's Digimon gains Security Attack -2 until the end of their turn. If you don't have a [Mirei Mikagura], you may play 1 [Mirei Mikagura] from your hand without paying the cost.
-        effect1 = ICardEffect()
-        effect1.set_timing(EffectTiming.OnEnterFieldAnyone)
-        effect1.set_effect_name("EX6-022 Give a Digimon Security Attack -2 or play [Mirei Mikagura] from hand")
-        effect1.set_effect_description("[On Play] If you have a [Mirei Mikagura], 1 of your opponent's Digimon gains Security Attack -2 until the end of their turn. If you don't have a [Mirei Mikagura], you may play 1 [Mirei Mikagura] from your hand without paying the cost.")
-        effect1.is_on_play = True
+        def build_main_effect(is_on_play: bool = False, is_when_digivolving: bool = False):
+            effect = ICardEffect()
+            effect.set_timing(EffectTiming.OnEnterFieldAnyone)
+            effect.set_effect_name("EX6-022 Give a Digimon Security Attack -2 or play [Mirei Mikagura] from hand")
+            effect.set_effect_description(
+                "[On Play] If you have a [Mirei Mikagura], 1 of your opponent's Digimon gains Security Attack -2 until the end of their turn. If you don't have a [Mirei Mikagura], you may play 1 [Mirei Mikagura] from your hand without paying the cost."
+                if is_on_play else
+                "[When Digivolving] If you have a [Mirei Mikagura], 1 of your opponent's Digimon gains Security Attack -2 until the end of their turn. If you don't have a [Mirei Mikagura], you may play 1 [Mirei Mikagura] from your hand without paying the cost."
+            )
+            effect.is_on_play = is_on_play
+            effect.is_when_digivolving = is_when_digivolving
 
-        effect = effect1  # alias for condition closure
-        def condition1(context: Dict[str, Any]) -> bool:
-            if card and card.permanent_of_this_card() is None:
-                return False
-            # Triggered on play — validated by engine timing
-            return True
-
-        effect1.set_can_use_condition(condition1)
-
-        def process1(ctx: Dict[str, Any]):
-            """Action: Play Card, Change Security Attack"""
-            player = ctx.get('player')
-            perm = ctx.get('permanent')
-            game = ctx.get('game')
-            if not (player and game):
-                return
-            def play_filter(c):
+            def condition(context: Dict[str, Any]) -> bool:
+                if card and card.permanent_of_this_card() is None:
+                    return False
                 return True
-            game.effect_play_from_zone(
-                player, 'hand', play_filter, free=True, is_optional=True)
-            # Grant Security Attack modifier to target permanent
-            pass  # descriptive-tagged: change_security_attack
 
-        effect1.set_on_process_callback(process1)
-        effects.append(effect1)
+            effect.set_can_use_condition(condition)
 
-        # Timing: EffectTiming.OnEnterFieldAnyone
-        # [When Digivolving] If you have a [Mirei Mikagura], 1 of your opponent's Digimon gains Security Attack -2 until the end of their turn. If you don't have a [Mirei Mikagura], you may play 1 [Mirei Mikagura] from your hand without paying the cost.
-        effect2 = ICardEffect()
-        effect2.set_timing(EffectTiming.OnEnterFieldAnyone)
-        effect2.set_effect_name("EX6-022 Give a Digimon Security Attack -2 or play [Mirei Mikagura] from hand")
-        effect2.set_effect_description("[When Digivolving] If you have a [Mirei Mikagura], 1 of your opponent's Digimon gains Security Attack -2 until the end of their turn. If you don't have a [Mirei Mikagura], you may play 1 [Mirei Mikagura] from your hand without paying the cost.")
-        effect2.is_when_digivolving = True
+            def process(ctx: Dict[str, Any]):
+                player = ctx.get('player')
+                game = ctx.get('game')
+                if not (player and game):
+                    return
 
-        effect = effect2  # alias for condition closure
-        def condition2(context: Dict[str, Any]) -> bool:
-            if card and card.permanent_of_this_card() is None:
-                return False
-            # Triggered when digivolving — validated by engine timing
-            return True
+                has_mirei = any(
+                    p.is_tamer
+                    and p.top_card
+                    and any('Mirei Mikagura' in name for name in getattr(p.top_card, 'card_names', []))
+                    for p in player.battle_area
+                )
 
-        effect2.set_can_use_condition(condition2)
+                if has_mirei:
+                    def target_filter(p):
+                        return p.is_digimon
 
-        def process2(ctx: Dict[str, Any]):
-            """Action: Play Card, Change Security Attack"""
-            player = ctx.get('player')
-            perm = ctx.get('permanent')
-            game = ctx.get('game')
-            if not (player and game):
-                return
-            def play_filter(c):
-                return True
-            game.effect_play_from_zone(
-                player, 'hand', play_filter, free=True, is_optional=True)
-            # Grant Security Attack modifier to target permanent
-            pass  # descriptive-tagged: change_security_attack
+                    def on_target(target_perm):
+                        # Approximated as a temporary modifier on the permanent.
+                        target_perm._temp_sa_modifier -= 2
 
-        effect2.set_on_process_callback(process2)
-        effects.append(effect2)
+                    game.effect_select_opponent_permanent(
+                        player, on_target, filter_fn=target_filter, is_optional=False)
+                    return
 
-        # Factory effect: alliance
-        # Alliance
+                def play_filter(hand_card):
+                    if not getattr(hand_card, 'is_tamer', False):
+                        return False
+                    return any('Mirei Mikagura' in name for name in getattr(hand_card, 'card_names', []))
+
+                game.effect_play_from_zone(
+                    player, 'hand', play_filter, free=True, is_optional=True)
+
+            effect.set_on_process_callback(process)
+            return effect
+
+        effects.append(build_main_effect(is_on_play=True))
+        effects.append(build_main_effect(is_when_digivolving=True))
+
         effect3 = ICardEffect()
         effect3.set_effect_name("EX6-022 Alliance")
         effect3.set_effect_description("Alliance")
@@ -107,6 +94,7 @@ class EX6_022(CardScript):
             if card and card.permanent_of_this_card() is None:
                 return False
             return True
+
         effect3.set_can_use_condition(condition3)
         effects.append(effect3)
 

@@ -40,6 +40,16 @@ class BT24_064(CardScript):
         effect1.set_can_use_condition(condition1)
         effects.append(effect1)
 
+        effect1b = ICardEffect()
+        effect1b.set_effect_name("BT24-064 Piercing")
+        effect1b.set_effect_description("Piercing")
+        effect1b._is_piercing = True
+
+        def condition1b(context: Dict[str, Any]) -> bool:
+            return True
+        effect1b.set_can_use_condition(condition1b)
+        effects.append(effect1b)
+
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [When Digivolving] Reveal the top 3 cards of your deck. You may play 1 play cost 7 or lower [Digi] or [SEEKERS] trait card among them without paying the cost. Return the rest to the top or bottom of the deck.
         effect2 = ICardEffect()

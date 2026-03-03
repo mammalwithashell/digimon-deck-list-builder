@@ -105,7 +105,6 @@ class BT13_083(CardScript):
         def process2(ctx: Dict[str, Any]):
             """Action: Draw 2, Trash From Hand"""
             player = ctx.get('player')
-            perm = ctx.get('permanent')
             game = ctx.get('game')
             if player:
                 player.draw_cards(2)
@@ -113,12 +112,22 @@ class BT13_083(CardScript):
                 return
             def hand_filter(c):
                 return True
+            def on_trashed_second(selected):
+                if selected in player.hand_cards:
+                    player.hand_cards.remove(selected)
+                    player.trash_cards.append(selected)
             def on_trashed(selected):
                 if selected in player.hand_cards:
                     player.hand_cards.remove(selected)
                     player.trash_cards.append(selected)
+                if player.hand_cards:
+                    game.effect_select_hand_card(
+                        player, hand_filter, on_trashed_second,
+                        is_optional=False,
+                        prompt="Select a second card to trash.")
             game.effect_select_hand_card(
-                player, hand_filter, on_trashed, is_optional=False)
+                player, hand_filter, on_trashed, is_optional=False,
+                prompt="Select a card to trash.")
 
         effect2.set_on_process_callback(process2)
         effects.append(effect2)

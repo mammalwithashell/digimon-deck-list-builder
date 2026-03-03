@@ -135,7 +135,7 @@ class BT19_065(CardScript):
                     return False
                 return True
             game.effect_play_from_zone(
-                player, 'hand', play_filter, free=True, is_optional=True)
+                player, 'trash', play_filter, free=True, is_optional=True)
 
         effect3.set_on_process_callback(process3)
         effects.append(effect3)

@@ -53,6 +53,17 @@ class BT23_047(CardScript):
         effect2.set_can_use_condition(condition2)
         effects.append(effect2)
 
+        effect2b = ICardEffect()
+        effect2b.set_effect_name("BT23-047 Piercing")
+        effect2b.set_effect_description("Piercing")
+        effect2b._is_piercing = True
+
+        def condition2b(context: Dict[str, Any]) -> bool:
+            return True
+
+        effect2b.set_can_use_condition(condition2b)
+        effects.append(effect2b)
+
         # Factory effect: partition
         # Partition
         effect3 = ICardEffect()

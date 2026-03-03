@@ -35,13 +35,10 @@ class BT11_083(CardScript):
         def process0(ctx: Dict[str, Any]):
             """Action: Trash From Hand, Add To Hand"""
             player = ctx.get('player')
-            perm = ctx.get('permanent')
             game = ctx.get('game')
             if not (player and game):
                 return
             def hand_filter(c):
-                if not (any('Angel' in _t or 'Archangel' in _t or 'Fallen Angel' in _t or 'FallenAngel' in _t for _t in (getattr(c, 'card_traits', []) or []))):
-                    return False
                 return True
             def on_trashed(selected):
                 if selected in player.hand_cards:
@@ -49,10 +46,19 @@ class BT11_083(CardScript):
                     player.trash_cards.append(selected)
             game.effect_select_hand_card(
                 player, hand_filter, on_trashed, is_optional=True)
-            # Add card to hand (from trash/reveal)
-            if player and player.trash_cards:
-                card_to_add = player.trash_cards.pop()
-                player.hand_cards.append(card_to_add)
+            for card_to_add in list(player.trash_cards):
+                traits = getattr(card_to_add, 'card_traits', []) or []
+                if (
+                    card_to_add.contains_card_name('Mirei Mikagura')
+                    or any(
+                        'Angel' in trait or 'Archangel' in trait
+                        or 'Fallen Angel' in trait or 'FallenAngel' in trait
+                        for trait in traits
+                    )
+                ):
+                    player.trash_cards.remove(card_to_add)
+                    player.hand_cards.append(card_to_add)
+                    break
 
         effect0.set_on_process_callback(process0)
         effects.append(effect0)
@@ -65,15 +71,21 @@ class BT11_083(CardScript):
         effect1.set_effect_description("[Your Turn][Once Per Turn] When you play [Angewomon] or [Mirei Mikagura], gain 1 memory.")
         effect1.set_max_count_per_turn(1)
         effect1.set_hash_string("Memory+1_BT11_083")
-        effect1.is_on_play = True
-
         effect = effect1  # alias for condition closure
         def condition1(context: Dict[str, Any]) -> bool:
             if card and card.permanent_of_this_card() is None:
                 return False
             if not (card and card.owner and card.owner.is_my_turn):
                 return False
-            return True
+            if context.get('event_player') is not card.owner:
+                return False
+            played_card = context.get('played_card')
+            if not played_card:
+                return False
+            return (
+                played_card.contains_card_name('Angewomon')
+                or played_card.contains_card_name('Mirei Mikagura')
+            )
 
         effect1.set_can_use_condition(condition1)
 

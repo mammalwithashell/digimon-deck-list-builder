@@ -2,7 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
-from ....data.enums import EffectTiming
+from ....data.enums import EffectTiming, CardColor
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -22,6 +22,7 @@ class BT23_102(CardScript):
         # Alternate digivolution: Lv.5 for cost 5
         effect0._alt_digi_cost = 5
         effect0._alt_digi_level = 5
+        effect0._alt_digi_color = CardColor.Yellow
 
         def condition0(context: Dict[str, Any]) -> bool:
             return True
@@ -92,7 +93,8 @@ class BT23_102(CardScript):
             def play_filter(c):
                 if getattr(c, 'level', None) is None or c.level > 5:
                     return False
-                return True
+                colors = [col.name for col in getattr(c, 'card_colors', [])]
+                return 'Yellow' in colors or 'Purple' in colors
             game.effect_play_from_zone(
                 player, 'hand_or_trash', play_filter, free=True, is_optional=True)
 

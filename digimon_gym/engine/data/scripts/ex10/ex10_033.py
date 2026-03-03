@@ -45,6 +45,26 @@ class EX10_033(CardScript):
             return True
 
         effect1.set_can_use_condition(condition1)
+
+        def process1(ctx: Dict[str, Any]):
+            player = ctx.get('player')
+            perm = ctx.get('permanent')
+            if not (player and perm):
+                return
+            placed = 0
+            for source_card in list(player.trash_cards):
+                if not getattr(source_card, 'is_digimon', False):
+                    continue
+                traits = set(getattr(source_card, 'card_traits', []))
+                if "Mineral" not in traits and "Rock" not in traits:
+                    continue
+                player.trash_cards.remove(source_card)
+                perm.add_card_source_bottom(source_card)
+                placed += 1
+                if placed >= 3:
+                    break
+
+        effect1.set_on_process_callback(process1)
         effects.append(effect1)
 
         # Timing: EffectTiming.OnAllyAttack
@@ -66,6 +86,26 @@ class EX10_033(CardScript):
             return True
 
         effect2.set_can_use_condition(condition2)
+
+        def process2(ctx: Dict[str, Any]):
+            player = ctx.get('player')
+            perm = ctx.get('permanent')
+            if not (player and perm):
+                return
+            placed = 0
+            for source_card in list(player.trash_cards):
+                if not getattr(source_card, 'is_digimon', False):
+                    continue
+                traits = set(getattr(source_card, 'card_traits', []))
+                if "Mineral" not in traits and "Rock" not in traits:
+                    continue
+                player.trash_cards.remove(source_card)
+                perm.add_card_source_bottom(source_card)
+                placed += 1
+                if placed >= 3:
+                    break
+
+        effect2.set_on_process_callback(process2)
         effects.append(effect2)
 
         # Timing: EffectTiming.OnEnterFieldAnyone
@@ -93,7 +133,7 @@ class EX10_033(CardScript):
             game = ctx.get('game')
             # Trash digivolution cards from this permanent
             if perm and not perm.has_no_digivolution_cards:
-                trashed = perm.trash_digivolution_cards(1)
+                trashed = perm.trash_digivolution_cards(3)
                 if player:
                     player.trash_cards.extend(trashed)
 
@@ -125,7 +165,7 @@ class EX10_033(CardScript):
             game = ctx.get('game')
             # Trash digivolution cards from this permanent
             if perm and not perm.has_no_digivolution_cards:
-                trashed = perm.trash_digivolution_cards(1)
+                trashed = perm.trash_digivolution_cards(3)
                 if player:
                     player.trash_cards.extend(trashed)
 

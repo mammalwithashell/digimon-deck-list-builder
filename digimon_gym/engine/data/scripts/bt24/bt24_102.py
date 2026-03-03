@@ -37,17 +37,10 @@ class BT24_102(CardScript):
             perm = ctx.get('permanent')
             game = ctx.get('game')
             if player:
-                player.draw_cards(1)
-            if player:
                 player.add_memory(1)
-            if not (player and game):
-                return
-            def target_filter(p):
-                return True
-            def on_suspend(target_perm):
-                target_perm.suspend()
-            game.effect_select_opponent_permanent(
-                player, on_suspend, filter_fn=target_filter, is_optional=False)
+            if player and game and game.memory >= 5 and perm:
+                perm.suspend()
+                player.draw_cards(1)
 
         effect0.set_on_process_callback(process0)
         effects.append(effect0)
@@ -87,17 +80,9 @@ class BT24_102(CardScript):
 
         def process2(ctx: Dict[str, Any]):
             """Action: Suspend"""
-            player = ctx.get('player')
             perm = ctx.get('permanent')
-            game = ctx.get('game')
-            if not (player and game):
-                return
-            def target_filter(p):
-                return True
-            def on_suspend(target_perm):
-                target_perm.suspend()
-            game.effect_select_opponent_permanent(
-                player, on_suspend, filter_fn=target_filter, is_optional=True)
+            if perm:
+                perm.suspend()
 
         effect2.set_on_process_callback(process2)
         effects.append(effect2)

@@ -12,6 +12,8 @@ from fastapi.middleware.cors import CORSMiddleware
 from digimon_gym.agents.training_worker import training_job_worker
 from digimon_gym.ai.worker import ai_task_worker
 from digimon_gym.db.database import init_db
+from digimon_gym.engine.data.card_database import CardDatabase
+from digimon_gym.engine.data.card_registry import CardRegistry
 from digimon_gym.db.routers import admin_ai as admin_ai_router
 from digimon_gym.db.routers import training as training_router
 from digimon_gym.db.routers import assets as assets_router
@@ -31,6 +33,8 @@ from digimon_gym.routers import simulations
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     await init_db()
+    CardDatabase()
+    CardRegistry.ensure_initialized()
     worker_enabled = os.getenv("AI_WORKER_DISABLED", "0") != "1"
     if worker_enabled:
         await ai_task_worker.start()

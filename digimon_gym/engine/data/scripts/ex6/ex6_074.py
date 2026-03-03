@@ -21,15 +21,24 @@ class EX6_074(CardScript):
         effect0.set_effect_name("EX6-074 Memory +1, Digivolve from trash for 1 cost reduction")
         effect0.set_effect_description("[Your Turn] When one of your Digimon with the [Holy Beast], [Archangel] or [Fallen Angel] trait is played, by suspending this Tamer, gain 1 memory. Then, 1 of your Digimon may digivolve into [Angewomon] or [LadyDevimon] in your trash with the cost reduced by 1.")
         effect0.is_optional = True
-        effect0.is_on_play = True
-
         effect = effect0  # alias for condition closure
         def condition0(context: Dict[str, Any]) -> bool:
             if card and card.permanent_of_this_card() is None:
                 return False
             if not (card and card.owner and card.owner.is_my_turn):
                 return False
-            return True
+            if context.get('event_player') is not card.owner:
+                return False
+            played_card = context.get('played_card')
+            if not played_card:
+                return False
+            traits = getattr(played_card, 'card_traits', []) or []
+            return any(
+                'Holy Beast' in trait or 'HolyBeast' in trait
+                or 'Archangel' in trait
+                or 'Fallen Angel' in trait or 'FallenAngel' in trait
+                for trait in traits
+            )
 
         effect0.set_can_use_condition(condition0)
 
@@ -38,24 +47,25 @@ class EX6_074(CardScript):
             player = ctx.get('player')
             perm = ctx.get('permanent')
             game = ctx.get('game')
+            if perm:
+                perm.suspend()
             if player:
                 player.add_memory(1)
-            if not (player and game):
-                return
-            def target_filter(p):
-                return True
-            def on_suspend(target_perm):
-                target_perm.suspend()
-            game.effect_select_opponent_permanent(
-                player, on_suspend, filter_fn=target_filter, is_optional=True)
-            if not (player and perm and game):
+            target = None
+            if player:
+                target = next((p for p in player.battle_area if p.is_digimon), None)
+            if not (player and target and game):
                 return
             def digi_filter(c):
-                if not getattr(c, 'is_digimon', False):
-                    return False
-                return True
+                return (
+                    getattr(c, 'is_digimon', False)
+                    and (
+                        c.contains_card_name('Angewomon')
+                        or c.contains_card_name('LadyDevimon')
+                    )
+                )
             game.effect_digivolve_from_hand(
-                player, perm, digi_filter, is_optional=True)
+                player, target, digi_filter, is_optional=True)
 
         effect0.set_on_process_callback(process0)
         effects.append(effect0)
@@ -81,18 +91,17 @@ class EX6_074(CardScript):
         effect1.set_can_use_condition(condition1)
 
         def process1(ctx: Dict[str, Any]):
-            """Action: Play Card"""
+            """Action: DNA Digivolve"""
             player = ctx.get('player')
-            perm = ctx.get('permanent')
             game = ctx.get('game')
             if not (player and game):
                 return
-            def play_filter(c):
+            def dna_filter(c):
                 if not getattr(c, 'is_digimon', False):
                     return False
                 return True
-            game.effect_play_from_zone(
-                player, 'hand', play_filter, free=True, is_optional=True)
+            game.effect_dna_digivolve_from_hand(
+                player, dna_filter, is_optional=True)
 
         effect1.set_on_process_callback(process1)
         effects.append(effect1)

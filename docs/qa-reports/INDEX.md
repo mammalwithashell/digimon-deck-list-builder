@@ -1,6 +1,6 @@
 # QA Issue Resolution Index
 
-**Last updated**: 2026-03-01
+**Last updated**: 2026-03-02
 
 ## Summary
 
@@ -22,6 +22,13 @@
 | [cs-mastemon](2026-03-01-cs-mastemon.md) | 5 | 0 | 0 | 5 |
 | [millennium](2026-03-01-millennium.md) | 10 | 0 | 0 | 10 |
 | [cross-archetype-matchups](2026-03-01-cross-archetype-matchups.md) | 1 | 0 | 0 | 1 |
+| [royal-knights-retest](2026-03-02-royal-knights-retest.md) | 0 | 0 | 0 | 0 |
+| [ts-neptune-retest](2026-03-02-ts-neptune-retest.md) | 0 | 0 | 0 | 0 |
+| [rocks-retest](2026-03-02-rocks-retest.md) | 0 | 0 | 0 | 0 |
+| [diaboromon-retest](2026-03-02-diaboromon-retest.md) | 0 | 0 | 0 | 0 |
+| [cs-mastemon-retest](2026-03-02-cs-mastemon-retest.md) | 0 | 0 | 0 | 0 |
+| [millennium-retest](2026-03-02-millennium-retest.md) | 0 | 0 | 0 | 0 |
+| [cross-archetype-retest](2026-03-02-cross-archetype-retest.md) | 0 | 0 | 0 | 0 |
 | **Total** | **152** | **79** | **7** | **66** |
 
 ---
@@ -252,6 +259,65 @@ Full archetype QA for Diaboromon (Token/Swarm). 26 unique cards across 6 decklis
 | 10 | BT24-065 When Digivolving not scaled per own Digimon | med | OUTSTANDING | Single de-digivolve instead of N per own Digimon |
 | 11 | BT5-085 cost reduction untested | low | OUTSTANDING | _temp_play_cost_reduction pattern may not be consumed by engine |
 | 12 | EX6-043 Jamming/Blocker grant is self-only | low | OUTSTANDING | Should grant to all other Diaboromon-named Digimon |
+
+## Report 14: Royal Knights Re-Test Follow-Up (2026-03-02)
+
+Implementation follow-up report only. Core Royal Knights engine and script fixes landed, but deterministic gameplay re-test was not executed in this session.
+
+| # | Issue | Sev | Status | Notes |
+|---|-------|-----|--------|-------|
+| 1 | BT13-007 breeding cost reduction implementation landed | high | OUTSTANDING | Engine path and script were rewritten; runtime verification still pending |
+| 2 | BT23-072 keyword grant target corrected in code | med | OUTSTANDING | Now targets `played_permanent`; live validation still pending |
+| 3 | BT20-017 / BT23-057 token callbacks implemented | med | OUTSTANDING | Now call `game.effect_play_token(...)`; live validation still pending |
+
+## Report 15: TS Neptune Re-Test Follow-Up (2026-03-02)
+
+Implementation follow-up report only. Shared engine play-cost and trigger-context fixes landed, but no live gameplay re-test was executed.
+
+| # | Issue | Sev | Status | Notes |
+|---|-------|-----|--------|-------|
+| 1 | Shared play-cost engine path implemented | high | OUTSTANDING | Intended to address March 1 cost-reduction failures; runtime verification pending |
+
+## Report 16: Rocks Re-Test Follow-Up (2026-03-02)
+
+Implementation follow-up report only. Shared engine changes landed, but the EX7 / EX8 / EX10 evo-cost data repair is still pending.
+
+| # | Issue | Sev | Status | Notes |
+|---|-------|-----|--------|-------|
+| 1 | Shared engine fixes applied | med | OUTSTANDING | Runtime validation pending |
+| 2 | Missing evo-cost data repair not completed in this session | crit | OUTSTANDING | Requires targeted ingestion/data pass |
+
+## Report 17: Diaboromon Re-Test Follow-Up (2026-03-02)
+
+Implementation follow-up report only. No full Diaboromon script sweep or live gameplay re-test was executed in this session.
+
+| # | Issue | Sev | Status | Notes |
+|---|-------|-----|--------|-------|
+| 1 | Shared engine fixes applied | med | OUTSTANDING | Diaboromon-specific runtime validation still pending |
+
+## Report 18: CS Mastemon Re-Test Follow-Up (2026-03-02)
+
+Implementation follow-up report only. `_alt_digi_color` support landed in the validator, but affected scripts were not fully migrated in this session.
+
+| # | Issue | Sev | Status | Notes |
+|---|-------|-----|--------|-------|
+| 1 | `_alt_digi_color` engine support implemented | high | OUTSTANDING | Script migration and gameplay verification still pending |
+
+## Report 19: Millennium Re-Test Follow-Up (2026-03-02)
+
+Implementation follow-up report only. Shared play-cost and option-lifecycle fixes landed, but live gameplay re-test was not executed.
+
+| # | Issue | Sev | Status | Notes |
+|---|-------|-----|--------|-------|
+| 1 | Shared engine fixes applied | med | OUTSTANDING | Millennium-specific runtime verification still pending |
+
+## Report 20: Cross-Archetype Re-Test Follow-Up (2026-03-02)
+
+Implementation follow-up report only. Trigger context handling was tightened, but the original Royal Knights vs Medusa replay was not run in this session.
+
+| # | Issue | Sev | Status | Notes |
+|---|-------|-----|--------|-------|
+| 1 | Trigger-context handling improved | med | OUTSTANDING | Cross-archetype replay still required |
 
 ## Systemic Issues (Backlog)
 

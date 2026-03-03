@@ -23,28 +23,29 @@ class EX5_028(CardScript):
         effect0.is_optional = True
         effect0.is_on_play = True
 
-        effect = effect0  # alias for condition closure
         def condition0(context: Dict[str, Any]) -> bool:
             if card and card.permanent_of_this_card() is None:
                 return False
-            # Triggered on play — validated by engine timing
-            return True
+            owner = getattr(card, 'owner', None)
+            if not owner or not owner.enemy:
+                return False
+            total_security = len(owner.security_cards) + len(owner.enemy.security_cards)
+            return total_security <= 6
 
         effect0.set_can_use_condition(condition0)
 
         def process0(ctx: Dict[str, Any]):
             """Action: Play Card"""
             player = ctx.get('player')
-            perm = ctx.get('permanent')
             game = ctx.get('game')
             if not (player and game):
                 return
+
             def play_filter(c):
                 if not getattr(c, 'is_tamer', False):
                     return False
-                if not ('Yellow' in [col.name for col in getattr(c, 'card_colors', [])]):
-                    return False
-                return True
+                return 'Yellow' in [col.name for col in getattr(c, 'card_colors', [])]
+
             game.effect_play_from_zone(
                 player, 'hand', play_filter, free=True, is_optional=True)
 
@@ -63,11 +64,9 @@ class EX5_028(CardScript):
         effect1.is_on_attack = True
         effect1.dp_modifier = -2000
 
-        effect = effect1  # alias for condition closure
         def condition1(context: Dict[str, Any]) -> bool:
             if card and card.permanent_of_this_card() is None:
                 return False
-            # Triggered on attack — validated by engine timing
             return True
 
         effect1.set_can_use_condition(condition1)
@@ -75,9 +74,6 @@ class EX5_028(CardScript):
         def process1(ctx: Dict[str, Any]):
             """Action: DP -2000"""
             player = ctx.get('player')
-            perm = ctx.get('permanent')
-            game = ctx.get('game')
-            # DP change targets opponent digimon
             enemy = player.enemy if player else None
             if enemy and enemy.battle_area:
                 dp_targets = [p for p in enemy.battle_area if p.is_digimon and p.dp is not None]

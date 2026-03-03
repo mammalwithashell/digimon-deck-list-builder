@@ -40,8 +40,6 @@ class BT18_013(CardScript):
         effect1.is_when_digivolving = True
 
         def condition1(context: Dict[str, Any]) -> bool:
-            if card and card.permanent_of_this_card() is None:
-                return False
             # Need at least 1 card in hand to trash as cost
             if card and card.owner:
                 if len(card.owner.hand_cards) < 1:

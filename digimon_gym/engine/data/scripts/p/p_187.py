@@ -51,21 +51,16 @@ class P_187(CardScript):
             game = ctx.get('game')
             if player:
                 player.recovery(1)
-            # Trash opponent's top security card(s)
-            enemy = player.enemy if player else None
-            if enemy:
-                for _ in range(1):
-                    if enemy.security_cards:
-                        trashed = enemy.security_cards.pop(0)
-                        enemy.trash_cards.append(trashed)
-            # Place a permanent into the security stack
-            if not (player and game):
+            if not (player and game and ctx.get('is_dna_digivolve')):
                 return
             def target_filter(p):
-                return p.is_digimon
+                return p is not perm and (p.is_digimon or p.is_tamer)
             def on_put_security(target_perm):
                 if player:
                     player.put_permanent_to_security(target_perm)
+                    enemy = player.enemy
+                    if enemy and enemy.security_cards:
+                        enemy.trash_cards.append(enemy.security_cards.pop(0))
             game.effect_select_own_permanent(
                 player, on_put_security, filter_fn=target_filter, is_optional=False)
 
@@ -107,13 +102,10 @@ class P_187(CardScript):
                 return True
             game.effect_play_from_zone(
                 player, 'hand_or_trash', play_filter, free=True, is_optional=True)
-            # Trash opponent's top security card(s)
-            enemy = player.enemy if player else None
-            if enemy:
-                for _ in range(1):
-                    if enemy.security_cards:
-                        trashed = enemy.security_cards.pop(0)
-                        enemy.trash_cards.append(trashed)
+            if ctx.get('is_dna_digivolve'):
+                enemy = player.enemy if player else None
+                if enemy and enemy.security_cards:
+                    enemy.trash_cards.append(enemy.security_cards.pop(0))
 
         effect2.set_on_process_callback(process2)
         effects.append(effect2)

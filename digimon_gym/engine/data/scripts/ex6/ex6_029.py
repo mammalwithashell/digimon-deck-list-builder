@@ -59,7 +59,7 @@ class EX6_029(CardScript):
         effect2.set_can_use_condition(condition2)
 
         def process2(ctx: Dict[str, Any]):
-            """Action: Play Card, Put To Security, Effect Immunity"""
+            """Action: Play a matching card, then resolve the DNA-only security effect."""
             player = ctx.get('player')
             perm = ctx.get('permanent')
             game = ctx.get('game')
@@ -68,25 +68,26 @@ class EX6_029(CardScript):
             def play_filter(c):
                 if getattr(c, 'level', None) is None or c.level > 5:
                     return False
-                return True
+                traits = getattr(c, 'card_traits', []) or []
+                return any(
+                    'Angel' in trait or 'Archangel' in trait
+                    or 'Fallen Angel' in trait or 'FallenAngel' in trait
+                    for trait in traits
+                )
             game.effect_play_from_zone(
-                player, 'hand', play_filter, free=True, is_optional=True)
-            # Place a permanent into the security stack
-            if not (player and game):
+                player, 'hand_or_trash', play_filter, free=True, is_optional=True)
+            if not ctx.get('is_dna_digivolve'):
                 return
             def target_filter(p):
-                return p.is_digimon
+                return p is not perm and (p.is_digimon or p.is_tamer)
             def on_put_security(target_perm):
                 if player:
                     player.put_permanent_to_security(target_perm)
+                    enemy = player.enemy
+                    while enemy and len(enemy.security_cards) > 4:
+                        enemy.trash_cards.append(enemy.security_cards.pop(0))
             game.effect_select_own_permanent(
                 player, on_put_security, filter_fn=target_filter, is_optional=True)
-            # Grant effect immunity via modifier system
-            if perm and game:
-                from digimon_gym.engine.interfaces.modifiers import ModifierType
-                game.register_modifier(
-                    ModifierType.CANNOT_BE_SELECTED_BY_EFFECT, perm,
-                    value_fn=lambda: True, expiry='end_of_turn')
 
         effect2.set_on_process_callback(process2)
         effects.append(effect2)
@@ -109,7 +110,7 @@ class EX6_029(CardScript):
         effect3.set_can_use_condition(condition3)
 
         def process3(ctx: Dict[str, Any]):
-            """Action: Play Card, Put To Security, Effect Immunity"""
+            """Action: Play a matching card, then resolve the DNA-only security effect."""
             player = ctx.get('player')
             perm = ctx.get('permanent')
             game = ctx.get('game')
@@ -118,25 +119,26 @@ class EX6_029(CardScript):
             def play_filter(c):
                 if getattr(c, 'level', None) is None or c.level > 5:
                     return False
-                return True
+                traits = getattr(c, 'card_traits', []) or []
+                return any(
+                    'Angel' in trait or 'Archangel' in trait
+                    or 'Fallen Angel' in trait or 'FallenAngel' in trait
+                    for trait in traits
+                )
             game.effect_play_from_zone(
-                player, 'hand', play_filter, free=True, is_optional=True)
-            # Place a permanent into the security stack
-            if not (player and game):
+                player, 'hand_or_trash', play_filter, free=True, is_optional=True)
+            if not ctx.get('is_dna_digivolve'):
                 return
             def target_filter(p):
-                return p.is_digimon
+                return p is not perm and (p.is_digimon or p.is_tamer)
             def on_put_security(target_perm):
                 if player:
                     player.put_permanent_to_security(target_perm)
+                    enemy = player.enemy
+                    while enemy and len(enemy.security_cards) > 4:
+                        enemy.trash_cards.append(enemy.security_cards.pop(0))
             game.effect_select_own_permanent(
                 player, on_put_security, filter_fn=target_filter, is_optional=False)
-            # Grant effect immunity via modifier system
-            if perm and game:
-                from digimon_gym.engine.interfaces.modifiers import ModifierType
-                game.register_modifier(
-                    ModifierType.CANNOT_BE_SELECTED_BY_EFFECT, perm,
-                    value_fn=lambda: True, expiry='end_of_turn')
 
         effect3.set_on_process_callback(process3)
         effects.append(effect3)
