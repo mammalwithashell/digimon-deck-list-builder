@@ -1,0 +1,57 @@
+# docker-compose.training.yml
+#
+# Local GPU training stack. Requires NVIDIA Container Toolkit.
+#
+# Usage:
+#   docker compose -f docker-compose.training.yml up --build
+#
+# For multiple GPUs, override TRAINING_WORKER_DEVICES:
+#   TRAINING_WORKER_DEVICES=cuda:0,cuda:1 docker compose -f docker-compose.training.yml up --build
+
+services:
+  training:
+    build:
+      context: .
+      dockerfile: Dockerfile.training
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all
+              capabilities: [gpu]
+    volumes:
+      # Persist trained models outside the container
+      - ./models:/app/models
+      # Persist SQLite database
+      - ./digimon_gym.db:/app/digimon_gym.db
+    ports:
+      - "8000:8000"
+    environment:
+      - TRAINING_WORKER_DISABLED=0
+      - TRAINING_WORKER_MAX_CONCURRENT=4
+      - TRAINING_WORKER_POLL_SECONDS=5.0
+      - TRAINING_WORKER_STALE_SECONDS=7200
+      # Uncomment and set for multi-GPU:
+      # - TRAINING_WORKER_DEVICES=cuda:0,cuda:1,cuda:2,cuda:3
+    restart: unless-stopped
+
+  # Optional: run pilot_training.py directly (one-shot, no API)
+  # Usage: docker compose -f docker-compose.training.yml run pilot --timesteps 500000 --gauntlet
+  pilot:
+    build:
+      context: .
+      dockerfile: Dockerfile.training
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all
+              capabilities: [gpu]
+    volumes:
+      - ./models:/app/models
+      - ./digimon_gym.db:/app/digimon_gym.db
+    entrypoint: ["python", "-m", "digimon_gym.agents.pilot_training"]
+    profiles:
+      - cli

@@ -1,0 +1,56 @@
+# Training worker image — runs the full API + training worker stack on GPU.
+#
+# Build:
+#   docker build -f Dockerfile.training -t digimon-training .
+#
+# Run locally (requires NVIDIA Container Toolkit):
+#   docker run --gpus all -v $(pwd)/models:/app/models digimon-training
+#
+# Run on cloud VM:
+#   docker run --gpus all \
+#     -e TRAINING_WORKER_MAX_CONCURRENT=8 \
+#     -e TRAINING_WORKER_DEVICES=cuda:0,cuda:1,cuda:2,cuda:3 \
+#     -v /mnt/models:/app/models \
+#     -p 8000:8000 \
+#     digimon-training
+
+FROM nvidia/cuda:12.1.0-runtime-ubuntu22.04
+
+ENV DEBIAN_FRONTEND=noninteractive
+ENV PYTHONUNBUFFERED=1
+
+# System deps
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    python3.11 python3.11-venv python3-pip git curl \
+    && rm -rf /var/lib/apt/lists/*
+
+RUN update-alternatives --install /usr/bin/python3 python3 /usr/bin/python3.11 1 \
+    && update-alternatives --install /usr/bin/python python /usr/bin/python3.11 1
+
+WORKDIR /app
+
+# Install Python deps (cached layer)
+COPY requirements.txt .
+RUN pip install --no-cache-dir -r requirements.txt \
+    && pip install --no-cache-dir torch --index-url https://download.pytorch.org/whl/cu121
+
+# Copy application code
+COPY digimon_gym/ digimon_gym/
+COPY data/ data/
+COPY alembic/ alembic/
+COPY alembic.ini .
+COPY scripts/ scripts/
+
+# Create models directory (mount point for volume)
+RUN mkdir -p models
+
+# Default env vars for training
+ENV TRAINING_WORKER_DISABLED=0
+ENV TRAINING_WORKER_MAX_CONCURRENT=4
+ENV TRAINING_WORKER_POLL_SECONDS=5.0
+ENV TRAINING_WORKER_STALE_SECONDS=7200
+
+EXPOSE 8000
+
+# Run the full API server (training worker starts automatically via lifespan)
+CMD ["python", "-m", "uvicorn", "digimon_gym.api:app", "--host", "0.0.0.0", "--port", "8000"]
