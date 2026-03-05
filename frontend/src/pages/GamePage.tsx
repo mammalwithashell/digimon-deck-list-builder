@@ -1,5 +1,5 @@
-import { useState, useCallback, useRef, useEffect } from 'react';
-import { useParams } from 'react-router-dom';
+import { useState, useCallback, useRef, useEffect, useMemo } from 'react';
+import { useParams, useSearchParams } from 'react-router-dom';
 import {
   DndContext,
   PointerSensor,
@@ -26,6 +26,7 @@ import { CardOverlay } from '@/components/game/CardOverlay';
 import { GameLogDrawer } from '@/components/game/GameLogDrawer';
 import { KeywordPromptDialog } from '@/components/game/KeywordPromptDialog';
 import { DragOverlayCard } from '@/components/game/DragOverlayCard';
+import { useWebSocketGame, type UseWebSocketGameOptions } from '@/hooks/useWebSocketGame';
 import { useDeckBuilderStore } from '@/stores/deckBuilderStore';
 import * as gameApi from '@/api/gameApi';
 import * as deckApiMod from '@/api/deckApi';
@@ -39,9 +40,41 @@ import { GamePhase, type PermanentInfo } from '@/types/game';
 
 export function GamePage() {
   const { id: urlGameId } = useParams<{ id: string }>();
+  const [searchParams] = useSearchParams();
+  const isPvpMode = searchParams.get('mode') === 'pvp';
+  const isSpectator = searchParams.get('role') === 'spectator';
+
+
   const store = useGameStore();
-  const { sendAction } = useGameActions();
+  const { sendAction: httpSendAction } = useGameActions();
   const parsedMask = useActionMask(store.actionMask);
+
+  // WebSocket connection (only active in PvP/spectator mode)
+  const wsOptions = useMemo<UseWebSocketGameOptions | null>(() => {
+    if (!urlGameId || (!isPvpMode && !isSpectator)) return null;
+    return {
+      gameId: urlGameId,
+      role: isSpectator ? 'spectator' : 'player',
+      onStateUpdate: (payload) => {
+        store.setGameState(payload.state);
+        store.setActionMask(payload.action_mask ?? []);
+        if (payload.logs) store.appendLogs(payload.logs);
+        if (payload.your_player_id != null) {
+          store.setPlayerLabels({
+            [payload.your_player_id]: 'You',
+            [payload.your_player_id === 1 ? 2 : 1]: 'Opponent',
+          });
+        }
+      },
+      onGameOver: () => {},
+      onError: (msg) => console.error('WebSocket error:', msg),
+    };
+  }, [urlGameId, isPvpMode, isSpectator]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const ws = useWebSocketGame(wsOptions);
+
+  // Use WebSocket sendAction for PvP, HTTP for local games
+  const sendAction = isPvpMode || isSpectator ? ws.sendAction : httpSendAction;
   const { savedDecks, setSavedDecks } = useDeckBuilderStore();
   const { getDropAction } = useDropZone(parsedMask);
 
@@ -53,20 +86,27 @@ export function GamePage() {
   // Hydrate store from URL param when navigating to /game/:id
   useEffect(() => {
     if (urlGameId && !store.gameId) {
-      (async () => {
-        try {
-          const [state, maskData] = await Promise.all([
-            gameApi.getState(urlGameId),
-            gameApi.getMask(urlGameId),
-          ]);
-          store.setGameId(urlGameId);
-          store.setGameState(state);
-          store.setActionMask(maskData);
-          store.clearLogs();
-        } catch (err) {
-          console.error('Failed to load game:', err);
-        }
-      })();
+      if (isPvpMode || isSpectator) {
+        // PvP/spectator mode: WebSocket hook will send initial state
+        store.setGameId(urlGameId);
+        store.clearLogs();
+      } else {
+        // Local mode: fetch state via HTTP
+        (async () => {
+          try {
+            const [state, maskData] = await Promise.all([
+              gameApi.getState(urlGameId),
+              gameApi.getMask(urlGameId),
+            ]);
+            store.setGameId(urlGameId);
+            store.setGameState(state);
+            store.setActionMask(maskData);
+            store.clearLogs();
+          } catch (err) {
+            console.error('Failed to load game:', err);
+          }
+        })();
+      }
     }
   }, [urlGameId]); // eslint-disable-line react-hooks/exhaustive-deps
   const [inspectedPerm, setInspectedPerm] = useState<PermanentInfo | null>(null);

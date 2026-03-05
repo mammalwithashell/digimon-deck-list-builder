@@ -25,9 +25,11 @@ from digimon_gym.db.routers import users as users_router
 from digimon_gym.routers import deck_tools
 from digimon_gym.routers import games
 from digimon_gym.routers import health
+from digimon_gym.routers import lobby
 from digimon_gym.routers import recordings
 from digimon_gym.routers import replays
 from digimon_gym.routers import simulations
+from digimon_gym.routers import ws_games
 
 
 @asynccontextmanager
@@ -75,6 +77,8 @@ app.include_router(games.router)
 app.include_router(recordings.router)
 app.include_router(replays.router)
 app.include_router(deck_tools.router)
+app.include_router(lobby.router)
+app.include_router(ws_games.router)
 
 # Debug endpoints (only in debug mode)
 if os.getenv("DEBUG_MODE") == "1":
