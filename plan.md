@@ -122,9 +122,26 @@ class EDHGame(Game):
 - `action_attack_digimon(attacker_idx, target_player_idx, target_digimon_idx)` — expanded targeting
 - BlockTiming/CounterTiming: only the defending player (the attacked opponent) responds
 
-**Card effect compat — "your opponent":**
-- `player.enemy` returns `opponents[0]` (clockwise next) — most "your opponent" effects use this
-- Effects iterating "all opponent's Digimon" use `player.opponents` list
+**Card effect compat — "your opponent" disambiguation:**
+
+The key discovery is that card scripts don't directly iterate `player.enemy.battle_area` for targeting — they call engine methods like `game.effect_select_opponent_permanent()`. This is the choke point.
+
+**Single-target effects** ("delete 1 of your opponent's Digimon"):
+- Scripts call `game.effect_select_opponent_permanent(player, callback, filter_fn)`
+- Standard: builds valid indices from `SEL_OPP_FIELD_START` (112-123), one opponent
+- **EDH override**: builds valid indices across ALL opponents' fields using expanded ranges (`SEL_OPP1_FIELD 112-123`, `SEL_OPP2_FIELD 200-211`, `SEL_OPP3_FIELD 212-223`)
+- Player chooses which opponent's Digimon to target — **no script changes needed**
+- The `on_select` callback maps the selected index back to the correct opponent + permanent
+
+**"All opponents" effects** ("all your opponent's Digimon get -3000 DP"):
+- Scripts that iterate `player.enemy.battle_area` only hit one opponent via the `enemy` shim
+- **EDH override**: `EDHPlayer` adds an `all_opponent_permanents()` helper that yields `(opponent, perm)` for all opponents
+- Engine methods that apply blanket effects (e.g., `effect_apply_to_all_opponent_digimon`) are overridden in EDHGame to iterate all opponents
+- Scripts using the `game.effect_*` API work automatically; scripts directly accessing `player.enemy.battle_area` get only clockwise-next (acceptable v1 compromise, audit later)
+
+**"Your opponent" direct effects** ("your opponent trashes 1 security"):
+- Affects clockwise-next opponent via `player.enemy` shim (default per spec)
+- Future: could add opponent selection for these too
 
 **Tensor writer — override:**
 - `get_board_state_tensor(player_id)` → builds ~1876-float tensor with 4P perspective
@@ -189,9 +206,11 @@ class EDHHeadlessGame(EDHBaseRunner):
 9. **Reboot**: unsuspends on each opponent's turn
 10. **Round 1 draw skip**: all players skip draw on turn 1
 11. **Backward compat**: `player.enemy` returns clockwise-next
-12. **Full game simulation**: 4 random-policy agents play to conclusion
-13. **Tensor shape**: tensor is correct size (~1876)
-14. **Action mask shape**: mask is correct size (2360)
+12. **Effect target disambiguation**: `effect_select_opponent_permanent` offers targets across all 3 opponents' fields; selecting opp2 slot 3 maps to the correct permanent
+13. **All-opponents effects**: blanket effects (e.g., DP reduction) hit all opponents' permanents
+14. **Full game simulation**: 4 random-policy agents play to conclusion
+15. **Tensor shape**: tensor is correct size (~1876)
+16. **Action mask shape**: mask is correct size (2360)
 
 ---
 
