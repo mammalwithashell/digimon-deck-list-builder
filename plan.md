@@ -140,8 +140,14 @@ The key discovery is that card scripts don't directly iterate `player.enemy.batt
 - Scripts using the `game.effect_*` API work automatically; scripts directly accessing `player.enemy.battle_area` get only clockwise-next (acceptable v1 compromise, audit later)
 
 **"Your opponent" direct effects** ("your opponent trashes 1 security"):
-- Affects clockwise-next opponent via `player.enemy` shim (default per spec)
-- Future: could add opponent selection for these too
+- ~920 occurrences across ~313 card scripts directly access `player.enemy.trash_cards`, `.security_cards`, `.hand_cards`
+- EDH override: inject a **player-selection step** before the effect resolves — player chooses which opponent is affected
+- Two-layer approach:
+  1. **Engine-mediated path**: override `effect_select_opponent_permanent` and `effect_select_opponent_security` in EDHGame to present targets across all opponents (already covered above)
+  2. **Direct `player.enemy` path**: EDHPlayer's `enemy` property is **context-aware** — when the game is in a selection/effect resolution phase, `enemy` returns the **currently targeted opponent** (set by a prior opponent-selection step). Outside of effect context, returns clockwise-next as default.
+  3. **New `SelectOpponent` phase**: added to EDHGame. When an effect needs "your opponent", EDHGame first pushes a `SelectOpponent` selection (choose opponent seat 0-2), then sets `player._targeted_enemy` to the chosen opponent before the effect callback runs. The `enemy` property reads `_targeted_enemy` if set, otherwise falls back to `opponents[0]`.
+- This means existing scripts like `enemy.security_cards.pop(0)` work correctly — the `enemy` reference resolves to whichever opponent was chosen
+- Adds `SelectOpponent` as a new `GamePhase` value in EDH (or reuse `SelectTarget` with seat indices)
 
 **Tensor writer — override:**
 - `get_board_state_tensor(player_id)` → builds ~1876-float tensor with 4P perspective
@@ -208,7 +214,8 @@ class EDHHeadlessGame(EDHBaseRunner):
 11. **Backward compat**: `player.enemy` returns clockwise-next
 12. **Effect target disambiguation**: `effect_select_opponent_permanent` offers targets across all 3 opponents' fields; selecting opp2 slot 3 maps to the correct permanent
 13. **All-opponents effects**: blanket effects (e.g., DP reduction) hit all opponents' permanents
-14. **Full game simulation**: 4 random-policy agents play to conclusion
+14. **Direct enemy targeting**: scripts accessing `player.enemy` in effect callbacks get the opponent chosen via `SelectOpponent` phase, not just clockwise-next
+15. **Full game simulation**: 4 random-policy agents play to conclusion
 15. **Tensor shape**: tensor is correct size (~1876)
 16. **Action mask shape**: mask is correct size (2360)
 
