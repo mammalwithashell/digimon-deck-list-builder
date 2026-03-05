@@ -45,11 +45,40 @@ echo "Building desktop sidecar (profile: $PROFILE, target: $TARGET_TRIPLE)"
 
 # Install dependencies based on profile
 if [ "$PROFILE" = "full" ]; then
-    echo "Installing full dependencies..."
-    pip install -r requirements-desktop.txt
+    echo "Installing full dependencies (including PyTorch for ONNX export)..."
+    pip install -r requirements.txt
+
+    # Export SB3 checkpoints to ONNX format
+    mkdir -p models
+    EXPORTED=0
+
+    for zip in models/*.zip; do
+        [ -f "$zip" ] || continue
+        base="$(basename "$zip" .zip)"
+        onnx_out="models/${base}.onnx"
+
+        if [ -f "$onnx_out" ]; then
+            echo "ONNX already exists: $onnx_out (skipping)"
+        else
+            # Detect model type from filename: *lstm* → lstm, else mlp
+            if echo "$base" | grep -qi "lstm"; then
+                model_type="lstm"
+            else
+                model_type="mlp"
+            fi
+            echo "Exporting $zip → $onnx_out (type: $model_type)..."
+            python scripts/export_onnx.py --type "$model_type" --input "$zip" --output "$onnx_out"
+            EXPORTED=$((EXPORTED + 1))
+        fi
+    done
+
+    if [ "$EXPORTED" -gt 0 ]; then
+        echo "Exported $EXPORTED model(s) to ONNX"
+    fi
+
     # Copy ONNX models to Tauri resources
     mkdir -p src-tauri/resources/models
-    if [ -d models ] && ls models/*.onnx 1>/dev/null 2>&1; then
+    if ls models/*.onnx 1>/dev/null 2>&1; then
         cp models/*.onnx src-tauri/resources/models/
         echo "Copied ONNX models to src-tauri/resources/models/"
     else
