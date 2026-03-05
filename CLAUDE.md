@@ -7,12 +7,13 @@ It focuses on stable contracts and implementation shape, not static snapshot met
 
 ## System Overview
 
-The repository contains four major surfaces:
+The repository contains five major surfaces:
 
 1. Headless Digimon game engine (`digimon_gym/engine/`)
 2. RL environment and pilot training (`digimon_gym/digimon_gym.py`, `digimon_gym/agents/`)
 3. FastAPI backend (`digimon_gym/api.py`, `digimon_gym/routers/`, `digimon_gym/db/routers/`)
 4. React frontend (`frontend/src/`)
+5. Tauri v2 desktop shell (`src-tauri/`, `digimon_gym/desktop_main.py`)
 
 It also includes an admin AI workflow for issue triage, AI task dispatch, autofix apply, and promotion auditing (`digimon_gym/ai/`, `/admin/*` routes).
 
@@ -35,7 +36,17 @@ It also includes an admin AI workflow for issue triage, AI task dispatch, autofi
 - `frontend/src/App.tsx`: route map
 - `frontend/src/pages/`: primary UI pages
 - `frontend/src/api/`: backend API clients
+- `digimon_gym/engine/state_filter.py`: per-recipient hidden information filtering for network play
+- `digimon_gym/engine/onnx_policy.py`: ONNX-based inference wrapper (no PyTorch required)
+- `digimon_gym/routers/ws_manager.py`: WebSocket connection manager for PvP games
+- `digimon_gym/routers/ws_games.py`: WebSocket game endpoint (player/spectator)
+- `digimon_gym/routers/lobby.py`: game lobby with join codes and public game browser
+- `digimon_gym/desktop_main.py`: lightweight desktop sidecar entry point (no DB/auth)
+- `src-tauri/`: Tauri v2 desktop app shell (Rust sidecar lifecycle management)
+- `scripts/export_onnx.py`: SB3 → ONNX model conversion (MLP + LSTM)
+- `scripts/build-sidecar.sh`: desktop sidecar build pipeline (PyInstaller + Tauri naming)
 - `docs/TENSOR_SPEC.md`, `docs/ACTION_SPEC.md`, `AGENTS.md`, `docs/TRAINING_RUNBOOK.md`: behavior contracts
+- `docs/plans/DESKTOP_DISTRIBUTION_PLAN.md`: full implementation plan for desktop distribution
 
 ## RL and Game Contracts
 
@@ -113,10 +124,12 @@ Full details in `AGENTS.md` §2.4.
 - Domain routers:
   - `/health`
   - `/simulations`
-  - `/games`
+  - `/games`, `/games/models`
   - `/recordings`
   - `/replays`
   - `/decks/parse`, `/decks/validate` (deck tools)
+  - `/lobby/*` (create/join/list/cancel)
+  - `/ws/games/{id}` (WebSocket PvP + spectating)
 
 ### Gameplay Routes
 
@@ -129,6 +142,33 @@ Primary routes include:
   - `/replays/*`
 
 Legacy aliases are present in several routers for compatibility.
+
+### WebSocket PvP & Spectating
+
+- `/ws/games/{id}?token=JWT&role=player|spectator` — real-time game transport
+- `ConnectionManager` (ws_manager.py) tracks players/spectators per game
+- `state_filter.py` provides per-recipient hidden information filtering:
+  - Players see own hand, opponent's hand hidden (count only), both security stacks hidden
+  - Spectators in `"hidden"` mode see redacted state; `"open"` mode shows everything
+- Message protocol: `state_update`, `player_joined`, `player_disconnected`, `game_over`, `error`
+- Reconnection: frontend hook retries with exponential backoff (1s–30s, max 5 retries)
+
+### Lobby System
+
+- `POST /lobby/create` — creates pending game with 6-char join code (requires auth)
+- `POST /lobby/join/{code}` — joins and starts InteractiveGame (both humans)
+- `GET /lobby/games` — lists public pending games
+- `DELETE /lobby/{id}` — host cancels pending game
+- In-memory storage (`pending_games` dict)
+
+### ONNX Agent Inference
+
+- `CreateGameRequest` supports `player1_policy="trained"` with `player1_model="model.onnx"`
+- ONNX models resolved from `ONNX_MODELS_DIR` env var (default: `models/`)
+- `GET /games/models` — lists available `.onnx` files
+- Model type auto-detected from filename: `*lstm*` → `OnnxLstmPolicy`, else `OnnxMlpPolicy`
+- Path traversal protection via `Path.name` sanitization
+- Export script: `scripts/export_onnx.py` converts SB3 .zip → .onnx (requires PyTorch)
 
 ### Admin AI Routes
 
@@ -147,15 +187,23 @@ Legacy aliases are present in several routers for compatibility.
 `frontend/src/App.tsx` defines:
 
 - Public: `/`, `/login`, `/register`
-- Auth-guarded: `/game/:id?`, `/deckbuilder/:id?`
+- Auth-guarded: `/game/:id?`, `/deckbuilder/:id?`, `/lobby`
 - Admin role-guarded: `/admin/issues`, `/admin/tasks`, `/admin/promotions`, `/admin/barracks`, `/admin/arena`, `/admin/gauntlet/:id?`, `/admin/deck-pools/:id?`
 
 ### Main Pages
 
-- `GamePage`: play/session UI
+- `GamePage`: play/session UI (dual-mode: HTTP for local games, WebSocket for PvP/spectating)
+- `LobbyPage`: multiplayer lobby (create/join/browse tabs)
 - `DeckBuilderPage`: deck editing and validation
 - `AdminIssuesPage`, `AdminTasksPage`, `AdminPromotionsPage`: admin AI workflow UI
 - `BarracksPage`, `ArenaPage`, `GauntletPage`, `DeckPoolPage`: training management UI
+
+### Frontend API Architecture
+
+- `client.ts` exports `default` (remote server) and `getGameClient()` for Tauri dual-server routing
+- `useWebSocketGame.ts`: WebSocket hook for PvP/spectating with reconnection
+- `lobbyApi.ts`: lobby REST client
+- In Tauri desktop mode, local game requests route to sidecar (`localhost:8321`); online features to remote server
 
 ### Frontend Action/Phase Constants
 
@@ -186,6 +234,35 @@ Common scope profiles:
 - `script`
 - `script_engine`
 - `script_engine_transpiler`
+
+## Desktop Distribution (Tauri v2)
+
+### Architecture
+
+The desktop app uses a **dual-server** model:
+- **Local sidecar** (PyInstaller binary): game engine + deck tools only, no DB/auth. For offline play against agents.
+- **Remote server**: PvP, auth, lobby, user data. All online features.
+
+### Key Files
+
+- `src-tauri/tauri.conf.json`: build config, sidecar + resource bundling
+- `src-tauri/src/main.rs`: Rust entry point, spawns/kills Python sidecar
+- `digimon_gym/desktop_main.py`: stripped-down FastAPI app (no SQLAlchemy imports)
+- `desktop.spec`: PyInstaller spec excluding heavy deps (torch, SB3, SQLAlchemy)
+- `scripts/build-sidecar.sh`: build script with `gameplay` (no models) and `full` (ONNX) profiles
+- `requirements-desktop.txt`: minimal deps for sidecar
+
+### Build Profiles
+
+- `gameplay` (default): greedy/random bots only, ~60-90MB
+- `full`: auto-exports SB3 → ONNX, bundles models, ~90-120MB
+
+### Working Rules for Desktop
+
+1. `desktop_main.py` must never import from `digimon_gym.db.*` or `digimon_gym.ai.*`
+2. The sidecar has its own inline game routes (not shared with `games.py`) to avoid DB import chains
+3. ONNX model paths are resolved at game creation time via `ONNX_MODELS_DIR` env var
+4. The Rust sidecar manager pipes stdout/stderr for debugging; sidecar is killed on window close
 
 ## Commands
 
@@ -223,6 +300,21 @@ python -m digimon_gym.agents.pilot_training --gauntlet --timesteps 500000
 
 # Env smoke check
 python -c "from digimon_gym.digimon_gym import DigimonEnv; env=DigimonEnv(); obs,info=env.reset(); print(obs.shape, info['action_mask'].shape)"
+
+# ONNX model export (requires PyTorch)
+python scripts/export_onnx.py --type mlp --input models/mlp_agent.zip --output models/mlp_agent.onnx
+python scripts/export_onnx.py --type lstm --input models/lstm_agent.zip --output models/lstm_agent.onnx
+
+# Desktop sidecar build
+./scripts/build-sidecar.sh gameplay   # greedy bots only
+./scripts/build-sidecar.sh full       # auto-exports ONNX + bundles models
+
+# Desktop sidecar (standalone, for testing)
+python -m digimon_gym.desktop_main --port 8321 --models-dir ./models
+
+# Tauri desktop app (requires Rust toolchain)
+cd src-tauri && cargo tauri dev    # development
+cd src-tauri && cargo tauri build  # production installers
 ```
 
 ## Working Rules
@@ -234,3 +326,6 @@ python -c "from digimon_gym.digimon_gym import DigimonEnv; env=DigimonEnv(); obs
 5. Keep docs stable: avoid stale hardcoded snapshot claims unless explicitly time-stamped.
 6. When threading LSTM state during evaluation/inference, reset state to `None` at episode boundaries.
 7. OpponentWrapper discards dense rewards from opponent steps; only terminal rewards pass through.
+8. `desktop_main.py` must not import any `digimon_gym.db.*` or `digimon_gym.ai.*` modules (breaks without SQLAlchemy).
+9. WebSocket state broadcasts must use `state_filter.py` — never send raw `to_ui_json()` to network clients.
+10. ONNX policies must call `reset()` at episode boundaries for LSTM models (same rule as SB3 LSTM state threading).
