@@ -1,0 +1,10 @@
+# Desktop sidecar dependencies — game engine only, no DB/auth/ML training
+numpy>=1.24
+fastapi>=0.100
+uvicorn>=0.20
+pydantic>=2.0
+Pillow>=10.0
+beautifulsoup4>=4.12
+requests>=2.31
+python-dotenv>=1.0
+onnxruntime>=1.16

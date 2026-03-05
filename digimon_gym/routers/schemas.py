@@ -20,8 +20,10 @@ class CreateGameRequest(BaseModel):
     deck2_raw: Optional[str] = None
     player1_type: str = "agent"  # "agent" or "human"
     player2_type: str = "agent"  # "agent" or "human"
-    player1_policy: str = "greedy"  # "greedy" or "random"
-    player2_policy: str = "greedy"  # "greedy" or "random"
+    player1_policy: str = "greedy"  # "greedy", "random", or "trained"
+    player2_policy: str = "greedy"  # "greedy", "random", or "trained"
+    player1_model: Optional[str] = None  # ONNX model filename (for "trained" policy)
+    player2_model: Optional[str] = None  # ONNX model filename (for "trained" policy)
     agent_action_delay_ms: int = Field(350, ge=0, le=3000)
     record_actions: bool = False
     record_tensors: bool = False

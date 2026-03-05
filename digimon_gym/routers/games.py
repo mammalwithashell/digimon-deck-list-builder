@@ -3,6 +3,8 @@
 from __future__ import annotations
 
 import json
+import os
+from pathlib import Path
 from uuid import uuid4
 
 from fastapi import APIRouter, Depends, HTTPException
@@ -19,6 +21,31 @@ from digimon_gym.routers.schemas import CreateGameRequest, GameActionRequest
 from digimon_gym.routers.state import active_games
 
 router = APIRouter(tags=["games"])
+
+# Directory for ONNX model files. Override with ONNX_MODELS_DIR env var.
+MODELS_DIR = Path(os.environ.get("ONNX_MODELS_DIR", "models"))
+
+
+def _resolve_model_path(model_name: str | None) -> str | None:
+    """Resolve an ONNX model filename to a full path, validating it exists."""
+    if not model_name:
+        return None
+    # Prevent path traversal
+    safe_name = Path(model_name).name
+    model_path = MODELS_DIR / safe_name
+    if not model_path.exists():
+        raise HTTPException(
+            status_code=400,
+            detail=f"ONNX model not found: {safe_name}. Available models: {_list_models()}",
+        )
+    return str(model_path)
+
+
+def _list_models() -> list[str]:
+    """List available ONNX model files."""
+    if not MODELS_DIR.exists():
+        return []
+    return sorted(f.name for f in MODELS_DIR.glob("*.onnx"))
 
 
 def _require_game(game_id: str):
@@ -47,6 +74,10 @@ def create_game(request: CreateGameRequest):
     p1_policy = request.player1_policy.lower()
     p2_policy = request.player2_policy.lower()
 
+    # Resolve ONNX model paths for "trained" policies
+    p1_model_path = _resolve_model_path(request.player1_model) if p1_policy == "trained" else None
+    p2_model_path = _resolve_model_path(request.player2_model) if p2_policy == "trained" else None
+
     if p1_type == PlayerType.Agent and p2_type == PlayerType.Agent:
         runner = HeadlessGame(
             deck1,
@@ -64,6 +95,8 @@ def create_game(request: CreateGameRequest):
             player1_policy=p1_policy,
             player2_policy=p2_policy,
             agent_action_delay_ms=request.agent_action_delay_ms,
+            player1_model_path=p1_model_path,
+            player2_model_path=p2_model_path,
         )
 
     active_games[game_id] = runner
@@ -243,3 +276,9 @@ async def save_game_recording(game_id: str, db: AsyncSession = Depends(get_db)):
     await db.refresh(record)
 
     return RecordingSaveResponse(recording_id=record.id)
+
+
+@router.get("/games/models")
+def list_available_models():
+    """List available ONNX agent models."""
+    return {"models": _list_models()}
