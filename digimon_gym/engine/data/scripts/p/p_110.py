@@ -21,6 +21,7 @@ class P_110(CardScript):
         effect0.set_effect_description("Alternate digivolution requirement")
         # Alternate digivolution: alternate source for cost 2
         effect0._alt_digi_cost = 2
+        effect0._alt_digi_name = "Wormmon"
 
         def condition0(context: Dict[str, Any]) -> bool:
             return True

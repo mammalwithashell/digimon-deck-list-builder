@@ -21,6 +21,8 @@ class BT16_048(CardScript):
         effect0.set_effect_description("Alternate digivolution requirement")
         # Alternate digivolution: alternate source for cost 2
         effect0._alt_digi_cost = 2
+        effect0._alt_digi_level = 6
+        effect0._alt_digi_trait = "Insectoid"
 
         def condition0(context: Dict[str, Any]) -> bool:
             return True

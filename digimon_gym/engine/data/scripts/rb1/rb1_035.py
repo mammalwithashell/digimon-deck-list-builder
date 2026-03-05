@@ -118,15 +118,10 @@ class RB1_035(CardScript):
         effect2.is_security_effect = True
 
         def condition2(context: Dict[str, Any]) -> bool:
-            return True
+            # Security effects are handled by the engine's security check
+            # system — never fire as a processable effect
+            return False
         effect2.set_can_use_condition(condition2)
-
-        def process2(ctx: Dict[str, Any]):
-            player = ctx.get('player')
-            game = ctx.get('game')
-            if player and game and card:
-                game.effect_play_card_from_security(player, card)
-        effect2.set_on_process_callback(process2)
         effects.append(effect2)
 
         return effects

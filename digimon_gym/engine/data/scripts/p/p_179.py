@@ -37,7 +37,7 @@ class P_179(CardScript):
         effect1.set_effect_name("P-179 Alternate digivolution requirement")
         effect1.set_effect_description("Alternate digivolution requirement")
         # Alternate digivolution: from [Justimon: Blitz Arm] for cost 0
-        effect1._alt_digi_cost = 0
+        effect1._alt_digi_cost = 1
         effect1._alt_digi_name = "Justimon: Blitz Arm"
 
         def condition1(context: Dict[str, Any]) -> bool:

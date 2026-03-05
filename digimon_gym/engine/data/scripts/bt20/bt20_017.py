@@ -90,10 +90,20 @@ class BT20_017(CardScript):
             def target_filter(p):
                 return p.is_digimon and p.dp is not None and p.dp <= 8000
 
+            def on_attack(selected_perm):
+                pass  # descriptive-tagged: force_attack
+
             def on_delete(target_perm):
                 enemy = player.enemy if player else None
                 if enemy:
                     enemy.delete_permanent(target_perm)
+                # Then, 1 of your Digimon may attack
+                game.effect_select_own_permanent(
+                    player, on_attack,
+                    filter_fn=lambda p: p.is_digimon,
+                    is_optional=True,
+                    prompt="Select a Digimon to attack."
+                )
 
             game.effect_select_opponent_permanent(player, on_delete, filter_fn=target_filter, is_optional=False)
 

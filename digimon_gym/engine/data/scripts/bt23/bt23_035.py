@@ -52,27 +52,38 @@ class BT23_035(CardScript):
         effect2.set_effect_description("[On Play] By trashing your top security card, all of your opponent's Digimon get -6000 DP for the turn.")
         effect2.is_on_play = True
 
+        effect2.is_optional = True
+
         effect = effect2  # alias for condition closure
         def condition2(context: Dict[str, Any]) -> bool:
             if card and card.permanent_of_this_card() is None:
                 return False
-            # Triggered on play — validated by engine timing
-            return True
+            # "By trashing" is a cost — must have security to pay
+            if card.owner and len(card.owner.security_cards) > 0:
+                return True
+            return False
 
         effect2.set_can_use_condition(condition2)
 
         def process2(ctx: Dict[str, Any]):
-            """Action: Destroy Security"""
+            """Action: Trash own top security, then all opponent Digimon get -6000 DP"""
             player = ctx.get('player')
             perm = ctx.get('permanent')
             game = ctx.get('game')
-            # Trash opponent's top security card(s)
+            if not player:
+                return
+            # Cost: Trash player's own top security card
+            if player.security_cards:
+                trashed = player.security_cards.pop(0)
+                player.trash_cards.append(trashed)
+            else:
+                return
+            # Effect: All opponent Digimon get -6000 DP for the turn
             enemy = player.enemy if player else None
             if enemy:
-                for _ in range(1):
-                    if enemy.security_cards:
-                        trashed = enemy.security_cards.pop(0)
-                        enemy.trash_cards.append(trashed)
+                for p in enemy.battle_area:
+                    if p.is_digimon:
+                        p.change_dp(-6000)
 
         effect2.set_on_process_callback(process2)
         effects.append(effect2)
@@ -85,27 +96,38 @@ class BT23_035(CardScript):
         effect3.set_effect_description("[When Digivolving] By trashing your top security card, all of your opponent's Digimon get -6000 DP for the turn.")
         effect3.is_when_digivolving = True
 
+        effect3.is_optional = True
+
         effect = effect3  # alias for condition closure
         def condition3(context: Dict[str, Any]) -> bool:
             if card and card.permanent_of_this_card() is None:
                 return False
-            # Triggered when digivolving — validated by engine timing
-            return True
+            # "By trashing" is a cost — must have security to pay
+            if card.owner and len(card.owner.security_cards) > 0:
+                return True
+            return False
 
         effect3.set_can_use_condition(condition3)
 
         def process3(ctx: Dict[str, Any]):
-            """Action: Destroy Security"""
+            """Action: Trash own top security, then all opponent Digimon get -6000 DP"""
             player = ctx.get('player')
             perm = ctx.get('permanent')
             game = ctx.get('game')
-            # Trash opponent's top security card(s)
+            if not player:
+                return
+            # Cost: Trash player's own top security card
+            if player.security_cards:
+                trashed = player.security_cards.pop(0)
+                player.trash_cards.append(trashed)
+            else:
+                return
+            # Effect: All opponent Digimon get -6000 DP for the turn
             enemy = player.enemy if player else None
             if enemy:
-                for _ in range(1):
-                    if enemy.security_cards:
-                        trashed = enemy.security_cards.pop(0)
-                        enemy.trash_cards.append(trashed)
+                for p in enemy.battle_area:
+                    if p.is_digimon:
+                        p.change_dp(-6000)
 
         effect3.set_on_process_callback(process3)
         effects.append(effect3)
@@ -128,11 +150,22 @@ class BT23_035(CardScript):
         effect4.set_can_use_condition(condition4)
 
         def process4(ctx: Dict[str, Any]):
-            """Action: Recovery +1"""
+            """Action: Security Attack +1 until your turn ends, then conditional Recovery +1"""
             player = ctx.get('player')
             perm = ctx.get('permanent')
             game = ctx.get('game')
-            if player:
+            if not (player and game and perm):
+                return
+            # Grant Security Attack +1 until your turn ends
+            from digimon_gym.engine.interfaces.modifiers import ModifierType
+            game.register_modifier(
+                perm, ModifierType.CHANGE_SECURITY_ATTACK,
+                value_fn=lambda current, target, ctx: current + 1,
+                source_effect=effect,
+                expiry='end_of_turn'
+            )
+            # Then, if you have 3 or fewer security cards, Recovery +1 (Deck)
+            if len(player.security_cards) <= 3:
                 player.recovery(1)
 
         effect4.set_on_process_callback(process4)

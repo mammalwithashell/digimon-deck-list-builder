@@ -33,6 +33,8 @@ class BT15_067(CardScript):
         effect1.set_effect_description("Alternate digivolution requirement")
         # Alternate digivolution: alternate source for cost 4
         effect1._alt_digi_cost = 4
+        effect1._alt_digi_level = 5
+        effect1._alt_digi_trait = "X Antibody"
 
         def condition1(context: Dict[str, Any]) -> bool:
             return True

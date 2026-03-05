@@ -705,9 +705,14 @@ class Game:
                 if effect.timing == timing:
                     return True
                 # Map script-side OptionSkill to engine-side OnUseOption
+                # Only fire for the card that was actually just played,
+                # not for other options already sitting in the battle area.
                 if (effect.timing == EffectTiming.OptionSkill
                         and timing == EffectTiming.OnUseOption):
-                    return True
+                    return (
+                        played_card is not None
+                        and perm.top_card is played_card
+                    )
                 # Map script-side SecuritySkill to engine-side OnSecurityCheck
                 if (effect.timing == EffectTiming.SecuritySkill
                         and timing == EffectTiming.OnSecurityCheck):
@@ -1767,8 +1772,9 @@ class Game:
                 play_cost = self.calculate_play_cost(me, card)
                 if self.memory >= 0 and play_cost <= self.memory + 10:
                     # Option color requirement: must have a matching-color
-                    # Digimon or Tamer on the field to play an Option card
-                    if card.is_option:
+                    # Digimon or Tamer on the field to play an Option card.
+                    # Cards with match_color_requirement=False bypass this check.
+                    if card.is_option and card.match_color_requirement:
                         option_colors = set(card.card_colors)
                         has_color_match = any(
                             bool(option_colors & set(p.top_card.card_colors))
@@ -2015,6 +2021,14 @@ class Game:
             # Optional selections allow declining (pass)
             if getattr(ps, 'is_optional', False):
                 mask[62] = 1.0
+            # Safety: if mask is all zeros for selection phase, force recovery
+            if not any(mask):
+                self.logger.log(
+                    f"[Recovery] All-zero mask in selection phase {phase} — recovering to Main")
+                self.pending_selection = None
+                self.current_phase = GamePhase.Main
+                self.active_player = None
+                return self.get_action_mask(player_id)
 
         return mask
 
@@ -2331,6 +2345,16 @@ class Game:
                 if perm.has_keyword('_is_training'):
                     self._execute_training(perm, self.turn_player)
 
+    @staticmethod
+    def _is_selection_phase(phase: 'GamePhase') -> bool:
+        """Return True if the phase is a selection/interrupt phase."""
+        return phase in (
+            GamePhase.SelectTarget, GamePhase.SelectMaterial,
+            GamePhase.SelectTrash, GamePhase.SelectSource,
+            GamePhase.SelectHand, GamePhase.SelectReveal,
+            GamePhase.SelectEffectChoice, GamePhase.SelectSecurity,
+        )
+
     def _decode_selection(self, action_id: int):
         """Handle target or material selection from an effect callback."""
         ps = self.pending_selection
@@ -2347,6 +2371,21 @@ class Game:
             self.active_player = None
             if on_decline:
                 on_decline()
+            # Guard: if we ended up in a selection phase with no pending_selection
+            # to service it, fall back to Main to avoid deadlock
+            if (self._is_selection_phase(self.current_phase)
+                    and self.pending_selection is None):
+                self.current_phase = GamePhase.Main
+            # Guard: pending_selection exists but has empty valid_indices
+            # and is not optional (would produce all-zero mask → deadlock)
+            if (self.pending_selection is not None
+                    and not self.pending_selection.valid_indices
+                    and not getattr(self.pending_selection, 'is_optional', False)):
+                self.logger.log(
+                    f"[Recovery] Empty valid_indices after selection decline — clearing")
+                self.pending_selection = None
+                if self._is_selection_phase(self.current_phase):
+                    self.current_phase = GamePhase.Main
             self._check_deferred_turn_end()
             return
 
@@ -2359,6 +2398,21 @@ class Game:
         self.current_phase = prev_phase
         self.active_player = None
         callback(action_id)
+        # Guard: if we ended up in a selection phase with no pending_selection
+        # to service it, fall back to Main to avoid deadlock
+        if (self._is_selection_phase(self.current_phase)
+                and self.pending_selection is None):
+            self.current_phase = GamePhase.Main
+        # Guard: pending_selection exists but has empty valid_indices
+        # and is not optional (would produce all-zero mask → deadlock)
+        if (self.pending_selection is not None
+                and not self.pending_selection.valid_indices
+                and not getattr(self.pending_selection, 'is_optional', False)):
+            self.logger.log(
+                f"[Recovery] Empty valid_indices after selection callback — clearing")
+            self.pending_selection = None
+            if self._is_selection_phase(self.current_phase):
+                self.current_phase = GamePhase.Main
         self._check_deferred_turn_end()
 
     def _decode_block(self, action_id: int):

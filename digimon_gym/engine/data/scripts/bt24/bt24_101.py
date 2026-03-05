@@ -20,7 +20,7 @@ class BT24_101(CardScript):
         effect0.set_effect_name("BT24-101 Alternate digivolution requirement")
         effect0.set_effect_description("Alternate digivolution requirement")
         # Alternate digivolution: Lv.5 with [TS] trait for cost 5
-        effect0._alt_digi_cost = 5
+        effect0._alt_digi_cost = 3
         effect0._alt_digi_level = 5
         effect0._alt_digi_trait = "TS"
 
@@ -35,7 +35,7 @@ class BT24_101(CardScript):
         effect1.set_effect_name("BT24-101 Alternate digivolution requirement")
         effect1.set_effect_description("Alternate digivolution requirement")
         # Alternate digivolution: Lv.5 for cost 5
-        effect1._alt_digi_cost = 5
+        effect1._alt_digi_cost = 3
         effect1._alt_digi_level = 5
 
         def condition1(context: Dict[str, Any]) -> bool:

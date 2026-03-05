@@ -20,8 +20,8 @@ class EX11_022(CardScript):
         effect0.set_effect_name("EX11-022 Alternate digivolution requirement")
         effect0.set_effect_description("Alternate digivolution requirement")
         # Alternate digivolution: Lv.4 with [Puppet] trait for cost 3
-        effect0._alt_digi_cost = 3
-        effect0._alt_digi_level = 4
+        effect0._alt_digi_cost = 2
+        effect0._alt_digi_level = 3
         effect0._alt_digi_trait = "Puppet"
 
         def condition0(context: Dict[str, Any]) -> bool:

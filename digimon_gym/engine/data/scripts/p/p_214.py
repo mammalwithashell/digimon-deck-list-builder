@@ -20,7 +20,7 @@ class P_214(CardScript):
         effect0.set_effect_name("P-214 Alternate digivolution requirement")
         effect0.set_effect_description("Alternate digivolution requirement")
         # Alternate digivolution: from [Betamon] for cost 0
-        effect0._alt_digi_cost = 0
+        effect0._alt_digi_cost = 2
         effect0._alt_digi_name = "Betamon"
 
         def condition0(context: Dict[str, Any]) -> bool:

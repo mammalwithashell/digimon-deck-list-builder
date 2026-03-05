@@ -55,6 +55,8 @@ class P_171(CardScript):
 
         effect = effect2  # alias for condition closure
         def condition2(context: Dict[str, Any]) -> bool:
+            if context.get('card_source') is not card:
+                return False
             return True
 
         effect2.set_can_use_condition(condition2)

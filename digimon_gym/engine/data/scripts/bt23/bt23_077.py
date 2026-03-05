@@ -74,7 +74,7 @@ class BT23_077(CardScript):
             if not (player and game):
                 return
             def target_filter(p):
-                return p.is_digimon
+                return p.is_digimon and p.top_card and p.top_card.get_cost_itself <= 4
             def on_delete(target_perm):
                 enemy = player.enemy if player else None
                 if enemy:
@@ -96,6 +96,11 @@ class BT23_077(CardScript):
         def condition3(context: Dict[str, Any]) -> bool:
             if card and card.permanent_of_this_card() is None:
                 return False
+            # Only trigger when THIS Digimon suspends
+            ctx_perm = context.get('permanent')
+            owner_perm = card.permanent_of_this_card() if card else None
+            if owner_perm and ctx_perm and ctx_perm is not owner_perm:
+                return False
             return True
 
         effect3.set_can_use_condition(condition3)
@@ -113,9 +118,98 @@ class BT23_077(CardScript):
                 if enemy:
                     enemy.trash_cards.extend(removed)
             game.effect_select_opponent_permanent(
-                player, on_de_digivolve, filter_fn=lambda p: p.is_digimon, is_optional=False)
+                player, on_de_digivolve,
+                filter_fn=lambda p: p.is_digimon and len(p.card_sources) > 1,
+                is_optional=False)
 
         effect3.set_on_process_callback(process3)
         effects.append(effect3)
+
+        # --- Inherited effects ---
+        # All three main effects (Blocker, On Play delete, When suspends de-digivolve)
+        # are also inherited effects per card text.
+
+        # Inherited: Blocker
+        effect_inh_blocker = ICardEffect()
+        effect_inh_blocker.set_effect_name("BT23-077 Blocker (Inherited)")
+        effect_inh_blocker.set_effect_description("Blocker")
+        effect_inh_blocker._is_blocker = True
+        effect_inh_blocker.is_inherited_effect = True
+
+        def condition_inh_blocker(context: Dict[str, Any]) -> bool:
+            return True
+        effect_inh_blocker.set_can_use_condition(condition_inh_blocker)
+        effects.append(effect_inh_blocker)
+
+        # Inherited: [On Play] Delete 1 of your opponent's Digimon with a play cost of 4 or less.
+        effect_inh_delete = ICardEffect()
+        effect_inh_delete.set_timing(EffectTiming.OnEnterFieldAnyone)
+        effect_inh_delete.set_effect_name("BT23-077 Delete 1 Digimon with a play cost of 4 or less (Inherited)")
+        effect_inh_delete.set_effect_description("[On Play] Delete 1 of your opponent's Digimon with a play cost of 4 or less.")
+        effect_inh_delete.is_on_play = True
+        effect_inh_delete.is_inherited_effect = True
+
+        def condition_inh_delete(context: Dict[str, Any]) -> bool:
+            if card and card.permanent_of_this_card() is None:
+                return False
+            return True
+        effect_inh_delete.set_can_use_condition(condition_inh_delete)
+
+        def process_inh_delete(ctx: Dict[str, Any]):
+            """Action: Delete (Inherited)"""
+            player = ctx.get('player')
+            perm = ctx.get('permanent')
+            game = ctx.get('game')
+            if not (player and game):
+                return
+            def target_filter(p):
+                return p.is_digimon and p.top_card and p.top_card.get_cost_itself <= 4
+            def on_delete(target_perm):
+                enemy = player.enemy if player else None
+                if enemy:
+                    enemy.delete_permanent(target_perm)
+            game.effect_select_opponent_permanent(
+                player, on_delete, filter_fn=target_filter, is_optional=False)
+
+        effect_inh_delete.set_on_process_callback(process_inh_delete)
+        effects.append(effect_inh_delete)
+
+        # Inherited: [All Turns] When this Digimon suspends, <De-Digivolve 1> 1 of your opponent's Digimon.
+        effect_inh_dedigivolve = ICardEffect()
+        effect_inh_dedigivolve.set_timing(EffectTiming.OnTappedAnyone)
+        effect_inh_dedigivolve.set_effect_name("BT23-077 <De-Digivolve 1> (Inherited)")
+        effect_inh_dedigivolve.set_effect_description("[All Turns] When this Digimon suspends, <De-Digivolve 1> 1 of your opponent's Digimon.")
+        effect_inh_dedigivolve.is_inherited_effect = True
+
+        def condition_inh_dedigivolve(context: Dict[str, Any]) -> bool:
+            if card and card.permanent_of_this_card() is None:
+                return False
+            # Only trigger when THIS Digimon suspends
+            ctx_perm = context.get('permanent')
+            owner_perm = card.permanent_of_this_card() if card else None
+            if owner_perm and ctx_perm and ctx_perm is not owner_perm:
+                return False
+            return True
+        effect_inh_dedigivolve.set_can_use_condition(condition_inh_dedigivolve)
+
+        def process_inh_dedigivolve(ctx: Dict[str, Any]):
+            """Action: De Digivolve (Inherited)"""
+            player = ctx.get('player')
+            perm = ctx.get('permanent')
+            game = ctx.get('game')
+            if not (player and game):
+                return
+            def on_de_digivolve(target_perm):
+                removed = target_perm.de_digivolve(1)
+                enemy = player.enemy if player else None
+                if enemy:
+                    enemy.trash_cards.extend(removed)
+            game.effect_select_opponent_permanent(
+                player, on_de_digivolve,
+                filter_fn=lambda p: p.is_digimon and len(p.card_sources) > 1,
+                is_optional=False)
+
+        effect_inh_dedigivolve.set_on_process_callback(process_inh_dedigivolve)
+        effects.append(effect_inh_dedigivolve)
 
         return effects

@@ -20,28 +20,35 @@ class EX6_039(CardScript):
         effect0.set_timing(EffectTiming.BeforePayCost)
         effect0.set_effect_name("EX6-039 Delete 1 digimon with [Unidentified] trait, to get Play Cost -3")
         effect0.set_effect_description("When this card would be played from the hand, by deleting 1 of your Digimon with the [Unidentified] trait, reduce the play cost by 3.")
-        effect0.set_hash_string("PlayCost-12_BT5_085")
+        effect0.set_hash_string("PlayCost-3_EX6_039")
         effect0.cost_reduction = 3
+        effect0.is_optional = True
 
-        effect = effect0  # alias for condition closure
         def condition0(context: Dict[str, Any]) -> bool:
-            return True
+            # Requires an [Unidentified] trait Digimon on your field to delete
+            if context.get('card_source') is not card:
+                return False
+            if not card or not card.owner:
+                return False
+            return any(
+                p.is_digimon and 'Unidentified' in getattr(p.top_card, 'card_traits', [])
+                for p in card.owner.battle_area
+            )
 
         effect0.set_can_use_condition(condition0)
 
         def process0(ctx: Dict[str, Any]):
-            """Action: Cost -3, Effect Immunity"""
+            """Delete 1 of your [Unidentified] Digimon as cost for -3 play cost reduction."""
             player = ctx.get('player')
-            perm = ctx.get('permanent')
             game = ctx.get('game')
-            # Cost reduction by 3 — handled via cost_reduction property
-            pass  # descriptive-tagged: cost_reduction
-            # Grant effect immunity via modifier system
-            if perm and game:
-                from digimon_gym.engine.interfaces.modifiers import ModifierType
-                game.register_modifier(
-                    ModifierType.CANNOT_BE_SELECTED_BY_EFFECT, perm,
-                    value_fn=lambda: True, expiry='end_of_turn')
+            if not (player and game):
+                return
+            def target_filter(p):
+                return p.is_digimon and 'Unidentified' in getattr(p.top_card, 'card_traits', [])
+            def on_delete(target_perm):
+                game.delete_permanent(target_perm, player)
+            game.effect_select_own_permanent(
+                player, on_delete, filter_fn=target_filter, is_optional=False)
 
         effect0.set_on_process_callback(process0)
         effects.append(effect0)

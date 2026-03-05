@@ -39,6 +39,8 @@ class BT17_060(CardScript):
         )
 
         def condition0(context: Dict[str, Any]) -> bool:
+            if context.get('card_source') is not card:
+                return False
             return True
         effect0.set_can_use_condition(condition0)
 

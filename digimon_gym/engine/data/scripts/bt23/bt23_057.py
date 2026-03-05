@@ -37,12 +37,34 @@ class BT23_057(CardScript):
         effect1.cost_reduction = 5
 
         def condition1(context: Dict[str, Any]) -> bool:
-            return True
+            if context.get('card_source') is not card:
+                return False
+            owner = card.owner if card else None
+            if not owner:
+                return False
+            qualifying = [c for c in owner.trash_cards
+                          if any('Huckmon' in n or 'Sistermon' in n or 'Jesmon' in n
+                                 for n in getattr(c, 'card_names', []))]
+            return len(qualifying) >= 3
 
         effect1.set_can_use_condition(condition1)
 
         def process1(ctx: Dict[str, Any]):
-            return
+            """Return 3 Huckmon/Sistermon/Jesmon cards from trash to deck bottom."""
+            player = ctx.get('player')
+            if not player:
+                return
+            returned = 0
+            for c in list(player.trash_cards):
+                if returned >= 3:
+                    break
+                names = getattr(c, 'card_names', [])
+                if any('Huckmon' in n or 'Sistermon' in n or 'Jesmon' in n
+                       for n in names):
+                    player.trash_cards.remove(c)
+                    # TODO: player should choose top or bottom for each returned card
+                    player.library_cards.append(c)  # defaults to bottom of deck
+                    returned += 1
 
         effect1.set_on_process_callback(process1)
         effects.append(effect1)
@@ -52,8 +74,9 @@ class BT23_057(CardScript):
             effect.set_timing(EffectTiming.OnEnterFieldAnyone)
             effect.set_effect_name(name)
             effect.set_effect_description(
-                "Play 1 [Hinukamuy] Token. Then, delete 1 of your opponent's Digimon within the effect's play-cost cap."
+                "You may play 1 [Hinukamuy] Token. Then, delete 1 of your opponent's Digimon within the effect's play-cost cap."
             )
+            effect.is_optional = True  # "You may" — declining skips both token play and delete
             if when_digivolving:
                 effect.is_when_digivolving = True
             else:

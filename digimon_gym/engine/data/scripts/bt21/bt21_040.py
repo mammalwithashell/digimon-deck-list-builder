@@ -38,7 +38,7 @@ class BT21_040(CardScript):
         effect1.set_effect_name("BT21-040 Alternate digivolution requirement")
         effect1.set_effect_description("Alternate digivolution requirement")
         # Alternate digivolution: from [ShineGreymon] for cost 4
-        effect1._alt_digi_cost = 4
+        effect1._alt_digi_cost = 0
         effect1._alt_digi_name = "ShineGreymon"
 
         def condition1(context: Dict[str, Any]) -> bool:

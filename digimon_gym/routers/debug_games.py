@@ -198,6 +198,8 @@ def debug_inject_card(game_id: str, request: InjectCardRequest):
         player.library_cards.insert(0, card_source)
     elif request.zone == "security_top":
         player.security_cards.insert(0, card_source)
+    elif request.zone == "trash":
+        player.trash_cards.append(card_source)
     else:
         raise HTTPException(status_code=400, detail=f"Invalid zone: {request.zone}")
 

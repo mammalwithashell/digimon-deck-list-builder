@@ -68,36 +68,32 @@ class BT24_064(CardScript):
         effect2.set_can_use_condition(condition2)
 
         def process2(ctx: Dict[str, Any]):
-            """Action: Play Card, Reveal And Select"""
+            """Action: Reveal top 3, play 1 cost<=7 [DigiPolice]/[SEEKERS] card free"""
             player = ctx.get('player')
-            perm = ctx.get('permanent')
             game = ctx.get('game')
             if not (player and game):
                 return
-            def play_filter(c):
-                if not getattr(c, 'has_play_cost', False):
-                    return False
-                if getattr(c, 'get_cost_itself', 0) > 7:
-                    return False
-                if not (any('DigiPolice' in _t or 'SEEKERS' in _t for _t in (getattr(c, 'card_traits', []) or []))):
-                    return False
-                return True
-            game.effect_play_from_zone(
-                player, 'hand', play_filter, free=True, is_optional=True)
-            if not (player and game):
-                return
+
             def reveal_filter(c):
-                if not getattr(c, 'has_play_cost', False):
-                    return False
                 if getattr(c, 'get_cost_itself', 0) > 7:
                     return False
-                if not (any('DigiPolice' in _t or 'SEEKERS' in _t for _t in (getattr(c, 'card_traits', []) or []))):
-                    return False
-                return True
+                traits = getattr(c, 'card_traits', []) or []
+                return any('DigiPolice' in t or 'SEEKERS' in t for t in traits)
+
             def on_revealed(selected, remaining):
-                player.hand_cards.append(selected)
+                # Play the selected card without paying the cost
+                played_perm = player.play_card_from_source(selected, pay_cost=False)
+                game.logger.log(f"[Effect] {player.player_name} played {getattr(selected, 'card_name_eng', '?')} from revealed cards")
+                game.execute_effects(
+                    EffectTiming.OnEnterFieldAnyone,
+                    {"played_card": selected, "played_permanent": played_perm, "event_player": player},
+                )
+                if selected.is_option:
+                    game._trash_option_after_resolution(player, played_perm)
+                # Return remaining to bottom of deck
                 for c in remaining:
                     player.library_cards.append(c)
+
             game.effect_reveal_and_select(
                 player, 3, reveal_filter, on_revealed, is_optional=True)
 

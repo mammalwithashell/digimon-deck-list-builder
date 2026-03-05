@@ -14,27 +14,30 @@ class BT13_111(CardScript):
     def get_card_effects(self, card: 'CardSource') -> List['ICardEffect']:
         effects = []
 
-        # Timing: EffectTiming.None
-        # Effect
+        # Timing: EffectTiming.BeforePayCost
+        # When you would play this card, if you have no Digimon in play,
+        # reduce the play cost by 2 for every 5 cards in both players' trashes.
         effect0 = ICardEffect()
-        effect0.set_effect_name("BT13-111 Effect")
-        effect0.set_effect_description("Effect")
+        effect0.set_timing(EffectTiming.BeforePayCost)
+        effect0.set_effect_name("BT13-111 Reduce play cost by 2 per 5 trash cards")
+        effect0.set_effect_description("When you would play this card, if you have no Digimon in play, reduce the play cost by 2 for every 5 cards in both players' trashes.")
 
-        effect = effect0  # alias for condition closure
         def condition0(context: Dict[str, Any]) -> bool:
+            if context.get('card_source') is not card:
+                return False
+            owner = getattr(card, 'owner', None)
+            if not owner:
+                return False
+            # Must have no Digimon in play
+            if any(p.is_digimon for p in owner.battle_area):
+                return False
             return True
 
         effect0.set_can_use_condition(condition0)
-
-        def process0(ctx: Dict[str, Any]):
-            """Action: Effect"""
-            player = ctx.get('player')
-            perm = ctx.get('permanent')
-            game = ctx.get('game')
-            # Cost reduction (variable amount) — handled via cost_reduction property
-            pass  # descriptive-tagged: cost_reduction
-
-        effect0.set_on_process_callback(process0)
+        effect0._cost_reduction_value_fn = (
+            lambda context: 2 * ((len(getattr(card, 'owner', None).trash_cards if getattr(card, 'owner', None) else []) +
+                                   len(getattr(card, 'owner', None).enemy.trash_cards if (getattr(card, 'owner', None) and getattr(card, 'owner', None).enemy) else [])) // 5)
+        )
         effects.append(effect0)
 
         # Factory effect: rush
@@ -66,25 +69,37 @@ class BT13_111(CardScript):
 
         effect2.set_can_use_condition(condition2)
 
-        def process2(ctx: Dict[str, Any]):
-            """Action: Delete"""
-            player = ctx.get('player')
-            perm = ctx.get('permanent')
-            game = ctx.get('game')
-            if not (player and game):
+        def _gallantmon_delete(player, game):
+            """Delete 1 opponent Digimon with 6000 DP or less. If none deleted, delete 1 with 13000 DP or more."""
+            enemy = player.enemy if player else None
+            if not enemy:
                 return
-            def target_filter(p):
-                if p.dp is None or p.dp > 6000:
-                    return False
-                if p.dp is None or p.dp < 13000:
-                    return False
-                return p.is_digimon
-            def on_delete(target_perm):
-                enemy = player.enemy if player else None
-                if enemy:
+
+            # First try: delete 1 with 6000 DP or less
+            low_filter = lambda p: p.is_digimon and p.dp is not None and p.dp <= 6000
+            has_low = any(low_filter(p) for p in enemy.battle_area)
+
+            if has_low:
+                def on_delete_low(target_perm):
                     enemy.delete_permanent(target_perm)
-            game.effect_select_opponent_permanent(
-                player, on_delete, filter_fn=target_filter, is_optional=False)
+                game.effect_select_opponent_permanent(
+                    player, on_delete_low, filter_fn=low_filter, is_optional=False)
+            else:
+                # Fallback: delete 1 with 13000 DP or more
+                high_filter = lambda p: p.is_digimon and p.dp is not None and p.dp >= 13000
+                has_high = any(high_filter(p) for p in enemy.battle_area)
+                if has_high:
+                    def on_delete_high(target_perm):
+                        enemy.delete_permanent(target_perm)
+                    game.effect_select_opponent_permanent(
+                        player, on_delete_high, filter_fn=high_filter, is_optional=False)
+
+        def process2(ctx: Dict[str, Any]):
+            """Action: Delete 6000 DP or less, else 13000 DP or more"""
+            player = ctx.get('player')
+            game = ctx.get('game')
+            if player and game:
+                _gallantmon_delete(player, game)
 
         effect2.set_on_process_callback(process2)
         effects.append(effect2)
@@ -101,30 +116,16 @@ class BT13_111(CardScript):
         def condition3(context: Dict[str, Any]) -> bool:
             if card and card.permanent_of_this_card() is None:
                 return False
-            # Triggered when digivolving — validated by engine timing
             return True
 
         effect3.set_can_use_condition(condition3)
 
         def process3(ctx: Dict[str, Any]):
-            """Action: Delete"""
+            """Action: Delete 6000 DP or less, else 13000 DP or more"""
             player = ctx.get('player')
-            perm = ctx.get('permanent')
             game = ctx.get('game')
-            if not (player and game):
-                return
-            def target_filter(p):
-                if p.dp is None or p.dp > 6000:
-                    return False
-                if p.dp is None or p.dp < 13000:
-                    return False
-                return p.is_digimon
-            def on_delete(target_perm):
-                enemy = player.enemy if player else None
-                if enemy:
-                    enemy.delete_permanent(target_perm)
-            game.effect_select_opponent_permanent(
-                player, on_delete, filter_fn=target_filter, is_optional=False)
+            if player and game:
+                _gallantmon_delete(player, game)
 
         effect3.set_on_process_callback(process3)
         effects.append(effect3)
@@ -141,30 +142,16 @@ class BT13_111(CardScript):
         def condition4(context: Dict[str, Any]) -> bool:
             if card and card.permanent_of_this_card() is None:
                 return False
-            # Triggered on attack — validated by engine timing
             return True
 
         effect4.set_can_use_condition(condition4)
 
         def process4(ctx: Dict[str, Any]):
-            """Action: Delete"""
+            """Action: Delete 6000 DP or less, else 13000 DP or more"""
             player = ctx.get('player')
-            perm = ctx.get('permanent')
             game = ctx.get('game')
-            if not (player and game):
-                return
-            def target_filter(p):
-                if p.dp is None or p.dp > 6000:
-                    return False
-                if p.dp is None or p.dp < 13000:
-                    return False
-                return p.is_digimon
-            def on_delete(target_perm):
-                enemy = player.enemy if player else None
-                if enemy:
-                    enemy.delete_permanent(target_perm)
-            game.effect_select_opponent_permanent(
-                player, on_delete, filter_fn=target_filter, is_optional=False)
+            if player and game:
+                _gallantmon_delete(player, game)
 
         effect4.set_on_process_callback(process4)
         effects.append(effect4)

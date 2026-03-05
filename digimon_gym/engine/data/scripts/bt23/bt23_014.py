@@ -46,12 +46,13 @@ class BT23_014(CardScript):
         effect1.set_can_use_condition(condition1)
 
         def process1(ctx: Dict[str, Any]):
-            """Action: Play Restriction"""
+            """Action: Play Restriction — opponent cannot play Digimon/Tamers from trash"""
             player = ctx.get('player')
             perm = ctx.get('permanent')
             game = ctx.get('game')
-            # Play restriction (CanNotPutFieldClass) — opponent play restrictions
-            pass  # descriptive-tagged
+            # Global play restriction: opponent can't play Digimon/Tamers from trash
+            # Requires global modifier target (None) which engine may not support yet
+            pass  # descriptive-tagged: cannot_play_from_trash
 
         effect1.set_on_process_callback(process1)
         effects.append(effect1)
@@ -74,12 +75,13 @@ class BT23_014(CardScript):
         effect2.set_can_use_condition(condition2)
 
         def process2(ctx: Dict[str, Any]):
-            """Action: Play Restriction"""
+            """Action: Play Restriction — opponent cannot play Digimon/Tamers from trash"""
             player = ctx.get('player')
             perm = ctx.get('permanent')
             game = ctx.get('game')
-            # Play restriction (CanNotPutFieldClass) — opponent play restrictions
-            pass  # descriptive-tagged
+            # Global play restriction: opponent can't play Digimon/Tamers from trash
+            # Requires global modifier target (None) which engine may not support yet
+            pass  # descriptive-tagged: cannot_play_from_trash
 
         effect2.set_on_process_callback(process2)
         effects.append(effect2)
@@ -102,16 +104,20 @@ class BT23_014(CardScript):
         effect3.set_can_use_condition(condition3)
 
         def process3(ctx: Dict[str, Any]):
-            """Action: Delete"""
+            """Action: Delete — 8000 DP base + 2000 per opponent's Digimon/Tamer"""
             player = ctx.get('player')
             perm = ctx.get('permanent')
             game = ctx.get('game')
             if not (player and game):
                 return
+            enemy = player.enemy if player else None
+            if not enemy:
+                return
+            # Calculate max DP: 8000 base + 2000 for each opponent Digimon and Tamer
+            max_dp = 8000 + 2000 * len([p for p in enemy.battle_area])
             def target_filter(p):
-                return p.is_digimon
+                return p.is_digimon and p.dp is not None and p.dp <= max_dp
             def on_delete(target_perm):
-                enemy = player.enemy if player else None
                 if enemy:
                     enemy.delete_permanent(target_perm)
             game.effect_select_opponent_permanent(
@@ -138,16 +144,20 @@ class BT23_014(CardScript):
         effect4.set_can_use_condition(condition4)
 
         def process4(ctx: Dict[str, Any]):
-            """Action: Delete"""
+            """Action: Delete — 8000 DP base + 2000 per opponent's Digimon/Tamer"""
             player = ctx.get('player')
             perm = ctx.get('permanent')
             game = ctx.get('game')
             if not (player and game):
                 return
+            enemy = player.enemy if player else None
+            if not enemy:
+                return
+            # Calculate max DP: 8000 base + 2000 for each opponent Digimon and Tamer
+            max_dp = 8000 + 2000 * len([p for p in enemy.battle_area])
             def target_filter(p):
-                return p.is_digimon
+                return p.is_digimon and p.dp is not None and p.dp <= max_dp
             def on_delete(target_perm):
-                enemy = player.enemy if player else None
                 if enemy:
                     enemy.delete_permanent(target_perm)
             game.effect_select_opponent_permanent(
@@ -174,16 +184,20 @@ class BT23_014(CardScript):
         effect5.set_can_use_condition(condition5)
 
         def process5(ctx: Dict[str, Any]):
-            """Action: Delete"""
+            """Action: Delete — 8000 DP base + 2000 per opponent's Digimon/Tamer"""
             player = ctx.get('player')
             perm = ctx.get('permanent')
             game = ctx.get('game')
             if not (player and game):
                 return
+            enemy = player.enemy if player else None
+            if not enemy:
+                return
+            # Calculate max DP: 8000 base + 2000 for each opponent Digimon and Tamer
+            max_dp = 8000 + 2000 * len([p for p in enemy.battle_area])
             def target_filter(p):
-                return p.is_digimon
+                return p.is_digimon and p.dp is not None and p.dp <= max_dp
             def on_delete(target_perm):
-                enemy = player.enemy if player else None
                 if enemy:
                     enemy.delete_permanent(target_perm)
             game.effect_select_opponent_permanent(

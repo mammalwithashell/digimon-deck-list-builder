@@ -64,23 +64,24 @@ class BT23_058(CardScript):
         def condition3(context: Dict[str, Any]) -> bool:
             if card and card.permanent_of_this_card() is None:
                 return False
+            # Can't activate if already suspended (cost is "by suspending this Digimon")
+            perm = card.permanent_of_this_card()
+            if perm and perm.is_suspended:
+                return False
             return True
 
         effect3.set_can_use_condition(condition3)
 
         def process3(ctx: Dict[str, Any]):
-            """Action: Suspend"""
+            """Action: Suspend THIS Craniamon to prevent a Digimon/Tamer from leaving"""
             player = ctx.get('player')
             perm = ctx.get('permanent')
             game = ctx.get('game')
-            if not (player and game):
+            if not (player and perm):
                 return
-            def target_filter(p):
-                return True
-            def on_suspend(target_perm):
-                target_perm.suspend()
-            game.effect_select_opponent_permanent(
-                player, on_suspend, filter_fn=target_filter, is_optional=True)
+            # Cost: suspend this Digimon
+            perm.suspend()
+            # Engine handles removal prevention via WhenRemoveField callback
 
         effect3.set_on_process_callback(process3)
         effects.append(effect3)
@@ -98,25 +99,30 @@ class BT23_058(CardScript):
         def condition4(context: Dict[str, Any]) -> bool:
             if card and card.permanent_of_this_card() is None:
                 return False
+            # Only triggers when THIS Craniamon suspends
+            suspended_perm = context.get('permanent')
+            my_perm = card.permanent_of_this_card()
+            if suspended_perm is not my_perm:
+                return False
             return True
 
         effect4.set_can_use_condition(condition4)
 
         def process4(ctx: Dict[str, Any]):
-            """Action: Delete"""
+            """Action: Delete ALL opponent's Digimon with the lowest play cost"""
             player = ctx.get('player')
             perm = ctx.get('permanent')
             game = ctx.get('game')
             if not (player and game):
                 return
-            def target_filter(p):
-                return p.is_digimon
-            def on_delete(target_perm):
-                enemy = player.enemy if player else None
-                if enemy:
-                    enemy.delete_permanent(target_perm)
-            game.effect_select_opponent_permanent(
-                player, on_delete, filter_fn=target_filter, is_optional=False)
+            enemy = player.enemy if player else None
+            if enemy and enemy.battle_area:
+                digimon = [p for p in enemy.battle_area if p.is_digimon and p.top_card]
+                if digimon:
+                    min_cost = min(p.top_card.get_cost_itself for p in digimon)
+                    to_delete = [p for p in digimon if p.top_card.get_cost_itself == min_cost]
+                    for target in to_delete:
+                        enemy.delete_permanent(target)
 
         effect4.set_on_process_callback(process4)
         effects.append(effect4)

@@ -20,7 +20,7 @@ class EX11_021(CardScript):
         effect0.set_effect_name("EX11-021 Alternate digivolution requirement")
         effect0.set_effect_description("Alternate digivolution requirement")
         # Alternate digivolution: Lv.3 with [Puppet] trait for cost 0
-        effect0._alt_digi_cost = 0
+        effect0._alt_digi_cost = 2
         effect0._alt_digi_level = 3
         effect0._alt_digi_trait = "Puppet"
 

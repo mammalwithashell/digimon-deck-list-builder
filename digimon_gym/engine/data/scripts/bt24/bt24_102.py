@@ -68,21 +68,64 @@ class BT24_102(CardScript):
         effect2.set_effect_description("[End of Your Turn] By suspending this Tamer, you may activate 1 [On Play] or [When Digivolving] effect of 1 of your [Olympos XII] trait Digimon.")
         effect2.is_optional = True
 
-        effect = effect2  # alias for condition closure
         def condition2(context: Dict[str, Any]) -> bool:
             if card and card.permanent_of_this_card() is None:
                 return False
             if not (card and card.owner and card.owner.is_my_turn):
                 return False
-            return True
+            tamer_perm = card.permanent_of_this_card() if card else None
+            if not tamer_perm or tamer_perm.is_suspended:
+                return False  # Can't pay cost if already suspended
+            player = card.owner
+            # Check for Olympos XII Digimon on field
+            for p in player.battle_area:
+                if not p.is_digimon:
+                    continue
+                for cs in p.card_sources:
+                    traits = getattr(cs, 'card_traits', []) or []
+                    if any('Olympos XII' in t for t in traits):
+                        return True
+            return False
 
         effect2.set_can_use_condition(condition2)
 
         def process2(ctx: Dict[str, Any]):
-            """Action: Suspend"""
+            """Suspend Homeros, reactivate On Play/When Digivolving of Olympos XII."""
+            player = ctx.get('player')
             perm = ctx.get('permanent')
-            if perm:
-                perm.suspend()
+            game = ctx.get('game')
+            if not (player and perm and game):
+                return
+            # Cost: suspend this Tamer
+            tamer_perm = card.permanent_of_this_card() if card else None
+            if not tamer_perm:
+                return
+            tamer_perm.suspend()
+
+            # Select Olympos XII Digimon to reactivate
+            def olympos_filter(p):
+                if not p.is_digimon:
+                    return False
+                for cs in p.card_sources:
+                    traits = getattr(cs, 'card_traits', []) or []
+                    if any('Olympos XII' in t for t in traits):
+                        return True
+                return False
+
+            def on_selected(target):
+                # Re-trigger On Play / When Digivolving effects
+                game.execute_effects(
+                    EffectTiming.OnEnterFieldAnyone,
+                    {"played_card": target.top_card,
+                     "played_permanent": target,
+                     "event_player": player,
+                     "permanent": target},
+                )
+
+            game.effect_select_own_permanent(
+                player, on_selected, filter_fn=olympos_filter,
+                is_optional=True,
+                prompt="Select an Olympos XII Digimon to reactivate.")
 
         effect2.set_on_process_callback(process2)
         effects.append(effect2)
@@ -95,7 +138,7 @@ class BT24_102(CardScript):
         effect3.is_security_effect = True
 
         def condition3(context: Dict[str, Any]) -> bool:
-            return True
+            return False  # Security effects handled by engine
         effect3.set_can_use_condition(condition3)
         effects.append(effect3)
 

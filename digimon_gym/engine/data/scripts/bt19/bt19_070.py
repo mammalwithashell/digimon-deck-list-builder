@@ -22,6 +22,7 @@ class BT19_070(CardScript):
         # Alternate digivolution: Lv.4 for cost 3
         effect0._alt_digi_cost = 3
         effect0._alt_digi_level = 4
+        effect0._alt_digi_trait = "Composite"
 
         def condition0(context: Dict[str, Any]) -> bool:
             return True

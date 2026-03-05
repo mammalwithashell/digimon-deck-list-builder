@@ -83,7 +83,6 @@ class BT23_047(CardScript):
         effect4.set_effect_name("BT23-047 Suspend 5 digimon/tamer, none can unsuspend. Then you may attack")
         effect4.set_effect_description("Suspend, Gain Keyword Cannot Unsuspend Player, Force Attack, Grant Cannot Unsuspend")
         effect4.is_on_play = True
-        effect4._is_cannot_unsuspend_player = True
 
         effect = effect4  # alias for condition closure
         def condition4(context: Dict[str, Any]) -> bool:
@@ -95,32 +94,28 @@ class BT23_047(CardScript):
         effect4.set_can_use_condition(condition4)
 
         def process4(ctx: Dict[str, Any]):
-            """Action: Suspend, Gain Keyword Cannot Unsuspend Player, Force Attack, Grant Cannot Unsuspend"""
+            """Action: Suspend 5 opponent Digimon/Tamers, none can unsuspend, then may attack"""
             player = ctx.get('player')
             perm = ctx.get('permanent')
             game = ctx.get('game')
             if not (player and game):
                 return
-            def target_filter(p):
-                return True
-            def on_suspend(target_perm):
-                target_perm.suspend()
-            game.effect_select_opponent_permanent(
-                player, on_suspend, filter_fn=target_filter, is_optional=False)
-            if perm:
-                perm.grant_keyword('_is_cannot_unsuspend_player')
-            # Force attack — target Digimon may attack (requires engine SelectAttack)
-            pass  # descriptive-tagged: force_attack
-            # Prevent target from unsuspending
-            if not (player and game):
-                return
-            from digimon_gym.engine.interfaces.modifiers import ModifierType
-            def on_freeze(target_perm):
-                game.register_modifier(
-                    ModifierType.CANNOT_UNSUSPEND, target_perm,
-                    value_fn=lambda: True, expiry='end_of_opponent_turn')
-            game.effect_select_opponent_permanent(
-                player, on_freeze, filter_fn=lambda p: p.is_suspended, is_optional=False)
+            enemy = player.enemy if player else None
+            if enemy:
+                # Auto-suspend up to 5 opponent permanents (Digimon or Tamers)
+                targets = [p for p in enemy.battle_area
+                           if (p.is_digimon or p.is_tamer) and not p.is_suspended][:5]
+                for t in targets:
+                    t.suspend()
+                # None of opponent's Digimon can unsuspend in their next unsuspend phase
+                from digimon_gym.engine.interfaces.modifiers import ModifierType
+                for p in enemy.battle_area:
+                    if p.is_digimon:
+                        game.register_modifier(
+                            p, ModifierType.CANNOT_UNSUSPEND,
+                            expiry='end_of_opponent_turn')
+            # Then, this Digimon may attack
+            pass  # descriptive-tagged: force_attack — engine does not yet support optional self-attack
 
         effect4.set_on_process_callback(process4)
         effects.append(effect4)
@@ -132,7 +127,6 @@ class BT23_047(CardScript):
         effect5.set_effect_name("BT23-047 Suspend 5 digimon/tamer, none can unsuspend. Then you may attack")
         effect5.set_effect_description("Suspend, Gain Keyword Cannot Unsuspend Player, Force Attack, Grant Cannot Unsuspend")
         effect5.is_when_digivolving = True
-        effect5._is_cannot_unsuspend_player = True
 
         effect = effect5  # alias for condition closure
         def condition5(context: Dict[str, Any]) -> bool:
@@ -144,32 +138,28 @@ class BT23_047(CardScript):
         effect5.set_can_use_condition(condition5)
 
         def process5(ctx: Dict[str, Any]):
-            """Action: Suspend, Gain Keyword Cannot Unsuspend Player, Force Attack, Grant Cannot Unsuspend"""
+            """Action: Suspend 5 opponent Digimon/Tamers, none can unsuspend, then may attack"""
             player = ctx.get('player')
             perm = ctx.get('permanent')
             game = ctx.get('game')
             if not (player and game):
                 return
-            def target_filter(p):
-                return True
-            def on_suspend(target_perm):
-                target_perm.suspend()
-            game.effect_select_opponent_permanent(
-                player, on_suspend, filter_fn=target_filter, is_optional=False)
-            if perm:
-                perm.grant_keyword('_is_cannot_unsuspend_player')
-            # Force attack — target Digimon may attack (requires engine SelectAttack)
-            pass  # descriptive-tagged: force_attack
-            # Prevent target from unsuspending
-            if not (player and game):
-                return
-            from digimon_gym.engine.interfaces.modifiers import ModifierType
-            def on_freeze(target_perm):
-                game.register_modifier(
-                    ModifierType.CANNOT_UNSUSPEND, target_perm,
-                    value_fn=lambda: True, expiry='end_of_opponent_turn')
-            game.effect_select_opponent_permanent(
-                player, on_freeze, filter_fn=lambda p: p.is_suspended, is_optional=False)
+            enemy = player.enemy if player else None
+            if enemy:
+                # Auto-suspend up to 5 opponent permanents (Digimon or Tamers)
+                targets = [p for p in enemy.battle_area
+                           if (p.is_digimon or p.is_tamer) and not p.is_suspended][:5]
+                for t in targets:
+                    t.suspend()
+                # None of opponent's Digimon can unsuspend in their next unsuspend phase
+                from digimon_gym.engine.interfaces.modifiers import ModifierType
+                for p in enemy.battle_area:
+                    if p.is_digimon:
+                        game.register_modifier(
+                            p, ModifierType.CANNOT_UNSUSPEND,
+                            expiry='end_of_opponent_turn')
+            # Then, this Digimon may attack
+            pass  # descriptive-tagged: force_attack — engine does not yet support optional self-attack
 
         effect5.set_on_process_callback(process5)
         effects.append(effect5)
@@ -194,20 +184,31 @@ class BT23_047(CardScript):
         effect6.set_can_use_condition(condition6)
 
         def process6(ctx: Dict[str, Any]):
-            """Action: Delete"""
+            """Action: Trash 1 opponent Option in battle area, then delete 1 suspended Digimon/Tamer"""
             player = ctx.get('player')
             perm = ctx.get('permanent')
             game = ctx.get('game')
             if not (player and game):
                 return
-            def target_filter(p):
-                return p.is_digimon
+            enemy = player.enemy if player else None
+            if not enemy:
+                return
+            # Trash 1 of their Option cards in the battle area
+            option_perms = [p for p in enemy.battle_area if p.is_option]
+            if option_perms:
+                target = option_perms[0]
+                if target in enemy.battle_area:
+                    enemy.battle_area.remove(target)
+                    for cs in target.card_sources:
+                        enemy.trash_cards.append(cs)
+            # Then, delete 1 of their suspended Digimon or Tamers
+            def delete_filter(p):
+                return (p.is_digimon or p.is_tamer) and p.is_suspended
             def on_delete(target_perm):
-                enemy = player.enemy if player else None
                 if enemy:
                     enemy.delete_permanent(target_perm)
             game.effect_select_opponent_permanent(
-                player, on_delete, filter_fn=target_filter, is_optional=False)
+                player, on_delete, filter_fn=delete_filter, is_optional=False)
 
         effect6.set_on_process_callback(process6)
         effects.append(effect6)

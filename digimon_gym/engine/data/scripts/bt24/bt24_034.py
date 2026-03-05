@@ -20,7 +20,7 @@ class BT24_034(CardScript):
         effect0.set_effect_name("BT24-034 Alternate digivolution requirement")
         effect0.set_effect_description("Alternate digivolution requirement")
         # Alternate digivolution: Lv.3 from [Elecmon] with [TS] trait for cost 0
-        effect0._alt_digi_cost = 0
+        effect0._alt_digi_cost = 2
         effect0._alt_digi_level = 3
         effect0._alt_digi_name = "Elecmon"
         effect0._alt_digi_trait = "TS"

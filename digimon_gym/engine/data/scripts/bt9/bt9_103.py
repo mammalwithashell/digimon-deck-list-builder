@@ -20,39 +20,56 @@ class BT9_103(CardScript):
     def get_card_effects(self, card: 'CardSource') -> List['ICardEffect']:
         effects = []
 
-        # --- Effect 0: [Main] Can't attack players (play cost <= 7) ---
+        def _apply_main_effect(player, game):
+            """Shared logic for [Main] and [Security] -- apply both restrictions."""
+            enemy = player.enemy
+            if not enemy:
+                return
+
+            # Part 1: Opponent's Digimon with play costs 7 or less can't attack players
+            # Duration: until end of opponent's turn (turn_count + 1)
+            expiry_turn = game.turn_count + 1
+            for perm in enemy.battle_area:
+                if perm.is_digimon:
+                    play_cost = perm.top_card.get_cost_itself if perm.top_card else 0
+                    if play_cost <= 7:
+                        perm.grant_keyword('_is_cannot_attack_player', duration=expiry_turn)
+
+            # Part 2: Cards can't be added to security stacks by opponent's effects
+            # NOTE: Engine does not yet enforce CANNOT_ADD_SECURITY at
+            # recovery/add-security decision points. This registers the
+            # modifier for future engine support.
+            from digimon_gym.engine.interfaces.modifiers import ModifierType, ModifierEntry
+            entry = ModifierEntry(
+                modifier_type=ModifierType.CANNOT_ADD_SECURITY,
+                condition=lambda perm, ctx: True,
+                expiry='end_of_opponent_turn',
+                granting_player=player,
+            )
+            game.modifiers.register(entry)
+
+        # --- Effect 0: [Main] ---
         effect0 = ICardEffect()
-        effect0.set_timing(EffectTiming.OnEnterFieldAnyone)
-        effect0.set_effect_name("BT9-103 Opponent Digimon can't attack players")
+        effect0.set_timing(EffectTiming.OptionSkill)
+        effect0.set_effect_name("BT9-103 Opponent restrictions")
         effect0.set_effect_description(
             "[Main] Until the end of your opponent's turn, your opponent's "
-            "Digimon with play costs of 7 or less can't attack players."
+            "Digimon with play costs of 7 or less can't attack players, and "
+            "cards can't be added to security stacks by your opponent's effects."
         )
-        effect0.is_on_play = True
-        effect0._is_cannot_attack_player = True
 
         def condition0(context: Dict[str, Any]) -> bool:
             return True
         effect0.set_can_use_condition(condition0)
 
         def process0(ctx: Dict[str, Any]):
-            """Grant cannot_attack_player to opponent Digimon with play cost <= 7."""
+            """Apply both cannot-attack-player and cannot-add-security."""
             player = ctx.get('player')
             game = ctx.get('game')
             if not (player and game):
                 return
-            enemy = player.enemy
-            if not enemy:
-                return
-            for perm in enemy.battle_area:
-                if perm.is_digimon:
-                    play_cost = getattr(perm.top_card, 'play_cost', 0) or 0
-                    if play_cost <= 7:
-                        perm.grant_keyword(
-                            '_is_cannot_attack_player',
-                            condition=lambda p, e=enemy: game.current_player == e,
-                            granting_player=player,
-                        )
+            _apply_main_effect(player, game)
+
         effect0.set_on_process_callback(process0)
         effects.append(effect0)
 
@@ -67,23 +84,13 @@ class BT9_103(CardScript):
         effect1.set_can_use_condition(condition1)
 
         def process1(ctx: Dict[str, Any]):
-            """Same as main effect — apply cannot_attack_player."""
+            """Same as main effect -- apply both restrictions."""
             player = ctx.get('player')
             game = ctx.get('game')
             if not (player and game):
                 return
-            enemy = player.enemy
-            if not enemy:
-                return
-            for perm in enemy.battle_area:
-                if perm.is_digimon:
-                    play_cost = getattr(perm.top_card, 'play_cost', 0) or 0
-                    if play_cost <= 7:
-                        perm.grant_keyword(
-                            '_is_cannot_attack_player',
-                            condition=lambda p, e=enemy: game.current_player == e,
-                            granting_player=player,
-                        )
+            _apply_main_effect(player, game)
+
         effect1.set_on_process_callback(process1)
         effects.append(effect1)
 

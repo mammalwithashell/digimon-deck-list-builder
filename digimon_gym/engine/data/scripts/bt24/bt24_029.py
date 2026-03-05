@@ -36,27 +36,59 @@ class BT24_029(CardScript):
         effect1.set_effect_name("BT24-029 By placing 1 5 or lower play cost [TS]/[Sea Beast]/[Aqua]/[Sea Animal] card as bottom source, 1 digimon/tamer cant suspend")
         effect1.set_effect_description("[On Play] By placing 1 play cost 5 or lower card with the [Sea Beast] or [TS] trait or [Aqua] or [Sea Animal] in any of its traits from your hand as this Digimon's bottom digivolution card, 1 of your opponent's Digimon or Tamers can't suspend until their turn ends.")
         effect1.is_on_play = True
+        effect1.is_optional = True
 
-        effect = effect1  # alias for condition closure
         def condition1(context: Dict[str, Any]) -> bool:
             if card and card.permanent_of_this_card() is None:
                 return False
-            # Triggered on play — validated by engine timing
-            return True
+            player = card.owner if card else None
+            if not player:
+                return False
+            # Check eligible hand cards to tuck
+            def _tuck_ok(c):
+                cost = getattr(c, 'play_cost', None)
+                if cost is None or cost > 5:
+                    return False
+                traits = getattr(c, 'card_traits', []) or []
+                return (any(t in ('Sea Beast', 'Aqua', 'Sea Animal') for t in traits)
+                        or any('TS' in t for t in traits))
+            return any(_tuck_ok(c) for c in player.hand_cards)
 
         effect1.set_can_use_condition(condition1)
 
         def process1(ctx: Dict[str, Any]):
-            """Action: Effect Immunity"""
+            """By tucking a card from hand, freeze 1 opponent perm."""
             player = ctx.get('player')
             perm = ctx.get('permanent')
             game = ctx.get('game')
-            # Grant effect immunity via modifier system
-            if perm and game:
-                from digimon_gym.engine.interfaces.modifiers import ModifierType
-                game.register_modifier(
-                    ModifierType.CANNOT_BE_SELECTED_BY_EFFECT, perm,
-                    value_fn=lambda: True, expiry='end_of_turn')
+            if not (player and perm and game):
+                return
+
+            def tuck_filter(c):
+                cost = getattr(c, 'play_cost', None)
+                if cost is None or cost > 5:
+                    return False
+                traits = getattr(c, 'card_traits', []) or []
+                return (any(t in ('Sea Beast', 'Aqua', 'Sea Animal') for t in traits)
+                        or any('TS' in t for t in traits))
+
+            def on_tuck(selected):
+                if selected in player.hand_cards:
+                    player.hand_cards.remove(selected)
+                    perm.card_sources.insert(0, selected)
+                # Select opponent perm to freeze
+                def on_target(target):
+                    from digimon_gym.engine.interfaces.modifiers import ModifierType
+                    game.register_modifier(
+                        ModifierType.CANNOT_SUSPEND, target,
+                        value_fn=lambda: True, expiry='end_of_opponent_turn')
+                game.effect_select_opponent_permanent(
+                    player, on_target, is_optional=False,
+                    prompt="Select opponent's Digimon/Tamer that can't suspend.")
+
+            game.effect_select_hand_card(
+                player, tuck_filter, on_tuck, is_optional=True,
+                prompt="Select a card to place as bottom digivolution card.")
 
         effect1.set_on_process_callback(process1)
         effects.append(effect1)
@@ -68,27 +100,57 @@ class BT24_029(CardScript):
         effect2.set_effect_name("BT24-029 By placing 1 5 or lower play cost [TS]/[Sea Beast]/[Aqua]/[Sea Animal] card as bottom source, 1 digimon/tamer cant suspend")
         effect2.set_effect_description("[When Digivolving] By placing 1 play cost 5 or lower card with the [Sea Beast] or [TS] trait or [Aqua] or [Sea Animal] in any of its traits from your hand as this Digimon's bottom digivolution card, 1 of your opponent's Digimon or Tamers can't suspend until their turn ends.")
         effect2.is_when_digivolving = True
+        effect2.is_optional = True
 
-        effect = effect2  # alias for condition closure
         def condition2(context: Dict[str, Any]) -> bool:
             if card and card.permanent_of_this_card() is None:
                 return False
-            # Triggered when digivolving — validated by engine timing
-            return True
+            player = card.owner if card else None
+            if not player:
+                return False
+            def _tuck_ok(c):
+                cost = getattr(c, 'play_cost', None)
+                if cost is None or cost > 5:
+                    return False
+                traits = getattr(c, 'card_traits', []) or []
+                return (any(t in ('Sea Beast', 'Aqua', 'Sea Animal') for t in traits)
+                        or any('TS' in t for t in traits))
+            return any(_tuck_ok(c) for c in player.hand_cards)
 
         effect2.set_can_use_condition(condition2)
 
         def process2(ctx: Dict[str, Any]):
-            """Action: Effect Immunity"""
+            """By tucking a card from hand, freeze 1 opponent perm."""
             player = ctx.get('player')
             perm = ctx.get('permanent')
             game = ctx.get('game')
-            # Grant effect immunity via modifier system
-            if perm and game:
-                from digimon_gym.engine.interfaces.modifiers import ModifierType
-                game.register_modifier(
-                    ModifierType.CANNOT_BE_SELECTED_BY_EFFECT, perm,
-                    value_fn=lambda: True, expiry='end_of_turn')
+            if not (player and perm and game):
+                return
+
+            def tuck_filter(c):
+                cost = getattr(c, 'play_cost', None)
+                if cost is None or cost > 5:
+                    return False
+                traits = getattr(c, 'card_traits', []) or []
+                return (any(t in ('Sea Beast', 'Aqua', 'Sea Animal') for t in traits)
+                        or any('TS' in t for t in traits))
+
+            def on_tuck(selected):
+                if selected in player.hand_cards:
+                    player.hand_cards.remove(selected)
+                    perm.card_sources.insert(0, selected)
+                def on_target(target):
+                    from digimon_gym.engine.interfaces.modifiers import ModifierType
+                    game.register_modifier(
+                        ModifierType.CANNOT_SUSPEND, target,
+                        value_fn=lambda: True, expiry='end_of_opponent_turn')
+                game.effect_select_opponent_permanent(
+                    player, on_target, is_optional=False,
+                    prompt="Select opponent's Digimon/Tamer that can't suspend.")
+
+            game.effect_select_hand_card(
+                player, tuck_filter, on_tuck, is_optional=True,
+                prompt="Select a card to place as bottom digivolution card.")
 
         effect2.set_on_process_callback(process2)
         effects.append(effect2)
@@ -103,31 +165,55 @@ class BT24_029(CardScript):
         effect3.set_max_count_per_turn(1)
         effect3.set_hash_string("BT24_029_EOA")
 
-        effect = effect3  # alias for condition closure
         def condition3(context: Dict[str, Any]) -> bool:
             if card and card.permanent_of_this_card() is None:
                 return False
-            return True
+            perm = card.permanent_of_this_card() if card else None
+            if not perm:
+                return False
+            top = perm.top_card
+            for cs in perm.card_sources:
+                if cs is top:
+                    continue
+                cost = getattr(cs, 'play_cost', None)
+                if cost is None or cost > 5:
+                    continue
+                traits = getattr(cs, 'card_traits', []) or []
+                if any('TS' in t for t in traits):
+                    return True
+            return False
 
         effect3.set_can_use_condition(condition3)
 
         def process3(ctx: Dict[str, Any]):
-            """Action: Play Card"""
+            """Play cost 5 or lower [TS] card from digi sources."""
             player = ctx.get('player')
             perm = ctx.get('permanent')
             game = ctx.get('game')
-            if not (player and game):
+            if not (player and perm and game):
                 return
-            def play_filter(c):
-                if not getattr(c, 'has_play_cost', False):
-                    return False
-                if getattr(c, 'get_cost_itself', 0) > 5:
-                    return False
-                if not (any('TS' in _t for _t in (getattr(c, 'card_traits', []) or []))):
-                    return False
-                return True
-            game.effect_play_from_zone(
-                player, 'hand', play_filter, free=True, is_optional=True)
+            top = perm.top_card
+            eligible = []
+            for cs in perm.card_sources:
+                if cs is top:
+                    continue
+                cost = getattr(cs, 'play_cost', None)
+                if cost is None or cost > 5:
+                    continue
+                traits = getattr(cs, 'card_traits', []) or []
+                if not any('TS' in t for t in traits):
+                    continue
+                eligible.append(cs)
+            if not eligible:
+                return
+            selected = eligible[0]
+            perm.card_sources.remove(selected)
+            played = player.play_card_from_source(selected, pay_cost=False)
+            game.execute_effects(
+                EffectTiming.OnEnterFieldAnyone,
+                {"played_card": selected, "played_permanent": played,
+                 "event_player": player},
+            )
 
         effect3.set_on_process_callback(process3)
         effects.append(effect3)
@@ -144,34 +230,65 @@ class BT24_029(CardScript):
         effect4.set_hash_string("BT24_029_ESS")
         effect4.is_on_attack = True
 
-        effect = effect4  # alias for condition closure
         def condition4(context: Dict[str, Any]) -> bool:
             if card and card.permanent_of_this_card() is None:
                 return False
-            # Triggered on attack — validated by engine timing
-            return True
+            perm = card.permanent_of_this_card() if card else None
+            if not perm:
+                return False
+            top = perm.top_card
+            for cs in perm.card_sources:
+                if cs is top:
+                    continue
+                if not getattr(cs, 'is_digimon', False):
+                    continue
+                level = getattr(cs, 'level', None)
+                if level is None or level > 4:
+                    continue
+                colors = [c.name for c in (getattr(cs, 'card_colors', None) or [])]
+                if 'Blue' not in colors:
+                    continue
+                traits = getattr(cs, 'card_traits', []) or []
+                if any('TS' in t for t in traits):
+                    return True
+            return False
 
         effect4.set_can_use_condition(condition4)
 
         def process4(ctx: Dict[str, Any]):
-            """Action: Play Card"""
+            """Play Lv.4 or lower blue [TS] Digimon from digi sources."""
             player = ctx.get('player')
             perm = ctx.get('permanent')
             game = ctx.get('game')
-            if not (player and game):
+            if not (player and perm and game):
                 return
-            def play_filter(c):
-                if not getattr(c, 'is_digimon', False):
-                    return False
-                if getattr(c, 'level', None) is None or c.level > 4:
-                    return False
-                if not ('Blue' in [col.name for col in getattr(c, 'card_colors', [])]):
-                    return False
-                if not (any('TS' in _t for _t in (getattr(c, 'card_traits', []) or []))):
-                    return False
-                return True
-            game.effect_play_from_zone(
-                player, 'hand', play_filter, free=True, is_optional=True)
+            top = perm.top_card
+            eligible = []
+            for cs in perm.card_sources:
+                if cs is top:
+                    continue
+                if not getattr(cs, 'is_digimon', False):
+                    continue
+                level = getattr(cs, 'level', None)
+                if level is None or level > 4:
+                    continue
+                colors = [c.name for c in (getattr(cs, 'card_colors', None) or [])]
+                if 'Blue' not in colors:
+                    continue
+                traits = getattr(cs, 'card_traits', []) or []
+                if not any('TS' in t for t in traits):
+                    continue
+                eligible.append(cs)
+            if not eligible:
+                return
+            selected = eligible[0]
+            perm.card_sources.remove(selected)
+            played = player.play_card_from_source(selected, pay_cost=False)
+            game.execute_effects(
+                EffectTiming.OnEnterFieldAnyone,
+                {"played_card": selected, "played_permanent": played,
+                 "event_player": player},
+            )
 
         effect4.set_on_process_callback(process4)
         effects.append(effect4)

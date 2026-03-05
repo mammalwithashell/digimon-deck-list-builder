@@ -128,6 +128,12 @@ Before playing, understand what each card should do:
    - Keywords and their mechanics
    - Digivolution requirements and costs
 
+4. **Optional/Cost Effects Rule** — Critically check each card's text for these patterns:
+   - **"may"** → The effect MUST be optional (`is_optional=True`), triggering a player/agent selection to use or decline it.
+   - **"by [doing X]"** → The stated action is a **cost** the player must pay to activate the effect. The cost targets the card's OWN permanent (e.g., "by suspending this Tamer" means `perm.suspend()` on this card, NOT selecting an opponent's permanent). The effect should be `is_optional=True` (player chooses whether to pay), and the cost must execute before the reward.
+   - **"or"** → When card text says "do X, or you may do Y", this is a **mutually exclusive choice** — the player picks one branch, not both.
+   - Scripts that apply "by" costs to opponent targets, skip "may" optionality, or execute both branches of an "or" choice are **bugs**.
+
 ---
 
 ## Phase 3: Create Test Game
@@ -200,6 +206,11 @@ The response includes:
 - `action_descriptions` — next available actions
 
 ### 4c. Validate after each action
+
+**Optional/Cost Effect Validation** (check these for EVERY effect that triggers):
+- If card text says **"may"**: Verify a selection/choice is presented to the player. If the effect fires automatically without choice, it's a bug.
+- If card text says **"by [doing X]"**: Verify the cost action targets the correct entity (e.g., "by suspending this Tamer" must suspend the card's own permanent, not an opponent's). Verify the cost is paid BEFORE the reward.
+- If card text says **"X, or you may Y"**: Verify only one branch executes, not both.
 
 **For PLAY actions (0-29)**:
 - Memory should decrease by the card's `play_cost`

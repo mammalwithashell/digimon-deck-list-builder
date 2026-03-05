@@ -25,13 +25,6 @@ class BT24_088(CardScript):
                 return False
             if not (card and card.owner and card.owner.is_my_turn):
                 return False
-            permanent = effect0.effect_source_permanent if hasattr(effect0, 'effect_source_permanent') else None
-            if permanent and permanent.top_card:
-                text = permanent.top_card.card_text
-                if 'Three Musketeers' not in text:
-                    return False
-            else:
-                return False
             return True
 
         effect0.set_can_use_condition(condition0)
@@ -68,12 +61,7 @@ class BT24_088(CardScript):
         effect1.is_on_play = True
 
         def condition1(context: Dict[str, Any]) -> bool:
-            permanent = effect1.effect_source_permanent if hasattr(effect1, 'effect_source_permanent') else None
-            if permanent and permanent.top_card:
-                text = permanent.top_card.card_text
-                if 'Three Musketeers' not in text:
-                    return False
-            else:
+            if card and card.permanent_of_this_card() is None:
                 return False
             return True
 
@@ -86,7 +74,14 @@ class BT24_088(CardScript):
                 return
 
             def hand_filter(c):
-                return True
+                # Card with [Three Musketeers] in its text or the [TS] trait
+                traits = getattr(c, 'card_traits', []) or []
+                if any('TS' in t for t in traits):
+                    return True
+                text = getattr(c, 'effect_description_eng', '') or ''
+                if 'Three Musketeers' in text:
+                    return True
+                return False
 
             def on_trashed(selected):
                 if selected in player.hand_cards:
@@ -106,7 +101,9 @@ class BT24_088(CardScript):
         effect2.is_security_effect = True
 
         def condition2(context: Dict[str, Any]) -> bool:
-            return True
+            # Security effects are handled by the engine's security check
+            # system — never fire as a processable effect
+            return False
 
         effect2.set_can_use_condition(condition2)
         effects.append(effect2)

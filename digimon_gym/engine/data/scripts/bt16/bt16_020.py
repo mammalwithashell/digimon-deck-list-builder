@@ -35,6 +35,8 @@ class BT16_020(CardScript):
         effect1.is_inherited_effect = True
         # Alternate digivolution: alternate source for cost 2
         effect1._alt_digi_cost = 2
+        effect1._alt_digi_level = 3
+        effect1._alt_digi_trait = "Night Claw"
 
         def condition1(context: Dict[str, Any]) -> bool:
             return True

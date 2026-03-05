@@ -38,45 +38,39 @@ class BT24_051(CardScript):
         effect1.set_timing(EffectTiming.BeforePayCost)
         effect1.set_effect_name("BT24-051 Reduce play cost (5)")
         effect1.set_effect_description("When this card would be played, if there are 3 or more Digimon, reduce the play cost by 5.")
+        effect1.cost_reduction = 5
 
-        effect = effect1  # alias for condition closure
         def condition1(context: Dict[str, Any]) -> bool:
-            return True
+            if context.get('card_source') is not card:
+                return False
+            owner = getattr(card, 'owner', None)
+            if not owner:
+                return False
+            own_digi = len([p for p in owner.battle_area if p.is_digimon])
+            enemy = owner.enemy if owner else None
+            opp_digi = len([p for p in enemy.battle_area if p.is_digimon]) if enemy else 0
+            return (own_digi + opp_digi) >= 3
 
         effect1.set_can_use_condition(condition1)
-
-        def process1(ctx: Dict[str, Any]):
-            """Action: Effect"""
-            player = ctx.get('player')
-            perm = ctx.get('permanent')
-            game = ctx.get('game')
-            # Cost reduction (variable amount) — handled via cost_reduction property
-            pass  # descriptive-tagged: cost_reduction
-
-        effect1.set_on_process_callback(process1)
         effects.append(effect1)
 
-        # Timing: EffectTiming.None
-        # Effect
         effect2 = ICardEffect()
         effect2.set_effect_name("BT24-051 Play Cost -5")
-        effect2.set_effect_description("Effect")
+        effect2.set_effect_description("Cost -5")
+        effect2.cost_reduction = 5
 
-        effect = effect2  # alias for condition closure
         def condition2(context: Dict[str, Any]) -> bool:
-            return True
+            if context.get('card_source') is not card:
+                return False
+            owner = getattr(card, 'owner', None)
+            if not owner:
+                return False
+            own_digi = len([p for p in owner.battle_area if p.is_digimon])
+            enemy = owner.enemy if owner else None
+            opp_digi = len([p for p in enemy.battle_area if p.is_digimon]) if enemy else 0
+            return (own_digi + opp_digi) >= 3
 
         effect2.set_can_use_condition(condition2)
-
-        def process2(ctx: Dict[str, Any]):
-            """Action: Effect"""
-            player = ctx.get('player')
-            perm = ctx.get('permanent')
-            game = ctx.get('game')
-            # Cost reduction (variable amount) — handled via cost_reduction property
-            pass  # descriptive-tagged: cost_reduction
-
-        effect2.set_on_process_callback(process2)
         effects.append(effect2)
 
         # Timing: EffectTiming.OnEnterFieldAnyone

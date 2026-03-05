@@ -56,6 +56,37 @@ class BT23_054(CardScript):
         effect2.set_can_use_condition(condition2)
         effects.append(effect2)
 
+        def _rk_cs_filter(p):
+            """Filter for Digimon with [Royal Knight] or [CS] trait."""
+            if not p.is_digimon:
+                return False
+            if p.top_card:
+                for t in getattr(p.top_card, 'card_traits', []):
+                    if 'Royal Knight' in t or t == 'CS':
+                        return True
+            return False
+
+        def _draw_and_grant_bounce_immunity(ctx):
+            """Draw 1, then select 1 of your Digimon with Royal Knight or CS trait to grant bounce immunity."""
+            player = ctx.get('player')
+            perm = ctx.get('permanent')
+            game = ctx.get('game')
+            if player:
+                player.draw_cards(1)
+            if not (player and game):
+                return
+            def on_select(selected_perm):
+                from digimon_gym.engine.interfaces.modifiers import ModifierType
+                game.register_modifier(
+                    selected_perm, ModifierType.CANNOT_RETURN_TO_HAND,
+                    value_fn=lambda: True, expiry='end_of_opponent_turn')
+                game.register_modifier(
+                    selected_perm, ModifierType.CANNOT_RETURN_TO_DECK,
+                    value_fn=lambda: True, expiry='end_of_opponent_turn')
+            game.effect_select_own_permanent(
+                player, on_select, filter_fn=_rk_cs_filter, is_optional=False,
+                prompt="Select a Digimon with [Royal Knight] or [CS] trait to protect from bouncing.")
+
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [On Play] <Draw 1> Then, 1 of your Digimon with the [Royal Knight] or [CS] trait can't be returned to hands or decks by your opponent's effects until their turn ends.
         effect3 = ICardEffect()
@@ -63,8 +94,6 @@ class BT23_054(CardScript):
         effect3.set_effect_name("BT23-054 Draw 1, then give can't be returned to hand/deck")
         effect3.set_effect_description("[On Play] <Draw 1> Then, 1 of your Digimon with the [Royal Knight] or [CS] trait can't be returned to hands or decks by your opponent's effects until their turn ends.")
         effect3.is_on_play = True
-        effect3._is_cannot_return_to_hand = True
-        effect3._is_cannot_return_to_deck = True
 
         effect = effect3  # alias for condition closure
         def condition3(context: Dict[str, Any]) -> bool:
@@ -76,21 +105,8 @@ class BT23_054(CardScript):
         effect3.set_can_use_condition(condition3)
 
         def process3(ctx: Dict[str, Any]):
-            """Action: Draw 1, Gain Keyword Cannot Return To Hand, Gain Keyword Cannot Return To Deck, Grant Bounce Immunity"""
-            player = ctx.get('player')
-            perm = ctx.get('permanent')
-            game = ctx.get('game')
-            if player:
-                player.draw_cards(1)
-            if perm:
-                perm.grant_keyword('_is_cannot_return_to_hand')
-                perm.grant_keyword('_is_cannot_return_to_deck')
-            # Prevent return to hand/deck via modifier system
-            if perm and game:
-                from digimon_gym.engine.interfaces.modifiers import ModifierType
-                game.register_modifier(
-                    ModifierType.CANNOT_BE_RETURNED, perm,
-                    value_fn=lambda: True, expiry='end_of_turn')
+            """Action: Draw 1, then grant bounce immunity to a selected Royal Knight/CS Digimon"""
+            _draw_and_grant_bounce_immunity(ctx)
 
         effect3.set_on_process_callback(process3)
         effects.append(effect3)
@@ -102,8 +118,6 @@ class BT23_054(CardScript):
         effect4.set_effect_name("BT23-054 Draw 1, then give can't be returned to hand/deck")
         effect4.set_effect_description("[When Digivolving] <Draw 1> Then, 1 of your Digimon with the [Royal Knight] or [CS] trait can't be returned to hands or decks by your opponent's effects until their turn ends.")
         effect4.is_when_digivolving = True
-        effect4._is_cannot_return_to_hand = True
-        effect4._is_cannot_return_to_deck = True
 
         effect = effect4  # alias for condition closure
         def condition4(context: Dict[str, Any]) -> bool:
@@ -115,21 +129,8 @@ class BT23_054(CardScript):
         effect4.set_can_use_condition(condition4)
 
         def process4(ctx: Dict[str, Any]):
-            """Action: Draw 1, Gain Keyword Cannot Return To Hand, Gain Keyword Cannot Return To Deck, Grant Bounce Immunity"""
-            player = ctx.get('player')
-            perm = ctx.get('permanent')
-            game = ctx.get('game')
-            if player:
-                player.draw_cards(1)
-            if perm:
-                perm.grant_keyword('_is_cannot_return_to_hand')
-                perm.grant_keyword('_is_cannot_return_to_deck')
-            # Prevent return to hand/deck via modifier system
-            if perm and game:
-                from digimon_gym.engine.interfaces.modifiers import ModifierType
-                game.register_modifier(
-                    ModifierType.CANNOT_BE_RETURNED, perm,
-                    value_fn=lambda: True, expiry='end_of_turn')
+            """Action: Draw 1, then grant bounce immunity to a selected Royal Knight/CS Digimon"""
+            _draw_and_grant_bounce_immunity(ctx)
 
         effect4.set_on_process_callback(process4)
         effects.append(effect4)

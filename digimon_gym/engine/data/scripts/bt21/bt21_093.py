@@ -26,6 +26,8 @@ class BT21_093(CardScript):
         effect = effect0  # alias for condition closure
         def condition0(context: Dict[str, Any]) -> bool:
             # Only reduce cost if opponent has 3 or fewer security cards
+            if context.get('card_source') is not card:
+                return False
             player = card.owner if card else None
             if player:
                 enemy = player.enemy if player else None

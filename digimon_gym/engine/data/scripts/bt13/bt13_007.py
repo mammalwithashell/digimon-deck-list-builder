@@ -15,13 +15,62 @@ class BT13_007(CardScript):
     def get_card_effects(self, card: 'CardSource') -> List['ICardEffect']:
         effects = []
 
+        # [Breeding][Your Turn] All of your Digimon can't digivolve.
+        # Implemented as a continuous modifier registered when this card enters
+        # the breeding area and cleaned up when it leaves.
+        effect_nodigi = ICardEffect()
+        effect_nodigi.set_timing(EffectTiming.OnEnterFieldAnyone)
+        effect_nodigi.set_effect_name("BT13-007 All your Digimon can't digivolve")
+        effect_nodigi.set_effect_description(
+            "[Breeding][Your Turn] All of your Digimon can't digivolve."
+        )
+        effect_nodigi._allow_breeding_source = True
+
+        def condition_nodigi(context: Dict[str, Any]) -> bool:
+            # This is a continuous effect — we register it once from any timing.
+            # We need the card to be in the breeding area.
+            if not (card and card.owner):
+                return False
+            perm = card.permanent_of_this_card()
+            if perm is None or card.owner.breeding_area is not perm:
+                return False
+            return card.owner.is_my_turn
+
+        effect_nodigi.set_can_use_condition(condition_nodigi)
+
+        def process_nodigi(ctx: Dict[str, Any]):
+            player = ctx.get("player")
+            perm = ctx.get("permanent")
+            game = ctx.get("game")
+            if not (player and perm and game):
+                return
+            from digimon_gym.engine.interfaces.modifiers import ModifierType
+            # Register CANNOT_DIGIVOLVE on all of this player's battle area Digimon.
+            # The modifier condition checks ownership and your-turn.
+            for battle_perm in player.battle_area:
+                game.register_modifier(
+                    battle_perm,
+                    ModifierType.CANNOT_DIGIVOLVE,
+                    condition=lambda p, ctx, owner=player: owner.is_my_turn,
+                    source_effect=effect_nodigi,
+                    expiry='permanent',
+                )
+
+        effect_nodigi.set_on_process_callback(process_nodigi)
+        effects.append(effect_nodigi)
+
+        # [Breeding][Your Turn][Once Per Turn] When a [Royal Knight] trait Digimon
+        # card would be played, you may reduce the play cost by 4, plus 1 for each
+        # of this Digimon's digivolution cards.
         effect0 = ICardEffect()
         effect0.set_timing(EffectTiming.BeforePayCost)
         effect0.set_effect_name("BT13-007 Royal Knight play cost reduction")
         effect0.set_effect_description(
-            "[Breeding] When one of your [Royal Knight] Digimon would be played, reduce the play cost by 4 plus 1 for each digivolution card under this Digimon."
+            "[Breeding][Your Turn][Once Per Turn] When a [Royal Knight] trait Digimon card would be played, reduce the play cost by 4 plus 1 for each digivolution card under this Digimon."
         )
         effect0._allow_breeding_source = True
+        effect0.set_max_count_per_turn(1)
+        effect0.set_hash_string("CostReduce_BT13_007")
 
         def condition0(context: Dict[str, Any]) -> bool:
             if not (card and card.owner and card.owner.is_my_turn):
@@ -46,6 +95,9 @@ class BT13_007(CardScript):
         effect0.set_on_process_callback(process0)
         effects.append(effect0)
 
+        # [Breeding][Start of Your Main Phase] Reveal the top card of your Digi-Egg
+        # deck, then place that card and all of your [Royal Knight] trait Digimon as
+        # this Digimon's bottom digivolution cards.
         effect1 = ICardEffect()
         effect1.set_timing(EffectTiming.OnStartMainPhase)
         effect1.set_effect_name("BT13-007 absorb Digi-Egg and Royal Knights")
@@ -83,11 +135,15 @@ class BT13_007(CardScript):
                 absorbed_sources.extend(field_perm.card_sources)
 
             if absorbed_sources:
+                # absorbed cards go to the BOTTOM of the stack (index 0 = bottom)
                 perm.card_sources = absorbed_sources + perm.card_sources
 
         effect1.set_on_process_callback(process1)
         effects.append(effect1)
 
+        # Inherited effect:
+        # [Breeding][Your Turn][Once Per Turn] When an Option card with the
+        # [Royal Knight] trait is placed in the battle area, gain 1 memory.
         effect2 = ICardEffect()
         effect2.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect2.set_effect_name("BT13-007 gain 1 memory")
