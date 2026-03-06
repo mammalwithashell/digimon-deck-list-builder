@@ -207,7 +207,7 @@ variants = generate_variants(
 ### Standard Training Chain
 
 ```
-DigimonEnv                        (981-obs, 2120-action, reward shaping)
+DigimonEnv                        (1375-obs, 2168-action, reward shaping)
   → OpponentWrapper              (single-agent MDP, auto-plays P2)
   → DeckPoolWrapper              (agent deck variation, optional)
   → GauntletWrapper              (opponent deck sampling from MetaGauntlet, optional)

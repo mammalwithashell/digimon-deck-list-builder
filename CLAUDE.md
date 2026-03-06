@@ -36,6 +36,12 @@ It also includes an admin AI workflow for issue triage, AI task dispatch, autofi
 - `frontend/src/pages/`: primary UI pages
 - `frontend/src/api/`: backend API clients
 - `docs/TENSOR_SPEC.md`, `docs/ACTION_SPEC.md`, `AGENTS.md`, `docs/TRAINING_RUNBOOK.md`: behavior contracts
+- `docs/TOOLS.md`: card registry, autoencoder, tensor layout, and new-set workflow documentation
+- `digimon_gym/engine/data/tensor_layout.py`: card ID / scalar position map for FeaturesExtractor
+- `digimon_gym/engine/data/card_features.py`: card feature vectorizer for autoencoder
+- `digimon_gym/engine/data/card_registry.py`: card ID → integer index mapping
+- `tools/build_registry.py`: append-only card registry builder (DigimonCard.io API)
+- `tools/train_card_autoencoder.py`: warm-start embedding generator
 
 ## RL and Game Contracts
 
