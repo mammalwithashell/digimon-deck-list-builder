@@ -21,3 +21,16 @@ frontend/tsconfig.tsbuildinfo
 .playwright-mcp/
 .worktrees/
 Digimon TCG resources/glossary.pdf
+
+# Tauri
+src-tauri/target/
+src-tauri/binaries/
+src-tauri/resources/models/
+*.AppImage
+*.dmg
+*.msi
+*.deb
+
+# PyInstaller
+build/
+dist/

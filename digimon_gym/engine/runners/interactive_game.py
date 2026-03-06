@@ -29,7 +29,9 @@ class InteractiveGame(BaseGameRunner):
                  player2_type: PlayerType = PlayerType.Agent,
                  player1_policy: str = "greedy",
                  player2_policy: str = "greedy",
-                 agent_action_delay_ms: int = 350):
+                 agent_action_delay_ms: int = 350,
+                 player1_model_path: Optional[str] = None,
+                 player2_model_path: Optional[str] = None):
         self._verbose_logger = VerboseLogger()
         # Create a lightweight recorder just for initial state capture
         recorder = GameRecorder(record_tensors=False)
@@ -39,6 +41,27 @@ class InteractiveGame(BaseGameRunner):
         self.player1_policy = player1_policy.lower()
         self.player2_policy = player2_policy.lower()
         self.agent_action_delay_ms = max(0, int(agent_action_delay_ms))
+
+        # ONNX policies for "trained" agents (lazy-loaded)
+        self._onnx_policies: Dict[int, Any] = {}
+        if self.player1_policy == "trained" and player1_model_path:
+            self._load_onnx_policy(1, player1_model_path)
+        if self.player2_policy == "trained" and player2_model_path:
+            self._load_onnx_policy(2, player2_model_path)
+
+        # Reset LSTM state to ensure clean episode boundary (CLAUDE.md rule 10)
+        self.reset_policies()
+
+    def _load_onnx_policy(self, player_num: int, model_path: str) -> None:
+        """Load an ONNX policy for a player (auto-detects MLP vs LSTM)."""
+        from digimon_gym.engine.onnx_policy import load_onnx_policy
+        self._onnx_policies[player_num] = load_onnx_policy(model_path)
+
+    def reset_policies(self) -> None:
+        """Reset ONNX LSTM hidden state. Call at episode/game boundaries."""
+        for policy in self._onnx_policies.values():
+            if hasattr(policy, "reset"):
+                policy.reset()
 
     @staticmethod
     def _random_policy(mask: np.ndarray) -> int:
@@ -64,9 +87,17 @@ class InteractiveGame(BaseGameRunner):
 
     def _select_agent_action(self, mask: np.ndarray) -> int:
         # Use current_player_id to pick the right policy (respects active_player during selections)
-        policy_name = self.player1_policy if self.game.current_player_id == self.game.player1.player_id else self.player2_policy
+        is_p1 = self.game.current_player_id == self.game.player1.player_id
+        policy_name = self.player1_policy if is_p1 else self.player2_policy
+        player_num = 1 if is_p1 else 2
 
-        if policy_name == "random":
+        if policy_name == "trained" and player_num in self._onnx_policies:
+            obs = np.array(
+                self.game.get_board_state_tensor(self.game.current_player_id),
+                dtype=np.float32,
+            )
+            action = self._onnx_policies[player_num].predict(obs, mask)
+        elif policy_name == "random":
             action = self._random_policy(mask)
         else:
             from digimon_gym.digimon_gym import greedy_policy

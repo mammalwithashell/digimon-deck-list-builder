@@ -15,6 +15,7 @@ import { BarracksPage } from '@/pages/BarracksPage';
 import { ArenaPage } from '@/pages/ArenaPage';
 import { GauntletPage } from '@/pages/GauntletPage';
 import { DeckPoolPage } from '@/pages/DeckPoolPage';
+import { LobbyPage } from '@/pages/LobbyPage';
 import { useAuthStore } from '@/stores/authStore';
 
 export function App() {
@@ -32,6 +33,7 @@ export function App() {
           <Route path="/login" element={<LoginPage />} />
           <Route path="/register" element={<RegisterPage />} />
           <Route element={<AuthGuard />}>
+            <Route path="/lobby" element={<LobbyPage />} />
             <Route path="/game/:id?" element={<GamePage />} />
             <Route path="/deckbuilder/:id?" element={<DeckBuilderPage />} />
           </Route>

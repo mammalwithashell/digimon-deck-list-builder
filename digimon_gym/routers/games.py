@@ -13,12 +13,21 @@ from digimon_gym.db.models import GameRecording
 from digimon_gym.db.schemas import RecordingSaveResponse
 from digimon_gym.engine.data.enums import PlayerType
 from digimon_gym.engine.data.deck_loader import parse_deck
+from digimon_gym.engine.model_utils import get_models_dir, list_onnx_models, resolve_model_path
 from digimon_gym.engine.runners.headless_game import HeadlessGame
 from digimon_gym.engine.runners.interactive_game import InteractiveGame
 from digimon_gym.routers.schemas import CreateGameRequest, GameActionRequest
 from digimon_gym.routers.state import active_games
 
 router = APIRouter(tags=["games"])
+
+
+def _resolve_model_path(model_name: str | None) -> str | None:
+    """Resolve an ONNX model filename, raising HTTPException on failure."""
+    try:
+        return resolve_model_path(model_name)
+    except FileNotFoundError as exc:
+        raise HTTPException(status_code=400, detail=str(exc))
 
 
 def _require_game(game_id: str):
@@ -47,6 +56,10 @@ def create_game(request: CreateGameRequest):
     p1_policy = request.player1_policy.lower()
     p2_policy = request.player2_policy.lower()
 
+    # Resolve ONNX model paths for "trained" policies
+    p1_model_path = _resolve_model_path(request.player1_model) if p1_policy == "trained" else None
+    p2_model_path = _resolve_model_path(request.player2_model) if p2_policy == "trained" else None
+
     if p1_type == PlayerType.Agent and p2_type == PlayerType.Agent:
         runner = HeadlessGame(
             deck1,
@@ -64,6 +77,8 @@ def create_game(request: CreateGameRequest):
             player1_policy=p1_policy,
             player2_policy=p2_policy,
             agent_action_delay_ms=request.agent_action_delay_ms,
+            player1_model_path=p1_model_path,
+            player2_model_path=p2_model_path,
         )
 
     active_games[game_id] = runner
@@ -243,3 +258,9 @@ async def save_game_recording(game_id: str, db: AsyncSession = Depends(get_db)):
     await db.refresh(record)
 
     return RecordingSaveResponse(recording_id=record.id)
+
+
+@router.get("/games/models")
+def list_available_models():
+    """List available ONNX agent models."""
+    return {"models": list_onnx_models()}
