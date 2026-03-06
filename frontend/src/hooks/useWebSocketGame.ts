@@ -63,13 +63,14 @@ export function useWebSocketGame(options: UseWebSocketGameOptions | null) {
   optionsRef.current = options;
 
   const connect = useCallback(() => {
-    if (!options) return;
-    const { gameId, role = 'player' } = options;
+    const opts = optionsRef.current;
+    if (!opts) return;
+    const { gameId, role = 'player' } = opts;
 
     const token = localStorage.getItem('access_token');
     if (!token) {
       setStatus('error');
-      options.onError?.('Not authenticated');
+      opts.onError?.('Not authenticated');
       return;
     }
 
@@ -95,33 +96,33 @@ export function useWebSocketGame(options: UseWebSocketGameOptions | null) {
 
     ws.onmessage = (event) => {
       const msg: ServerMessage = JSON.parse(event.data);
-      const opts = optionsRef.current;
-      if (!opts) return;
+      const currentOpts = optionsRef.current;
+      if (!currentOpts) return;
 
       switch (msg.type) {
         case 'state_update':
           if (msg.your_player_id != null) {
             setMyPlayerId(msg.your_player_id);
           }
-          opts.onStateUpdate?.(msg);
+          currentOpts.onStateUpdate?.(msg);
           break;
         case 'player_joined':
-          opts.onPlayerJoined?.(msg);
+          currentOpts.onPlayerJoined?.(msg);
           break;
         case 'player_disconnected':
-          opts.onPlayerDisconnected?.(msg.player_id);
+          currentOpts.onPlayerDisconnected?.(msg.player_id);
           break;
         case 'player_reconnected':
-          opts.onPlayerReconnected?.(msg.player_id);
+          currentOpts.onPlayerReconnected?.(msg.player_id);
           break;
         case 'game_over':
-          opts.onGameOver?.(msg);
+          currentOpts.onGameOver?.(msg);
           break;
         case 'spectator_count':
-          opts.onSpectatorCount?.(msg.count);
+          currentOpts.onSpectatorCount?.(msg.count);
           break;
         case 'error':
-          opts.onError?.(msg.message);
+          currentOpts.onError?.(msg.message);
           break;
         case 'pong':
           break;
@@ -133,7 +134,7 @@ export function useWebSocketGame(options: UseWebSocketGameOptions | null) {
       if (event.code === 4001 || event.code === 4003 || event.code === 4004) {
         // Auth failure or game not found — don't retry
         setStatus('error');
-        options.onError?.(event.reason || 'Connection rejected');
+        optionsRef.current?.onError?.(event.reason || 'Connection rejected');
         return;
       }
       setStatus('disconnected');
@@ -147,7 +148,7 @@ export function useWebSocketGame(options: UseWebSocketGameOptions | null) {
         }, delay);
       } else {
         setStatus('error');
-        options.onError?.('Connection lost after multiple retries');
+        optionsRef.current?.onError?.('Connection lost after multiple retries');
       }
     };
 

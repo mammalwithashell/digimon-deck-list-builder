@@ -1,6 +1,7 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useDeckBuilderStore } from '@/stores/deckBuilderStore';
+import { useWebSocketGame } from '@/hooks/useWebSocketGame';
 import * as lobbyApi from '@/api/lobbyApi';
 import * as deckApiMod from '@/api/deckApi';
 import type { LobbyGame } from '@/api/lobbyApi';
@@ -25,6 +26,25 @@ export function LobbyPage() {
   const [createdCode, setCreatedCode] = useState<string | null>(null);
   const [createdGameId, setCreatedGameId] = useState<string | null>(null);
   const [creating, setCreating] = useState(false);
+  const [opponentJoined, setOpponentJoined] = useState(false);
+
+  // WebSocket connection to detect when opponent joins
+  const wsOptions = useMemo(
+    () =>
+      createdGameId
+        ? {
+            gameId: createdGameId,
+            role: 'player' as const,
+            onPlayerJoined: () => {
+              setOpponentJoined(true);
+              // Auto-navigate to game when opponent connects
+              navigate(`/game/${createdGameId}?mode=pvp&player=1`);
+            },
+          }
+        : null,
+    [createdGameId, navigate],
+  );
+  useWebSocketGame(wsOptions);
 
   // Join tab state
   const [joinCode, setJoinCode] = useState('');
@@ -101,12 +121,7 @@ export function LobbyPage() {
     }
     setCreatedCode(null);
     setCreatedGameId(null);
-  };
-
-  const handleGoToGame = () => {
-    if (createdGameId) {
-      navigate(`/game/${createdGameId}?mode=pvp&player=1`);
-    }
+    setOpponentJoined(false);
   };
 
   // Deck selector helper
@@ -155,17 +170,16 @@ export function LobbyPage() {
               <p className="mb-4 font-mono text-4xl font-bold tracking-widest text-green-400">
                 {createdCode}
               </p>
-              <p className="mb-4 text-sm text-gray-400">Waiting for opponent to join...</p>
+              <p className="mb-4 text-sm text-gray-400">
+                {opponentJoined
+                  ? 'Opponent joined! Redirecting to game...'
+                  : 'Waiting for opponent to join...'}
+              </p>
               <div className="flex justify-center gap-3">
                 <button
-                  onClick={handleGoToGame}
-                  className="rounded bg-blue-600 px-4 py-2 text-white hover:bg-blue-500"
-                >
-                  Go to Game
-                </button>
-                <button
                   onClick={handleCancel}
-                  className="rounded bg-red-700 px-4 py-2 text-white hover:bg-red-600"
+                  disabled={opponentJoined}
+                  className="rounded bg-red-700 px-4 py-2 text-white hover:bg-red-600 disabled:opacity-50"
                 >
                   Cancel
                 </button>

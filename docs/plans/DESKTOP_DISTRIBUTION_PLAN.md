@@ -32,7 +32,7 @@ class ConnectionManager:
 
 Responsibilities:
 - Track which WebSocket belongs to which player in which game
-- **Send perspective-filtered state to each recipient** (see §1.11 Hidden Information)
+- **Send perspective-filtered state to each recipient** (see §1.9 Hidden Information)
 - Handle disconnection cleanup
 - Support reconnection (player reconnects with same token/player_id)
 
@@ -85,7 +85,7 @@ Server → Client:
    - Spectators get hands/security hidden for both unless the game allows open spectating
 
 **Spectator handling:**
-- Spectators receive **redacted** `state_update` messages (see §1.11 Hidden Information)
+- Spectators receive **redacted** `state_update` messages (see §1.9 Hidden Information)
 - Spectators cannot send `action` messages (server ignores/errors)
 - Spectators do NOT receive `action_mask` (they can't act; showing valid moves leaks strategy)
 
@@ -131,7 +131,7 @@ async def cancel_lobby_game(game_id: str) -> dict:
 
 **Flow:**
 1. Player A: `POST /lobby/create` with their deck → gets `join_code: "ABC123"`
-2. Player A: connects to `ws://server/ws/games/{game_id}?role=player&token=...` → waits
+2. Player A: connects to `wss://server/ws/games/{game_id}?role=player&token=...` → waits
 3. Player B: `POST /lobby/join/ABC123` with their deck → gets `game_id`
 4. Player B: connects to same WebSocket → server sends `player_joined` to Player A
 5. Server sends initial `state_update` to both → game begins

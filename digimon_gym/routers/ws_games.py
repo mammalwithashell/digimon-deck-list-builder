@@ -66,26 +66,26 @@ async def game_websocket(websocket: WebSocket, game_id: str) -> None:
     if role == "player":
         # Assign player_id based on lobby metadata stored in manager settings
         settings = manager.get_settings(game_id)
-        if settings.host_user_id == user_id:
+
+        # Check if this user is reconnecting to a previously assigned slot
+        existing_pid = manager.player_id_for_user(game_id, user_id)
+        if existing_pid is not None:
+            player_id = existing_pid
+        elif settings.host_user_id == user_id:
             player_id = 1
-        elif manager.player_count(game_id) < 2:
-            # Second player to connect
-            player_id = 2 if manager.player_id_for(game_id, websocket) is None else None
-            # Check if player 1 slot is actually taken
-            if player_id == 2:
-                conn = manager._games.get(game_id)
-                if conn and 1 not in conn.players:
-                    player_id = 1
-        else:
-            # Both slots full — check if reconnecting
+        elif settings.joiner_user_id == user_id:
+            player_id = 2
+        elif settings.joiner_user_id is None and manager.player_count(game_id) < 2:
+            # No lobby join tracking (e.g. direct game creation) — allow if slot open
             conn = manager._games.get(game_id)
-            if conn:
-                # Allow reconnection if user was previously connected
-                # (In a production system you'd track user_id → player_id mapping)
-                pass
+            if conn and 1 not in conn.players:
+                player_id = 1
+            else:
+                player_id = 2
+        # else: player_id stays None → downgraded to spectator
 
         if player_id is None:
-            # Game full, downgrade to spectator
+            # Game full or user not authorized — downgrade to spectator
             role = "spectator"
 
     if role == "spectator":
@@ -107,7 +107,7 @@ async def game_websocket(websocket: WebSocket, game_id: str) -> None:
         return
 
     # Player connection
-    await manager.connect_player(game_id, player_id, websocket)
+    await manager.connect_player(game_id, player_id, websocket, user_id=user_id)
 
     # Notify everyone
     await manager.broadcast_event(game_id, {

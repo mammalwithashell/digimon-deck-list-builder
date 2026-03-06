@@ -25,6 +25,7 @@ class GameSettings:
     allow_spectators: bool = True
     spectator_mode: str = "hidden"  # "hidden" or "open"
     host_user_id: Optional[str] = None
+    joiner_user_id: Optional[str] = None  # Set when player 2 joins via lobby
 
 
 @dataclass
@@ -35,6 +36,8 @@ class GameConnections:
     spectators: List[WebSocket] = field(default_factory=list)
     # Map WebSocket → player_id for reverse lookups
     ws_to_player: Dict[int, int] = field(default_factory=dict)
+    # Map user_id → player_id for reconnection and slot validation
+    user_to_player: Dict[str, int] = field(default_factory=dict)
     settings: GameSettings = field(default_factory=GameSettings)
 
 
@@ -61,7 +64,7 @@ class ConnectionManager:
     # ------------------------------------------------------------------
 
     async def connect_player(
-        self, game_id: str, player_id: int, ws: WebSocket
+        self, game_id: str, player_id: int, ws: WebSocket, user_id: str | None = None
     ) -> None:
         conn = self._ensure_game(game_id)
         old_ws = conn.players.get(player_id)
@@ -73,6 +76,8 @@ class ConnectionManager:
                 pass
         conn.players[player_id] = ws
         conn.ws_to_player[id(ws)] = player_id
+        if user_id is not None:
+            conn.user_to_player[user_id] = player_id
         logger.info("Player %d connected to game %s", player_id, game_id)
 
     async def connect_spectator(self, game_id: str, ws: WebSocket) -> None:
@@ -115,6 +120,13 @@ class ConnectionManager:
         if conn is None:
             return None
         return conn.ws_to_player.get(id(ws))
+
+    def player_id_for_user(self, game_id: str, user_id: str) -> Optional[int]:
+        """Return the player_id previously assigned to a user_id, if any."""
+        conn = self._games.get(game_id)
+        if conn is None:
+            return None
+        return conn.user_to_player.get(user_id)
 
     def player_count(self, game_id: str) -> int:
         conn = self._games.get(game_id)

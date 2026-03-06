@@ -10,7 +10,7 @@ from __future__ import annotations
 import logging
 import secrets
 import string
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from typing import Optional
 from uuid import uuid4
 
@@ -57,6 +57,21 @@ pending_games: dict[str, PendingGame] = {}
 # join_code → game_id (for fast lookup)
 code_to_game: dict[str, str] = {}
 
+# Pending lobbies older than this are automatically pruned
+_LOBBY_TTL = timedelta(minutes=30)
+
+
+def _prune_stale_lobbies() -> None:
+    """Remove pending lobbies that have exceeded the TTL."""
+    cutoff = datetime.now(timezone.utc) - _LOBBY_TTL
+    expired = [gid for gid, pg in pending_games.items() if pg.created_at < cutoff]
+    for gid in expired:
+        pg = pending_games.pop(gid)
+        code_to_game.pop(pg.join_code, None)
+        manager.cleanup_game(gid)
+    if expired:
+        logger.info("Pruned %d stale lobbies", len(expired))
+
 
 # ── Request / Response Schemas ───────────────────────────────────────────
 
@@ -82,6 +97,7 @@ async def create_lobby_game(
     db: AsyncSession = Depends(get_db),
 ) -> dict:
     """Host creates a game and gets a join code.  Game is not started yet."""
+    _prune_stale_lobbies()
     # Validate deck
     try:
         deck = parse_deck(request.deck_raw) if request.deck_raw else request.deck
@@ -166,6 +182,10 @@ async def join_lobby_game(
 
     active_games[game_id] = runner
 
+    # Record the joiner's user_id so WebSocket slot validation works
+    settings = manager.get_settings(game_id)
+    settings.joiner_user_id = user.id
+
     # Clean up lobby state
     del pending_games[game_id]
     del code_to_game[join_code]
@@ -184,6 +204,7 @@ async def join_lobby_game(
 @router.get("/games")
 async def list_lobby_games() -> list[dict]:
     """List public pending games (for lobby browser)."""
+    _prune_stale_lobbies()
     return [
         {
             "game_id": pg.game_id,
