@@ -6,7 +6,8 @@ const API_BASE = import.meta.env.VITE_API_URL ?? '/api';
 // When running as a Tauri desktop app, local game engine requests go to
 // the bundled Python sidecar; online features go to the remote server.
 const isTauri = typeof window !== 'undefined' && '__TAURI__' in window;
-const LOCAL_SIDECAR_URL = 'http://localhost:8321';
+const DEFAULT_SIDECAR_PORT = 8321;
+let LOCAL_SIDECAR_URL = `http://localhost:${DEFAULT_SIDECAR_PORT}`;
 
 /** Remote server client — handles auth, PvP, lobby, user data */
 const client = axios.create({
@@ -53,6 +54,26 @@ client.interceptors.response.use(
 const localClient = axios.create({
   baseURL: LOCAL_SIDECAR_URL,
   headers: { 'Content-Type': 'application/json' },
+});
+
+// Lazily resolve the actual sidecar port on first request (handles port collisions)
+let _portResolved = false;
+localClient.interceptors.request.use(async (config) => {
+  if (!_portResolved && isTauri) {
+    _portResolved = true;
+    try {
+      const { invoke } = await import('@tauri-apps/api/core');
+      const port = await invoke<number | null>('get_sidecar_port');
+      if (port) {
+        LOCAL_SIDECAR_URL = `http://localhost:${port}`;
+        localClient.defaults.baseURL = LOCAL_SIDECAR_URL;
+        config.baseURL = LOCAL_SIDECAR_URL;
+      }
+    } catch {
+      // Fall back to default port
+    }
+  }
+  return config;
 });
 
 /**

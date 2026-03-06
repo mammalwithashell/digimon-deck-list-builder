@@ -16,7 +16,15 @@ import platform
 import sys
 from pathlib import Path
 
+from PyInstaller.utils.hooks import collect_dynamic_libs
+
 block_cipher = None
+
+# Collect ONNX Runtime native binaries (.so/.dll/.dylib) for bundling
+try:
+    ort_binaries = collect_dynamic_libs('onnxruntime')
+except Exception:
+    ort_binaries = []
 
 # Determine data files to include (card data, scripts, etc.)
 engine_data = Path("digimon_gym/engine/data")
@@ -36,7 +44,7 @@ if scripts_dir.exists():
 a = Analysis(
     ["digimon_gym/desktop_main.py"],
     pathex=["."],
-    binaries=[],
+    binaries=ort_binaries,
     datas=datas,
     hiddenimports=[
         "digimon_gym.engine",
@@ -49,6 +57,9 @@ a = Analysis(
         "digimon_gym.engine.runners.interactive_game",
         "digimon_gym.engine.runners.base_runner",
         "digimon_gym.engine.onnx_policy",
+        "onnxruntime",
+        "onnxruntime.capi",
+        "onnxruntime.capi._pybind_state",
         "digimon_gym.engine.loggers",
         "digimon_gym.engine.recording",
         "digimon_gym.routers.schemas",

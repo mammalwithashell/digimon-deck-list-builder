@@ -11,6 +11,8 @@ from __future__ import annotations
 
 import argparse
 import os
+import socket
+import time
 
 import uvicorn
 from fastapi import FastAPI, APIRouter, HTTPException
@@ -39,6 +41,23 @@ def create_desktop_app(models_dir: str = "./models") -> FastAPI:
 
     # In-memory game storage (no persistence needed for desktop)
     active_games: dict[str, InteractiveGame] = {}
+    game_last_access: dict[str, float] = {}
+
+    MAX_GAMES = 10
+    GAME_TTL_SECONDS = 3600  # 1 hour
+
+    def _cleanup_stale_games():
+        """Remove games that haven't been accessed within TTL."""
+        now = time.time()
+        expired = [gid for gid, ts in game_last_access.items()
+                   if now - ts > GAME_TTL_SECONDS]
+        for gid in expired:
+            active_games.pop(gid, None)
+            game_last_access.pop(gid, None)
+
+    def _touch_game(game_id: str):
+        """Update last-access timestamp for a game."""
+        game_last_access[game_id] = time.time()
 
     router = APIRouter(tags=["games"])
 
@@ -51,6 +70,13 @@ def create_desktop_app(models_dir: str = "./models") -> FastAPI:
         """Create a new local game session."""
         from pathlib import Path
         from uuid import uuid4
+
+        _cleanup_stale_games()
+        # Evict oldest game if at capacity
+        while len(active_games) >= MAX_GAMES and game_last_access:
+            oldest = min(game_last_access, key=game_last_access.get)
+            active_games.pop(oldest, None)
+            game_last_access.pop(oldest, None)
 
         try:
             deck1 = parse_deck(request.deck1_raw) if request.deck1_raw else request.deck1
@@ -79,6 +105,7 @@ def create_desktop_app(models_dir: str = "./models") -> FastAPI:
             player1_model_path=p1_model, player2_model_path=p2_model,
         )
         active_games[game_id] = runner
+        _touch_game(game_id)
         runner.clear_log()
 
         state = runner.game.to_ui_json()
@@ -101,6 +128,7 @@ def create_desktop_app(models_dir: str = "./models") -> FastAPI:
         runner = active_games.get(game_id)
         if not runner:
             raise HTTPException(status_code=404, detail="Game not found")
+        _touch_game(game_id)
 
         current_player_id = runner.game.current_player_id
         memory_before = runner.game.memory
@@ -134,6 +162,7 @@ def create_desktop_app(models_dir: str = "./models") -> FastAPI:
         runner = active_games.get(game_id)
         if not runner:
             raise HTTPException(status_code=404, detail="Game not found")
+        _touch_game(game_id)
 
         state = runner.run_step()
         mask = runner.get_action_mask().tolist()
@@ -154,6 +183,7 @@ def create_desktop_app(models_dir: str = "./models") -> FastAPI:
         runner = active_games.get(game_id)
         if not runner:
             raise HTTPException(status_code=404, detail="Game not found")
+        _touch_game(game_id)
         return runner.game.to_ui_json()
 
     @router.get("/games/{game_id}/action-mask")
@@ -161,6 +191,7 @@ def create_desktop_app(models_dir: str = "./models") -> FastAPI:
         runner = active_games.get(game_id)
         if not runner:
             raise HTTPException(status_code=404, detail="Game not found")
+        _touch_game(game_id)
         return {"action_mask": runner.get_action_mask().tolist()}
 
     @router.get("/games/models")
@@ -173,8 +204,8 @@ def create_desktop_app(models_dir: str = "./models") -> FastAPI:
 
     @router.delete("/games/{game_id}")
     def delete_game(game_id: str):
-        if game_id in active_games:
-            del active_games[game_id]
+        active_games.pop(game_id, None)
+        game_last_access.pop(game_id, None)
         return {"status": "deleted"}
 
     app.include_router(router)
@@ -186,14 +217,33 @@ def create_desktop_app(models_dir: str = "./models") -> FastAPI:
     return app
 
 
+def _find_available_port(start: int = 8321, max_attempts: int = 10) -> int:
+    """Find an available port starting from *start*, trying up to *max_attempts*."""
+    for offset in range(max_attempts):
+        port = start + offset
+        with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+            try:
+                s.bind(("127.0.0.1", port))
+                return port
+            except OSError:
+                continue
+    raise RuntimeError(
+        f"No available port in range {start}-{start + max_attempts - 1}"
+    )
+
+
 def main():
     parser = argparse.ArgumentParser(description="Digimon TCG Desktop Sidecar")
     parser.add_argument("--port", type=int, default=8321)
     parser.add_argument("--models-dir", default="./models")
     args = parser.parse_args()
 
+    port = _find_available_port(args.port)
+    # Print port for Tauri to discover via stdout parsing
+    print(f"SIDECAR_PORT={port}", flush=True)
+
     app = create_desktop_app(args.models_dir)
-    uvicorn.run(app, host="127.0.0.1", port=args.port)
+    uvicorn.run(app, host="127.0.0.1", port=port)
 
 
 if __name__ == "__main__":

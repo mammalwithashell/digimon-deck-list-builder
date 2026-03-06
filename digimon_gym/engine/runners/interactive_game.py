@@ -49,12 +49,19 @@ class InteractiveGame(BaseGameRunner):
         if self.player2_policy == "trained" and player2_model_path:
             self._load_onnx_policy(2, player2_model_path)
 
+        # Reset LSTM state to ensure clean episode boundary (CLAUDE.md rule 10)
+        self.reset_policies()
+
     def _load_onnx_policy(self, player_num: int, model_path: str) -> None:
-        """Load an ONNX policy for a player."""
+        """Load an ONNX policy for a player (auto-detects MLP vs LSTM)."""
         from digimon_gym.engine.onnx_policy import load_onnx_policy
-        # Detect model type from filename convention: *lstm* → lstm, else mlp
-        model_type = "lstm" if "lstm" in model_path.lower() else "mlp"
-        self._onnx_policies[player_num] = load_onnx_policy(model_path, model_type)
+        self._onnx_policies[player_num] = load_onnx_policy(model_path)
+
+    def reset_policies(self) -> None:
+        """Reset ONNX LSTM hidden state. Call at episode/game boundaries."""
+        for policy in self._onnx_policies.values():
+            if hasattr(policy, "reset"):
+                policy.reset()
 
     @staticmethod
     def _random_policy(mask: np.ndarray) -> int:

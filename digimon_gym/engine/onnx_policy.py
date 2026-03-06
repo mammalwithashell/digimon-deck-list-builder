@@ -13,12 +13,23 @@ import numpy as np
 
 def _get_session(onnx_path: str):
     """Create an ONNX Runtime inference session."""
-    import onnxruntime as ort
-
-    return ort.InferenceSession(
-        onnx_path,
-        providers=["CPUExecutionProvider"],
-    )
+    try:
+        import onnxruntime as ort
+    except ImportError:
+        raise ImportError(
+            "onnxruntime is required for trained agent inference. "
+            "Install it with: pip install onnxruntime"
+        )
+    try:
+        return ort.InferenceSession(
+            onnx_path,
+            providers=["CPUExecutionProvider"],
+        )
+    except Exception as e:
+        raise RuntimeError(
+            f"Failed to load ONNX model '{onnx_path}': {e}. "
+            "The model file may be corrupted or incompatible."
+        ) from e
 
 
 def _masked_argmax(logits: np.ndarray, mask: np.ndarray) -> int:
@@ -33,13 +44,26 @@ def _masked_argmax(logits: np.ndarray, mask: np.ndarray) -> int:
     return int(np.argmax(masked))
 
 
+def _detect_model_type(session) -> str:
+    """Detect model type by inspecting ONNX output names."""
+    output_names = {o.name for o in session.get_outputs()}
+    if {"logits", "h_out", "c_out"} <= output_names:
+        return "lstm"
+    if "logits" in output_names:
+        return "mlp"
+    raise ValueError(
+        f"Unrecognized ONNX model outputs: {output_names}. "
+        "Expected 'logits' (MLP) or 'logits','h_out','c_out' (LSTM)."
+    )
+
+
 class OnnxMlpPolicy:
     """ONNX MLP policy: obs → logits → masked argmax."""
 
-    def __init__(self, onnx_path: str):
+    def __init__(self, onnx_path: str, session=None):
         if not Path(onnx_path).exists():
             raise FileNotFoundError(f"ONNX model not found: {onnx_path}")
-        self.session = _get_session(onnx_path)
+        self.session = session or _get_session(onnx_path)
 
     def predict(self, obs: np.ndarray, action_mask: np.ndarray) -> int:
         """Run inference and return the selected action index.
@@ -59,10 +83,10 @@ class OnnxLstmPolicy:
     Call reset() at episode boundaries to clear LSTM state.
     """
 
-    def __init__(self, onnx_path: str, hidden_size: int = 256):
+    def __init__(self, onnx_path: str, hidden_size: int = 256, session=None):
         if not Path(onnx_path).exists():
             raise FileNotFoundError(f"ONNX model not found: {onnx_path}")
-        self.session = _get_session(onnx_path)
+        self.session = session or _get_session(onnx_path)
         self.hidden_size = hidden_size
         self.reset()
 
@@ -88,13 +112,22 @@ class OnnxLstmPolicy:
         self.c = np.zeros((1, 1, self.hidden_size), dtype=np.float32)
 
 
-def load_onnx_policy(onnx_path: str, model_type: str = "mlp") -> OnnxMlpPolicy | OnnxLstmPolicy:
+def load_onnx_policy(onnx_path: str, model_type: str = "auto") -> OnnxMlpPolicy | OnnxLstmPolicy:
     """Load an ONNX policy by type.
 
     Args:
         onnx_path: path to the .onnx file
-        model_type: "mlp" or "lstm"
+        model_type: "mlp", "lstm", or "auto" (detect from model outputs)
     """
+    if not Path(onnx_path).exists():
+        raise FileNotFoundError(f"ONNX model not found: {onnx_path}")
+    if model_type == "auto":
+        session = _get_session(onnx_path)
+        model_type = _detect_model_type(session)
+        # Pass pre-created session to avoid double-loading
+        if model_type == "lstm":
+            return OnnxLstmPolicy(onnx_path, session=session)
+        return OnnxMlpPolicy(onnx_path, session=session)
     if model_type == "lstm":
         return OnnxLstmPolicy(onnx_path)
     return OnnxMlpPolicy(onnx_path)
