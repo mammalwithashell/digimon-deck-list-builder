@@ -67,6 +67,7 @@ class CardRegistry:
                 cls._id_to_norm[cid] = idx / REGISTRY_CAPACITY
 
         cls._initialized = True
+        cls.load_embeddings()
 
     @classmethod
     def initialize_from_list(cls, card_ids: list[str]):
@@ -114,7 +115,6 @@ class CardRegistry:
     def ensure_initialized(cls):
         if not cls._initialized:
             cls.initialize()
-            cls.load_embeddings()
 
     @classmethod
     def get_id(cls, card_id: str) -> int:
@@ -137,11 +137,11 @@ class CardRegistry:
         """Return the embedding vector for a card_id. Zero-vector if unknown/empty."""
         cls.ensure_initialized()
         if not card_id:
-            return cls._zero_embedding
+            return cls._zero_embedding.copy()
         emb = cls._id_to_embedding.get(card_id)
         if emb is not None:
             return emb
-        return cls._zero_embedding
+        return cls._zero_embedding.copy()
 
     @classmethod
     def get_string_id(cls, internal_id: int) -> Optional[str]:

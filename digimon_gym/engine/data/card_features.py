@@ -76,7 +76,6 @@ class CardFeatureVectorizer:
         self._form_idx = {f: i for i, f in enumerate(FORMS)}
         self._attr_idx = {a: i for i, a in enumerate(ATTRIBUTES)}
         self._kw_idx = {k: i for i, k in enumerate(BASE_KEYWORDS)}
-        self._color_idx = {i: i for i in range(len(CARD_COLORS))}
 
     def vectorize(self, card: Dict) -> np.ndarray:
         """Convert a single card entry to a feature vector.

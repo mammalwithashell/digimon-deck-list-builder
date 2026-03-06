@@ -19,8 +19,8 @@ def _compute_positions():
     card_positions = []
     scalar_positions = []
 
-    # Global [0-9]: all scalars
-    for i in range(10):
+    # Global section: all scalars
+    for i in range(_GLOBAL):
         scalar_positions.append(i)
 
     def _slot_positions(slot_base):
