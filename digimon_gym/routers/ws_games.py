@@ -77,11 +77,7 @@ async def game_websocket(websocket: WebSocket, game_id: str) -> None:
             player_id = 2
         elif settings.joiner_user_id is None and manager.player_count(game_id) < 2:
             # No lobby join tracking (e.g. direct game creation) — allow if slot open
-            conn = manager._games.get(game_id)
-            if conn and 1 not in conn.players:
-                player_id = 1
-            else:
-                player_id = 2
+            player_id = manager.next_available_slot(game_id)
         # else: player_id stays None → downgraded to spectator
 
         if player_id is None:
@@ -204,12 +200,13 @@ async def _handle_action(
     # Broadcast updated state to all
     await manager.broadcast_state(game_id, runner, logs=logs)
 
-    # If game is over, send game_over event
+    # If game is over, send game_over event and clean up connection tracking
     if runner.is_game_over:
         await manager.broadcast_event(game_id, {
             "type": "game_over",
             "winner_id": runner.game.winner.player_id if runner.game.winner else None,
         })
+        manager.cleanup_game(game_id)
 
 
 async def _spectator_loop(ws: WebSocket, game_id: str) -> None:

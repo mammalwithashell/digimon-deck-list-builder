@@ -20,6 +20,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from digimon_gym.engine.data.enums import PlayerType
 from digimon_gym.engine.data.deck_loader import parse_deck
+from digimon_gym.engine.model_utils import resolve_model_path, list_onnx_models
 from digimon_gym.engine.runners.interactive_game import InteractiveGame
 from digimon_gym.routers.schemas import CreateGameRequest, GameActionRequest
 
@@ -68,7 +69,6 @@ def create_desktop_app(models_dir: str = "./models") -> FastAPI:
     @router.post("/games")
     def create_game(request: CreateGameRequest):
         """Create a new local game session."""
-        from pathlib import Path
         from uuid import uuid4
 
         _cleanup_stale_games()
@@ -93,10 +93,12 @@ def create_desktop_app(models_dir: str = "./models") -> FastAPI:
         p1_policy = request.player1_policy.lower()
         p2_policy = request.player2_policy.lower()
 
-        # Resolve ONNX model paths
-        models_path = Path(models_dir)
-        p1_model = str(models_path / Path(request.player1_model).name) if p1_policy == "trained" and request.player1_model else None
-        p2_model = str(models_path / Path(request.player2_model).name) if p2_policy == "trained" and request.player2_model else None
+        # Resolve ONNX model paths (shared helper handles sanitization)
+        try:
+            p1_model = resolve_model_path(request.player1_model) if p1_policy == "trained" else None
+            p2_model = resolve_model_path(request.player2_model) if p2_policy == "trained" else None
+        except FileNotFoundError as exc:
+            raise HTTPException(status_code=400, detail=str(exc))
 
         runner = InteractiveGame(
             deck1, deck2, p1_type, p2_type,
@@ -196,11 +198,7 @@ def create_desktop_app(models_dir: str = "./models") -> FastAPI:
 
     @router.get("/games/models")
     def list_models():
-        from pathlib import Path
-        md = Path(models_dir)
-        if not md.exists():
-            return {"models": []}
-        return {"models": sorted(f.name for f in md.glob("*.onnx"))}
+        return {"models": list_onnx_models()}
 
     @router.delete("/games/{game_id}")
     def delete_game(game_id: str):

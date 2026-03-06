@@ -3,8 +3,6 @@
 from __future__ import annotations
 
 import json
-import os
-from pathlib import Path
 from uuid import uuid4
 
 from fastapi import APIRouter, Depends, HTTPException
@@ -15,6 +13,7 @@ from digimon_gym.db.models import GameRecording
 from digimon_gym.db.schemas import RecordingSaveResponse
 from digimon_gym.engine.data.enums import PlayerType
 from digimon_gym.engine.data.deck_loader import parse_deck
+from digimon_gym.engine.model_utils import get_models_dir, list_onnx_models, resolve_model_path
 from digimon_gym.engine.runners.headless_game import HeadlessGame
 from digimon_gym.engine.runners.interactive_game import InteractiveGame
 from digimon_gym.routers.schemas import CreateGameRequest, GameActionRequest
@@ -22,30 +21,13 @@ from digimon_gym.routers.state import active_games
 
 router = APIRouter(tags=["games"])
 
-# Directory for ONNX model files. Override with ONNX_MODELS_DIR env var.
-MODELS_DIR = Path(os.environ.get("ONNX_MODELS_DIR", "models"))
-
 
 def _resolve_model_path(model_name: str | None) -> str | None:
-    """Resolve an ONNX model filename to a full path, validating it exists."""
-    if not model_name:
-        return None
-    # Prevent path traversal
-    safe_name = Path(model_name).name
-    model_path = MODELS_DIR / safe_name
-    if not model_path.exists():
-        raise HTTPException(
-            status_code=400,
-            detail=f"ONNX model not found: {safe_name}. Available models: {_list_models()}",
-        )
-    return str(model_path)
-
-
-def _list_models() -> list[str]:
-    """List available ONNX model files."""
-    if not MODELS_DIR.exists():
-        return []
-    return sorted(f.name for f in MODELS_DIR.glob("*.onnx"))
+    """Resolve an ONNX model filename, raising HTTPException on failure."""
+    try:
+        return resolve_model_path(model_name)
+    except FileNotFoundError as exc:
+        raise HTTPException(status_code=400, detail=str(exc))
 
 
 def _require_game(game_id: str):
@@ -281,4 +263,4 @@ async def save_game_recording(game_id: str, db: AsyncSession = Depends(get_db)):
 @router.get("/games/models")
 def list_available_models():
     """List available ONNX agent models."""
-    return {"models": _list_models()}
+    return {"models": list_onnx_models()}

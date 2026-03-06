@@ -139,6 +139,17 @@ class ConnectionManager:
     def has_game(self, game_id: str) -> bool:
         return game_id in self._games
 
+    def next_available_slot(self, game_id: str) -> Optional[int]:
+        """Return the next open player slot (1 or 2), or None if full."""
+        conn = self._games.get(game_id)
+        if conn is None:
+            return 1
+        if 1 not in conn.players:
+            return 1
+        if 2 not in conn.players:
+            return 2
+        return None
+
     # ------------------------------------------------------------------
     # Broadcasting
     # ------------------------------------------------------------------

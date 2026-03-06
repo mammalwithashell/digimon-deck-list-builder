@@ -56,22 +56,30 @@ const localClient = axios.create({
   headers: { 'Content-Type': 'application/json' },
 });
 
-// Lazily resolve the actual sidecar port on first request (handles port collisions)
-let _portResolved = false;
-localClient.interceptors.request.use(async (config) => {
-  if (!_portResolved && isTauri) {
-    _portResolved = true;
-    try {
-      const { invoke } = await import('@tauri-apps/api/core');
-      const port = await invoke<number | null>('get_sidecar_port');
-      if (port) {
-        LOCAL_SIDECAR_URL = `http://localhost:${port}`;
-        localClient.defaults.baseURL = LOCAL_SIDECAR_URL;
-        config.baseURL = LOCAL_SIDECAR_URL;
-      }
-    } catch {
-      // Fall back to default port
+// Lazily resolve the actual sidecar port on first request (handles port collisions).
+// Uses a shared promise so concurrent requests all wait for the same resolution.
+let _portPromise: Promise<void> | null = null;
+
+async function _resolvePort(): Promise<void> {
+  try {
+    const { invoke } = await import('@tauri-apps/api/core');
+    const port = await invoke<number | null>('get_sidecar_port');
+    if (port) {
+      LOCAL_SIDECAR_URL = `http://localhost:${port}`;
+      localClient.defaults.baseURL = LOCAL_SIDECAR_URL;
     }
+  } catch {
+    // Fall back to default port
+  }
+}
+
+localClient.interceptors.request.use(async (config) => {
+  if (isTauri) {
+    if (!_portPromise) {
+      _portPromise = _resolvePort();
+    }
+    await _portPromise;
+    config.baseURL = localClient.defaults.baseURL;
   }
   return config;
 });
