@@ -6,9 +6,12 @@ import pytest
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 
+import numpy as np
 from digimon_gym.engine.game import (
     Game, TENSOR_SIZE, ACTION_SPACE_SIZE, FIELD_SLOTS, SLOT_SIZE,
     MAX_HAND, MAX_TRASH, MAX_SECURITY, MAX_SOURCES,
+    SOURCE_ENTRY_SIZE, BREEDING_SLOT, SECURITY_TARGET,
+    TARGETS_PER_ATTACKER, FIELDS_PER_HAND,
 )
 from digimon_gym.engine.data.enums import GamePhase, CardKind, CardColor
 from digimon_gym.engine.data.card_registry import CardRegistry
@@ -148,7 +151,9 @@ class TestBoardStateTensor:
     def test_tensor_size(self):
         game = setup_game_at_phase(GamePhase.Main)
         tensor = game.get_board_state_tensor(1)
-        assert len(tensor) == TENSOR_SIZE
+        assert isinstance(tensor, np.ndarray)
+        assert tensor.shape == (TENSOR_SIZE,)
+        assert tensor.dtype == np.float32
 
     def test_global_data(self):
         game = setup_game_at_phase(GamePhase.Main, memory=7)
@@ -173,7 +178,7 @@ class TestBoardStateTensor:
         tensor = game.get_board_state_tensor(1)
 
         # Everything after global data should be 0
-        assert all(v == 0.0 for v in tensor[3:])
+        assert np.all(tensor[3:] == 0.0)
 
     def test_battle_area_encoding(self):
         game = setup_game_at_phase(GamePhase.Main)
@@ -186,37 +191,45 @@ class TestBoardStateTensor:
 
         tensor = game.get_board_state_tensor(1)
 
-        # My field starts at index 10
+        # My field starts at index 10, compact layout: +0=card_id, +1=DP, ...
         base = 10
-        assert tensor[base + 0] == CardRegistry.get_norm_id("BT14-001")  # card ID
-        assert tensor[base + 1] == 5000.0  # DP
-        assert tensor[base + 2] == 1.0     # suspended
-        assert tensor[base + 6] == 1.0     # source count
-        assert tensor[base + 7] == CardRegistry.get_norm_id("BT14-001")  # source[0] card_id
-        assert tensor[base + 8] == -1.0   # source[0] opt_state: no OPT effects
-        assert tensor[base + 9] == 0.0    # source[0] dp_contribution: no DP effect
+        assert tensor[base] == float(CardRegistry.get_id("BT14-001"))  # card ID
+        assert tensor[base + 1] == 5000.0    # DP
+        assert tensor[base + 2] == 1.0       # suspended
+        assert tensor[base + 6] == 1.0       # source count
+        # source[0]: card_id + opt_state + dp_contribution
+        src0 = base + 7
+        assert tensor[src0] == float(CardRegistry.get_id("BT14-001"))  # source card ID
+        assert tensor[src0 + 1] == -1.0      # opt_state: no OPT effects
+        assert tensor[src0 + 2] == 0.0       # dp_contribution: no DP effect
 
     def test_digivolution_stack_encoding(self):
         game = setup_game_at_phase(GamePhase.Main)
         p1 = game.player1
 
-        base = make_card("BT14-002", "Rookie", dp=3000, level=3, owner=p1)
+        base_card = make_card("BT14-002", "Rookie", dp=3000, level=3, owner=p1)
         top = make_card("BT14-010", "Champion", dp=6000, level=4, owner=p1)
-        perm = Permanent([base, top])
+        perm = Permanent([base_card, top])
         p1.battle_area.append(perm)
 
         tensor = game.get_board_state_tensor(1)
+        SE = SOURCE_ENTRY_SIZE  # 3
 
         slot_base = 10
-        assert tensor[slot_base + 0] == CardRegistry.get_norm_id("BT14-010")  # top card
-        assert tensor[slot_base + 1] == 6000.0  # DP
-        assert tensor[slot_base + 6] == 2.0     # 2 sources
-        assert tensor[slot_base + 7] == CardRegistry.get_norm_id("BT14-002")   # source[0] card_id
-        assert tensor[slot_base + 8] == -1.0    # source[0] opt_state: no OPT
-        assert tensor[slot_base + 9] == 0.0     # source[0] dp_contribution
-        assert tensor[slot_base + 10] == CardRegistry.get_norm_id("BT14-010")  # source[1] card_id
-        assert tensor[slot_base + 11] == -1.0   # source[1] opt_state: no OPT
-        assert tensor[slot_base + 12] == 0.0    # source[1] dp_contribution
+        assert tensor[slot_base] == float(CardRegistry.get_id("BT14-010"))  # top card
+        assert tensor[slot_base + 1] == 6000.0     # DP
+        assert tensor[slot_base + 6] == 2.0        # 2 sources
+
+        src_start = slot_base + 7
+        # source[0]
+        assert tensor[src_start] == float(CardRegistry.get_id("BT14-002"))
+        assert tensor[src_start + 1] == -1.0       # opt_state
+        assert tensor[src_start + 2] == 0.0        # dp_contribution
+        # source[1]
+        src1 = src_start + SE
+        assert tensor[src1] == float(CardRegistry.get_id("BT14-010"))
+        assert tensor[src1 + 1] == -1.0            # opt_state
+        assert tensor[src1 + 2] == 0.0             # dp_contribution
 
     def test_opponent_field_offset(self):
         game = setup_game_at_phase(GamePhase.Main)
@@ -228,9 +241,9 @@ class TestBoardStateTensor:
 
         tensor = game.get_board_state_tensor(1)
 
-        # Opp field starts at 382
-        base = 382
-        assert tensor[base + 0] == CardRegistry.get_norm_id("BT14-020")
+        # Opp field starts at 10 + FIELD_SLOTS*SLOT_SIZE
+        base = 10 + FIELD_SLOTS * SLOT_SIZE
+        assert tensor[base] == float(CardRegistry.get_id("BT14-020"))
         assert tensor[base + 1] == 7000.0
 
     def test_hand_encoding(self):
@@ -242,10 +255,12 @@ class TestBoardStateTensor:
 
         tensor = game.get_board_state_tensor(1)
 
-        # My hand starts at 754
-        assert tensor[754] == CardRegistry.get_norm_id("BT14-003")
-        assert tensor[755] == CardRegistry.get_norm_id("BT14-050")
-        assert tensor[756] == 0.0  # padding
+        # My hand: 1 card ID per slot (compact)
+        hand_start = 10 + 2 * FIELD_SLOTS * SLOT_SIZE
+        assert tensor[hand_start] == float(CardRegistry.get_id("BT14-003"))
+        assert tensor[hand_start + 1] == float(CardRegistry.get_id("BT14-050"))
+        # Third slot should be zero-padded
+        assert tensor[hand_start + 2] == 0.0
 
     def test_trash_encoding(self):
         game = setup_game_at_phase(GamePhase.Main)
@@ -256,10 +271,10 @@ class TestBoardStateTensor:
 
         tensor = game.get_board_state_tensor(1)
 
-        # My trash starts at 794
-        assert tensor[794] == CardRegistry.get_norm_id("BT14-001")
-        assert tensor[795] == CardRegistry.get_norm_id("BT14-002")
-        assert tensor[796] == CardRegistry.get_norm_id("BT14-003")
+        # My trash starts after hands (1 card ID per slot)
+        trash_start = 10 + 2 * FIELD_SLOTS * SLOT_SIZE + 2 * MAX_HAND
+        for i, card_id in enumerate(["BT14-001", "BT14-002", "BT14-003"]):
+            assert tensor[trash_start + i] == float(CardRegistry.get_id(card_id))
 
     def test_security_encoding(self):
         game = setup_game_at_phase(GamePhase.Main)
@@ -269,9 +284,12 @@ class TestBoardStateTensor:
 
         tensor = game.get_board_state_tensor(1)
 
-        # My security starts at 884
-        assert tensor[884] == CardRegistry.get_norm_id("BT14-090")
-        assert tensor[885] == 0.0
+        # My security starts after hands + trashes
+        sec_start = (10 + 2 * FIELD_SLOTS * SLOT_SIZE +
+                     2 * MAX_HAND + 2 * MAX_TRASH)
+        assert tensor[sec_start] == float(CardRegistry.get_id("BT14-090"))
+        # Second slot should be zero
+        assert tensor[sec_start + 1] == 0.0
 
     def test_breeding_encoding(self):
         game = setup_game_at_phase(GamePhase.Main)
@@ -282,9 +300,12 @@ class TestBoardStateTensor:
 
         tensor = game.get_board_state_tensor(1)
 
-        # My breeding starts at 904
-        assert tensor[904] == CardRegistry.get_norm_id("BT14-001")
-        assert tensor[910] == 1.0  # source count
+        # My breeding starts after battle + hands + trashes + security
+        breed_start = (10 + 2 * FIELD_SLOTS * SLOT_SIZE +
+                       2 * MAX_HAND + 2 * MAX_TRASH +
+                       2 * MAX_SECURITY)
+        assert tensor[breed_start] == float(CardRegistry.get_id("BT14-001"))
+        assert tensor[breed_start + 6] == 1.0  # source count
 
     def test_ui_memory_gauge_is_player1_oriented(self):
         game = setup_game_at_phase(GamePhase.Main, memory=2)
@@ -417,8 +438,15 @@ class TestMulliganSetup:
         game.start_game()
 
         tensor = game.get_board_state_tensor(1)
-        assert any(v != 0.0 for v in tensor[754:759])  # opening hand cards
-        assert all(v == 0.0 for v in tensor[884:894])  # security not set yet
+        # My hand starts after battle areas (1 card ID per hand slot)
+        hand_start = 10 + 2 * FIELD_SLOTS * SLOT_SIZE
+        hand_region = tensor[hand_start:hand_start + 5]
+        assert np.any(hand_region != 0.0)  # opening hand cards
+
+        # My security starts after hands + trashes
+        sec_start = hand_start + 2 * MAX_HAND + 2 * MAX_TRASH
+        sec_region = tensor[sec_start:sec_start + MAX_SECURITY]
+        assert np.all(sec_region == 0.0)  # security not set yet
 
 
 # ─── Action Mask Tests ───────────────────────────────────────────────
@@ -464,8 +492,8 @@ class TestActionMask:
 
         mask = game.get_action_mask(1)
 
-        # Attacker 0, target 12 (security) -> action 100 + 0*15 + 12 = 112
-        assert mask[112] == 1.0
+        # Attacker 0, target SECURITY_TARGET (14) -> action 100 + 0*15 + 14 = 114
+        assert mask[100 + 0 * TARGETS_PER_ATTACKER + SECURITY_TARGET] == 1.0
 
     def test_main_phase_attack_suspended_digimon(self):
         game = setup_game_at_phase(GamePhase.Main)
@@ -583,8 +611,8 @@ class TestActionMask:
         p1.hand_cards.append(evo)
 
         mask = game.get_action_mask(1)
-        # 400 + hand[0]*15 + breeding_slot[12]
-        assert mask[412] == 1.0
+        # 400 + hand[0]*FIELDS_PER_HAND + BREEDING_SLOT
+        assert mask[400 + 0 * FIELDS_PER_HAND + BREEDING_SLOT] == 1.0
 
     def test_breeding_phase_hatch(self):
         game = setup_game_at_phase(GamePhase.Breeding)
@@ -669,8 +697,8 @@ class TestActionDecoder:
         # Give opponent security
         p2.security_cards.append(make_card("BT14-002", dp=1000, owner=p2))
 
-        # Action 112 = attack slot 0 -> security (100 + 0*15 + 12)
-        game.decode_action(112, 1)
+        # Attack slot 0 -> security (100 + 0*TARGETS_PER_ATTACKER + SECURITY_TARGET)
+        game.decode_action(100 + 0 * TARGETS_PER_ATTACKER + SECURITY_TARGET, 1)
 
         assert p1.battle_area[0].is_suspended
         assert len(p2.security_cards) == 0
@@ -728,8 +756,8 @@ class TestActionDecoder:
                         evo_costs=[EvoCost(CardColor.Red, 2, 0)])
         p1.hand_cards.append(evo)
 
-        # 400 + hand[0]*15 + breeding[12]
-        game.decode_action(412, 1)
+        # 400 + hand[0]*FIELDS_PER_HAND + BREEDING_SLOT
+        game.decode_action(400 + 0 * FIELDS_PER_HAND + BREEDING_SLOT, 1)
 
         assert p1.breeding_area is not None
         assert p1.breeding_area.level == 3
@@ -794,8 +822,8 @@ class TestActionDecoder:
         p2.security_cards.append(make_card("BT14-003", dp=1000, owner=p2))
         p2.security_cards.append(make_card("BT14-010", dp=1000, owner=p2))
 
-        # Attacker 1, security: 100 + 1*15 + 12 = 127
-        game.decode_action(127, 1)
+        # Attacker 1, security: 100 + 1*TARGETS_PER_ATTACKER + SECURITY_TARGET
+        game.decode_action(100 + 1 * TARGETS_PER_ATTACKER + SECURITY_TARGET, 1)
 
         assert not p1.battle_area[0].is_suspended  # attacker 0 untouched
         assert p1.battle_area[1].is_suspended       # attacker 1 attacked
@@ -834,14 +862,16 @@ class TestTensorMaskDecoderRoundTrip:
         card = make_card("BT14-001", play_cost=3, dp=5000, level=4, owner=p1)
         p1.hand_cards.append(card)
 
+        hand_start = 10 + 2 * FIELD_SLOTS * SLOT_SIZE
+
         t_before = game.get_board_state_tensor(1)
-        assert t_before[754] != 0.0  # hand has a card
+        assert t_before[hand_start] != 0.0  # hand has a card ID
 
         game.decode_action(0, 1)  # play hand[0]
 
         t_after = game.get_board_state_tensor(1)
-        assert t_after[754] == 0.0   # hand now empty
-        assert t_after[10] != 0.0    # field has the card
+        assert t_after[hand_start] == 0.0   # hand now empty
+        assert t_after[10] != 0.0            # field has the card ID
 
     def test_mask_zero_after_action_depletes(self):
         """After playing the only hand card, play mask should zero out."""

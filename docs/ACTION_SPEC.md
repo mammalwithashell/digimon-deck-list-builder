@@ -1,6 +1,6 @@
 # Action Decoder Specification
 
-The engine exposes `2120` discrete action IDs. Legal actions are provided by `get_action_mask(player_id)` and executed by `decode_action(action_id, player_id)`.
+The engine exposes `2168` discrete action IDs. Legal actions are provided by `get_action_mask(player_id)` and executed by `decode_action(action_id, player_id)`.
 
 ## Global Action Ranges
 
@@ -15,8 +15,21 @@ The engine exposes `2120` discrete action IDs. Legal actions are provided by `ge
 | `93-99` | 7 | Unused |
 | `100-399` | 300 | Attack-like selections | `100 + slot * 15 + target` |
 | `400-999` | 600 | Digivolve | `400 + hand_idx * 15 + field_idx` |
-| `1000-1999` | 1000 | Effect activation | `1000 + source_idx * 10 + effect_idx` |
-| `2000-2119` | 120 | Source selection | `2000 + field_idx * 10 + source_idx` |
+| `1000-1999` | 1000 | Effect activation | `1000 + perm_idx * 10 + effect_idx` |
+| `2000-2167` | 168 | Source selection | `2000 + field_idx * 12 + source_idx` |
+
+## Key Constants
+
+| Name | Value | Notes |
+|---|---:|---|
+| `FIELD_SLOTS` | 14 | Battle area slots per player |
+| `MAX_SOURCES` | 11 | Max digivolution stack depth |
+| `SECURITY_TARGET` | 14 | Attack target index for security (`= FIELD_SLOTS`) |
+| `BREEDING_SLOT` | 14 | Virtual field index for breeding (`= FIELD_SLOTS`) |
+| `TARGETS_PER_ATTACKER` | 15 | Stride for attack formula |
+| `FIELDS_PER_HAND` | 15 | Stride for digivolve formula |
+| `EFFECTS_PER_PERM` | 10 | Stride for effect formula |
+| `SOURCES_PER_FIELD` | 12 | Stride for source selection formula |
 
 ## Phase-Aware Meaning
 
@@ -32,8 +45,8 @@ Action IDs are intentionally reused across phases.
 - `0-29`: play card from hand
 - `62`: pass turn
 - `63-92`: initiate DNA digivolve
-- `100-399`: attack (`target=12` means security)
-- `400-999`: digivolve (`field_idx=12` means breeding-area digivolve)
+- `100-399`: attack (`target=14` means security)
+- `400-999`: digivolve (`field_idx=14` means breeding-area digivolve)
 - `1000-1999`: effect activations currently used for training/delay style actions
 
 ### Breeding
@@ -41,11 +54,11 @@ Action IDs are intentionally reused across phases.
 - `60`: hatch
 - `61`: move from breeding
 - `62`: pass breeding
-- `1000-1999`: breeding-side training activation (virtual slot mapping)
+- `1000-1999`: breeding-side training activation (virtual slot 14)
 
 ### BlockTiming
 
-- `100-111`: choose blocker (`100 + blocker_slot`)
+- `100-113`: choose blocker (`100 + blocker_slot`)
 - `62`: decline block (unless rules force block, for example Collision state)
 
 ### CounterTiming
@@ -61,14 +74,14 @@ Action IDs are intentionally reused across phases.
 
 ### AllianceTiming (`GamePhase=16`)
 
-- `100-111`: choose ally to suspend for Alliance bonus
+- `100-113`: choose ally to suspend for Alliance bonus
 - `62`: decline Alliance
 
 ### Selection Phases
 
 - Generic selection phases (`SelectTarget`, `SelectMaterial`, `SelectHand`, `SelectReveal`, `SelectEffectChoice`, `SelectSecurity`) use `pending_selection.valid_indices`.
 - `SelectTrash`: uses `130-179` (`130 + trash_idx`)
-- `SelectSource`: uses `2000-2119` (`2000 + field_idx * 10 + source_idx`)
+- `SelectSource`: uses `2000-2167` (`2000 + field_idx * 12 + source_idx`)
 - Optional selections allow decline with `62`.
 
 ## Selection Conventions
@@ -81,8 +94,8 @@ Action IDs are intentionally reused across phases.
 | `50-59` | Opponent security index |
 | `62` | Decline optional selection |
 | `99` | Own breeding permanent |
-| `100-111` | Own battle-area permanent |
-| `112-123` | Opponent battle-area permanent |
+| `100-113` | Own battle-area permanent |
+| `114-127` | Opponent battle-area permanent |
 | `130-179` | Trash-card index |
 | `1000-1009` | Effect branch choice |
 
@@ -92,32 +105,31 @@ Action IDs are intentionally reused across phases.
 
 Target mapping:
 
-- `0-11`: opponent battle-area slots
-- `12`: opponent security
-- `13-14`: reserved/unused
+- `0-13`: opponent battle-area slots
+- `14`: opponent security (`SECURITY_TARGET`)
 
 ## Digivolve Formula
 
 `action_id = 400 + hand_idx * 15 + field_idx`
 
-- `field_idx=0..11`: battle area
-- `field_idx=12`: breeding area (when valid)
+- `field_idx=0..13`: battle area
+- `field_idx=14`: breeding area (`BREEDING_SLOT`)
 
 ## Effect Formula
 
-`action_id = 1000 + source_idx * 10 + effect_idx`
+`action_id = 1000 + perm_idx * 10 + effect_idx`
 
 Current engine usage includes training, delay, and end-of-turn effect hooks (for example overclock flow), depending on phase and card state.
 
 ## Source Selection Formula
 
-`action_id = 2000 + field_idx * 10 + source_idx`
+`action_id = 2000 + field_idx * 12 + source_idx`
 
 Used in `SelectSource` when effects need a specific card from a digivolution stack.
 
 ## Masking Contract
 
-- Mask size is always `2120`
+- Mask size is always `2168`
 - `1.0` means legal, `0.0` illegal
 - Frontend and RL agents must select only masked-legal actions
 - Backend decoder is phase-aware and resolves semantics from current `GamePhase`

@@ -19,12 +19,17 @@ export const ACTION = {
   EFFECT_START: 1000,
   EFFECT_END: 1999,
   SOURCE_START: 2000,
-  SOURCE_END: 2119,
+  SOURCE_END: 2167,
 } as const;
+
+// Board layout constants
+export const FIELD_SLOTS = 14;
+export const BREEDING_SLOT = FIELD_SLOTS;  // 14
+export const MAX_SOURCES = 11;
 
 // Attack formula: 100 + attacker * 15 + target
 export const ATTACK_TARGETS_PER_SLOT = 15;
-export const ATTACK_TARGET_SECURITY = 12;
+export const ATTACK_TARGET_SECURITY = FIELD_SLOTS;  // 14
 
 // Digivolve formula: 400 + hand * 15 + field
 export const DIGIVOLVE_FIELDS_PER_HAND = 15;
@@ -32,8 +37,8 @@ export const DIGIVOLVE_FIELDS_PER_HAND = 15;
 // Effect formula: 1000 + source * 10 + effectIdx
 export const EFFECTS_PER_SOURCE = 10;
 
-// Source formula: 2000 + field * 10 + sourceIdx
-export const SOURCES_PER_FIELD = 10;
+// Source formula: 2000 + field * 12 + sourceIdx
+export const SOURCES_PER_FIELD = 12;
 
 // ─── Selection Ranges ──────────────────────────────────────────────
 
@@ -49,9 +54,9 @@ export const SELECTION = {
   DECLINE: 62,
   BREEDING: 99,
   OWN_FIELD_START: 100,
-  OWN_FIELD_END: 111,
-  ENEMY_FIELD_START: 112,
-  ENEMY_FIELD_END: 123,
+  OWN_FIELD_END: 100 + FIELD_SLOTS - 1,       // 113
+  ENEMY_FIELD_START: 100 + FIELD_SLOTS,        // 114
+  ENEMY_FIELD_END: 100 + 2 * FIELD_SLOTS - 1,  // 127
   TRASH_START: 130,
   TRASH_END: 179,
   EFFECT_CHOICE_START: 1000,
@@ -180,7 +185,7 @@ export const KEYWORD_DISPLAY: Record<string, string> = {
 
 // ─── Board Layout ──────────────────────────────────────────────────
 
-export const MAX_BATTLE_AREA_SLOTS = 12;
+export const MAX_BATTLE_AREA_SLOTS = FIELD_SLOTS;  // 14
 export const MAX_HAND_SIZE = 30;
 export const MEMORY_MIN = -10;
 export const MEMORY_MAX = 10;

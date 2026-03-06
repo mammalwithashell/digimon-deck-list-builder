@@ -3,6 +3,8 @@ from typing import TYPE_CHECKING, Optional, Union, List, Dict, Any, Callable
 from dataclasses import dataclass, field
 import random
 
+import numpy as np
+
 from digimon_gym.engine.data.enums import GamePhase, EffectTiming, AttackResolution, PendingAction
 from digimon_gym.engine.core.player import Player
 from digimon_gym.engine.core.permanent import Permanent
@@ -18,15 +20,48 @@ if TYPE_CHECKING:
     from .core.card_source import CardSource
 
 # ─── Tensor / Action Space Constants (match C# Digimon.Core) ────────
-TENSOR_SIZE = 981
-ACTION_SPACE_SIZE = 2120
-FIELD_SLOTS = 12
-SLOT_SIZE = 31
+FIELD_SLOTS = 14
 MAX_HAND = 20
 MAX_TRASH = 45
 MAX_SECURITY = 10
-MAX_SOURCES = 8
+MAX_SOURCES = 11
 MAX_REVEALED = 10
+
+# Named slot indices for action formulas (breeding/security share index = FIELD_SLOTS)
+BREEDING_SLOT = FIELD_SLOTS       # 14 — virtual field index for breeding area
+SECURITY_TARGET = FIELD_SLOTS     # 14 — attack target index for security attack
+
+# Per-slot layout: 1 (card_id) + 6 scalars + MAX_SOURCES * 3 (card_id + opt_state + dp_contribution)
+SOURCE_ENTRY_SIZE = 3             # card_id + opt_state + dp_contribution
+SLOT_SIZE = 1 + 6 + MAX_SOURCES * SOURCE_ENTRY_SIZE  # 1 + 6 + 11*3 = 40
+
+# Action space strides
+TARGETS_PER_ATTACKER = 15         # 0..FIELD_SLOTS-1 = opp field, FIELD_SLOTS = security
+FIELDS_PER_HAND = 15              # 0..FIELD_SLOTS-1 = battle area, FIELD_SLOTS = breeding
+EFFECTS_PER_PERM = 10             # effect sub-indices per permanent
+SOURCES_PER_FIELD = 12            # source sub-indices per field slot (accommodates MAX_SOURCES=11)
+
+# Action space size: max source action = 2000 + (FIELD_SLOTS-1)*SOURCES_PER_FIELD + (SOURCES_PER_FIELD-1)
+ACTION_SPACE_SIZE = 2000 + FIELD_SLOTS * SOURCES_PER_FIELD  # 2168
+
+# Tensor layout offsets (compact: card IDs are single integer indices, not embeddings)
+_GLOBAL = 10
+_MY_BATTLE = FIELD_SLOTS * SLOT_SIZE      # 560
+_OPP_BATTLE = FIELD_SLOTS * SLOT_SIZE     # 560
+_MY_HAND = MAX_HAND                       # 20
+_OPP_HAND = MAX_HAND                      # 20
+_MY_TRASH = MAX_TRASH                     # 45
+_OPP_TRASH = MAX_TRASH                    # 45
+_MY_SECURITY = MAX_SECURITY               # 10
+_OPP_SECURITY = MAX_SECURITY              # 10
+_MY_BREEDING = 1 * SLOT_SIZE              # 40
+_OPP_BREEDING = 1 * SLOT_SIZE             # 40
+_REVEALED = MAX_REVEALED                  # 10
+_SELECTION = 5
+
+TENSOR_SIZE = (_GLOBAL + _MY_BATTLE + _OPP_BATTLE + _MY_HAND + _OPP_HAND +
+               _MY_TRASH + _OPP_TRASH + _MY_SECURITY + _OPP_SECURITY +
+               _MY_BREEDING + _OPP_BREEDING + _REVEALED + _SELECTION)  # 1375
 
 # ─── Selection Action Conventions ───────────────────────────────────
 # When in SelectTarget/SelectMaterial/SelectHand/SelectReveal/SelectSecurity,
@@ -40,10 +75,10 @@ SEL_MY_SECURITY_END = 49
 SEL_OPP_SECURITY_START = 50 # 50-59:   select from opponent's security stack
 SEL_OPP_SECURITY_END = 59
 SEL_MY_BREEDING = 99       # 99:       select own breeding area permanent
-SEL_MY_FIELD_START = 100   # 100-111:  select own battle_area permanent
-SEL_MY_FIELD_END = 111
-SEL_OPP_FIELD_START = 112  # 112-123:  select opponent's battle_area permanent
-SEL_OPP_FIELD_END = 123
+SEL_MY_FIELD_START = 100   # 100-113:  select own battle_area permanent
+SEL_MY_FIELD_END = 100 + FIELD_SLOTS - 1   # 113
+SEL_OPP_FIELD_START = 100 + FIELD_SLOTS     # 114:  select opponent's battle_area permanent
+SEL_OPP_FIELD_END = 100 + 2 * FIELD_SLOTS - 1  # 127
 SEL_TRASH_START = 130      # 130-179:  select trash card by index (up to 50)
 SEL_TRASH_END = 179
 SEL_EFFECT_CHOICE_START = 1000  # 1000-1009: choose between effect branches
@@ -953,7 +988,7 @@ class Game:
                 and perm.has_keyword('_is_training') and owner.library_cards):
             effects.append({
                 "effectIdx": 0,
-                "actionId": 1000 + slot_idx * 10,
+                "actionId": 1000 + slot_idx * EFFECTS_PER_PERM,
                 "name": "Training",
                 "description": "Suspend to place top deck card at bottom of digi stack",
             })
@@ -963,7 +998,7 @@ class Game:
             perm_name = perm.top_card.card_names[0] if perm.top_card and perm.top_card.card_names else "this card"
             effects.append({
                 "effectIdx": 1,
-                "actionId": 1000 + slot_idx * 10 + 1,
+                "actionId": 1000 + slot_idx * EFFECTS_PER_PERM + 1,
                 "name": "Delay",
                 "description": f"Trash {perm_name} to activate delayed effect",
             })
@@ -1196,7 +1231,7 @@ class Game:
                         target_slot = i
                         break
             else:
-                target_slot = 12  # security attack
+                target_slot = SECURITY_TARGET  # security attack
             pending_atk = {
                 "attackerSlot": attacker_slot,
                 "targetSlot": target_slot,
@@ -1592,29 +1627,32 @@ class Game:
 
     # ─── Board State Tensor ──────────────────────────────────────────
 
-    def get_board_state_tensor(self, player_id: int) -> List[float]:
-        """Build a 981-float tensor representing the board from player's perspective.
+    def get_board_state_tensor(self, player_id: int) -> np.ndarray:
+        """Build a flat tensor representing the board from player's perspective.
 
-        Layout:
-          [0-9]     Global data
-          [10-381]  My battle area  (12 slots × 31)
-          [382-753] Opp battle area (12 slots × 31)
-          [754-773] My hand  (20)
-          [774-793] Opp hand (20)
-          [794-838] My trash (45)
-          [839-883] Opp trash (45)
-          [884-893] My security (10)
-          [894-903] Opp security (10)
-          [904-934] My breeding (1 slot × 31)
-          [935-965] Opp breeding (1 slot × 31)
-          [966-975] Revealed cards (10)
-          [976-980] Selection context (5)
+        Returns a numpy array of shape (TENSOR_SIZE,) with dtype float32.
+        Card identities are encoded as integer registry indices (float-cast).
+        The nn.Embedding lookup happens inside the FeaturesExtractor on the GPU.
+
+        Layout (TENSOR_SIZE=1375):
+          [0-9]         Global data
+          [10-569]      My battle area  (14 slots × 40)
+          [570-1129]    Opp battle area (14 slots × 40)
+          [1130-1149]   My hand  (20 card IDs)
+          [1150-1169]   Opp hand (20 card IDs)
+          [1170-1214]   My trash (45 card IDs)
+          [1215-1259]   Opp trash (45 card IDs)
+          [1260-1269]   My security (10 card IDs)
+          [1270-1279]   Opp security (10 card IDs)
+          [1280-1319]   My breeding (1 slot × 40)
+          [1320-1359]   Opp breeding (1 slot × 40)
+          [1360-1369]   Revealed cards (10 card IDs)
+          [1370-1374]   Selection context (5)
         """
         me = self.player1 if player_id == 1 else self.player2
         opp = self.player2 if player_id == 1 else self.player1
 
-        # Pre-allocate tensor with zeros (faster than repeated appending)
-        t = [0.0] * TENSOR_SIZE
+        t = np.zeros(TENSOR_SIZE, dtype=np.float32)
 
         # --- Global [0-9] ---
         t[0] = float(self.turn_count)
@@ -1622,42 +1660,54 @@ class Game:
         t[2] = float(self._get_memory_for(me))
         # [3-9] are reserved (already 0.0)
 
-        # --- My field [10-381] ---
-        self._write_field(t, 10, me.battle_area, FIELD_SLOTS)
+        # --- My field ---
+        off = _GLOBAL
+        self._write_field(t, off, me.battle_area, FIELD_SLOTS)
 
-        # --- Opp field [382-753] ---
-        self._write_field(t, 382, opp.battle_area, FIELD_SLOTS)
+        # --- Opp field ---
+        off += _MY_BATTLE
+        self._write_field(t, off, opp.battle_area, FIELD_SLOTS)
 
-        # --- My hand [754-773] ---
-        self._write_card_ids(t, 754, me.hand_cards, MAX_HAND)
+        # --- My hand ---
+        off += _OPP_BATTLE
+        self._write_card_ids(t, off, me.hand_cards, MAX_HAND)
 
-        # --- Opp hand [774-793] ---
-        self._write_card_ids(t, 774, opp.hand_cards, MAX_HAND)
+        # --- Opp hand ---
+        off += _MY_HAND
+        self._write_card_ids(t, off, opp.hand_cards, MAX_HAND)
 
-        # --- My trash [794-838] ---
-        self._write_card_ids(t, 794, me.trash_cards, MAX_TRASH)
+        # --- My trash ---
+        off += _OPP_HAND
+        self._write_card_ids(t, off, me.trash_cards, MAX_TRASH)
 
-        # --- Opp trash [839-883] ---
-        self._write_card_ids(t, 839, opp.trash_cards, MAX_TRASH)
+        # --- Opp trash ---
+        off += _MY_TRASH
+        self._write_card_ids(t, off, opp.trash_cards, MAX_TRASH)
 
-        # --- My security [884-893] ---
-        self._write_card_ids(t, 884, me.security_cards, MAX_SECURITY)
+        # --- My security ---
+        off += _OPP_TRASH
+        self._write_card_ids(t, off, me.security_cards, MAX_SECURITY)
 
-        # --- Opp security [894-903] ---
-        self._write_card_ids(t, 894, opp.security_cards, MAX_SECURITY)
+        # --- Opp security ---
+        off += _MY_SECURITY
+        self._write_card_ids(t, off, opp.security_cards, MAX_SECURITY)
 
-        # --- My breeding [904-934] ---
+        # --- My breeding ---
+        off += _OPP_SECURITY
         breeding_list = [me.breeding_area] if me.breeding_area else []
-        self._write_field(t, 904, breeding_list, 1)
+        self._write_field(t, off, breeding_list, 1)
 
-        # --- Opp breeding [935-965] ---
+        # --- Opp breeding ---
+        off += _MY_BREEDING
         opp_breeding_list = [opp.breeding_area] if opp.breeding_area else []
-        self._write_field(t, 935, opp_breeding_list, 1)
+        self._write_field(t, off, opp_breeding_list, 1)
 
-        # --- Revealed cards [966-975] ---
-        self._write_card_ids(t, 966, self.revealed_cards, MAX_REVEALED)
+        # --- Revealed cards ---
+        off += _OPP_BREEDING
+        self._write_card_ids(t, off, self.revealed_cards, MAX_REVEALED)
 
-        # --- Selection context [976-980] ---
+        # --- Selection context ---
+        off += _REVEALED
         ps = self.pending_selection
         if self.current_phase in (
             GamePhase.SelectTarget, GamePhase.SelectMaterial,
@@ -1665,13 +1715,13 @@ class Game:
             GamePhase.SelectHand, GamePhase.SelectReveal,
             GamePhase.SelectEffectChoice, GamePhase.SelectSecurity,
         ):
-            t[976] = float(self.current_phase.value)
+            t[off] = float(self.current_phase.value)
 
         if ps:
-            t[977] = float(len(ps.valid_indices))
-            t[978] = float(ps.selecting_player.player_id)
+            t[off + 1] = float(len(ps.valid_indices))
+            t[off + 2] = float(ps.selecting_player.player_id)
 
-        # [979-980] are reserved (already 0.0)
+        # [off+3, off+4] are reserved (already 0.0)
 
         return t
 
@@ -1682,63 +1732,54 @@ class Game:
         return -self.memory
 
     @staticmethod
-    def _write_field(tensor: List[float], start_idx: int, permanents: List[Permanent], slots: int):
+    def _write_field(tensor: np.ndarray, start_idx: int, permanents: List[Permanent], slots: int):
         """Write field slot data into tensor starting at start_idx.
 
-        Layout per slot (31 floats):
-          +0:  top card internal ID
-          +1:  current DP
-          +2:  suspended (0/1)
-          +3:  OPT total (count of all once-per-turn effects)
-          +4:  OPT used  (count of OPT effects activated this turn)
-          +5:  linked card count
-          +6:  source count
-          +7..+30: 8 source entries × 3 floats each:
-                   [card_id, opt_state, dp_contribution]
+        Layout per slot (SLOT_SIZE=40 floats):
+          +0:       top card ID (integer registry index)
+          +1:       current DP
+          +2:       suspended (0/1)
+          +3:       OPT total
+          +4:       OPT used
+          +5:       linked card count
+          +6:       source count
+          +7..+39:  11 source entries × 3 each:
+                    [card_id, opt_state, dp_contribution]
         """
         for i, perm in enumerate(permanents[:slots]):
             base = start_idx + i * SLOT_SIZE
             top = perm.top_card
 
-            # +0: top card normalized ID
-            tensor[base] = CardRegistry.get_norm_id(top.card_id) if top else 0.0
+            # +0: top card ID
+            if top:
+                tensor[base] = float(CardRegistry.get_id(top.card_id))
 
-            # +1: current DP (None for eggs/tamers → 0.0)
+            # Scalar fields
             tensor[base + 1] = float(perm.dp or 0)
-
-            # +2: suspended
             tensor[base + 2] = 1.0 if perm.is_suspended else 0.0
-
-            # +3: OPT total
             tensor[base + 3] = float(perm.opt_total)
-
-            # +4: OPT used
             tensor[base + 4] = float(perm.opt_used)
-
-            # +5: linked card count
             tensor[base + 5] = float(len(perm.linked_cards))
-
-            # +6: source count
             tensor[base + 6] = float(len(perm.card_sources))
 
-            # +7..+30: source entries [card_id, opt_state, dp_contribution] × 8
+            # Source entries: [card_id, opt_state, dp_contribution] × MAX_SOURCES
             src_base = base + 7
             for j, src in enumerate(perm.card_sources[:MAX_SOURCES]):
-                off = src_base + j * 3
-                tensor[off] = CardRegistry.get_norm_id(src.card_id)
+                off = src_base + j * SOURCE_ENTRY_SIZE
+                tensor[off] = float(CardRegistry.get_id(src.card_id))
                 tensor[off + 1] = perm.source_opt_state(src)
                 tensor[off + 2] = perm.source_dp_contribution(src)
 
     @staticmethod
-    def _write_card_ids(tensor: List[float], start_idx: int, cards: list, limit: int):
-        """Write card ID list into tensor starting at start_idx."""
+    def _write_card_ids(tensor: np.ndarray, start_idx: int, cards: list, limit: int):
+        """Write card integer IDs into tensor starting at start_idx (1 float per card)."""
         for i, card in enumerate(cards[:limit]):
-            tensor[start_idx + i] = CardRegistry.get_norm_id(card.card_id)
+            tensor[start_idx + i] = float(CardRegistry.get_id(card.card_id))
 
     # ─── Action Mask ─────────────────────────────────────────────────
 
     def get_action_mask(self, player_id: int) -> List[float]:
-        """Build a 2120-float mask (1.0 = valid, 0.0 = invalid).
+        """Build an ACTION_SPACE_SIZE-float mask (1.0 = valid, 0.0 = invalid).
 
         Ranges match C# Digimon.Core.ActionDecoder:
           0-29:      Play card from hand
@@ -1746,10 +1787,10 @@ class Game:
           60:        Hatch
           61:        Move from breeding
           62:        Pass / end turn
-          100-399:   Attack (100 + attacker*15 + target, target 12 = security)
-          400-999:   Digivolve (400 + hand*15 + field)
-          1000-1999: Activate effect (1000 + source*10 + effectIdx)
-          2000-2119: Source selection (2000 + field*10 + sourceIdx)
+          100-399:   Attack (100 + attacker*15 + target, target 14 = security)
+          400-999:   Digivolve (400 + hand*15 + field, field 14 = breeding)
+          1000-1999: Activate effect (1000 + perm*10 + effectIdx)
+          2000-2167: Source selection (2000 + field*12 + sourceIdx)
         """
         mask = [0.0] * ACTION_SPACE_SIZE
         me = self.player1 if player_id == 1 else self.player2
@@ -1790,7 +1831,7 @@ class Game:
                             continue
                     mask[i] = 1.0
 
-            # Attack (100-399): 100 + attacker*15 + target
+            # Attack (100-399): 100 + attacker*TARGETS_PER_ATTACKER + target
             for i in range(min(len(me.battle_area), FIELD_SLOTS)):
                 attacker = me.battle_area[i]
                 if not attacker.can_attack():
@@ -1803,28 +1844,26 @@ class Game:
                                             attacker.turn_digivolved == self.turn_count)
                     if not (has_blitz and digivolved_this_turn):
                         continue
-                # Security attack (target index 12) — check cannot_attack_player
+                # Security attack (target index SECURITY_TARGET) — check cannot_attack_player
                 if attacker.can_attack_player():
-                    mask[100 + i * 15 + 12] = 1.0
-                # Digimon attacks (targets 0-11, suspended only per rules)
+                    mask[100 + i * TARGETS_PER_ATTACKER + SECURITY_TARGET] = 1.0
+                # Digimon attacks (targets 0..FIELD_SLOTS-1, suspended only per rules)
                 if attacker.has_keyword('_is_cannot_attack_digimon'):
                     continue
                 has_raid = attacker.has_keyword('_is_raid')
                 for j in range(min(len(opp.battle_area), FIELD_SLOTS)):
                     target = opp.battle_area[j]
                     if target.is_suspended and target.is_digimon:
-                        mask[100 + i * 15 + j] = 1.0
+                        mask[100 + i * TARGETS_PER_ATTACKER + j] = 1.0
                     elif has_raid and not target.is_suspended and target.is_digimon:
-                        # <Raid>: can attack unsuspended Digimon with highest DP
-                        # Find the highest DP among unsuspended opponent Digimon
                         unsuspended_dps = [
                             (p.dp or 0) for p in opp.battle_area
                             if not p.is_suspended and p.is_digimon
                         ]
                         if unsuspended_dps and (target.dp or 0) == max(unsuspended_dps):
-                            mask[100 + i * 15 + j] = 1.0
+                            mask[100 + i * TARGETS_PER_ATTACKER + j] = 1.0
 
-            # Digivolve (400-999): 400 + hand*15 + field
+            # Digivolve (400-999): 400 + hand*FIELDS_PER_HAND + field
             for h in range(min(len(me.hand_cards), 30)):
                 card = me.hand_cards[h]
                 if not card.is_digimon:
@@ -1832,10 +1871,10 @@ class Game:
                 for f in range(min(len(me.battle_area), FIELD_SLOTS)):
                     base_perm = me.battle_area[f]
                     if can_digivolve(card, base_perm):
-                        mask[400 + h * 15 + f] = 1.0
-                # Virtual field index 12 = breeding area digivolve.
+                        mask[400 + h * FIELDS_PER_HAND + f] = 1.0
+                # Virtual field index BREEDING_SLOT = breeding area digivolve.
                 if me.breeding_area and can_digivolve(card, me.breeding_area):
-                    mask[400 + h * 15 + 12] = 1.0
+                    mask[400 + h * FIELDS_PER_HAND + BREEDING_SLOT] = 1.0
 
             # DNA Digivolve (63-92): 63 + hand_idx
             for h in range(min(len(me.hand_cards), 30)):
@@ -1850,14 +1889,14 @@ class Game:
                 perm = me.battle_area[i]
                 if (perm.is_digimon and not perm.is_suspended
                         and perm.has_keyword('_is_training') and me.library_cards):
-                    mask[1000 + i * 10] = 1.0
+                    mask[1000 + i * EFFECTS_PER_PERM] = 1.0
 
             # <Delay>: trash Option card in battle area to activate delayed effect (effectIdx=1)
             for i in range(min(len(me.battle_area), FIELD_SLOTS)):
                 perm = me.battle_area[i]
                 if (self._has_delay_effect(perm)
                         and perm.turn_played < self.turn_count):  # Not same turn placed
-                    mask[1000 + i * 10 + 1] = 1.0
+                    mask[1000 + i * EFFECTS_PER_PERM + 1] = 1.0
 
             # Force Attack: if any of the turn player's Digimon have
             # FORCE_ATTACK modifier, restrict the mask to attack actions
@@ -1879,14 +1918,14 @@ class Game:
                         continue
                     # Security attack
                     if attacker.can_attack_player():
-                        forced_mask[100 + i * 15 + 12] = 1.0
+                        forced_mask[100 + i * TARGETS_PER_ATTACKER + SECURITY_TARGET] = 1.0
                         has_any_attack = True
                     # Digimon attacks
                     has_raid = attacker.has_keyword('_is_raid')
                     for j in range(min(len(opp.battle_area), FIELD_SLOTS)):
                         target = opp.battle_area[j]
                         if target.is_suspended and target.is_digimon:
-                            forced_mask[100 + i * 15 + j] = 1.0
+                            forced_mask[100 + i * TARGETS_PER_ATTACKER + j] = 1.0
                             has_any_attack = True
                         elif has_raid and not target.is_suspended and target.is_digimon:
                             unsuspended_dps = [
@@ -1894,7 +1933,7 @@ class Game:
                                 if not p.is_suspended and p.is_digimon
                             ]
                             if unsuspended_dps and (target.dp or 0) == max(unsuspended_dps):
-                                forced_mask[100 + i * 15 + j] = 1.0
+                                forced_mask[100 + i * TARGETS_PER_ATTACKER + j] = 1.0
                                 has_any_attack = True
                 if has_any_attack:
                     return forced_mask
@@ -1915,8 +1954,7 @@ class Game:
             ba = me.breeding_area
             if (ba is not None and ba.is_digimon and not ba.is_suspended
                     and ba.has_keyword('_is_training') and me.library_cards):
-                # Use a special action index for breeding training: 1000 + 12*10 (virtual slot 12)
-                mask[1000 + 12 * 10] = 1.0
+                mask[1000 + BREEDING_SLOT * EFFECTS_PER_PERM] = 1.0
             # Pass (62)
             mask[62] = 1.0
 
@@ -1937,7 +1975,7 @@ class Game:
 
         elif phase == GamePhase.CounterTiming:
             mask[62] = 1.0  # always can decline
-            # Blast digivolve options (400-999): 400 + hand*15 + field
+            # Blast digivolve options (400-999): 400 + hand*FIELDS_PER_HAND + field
             for h in range(min(len(me.hand_cards), 30)):
                 card = me.hand_cards[h]
                 if not card.is_digimon:
@@ -1951,7 +1989,7 @@ class Game:
                 for f in range(min(len(me.battle_area), FIELD_SLOTS)):
                     base_perm = me.battle_area[f]
                     if can_digivolve(card, base_perm):
-                        mask[400 + h * 15 + f] = 1.0
+                        mask[400 + h * FIELDS_PER_HAND + f] = 1.0
 
         elif phase == GamePhase.EndOfTurnAction:
             # End-of-turn keyword actions: Vortex attacks and Overclock activations
@@ -1967,7 +2005,7 @@ class Game:
                     for j in range(min(len(opp.battle_area), FIELD_SLOTS)):
                         target = opp.battle_area[j]
                         if target.is_digimon:
-                            mask[100 + i * 15 + j] = 1.0
+                            mask[100 + i * TARGETS_PER_ATTACKER + j] = 1.0
 
                 # <Overclock>: activate to sacrifice + attack player
                 if perm.has_keyword('_is_overclock'):
@@ -1976,8 +2014,7 @@ class Game:
                         for p in me.battle_area
                     )
                     if has_sacrifice:
-                        # Expose via effect activation range (1000 + slot * 10 + 0)
-                        mask[1000 + i * 10] = 1.0
+                        mask[1000 + i * EFFECTS_PER_PERM] = 1.0
 
         elif phase == GamePhase.AllianceTiming:
             # Alliance: select an unsuspended ally to suspend for DP + SA+1 bonus
@@ -1995,11 +2032,11 @@ class Game:
                 mask[SEL_TRASH_START + i] = 1.0
 
         elif phase == GamePhase.SelectSource:
-            # Source selection (2000-2119): 2000 + field*10 + sourceIdx
+            # Source selection: 2000 + field*SOURCES_PER_FIELD + sourceIdx
             for f in range(min(len(me.battle_area), FIELD_SLOTS)):
                 perm = me.battle_area[f]
-                for s in range(min(len(perm.card_sources), 10)):
-                    mask[2000 + f * 10 + s] = 1.0
+                for s in range(min(len(perm.card_sources), MAX_SOURCES)):
+                    mask[2000 + f * SOURCES_PER_FIELD + s] = 1.0
 
         elif phase in (GamePhase.SelectTarget, GamePhase.SelectMaterial,
                        GamePhase.SelectHand, GamePhase.SelectReveal,
@@ -2117,13 +2154,13 @@ class Game:
         # Attack (100-399)
         if 100 <= action_id <= 399:
             normalized = action_id - 100
-            attacker_idx = normalized // 15
-            target_idx = normalized % 15
+            attacker_idx = normalized // TARGETS_PER_ATTACKER
+            target_idx = normalized % TARGETS_PER_ATTACKER
             attacker_name = "?"
             if attacker_idx < len(me.battle_area):
                 a = me.battle_area[attacker_idx]
                 attacker_name = a.top_card.card_names[0] if a.top_card and a.top_card.card_names else "Digimon"
-            if target_idx == 12:
+            if target_idx == SECURITY_TARGET:
                 return f"Attack player with {attacker_name}"
             elif target_idx < len(opp.battle_area):
                 t = opp.battle_area[target_idx]
@@ -2134,8 +2171,8 @@ class Game:
         # Digivolve (400-999)
         if 400 <= action_id <= 999:
             normalized = action_id - 400
-            hand_idx = normalized // 15
-            field_idx = normalized % 15
+            hand_idx = normalized // FIELDS_PER_HAND
+            field_idx = normalized % FIELDS_PER_HAND
             hand_name = "?"
             field_name = "?"
             if hand_idx < len(me.hand_cards):
@@ -2144,7 +2181,7 @@ class Game:
             if field_idx < len(me.battle_area):
                 p = me.battle_area[field_idx]
                 field_name = p.top_card.card_names[0] if p.top_card and p.top_card.card_names else "Digimon"
-            elif field_idx == 12 and me.breeding_area is not None:
+            elif field_idx == BREEDING_SLOT and me.breeding_area is not None:
                 p = me.breeding_area
                 field_name = p.top_card.card_names[0] if p.top_card and p.top_card.card_names else "Breeding Digimon"
             return f"Digivolve {hand_name} onto {field_name}"
@@ -2152,13 +2189,13 @@ class Game:
         # Effect activation (1000-1999): Training=0, Delay=1
         if 1000 <= action_id <= 1999:
             normalized = action_id - 1000
-            perm_idx = normalized // 10
-            effect_idx = normalized % 10
+            perm_idx = normalized // EFFECTS_PER_PERM
+            effect_idx = normalized % EFFECTS_PER_PERM
             perm_name = "?"
             if perm_idx < len(me.battle_area):
                 p = me.battle_area[perm_idx]
                 perm_name = p.top_card.card_names[0] if p.top_card and p.top_card.card_names else "Permanent"
-            elif perm_idx == 12 and me.breeding_area:
+            elif perm_idx == BREEDING_SLOT and me.breeding_area:
                 p = me.breeding_area
                 perm_name = p.top_card.card_names[0] if p.top_card and p.top_card.card_names else "Breeding"
             if effect_idx == 0:
@@ -2167,11 +2204,11 @@ class Game:
                 return f"Delay: {perm_name}"
             return f"Activate effect {effect_idx} on {perm_name}"
 
-        # Source selection (2000-2119)
-        if 2000 <= action_id <= 2119:
+        # Source selection (2000+)
+        if 2000 <= action_id < ACTION_SPACE_SIZE:
             normalized = action_id - 2000
-            field_idx = normalized // 10
-            source_idx = normalized % 10
+            field_idx = normalized // SOURCES_PER_FIELD
+            source_idx = normalized % SOURCES_PER_FIELD
             return f"Select source[{source_idx}] from slot[{field_idx}]"
 
         # Selection phases use shared action space
@@ -2300,9 +2337,9 @@ class Game:
             self.action_pass_turn()
         elif 100 <= action_id <= 399:
             normalized = action_id - 100
-            attacker_idx = normalized // 15
-            target_idx = normalized % 15
-            if target_idx == 12:
+            attacker_idx = normalized // TARGETS_PER_ATTACKER
+            target_idx = normalized % TARGETS_PER_ATTACKER
+            if target_idx == SECURITY_TARGET:
                 self.action_attack_player(attacker_idx)
             else:
                 self.action_attack_digimon(attacker_idx, target_idx)
@@ -2311,17 +2348,17 @@ class Game:
             self._initiate_dna_digivolve(hand_idx)
         elif 400 <= action_id <= 999:
             normalized = action_id - 400
-            hand_idx = normalized // 15
-            field_idx = normalized % 15
-            if field_idx == 12:
+            hand_idx = normalized // FIELDS_PER_HAND
+            field_idx = normalized % FIELDS_PER_HAND
+            if field_idx == BREEDING_SLOT:
                 self.action_digivolve_breeding(hand_idx)
             else:
                 self.action_digivolve(field_idx, hand_idx)
         elif 1000 <= action_id <= 1999:
             # Effect activation (Training=0, Delay=1 in main phase)
             normalized = action_id - 1000
-            perm_idx = normalized // 10
-            effect_idx = normalized % 10
+            perm_idx = normalized // EFFECTS_PER_PERM
+            effect_idx = normalized % EFFECTS_PER_PERM
             if perm_idx < len(self.turn_player.battle_area):
                 perm = self.turn_player.battle_area[perm_idx]
                 if effect_idx == 0 and perm.has_keyword('_is_training'):
@@ -2337,10 +2374,10 @@ class Game:
         elif action_id == 62:
             self.action_breeding_pass()
         elif 1000 <= action_id <= 1999:
-            # Training in breeding area (virtual slot 12 = 1000 + 120)
+            # Training in breeding area (virtual slot BREEDING_SLOT)
             normalized = action_id - 1000
-            perm_idx = normalized // 10
-            if perm_idx == 12 and self.turn_player.breeding_area:
+            perm_idx = normalized // EFFECTS_PER_PERM
+            if perm_idx == BREEDING_SLOT and self.turn_player.breeding_area:
                 perm = self.turn_player.breeding_area
                 if perm.has_keyword('_is_training'):
                     self._execute_training(perm, self.turn_player)
@@ -2430,7 +2467,7 @@ class Game:
             self.logger.log("[Block] Declined to block")
             self._resolve_battle()
 
-        elif 100 <= action_id <= 111:
+        elif 100 <= action_id <= 100 + FIELD_SLOTS - 1:
             blocker_idx = action_id - 100
             defender = self.opponent_player
 
@@ -2476,8 +2513,8 @@ class Game:
 
         elif 400 <= action_id <= 999:
             normalized = action_id - 400
-            hand_idx = normalized // 15
-            field_idx = normalized % 15
+            hand_idx = normalized // FIELDS_PER_HAND
+            field_idx = normalized % FIELDS_PER_HAND
 
             defender = self.opponent_player
 
@@ -2535,10 +2572,10 @@ class Game:
         if ps is None:
             return
 
-        if 2000 <= action_id <= 2119:
+        if 2000 <= action_id < ACTION_SPACE_SIZE:
             normalized = action_id - 2000
-            field_idx = normalized // 10
-            source_idx = normalized % 10
+            field_idx = normalized // SOURCES_PER_FIELD
+            source_idx = normalized % SOURCES_PER_FIELD
 
             selecting = ps.selecting_player
             if field_idx < len(selecting.battle_area):
@@ -2623,8 +2660,8 @@ class Game:
         if 100 <= action_id <= 399:
             # Vortex attack against opponent Digimon
             normalized = action_id - 100
-            attacker_idx = normalized // 15
-            target_idx = normalized % 15
+            attacker_idx = normalized // TARGETS_PER_ATTACKER
+            target_idx = normalized % TARGETS_PER_ATTACKER
             if attacker_idx < len(self.turn_player.battle_area) and target_idx < len(self.opponent_player.battle_area):
                 attacker = self.turn_player.battle_area[attacker_idx]
                 target = self.opponent_player.battle_area[target_idx]
@@ -2635,7 +2672,7 @@ class Game:
         elif 1000 <= action_id <= 1999:
             # Overclock activation: select sacrifice target, then attack player
             normalized = action_id - 1000
-            perm_idx = normalized // 10
+            perm_idx = normalized // EFFECTS_PER_PERM
             if perm_idx < len(self.turn_player.battle_area):
                 overclock_perm = self.turn_player.battle_area[perm_idx]
                 self._initiate_overclock(overclock_perm)
