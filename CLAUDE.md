@@ -56,13 +56,17 @@ It also includes an admin AI workflow for issue triage, AI task dispatch, autofi
 
 ### Tensor Contract
 
-- Tensor size: `6891` (with `EMBEDDING_DIM=16`)
-- Card identities encoded as frozen autoencoder embeddings (16 floats per card)
+- Tensor size: `1375` (compact layout with integer card IDs)
+- Card identities are integer registry indices (1 float per card)
+- `nn.Embedding` lookup happens inside `CardEmbeddingExtractor` on the GPU
+- `FIELD_SLOTS=14`, `MAX_SOURCES=11`, `SLOT_SIZE=40`
 - See `docs/TENSOR_SPEC.md` for exact layout
 
 ### Action Contract
 
-- Action space size: `2120`
+- Action space size: `2168`
+- `SECURITY_TARGET=14`, `BREEDING_SLOT=14` (= `FIELD_SLOTS`)
+- `SOURCES_PER_FIELD=12` (stride for source selection)
 - Phase-aware decoding in `Game.decode_action`
 - See `docs/ACTION_SPEC.md` for ranges and conventions
 

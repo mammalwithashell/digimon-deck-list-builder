@@ -523,10 +523,23 @@ def train(total_timesteps: int = 100_000,
         deck_pool_hybrid_max=deck_pool_hybrid_max,
     )
 
+    # Load autoencoder embeddings for warm-start (if available)
+    pretrained_embeddings = None
+    emb_path = os.path.join(
+        os.path.dirname(__file__), '..', 'engine', 'data', 'card_embeddings.npy'
+    )
+    if os.path.exists(emb_path):
+        pretrained_embeddings = np.load(emb_path)
+        if verbose:
+            print(f"  Warm-start: loaded {len(pretrained_embeddings)} card embeddings")
+
     # Create model
     extractor_kwargs = dict(
         features_extractor_class=CardEmbeddingExtractor,
-        features_extractor_kwargs=dict(features_dim=512),
+        features_extractor_kwargs=dict(
+            features_dim=512,
+            pretrained_embeddings=pretrained_embeddings,
+        ),
     )
 
     if use_lstm:

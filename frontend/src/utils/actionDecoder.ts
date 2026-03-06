@@ -1,5 +1,7 @@
 import {
   ACTION,
+  FIELD_SLOTS,
+  BREEDING_SLOT,
   ATTACK_TARGETS_PER_SLOT,
   ATTACK_TARGET_SECURITY,
   DIGIVOLVE_FIELDS_PER_HAND,
@@ -28,7 +30,7 @@ export function decodeAction(id: number): string {
     if (target === ATTACK_TARGET_SECURITY) {
       return `Slot ${attacker} attacks security`;
     }
-    if (target < 12) {
+    if (target < FIELD_SLOTS) {
       return `Slot ${attacker} attacks opponent slot ${target}`;
     }
     return `Slot ${attacker} attack (target ${target})`;
@@ -38,7 +40,7 @@ export function decodeAction(id: number): string {
     const offset = id - ACTION.DIGIVOLVE_START;
     const hand = Math.floor(offset / DIGIVOLVE_FIELDS_PER_HAND);
     const field = offset % DIGIVOLVE_FIELDS_PER_HAND;
-    if (field === 12) {
+    if (field === BREEDING_SLOT) {
       return `Digivolve hand ${hand} onto breeding area`;
     }
     return `Digivolve hand ${hand} onto slot ${field}`;
