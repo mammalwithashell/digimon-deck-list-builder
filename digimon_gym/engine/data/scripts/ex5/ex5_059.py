@@ -18,6 +18,7 @@ class EX5_059(CardScript):
         effect0.set_effect_name("EX5-059 Alternate digivolution requirement")
         effect0.set_effect_description("Alternate digivolution requirement")
         effect0._alt_digi_cost = 0
+        effect0._alt_digi_name = "Dobermon"
 
         def condition0(context: Dict[str, Any]) -> bool:
             return True

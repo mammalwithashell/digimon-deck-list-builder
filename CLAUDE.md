@@ -47,6 +47,12 @@ It also includes an admin AI workflow for issue triage, AI task dispatch, autofi
 - `scripts/build-sidecar.sh`: desktop sidecar build pipeline (PyInstaller + Tauri naming)
 - `docs/TENSOR_SPEC.md`, `docs/ACTION_SPEC.md`, `AGENTS.md`, `docs/TRAINING_RUNBOOK.md`: behavior contracts
 - `docs/plans/DESKTOP_DISTRIBUTION_PLAN.md`: full implementation plan for desktop distribution
+- `docs/TOOLS.md`: card registry, autoencoder, tensor layout, and new-set workflow documentation
+- `digimon_gym/engine/data/tensor_layout.py`: card ID / scalar position map for FeaturesExtractor
+- `digimon_gym/engine/data/card_features.py`: card feature vectorizer for autoencoder
+- `digimon_gym/engine/data/card_registry.py`: card ID → integer index mapping
+- `tools/build_registry.py`: append-only card registry builder (DigimonCard.io API)
+- `tools/train_card_autoencoder.py`: warm-start embedding generator
 
 ## RL and Game Contracts
 
@@ -67,12 +73,17 @@ It also includes an admin AI workflow for issue triage, AI task dispatch, autofi
 
 ### Tensor Contract
 
-- Tensor size: `981`
+- Tensor size: `1375` (compact layout with integer card IDs)
+- Card identities are integer registry indices (1 float per card)
+- `nn.Embedding` lookup happens inside `CardEmbeddingExtractor` on the GPU
+- `FIELD_SLOTS=14`, `MAX_SOURCES=11`, `SLOT_SIZE=40`
 - See `docs/TENSOR_SPEC.md` for exact layout
 
 ### Action Contract
 
-- Action space size: `2120`
+- Action space size: `2168`
+- `SECURITY_TARGET=14`, `BREEDING_SLOT=14` (= `FIELD_SLOTS`)
+- `SOURCES_PER_FIELD=12` (stride for source selection)
 - Phase-aware decoding in `Game.decode_action`
 - See `docs/ACTION_SPEC.md` for ranges and conventions
 

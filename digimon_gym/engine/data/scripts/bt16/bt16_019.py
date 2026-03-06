@@ -33,6 +33,7 @@ class BT16_019(CardScript):
         effect1.set_effect_description("Alternate digivolution requirement")
         # Alternate digivolution: alternate source for cost 2
         effect1._alt_digi_cost = 2
+        effect1._alt_digi_name = "Patamon"
 
         def condition1(context: Dict[str, Any]) -> bool:
             return True

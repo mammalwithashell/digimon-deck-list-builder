@@ -35,46 +35,21 @@ class BT24_030(CardScript):
         effect1.set_timing(EffectTiming.BeforePayCost)
         effect1.set_effect_name("BT24-030 Reduce play cost (5)")
         effect1.set_effect_description("When this card would be played, if your opponent has 2 or more Digimon, reduce the play cost by 5.")
+        effect1.cost_reduction = 5
 
-        effect = effect1  # alias for condition closure
         def condition1(context: Dict[str, Any]) -> bool:
-            return True
+            if context.get('card_source') is not card:
+                return False
+            owner = getattr(card, 'owner', None)
+            if not owner:
+                return False
+            enemy = owner.enemy if owner else None
+            if not enemy:
+                return False
+            return len([p for p in enemy.battle_area if p.is_digimon]) >= 2
 
         effect1.set_can_use_condition(condition1)
-
-        def process1(ctx: Dict[str, Any]):
-            """Action: Effect"""
-            player = ctx.get('player')
-            perm = ctx.get('permanent')
-            game = ctx.get('game')
-            # Cost reduction (variable amount) — handled via cost_reduction property
-            pass  # descriptive-tagged: cost_reduction
-
-        effect1.set_on_process_callback(process1)
         effects.append(effect1)
-
-        # Timing: EffectTiming.None
-        # Effect
-        effect2 = ICardEffect()
-        effect2.set_effect_name("BT24-030 Play Cost -5")
-        effect2.set_effect_description("Effect")
-
-        effect = effect2  # alias for condition closure
-        def condition2(context: Dict[str, Any]) -> bool:
-            return True
-
-        effect2.set_can_use_condition(condition2)
-
-        def process2(ctx: Dict[str, Any]):
-            """Action: Effect"""
-            player = ctx.get('player')
-            perm = ctx.get('permanent')
-            game = ctx.get('game')
-            # Cost reduction (variable amount) — handled via cost_reduction property
-            pass  # descriptive-tagged: cost_reduction
-
-        effect2.set_on_process_callback(process2)
-        effects.append(effect2)
 
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [On Play] Return all of your opponent's Digimon with the fewest digivolution cards to the bottom of the deck.
@@ -91,6 +66,27 @@ class BT24_030(CardScript):
             # Triggered on play — validated by engine timing
             return True
 
+        def _neptunemon_bottom_deck(player, game):
+            """Return all opponent's Digimon with fewest digivolution cards to bottom of deck."""
+            enemy = player.enemy if player else None
+            if not enemy:
+                return
+            opp_digimon = [p for p in enemy.battle_area if p.is_digimon]
+            if not opp_digimon:
+                return
+            min_sources = min(len(p.card_sources) for p in opp_digimon)
+            to_remove = [p for p in opp_digimon if len(p.card_sources) == min_sources]
+            for target in to_remove:
+                if target in enemy.battle_area:
+                    enemy.return_permanent_to_deck_bottom(target)
+
+        def process3(ctx: Dict[str, Any]):
+            player = ctx.get('player')
+            game = ctx.get('game')
+            if player and game:
+                _neptunemon_bottom_deck(player, game)
+
+        effect3.set_on_process_callback(process3)
         effect3.set_can_use_condition(condition3)
         effects.append(effect3)
 
@@ -109,6 +105,13 @@ class BT24_030(CardScript):
             # Triggered when digivolving — validated by engine timing
             return True
 
+        def process4(ctx: Dict[str, Any]):
+            player = ctx.get('player')
+            game = ctx.get('game')
+            if player and game:
+                _neptunemon_bottom_deck(player, game)
+
+        effect4.set_on_process_callback(process4)
         effect4.set_can_use_condition(condition4)
         effects.append(effect4)
 
@@ -131,18 +134,10 @@ class BT24_030(CardScript):
         effect5.set_can_use_condition(condition5)
 
         def process5(ctx: Dict[str, Any]):
-            """Action: Unsuspend"""
-            player = ctx.get('player')
+            """Action: Unsuspend this Digimon"""
             perm = ctx.get('permanent')
-            game = ctx.get('game')
-            if not (player and game):
-                return
-            def target_filter(p):
-                return True
-            def on_unsuspend(target_perm):
-                target_perm.unsuspend()
-            game.effect_select_own_permanent(
-                player, on_unsuspend, filter_fn=target_filter, is_optional=True)
+            if perm:
+                perm.unsuspend()
 
         effect5.set_on_process_callback(process5)
         effects.append(effect5)

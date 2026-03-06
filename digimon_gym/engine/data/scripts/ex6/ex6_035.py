@@ -34,7 +34,7 @@ class EX6_035(CardScript):
         effect1.set_effect_description("Alternate digivolution requirement")
         # Alternate digivolution: from [Cherubimon] for cost 3
         effect1._alt_digi_cost = 3
-        effect1._alt_digi_name = "Cherubimon"
+        effect1._alt_digi_name = "Antylamon"
 
         def condition1(context: Dict[str, Any]) -> bool:
             permanent = card.permanent_of_this_card() if card else None

@@ -182,9 +182,8 @@ class ReplayRunner:
         return self.game.to_json()
 
     def get_board_tensor(self, player_id: int) -> np.ndarray:
-        """Return 981-float board state tensor for the given player."""
-        tensor = self.game.get_board_state_tensor(player_id)
-        return np.array(tensor, dtype=np.float32)
+        """Return board state tensor for the given player."""
+        return self.game.get_board_state_tensor(player_id)
 
     def get_action_mask(self) -> np.ndarray:
         """Return action mask for the current player."""

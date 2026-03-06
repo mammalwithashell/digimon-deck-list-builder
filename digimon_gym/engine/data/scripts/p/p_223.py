@@ -21,6 +21,8 @@ class P_223(CardScript):
         effect0.set_effect_description("Alternate digivolution requirement")
         # Alternate digivolution: alternate source for cost 1
         effect0._alt_digi_cost = 1
+        effect0._alt_digi_level = 6
+        effect0._alt_digi_name = "Maid Mode"
 
         def condition0(context: Dict[str, Any]) -> bool:
             return True
@@ -38,6 +40,8 @@ class P_223(CardScript):
 
         effect = effect1  # alias for condition closure
         def condition1(context: Dict[str, Any]) -> bool:
+            if context.get('card_source') is not card:
+                return False
             return True
 
         effect1.set_can_use_condition(condition1)

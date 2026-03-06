@@ -33,6 +33,8 @@ class BT5_085(CardScript):
         effect0.is_optional = True
 
         def condition0(context: Dict[str, Any]) -> bool:
+            if context.get('card_source') is not card:
+                return False
             return True
         effect0.set_can_use_condition(condition0)
 

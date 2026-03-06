@@ -109,24 +109,36 @@ class BT24_090(CardScript):
         effect4.set_can_use_condition(condition4)
 
         def process4(ctx: Dict[str, Any]):
-            """Action: Cost -3, Play Card"""
+            """Swap bottom security with this card, then optionally play TS Digimon at -3."""
             player = ctx.get('player')
             perm = ctx.get('permanent')
             game = ctx.get('game')
             if not (player and game):
                 return
+
+            # Step 1: Add bottom security card to hand
+            if player.security_cards:
+                bottom_sec = player.security_cards.pop(-1)
+                player.hand_cards.append(bottom_sec)
+
+            # Step 2: Place this option as bottom security card
+            # The option card is the card being resolved
+            if card:
+                player.security_cards.insert(0, card)
+
+            # Step 3: Optionally play 1 blue/yellow [TS] Digimon at -3 cost
             def play_filter(c):
                 if not getattr(c, 'is_digimon', False):
                     return False
-                if not ('Blue' in [col.name for col in getattr(c, 'card_colors', [])] or 'Yellow' in [col.name for col in getattr(c, 'card_colors', [])]):
+                colors = [col.name for col in (getattr(c, 'card_colors', None) or [])]
+                if 'Blue' not in colors and 'Yellow' not in colors:
                     return False
-                if not (any('TS' in _t for _t in (getattr(c, 'card_traits', []) or []))):
+                if not any('TS' in _t for _t in (getattr(c, 'card_traits', []) or [])):
                     return False
                 return True
             game.effect_play_from_zone(
-                player, 'hand', play_filter, free=True, is_optional=True)
-            # Cost reduction by 3 — handled via cost_reduction property
-            pass  # descriptive-tagged: cost_reduction
+                player, 'hand', play_filter, free=False,
+                manual_reduction=3, is_optional=True)
 
         effect4.set_on_process_callback(process4)
         effects.append(effect4)
@@ -140,10 +152,8 @@ class BT24_090(CardScript):
         effect5.is_security_effect = True
         effect5.is_security_effect = True
 
-        effect = effect5  # alias for condition closure
         def condition5(context: Dict[str, Any]) -> bool:
-            # Security effect — validated by engine timing
-            return True
+            return False  # Security effects handled by engine
 
         effect5.set_can_use_condition(condition5)
 

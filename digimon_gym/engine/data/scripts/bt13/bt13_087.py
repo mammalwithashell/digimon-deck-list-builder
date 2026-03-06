@@ -14,11 +14,19 @@ class BT13_087(CardScript):
     def get_card_effects(self, card: 'CardSource') -> List['ICardEffect']:
         effects = []
 
+        def lucemon_rk_filter(c):
+            """Filter for cards with [Lucemon] in name or [Royal Knight] trait."""
+            return (
+                any('Lucemon' in n for n in getattr(c, 'card_names', []))
+                or any('Royal Knight' in t for t in (getattr(c, 'card_traits', []) or []))
+            )
+
         # Timing: EffectTiming.OnEnterFieldAnyone
-        # [On Play] Reveal the top 4 cards of your deck. Add 2 cards with [Lucemon] in their names or the [Royal Knight] trait among them to the hand. Trash the rest.
+        # [On Play] Reveal the top 4 cards of your deck. Add 2 cards with [Lucemon] in their
+        # names or the [Royal Knight] trait among them to the hand. Trash the rest.
         effect0 = ICardEffect()
         effect0.set_timing(EffectTiming.OnEnterFieldAnyone)
-        effect0.set_effect_name("BT13-087 Reveal the top 4 cards of deck")
+        effect0.set_effect_name("BT13-087 Reveal top 4, add 2 Lucemon/Royal Knight to hand")
         effect0.set_effect_description("[On Play] Reveal the top 4 cards of your deck. Add 2 cards with [Lucemon] in their names or the [Royal Knight] trait among them to the hand. Trash the rest.")
         effect0.is_on_play = True
 
@@ -26,41 +34,35 @@ class BT13_087(CardScript):
         def condition0(context: Dict[str, Any]) -> bool:
             if card and card.permanent_of_this_card() is None:
                 return False
-            # Triggered on play — validated by engine timing
             return True
 
         effect0.set_can_use_condition(condition0)
 
         def process0(ctx: Dict[str, Any]):
-            """Action: Add To Hand, Reveal And Select"""
+            """Action: Reveal top 4, pick up to 2 Lucemon/Royal Knight to hand, trash rest."""
             player = ctx.get('player')
             perm = ctx.get('permanent')
             game = ctx.get('game')
-            # Add card to hand (from trash/reveal)
-            if player and player.trash_cards:
-                card_to_add = player.trash_cards.pop()
-                player.hand_cards.append(card_to_add)
             if not (player and game):
                 return
-            def reveal_filter(c):
-                if not (any('Lucemon' in _n for _n in getattr(c, 'card_names', [])) or any('Royal Knight' in _t for _t in (getattr(c, 'card_traits', []) or []))):
-                    return False
-                return True
-            def on_revealed(selected, remaining):
-                player.hand_cards.append(selected)
-                for c in remaining:
-                    player.library_cards.append(c)
-            game.effect_reveal_and_select(
-                player, 4, reveal_filter, on_revealed, is_optional=True)
+            game.effect_reveal_and_select_multi(
+                player, 4,
+                passes=[
+                    (lucemon_rk_filter, 'hand'),
+                    (lucemon_rk_filter, 'hand'),
+                ],
+                remaining_placement='trash',
+                is_optional=True,
+            )
 
         effect0.set_on_process_callback(process0)
         effects.append(effect0)
 
         # Timing: EffectTiming.OnEnterFieldAnyone
-        # [When Digivolving] Reveal the top 4 cards of your deck. Add 2 cards with [Lucemon] in their names or the [Royal Knight] trait among them to the hand. Trash the rest.
+        # [When Digivolving] Same reveal effect as On Play.
         effect1 = ICardEffect()
         effect1.set_timing(EffectTiming.OnEnterFieldAnyone)
-        effect1.set_effect_name("BT13-087 Reveal the top 4 cards of deck")
+        effect1.set_effect_name("BT13-087 Reveal top 4, add 2 Lucemon/Royal Knight to hand")
         effect1.set_effect_description("[When Digivolving] Reveal the top 4 cards of your deck. Add 2 cards with [Lucemon] in their names or the [Royal Knight] trait among them to the hand. Trash the rest.")
         effect1.is_when_digivolving = True
 
@@ -68,41 +70,36 @@ class BT13_087(CardScript):
         def condition1(context: Dict[str, Any]) -> bool:
             if card and card.permanent_of_this_card() is None:
                 return False
-            # Triggered when digivolving — validated by engine timing
             return True
 
         effect1.set_can_use_condition(condition1)
 
         def process1(ctx: Dict[str, Any]):
-            """Action: Add To Hand, Reveal And Select"""
+            """Action: Reveal top 4, pick up to 2 Lucemon/Royal Knight to hand, trash rest."""
             player = ctx.get('player')
             perm = ctx.get('permanent')
             game = ctx.get('game')
-            # Add card to hand (from trash/reveal)
-            if player and player.trash_cards:
-                card_to_add = player.trash_cards.pop()
-                player.hand_cards.append(card_to_add)
             if not (player and game):
                 return
-            def reveal_filter(c):
-                if not (any('Lucemon' in _n for _n in getattr(c, 'card_names', [])) or any('Royal Knight' in _t for _t in (getattr(c, 'card_traits', []) or []))):
-                    return False
-                return True
-            def on_revealed(selected, remaining):
-                player.hand_cards.append(selected)
-                for c in remaining:
-                    player.library_cards.append(c)
-            game.effect_reveal_and_select(
-                player, 4, reveal_filter, on_revealed, is_optional=True)
+            game.effect_reveal_and_select_multi(
+                player, 4,
+                passes=[
+                    (lucemon_rk_filter, 'hand'),
+                    (lucemon_rk_filter, 'hand'),
+                ],
+                remaining_placement='trash',
+                is_optional=True,
+            )
 
         effect1.set_on_process_callback(process1)
         effects.append(effect1)
 
         # Timing: EffectTiming.OnEnterFieldAnyone
-        # [Your Turn] When you play another Digimon with [Lucemon] in its name or the [Royal Knight] trait, delete all of your opponent's level 4 or lower Digimon.
+        # [Your Turn] When you play another Digimon with [Lucemon] in its name or the
+        # [Royal Knight] trait, delete all of your opponent's level 4 or lower Digimon.
         effect2 = ICardEffect()
         effect2.set_timing(EffectTiming.OnEnterFieldAnyone)
-        effect2.set_effect_name("BT13-087 Delete opponent's all level 4 or lower Digimons")
+        effect2.set_effect_name("BT13-087 Delete all opponent Lv.4 or lower Digimon")
         effect2.set_effect_description("[Your Turn] When you play another Digimon with [Lucemon] in its name or the [Royal Knight] trait, delete all of your opponent's level 4 or lower Digimon.")
         effect2.is_on_play = True
 
@@ -110,37 +107,49 @@ class BT13_087(CardScript):
         def condition2(context: Dict[str, Any]) -> bool:
             if card and card.permanent_of_this_card() is None:
                 return False
+            # Must be your turn
             if not (card and card.owner and card.owner.is_my_turn):
+                return False
+            # Check that the played Digimon is "another" (not this Dynasmon)
+            # and has Lucemon in name or Royal Knight trait
+            played_perm = context.get('played_permanent')
+            played_card_src = context.get('played_card')
+            check_target = played_perm or played_card_src
+            if check_target is None:
+                return False
+            # "another" — not this card
+            this_perm = card.permanent_of_this_card()
+            if played_perm and this_perm and played_perm is this_perm:
+                return False
+            # Must be a Digimon with Lucemon name or Royal Knight trait
+            tc = getattr(check_target, 'top_card', check_target)
+            names = getattr(tc, 'card_names', [])
+            traits = getattr(tc, 'card_traits', []) or []
+            if not (any('Lucemon' in n for n in names) or any('Royal Knight' in t for t in traits)):
                 return False
             return True
 
         effect2.set_can_use_condition(condition2)
 
         def process2(ctx: Dict[str, Any]):
-            """Action: Delete, Effect Immunity"""
+            """Action: Delete all opponent's level 4 or lower Digimon."""
             player = ctx.get('player')
             perm = ctx.get('permanent')
             game = ctx.get('game')
             if not (player and game):
                 return
-            def target_filter(p):
-                if p.level is None or p.level > 4:
-                    return False
-                if not (p.contains_card_name('Lucemon') or any('Royal Knight' in t for t in (getattr(p.top_card, 'card_traits', []) or []))):
-                    return False
-                return p.is_digimon
-            def on_delete(target_perm):
-                enemy = player.enemy if player else None
-                if enemy:
-                    enemy.delete_permanent(target_perm)
-            game.effect_select_opponent_permanent(
-                player, on_delete, filter_fn=target_filter, is_optional=False)
-            # Grant effect immunity via modifier system
-            if perm and game:
-                from digimon_gym.engine.interfaces.modifiers import ModifierType
-                game.register_modifier(
-                    ModifierType.CANNOT_BE_SELECTED_BY_EFFECT, perm,
-                    value_fn=lambda: True, expiry='end_of_turn')
+            enemy = player.enemy
+            if not enemy:
+                return
+            to_delete = [
+                p for p in list(enemy.battle_area)
+                if p.is_digimon
+                and p.top_card
+                and p.top_card.level is not None
+                and p.top_card.level <= 4
+            ]
+            for target in to_delete:
+                enemy.delete_permanent(target)
 
         effect2.set_on_process_callback(process2)
         effects.append(effect2)

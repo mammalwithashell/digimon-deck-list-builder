@@ -33,18 +33,16 @@ class BT19_072(CardScript):
         effect0.set_can_use_condition(condition0)
 
         def process0(ctx: Dict[str, Any]):
-            """Action: Play Card"""
+            """Action: Play Card from trash"""
             player = ctx.get('player')
             perm = ctx.get('permanent')
             game = ctx.get('game')
             if not (player and game):
                 return
             def play_filter(c):
-                if getattr(c, 'level', None) is None or c.level > 4:
-                    return False
-                return True
+                return c.is_digimon and getattr(c, 'level', None) is not None and c.level <= 4
             game.effect_play_from_zone(
-                player, 'hand', play_filter, free=True, is_optional=True)
+                player, 'trash', play_filter, free=True, is_optional=True)
 
         effect0.set_on_process_callback(process0)
         effects.append(effect0)
@@ -68,18 +66,16 @@ class BT19_072(CardScript):
         effect1.set_can_use_condition(condition1)
 
         def process1(ctx: Dict[str, Any]):
-            """Action: Play Card"""
+            """Action: Play Card from trash"""
             player = ctx.get('player')
             perm = ctx.get('permanent')
             game = ctx.get('game')
             if not (player and game):
                 return
             def play_filter(c):
-                if getattr(c, 'level', None) is None or c.level > 4:
-                    return False
-                return True
+                return c.is_digimon and getattr(c, 'level', None) is not None and c.level <= 4
             game.effect_play_from_zone(
-                player, 'hand', play_filter, free=True, is_optional=True)
+                player, 'trash', play_filter, free=True, is_optional=True)
 
         effect1.set_on_process_callback(process1)
         effects.append(effect1)
@@ -99,6 +95,10 @@ class BT19_072(CardScript):
         def condition2(context: Dict[str, Any]) -> bool:
             if card and card.permanent_of_this_card() is None:
                 return False
+            # [Opponent's Turn] — only active when it's not our turn
+            owner = card.owner if card else None
+            if not owner or owner.is_my_turn:
+                return False
             return True
 
         effect2.set_can_use_condition(condition2)
@@ -108,8 +108,8 @@ class BT19_072(CardScript):
             player = ctx.get('player')
             perm = ctx.get('permanent')
             game = ctx.get('game')
-            # Redirect attack target (SwitchDefender) — not yet in engine
-            pass  # descriptive-tagged: redirect_attack
+            # Redirect attack target to a Royal Knight (SwitchDefender)
+            pass  # descriptive-tagged: redirect_attack — engine does not yet support attack redirection
 
         effect2.set_on_process_callback(process2)
         effects.append(effect2)

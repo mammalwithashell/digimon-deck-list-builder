@@ -92,12 +92,13 @@ class BT21_029(CardScript):
         effect4.set_can_use_condition(condition4)
 
         def process4(ctx: Dict[str, Any]):
-            """Action: Play Token"""
+            """Action: Play Petrification Token on opponent's field"""
             player = ctx.get('player')
-            perm = ctx.get('permanent')
             game = ctx.get('game')
-            # Play Petrification Token — token play not yet supported in engine
-            pass  # descriptive-tagged: play_token
+            if player and game:
+                enemy = player.enemy if player else None
+                if enemy:
+                    game.effect_play_token(enemy, 'petrification')
 
         effect4.set_on_process_callback(process4)
         effects.append(effect4)
@@ -119,12 +120,13 @@ class BT21_029(CardScript):
         effect5.set_can_use_condition(condition5)
 
         def process5(ctx: Dict[str, Any]):
-            """Action: Play Token"""
+            """Action: Play Petrification Token on opponent's field"""
             player = ctx.get('player')
-            perm = ctx.get('permanent')
             game = ctx.get('game')
-            # Play Petrification Token — token play not yet supported in engine
-            pass  # descriptive-tagged: play_token
+            if player and game:
+                enemy = player.enemy if player else None
+                if enemy:
+                    game.effect_play_token(enemy, 'petrification')
 
         effect5.set_on_process_callback(process5)
         effects.append(effect5)

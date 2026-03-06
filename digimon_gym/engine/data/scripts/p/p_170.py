@@ -21,6 +21,7 @@ class P_170(CardScript):
         effect0.set_effect_description("Alternate digivolution requirement")
         # Alternate digivolution: alternate source for cost 4
         effect0._alt_digi_cost = 4
+        effect0._alt_digi_level = 5
 
         def condition0(context: Dict[str, Any]) -> bool:
             permanent = card.permanent_of_this_card() if card else None
@@ -45,6 +46,8 @@ class P_170(CardScript):
 
         effect = effect1  # alias for condition closure
         def condition1(context: Dict[str, Any]) -> bool:
+            if context.get('card_source') is not card:
+                return False
             return True
 
         effect1.set_can_use_condition(condition1)

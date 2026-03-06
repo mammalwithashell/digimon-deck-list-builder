@@ -340,7 +340,8 @@ class TestGreedyPolicy:
         p2.security_cards.append(make_card("SEC-001", "Sec", p2))
 
         action = greedy_policy(PolicyEnv(game))
-        assert action == 112  # Attack with slot 0 at security target 12
+        # Attack with slot 0 at security: 100 + 0*15 + SECURITY_TARGET(14) = 114
+        assert action == 114
 
     def test_breeding_prefers_hatch_when_available(self):
         game = setup_policy_game(GamePhase.Breeding, memory=0)

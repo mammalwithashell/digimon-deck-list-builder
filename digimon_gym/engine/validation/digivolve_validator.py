@@ -39,6 +39,10 @@ def can_digivolve(evo_card: 'CardSource', base_perm: 'Permanent') -> bool:
     if not base_perm.top_card:
         return False
 
+    # Base must be a Digimon or Digi-Egg (not a Tamer or Option)
+    if not (base_perm.is_digimon or base_perm.top_card.is_digi_egg):
+        return False
+
     # 1. Standard evo_costs check
     if evo_card.c_entity_base and evo_card.c_entity_base.evo_costs:
         base_colors = set(base_perm.top_card.card_colors)
@@ -87,11 +91,11 @@ def _check_alt_digivolve(evo_card: 'CardSource', base_perm: 'Permanent') -> bool
         if req_name is not None:
             if not base_perm.contains_card_name(req_name):
                 continue
-        # Condition check (e.g., "while you have [Owen Dreadnought]")
-        if effect.can_use_condition is not None:
-            ctx = {}
-            if not effect.can_use_condition(ctx):
-                continue
+        # Note: can_use_condition is NOT checked here because alt-digi
+        # validation runs while the card is in hand (not on field).
+        # Most transpiled conditions check permanent_of_this_card() which
+        # returns None for hand cards. The _alt_digi_* attributes already
+        # encode all digivolution constraints.
         return True
     return False
 
@@ -121,11 +125,6 @@ def get_alt_digi_cost(evo_card: 'CardSource', base_perm: 'Permanent') -> int:
         req_name = getattr(effect, '_alt_digi_name', None)
         if req_name is not None:
             if not base_perm.contains_card_name(req_name):
-                continue
-        # Condition check (e.g., "while you have [Owen Dreadnought]")
-        if effect.can_use_condition is not None:
-            ctx = {}
-            if not effect.can_use_condition(ctx):
                 continue
         return cost
     return 0

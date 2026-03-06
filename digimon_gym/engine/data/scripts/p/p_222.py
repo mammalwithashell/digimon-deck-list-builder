@@ -42,6 +42,8 @@ class P_222(CardScript):
 
         effect = effect1  # alias for condition closure
         def condition1(context: Dict[str, Any]) -> bool:
+            if context.get('card_source') is not card:
+                return False
             return True
 
         effect1.set_can_use_condition(condition1)

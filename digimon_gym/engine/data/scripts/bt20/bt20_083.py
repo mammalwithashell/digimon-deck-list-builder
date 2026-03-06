@@ -61,13 +61,16 @@ class BT20_083(CardScript):
         def condition2(context: Dict[str, Any]) -> bool:
             if card and card.permanent_of_this_card() is None:
                 return False
-            # Triggered on play — validated by engine timing
+            # Condition: 1 or fewer security cards
+            player = card.owner if card else None
+            if not player or len(player.security_cards) > 1:
+                return False
             return True
 
         effect2.set_can_use_condition(condition2)
 
         def process2(ctx: Dict[str, Any]):
-            """Action: Digivolve"""
+            """Action: Digivolve into Omnimon (X Antibody)"""
             player = ctx.get('player')
             perm = ctx.get('permanent')
             game = ctx.get('game')
@@ -76,11 +79,12 @@ class BT20_083(CardScript):
             def digi_filter(c):
                 if not getattr(c, 'is_digimon', False):
                     return False
-                if not (any('Omnimon (X Antibody)' in _n for _n in getattr(c, 'card_names', []))):
+                if not (any('Omnimon' in _n for _n in getattr(c, 'card_names', []))):
                     return False
                 return True
             game.effect_digivolve_from_hand(
-                player, perm, digi_filter, is_optional=True)
+                player, perm, digi_filter, cost_override=0,
+                ignore_requirements=True, is_optional=True)
 
         effect2.set_on_process_callback(process2)
         effects.append(effect2)
@@ -96,51 +100,89 @@ class BT20_083(CardScript):
 
         effect = effect3  # alias for condition closure
         def condition3(context: Dict[str, Any]) -> bool:
-            # Triggered on deletion — validated by engine timing
-            permanent = effect.effect_source_permanent if hasattr(effect, 'effect_source_permanent') else None
-            if not (permanent and (permanent.contains_card_name('King Drasil_7D6'))):
+            # Check that the player has a King Drasil_7D6 in the BREEDING AREA
+            player = card.owner if card else None
+            if not player or not player.breeding_area:
+                return False
+            breeding = player.breeding_area
+            if not breeding.contains_card_name('King Drasil_7D6'):
                 return False
             return True
 
         effect3.set_can_use_condition(condition3)
+
+        def process3(ctx: Dict[str, Any]):
+            """Place this card as the bottom digivolution card of King Drasil_7D6 in breeding area."""
+            player = ctx.get('player')
+            if not player or not player.breeding_area:
+                return
+            breeding = player.breeding_area
+            if not breeding.contains_card_name('King Drasil_7D6'):
+                return
+            # Remove card from trash (it was just deleted and sent to trash)
+            if card in player.trash_cards:
+                player.trash_cards.remove(card)
+            # Place this card at bottom of breeding digi stack
+            breeding.card_sources.insert(0, card)
+
+        effect3.set_on_process_callback(process3)
         effects.append(effect3)
 
         # Timing: EffectTiming.OnLoseSecurity
         # [Breeding] [Opponent's Turn] When your security stack is removed from, by suspending this Digimon, play 1 [Omekamon] from this Digimon's digivolution cards without paying the cost.
         effect4 = ICardEffect()
         effect4.set_timing(EffectTiming.OnLoseSecurity)
-        effect4.set_effect_name("BT20-083 play 1 [Omekamon]")
+        effect4.set_effect_name("BT20-083 play 1 [Omekamon] from digivolution cards")
         effect4.set_effect_description("[Breeding] [Opponent's Turn] When your security stack is removed from, by suspending this Digimon, play 1 [Omekamon] from this Digimon's digivolution cards without paying the cost.")
         effect4.is_inherited_effect = True
         effect4.is_optional = True
 
         effect = effect4  # alias for condition closure
         def condition4(context: Dict[str, Any]) -> bool:
+            # [Opponent's Turn] — only on opponent's turn
+            player = card.owner if card else None
+            if not player or player.is_my_turn:
+                return False
+            # Must not already be suspended (cost is "by suspending this Digimon")
+            permanent = effect.effect_source_permanent if hasattr(effect, 'effect_source_permanent') else None
+            if not permanent or permanent.is_suspended:
+                return False
+            # Must have an Omekamon in digivolution cards
+            digi_sources = permanent.card_sources[:-1] if len(permanent.card_sources) > 1 else []
+            has_omekamon = any(
+                any('Omekamon' in _n for _n in getattr(src, 'card_names', []))
+                for src in digi_sources
+            )
+            if not has_omekamon:
+                return False
             return True
 
         effect4.set_can_use_condition(condition4)
 
         def process4(ctx: Dict[str, Any]):
-            """Action: Suspend, Play Card"""
+            """Cost: suspend this Digimon. Action: Play 1 Omekamon from digivolution cards."""
             player = ctx.get('player')
             perm = ctx.get('permanent')
             game = ctx.get('game')
-            if not (player and game):
+            if not (player and perm and game):
                 return
-            def target_filter(p):
-                return True
-            def on_suspend(target_perm):
-                target_perm.suspend()
-            game.effect_select_opponent_permanent(
-                player, on_suspend, filter_fn=target_filter, is_optional=True)
-            if not (player and game):
-                return
-            def play_filter(c):
-                if not (any('Omekamon' in _n for _n in getattr(c, 'card_names', []))):
-                    return False
-                return True
-            game.effect_play_from_zone(
-                player, 'hand', play_filter, free=True, is_optional=True)
+            # Cost: suspend self
+            perm.suspend()
+            # Find Omekamon in digivolution cards (card_sources[:-1])
+            digi_sources = list(perm.card_sources[:-1]) if len(perm.card_sources) > 1 else []
+            for source in digi_sources:
+                if any('Omekamon' in _n for _n in getattr(source, 'card_names', [])):
+                    # Remove from digivolution cards
+                    perm.card_sources.remove(source)
+                    # Play without paying cost
+                    played_perm = player.play_card_from_source(source, pay_cost=False)
+                    if played_perm and hasattr(game, 'execute_effects'):
+                        game.execute_effects(
+                            EffectTiming.OnEnterFieldAnyone,
+                            {"played_card": source, "played_permanent": played_perm,
+                             "event_player": player},
+                        )
+                    break
 
         effect4.set_on_process_callback(process4)
         effects.append(effect4)

@@ -32,7 +32,7 @@ class CardSource:
 
     @property
     def match_color_requirement(self) -> bool:
-        return True
+        return getattr(self, '_match_color_requirement', True)
 
     @property
     def base_card_colors_from_entity(self) -> List[CardColor]:

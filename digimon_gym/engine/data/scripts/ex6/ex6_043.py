@@ -92,34 +92,92 @@ class EX6_043(CardScript):
             return True
 
         effect2.set_can_use_condition(condition2)
+
+        def process2(ctx: Dict[str, Any]):
+            """Activate [When Digivolving] effect (play 1 Diaboromon Token)."""
+            player = ctx.get('player')
+            game = ctx.get('game')
+            if player and game:
+                game.effect_play_token(player, 'diaboromon')
+
+        effect2.set_on_process_callback(process2)
         effects.append(effect2)
 
-        # Factory effect: blocker
-        # Blocker
+        # [All Turns] All of your other Digimon with [Diaboromon] in their names gain <Jamming> and <Blocker>.
+        # Implemented as a start-of-main-phase continuous grant + on-play/when-digivolving initial grant.
+        def _grant_keywords_to_diaboromon(player, perm):
+            """Grant Blocker and Jamming to all other Diaboromon-named Digimon."""
+            for p in player.battle_area:
+                if p is perm:
+                    continue
+                if p.is_digimon and p.contains_card_name('Diaboromon'):
+                    p.grant_keyword('_is_blocker')
+                    p.grant_keyword('_is_jamming')
+
         effect3 = ICardEffect()
-        effect3.set_effect_name("EX6-043 Blocker")
-        effect3.set_effect_description("Blocker")
-        effect3._is_blocker = True
+        effect3.set_timing(EffectTiming.OnStartMainPhase)
+        effect3.set_effect_name("EX6-043 Grant Blocker+Jamming to other Diaboromon")
+        effect3.set_effect_description("[All Turns] All of your other Digimon with [Diaboromon] in their names gain <Jamming> and <Blocker>.")
 
         def condition3(context: Dict[str, Any]) -> bool:
             if card and card.permanent_of_this_card() is None:
                 return False
             return True
         effect3.set_can_use_condition(condition3)
+
+        def process3(ctx: Dict[str, Any]):
+            """Grant Blocker+Jamming to all other Diaboromon-named Digimon."""
+            player = ctx.get('player')
+            perm = ctx.get('permanent')
+            if player and perm:
+                _grant_keywords_to_diaboromon(player, perm)
+
+        effect3.set_on_process_callback(process3)
         effects.append(effect3)
 
-        # Factory effect: jamming
-        # Jamming
+        # Also grant keywords when EX6-043 enters play or digivolves
         effect4 = ICardEffect()
-        effect4.set_effect_name("EX6-043 Jamming")
-        effect4.set_effect_description("Jamming")
-        effect4._is_jamming = True
+        effect4.set_timing(EffectTiming.OnEnterFieldAnyone)
+        effect4.set_effect_name("EX6-043 Grant Blocker+Jamming (on play)")
+        effect4.set_effect_description("[All Turns] All of your other Digimon with [Diaboromon] in their names gain <Jamming> and <Blocker>.")
+        effect4.is_on_play = True
 
         def condition4(context: Dict[str, Any]) -> bool:
             if card and card.permanent_of_this_card() is None:
                 return False
             return True
         effect4.set_can_use_condition(condition4)
+
+        def process4(ctx: Dict[str, Any]):
+            """Grant Blocker+Jamming to all other Diaboromon on entry."""
+            player = ctx.get('player')
+            perm = ctx.get('permanent')
+            if player and perm:
+                _grant_keywords_to_diaboromon(player, perm)
+
+        effect4.set_on_process_callback(process4)
         effects.append(effect4)
+
+        effect5 = ICardEffect()
+        effect5.set_timing(EffectTiming.OnEnterFieldAnyone)
+        effect5.set_effect_name("EX6-043 Grant Blocker+Jamming (when digivolving)")
+        effect5.set_effect_description("[All Turns] All of your other Digimon with [Diaboromon] in their names gain <Jamming> and <Blocker>.")
+        effect5.is_when_digivolving = True
+
+        def condition5(context: Dict[str, Any]) -> bool:
+            if card and card.permanent_of_this_card() is None:
+                return False
+            return True
+        effect5.set_can_use_condition(condition5)
+
+        def process5(ctx: Dict[str, Any]):
+            """Grant Blocker+Jamming to all other Diaboromon on digivolve."""
+            player = ctx.get('player')
+            perm = ctx.get('permanent')
+            if player and perm:
+                _grant_keywords_to_diaboromon(player, perm)
+
+        effect5.set_on_process_callback(process5)
+        effects.append(effect5)
 
         return effects

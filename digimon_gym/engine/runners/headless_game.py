@@ -17,7 +17,7 @@ class HeadlessGame(BaseGameRunner):
 
     Recording is opt-in:
       - record_actions=True: captures the action sequence for replay/debugging.
-      - record_tensors=True: also captures 981-float board tensor at each step (ML debugging).
+      - record_tensors=True: also captures board tensor at each step (ML debugging).
     """
 
     def __init__(self, deck1_ids: List[str], deck2_ids: List[str],
@@ -88,8 +88,7 @@ class HeadlessGame(BaseGameRunner):
     def get_board_tensor(self, player_id: Optional[int] = None) -> np.ndarray:
         """Return board state tensor for the given player (default: current)."""
         pid = player_id if player_id is not None else self.game.current_player_id
-        tensor = self.game.get_board_state_tensor(pid)
-        return np.array(tensor, dtype=np.float32)
+        return self.game.get_board_state_tensor(pid)
 
     def get_last_log(self) -> List[str]:
         """Get buffered log messages (only useful in verbose mode)."""

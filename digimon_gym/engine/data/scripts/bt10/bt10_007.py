@@ -21,6 +21,8 @@ class BT10_007(CardScript):
         effect0.set_effect_description("Alternate digivolution requirement")
         # Alternate digivolution: alternate source for cost 0
         effect0._alt_digi_cost = 0
+        effect0._alt_digi_level = 2
+        effect0._alt_digi_trait = "Xros Heart"
 
         def condition0(context: Dict[str, Any]) -> bool:
             return True

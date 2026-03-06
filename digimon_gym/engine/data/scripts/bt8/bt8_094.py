@@ -14,54 +14,95 @@ class BT8_094(CardScript):
     def get_card_effects(self, card: 'CardSource') -> List['ICardEffect']:
         effects = []
 
-        # Timing: EffectTiming.OnDestroyedAnyone
-        # [All Turns] When one of your opponent's level 5 or lower Digimon is deleted, you may suspend this Tamer to <Draw 1��. (Draw 1 card from your deck.)
+        # Timing: EffectTiming.OnRemovedField
+        # [All Turns] When one of your opponent's level 5 or lower Digimon is deleted,
+        # you may suspend this Tamer to <Draw 1>.
+        # Uses OnRemovedField so it fires from the global execute_effects scan
+        # (OnDestroyedAnyone only scans the deleted permanent's own card sources).
         effect0 = ICardEffect()
-        effect0.set_timing(EffectTiming.OnDestroyedAnyone)
+        effect0.set_timing(EffectTiming.OnRemovedField)
         effect0.set_effect_name("BT8-094 Draw 1")
-        effect0.set_effect_description("[All Turns] When one of your opponent's level 5 or lower Digimon is deleted, you may suspend this Tamer to <Draw 1��. (Draw 1 card from your deck.)")
+        effect0.set_effect_description(
+            "[All Turns] When one of your opponent's level 5 or lower Digimon is deleted, "
+            "you may suspend this Tamer to <Draw 1>."
+        )
         effect0.is_optional = True
-        effect0.is_on_deletion = True
 
-        effect = effect0  # alias for condition closure
         def condition0(context: Dict[str, Any]) -> bool:
-            if card and card.permanent_of_this_card() is None:
+            perm = card.permanent_of_this_card() if card else None
+            if perm is None:
+                return False
+            # "you may suspend this Tamer" — can't activate if already suspended
+            if perm.is_suspended:
+                return False
+            player = card.owner if card else None
+            if not player:
+                return False
+            # The deleted permanent is in event_permanent (from extra_context)
+            deleted = context.get('event_permanent')
+            if deleted is None:
+                return False
+            # Must be opponent's Digimon
+            event_player = context.get('event_player')
+            if event_player is None or event_player is player:
+                return False
+            if not deleted.is_digimon:
+                return False
+            # Level 5 or lower
+            deleted_level = deleted.level
+            if deleted_level is None or deleted_level > 5:
                 return False
             return True
 
         effect0.set_can_use_condition(condition0)
 
         def process0(ctx: Dict[str, Any]):
-            """Action: Draw 1, Suspend"""
+            """Suspend this Tamer (cost), then Draw 1 (reward)."""
             player = ctx.get('player')
             perm = ctx.get('permanent')
             game = ctx.get('game')
-            if player:
-                player.draw_cards(1)
-            if not (player and game):
+            if not (player and perm and game):
                 return
-            def target_filter(p):
-                if p.level is None or p.level > 5:
-                    return False
-                return True
-            def on_suspend(target_perm):
-                target_perm.suspend()
-            game.effect_select_opponent_permanent(
-                player, on_suspend, filter_fn=target_filter, is_optional=True)
+            # Cost: suspend this Tamer
+            perm.suspend()
+            # Reward: draw 1
+            player.draw_cards(1)
 
         effect0.set_on_process_callback(process0)
         effects.append(effect0)
 
         # Timing: EffectTiming.OnMove
-        # [Opponent's Turn] When one of your opponent's level 3 Digimon is moved from their breeding area to their battle area, gain 2 memory.
+        # [Opponent's Turn] When one of your opponent's level 3 Digimon is moved
+        # from their breeding area to their battle area, gain 2 memory.
         effect1 = ICardEffect()
         effect1.set_timing(EffectTiming.OnMove)
         effect1.set_effect_name("BT8-094 Memory +2")
-        effect1.set_effect_description("[Opponent's Turn] When one of your opponent's level 3 Digimon is moved from their breeding area to their battle area, gain 2 memory.")
+        effect1.set_effect_description(
+            "[Opponent's Turn] When one of your opponent's level 3 Digimon is moved "
+            "from their breeding area to their battle area, gain 2 memory."
+        )
 
-        effect = effect1  # alias for condition closure
         def condition1(context: Dict[str, Any]) -> bool:
-            if card and card.permanent_of_this_card() is None:
+            perm = card.permanent_of_this_card() if card else None
+            if perm is None:
+                return False
+            player = card.owner if card else None
+            if not player:
+                return False
+            # [Opponent's Turn] — only fires on opponent's turn
+            if player.is_my_turn:
+                return False
+            # The moved permanent is in context via extra_context['moved_permanent']
+            moved = context.get('moved_permanent')
+            if moved is None:
+                return False
+            # Must be opponent's Digimon (moved from breeding = opponent's action)
+            # The move is done by the turn player, who is the opponent
+            if not moved.is_digimon:
+                return False
+            # Level 3 check
+            moved_level = moved.level
+            if moved_level is None or moved_level != 3:
                 return False
             return True
 
@@ -70,8 +111,6 @@ class BT8_094(CardScript):
         def process1(ctx: Dict[str, Any]):
             """Action: Gain 2 memory"""
             player = ctx.get('player')
-            perm = ctx.get('permanent')
-            game = ctx.get('game')
             if player:
                 player.add_memory(2)
 

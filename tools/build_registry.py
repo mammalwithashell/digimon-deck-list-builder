@@ -169,6 +169,7 @@ def convert_card(api_card, index, norm_id):
         "inherited_effect_description_eng": api_card.get("source_effect") or "",
         "security_effect_description_eng": "",
         "evo_costs": parse_evo_costs(api_card),
+        "xros_req": api_card.get("xros_req") or "",
     }
 
 

@@ -9,54 +9,80 @@ if TYPE_CHECKING:
 
 
 class ST12_12(CardScript):
-    """ST12-12 Sistermon Blanc | Lv.3"""
+    """ST12-12 Sistermon Blanc (Awakened) | Lv.3
+
+    [On Play] By trashing 1 card in your hand, <Draw 2>.
+        (Draw 2 cards from your deck.)
+    [All Turns] While you have a Digimon in play with [Huckmon] in its name
+        or [Royal Knight] trait, this Digimon gains <Decoy (Red/Black)>.
+        (When your other Red or Black Digimon would be deleted by an
+        opponent's effect, you may delete this Digimon to prevent 1 of
+        those Digimon's deletion.)
+    """
 
     def get_card_effects(self, card: 'CardSource') -> List['ICardEffect']:
         effects = []
 
-        # Timing: EffectTiming.OnEnterFieldAnyone
-        # [On Play] By trashing 1 card in your hand, <Draw 2>. (Draw 2 cards from your deck.)
+        # --- Effect 0: [On Play] By trashing 1 card in your hand, <Draw 2> ---
+        # "By trashing" = cost; entire effect is optional.
+        # Must have at least 1 card in hand to pay the cost.
         effect0 = ICardEffect()
         effect0.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect0.set_effect_name("ST12-12 Trash 1 card from hand to Draw 2")
-        effect0.set_effect_description("[On Play] By trashing 1 card in your hand, <Draw 2>. (Draw 2 cards from your deck.)")
+        effect0.set_effect_description(
+            "[On Play] By trashing 1 card in your hand, <Draw 2>. "
+            "(Draw 2 cards from your deck.)"
+        )
         effect0.is_on_play = True
+        effect0.is_optional = True
 
-        effect = effect0  # alias for condition closure
         def condition0(context: Dict[str, Any]) -> bool:
             if card and card.permanent_of_this_card() is None:
                 return False
-            # Triggered on play — validated by engine timing
+            # Must have at least 1 card in hand to pay trash cost
+            player = card.owner if card else None
+            if not player or len(player.hand_cards) < 1:
+                return False
             return True
 
         effect0.set_can_use_condition(condition0)
 
         def process0(ctx: Dict[str, Any]):
-            """Action: Draw 2, Trash From Hand"""
+            """Trash 1 card from hand as cost, then Draw 2."""
             player = ctx.get('player')
-            perm = ctx.get('permanent')
             game = ctx.get('game')
             if not (player and game):
                 return
+
             def hand_filter(c):
                 return True
+
             def on_trashed(selected):
                 if selected in player.hand_cards:
                     player.hand_cards.remove(selected)
                     player.trash_cards.append(selected)
+                # Cost paid -- now draw 2
+                player.draw_cards(2)
+
             game.effect_select_hand_card(
                 player, hand_filter, on_trashed, is_optional=False)
-            if player:
-                player.draw_cards(2)
 
         effect0.set_on_process_callback(process0)
         effects.append(effect0)
 
-        # Factory effect: decoy
-        # Decoy
+        # --- Effect 1: [All Turns] Conditional Decoy (Red/Black) ---
+        # Gains <Decoy (Red/Black)> while you have a Digimon with
+        # [Huckmon] in name or [Royal Knight] trait in play.
+        # NOTE: Engine decoy check (player.py) does not enforce color
+        # restriction -- it protects any allied Digimon. The (Red/Black)
+        # color filter requires engine-level support for full enforcement.
         effect1 = ICardEffect()
-        effect1.set_effect_name("ST12-12 Decoy")
-        effect1.set_effect_description("Decoy")
+        effect1.set_effect_name("ST12-12 Decoy (Red/Black)")
+        effect1.set_effect_description(
+            "<Decoy (Red/Black)> (When your other Red or Black Digimon "
+            "would be deleted by an opponent's effect, you may delete "
+            "this Digimon to prevent 1 of those Digimon's deletion.)"
+        )
         effect1._is_decoy = True
 
         def condition1(context: Dict[str, Any]) -> bool:
@@ -65,21 +91,16 @@ class ST12_12(CardScript):
             player = card.owner if card else None
             if not player:
                 return False
-            # Check if any allied Digimon has [Huckmon] in name or [Royal Knight] trait
-            has_huckmon_or_rk = False
+            # Check if any allied Digimon has [Huckmon] in name
+            # or [Royal Knight] trait
             for p in player.battle_area:
                 if not p.is_digimon:
                     continue
-                names = getattr(p.top_card, 'card_names', []) or []
-                name = names[0] if names else ''
-                if 'Huckmon' in name:
-                    has_huckmon_or_rk = True
-                    break
-                traits = getattr(p.top_card, 'card_traits', []) or []
-                if any('Royal Knight' in t for t in traits):
-                    has_huckmon_or_rk = True
-                    break
-            return has_huckmon_or_rk
+                if p.contains_card_name('Huckmon'):
+                    return True
+                if p.has_trait('Royal Knight'):
+                    return True
+            return False
         effect1.set_can_use_condition(condition1)
         effects.append(effect1)
 

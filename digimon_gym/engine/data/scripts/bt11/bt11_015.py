@@ -21,6 +21,7 @@ class BT11_015(CardScript):
         effect0.set_effect_description("Alternate digivolution requirement")
         # Alternate digivolution: alternate source for cost 4
         effect0._alt_digi_cost = 4
+        effect0._alt_digi_name = "Shoutmon"
 
         def condition0(context: Dict[str, Any]) -> bool:
             return True

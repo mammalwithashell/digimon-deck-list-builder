@@ -13,7 +13,10 @@ from typing import List, Tuple, Dict, Any, Optional
 import gymnasium
 from gymnasium import spaces
 from digimon_gym.engine.runners.headless_game import HeadlessGame
-from digimon_gym.engine.game import TENSOR_SIZE, ACTION_SPACE_SIZE
+from digimon_gym.engine.game import (
+    TENSOR_SIZE, ACTION_SPACE_SIZE, FIELD_SLOTS,
+    TARGETS_PER_ATTACKER, FIELDS_PER_HAND, SECURITY_TARGET, BREEDING_SLOT,
+)
 from digimon_gym.engine.data.enums import PendingAction, GamePhase
 
 # Action Space Constants (re-exported for backward compatibility)
@@ -31,7 +34,7 @@ ACTION_DIGIVOLVE_END = 999
 ACTION_EFFECT_START = 1000
 ACTION_EFFECT_END = 1999
 ACTION_SOURCE_START = 2000
-ACTION_SOURCE_END = 2119
+ACTION_SOURCE_END = ACTION_SPACE_SIZE - 1  # 2167
 
 logger = logging.getLogger(__name__)
 
@@ -57,8 +60,10 @@ class DigimonEnv(gymnasium.Env):
         super().__init__()
 
         # Observation and action spaces
+        # Card ID slots can hold registry indices up to 20000;
+        # scalar fields stay within normal game ranges.
         self.observation_space = spaces.Box(
-            low=-10.0, high=10000.0,
+            low=-10.0, high=20001.0,
             shape=(TENSOR_SIZE,), dtype=np.float32
         )
         self.action_space = spaces.Discrete(ACTION_SPACE_SIZE)
@@ -344,8 +349,8 @@ def greedy_policy(env) -> int:
             if not (ACTION_DIGIVOLVE_START <= action <= ACTION_DIGIVOLVE_END):
                 continue
             offset = int(action - ACTION_DIGIVOLVE_START)
-            hand_idx = offset // 15
-            field_idx = offset % 15
+            hand_idx = offset // FIELDS_PER_HAND
+            field_idx = offset % FIELDS_PER_HAND
 
             if hand_idx >= len(player.hand_cards):
                 continue
@@ -353,7 +358,7 @@ def greedy_policy(env) -> int:
 
             if field_idx < len(player.battle_area):
                 base_perm = player.battle_area[field_idx]
-            elif field_idx == 12 and player.breeding_area is not None:
+            elif field_idx == BREEDING_SLOT and player.breeding_area is not None:
                 base_perm = player.breeding_area
             else:
                 continue
@@ -383,15 +388,15 @@ def greedy_policy(env) -> int:
             if not (ACTION_ATTACK_START <= action <= ACTION_ATTACK_END):
                 continue
             offset = int(action - ACTION_ATTACK_START)
-            attacker_idx = offset // 15
-            target_idx = offset % 15
+            attacker_idx = offset // TARGETS_PER_ATTACKER
+            target_idx = offset % TARGETS_PER_ATTACKER
 
             if attacker_idx >= len(player.battle_area):
                 continue
             attacker = player.battle_area[attacker_idx]
             attacker_dp = int(attacker.dp or 0)
 
-            if target_idx == 12:
+            if target_idx == SECURITY_TARGET:
                 is_lethal = len(opponent.security_cards) == 0
                 priority = 3 if is_lethal else 1
                 score = (priority, attacker_dp, -attacker_idx)

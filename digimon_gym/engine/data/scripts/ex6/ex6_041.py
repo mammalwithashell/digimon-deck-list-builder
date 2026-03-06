@@ -33,18 +33,37 @@ class EX6_041(CardScript):
         effect0.set_can_use_condition(condition0)
 
         def process0(ctx: Dict[str, Any]):
-            """Action: Digivolve"""
+            """Action: Delete own Diaboromon, then Digivolve"""
             player = ctx.get('player')
             perm = ctx.get('permanent')
             game = ctx.get('game')
             if not (player and perm and game):
                 return
-            def digi_filter(c):
-                if not (any('Diaboromon' in _n for _n in getattr(c, 'card_names', []))):
+
+            def delete_filter(p):
+                if p is perm:
                     return False
-                return True
-            game.effect_digivolve_from_hand(
-                player, perm, digi_filter, is_optional=True)
+                if not p.is_digimon:
+                    return False
+                return p.contains_card_name('Diaboromon')
+
+            # Must have a valid deletion target to pay the cost
+            if not any(delete_filter(p) for p in player.battle_area):
+                return
+
+            def on_delete(target_perm):
+                player.delete_permanent(target_perm)
+                # After paying the cost, digivolve into Diaboromon from hand
+                def digi_filter(c):
+                    if not (any('Diaboromon' in _n for _n in getattr(c, 'card_names', []))):
+                        return False
+                    return True
+                game.effect_digivolve_from_hand(
+                    player, perm, digi_filter, is_optional=True)
+
+            game.effect_select_own_permanent(
+                player, on_delete, filter_fn=delete_filter, is_optional=False,
+                prompt="Select a Digimon with [Diaboromon] to delete.")
 
         effect0.set_on_process_callback(process0)
         effects.append(effect0)
@@ -68,18 +87,37 @@ class EX6_041(CardScript):
         effect1.set_can_use_condition(condition1)
 
         def process1(ctx: Dict[str, Any]):
-            """Action: Digivolve"""
+            """Action: Delete own Diaboromon, then Digivolve"""
             player = ctx.get('player')
             perm = ctx.get('permanent')
             game = ctx.get('game')
             if not (player and perm and game):
                 return
-            def digi_filter(c):
-                if not (any('Diaboromon' in _n for _n in getattr(c, 'card_names', []))):
+
+            def delete_filter(p):
+                if p is perm:
                     return False
-                return True
-            game.effect_digivolve_from_hand(
-                player, perm, digi_filter, is_optional=True)
+                if not p.is_digimon:
+                    return False
+                return p.contains_card_name('Diaboromon')
+
+            # Must have a valid deletion target to pay the cost
+            if not any(delete_filter(p) for p in player.battle_area):
+                return
+
+            def on_delete(target_perm):
+                player.delete_permanent(target_perm)
+                # After paying the cost, digivolve into Diaboromon from hand
+                def digi_filter(c):
+                    if not (any('Diaboromon' in _n for _n in getattr(c, 'card_names', []))):
+                        return False
+                    return True
+                game.effect_digivolve_from_hand(
+                    player, perm, digi_filter, is_optional=True)
+
+            game.effect_select_own_permanent(
+                player, on_delete, filter_fn=delete_filter, is_optional=False,
+                prompt="Select a Digimon with [Diaboromon] to delete.")
 
         effect1.set_on_process_callback(process1)
         effects.append(effect1)

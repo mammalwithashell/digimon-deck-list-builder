@@ -64,34 +64,46 @@ class BT24_091(CardScript):
         effect2.set_can_use_condition(condition2)
 
         def process2(ctx: Dict[str, Any]):
-            """Action: Unsuspend, Bounce, Effect Immunity"""
+            """Action: Bounce all lowest-level opponent Digimon, unsuspend TS Digimon, link"""
             player = ctx.get('player')
             perm = ctx.get('permanent')
             game = ctx.get('game')
             if not (player and game):
                 return
-            def target_filter(p):
-                return True
-            def on_unsuspend(target_perm):
-                target_perm.unsuspend()
-            game.effect_select_own_permanent(
-                player, on_unsuspend, filter_fn=target_filter, is_optional=False)
-            if not (player and game):
+            enemy = player.enemy if player else None
+            if not enemy:
                 return
-            def target_filter(p):
-                return True
-            def on_bounce(target_perm):
-                enemy = player.enemy if player else None
-                if enemy:
-                    enemy.bounce_permanent_to_hand(target_perm)
-            game.effect_select_opponent_permanent(
-                player, on_bounce, filter_fn=target_filter, is_optional=False)
-            # Grant effect immunity via modifier system
-            if perm and game:
-                from digimon_gym.engine.interfaces.modifiers import ModifierType
-                game.register_modifier(
-                    ModifierType.CANNOT_BE_SELECTED_BY_EFFECT, perm,
-                    value_fn=lambda: True, expiry='end_of_turn')
+
+            # 1. Return ALL of opponent's lowest level Digimon to hand
+            opp_digimon = [p for p in enemy.battle_area if p.is_digimon and p.level is not None]
+            bounced_count = 0
+            if opp_digimon:
+                min_level = min(p.level for p in opp_digimon)
+                to_bounce = [p for p in opp_digimon if p.level == min_level]
+                for target in to_bounce:
+                    if target in enemy.battle_area:
+                        enemy.bounce_permanent_to_hand(target)
+                        bounced_count += 1
+
+            # 2. If this effect returned at least 1, unsuspend 1 of your [TS]-trait Digimon
+            if bounced_count > 0:
+                def ts_filter(p):
+                    if not p.is_digimon:
+                        return False
+                    if p.top_card:
+                        traits = getattr(p.top_card, 'card_traits', []) or []
+                        if any('TS' in t for t in traits):
+                            return True
+                    return False
+
+                def on_unsuspend(target_perm):
+                    target_perm.unsuspend()
+
+                game.effect_select_own_permanent(
+                    player, on_unsuspend, filter_fn=ts_filter, is_optional=True)
+
+            # 3. Link this card to 1 of your Digimon
+            game.effect_link_to_permanent(player, card, is_optional=True)
 
         effect2.set_on_process_callback(process2)
         effects.append(effect2)
@@ -116,18 +128,29 @@ class BT24_091(CardScript):
         effect3.set_can_use_condition(condition3)
 
         def process3(ctx: Dict[str, Any]):
-            """Action: Bounce"""
+            """Action: Bounce 1 opponent's lowest level Digimon"""
             player = ctx.get('player')
             perm = ctx.get('permanent')
             game = ctx.get('game')
             if not (player and game):
                 return
+            enemy = player.enemy if player else None
+            if not enemy:
+                return
+
+            # Find the lowest level among opponent's Digimon
+            opp_digimon = [p for p in enemy.battle_area if p.is_digimon and p.level is not None]
+            if not opp_digimon:
+                return
+            min_level = min(p.level for p in opp_digimon)
+
             def target_filter(p):
-                return True
+                return p.is_digimon and p.level is not None and p.level == min_level
+
             def on_bounce(target_perm):
-                enemy = player.enemy if player else None
                 if enemy:
                     enemy.bounce_permanent_to_hand(target_perm)
+
             game.effect_select_opponent_permanent(
                 player, on_bounce, filter_fn=target_filter, is_optional=False)
 

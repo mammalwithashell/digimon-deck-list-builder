@@ -50,24 +50,31 @@ class BT24_031(CardScript):
         effect1.set_can_use_condition(condition1)
 
         def process1(ctx: Dict[str, Any]):
-            """Action: Add To Hand, Reveal And Select"""
+            """Reveal top 3, add 1 [Iliad] and 1 [TS] trait card to hand."""
             player = ctx.get('player')
-            perm = ctx.get('permanent')
             game = ctx.get('game')
-            # Add card to hand (from trash/reveal)
-            if player and player.trash_cards:
-                card_to_add = player.trash_cards.pop()
-                player.hand_cards.append(card_to_add)
             if not (player and game):
                 return
-            def reveal_filter(c):
-                return True
-            def on_revealed(selected, remaining):
-                player.hand_cards.append(selected)
-                for c in remaining:
-                    player.library_cards.append(c)
-            game.effect_reveal_and_select(
-                player, 3, reveal_filter, on_revealed, is_optional=True)
+            if not player.library_cards:
+                return
+
+            def iliad_filter(c):
+                traits = getattr(c, 'card_traits', []) or []
+                return any('Iliad' in t for t in traits)
+
+            def ts_filter(c):
+                traits = getattr(c, 'card_traits', []) or []
+                return any('TS' in t for t in traits)
+
+            game.effect_reveal_and_select_multi(
+                player, 3,
+                passes=[
+                    (iliad_filter, 'hand'),
+                    (ts_filter, 'hand'),
+                ],
+                remaining_placement='deck_bottom',
+                is_optional=True,
+            )
 
         effect1.set_on_process_callback(process1)
         effects.append(effect1)
@@ -79,37 +86,37 @@ class BT24_031(CardScript):
         effect2.set_effect_name("BT24-031 May add 1 sec card to hand, if at 0 <Recovery +1>.")
         effect2.set_effect_description("[When Attacking] [Once Per Turn] You may add your top security card to the hand. Then, if you have 0 security cards, <Recovery +1 (Deck)>.")
         effect2.is_inherited_effect = True
+        effect2.is_optional = True
         effect2.set_max_count_per_turn(1)
         effect2.set_hash_string("BT24_031_Inherited")
         effect2.is_on_attack = True
 
-        effect = effect2  # alias for condition closure
         def condition2(context: Dict[str, Any]) -> bool:
             if card and card.permanent_of_this_card() is None:
                 return False
-            # Triggered on attack — validated by engine timing
+            player = card.owner if card else None
+            if not player:
+                return False
+            # Must have security cards to add to hand
+            if not player.security_cards:
+                return False
             return True
 
         effect2.set_can_use_condition(condition2)
 
         def process2(ctx: Dict[str, Any]):
-            """Action: Recovery +1, Add To Hand, Destroy Security"""
+            """You may add top security to hand. If 0 security, Recovery +1."""
             player = ctx.get('player')
-            perm = ctx.get('permanent')
             game = ctx.get('game')
-            if player:
+            if not (player and game):
+                return
+            # Add top security card to hand
+            if player.security_cards:
+                top_sec = player.security_cards.pop(0)
+                player.hand_cards.append(top_sec)
+            # Then if 0 security, Recovery +1 (Deck)
+            if not player.security_cards:
                 player.recovery(1)
-            # Add card to hand (from trash/reveal)
-            if player and player.trash_cards:
-                card_to_add = player.trash_cards.pop()
-                player.hand_cards.append(card_to_add)
-            # Trash opponent's top security card(s)
-            enemy = player.enemy if player else None
-            if enemy:
-                for _ in range(1):
-                    if enemy.security_cards:
-                        trashed = enemy.security_cards.pop(0)
-                        enemy.trash_cards.append(trashed)
 
         effect2.set_on_process_callback(process2)
         effects.append(effect2)

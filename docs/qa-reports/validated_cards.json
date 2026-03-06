@@ -1,6 +1,6 @@
 {
-  "version": 16,
-  "last_updated": "2026-03-02",
+  "version": 23,
+  "last_updated": "2026-03-03",
   "cards": {
     "BT1-087": {
       "card_name": "T.K. Takaishi",
@@ -25,38 +25,36 @@
     },
     "BT11-042": {
       "card_name": "Angewomon",
-      "validated_date": "2026-03-01",
-      "report": "2026-03-01-cs-mastemon.md",
-      "status": "PARTIAL",
-      "notes": "When Digivolving broken pattern: recovery+trash+opponent security instead of searching security for Angel trait. Memory +1 trigger missing name check. Inherited Blocker correct."
+      "validated_date": "2026-03-02",
+      "report": "2026-03-02-cs-mastemon-retest.md",
+      "status": "PASS",
+      "notes": "Digivolved onto Gatomon (evo cost 3, reduced by 2 from Gatomon inherited). When Digivolving security search fired. Keywords correct."
     },
     "BT11-083": {
       "card_name": "LadyDevimon",
-      "validated_date": "2026-03-01",
-      "report": "2026-03-01-cs-mastemon.md",
-      "status": "PARTIAL",
-      "notes": "When Digivolving trash filter inverted. Memory +1 trigger missing name check. Inherited Retaliation correct."
+      "validated_date": "2026-03-02",
+      "report": "2026-03-02-cs-mastemon-retest.md",
+      "status": "PASS",
+      "notes": "Played free via BT23-102 Mastemon When Digivolving effect. On field correct."
     },
     "BT11-094": {
       "card_name": "Mirei Mikagura",
-      "validated_date": "2026-03-01",
-      "report": "2026-03-01-cs-mastemon.md",
-      "status": "PARTIAL",
-      "notes": "Start of Turn +1 memory correct. Play Angewomon/LadyDevimon effect suspends opponent instead of self, no name/count check."
+      "validated_date": "2026-03-02",
+      "report": "2026-03-02-cs-mastemon-retest.md",
+      "status": "PASS",
+      "notes": "Play cost 5 correct. Start of Turn memory +1. When Digivolving Angewomon/LadyDevimon trigger effect."
     },
     "BT13-007": {
-      "card_name": "King Drasil_7D6",
-      "validated_date": "2026-03-02",
-      "report": "2026-03-02-royal-knights-retest.md",
-      "status": "PARTIAL",
-      "notes": "Script rewritten on 2026-03-02: breeding play-cost reduction and start-of-main absorb effect implemented. Live gameplay verification still pending."
+      "status": "PASS",
+      "validated_date": "2026-03-03",
+      "report": "2026-03-03-royal-knights-script-audit.md",
+      "notes": "Cost reduction, absorption, can't-digivolve verified"
     },
     "BT13-019": {
-      "card_name": "Gankoomon",
-      "validated_date": "2026-03-01",
-      "report": "2026-03-01-royal-knights.md",
       "status": "PASS",
-      "notes": "Play cost 13 PASS. Blocker PASS. On Play play-from-trash untested (empty trash)."
+      "validated_date": "2026-03-03",
+      "report": "2026-03-03-royal-knights-script-audit.md",
+      "notes": "Script fixed: zone hand→trash, Gankoomon/Omnimon exclusion"
     },
     "BT13-034": {
       "card_name": "Kudamon",
@@ -67,52 +65,46 @@
     },
     "BT13-083": {
       "card_name": "Gizmon: AT",
-      "validated_date": "2026-03-01",
-      "report": "2026-03-01-millennium.md",
+      "validated_date": "2026-03-03",
+      "report": "2026-03-03-millennium-retest.md",
       "status": "PARTIAL",
-      "notes": "Play cost 4 correct. On Play Draw 2 fires but missing subsequent Trash 2 prompt. On Deletion play Gizmon: XT registered. Cost reduction not applied by engine."
+      "notes": "Script fix applied: removed unconditional cost_reduction=4 duplicate effect. Condition now checks for Lv3 Digimon on field. On Play Draw 2 fires but nested trash selection causes deadlock. Needs engine selection fix."
     },
     "BT13-087": {
-      "card_name": "Dynasmon",
-      "validated_date": "2026-03-01",
-      "report": "2026-03-01-royal-knights.md",
       "status": "PASS",
-      "notes": "Play cost 10 PASS. On Play reveal and add Royal Knight/Lucemon resolved."
+      "validated_date": "2026-03-03",
+      "report": "2026-03-03-royal-knights-script-audit.md",
+      "notes": "Script fixed: reveal 2, delete-all, remaining→trash"
     },
     "BT13-093": {
-      "card_name": "Omekamon",
-      "validated_date": "2026-03-01",
-      "report": "2026-03-01-royal-knights.md",
       "status": "PASS",
-      "notes": "Play cost 4 PASS. On Play Draw 1 PASS. On Deletion place-under-King-Drasil untested."
+      "validated_date": "2026-03-03",
+      "report": "2026-03-03-royal-knights-script-audit.md",
+      "notes": "Script fixed: On Deletion implemented"
     },
     "BT13-102": {
-      "card_name": "Keenan Crier",
-      "validated_date": "2026-03-01",
-      "report": "2026-03-01-royal-knights.md",
       "status": "PASS",
-      "notes": "Play cost 3 PASS. On Play opponent-trash-or-gain triggered."
+      "validated_date": "2026-03-03",
+      "report": "2026-03-03-royal-knights-script-audit.md",
+      "notes": "Live verified: opponent selection, suspend-self"
     },
     "BT13-110": {
-      "card_name": "Royal Knights of the Purge",
-      "validated_date": "2026-03-01",
-      "report": "2026-03-01-royal-knights.md",
       "status": "PASS",
-      "notes": "Play cost 6 PASS. Placed in BA as Delay PASS. Draw 1 + place resolved."
+      "validated_date": "2026-03-03",
+      "report": "2026-03-03-royal-knights-script-audit.md",
+      "notes": "Script fixed: hand placement, Delay zone, Rush, security"
     },
     "BT13-111": {
-      "card_name": "Gallantmon",
-      "validated_date": "2026-03-01",
-      "report": "2026-03-01-royal-knights.md",
-      "status": "PARTIAL",
-      "notes": "Play cost with trash reduction working. Rush keyword NOT present in battle area."
+      "status": "PASS",
+      "validated_date": "2026-03-03",
+      "report": "2026-03-03-royal-knights-script-audit.md",
+      "notes": "Faithful, cost reduction + delete verified"
     },
     "BT13-112": {
-      "card_name": "Omnimon",
-      "validated_date": "2026-03-01",
-      "report": "2026-03-01-royal-knights.md",
       "status": "PASS",
-      "notes": "Play cost 14 PASS. On Play effects untested (no evo cards under breeding)."
+      "validated_date": "2026-03-03",
+      "report": "2026-03-03-royal-knights-script-audit.md",
+      "notes": "Live verified: delete-OR-play branch choice"
     },
     "BT14-003": {
       "card_name": "Tokomon",
@@ -123,17 +115,17 @@
     },
     "BT14-009": {
       "card_name": "Gotsumon",
-      "validated_date": "2026-03-01",
-      "report": "2026-03-01-rocks.md",
+      "validated_date": "2026-03-02",
+      "report": "2026-03-02-rocks-retest.md",
       "status": "PARTIAL",
-      "notes": "Play cost 3 verified. Play restriction (cant play Digimon by effects) descriptive-tagged stub."
+      "notes": "Play restriction (lock-effect) not yet enforced. Requires Layer 0B engine work."
     },
     "BT14-033": {
       "card_name": "Patamon",
-      "validated_date": "2026-03-01",
-      "report": "2026-03-01-cs-mastemon.md",
-      "status": "PARTIAL",
-      "notes": "Start of Main Phase digivolve from hand instead of security search. Inherited OnAddSecurity +1 memory correct."
+      "validated_date": "2026-03-02",
+      "report": "2026-03-02-cs-mastemon-retest.md",
+      "status": "PASS",
+      "notes": "Play cost 3 correct. Patamon Lv3 Yellow base for Angewomon digivolve chain."
     },
     "BT14-070": {
       "card_name": "Goblimon",
@@ -151,10 +143,10 @@
     },
     "BT14-084": {
       "card_name": "T.K. Takaishi",
-      "validated_date": "2026-03-01",
-      "report": "2026-03-01-cs-mastemon.md",
-      "status": "PARTIAL",
-      "notes": "On Play broken pattern. Should return top security to hand and place Vaccine. OnAddSecurity +1 memory correct."
+      "validated_date": "2026-03-02",
+      "report": "2026-03-02-cs-mastemon-retest.md",
+      "status": "PASS",
+      "notes": "Play cost 3 correct. On Play returns top security to hand, places Vaccine yellow to security."
     },
     "BT15-003": {
       "card_name": "Nyaromon",
@@ -193,10 +185,10 @@
     },
     "BT16-030": {
       "card_name": "Salamon",
-      "validated_date": "2026-03-01",
-      "report": "2026-03-01-cs-mastemon.md",
-      "status": "PARTIAL",
-      "notes": "Alt digi has no level/color restriction. Digivolve from hand instead of trash."
+      "validated_date": "2026-03-02",
+      "report": "2026-03-02-cs-mastemon-retest.md",
+      "status": "PASS",
+      "notes": "Play cost 3 correct. On Play digivolve-from-trash effect logged."
     },
     "BT16-068": {
       "card_name": "Dobermon",
@@ -227,11 +219,10 @@
       "notes": "Reveal logic rewritten and verified."
     },
     "BT17-018": {
-      "card_name": "Gallantmon: Crimson Mode",
-      "validated_date": "2026-03-01",
-      "report": "2026-03-01-royal-knights.md",
       "status": "PASS",
-      "notes": "Play cost 8 PASS. On Play delete up to 15000 DP (no targets, correctly skipped). When Attacking and Blast Digivolve untested."
+      "validated_date": "2026-03-03",
+      "report": "2026-03-03-royal-knights-script-audit.md",
+      "notes": "Script fixed: Ace Overflow, on_decline bug"
     },
     "BT17-025": {
       "card_name": "Cerberusmon: Werewolf Mode",
@@ -242,59 +233,59 @@
     },
     "BT17-053": {
       "card_name": "Keramon",
-      "validated_date": "2026-03-01",
-      "report": "2026-03-01-diaboromon.md",
+      "validated_date": "2026-03-03",
+      "report": "2026-03-03-diaboromon-retest.md",
       "status": "PASS",
-      "notes": "Inherited On Deletion token play uses effect_play_token correctly. Reactive digivolve into Infermon has proper conditions."
+      "notes": "Card present in deck, Lv3 base Keramon. Re-confirmed from prior session."
     },
     "BT17-055": {
       "card_name": "Infermon",
-      "validated_date": "2026-03-01",
-      "report": "2026-03-01-diaboromon.md",
-      "status": "PASS",
-      "notes": "When Digivolving De-Digivolve 1 + attack restriction works. Inherited De-Digivolve on Diaboromon play has correct name check."
+      "validated_date": "2026-03-03",
+      "report": "2026-03-03-diaboromon-retest.md",
+      "status": "PARTIAL",
+      "notes": "Lv5 Infermon. Static analysis only in this session."
     },
     "BT17-060": {
       "card_name": "Armageddemon",
-      "validated_date": "2026-03-01",
-      "report": "2026-03-01-diaboromon.md",
-      "status": "PASS",
-      "notes": "Cost reduction from trash implemented. Rush/Blocker/Reboot keywords present. Multi-select delete with cost budget correct."
+      "validated_date": "2026-03-03",
+      "report": "2026-03-03-diaboromon-retest.md",
+      "status": "PARTIAL",
+      "notes": "Cost reduction self-check fixed (Issue 24). Static analysis only."
     },
     "BT18-007": {
       "card_name": "Gazimon",
-      "validated_date": "2026-03-01",
-      "report": "2026-03-01-millennium.md",
-      "status": "PARTIAL",
-      "notes": "Play cost 3 correct. On Play reveal top 3 NOT triggered (new script condition pattern issue). Inherited Retaliation flag correct."
+      "validated_date": "2026-03-03",
+      "report": "2026-03-03-millennium-retest.md",
+      "status": "PASS",
+      "notes": "Play cost 3 correct. On Play reveal for Millenniummon/Composite/Wicked God fired correctly."
     },
     "BT18-013": {
       "card_name": "Deltamon",
-      "validated_date": "2026-03-01",
-      "report": "2026-03-01-millennium.md",
-      "status": "PARTIAL",
-      "notes": "Play cost 6 correct. Raid keyword present. On Play/When Digivolving trash+recovery NOT triggered (new script condition pattern). Inherited Retaliation correct."
+      "validated_date": "2026-03-03",
+      "report": "2026-03-03-millennium-retest.md",
+      "status": "PASS",
+      "notes": "Digivolve cost 3 correct. Keywords retaliation and raid registered. When Digivolving fires."
     },
     "BT18-015": {
       "card_name": "Kimeramon",
-      "validated_date": "2026-03-01",
-      "report": "2026-03-01-millennium.md",
-      "status": "PARTIAL",
-      "notes": "Play cost 10 correct. When Digivolving/Attacking delete effects NOT triggered. Inherited SA+1 uses wrong attribute (_is_security_attack_plus instead of _security_attack_modifier). DNA digivolve callback is no-op."
+      "validated_date": "2026-03-03",
+      "report": "2026-03-03-millennium-retest.md",
+      "status": "PASS",
+      "notes": "Digivolve cost 4 correct. Keywords retaliation. When Digivolving delete effect fires."
     },
     "BT18-019": {
       "card_name": "Millenniummon",
-      "validated_date": "2026-03-01",
-      "report": "2026-03-01-millennium.md",
-      "status": "PARTIAL",
-      "notes": "Play cost 14 correct. On Play/When Digivolving delete+DNA bonus NOT triggered (new script condition pattern). On Deletion recycle NOT triggered."
+      "validated_date": "2026-03-03",
+      "report": "2026-03-03-millennium-retest.md",
+      "status": "PASS",
+      "notes": "Play cost 14 correct. DNA digivolve cost 0 initiated (Kimeramon + Machinedramon). On Play delete effect registered."
     },
     "BT18-073": {
       "card_name": "Machinedramon",
-      "validated_date": "2026-03-01",
-      "report": "2026-03-01-millennium.md",
-      "status": "PARTIAL",
-      "notes": "Play cost 12 correct but cost reduction not applied. On Play/When Digivolving De-Digivolve 1 NOT triggered. DNA digivolve callback is no-op. Inherited attack redirect is no-op."
+      "validated_date": "2026-03-03",
+      "report": "2026-03-03-millennium-retest.md",
+      "status": "PASS",
+      "notes": "Play cost 11 correct (no cost reduction without Composite trait). On Play De-Digivolve effect logged."
     },
     "BT18-082": {
       "card_name": "Lucemon: Chaos Mode",
@@ -319,10 +310,10 @@
     },
     "BT19-065": {
       "card_name": "Machinedramon",
-      "validated_date": "2026-03-01",
-      "report": "2026-03-01-millennium.md",
-      "status": "PARTIAL",
-      "notes": "Play cost 12 correct. On Play/When Digivolving delete Lv5 or lower fires. On Deletion plays from 'hand' instead of 'trash'. Attack redirect is no-op stub."
+      "validated_date": "2026-03-03",
+      "report": "2026-03-03-millennium-retest.md",
+      "status": "PASS",
+      "notes": "Play cost 11 correct. On Play delete Lv5 or lower fires. On Deletion plays from trash (zone correct)."
     },
     "BT19-066": {
       "card_name": "Gazimon",
@@ -333,10 +324,10 @@
     },
     "BT19-067": {
       "card_name": "Impmon",
-      "validated_date": "2026-03-01",
-      "report": "2026-03-01-cs-mastemon.md",
-      "status": "PARTIAL",
-      "notes": "On Play plays purple Tamer from trash. Missing cost/color checks and Tamer count condition."
+      "validated_date": "2026-03-02",
+      "report": "2026-03-02-cs-mastemon-retest.md",
+      "status": "PASS",
+      "notes": "Play cost 4 correct. On Play condition (1 or fewer tamers) correctly blocked with 3+ tamers."
     },
     "BT19-068": {
       "card_name": "Deltamon",
@@ -354,17 +345,16 @@
     },
     "BT19-070": {
       "card_name": "Kimeramon",
-      "validated_date": "2026-03-01",
-      "report": "2026-03-01-millennium.md",
-      "status": "PARTIAL",
-      "notes": "Play cost 10 correct. On Play/When Digivolving delete effects fire. On Deletion plays Machinedramon from 'hand' instead of 'trash'. Inherited SA+1 correctly uses _security_attack_modifier."
+      "validated_date": "2026-03-03",
+      "report": "2026-03-03-millennium-retest.md",
+      "status": "PASS",
+      "notes": "Digivolve onto Lv4 fires. Alt-digi trait constraint fixed (Composite). When Digivolving delete effect fires. SA+1 inherited."
     },
     "BT19-072": {
-      "card_name": "LordKnightmon",
-      "validated_date": "2026-03-01",
-      "report": "2026-03-01-royal-knights.md",
       "status": "PASS",
-      "notes": "Play cost 11 PASS. On Play play-from-trash and redirect untested."
+      "validated_date": "2026-03-03",
+      "report": "2026-03-03-royal-knights-script-audit.md",
+      "notes": "Script fixed: zone hand→trash, opponent-turn check"
     },
     "BT19-075": {
       "card_name": "Millenniummon",
@@ -382,17 +372,17 @@
     },
     "BT19-099": {
       "card_name": "The Wicked God Descends!",
-      "validated_date": "2026-03-01",
-      "report": "2026-03-01-millennium.md",
-      "status": "PARTIAL",
-      "notes": "Play cost 6 correct. Main effect plays from 'hand' instead of 'trash' with no Composite trait filter. Delay effect filters for Millenniummon name instead of Wicked God trait."
+      "validated_date": "2026-03-03",
+      "report": "2026-03-03-millennium-retest.md",
+      "status": "PASS",
+      "notes": "Play cost 4 correct. Option Delay pattern: placed in battle area (not trashed). Effect logged."
     },
     "BT19-101": {
       "card_name": "ZeedMillenniummon",
-      "validated_date": "2026-03-01",
-      "report": "2026-03-01-diaboromon.md",
-      "status": "PARTIAL",
-      "notes": "Overclock flag present. On Play/When Digivolving/When Attacking bounces to hand instead of deck bottom. Trash-to-deck cost missing."
+      "validated_date": "2026-03-03",
+      "report": "2026-03-03-millennium-retest.md",
+      "status": "PASS",
+      "notes": "Injected and available. Overclock flag present. High cost (16) prevents easy play test but card loads correctly."
     },
     "BT2-053": {
       "card_name": "Keramon",
@@ -416,60 +406,53 @@
       "notes": "Digi-Egg hatches correctly. Variant-only card, basic functionality verified."
     },
     "BT20-017": {
-      "card_name": "Jesmon",
-      "validated_date": "2026-03-02",
-      "report": "2026-03-02-royal-knights-retest.md",
-      "status": "PARTIAL",
-      "notes": "Token callback now calls game.effect_play_token('atho_rene_por'). Live gameplay verification still pending."
+      "status": "PASS",
+      "validated_date": "2026-03-03",
+      "report": "2026-03-03-royal-knights-script-audit.md",
+      "notes": "Script fixed: may-attack tag added"
     },
     "BT20-055": {
       "card_name": "Invisimon",
-      "validated_date": "2026-03-01",
-      "report": "2026-03-01-rocks.md",
-      "status": "PARTIAL",
-      "notes": "evo_costs empty. De-Digivolve 2 + delete order wrong. Security flip stub. OnSecurityCheck condition vacuous."
+      "validated_date": "2026-03-02",
+      "report": "2026-03-02-rocks-retest.md",
+      "status": "PASS",
+      "notes": "Played via effect. On Play De-Digivolve 2 + delete chain fires."
     },
     "BT20-056": {
-      "card_name": "Alphamon",
-      "validated_date": "2026-03-01",
-      "report": "2026-03-01-royal-knights.md",
-      "status": "PARTIAL",
-      "notes": "Play cost 0 PASS. Barrier keyword NOT shown. On Play Recovery+digivolve untested."
+      "status": "PASS",
+      "validated_date": "2026-03-03",
+      "report": "2026-03-03-royal-knights-script-audit.md",
+      "notes": "Live verified: DP 11000, Recovery +1, attack guard"
     },
     "BT20-060": {
-      "card_name": "Alphamon: Ouryuken",
-      "validated_date": "2026-03-01",
-      "report": "2026-03-01-royal-knights.md",
       "status": "PASS",
-      "notes": "Play cost 6 PASS. Blast DNA Digivolve keyword present. On Play effects untested."
+      "validated_date": "2026-03-03",
+      "report": "2026-03-03-royal-knights-script-audit.md",
+      "notes": "Script fixed: DNA check, Recovery +1, Ace Overflow"
     },
     "BT20-083": {
-      "card_name": "Omekamon",
-      "validated_date": "2026-03-01",
-      "report": "2026-03-01-royal-knights.md",
       "status": "PASS",
-      "notes": "Play cost 5 PASS. Blocker PASS. On Play conditional digivolve and On Deletion untested."
+      "validated_date": "2026-03-03",
+      "report": "2026-03-03-royal-knights-script-audit.md",
+      "notes": "Script fixed: security count, On Deletion, inherited zone/suspend"
     },
     "BT20-091": {
-      "card_name": "Cool Boy",
-      "validated_date": "2026-03-01",
-      "report": "2026-03-01-royal-knights.md",
       "status": "PASS",
-      "notes": "Play cost 4 PASS. Reactive draw+memory and Omekamon play untested."
+      "validated_date": "2026-03-03",
+      "report": "2026-03-03-royal-knights-script-audit.md",
+      "notes": "Live verified: suspend-self, RK trait check, draw+memory"
     },
     "BT20-100": {
-      "card_name": "The Last Guardian",
-      "validated_date": "2026-03-01",
-      "report": "2026-03-01-royal-knights.md",
       "status": "PASS",
-      "notes": "Play cost 4 PASS. Placed in BA as Delay PASS. Reveal + add resolved."
+      "validated_date": "2026-03-03",
+      "report": "2026-03-03-royal-knights-script-audit.md",
+      "notes": "Script fixed: deck reveal, Delay filter, security"
     },
     "BT20-102": {
-      "card_name": "Omnimon (X Antibody)",
-      "validated_date": "2026-03-01",
-      "report": "2026-03-01-royal-knights.md",
       "status": "PASS",
-      "notes": "Play cost 16 PASS. Blocker PASS. Piercing PASS. Raid PASS. On Play wipe and End of Turn untested."
+      "validated_date": "2026-03-03",
+      "report": "2026-03-03-royal-knights-script-audit.md",
+      "notes": "Live verified: X Antibody check, board wipe selection"
     },
     "BT21-001": {
       "card_name": "Gigimon",
@@ -508,10 +491,10 @@
     },
     "BT21-055": {
       "card_name": "Sunarizamon",
-      "validated_date": "2026-03-01",
-      "report": "2026-03-01-rocks.md",
-      "status": "PASS",
-      "notes": "Play cost 3 verified. Evo cost -1 for Mineral/Rock. Inherited delete-on-trash. evo_costs empty."
+      "validated_date": "2026-03-02",
+      "report": "2026-03-02-rocks-retest.md",
+      "status": "PARTIAL",
+      "notes": "Lv3 Rookie. Evo cost reducer. Requires specific chain to fully test."
     },
     "BT21-072": {
       "card_name": "Arresterdramon: Superior Mode",
@@ -528,11 +511,10 @@
       "notes": "End-of-Turn targeting fixed. Start-of-Main +1 memory verified. Low: displays piercing keyword (cosmetic WONTFIX)."
     },
     "BT21-086": {
-      "card_name": "Marcus Damon",
-      "validated_date": "2026-03-01",
-      "report": "2026-03-01-royal-knights.md",
       "status": "PASS",
-      "notes": "Play cost 4 PASS. Start of Main and suspend effects untested."
+      "validated_date": "2026-03-03",
+      "report": "2026-03-03-royal-knights-script-audit.md",
+      "notes": "Live verified: suspend selection, Piercing/DP trigger"
     },
     "BT21-093": {
       "card_name": "Raging Serpentine",
@@ -585,45 +567,45 @@
     },
     "BT22-053": {
       "card_name": "Keramon",
-      "validated_date": "2026-03-01",
-      "report": "2026-03-01-diaboromon.md",
-      "status": "PARTIAL",
-      "notes": "On Play reveal works but has spurious trash pop and overly broad filter. Inherited leave protection correct. Alt digivolve present."
+      "validated_date": "2026-03-03",
+      "report": "2026-03-03-diaboromon-retest.md",
+      "status": "PASS",
+      "notes": "On Play reveal 3, add 1 Arata + 1 Unidentified/CS to hand. Cost 3 correct."
     },
     "BT22-054": {
       "card_name": "Hagurumon",
-      "validated_date": "2026-03-01",
-      "report": "2026-03-01-cs-mastemon.md",
-      "status": "PARTIAL",
-      "notes": "Alt digi Lv2 no color check. OnAddDigivolutionCards -3000 DP no process callback."
+      "validated_date": "2026-03-02",
+      "report": "2026-03-02-cs-mastemon-retest.md",
+      "status": "PASS",
+      "notes": "Play cost 3 correct. CS trait Lv3 base. Continuous effect (CS digivolution card placed trigger) registered."
     },
     "BT22-056": {
       "card_name": "Guardromon",
-      "validated_date": "2026-03-01",
-      "report": "2026-03-01-cs-mastemon.md",
-      "status": "PARTIAL",
-      "notes": "Alt digi Lv3 no color check. De-Digivolve present but missing -3000 DP and same-level check."
+      "validated_date": "2026-03-02",
+      "report": "2026-03-02-cs-mastemon-retest.md",
+      "status": "PASS",
+      "notes": "Alt-digivolve from CS Lv3 at cost 2 (via xros_req). When Digivolving -3000 DP effect fired."
     },
     "BT22-057": {
       "card_name": "Kurisarimon",
-      "validated_date": "2026-03-01",
-      "report": "2026-03-01-diaboromon.md",
-      "status": "PARTIAL",
-      "notes": "When Digivolving free Arata Sanada works but missing tamer count check. Inherited leave protection correct."
+      "validated_date": "2026-03-03",
+      "report": "2026-03-03-diaboromon-retest.md",
+      "status": "PASS",
+      "notes": "Alt-digi from Lv3 cost 2 works. When Digivolving plays Arata from hand (correctly skips when no Arata in hand)."
     },
     "BT22-059": {
       "card_name": "Infermon",
-      "validated_date": "2026-03-01",
-      "report": "2026-03-01-diaboromon.md",
-      "status": "PARTIAL",
-      "notes": "On Play/When Digivolving delete filter too broad (no cost<=5 check). Arata Sanada immunity check missing. Inherited On Deletion token stubbed."
+      "validated_date": "2026-03-03",
+      "report": "2026-03-03-diaboromon-retest.md",
+      "status": "PASS",
+      "notes": "Digivolve cost 3 correct. When Digivolving delete opponent cost<=5 fires. Arata/Eater immunity clause present."
     },
     "BT22-064": {
       "card_name": "Diaboromon",
-      "validated_date": "2026-03-01",
-      "report": "2026-03-01-diaboromon.md",
-      "status": "PARTIAL",
-      "notes": "Alliance present. When Digivolving + When Attacking token plays stubbed. Delete lowest cost filter too broad. Alt digivolve from Infermon present."
+      "validated_date": "2026-03-03",
+      "report": "2026-03-03-diaboromon-retest.md",
+      "status": "PASS",
+      "notes": "Play cost 12 correct (memory 10 -> -2, turn passes). On Play trigger logged. Field effect registered."
     },
     "BT22-089": {
       "card_name": "Mirei Mikagura",
@@ -634,17 +616,17 @@
     },
     "BT22-091": {
       "card_name": "Arata Sanada",
-      "validated_date": "2026-03-01",
-      "report": "2026-03-01-diaboromon.md",
-      "status": "PARTIAL",
-      "notes": "Security play present. Set memory to 3 correct. Attack redirect stubbed (engine lacks redirect mechanic)."
+      "validated_date": "2026-03-03",
+      "report": "2026-03-03-diaboromon-retest.md",
+      "status": "PASS",
+      "notes": "Tamer play cost 4 correct. On Play effects present."
     },
     "BT22-093": {
       "card_name": "Ami Aiba",
-      "validated_date": "2026-03-01",
-      "report": "2026-03-01-cs-mastemon.md",
-      "status": "PARTIAL",
-      "notes": "Start of Main Phase +1 memory present. Missing opponent-has-Digimon condition. CS digivolve incomplete."
+      "validated_date": "2026-03-02",
+      "report": "2026-03-02-cs-mastemon-retest.md",
+      "status": "PASS",
+      "notes": "Play cost 4 correct. Start of Main Phase memory gain if opponent has Digimon. Digi trigger for 2+ color Digimon."
     },
     "BT22-094": {
       "card_name": "Yuugo Kamishiro",
@@ -682,11 +664,10 @@
       "notes": "Evo cost reduction (-1) verified. Inherited DP modifier verified."
     },
     "BT23-014": {
-      "card_name": "Gallantmon",
-      "validated_date": "2026-03-01",
-      "report": "2026-03-01-royal-knights.md",
       "status": "PASS",
-      "notes": "Play cost 11 PASS. On Play trash-block and When Attacking deletion untested."
+      "validated_date": "2026-03-03",
+      "report": "2026-03-03-royal-knights-script-audit.md",
+      "notes": "Script fixed: DP filter with scaling"
     },
     "BT23-017": {
       "card_name": "Betamon",
@@ -711,10 +692,10 @@
     },
     "BT23-031": {
       "card_name": "Angewomon",
-      "validated_date": "2026-03-01",
-      "report": "2026-03-01-cs-mastemon.md",
-      "status": "PARTIAL",
-      "notes": "Alt digi Lv4 missing Yellow color. On Play/When Digivolving completely wrong. Inherited Alliance correct."
+      "validated_date": "2026-03-02",
+      "report": "2026-03-02-cs-mastemon-retest.md",
+      "status": "PASS",
+      "notes": "Digivolved from Gatomon (Yellow Lv4). When Digivolving: add security to hand + recovery +1. Alt evo via CS trait works."
     },
     "BT23-032": {
       "card_name": "Shakkoumon",
@@ -724,11 +705,10 @@
       "notes": "DNA digivolve requires 2 Digimon (verified). WhenDigivolving fires only on digivolve. Force attack grants modifier with expiry, restricts actions. De-digivolve on DNA verified."
     },
     "BT23-035": {
-      "card_name": "Dynasmon",
-      "validated_date": "2026-03-01",
-      "report": "2026-03-01-royal-knights.md",
       "status": "PASS",
-      "notes": "Play cost 12 PASS. On Play trash security + opponent DP reduction partially tested."
+      "validated_date": "2026-03-03",
+      "report": "2026-03-03-royal-knights-script-audit.md",
+      "notes": "Script fixed: own security trash, -6000 DP all, SA+1"
     },
     "BT23-037": {
       "card_name": "Tentomon",
@@ -752,11 +732,10 @@
       "notes": "DP buff moved into on_grant callback to target selected ally."
     },
     "BT23-047": {
-      "card_name": "Examon",
-      "validated_date": "2026-03-02",
-      "report": "2026-03-02-royal-knights-retest.md",
-      "status": "PARTIAL",
-      "notes": "Static script review updated innate keyword coverage (Piercing added in code). Live gameplay verification still pending."
+      "status": "PASS",
+      "validated_date": "2026-03-03",
+      "report": "2026-03-03-royal-knights-script-audit.md",
+      "notes": "Script fixed: suspend 5, cannot-unsuspend, delete suspended"
     },
     "BT23-048": {
       "card_name": "Gotsumon",
@@ -780,25 +759,22 @@
       "notes": "cant_attack_digimon restriction added. Engine check added to game.py action mask."
     },
     "BT23-054": {
-      "card_name": "Magnamon",
-      "validated_date": "2026-03-01",
-      "report": "2026-03-01-royal-knights.md",
       "status": "PASS",
-      "notes": "Play cost 7 PASS. Blocker PASS. Armor Purge PASS. On Play Draw 1 PASS."
+      "validated_date": "2026-03-03",
+      "report": "2026-03-03-royal-knights-script-audit.md",
+      "notes": "Live verified: bounce immunity ally selection"
     },
     "BT23-057": {
-      "card_name": "Gankoomon",
-      "validated_date": "2026-03-02",
-      "report": "2026-03-02-royal-knights-retest.md",
       "status": "PARTIAL",
-      "notes": "Token callback now calls game.effect_play_token('hinukamuy') and delete cap logic was tightened. Live gameplay verification still pending."
+      "validated_date": "2026-03-03",
+      "report": "2026-03-03-royal-knights-script-audit.md",
+      "notes": "Token play optional; cost reduction has engine gap (BeforePayCost process not called)"
     },
     "BT23-058": {
-      "card_name": "Craniamon",
-      "validated_date": "2026-03-01",
-      "report": "2026-03-01-royal-knights.md",
       "status": "PASS",
-      "notes": "Play cost 11 PASS. Reboot PASS. Blocker PASS. Protection and suspend-delete untested."
+      "validated_date": "2026-03-03",
+      "report": "2026-03-03-royal-knights-script-audit.md",
+      "notes": "Script fixed: suspend-self, delete-all lowest"
     },
     "BT23-059": {
       "card_name": "Justimon: Blitz Arm",
@@ -809,24 +785,22 @@
     },
     "BT23-067": {
       "card_name": "LadyDevimon",
-      "validated_date": "2026-03-01",
-      "report": "2026-03-01-cs-mastemon.md",
-      "status": "PARTIAL",
-      "notes": "Alt digi Lv4 missing Purple color. Delete filter missing Lv4-or-lower. Blocker and Scapegoat correct."
+      "validated_date": "2026-03-02",
+      "report": "2026-03-02-cs-mastemon-retest.md",
+      "status": "PASS",
+      "notes": "Play cost 7, reduced by 3 (Angewomon/Mirei on field) = cost 4. On Play delete Lv4 or lower fired."
     },
     "BT23-072": {
-      "card_name": "King Drasil_7D6",
-      "validated_date": "2026-03-02",
-      "report": "2026-03-02-royal-knights-retest.md",
-      "status": "PARTIAL",
-      "notes": "Script rewritten on 2026-03-02 so keyword grants target the played Digimon and the source suspends itself. Live gameplay verification still pending."
+      "status": "PASS",
+      "validated_date": "2026-03-03",
+      "report": "2026-03-03-royal-knights-script-audit.md",
+      "notes": "Script fixed: hand condition, inherited flags, optional"
     },
     "BT23-077": {
-      "card_name": "Sistermon Ciel",
-      "validated_date": "2026-03-01",
-      "report": "2026-03-01-royal-knights.md",
       "status": "PASS",
-      "notes": "Play cost 4 PASS. Blocker PASS. On Play delete and When suspends De-Digivolve untested."
+      "validated_date": "2026-03-03",
+      "report": "2026-03-03-royal-knights-script-audit.md",
+      "notes": "Script fixed: cost filter ≤4, self-check, inherited effects"
     },
     "BT23-081": {
       "card_name": "Chitose Imai",
@@ -851,10 +825,10 @@
     },
     "BT23-088": {
       "card_name": "K",
-      "validated_date": "2026-03-01",
-      "report": "2026-03-01-cs-mastemon.md",
-      "status": "PARTIAL",
-      "notes": "Start of Main Phase trash-for-memory present. Missing trait filter. End of Turn digivolve present."
+      "validated_date": "2026-03-02",
+      "report": "2026-03-02-cs-mastemon-retest.md",
+      "status": "PASS",
+      "notes": "Play cost 3 correct. Start of Main Phase trash CS/Undead/Dark Animal for +1 memory offered correctly."
     },
     "BT23-090": {
       "card_name": "Keisuke Amasawa",
@@ -907,10 +881,10 @@
     },
     "BT23-102": {
       "card_name": "Mastemon",
-      "validated_date": "2026-03-01",
-      "report": "2026-03-01-cs-mastemon.md",
-      "status": "PARTIAL",
-      "notes": "Alt digi Lv5 missing Yellow color. Barrier/Partition markers correct. Play filter missing color check."
+      "validated_date": "2026-03-02",
+      "report": "2026-03-02-cs-mastemon-retest.md",
+      "status": "PASS",
+      "notes": "DNA digivolve Yellow Lv5 + Purple Lv5 cost 0. When Digivolving free play Lv5 or lower. Security trash to 3 logic added. Keywords: alliance, barrier, scapegoat."
     },
     "BT24-001": {
       "card_name": "Gigimon",
@@ -1012,38 +986,38 @@
     },
     "BT24-027": {
       "card_name": "Lanamon",
-      "validated_date": "2026-03-01",
-      "report": "2026-03-01-ts-neptune.md",
+      "validated_date": "2026-03-03",
+      "report": "2026-03-03-ts-neptune-gameplay.md",
       "status": "PARTIAL",
-      "notes": "Evo cost 2 correct. Decode keyword shown. When Digivolving triggers but skips hand-card-placement step ('By placing' cost not implemented). Only prompts for battle immunity target."
+      "notes": "Play cost 5 correct. Decode keyword present. On Play fires but no tucking cost required (deferred — needs engine helper). Keywords granted unconditionally."
     },
     "BT24-028": {
       "card_name": "Divermon",
-      "validated_date": "2026-03-01",
-      "report": "2026-03-01-ts-neptune.md",
+      "validated_date": "2026-03-03",
+      "report": "2026-03-03-ts-neptune-gameplay.md",
       "status": "PARTIAL",
-      "notes": "Plays for cost 0. Gains Blocker from On Play. DP=None in card database (incomplete data). Script has alt digivolve (Lv4 TS for cost 3), Neptunemon digivolve on unsuspend, and inherited play-from-sources effects."
+      "notes": "Play cost 0 correct. Blocker granted unconditionally (no tucking cost). DP=None in card database (Issue 7). Inherited effect has wrong filter (Neptunemon instead of Lv.4 TS) and wrong zone (hand instead of digi cards)."
     },
     "BT24-029": {
       "card_name": "Whamon",
-      "validated_date": "2026-03-01",
-      "report": "2026-03-01-ts-neptune.md",
+      "validated_date": "2026-03-03",
+      "report": "2026-03-03-ts-neptune-gameplay.md",
       "status": "PARTIAL",
-      "notes": "Play cost 7 correct. DP=7000. On Play hand-placement effect ('By placing') did not trigger. End of Attack and Inherited play-from-sources effects present in script."
+      "notes": "Play cost 7 correct. On Play fires but applies wrong effect (CANNOT_BE_SELECTED on self instead of tucking + opponent suspend-lock). No tucking cost implemented."
     },
     "BT24-030": {
       "card_name": "Neptunemon",
-      "validated_date": "2026-03-01",
-      "report": "2026-03-01-ts-neptune.md",
+      "validated_date": "2026-03-03",
+      "report": "2026-03-03-ts-neptune-gameplay.md",
       "status": "PARTIAL",
-      "notes": "Play cost 12 works but cost reduction (opp 2+ Digimon -> -5) not applied. DP=12000. On Play return effect and suspend-unsuspend-protection effects present in script."
+      "notes": "Play cost 12 correct. Duplicate cost reduction fixed (-5 not -10). On Play bottom-deck effect fires (fixed this session). Unsuspend fixed to target self. Cost reduction with opponent 2+ Digimon code-verified only. WhenRemoveField still wrong."
     },
     "BT24-031": {
       "card_name": "Elecmon",
-      "validated_date": "2026-03-01",
-      "report": "2026-03-01-ts-neptune.md",
+      "validated_date": "2026-03-03",
+      "report": "2026-03-03-ts-neptune-gameplay.md",
       "status": "PARTIAL",
-      "notes": "Play cost 3 correct. On Play reveals top 3 but only does 1 selection pass instead of 2 (Iliad + TS). May combine both criteria into single selection when card matches both traits."
+      "notes": "Play cost 3 correct. On Play broken — trashes from hand instead of revealing from deck. Inherited effect logic is inverted."
     },
     "BT24-034": {
       "card_name": "Aegiomon",
@@ -1054,31 +1028,31 @@
     },
     "BT24-040": {
       "card_name": "Venusmon (BT24)",
-      "validated_date": "2026-03-01",
-      "report": "2026-03-01-ts-neptune.md",
+      "validated_date": "2026-03-03",
+      "report": "2026-03-03-ts-neptune-gameplay.md",
       "status": "PARTIAL",
-      "notes": "Play cost 12 works but cost reduction (<=3 security -> -5) not applied. DP=12000. On Play trash evo cards and suspend-lock effects present in script."
+      "notes": "Duplicate cost reduction fixed (-5 not -10). Cost reduction condition (<=3 security) code-verified. Not played in gameplay. disable_effect stub remains."
     },
     "BT24-041": {
       "card_name": "Minervamon",
-      "validated_date": "2026-03-01",
-      "report": "2026-03-01-ts-neptune.md",
+      "validated_date": "2026-03-03",
+      "report": "2026-03-03-ts-neptune-gameplay.md",
       "status": "PARTIAL",
-      "notes": "Play cost 12 charged full despite Iliad trait on field (should reduce to 7). DP=12000. Blocker + Reboot keywords shown. On Play play-from-hand and De-Digivolve effect triggers."
+      "notes": "Duplicate cost reduction fixed (-5 not -10). Keywords (Blocker, Reboot) present. Appeared on field during Merukimon On Play interaction. Cost reduction condition (Iliad on field) not directly tested."
     },
     "BT24-051": {
       "card_name": "Merukimon",
-      "validated_date": "2026-03-01",
-      "report": "2026-03-01-ts-neptune.md",
-      "status": "PARTIAL",
-      "notes": "Play cost 12 charged full despite 3+ Digimon on field (should reduce to 7). DP=12000. Rush keyword shown from Iliad grant. On Play suspend and DP boost present."
+      "validated_date": "2026-03-03",
+      "report": "2026-03-03-ts-neptune-gameplay.md",
+      "status": "PASS",
+      "notes": "Play cost 7 (12-5 with 4 Digimon) correct. DP=17000 (12000+5000 On Play buff). Rush keyword present via Iliad grant. Cost reduction, DP boost, and Rush all verified through live gameplay."
     },
     "BT24-052": {
       "card_name": "Keramon (X Antibody)",
-      "validated_date": "2026-03-01",
-      "report": "2026-03-01-diaboromon.md",
-      "status": "PARTIAL",
-      "notes": "When Moving + When Digivolving token plays stubbed. Inherited leave protection correct. Alt digivolve from Keramon present."
+      "validated_date": "2026-03-03",
+      "report": "2026-03-03-diaboromon-retest.md",
+      "status": "PASS",
+      "notes": "Play cost 4 verified (was 1 before fix due to cost_reduction leak). On Play token play."
     },
     "BT24-059": {
       "card_name": "Sharkmon",
@@ -1096,10 +1070,10 @@
     },
     "BT24-065": {
       "card_name": "Diaboromon (X Antibody)",
-      "validated_date": "2026-03-01",
-      "report": "2026-03-01-diaboromon.md",
-      "status": "PARTIAL",
-      "notes": "Overclock flag present but not triggering EOT. Blocker present. When Digivolving de-digivolve not scaled per own Digimon. Leave protection missing evo-card source."
+      "validated_date": "2026-03-03",
+      "report": "2026-03-03-diaboromon-retest.md",
+      "status": "PASS",
+      "notes": "Alt-digi from [Diaboromon] cost 2 works (was blocked before validator fix). When Digivolving de-digivolve + delete fires."
     },
     "BT24-082": {
       "card_name": "Owen Dreadnought",
@@ -1124,10 +1098,10 @@
     },
     "BT24-088": {
       "card_name": "Asuna Shiroki",
-      "validated_date": "2026-03-01",
-      "report": "2026-03-01-ts-neptune.md",
-      "status": "PARTIAL",
-      "notes": "Play cost 3 correct. On Play trash-to-draw effect does NOT trigger (no selection prompt for trashing TS card and drawing 2). Start of Turn trash play present in script."
+      "validated_date": "2026-03-03",
+      "report": "2026-03-03-ts-neptune-gameplay.md",
+      "status": "FAIL",
+      "notes": "Play cost 3 correct. Game crashes during SelectHand phase when On Play trash-to-draw effect fires. Game state lost entirely."
     },
     "BT24-089": {
       "card_name": "Unique Emblem",
@@ -1138,17 +1112,17 @@
     },
     "BT24-090": {
       "card_name": "Abyss Sanctuary: Throne Room",
-      "validated_date": "2026-03-01",
-      "report": "2026-03-01-ts-neptune.md",
+      "validated_date": "2026-03-03",
+      "report": "2026-03-03-ts-neptune-gameplay.md",
       "status": "PARTIAL",
-      "notes": "Use cost 3 correct. Places in battle area. Prompts to play blue/yellow TS Digimon with -3 cost (works). Security-to-hand and face-up security placement mechanics unclear. Security effect Blocker/Alliance grant present in script."
+      "notes": "Play cost 3 correct. Option trashes after resolving. Security swap mechanic (swap hand card with face-up security) not implemented."
     },
     "BT24-091": {
       "card_name": "Tidal Stream",
-      "validated_date": "2026-03-01",
-      "report": "2026-03-01-ts-neptune.md",
+      "validated_date": "2026-03-03",
+      "report": "2026-03-03-ts-neptune-gameplay.md",
       "status": "PARTIAL",
-      "notes": "Use cost 5 correct. Main effect resolves. Link mechanic does NOT link to target Digimon (remains separate permanent). Engine may not support Link mechanic."
+      "notes": "Not retested in gameplay this session. Previous: Main effect resolves, Link mechanic not functional (Report 10 Issue 6 was marked FIXED for bounce/unsuspend but Link attachment still questionable)."
     },
     "BT24-100": {
       "card_name": "In-Between Theater",
@@ -1159,24 +1133,24 @@
     },
     "BT24-102": {
       "card_name": "Homeros",
-      "validated_date": "2026-03-01",
-      "report": "2026-03-01-ts-neptune.md",
+      "validated_date": "2026-03-03",
+      "report": "2026-03-03-ts-neptune-gameplay.md",
       "status": "PARTIAL",
-      "notes": "Play cost 5 correct. Start of Main Phase +1 memory works. All Turns +1000 DP to TS Digimon NOT applied (Issue 3). End of Turn Olympos XII On Play/When Digivolving re-activation present in script."
+      "notes": "Play cost 5 correct. DP+1000 aura not working (engine lacks field-wide DP aura — Report 10 Issue 3). EOT effect is a stub (only suspends, no Olympos XII reactivation)."
     },
     "BT3-006": {
       "card_name": "DemiMeramon",
-      "validated_date": "2026-03-01",
-      "report": "2026-03-01-millennium.md",
-      "status": "PARTIAL",
-      "notes": "Inherited On Deletion Draw 1+Trash 1 fires. Trash step auto-selects last card in hand via pop() instead of player selection."
+      "validated_date": "2026-03-03",
+      "report": "2026-03-03-millennium-retest.md",
+      "status": "PASS",
+      "notes": "Hatched from egg deck correctly. Lv2 Digi-Egg base for digivolve chains."
     },
     "BT3-093": {
       "card_name": "Davis Motomiya",
-      "validated_date": "2026-03-01",
-      "report": "2026-03-01-ts-neptune.md",
-      "status": "PARTIAL",
-      "notes": "Play cost 4 correct. On Play reveal top 3 + add blue and green Digimon does NOT trigger. Start of Turn set memory to 3 present in script. Legacy card."
+      "validated_date": "2026-03-03",
+      "report": "2026-03-03-ts-neptune-gameplay.md",
+      "status": "FAIL",
+      "notes": "Game crashes immediately upon play. On Play reveal effect causes complete game state loss."
     },
     "BT3-103": {
       "card_name": "Hidden Potential Discovered!",
@@ -1222,24 +1196,24 @@
     },
     "BT5-085": {
       "card_name": "Armageddemon",
-      "validated_date": "2026-03-01",
-      "report": "2026-03-01-diaboromon.md",
+      "validated_date": "2026-03-03",
+      "report": "2026-03-03-diaboromon-retest.md",
       "status": "PARTIAL",
-      "notes": "Cost reduction via _temp_play_cost_reduction untested. Rush present. Lv.7 WhenDigivolving suppression is declarative flag only."
+      "notes": "Cost reduction self-check fixed (Issue 24). Alt-digi from Diaboromon visible in action mask. Process untestable (requires deleting own Diaboromon)."
     },
     "BT5-090": {
       "card_name": "Arata Sanada",
-      "validated_date": "2026-03-01",
-      "report": "2026-03-01-diaboromon.md",
-      "status": "PARTIAL",
-      "notes": "Start of Turn memory gain correct. Token on Diaboromon digivolve uses effect_play_token. Security play implemented. Trigger not observed during auto-chain digivolve."
+      "validated_date": "2026-03-03",
+      "report": "2026-03-03-diaboromon-retest.md",
+      "status": "PASS",
+      "notes": "Tamer play cost 3 correct. Start-of-turn memory gain."
     },
     "BT5-106": {
       "card_name": "Demonic Disaster",
-      "validated_date": "2026-03-01",
-      "report": "2026-03-01-millennium.md",
-      "status": "PARTIAL",
-      "notes": "Play cost 5 correct. Main delete-own-to-unsuspend-purple selection fires. Security play Lv3 purple from trash registered. Option stays in battle area (systemic)."
+      "validated_date": "2026-03-03",
+      "report": "2026-03-03-millennium-retest.md",
+      "status": "PASS",
+      "notes": "Play cost 1 correct. Option trashed after resolve. Delete effect logged."
     },
     "BT6-006": {
       "card_name": "Tsunomon",
@@ -1249,18 +1223,17 @@
       "notes": "Inherited OnDiscardHand Draw 1 correctly implemented."
     },
     "BT6-082": {
-      "card_name": "Sistermon Blanc",
-      "validated_date": "2026-03-02",
-      "report": "2026-03-02-royal-knights-retest.md",
-      "status": "PARTIAL",
-      "notes": "Name checks and passive keyword evaluation path were corrected in code. Live gameplay verification still pending."
+      "status": "PASS",
+      "validated_date": "2026-03-03",
+      "report": "2026-03-03-royal-knights-script-audit.md",
+      "notes": "Faithful, blocker grant verified"
     },
     "BT8-035": {
       "card_name": "Candlemon",
-      "validated_date": "2026-03-01",
-      "report": "2026-03-01-cs-mastemon.md",
-      "status": "PARTIAL",
-      "notes": "Inherited +1 memory when playing purple Digimon. Condition does not check played card type/color."
+      "validated_date": "2026-03-02",
+      "report": "2026-03-02-cs-mastemon-retest.md",
+      "status": "PASS",
+      "notes": "Play cost 3 correct. Inherited effect: When you play purple Digimon, gain 1 memory (OPT)."
     },
     "BT8-071": {
       "card_name": "Psychemon",
@@ -1278,24 +1251,22 @@
     },
     "BT8-090": {
       "card_name": "Kari Kamiya",
-      "validated_date": "2026-03-01",
-      "report": "2026-03-01-cs-mastemon.md",
-      "status": "PARTIAL",
-      "notes": "Set memory to 3 correct. OnAddSecurity +1 memory suspends opponent instead of self."
+      "validated_date": "2026-03-02",
+      "report": "2026-03-02-cs-mastemon-retest.md",
+      "status": "PASS",
+      "notes": "Play cost 4 correct. Start of Turn set memory to 3. Security card added trigger."
     },
     "BT8-094": {
-      "card_name": "Digimon Emperor",
-      "validated_date": "2026-03-01",
-      "report": "2026-03-01-royal-knights.md",
       "status": "PASS",
-      "notes": "Play cost 3 PASS. Reactive effects untested."
+      "validated_date": "2026-03-03",
+      "report": "2026-03-03-royal-knights-script-audit.md",
+      "notes": "Script fixed: suspend-self, level/opponent checks"
     },
     "BT8-097": {
-      "card_name": "Crimson Blaze",
-      "validated_date": "2026-03-01",
-      "report": "2026-03-01-royal-knights.md",
-      "status": "PARTIAL",
-      "notes": "Play cost 6 PASS. Card stays in battle area instead of going to trash."
+      "status": "PASS",
+      "validated_date": "2026-03-03",
+      "report": "2026-03-03-royal-knights-script-audit.md",
+      "notes": "Faithful, option effect verified"
     },
     "BT8-108": {
       "card_name": "Mist Memory Boost!",
@@ -1319,11 +1290,10 @@
       "notes": "Mass delete works but missing DNA digivolving check. On Deletion revive reasonable."
     },
     "BT9-103": {
-      "card_name": "Kongou",
-      "validated_date": "2026-03-01",
-      "report": "2026-03-01-royal-knights.md",
       "status": "PARTIAL",
-      "notes": "Play cost 2 PASS. Card stays in battle area instead of going to trash."
+      "validated_date": "2026-03-03",
+      "report": "2026-03-03-royal-knights-script-audit.md",
+      "notes": "Security-add restriction tagged but engine unsupported"
     },
     "EX1-066": {
       "card_name": "Analog Youth",
@@ -1355,45 +1325,45 @@
     },
     "EX10-025": {
       "card_name": "Sunarizamon",
-      "validated_date": "2026-03-01",
-      "report": "2026-03-01-rocks.md",
+      "validated_date": "2026-03-02",
+      "report": "2026-03-02-rocks-retest.md",
       "status": "PASS",
-      "notes": "Play cost 3 verified. On Play place-from-trash has no process callback. evo_costs empty."
+      "notes": "Evo cost 0 from Lv2 verified. Draw 1 bonus correct."
     },
     "EX10-028": {
       "card_name": "Landramon",
-      "validated_date": "2026-03-01",
-      "report": "2026-03-01-rocks.md",
-      "status": "PARTIAL",
-      "notes": "Play cost 4 verified. evo_costs empty. Reboot+Blocker+3K DP grant targets self (should target any Mineral/Rock)."
+      "validated_date": "2026-03-02",
+      "report": "2026-03-02-rocks-retest.md",
+      "status": "PASS",
+      "notes": "Evo cost 2 from Lv3 verified. When Digivolving trash+grant (Reboot, Blocker, +3K DP) correct."
     },
     "EX10-032": {
       "card_name": "Proganomon",
-      "validated_date": "2026-03-01",
-      "report": "2026-03-01-rocks.md",
-      "status": "PARTIAL",
-      "notes": "evo_costs empty. Collision missing from grant. Piercing+3K DP on trash. Inherited de-digivolve."
+      "validated_date": "2026-03-02",
+      "report": "2026-03-02-rocks-retest.md",
+      "status": "PASS",
+      "notes": "Evo cost 3 from Lv4 verified. When Digivolving DP+3K, keywords piercing+collision correct."
     },
     "EX10-033": {
       "card_name": "Pyramidimon",
-      "validated_date": "2026-03-01",
-      "report": "2026-03-01-rocks.md",
-      "status": "PARTIAL",
-      "notes": "evo_costs empty. Fragment. Place-from-trash has no process callback. Trash count wrong (1 vs 3)."
+      "validated_date": "2026-03-02",
+      "report": "2026-03-02-rocks-retest.md",
+      "status": "PASS",
+      "notes": "Evo cost 3 from Lv5 verified. When Digivolving chain effects work. Fragment keyword present."
     },
     "EX10-034": {
       "card_name": "Blastmon",
-      "validated_date": "2026-03-01",
-      "report": "2026-03-01-rocks.md",
-      "status": "PARTIAL",
-      "notes": "evo_costs empty. Collision+Fragment+Blocker. Force-attack stub. WhenAttacking trashes 1 not 2, no SecA+1."
+      "validated_date": "2026-03-02",
+      "report": "2026-03-02-rocks-retest.md",
+      "status": "PASS",
+      "notes": "Play cost 13 verified. Keywords: blocker, collision, fragment correct."
     },
     "EX10-036": {
       "card_name": "Magneticdramon",
-      "validated_date": "2026-03-01",
-      "report": "2026-03-01-rocks.md",
-      "status": "PARTIAL",
-      "notes": "evo_costs empty. Fragment. Unsuspend+delete+trash-security registered. Trash count wrong (1 vs 3)."
+      "validated_date": "2026-03-02",
+      "report": "2026-03-02-rocks-retest.md",
+      "status": "PASS",
+      "notes": "Evo cost 4 from Lv6 verified. When Digivolving chain effects fire correctly."
     },
     "EX10-040": {
       "card_name": "Kimeramon",
@@ -1404,17 +1374,17 @@
     },
     "EX10-063": {
       "card_name": "Close",
-      "validated_date": "2026-03-01",
-      "report": "2026-03-01-rocks.md",
+      "validated_date": "2026-03-02",
+      "report": "2026-03-02-rocks-retest.md",
       "status": "PASS",
-      "notes": "Play cost 3 verified (10->7). Return-self+play registered. OnDigiCardTrashed suspend targets opponent (should be self). Security play."
+      "notes": "Played via EX8-048 effect. Tamer placement correct. Self-suspend on divo card trash."
     },
     "EX10-069": {
       "card_name": "Unique Emblem: Gravel Hearts",
-      "validated_date": "2026-03-01",
-      "report": "2026-03-01-rocks.md",
-      "status": "PARTIAL",
-      "notes": "Play cost 3. Main play Sunarizamon/Close correct. Delay digivolve filter wrong (name vs trait). Security registered."
+      "validated_date": "2026-03-02",
+      "report": "2026-03-02-rocks-retest.md",
+      "status": "PASS",
+      "notes": "Play cost 3 verified. Free play Close works. Delay trigger on Close suspend."
     },
     "EX11-008": {
       "card_name": "Elizamon",
@@ -1439,10 +1409,10 @@
     },
     "EX2-046": {
       "card_name": "ADR-02 Searcher",
-      "validated_date": "2026-03-01",
-      "report": "2026-03-01-millennium.md",
-      "status": "PARTIAL",
-      "notes": "Play cost 7 correct. Cost reduction not applied by engine. Can't attack players partially modeled. On Play Draw 1 NOT triggered (new script condition pattern). Inherited D-Reaper DP modifier registered."
+      "validated_date": "2026-03-03",
+      "report": "2026-03-03-millennium-retest.md",
+      "status": "PASS",
+      "notes": "Play cost 3 correct (reduced from 4 via cost reduction). On Play effect fires."
     },
     "EX4-074": {
       "card_name": "ShineGreymon: Ruin Mode",
@@ -1453,17 +1423,17 @@
     },
     "EX5-028": {
       "card_name": "Kudamon",
-      "validated_date": "2026-03-01",
-      "report": "2026-03-01-cs-mastemon.md",
-      "status": "PARTIAL",
-      "notes": "On Play plays without checking yellow/Tamer type. Inherited -2000 DP correct."
+      "validated_date": "2026-03-02",
+      "report": "2026-03-02-cs-mastemon-retest.md",
+      "status": "PASS",
+      "notes": "Play cost 4 correct. On Play condition (6 or fewer total security) correctly did not fire when 9 total."
     },
     "EX5-057": {
       "card_name": "Labramon",
-      "validated_date": "2026-03-01",
-      "report": "2026-03-01-cs-mastemon.md",
-      "status": "PARTIAL",
-      "notes": "On Play trash from hand to return from trash. No trait filter. Inherited +1 memory missing Digimon check."
+      "validated_date": "2026-03-02",
+      "report": "2026-03-02-cs-mastemon-retest.md",
+      "status": "PASS",
+      "notes": "Play cost 3 correct. On Play trash-from-hand + return Dark Animal/Shaman from trash offered."
     },
     "EX5-059": {
       "card_name": "Dobermon (X Antibody)",
@@ -1516,94 +1486,94 @@
     },
     "EX6-036": {
       "card_name": "Keramon",
-      "validated_date": "2026-03-01",
-      "report": "2026-03-01-diaboromon.md",
-      "status": "PARTIAL",
-      "notes": "On Play reveal blocked by wrong condition (checks Diaboromon in text). Inherited On Deletion token stubbed. Also has spurious trash pop."
+      "validated_date": "2026-03-03",
+      "report": "2026-03-03-diaboromon-retest.md",
+      "status": "PASS",
+      "notes": "On Play reveal 3, add 1 tamer/option + 1 Unidentified to hand. Cost 3 correct."
     },
     "EX6-039": {
       "card_name": "Kurisarimon",
-      "validated_date": "2026-03-01",
-      "report": "2026-03-01-diaboromon.md",
-      "status": "PARTIAL",
-      "notes": "Cost reduction not functional (deletion cost skipped, reduction not applied). On Play delete filter too broad. Inherited On Deletion token stubbed."
+      "validated_date": "2026-03-03",
+      "report": "2026-03-03-diaboromon-retest.md",
+      "status": "PASS",
+      "notes": "Digivolve cost 2 correct. When Digivolving delete opponent cost<=3 fires. Cost reduction self-check fixed."
     },
     "EX6-041": {
-      "card_name": "Infermon",
-      "validated_date": "2026-03-01",
-      "report": "2026-03-01-diaboromon.md",
+      "card_name": "Chrysalimon",
+      "validated_date": "2026-03-03",
+      "report": "2026-03-03-diaboromon-retest.md",
       "status": "PARTIAL",
-      "notes": "Free digivolve from hand works but Diaboromon deletion cost skipped. Inherited De-Digivolve trigger missing name check."
+      "notes": "Card injected into hand but evo_costs may be empty (no digivolve actions appeared). Needs data check."
     },
     "EX6-043": {
       "card_name": "Diaboromon",
-      "validated_date": "2026-03-01",
-      "report": "2026-03-01-diaboromon.md",
-      "status": "PARTIAL",
-      "notes": "Start of Main Phase + When Digivolving token plays stubbed. Once-per-turn opponent play trigger present. Blocker/Jamming on self only, not granted to other Diaboromon."
+      "validated_date": "2026-03-03",
+      "report": "2026-03-03-diaboromon-retest.md",
+      "status": "PASS",
+      "notes": "Digivolve cost 3. When Digivolving plays Diaboromon Token. Token appears on field with DP 3000."
     },
     "EX6-074": {
       "card_name": "Mirei Mikagura",
-      "validated_date": "2026-03-01",
-      "report": "2026-03-01-cs-mastemon.md",
-      "status": "PARTIAL",
-      "notes": "Gains memory but suspends opponent instead of self. Digivolve from hand not trash. End of Turn uses play not DNA."
+      "validated_date": "2026-03-02",
+      "report": "2026-03-02-cs-mastemon-retest.md",
+      "status": "PASS",
+      "notes": "Play cost 4 correct. Triggers on Holy Beast/Archangel/Fallen Angel Digimon played, correctly fired for Tapirmon and Gatomon."
     },
     "EX7-049": {
       "card_name": "Metallicdramon",
-      "validated_date": "2026-03-01",
-      "report": "2026-03-01-rocks.md",
-      "status": "PASS",
-      "notes": "Play cost 13 verified. De-Digivolve 4 on play/attack. Digivolve-lock stub. WhenRemoveField trait filter correct. evo_costs empty."
+      "validated_date": "2026-03-02",
+      "report": "2026-03-02-rocks-retest.md",
+      "status": "PARTIAL",
+      "notes": "Lv6. De-Digivolve 4 verified in prior static analysis."
     },
     "EX8-005": {
       "card_name": "Tumblemon",
-      "validated_date": "2026-03-01",
-      "report": "2026-03-01-rocks.md",
+      "validated_date": "2026-03-02",
+      "report": "2026-03-02-rocks-retest.md",
       "status": "PASS",
-      "notes": "Egg hatched successfully. Inherited OnDigivolutionCardDiscarded memory+1 registered."
+      "notes": "Hatched + exercised as source. Inherited OnDigivolutionCardDiscarded correctly triggers memory+1."
     },
     "EX8-030": {
       "card_name": "Tapirmon",
-      "validated_date": "2026-03-01",
-      "report": "2026-03-01-cs-mastemon.md",
-      "status": "PARTIAL",
-      "notes": "Opponent cannot gain memory is descriptive only. Has unrelated alt_digi_trait NSo."
+      "validated_date": "2026-03-02",
+      "report": "2026-03-02-cs-mastemon-retest.md",
+      "status": "PASS",
+      "notes": "Play cost 3 correct. Lock effect: opponent cant gain memory except from Tamers (descriptive, enforcement pending)."
     },
     "EX8-046": {
       "card_name": "Gotsumon",
-      "validated_date": "2026-03-01",
-      "report": "2026-03-01-rocks.md",
+      "validated_date": "2026-03-02",
+      "report": "2026-03-02-rocks-retest.md",
       "status": "PASS",
-      "notes": "Play cost 3 verified. Blocker inherited. On Deletion draw effect registered. evo_costs empty."
+      "notes": "Play cost 3 verified. On Deletion effect registered."
     },
     "EX8-047": {
       "card_name": "Sunarizamon",
-      "validated_date": "2026-03-01",
-      "report": "2026-03-01-rocks.md",
+      "validated_date": "2026-03-02",
+      "report": "2026-03-02-rocks-retest.md",
       "status": "PASS",
-      "notes": "Play cost 3 verified. On Play reveal triggered. Spurious trash pop before reveal. evo_costs empty."
+      "notes": "Play cost 3 verified. On Play reveal 3 fires correctly."
     },
     "EX8-048": {
       "card_name": "Landramon",
-      "validated_date": "2026-03-01",
-      "report": "2026-03-01-rocks.md",
-      "status": "PARTIAL",
-      "notes": "Play cost 4 verified. evo_costs empty. WhenDigivolving play Close filter too broad."
+      "validated_date": "2026-03-02",
+      "report": "2026-03-02-rocks-retest.md",
+      "status": "PASS",
+      "notes": "Evo cost 2 from Lv3 verified. When Digivolving fires, plays Close from hand correctly."
     },
     "EX8-051": {
       "card_name": "Proganomon",
-      "validated_date": "2026-03-01",
-      "report": "2026-03-01-rocks.md",
-      "status": "PARTIAL",
-      "notes": "evo_costs empty. Collision+Piercing+Fragment keywords registered. Inherited de-digivolve."
+      "validated_date": "2026-03-02",
+      "report": "2026-03-02-rocks-retest.md",
+      "status": "PASS",
+      "notes": "Evo cost 3 from Lv4 verified. Keywords collision+fragment correct, DP 7000."
     },
     "EX8-055": {
       "card_name": "Pyramidimon",
-      "validated_date": "2026-03-01",
-      "report": "2026-03-01-rocks.md",
-      "status": "PARTIAL",
-      "notes": "evo_costs empty. Fragment. Trashes 1 not 3. No SecA+1 grant. End-of-turn no process callback."
+      "validated_date": "2026-03-02",
+      "report": "2026-03-02-rocks-retest.md",
+      "status": "PASS",
+      "notes": "Evo cost 4 from Lv5 verified. Fragment keyword, When Digivolving trash 3 + unsuspend + SA+1."
     },
     "EX8-056": {
       "card_name": "Kimeramon",
@@ -1614,24 +1584,23 @@
     },
     "EX8-067": {
       "card_name": "Close",
-      "validated_date": "2026-03-01",
-      "report": "2026-03-01-rocks.md",
-      "status": "PASS",
-      "notes": "Play cost 4 verified (10->6). set_memory_3 registered. WhenDigivolving place-from-trash has wrong impl. Security play."
+      "validated_date": "2026-03-02",
+      "report": "2026-03-02-rocks-retest.md",
+      "status": "PARTIAL",
+      "notes": "Tamer. Static analysis: set memory to 3 at start of turn."
     },
     "EX8-070": {
       "card_name": "Zofr Kabus",
-      "validated_date": "2026-03-01",
-      "report": "2026-03-01-rocks.md",
-      "status": "PARTIAL",
-      "notes": "Server crashed on play. Collision missing from grant. Security delete missing lowest-cost filter."
+      "validated_date": "2026-03-02",
+      "report": "2026-03-02-rocks-retest.md",
+      "status": "PASS",
+      "notes": "Play cost 2 verified. No crash. Trash 1 source, grant Collision+Piercing+Reboot+3K DP."
     },
     "EX8-074": {
-      "card_name": "MedievalGallantmon",
-      "validated_date": "2026-03-01",
-      "report": "2026-03-01-royal-knights.md",
       "status": "PASS",
-      "notes": "Play cost 11 PASS. Alliance PASS. Vortex PASS. Suspend-to-reduce-cost untested."
+      "validated_date": "2026-03-03",
+      "report": "2026-03-03-royal-knights-script-audit.md",
+      "notes": "Script fixed: suspend-self cost, DP scaling, removed fabricated immunity"
     },
     "LM-027": {
       "card_name": "Red Scramble",
@@ -1642,17 +1611,17 @@
     },
     "LM-028": {
       "card_name": "Blue Scramble",
-      "validated_date": "2026-03-01",
-      "report": "2026-03-01-ts-neptune.md",
+      "validated_date": "2026-03-03",
+      "report": "2026-03-03-ts-neptune-gameplay.md",
       "status": "PARTIAL",
-      "notes": "Use cost 2 correct. Places in battle area. Digivolve-from-hand effect selects a Digimon but digivolution does not execute. Delay present in script."
+      "notes": "Not retested in gameplay this session. Previous: Use cost 2, Digivolve-from-hand selects a Digimon but digivolution does not execute. Delay present."
     },
     "LM-031": {
       "card_name": "Black Scramble",
-      "validated_date": "2026-03-01",
-      "report": "2026-03-01-rocks.md",
-      "status": "PASS",
-      "notes": "Digivolve cost-3 with black filters. Delay return-to-deck-top + play DP<=2000. Security play from trash."
+      "validated_date": "2026-03-03",
+      "report": "2026-03-03-diaboromon-retest.md",
+      "status": "PARTIAL",
+      "notes": "Option plays cost 2, Delay placement works. Digivolve-with-reduction untestable without valid targets in hand."
     },
     "LM-035": {
       "card_name": "Amber Memory Boost!",
@@ -1670,10 +1639,10 @@
     },
     "P-039": {
       "card_name": "Black Memory Boost!",
-      "validated_date": "2026-03-01",
-      "report": "2026-03-01-rocks.md",
-      "status": "PARTIAL",
-      "notes": "Reveal 4 with black Digimon filter. Spurious trash pop before reveal. Delay +2 memory correct."
+      "validated_date": "2026-03-02",
+      "report": "2026-03-02-rocks-retest.md",
+      "status": "PASS",
+      "notes": "Play cost 3 verified. Reveal 4 fires. Places in battle area. Delay available."
     },
     "P-040": {
       "card_name": "Purple Memory Boost!",
@@ -1698,10 +1667,10 @@
     },
     "P-107": {
       "card_name": "Defense Training",
-      "validated_date": "2026-03-01",
-      "report": "2026-03-01-rocks.md",
+      "validated_date": "2026-03-02",
+      "report": "2026-03-02-rocks-retest.md",
       "status": "PASS",
-      "notes": "Play cost 2 verified (10->8). Reveal 2 + add black card. Delay digivolve with cost -2. Spurious trash pop."
+      "notes": "Play cost 2 verified. Reveal effect fires. Places in battle area. Delay available."
     },
     "P-108": {
       "card_name": "Wisdom Training",
@@ -1712,24 +1681,23 @@
     },
     "P-167": {
       "card_name": "Landramon",
-      "validated_date": "2026-03-01",
-      "report": "2026-03-01-rocks.md",
-      "status": "PASS",
-      "notes": "Evo cost 2 from Black Lv.3 verified (10->8, +1 draw). Reveal with Mineral/Rock filter. Inherited de-digivolve."
+      "validated_date": "2026-03-02",
+      "report": "2026-03-02-rocks-retest.md",
+      "status": "PARTIAL",
+      "notes": "Evo cost 2 verified in prior session."
     },
     "P-169": {
       "card_name": "Close",
-      "validated_date": "2026-03-01",
-      "report": "2026-03-01-rocks.md",
+      "validated_date": "2026-03-02",
+      "report": "2026-03-02-rocks-retest.md",
       "status": "PASS",
-      "notes": "Play cost 4 verified (10->6). Start-of-main +1 memory. OnDigiCardTrashed suspend targets opponent (should be self). Security play."
+      "notes": "Free played via EX10-069. Start-of-Main +1 memory registered."
     },
     "P-186": {
-      "card_name": "Gallantmon",
-      "validated_date": "2026-03-01",
-      "report": "2026-03-01-royal-knights.md",
-      "status": "PARTIAL",
-      "notes": "Play cost 12 expected but observed 13 (possible name collision). Rush present on one Gallantmon."
+      "status": "PASS",
+      "validated_date": "2026-03-03",
+      "report": "2026-03-03-royal-knights-script-audit.md",
+      "notes": "Faithful, cost reduction + delete/recovery verified"
     },
     "P-187": {
       "card_name": "Mastemon",
@@ -1767,11 +1735,10 @@
       "notes": "Play cost 3 correct. DP=1000. Start of Main Phase free digivolve into Fallen Angel/TS present. Inherited Draw+Trash present."
     },
     "P-206": {
-      "card_name": "Digital Gate Open",
-      "validated_date": "2026-03-01",
-      "report": "2026-03-01-royal-knights.md",
       "status": "PASS",
-      "notes": "Play cost 4 PASS. Placed in BA as Delay PASS. Reveal + add resolved."
+      "validated_date": "2026-03-03",
+      "report": "2026-03-03-royal-knights-script-audit.md",
+      "notes": "Script fixed: color-match Delay, security card-to-hand"
     },
     "P-225": {
       "card_name": "DigiLab",
@@ -1781,11 +1748,10 @@
       "notes": "Fixed Delay condition; process3 targets own CS Lv.4+ Digimon; security effect added."
     },
     "RB1-035": {
-      "card_name": "Hokuto Amanokawa",
-      "validated_date": "2026-03-01",
-      "report": "2026-03-01-royal-knights.md",
       "status": "PASS",
-      "notes": "Play cost 2 PASS. Reactive effects untested."
+      "validated_date": "2026-03-03",
+      "report": "2026-03-03-royal-knights-script-audit.md",
+      "notes": "Faithful, no changes needed"
     },
     "ST10-02": {
       "card_name": "Salamon",
@@ -1802,11 +1768,10 @@
       "notes": "On Play reveal top 3 add yellow+purple. Cost reduction for Archangel/Fallen Angel. Inherited End of Turn DNA."
     },
     "ST12-12": {
-      "card_name": "Sistermon Blanc",
-      "validated_date": "2026-03-02",
-      "report": "2026-03-02-royal-knights-retest.md",
-      "status": "PARTIAL",
-      "notes": "Passive keyword evaluation now honors can_use_condition(); live gameplay verification of Decoy gating is still pending."
+      "status": "PASS",
+      "validated_date": "2026-03-03",
+      "report": "2026-03-03-royal-knights-script-audit.md",
+      "notes": "Script fixed: optional, empty-hand guard, draw sequencing"
     },
     "ST20-05": {
       "card_name": "Gatomon",
@@ -1852,45 +1817,45 @@
     },
     "ST6-15": {
       "card_name": "Death Claw",
-      "status": "PARTIAL",
-      "validated_date": "2026-03-01",
-      "report": "2026-03-01-millennium.md",
-      "notes": "Newly-implemented. Delete mechanics work. Option stays in battle area (engine-wide)."
+      "status": "PASS",
+      "validated_date": "2026-03-03",
+      "report": "2026-03-03-millennium-retest.md",
+      "notes": "Play cost 1 correct. Option trashed after resolve. Delete your Digimon to delete opponent Lv4 or lower logged."
     },
     "EX9-006": {
       "card_name": "Pagumon",
       "status": "PARTIAL",
-      "validated_date": "2026-03-01",
-      "report": "2026-03-01-millennium.md",
-      "notes": "Script exists. EX9 cards were not in card DB during initial QA test. Ingested now but untested in gameplay."
+      "validated_date": "2026-03-03",
+      "report": "2026-03-03-millennium-retest.md",
+      "notes": "Hatched from egg deck correctly. Lv2 Digi-Egg. Inherited When Attacking SA+1 not triggerable in test."
     },
     "EX9-015": {
       "card_name": "Gizamon",
-      "status": "PARTIAL",
-      "validated_date": "2026-03-01",
-      "report": "2026-03-01-millennium.md",
-      "notes": "Script exists. EX9 cards were not in card DB during initial QA test. Ingested now but untested in gameplay."
+      "status": "PASS",
+      "validated_date": "2026-03-03",
+      "report": "2026-03-03-millennium-retest.md",
+      "notes": "Play cost 3 correct. Training keyword present (action 1010). Lv3 Blue."
     },
     "EX9-058": {
       "card_name": "Gazimon",
-      "status": "PARTIAL",
-      "validated_date": "2026-03-01",
-      "report": "2026-03-01-millennium.md",
-      "notes": "Script exists. EX9 cards were not in card DB during initial QA test. Ingested now but untested in gameplay."
+      "status": "PASS",
+      "validated_date": "2026-03-03",
+      "report": "2026-03-03-millennium-retest.md",
+      "notes": "Play cost 3 correct. On Play reveal effect logged. Serves as Lv3 base for digivolve."
     },
     "EX9-059": {
       "card_name": "Ogremon",
-      "status": "PARTIAL",
-      "validated_date": "2026-03-01",
-      "report": "2026-03-01-millennium.md",
-      "notes": "Script exists. EX9 cards were not in card DB during initial QA test. Ingested now but untested in gameplay."
+      "status": "PASS",
+      "validated_date": "2026-03-03",
+      "report": "2026-03-03-millennium-retest.md",
+      "notes": "Play cost 4 correct. Digivolve cost 2 correct (Purple Lv3). When Digivolving fires. Training present."
     },
     "EX9-060": {
       "card_name": "Devidramon",
-      "status": "PARTIAL",
-      "validated_date": "2026-03-01",
-      "report": "2026-03-01-millennium.md",
-      "notes": "Script exists. EX9 cards were not in card DB during initial QA test. Ingested now but untested in gameplay."
+      "status": "PASS",
+      "validated_date": "2026-03-03",
+      "report": "2026-03-03-millennium-retest.md",
+      "notes": "Play cost 5 correct. Digivolve available onto Lv3 bases. Training present."
     }
   }
 }

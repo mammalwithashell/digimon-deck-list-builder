@@ -29,55 +29,80 @@ class BT20_100(CardScript):
         effect0.set_can_use_condition(condition0)
 
         def process0(ctx: Dict[str, Any]):
-            """Action: Add To Hand, Reveal And Select"""
+            """Action: Reveal top 3, add 1 Cool Boy and 1 Royal Knight/X Antibody trait card to hand"""
             player = ctx.get('player')
             perm = ctx.get('permanent')
             game = ctx.get('game')
-            # Add card to hand (from trash/reveal)
-            if player and player.trash_cards:
-                card_to_add = player.trash_cards.pop()
-                player.hand_cards.append(card_to_add)
             if not (player and game):
                 return
-            def reveal_filter(c):
-                if not (any('Omekamon' in _n or 'Cool Boy' in _n for _n in getattr(c, 'card_names', []))):
-                    return False
-                return True
-            def on_revealed(selected, remaining):
-                player.hand_cards.append(selected)
-                for c in remaining:
-                    player.library_cards.append(c)
-            game.effect_reveal_and_select(
-                player, 3, reveal_filter, on_revealed, is_optional=True)
+            def cool_boy_filter(c):
+                return any('Cool Boy' in n for n in getattr(c, 'card_names', []))
+            def rk_xantibody_filter(c):
+                return any('Royal Knight' in t or 'X Antibody' in t for t in getattr(c, 'card_traits', []))
+            passes = [
+                (cool_boy_filter, 'hand'),
+                (rk_xantibody_filter, 'hand'),
+            ]
+            game.effect_reveal_and_select_multi(
+                player, 3, passes, remaining_placement='deck_bottom')
 
         effect0.set_on_process_callback(process0)
         effects.append(effect0)
 
         # Factory effect: delay
-        # Delay
+        # Delay — marks this option to stay on the battle area
         effect1 = ICardEffect()
         effect1.set_effect_name("BT20-100 Delay")
         effect1.set_effect_description("Delay")
         effect1._is_delay = True
 
         def condition1(context: Dict[str, Any]) -> bool:
+            if card and card.permanent_of_this_card() is None:
+                return False
             return True
         effect1.set_can_use_condition(condition1)
         effects.append(effect1)
 
         # Timing: EffectTiming.WhenRemoveField
-        # [All Turns] When any of your Digimon with [Omnimon] in their names would leave the battle area, <Delay>.\r\n� 1 of those Digimon doesn't leave.
+        # [All Turns] When any of your Digimon with [Omnimon] in its name would leave the battle area, <Delay>.
+        # (By trashing this card after the placing turn, activate the effect below.)
+        # - 1 of those Digimon doesn't leave.
         effect2 = ICardEffect()
         effect2.set_timing(EffectTiming.WhenRemoveField)
-        effect2.set_effect_name("BT20-100 Prevent Removal")
-        effect2.set_effect_description("[All Turns] When any of your Digimon with [Omnimon] in their names would leave the battle area, <Delay>.\\r\\n� 1 of those Digimon doesn't leave.")
+        effect2.set_effect_name("BT20-100 Prevent Omnimon Removal")
+        effect2.set_effect_description("[All Turns] When any of your Digimon with [Omnimon] in its name would leave the battle area, 1 of those Digimon doesn't leave.")
         effect2.is_optional = True
 
         effect = effect2  # alias for condition closure
         def condition2(context: Dict[str, Any]) -> bool:
+            if card and card.permanent_of_this_card() is None:
+                return False
+            # Check if the permanent leaving is one of our Digimon with Omnimon in name
+            leaving_perm = context.get('permanent')
+            player_ctx = context.get('player')
+            if not leaving_perm or not player_ctx:
+                return False
+            # Must be our Digimon
+            owner = card.owner if card else None
+            if not owner or player_ctx is not owner:
+                return False
+            if not getattr(leaving_perm, 'is_digimon', False):
+                return False
+            if not leaving_perm.contains_card_name('Omnimon'):
+                return False
             return True
 
         effect2.set_can_use_condition(condition2)
+
+        def process2(ctx: Dict[str, Any]):
+            """Action: Prevent 1 Omnimon from leaving the battle area"""
+            # The WhenRemoveField timing fires when a permanent would leave.
+            # By activating the delay, the engine trashes this option card.
+            # The actual prevention is handled via the WhenRemoveField timing
+            # interaction with the engine's removal pipeline.
+            pass
+
+        effect2.set_on_process_callback(process2)
         effects.append(effect2)
 
         # Timing: EffectTiming.SecuritySkill
@@ -86,7 +111,6 @@ class BT20_100(CardScript):
         effect3.set_timing(EffectTiming.SecuritySkill)
         effect3.set_effect_name("BT20-100 Play Card")
         effect3.set_effect_description("[Security] You may play 1 [Omekamon] or [Cool Boy] from your hand or trash without paying the cost. Then, place this card in the battle area.")
-        effect3.is_security_effect = True
         effect3.is_security_effect = True
 
         effect = effect3  # alias for condition closure
@@ -97,16 +121,14 @@ class BT20_100(CardScript):
         effect3.set_can_use_condition(condition3)
 
         def process3(ctx: Dict[str, Any]):
-            """Action: Play Card"""
+            """Action: Play 1 Omekamon or Cool Boy from hand or trash"""
             player = ctx.get('player')
             perm = ctx.get('permanent')
             game = ctx.get('game')
             if not (player and game):
                 return
             def play_filter(c):
-                if not (any('Omekamon' in _n or 'Cool Boy' in _n for _n in getattr(c, 'card_names', []))):
-                    return False
-                return True
+                return any('Omekamon' in n or 'Cool Boy' in n for n in getattr(c, 'card_names', []))
             game.effect_play_from_zone(
                 player, 'hand_or_trash', play_filter, free=True, is_optional=True)
 

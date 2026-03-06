@@ -67,11 +67,82 @@ class BT20_102(CardScript):
         effect2.set_can_use_condition(condition2)
         effects.append(effect2)
 
+        def _check_omnimon_or_xantibody_in_sources(permanent):
+            """Check if [Omnimon] or [X Antibody] is in this Digimon's digivolution cards."""
+            if not permanent:
+                return False
+            # digivolution cards = card_sources[:-1] (everything under top card)
+            for src in permanent.card_sources[:-1]:
+                if src.contains_card_name('Omnimon'):
+                    return True
+                if any('X Antibody' in t for t in getattr(src, 'card_traits', [])):
+                    return True
+            return False
+
+        def _board_wipe_and_bottom_deck(player, perm, game):
+            """Shared: choose 1 own Digimon + 1 opp Digimon to keep, delete rest, then bottom deck 1 opp Digimon."""
+            enemy = player.enemy if player else None
+            if not enemy:
+                return
+
+            def own_digi_filter(p):
+                return p.is_digimon
+
+            def on_own_keep(kept_own):
+                """After choosing own Digimon to keep, choose opponent's Digimon to keep."""
+                def opp_digi_filter(p):
+                    return p.is_digimon
+
+                def on_opp_keep(kept_opp):
+                    """After choosing opponent's Digimon to keep, delete all others, then bottom deck 1 opp."""
+                    # Delete all own Digimon except the one kept
+                    own_to_delete = [p for p in list(player.battle_area)
+                                     if p.is_digimon and p is not kept_own]
+                    for p in own_to_delete:
+                        player.delete_permanent(p)
+                    # Delete all opponent Digimon except the one kept
+                    opp_to_delete = [p for p in list(enemy.battle_area)
+                                     if p.is_digimon and p is not kept_opp]
+                    for p in opp_to_delete:
+                        enemy.delete_permanent(p)
+                    # Step 3: Return 1 opponent's Digimon to the bottom of the deck
+                    def bottom_filter(p):
+                        return p.is_digimon
+                    def on_bottom(target_perm):
+                        player.enemy.return_permanent_to_deck_bottom(target_perm)
+                    game.effect_select_opponent_permanent(
+                        player, on_bottom, filter_fn=bottom_filter, is_optional=False)
+
+                # If opponent has Digimon, let player choose which one survives
+                opp_digimon = [p for p in enemy.battle_area if p.is_digimon]
+                if opp_digimon:
+                    game.effect_select_opponent_permanent(
+                        player, on_opp_keep, filter_fn=opp_digi_filter, is_optional=False)
+                else:
+                    # No opponent Digimon — just delete own except kept, then bottom deck
+                    own_to_delete = [p for p in list(player.battle_area)
+                                     if p.is_digimon and p is not kept_own]
+                    for p in own_to_delete:
+                        player.delete_permanent(p)
+                    # Still try to bottom deck if opponent somehow has Digimon after deletions
+                    def bottom_filter(p):
+                        return p.is_digimon
+                    def on_bottom(target_perm):
+                        player.enemy.return_permanent_to_deck_bottom(target_perm)
+                    game.effect_select_opponent_permanent(
+                        player, on_bottom, filter_fn=bottom_filter, is_optional=False)
+
+            # If player has Digimon, let them choose which one survives
+            own_digimon = [p for p in player.battle_area if p.is_digimon]
+            if own_digimon:
+                game.effect_select_own_permanent(
+                    player, on_own_keep, filter_fn=own_digi_filter, is_optional=False)
+
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [On Play] If [Omnimon] or [X Antibody] is in this Digimon's digivolution cards, choose 1 of both players' Digimon and delete all other Digimon. Then, return 1 of your opponent's Digimon to the bottom of the deck.
         effect3 = ICardEffect()
         effect3.set_timing(EffectTiming.OnEnterFieldAnyone)
-        effect3.set_effect_name("BT20-102 Choos 1 of both players' Digimon, delete the rest, then bottom deck 1 opponents Digimon")
+        effect3.set_effect_name("BT20-102 Choose 1 of both players' Digimon, delete the rest, then bottom deck 1 opponent's Digimon")
         effect3.set_effect_description("[On Play] If [Omnimon] or [X Antibody] is in this Digimon's digivolution cards, choose 1 of both players' Digimon and delete all other Digimon. Then, return 1 of your opponent's Digimon to the bottom of the deck.")
         effect3.is_on_play = True
 
@@ -79,51 +150,14 @@ class BT20_102(CardScript):
         def condition3(context: Dict[str, Any]) -> bool:
             if card and card.permanent_of_this_card() is None:
                 return False
-            # Triggered on play — validated by engine timing
             permanent = effect.effect_source_permanent if hasattr(effect, 'effect_source_permanent') else None
-            if permanent:
-                if not any(src.contains_card_name('Omnimon') for src in permanent.digivolution_cards):
-                    return False
-            else:
+            if not permanent:
+                return False
+            if not _check_omnimon_or_xantibody_in_sources(permanent):
                 return False
             return True
 
         effect3.set_can_use_condition(condition3)
-
-        def _board_wipe_and_bottom_deck(player, perm, game):
-            """Shared: choose 1 own Digimon + 1 opp Digimon to keep, delete rest, then bottom deck 1 opp Digimon."""
-            enemy = player.enemy if player else None
-            if not enemy:
-                return
-            # Step 1: Choose 1 own Digimon to keep (self by default)
-            self_perm = card.permanent_of_this_card() if card else None
-            # Delete all own Digimon except self
-            own_to_delete = [p for p in list(player.battle_area)
-                             if p.is_digimon and p is not self_perm]
-            for p in own_to_delete:
-                player.delete_permanent(p)
-            # Step 2: Choose 1 opponent Digimon to keep, delete rest
-            def opp_keep_filter(p):
-                return p.is_digimon
-            def on_keep(kept_perm):
-                opp_to_delete = [p for p in list(enemy.battle_area)
-                                 if p.is_digimon and p is not kept_perm]
-                for p in opp_to_delete:
-                    enemy.delete_permanent(p)
-                # Step 3: Return 1 opp Digimon to deck bottom
-                def bottom_filter(p):
-                    return p.is_digimon
-                def on_bottom(target_perm):
-                    if target_perm in enemy.battle_area:
-                        enemy.battle_area.remove(target_perm)
-                        if game and hasattr(game, 'cleanup_modifiers_for_permanent'):
-                            game.cleanup_modifiers_for_permanent(target_perm)
-                        for cs in target_perm.card_sources:
-                            enemy.library_cards.append(cs)
-                game.effect_select_opponent_permanent(
-                    player, on_bottom, filter_fn=bottom_filter, is_optional=True)
-            game.effect_select_opponent_permanent(
-                player, on_keep, filter_fn=opp_keep_filter, is_optional=False)
 
         def process3(ctx: Dict[str, Any]):
             """Action: Board wipe (keep 1 each), then bottom deck 1 opp Digimon (On Play)"""
@@ -141,7 +175,7 @@ class BT20_102(CardScript):
         # [When Digivolving] If [Omnimon] or [X Antibody] is in this Digimon's digivolution cards, choose 1 of both players' Digimon and delete all other Digimon. Then, return 1 of your opponent's Digimon to the bottom of the deck.
         effect4 = ICardEffect()
         effect4.set_timing(EffectTiming.OnEnterFieldAnyone)
-        effect4.set_effect_name("BT20-102 Choos 1 of both players' Digimon, delete the rest, then bottom deck 1 opponents Digimon")
+        effect4.set_effect_name("BT20-102 Choose 1 of both players' Digimon, delete the rest, then bottom deck 1 opponent's Digimon")
         effect4.set_effect_description("[When Digivolving] If [Omnimon] or [X Antibody] is in this Digimon's digivolution cards, choose 1 of both players' Digimon and delete all other Digimon. Then, return 1 of your opponent's Digimon to the bottom of the deck.")
         effect4.is_when_digivolving = True
 
@@ -149,12 +183,10 @@ class BT20_102(CardScript):
         def condition4(context: Dict[str, Any]) -> bool:
             if card and card.permanent_of_this_card() is None:
                 return False
-            # Triggered when digivolving — validated by engine timing
             permanent = effect.effect_source_permanent if hasattr(effect, 'effect_source_permanent') else None
-            if permanent:
-                if not any(src.contains_card_name('Omnimon') for src in permanent.digivolution_cards):
-                    return False
-            else:
+            if not permanent:
+                return False
+            if not _check_omnimon_or_xantibody_in_sources(permanent):
                 return False
             return True
 
@@ -205,7 +237,7 @@ class BT20_102(CardScript):
                 target_perm.grant_keyword('_is_rush')
                 from digimon_gym.engine.interfaces.modifiers import ModifierType
                 game.register_modifier(
-                    ModifierType.CAN_ATTACK_UNSUSPENDED, target_perm,
+                    target_perm, ModifierType.CAN_ATTACK_UNSUSPENDED,
                     value_fn=lambda: True, expiry='end_of_turn')
             game.effect_select_own_permanent(
                 player, on_grant, filter_fn=digi_filter, is_optional=True)

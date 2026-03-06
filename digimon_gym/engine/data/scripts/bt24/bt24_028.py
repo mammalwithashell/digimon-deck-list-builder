@@ -137,28 +137,68 @@ class BT24_028(CardScript):
         effect4.set_hash_string("BT24_028_ESS")
         effect4.is_on_attack = True
 
-        effect = effect4  # alias for condition closure
         def condition4(context: Dict[str, Any]) -> bool:
             if card and card.permanent_of_this_card() is None:
                 return False
-            # Triggered on attack — validated by engine timing
-            return True
+            perm = card.permanent_of_this_card() if card else None
+            if not perm:
+                return False
+            # Check if any eligible digi source cards exist
+            top = perm.top_card
+            for cs in perm.card_sources:
+                if cs is top:
+                    continue
+                if not getattr(cs, 'is_digimon', False):
+                    continue
+                level = getattr(cs, 'level', None)
+                if level is None or level > 4:
+                    continue
+                colors = [c.name for c in (getattr(cs, 'card_colors', None) or [])]
+                if 'Blue' not in colors:
+                    continue
+                traits = getattr(cs, 'card_traits', []) or []
+                if any('TS' in t for t in traits):
+                    return True
+            return False
 
         effect4.set_can_use_condition(condition4)
 
         def process4(ctx: Dict[str, Any]):
-            """Action: Play Card"""
+            """Play 1 Lv.4 or lower blue [TS] Digimon from digi sources."""
             player = ctx.get('player')
             perm = ctx.get('permanent')
             game = ctx.get('game')
-            if not (player and game):
+            if not (player and perm and game):
                 return
-            def play_filter(c):
-                if not (any('Neptunemon' in _n for _n in getattr(c, 'card_names', []))):
-                    return False
-                return True
-            game.effect_play_from_zone(
-                player, 'hand', play_filter, free=True, is_optional=True)
+            # Find eligible cards in digi sources (not top card)
+            top = perm.top_card
+            eligible = []
+            for cs in perm.card_sources:
+                if cs is top:
+                    continue
+                if not getattr(cs, 'is_digimon', False):
+                    continue
+                level = getattr(cs, 'level', None)
+                if level is None or level > 4:
+                    continue
+                colors = [c.name for c in (getattr(cs, 'card_colors', None) or [])]
+                if 'Blue' not in colors:
+                    continue
+                traits = getattr(cs, 'card_traits', []) or []
+                if not any('TS' in t for t in traits):
+                    continue
+                eligible.append(cs)
+            if not eligible:
+                return
+            # Auto-select first eligible (digi source selection not supported)
+            selected = eligible[0]
+            perm.card_sources.remove(selected)
+            played = player.play_card_from_source(selected, pay_cost=False)
+            game.execute_effects(
+                EffectTiming.OnEnterFieldAnyone,
+                {"played_card": selected, "played_permanent": played,
+                 "event_player": player},
+            )
 
         effect4.set_on_process_callback(process4)
         effects.append(effect4)

@@ -38,46 +38,24 @@ class BT24_041(CardScript):
         effect1.set_timing(EffectTiming.BeforePayCost)
         effect1.set_effect_name("BT24-041 Reduce play cost (5)")
         effect1.set_effect_description("When this card would be played, if you have an [Iliad] trait Digimon or Tamer, reduce the play cost by 5.")
+        effect1.cost_reduction = 5
 
-        effect = effect1  # alias for condition closure
         def condition1(context: Dict[str, Any]) -> bool:
-            return True
+            if context.get('card_source') is not card:
+                return False
+            owner = getattr(card, 'owner', None)
+            if not owner:
+                return False
+            for p in owner.battle_area:
+                traits = []
+                if p.top_card:
+                    traits = getattr(p.top_card, 'card_traits', []) or []
+                if any('Iliad' in t for t in traits):
+                    return True
+            return False
 
         effect1.set_can_use_condition(condition1)
-
-        def process1(ctx: Dict[str, Any]):
-            """Action: Effect"""
-            player = ctx.get('player')
-            perm = ctx.get('permanent')
-            game = ctx.get('game')
-            # Cost reduction (variable amount) — handled via cost_reduction property
-            pass  # descriptive-tagged: cost_reduction
-
-        effect1.set_on_process_callback(process1)
         effects.append(effect1)
-
-        # Timing: EffectTiming.None
-        # Effect
-        effect2 = ICardEffect()
-        effect2.set_effect_name("BT24-041 Play Cost -5")
-        effect2.set_effect_description("Effect")
-
-        effect = effect2  # alias for condition closure
-        def condition2(context: Dict[str, Any]) -> bool:
-            return True
-
-        effect2.set_can_use_condition(condition2)
-
-        def process2(ctx: Dict[str, Any]):
-            """Action: Effect"""
-            player = ctx.get('player')
-            perm = ctx.get('permanent')
-            game = ctx.get('game')
-            # Cost reduction (variable amount) — handled via cost_reduction property
-            pass  # descriptive-tagged: cost_reduction
-
-        effect2.set_on_process_callback(process2)
-        effects.append(effect2)
 
         # Timing: EffectTiming.OnEnterFieldAnyone
         # Play Card, De Digivolve
