@@ -56,7 +56,8 @@ It also includes an admin AI workflow for issue triage, AI task dispatch, autofi
 
 ### Tensor Contract
 
-- Tensor size: `981`
+- Tensor size: `6891` (with `EMBEDDING_DIM=16`)
+- Card identities encoded as frozen autoencoder embeddings (16 floats per card)
 - See `docs/TENSOR_SPEC.md` for exact layout
 
 ### Action Contract

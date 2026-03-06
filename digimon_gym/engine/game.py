@@ -3,10 +3,12 @@ from typing import TYPE_CHECKING, Optional, Union, List, Dict, Any, Callable
 from dataclasses import dataclass, field
 import random
 
+import numpy as np
+
 from digimon_gym.engine.data.enums import GamePhase, EffectTiming, AttackResolution, PendingAction
 from digimon_gym.engine.core.player import Player
 from digimon_gym.engine.core.permanent import Permanent
-from digimon_gym.engine.data.card_registry import CardRegistry
+from digimon_gym.engine.data.card_registry import CardRegistry, EMBEDDING_DIM
 from digimon_gym.engine.loggers import IGameLogger, SilentLogger
 from digimon_gym.engine.interfaces.modifiers import ModifierRegistry, ModifierType, ModifierEntry
 from digimon_gym.engine.validation.digivolve_validator import (
@@ -18,15 +20,36 @@ if TYPE_CHECKING:
     from .core.card_source import CardSource
 
 # ─── Tensor / Action Space Constants (match C# Digimon.Core) ────────
-TENSOR_SIZE = 981
 ACTION_SPACE_SIZE = 2120
 FIELD_SLOTS = 12
-SLOT_SIZE = 31
 MAX_HAND = 20
 MAX_TRASH = 45
 MAX_SECURITY = 10
 MAX_SOURCES = 8
 MAX_REVEALED = 10
+
+# Per-slot layout: embedding(EMBEDDING_DIM) + 6 scalars + MAX_SOURCES * (EMBEDDING_DIM + 2)
+SOURCE_ENTRY_SIZE = EMBEDDING_DIM + 2   # card embedding + opt_state + dp_contribution
+SLOT_SIZE = EMBEDDING_DIM + 6 + MAX_SOURCES * SOURCE_ENTRY_SIZE  # 16 + 6 + 8*18 = 166
+
+# Tensor layout offsets
+_GLOBAL = 10
+_MY_BATTLE = FIELD_SLOTS * SLOT_SIZE      # 1992
+_OPP_BATTLE = FIELD_SLOTS * SLOT_SIZE     # 1992
+_MY_HAND = MAX_HAND * EMBEDDING_DIM      # 320
+_OPP_HAND = MAX_HAND * EMBEDDING_DIM     # 320
+_MY_TRASH = MAX_TRASH * EMBEDDING_DIM    # 720
+_OPP_TRASH = MAX_TRASH * EMBEDDING_DIM   # 720
+_MY_SECURITY = MAX_SECURITY * EMBEDDING_DIM   # 160
+_OPP_SECURITY = MAX_SECURITY * EMBEDDING_DIM  # 160
+_MY_BREEDING = 1 * SLOT_SIZE              # 166
+_OPP_BREEDING = 1 * SLOT_SIZE             # 166
+_REVEALED = MAX_REVEALED * EMBEDDING_DIM  # 160
+_SELECTION = 5
+
+TENSOR_SIZE = (_GLOBAL + _MY_BATTLE + _OPP_BATTLE + _MY_HAND + _OPP_HAND +
+               _MY_TRASH + _OPP_TRASH + _MY_SECURITY + _OPP_SECURITY +
+               _MY_BREEDING + _OPP_BREEDING + _REVEALED + _SELECTION)  # 6891
 
 # ─── Selection Action Conventions ───────────────────────────────────
 # When in SelectTarget/SelectMaterial/SelectHand/SelectReveal/SelectSecurity,
@@ -1592,29 +1615,31 @@ class Game:
 
     # ─── Board State Tensor ──────────────────────────────────────────
 
-    def get_board_state_tensor(self, player_id: int) -> List[float]:
-        """Build a 981-float tensor representing the board from player's perspective.
+    def get_board_state_tensor(self, player_id: int) -> np.ndarray:
+        """Build a flat tensor representing the board from player's perspective.
 
-        Layout:
-          [0-9]     Global data
-          [10-381]  My battle area  (12 slots × 31)
-          [382-753] Opp battle area (12 slots × 31)
-          [754-773] My hand  (20)
-          [774-793] Opp hand (20)
-          [794-838] My trash (45)
-          [839-883] Opp trash (45)
-          [884-893] My security (10)
-          [894-903] Opp security (10)
-          [904-934] My breeding (1 slot × 31)
-          [935-965] Opp breeding (1 slot × 31)
-          [966-975] Revealed cards (10)
-          [976-980] Selection context (5)
+        Returns a numpy array of shape (TENSOR_SIZE,) with dtype float32.
+        Card identities are encoded as EMBEDDING_DIM-float embedding vectors.
+
+        Layout (EMBEDDING_DIM=16, TENSOR_SIZE=6891):
+          [0-9]         Global data
+          [10-2001]     My battle area  (12 slots × 166)
+          [2002-3993]   Opp battle area (12 slots × 166)
+          [3994-4313]   My hand  (20 × 16)
+          [4314-4633]   Opp hand (20 × 16)
+          [4634-5353]   My trash (45 × 16)
+          [5354-6073]   Opp trash (45 × 16)
+          [6074-6233]   My security (10 × 16)
+          [6234-6393]   Opp security (10 × 16)
+          [6394-6559]   My breeding (1 slot × 166)
+          [6560-6725]   Opp breeding (1 slot × 166)
+          [6726-6885]   Revealed cards (10 × 16)
+          [6886-6890]   Selection context (5)
         """
         me = self.player1 if player_id == 1 else self.player2
         opp = self.player2 if player_id == 1 else self.player1
 
-        # Pre-allocate tensor with zeros (faster than repeated appending)
-        t = [0.0] * TENSOR_SIZE
+        t = np.zeros(TENSOR_SIZE, dtype=np.float32)
 
         # --- Global [0-9] ---
         t[0] = float(self.turn_count)
@@ -1622,42 +1647,54 @@ class Game:
         t[2] = float(self._get_memory_for(me))
         # [3-9] are reserved (already 0.0)
 
-        # --- My field [10-381] ---
-        self._write_field(t, 10, me.battle_area, FIELD_SLOTS)
+        # --- My field ---
+        off = _GLOBAL
+        self._write_field(t, off, me.battle_area, FIELD_SLOTS)
 
-        # --- Opp field [382-753] ---
-        self._write_field(t, 382, opp.battle_area, FIELD_SLOTS)
+        # --- Opp field ---
+        off += _MY_BATTLE
+        self._write_field(t, off, opp.battle_area, FIELD_SLOTS)
 
-        # --- My hand [754-773] ---
-        self._write_card_ids(t, 754, me.hand_cards, MAX_HAND)
+        # --- My hand ---
+        off += _OPP_BATTLE
+        self._write_card_embeddings(t, off, me.hand_cards, MAX_HAND)
 
-        # --- Opp hand [774-793] ---
-        self._write_card_ids(t, 774, opp.hand_cards, MAX_HAND)
+        # --- Opp hand ---
+        off += _MY_HAND
+        self._write_card_embeddings(t, off, opp.hand_cards, MAX_HAND)
 
-        # --- My trash [794-838] ---
-        self._write_card_ids(t, 794, me.trash_cards, MAX_TRASH)
+        # --- My trash ---
+        off += _OPP_HAND
+        self._write_card_embeddings(t, off, me.trash_cards, MAX_TRASH)
 
-        # --- Opp trash [839-883] ---
-        self._write_card_ids(t, 839, opp.trash_cards, MAX_TRASH)
+        # --- Opp trash ---
+        off += _MY_TRASH
+        self._write_card_embeddings(t, off, opp.trash_cards, MAX_TRASH)
 
-        # --- My security [884-893] ---
-        self._write_card_ids(t, 884, me.security_cards, MAX_SECURITY)
+        # --- My security ---
+        off += _OPP_TRASH
+        self._write_card_embeddings(t, off, me.security_cards, MAX_SECURITY)
 
-        # --- Opp security [894-903] ---
-        self._write_card_ids(t, 894, opp.security_cards, MAX_SECURITY)
+        # --- Opp security ---
+        off += _MY_SECURITY
+        self._write_card_embeddings(t, off, opp.security_cards, MAX_SECURITY)
 
-        # --- My breeding [904-934] ---
+        # --- My breeding ---
+        off += _OPP_SECURITY
         breeding_list = [me.breeding_area] if me.breeding_area else []
-        self._write_field(t, 904, breeding_list, 1)
+        self._write_field(t, off, breeding_list, 1)
 
-        # --- Opp breeding [935-965] ---
+        # --- Opp breeding ---
+        off += _MY_BREEDING
         opp_breeding_list = [opp.breeding_area] if opp.breeding_area else []
-        self._write_field(t, 935, opp_breeding_list, 1)
+        self._write_field(t, off, opp_breeding_list, 1)
 
-        # --- Revealed cards [966-975] ---
-        self._write_card_ids(t, 966, self.revealed_cards, MAX_REVEALED)
+        # --- Revealed cards ---
+        off += _OPP_BREEDING
+        self._write_card_embeddings(t, off, self.revealed_cards, MAX_REVEALED)
 
-        # --- Selection context [976-980] ---
+        # --- Selection context ---
+        off += _REVEALED
         ps = self.pending_selection
         if self.current_phase in (
             GamePhase.SelectTarget, GamePhase.SelectMaterial,
@@ -1665,13 +1702,13 @@ class Game:
             GamePhase.SelectHand, GamePhase.SelectReveal,
             GamePhase.SelectEffectChoice, GamePhase.SelectSecurity,
         ):
-            t[976] = float(self.current_phase.value)
+            t[off] = float(self.current_phase.value)
 
         if ps:
-            t[977] = float(len(ps.valid_indices))
-            t[978] = float(ps.selecting_player.player_id)
+            t[off + 1] = float(len(ps.valid_indices))
+            t[off + 2] = float(ps.selecting_player.player_id)
 
-        # [979-980] are reserved (already 0.0)
+        # [off+3, off+4] are reserved (already 0.0)
 
         return t
 
@@ -1682,58 +1719,53 @@ class Game:
         return -self.memory
 
     @staticmethod
-    def _write_field(tensor: List[float], start_idx: int, permanents: List[Permanent], slots: int):
+    def _write_field(tensor: np.ndarray, start_idx: int, permanents: List[Permanent], slots: int):
         """Write field slot data into tensor starting at start_idx.
 
-        Layout per slot (31 floats):
-          +0:  top card internal ID
-          +1:  current DP
-          +2:  suspended (0/1)
-          +3:  OPT total (count of all once-per-turn effects)
-          +4:  OPT used  (count of OPT effects activated this turn)
-          +5:  linked card count
-          +6:  source count
-          +7..+30: 8 source entries × 3 floats each:
-                   [card_id, opt_state, dp_contribution]
+        Layout per slot (SLOT_SIZE floats, default 166):
+          +0..+15:  top card embedding (EMBEDDING_DIM)
+          +16:      current DP
+          +17:      suspended (0/1)
+          +18:      OPT total
+          +19:      OPT used
+          +20:      linked card count
+          +21:      source count
+          +22..+165: 8 source entries × (EMBEDDING_DIM + 2) each:
+                     [embedding..., opt_state, dp_contribution]
         """
+        E = EMBEDDING_DIM
         for i, perm in enumerate(permanents[:slots]):
             base = start_idx + i * SLOT_SIZE
             top = perm.top_card
 
-            # +0: top card normalized ID
-            tensor[base] = CardRegistry.get_norm_id(top.card_id) if top else 0.0
+            # +0..+E-1: top card embedding
+            if top:
+                tensor[base:base + E] = CardRegistry.get_embedding(top.card_id)
 
-            # +1: current DP (None for eggs/tamers → 0.0)
-            tensor[base + 1] = float(perm.dp or 0)
+            # Scalar fields after embedding
+            s = base + E
+            tensor[s] = float(perm.dp or 0)             # current DP
+            tensor[s + 1] = 1.0 if perm.is_suspended else 0.0  # suspended
+            tensor[s + 2] = float(perm.opt_total)        # OPT total
+            tensor[s + 3] = float(perm.opt_used)         # OPT used
+            tensor[s + 4] = float(len(perm.linked_cards))  # linked card count
+            tensor[s + 5] = float(len(perm.card_sources))  # source count
 
-            # +2: suspended
-            tensor[base + 2] = 1.0 if perm.is_suspended else 0.0
-
-            # +3: OPT total
-            tensor[base + 3] = float(perm.opt_total)
-
-            # +4: OPT used
-            tensor[base + 4] = float(perm.opt_used)
-
-            # +5: linked card count
-            tensor[base + 5] = float(len(perm.linked_cards))
-
-            # +6: source count
-            tensor[base + 6] = float(len(perm.card_sources))
-
-            # +7..+30: source entries [card_id, opt_state, dp_contribution] × 8
-            src_base = base + 7
+            # Source entries: [embedding(E), opt_state, dp_contribution] × MAX_SOURCES
+            src_base = s + 6
             for j, src in enumerate(perm.card_sources[:MAX_SOURCES]):
-                off = src_base + j * 3
-                tensor[off] = CardRegistry.get_norm_id(src.card_id)
-                tensor[off + 1] = perm.source_opt_state(src)
-                tensor[off + 2] = perm.source_dp_contribution(src)
+                off = src_base + j * SOURCE_ENTRY_SIZE
+                tensor[off:off + E] = CardRegistry.get_embedding(src.card_id)
+                tensor[off + E] = perm.source_opt_state(src)
+                tensor[off + E + 1] = perm.source_dp_contribution(src)
 
     @staticmethod
-    def _write_card_ids(tensor: List[float], start_idx: int, cards: list, limit: int):
-        """Write card ID list into tensor starting at start_idx."""
+    def _write_card_embeddings(tensor: np.ndarray, start_idx: int, cards: list, limit: int):
+        """Write card embedding vectors into tensor starting at start_idx."""
+        E = EMBEDDING_DIM
         for i, card in enumerate(cards[:limit]):
-            tensor[start_idx + i] = CardRegistry.get_norm_id(card.card_id)
+            off = start_idx + i * E
+            tensor[off:off + E] = CardRegistry.get_embedding(card.card_id)
 
     # ─── Action Mask ─────────────────────────────────────────────────
 

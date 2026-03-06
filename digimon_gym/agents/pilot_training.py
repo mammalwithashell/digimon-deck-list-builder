@@ -32,6 +32,7 @@ from stable_baselines3.common.callbacks import BaseCallback
 from digimon_gym.digimon_gym import DigimonEnv, greedy_policy, ACTION_PASS_TURN
 from digimon_gym.engine.game import ACTION_SPACE_SIZE
 from digimon_gym.agents.gauntlet import MetaGauntlet, GauntletWrapper
+from digimon_gym.agents.features_extractor import CardEmbeddingExtractor
 from digimon_gym.agents.maskable_recurrent import (
     MaskableRecurrentPPO,
     MaskableMlpLstmPolicy,
@@ -523,6 +524,11 @@ def train(total_timesteps: int = 100_000,
     )
 
     # Create model
+    extractor_kwargs = dict(
+        features_extractor_class=CardEmbeddingExtractor,
+        features_extractor_kwargs=dict(features_dim=512),
+    )
+
     if use_lstm:
         model = MaskableRecurrentPPO(
             MaskableMlpLstmPolicy,
@@ -540,6 +546,7 @@ def train(total_timesteps: int = 100_000,
                 n_lstm_layers=1,
                 enable_critic_lstm=True,
                 net_arch=dict(pi=[64], vf=[64]),
+                **extractor_kwargs,
             ),
         )
     else:
@@ -554,6 +561,7 @@ def train(total_timesteps: int = 100_000,
             tensorboard_log=tensorboard_log,
             verbose=0,
             device=device,
+            policy_kwargs=extractor_kwargs,
         )
 
     # Create evaluation callback

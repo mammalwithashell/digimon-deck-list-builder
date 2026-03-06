@@ -311,7 +311,7 @@ class TestReplayStateInspection:
         assert "Player2" in state
 
     def test_get_board_tensor(self):
-        """get_board_tensor should return 981-element float32 array."""
+        """get_board_tensor should return TENSOR_SIZE-element float32 array."""
         recording = record_a_game()
         runner = ReplayRunner(recording)
         tensor = runner.get_board_tensor(1)

@@ -59,7 +59,7 @@ class TensorSnapshot:
 
     step_number: int
     player_id: int
-    tensor: List[float]  # 981-float board state tensor
+    tensor: List[float]  # board state tensor (TENSOR_SIZE floats)
     action_mask: List[int]  # 2120-int action mask
 
 

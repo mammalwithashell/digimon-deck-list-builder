@@ -6,9 +6,11 @@ import pytest
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 
+import numpy as np
 from digimon_gym.engine.game import (
     Game, TENSOR_SIZE, ACTION_SPACE_SIZE, FIELD_SLOTS, SLOT_SIZE,
-    MAX_HAND, MAX_TRASH, MAX_SECURITY, MAX_SOURCES,
+    MAX_HAND, MAX_TRASH, MAX_SECURITY, MAX_SOURCES, EMBEDDING_DIM,
+    SOURCE_ENTRY_SIZE,
 )
 from digimon_gym.engine.data.enums import GamePhase, CardKind, CardColor
 from digimon_gym.engine.data.card_registry import CardRegistry
@@ -148,7 +150,9 @@ class TestBoardStateTensor:
     def test_tensor_size(self):
         game = setup_game_at_phase(GamePhase.Main)
         tensor = game.get_board_state_tensor(1)
-        assert len(tensor) == TENSOR_SIZE
+        assert isinstance(tensor, np.ndarray)
+        assert tensor.shape == (TENSOR_SIZE,)
+        assert tensor.dtype == np.float32
 
     def test_global_data(self):
         game = setup_game_at_phase(GamePhase.Main, memory=7)
@@ -173,7 +177,7 @@ class TestBoardStateTensor:
         tensor = game.get_board_state_tensor(1)
 
         # Everything after global data should be 0
-        assert all(v == 0.0 for v in tensor[3:])
+        assert np.all(tensor[3:] == 0.0)
 
     def test_battle_area_encoding(self):
         game = setup_game_at_phase(GamePhase.Main)
@@ -185,38 +189,58 @@ class TestBoardStateTensor:
         p1.battle_area.append(perm)
 
         tensor = game.get_board_state_tensor(1)
+        E = EMBEDDING_DIM
 
         # My field starts at index 10
         base = 10
-        assert tensor[base + 0] == CardRegistry.get_norm_id("BT14-001")  # card ID
-        assert tensor[base + 1] == 5000.0  # DP
-        assert tensor[base + 2] == 1.0     # suspended
-        assert tensor[base + 6] == 1.0     # source count
-        assert tensor[base + 7] == CardRegistry.get_norm_id("BT14-001")  # source[0] card_id
-        assert tensor[base + 8] == -1.0   # source[0] opt_state: no OPT effects
-        assert tensor[base + 9] == 0.0    # source[0] dp_contribution: no DP effect
+        emb = CardRegistry.get_embedding("BT14-001")
+        np.testing.assert_array_equal(tensor[base:base + E], emb)  # card embedding
+        assert tensor[base + E] == 5000.0    # DP
+        assert tensor[base + E + 1] == 1.0   # suspended
+        assert tensor[base + E + 5] == 1.0   # source count
+        # source[0]: embedding + opt_state + dp_contribution
+        src0 = base + E + 6
+        np.testing.assert_array_equal(tensor[src0:src0 + E], emb)  # source[0] embedding
+        assert tensor[src0 + E] == -1.0      # source[0] opt_state: no OPT effects
+        assert tensor[src0 + E + 1] == 0.0   # source[0] dp_contribution: no DP effect
 
     def test_digivolution_stack_encoding(self):
         game = setup_game_at_phase(GamePhase.Main)
         p1 = game.player1
 
-        base = make_card("BT14-002", "Rookie", dp=3000, level=3, owner=p1)
+        base_card = make_card("BT14-002", "Rookie", dp=3000, level=3, owner=p1)
         top = make_card("BT14-010", "Champion", dp=6000, level=4, owner=p1)
-        perm = Permanent([base, top])
+        perm = Permanent([base_card, top])
         p1.battle_area.append(perm)
 
         tensor = game.get_board_state_tensor(1)
+        E = EMBEDDING_DIM
+        SE = SOURCE_ENTRY_SIZE
 
         slot_base = 10
-        assert tensor[slot_base + 0] == CardRegistry.get_norm_id("BT14-010")  # top card
-        assert tensor[slot_base + 1] == 6000.0  # DP
-        assert tensor[slot_base + 6] == 2.0     # 2 sources
-        assert tensor[slot_base + 7] == CardRegistry.get_norm_id("BT14-002")   # source[0] card_id
-        assert tensor[slot_base + 8] == -1.0    # source[0] opt_state: no OPT
-        assert tensor[slot_base + 9] == 0.0     # source[0] dp_contribution
-        assert tensor[slot_base + 10] == CardRegistry.get_norm_id("BT14-010")  # source[1] card_id
-        assert tensor[slot_base + 11] == -1.0   # source[1] opt_state: no OPT
-        assert tensor[slot_base + 12] == 0.0    # source[1] dp_contribution
+        np.testing.assert_array_equal(
+            tensor[slot_base:slot_base + E],
+            CardRegistry.get_embedding("BT14-010"),
+        )  # top card
+        assert tensor[slot_base + E] == 6000.0     # DP
+        assert tensor[slot_base + E + 5] == 2.0    # 2 sources
+
+        src_start = slot_base + E + 6
+        # source[0]
+        np.testing.assert_array_equal(
+            tensor[src_start:src_start + E],
+            CardRegistry.get_embedding("BT14-002"),
+        )
+        assert tensor[src_start + E] == -1.0       # opt_state
+        assert tensor[src_start + E + 1] == 0.0    # dp_contribution
+        # source[1]
+        src1 = src_start + SE
+        np.testing.assert_array_equal(
+            tensor[src1:src1 + E],
+            CardRegistry.get_embedding("BT14-010"),
+        )
+        assert tensor[src1 + E] == -1.0             # opt_state
+        assert tensor[src1 + E + 1] == 0.0          # dp_contribution
 
     def test_opponent_field_offset(self):
         game = setup_game_at_phase(GamePhase.Main)
@@ -227,11 +251,15 @@ class TestBoardStateTensor:
         p2.battle_area.append(perm)
 
         tensor = game.get_board_state_tensor(1)
+        E = EMBEDDING_DIM
 
-        # Opp field starts at 382
-        base = 382
-        assert tensor[base + 0] == CardRegistry.get_norm_id("BT14-020")
-        assert tensor[base + 1] == 7000.0
+        # Opp field starts at 10 + 12*SLOT_SIZE = 2002
+        base = 10 + FIELD_SLOTS * SLOT_SIZE
+        np.testing.assert_array_equal(
+            tensor[base:base + E],
+            CardRegistry.get_embedding("BT14-020"),
+        )
+        assert tensor[base + E] == 7000.0
 
     def test_hand_encoding(self):
         game = setup_game_at_phase(GamePhase.Main)
@@ -241,11 +269,20 @@ class TestBoardStateTensor:
         p1.hand_cards.append(make_card("BT14-050", owner=p1))
 
         tensor = game.get_board_state_tensor(1)
+        E = EMBEDDING_DIM
 
-        # My hand starts at 754
-        assert tensor[754] == CardRegistry.get_norm_id("BT14-003")
-        assert tensor[755] == CardRegistry.get_norm_id("BT14-050")
-        assert tensor[756] == 0.0  # padding
+        # My hand starts at 10 + 2*12*SLOT_SIZE = 3994
+        hand_start = 10 + 2 * FIELD_SLOTS * SLOT_SIZE
+        np.testing.assert_array_equal(
+            tensor[hand_start:hand_start + E],
+            CardRegistry.get_embedding("BT14-003"),
+        )
+        np.testing.assert_array_equal(
+            tensor[hand_start + E:hand_start + 2 * E],
+            CardRegistry.get_embedding("BT14-050"),
+        )
+        # Third slot should be zero-padded
+        assert np.all(tensor[hand_start + 2 * E:hand_start + 3 * E] == 0.0)
 
     def test_trash_encoding(self):
         game = setup_game_at_phase(GamePhase.Main)
@@ -255,11 +292,17 @@ class TestBoardStateTensor:
             p1.trash_cards.append(make_card(f"BT14-00{i+1}", owner=p1))
 
         tensor = game.get_board_state_tensor(1)
+        E = EMBEDDING_DIM
 
-        # My trash starts at 794
-        assert tensor[794] == CardRegistry.get_norm_id("BT14-001")
-        assert tensor[795] == CardRegistry.get_norm_id("BT14-002")
-        assert tensor[796] == CardRegistry.get_norm_id("BT14-003")
+        # My trash starts after hands
+        trash_start = (10 + 2 * FIELD_SLOTS * SLOT_SIZE +
+                       2 * MAX_HAND * E)
+        for i, card_id in enumerate(["BT14-001", "BT14-002", "BT14-003"]):
+            off = trash_start + i * E
+            np.testing.assert_array_equal(
+                tensor[off:off + E],
+                CardRegistry.get_embedding(card_id),
+            )
 
     def test_security_encoding(self):
         game = setup_game_at_phase(GamePhase.Main)
@@ -268,10 +311,17 @@ class TestBoardStateTensor:
         p1.security_cards.append(make_card("BT14-090", owner=p1))
 
         tensor = game.get_board_state_tensor(1)
+        E = EMBEDDING_DIM
 
-        # My security starts at 884
-        assert tensor[884] == CardRegistry.get_norm_id("BT14-090")
-        assert tensor[885] == 0.0
+        # My security starts after hands + trashes
+        sec_start = (10 + 2 * FIELD_SLOTS * SLOT_SIZE +
+                     2 * MAX_HAND * E + 2 * MAX_TRASH * E)
+        np.testing.assert_array_equal(
+            tensor[sec_start:sec_start + E],
+            CardRegistry.get_embedding("BT14-090"),
+        )
+        # Second slot should be zero
+        assert np.all(tensor[sec_start + E:sec_start + 2 * E] == 0.0)
 
     def test_breeding_encoding(self):
         game = setup_game_at_phase(GamePhase.Main)
@@ -281,10 +331,17 @@ class TestBoardStateTensor:
         p1.breeding_area = Permanent([egg])
 
         tensor = game.get_board_state_tensor(1)
+        E = EMBEDDING_DIM
 
-        # My breeding starts at 904
-        assert tensor[904] == CardRegistry.get_norm_id("BT14-001")
-        assert tensor[910] == 1.0  # source count
+        # My breeding starts after battle + hands + trashes + security
+        breed_start = (10 + 2 * FIELD_SLOTS * SLOT_SIZE +
+                       2 * MAX_HAND * E + 2 * MAX_TRASH * E +
+                       2 * MAX_SECURITY * E)
+        np.testing.assert_array_equal(
+            tensor[breed_start:breed_start + E],
+            CardRegistry.get_embedding("BT14-001"),
+        )
+        assert tensor[breed_start + E + 5] == 1.0  # source count
 
     def test_ui_memory_gauge_is_player1_oriented(self):
         game = setup_game_at_phase(GamePhase.Main, memory=2)
@@ -417,8 +474,16 @@ class TestMulliganSetup:
         game.start_game()
 
         tensor = game.get_board_state_tensor(1)
-        assert any(v != 0.0 for v in tensor[754:759])  # opening hand cards
-        assert all(v == 0.0 for v in tensor[884:894])  # security not set yet
+        E = EMBEDDING_DIM
+        # My hand starts after battle areas
+        hand_start = 10 + 2 * FIELD_SLOTS * SLOT_SIZE
+        hand_region = tensor[hand_start:hand_start + 5 * E]
+        assert np.any(hand_region != 0.0)  # opening hand cards
+
+        # My security starts after hands + trashes
+        sec_start = hand_start + 2 * MAX_HAND * E + 2 * MAX_TRASH * E
+        sec_region = tensor[sec_start:sec_start + MAX_SECURITY * E]
+        assert np.all(sec_region == 0.0)  # security not set yet
 
 
 # ─── Action Mask Tests ───────────────────────────────────────────────
@@ -834,14 +899,17 @@ class TestTensorMaskDecoderRoundTrip:
         card = make_card("BT14-001", play_cost=3, dp=5000, level=4, owner=p1)
         p1.hand_cards.append(card)
 
+        E = EMBEDDING_DIM
+        hand_start = 10 + 2 * FIELD_SLOTS * SLOT_SIZE
+
         t_before = game.get_board_state_tensor(1)
-        assert t_before[754] != 0.0  # hand has a card
+        assert np.any(t_before[hand_start:hand_start + E] != 0.0)  # hand has a card
 
         game.decode_action(0, 1)  # play hand[0]
 
         t_after = game.get_board_state_tensor(1)
-        assert t_after[754] == 0.0   # hand now empty
-        assert t_after[10] != 0.0    # field has the card
+        assert np.all(t_after[hand_start:hand_start + E] == 0.0)  # hand now empty
+        assert np.any(t_after[10:10 + E] != 0.0)  # field has the card
 
     def test_mask_zero_after_action_depletes(self):
         """After playing the only hand card, play mask should zero out."""
