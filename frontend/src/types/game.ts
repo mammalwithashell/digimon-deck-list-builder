@@ -27,6 +27,7 @@ export interface SourceInfo {
   dpContribution: number;
   mainEffectText: string;
   inheritedEffectText: string;
+  colors: number[];
 }
 
 export interface InheritedEffectInfo {

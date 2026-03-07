@@ -1173,6 +1173,7 @@ class Game:
                     "dpContribution": perm.source_dp_contribution(src),
                     "mainEffectText": clean_text(entity.effect_description_eng if entity else ""),
                     "inheritedEffectText": clean_text(entity.inherited_effect_description_eng if entity else ""),
+                    "colors": [c.value for c in getattr(src, 'card_colors', [])],
                 })
 
             inherited_effects = []
