@@ -6,7 +6,7 @@ from uuid import uuid4
 
 from fastapi import APIRouter, HTTPException
 
-from digimon_gym.db.schemas import (
+from digimon_gym.routers.schemas import (
     ReplayCreateResponse,
     ReplayRequest,
     ReplayStepResponse,

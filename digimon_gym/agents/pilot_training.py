@@ -212,6 +212,9 @@ class WinRateCallback(BaseCallback):
     - pilot/mean_reward: average episode reward
     - pilot/mean_episode_length: average steps per episode
     - pilot/games_played: total training episodes so far
+
+    Also tracks per-archetype win rates when a GauntletWrapper is present,
+    accessible via ``get_archetype_results()``.
     """
 
     def __init__(self, eval_env_fn: Callable,
@@ -225,6 +228,30 @@ class WinRateCallback(BaseCallback):
         self.n_eval_episodes = n_eval_episodes
         self.games_played = 0
         self._last_eval_step = 0
+        self.last_win_rate: float = 0.0
+        self.last_mean_reward: float = 0.0
+        # Per-archetype tracking
+        self._archetype_wins: Dict[str, int] = {}
+        self._archetype_draws: Dict[str, int] = {}
+        self._archetype_games: Dict[str, int] = {}
+
+    def get_archetype_results(self):
+        """Return per-archetype results as ArchetypeResult list."""
+        from digimon_gym.agents.training_metrics import ArchetypeResult
+        results = []
+        for name, games in self._archetype_games.items():
+            wins = self._archetype_wins.get(name, 0)
+            draws = self._archetype_draws.get(name, 0)
+            losses = games - wins - draws
+            results.append(ArchetypeResult(
+                archetype_name=name,
+                games_played=games,
+                wins=wins,
+                losses=losses,
+                draws=draws,
+                win_rate=wins / max(1, games),
+            ))
+        return results
 
     def _on_step(self) -> bool:
         # Track episode completions from training
@@ -261,10 +288,11 @@ class WinRateCallback(BaseCallback):
         total_steps = 0
 
         for _ in range(self.n_eval_episodes):
-            obs, _ = eval_env.reset()
+            obs, info = eval_env.reset()
             episode_reward = 0.0
             steps = 0
             done = False
+            opponent_archetype = info.get("opponent_archetype")
 
             # LSTM state management (None for MLP, threaded for LSTM)
             state = None
@@ -292,19 +320,40 @@ class WinRateCallback(BaseCallback):
 
             # Use the actual game outcome instead of reward as a proxy
             game = None
+            won = False
+            is_draw = False
             if eval_env is not None:
                 game = _unwrap_to_digimon_env(eval_env).game
             if game is not None and game.winner is not None:
                 if game.winner.player_id == 1:
                     wins += 1
+                    won = True
             else:
                 draws += 1
+                is_draw = True
+
+            # Track per-archetype win rates (when gauntlet is active)
+            if opponent_archetype:
+                self._archetype_games[opponent_archetype] = (
+                    self._archetype_games.get(opponent_archetype, 0) + 1
+                )
+                if won:
+                    self._archetype_wins[opponent_archetype] = (
+                        self._archetype_wins.get(opponent_archetype, 0) + 1
+                    )
+                elif is_draw:
+                    self._archetype_draws[opponent_archetype] = (
+                        self._archetype_draws.get(opponent_archetype, 0) + 1
+                    )
 
         win_rate = wins / self.n_eval_episodes
         mean_reward = total_reward / self.n_eval_episodes
         mean_length = total_steps / self.n_eval_episodes
 
         draw_rate = draws / self.n_eval_episodes
+
+        self.last_win_rate = win_rate
+        self.last_mean_reward = mean_reward
 
         self.logger.record("pilot/win_rate", win_rate)
         self.logger.record("pilot/draw_rate", draw_rate)
@@ -614,6 +663,37 @@ def train(total_timesteps: int = 100_000,
     model_path = save_model(model, save_dir, job_id=job_id)
     if verbose:
         print(f"  Model saved to: {model_path}")
+
+    # Save training run metadata as JSON sidecar
+    from pathlib import Path
+    from digimon_gym.agents.training_metrics import TrainingRunMetadata
+
+    run_id = Path(model_path).stem
+    meta = TrainingRunMetadata(
+        run_id=run_id,
+        started_at=datetime.fromtimestamp(start).isoformat(),
+        finished_at=datetime.now().isoformat(),
+        algorithm="LSTM" if use_lstm else "MLP",
+        total_timesteps=total_timesteps,
+        opponent_type=opponent,
+        model_path=model_path,
+        tensorboard_log_dir=tensorboard_log,
+        final_win_rate=win_rate_cb.last_win_rate,
+        final_mean_reward=win_rate_cb.last_mean_reward,
+        total_games=win_rate_cb.games_played,
+        archetype_results=win_rate_cb.get_archetype_results(),
+        hyperparameters={
+            "learning_rate": learning_rate,
+            "n_steps": n_steps,
+            "batch_size": batch_size,
+            "n_epochs": n_epochs,
+            "gamma": gamma,
+        },
+    )
+    meta_path = Path(model_path).with_suffix(".meta.json")
+    meta.save(meta_path)
+    if verbose:
+        print(f"  Metadata saved to: {meta_path}")
 
     return model
 

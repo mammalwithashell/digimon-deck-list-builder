@@ -1,0 +1,13 @@
+# Standalone RL training dependencies — no FastAPI, no DB, no auth
+numpy>=1.24
+gymnasium>=0.29
+torch>=2.0
+stable-baselines3>=2.0
+sb3-contrib>=2.0
+tensorboard>=2.14
+pydantic>=2.0
+beautifulsoup4>=4.12
+requests>=2.28
+python-dotenv>=1.0
+Pillow>=10.0
+onnxruntime>=1.16

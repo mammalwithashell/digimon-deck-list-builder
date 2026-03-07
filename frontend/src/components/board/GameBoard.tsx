@@ -62,7 +62,13 @@ export function GameBoard({
     pendingSelection,
   } = useGameStore();
 
-  if (!player1 || !player2) return null;
+  if (!player1 || !player2) {
+    return (
+      <div data-testid="game-board" className="flex items-center justify-center h-full text-gray-400">
+        Loading game...
+      </div>
+    );
+  }
 
   // During selection phases, highlight valid targets
   const selectionHighlights = new Set<number>();
