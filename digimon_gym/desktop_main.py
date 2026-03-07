@@ -196,6 +196,18 @@ def create_desktop_app(models_dir: str = "./models") -> FastAPI:
         _touch_game(game_id)
         return {"action_mask": runner.get_action_mask().tolist()}
 
+    @router.get("/games/{game_id}/logs")
+    def game_logs(game_id: str):
+        runner = active_games.get(game_id)
+        if not runner:
+            raise HTTPException(status_code=404, detail="Game not found")
+        _touch_game(game_id)
+        if isinstance(runner, InteractiveGame):
+            logs = runner.get_last_log()
+            runner.clear_log()
+            return {"logs": logs}
+        return {"logs": []}
+
     @router.get("/games/models")
     def list_models():
         return {"models": list_onnx_models()}

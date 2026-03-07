@@ -154,11 +154,12 @@ export function GamePage() {
         player2_policy: agentType,
       });
 
-      store.setGameId(result.game_id);
+      // Set game state before gameId so the board has player data when it first renders
       store.setGameState(result.state);
       store.setActionMask(result.action_mask);
       if (result.player_labels) store.setPlayerLabels(result.player_labels);
       store.clearLogs();
+      store.setGameId(result.game_id);
 
       // Step once to handle initial agent turn if agent goes first
       const stepResult = await gameApi.stepGame(result.game_id);
@@ -167,6 +168,8 @@ export function GamePage() {
       if (stepResult.logs) store.appendLogs(stepResult.logs);
     } catch (err) {
       console.error('Failed to create game:', err);
+      // If gameId was set but step failed, reset to avoid blank board
+      if (store.gameId) store.reset();
     } finally {
       setStarting(false);
     }
