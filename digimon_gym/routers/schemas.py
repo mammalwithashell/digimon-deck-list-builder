@@ -108,4 +108,4 @@ class ReplayStepResponse(BaseModel):
     winner_id: Optional[int] = None
     state: Dict[str, Any]
     verification_ok: Optional[bool] = None
-    verification_errors: List[str] = []
+    verification_errors: List[str] = Field(default_factory=list)

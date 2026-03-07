@@ -22,6 +22,14 @@ const ArenaPage = lazy(() => import('@/pages/ArenaPage').then(m => ({ default: m
 const GauntletPage = lazy(() => import('@/pages/GauntletPage').then(m => ({ default: m.GauntletPage })));
 const DeckPoolPage = lazy(() => import('@/pages/DeckPoolPage').then(m => ({ default: m.DeckPoolPage })));
 
+function suspended(Component: React.LazyExoticComponent<React.ComponentType>) {
+  return (
+    <Suspense fallback={null}>
+      <Component />
+    </Suspense>
+  );
+}
+
 export function App() {
   const hydrate = useAuthStore((s) => s.hydrate);
 
@@ -43,17 +51,15 @@ export function App() {
           </Route>
           {!IS_DESKTOP && (
             <Route element={<RoleGuard allowedRoles={['admin']} />}>
-              <Suspense fallback={null}>
-                <Route path="/admin/issues" element={<AdminIssuesPage />} />
-                <Route path="/admin/tasks" element={<AdminTasksPage />} />
-                <Route path="/admin/promotions" element={<AdminPromotionsPage />} />
-                <Route path="/admin/barracks" element={<BarracksPage />} />
-                <Route path="/admin/arena" element={<ArenaPage />} />
-                <Route path="/admin/gauntlet" element={<GauntletPage />} />
-                <Route path="/admin/gauntlet/:id" element={<GauntletPage />} />
-                <Route path="/admin/deck-pools" element={<DeckPoolPage />} />
-                <Route path="/admin/deck-pools/:id" element={<DeckPoolPage />} />
-              </Suspense>
+              <Route path="/admin/issues" element={suspended(AdminIssuesPage)} />
+              <Route path="/admin/tasks" element={suspended(AdminTasksPage)} />
+              <Route path="/admin/promotions" element={suspended(AdminPromotionsPage)} />
+              <Route path="/admin/barracks" element={suspended(BarracksPage)} />
+              <Route path="/admin/arena" element={suspended(ArenaPage)} />
+              <Route path="/admin/gauntlet" element={suspended(GauntletPage)} />
+              <Route path="/admin/gauntlet/:id" element={suspended(GauntletPage)} />
+              <Route path="/admin/deck-pools" element={suspended(DeckPoolPage)} />
+              <Route path="/admin/deck-pools/:id" element={suspended(DeckPoolPage)} />
             </Route>
           )}
         </Route>

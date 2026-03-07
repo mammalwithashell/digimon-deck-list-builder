@@ -232,6 +232,7 @@ class WinRateCallback(BaseCallback):
         self.last_mean_reward: float = 0.0
         # Per-archetype tracking
         self._archetype_wins: Dict[str, int] = {}
+        self._archetype_draws: Dict[str, int] = {}
         self._archetype_games: Dict[str, int] = {}
 
     def get_archetype_results(self):
@@ -240,12 +241,14 @@ class WinRateCallback(BaseCallback):
         results = []
         for name, games in self._archetype_games.items():
             wins = self._archetype_wins.get(name, 0)
-            losses = games - wins  # simplified: treats draws as losses
+            draws = self._archetype_draws.get(name, 0)
+            losses = games - wins - draws
             results.append(ArchetypeResult(
                 archetype_name=name,
                 games_played=games,
                 wins=wins,
                 losses=losses,
+                draws=draws,
                 win_rate=wins / max(1, games),
             ))
         return results
@@ -318,6 +321,7 @@ class WinRateCallback(BaseCallback):
             # Use the actual game outcome instead of reward as a proxy
             game = None
             won = False
+            is_draw = False
             if eval_env is not None:
                 game = _unwrap_to_digimon_env(eval_env).game
             if game is not None and game.winner is not None:
@@ -326,6 +330,7 @@ class WinRateCallback(BaseCallback):
                     won = True
             else:
                 draws += 1
+                is_draw = True
 
             # Track per-archetype win rates (when gauntlet is active)
             if opponent_archetype:
@@ -335,6 +340,10 @@ class WinRateCallback(BaseCallback):
                 if won:
                     self._archetype_wins[opponent_archetype] = (
                         self._archetype_wins.get(opponent_archetype, 0) + 1
+                    )
+                elif is_draw:
+                    self._archetype_draws[opponent_archetype] = (
+                        self._archetype_draws.get(opponent_archetype, 0) + 1
                     )
 
         win_rate = wins / self.n_eval_episodes
