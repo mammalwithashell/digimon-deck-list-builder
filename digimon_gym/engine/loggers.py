@@ -1,10 +1,13 @@
 """Game logger abstraction for headless and interactive game modes.
 
 Mirrors C# Digimon.Core.Loggers: IGameLogger, SilentLogger, VerboseLogger.
+EventLogger extends VerboseLogger with structured GameEvent support.
 """
 
 from abc import ABC, abstractmethod
-from typing import List
+from typing import Dict, List, Any
+
+from digimon_gym.engine.events import GameEvent
 
 
 class IGameLogger(ABC):
@@ -60,3 +63,24 @@ class VerboseLogger(IGameLogger):
 
     def clear(self) -> None:
         self._logs.clear()
+
+
+class EventLogger(VerboseLogger):
+    """VerboseLogger + structured GameEvent buffer for interactive games."""
+
+    def __init__(self):
+        super().__init__()
+        self._events: List[GameEvent] = []
+
+    def emit(self, event: GameEvent) -> None:
+        self._events.append(event)
+
+    def get_events(self) -> List[Dict[str, Any]]:
+        return [e.to_dict() for e in self._events]
+
+    def clear_events(self) -> None:
+        self._events.clear()
+
+    def clear(self) -> None:
+        super().clear()
+        self._events.clear()

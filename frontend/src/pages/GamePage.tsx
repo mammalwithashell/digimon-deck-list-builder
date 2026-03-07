@@ -12,6 +12,7 @@ import {
 import { useGameStore } from '@/stores/gameStore';
 import { useActionMask } from '@/hooks/useActionMask';
 import { useGameActions } from '@/hooks/useGameActions';
+import { useEffectHighlight } from '@/hooks/useEffectHighlight';
 import { useDropZone, type DragData } from '@/hooks/useDropZone';
 import { GameBoard } from '@/components/board/GameBoard';
 import { ActionBar } from '@/components/game/ActionBar';
@@ -24,6 +25,7 @@ import { AttackArrow } from '@/components/game/AttackArrow';
 import { PhaseBanner } from '@/components/game/PhaseBanner';
 import { CardOverlay } from '@/components/game/CardOverlay';
 import { GameLogDrawer } from '@/components/game/GameLogDrawer';
+import { SecurityRevealOverlay } from '@/components/board/SecurityRevealOverlay';
 import { KeywordPromptDialog } from '@/components/game/KeywordPromptDialog';
 import { DragOverlayCard } from '@/components/game/DragOverlayCard';
 import { useWebSocketGame, type UseWebSocketGameOptions } from '@/hooks/useWebSocketGame';
@@ -47,6 +49,7 @@ export function GamePage() {
 
   const store = useGameStore();
   const { sendAction: httpSendAction } = useGameActions();
+  useEffectHighlight();
   const parsedMask = useActionMask(store.actionMask);
 
   // WebSocket connection (only active in PvP/spectator mode)
@@ -59,6 +62,7 @@ export function GamePage() {
         store.setGameState(payload.state);
         store.setActionMask(payload.action_mask ?? []);
         if (payload.logs) store.appendLogs(payload.logs);
+        if (payload.events) store.appendEvents(payload.events);
         if (payload.your_player_id != null) {
           store.setPlayerLabels({
             [payload.your_player_id]: 'You',
@@ -159,6 +163,7 @@ export function GamePage() {
       store.setActionMask(result.action_mask);
       if (result.player_labels) store.setPlayerLabels(result.player_labels);
       store.clearLogs();
+      store.clearEvents();
       store.setGameId(result.game_id);
 
       // Step once to handle initial agent turn if agent goes first
@@ -166,6 +171,7 @@ export function GamePage() {
       store.setGameState(stepResult.state);
       store.setActionMask(stepResult.action_mask);
       if (stepResult.logs) store.appendLogs(stepResult.logs);
+      if (stepResult.events) store.appendEvents(stepResult.events);
     } catch (err) {
       console.error('Failed to create game:', err);
       // If gameId was set but step failed, reset to avoid blank board
@@ -569,6 +575,7 @@ export function GamePage() {
             permanent={inspectedPerm}
             onClose={() => setInspectedPerm(null)}
           />
+          <SecurityRevealOverlay />
           <GameLogDrawer logs={store.logs} />
           <AttackArrow
             pendingAttack={store.pendingAttack}

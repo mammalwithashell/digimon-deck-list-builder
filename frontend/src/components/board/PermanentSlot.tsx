@@ -1,5 +1,6 @@
 import { Card } from '@/components/shared/Card';
 import { KeywordBadges } from './KeywordBadges';
+import { useGameStore } from '@/stores/gameStore';
 import type { PermanentInfo } from '@/types/game';
 
 interface PermanentSlotProps {
@@ -15,19 +16,30 @@ interface PermanentSlotProps {
 
 export function PermanentSlot({
   perm,
-  slotIndex: _slotIndex,
-  isOpponent: _isOpponent,
+  slotIndex,
+  isOpponent,
   highlighted = false,
   targeted = false,
   onClick,
   onMouseEnter,
   onMouseLeave,
 }: PermanentSlotProps) {
+  const activeEffectSlot = useGameStore((s) => s.activeEffectSlot);
+  const activeEffectPlayer = useGameStore((s) => s.activeEffectPlayer);
+
   if (!perm.topCardId) return null;
+
+  // Check if this slot has an active effect
+  const isEffectSource =
+    activeEffectSlot === slotIndex &&
+    ((isOpponent && activeEffectPlayer === 2) ||
+     (!isOpponent && activeEffectPlayer === 1));
 
   return (
     <div
-      className="flex flex-col items-center gap-0.5"
+      className={`flex flex-col items-center gap-0.5 ${
+        isEffectSource ? 'animate-effect-pulse rounded' : ''
+      }`}
       onClick={onClick}
       onMouseEnter={onMouseEnter}
       onMouseLeave={onMouseLeave}

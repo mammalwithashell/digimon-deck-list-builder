@@ -116,6 +116,17 @@ export interface PlayerState {
   trashIds: string[];
 }
 
+export interface GameEvent {
+  type: string;
+  seq: number;
+  player: number;
+  source_card_id: string | null;
+  source_slot: number | null;
+  target_card_id: string | null;
+  target_slot: number | null;
+  meta: Record<string, unknown>;
+}
+
 export interface GameState {
   turnCount: number;
   currentPhase: GamePhase;

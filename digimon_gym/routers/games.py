@@ -139,7 +139,9 @@ def game_action(game_id: str, request: GameActionRequest):
 
     if isinstance(runner, InteractiveGame):
         result["logs"] = runner.get_last_log()
+        result["events"] = runner.get_last_events()
         runner.clear_log()
+        runner.clear_events()
 
     return result
 
@@ -155,13 +157,16 @@ def game_step(game_id: str):
     state = runner.run_step()
     mask = runner.get_action_mask().tolist()
     logs = runner.get_last_log()
+    events = runner.get_last_events()
     runner.clear_log()
+    runner.clear_events()
 
     return {
         "state": state,
         "action_mask": mask,
         "action_descriptions": runner.game.describe_actions(runner.game.current_player_id),
         "logs": logs,
+        "events": events,
         "is_human_turn": runner.is_current_player_human(),
         "is_game_over": runner.is_game_over,
     }

@@ -193,12 +193,14 @@ async def _handle_action(
     # Execute action
     runner.step(action_id)
 
-    # Collect logs
+    # Collect logs and events
     logs = runner.get_last_log()
+    events = runner.get_last_events()
     runner.clear_log()
+    runner.clear_events()
 
     # Broadcast updated state to all
-    await manager.broadcast_state(game_id, runner, logs=logs)
+    await manager.broadcast_state(game_id, runner, logs=logs, events=events)
 
     # If game is over, send game_over event and clean up connection tracking
     if runner.is_game_over:

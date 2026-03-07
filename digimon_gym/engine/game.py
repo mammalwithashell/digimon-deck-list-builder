@@ -10,6 +10,7 @@ from digimon_gym.engine.core.player import Player
 from digimon_gym.engine.core.permanent import Permanent
 from digimon_gym.engine.data.card_registry import CardRegistry
 from digimon_gym.engine.loggers import IGameLogger, SilentLogger
+from digimon_gym.engine.events import GameEvent
 from digimon_gym.engine.interfaces.modifiers import ModifierRegistry, ModifierType, ModifierEntry
 from digimon_gym.engine.validation.digivolve_validator import (
     can_digivolve, has_valid_dna_targets, get_valid_dna_first_targets,
@@ -175,6 +176,9 @@ class Game:
         self._mulligan_index: int = 0
         self._mulligan_used: Dict[int, bool] = {}
 
+        # Structured event sequence counter
+        self._event_seq: int = 0
+
     @property
     def current_player_id(self) -> int:
         """Return the player_id of the active player.
@@ -304,6 +308,7 @@ class Game:
     def phase_start(self):
         self.current_phase = GamePhase.Start
         self.logger.log(f"=== Turn {self.turn_count} — {self.turn_player.player_name} ===")
+        self._emit('phase_change', phase='Start', turn=self.turn_count)
         # Unsuspend turn player's permanents (skip those with <Reboot> — they unsuspend on opponent's turn)
         self.turn_player.unsuspend_all(skip_reboot=True)
         # <Reboot>: unsuspend opponent's Reboot permanents (they unsuspend during opponent's unsuspend phase)
@@ -448,10 +453,59 @@ class Game:
             text = "<no effect text>"
         return " ".join(text.replace("\r", "\n").split())
 
+    def _emit(self, event_type: str, player: int = 0, **kwargs) -> None:
+        """Emit a structured GameEvent if the logger supports it."""
+        if not hasattr(self.logger, 'emit'):
+            return
+        event = GameEvent(
+            type=event_type,
+            seq=self._event_seq,
+            player=player or self.turn_player.player_id,
+            source_card_id=kwargs.pop('source_card_id', None),
+            source_slot=kwargs.pop('source_slot', None),
+            target_card_id=kwargs.pop('target_card_id', None),
+            target_slot=kwargs.pop('target_slot', None),
+            meta=kwargs,
+        )
+        self._event_seq += 1
+        self.logger.emit(event)
+
+    @staticmethod
+    def _card_id(card) -> Optional[str]:
+        """Extract card_id string from a CardSource, or None."""
+        return getattr(card, 'card_id', None) if card else None
+
+    @staticmethod
+    def _card_name(card) -> str:
+        """Extract first card name from a CardSource."""
+        if card is None:
+            return "Unknown"
+        names = getattr(card, 'card_names', None)
+        return names[0] if names else "Unknown"
+
+    def _perm_slot(self, perm: Permanent) -> Optional[int]:
+        """Return the battle area slot index for a permanent, or None."""
+        for player in (self.player1, self.player2):
+            try:
+                return player.battle_area.index(perm)
+            except ValueError:
+                continue
+        return None
+
     def _log_effect_activation(self, effect, timing: EffectTiming) -> None:
         source_name = self._effect_source_name(effect)
         effect_text = self._effect_text_for_log(effect)
         self.logger.log(f"[Effect] {timing.name} | {source_name}: {effect_text}")
+        src_card = getattr(effect, 'effect_source_card', None)
+        src_perm = getattr(effect, 'effect_source_permanent', None)
+        self._emit(
+            'effect_activate',
+            source_card_id=self._card_id(src_card),
+            source_slot=self._perm_slot(src_perm) if src_perm else None,
+            effect_name=effect.effect_name or "",
+            timing=timing.name,
+            card_name=self._card_name(src_card),
+        )
 
     # ─── Effect Execution ────────────────────────────────────────────
 
@@ -924,6 +978,7 @@ class Game:
         if hasattr(self, 'revealed_cards'):
             self.revealed_cards.clear()
         self.logger.log(f"Game Over! Winner: {winner.player_name}")
+        self._emit('game_over', player=winner.player_id, winner=winner.player_id)
 
     # ─── Keyword display mapping ────────────────────────────────────────
     # Maps internal _is_{flag} attribute names to human-readable UI labels.
@@ -1269,6 +1324,16 @@ class Game:
         target_name = target.player_name if isinstance(target, Player) else self._perm_ref(target)
         attacker_ref = self._perm_ref(attacker)
         self.logger.log(f"[Attack] {attacker_ref} attacks {target_name}")
+        self._emit(
+            'attack_declare',
+            source_card_id=self._card_id(attacker.top_card),
+            source_slot=self._perm_slot(attacker),
+            target_card_id=self._card_id(target.top_card) if isinstance(target, Permanent) else None,
+            target_slot=self._perm_slot(target) if isinstance(target, Permanent) else None,
+            attacker_name=self._card_name(attacker.top_card),
+            target_type='player' if isinstance(target, Player) else 'digimon',
+            target_name=target_name,
+        )
 
         # <Progress>: mark attacker as attacking (for effect immunity)
         attacker.is_attacking = True
@@ -1422,17 +1487,36 @@ class Game:
             tie = a_dp == t_dp
 
             if attacker_wins:
+                result_str = 'attacker_wins'
+            elif defender_wins:
+                result_str = 'defender_wins'
+            else:
+                result_str = 'tie'
+            self._emit(
+                'battle_result',
+                source_card_id=self._card_id(attacker.top_card),
+                target_card_id=self._card_id(target.top_card),
+                attacker_dp=a_dp,
+                defender_dp=t_dp,
+                result=result_str,
+            )
+
+            if attacker_wins:
                 # <Retaliation>: when this Digimon is deleted in battle, delete the winner
                 has_retaliation = target.has_keyword('_is_retaliation')
                 was_deleted = self.opponent_player.delete_permanent(target, is_battle=True)
                 if has_retaliation and was_deleted:
                     self.logger.log(f"[Retaliation] {self._perm_ref(target)} retaliates!")
+                    self._emit('keyword_trigger', source_card_id=self._card_id(target.top_card),
+                               keyword='Retaliation', card_name=self._card_name(target.top_card))
                     # Retaliation is an opponent's effect — Progress blocks this
                     self.turn_player.delete_permanent(attacker, is_battle=True, is_opponent_effect=True)
                 # <Piercing>: after winning battle vs Digimon, check security
                 # Only triggers when the target was actually deleted (not prevented)
                 elif was_deleted and attacker.has_keyword('_is_piercing') and attacker in self.turn_player.battle_area:
                     self.logger.log(f"[Piercing] {self._perm_ref(attacker)} pierces through!")
+                    self._emit('keyword_trigger', source_card_id=self._card_id(attacker.top_card),
+                               keyword='Piercing', card_name=self._card_name(attacker.top_card))
                     self._execute_security_checks(attacker, self.opponent_player)
             elif defender_wins:
                 # <Retaliation> on attacker: when deleted in battle, delete the winner
@@ -1440,6 +1524,8 @@ class Game:
                 was_deleted = self.turn_player.delete_permanent(attacker, is_battle=True)
                 if has_retaliation and was_deleted:
                     self.logger.log(f"[Retaliation] {self._perm_ref(attacker)} retaliates!")
+                    self._emit('keyword_trigger', source_card_id=self._card_id(attacker.top_card),
+                               keyword='Retaliation', card_name=self._card_name(attacker.top_card))
                     # Retaliation is an opponent's effect — Progress blocks this
                     self.opponent_player.delete_permanent(target, is_battle=True, is_opponent_effect=True)
             else:
@@ -1478,6 +1564,13 @@ class Game:
         self.logger.log(f"[Play] {self.turn_player.player_name} plays {self._card_ref(card)} (cost: {cost})")
         is_option = card.is_option
         played_perm = self.turn_player.play_card(card)
+        self._emit(
+            'play_card',
+            source_card_id=self._card_id(card),
+            source_slot=self._perm_slot(played_perm) if played_perm else None,
+            cost=cost,
+            card_name=self._card_name(card),
+        )
         self.turn_player.lose_memory(cost)
         if hasattr(self.turn_player, "_temp_play_cost_reduction"):
             self.turn_player._temp_play_cost_reduction = 0
@@ -1509,8 +1602,17 @@ class Game:
         perm = self.turn_player.battle_area[permanent_index]
         card = self.turn_player.hand_cards[card_index]
 
+        from_card_id = self._card_id(perm.top_card) if perm.top_card else None
         cost = self.turn_player.digivolve(perm, card)
         self.turn_player.lose_memory(cost)
+        self._emit(
+            'digivolve',
+            source_card_id=self._card_id(card),
+            source_slot=permanent_index,
+            cost=cost,
+            card_name=self._card_name(card),
+            from_card_id=from_card_id,
+        )
 
         # Digivolution bonus: draw 1 card (Rule 8-1-4)
         self.turn_player.draw()

@@ -3,7 +3,7 @@ import { useGameStore } from '@/stores/gameStore';
 import * as gameApi from '@/api/gameApi';
 
 export function useGameActions() {
-  const { gameId, setGameState, setActionMask, appendLogs } = useGameStore();
+  const { gameId, setGameState, setActionMask, appendLogs, appendEvents } = useGameStore();
 
   const sendAction = useCallback(
     async (actionId: number) => {
@@ -14,6 +14,7 @@ export function useGameActions() {
       setGameState(actionResult.state);
       setActionMask(actionResult.action_mask);
       if (actionResult.logs) appendLogs(actionResult.logs);
+      if (actionResult.events) appendEvents(actionResult.events);
 
       // Then step the game (runs agent turns, pauses on next human turn)
       if (!actionResult.is_game_over) {
@@ -21,9 +22,10 @@ export function useGameActions() {
         setGameState(stepResult.state);
         setActionMask(stepResult.action_mask);
         if (stepResult.logs) appendLogs(stepResult.logs);
+        if (stepResult.events) appendEvents(stepResult.events);
       }
     },
-    [gameId, setGameState, setActionMask, appendLogs],
+    [gameId, setGameState, setActionMask, appendLogs, appendEvents],
   );
 
   return { sendAction };

@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import type { GameState } from '@/types/game';
+import type { GameState, GameEvent } from '@/types/game';
 
 export type ConnectionStatus = 'connecting' | 'connected' | 'disconnected' | 'error';
 
@@ -12,6 +12,7 @@ interface StateUpdatePayload {
   is_game_over: boolean;
   winner_id?: number | null;
   logs?: string[];
+  events?: GameEvent[];
   your_player_id?: number;
 }
 

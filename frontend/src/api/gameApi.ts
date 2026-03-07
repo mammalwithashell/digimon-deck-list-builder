@@ -1,5 +1,5 @@
 import { getGameClient } from './client';
-import type { GameState } from '@/types/game';
+import type { GameState, GameEvent } from '@/types/game';
 
 interface CreateGameParams {
   deck1?: string[];
@@ -26,6 +26,7 @@ interface ActionResponse {
   action_mask: number[];
   is_game_over: boolean;
   logs?: string[];
+  events?: GameEvent[];
   action_context?: Record<string, unknown>;
 }
 
@@ -33,6 +34,7 @@ interface StepResponse {
   state: GameState;
   action_mask: number[];
   logs: string[];
+  events?: GameEvent[];
   is_human_turn: boolean;
   is_game_over: boolean;
 }

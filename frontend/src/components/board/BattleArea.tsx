@@ -1,3 +1,4 @@
+import { useRef, useEffect, useState } from 'react';
 import { useDroppable } from '@dnd-kit/core';
 import { PermanentSlot } from './PermanentSlot';
 import type { PermanentInfo } from '@/types/game';
@@ -73,6 +74,31 @@ export function BattleArea({
 }: BattleAreaProps) {
   const slots = Array.from({ length: MAX_BATTLE_AREA_SLOTS }, (_, i) => i);
 
+  // Track previous card IDs per slot to detect entries
+  const prevCardIds = useRef<(string | null)[]>(
+    Array(MAX_BATTLE_AREA_SLOTS).fill(null)
+  );
+  const [animatingSlots, setAnimatingSlots] = useState<Set<number>>(new Set());
+
+  useEffect(() => {
+    const newAnimating = new Set<number>();
+    for (let i = 0; i < MAX_BATTLE_AREA_SLOTS; i++) {
+      const currentId = permanents[i]?.topCardId ?? null;
+      const prevId = prevCardIds.current[i];
+      // New card appeared in a slot that was empty or had a different card
+      if (currentId && currentId !== prevId) {
+        newAnimating.add(i);
+      }
+      prevCardIds.current[i] = currentId;
+    }
+    if (newAnimating.size > 0) {
+      setAnimatingSlots(newAnimating);
+      // Clear animation classes after animation completes
+      const timer = setTimeout(() => setAnimatingSlots(new Set()), 350);
+      return () => clearTimeout(timer);
+    }
+  }, [permanents]);
+
   return (
     <div className="grid grid-cols-6 gap-1 justify-center min-h-[276px] w-fit mx-auto">
       {slots.map((i) => {
@@ -102,16 +128,18 @@ export function BattleArea({
                 <span className="text-[9px] text-gray-700">{i}</span>
               </div>
             ) : (
-              <PermanentSlot
-                perm={perm}
-                slotIndex={i}
-                isOpponent={isOpponent}
-                highlighted={highlightedSlots?.has(i)}
-                targeted={targetedSlots?.has(i)}
-                onClick={() => onSlotClick?.(i)}
-                onMouseEnter={() => onSlotHover?.(i)}
-                onMouseLeave={() => onSlotHover?.(null)}
-              />
+              <div className={animatingSlots.has(i) ? 'animate-card-enter' : ''}>
+                <PermanentSlot
+                  perm={perm}
+                  slotIndex={i}
+                  isOpponent={isOpponent}
+                  highlighted={highlightedSlots?.has(i)}
+                  targeted={targetedSlots?.has(i)}
+                  onClick={() => onSlotClick?.(i)}
+                  onMouseEnter={() => onSlotHover?.(i)}
+                  onMouseLeave={() => onSlotHover?.(null)}
+                />
+              </div>
             )}
           </DroppableSlot>
         );
