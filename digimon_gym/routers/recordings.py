@@ -10,8 +10,10 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from digimon_gym.db.database import get_db
 from digimon_gym.db.models import GameRecording, GameRecordingReport
-from digimon_gym.db.schemas import BugReportRequest, BugReportResponse, RecordingResponse
+from digimon_gym.db.schemas import BugReportRequest, BugReportResponse, RecordingResponse, RecordingSaveResponse
+from digimon_gym.engine.runners.headless_game import HeadlessGame
 from digimon_gym.engine.runners.replay_runner import ReplayRunner
+from digimon_gym.routers.state import active_games
 
 router = APIRouter(tags=["recordings"])
 
@@ -80,6 +82,33 @@ async def get_recording_state_at_step(
         raise HTTPException(status_code=400, detail=str(exc))
 
     return replay_result.state
+
+
+@router.post("/games/{game_id}/recordings", response_model=RecordingSaveResponse)
+@router.post("/game/{game_id}/recording/save", response_model=RecordingSaveResponse, include_in_schema=False)
+async def save_game_recording(game_id: str, db: AsyncSession = Depends(get_db)):
+    """Persist a headless game recording to the database."""
+    runner = active_games.get(game_id)
+    if not runner:
+        raise HTTPException(status_code=404, detail="Game not found")
+    if not isinstance(runner, HeadlessGame):
+        raise HTTPException(status_code=400, detail="Only headless game recordings can be saved server-side.")
+
+    recording_data = runner.get_recording()
+    if not recording_data:
+        raise HTTPException(status_code=404, detail="No recording data available.")
+
+    record = GameRecording(
+        game_mode="headless",
+        recording_json=json.dumps(recording_data),
+        total_steps=recording_data.get("total_actions", 0),
+        has_tensors=1 if recording_data.get("tensor_snapshots_count", 0) > 0 else 0,
+    )
+    db.add(record)
+    await db.commit()
+    await db.refresh(record)
+
+    return RecordingSaveResponse(recording_id=record.id)
 
 
 @router.post("/bug-reports", response_model=BugReportResponse)
