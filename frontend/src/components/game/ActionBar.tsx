@@ -5,10 +5,11 @@ interface ActionBarProps {
   phase: GamePhase;
   actionMask: number[];
   onAction: (actionId: number) => void;
+  onSurrender?: () => void;
   isGameOver: boolean;
 }
 
-export function ActionBar({ phase, actionMask, onAction, isGameOver }: ActionBarProps) {
+export function ActionBar({ phase, actionMask, onAction, onSurrender, isGameOver }: ActionBarProps) {
   if (isGameOver) return null;
 
   const canPass = actionMask[ACTION.PASS] === 1;
@@ -18,6 +19,12 @@ export function ActionBar({ phase, actionMask, onAction, isGameOver }: ActionBar
   const canMulligan = actionMask[ACTION.MULLIGAN_REDRAW] === 1;
 
   const phaseName = PHASE_NAMES[phase] ?? 'Unknown';
+
+  const handleSurrender = () => {
+    if (onSurrender && window.confirm('Are you sure you want to surrender?')) {
+      onSurrender();
+    }
+  };
 
   return (
     <div data-testid="action-bar" className="flex items-center gap-2 px-3 py-2 bg-gray-800 border-t border-gray-700">
@@ -71,6 +78,20 @@ export function ActionBar({ phase, actionMask, onAction, isGameOver }: ActionBar
         >
           {phase === 2 ? 'Skip Breeding' : phase >= 5 ? 'Decline' : 'Pass'}
         </button>
+      )}
+
+      {/* Spacer + Surrender */}
+      {onSurrender && (
+        <>
+          <div className="flex-1" />
+          <button
+            data-testid="action-surrender"
+            onClick={handleSurrender}
+            className="px-3 py-1 bg-red-900/60 hover:bg-red-800 text-red-300 text-xs rounded border border-red-700/50"
+          >
+            Surrender
+          </button>
+        </>
       )}
     </div>
   );

@@ -170,6 +170,11 @@ class InteractiveGame(BaseGameRunner):
 
         return self.game.to_ui_json()
 
+    def surrender(self, player_id: int) -> Dict[str, Any]:
+        """Handle a player surrendering."""
+        self.game.surrender(player_id)
+        return self.game.to_ui_json()
+
     def step(self, action_id: int) -> None:
         """Execute a single action (from human or agent)."""
         if self.game.game_over:

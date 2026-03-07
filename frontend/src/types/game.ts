@@ -102,11 +102,23 @@ export interface PendingAttack {
   targetSlot: number;
 }
 
+export interface HandCardInfo {
+  cardId: string;
+  cardName: string;
+  playCost: number;
+  level: number | null;
+  dp: number | null;
+  colors: number[];
+  cardKind: number; // 0=Digimon, 1=Tamer, 2=Option, 3=DigiEgg
+  evoCosts: { color: number; level: number; cost: number }[];
+}
+
 export interface PlayerState {
   id: number;
   memory: number;
   handCount: number;
   handIds: string[];
+  handCards: HandCardInfo[];
   securityCount: number;
   securityIds: string[];
   deckCount: number;

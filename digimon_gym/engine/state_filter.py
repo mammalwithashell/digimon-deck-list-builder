@@ -21,9 +21,10 @@ from typing import Any, Dict
 
 
 def _redact_player(player_data: dict) -> dict:
-    """Replace hand/security card IDs with empty lists, preserving counts."""
+    """Replace hand/security card IDs/metadata with empty lists, preserving counts."""
     out = dict(player_data)
     out["handIds"] = []
+    out["handCards"] = []
     out["securityIds"] = []
     return out
 

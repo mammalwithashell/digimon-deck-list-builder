@@ -29,6 +29,10 @@ interface GameBoardProps {
   canPlayDragged?: boolean;
   onOwnTrashClick?: () => void;
   onOpponentTrashClick?: () => void;
+  /** Memory cost preview (positive = costs memory) */
+  previewCost?: number | null;
+  /** Callback when hovering a hand card by index */
+  onHandCardHoverIndex?: (index: number | null) => void;
 }
 
 export function GameBoard({
@@ -52,6 +56,8 @@ export function GameBoard({
   canPlayDragged = false,
   onOwnTrashClick,
   onOpponentTrashClick,
+  previewCost,
+  onHandCardHoverIndex,
 }: GameBoardProps) {
   const {
     player1,
@@ -101,7 +107,7 @@ export function GameBoard({
 
       {/* Memory gauge */}
       <div className="flex items-center justify-center gap-4 py-1 border-y border-gray-700/50">
-        <MemoryGauge value={memoryGauge} localPlayer={1} currentPhase={currentPhase} />
+        <MemoryGauge value={memoryGauge} localPlayer={1} currentPhase={currentPhase} previewCost={previewCost} />
       </div>
 
       {/* Revealed cards */}
@@ -139,7 +145,9 @@ export function GameBoard({
         cardIds={player1.handIds}
         isOpponent={false}
         highlightedIndices={playableHandIndices}
+        handCards={player1.handCards}
         onCardClick={onPlayCard}
+        onCardHoverIndex={onHandCardHoverIndex}
       />
     </div>
   );

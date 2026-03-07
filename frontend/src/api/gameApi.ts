@@ -75,6 +75,21 @@ export async function getLog(gameId: string): Promise<string[]> {
   return data.logs;
 }
 
+interface SurrenderResponse {
+  state: GameState;
+  action_mask: number[];
+  logs: string[];
+  events?: GameEvent[];
+  is_game_over: boolean;
+  surrendered_by: number;
+}
+
+export async function surrenderGame(gameId: string, playerId: number): Promise<SurrenderResponse> {
+  const client = getGameClient();
+  const { data } = await client.post<SurrenderResponse>(`/games/${gameId}/surrender`, { player_id: playerId });
+  return data;
+}
+
 export async function deleteGame(gameId: string): Promise<void> {
   const client = getGameClient();
   await client.delete(`/games/${gameId}`);

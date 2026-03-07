@@ -972,6 +972,15 @@ class Game:
 
     # ─── Game Actions ────────────────────────────────────────────────
 
+    def surrender(self, player_id: int) -> None:
+        """A player concedes the game."""
+        if self.game_over:
+            return
+        winner = self.player2 if player_id == self.player1.player_id else self.player1
+        self.logger.log(f"[Surrender] Player {player_id} surrendered.")
+        self._emit('surrender', player=player_id)
+        self.declare_winner(winner)
+
     def declare_winner(self, winner: Player):
         self.game_over = True
         self.winner = winner
@@ -1245,6 +1254,22 @@ class Game:
                 "memory": self._get_memory_for(p),
                 "handCount": len(p.hand_cards),
                 "handIds": [c.card_id for c in p.hand_cards],
+                "handCards": [
+                    {
+                        "cardId": c.card_id,
+                        "cardName": c.card_names[0] if c.card_names else "",
+                        "playCost": c.c_entity_base.play_cost if c.c_entity_base else 0,
+                        "level": c.c_entity_base.level if c.c_entity_base else None,
+                        "dp": c.c_entity_base.dp if c.c_entity_base else None,
+                        "colors": [col.value for col in c.card_colors],
+                        "cardKind": c.c_entity_base.card_kind.value if c.c_entity_base else 0,
+                        "evoCosts": [
+                            {"color": ec.card_color.value, "level": ec.level, "cost": ec.memory_cost}
+                            for ec in (c.c_entity_base.evo_costs if c.c_entity_base else [])
+                        ],
+                    }
+                    for c in p.hand_cards
+                ],
                 "securityCount": len(p.security_cards),
                 "securityIds": [c.card_id for c in p.security_cards],
                 "deckCount": len(p.library_cards),

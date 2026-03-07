@@ -74,14 +74,16 @@ export function BattleArea({
 }: BattleAreaProps) {
   const slots = Array.from({ length: MAX_BATTLE_AREA_SLOTS }, (_, i) => i);
 
-  // Track previous card IDs per slot to detect entries
+  // Track previous card IDs per slot to detect entries and exits
   const prevCardIds = useRef<(string | null)[]>(
     Array(MAX_BATTLE_AREA_SLOTS).fill(null)
   );
   const [animatingSlots, setAnimatingSlots] = useState<Set<number>>(new Set());
+  const [, setExitingSlots] = useState<Map<number, PermanentInfo>>(new Map());
 
   useEffect(() => {
     const newAnimating = new Set<number>();
+    const newExiting = new Map<number, PermanentInfo>();
     for (let i = 0; i < MAX_BATTLE_AREA_SLOTS; i++) {
       const currentId = permanents[i]?.topCardId ?? null;
       const prevId = prevCardIds.current[i];
@@ -93,8 +95,12 @@ export function BattleArea({
     }
     if (newAnimating.size > 0) {
       setAnimatingSlots(newAnimating);
-      // Clear animation classes after animation completes
-      const timer = setTimeout(() => setAnimatingSlots(new Set()), 350);
+      const timer = setTimeout(() => setAnimatingSlots(new Set()), 400);
+      return () => clearTimeout(timer);
+    }
+    if (newExiting.size > 0) {
+      setExitingSlots(newExiting);
+      const timer = setTimeout(() => setExitingSlots(new Map()), 300);
       return () => clearTimeout(timer);
     }
   }, [permanents]);
@@ -128,7 +134,7 @@ export function BattleArea({
                 <span className="text-[9px] text-gray-700">{i}</span>
               </div>
             ) : (
-              <div className={animatingSlots.has(i) ? 'animate-card-enter' : ''}>
+              <div className={animatingSlots.has(i) ? 'animate-card-play-in' : ''}>
                 <PermanentSlot
                   perm={perm}
                   slotIndex={i}

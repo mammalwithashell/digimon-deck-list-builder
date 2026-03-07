@@ -3,6 +3,7 @@ interface ResultOverlayProps {
   winner: number | null;
   localPlayer: number;
   playerLabels: Record<number, string>;
+  surrenderedBy?: number | null;
   onReturnToMenu: () => void;
 }
 
@@ -11,6 +12,7 @@ export function ResultOverlay({
   winner,
   localPlayer,
   playerLabels,
+  surrenderedBy,
   onReturnToMenu,
 }: ResultOverlayProps) {
   if (!isGameOver) return null;
@@ -19,6 +21,7 @@ export function ResultOverlay({
 
   const isWin = winner === localPlayer;
   const isDraw = winner === null;
+  const isSurrender = surrenderedBy != null;
 
   let headingText: string;
   let headingColor: string;
@@ -34,12 +37,16 @@ export function ResultOverlay({
     headingText = 'Victory!';
     headingColor = 'text-yellow-300';
     bgGradient = 'from-yellow-900/95 to-amber-900/95';
-    subText = 'Congratulations!';
+    subText = isSurrender && surrenderedBy !== localPlayer
+      ? `${getLabel(surrenderedBy)} surrendered.`
+      : 'Congratulations!';
   } else {
-    headingText = 'Defeat';
+    headingText = isSurrender && surrenderedBy === localPlayer ? 'Surrendered' : 'Defeat';
     headingColor = 'text-red-300';
     bgGradient = 'from-red-900/95 to-gray-900/95';
-    subText = `${getLabel(winner!)} wins.`;
+    subText = isSurrender && surrenderedBy === localPlayer
+      ? 'You surrendered the game.'
+      : `${getLabel(winner!)} wins.`;
   }
 
   return (
@@ -75,4 +82,3 @@ export function ResultOverlay({
     </div>
   );
 }
-

@@ -172,11 +172,15 @@ export function useWebSocketGame(options: UseWebSocketGameOptions | null) {
     wsRef.current?.send(JSON.stringify({ type: 'action', action_id: actionId }));
   }, []);
 
+  const sendSurrender = useCallback(() => {
+    wsRef.current?.send(JSON.stringify({ type: 'surrender' }));
+  }, []);
+
   const disconnect = useCallback(() => {
     wsRef.current?.close(1000, 'User disconnected');
     wsRef.current = null;
     setStatus('disconnected');
   }, []);
 
-  return { sendAction, disconnect, status, myPlayerId };
+  return { sendAction, sendSurrender, disconnect, status, myPlayerId };
 }
