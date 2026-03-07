@@ -498,13 +498,17 @@ class Game:
         self.logger.log(f"[Effect] {timing.name} | {source_name}: {effect_text}")
         src_card = getattr(effect, 'effect_source_card', None)
         src_perm = getattr(effect, 'effect_source_permanent', None)
+        is_inherited = getattr(effect, 'is_inherited_effect', False)
+        effect_desc = (getattr(effect, 'effect_description', None) or "").strip()
         self._emit(
             'effect_activate',
             source_card_id=self._card_id(src_card),
             source_slot=self._perm_slot(src_perm) if src_perm else None,
             effect_name=effect.effect_name or "",
+            effect_text=effect_desc,
             timing=timing.name,
             card_name=self._card_name(src_card),
+            is_inherited=is_inherited,
         )
 
     # ─── Effect Execution ────────────────────────────────────────────

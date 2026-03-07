@@ -70,6 +70,49 @@ body {
   animation: effectPulse 1.2s ease-out;
 }
 
+/* ─── Effect popup animation ──────────────────────────────── */
+
+@keyframes effectPopup {
+  0% { opacity: 0; transform: translateY(8px); }
+  15% { opacity: 1; transform: translateY(0); }
+  85% { opacity: 1; transform: translateY(0); }
+  100% { opacity: 0; transform: translateY(-4px); }
+}
+
+.animate-effect-popup {
+  animation: effectPopup 1.8s ease-out forwards;
+}
+
+/* ─── Security break animation ────────────────────────────── */
+
+@keyframes securityBreak {
+  0% { transform: scale(1); }
+  15% { transform: scale(0.95); border-color: rgba(239, 68, 68, 0.8); }
+  30% { transform: scale(1.03); }
+  50% { border-color: rgba(239, 68, 68, 0.4); }
+  100% { transform: scale(1); }
+}
+
+@keyframes securityShatter {
+  0% {
+    opacity: 0.8;
+    background: radial-gradient(circle at 50% 50%, rgba(239, 68, 68, 0.4) 0%, transparent 70%);
+  }
+  50% {
+    opacity: 0.4;
+    background: radial-gradient(circle at 50% 50%, rgba(239, 68, 68, 0.2) 0%, transparent 70%);
+  }
+  100% { opacity: 0; }
+}
+
+.animate-security-break {
+  animation: securityBreak 0.6s ease-out;
+}
+
+.animate-security-shatter {
+  animation: securityShatter 0.6s ease-out forwards;
+}
+
 /* ─── Phase banner animation ───────────────────────────────── */
 
 @keyframes bannerSlide {

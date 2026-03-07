@@ -26,6 +26,7 @@ import { PhaseBanner } from '@/components/game/PhaseBanner';
 import { CardOverlay } from '@/components/game/CardOverlay';
 import { GameLogDrawer } from '@/components/game/GameLogDrawer';
 import { SecurityRevealOverlay } from '@/components/board/SecurityRevealOverlay';
+import { EffectPopup } from '@/components/game/EffectPopup';
 import { KeywordPromptDialog } from '@/components/game/KeywordPromptDialog';
 import { DragOverlayCard } from '@/components/game/DragOverlayCard';
 import { useWebSocketGame, type UseWebSocketGameOptions } from '@/hooks/useWebSocketGame';
@@ -576,6 +577,7 @@ export function GamePage() {
             onClose={() => setInspectedPerm(null)}
           />
           <SecurityRevealOverlay />
+          <EffectPopup />
           <GameLogDrawer logs={store.logs} />
           <AttackArrow
             pendingAttack={store.pendingAttack}

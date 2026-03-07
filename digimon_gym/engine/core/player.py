@@ -499,6 +499,20 @@ class Player:
         sec_name = security_card.card_names[0] if security_card.card_names else "Unknown"
         sec_id = getattr(security_card, 'card_id', None)
         self._log(f"Security Check: Revealed {sec_name}")
+        # Build card type string
+        if security_card.is_digimon:
+            sec_card_type = 'Digimon'
+        elif security_card.is_option:
+            sec_card_type = 'Option'
+        elif security_card.is_tamer:
+            sec_card_type = 'Tamer'
+        else:
+            sec_card_type = 'Digi-Egg'
+        # Extract effect text from entity base
+        sec_entity = security_card.c_entity_base
+        sec_main_effect = sec_entity.effect_description_eng if sec_entity else ''
+        sec_inherited_effect = sec_entity.inherited_effect_description_eng if sec_entity else ''
+        sec_security_effect = sec_entity.security_effect_description_eng if sec_entity else ''
         self._emit(
             'security_reveal',
             source_card_id=sec_id,
@@ -506,6 +520,11 @@ class Player:
             revealed_card_name=sec_name,
             security_remaining=len(self.security_cards),
             is_digimon=security_card.is_digimon,
+            card_type=sec_card_type,
+            base_dp=security_card.base_dp,
+            main_effect_text=sec_main_effect,
+            inherited_effect_text=sec_inherited_effect,
+            security_effect_text=sec_security_effect,
         )
 
         # Track Security Digimon concept (DCGO: AttackProcess.SecurityDigimon)
@@ -562,13 +581,18 @@ class Player:
                         result = AttackResolution.AttackerDeleted
                 else:
                     self._log(f"Attacker {attacker.top_card.card_names[0]} survives.")
+                attacker_name = attacker.top_card.card_names[0] if attacker.top_card and attacker.top_card.card_names else "Unknown"
+                jamming_saved = (result != AttackResolution.AttackerDeleted and (a_dp < s_dp or a_dp == s_dp))
                 self._emit(
                     'security_battle',
                     source_card_id=getattr(attacker.top_card, 'card_id', None),
                     target_card_id=sec_id,
                     attacker_dp=a_dp,
                     defender_dp=s_dp,
+                    attacker_name=attacker_name,
+                    defender_name=sec_name,
                     result='attacker_deleted' if result == AttackResolution.AttackerDeleted else 'attacker_survives',
+                    jamming=jamming_saved,
                 )
 
         # Trash the security card
