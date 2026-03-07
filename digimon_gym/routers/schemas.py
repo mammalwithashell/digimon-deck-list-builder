@@ -1,8 +1,12 @@
-"""Pydantic schemas for gameplay-oriented API routers."""
+"""Pydantic schemas for gameplay-oriented API routers.
+
+Engine-only schemas — no database or SQLAlchemy dependencies.
+Safe to import from the desktop sidecar.
+"""
 
 from __future__ import annotations
 
-from typing import Optional
+from typing import Any, Dict, List, Optional
 
 from pydantic import BaseModel, Field
 
@@ -68,3 +72,40 @@ class InjectCardRequest(BaseModel):
     player_id: int = Field(ge=1, le=2)
     card_id: str
     zone: str = "hand"  # "hand", "library_top", "security_top"
+
+
+# ── Replay ───────────────────────────────────────────────────────────────
+
+class ReplayRequest(BaseModel):
+    """Create a replay session from a recording dict."""
+    recording: Dict[str, Any]
+    verify: bool = False
+
+
+class SeekRequest(BaseModel):
+    """Jump to a specific step in a replay session."""
+    step: int
+
+
+class ReplayCreateResponse(BaseModel):
+    """Response from creating a replay session."""
+    replay_id: str
+    total_steps: int
+    initial_state: Dict[str, Any]
+
+
+class ReplayStepResponse(BaseModel):
+    """Response from a replay step or seek."""
+    step_number: int
+    action_id: int
+    player_id: int
+    phase_before: str
+    phase_after: str
+    memory_before: int
+    memory_after: int
+    turn_number: int
+    is_game_over: bool
+    winner_id: Optional[int] = None
+    state: Dict[str, Any]
+    verification_ok: Optional[bool] = None
+    verification_errors: List[str] = Field(default_factory=list)

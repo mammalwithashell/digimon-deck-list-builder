@@ -13,6 +13,7 @@ import argparse
 import os
 import socket
 import time
+from contextlib import asynccontextmanager
 
 import uvicorn
 from fastapi import FastAPI, APIRouter, HTTPException
@@ -25,14 +26,26 @@ from digimon_gym.engine.runners.interactive_game import InteractiveGame
 from digimon_gym.routers.schemas import CreateGameRequest, GameActionRequest
 
 
+@asynccontextmanager
+async def _lifespan(app: FastAPI):
+    """Initialize card data on startup."""
+    from digimon_gym.engine.data.card_database import CardDatabase
+    from digimon_gym.engine.data.card_registry import CardRegistry
+
+    CardDatabase()
+    CardRegistry.ensure_initialized()
+    yield
+
+
 def create_desktop_app(models_dir: str = "./models") -> FastAPI:
     """Create a minimal FastAPI app for desktop sidecar use.
 
     Only mounts game engine and deck tool routes — no DB, no auth.
+    Also mounts simulation and replay routers (engine-only, no DB deps).
     """
     os.environ["ONNX_MODELS_DIR"] = models_dir
 
-    app = FastAPI(title="Digimon TCG Desktop", version="0.1.0")
+    app = FastAPI(title="Digimon TCG Desktop", version="0.1.0", lifespan=_lifespan)
     app.add_middleware(
         CORSMiddleware,
         allow_origins=["*"],
@@ -220,9 +233,11 @@ def create_desktop_app(models_dir: str = "./models") -> FastAPI:
 
     app.include_router(router)
 
-    # Deck tools have no DB deps — safe to import directly
-    from digimon_gym.routers import deck_tools
+    # Engine-only routers — no DB deps, safe for sidecar
+    from digimon_gym.routers import deck_tools, simulations, replays
     app.include_router(deck_tools.router)
+    app.include_router(simulations.router)
+    app.include_router(replays.router)
 
     return app
 

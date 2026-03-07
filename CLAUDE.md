@@ -7,15 +7,38 @@ It focuses on stable contracts and implementation shape, not static snapshot met
 
 ## System Overview
 
-The repository contains five major surfaces:
+The codebase is split into three deployable services sharing a common engine:
 
-1. Headless Digimon game engine (`digimon_gym/engine/`)
+1. **Desktop Sidecar** (`digimon_gym/desktop_main.py`) — local games vs AI agents, deck tools, simulations, replays. No DB, no auth. Bundled as a Tauri v2 desktop app.
+2. **Hosted API** (`digimon_gym/api.py`) — PvP WebSockets, lobby, auth, user data, recordings, admin AI. Central server for online features.
+3. **Training CLI** (`python -m digimon_gym.agents.pilot_training`) — standalone RL training. No HTTP server, no DB.
+
+Underlying surfaces:
+
+1. Headless Digimon game engine (`digimon_gym/engine/`) — shared by all services
 2. RL environment and pilot training (`digimon_gym/digimon_gym.py`, `digimon_gym/agents/`)
-3. FastAPI backend (`digimon_gym/api.py`, `digimon_gym/routers/`, `digimon_gym/db/routers/`)
-4. React frontend (`frontend/src/`)
-5. Tauri v2 desktop shell (`src-tauri/`, `digimon_gym/desktop_main.py`)
+3. React frontend (`frontend/src/`) — desktop build excludes admin/training UI via `VITE_BUILD_TARGET`
+4. Tauri v2 desktop shell (`src-tauri/`)
+5. Admin AI workflow (`digimon_gym/ai/`, `/admin/*` routes) — hosted API only
 
-It also includes an admin AI workflow for issue triage, AI task dispatch, autofix apply, and promotion auditing (`digimon_gym/ai/`, `/admin/*` routes).
+## Service Boundaries
+
+**Engine-only routers** (safe for desktop sidecar — no DB imports):
+- `health`, `games`, `deck_tools`, `simulations`, `replays`
+
+**DB/auth-required routers** (hosted API only):
+- `lobby`, `ws_games`, `recordings`, all `db/routers/*`
+
+**Standalone agent modules** (no DB, no HTTP — training CLI):
+- `pilot_training`, `gauntlet`, `deck_pool`, `features_extractor`, `maskable_recurrent/`
+
+**DB-dependent agent modules** (hosted API only):
+- `training_worker`, `gauntlet_orchestrator`
+
+**Requirements files:**
+- `requirements.txt` — full hosted API (all deps)
+- `requirements-desktop.txt` — sidecar (engine + ONNX, no DB/torch)
+- `requirements-training.txt` — training CLI (engine + torch/SB3, no FastAPI/DB)
 
 ## Key Repository Paths
 
@@ -28,6 +51,7 @@ It also includes an admin AI workflow for issue triage, AI task dispatch, autofi
 - `digimon_gym/agents/gauntlet_orchestrator.py`: 3-stage training pipeline
 - `digimon_gym/agents/league_wrapper.py`: PFSP opponent wrapper
 - `digimon_gym/agents/deck_pool.py`: deck variant generation for training
+- `digimon_gym/agents/training_metrics.py`: file-based training run metadata (no DB)
 - `digimon_gym/agents/training_worker.py`: async DB-backed training job queue
 - `digimon_gym/api.py`: app assembly and router registration
 - `digimon_gym/routers/`: gameplay-facing routers
@@ -340,3 +364,6 @@ cd src-tauri && cargo tauri build  # production installers
 8. `desktop_main.py` must not import any `digimon_gym.db.*` or `digimon_gym.ai.*` modules (breaks without SQLAlchemy).
 9. WebSocket state broadcasts must use `state_filter.py` — never send raw `to_ui_json()` to network clients.
 10. ONNX policies must call `reset()` at episode boundaries for LSTM models (same rule as SB3 LSTM state threading).
+11. Engine-only routers (`games.py`, `replays.py`, `simulations.py`, `deck_tools.py`) must not import from `digimon_gym.db.*` or `digimon_gym.ai.*`.
+12. Training CLI modules (`pilot_training.py`, `gauntlet.py`, `deck_pool.py`) must not import from `digimon_gym.db.*`.
+13. Desktop frontend builds use `VITE_BUILD_TARGET=desktop` to tree-shake admin/training UI.

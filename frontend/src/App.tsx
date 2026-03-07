@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { lazy, Suspense, useEffect } from 'react';
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import { Layout } from '@/components/layout/Layout';
 import { AuthGuard } from '@/components/auth/AuthGuard';
@@ -8,15 +8,27 @@ import { LoginPage } from '@/pages/LoginPage';
 import { RegisterPage } from '@/pages/RegisterPage';
 import { GamePage } from '@/pages/GamePage';
 import { DeckBuilderPage } from '@/pages/DeckBuilderPage';
-import { AdminIssuesPage } from '@/pages/AdminIssuesPage';
-import { AdminTasksPage } from '@/pages/AdminTasksPage';
-import { AdminPromotionsPage } from '@/pages/AdminPromotionsPage';
-import { BarracksPage } from '@/pages/BarracksPage';
-import { ArenaPage } from '@/pages/ArenaPage';
-import { GauntletPage } from '@/pages/GauntletPage';
-import { DeckPoolPage } from '@/pages/DeckPoolPage';
 import { LobbyPage } from '@/pages/LobbyPage';
 import { useAuthStore } from '@/stores/authStore';
+
+const IS_DESKTOP = import.meta.env.VITE_BUILD_TARGET === 'desktop';
+
+// Lazy-load admin/training pages so they're tree-shaken out of desktop builds
+const AdminIssuesPage = lazy(() => import('@/pages/AdminIssuesPage').then(m => ({ default: m.AdminIssuesPage })));
+const AdminTasksPage = lazy(() => import('@/pages/AdminTasksPage').then(m => ({ default: m.AdminTasksPage })));
+const AdminPromotionsPage = lazy(() => import('@/pages/AdminPromotionsPage').then(m => ({ default: m.AdminPromotionsPage })));
+const BarracksPage = lazy(() => import('@/pages/BarracksPage').then(m => ({ default: m.BarracksPage })));
+const ArenaPage = lazy(() => import('@/pages/ArenaPage').then(m => ({ default: m.ArenaPage })));
+const GauntletPage = lazy(() => import('@/pages/GauntletPage').then(m => ({ default: m.GauntletPage })));
+const DeckPoolPage = lazy(() => import('@/pages/DeckPoolPage').then(m => ({ default: m.DeckPoolPage })));
+
+function suspended(Component: React.LazyExoticComponent<React.ComponentType>) {
+  return (
+    <Suspense fallback={null}>
+      <Component />
+    </Suspense>
+  );
+}
 
 export function App() {
   const hydrate = useAuthStore((s) => s.hydrate);
@@ -37,17 +49,19 @@ export function App() {
             <Route path="/game/:id?" element={<GamePage />} />
             <Route path="/deckbuilder/:id?" element={<DeckBuilderPage />} />
           </Route>
-          <Route element={<RoleGuard allowedRoles={['admin']} />}>
-            <Route path="/admin/issues" element={<AdminIssuesPage />} />
-            <Route path="/admin/tasks" element={<AdminTasksPage />} />
-            <Route path="/admin/promotions" element={<AdminPromotionsPage />} />
-            <Route path="/admin/barracks" element={<BarracksPage />} />
-            <Route path="/admin/arena" element={<ArenaPage />} />
-            <Route path="/admin/gauntlet" element={<GauntletPage />} />
-            <Route path="/admin/gauntlet/:id" element={<GauntletPage />} />
-            <Route path="/admin/deck-pools" element={<DeckPoolPage />} />
-            <Route path="/admin/deck-pools/:id" element={<DeckPoolPage />} />
-          </Route>
+          {!IS_DESKTOP && (
+            <Route element={<RoleGuard allowedRoles={['admin']} />}>
+              <Route path="/admin/issues" element={suspended(AdminIssuesPage)} />
+              <Route path="/admin/tasks" element={suspended(AdminTasksPage)} />
+              <Route path="/admin/promotions" element={suspended(AdminPromotionsPage)} />
+              <Route path="/admin/barracks" element={suspended(BarracksPage)} />
+              <Route path="/admin/arena" element={suspended(ArenaPage)} />
+              <Route path="/admin/gauntlet" element={suspended(GauntletPage)} />
+              <Route path="/admin/gauntlet/:id" element={suspended(GauntletPage)} />
+              <Route path="/admin/deck-pools" element={suspended(DeckPoolPage)} />
+              <Route path="/admin/deck-pools/:id" element={suspended(DeckPoolPage)} />
+            </Route>
+          )}
         </Route>
       </Routes>
     </BrowserRouter>

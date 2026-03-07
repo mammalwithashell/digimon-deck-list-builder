@@ -16,6 +16,8 @@ type NavGroup = {
   items: NavItem[];
 };
 
+const IS_DESKTOP = import.meta.env.VITE_BUILD_TARGET === 'desktop';
+
 const NAV_GROUPS: NavGroup[] = [
   {
     key: 'home',
@@ -66,7 +68,11 @@ export function NavBar() {
   const navRef = useRef<HTMLDivElement | null>(null);
   const [openGroup, setOpenGroup] = useState<string | null>(null);
   const isAdmin = useAuthStore((s) => s.user?.roles?.includes('admin') ?? false);
-  const groups = NAV_GROUPS.filter((group) => !group.adminOnly || isAdmin);
+  const groups = NAV_GROUPS.filter((group) => {
+    if (group.adminOnly && IS_DESKTOP) return false;
+    if (group.adminOnly && !isAdmin) return false;
+    return true;
+  });
 
   useEffect(() => {
     setOpenGroup(null);
