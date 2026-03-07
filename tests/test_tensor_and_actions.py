@@ -160,17 +160,17 @@ class TestBoardStateTensor:
         game.turn_count = 5
         tensor = game.get_board_state_tensor(1)
 
-        assert tensor[0] == 5.0   # turn count
+        assert tensor[0] == pytest.approx(5.0 / 30.0)   # turn count normalized
         assert tensor[1] == float(GamePhase.Main.value)  # phase
-        assert tensor[2] == 7.0   # memory for player 1
+        assert tensor[2] == pytest.approx(7.0 / 10.0)   # memory normalized
 
     def test_memory_relative_to_player(self):
         game = setup_game_at_phase(GamePhase.Main, memory=4)
         t1 = game.get_board_state_tensor(1)
         t2 = game.get_board_state_tensor(2)
 
-        assert t1[2] == 4.0   # P1's view: +4
-        assert t2[2] == -4.0  # P2's view: -4
+        assert t1[2] == pytest.approx(4.0 / 10.0)   # P1's view: +4, normalized
+        assert t2[2] == pytest.approx(-4.0 / 10.0)  # P2's view: -4, normalized
 
     def test_empty_board_all_zeros(self):
         game = setup_game_at_phase(GamePhase.Main, memory=0)
@@ -194,13 +194,13 @@ class TestBoardStateTensor:
         # My field starts at index 10, compact layout: +0=card_id, +1=DP, ...
         base = 10
         assert tensor[base] == float(CardRegistry.get_id("BT14-001"))  # card ID
-        assert tensor[base + 1] == 5000.0    # DP
+        assert tensor[base + 1] == pytest.approx(5000.0 / 30000.0)    # DP normalized
         assert tensor[base + 2] == 1.0       # suspended
         assert tensor[base + 6] == 1.0       # source count
         # source[0]: card_id + opt_state + dp_contribution
         src0 = base + 7
         assert tensor[src0] == float(CardRegistry.get_id("BT14-001"))  # source card ID
-        assert tensor[src0 + 1] == -1.0      # opt_state: no OPT effects
+        assert tensor[src0 + 1] == 0.0       # opt_state: no OPT effects (was -1, now 0)
         assert tensor[src0 + 2] == 0.0       # dp_contribution: no DP effect
 
     def test_digivolution_stack_encoding(self):
@@ -217,18 +217,18 @@ class TestBoardStateTensor:
 
         slot_base = 10
         assert tensor[slot_base] == float(CardRegistry.get_id("BT14-010"))  # top card
-        assert tensor[slot_base + 1] == 6000.0     # DP
+        assert tensor[slot_base + 1] == pytest.approx(6000.0 / 30000.0)  # DP normalized
         assert tensor[slot_base + 6] == 2.0        # 2 sources
 
         src_start = slot_base + 7
         # source[0]
         assert tensor[src_start] == float(CardRegistry.get_id("BT14-002"))
-        assert tensor[src_start + 1] == -1.0       # opt_state
+        assert tensor[src_start + 1] == 0.0        # opt_state (no OPT = 0.0)
         assert tensor[src_start + 2] == 0.0        # dp_contribution
         # source[1]
         src1 = src_start + SE
         assert tensor[src1] == float(CardRegistry.get_id("BT14-010"))
-        assert tensor[src1 + 1] == -1.0            # opt_state
+        assert tensor[src1 + 1] == 0.0             # opt_state (no OPT = 0.0)
         assert tensor[src1 + 2] == 0.0             # dp_contribution
 
     def test_opponent_field_offset(self):
@@ -244,7 +244,7 @@ class TestBoardStateTensor:
         # Opp field starts at 10 + FIELD_SLOTS*SLOT_SIZE
         base = 10 + FIELD_SLOTS * SLOT_SIZE
         assert tensor[base] == float(CardRegistry.get_id("BT14-020"))
-        assert tensor[base + 1] == 7000.0
+        assert tensor[base + 1] == pytest.approx(7000.0 / 30000.0)
 
     def test_hand_encoding(self):
         game = setup_game_at_phase(GamePhase.Main)
@@ -280,16 +280,23 @@ class TestBoardStateTensor:
         game = setup_game_at_phase(GamePhase.Main)
         p1 = game.player1
 
-        p1.security_cards.append(make_card("BT14-090", owner=p1))
+        card = make_card("BT14-090", owner=p1)
+        p1.security_cards.append(card)
 
         tensor = game.get_board_state_tensor(1)
 
         # My security starts after hands + trashes
         sec_start = (10 + 2 * FIELD_SLOTS * SLOT_SIZE +
                      2 * MAX_HAND + 2 * MAX_TRASH)
-        assert tensor[sec_start] == float(CardRegistry.get_id("BT14-090"))
-        # Second slot should be zero
+        # Face-down security cards are hidden (0.0)
+        assert tensor[sec_start] == 0.0
         assert tensor[sec_start + 1] == 0.0
+
+        # Face-up security cards are visible
+        p1.face_up_security.add(card)
+        tensor2 = game.get_board_state_tensor(1)
+        assert tensor2[sec_start] == float(CardRegistry.get_id("BT14-090"))
+        assert tensor2[sec_start + 1] == 0.0
 
     def test_breeding_encoding(self):
         game = setup_game_at_phase(GamePhase.Main)

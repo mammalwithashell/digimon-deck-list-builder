@@ -36,8 +36,10 @@ fn main() {
             let child_state: Arc<Mutex<Option<tauri_plugin_shell::process::CommandChild>>> =
                 Arc::new(Mutex::new(None));
 
+            let app_handle = app.handle().clone();
+
             // Spawn the Python sidecar (game engine only, no DB/auth)
-            let (rx, child) = app
+            let (rx, child) = app_handle
                 .shell()
                 .sidecar("digimon-server")
                 .expect("failed to create sidecar command")
@@ -50,7 +52,7 @@ fn main() {
             // Clone handles for the async task
             let port_clone = Arc::clone(&port_state);
             let child_clone = Arc::clone(&child_state);
-            let shell_handle = app.shell().clone();
+            let handle_clone = app_handle.clone();
             let models_dir_clone = models_dir_str.clone();
 
             // Log sidecar output, parse port, and handle respawn
@@ -92,7 +94,8 @@ fn main() {
                             // Wait before respawn
                             tokio::time::sleep(std::time::Duration::from_secs(2)).await;
                             eprintln!("[sidecar] respawning (attempt {}/{})", retries, MAX_RESPAWN_RETRIES);
-                            match shell_handle
+                            match handle_clone
+                                .shell()
                                 .sidecar("digimon-server")
                                 .expect("failed to create sidecar command")
                                 .args(["--port", "8321", "--models-dir", &models_dir_clone])
@@ -127,7 +130,7 @@ fn main() {
             if let tauri::WindowEvent::CloseRequested { .. } = event {
                 // Kill the sidecar when the window closes
                 if let Some(state) = window.try_state::<SidecarState>() {
-                    if let Some(ref child) = *state.child.lock().unwrap() {
+                    if let Some(child) = state.child.lock().unwrap().take() {
                         let _ = child.kill();
                     }
                 }

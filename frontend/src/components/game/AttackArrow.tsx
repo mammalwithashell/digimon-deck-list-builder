@@ -67,7 +67,6 @@ export function AttackArrow({ pendingAttack, selectedAttacker, containerRef }: A
 
   const dx = line.to.x - line.from.x;
   const dy = line.to.y - line.from.y;
-  const len = Math.sqrt(dx * dx + dy * dy);
   const angle = Math.atan2(dy, dx);
 
   // Arrowhead points

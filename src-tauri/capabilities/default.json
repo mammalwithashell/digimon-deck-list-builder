@@ -4,8 +4,6 @@
   "permissions": [
     "core:default",
     "shell:allow-execute",
-    "shell:allow-spawn",
-    "fs:allow-read",
-    "http:default"
+    "shell:allow-spawn"
   ]
 }

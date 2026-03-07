@@ -29,8 +29,8 @@ happens inside the `CardEmbeddingExtractor` on the GPU, not in the tensor writer
 | `1150-1169` | 20 | Opponent hand card IDs (`20 × 1`) |
 | `1170-1214` | 45 | My trash card IDs (`45 × 1`) |
 | `1215-1259` | 45 | Opponent trash card IDs (`45 × 1`) |
-| `1260-1269` | 10 | My security card IDs (`10 × 1`) |
-| `1270-1279` | 10 | Opponent security card IDs (`10 × 1`) |
+| `1260-1269` | 10 | My security card IDs (`10 × 1`, face-up only; face-down = `0.0`) |
+| `1270-1279` | 10 | Opponent security card IDs (`10 × 1`, face-up only; face-down = `0.0`) |
 | `1280-1319` | 40 | My breeding area (`1 × 40`) |
 | `1320-1359` | 40 | Opponent breeding area (`1 × 40`) |
 | `1360-1369` | 10 | Revealed card IDs (`10 × 1`) |
@@ -40,9 +40,9 @@ happens inside the `CardEmbeddingExtractor` on the GPU, not in the tensor writer
 
 | Index | Field | Notes |
 |---:|---|---|
-| `0` | Turn count | Current turn number |
+| `0` | Turn count | `turn_count / 30.0` clamped to `1.0` |
 | `1` | Phase | `GamePhase` enum value |
-| `2` | Memory | Relative to observer (`+` means observer-favored) |
+| `2` | Memory | `memory / 10.0`, relative to observer (`+` means observer-favored) |
 | `3-9` | Reserved | `0.0` |
 
 ### GamePhase Values
@@ -77,7 +77,7 @@ Each slot in battle area and breeding area uses this format.
 | Offset | Field | Notes |
 |---:|---|---|
 | `+0` | Top card ID | Integer registry index (0 = empty) |
-| `+1` | DP | Current DP with modifiers |
+| `+1` | DP | `dp / 30000.0` (normalized) |
 | `+2` | Suspended | `1.0` suspended, `0.0` active |
 | `+3` | OPT total | Count of OPT effects on permanent |
 | `+4` | OPT used | OPT effects used this turn |
@@ -91,8 +91,8 @@ Start at `+7`, bottom-to-top ordering.
 | Per-source Offset | Field | Notes |
 |---:|---|---|
 | `+0` | Source card ID | Integer registry index |
-| `+1` | OPT state | `-1` none, `0..1` availability |
-| `+2` | DP contribution | Active DP modifier from this source |
+| `+1` | OPT state | `0` none/exhausted, `0..1` availability |
+| `+2` | DP contribution | `dp_contribution / 30000.0` (normalized) |
 
 ## Card Identity Encoding
 

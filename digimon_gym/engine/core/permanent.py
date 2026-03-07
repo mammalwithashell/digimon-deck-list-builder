@@ -383,8 +383,7 @@ class Permanent:
         """Return OPT availability state for a specific source card.
 
         Returns:
-          -1.0  — source has no once-per-turn effects
-           0.0  — all OPT effects exhausted this turn
+           0.0  — source has no once-per-turn effects OR all exhausted
            1.0  — all OPT effects still available
            0.0-1.0 — fraction available (e.g. 0.5 = 1 of 2 available)
 
@@ -404,7 +403,7 @@ class Permanent:
                 if effect.can_activate_this_turn():
                     available += 1
         if total == 0:
-            return -1.0
+            return 0.0
         return float(available) / float(total)
 
     def source_dp_contribution(self, source: 'CardSource') -> float:

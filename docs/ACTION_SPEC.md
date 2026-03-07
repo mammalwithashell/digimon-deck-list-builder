@@ -13,7 +13,7 @@ The engine exposes `2168` discrete action IDs. Legal actions are provided by `ge
 | `62` | 1 | Pass / decline |
 | `63-92` | 30 | Initiate DNA Digivolve | `63 + hand_idx` |
 | `93-99` | 7 | Unused |
-| `100-399` | 300 | Attack-like selections | `100 + slot * 15 + target` |
+| `100-399` | 300 | Attack / block / alliance (phase-dependent) | `100 + slot * 15 + target` |
 | `400-999` | 600 | Digivolve | `400 + hand_idx * 15 + field_idx` |
 | `1000-1999` | 1000 | Effect activation | `1000 + perm_idx * 10 + effect_idx` |
 | `2000-2167` | 168 | Source selection | `2000 + field_idx * 12 + source_idx` |
@@ -80,8 +80,8 @@ Action IDs are intentionally reused across phases.
 ### Selection Phases
 
 - Generic selection phases (`SelectTarget`, `SelectMaterial`, `SelectHand`, `SelectReveal`, `SelectEffectChoice`, `SelectSecurity`) use `pending_selection.valid_indices`.
-- `SelectTrash`: uses `130-179` (`130 + trash_idx`)
-- `SelectSource`: uses `2000-2167` (`2000 + field_idx * 12 + source_idx`)
+- `SelectTrash`: uses `pending_selection.valid_indices` when available, otherwise falls back to `130-179` (`130 + trash_idx`). Optional selections allow decline with `62`.
+- `SelectSource`: uses `pending_selection.valid_indices` when available, otherwise falls back to `2000-2167` (`2000 + field_idx * 12 + source_idx`). Optional selections allow decline with `62`.
 - Optional selections allow decline with `62`.
 
 ## Selection Conventions

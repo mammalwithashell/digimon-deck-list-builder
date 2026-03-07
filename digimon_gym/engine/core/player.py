@@ -1,5 +1,5 @@
 from __future__ import annotations
-from typing import TYPE_CHECKING, List, Optional, Callable
+from typing import TYPE_CHECKING, List, Optional, Callable, Set
 import random
 from .permanent import Permanent
 from ..data.enums import EffectTiming, CardKind, AttackResolution
@@ -22,6 +22,7 @@ class Player:
 
         self.battle_area: List['Permanent'] = []
         self.breeding_area: Optional['Permanent'] = None
+        self.face_up_security: Set['CardSource'] = set()
 
         self.enemy: Optional['Player'] = None
         self.game: Optional[object] = None  # Back-reference to Game, set at start
@@ -496,6 +497,7 @@ class Player:
 
         # Reveal top card
         security_card = self.security_cards.pop(0)
+        self.face_up_security.discard(security_card)
         sec_name = security_card.card_names[0] if security_card.card_names else "Unknown"
         sec_id = getattr(security_card, 'card_id', None)
         self._log(f"Security Check: Revealed {sec_name}")
@@ -706,6 +708,7 @@ class Player:
         """Remove a specific card from the security stack and trash it."""
         if card in self.security_cards:
             self.security_cards.remove(card)
+            self.face_up_security.discard(card)
             self.trash_cards.append(card)
             self._fire_timing(EffectTiming.OnDiscardSecurity, {"discarded_card": card, "player": self})
             self._fire_timing(EffectTiming.OnLoseSecurity, {"lost_card": card, "player": self})
@@ -714,8 +717,26 @@ class Player:
         """Remove a card from the security stack (without trashing). Returns the card."""
         if card in self.security_cards:
             self.security_cards.remove(card)
+            self.face_up_security.discard(card)
             return card
         return None
+
+    def add_to_security_face_up(self, card: 'CardSource', to_top: bool = True):
+        """Add a card to the security stack face-up."""
+        if to_top:
+            self.security_cards.append(card)
+        else:
+            self.security_cards.insert(0, card)
+        self.face_up_security.add(card)
+        self._fire_timing(EffectTiming.OnAddSecurity, {"added_cards": [card], "player": self})
+
+    def flip_security_face_down(self, card: 'CardSource'):
+        """Flip a face-up security card face-down."""
+        self.face_up_security.discard(card)
+
+    def is_security_face_up(self, card: 'CardSource') -> bool:
+        """Check if a security card is face-up."""
+        return card in self.face_up_security
 
     def reveal_top_cards(self, count: int) -> List['CardSource']:
         """Reveal top N cards of library (peek without removing)."""
@@ -736,7 +757,7 @@ class Player:
         self.battle_area.append(new_permanent)
         return new_permanent
 
-    def put_permanent_to_security(self, permanent: 'Permanent'):
+    def put_permanent_to_security(self, permanent: 'Permanent', face_up: bool = False):
         """Move a permanent from the battle area to the security stack.
         The top card goes to security; digivolution cards under it go to trash."""
         if permanent not in self.battle_area:
@@ -748,6 +769,8 @@ class Player:
             return
         if permanent.top_card:
             self.security_cards.append(permanent.top_card)
+            if face_up:
+                self.face_up_security.add(permanent.top_card)
             self._log(f"{permanent.top_card.card_names[0]} placed into security.")
         # Digivolution cards under top go to trash
         under_cards = permanent.card_sources[:-1]
