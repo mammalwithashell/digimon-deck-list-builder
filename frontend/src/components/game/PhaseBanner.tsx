@@ -28,7 +28,7 @@ export function PhaseBanner({ phase, isGameOver }: PhaseBannerProps) {
   const [visible, setVisible] = useState(false);
   const [displayPhase, setDisplayPhase] = useState<GamePhase>(phase);
   const prevPhase = useRef(phase);
-  const timerRef = useRef<ReturnType<typeof setTimeout>>();
+  const timerRef = useRef<ReturnType<typeof setTimeout>>(undefined);
 
   useEffect(() => {
     if (isGameOver) return;

@@ -40,6 +40,7 @@ TARGETS_PER_ATTACKER = 15         # 0..FIELD_SLOTS-1 = opp field, FIELD_SLOTS = 
 FIELDS_PER_HAND = 15              # 0..FIELD_SLOTS-1 = battle area, FIELD_SLOTS = breeding
 EFFECTS_PER_PERM = 10             # effect sub-indices per permanent
 SOURCES_PER_FIELD = 12            # source sub-indices per field slot (accommodates MAX_SOURCES=11)
+DP_NORM = 30000.0                 # DP normalization factor (covers rare ~30k buffed archetypes)
 
 # Action space size: max source action = 2000 + (FIELD_SLOTS-1)*SOURCES_PER_FIELD + (SOURCES_PER_FIELD-1)
 ACTION_SPACE_SIZE = 2000 + FIELD_SLOTS * SOURCES_PER_FIELD  # 2168
@@ -1186,7 +1187,11 @@ class Game:
                 "handCount": len(p.hand_cards),
                 "handIds": [c.card_id for c in p.hand_cards],
                 "securityCount": len(p.security_cards),
-                "securityIds": [c.card_id for c in p.security_cards],
+                "securityIds": [
+                    c.card_id if c in p.face_up_security else None
+                    for c in p.security_cards
+                ],
+                "securityFaceUp": [c in p.face_up_security for c in p.security_cards],
                 "deckCount": len(p.library_cards),
                 "eggDeckCount": len(p.digitama_library_cards),
                 "battleAreaCount": len(p.battle_area),
@@ -1655,9 +1660,9 @@ class Game:
         t = np.zeros(TENSOR_SIZE, dtype=np.float32)
 
         # --- Global [0-9] ---
-        t[0] = float(self.turn_count)
+        t[0] = min(float(self.turn_count) / 30.0, 1.0)
         t[1] = float(self.current_phase.value)
-        t[2] = float(self._get_memory_for(me))
+        t[2] = float(self._get_memory_for(me)) / 10.0
         # [3-9] are reserved (already 0.0)
 
         # --- My field ---
@@ -1684,13 +1689,13 @@ class Game:
         off += _MY_TRASH
         self._write_card_ids(t, off, opp.trash_cards, MAX_TRASH)
 
-        # --- My security ---
+        # --- My security (only face-up cards visible) ---
         off += _OPP_TRASH
-        self._write_card_ids(t, off, me.security_cards, MAX_SECURITY)
+        self._write_security_ids(t, off, me)
 
-        # --- Opp security ---
+        # --- Opp security (only face-up cards visible) ---
         off += _MY_SECURITY
-        self._write_card_ids(t, off, opp.security_cards, MAX_SECURITY)
+        self._write_security_ids(t, off, opp)
 
         # --- My breeding ---
         off += _OPP_SECURITY
@@ -1755,7 +1760,7 @@ class Game:
                 tensor[base] = float(CardRegistry.get_id(top.card_id))
 
             # Scalar fields
-            tensor[base + 1] = float(perm.dp or 0)
+            tensor[base + 1] = float(perm.dp or 0) / DP_NORM
             tensor[base + 2] = 1.0 if perm.is_suspended else 0.0
             tensor[base + 3] = float(perm.opt_total)
             tensor[base + 4] = float(perm.opt_used)
@@ -1768,13 +1773,21 @@ class Game:
                 off = src_base + j * SOURCE_ENTRY_SIZE
                 tensor[off] = float(CardRegistry.get_id(src.card_id))
                 tensor[off + 1] = perm.source_opt_state(src)
-                tensor[off + 2] = perm.source_dp_contribution(src)
+                tensor[off + 2] = perm.source_dp_contribution(src) / DP_NORM
 
     @staticmethod
     def _write_card_ids(tensor: np.ndarray, start_idx: int, cards: list, limit: int):
         """Write card integer IDs into tensor starting at start_idx (1 float per card)."""
         for i, card in enumerate(cards[:limit]):
             tensor[start_idx + i] = float(CardRegistry.get_id(card.card_id))
+
+    @staticmethod
+    def _write_security_ids(tensor: np.ndarray, start_idx: int, player: Player):
+        """Write security card IDs — only face-up cards are visible, face-down = 0.0."""
+        for i, card in enumerate(player.security_cards[:MAX_SECURITY]):
+            if card in player.face_up_security:
+                tensor[start_idx + i] = float(CardRegistry.get_id(card.card_id))
+            # else stays 0.0 (face-down)
 
     # ─── Action Mask ─────────────────────────────────────────────────
 
@@ -2027,16 +2040,32 @@ class Game:
                         mask[100 + i] = 1.0
 
         elif phase == GamePhase.SelectTrash:
-            max_trash_sel = SEL_TRASH_END - SEL_TRASH_START + 1  # 50 slots
-            for i in range(min(len(me.trash_cards), max_trash_sel)):
-                mask[SEL_TRASH_START + i] = 1.0
+            ps = self.pending_selection
+            if ps and ps.valid_indices:
+                for idx in ps.valid_indices:
+                    if 0 <= idx < ACTION_SPACE_SIZE:
+                        mask[idx] = 1.0
+            else:
+                max_trash_sel = SEL_TRASH_END - SEL_TRASH_START + 1  # 50 slots
+                for i in range(min(len(me.trash_cards), max_trash_sel)):
+                    mask[SEL_TRASH_START + i] = 1.0
+            if ps and getattr(ps, 'is_optional', False):
+                mask[62] = 1.0
 
         elif phase == GamePhase.SelectSource:
-            # Source selection: 2000 + field*SOURCES_PER_FIELD + sourceIdx
-            for f in range(min(len(me.battle_area), FIELD_SLOTS)):
-                perm = me.battle_area[f]
-                for s in range(min(len(perm.card_sources), MAX_SOURCES)):
-                    mask[2000 + f * SOURCES_PER_FIELD + s] = 1.0
+            ps = self.pending_selection
+            if ps and ps.valid_indices:
+                for idx in ps.valid_indices:
+                    if 0 <= idx < ACTION_SPACE_SIZE:
+                        mask[idx] = 1.0
+            else:
+                # Source selection: 2000 + field*SOURCES_PER_FIELD + sourceIdx
+                for f in range(min(len(me.battle_area), FIELD_SLOTS)):
+                    perm = me.battle_area[f]
+                    for s in range(min(len(perm.card_sources), MAX_SOURCES)):
+                        mask[2000 + f * SOURCES_PER_FIELD + s] = 1.0
+            if ps and getattr(ps, 'is_optional', False):
+                mask[62] = 1.0
 
         elif phase in (GamePhase.SelectTarget, GamePhase.SelectMaterial,
                        GamePhase.SelectHand, GamePhase.SelectReveal,
@@ -2150,6 +2179,21 @@ class Game:
                 name = card.card_names[0] if card.card_names else card.card_id
                 return f"DNA Digivolve with {name}"
             return f"DNA Digivolve hand[{idx}]"
+
+        # Actions 100-113: phase-dependent (Block / Alliance / Attack)
+        if 100 <= action_id <= 100 + FIELD_SLOTS - 1:
+            slot = action_id - 100
+            if self.current_phase == GamePhase.BlockTiming:
+                if slot < len(me.battle_area) and me.battle_area[slot].top_card:
+                    name = me.battle_area[slot].top_card.card_names[0]
+                    return f"Block with {name} (slot {slot})"
+                return f"Block with slot {slot}"
+            elif self.current_phase == GamePhase.AllianceTiming:
+                if slot < len(me.battle_area) and me.battle_area[slot].top_card:
+                    name = me.battle_area[slot].top_card.card_names[0]
+                    return f"Alliance with {name} (slot {slot})"
+                return f"Alliance with slot {slot}"
+            # Fall through to attack formula for Main/EndOfTurnAction
 
         # Attack (100-399)
         if 100 <= action_id <= 399:
@@ -2382,6 +2426,25 @@ class Game:
                 if perm.has_keyword('_is_training'):
                     self._execute_training(perm, self.turn_player)
 
+    def _recover_from_stale_selection(self):
+        """Guard against stale selection state after a callback.
+
+        Two conditions are checked:
+        1. Selection phase with no pending_selection → fall back to Main
+        2. pending_selection with empty valid_indices and not optional → clear to avoid deadlock
+        """
+        if (self._is_selection_phase(self.current_phase)
+                and self.pending_selection is None):
+            self.current_phase = GamePhase.Main
+        if (self.pending_selection is not None
+                and not self.pending_selection.valid_indices
+                and not getattr(self.pending_selection, 'is_optional', False)):
+            self.logger.log(
+                f"[Recovery] Empty valid_indices — clearing")
+            self.pending_selection = None
+            if self._is_selection_phase(self.current_phase):
+                self.current_phase = GamePhase.Main
+
     @staticmethod
     def _is_selection_phase(phase: 'GamePhase') -> bool:
         """Return True if the phase is a selection/interrupt phase."""
@@ -2408,21 +2471,7 @@ class Game:
             self.active_player = None
             if on_decline:
                 on_decline()
-            # Guard: if we ended up in a selection phase with no pending_selection
-            # to service it, fall back to Main to avoid deadlock
-            if (self._is_selection_phase(self.current_phase)
-                    and self.pending_selection is None):
-                self.current_phase = GamePhase.Main
-            # Guard: pending_selection exists but has empty valid_indices
-            # and is not optional (would produce all-zero mask → deadlock)
-            if (self.pending_selection is not None
-                    and not self.pending_selection.valid_indices
-                    and not getattr(self.pending_selection, 'is_optional', False)):
-                self.logger.log(
-                    f"[Recovery] Empty valid_indices after selection decline — clearing")
-                self.pending_selection = None
-                if self._is_selection_phase(self.current_phase):
-                    self.current_phase = GamePhase.Main
+            self._recover_from_stale_selection()
             self._check_deferred_turn_end()
             return
 
@@ -2435,21 +2484,7 @@ class Game:
         self.current_phase = prev_phase
         self.active_player = None
         callback(action_id)
-        # Guard: if we ended up in a selection phase with no pending_selection
-        # to service it, fall back to Main to avoid deadlock
-        if (self._is_selection_phase(self.current_phase)
-                and self.pending_selection is None):
-            self.current_phase = GamePhase.Main
-        # Guard: pending_selection exists but has empty valid_indices
-        # and is not optional (would produce all-zero mask → deadlock)
-        if (self.pending_selection is not None
-                and not self.pending_selection.valid_indices
-                and not getattr(self.pending_selection, 'is_optional', False)):
-            self.logger.log(
-                f"[Recovery] Empty valid_indices after selection callback — clearing")
-            self.pending_selection = None
-            if self._is_selection_phase(self.current_phase):
-                self.current_phase = GamePhase.Main
+        self._recover_from_stale_selection()
         self._check_deferred_turn_end()
 
     def _decode_block(self, action_id: int):
@@ -2554,6 +2589,18 @@ class Game:
         if ps is None:
             return
 
+        if action_id == 62 and getattr(ps, 'is_optional', False):
+            on_decline = ps.on_decline
+            prev_phase = ps.previous_phase
+            self.pending_selection = None
+            self.current_phase = prev_phase
+            self.active_player = None
+            if on_decline:
+                on_decline()
+            self._recover_from_stale_selection()
+            self._check_deferred_turn_end()
+            return
+
         if SEL_TRASH_START <= action_id <= SEL_TRASH_END:
             idx = action_id - SEL_TRASH_START
             selecting = ps.selecting_player
@@ -2564,12 +2611,25 @@ class Game:
                 self.current_phase = prev_phase
                 self.active_player = None
                 callback(idx)
+                self._recover_from_stale_selection()
                 self._check_deferred_turn_end()
 
     def _decode_source_selection(self, action_id: int):
         """Handle digivolution source selection from an effect callback."""
         ps = self.pending_selection
         if ps is None:
+            return
+
+        if action_id == 62 and getattr(ps, 'is_optional', False):
+            on_decline = ps.on_decline
+            prev_phase = ps.previous_phase
+            self.pending_selection = None
+            self.current_phase = prev_phase
+            self.active_player = None
+            if on_decline:
+                on_decline()
+            self._recover_from_stale_selection()
+            self._check_deferred_turn_end()
             return
 
         if 2000 <= action_id < ACTION_SPACE_SIZE:
@@ -2587,6 +2647,7 @@ class Game:
                     self.current_phase = prev_phase
                     self.active_player = None
                     callback(action_id)
+                    self._recover_from_stale_selection()
                     self._check_deferred_turn_end()
 
     def _execute_training(self, perm: Permanent, owner: Player):
