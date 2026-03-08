@@ -27,6 +27,7 @@ export interface SourceInfo {
   dpContribution: number;
   mainEffectText: string;
   inheritedEffectText: string;
+  colors: number[];
 }
 
 export interface InheritedEffectInfo {
@@ -101,11 +102,23 @@ export interface PendingAttack {
   targetSlot: number;
 }
 
+export interface HandCardInfo {
+  cardId: string;
+  cardName: string;
+  playCost: number;
+  level: number | null;
+  dp: number | null;
+  colors: number[];
+  cardKind: number; // 0=Digimon, 1=Tamer, 2=Option, 3=DigiEgg
+  evoCosts: { color: number; level: number; cost: number }[];
+}
+
 export interface PlayerState {
   id: number;
   memory: number;
   handCount: number;
   handIds: string[];
+  handCards: HandCardInfo[];
   securityCount: number;
   securityIds: string[];
   deckCount: number;
@@ -114,6 +127,17 @@ export interface PlayerState {
   battleArea: PermanentInfo[];
   breedingArea: PermanentInfo | null;
   trashIds: string[];
+}
+
+export interface GameEvent {
+  type: string;
+  seq: number;
+  player: number;
+  source_card_id: string | null;
+  source_slot: number | null;
+  target_card_id: string | null;
+  target_slot: number | null;
+  meta: Record<string, unknown>;
 }
 
 export interface GameState {

@@ -37,6 +37,10 @@ class GameActionRequest(BaseModel):
     action: int
 
 
+class SurrenderRequest(BaseModel):
+    player_id: int = Field(ge=1, le=2)
+
+
 class DeckParseRequest(BaseModel):
     deck: str
 

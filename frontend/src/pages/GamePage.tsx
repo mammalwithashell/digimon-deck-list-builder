@@ -12,6 +12,7 @@ import {
 import { useGameStore } from '@/stores/gameStore';
 import { useActionMask } from '@/hooks/useActionMask';
 import { useGameActions } from '@/hooks/useGameActions';
+import { useEffectHighlight } from '@/hooks/useEffectHighlight';
 import { useDropZone, type DragData } from '@/hooks/useDropZone';
 import { GameBoard } from '@/components/board/GameBoard';
 import { ActionBar } from '@/components/game/ActionBar';
@@ -22,8 +23,12 @@ import { TrashViewer } from '@/components/game/TrashViewer';
 import { ResultOverlay } from '@/components/game/ResultOverlay';
 import { AttackArrow } from '@/components/game/AttackArrow';
 import { PhaseBanner } from '@/components/game/PhaseBanner';
+import { DigivolveBanner } from '@/components/game/DigivolveBanner';
+import { BattleEffect } from '@/components/game/BattleEffect';
 import { CardOverlay } from '@/components/game/CardOverlay';
 import { GameLogDrawer } from '@/components/game/GameLogDrawer';
+import { SecurityRevealOverlay } from '@/components/board/SecurityRevealOverlay';
+import { EffectPopup } from '@/components/game/EffectPopup';
 import { KeywordPromptDialog } from '@/components/game/KeywordPromptDialog';
 import { DragOverlayCard } from '@/components/game/DragOverlayCard';
 import { useWebSocketGame, type UseWebSocketGameOptions } from '@/hooks/useWebSocketGame';
@@ -47,6 +52,7 @@ export function GamePage() {
 
   const store = useGameStore();
   const { sendAction: httpSendAction } = useGameActions();
+  useEffectHighlight();
   const parsedMask = useActionMask(store.actionMask);
 
   // WebSocket connection (only active in PvP/spectator mode)
@@ -59,6 +65,7 @@ export function GamePage() {
         store.setGameState(payload.state);
         store.setActionMask(payload.action_mask ?? []);
         if (payload.logs) store.appendLogs(payload.logs);
+        if (payload.events) store.appendEvents(payload.events);
         if (payload.your_player_id != null) {
           store.setPlayerLabels({
             [payload.your_player_id]: 'You',
@@ -124,6 +131,10 @@ export function GamePage() {
   const [digivolvingHandIndex, setDigivolvingHandIndex] = useState<number | null>(null);
   // Trash viewer state: null = closed, 1 = own trash, 2 = opponent trash
   const [trashViewerPlayer, setTrashViewerPlayer] = useState<number | null>(null);
+  // Hovered hand card index for memory cost preview
+  const [hoveredHandIndex, setHoveredHandIndex] = useState<number | null>(null);
+  // Track which player surrendered (if any)
+  const [surrenderedBy, setSurrenderedBy] = useState<number | null>(null);
   const boardContainerRef = useRef<HTMLDivElement>(null);
 
   // Load saved decks on first render
@@ -159,6 +170,7 @@ export function GamePage() {
       store.setActionMask(result.action_mask);
       if (result.player_labels) store.setPlayerLabels(result.player_labels);
       store.clearLogs();
+      store.clearEvents();
       store.setGameId(result.game_id);
 
       // Step once to handle initial agent turn if agent goes first
@@ -166,6 +178,7 @@ export function GamePage() {
       store.setGameState(stepResult.state);
       store.setActionMask(stepResult.action_mask);
       if (stepResult.logs) store.appendLogs(stepResult.logs);
+      if (stepResult.events) store.appendEvents(stepResult.events);
     } catch (err) {
       console.error('Failed to create game:', err);
       // If gameId was set but step failed, reset to avoid blank board
@@ -181,6 +194,20 @@ export function GamePage() {
     },
     [sendAction],
   );
+
+  const handleSurrender = useCallback(async () => {
+    if (!store.gameId || store.isGameOver) return;
+    try {
+      const res = await gameApi.surrenderGame(store.gameId, 1);
+      store.setGameState(res.state);
+      store.setActionMask(res.action_mask);
+      if (res.logs) store.appendLogs(res.logs);
+      if (res.events) store.appendEvents(res.events);
+      setSurrenderedBy(1);
+    } catch {
+      // Ignore errors (e.g. game already over)
+    }
+  }, [store]);
 
   const handlePlayCard = useCallback(
     (handIndex: number) => {
@@ -508,6 +535,16 @@ export function GamePage() {
     ? new Set<number>()
     : new Set([...parsedMask.canPlayFromHand, ...digivolveHandIndices]);
 
+  // Memory cost preview: look up hovered hand card's play cost
+  const previewCost = (() => {
+    if (hoveredHandIndex == null || !store.player1) return null;
+    const cardInfo = store.player1.handCards?.[hoveredHandIndex];
+    if (!cardInfo) return null;
+    // Only show preview for playable cards
+    if (!parsedMask.canPlayFromHand.has(hoveredHandIndex) && !digivolveHandIndices.has(hoveredHandIndex)) return null;
+    return cardInfo.playCost;
+  })();
+
   // Compute valid drop slots while dragging a hand card
   const dragValidDropSlots = new Set<number>();
   let dragCanBreeding = false;
@@ -563,12 +600,16 @@ export function GamePage() {
         />
 
         <PhaseBanner phase={store.currentPhase} isGameOver={store.isGameOver} />
+        <DigivolveBanner />
+        <BattleEffect />
 
         <div className="flex-1 overflow-hidden relative" ref={boardContainerRef}>
           <CardOverlay
             permanent={inspectedPerm}
             onClose={() => setInspectedPerm(null)}
           />
+          <SecurityRevealOverlay />
+          <EffectPopup />
           <GameLogDrawer logs={store.logs} />
           <AttackArrow
             pendingAttack={store.pendingAttack}
@@ -614,6 +655,8 @@ export function GamePage() {
               dragValidDropSlots={draggedHandIndex !== null ? dragValidDropSlots : undefined}
               isDraggingHandCard={draggedHandIndex !== null}
               canPlayDragged={draggedHandIndex !== null && parsedMask.canPlayFromHand.has(draggedHandIndex)}
+              previewCost={previewCost}
+              onHandCardHoverIndex={setHoveredHandIndex}
             />
             <DragOverlayCard cardId={draggedCardId} isOverValid={isOverValid} />
           </DndContext>
@@ -661,6 +704,7 @@ export function GamePage() {
           phase={store.currentPhase}
           actionMask={store.actionMask}
           onAction={handleAction}
+          onSurrender={handleSurrender}
           isGameOver={store.isGameOver}
         />
       </div>
@@ -671,6 +715,7 @@ export function GamePage() {
         winner={store.winner}
         localPlayer={1}
         playerLabels={store.playerLabels}
+        surrenderedBy={surrenderedBy}
         onReturnToMenu={() => store.reset()}
       />
 

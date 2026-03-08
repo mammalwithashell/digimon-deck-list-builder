@@ -170,7 +170,7 @@ Full details in `AGENTS.md` §2.4.
 
 Primary routes include:
 
-- Game session lifecycle: `/games`, `/games/{id}/actions`, `/games/{id}/steps`, `/games/{id}/state`, `/games/{id}/action-mask`, `/games/{id}/actions`, `/games/{id}/logs`, `/games/{id}`
+- Game session lifecycle: `/games`, `/games/{id}/actions`, `/games/{id}/steps`, `/games/{id}/state`, `/games/{id}/action-mask`, `/games/{id}/actions`, `/games/{id}/logs`, `/games/{id}`, `/games/{id}/surrender`
 - Recording/replay:
   - `/games/{id}/recording`, `/games/{id}/recordings`
   - `/recordings/*`
@@ -185,7 +185,8 @@ Legacy aliases are present in several routers for compatibility.
 - `state_filter.py` provides per-recipient hidden information filtering:
   - Players see own hand, opponent's hand hidden (count only), both security stacks hidden
   - Spectators in `"hidden"` mode see redacted state; `"open"` mode shows everything
-- Message protocol: `state_update`, `player_joined`, `player_disconnected`, `game_over`, `error`
+- Message protocol: `state_update`, `player_joined`, `player_disconnected`, `game_over`, `error`, `surrender`
+- Surrender: client sends `{type: "surrender"}`, server broadcasts `game_over` with `surrendered_by` field
 - Reconnection: frontend hook retries with exponential backoff (1s–30s, max 5 retries)
 
 ### Lobby System
@@ -233,10 +234,65 @@ Legacy aliases are present in several routers for compatibility.
 - `AdminIssuesPage`, `AdminTasksPage`, `AdminPromotionsPage`: admin AI workflow UI
 - `BarracksPage`, `ArenaPage`, `GauntletPage`, `DeckPoolPage`: training management UI
 
+### Game UI Components
+
+Board components (`frontend/src/components/board/`):
+- `GameBoard`: top-level board composition (opponent hand → opponent field → memory gauge → player field → player hand)
+- `HandZone` + `DraggableHandCard`: hand cards with drag-and-drop, stat overlays (cost/level/DP badges), and hover index callbacks
+- `MemoryGauge`: DCGO-style diamond gauge with preview cost ghost indicators on card hover
+- `BattleArea`: 14-slot grid with card entry/exit animation tracking (`animate-card-play-in`)
+- `PlayerHalf`: per-player field layout (egg deck, breeding, battle area, deck/security/trash piles)
+- `PermanentSlot`: individual field card with overlay badges (DP, level, keywords, SA modifier)
+
+Game overlay components (`frontend/src/components/game/`):
+- `ActionBar`: phase-aware action buttons + surrender button (with confirmation dialog)
+- `ResultOverlay`: win/loss/draw/surrender result screen
+- `PhaseBanner`: full-screen phase transition banner (1.2s `bannerSlide`)
+- `DigivolveBanner`: digivolution cut-in overlay (1.4s) with color-matched glow and card drop animation
+- `BattleEffect`: CSS slash overlay + shake on losing permanent's slot after battle resolution
+- `CardOverlay`: DCGO-style vertical stack inspector for viewing permanent sources
+- `SecurityRevealOverlay`: security card reveal with flip animation
+- `EffectPopup`: floating effect activation indicator
+- `AttackArrow`: SVG arrow drawn between attacker and target slots
+- `SelectionPanel`, `PromptBar`, `KeywordPromptDialog`: selection phase UI
+- `TrashViewer`: modal trash pile browser
+
+### Hand Card Data Flow
+
+Backend `player_ui_data()` sends both `handIds` (string[]) and `handCards` (metadata array):
+```
+handCards[]: { cardId, cardName, playCost, level, dp, colors[], cardKind, evoCosts[] }
+```
+- `state_filter.py` redacts both `handIds` and `handCards` for opponents (count preserved)
+- Frontend `HandCardInfo` type in `frontend/src/types/game.ts`
+- Used for: stat overlays on hand cards, memory cost preview on hover
+
+### Game Animations
+
+CSS keyframes defined in `frontend/src/index.css`:
+- `cardPlayIn` (0.35s): scale bounce + Y translation for cards entering field
+- `cardTrashOut` (0.3s): shrink + fade for cards leaving field
+- `digivolveBanner` (1.4s): horizontal scale-in/out for digivolve cut-in
+- `digivolveCardDrop` (0.5s): card falling into digivolve banner
+- `battleSlash` (0.35s): diagonal clip-path wipe over losing slot
+- `battleShake` (0.4s): rapid position jitter on losing permanent
+- `securityBreak` (0.6s): pulse + red border for security checks
+- `bannerSlide` (1.2s): phase banner entrance/exit
+- `effectPulse` (1.2s): golden glow ring for active effects
+
+### Surrender
+
+- Backend: `Game.surrender(player_id)` emits `surrender` event then calls `declare_winner()`
+- HTTP: `POST /games/{id}/surrender` with `{player_id: 1|2}`
+- WebSocket: client sends `{type: "surrender"}`, server broadcasts `game_over` with `surrendered_by`
+- Frontend: red "Surrender" button in `ActionBar` (far right), `window.confirm()` guard
+- `ResultOverlay` shows "Surrendered" / "Opponent surrendered" based on `surrenderedBy` state
+
 ### Frontend API Architecture
 
 - `client.ts` exports `default` (remote server) and `getGameClient()` for Tauri dual-server routing
-- `useWebSocketGame.ts`: WebSocket hook for PvP/spectating with reconnection
+- `useWebSocketGame.ts`: WebSocket hook for PvP/spectating with reconnection; exposes `sendAction` and `sendSurrender`
+- `gameApi.ts`: game REST client (create, action, step, state, mask, log, surrender, delete)
 - `lobbyApi.ts`: lobby REST client
 - In Tauri desktop mode, local game requests route to sidecar (`localhost:8321`); online features to remote server
 
@@ -367,3 +423,6 @@ cd src-tauri && cargo tauri build  # production installers
 11. Engine-only routers (`games.py`, `replays.py`, `simulations.py`, `deck_tools.py`) must not import from `digimon_gym.db.*` or `digimon_gym.ai.*`.
 12. Training CLI modules (`pilot_training.py`, `gauntlet.py`, `deck_pool.py`) must not import from `digimon_gym.db.*`.
 13. Desktop frontend builds use `VITE_BUILD_TARGET=desktop` to tree-shake admin/training UI.
+14. `state_filter.py` must redact both `handIds` and `handCards` for opponents — never leak card metadata.
+15. Game animation components (`DigivolveBanner`, `BattleEffect`) subscribe to `store.events` and track `lastSeqRef` to avoid replaying stale events.
+16. `Game.surrender()` must emit the `surrender` event before calling `declare_winner()` so event listeners see the surrender before game_over.

@@ -6,7 +6,7 @@ import time
 import numpy as np
 
 from digimon_gym.engine.runners.base_runner import BaseGameRunner
-from digimon_gym.engine.loggers import VerboseLogger
+from digimon_gym.engine.loggers import EventLogger
 from digimon_gym.engine.data.enums import PlayerType
 from digimon_gym.engine.recording import GameRecorder
 
@@ -32,7 +32,7 @@ class InteractiveGame(BaseGameRunner):
                  agent_action_delay_ms: int = 350,
                  player1_model_path: Optional[str] = None,
                  player2_model_path: Optional[str] = None):
-        self._verbose_logger = VerboseLogger()
+        self._verbose_logger = EventLogger()
         # Create a lightweight recorder just for initial state capture
         recorder = GameRecorder(record_tensors=False)
         super().__init__(deck1_ids, deck2_ids, self._verbose_logger, recorder=recorder)
@@ -170,6 +170,11 @@ class InteractiveGame(BaseGameRunner):
 
         return self.game.to_ui_json()
 
+    def surrender(self, player_id: int) -> Dict[str, Any]:
+        """Handle a player surrendering."""
+        self.game.surrender(player_id)
+        return self.game.to_ui_json()
+
     def step(self, action_id: int) -> None:
         """Execute a single action (from human or agent)."""
         if self.game.game_over:
@@ -192,6 +197,14 @@ class InteractiveGame(BaseGameRunner):
     def clear_log(self) -> None:
         """Clear the log buffer."""
         self._verbose_logger.clear()
+
+    def get_last_events(self) -> List[Dict[str, Any]]:
+        """Get buffered structured events since last clear."""
+        return self._verbose_logger.get_events()
+
+    def clear_events(self) -> None:
+        """Clear the event buffer."""
+        self._verbose_logger.clear_events()
 
     def get_initial_state_dict(self) -> Dict[str, Any]:
         """Return initial state metadata for client-side recording.

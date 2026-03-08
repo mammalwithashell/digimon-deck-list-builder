@@ -160,6 +160,7 @@ class ConnectionManager:
         runner: InteractiveGame,
         *,
         logs: Optional[List[str]] = None,
+        events: Optional[List[Dict[str, Any]]] = None,
     ) -> None:
         """Send perspective-filtered state to every connected client."""
         conn = self._games.get(game_id)
@@ -188,6 +189,8 @@ class ConnectionManager:
             }
             if logs:
                 payload["logs"] = logs
+            if events:
+                payload["events"] = events
             if is_game_over:
                 payload["winner_id"] = runner.game.winner.player_id if runner.game.winner else None
             tasks.append(asyncio.create_task(self._safe_send(ws, payload)))
@@ -203,6 +206,8 @@ class ConnectionManager:
             }
             if logs:
                 spec_payload["logs"] = logs
+            if events:
+                spec_payload["events"] = events
             if is_game_over:
                 spec_payload["winner_id"] = runner.game.winner.player_id if runner.game.winner else None
             for ws in list(conn.spectators):

@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 import type {
   GameState,
+  GameEvent,
   GamePhase,
   PlayerState,
   PendingSelection,
@@ -29,6 +30,9 @@ interface GameStore {
   selectedAttacker: number | null;
   hoveredCard: string | null;
   logs: string[];
+  events: GameEvent[];
+  activeEffectSlot: number | null;
+  activeEffectPlayer: number | null;
   playerLabels: Record<number, string>;
 
   // Actions
@@ -40,6 +44,9 @@ interface GameStore {
   setHoveredCard: (cardId: string | null) => void;
   appendLogs: (newLogs: string[]) => void;
   clearLogs: () => void;
+  appendEvents: (newEvents: GameEvent[]) => void;
+  clearEvents: () => void;
+  setActiveEffect: (slot: number | null, player: number | null) => void;
   reset: () => void;
 }
 
@@ -60,6 +67,9 @@ const initialState = {
   selectedAttacker: null,
   hoveredCard: null,
   logs: [],
+  events: [],
+  activeEffectSlot: null,
+  activeEffectPlayer: null,
   playerLabels: { 1: 'Player 1', 2: 'Player 2' },
 };
 
@@ -90,5 +100,10 @@ export const useGameStore = create<GameStore>((set) => ({
   appendLogs: (newLogs) =>
     set((s) => ({ logs: [...s.logs, ...newLogs] })),
   clearLogs: () => set({ logs: [] }),
+  appendEvents: (newEvents) =>
+    set((s) => ({ events: [...s.events, ...newEvents] })),
+  clearEvents: () => set({ events: [] }),
+  setActiveEffect: (slot, player) =>
+    set({ activeEffectSlot: slot, activeEffectPlayer: player }),
   reset: () => set(initialState),
 }));

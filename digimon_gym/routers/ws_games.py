@@ -149,6 +149,10 @@ async def game_websocket(websocket: WebSocket, game_id: str) -> None:
                 await _handle_action(websocket, game_id, player_id, data, runner)
                 continue
 
+            if msg_type == "surrender":
+                await _handle_surrender(websocket, game_id, player_id, runner)
+                continue
+
             await websocket.send_json({
                 "type": "error",
                 "message": f"Unknown message type: {msg_type}",
@@ -193,12 +197,14 @@ async def _handle_action(
     # Execute action
     runner.step(action_id)
 
-    # Collect logs
+    # Collect logs and events
     logs = runner.get_last_log()
+    events = runner.get_last_events()
     runner.clear_log()
+    runner.clear_events()
 
     # Broadcast updated state to all
-    await manager.broadcast_state(game_id, runner, logs=logs)
+    await manager.broadcast_state(game_id, runner, logs=logs, events=events)
 
     # If game is over, send game_over event and clean up connection tracking
     if runner.is_game_over:
@@ -207,6 +213,33 @@ async def _handle_action(
             "winner_id": runner.game.winner.player_id if runner.game.winner else None,
         })
         manager.cleanup_game(game_id)
+
+
+async def _handle_surrender(
+    ws: WebSocket,
+    game_id: str,
+    player_id: int,
+    runner: InteractiveGame,
+) -> None:
+    """Process a surrender message from a player."""
+    if runner.game.game_over:
+        await ws.send_json({"type": "error", "message": "Game is already over"})
+        return
+
+    runner.surrender(player_id)
+
+    logs = runner.get_last_log()
+    events = runner.get_last_events()
+    runner.clear_log()
+    runner.clear_events()
+
+    await manager.broadcast_state(game_id, runner, logs=logs, events=events)
+    await manager.broadcast_event(game_id, {
+        "type": "game_over",
+        "winner_id": runner.game.winner.player_id if runner.game.winner else None,
+        "surrendered_by": player_id,
+    })
+    manager.cleanup_game(game_id)
 
 
 async def _spectator_loop(ws: WebSocket, game_id: str) -> None:

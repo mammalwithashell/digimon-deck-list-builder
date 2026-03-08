@@ -15,7 +15,7 @@ from digimon_gym.engine.data.deck_loader import parse_deck
 from digimon_gym.engine.model_utils import get_models_dir, list_onnx_models, resolve_model_path
 from digimon_gym.engine.runners.headless_game import HeadlessGame
 from digimon_gym.engine.runners.interactive_game import InteractiveGame
-from digimon_gym.routers.schemas import CreateGameRequest, GameActionRequest
+from digimon_gym.routers.schemas import CreateGameRequest, GameActionRequest, SurrenderRequest
 from digimon_gym.routers.state import active_games
 
 router = APIRouter(tags=["games"])
@@ -139,7 +139,9 @@ def game_action(game_id: str, request: GameActionRequest):
 
     if isinstance(runner, InteractiveGame):
         result["logs"] = runner.get_last_log()
+        result["events"] = runner.get_last_events()
         runner.clear_log()
+        runner.clear_events()
 
     return result
 
@@ -155,13 +157,16 @@ def game_step(game_id: str):
     state = runner.run_step()
     mask = runner.get_action_mask().tolist()
     logs = runner.get_last_log()
+    events = runner.get_last_events()
     runner.clear_log()
+    runner.clear_events()
 
     return {
         "state": state,
         "action_mask": mask,
         "action_descriptions": runner.game.describe_actions(runner.game.current_player_id),
         "logs": logs,
+        "events": events,
         "is_human_turn": runner.is_current_player_human(),
         "is_game_over": runner.is_game_over,
     }
@@ -203,6 +208,31 @@ def game_log(game_id: str):
         runner.clear_log()
         return {"logs": logs}
     return {"logs": []}
+
+
+@router.post("/games/{game_id}/surrender")
+def surrender_game(game_id: str, request: SurrenderRequest):
+    """Surrender an active game."""
+    runner = _require_game(game_id)
+    if not isinstance(runner, InteractiveGame):
+        raise HTTPException(status_code=400, detail="Surrender is only for interactive games.")
+    if runner.game.game_over:
+        raise HTTPException(status_code=400, detail="Game is already over.")
+
+    state = runner.surrender(request.player_id)
+    logs = runner.get_last_log()
+    events = runner.get_last_events()
+    runner.clear_log()
+    runner.clear_events()
+
+    return {
+        "state": state,
+        "action_mask": runner.get_action_mask().tolist(),
+        "logs": logs,
+        "events": events,
+        "is_game_over": True,
+        "surrendered_by": request.player_id,
+    }
 
 
 @router.delete("/games/{game_id}")

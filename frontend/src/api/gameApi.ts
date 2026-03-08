@@ -1,5 +1,5 @@
 import { getGameClient } from './client';
-import type { GameState } from '@/types/game';
+import type { GameState, GameEvent } from '@/types/game';
 
 interface CreateGameParams {
   deck1?: string[];
@@ -26,6 +26,7 @@ interface ActionResponse {
   action_mask: number[];
   is_game_over: boolean;
   logs?: string[];
+  events?: GameEvent[];
   action_context?: Record<string, unknown>;
 }
 
@@ -33,6 +34,7 @@ interface StepResponse {
   state: GameState;
   action_mask: number[];
   logs: string[];
+  events?: GameEvent[];
   is_human_turn: boolean;
   is_game_over: boolean;
 }
@@ -71,6 +73,21 @@ export async function getLog(gameId: string): Promise<string[]> {
   const client = getGameClient();
   const { data } = await client.get<{ logs: string[] }>(`/games/${gameId}/logs`);
   return data.logs;
+}
+
+interface SurrenderResponse {
+  state: GameState;
+  action_mask: number[];
+  logs: string[];
+  events?: GameEvent[];
+  is_game_over: boolean;
+  surrendered_by: number;
+}
+
+export async function surrenderGame(gameId: string, playerId: number): Promise<SurrenderResponse> {
+  const client = getGameClient();
+  const { data } = await client.post<SurrenderResponse>(`/games/${gameId}/surrender`, { player_id: playerId });
+  return data;
 }
 
 export async function deleteGame(gameId: string): Promise<void> {

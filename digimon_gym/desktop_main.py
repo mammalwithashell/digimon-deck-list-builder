@@ -154,7 +154,9 @@ def create_desktop_app(models_dir: str = "./models") -> FastAPI:
         state = runner.game.to_ui_json()
         mask = runner.get_action_mask().tolist()
         logs = runner.get_last_log()
+        events = runner.get_last_events()
         runner.clear_log()
+        runner.clear_events()
 
         return {
             "state": state,
@@ -162,6 +164,7 @@ def create_desktop_app(models_dir: str = "./models") -> FastAPI:
             "action_descriptions": runner.game.describe_actions(runner.game.current_player_id),
             "is_game_over": runner.is_game_over,
             "logs": logs,
+            "events": events,
             "action_context": {
                 "player_id": current_player_id,
                 "action_id": request.action,
@@ -182,13 +185,16 @@ def create_desktop_app(models_dir: str = "./models") -> FastAPI:
         state = runner.run_step()
         mask = runner.get_action_mask().tolist()
         logs = runner.get_last_log()
+        events = runner.get_last_events()
         runner.clear_log()
+        runner.clear_events()
 
         return {
             "state": state,
             "action_mask": mask,
             "action_descriptions": runner.game.describe_actions(runner.game.current_player_id),
             "logs": logs,
+            "events": events,
             "is_human_turn": runner.is_current_player_human(),
             "is_game_over": runner.is_game_over,
         }

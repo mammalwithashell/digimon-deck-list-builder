@@ -37,6 +37,11 @@ class Player:
         if self.game and hasattr(self.game, 'execute_effects'):
             self.game.execute_effects(timing, context)
 
+    def _emit(self, event_type: str, **kwargs) -> None:
+        """Emit a structured GameEvent via the game if available."""
+        if self.game and hasattr(self.game, '_emit'):
+            self.game._emit(event_type, player=self.player_id, **kwargs)
+
     def _apply_ace_overflow(self, card_sources: List['CardSource']):
         """Check card sources for ACE cards and apply overflow memory penalty.
 
@@ -412,6 +417,19 @@ class Player:
         has_save = permanent.has_keyword('_is_save')
         top_card = permanent.top_card
 
+        slot_idx = None
+        try:
+            slot_idx = self.battle_area.index(permanent)
+        except ValueError:
+            pass
+        self._emit(
+            'delete',
+            source_card_id=getattr(top_card, 'card_id', None) if top_card else None,
+            source_slot=slot_idx,
+            card_name=perm_name,
+            reason='battle' if is_battle else 'effect',
+        )
+
         self.battle_area.remove(permanent)
         # Clean up continuous modifiers sourced from this permanent
         if self.game and hasattr(self.game, 'cleanup_modifiers_for_permanent'):
@@ -480,7 +498,36 @@ class Player:
         # Reveal top card
         security_card = self.security_cards.pop(0)
         self.face_up_security.discard(security_card)
-        self._log(f"Security Check: Revealed {security_card.card_names[0]}")
+        sec_name = security_card.card_names[0] if security_card.card_names else "Unknown"
+        sec_id = getattr(security_card, 'card_id', None)
+        self._log(f"Security Check: Revealed {sec_name}")
+        # Build card type string
+        if security_card.is_digimon:
+            sec_card_type = 'Digimon'
+        elif security_card.is_option:
+            sec_card_type = 'Option'
+        elif security_card.is_tamer:
+            sec_card_type = 'Tamer'
+        else:
+            sec_card_type = 'Digi-Egg'
+        # Extract effect text from entity base
+        sec_entity = security_card.c_entity_base
+        sec_main_effect = sec_entity.effect_description_eng if sec_entity else ''
+        sec_inherited_effect = sec_entity.inherited_effect_description_eng if sec_entity else ''
+        sec_security_effect = sec_entity.security_effect_description_eng if sec_entity else ''
+        self._emit(
+            'security_reveal',
+            source_card_id=sec_id,
+            revealed_card_id=sec_id,
+            revealed_card_name=sec_name,
+            security_remaining=len(self.security_cards),
+            is_digimon=security_card.is_digimon,
+            card_type=sec_card_type,
+            base_dp=security_card.base_dp,
+            main_effect_text=sec_main_effect,
+            inherited_effect_text=sec_inherited_effect,
+            security_effect_text=sec_security_effect,
+        )
 
         # Track Security Digimon concept (DCGO: AttackProcess.SecurityDigimon)
         security_digimon = security_card if security_card.is_digimon else None
@@ -528,11 +575,27 @@ class Player:
                     # <Jamming>: Digimon can't be deleted in battles against Security Digimon
                     if attacker.has_keyword('_is_jamming'):
                         self._log(f"Attacker {attacker.top_card.card_names[0]} survives (Jamming).")
+                        self._emit('keyword_trigger', keyword='Jamming',
+                                   source_card_id=getattr(attacker.top_card, 'card_id', None),
+                                   card_name=attacker.top_card.card_names[0] if attacker.top_card else "Unknown")
                     else:
                         self._log(f"Attacker {attacker.top_card.card_names[0]} is deleted by Security Digimon!")
                         result = AttackResolution.AttackerDeleted
                 else:
                     self._log(f"Attacker {attacker.top_card.card_names[0]} survives.")
+                attacker_name = attacker.top_card.card_names[0] if attacker.top_card and attacker.top_card.card_names else "Unknown"
+                jamming_saved = (result != AttackResolution.AttackerDeleted and (a_dp < s_dp or a_dp == s_dp))
+                self._emit(
+                    'security_battle',
+                    source_card_id=getattr(attacker.top_card, 'card_id', None),
+                    target_card_id=sec_id,
+                    attacker_dp=a_dp,
+                    defender_dp=s_dp,
+                    attacker_name=attacker_name,
+                    defender_name=sec_name,
+                    result='attacker_deleted' if result == AttackResolution.AttackerDeleted else 'attacker_survives',
+                    jamming=jamming_saved,
+                )
 
         # Trash the security card
         self.trash_cards.append(security_card)
