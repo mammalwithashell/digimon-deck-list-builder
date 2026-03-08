@@ -1,6 +1,6 @@
 # QA Issue Resolution Index
 
-**Last updated**: 2026-03-03
+**Last updated**: 2026-03-08
 
 ## Summary
 
@@ -35,7 +35,8 @@
 | [royal-knights-gameplay](2026-03-03-royal-knights-gameplay.md) | 3 | 1 | 0 | 2 |
 | [ts-neptune-gameplay](2026-03-03-ts-neptune-gameplay.md) | 12 | 3 | 0 | 9 |
 | [royal-knights-script-audit](2026-03-03-royal-knights-script-audit.md) | 3 | 0 | 0 | 3 |
-| **Total** | **189** | **151** | **7** | **31** |
+| [medusamon-royal-knights](2026-03-08-medusamon-royal-knights.md) | 6 | 0 | 0 | 6 |
+| **Total** | **195** | **151** | **7** | **37** |
 
 ---
 
@@ -410,3 +411,16 @@ Full script audit of all 35 Royal Knights cards. Found 6 systemic bug patterns a
 | 43 | CANNOT_DIGIVOLVE modifier not checked in action mask | med | OUTSTANDING | BT13-007 registers modifier but digivolve actions still appear in mask. Engine gap. |
 | 44 | BeforePayCost process callbacks never fire | med | OUTSTANDING | action_play_card() never calls execute_effects(BeforePayCost). Scripts with trash-return costs (BT23-057) don't execute. |
 | 45 | CANNOT_ADD_SECURITY modifier not enforced | low | OUTSTANDING | BT9-103 registers modifier but engine recovery/add-security doesn't check it. |
+
+## Report 31: Medusamon & Royal Knights Cross-Archetype QA (2026-03-08)
+
+Live gameplay testing of both archetypes with targeted board states. Verified Omekamon deletion effects, King Drasil cost reduction bugs (user-reported), Medusamon When Digivolving regression, and cross-archetype interactions. 10 deterministic test games.
+
+| # | Issue | Sev | Status | Notes |
+|---|-------|-----|--------|-------|
+| 46 | King Drasil once-per-turn cost reduction never decrements | critical | OUTSTANDING | `calculate_play_cost()` calls `can_activate_this_turn()` but never `record_activation()`. Every RK play in a turn gets reduced, not just the first. |
+| 47 | King Drasil cost reduction skips "may" optional prompt | critical | OUTSTANDING | `is_optional` never checked in `calculate_play_cost()`. Card text says "you may reduce" but reduction is always applied without player choice. |
+| 48 | Medusamon BT24-017 When Digivolving effect does not fire | high | OUTSTANDING | DP scaling (+2000 per opponent Digimon), delete, and token play all fail to trigger during digivolution. Effect uses `OnEnterFieldAnyone` + `is_when_digivolving=True` but engine may not dispatch this combination during digivolve. |
+| 49 | Lamiamon BT24-016 opponent hand card taken without choice | med | OUTSTANDING | `enemy.hand_cards.pop(0)` always takes the first card. Should use `request_selection()` to let opponent choose which card to place in security. |
+| 50 | Lamiamon BT24-016 card placed at security TOP instead of BOTTOM | med | OUTSTANDING | `enemy.security_cards.insert(0, card)` places at index 0 (top). Card text says "bottom of their security stack" — should use `.append()`. |
+| 51 | Lamiamon BT24-016 On Attack condition too strict | low | OUTSTANDING | Condition requires another Reptile/Dragonkin ally on field for the When Attacking effect, but this restriction may not match the card text intent for all triggering conditions. |

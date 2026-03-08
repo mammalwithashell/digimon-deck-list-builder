@@ -1,6 +1,6 @@
 {
-  "version": 23,
-  "last_updated": "2026-03-03",
+  "version": 24,
+  "last_updated": "2026-03-08",
   "cards": {
     "BT1-087": {
       "card_name": "T.K. Takaishi",
@@ -45,10 +45,10 @@
       "notes": "Play cost 5 correct. Start of Turn memory +1. When Digivolving Angewomon/LadyDevimon trigger effect."
     },
     "BT13-007": {
-      "status": "PASS",
-      "validated_date": "2026-03-03",
-      "report": "2026-03-03-royal-knights-script-audit.md",
-      "notes": "Cost reduction, absorption, can't-digivolve verified"
+      "status": "FAIL",
+      "validated_date": "2026-03-08",
+      "report": "2026-03-08-medusamon-royal-knights.md",
+      "notes": "TWO bugs: (1) calculate_play_cost() never calls record_activation() so once-per-turn never decrements — all RK plays get reduced. (2) is_optional never checked — 'you may reduce' always applied without prompt."
     },
     "BT13-019": {
       "status": "PASS",
@@ -78,9 +78,9 @@
     },
     "BT13-093": {
       "status": "PASS",
-      "validated_date": "2026-03-03",
-      "report": "2026-03-03-royal-knights-script-audit.md",
-      "notes": "Script fixed: On Deletion implemented"
+      "validated_date": "2026-03-08",
+      "report": "2026-03-08-medusamon-royal-knights.md",
+      "notes": "Live verified: On Play Draw 1 correct. On Deletion places RK from hand under King Drasil in breeding. Tested happy path + edge cases (no King Drasil, no RK in hand)."
     },
     "BT13-102": {
       "status": "PASS",
@@ -426,15 +426,15 @@
     },
     "BT20-060": {
       "status": "PASS",
-      "validated_date": "2026-03-03",
-      "report": "2026-03-03-royal-knights-script-audit.md",
-      "notes": "Script fixed: DNA check, Recovery +1, Ace Overflow"
+      "validated_date": "2026-03-08",
+      "report": "2026-03-08-medusamon-royal-knights.md",
+      "notes": "Live verified in RK test games. DNA digivolve, Recovery +1, Ace Overflow all function correctly."
     },
     "BT20-083": {
       "status": "PASS",
-      "validated_date": "2026-03-03",
-      "report": "2026-03-03-royal-knights-script-audit.md",
-      "notes": "Script fixed: security count, On Deletion, inherited zone/suspend"
+      "validated_date": "2026-03-08",
+      "report": "2026-03-08-medusamon-royal-knights.md",
+      "notes": "Live verified: Blocker keyword, On Play digivolve (security ≤1 condition), On Deletion self-placement under King Drasil. Both happy path and edge cases confirmed."
     },
     "BT20-091": {
       "status": "PASS",
@@ -470,10 +470,10 @@
     },
     "BT21-017": {
       "card_name": "Dimetromon",
-      "validated_date": "2026-02-28",
-      "report": "2026-02-28-medusa.md",
+      "validated_date": "2026-03-08",
+      "report": "2026-03-08-medusamon-royal-knights.md",
       "status": "PASS",
-      "notes": "WhenDigivolving play Owen verified. Evo cost verified."
+      "notes": "Re-verified in Medusamon evolution chain tests. WhenDigivolving play Owen correct. Evo cost correct."
     },
     "BT21-025": {
       "card_name": "Lamiamon",
@@ -760,9 +760,9 @@
     },
     "BT23-054": {
       "status": "PASS",
-      "validated_date": "2026-03-03",
-      "report": "2026-03-03-royal-knights-script-audit.md",
-      "notes": "Live verified: bounce immunity ally selection"
+      "validated_date": "2026-03-08",
+      "report": "2026-03-08-medusamon-royal-knights.md",
+      "notes": "Re-verified in RK test games. Bounce immunity and ally selection working correctly."
     },
     "BT23-057": {
       "status": "PARTIAL",
@@ -902,10 +902,10 @@
     },
     "BT24-008": {
       "card_name": "Elizamon",
-      "validated_date": "2026-03-01",
-      "report": "2026-03-01-medusa-v2.md",
+      "validated_date": "2026-03-08",
+      "report": "2026-03-08-medusamon-royal-knights.md",
       "status": "PASS",
-      "notes": "Fixed: OnLoseSecurity inherited was adding memory to wrong player (ctx overwrite). Now uses card.owner. Verified +1 memory on own-turn security attack."
+      "notes": "Re-verified: On Play trash filter correctly accepts Reptile/Dragonkin/LIBERATOR and rejects Puppet/X Antibody. Draw 2 reward fires. Trait filter logic confirmed correct."
     },
     "BT24-011": {
       "card_name": "Cyclonemon",
@@ -930,17 +930,17 @@
     },
     "BT24-016": {
       "card_name": "Lamiamon",
-      "validated_date": "2026-03-01",
-      "report": "2026-03-01-medusa-v2.md",
-      "status": "PASS",
-      "notes": "Fixed: WhenDigivolving condition incorrectly required another Reptile/Dragonkin. Card text has no such restriction. Removed condition. Verified fires solo. OnAllyAttack condition (requires ally) is correct."
+      "validated_date": "2026-03-08",
+      "report": "2026-03-08-medusamon-royal-knights.md",
+      "status": "PARTIAL",
+      "notes": "Downgraded from PASS. Two bugs in When Attacking/When Digivolving effect: (1) opponent hand card taken without choice (pop(0) instead of selection), (2) card placed at security TOP not BOTTOM. On Attack condition may be too strict."
     },
     "BT24-017": {
       "card_name": "Medusamon",
-      "validated_date": "2026-03-01",
-      "report": "2026-03-01-medusa-partial-retest.md",
-      "status": "PASS",
-      "notes": "Upgraded from PARTIAL. Raid, Progress, DP scaling (+2000 per opp Digimon) all verified. Token play now working: game.effect_play_token() creates 2 Petrification Tokens on opponent field with correct metadata and effects."
+      "validated_date": "2026-03-08",
+      "report": "2026-03-08-medusamon-royal-knights.md",
+      "status": "FAIL",
+      "notes": "Downgraded from PASS. When Digivolving effect (DP scaling + delete + token play) does not fire during live digivolution. Effect uses OnEnterFieldAnyone + is_when_digivolving=True but engine fails to dispatch. Raid/Progress keywords untested in this session."
     },
     "BT24-018": {
       "card_name": "Styracomon",
