@@ -39,10 +39,8 @@ class BT24_017(CardScript):
         effect1.set_can_use_condition(condition1)
         effects.append(effect1)
 
-        # Timing: EffectTiming.OnEnterFieldAnyone
-        # DP +2000, Delete, Play Token
+        # [When Digivolving] DP +2000, Delete, Play Token
         effect2 = ICardEffect()
-        effect2.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect2.set_effect_name("BT24-017 Delete lowest DP Digimon, Return 2 cards from their trash to deck to play 2 Tokens and gain 2k DP per opponent's Digimon.")
         effect2.set_effect_description("DP +2000, Delete, Play Token")
         effect2.is_when_digivolving = True

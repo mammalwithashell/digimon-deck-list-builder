@@ -557,12 +557,14 @@ class Game:
             if callable(dynamic_reduction):
                 try:
                     reduction += max(0, int(dynamic_reduction(context)))
+                    effect.record_activation()
                 except Exception:
                     return
                 return
             effect_reduction = getattr(effect, 'cost_reduction', 0)
             if effect_reduction:
                 reduction += max(0, int(effect_reduction))
+                effect.record_activation()
 
         for perm in list(player.battle_area):
             for effect in perm.effect_list(EffectTiming.NoTiming):
@@ -890,6 +892,23 @@ class Game:
         for te in stack:
             if te.effect.can_use_condition is not None and not te.effect.can_use_condition(te.context):
                 continue
+
+            if te.effect.is_optional:
+                # Present choice to use or decline optional On Deletion effect
+                def _make_optional_cb(triggered):
+                    def on_choice(branch):
+                        if branch == 0:  # Accept
+                            self._log_effect_activation(triggered.effect, EffectTiming.OnDestroyedAnyone)
+                            triggered.effect.record_activation()
+                            triggered.effect.on_process_callback(triggered.context)
+                    return on_choice
+
+                self.effect_choose_branch(
+                    te.owner, 2, _make_optional_cb(te),
+                    prompt=f"Use effect: {te.effect.effect_name}?",
+                    branch_labels=["Yes", "No"])
+                continue
+
             self._log_effect_activation(te.effect, EffectTiming.OnDestroyedAnyone)
             te.effect.record_activation()
             te.effect.on_process_callback(te.context)

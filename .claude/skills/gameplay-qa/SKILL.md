@@ -208,7 +208,7 @@ The response includes:
 ### 4c. Validate after each action
 
 **Optional/Cost Effect Validation** (check these for EVERY effect that triggers):
-- If card text says **"may"**: Verify a selection/choice is presented to the player. If the effect fires automatically without choice, it's a bug.
+- If card text says **"may"**: Verify a selection/choice is presented to the player. If the effect fires automatically without presenting a choice to use or decline, this is a **CRITICAL** bug — optional effects must never auto-accept.
 - If card text says **"by [doing X]"**: Verify the cost action targets the correct entity (e.g., "by suspending this Tamer" must suspend the card's own permanent, not an opponent's). Verify the cost is paid BEFORE the reward.
 - If card text says **"X, or you may Y"**: Verify only one branch executes, not both.
 
@@ -415,7 +415,7 @@ When bugs from a QA report are fixed (in the same session or later), update `doc
 - When all issues are resolved, add "All outstanding issues resolved." below the summary table
 
 ### Severity Guidelines
-- **critical**: Game crashes, infinite loops, wrong winner declared, game state corruption
+- **critical**: Game crashes, infinite loops, wrong winner declared, game state corruption, optional ("may") effects auto-accepting without player choice
 - **high**: Incorrect play costs, wrong memory changes, effects not triggering at all, security check errors
 - **medium**: Keywords partially wrong, minor timing issues, effect activating with wrong parameters
 - **low**: Cosmetic issues, edge cases unlikely in normal play, minor UI mismatches

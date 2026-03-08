@@ -69,6 +69,7 @@ class BT13_007(CardScript):
             "[Breeding][Your Turn][Once Per Turn] When a [Royal Knight] trait Digimon card would be played, reduce the play cost by 4 plus 1 for each digivolution card under this Digimon."
         )
         effect0._allow_breeding_source = True
+        effect0.is_optional = True
         effect0.set_max_count_per_turn(1)
         effect0.set_hash_string("CostReduce_BT13_007")
 

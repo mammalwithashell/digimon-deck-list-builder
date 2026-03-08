@@ -82,17 +82,23 @@ class BT24_016(CardScript):
             player = ctx.get('player')
             perm = ctx.get('permanent')
             game = ctx.get('game')
-            # Place 1 card from opponent's hand on top of their security stack
             enemy = player.enemy if player else None
-            if enemy and enemy.hand_cards:
-                card_to_place = enemy.hand_cards.pop(0)
-                enemy.security_cards.insert(0, card_to_place)
-            # Trash opponent's top security card(s)
-            if enemy:
-                for _ in range(1):
-                    if enemy.security_cards:
-                        trashed = enemy.security_cards.pop(0)
-                        enemy.trash_cards.append(trashed)
+            if not (enemy and game and enemy.hand_cards):
+                return
+
+            def on_hand_selected(selected_card):
+                if selected_card in enemy.hand_cards:
+                    enemy.hand_cards.remove(selected_card)
+                enemy.security_cards.append(selected_card)  # bottom of security
+                # Trash opponent's top security card
+                if enemy.security_cards:
+                    trashed = enemy.security_cards.pop(0)
+                    enemy.trash_cards.append(trashed)
+
+            game.effect_select_hand_card(
+                enemy, filter_fn=lambda c: True, callback=on_hand_selected,
+                is_optional=False,
+                prompt="Place 1 card from your hand as the bottom card of your security stack.")
 
         effect1.set_on_process_callback(process1)
         effects.append(effect1)
@@ -119,17 +125,23 @@ class BT24_016(CardScript):
             player = ctx.get('player')
             perm = ctx.get('permanent')
             game = ctx.get('game')
-            # Place 1 card from opponent's hand on top of their security stack
             enemy = player.enemy if player else None
-            if enemy and enemy.hand_cards:
-                card_to_place = enemy.hand_cards.pop(0)
-                enemy.security_cards.insert(0, card_to_place)
-            # Trash opponent's top security card(s)
-            if enemy:
-                for _ in range(1):
-                    if enemy.security_cards:
-                        trashed = enemy.security_cards.pop(0)
-                        enemy.trash_cards.append(trashed)
+            if not (enemy and game and enemy.hand_cards):
+                return
+
+            def on_hand_selected(selected_card):
+                if selected_card in enemy.hand_cards:
+                    enemy.hand_cards.remove(selected_card)
+                enemy.security_cards.append(selected_card)  # bottom of security
+                # Trash opponent's top security card
+                if enemy.security_cards:
+                    trashed = enemy.security_cards.pop(0)
+                    enemy.trash_cards.append(trashed)
+
+            game.effect_select_hand_card(
+                enemy, filter_fn=lambda c: True, callback=on_hand_selected,
+                is_optional=False,
+                prompt="Place 1 card from your hand as the bottom card of your security stack.")
 
         effect2.set_on_process_callback(process2)
         effects.append(effect2)
