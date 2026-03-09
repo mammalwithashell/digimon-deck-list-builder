@@ -1,6 +1,6 @@
 {
-  "version": 24,
-  "last_updated": "2026-03-08",
+  "version": 25,
+  "last_updated": "2026-03-09",
   "cards": {
     "BT1-087": {
       "card_name": "T.K. Takaishi",
@@ -48,13 +48,13 @@
       "status": "FAIL",
       "validated_date": "2026-03-08",
       "report": "2026-03-08-medusamon-royal-knights.md",
-      "notes": "TWO bugs: (1) calculate_play_cost() never calls record_activation() so once-per-turn never decrements — all RK plays get reduced. (2) is_optional never checked — 'you may reduce' always applied without prompt."
+      "notes": "TWO bugs: (1) calculate_play_cost() never calls record_activation() so once-per-turn never decrements \u2014 all RK plays get reduced. (2) is_optional never checked \u2014 'you may reduce' always applied without prompt."
     },
     "BT13-019": {
       "status": "PASS",
       "validated_date": "2026-03-03",
       "report": "2026-03-03-royal-knights-script-audit.md",
-      "notes": "Script fixed: zone hand→trash, Gankoomon/Omnimon exclusion"
+      "notes": "Script fixed: zone hand\u2192trash, Gankoomon/Omnimon exclusion"
     },
     "BT13-034": {
       "card_name": "Kudamon",
@@ -74,7 +74,7 @@
       "status": "PASS",
       "validated_date": "2026-03-03",
       "report": "2026-03-03-royal-knights-script-audit.md",
-      "notes": "Script fixed: reveal 2, delete-all, remaining→trash"
+      "notes": "Script fixed: reveal 2, delete-all, remaining\u2192trash"
     },
     "BT13-093": {
       "status": "PASS",
@@ -354,7 +354,7 @@
       "status": "PASS",
       "validated_date": "2026-03-03",
       "report": "2026-03-03-royal-knights-script-audit.md",
-      "notes": "Script fixed: zone hand→trash, opponent-turn check"
+      "notes": "Script fixed: zone hand\u2192trash, opponent-turn check"
     },
     "BT19-075": {
       "card_name": "Millenniummon",
@@ -434,7 +434,7 @@
       "status": "PASS",
       "validated_date": "2026-03-08",
       "report": "2026-03-08-medusamon-royal-knights.md",
-      "notes": "Live verified: Blocker keyword, On Play digivolve (security ≤1 condition), On Deletion self-placement under King Drasil. Both happy path and edge cases confirmed."
+      "notes": "Live verified: Blocker keyword, On Play digivolve (security \u22641 condition), On Deletion self-placement under King Drasil. Both happy path and edge cases confirmed."
     },
     "BT20-091": {
       "status": "PASS",
@@ -800,14 +800,14 @@
       "status": "PASS",
       "validated_date": "2026-03-03",
       "report": "2026-03-03-royal-knights-script-audit.md",
-      "notes": "Script fixed: cost filter ≤4, self-check, inherited effects"
+      "notes": "Script fixed: cost filter \u22644, self-check, inherited effects"
     },
     "BT23-081": {
       "card_name": "Chitose Imai",
       "validated_date": "2026-02-28",
       "report": "2026-02-28-medusa-vs-hudie.md",
       "status": "PASS",
-      "notes": "Free CS play verified. OnTapped trait filter fixed â€” triggers only for Hudie Digimon. Suspends self as cost. Security play verified."
+      "notes": "Free CS play verified. OnTapped trait filter fixed \u00e2\u20ac\u201d triggers only for Hudie Digimon. Suspends self as cost. Security play verified."
     },
     "BT23-084": {
       "card_name": "Erika Mishima",
@@ -930,17 +930,19 @@
     },
     "BT24-016": {
       "card_name": "Lamiamon",
-      "validated_date": "2026-03-08",
-      "report": "2026-03-08-medusamon-royal-knights.md",
-      "status": "PARTIAL",
-      "notes": "Downgraded from PASS. Two bugs in When Attacking/When Digivolving effect: (1) opponent hand card taken without choice (pop(0) instead of selection), (2) card placed at security TOP not BOTTOM. On Attack condition may be too strict."
+      "validated_date": "2026-03-09",
+      "report": "2026-03-09-medusa-regression.md",
+      "status": "PASS",
+      "notes": "WhenDigivolving, WhenAttacking, inherited OnLoseSecurity all verified. Opponent hand selection and security bottom placement fixed.",
+      "name": "Lamiamon"
     },
     "BT24-017": {
       "card_name": "Medusamon",
-      "validated_date": "2026-03-08",
-      "report": "2026-03-08-medusamon-royal-knights.md",
-      "status": "FAIL",
-      "notes": "Downgraded from PASS. When Digivolving effect (DP scaling + delete + token play) does not fire during live digivolution. Effect uses OnEnterFieldAnyone + is_when_digivolving=True but engine fails to dispatch. Raid/Progress keywords untested in this session."
+      "validated_date": "2026-03-09",
+      "report": "2026-03-09-medusa-regression.md",
+      "status": "PARTIAL",
+      "notes": "WhenDigivolving fires (Issue 48 fixed), but DP scaling order wrong, missing Piercing, missing trash-to-deck cost",
+      "name": "Medusamon"
     },
     "BT24-018": {
       "card_name": "Styracomon",
@@ -989,7 +991,7 @@
       "validated_date": "2026-03-03",
       "report": "2026-03-03-ts-neptune-gameplay.md",
       "status": "PARTIAL",
-      "notes": "Play cost 5 correct. Decode keyword present. On Play fires but no tucking cost required (deferred — needs engine helper). Keywords granted unconditionally."
+      "notes": "Play cost 5 correct. Decode keyword present. On Play fires but no tucking cost required (deferred \u2014 needs engine helper). Keywords granted unconditionally."
     },
     "BT24-028": {
       "card_name": "Divermon",
@@ -1017,7 +1019,7 @@
       "validated_date": "2026-03-03",
       "report": "2026-03-03-ts-neptune-gameplay.md",
       "status": "PARTIAL",
-      "notes": "Play cost 3 correct. On Play broken — trashes from hand instead of revealing from deck. Inherited effect logic is inverted."
+      "notes": "Play cost 3 correct. On Play broken \u2014 trashes from hand instead of revealing from deck. Inherited effect logic is inverted."
     },
     "BT24-034": {
       "card_name": "Aegiomon",
@@ -1077,10 +1079,11 @@
     },
     "BT24-082": {
       "card_name": "Owen Dreadnought",
-      "validated_date": "2026-02-28",
-      "report": "2026-02-28-retest-medusa-hudie.md",
-      "status": "PASS",
-      "notes": "Timing bug fixed systemically."
+      "validated_date": "2026-03-09",
+      "report": "2026-03-09-medusa-regression.md",
+      "status": "FAIL",
+      "notes": "Digivolve trigger wrong flag (is_on_play instead of is_when_digivolving), wrong targets, Start of Main Phase missing filter and cost",
+      "name": "Owen Dreadnought"
     },
     "BT24-083": {
       "card_name": "Hiroko Sagisaka",
@@ -1136,7 +1139,7 @@
       "validated_date": "2026-03-03",
       "report": "2026-03-03-ts-neptune-gameplay.md",
       "status": "PARTIAL",
-      "notes": "Play cost 5 correct. DP+1000 aura not working (engine lacks field-wide DP aura — Report 10 Issue 3). EOT effect is a stub (only suspends, no Olympos XII reactivation)."
+      "notes": "Play cost 5 correct. DP+1000 aura not working (engine lacks field-wide DP aura \u2014 Report 10 Issue 3). EOT effect is a stub (only suspends, no Olympos XII reactivation)."
     },
     "BT3-006": {
       "card_name": "DemiMeramon",

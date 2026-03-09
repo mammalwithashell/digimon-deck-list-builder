@@ -1,6 +1,6 @@
 # QA Issue Resolution Index
 
-**Last updated**: 2026-03-08
+**Last updated**: 2026-03-09
 
 ## Summary
 
@@ -35,8 +35,9 @@
 | [royal-knights-gameplay](2026-03-03-royal-knights-gameplay.md) | 3 | 1 | 0 | 2 |
 | [ts-neptune-gameplay](2026-03-03-ts-neptune-gameplay.md) | 12 | 3 | 0 | 9 |
 | [royal-knights-script-audit](2026-03-03-royal-knights-script-audit.md) | 3 | 0 | 0 | 3 |
-| [medusamon-royal-knights](2026-03-08-medusamon-royal-knights.md) | 6 | 0 | 0 | 6 |
-| **Total** | **195** | **151** | **7** | **37** |
+| [medusamon-royal-knights](2026-03-08-medusamon-royal-knights.md) | 6 | 5 | 1 | 0 |
+| [medusa-regression](2026-03-09-medusa-regression.md) | 7 | 0 | 0 | 7 |
+| **Total** | **202** | **156** | **8** | **38** |
 
 ---
 
@@ -418,9 +419,23 @@ Live gameplay testing of both archetypes with targeted board states. Verified Om
 
 | # | Issue | Sev | Status | Notes |
 |---|-------|-----|--------|-------|
-| 46 | King Drasil once-per-turn cost reduction never decrements | critical | OUTSTANDING | `calculate_play_cost()` calls `can_activate_this_turn()` but never `record_activation()`. Every RK play in a turn gets reduced, not just the first. |
-| 47 | King Drasil cost reduction skips "may" optional prompt | critical | OUTSTANDING | `is_optional` never checked in `calculate_play_cost()`. Card text says "you may reduce" but reduction is always applied without player choice. |
-| 48 | Medusamon BT24-017 When Digivolving effect does not fire | high | OUTSTANDING | DP scaling (+2000 per opponent Digimon), delete, and token play all fail to trigger during digivolution. Effect uses `OnEnterFieldAnyone` + `is_when_digivolving=True` but engine may not dispatch this combination during digivolve. |
-| 49 | Lamiamon BT24-016 opponent hand card taken without choice | med | OUTSTANDING | `enemy.hand_cards.pop(0)` always takes the first card. Should use `request_selection()` to let opponent choose which card to place in security. |
-| 50 | Lamiamon BT24-016 card placed at security TOP instead of BOTTOM | med | OUTSTANDING | `enemy.security_cards.insert(0, card)` places at index 0 (top). Card text says "bottom of their security stack" — should use `.append()`. |
-| 51 | Lamiamon BT24-016 On Attack condition too strict | low | OUTSTANDING | Condition requires another Reptile/Dragonkin ally on field for the When Attacking effect, but this restriction may not match the card text intent for all triggering conditions. |
+| 46 | King Drasil once-per-turn cost reduction never decrements | critical | FIXED | `record_activation()` added after cost reduction in `calculate_play_cost()` |
+| 47 | King Drasil cost reduction skips "may" optional prompt | critical | WONTFIX | `calculate_play_cost()` runs during action mask (synchronous), cannot prompt player |
+| 48 | Medusamon BT24-017 When Digivolving effect does not fire | high | FIXED | Removed `set_timing(OnEnterFieldAnyone)` — `is_when_digivolving=True` flag sufficient |
+| 49 | Lamiamon BT24-016 opponent hand card taken without choice | med | FIXED | Rewrote to use `effect_select_hand_card()` for opponent selection |
+| 50 | Lamiamon BT24-016 card placed at security TOP instead of BOTTOM | med | FIXED | Changed `insert(0, ...)` to `append()` for bottom placement |
+| 51 | BT20-083 Omekamon On Deletion optional auto-accepts | critical | FIXED | `execute_deletion_effects()` uses `effect_choose_branch()` for optional effects |
+
+## Report 32: Medusa Regression Testing (2026-03-09)
+
+Post-fix verification of Issues 46-51. Confirmed 5 fixes, 1 known limitation (WONTFIX). Found 7 new issues in Medusamon DP scaling and Owen Dreadnought script.
+
+| # | Issue | Sev | Status | Notes |
+|---|-------|-----|--------|-------|
+| 52 | BT24-017 Medusamon DP scaling happens BEFORE delete and tokens | critical | OUTSTANDING | `change_dp()` called at top of process2 instead of after `effect_play_token()`. DP counts pre-delete board, not post-token board. |
+| 53 | BT24-017 Medusamon missing trash-to-deck cost for tokens | high | OUTSTANDING | Card says "by returning 2 cards from their trash to deck, play 2 tokens". Script skips the cost entirely. |
+| 54 | BT24-082 Owen Dreadnought digivolve trigger uses `is_on_play` instead of `is_when_digivolving` | high | OUTSTANDING | Effect never fires on digivolve because it listens for On Play events. |
+| 55 | BT24-082 Owen Dreadnought digivolve trigger targets wrong entities | med | OUTSTANDING | Cost suspends opponent (should suspend self). Reward gives +3000 DP to self (should target digivolving Digimon). |
+| 56 | BT24-082 Owen Dreadnought Start of Main Phase filter missing | med | OUTSTANDING | `play_filter` returns True for all cards. Should filter to only [Owen Dreadnought]. |
+| 57 | BT24-082 Owen Dreadnought Start of Main Phase missing self-bottom-deck cost | med | OUTSTANDING | Card says "by returning this Tamer to the bottom of the deck" but the process never bottom-decks the tamer. |
+| 58 | BT24-017 Medusamon missing Piercing keyword | low | OUTSTANDING | Card has ＜Piercing＞ in text but script only defines Raid, Progress, and WhenDigivolving effects. |
