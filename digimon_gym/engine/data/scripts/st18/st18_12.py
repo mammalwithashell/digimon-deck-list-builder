@@ -25,14 +25,12 @@ class ST18_12(CardScript):
         effect0.set_can_use_condition(condition0)
         effects.append(effect0)
 
-        # [When Digivolving] You may unsuspend this Digimon. Then, suspend 1 of
-        # your opponent's Digimon.
+        # [When Digivolving] Suspend 1 Digimon. Then, unsuspend 1 Digimon.
         effect1 = ICardEffect()
         effect1.set_timing(EffectTiming.OnEnterFieldAnyone)
-        effect1.set_effect_name("ST18-12 May unsuspend self, then suspend 1 opponent's Digimon")
+        effect1.set_effect_name("ST18-12 Suspend 1 Digimon, then unsuspend 1 Digimon")
         effect1.set_effect_description(
-            "[When Digivolving] You may unsuspend this Digimon. Then, suspend 1 "
-            "of your opponent's Digimon."
+            "[When Digivolving] Suspend 1 Digimon. Then, unsuspend 1 Digimon."
         )
         effect1.is_when_digivolving = True
 
@@ -49,36 +47,45 @@ class ST18_12(CardScript):
             game = ctx.get('game')
             if not (player and perm and game):
                 return
-            # May unsuspend self
-            if perm.is_suspended:
-                perm.unsuspend()
-            # Then, suspend 1 opponent's Digimon
-            def target_filter(p):
-                return p.is_digimon
+
+            # Suspend 1 Digimon (any)
+            def suspend_filter(p):
+                return p.is_digimon and not p.is_suspended
 
             def on_suspend(target_perm):
                 target_perm.suspend()
 
-            game.effect_select_opponent_permanent(
-                player, on_suspend, filter_fn=target_filter, is_optional=False)
+                # Then, unsuspend 1 Digimon (any)
+                def unsuspend_filter(p):
+                    return p.is_digimon and p.is_suspended
+
+                def on_unsuspend(unsuspend_target):
+                    unsuspend_target.unsuspend()
+
+                game.effect_select_any_permanent(
+                    player, on_unsuspend, filter_fn=unsuspend_filter,
+                    is_optional=False)
+
+            game.effect_select_any_permanent(
+                player, on_suspend, filter_fn=suspend_filter, is_optional=False)
 
         effect1.set_on_process_callback(process1)
         effects.append(effect1)
 
-        # [All Turns] [Once Per Turn] When any Digimon suspend, you may play 1
-        # green Digimon card with [Avian] or [Bird] in any of its traits and a
-        # play cost of 5 or less from your hand without paying the cost.
+        # [All Turns] [Once Per Turn] When any Digimon unsuspend, for the turn,
+        # this Digimon isn't affected by the effects of your opponent's Digimon
+        # and gets +3000 DP.
         effect2 = ICardEffect()
-        effect2.set_timing(EffectTiming.OnTappedAnyone)
-        effect2.set_effect_name("ST18-12 When any Digimon suspend, play 1 green Bird/Avian cost 5 or less")
+        effect2.set_timing(EffectTiming.OnUnTappedAnyone)
+        effect2.set_effect_name("ST18-12 On unsuspend: immunity + +3000 DP")
         effect2.set_effect_description(
-            "[All Turns] [Once Per Turn] When any Digimon suspend, you may play "
-            "1 green Digimon card with [Avian] or [Bird] in any of its traits "
-            "and a play cost of 5 or less from your hand without paying the cost."
+            "[All Turns] [Once Per Turn] When any Digimon unsuspend, for the "
+            "turn, this Digimon isn't affected by the effects of your opponent's "
+            "Digimon and gets +3000 DP."
         )
-        effect2.is_optional = True
+        effect2.is_optional = False
         effect2.set_max_count_per_turn(1)
-        effect2.set_hash_string("ST18_12_AT_Play")
+        effect2.set_hash_string("ST18_12_AT_Unsuspend")
 
         def condition2(context: Dict[str, Any]) -> bool:
             if card and card.permanent_of_this_card() is None:
@@ -89,24 +96,19 @@ class ST18_12(CardScript):
 
         def process2(ctx: Dict[str, Any]):
             player = ctx.get('player')
+            perm = ctx.get('permanent')
             game = ctx.get('game')
-            if not (player and game):
+            if not (player and perm and game):
                 return
 
-            def play_filter(c):
-                if not getattr(c, 'is_digimon', False):
-                    return False
-                cost = getattr(c, 'play_cost', 99) or 99
-                if cost > 5:
-                    return False
-                colors = [col.name for col in getattr(c, 'card_colors', [])]
-                if 'Green' not in colors:
-                    return False
-                traits = getattr(c, 'card_traits', []) or []
-                return any('Avian' in t or 'Bird' in t for t in traits)
+            # Grant effect immunity for the turn
+            from digimon_gym.engine.interfaces.modifiers import ModifierType
+            game.register_modifier(
+                ModifierType.CANNOT_BE_SELECTED_BY_EFFECT, perm,
+                value_fn=lambda: True, expiry='end_of_turn')
 
-            game.effect_play_from_zone(
-                player, 'hand', play_filter, free=True, is_optional=True)
+            # Grant +3000 DP for the turn
+            perm.change_dp(3000)
 
         effect2.set_on_process_callback(process2)
         effects.append(effect2)

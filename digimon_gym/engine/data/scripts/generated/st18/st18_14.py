@@ -41,15 +41,18 @@ class ST18_14(CardScript):
         effects.append(effect0)
 
         # [Your Turn] When one of your Digimon attacks your opponent's Digimon,
-        # by suspending this Tamer, 1 of your Digimon gets +3000 DP for the turn.
+        # by suspending this Tamer, you may change the attack target to another
+        # of your opponent's Digimon or the player.
         effect1 = ICardEffect()
         effect1.set_timing(EffectTiming.OnAllyAttack)
-        effect1.set_effect_name("ST18-14 Suspend this Tamer for +3000 DP")
+        effect1.set_effect_name("ST18-14 Suspend Tamer to redirect attack")
         effect1.set_effect_description(
-            "[Your Turn] When one of your Digimon attacks your opponent's Digimon, "
-            "by suspending this Tamer, 1 of your Digimon gets +3000 DP for the turn."
+            "[Your Turn] When one of your Digimon attacks your opponent's "
+            "Digimon, by suspending this Tamer, you may change the attack "
+            "target to another of your opponent's Digimon or the player."
         )
         effect1.is_optional = True
+        effect1.is_on_attack = True
 
         def condition1(context: Dict[str, Any]) -> bool:
             if card and card.permanent_of_this_card() is None:
@@ -73,15 +76,8 @@ class ST18_14(CardScript):
             tamer_perm = card.permanent_of_this_card()
             if tamer_perm and not tamer_perm.is_suspended:
                 tamer_perm.suspend()
-                # Reward: 1 of your Digimon gets +3000 DP
-                def dp_filter(p):
-                    return p.is_digimon
-
-                def on_dp(target_perm):
-                    target_perm.change_dp(3000)
-
-                game.effect_select_own_permanent(
-                    player, on_dp, filter_fn=dp_filter, is_optional=False)
+                # Redirect attack target — not yet in engine
+                pass  # descriptive-tagged: redirect_attack
 
         effect1.set_on_process_callback(process1)
         effects.append(effect1)

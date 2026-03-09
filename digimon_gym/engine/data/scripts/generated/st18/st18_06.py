@@ -50,7 +50,7 @@ class ST18_06(CardScript):
 
         # [On Deletion] Suspend 1 of your opponent's Digimon.
         effect1 = ICardEffect()
-        effect1.set_timing(EffectTiming.OnLeaveFieldAnyone)
+        effect1.set_timing(EffectTiming.OnDestroyedAnyone)
         effect1.set_effect_name("ST18-06 On Deletion: Suspend 1 opponent's Digimon")
         effect1.set_effect_description(
             "[On Deletion] Suspend 1 of your opponent's Digimon."

@@ -16,14 +16,16 @@ class ST18_05(CardScript):
 
         # [All Turns] [Once Per Turn] When this Digimon is suspended by an effect,
         # 1 of your Digimon with [Bird] in any of its traits or with the
-        # [Vortex Warriors] trait gets +3000 DP for the turn.
+        # [Vortex Warriors] trait gets +3000 DP until the end of your
+        # opponent's turn.
         effect0 = ICardEffect()
         effect0.set_timing(EffectTiming.OnTappedAnyone)
         effect0.set_effect_name("ST18-05 When suspended by effect, +3000 DP to Bird/Vortex Warriors")
         effect0.set_effect_description(
             "[All Turns] [Once Per Turn] When this Digimon is suspended by an effect, "
             "1 of your Digimon with [Bird] in any of its traits or with the "
-            "[Vortex Warriors] trait gets +3000 DP for the turn."
+            "[Vortex Warriors] trait gets +3000 DP until the end of your "
+            "opponent's turn."
         )
         effect0.set_max_count_per_turn(1)
         effect0.set_hash_string("ST18_05_OnSuspend")
@@ -51,7 +53,12 @@ class ST18_05(CardScript):
                 return any('Bird' in t for t in traits) or any('Vortex Warriors' in t for t in traits)
 
             def on_select(target_perm):
-                target_perm.change_dp(3000)
+                # +3000 DP until end of opponent's turn (not just end of turn)
+                from digimon_gym.engine.interfaces.modifiers import ModifierType
+                game.register_modifier(
+                    ModifierType.CHANGE_DP, target_perm,
+                    value_fn=lambda dp, p, ctx: dp + 3000,
+                    expiry='end_of_opponent_turn')
 
             game.effect_select_own_permanent(
                 player, on_select, filter_fn=target_filter, is_optional=False)

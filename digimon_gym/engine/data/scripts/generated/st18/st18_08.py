@@ -41,7 +41,7 @@ class ST18_08(CardScript):
                 return any('LIBERATOR' in t for t in traits) and cost <= 4
 
             game.effect_play_from_zone(
-                player, 'hand', play_filter, free=True, is_optional=True)
+                player, 'hand_or_trash', play_filter, free=True, is_optional=True)
 
         effect0.set_on_process_callback(process_sec)
         effects.append(effect0)
@@ -57,71 +57,21 @@ class ST18_08(CardScript):
         effect1.set_can_use_condition(condition1)
         effects.append(effect1)
 
-        # [When Attacking] [Once Per Turn] You may suspend 1 of your Digimon.
-        # If this effect suspended your Digimon, 1 of your Digimon gets +4000 DP
-        # for the turn.
+        # Inherited: [Your Turn] This Digimon gets +2000 DP.
         effect2 = ICardEffect()
-        effect2.set_timing(EffectTiming.OnAllyAttack)
-        effect2.set_effect_name("ST18-08 Suspend own Digimon for +4000 DP")
-        effect2.set_effect_description(
-            "[When Attacking] [Once Per Turn] You may suspend 1 of your Digimon. "
-            "If this effect suspended your Digimon, 1 of your Digimon gets +4000 DP "
-            "for the turn."
-        )
-        effect2.is_on_attack = True
-        effect2.is_optional = True
-        effect2.set_max_count_per_turn(1)
-        effect2.set_hash_string("ST18_08_WA_Suspend")
+        effect2.set_effect_name("ST18-08 +2000 DP")
+        effect2.set_effect_description("[Your Turn] This Digimon gets +2000 DP.")
+        effect2.is_inherited_effect = True
+        effect2.dp_modifier = 2000
 
         def condition2(context: Dict[str, Any]) -> bool:
-            if card and card.permanent_of_this_card() is None:
-                return False
-            return True
-
-        effect2.set_can_use_condition(condition2)
-
-        def process2(ctx: Dict[str, Any]):
-            player = ctx.get('player')
-            perm = ctx.get('permanent')
-            game = ctx.get('game')
-            if not (player and game):
-                return
-
-            def target_filter(p):
-                return p.is_digimon and not p.is_suspended
-
-            def on_suspend(target_perm):
-                target_perm.suspend()
-                # Grant +4000 DP to 1 of your Digimon
-                def dp_filter(p):
-                    return p.is_digimon
-                def on_dp_grant(dp_target):
-                    dp_target.change_dp(4000)
-                game.effect_select_own_permanent(
-                    player, on_dp_grant, filter_fn=dp_filter, is_optional=False)
-
-            game.effect_select_own_permanent(
-                player, on_suspend, filter_fn=target_filter, is_optional=True)
-
-        effect2.set_on_process_callback(process2)
-        effects.append(effect2)
-
-        # Inherited: [Your Turn] This Digimon gets +2000 DP.
-        effect3 = ICardEffect()
-        effect3.set_timing(EffectTiming.StatModifier)
-        effect3.set_effect_name("ST18-08 +2000 DP")
-        effect3.set_effect_description("[Your Turn] This Digimon gets +2000 DP.")
-        effect3.is_inherited_effect = True
-        effect3.dp_modifier = 2000
-
-        def condition3(context: Dict[str, Any]) -> bool:
             if card and card.permanent_of_this_card() is None:
                 return False
             if not (card and card.owner and card.owner.is_my_turn):
                 return False
             return True
 
-        effect3.set_can_use_condition(condition3)
-        effects.append(effect3)
+        effect2.set_can_use_condition(condition2)
+        effects.append(effect2)
 
         return effects

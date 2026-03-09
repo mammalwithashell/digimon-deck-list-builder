@@ -16,15 +16,15 @@ class ST18_10(CardScript):
 
         # [On Play] [When Digivolving] Suspend 1 Digimon. If this effect
         # suspends your Digimon, you may play 1 Digimon card with the [Bird]
-        # or [Avian] in any of its traits and a play cost of 5 or less from
-        # your hand without paying the cost.
+        # or [Avian] in any of its traits with 3000 DP or less from your hand
+        # without paying the cost.
         effect0 = ICardEffect()
         effect0.set_timing(EffectTiming.OnEnterFieldAnyone)
-        effect0.set_effect_name("ST18-10 Suspend 1 Digimon, may play Bird/Avian cost 5 or less")
+        effect0.set_effect_name("ST18-10 Suspend 1 Digimon, may play Bird/Avian 3000 DP or less")
         effect0.set_effect_description(
             "[On Play] [When Digivolving] Suspend 1 Digimon. If this effect "
             "suspends your Digimon, you may play 1 Digimon card with [Bird] "
-            "or [Avian] in any of its traits and a play cost of 5 or less "
+            "or [Avian] in any of its traits with 3000 DP or less "
             "from your hand without paying the cost."
         )
         effect0.is_on_play = True
@@ -53,8 +53,8 @@ class ST18_10(CardScript):
                     def play_filter(c):
                         if not getattr(c, 'is_digimon', False):
                             return False
-                        cost = getattr(c, 'play_cost', 99) or 99
-                        if cost > 5:
+                        dp = getattr(c, 'dp', 0) or 0
+                        if dp > 3000:
                             return False
                         traits = getattr(c, 'card_traits', []) or []
                         return any('Bird' in t or 'Avian' in t for t in traits)
@@ -75,7 +75,7 @@ class ST18_10(CardScript):
         effect1.set_effect_description(
             "[When Digivolving] Suspend 1 Digimon. If this effect suspends your "
             "Digimon, you may play 1 Digimon card with [Bird] or [Avian] in any "
-            "of its traits and a play cost of 5 or less from your hand without "
+            "of its traits with 3000 DP or less from your hand without "
             "paying the cost."
         )
         effect1.is_when_digivolving = True
@@ -103,8 +103,8 @@ class ST18_10(CardScript):
                     def play_filter(c):
                         if not getattr(c, 'is_digimon', False):
                             return False
-                        cost = getattr(c, 'play_cost', 99) or 99
-                        if cost > 5:
+                        dp = getattr(c, 'dp', 0) or 0
+                        if dp > 3000:
                             return False
                         traits = getattr(c, 'card_traits', []) or []
                         return any('Bird' in t or 'Avian' in t for t in traits)

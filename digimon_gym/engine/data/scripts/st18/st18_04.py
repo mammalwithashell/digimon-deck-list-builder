@@ -75,7 +75,6 @@ class ST18_04(CardScript):
 
         # Inherited: [Your Turn] This Digimon gets +2000 DP.
         effect1 = ICardEffect()
-        effect1.set_timing(EffectTiming.StatModifier)
         effect1.set_effect_name("ST18-04 +2000 DP")
         effect1.set_effect_description("[Your Turn] This Digimon gets +2000 DP.")
         effect1.is_inherited_effect = True

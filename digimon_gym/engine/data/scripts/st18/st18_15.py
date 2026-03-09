@@ -16,14 +16,14 @@ class ST18_15(CardScript):
 
         # [Main] Suspend 1 Digimon. If this effect suspended your Digimon,
         # return 1 of your opponent's suspended Digimon to the bottom of the
-        # deck. Then, unsuspend the Digimon suspended by this effect.
+        # deck. Then, unsuspend 1 Digimon.
         effect0 = ICardEffect()
         effect0.set_timing(EffectTiming.OptionSkill)
-        effect0.set_effect_name("ST18-15 Suspend own Digimon, bounce opponent's suspended, unsuspend")
+        effect0.set_effect_name("ST18-15 Suspend, bounce opponent's suspended, unsuspend")
         effect0.set_effect_description(
             "[Main] Suspend 1 Digimon. If this effect suspended your Digimon, "
             "return 1 of your opponent's suspended Digimon to the bottom of the "
-            "deck. Then, unsuspend the Digimon suspended by this effect."
+            "deck. Then, unsuspend 1 Digimon."
         )
 
         def condition0(context: Dict[str, Any]) -> bool:
@@ -57,8 +57,16 @@ class ST18_15(CardScript):
                             player, on_bounce, filter_fn=bounce_filter,
                             is_optional=False)
 
-                    # Then, unsuspend the Digimon suspended by this effect
-                    target_perm.unsuspend()
+                # Then, unsuspend 1 Digimon (any Digimon, player choice)
+                def unsuspend_filter(p):
+                    return p.is_digimon and p.is_suspended
+
+                def on_unsuspend(unsuspend_target):
+                    unsuspend_target.unsuspend()
+
+                game.effect_select_any_permanent(
+                    player, on_unsuspend, filter_fn=unsuspend_filter,
+                    is_optional=False)
 
             game.effect_select_any_permanent(
                 player, on_suspend, filter_fn=target_filter, is_optional=False)

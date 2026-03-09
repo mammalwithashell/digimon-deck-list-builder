@@ -26,15 +26,15 @@ class ST18_09(CardScript):
         effects.append(effect0)
 
         # [On Deletion] You may play 1 Digimon card with [Avian], [Bird],
-        # [Vegetation] or [Plant] in any of its traits and a play cost of 7
-        # or less from your hand without paying the cost.
+        # [Vegetation] or [Plant] in any of its traits and 3000 DP or less
+        # from your hand without paying the cost.
         effect1 = ICardEffect()
-        effect1.set_timing(EffectTiming.OnLeaveFieldAnyone)
-        effect1.set_effect_name("ST18-09 On Deletion: Play 1 Avian/Bird/Vegetation/Plant Digimon cost 7 or less")
+        effect1.set_timing(EffectTiming.OnDestroyedAnyone)
+        effect1.set_effect_name("ST18-09 On Deletion: Play 1 Avian/Bird/Vegetation/Plant 3000 DP or less")
         effect1.set_effect_description(
             "[On Deletion] You may play 1 Digimon card with [Avian], [Bird], "
-            "[Vegetation] or [Plant] in any of its traits and a play cost of 7 "
-            "or less from your hand without paying the cost."
+            "[Vegetation] or [Plant] in any of its traits and 3000 DP or less "
+            "from your hand without paying the cost."
         )
         effect1.is_on_deletion = True
         effect1.is_optional = True
@@ -54,8 +54,8 @@ class ST18_09(CardScript):
             def play_filter(c):
                 if not getattr(c, 'is_digimon', False):
                     return False
-                cost = getattr(c, 'play_cost', 99) or 99
-                if cost > 7:
+                dp = getattr(c, 'dp', 0) or 0
+                if dp > 3000:
                     return False
                 traits = getattr(c, 'card_traits', []) or []
                 return any(any(tt in t for tt in target_traits) for t in traits)
