@@ -2278,6 +2278,13 @@ class Game:
             if action_id == 1:
                 return "Mulligan (redraw 5)"
 
+        # Selection phases: delegate to selection-specific descriptions first
+        # (must come before Play/Trash handlers which share action ID ranges)
+        if self.current_phase in (GamePhase.SelectTarget, GamePhase.SelectMaterial,
+                                  GamePhase.SelectHand, GamePhase.SelectReveal,
+                                  GamePhase.SelectTrash, GamePhase.SelectSecurity):
+            return self._describe_selection_action(action_id, me, opp)
+
         # Play card from hand (0-29)
         if 0 <= action_id <= 29:
             idx = action_id
@@ -2405,13 +2412,6 @@ class Game:
             field_idx = normalized // SOURCES_PER_FIELD
             source_idx = normalized % SOURCES_PER_FIELD
             return f"Select source[{source_idx}] from slot[{field_idx}]"
-
-        # Selection phases use shared action space
-        phase = self.current_phase
-        if phase in (GamePhase.SelectTarget, GamePhase.SelectMaterial,
-                     GamePhase.SelectHand, GamePhase.SelectReveal,
-                     GamePhase.SelectTrash, GamePhase.SelectSecurity):
-            return self._describe_selection_action(action_id, me, opp)
 
         return f"Action {action_id}"
 
