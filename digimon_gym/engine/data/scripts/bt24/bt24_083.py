@@ -26,25 +26,34 @@ class BT24_083(CardScript):
         def condition0(context: Dict[str, Any]) -> bool:
             if card and card.permanent_of_this_card() is None:
                 return False
-            if not (card and card.owner and card.owner.is_my_turn):
+            owner = getattr(card, 'owner', None)
+            game = getattr(owner, 'game', None)
+            if not (owner and owner.is_my_turn and game):
+                return False
+            if game.memory > 4:
                 return False
             return True
 
         effect0.set_can_use_condition(condition0)
 
         def process0(ctx: Dict[str, Any]):
-            """Action: Play Card"""
+            """Return this Tamer to the bottom of the deck, then play a card."""
             player = ctx.get('player')
             perm = ctx.get('permanent')
             game = ctx.get('game')
-            if not (player and game):
+            if not (player and perm and game):
                 return
+            player.return_permanent_to_deck_bottom(perm)
+
             def play_filter(c):
-                if not getattr(c, 'is_digimon', False):
-                    return False
-                if not (any('Hiroko Sagisaka' in _n for _n in getattr(c, 'card_names', [])) or any('TS' in _t for _t in (getattr(c, 'card_traits', []) or []))):
-                    return False
-                return True
+                if any('Hiroko Sagisaka' in _n for _n in getattr(c, 'card_names', [])):
+                    return True
+                return (
+                    getattr(c, 'is_digimon', False)
+                    and 'TS' in (getattr(c, 'card_traits', []) or [])
+                    and (getattr(c, 'base_dp', 0) or 0) <= 5000
+                )
+
             game.effect_play_from_zone(
                 player, 'hand', play_filter, free=True, is_optional=True)
 
@@ -71,18 +80,11 @@ class BT24_083(CardScript):
         def process1(ctx: Dict[str, Any]):
             """Action: Add To Hand, Reveal And Select"""
             player = ctx.get('player')
-            perm = ctx.get('permanent')
             game = ctx.get('game')
-            # Add card to hand (from trash/reveal)
-            if player and player.trash_cards:
-                card_to_add = player.trash_cards.pop()
-                player.hand_cards.append(card_to_add)
             if not (player and game):
                 return
             def reveal_filter(c):
-                if not (any('TS' in _t for _t in (getattr(c, 'card_traits', []) or []))):
-                    return False
-                return True
+                return 'TS' in (getattr(c, 'card_traits', []) or [])
             def on_revealed(selected, remaining):
                 player.hand_cards.append(selected)
                 for c in remaining:

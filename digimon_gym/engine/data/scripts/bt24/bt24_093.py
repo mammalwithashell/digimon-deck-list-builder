@@ -29,23 +29,13 @@ class BT24_093(CardScript):
         effect0.set_can_use_condition(condition0)
 
         def process0(ctx: Dict[str, Any]):
-            """Action: Recovery +1, Add To Hand, Destroy Security"""
+            """Add your top security card to hand, then recover 1."""
             player = ctx.get('player')
-            perm = ctx.get('permanent')
-            game = ctx.get('game')
-            if player:
-                player.recovery(1)
-            # Add card to hand (from trash/reveal)
-            if player and player.trash_cards:
-                card_to_add = player.trash_cards.pop()
-                player.hand_cards.append(card_to_add)
-            # Trash opponent's top security card(s)
-            enemy = player.enemy if player else None
-            if enemy:
-                for _ in range(1):
-                    if enemy.security_cards:
-                        trashed = enemy.security_cards.pop(0)
-                        enemy.trash_cards.append(trashed)
+            if not player:
+                return
+            if player.security_cards:
+                player.hand_cards.append(player.security_cards.pop(0))
+            player.recovery(1)
 
         effect0.set_on_process_callback(process0)
         effects.append(effect0)
@@ -60,17 +50,20 @@ class BT24_093(CardScript):
         def condition1(context: Dict[str, Any]) -> bool:
             if card and card.permanent_of_this_card() is None:
                 return False
-            permanent = card.permanent_of_this_card() if card else None
-            if not (permanent and len(permanent.digivolution_cards) >= 0):
-                return False
             return True
         effect1.set_can_use_condition(condition1)
         effects.append(effect1)
 
-        # Timing: EffectTiming.OnLoseSecurity
+        # Timing: EffectTiming.NoTiming
+        # TODO: switch this back to the real security-removal trigger once the
+        # engine exposes a dedicated helper for that printed trigger.
+        # Delay callbacks are surfaced via the generic Delay action, so this
+        # effect intentionally uses NoTiming for now even though the printed
+        # text references a security-removal trigger that the engine does not
+        # model directly yet.
         # [All Turns] When your security stack is removed, <Delay>.\r\n• You may place the top stacked card of any your Digimon with [Aegiochusmon] or [Jupitermon] in their names as the top security card.
         effect2 = ICardEffect()
-        effect2.set_timing(EffectTiming.OnLoseSecurity)
+        effect2.set_timing(EffectTiming.NoTiming)
         effect2.set_effect_name("BT24-093 Place top card [Aegiochusmon] or [Jupitermon] on top sec.")
         effect2.set_effect_description("[All Turns] When your security stack is removed, <Delay>.\\r\\n• You may place the top stacked card of any your Digimon with [Aegiochusmon] or [Jupitermon] in their names as the top security card.")
         effect2.is_optional = True
@@ -79,21 +72,31 @@ class BT24_093(CardScript):
         def condition2(context: Dict[str, Any]) -> bool:
             if card and card.permanent_of_this_card() is None:
                 return False
-            permanent = effect.effect_source_permanent if hasattr(effect, 'effect_source_permanent') else None
-            if not (permanent and len(permanent.digivolution_cards) >= 0):
-                return False
             return True
 
         effect2.set_can_use_condition(condition2)
 
         def process2(ctx: Dict[str, Any]):
-            """Action: Add To Security"""
+            """Place the top stacked card of an [Aegiochusmon]/[Jupitermon] on security."""
             player = ctx.get('player')
-            perm = ctx.get('permanent')
             game = ctx.get('game')
-            # Add top card of deck to security
-            if player:
-                player.recovery(1)
+            if not (player and game):
+                return
+
+            def target_filter(p):
+                return (
+                    p.is_digimon
+                    and (p.contains_card_name('Aegiochusmon') or p.contains_card_name('Jupitermon'))
+                    and len(p.card_sources) > 1
+                )
+
+            def on_stack_to_security(target_perm):
+                stacked_cards = target_perm.trash_digivolution_cards(1)
+                if stacked_cards:
+                    player.security_cards.insert(0, stacked_cards[0])
+
+            game.effect_select_own_permanent(
+                player, on_stack_to_security, filter_fn=target_filter, is_optional=True)
 
         effect2.set_on_process_callback(process2)
         effects.append(effect2)

@@ -45,12 +45,37 @@ class BT24_034(CardScript):
         effect1.set_can_use_condition(condition1)
         effects.append(effect1)
 
+        def play_ts_tamer_after_security_to_hand(ctx: Dict[str, Any]):
+            player = ctx.get('player')
+            game = ctx.get('game')
+            if not (player and game and player.security_cards):
+                return
+
+            player.hand_cards.append(player.security_cards.pop(0))
+            existing_tamer_names = {
+                p.top_card.card_names[0]
+                for p in player.battle_area
+                if p.is_tamer and p.top_card and p.top_card.card_names
+            }
+
+            def play_filter(c):
+                if not getattr(c, 'is_tamer', False):
+                    return False
+                if 'TS' not in (getattr(c, 'card_traits', []) or []):
+                    return False
+                if any(name in existing_tamer_names for name in getattr(c, 'card_names', [])):
+                    return False
+                return True
+
+            game.effect_play_from_zone(
+                player, 'hand', play_filter, free=True, is_optional=True)
+
         # Timing: EffectTiming.OnMove
-        # Play Card, Add To Hand, Destroy Security
+        # Add top security to hand, then play a [TS] Tamer
         effect2 = ICardEffect()
         effect2.set_timing(EffectTiming.OnMove)
-        effect2.set_effect_name("BT24-034 Play Card, Add To Hand, Destroy Security")
-        effect2.set_effect_description("Play Card, Add To Hand, Destroy Security")
+        effect2.set_effect_name("BT24-034 Add top security to hand, then play a [TS] Tamer")
+        effect2.set_effect_description("By adding your top security card to the hand, you may play 1 [TS] trait Tamer card from your hand without paying the cost. This effect can't play cards with the same name as any of your Tamers.")
 
         effect = effect2  # alias for condition closure
         def condition2(context: Dict[str, Any]) -> bool:
@@ -60,38 +85,15 @@ class BT24_034(CardScript):
 
         effect2.set_can_use_condition(condition2)
 
-        def process2(ctx: Dict[str, Any]):
-            """Action: Play Card, Add To Hand, Destroy Security"""
-            player = ctx.get('player')
-            perm = ctx.get('permanent')
-            game = ctx.get('game')
-            if not (player and game):
-                return
-            def play_filter(c):
-                return True
-            game.effect_play_from_zone(
-                player, 'hand', play_filter, free=True, is_optional=True)
-            # Add card to hand (from trash/reveal)
-            if player and player.trash_cards:
-                card_to_add = player.trash_cards.pop()
-                player.hand_cards.append(card_to_add)
-            # Trash opponent's top security card(s)
-            enemy = player.enemy if player else None
-            if enemy:
-                for _ in range(1):
-                    if enemy.security_cards:
-                        trashed = enemy.security_cards.pop(0)
-                        enemy.trash_cards.append(trashed)
-
-        effect2.set_on_process_callback(process2)
+        effect2.set_on_process_callback(play_ts_tamer_after_security_to_hand)
         effects.append(effect2)
 
         # Timing: EffectTiming.OnEnterFieldAnyone
-        # Play Card, Add To Hand, Destroy Security
+        # Add top security to hand, then play a [TS] Tamer
         effect3 = ICardEffect()
         effect3.set_timing(EffectTiming.OnEnterFieldAnyone)
-        effect3.set_effect_name("BT24-034 Play Card, Add To Hand, Destroy Security")
-        effect3.set_effect_description("Play Card, Add To Hand, Destroy Security")
+        effect3.set_effect_name("BT24-034 Add top security to hand, then play a [TS] Tamer")
+        effect3.set_effect_description("By adding your top security card to the hand, you may play 1 [TS] trait Tamer card from your hand without paying the cost. This effect can't play cards with the same name as any of your Tamers.")
         effect3.is_on_play = True
 
         effect = effect3  # alias for condition closure
@@ -103,38 +105,15 @@ class BT24_034(CardScript):
 
         effect3.set_can_use_condition(condition3)
 
-        def process3(ctx: Dict[str, Any]):
-            """Action: Play Card, Add To Hand, Destroy Security"""
-            player = ctx.get('player')
-            perm = ctx.get('permanent')
-            game = ctx.get('game')
-            if not (player and game):
-                return
-            def play_filter(c):
-                return True
-            game.effect_play_from_zone(
-                player, 'hand', play_filter, free=True, is_optional=True)
-            # Add card to hand (from trash/reveal)
-            if player and player.trash_cards:
-                card_to_add = player.trash_cards.pop()
-                player.hand_cards.append(card_to_add)
-            # Trash opponent's top security card(s)
-            enemy = player.enemy if player else None
-            if enemy:
-                for _ in range(1):
-                    if enemy.security_cards:
-                        trashed = enemy.security_cards.pop(0)
-                        enemy.trash_cards.append(trashed)
-
-        effect3.set_on_process_callback(process3)
+        effect3.set_on_process_callback(play_ts_tamer_after_security_to_hand)
         effects.append(effect3)
 
         # Timing: EffectTiming.OnEnterFieldAnyone
-        # Play Card, Add To Hand, Destroy Security
+        # Add top security to hand, then play a [TS] Tamer
         effect4 = ICardEffect()
         effect4.set_timing(EffectTiming.OnEnterFieldAnyone)
-        effect4.set_effect_name("BT24-034 Play Card, Add To Hand, Destroy Security")
-        effect4.set_effect_description("Play Card, Add To Hand, Destroy Security")
+        effect4.set_effect_name("BT24-034 Add top security to hand, then play a [TS] Tamer")
+        effect4.set_effect_description("By adding your top security card to the hand, you may play 1 [TS] trait Tamer card from your hand without paying the cost. This effect can't play cards with the same name as any of your Tamers.")
         effect4.is_when_digivolving = True
 
         effect = effect4  # alias for condition closure
@@ -146,30 +125,7 @@ class BT24_034(CardScript):
 
         effect4.set_can_use_condition(condition4)
 
-        def process4(ctx: Dict[str, Any]):
-            """Action: Play Card, Add To Hand, Destroy Security"""
-            player = ctx.get('player')
-            perm = ctx.get('permanent')
-            game = ctx.get('game')
-            if not (player and game):
-                return
-            def play_filter(c):
-                return True
-            game.effect_play_from_zone(
-                player, 'hand', play_filter, free=True, is_optional=True)
-            # Add card to hand (from trash/reveal)
-            if player and player.trash_cards:
-                card_to_add = player.trash_cards.pop()
-                player.hand_cards.append(card_to_add)
-            # Trash opponent's top security card(s)
-            enemy = player.enemy if player else None
-            if enemy:
-                for _ in range(1):
-                    if enemy.security_cards:
-                        trashed = enemy.security_cards.pop(0)
-                        enemy.trash_cards.append(trashed)
-
-        effect4.set_on_process_callback(process4)
+        effect4.set_on_process_callback(play_ts_tamer_after_security_to_hand)
         effects.append(effect4)
 
         # Factory effect: barrier

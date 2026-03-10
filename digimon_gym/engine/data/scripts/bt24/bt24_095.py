@@ -37,16 +37,22 @@ class BT24_095(CardScript):
         effect0.set_on_process_callback(process0)
         effects.append(effect0)
 
-        # Factory effect: security_play
-        # Security: Play this card
+        # Timing: EffectTiming.SecuritySkill
+        # Security: Activate this card's [Main] effects.
         effect1 = ICardEffect()
-        effect1.set_effect_name("BT24-095 Security: Play this card")
-        effect1.set_effect_description("Security: Play this card")
+        effect1.set_timing(EffectTiming.SecuritySkill)
+        effect1.set_effect_name("BT24-095 Security: Activate this card's [Main] effects")
+        effect1.set_effect_description("[Security] Activate this card's [Main] effects.")
         effect1.is_security_effect = True
 
         def condition1(context: Dict[str, Any]) -> bool:
             return True
         effect1.set_can_use_condition(condition1)
+
+        def process1(ctx: Dict[str, Any]):
+            effect2.on_process_callback(ctx)
+
+        effect1.set_on_process_callback(process1)
         effects.append(effect1)
 
         # Timing: EffectTiming.OptionSkill
@@ -67,58 +73,25 @@ class BT24_095(CardScript):
         def process2(ctx: Dict[str, Any]):
             """Action: Suspend, Gain Keyword Cannot Unsuspend"""
             player = ctx.get('player')
-            perm = ctx.get('permanent')
             game = ctx.get('game')
             if not (player and game):
                 return
             def target_filter(p):
-                return True
+                return p.is_digimon or p.is_tamer
+
             def on_suspend(target_perm):
                 target_perm.suspend()
+                # Match the engine's turn-based duration convention so the
+                # keyword lasts through the target controller's next unsuspend
+                # phase regardless of whose turn this resolves on.
+                duration = game.turn_count + (2 if player.enemy is game.turn_player else 1)
+                target_perm.grant_keyword('_is_cannot_unsuspend', duration=duration)
+
             game.effect_select_opponent_permanent(
                 player, on_suspend, filter_fn=target_filter, is_optional=False)
-            if perm:
-                perm.grant_keyword('_is_cannot_unsuspend')
+            game.effect_link_to_permanent(player, card, is_optional=True)
 
         effect2.set_on_process_callback(process2)
         effects.append(effect2)
-
-        # Timing: EffectTiming.OnAllyAttack
-        # [When Attacking] [Once Per Turn] Return 1 of your opponent's suspended Digimon to the hand.
-        effect3 = ICardEffect()
-        effect3.set_timing(EffectTiming.OnAllyAttack)
-        effect3.set_effect_name("BT24-095 Bounce 1 opponent's suspended Digimon.")
-        effect3.set_effect_description("[When Attacking] [Once Per Turn] Return 1 of your opponent's suspended Digimon to the hand.")
-        effect3.set_max_count_per_turn(1)
-        effect3.set_hash_string("WA_BT24-095")
-        effect3.is_on_attack = True
-
-        effect = effect3  # alias for condition closure
-        def condition3(context: Dict[str, Any]) -> bool:
-            if card and card.permanent_of_this_card() is None:
-                return False
-            # Triggered on attack — validated by engine timing
-            return True
-
-        effect3.set_can_use_condition(condition3)
-
-        def process3(ctx: Dict[str, Any]):
-            """Action: Bounce"""
-            player = ctx.get('player')
-            perm = ctx.get('permanent')
-            game = ctx.get('game')
-            if not (player and game):
-                return
-            def target_filter(p):
-                return True
-            def on_bounce(target_perm):
-                enemy = player.enemy if player else None
-                if enemy:
-                    enemy.bounce_permanent_to_hand(target_perm)
-            game.effect_select_opponent_permanent(
-                player, on_bounce, filter_fn=target_filter, is_optional=False)
-
-        effect3.set_on_process_callback(process3)
-        effects.append(effect3)
 
         return effects
