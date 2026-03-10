@@ -26,11 +26,50 @@ class BT24_041(CardScript):
 
         def condition0(context: Dict[str, Any]) -> bool:
             permanent = card.permanent_of_this_card() if card else None
-            if not (permanent and permanent.top_card and (any('Beastkin' in tr for tr in (getattr(permanent.top_card, 'card_traits', []) or [])) or any('Dark Dragon' in tr for tr in (getattr(permanent.top_card, 'card_traits', []) or [])))):
+            traits = (getattr(permanent.top_card, 'card_traits', []) or []) if permanent and permanent.top_card else []
+            if not (
+                permanent and permanent.top_card and (
+                    any('Beastkin' in tr for tr in traits)
+                    or any('Dark Dragon' in tr for tr in traits)
+                    or any('TS' in tr for tr in traits)
+                )
+            ):
                 return False
             return True
         effect0.set_can_use_condition(condition0)
         effects.append(effect0)
+
+        def play_then_dedigivolve(ctx: Dict[str, Any]):
+            player = ctx.get('player')
+            game = ctx.get('game')
+            if not (player and game):
+                return
+
+            def play_filter(c):
+                if not getattr(c, 'has_play_cost', False):
+                    return False
+                if getattr(c, 'get_cost_itself', 0) > 5:
+                    return False
+                if 'Iliad' not in (getattr(c, 'card_traits', []) or []):
+                    return False
+                return True
+
+            game.effect_play_from_zone(
+                player, 'hand', play_filter, free=True, is_optional=True)
+
+            # Minervamon applies <De-Digivolve 1> for each of your Digimon.
+            dedigivolve_count = sum(1 for p in player.battle_area if p.is_digimon)
+            if dedigivolve_count <= 0:
+                return
+
+            def on_de_digivolve(target_perm):
+                removed = target_perm.de_digivolve(dedigivolve_count)
+                enemy = player.enemy if player else None
+                if enemy:
+                    enemy.trash_cards.extend(removed)
+
+            game.effect_select_opponent_permanent(
+                player, on_de_digivolve, filter_fn=lambda p: p.is_digimon, is_optional=False)
 
         # Timing: EffectTiming.BeforePayCost
         # When this card would be played, if you have an [Iliad] trait Digimon or Tamer, reduce the play cost by 5.
@@ -74,34 +113,7 @@ class BT24_041(CardScript):
 
         effect3.set_can_use_condition(condition3)
 
-        def process3(ctx: Dict[str, Any]):
-            """Action: Play Card, De Digivolve"""
-            player = ctx.get('player')
-            perm = ctx.get('permanent')
-            game = ctx.get('game')
-            if not (player and game):
-                return
-            def play_filter(c):
-                if not getattr(c, 'has_play_cost', False):
-                    return False
-                if getattr(c, 'get_cost_itself', 0) > 5:
-                    return False
-                if not (any('Iliad' in _t for _t in (getattr(c, 'card_traits', []) or []))):
-                    return False
-                return True
-            game.effect_play_from_zone(
-                player, 'hand', play_filter, free=True, is_optional=True)
-            if not (player and game):
-                return
-            def on_de_digivolve(target_perm):
-                removed = target_perm.de_digivolve(1)
-                enemy = player.enemy if player else None
-                if enemy:
-                    enemy.trash_cards.extend(removed)
-            game.effect_select_opponent_permanent(
-                player, on_de_digivolve, filter_fn=lambda p: p.is_digimon, is_optional=False)
-
-        effect3.set_on_process_callback(process3)
+        effect3.set_on_process_callback(play_then_dedigivolve)
         effects.append(effect3)
 
         # Timing: EffectTiming.OnEnterFieldAnyone
@@ -121,34 +133,7 @@ class BT24_041(CardScript):
 
         effect4.set_can_use_condition(condition4)
 
-        def process4(ctx: Dict[str, Any]):
-            """Action: Play Card, De Digivolve"""
-            player = ctx.get('player')
-            perm = ctx.get('permanent')
-            game = ctx.get('game')
-            if not (player and game):
-                return
-            def play_filter(c):
-                if not getattr(c, 'has_play_cost', False):
-                    return False
-                if getattr(c, 'get_cost_itself', 0) > 5:
-                    return False
-                if not (any('Iliad' in _t for _t in (getattr(c, 'card_traits', []) or []))):
-                    return False
-                return True
-            game.effect_play_from_zone(
-                player, 'hand', play_filter, free=True, is_optional=True)
-            if not (player and game):
-                return
-            def on_de_digivolve(target_perm):
-                removed = target_perm.de_digivolve(1)
-                enemy = player.enemy if player else None
-                if enemy:
-                    enemy.trash_cards.extend(removed)
-            game.effect_select_opponent_permanent(
-                player, on_de_digivolve, filter_fn=lambda p: p.is_digimon, is_optional=False)
-
-        effect4.set_on_process_callback(process4)
+        effect4.set_on_process_callback(play_then_dedigivolve)
         effects.append(effect4)
 
         # Timing: EffectTiming.OnDestroyedAnyone
@@ -166,34 +151,7 @@ class BT24_041(CardScript):
 
         effect5.set_can_use_condition(condition5)
 
-        def process5(ctx: Dict[str, Any]):
-            """Action: Play Card, De Digivolve"""
-            player = ctx.get('player')
-            perm = ctx.get('permanent')
-            game = ctx.get('game')
-            if not (player and game):
-                return
-            def play_filter(c):
-                if not getattr(c, 'has_play_cost', False):
-                    return False
-                if getattr(c, 'get_cost_itself', 0) > 5:
-                    return False
-                if not (any('Iliad' in _t for _t in (getattr(c, 'card_traits', []) or []))):
-                    return False
-                return True
-            game.effect_play_from_zone(
-                player, 'hand', play_filter, free=True, is_optional=True)
-            if not (player and game):
-                return
-            def on_de_digivolve(target_perm):
-                removed = target_perm.de_digivolve(1)
-                enemy = player.enemy if player else None
-                if enemy:
-                    enemy.trash_cards.extend(removed)
-            game.effect_select_opponent_permanent(
-                player, on_de_digivolve, filter_fn=lambda p: p.is_digimon, is_optional=False)
-
-        effect5.set_on_process_callback(process5)
+        effect5.set_on_process_callback(play_then_dedigivolve)
         effects.append(effect5)
 
         # Factory effect: blocker
