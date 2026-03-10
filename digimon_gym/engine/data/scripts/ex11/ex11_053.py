@@ -50,21 +50,57 @@ class EX11_053(CardScript):
         def condition1(context: Dict[str, Any]) -> bool:
             if card and card.permanent_of_this_card() is None:
                 return False
-            # Triggered on play — validated by engine timing
-            permanent = effect.effect_source_permanent if hasattr(effect, 'effect_source_permanent') else None
-            if not (permanent and (permanent.contains_card_name('King Drasil_7D6'))):
+            player = card.owner if card else None
+            if not player:
                 return False
-            return True
+            # Check if player has any King Drasil_7D6 in battle area or breeding
+            has_king_drasil = False
+            for p in player.battle_area:
+                if p.contains_card_name('King Drasil_7D6'):
+                    has_king_drasil = True
+                    break
+            if not has_king_drasil and player.breeding_area:
+                if player.breeding_area.contains_card_name('King Drasil_7D6'):
+                    has_king_drasil = True
+            if not has_king_drasil:
+                return False
+            # Check if player has a Royal Knight trait card in hand
+            has_rk_in_hand = any(
+                any('Royal Knight' in t for t in (getattr(c, 'card_traits', []) or []))
+                for c in player.hand_cards
+            )
+            return has_rk_in_hand
 
         effect1.set_can_use_condition(condition1)
 
         def process1(ctx: Dict[str, Any]):
-            """Action: Draw 1"""
+            """Action: Place Royal Knight from hand under King Drasil, then Draw 1"""
             player = ctx.get('player')
             perm = ctx.get('permanent')
             game = ctx.get('game')
-            if player:
-                player.draw_cards(1)
+            if not (player and game):
+                return
+            # Cost: select a Royal Knight trait card from hand and place under King Drasil
+            def hand_filter(c):
+                return any('Royal Knight' in t for t in (getattr(c, 'card_traits', []) or []))
+            def on_select(selected_card):
+                # Find King Drasil permanent
+                king_drasil = None
+                for p in player.battle_area:
+                    if p.contains_card_name('King Drasil_7D6'):
+                        king_drasil = p
+                        break
+                if not king_drasil and player.breeding_area:
+                    if player.breeding_area.contains_card_name('King Drasil_7D6'):
+                        king_drasil = player.breeding_area
+                if king_drasil and selected_card:
+                    player.hand_cards.remove(selected_card)
+                    king_drasil.add_card_source(selected_card)
+                    # Reward: draw 1
+                    player.draw_cards(1)
+            game.effect_select_hand_card(
+                player, hand_filter, on_select, is_optional=True,
+                prompt="Select a [Royal Knight] card to place under King Drasil.")
 
         effect1.set_on_process_callback(process1)
         effects.append(effect1)

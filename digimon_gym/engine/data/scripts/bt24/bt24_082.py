@@ -33,54 +33,81 @@ class BT24_082(CardScript):
         effect0.set_can_use_condition(condition0)
 
         def process0(ctx: Dict[str, Any]):
-            """Action: Play Card"""
+            """Action: Return self to deck bottom, play Owen from hand, then Elizamon from trash"""
             player = ctx.get('player')
             perm = ctx.get('permanent')
             game = ctx.get('game')
             if not (player and game):
                 return
-            def play_filter(c):
-                return True
+            # Cost: return this Tamer to bottom of deck
+            tamer_perm = card.permanent_of_this_card() if card else None
+            if tamer_perm:
+                player.return_permanent_to_deck_bottom(tamer_perm)
+            # Play 1 [Owen Dreadnought] from hand without paying cost
+            def owen_filter(c):
+                c_names = getattr(c, 'card_names', []) or []
+                return any('Owen Dreadnought' in n for n in c_names)
             game.effect_play_from_zone(
-                player, 'hand_or_trash', play_filter, free=True, is_optional=True)
+                player, 'hand', owen_filter, free=True, is_optional=True)
+            # Then, if you don't have a Digimon, play 1 [Elizamon] from trash
+            if not any(p.is_digimon for p in player.battle_area):
+                def eliza_filter(c):
+                    c_names = getattr(c, 'card_names', []) or []
+                    return any('Elizamon' in n for n in c_names)
+                game.effect_play_from_zone(
+                    player, 'trash', eliza_filter, free=True, is_optional=True)
 
         effect0.set_on_process_callback(process0)
         effects.append(effect0)
 
-        # Timing: EffectTiming.OnEnterFieldAnyone
+        # Timing: EffectTiming.WhenDigivolving (observer — watches other permanents digivolve)
         # [Your Turn] When any of your Digimon digivolve into a [Reptile] or [Dragonkin] trait Digimon, by suspending this Tamer, that Digimon gets +3000 DP for the turn. Then, it may attack.
         effect1 = ICardEffect()
-        effect1.set_timing(EffectTiming.OnEnterFieldAnyone)
+        effect1.set_timing(EffectTiming.WhenDigivolving)
         effect1.set_effect_name("BT24-082 +3k and may attack")
         effect1.set_effect_description("[Your Turn] When any of your Digimon digivolve into a [Reptile] or [Dragonkin] trait Digimon, by suspending this Tamer, that Digimon gets +3000 DP for the turn. Then, it may attack.")
         effect1.is_optional = True
-        effect1.is_on_play = True
 
         effect = effect1  # alias for condition closure
         def condition1(context: Dict[str, Any]) -> bool:
             if card and card.permanent_of_this_card() is None:
+                return False
+            # Cost: tamer must not already be suspended
+            tamer_perm = card.permanent_of_this_card()
+            if tamer_perm and getattr(tamer_perm, 'is_suspended', False):
+                return False
+            # Must be our turn
+            if not (card and card.owner and card.owner.is_my_turn):
+                return False
+            # Check the digivolved permanent has Reptile or Dragonkin trait
+            digivolved = context.get('digivolved_permanent')
+            if not digivolved:
+                return False
+            traits = getattr(digivolved.top_card, 'card_traits', []) or [] if digivolved.top_card else []
+            if not any('Reptile' in t or 'Dragonkin' in t for t in traits):
+                return False
+            # Must be our own Digimon
+            player = card.owner if card else None
+            if player and digivolved not in player.battle_area:
                 return False
             return True
 
         effect1.set_can_use_condition(condition1)
 
         def process1(ctx: Dict[str, Any]):
-            """Action: DP +3000, Suspend, Force Attack"""
+            """Action: Suspend this Tamer, DP +3000 to digivolved Digimon"""
             player = ctx.get('player')
-            perm = ctx.get('permanent')
             game = ctx.get('game')
-            if perm:
-                perm.change_dp(3000)
             if not (player and game):
                 return
-            def target_filter(p):
-                return True
-            def on_suspend(target_perm):
-                target_perm.suspend()
-            game.effect_select_opponent_permanent(
-                player, on_suspend, filter_fn=target_filter, is_optional=True)
-            # Force attack — target Digimon may attack (requires engine SelectAttack)
-            pass  # descriptive-tagged: force_attack
+            # Cost: suspend this Tamer
+            tamer_perm = card.permanent_of_this_card() if card else None
+            if tamer_perm:
+                tamer_perm.suspend()
+            # Target: the digivolved Digimon gets +3000 DP
+            digivolved = ctx.get('digivolved_permanent')
+            if digivolved:
+                digivolved.change_dp(3000)
 
         effect1.set_on_process_callback(process1)
         effects.append(effect1)
