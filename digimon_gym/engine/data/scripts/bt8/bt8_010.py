@@ -38,10 +38,10 @@ class BT8_010(CardScript):
         effect0.set_on_process_callback(process0)
         effects.append(effect0)
 
-        # Timing: EffectTiming.OnAllyAttack
+        # Timing: EffectTiming.OnUseAttack
         # [When Attacking] If you have a yellow Digimon in play, delete 1 of your opponent's Digimon with 5000 DP or less.
         effect1 = ICardEffect()
-        effect1.set_timing(EffectTiming.OnAllyAttack)
+        effect1.set_timing(EffectTiming.OnUseAttack)
         effect1.set_effect_name("BT8-010 Delete 1 Digimon with 5000 DP or less")
         effect1.set_effect_description("[When Attacking] If you have a yellow Digimon in play, delete 1 of your opponent's Digimon with 5000 DP or less.")
         effect1.is_inherited_effect = True

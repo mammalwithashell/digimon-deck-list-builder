@@ -61,10 +61,10 @@ class P_089(CardScript):
         effect0.set_on_process_callback(process0)
         effects.append(effect0)
 
-        # Timing: EffectTiming.OnAllyAttack
+        # Timing: EffectTiming.OnUseAttack
         # [Opponent's Turn] [Once Per Turn] When an opponent's Digimon attacks, end that attack by returning 3 cards with [Jellymon] in their text from your trash to the bottom of your deck.
         effect1 = ICardEffect()
-        effect1.set_timing(EffectTiming.OnAllyAttack)
+        effect1.set_timing(EffectTiming.OnUseAttack)
         effect1.set_effect_name("P-089 Return cards from trash to the bottom of deck to end the attack")
         effect1.set_effect_description("[Opponent's Turn] [Once Per Turn] When an opponent's Digimon attacks, end that attack by returning 3 cards with [Jellymon] in their text from your trash to the bottom of your deck.")
         effect1.is_optional = True

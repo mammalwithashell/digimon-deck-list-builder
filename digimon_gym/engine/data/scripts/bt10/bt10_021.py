@@ -64,10 +64,10 @@ class BT10_021(CardScript):
         effect1.set_can_use_condition(condition1)
         effects.append(effect1)
 
-        # Timing: EffectTiming.OnAllyAttack
+        # Timing: EffectTiming.OnUseAttack
         # [When Attacking][Once Per Turn] If this Digimon has [Blue Flare] in its traits and your opponent has 2 or more Digimon in play, 1 of your opponent's Digimon can't attack or block until the end of your opponent's turn.
         effect2 = ICardEffect()
-        effect2.set_timing(EffectTiming.OnAllyAttack)
+        effect2.set_timing(EffectTiming.OnUseAttack)
         effect2.set_effect_name("BT10-021 Opponent's 1 Digimon can't attack and block")
         effect2.set_effect_description("[When Attacking][Once Per Turn] If this Digimon has [Blue Flare] in its traits and your opponent has 2 or more Digimon in play, 1 of your opponent's Digimon can't attack or block until the end of your opponent's turn.")
         effect2.is_inherited_effect = True

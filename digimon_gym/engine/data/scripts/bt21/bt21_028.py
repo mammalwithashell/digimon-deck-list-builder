@@ -108,10 +108,10 @@ class BT21_028(CardScript):
         effect3.set_on_process_callback(process3)
         effects.append(effect3)
 
-        # Timing: EffectTiming.OnAllyAttack
+        # Timing: EffectTiming.OnUseAttack
         # [When Attacking] By placing 1 Digimon card with [Gammamon] in its text or the [Hero] trait from your hand as this Digimon's bottom digivolution card, delete 1 of your opponent's lowest DP Digimon.
         effect4 = ICardEffect()
-        effect4.set_timing(EffectTiming.OnAllyAttack)
+        effect4.set_timing(EffectTiming.OnUseAttack)
         effect4.set_effect_name("BT21-028 Place 1 card to digivolution cards to Delete Digimon")
         effect4.set_effect_description("[When Attacking] By placing 1 Digimon card with [Gammamon] in its text or the [Hero] trait from your hand as this Digimon's bottom digivolution card, delete 1 of your opponent's lowest DP Digimon.")
         effect4.is_optional = True

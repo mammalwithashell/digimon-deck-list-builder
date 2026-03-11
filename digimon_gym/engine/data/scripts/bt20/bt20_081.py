@@ -133,10 +133,10 @@ class BT20_081(CardScript):
         effect3.set_on_process_callback(process3)
         effects.append(effect3)
 
-        # Timing: EffectTiming.OnAllyAttack
+        # Timing: EffectTiming.OnUseAttack
         # [When Attacking] By trashing your top security card, activate 1 of this Digimon's [When Digivolving] effects.
         effect4 = ICardEffect()
-        effect4.set_timing(EffectTiming.OnAllyAttack)
+        effect4.set_timing(EffectTiming.OnUseAttack)
         effect4.set_effect_name("BT20-081 Activate 1 of this Digimon's [When Digivolving] effects")
         effect4.set_effect_description("[When Attacking] By trashing your top security card, activate 1 of this Digimon's [When Digivolving] effects.")
         effect4.is_optional = True

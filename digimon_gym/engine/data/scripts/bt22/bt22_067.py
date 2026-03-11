@@ -126,10 +126,10 @@ class BT22_067(CardScript):
         effect5.set_on_process_callback(process5)
         effects.append(effect5)
 
-        # Timing: EffectTiming.OnAllyAttack
+        # Timing: EffectTiming.OnUseAttack
         # [All Turns] [Once Per Turn] When Digimon attack players, reveal the top 3 cards of your deck. You may play 1 play cost 4 or lower black or red card among them without paying the cost. Trash the rest.
         effect6 = ICardEffect()
-        effect6.set_timing(EffectTiming.OnAllyAttack)
+        effect6.set_timing(EffectTiming.OnUseAttack)
         effect6.set_effect_name("BT22-067 Reveal top 3, Play 1 4 cost or lower Black or Red card")
         effect6.set_effect_description("[All Turns] [Once Per Turn] When Digimon attack players, reveal the top 3 cards of your deck. You may play 1 play cost 4 or lower black or red card among them without paying the cost. Trash the rest.")
         effect6.set_max_count_per_turn(1)

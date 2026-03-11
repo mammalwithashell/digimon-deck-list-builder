@@ -48,10 +48,10 @@ class P_053(CardScript):
         effect0.set_on_process_callback(process0)
         effects.append(effect0)
 
-        # Timing: EffectTiming.OnAllyAttack
+        # Timing: EffectTiming.OnUseAttack
         # [When Attacking] 1 of your opponent's Digimon and all of your opponent's Security Digimon get -2000 DP for the turn.
         effect1 = ICardEffect()
-        effect1.set_timing(EffectTiming.OnAllyAttack)
+        effect1.set_timing(EffectTiming.OnUseAttack)
         effect1.set_effect_name("P-053 Opponent's Digimon and Security Digimon get DP -2000")
         effect1.set_effect_description("[When Attacking] 1 of your opponent's Digimon and all of your opponent's Security Digimon get -2000 DP for the turn.")
         effect1.is_on_attack = True

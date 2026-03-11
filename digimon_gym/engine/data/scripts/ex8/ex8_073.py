@@ -60,10 +60,10 @@ class EX8_073(CardScript):
         effect1.set_on_process_callback(process1)
         effects.append(effect1)
 
-        # Timing: EffectTiming.OnAllyAttack
+        # Timing: EffectTiming.OnUseAttack
         # [When Attacking] If [Gallantmon]/[X Antibody] is in this Digimon's digivolution cards, this Digimon gets +4000 DP and 1 of your opponent's Digimon gets -4000 DP until the end of their turn.
         effect2 = ICardEffect()
-        effect2.set_timing(EffectTiming.OnAllyAttack)
+        effect2.set_timing(EffectTiming.OnUseAttack)
         effect2.set_effect_name("EX8-073 This Digimon gets +4000 DP and gives -4000 DP to an opponent's Digimon")
         effect2.set_effect_description("[When Attacking] If [Gallantmon]/[X Antibody] is in this Digimon's digivolution cards, this Digimon gets +4000 DP and 1 of your opponent's Digimon gets -4000 DP until the end of their turn.")
         effect2.is_on_attack = True

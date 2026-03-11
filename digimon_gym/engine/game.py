@@ -659,7 +659,7 @@ class Game:
                     continue
                 if not effect.can_activate_this_turn():
                     continue
-                if not self._effect_matches_timing(effect, timing, perm, played_card, digivolved_perm):
+                if not self._effect_matches_timing(effect, timing, perm, played_card, digivolved_perm, extra_context):
                     continue
 
                 owner = self._find_owner(perm)
@@ -779,7 +779,7 @@ class Game:
     @staticmethod
     def _effect_matches_timing(
         effect, timing: 'EffectTiming', perm: 'Permanent',
-        played_card, digivolved_perm,
+        played_card, digivolved_perm, extra_context=None,
     ) -> bool:
         """Check whether an effect should fire for the given timing.
 
@@ -841,8 +841,13 @@ class Game:
                 and (effect.effect_source_card is None or effect.effect_source_card is perm.top_card)
             )
 
-        if timing in (EffectTiming.OnAllyAttack,):
-            return effect.is_on_attack
+        if timing == EffectTiming.OnUseAttack:
+            attacker = extra_context.get('attacker') if extra_context else None
+            return effect.is_on_attack and attacker is not None and perm is attacker
+
+        if timing == EffectTiming.OnAllyAttack:
+            attacker = extra_context.get('attacker') if extra_context else None
+            return effect.is_on_attack and attacker is not None and perm is not attacker
 
         if timing == EffectTiming.OnDestroyedAnyone:
             return effect.is_on_deletion
@@ -1240,6 +1245,7 @@ class Game:
                     "base": dp_base,
                     "sources": dp_sources,
                     "temporary": dp_temporary,
+                    "aura": perm._get_aura_dp_modifier() if perm.is_digimon else 0,
                     "total": perm.dp,
                 },
                 "turnPlayed": perm.turn_played,
@@ -1385,7 +1391,8 @@ class Game:
         if not without_suspend:
             attacker.suspend()
 
-        # Trigger When Attacking (OnAllyAttack for the attacker's effects)
+        # Trigger When Attacking (OnUseAttack = self, OnAllyAttack = other allies)
+        self.execute_effects(EffectTiming.OnUseAttack, {"attacker": attacker})
         self.execute_effects(EffectTiming.OnAllyAttack, {"attacker": attacker})
 
         # Store pending attack context

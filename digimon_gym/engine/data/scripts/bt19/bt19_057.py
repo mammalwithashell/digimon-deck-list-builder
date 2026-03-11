@@ -31,10 +31,10 @@ class BT19_057(CardScript):
         effect0.set_can_use_condition(condition0)
         effects.append(effect0)
 
-        # Timing: EffectTiming.OnAllyAttack
+        # Timing: EffectTiming.OnUseAttack
         # [When Attacking] This Digimon may digivolve into [RaptorSparrowmon] under your Tamers without paying the cost.
         effect1 = ICardEffect()
-        effect1.set_timing(EffectTiming.OnAllyAttack)
+        effect1.set_timing(EffectTiming.OnUseAttack)
         effect1.set_effect_name("BT19-057 Digivolve into [RaptorSparrowmon] from under your Tamers")
         effect1.set_effect_description("[When Attacking] This Digimon may digivolve into [RaptorSparrowmon] under your Tamers without paying the cost.")
         effect1.is_optional = True

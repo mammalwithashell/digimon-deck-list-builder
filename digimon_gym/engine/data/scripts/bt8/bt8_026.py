@@ -40,10 +40,10 @@ class BT8_026(CardScript):
         effect1.set_can_use_condition(condition1)
         effects.append(effect1)
 
-        # Timing: EffectTiming.OnAllyAttack
+        # Timing: EffectTiming.OnUseAttack
         # [When Attacking] Delete 1 of your opponent's level 3 Digimon.
         effect2 = ICardEffect()
-        effect2.set_timing(EffectTiming.OnAllyAttack)
+        effect2.set_timing(EffectTiming.OnUseAttack)
         effect2.set_effect_name("BT8-026 Delete 1 level 3 Digimon")
         effect2.set_effect_description("[When Attacking] Delete 1 of your opponent's level 3 Digimon.")
         effect2.is_on_attack = True

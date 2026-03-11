@@ -73,17 +73,23 @@ class BT24_029(CardScript):
                         or any('TS' in t for t in traits))
 
             def on_tuck(selected):
+                if selected is None:
+                    return
                 if selected in player.hand_cards:
                     player.hand_cards.remove(selected)
                     perm.card_sources.insert(0, selected)
-                # Select opponent perm to freeze
+                # Only freeze opponent perm if card was successfully placed (matches C# guard)
+                if selected not in perm.card_sources:
+                    return
                 def on_target(target):
                     from digimon_gym.engine.interfaces.modifiers import ModifierType
                     game.register_modifier(
                         ModifierType.CANNOT_SUSPEND, target,
                         value_fn=lambda: True, expiry='end_of_opponent_turn')
                 game.effect_select_opponent_permanent(
-                    player, on_target, is_optional=False,
+                    player, on_target,
+                    filter_fn=lambda p: p.is_digimon or p.is_tamer,
+                    is_optional=False,
                     prompt="Select opponent's Digimon/Tamer that can't suspend.")
 
             game.effect_select_hand_card(
@@ -136,16 +142,23 @@ class BT24_029(CardScript):
                         or any('TS' in t for t in traits))
 
             def on_tuck(selected):
+                if selected is None:
+                    return
                 if selected in player.hand_cards:
                     player.hand_cards.remove(selected)
                     perm.card_sources.insert(0, selected)
+                # Only freeze opponent perm if card was successfully placed
+                if selected not in perm.card_sources:
+                    return
                 def on_target(target):
                     from digimon_gym.engine.interfaces.modifiers import ModifierType
                     game.register_modifier(
                         ModifierType.CANNOT_SUSPEND, target,
                         value_fn=lambda: True, expiry='end_of_opponent_turn')
                 game.effect_select_opponent_permanent(
-                    player, on_target, is_optional=False,
+                    player, on_target,
+                    filter_fn=lambda p: p.is_digimon or p.is_tamer,
+                    is_optional=False,
                     prompt="Select opponent's Digimon/Tamer that can't suspend.")
 
             game.effect_select_hand_card(
@@ -218,10 +231,10 @@ class BT24_029(CardScript):
         effect3.set_on_process_callback(process3)
         effects.append(effect3)
 
-        # Timing: EffectTiming.OnAllyAttack
+        # Timing: EffectTiming.OnUseAttack
         # [When Attacking] [Once Per Turn] You may play 1 level 4 or lower blue Digimon card with the [TS] trait from this Digimon's digivolution cards without paying the cost.
         effect4 = ICardEffect()
-        effect4.set_timing(EffectTiming.OnAllyAttack)
+        effect4.set_timing(EffectTiming.OnUseAttack)
         effect4.set_effect_name("BT24-029 Play 1 level 4 or lower blue [TS] digimon in digivolution sources")
         effect4.set_effect_description("[When Attacking] [Once Per Turn] You may play 1 level 4 or lower blue Digimon card with the [TS] trait from this Digimon's digivolution cards without paying the cost.")
         effect4.is_inherited_effect = True

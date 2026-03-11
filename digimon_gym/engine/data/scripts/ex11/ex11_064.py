@@ -58,10 +58,10 @@ class EX11_064(CardScript):
         effect1.set_can_use_condition(condition1)
         effects.append(effect1)
 
-        # Timing: EffectTiming.OnAllyAttack
+        # Timing: EffectTiming.OnUseAttack
         # Suspend, Digivolve
         effect2 = ICardEffect()
-        effect2.set_timing(EffectTiming.OnAllyAttack)
+        effect2.set_timing(EffectTiming.OnUseAttack)
         effect2.set_effect_name("EX11-064 Digivolve attacker into [Cyborg] or [Machine] with cost reduced by # of face up security.")
         effect2.set_effect_description("Suspend, Digivolve")
         effect2.is_optional = True

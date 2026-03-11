@@ -40,10 +40,10 @@ class BT16_070(CardScript):
         effect1.set_can_use_condition(condition1)
         effects.append(effect1)
 
-        # Timing: EffectTiming.OnAllyAttack
+        # Timing: EffectTiming.OnUseAttack
         # [When Attacking] You may choose 1 of your Digimon. Delete 1 of your opponent's Digimon with DP less than or equal to that Digimon's DP and your chosen Digimon.
         effect2 = ICardEffect()
-        effect2.set_timing(EffectTiming.OnAllyAttack)
+        effect2.set_timing(EffectTiming.OnUseAttack)
         effect2.set_effect_name("BT16-070 You may choose a Digimon. Delete that Digimon and 1 opponent Digimon with less or equal DP.")
         effect2.set_effect_description("[When Attacking] You may choose 1 of your Digimon. Delete 1 of your opponent's Digimon with DP less than or equal to that Digimon's DP and your chosen Digimon.")
         effect2.is_optional = True

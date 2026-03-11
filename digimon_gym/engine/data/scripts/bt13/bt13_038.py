@@ -14,10 +14,10 @@ class BT13_038(CardScript):
     def get_card_effects(self, card: 'CardSource') -> List['ICardEffect']:
         effects = []
 
-        # Timing: EffectTiming.OnAllyAttack
+        # Timing: EffectTiming.OnUseAttack
         # [When Attacking] By trashing the top card of your security stack, 1 of your opponent's Digimon gains <Security Attack -2> until the end of your opponent's turn.
         effect0 = ICardEffect()
-        effect0.set_timing(EffectTiming.OnAllyAttack)
+        effect0.set_timing(EffectTiming.OnUseAttack)
         effect0.set_effect_name("BT13-038 Trash your 1 security and Security Attack -2")
         effect0.set_effect_description("[When Attacking] By trashing the top card of your security stack, 1 of your opponent's Digimon gains <Security Attack -2> until the end of your opponent's turn.")
         effect0.is_optional = True
@@ -50,10 +50,10 @@ class BT13_038(CardScript):
         effect0.set_on_process_callback(process0)
         effects.append(effect0)
 
-        # Timing: EffectTiming.OnAllyAttack
+        # Timing: EffectTiming.OnUseAttack
         # [When Attacking][Once per Turn] If there're 6 or fewer total cards in both players' security stacks, 1 of your opponent's Digimon gets -2000 DP for the turn.
         effect1 = ICardEffect()
-        effect1.set_timing(EffectTiming.OnAllyAttack)
+        effect1.set_timing(EffectTiming.OnUseAttack)
         effect1.set_effect_name("BT13-038 DP -2000")
         effect1.set_effect_description("[When Attacking][Once per Turn] If there're 6 or fewer total cards in both players' security stacks, 1 of your opponent's Digimon gets -2000 DP for the turn.")
         effect1.is_inherited_effect = True

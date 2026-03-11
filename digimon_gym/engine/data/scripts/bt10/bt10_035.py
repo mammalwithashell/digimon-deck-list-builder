@@ -14,10 +14,10 @@ class BT10_035(CardScript):
     def get_card_effects(self, card: 'CardSource') -> List['ICardEffect']:
         effects = []
 
-        # Timing: EffectTiming.OnAllyAttack
+        # Timing: EffectTiming.OnUseAttack
         # [When Attacking][Once Per Turn] 1 of your opponent's Digimon gains <Security Attack -1> until the end of your opponent's turn. (This Digimon checks 1 fewer security cards.)
         effect0 = ICardEffect()
-        effect0.set_timing(EffectTiming.OnAllyAttack)
+        effect0.set_timing(EffectTiming.OnUseAttack)
         effect0.set_effect_name("BT10-035 Security Attack -1")
         effect0.set_effect_description("[When Attacking][Once Per Turn] 1 of your opponent's Digimon gains <Security Attack -1> until the end of your opponent's turn. (This Digimon checks 1 fewer security cards.)")
         effect0.is_inherited_effect = True

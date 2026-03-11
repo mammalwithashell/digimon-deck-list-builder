@@ -102,10 +102,10 @@ class BT24_013(CardScript):
         effect2.set_on_process_callback(process2)
         effects.append(effect2)
 
-        # Timing: EffectTiming.OnAllyAttack
+        # Timing: EffectTiming.OnUseAttack
         # Delete, Trash From Hand
         effect3 = ICardEffect()
-        effect3.set_timing(EffectTiming.OnAllyAttack)
+        effect3.set_timing(EffectTiming.OnUseAttack)
         effect3.set_effect_name("BT24-013 Delete, Trash From Hand")
         effect3.set_effect_description("Delete, Trash From Hand")
         effect3.is_on_attack = True

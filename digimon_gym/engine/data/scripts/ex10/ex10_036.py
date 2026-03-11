@@ -42,7 +42,7 @@ class EX10_036(CardScript):
 
         def build_unsuspend_effect(is_when_digivolving: bool = False, is_on_attack: bool = False):
             effect = ICardEffect()
-            effect.set_timing(EffectTiming.OnEnterFieldAnyone if is_when_digivolving else EffectTiming.OnAllyAttack)
+            effect.set_timing(EffectTiming.OnEnterFieldAnyone if is_when_digivolving else EffectTiming.OnUseAttack)
             effect.set_effect_name("EX10-036 Place 3 cards from trash as bottom sources")
             effect.set_effect_description(
                 "[When Digivolving] [Once Per Turn] By placing 3 [Mineral] or [Rock] trait cards from your trash as this Digimon's bottom digivolution cards, it unsuspends."
@@ -75,7 +75,7 @@ class EX10_036(CardScript):
 
         def build_delete_effect(is_when_digivolving: bool = False, is_on_attack: bool = False):
             effect = ICardEffect()
-            effect.set_timing(EffectTiming.OnEnterFieldAnyone if is_when_digivolving else EffectTiming.OnAllyAttack)
+            effect.set_timing(EffectTiming.OnEnterFieldAnyone if is_when_digivolving else EffectTiming.OnUseAttack)
             effect.set_effect_name("EX10-036 By trashing 3 sources, Delete 1 digimon and trash top security")
             effect.set_effect_description(
                 "[When Digivolving] By trashing 3 [Mineral] or [Rock] trait cards from any of your Digimon's digivolution cards, delete 1 of your opponent's Digimon and trash their top security card."

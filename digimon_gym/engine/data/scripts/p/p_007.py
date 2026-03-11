@@ -14,10 +14,10 @@ class P_007(CardScript):
     def get_card_effects(self, card: 'CardSource') -> List['ICardEffect']:
         effects = []
 
-        # Timing: EffectTiming.OnAllyAttack
+        # Timing: EffectTiming.OnUseAttack
         # [When Attacking] If this Digimon has [Garurumon] in its name�Ctrigger <Draw 1>. (Draw 1 card from your deck.)
         effect0 = ICardEffect()
-        effect0.set_timing(EffectTiming.OnAllyAttack)
+        effect0.set_timing(EffectTiming.OnUseAttack)
         effect0.set_effect_name("P-007 Draw 1")
         effect0.set_effect_description("[When Attacking] If this Digimon has [Garurumon] in its name�Ctrigger <Draw 1>. (Draw 1 card from your deck.)")
         effect0.is_inherited_effect = True

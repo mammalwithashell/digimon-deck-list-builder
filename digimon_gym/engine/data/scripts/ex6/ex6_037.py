@@ -92,10 +92,10 @@ class EX6_037(CardScript):
         effect2.set_on_process_callback(process2)
         effects.append(effect2)
 
-        # Timing: EffectTiming.OnAllyAttack
+        # Timing: EffectTiming.OnUseAttack
         # [When Attacking] [Once Per Turn] Delete 1 of your opponent's Digimon with 3000 DP or less.
         effect3 = ICardEffect()
-        effect3.set_timing(EffectTiming.OnAllyAttack)
+        effect3.set_timing(EffectTiming.OnUseAttack)
         effect3.set_effect_name("EX6-037 Delete 1 3000 DP or less Digimon")
         effect3.set_effect_description("[When Attacking] [Once Per Turn] Delete 1 of your opponent's Digimon with 3000 DP or less.")
         effect3.is_inherited_effect = True

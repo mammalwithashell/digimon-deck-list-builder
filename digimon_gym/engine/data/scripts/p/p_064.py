@@ -14,10 +14,10 @@ class P_064(CardScript):
     def get_card_effects(self, card: 'CardSource') -> List['ICardEffect']:
         effects = []
 
-        # Timing: EffectTiming.OnAllyAttack
+        # Timing: EffectTiming.OnUseAttack
         # [Your Turn] When you attack with a Digimon that has [Jellymon] in its digivolution cards, you may suspend this Tamer to have that Digimon gain <Jamming> for the turn. (This Digimon can't be deleted in battles against Security Digimon.)
         effect0 = ICardEffect()
-        effect0.set_timing(EffectTiming.OnAllyAttack)
+        effect0.set_timing(EffectTiming.OnUseAttack)
         effect0.set_effect_name("P-064 Your Attacking Digimon gains Jamming")
         effect0.set_effect_description("[Your Turn] When you attack with a Digimon that has [Jellymon] in its digivolution cards, you may suspend this Tamer to have that Digimon gain <Jamming> for the turn. (This Digimon can't be deleted in battles against Security Digimon.)")
         effect0.is_optional = True

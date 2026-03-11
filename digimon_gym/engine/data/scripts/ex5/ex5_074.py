@@ -68,10 +68,10 @@ class EX5_074(CardScript):
         effect1.set_on_process_callback(process1)
         effects.append(effect1)
 
-        # Timing: EffectTiming.OnAllyAttack
+        # Timing: EffectTiming.OnUseAttack
         # [When Attacking] By returning up to 4 cards with the [Deva]/[Four Sovereigns] trait from your trash to the bottom of the deck, for each one, all your opponent's Digimon get -4000 DP for the turn.
         effect2 = ICardEffect()
-        effect2.set_timing(EffectTiming.OnAllyAttack)
+        effect2.set_timing(EffectTiming.OnUseAttack)
         effect2.set_effect_name("EX5-074 Return cards from trash to the bottom of deck to reduce opponent's Digimon's DP")
         effect2.set_effect_description("[When Attacking] By returning up to 4 cards with the [Deva]/[Four Sovereigns] trait from your trash to the bottom of the deck, for each one, all your opponent's Digimon get -4000 DP for the turn.")
         effect2.is_optional = True
@@ -107,10 +107,10 @@ class EX5_074(CardScript):
         effect2.set_on_process_callback(process2)
         effects.append(effect2)
 
-        # Timing: EffectTiming.OnAllyAttack
+        # Timing: EffectTiming.OnUseAttack
         # [When Attacking] For each of your Digimon with the [Four Sovereigns] trait, trash the top card of your opponent's security stack.
         effect3 = ICardEffect()
-        effect3.set_timing(EffectTiming.OnAllyAttack)
+        effect3.set_timing(EffectTiming.OnUseAttack)
         effect3.set_effect_name("EX5-074 Trash the top cards of opponent's security")
         effect3.set_effect_description("[When Attacking] For each of your Digimon with the [Four Sovereigns] trait, trash the top card of your opponent's security stack.")
         effect3.is_on_attack = True

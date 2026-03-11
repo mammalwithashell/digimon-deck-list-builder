@@ -52,10 +52,10 @@ class P_065(CardScript):
         effect0.set_on_process_callback(process0)
         effects.append(effect0)
 
-        # Timing: EffectTiming.OnAllyAttack
+        # Timing: EffectTiming.OnUseAttack
         # [When Attacking] Delete 1 of your opponent's Digimon with 2000 DP or less.
         effect1 = ICardEffect()
-        effect1.set_timing(EffectTiming.OnAllyAttack)
+        effect1.set_timing(EffectTiming.OnUseAttack)
         effect1.set_effect_name("P-065 Delete 1 Digimon with 2000 DP or less")
         effect1.set_effect_description("[When Attacking] Delete 1 of your opponent's Digimon with 2000 DP or less.")
         effect1.is_inherited_effect = True

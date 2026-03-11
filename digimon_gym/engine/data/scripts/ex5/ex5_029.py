@@ -14,10 +14,10 @@ class EX5_029(CardScript):
     def get_card_effects(self, card: 'CardSource') -> List['ICardEffect']:
         effects = []
 
-        # Timing: EffectTiming.OnAllyAttack
+        # Timing: EffectTiming.OnUseAttack
         # [When Attacking] By trashing the top card of your security stack, for the turn, when one of your Digimon would next digivolve, reduce the digivolution cost by 2.
         effect0 = ICardEffect()
-        effect0.set_timing(EffectTiming.OnAllyAttack)
+        effect0.set_timing(EffectTiming.OnUseAttack)
         effect0.set_effect_name("EX5-029 Trash the top card of your security to reduce digivolution cost")
         effect0.set_effect_description("[When Attacking] By trashing the top card of your security stack, for the turn, when one of your Digimon would next digivolve, reduce the digivolution cost by 2.")
         effect0.is_optional = True
@@ -50,10 +50,10 @@ class EX5_029(CardScript):
         effect0.set_on_process_callback(process0)
         effects.append(effect0)
 
-        # Timing: EffectTiming.OnAllyAttack
+        # Timing: EffectTiming.OnUseAttack
         # Cost -2
         effect1 = ICardEffect()
-        effect1.set_timing(EffectTiming.OnAllyAttack)
+        effect1.set_timing(EffectTiming.OnUseAttack)
         effect1.set_effect_name("EX5-029 Remove Effect")
         effect1.set_effect_description("Cost -2")
         effect1.is_on_attack = True
@@ -76,10 +76,10 @@ class EX5_029(CardScript):
         effect1.set_on_process_callback(process1)
         effects.append(effect1)
 
-        # Timing: EffectTiming.OnAllyAttack
+        # Timing: EffectTiming.OnUseAttack
         # [When Attacking] [Once Per Turn] If there're 6 or fewer total cards in both players' security stacks, 1 of your opponent's Digimon gets -2000 DP for the turn.
         effect2 = ICardEffect()
-        effect2.set_timing(EffectTiming.OnAllyAttack)
+        effect2.set_timing(EffectTiming.OnUseAttack)
         effect2.set_effect_name("EX5-029 DP -2000")
         effect2.set_effect_description("[When Attacking] [Once Per Turn] If there're 6 or fewer total cards in both players' security stacks, 1 of your opponent's Digimon gets -2000 DP for the turn.")
         effect2.is_inherited_effect = True

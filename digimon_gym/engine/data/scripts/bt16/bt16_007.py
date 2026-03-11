@@ -28,10 +28,10 @@ class BT16_007(CardScript):
         effect0.set_can_use_condition(condition0)
         effects.append(effect0)
 
-        # Timing: EffectTiming.OnAllyAttack
+        # Timing: EffectTiming.OnUseAttack
         # [Your Turn] [Once Per Turn] Suspend 1 of your opponent's Digimon.
         effect1 = ICardEffect()
-        effect1.set_timing(EffectTiming.OnAllyAttack)
+        effect1.set_timing(EffectTiming.OnUseAttack)
         effect1.set_effect_name("BT16-007 Suspend 1 of your opponent's Digimon")
         effect1.set_effect_description("[Your Turn] [Once Per Turn] Suspend 1 of your opponent's Digimon.")
         effect1.is_inherited_effect = True

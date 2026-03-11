@@ -44,10 +44,10 @@ class BT8_092(CardScript):
         effect0.set_on_process_callback(process0)
         effects.append(effect0)
 
-        # Timing: EffectTiming.OnAllyAttack
+        # Timing: EffectTiming.OnUseAttack
         # [Your Turn] When one of your black Digimon with [X-Antibody] in its traits attacks, you may suspend this Tamer to place 1 card with [X-Antibody] in its traits from your hand under that Digimon as its bottom digivolution card.
         effect1 = ICardEffect()
-        effect1.set_timing(EffectTiming.OnAllyAttack)
+        effect1.set_timing(EffectTiming.OnUseAttack)
         effect1.set_effect_name("BT8-092 Place a Card to digivolution cards")
         effect1.set_effect_description("[Your Turn] When one of your black Digimon with [X-Antibody] in its traits attacks, you may suspend this Tamer to place 1 card with [X-Antibody] in its traits from your hand under that Digimon as its bottom digivolution card.")
         effect1.is_optional = True

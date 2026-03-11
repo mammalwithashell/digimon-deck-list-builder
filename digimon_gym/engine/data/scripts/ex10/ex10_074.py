@@ -77,10 +77,10 @@ class EX10_074(CardScript):
         effect3.set_can_use_condition(condition3)
         effects.append(effect3)
 
-        # Timing: EffectTiming.OnAllyAttack
+        # Timing: EffectTiming.OnUseAttack
         # Effect
         effect4 = ICardEffect()
-        effect4.set_timing(EffectTiming.OnAllyAttack)
+        effect4.set_timing(EffectTiming.OnUseAttack)
         effect4.set_effect_name("EX10-074 Effect")
         effect4.set_effect_description("Effect")
         effect4.is_on_attack = True

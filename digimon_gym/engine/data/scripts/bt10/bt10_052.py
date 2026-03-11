@@ -57,10 +57,10 @@ class BT10_052(CardScript):
         effect0.set_on_process_callback(process0)
         effects.append(effect0)
 
-        # Timing: EffectTiming.OnAllyAttack
+        # Timing: EffectTiming.OnUseAttack
         # [Opponent's Turn][Once Per Turn] When an opponent's Digimon attacks, you may switch the target of attack to 1 of your suspended Digimon.
         effect1 = ICardEffect()
-        effect1.set_timing(EffectTiming.OnAllyAttack)
+        effect1.set_timing(EffectTiming.OnUseAttack)
         effect1.set_effect_name("BT10-052 Switch Attack Target")
         effect1.set_effect_description("[Opponent's Turn][Once Per Turn] When an opponent's Digimon attacks, you may switch the target of attack to 1 of your suspended Digimon.")
         effect1.is_optional = True

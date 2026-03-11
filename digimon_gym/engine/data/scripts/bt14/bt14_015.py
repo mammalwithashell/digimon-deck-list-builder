@@ -14,10 +14,10 @@ class BT14_015(CardScript):
     def get_card_effects(self, card: 'CardSource') -> List['ICardEffect']:
         effects = []
 
-        # Timing: EffectTiming.OnAllyAttack
+        # Timing: EffectTiming.OnUseAttack
         # [When Attacking] Delete 1 of your opponent's Digimon with 5000 DP or less.
         effect0 = ICardEffect()
-        effect0.set_timing(EffectTiming.OnAllyAttack)
+        effect0.set_timing(EffectTiming.OnUseAttack)
         effect0.set_effect_name("BT14-015 Delete 1 Digimon with 5000 DP or less")
         effect0.set_effect_description("[When Attacking] Delete 1 of your opponent's Digimon with 5000 DP or less.")
         effect0.is_inherited_effect = True

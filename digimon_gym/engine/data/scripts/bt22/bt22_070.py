@@ -66,10 +66,10 @@ class BT22_070(CardScript):
         effect1.set_on_process_callback(process1)
         effects.append(effect1)
 
-        # Timing: EffectTiming.OnAllyAttack
+        # Timing: EffectTiming.OnUseAttack
         # Digivolve
         effect2 = ICardEffect()
-        effect2.set_timing(EffectTiming.OnAllyAttack)
+        effect2.set_timing(EffectTiming.OnUseAttack)
         effect2.set_effect_name("BT22-070 This Digimon digivolves")
         effect2.set_effect_description("Digivolve")
         effect2.is_optional = True

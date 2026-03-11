@@ -92,10 +92,10 @@ class BT23_092(CardScript):
         effect2.set_can_use_condition(condition2)
         effects.append(effect2)
 
-        # Timing: EffectTiming.OnAllyAttack
+        # Timing: EffectTiming.OnUseAttack
         # [Your Turn] When one of your [CS] trait Digimon attacks <Delay>, 1 opp Digimon + 1 opp Tamer can't suspend.
         effect3 = ICardEffect()
-        effect3.set_timing(EffectTiming.OnAllyAttack)
+        effect3.set_timing(EffectTiming.OnUseAttack)
         effect3.set_effect_name("BT23-092 Delay can't suspend")
         effect3.set_effect_description("[Your Turn] When one of your [CS] trait Digimon attacks <Delay>, until opponent's turn ends, 1 of their Digimon and 1 of their Tamers can't suspend.")
         effect3.is_optional = True

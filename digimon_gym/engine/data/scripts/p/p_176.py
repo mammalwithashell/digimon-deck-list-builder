@@ -14,10 +14,10 @@ class P_176(CardScript):
     def get_card_effects(self, card: 'CardSource') -> List['ICardEffect']:
         effects = []
 
-        # Timing: EffectTiming.OnAllyAttack
+        # Timing: EffectTiming.OnUseAttack
         # Play Card
         effect0 = ICardEffect()
-        effect0.set_timing(EffectTiming.OnAllyAttack)
+        effect0.set_timing(EffectTiming.OnUseAttack)
         effect0.set_effect_name("P-176 Digivolve this Digimon into [Chronicle] Digimon")
         effect0.set_effect_description("Play Card")
         effect0.is_inherited_effect = True

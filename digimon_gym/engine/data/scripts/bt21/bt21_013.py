@@ -63,10 +63,10 @@ class BT21_013(CardScript):
         effect2.set_can_use_condition(condition2)
         effects.append(effect2)
 
-        # Timing: EffectTiming.OnAllyAttack
+        # Timing: EffectTiming.OnUseAttack
         # Digivolve
         effect3 = ICardEffect()
-        effect3.set_timing(EffectTiming.OnAllyAttack)
+        effect3.set_timing(EffectTiming.OnUseAttack)
         effect3.set_effect_name("BT21-013 Digivolve into a [Hybrid]/[Hero] digimon")
         effect3.set_effect_description("Digivolve")
         effect3.is_optional = True

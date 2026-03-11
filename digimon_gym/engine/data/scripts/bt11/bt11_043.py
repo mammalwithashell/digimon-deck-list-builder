@@ -93,10 +93,10 @@ class BT11_043(CardScript):
         effect2.set_on_process_callback(process2)
         effects.append(effect2)
 
-        # Timing: EffectTiming.OnAllyAttack
+        # Timing: EffectTiming.OnUseAttack
         # [When Attacking] For each other Digimon with [Sukamon] in its name in play, this Digimon gains <Security Attack +1> for the turn.
         effect3 = ICardEffect()
-        effect3.set_timing(EffectTiming.OnAllyAttack)
+        effect3.set_timing(EffectTiming.OnUseAttack)
         effect3.set_effect_name("BT11-043 This Digimon gains Security Attack+")
         effect3.set_effect_description("[When Attacking] For each other Digimon with [Sukamon] in its name in play, this Digimon gains <Security Attack +1> for the turn.")
         effect3.is_on_attack = True

@@ -71,10 +71,10 @@ class P_074(CardScript):
         effect1.set_on_process_callback(process1)
         effects.append(effect1)
 
-        # Timing: EffectTiming.OnAllyAttack
+        # Timing: EffectTiming.OnUseAttack
         # [When Attacking][Once Per Turn] If you have exactly 3 security cards, unsuspend this Digimon.
         effect2 = ICardEffect()
-        effect2.set_timing(EffectTiming.OnAllyAttack)
+        effect2.set_timing(EffectTiming.OnUseAttack)
         effect2.set_effect_name("P-074 Unsuspend this Digimon")
         effect2.set_effect_description("[When Attacking][Once Per Turn] If you have exactly 3 security cards, unsuspend this Digimon.")
         effect2.is_inherited_effect = True

@@ -49,7 +49,7 @@ class EX10_032(CardScript):
 
         def build_grant_effect(is_on_play: bool = False, is_when_digivolving: bool = False, is_on_attack: bool = False):
             effect = ICardEffect()
-            timing = EffectTiming.OnEnterFieldAnyone if not is_on_attack else EffectTiming.OnAllyAttack
+            timing = EffectTiming.OnEnterFieldAnyone if not is_on_attack else EffectTiming.OnUseAttack
             effect.set_timing(timing)
             effect.set_effect_name("EX10-032 By trashing 1 source, 1 digimon gains Collision, Piercing, +3K DP")
             effect.set_effect_description("DP +3000, Trash Digivolution Cards, Gain Keyword Collision, Gain Keyword Piercing")

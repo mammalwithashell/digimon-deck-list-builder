@@ -47,10 +47,10 @@ class BT24_016(CardScript):
         effect0.set_on_process_callback(process0)
         effects.append(effect0)
 
-        # Timing: EffectTiming.OnAllyAttack
+        # Timing: EffectTiming.OnUseAttack
         # Add To Security, Destroy Security
         effect1 = ICardEffect()
-        effect1.set_timing(EffectTiming.OnAllyAttack)
+        effect1.set_timing(EffectTiming.OnUseAttack)
         effect1.set_effect_name("BT24-016 Opponent places 1 card from hand in security bottom. Trash their security top")
         effect1.set_effect_description("Add To Security, Destroy Security")
         effect1.set_hash_string("WAWD_BT24-016")

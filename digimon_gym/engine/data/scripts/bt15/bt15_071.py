@@ -29,10 +29,10 @@ class BT15_071(CardScript):
         effect0.set_can_use_condition(condition0)
         effects.append(effect0)
 
-        # Timing: EffectTiming.OnAllyAttack
+        # Timing: EffectTiming.OnUseAttack
         # [When Attacking] By trashing 1 card in your hand, delete 1 of your opponent's Digimon with 3000 DP or less. If a Tamer card with the [SoC] trait is in this Digimon's digivolution cards, <Draw 1>.
         effect1 = ICardEffect()
-        effect1.set_timing(EffectTiming.OnAllyAttack)
+        effect1.set_timing(EffectTiming.OnUseAttack)
         effect1.set_effect_name("BT15-071 Delete 1 Digimon and Draw 1")
         effect1.set_effect_description("[When Attacking] By trashing 1 card in your hand, delete 1 of your opponent's Digimon with 3000 DP or less. If a Tamer card with the [SoC] trait is in this Digimon's digivolution cards, <Draw 1>.")
         effect1.is_optional = True

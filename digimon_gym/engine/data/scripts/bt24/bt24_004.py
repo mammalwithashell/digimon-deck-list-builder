@@ -25,11 +25,24 @@ class BT24_004(CardScript):
         effect0.set_hash_string("BT24_004_Draw1")
         effect0.is_on_play = True
 
-        effect = effect0  # alias for condition closure
         def condition0(context: Dict[str, Any]) -> bool:
             if card and card.permanent_of_this_card() is None:
                 return False
             if not (card and card.owner and card.owner.is_my_turn):
+                return False
+            # The entering permanent must be owned by this card's owner and have [Iliad] trait
+            entering_perm = context.get('permanent')
+            if entering_perm is None:
+                return False
+            # Must be on the owner's side (not the opponent's)
+            perm_owner = getattr(entering_perm, 'owner', None)
+            if perm_owner is None or perm_owner is not (card.owner if card else None):
+                return False
+            top = getattr(entering_perm, 'top_card', None)
+            if top is None:
+                return False
+            traits = getattr(top, 'card_traits', []) or []
+            if not any('Iliad' in t for t in traits):
                 return False
             return True
 
@@ -38,8 +51,6 @@ class BT24_004(CardScript):
         def process0(ctx: Dict[str, Any]):
             """Action: Draw 1"""
             player = ctx.get('player')
-            perm = ctx.get('permanent')
-            game = ctx.get('game')
             if player:
                 player.draw_cards(1)
 

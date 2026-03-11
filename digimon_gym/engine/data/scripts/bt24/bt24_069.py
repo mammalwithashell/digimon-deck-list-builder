@@ -122,10 +122,10 @@ class BT24_069(CardScript):
         effect3.set_can_use_condition(condition3)
         effects.append(effect3)
 
-        # Timing: EffectTiming.OnAllyAttack
+        # Timing: EffectTiming.OnUseAttack
         # [When Attacking] [Once Per Turn] Trash the top card of both players' decks.
         effect4 = ICardEffect()
-        effect4.set_timing(EffectTiming.OnAllyAttack)
+        effect4.set_timing(EffectTiming.OnUseAttack)
         effect4.set_effect_name("BT24-069 Trash top card from both players deck")
         effect4.set_effect_description("[When Attacking] [Once Per Turn] Trash the top card of both players' decks.")
         effect4.is_inherited_effect = True

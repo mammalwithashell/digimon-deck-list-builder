@@ -65,10 +65,10 @@ class BT8_042(CardScript):
         effect1.set_on_process_callback(process1)
         effects.append(effect1)
 
-        # Timing: EffectTiming.OnAllyAttack
+        # Timing: EffectTiming.OnUseAttack
         # [When Attacking] 1 of your opponent's Digimon gets -3000 DP for the turn.
         effect2 = ICardEffect()
-        effect2.set_timing(EffectTiming.OnAllyAttack)
+        effect2.set_timing(EffectTiming.OnUseAttack)
         effect2.set_effect_name("BT8-042 DP -3000")
         effect2.set_effect_description("[When Attacking] 1 of your opponent's Digimon gets -3000 DP for the turn.")
         effect2.is_inherited_effect = True

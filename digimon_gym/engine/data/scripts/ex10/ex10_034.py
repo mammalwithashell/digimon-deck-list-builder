@@ -161,10 +161,10 @@ class EX10_034(CardScript):
         effect7.set_on_process_callback(process7)
         effects.append(effect7)
 
-        # Timing: EffectTiming.OnAllyAttack
+        # Timing: EffectTiming.OnUseAttack
         # [All Turns] [Once Per Turn] When Digimon attack, by trashing any 2 of this Digimon's digivolution cards, this Digimon gains <Security A. +1> and +3000 DP until your turn ends.
         effect8 = ICardEffect()
-        effect8.set_timing(EffectTiming.OnAllyAttack)
+        effect8.set_timing(EffectTiming.OnUseAttack)
         effect8.set_effect_name("EX10-034 Trash 2 source cards, gain <Security A. +1> and +3000 DP")
         effect8.set_effect_description("[All Turns] [Once Per Turn] When Digimon attack, by trashing any 2 of this Digimon's digivolution cards, this Digimon gains <Security A. +1> and +3000 DP until your turn ends.")
         effect8.is_optional = True

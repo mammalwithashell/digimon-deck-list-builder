@@ -57,7 +57,7 @@ class EX7_049(CardScript):
 
         # --- Effect 1: [When Attacking] <De-Digivolve 4> 1 opponent Digimon ---
         effect1 = ICardEffect()
-        effect1.set_timing(EffectTiming.OnAllyAttack)
+        effect1.set_timing(EffectTiming.OnUseAttack)
         effect1.set_effect_name("EX7-049 <De-Digivolve 4> when attacking")
         effect1.set_effect_description(
             "[When Attacking] <De-Digivolve 4> 1 of your opponent's Digimon."

@@ -48,7 +48,7 @@ BT21_060: 4 effects
   [factory] alt_digivolve_req
   [EffectTiming.OnEnterFieldAnyone] de_digivolve
   [EffectTiming.WhenRemoveField] play_card
-  [EffectTiming.OnAllyAttack] no-action (inherited) (1/turn)
+  [EffectTiming.OnUseAttack] no-action (inherited) (1/turn)
 BT21_061: 5 effects
   [factory] alt_digivolve_req
   [EffectTiming.OnEnterFieldAnyone] de_digivolve
@@ -67,7 +67,7 @@ BT21_087: 3 effects
 BT21_098: 4 effects
   [EffectTiming.OptionSkill] delete
   [factory] delay
-  [EffectTiming.OnAllyAttack] no-action
+  [EffectTiming.OnUseAttack] no-action
   [EffectTiming.SecuritySkill] play_card, add_to_hand
 BT21_003: 1 effects
   [EffectTiming.OnEnterFieldAnyone] draw (inherited) (1/turn)
@@ -111,7 +111,7 @@ BT21_039: 5 effects
   [EffectTiming.None] jogress_condition
   [factory] alliance
   [EffectTiming.OnEnterFieldAnyone] play_card
-  [EffectTiming.OnAllyAttack] digivolve (1/turn)
+  [EffectTiming.OnUseAttack] digivolve (1/turn)
 BT21_085: 3 effects
   [EffectTiming.OnStartMainPhase] gain_memory
   [EffectTiming.OnDeclaration] draw, gain_memory, suspend, de_digivolve
@@ -147,7 +147,7 @@ BT21_050: 5 effects
   [factory] alt_digivolve_req
   [EffectTiming.OnEnterFieldAnyone] suspend
   [EffectTiming.OnEnterFieldAnyone] suspend
-  [EffectTiming.OnAllyAttack] redirect_attack (1/turn)
+  [EffectTiming.OnUseAttack] redirect_attack (1/turn)
   [EffectTiming.OnEnterFieldAnyone] suspend (inherited) (1/turn)
 BT21_051: 6 effects
   [factory] alt_digivolve_req
@@ -191,7 +191,7 @@ BT21_067: 5 effects
   [factory] security_play
   [EffectTiming.OnEnterFieldAnyone] add_to_hand
   [EffectTiming.OnEnterFieldAnyone] add_to_hand
-  [EffectTiming.OnAllyAttack] draw, trash_from_hand (inherited) (1/turn)
+  [EffectTiming.OnUseAttack] draw, trash_from_hand (inherited) (1/turn)
 BT21_068: 4 effects
   [factory] alt_digivolve_req
   [EffectTiming.OnEnterFieldAnyone] mill
@@ -235,7 +235,7 @@ BT21_074: 7 effects
   [EffectTiming.OnEnterFieldAnyone] gain_keyword_cannot_return_to_hand, gain_keyword_cannot_return_to_deck
   [EffectTiming.OnEnterFieldAnyone] gain_keyword_cannot_return_to_hand, gain_keyword_cannot_return_to_deck
   [EffectTiming.OnEnterFieldAnyone] trash_digivolution_cards, de_digivolve (1/turn)
-  [EffectTiming.OnAllyAttack] trash_digivolution_cards, de_digivolve (1/turn)
+  [EffectTiming.OnUseAttack] trash_digivolution_cards, de_digivolve (1/turn)
   [EffectTiming.WhenLinked] delete
 BT21_075: 5 effects
   [factory] alt_digivolve_req
@@ -247,7 +247,7 @@ BT21_076: 5 effects
   [factory] alt_digivolve_req
   [EffectTiming.OnEnterFieldAnyone] gain_keyword_raid, gain_keyword_retaliation, mill
   [EffectTiming.OnEnterFieldAnyone] gain_keyword_raid, gain_keyword_retaliation, mill
-  [EffectTiming.OnAllyAttack] digivolve (1/turn)
+  [EffectTiming.OnUseAttack] digivolve (1/turn)
   [EffectTiming.OnDestroyedAnyone] destroy_security (inherited)
 BT21_077: 7 effects
   [factory] alt_digivolve_req
@@ -289,7 +289,7 @@ BT21_100: 5 effects
 BT21_001: 1 effects
   [EffectTiming.OnLoseSecurity] digivolve (inherited) (1/turn)
 BT21_002: 1 effects
-  [EffectTiming.OnAllyAttack] draw (inherited) (1/turn)
+  [EffectTiming.OnUseAttack] draw (inherited) (1/turn)
 BT21_007: 2 effects
   [EffectTiming.OnEnterFieldAnyone] add_to_hand
   [factory] dp_modifier
@@ -316,7 +316,7 @@ BT21_013: 5 effects
   [factory] alt_digivolve_req
   [factory] alt_digivolve_req
   [EffectTiming.OnEnterFieldAnyone] no-action
-  [EffectTiming.OnAllyAttack] digivolve
+  [EffectTiming.OnUseAttack] digivolve
   [factory] dp_modifier
 BT21_014: 6 effects
   [factory] alt_digivolve_req
@@ -403,7 +403,7 @@ BT21_028: 5 effects
   [factory] security_attack_plus
   [factory] raid
   [EffectTiming.OnEnterFieldAnyone] delete
-  [EffectTiming.OnAllyAttack] delete
+  [EffectTiming.OnUseAttack] delete
 BT21_029: 6 effects
   [factory] progress
   [factory] security_attack_plus
@@ -419,7 +419,7 @@ BT21_030: 6 effects
   [EffectTiming.BeforePayCost] cost_reduction
   [EffectTiming.OnEnterFieldAnyone] no-action
   [EffectTiming.OnEnterFieldAnyone] no-action
-  [EffectTiming.OnAllyAttack] no-action (1/turn)
+  [EffectTiming.OnUseAttack] no-action (1/turn)
 BT21_080: 3 effects
   [EffectTiming.OnStartMainPhase] gain_memory
   [EffectTiming.OnAddDigivolutionCards] draw, gain_memory, suspend
@@ -469,10 +469,10 @@ BT21_101: 6 effects
   [EffectTiming.None] destroy_security, unsuspend (1/turn)
   [EffectTiming.WhenLinked] destroy_security, unsuspend (1/turn)
   [EffectTiming.OnEnterFieldAnyone] no-action
-  [EffectTiming.OnAllyAttack] no-action
+  [EffectTiming.OnUseAttack] no-action
 BT21_102: 3 effects
   [EffectTiming.OnStartTurn] draw, suspend
-  [EffectTiming.OnAllyAttack] draw, suspend
+  [EffectTiming.OnUseAttack] draw, suspend
   [EffectTiming.OnDeclaration] play_card (1/turn)
 BT21_004: 1 effects
   [EffectTiming.OnTappedAnyone] draw (inherited) (1/turn)
@@ -503,8 +503,8 @@ BT21_045: 5 effects
   [factory] alt_digivolve_req
   [factory] raid
   [EffectTiming.OnEnterFieldAnyone] delete (1/turn)
-  [EffectTiming.OnAllyAttack] delete (1/turn)
-  [EffectTiming.OnAllyAttack] change_dp, suspend (1/turn)
+  [EffectTiming.OnUseAttack] delete (1/turn)
+  [EffectTiming.OnUseAttack] change_dp, suspend (1/turn)
 BT21_086: 4 effects
   [factory] security_play
   [EffectTiming.OnStartMainPhase] gain_memory

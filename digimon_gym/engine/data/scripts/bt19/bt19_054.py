@@ -63,10 +63,10 @@ class BT19_054(CardScript):
         effect1.set_on_process_callback(process1)
         effects.append(effect1)
 
-        # Timing: EffectTiming.OnAllyAttack
+        # Timing: EffectTiming.OnUseAttack
         # [When Attacking] You may return 1 of your opponent's suspended Digimon to the bottom of its owner's deck.
         effect2 = ICardEffect()
-        effect2.set_timing(EffectTiming.OnAllyAttack)
+        effect2.set_timing(EffectTiming.OnUseAttack)
         effect2.set_effect_name("BT19-054 Return 1 suspended Digimon to the bottom of deck")
         effect2.set_effect_description("[When Attacking] You may return 1 of your opponent's suspended Digimon to the bottom of its owner's deck.")
         effect2.is_optional = True

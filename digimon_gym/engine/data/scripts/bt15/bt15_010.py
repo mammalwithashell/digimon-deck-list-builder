@@ -14,10 +14,10 @@ class BT15_010(CardScript):
     def get_card_effects(self, card: 'CardSource') -> List['ICardEffect']:
         effects = []
 
-        # Timing: EffectTiming.OnAllyAttack
+        # Timing: EffectTiming.OnUseAttack
         # [Your Turn][Once per turn] When your Digimon attacks a player, delete 1 of your opponent's Digimon with 3000DP or less.
         effect0 = ICardEffect()
-        effect0.set_timing(EffectTiming.OnAllyAttack)
+        effect0.set_timing(EffectTiming.OnUseAttack)
         effect0.set_effect_name("BT15-010 Delete 1 Digimon with 3000 DP or less")
         effect0.set_effect_description("[Your Turn][Once per turn] When your Digimon attacks a player, delete 1 of your opponent's Digimon with 3000DP or less.")
         effect0.set_max_count_per_turn(1)

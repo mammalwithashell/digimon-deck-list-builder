@@ -29,10 +29,10 @@ class BT15_064(CardScript):
         effect0.set_can_use_condition(condition0)
         effects.append(effect0)
 
-        # Timing: EffectTiming.OnAllyAttack
+        # Timing: EffectTiming.OnUseAttack
         # [When Attacking] [Once Per Turn] <De-Digivolve 1> 1 of your opponent's Digimon.
         effect1 = ICardEffect()
-        effect1.set_timing(EffectTiming.OnAllyAttack)
+        effect1.set_timing(EffectTiming.OnUseAttack)
         effect1.set_effect_name("BT15-064 De-Digivolve 1 on 1 Digimon")
         effect1.set_effect_description("[When Attacking] [Once Per Turn] <De-Digivolve 1> 1 of your opponent's Digimon.")
         effect1.is_inherited_effect = True
@@ -67,10 +67,10 @@ class BT15_064(CardScript):
         effect1.set_on_process_callback(process1)
         effects.append(effect1)
 
-        # Timing: EffectTiming.OnAllyAttack
+        # Timing: EffectTiming.OnUseAttack
         # [When Attacking] If this Digimon has a Tamer card with the [SoC] trait in it's digivolution cards, delete 1 of your opponent's Digimon or Tamers with a play cost of 3 or less.
         effect2 = ICardEffect()
-        effect2.set_timing(EffectTiming.OnAllyAttack)
+        effect2.set_timing(EffectTiming.OnUseAttack)
         effect2.set_effect_name("BT15-064 Delete 1 Digimon or Tamer  with play cost 3 or less")
         effect2.set_effect_description("[When Attacking] If this Digimon has a Tamer card with the [SoC] trait in it's digivolution cards, delete 1 of your opponent's Digimon or Tamers with a play cost of 3 or less.")
         effect2.set_max_count_per_turn(1)

@@ -9,164 +9,194 @@ if TYPE_CHECKING:
 
 
 class BT24_094(CardScript):
-    """BT24-094 Central Town: Throne Room"""
+    """BT24-094 Central Town: Throne Room | Option (Green/Yellow, Cost 3)
+
+    While you have no face-up security cards, you can ignore this card's color requirements.
+    [Security] You may play 1 level 4 or lower green or yellow [TS] trait Digimon card from
+    your hand or trash without paying the cost.
+    [All Turns] All of your green or yellow [TS] trait Digimon get +2000 DP.
+    While you have [Merukimon] or [Minervamon], this effect can't be removed.
+    [Main] You may play 1 level 4 or lower green or yellow [TS] trait Digimon card from your
+    hand with the play cost reduced by 3. Then, place this card in the battle area.
+    """
 
     def get_card_effects(self, card: 'CardSource') -> List['ICardEffect']:
         effects = []
 
-        # Timing: EffectTiming.None
-        # Ignore Color Req
+        # --- Effect 0: Ignore color requirements (while no face-up security cards) ---
         effect0 = ICardEffect()
         effect0.set_effect_name("BT24-094 Ignore color requirements")
-        effect0.set_effect_description("Ignore Color Req")
+        effect0.set_effect_description(
+            "While you have no face-up security cards, you can ignore this card's color requirements."
+        )
 
-        effect = effect0  # alias for condition closure
         def condition0(context: Dict[str, Any]) -> bool:
-            return True
+            owner = card.owner if card else None
+            if not owner:
+                return False
+            face_up_count = sum(
+                1 for c in owner.security_cards
+                if getattr(c, 'is_flipped', False)
+            )
+            return face_up_count == 0
 
         effect0.set_can_use_condition(condition0)
 
         def process0(ctx: Dict[str, Any]):
-            """Action: Ignore Color Req"""
-            player = ctx.get('player')
-            perm = ctx.get('permanent')
-            game = ctx.get('game')
-            # Ignores color requirement for playing Options — not modeled in engine
-            pass  # descriptive-tagged
+            pass  # Color requirement bypass — not modeled in engine
 
         effect0.set_on_process_callback(process0)
         effects.append(effect0)
 
-        # Factory effect: alliance
-        # Alliance
+        # --- Effect 1: [Security] [All Turns] +2000 DP for green or yellow [TS] Digimon ---
+        # Active while this card is face-down in security
         effect1 = ICardEffect()
-        effect1.set_effect_name("BT24-094 Alliance")
-        effect1.set_effect_description("Alliance")
-        effect1._is_alliance = True
+        effect1.set_effect_name("BT24-094 All green or yellow [TS] Digimon +2000 DP")
+        effect1.set_effect_description(
+            "[All Turns] All of your green or yellow [TS] trait Digimon get +2000 DP."
+        )
+        effect1.dp_modifier = 2000
+        effect1._applies_to_all_own_digimon = True
 
         def condition1(context: Dict[str, Any]) -> bool:
-            permanent = card.permanent_of_this_card() if card else None
-            if not (permanent and (permanent.contains_card_name('Merukimon') or permanent.contains_card_name('Minervamon'))):
+            # Active while card is in security (face-down)
+            owner = card.owner if card else None
+            if not owner:
                 return False
-            return True
+            return card in owner.security_cards
+
         effect1.set_can_use_condition(condition1)
+
+        def process1(ctx: Dict[str, Any]):
+            pass  # Declarative DP modifier
+
+        effect1.set_on_process_callback(process1)
         effects.append(effect1)
 
-        # Factory effect: dp_modifier_all
-        # All your Digimon DP modifier
+        # --- Effect 2: Alliance for green/yellow [TS] Digimon while Merukimon or Minervamon ---
         effect2 = ICardEffect()
-        effect2.set_effect_name("BT24-094 All your Digimon DP modifier")
-        effect2.set_effect_description("All your Digimon DP modifier")
-        effect2.dp_modifier = 2000
-        effect2._applies_to_all_own_digimon = True
+        effect2.set_effect_name("BT24-094 Grant Alliance to green or yellow [TS] Digimon")
+        effect2.set_effect_description(
+            "[All Turns] All of your green or yellow [TS] trait Digimon gain <Alliance>. "
+            "While you have [Merukimon] or [Minervamon], this effect can't be removed."
+        )
+        effect2._is_alliance = True
 
         def condition2(context: Dict[str, Any]) -> bool:
-            permanent = card.permanent_of_this_card() if card else None
-            if not (permanent and (permanent.contains_card_name('Merukimon') or permanent.contains_card_name('Minervamon'))):
+            owner = card.owner if card else None
+            if not owner:
                 return False
-            return True
+            # Only active while card is in security (face-down)
+            if card not in owner.security_cards:
+                return False
+            # Requires Merukimon or Minervamon
+            return any(
+                p.contains_card_name('Merukimon') or p.contains_card_name('Minervamon')
+                for p in owner.battle_area
+            )
+
         effect2.set_can_use_condition(condition2)
+
+        def process2(ctx: Dict[str, Any]):
+            pass  # Declarative Alliance grant
+
+        effect2.set_on_process_callback(process2)
         effects.append(effect2)
 
-        # Timing: EffectTiming.None
-        # Grant Skill
+        # --- Effect 3: [Main] Play level 4 or lower green/yellow [TS] Digimon from hand
+        #    with cost reduced by 3. Place this card in battle area (face-up security swap). ---
         effect3 = ICardEffect()
-        effect3.set_effect_name("BT24-094 Your Digimon gain <Alliance>")
-        effect3.set_effect_description("Grant Skill")
+        effect3.set_timing(EffectTiming.OptionSkill)
+        effect3.set_effect_name(
+            "BT24-094 Replace bottom security with this face-up card, play a [TS] Digimon for -3"
+        )
+        effect3.set_effect_description(
+            "[Main] Add your bottom security card to the hand and place this card face up "
+            "as the bottom security card. Then, you may play 1 green or yellow [TS] trait "
+            "Digimon card from your hand with the play cost reduced by 3."
+        )
 
-        effect = effect3  # alias for condition closure
         def condition3(context: Dict[str, Any]) -> bool:
-            permanent = effect.effect_source_permanent if hasattr(effect, 'effect_source_permanent') else None
-            if not (permanent and (permanent.contains_card_name('Merukimon') or permanent.contains_card_name('Minervamon'))):
-                return False
             return True
 
         effect3.set_can_use_condition(condition3)
 
         def process3(ctx: Dict[str, Any]):
-            """Action: Grant Skill"""
             player = ctx.get('player')
-            perm = ctx.get('permanent')
             game = ctx.get('game')
-            # Grant keyword to other permanents (AddSkillClass) — not yet in engine
-            pass  # descriptive-tagged: grant_skill
+            if not (player and game):
+                return
+
+            # Step 1: Add bottom security card to hand
+            if player.security_cards:
+                bottom_sec = player.security_cards.pop(-1)
+                player.hand_cards.append(bottom_sec)
+
+            # Step 2: Place this option card face-up as bottom security card
+            if card:
+                player.security_cards.insert(0, card)
+
+            # Step 3: Optionally play 1 green/yellow [TS] Digimon from hand with cost -3
+            def play_filter(c):
+                if not getattr(c, 'is_digimon', False):
+                    return False
+                colors = [col.name for col in (getattr(c, 'card_colors', None) or [])]
+                if 'Green' not in colors and 'Yellow' not in colors:
+                    return False
+                if not any('TS' in t for t in (getattr(c, 'card_traits', []) or [])):
+                    return False
+                return True
+
+            game.effect_play_from_zone(
+                player, 'hand', play_filter,
+                free=False, manual_reduction=3, is_optional=True
+            )
 
         effect3.set_on_process_callback(process3)
         effects.append(effect3)
 
-        # Timing: EffectTiming.OptionSkill
-        # [Main] Add your bottom security card to the hand and place this card face up as the bottom security card. Then, you may play 1 green or yellow [TS] trait Digimon card from your hand with the play cost reduced by 3.
+        # --- Effect 4: [Security] Play level 4 or lower green/yellow [TS] Digimon
+        #    from hand or trash without paying cost ---
         effect4 = ICardEffect()
-        effect4.set_timing(EffectTiming.OptionSkill)
-        effect4.set_effect_name("BT24-094 Replace your bottom sec with this face-up card, play a [TS] Digimon for -3")
-        effect4.set_effect_description("[Main] Add your bottom security card to the hand and place this card face up as the bottom security card. Then, you may play 1 green or yellow [TS] trait Digimon card from your hand with the play cost reduced by 3.")
-        effect4.cost_reduction = 3
+        effect4.set_timing(EffectTiming.SecuritySkill)
+        effect4.set_effect_name(
+            "BT24-094 Play 1 lvl 4- Green or Yellow [TS] Digimon from hand or trash"
+        )
+        effect4.set_effect_description(
+            "[Security] You may play 1 level 4 or lower green or yellow [TS] trait Digimon "
+            "card from your hand or trash without paying the cost."
+        )
+        effect4.is_security_effect = True
 
-        effect = effect4  # alias for condition closure
         def condition4(context: Dict[str, Any]) -> bool:
-            # Option main effect — validated by engine timing
             return True
 
         effect4.set_can_use_condition(condition4)
 
         def process4(ctx: Dict[str, Any]):
-            """Action: Cost -3, Play Card"""
             player = ctx.get('player')
-            perm = ctx.get('permanent')
             game = ctx.get('game')
             if not (player and game):
                 return
+
             def play_filter(c):
                 if not getattr(c, 'is_digimon', False):
                     return False
-                if not ('Green' in [col.name for col in getattr(c, 'card_colors', [])] or 'Yellow' in [col.name for col in getattr(c, 'card_colors', [])]):
+                lv = getattr(c, 'level', None)
+                if lv is None or lv > 4:
                     return False
-                if not (any('TS' in _t for _t in (getattr(c, 'card_traits', []) or []))):
+                colors = [col.name for col in (getattr(c, 'card_colors', None) or [])]
+                if 'Green' not in colors and 'Yellow' not in colors:
+                    return False
+                if not any('TS' in t for t in (getattr(c, 'card_traits', []) or [])):
                     return False
                 return True
+
             game.effect_play_from_zone(
-                player, 'hand', play_filter, free=True, is_optional=True)
-            # Cost reduction by 3 — handled via cost_reduction property
-            pass  # descriptive-tagged: cost_reduction
+                player, 'hand_or_trash', play_filter, free=True, is_optional=True
+            )
 
         effect4.set_on_process_callback(process4)
         effects.append(effect4)
-
-        # Timing: EffectTiming.SecuritySkill
-        # Play Card
-        effect5 = ICardEffect()
-        effect5.set_timing(EffectTiming.SecuritySkill)
-        effect5.set_effect_name("BT24-094 Play Card")
-        effect5.set_effect_description("Play Card")
-        effect5.is_security_effect = True
-        effect5.is_security_effect = True
-
-        effect = effect5  # alias for condition closure
-        def condition5(context: Dict[str, Any]) -> bool:
-            # Security effect — validated by engine timing
-            return True
-
-        effect5.set_can_use_condition(condition5)
-
-        def process5(ctx: Dict[str, Any]):
-            """Action: Play Card"""
-            player = ctx.get('player')
-            perm = ctx.get('permanent')
-            game = ctx.get('game')
-            if not (player and game):
-                return
-            def play_filter(c):
-                if not getattr(c, 'is_digimon', False):
-                    return False
-                if not ('Green' in [col.name for col in getattr(c, 'card_colors', [])] or 'Yellow' in [col.name for col in getattr(c, 'card_colors', [])]):
-                    return False
-                if not (any('TS' in _t for _t in (getattr(c, 'card_traits', []) or []))):
-                    return False
-                return True
-            game.effect_play_from_zone(
-                player, 'hand_or_trash', play_filter, free=True, is_optional=True)
-
-        effect5.set_on_process_callback(process5)
-        effects.append(effect5)
 
         return effects

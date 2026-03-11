@@ -75,10 +75,10 @@ class BT22_064(CardScript):
         effect2.set_on_process_callback(process2)
         effects.append(effect2)
 
-        # Timing: EffectTiming.OnAllyAttack
+        # Timing: EffectTiming.OnUseAttack
         # [When Attacking] You may play 1 [Diaboromon] Token without paying the cost. (Digimon / Cost 14 / Lv.6 / White / Mega / Unknown / Unidentified / 3000 DP)
         effect3 = ICardEffect()
-        effect3.set_timing(EffectTiming.OnAllyAttack)
+        effect3.set_timing(EffectTiming.OnUseAttack)
         effect3.set_effect_name("BT22-064 Play 1 [Diaboromon] token")
         effect3.set_effect_description("[When Attacking] You may play 1 [Diaboromon] Token without paying the cost. (Digimon / Cost 14 / Lv.6 / White / Mega / Unknown / Unidentified / 3000 DP)")
         effect3.is_optional = True

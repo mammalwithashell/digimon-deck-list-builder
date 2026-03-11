@@ -31,17 +31,29 @@ class BT21_037(CardScript):
         effect0.set_can_use_condition(condition0)
         effects.append(effect0)
 
-        # Factory effect: armor_purge
-        # Armor Purge
+        # Factory effect: piercing
+        # Piercing
         effect1 = ICardEffect()
-        effect1.set_effect_name("BT21-037 Armor Purge")
-        effect1.set_effect_description("Armor Purge")
-        effect1._is_armor_purge = True
+        effect1.set_effect_name("BT21-037 Piercing")
+        effect1.set_effect_description("<Piercing>")
+        effect1._is_piercing = True
 
         def condition1(context: Dict[str, Any]) -> bool:
             return True
         effect1.set_can_use_condition(condition1)
         effects.append(effect1)
+
+        # Factory effect: armor_purge
+        # Armor Purge
+        effect1b = ICardEffect()
+        effect1b.set_effect_name("BT21-037 Armor Purge")
+        effect1b.set_effect_description("Armor Purge")
+        effect1b._is_armor_purge = True
+
+        def condition1b(context: Dict[str, Any]) -> bool:
+            return True
+        effect1b.set_can_use_condition(condition1b)
+        effects.append(effect1b)
 
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [When Digivolving] Suspend 1 of your opponent's Digimon. Then, this Digimon gets +2000 DP until your opponent's turn ends.

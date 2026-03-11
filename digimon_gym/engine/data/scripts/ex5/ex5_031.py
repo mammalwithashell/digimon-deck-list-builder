@@ -56,10 +56,10 @@ class EX5_031(CardScript):
         effect0.set_on_process_callback(process0)
         effects.append(effect0)
 
-        # Timing: EffectTiming.OnAllyAttack
+        # Timing: EffectTiming.OnUseAttack
         # [When Attacking] [Once Per Turn] If there're 6 or fewer total cards in both players' security stacks, you may place 1 yellow card from your hand on top of your security stack.
         effect1 = ICardEffect()
-        effect1.set_timing(EffectTiming.OnAllyAttack)
+        effect1.set_timing(EffectTiming.OnUseAttack)
         effect1.set_effect_name("EX5-031 Place 1 card from hand at the top of security")
         effect1.set_effect_description("[When Attacking] [Once Per Turn] If there're 6 or fewer total cards in both players' security stacks, you may place 1 yellow card from your hand on top of your security stack.")
         effect1.is_inherited_effect = True

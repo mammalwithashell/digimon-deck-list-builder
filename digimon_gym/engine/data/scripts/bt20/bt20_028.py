@@ -104,10 +104,10 @@ class BT20_028(CardScript):
         effect4.set_on_process_callback(process4)
         effects.append(effect4)
 
-        # Timing: EffectTiming.OnAllyAttack
+        # Timing: EffectTiming.OnUseAttack
         # [When Attacking][Once Per Turn] From the digivolution cards of this Digimon with [MetalSeadramon]/[X Antibody] in its digivolution cards, you may play 1 level 5 or lower Digimon card without paying the cost.
         effect5 = ICardEffect()
-        effect5.set_timing(EffectTiming.OnAllyAttack)
+        effect5.set_timing(EffectTiming.OnUseAttack)
         effect5.set_effect_name("BT20-028 Play 1 Digimon from this Digimon's digivolution cards")
         effect5.set_effect_description("[When Attacking][Once Per Turn] From the digivolution cards of this Digimon with [MetalSeadramon]/[X Antibody] in its digivolution cards, you may play 1 level 5 or lower Digimon card without paying the cost.")
         effect5.is_optional = True

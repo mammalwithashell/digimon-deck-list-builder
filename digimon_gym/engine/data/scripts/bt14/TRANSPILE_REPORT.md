@@ -12,7 +12,7 @@ Generated from DCGO C# card scripts.
 
 ```
 BT14_005: 1 effects
-  [EffectTiming.OnAllyAttack] change_dp (inherited) (1/turn)
+  [EffectTiming.OnUseAttack] change_dp (inherited) (1/turn)
 BT14_056: 2 effects
   [EffectTiming.OnEnterFieldAnyone] add_to_hand, reveal_and_select
   [EffectTiming.WhenRemoveField] no-action (inherited) (1/turn)
@@ -29,7 +29,7 @@ BT14_059: 3 effects
   [factory] blocker
 BT14_060: 3 effects
   [EffectTiming.None] also_treated_as (descriptive-tagged)
-  [EffectTiming.OnAllyAttack] play_card, reveal_and_select
+  [EffectTiming.OnUseAttack] play_card, reveal_and_select
   [EffectTiming.WhenRemoveField] no-action (inherited) (1/turn)
 BT14_061: 2 effects
   [EffectTiming.OnEnterFieldAnyone] gain_memory
@@ -74,18 +74,18 @@ BT14_098: 1 effects
 BT14_002: 1 effects
   [factory] jamming
 BT14_019: 1 effects
-  [EffectTiming.OnAllyAttack] trash_digivolution_cards (inherited) (1/turn)
+  [EffectTiming.OnUseAttack] trash_digivolution_cards (inherited) (1/turn)
 BT14_020: 2 effects
   [EffectTiming.OnStartMainPhase] trash_digivolution_cards, gain_keyword_cannot_be_blocked
   [EffectTiming.WhenPermanentWouldBeDeleted] play_card (inherited)
 BT14_021: 1 effects
   [factory] evade
 BT14_022: 1 effects
-  [EffectTiming.OnAllyAttack] bounce, trash_digivolution_cards
+  [EffectTiming.OnUseAttack] bounce, trash_digivolution_cards
 BT14_023: 3 effects
   [EffectTiming.OnEnterFieldAnyone] trash_digivolution_cards
-  [EffectTiming.OnAllyAttack] gain_keyword_cannot_attack (1/turn)
-  [EffectTiming.OnAllyAttack] gain_keyword_cannot_attack (inherited) (1/turn)
+  [EffectTiming.OnUseAttack] gain_keyword_cannot_attack (1/turn)
+  [EffectTiming.OnUseAttack] gain_keyword_cannot_attack (inherited) (1/turn)
 BT14_026: 3 effects
   [factory] blast_digivolve
   [EffectTiming.OnEnterFieldAnyone] bounce, trash_digivolution_cards
@@ -98,7 +98,7 @@ BT14_028: 2 effects
   [EffectTiming.OnDigivolutionCardDiscarded] gain_keyword_cannot_be_deleted_by_battle (1/turn)
 BT14_029: 2 effects
   [EffectTiming.OnEnterFieldAnyone] trash_digivolution_cards
-  [EffectTiming.OnAllyAttack] unsuspend (1/turn)
+  [EffectTiming.OnUseAttack] unsuspend (1/turn)
 BT14_030: 3 effects
   [EffectTiming.OnEnterFieldAnyone] bounce
   [EffectTiming.OnEnterFieldAnyone] bounce
@@ -129,7 +129,7 @@ BT14_047: 2 effects
   [EffectTiming.OnEnterFieldAnyone] suspend, gain_keyword_cannot_unsuspend_player
   [EffectTiming.OnEnterFieldAnyone] suspend, gain_keyword_cannot_unsuspend_player
 BT14_048: 2 effects
-  [EffectTiming.OnAllyAttack] digivolve
+  [EffectTiming.OnUseAttack] digivolve
   [factory] dp_modifier
 BT14_049: 3 effects
   [factory] blast_digivolve
@@ -146,7 +146,7 @@ BT14_052: 3 effects
   [factory] dp_modifier
 BT14_053: 3 effects
   [EffectTiming.OnEnterFieldAnyone] suspend
-  [EffectTiming.OnAllyAttack] suspend
+  [EffectTiming.OnUseAttack] suspend
   [EffectTiming.OnTappedAnyone] unsuspend (1/turn)
 BT14_054: 2 effects
   [EffectTiming.OnEnterFieldAnyone] suspend, unsuspend
@@ -169,16 +169,16 @@ BT14_071: 2 effects
   [EffectTiming.OnEnterFieldAnyone] gain_memory (inherited) (1/turn)
 BT14_072: 2 effects
   [EffectTiming.OnEnterFieldAnyone] trash_from_hand, add_to_hand
-  [EffectTiming.OnAllyAttack] trash_from_hand, add_to_hand
+  [EffectTiming.OnUseAttack] trash_from_hand, add_to_hand
 BT14_073: 2 effects
   [EffectTiming.OnDiscardHand] gain_memory (1/turn)
   [EffectTiming.OnDiscardHand] gain_memory (inherited) (1/turn)
 BT14_074: 2 effects
-  [EffectTiming.OnAllyAttack] draw, gain_memory, trash_from_hand
+  [EffectTiming.OnUseAttack] draw, gain_memory, trash_from_hand
   [EffectTiming.OnEnterFieldAnyone] gain_memory (inherited) (1/turn)
 BT14_075: 4 effects
   [EffectTiming.OnEnterFieldAnyone] mill
-  [EffectTiming.OnAllyAttack] mill
+  [EffectTiming.OnUseAttack] mill
   [factory] dp_modifier
   [EffectTiming.OnDestroyedAnyone] trash_from_hand, flip_security
 BT14_076: 3 effects
@@ -194,15 +194,15 @@ BT14_078: 2 effects
   [EffectTiming.OnDestroyedAnyone] delete, trash_from_hand
 BT14_079: 3 effects
   [EffectTiming.OnEnterFieldAnyone] play_card
-  [EffectTiming.OnAllyAttack] gain_memory, trash_from_hand
+  [EffectTiming.OnUseAttack] gain_memory, trash_from_hand
   [EffectTiming.OnEnterFieldAnyone] unsuspend (inherited) (1/turn)
 BT14_080: 3 effects
   [EffectTiming.OnEnterFieldAnyone] mill (1/turn)
-  [EffectTiming.OnAllyAttack] mill (1/turn)
-  [EffectTiming.OnAllyAttack] no-action (1/turn)
+  [EffectTiming.OnUseAttack] mill (1/turn)
+  [EffectTiming.OnUseAttack] no-action (1/turn)
 BT14_081: 3 effects
   [EffectTiming.OnEnterFieldAnyone] play_card
-  [EffectTiming.OnAllyAttack] unsuspend (1/turn)
+  [EffectTiming.OnUseAttack] unsuspend (1/turn)
   [EffectTiming.None] no-action
 BT14_087: 6 effects
   [factory] security_play
@@ -223,10 +223,10 @@ BT14_007: 3 effects
   [EffectTiming.OnStartMainPhase] digivolve
   [factory] dp_modifier
 BT14_008: 1 effects
-  [EffectTiming.OnAllyAttack] delete (inherited) (1/turn)
+  [EffectTiming.OnUseAttack] delete (inherited) (1/turn)
 BT14_012: 3 effects
   [factory] alt_digivolve_req
-  [EffectTiming.OnAllyAttack] gain_memory, change_dp
+  [EffectTiming.OnUseAttack] gain_memory, change_dp
   [factory] dp_modifier
 BT14_013: 3 effects
   [factory] change_digi_cost
@@ -238,7 +238,7 @@ BT14_014: 4 effects
   [EffectTiming.OnEnterFieldAnyone] delete
   [EffectTiming.OnEnterFieldAnyone] delete
 BT14_015: 1 effects
-  [EffectTiming.OnAllyAttack] delete (inherited) (1/turn)
+  [EffectTiming.OnUseAttack] delete (inherited) (1/turn)
 BT14_016: 1 effects
   [factory] raid
 BT14_017: 3 effects
@@ -264,15 +264,15 @@ BT14_101: 4 effects
   [factory] alt_digivolve_req
   [factory] alt_digivolve_req
   [EffectTiming.OnEnterFieldAnyone] gain_keyword_raid, force_attack
-  [EffectTiming.OnAllyAttack] gain_keyword_piercing
+  [EffectTiming.OnUseAttack] gain_keyword_piercing
 BT14_088: 3 effects
   [EffectTiming.OnEnterFieldAnyone] add_to_hand, reveal_and_select
-  [EffectTiming.OnAllyAttack] suspend
+  [EffectTiming.OnUseAttack] suspend
   [factory] security_play
 BT14_003: 1 effects
   [EffectTiming.OnAddSecurity] draw (inherited) (1/turn)
 BT14_031: 1 effects
-  [EffectTiming.OnAllyAttack] change_dp (inherited) (1/turn)
+  [EffectTiming.OnUseAttack] change_dp (inherited) (1/turn)
 BT14_032: 2 effects
   [EffectTiming.OnEnterFieldAnyone] add_to_hand, add_to_security, destroy_security
   [EffectTiming.OnDestroyedAnyone] change_dp (inherited)
@@ -286,7 +286,7 @@ BT14_035: 1 effects
   [factory] barrier
 BT14_036: 2 effects
   [EffectTiming.OnEnterFieldAnyone] change_dp
-  [EffectTiming.OnAllyAttack] change_dp (inherited) (1/turn)
+  [EffectTiming.OnUseAttack] change_dp (inherited) (1/turn)
 BT14_037: 3 effects
   [factory] blast_digivolve
   [EffectTiming.OnEnterFieldAnyone] recovery
@@ -319,7 +319,7 @@ BT14_094: 1 effects
   [EffectTiming.OptionSkill] change_dp, put_to_security
 BT14_102: 4 effects
   [factory] alt_digivolve_req
-  [EffectTiming.OnAllyAttack] change_dp, put_to_security
+  [EffectTiming.OnUseAttack] change_dp, put_to_security
   [EffectTiming.OnDestroyedAnyone] add_to_security
   [EffectTiming.OnDestroyedAnyone] add_to_security (inherited)
 ```

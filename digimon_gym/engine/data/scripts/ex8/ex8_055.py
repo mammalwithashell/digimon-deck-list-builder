@@ -27,7 +27,7 @@ class EX8_055(CardScript):
 
         def build_unsuspend_effect(is_when_digivolving: bool = False, is_on_attack: bool = False):
             effect = ICardEffect()
-            effect.set_timing(EffectTiming.OnEnterFieldAnyone if is_when_digivolving else EffectTiming.OnAllyAttack)
+            effect.set_timing(EffectTiming.OnEnterFieldAnyone if is_when_digivolving else EffectTiming.OnUseAttack)
             effect.set_effect_name("EX8-055 By trashing 3 sources, Unsuspend and gain Security A. +1")
             effect.set_effect_description(
                 "[When Digivolving] By trashing any 3 [Mineral] or [Rock] trait cards from any of your Digimon's digivolution cards, this Digimon unsuspends, and it gains <Security A. +1> for the turn."

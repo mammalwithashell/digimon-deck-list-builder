@@ -42,10 +42,10 @@ class BT10_029(CardScript):
         effect1.set_can_use_condition(condition1)
         effects.append(effect1)
 
-        # Timing: EffectTiming.OnAllyAttack
+        # Timing: EffectTiming.OnUseAttack
         # [When Attacking] If this Digimon has [Shoutmon] in its name, <Draw 1>. (Draw 1 card from your deck.)
         effect2 = ICardEffect()
-        effect2.set_timing(EffectTiming.OnAllyAttack)
+        effect2.set_timing(EffectTiming.OnUseAttack)
         effect2.set_effect_name("BT10-029 Draw 1")
         effect2.set_effect_description("[When Attacking] If this Digimon has [Shoutmon] in its name, <Draw 1>. (Draw 1 card from your deck.)")
         effect2.is_inherited_effect = True

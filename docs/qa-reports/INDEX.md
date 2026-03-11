@@ -1,6 +1,6 @@
 # QA Issue Resolution Index
 
-**Last updated**: 2026-03-03
+**Last updated**: 2026-03-11
 
 ## Summary
 
@@ -35,7 +35,8 @@
 | [royal-knights-gameplay](2026-03-03-royal-knights-gameplay.md) | 3 | 1 | 0 | 2 |
 | [ts-neptune-gameplay](2026-03-03-ts-neptune-gameplay.md) | 12 | 3 | 0 | 9 |
 | [royal-knights-script-audit](2026-03-03-royal-knights-script-audit.md) | 3 | 0 | 0 | 3 |
-| **Total** | **189** | **151** | **7** | **31** |
+| [ts-olympos-vs-imperialdramon](2026-03-11-ts-olympos-vs-imperialdramon.md) | 7 | 5 | 0 | 2 |
+| **Total** | **196** | **156** | **7** | **33** |
 
 ---
 
@@ -410,3 +411,17 @@ Full script audit of all 35 Royal Knights cards. Found 6 systemic bug patterns a
 | 43 | CANNOT_DIGIVOLVE modifier not checked in action mask | med | OUTSTANDING | BT13-007 registers modifier but digivolve actions still appear in mask. Engine gap. |
 | 44 | BeforePayCost process callbacks never fire | med | OUTSTANDING | action_play_card() never calls execute_effects(BeforePayCost). Scripts with trash-return costs (BT23-057) don't execute. |
 | 45 | CANNOT_ADD_SECURITY modifier not enforced | low | OUTSTANDING | BT9-103 registers modifier but engine recovery/add-security doesn't check it. |
+
+## Report 31: TS Olympos vs BG Imperial (2026-03-11)
+
+7 issues found across TS Olympos cards in live gameplay. Post-archetype-implementation QA session testing 31 newly implemented TS Olympos scripts.
+
+| # | Issue | Sev | Status | Notes |
+|---|-------|-----|--------|-------|
+| 46 | BT24-102 Homeros +1000 DP aura not applying to TS Digimon | high | FIXED | Engine: added `_get_aura_dp_modifier()` to `permanent.py` scanning `_applies_to_all_own_digimon` effects from field |
+| 47 | BT24-034 Aegiomon "by" cost auto-pays without player choice | high | FIXED | Script: check valid targets exist before paying security cost; skip entire effect if no targets |
+| 48 | BT24-034 Aegiomon When Moving fires for other Digimon's move | high | FIXED | Script: condition now checks `context.get('moved_permanent')` (engine key) instead of `'permanent'` |
+| 49 | BT24-041 Minervamon On Play skips free Iliad card play | high | FIXED | Script: chained selections via `request_selection` with `on_decline` callback to prevent overwrite |
+| 50 | BT24-090 Abyss Sanctuary multiple implementation errors | med | FIXED | Script: rewrote [Main] effect — free play lv4- blue/yellow TS from hand/trash, place in battle area |
+| 51 | SelectReveal action descriptions show wrong text | low | OUTSTANDING | Actions show "Trash X from hand" during reveal-and-select phases. Prompt text is correct. |
+| 52 | BT24-041 Minervamon De-Digivolve uses attack action IDs | med | OUTSTANDING | Target selection offers attack action IDs (114, 115) instead of target selection indices. |

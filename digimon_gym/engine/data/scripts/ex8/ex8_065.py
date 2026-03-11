@@ -54,10 +54,10 @@ class EX8_065(CardScript):
         effect1.set_on_process_callback(process1)
         effects.append(effect1)
 
-        # Timing: EffectTiming.OnAllyAttack
+        # Timing: EffectTiming.OnUseAttack
         # [Your Turn] When one of your Digimon with [Tyrannomon] in its name attacks, by suspending this Tamer, that Digimon may digivolve into a Digimon card with [Tyrannomon] in its name or the [Dinosaur] trait in the hand with the digivolution cost reduced by 1.
         effect2 = ICardEffect()
-        effect2.set_timing(EffectTiming.OnAllyAttack)
+        effect2.set_timing(EffectTiming.OnUseAttack)
         effect2.set_effect_name("EX8-065 One of your Digimon may digivolve from your hand with reduced cost")
         effect2.set_effect_description("[Your Turn] When one of your Digimon with [Tyrannomon] in its name attacks, by suspending this Tamer, that Digimon may digivolve into a Digimon card with [Tyrannomon] in its name or the [Dinosaur] trait in the hand with the digivolution cost reduced by 1.")
         effect2.is_optional = True

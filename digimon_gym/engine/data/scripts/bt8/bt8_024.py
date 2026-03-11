@@ -43,10 +43,10 @@ class BT8_024(CardScript):
         effect0.set_on_process_callback(process0)
         effects.append(effect0)
 
-        # Timing: EffectTiming.OnAllyAttack
+        # Timing: EffectTiming.OnUseAttack
         # [When Attacking] If you have 3 or more security cards, return 1 of your opponent's level 3 Digimon to its owner's hand.
         effect1 = ICardEffect()
-        effect1.set_timing(EffectTiming.OnAllyAttack)
+        effect1.set_timing(EffectTiming.OnUseAttack)
         effect1.set_effect_name("BT8-024 Return 1 level 3 Digimon to hand")
         effect1.set_effect_description("[When Attacking] If you have 3 or more security cards, return 1 of your opponent's level 3 Digimon to its owner's hand.")
         effect1.is_inherited_effect = True

@@ -14,10 +14,10 @@ class P_060(CardScript):
     def get_card_effects(self, card: 'CardSource') -> List['ICardEffect']:
         effects = []
 
-        # Timing: EffectTiming.OnAllyAttack
+        # Timing: EffectTiming.OnUseAttack
         # [When Attacking][Once Per Turn] If you have a [Ruli Tsukiyono] in play, gain 1 memory.
         effect0 = ICardEffect()
-        effect0.set_timing(EffectTiming.OnAllyAttack)
+        effect0.set_timing(EffectTiming.OnUseAttack)
         effect0.set_effect_name("P-060 Memory +1")
         effect0.set_effect_description("[When Attacking][Once Per Turn] If you have a [Ruli Tsukiyono] in play, gain 1 memory.")
         effect0.is_inherited_effect = True

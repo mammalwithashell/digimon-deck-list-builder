@@ -53,10 +53,10 @@ class BT14_079(CardScript):
         effect0.set_on_process_callback(process0)
         effects.append(effect0)
 
-        # Timing: EffectTiming.OnAllyAttack
+        # Timing: EffectTiming.OnUseAttack
         # [When Attacking] By trashing 1 card in your hand, gain 1 memory.
         effect1 = ICardEffect()
-        effect1.set_timing(EffectTiming.OnAllyAttack)
+        effect1.set_timing(EffectTiming.OnUseAttack)
         effect1.set_effect_name("BT14-079 Trash 1 card from hand to gain Memory +1")
         effect1.set_effect_description("[When Attacking] By trashing 1 card in your hand, gain 1 memory.")
         effect1.is_optional = True

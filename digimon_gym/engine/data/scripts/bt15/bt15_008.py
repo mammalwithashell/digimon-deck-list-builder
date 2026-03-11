@@ -14,10 +14,10 @@ class BT15_008(CardScript):
     def get_card_effects(self, card: 'CardSource') -> List['ICardEffect']:
         effects = []
 
-        # Timing: EffectTiming.OnAllyAttack
+        # Timing: EffectTiming.OnUseAttack
         # [Your Turn][Once per turn] When your red Digimon attacks a play, [Draw 1].
         effect0 = ICardEffect()
-        effect0.set_timing(EffectTiming.OnAllyAttack)
+        effect0.set_timing(EffectTiming.OnUseAttack)
         effect0.set_effect_name("BT15-008 Draw 1")
         effect0.set_effect_description("[Your Turn][Once per turn] When your red Digimon attacks a play, [Draw 1].")
         effect0.set_max_count_per_turn(1)

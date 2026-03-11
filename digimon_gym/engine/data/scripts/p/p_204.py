@@ -65,10 +65,10 @@ class P_204(CardScript):
         effect1.set_can_use_condition(condition1)
         effects.append(effect1)
 
-        # Timing: EffectTiming.OnAllyAttack
+        # Timing: EffectTiming.OnUseAttack
         # [All Turns] When Digimon attack players, <Delay>. 1 of your [Grademon] or Digimon with the [Chronicle] trait may digivolve into [Alphamon] or a level 6 or lower Digimon card with the [Chronicle] trait in the hand without paying the cost.
         effect2 = ICardEffect()
-        effect2.set_timing(EffectTiming.OnAllyAttack)
+        effect2.set_timing(EffectTiming.OnUseAttack)
         effect2.set_effect_name("P-204 1 [Grademon]/[Chronicle] digimon digivoles into [Alphamon]/ level 6 or lower [Chronicle] digimon")
         effect2.set_effect_description("[All Turns] When Digimon attack players, <Delay>. 1 of your [Grademon] or Digimon with the [Chronicle] trait may digivolve into [Alphamon] or a level 6 or lower Digimon card with the [Chronicle] trait in the hand without paying the cost.")
         effect2.is_optional = True

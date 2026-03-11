@@ -80,10 +80,10 @@ class EX5_025(CardScript):
         effect2.set_on_process_callback(process2)
         effects.append(effect2)
 
-        # Timing: EffectTiming.OnAllyAttack
+        # Timing: EffectTiming.OnUseAttack
         # [When Attacking] [Once Per Turn] For each of this Digimon's digivolution cards, trash any 1 digivolution card from 1 of your opponent's Digimon. Then, until the end of your opponent's turn, all of their Digimon with no digivolution cards can't suspend.
         effect3 = ICardEffect()
-        effect3.set_timing(EffectTiming.OnAllyAttack)
+        effect3.set_timing(EffectTiming.OnUseAttack)
         effect3.set_effect_name("EX5-025 Trash digivolution cards and opponent's Digimon can't suspend")
         effect3.set_effect_description("[When Attacking] [Once Per Turn] For each of this Digimon's digivolution cards, trash any 1 digivolution card from 1 of your opponent's Digimon. Then, until the end of your opponent's turn, all of their Digimon with no digivolution cards can't suspend.")
         effect3.set_max_count_per_turn(1)

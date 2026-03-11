@@ -38,10 +38,10 @@ class BT8_086(CardScript):
         effect0.set_on_process_callback(process0)
         effects.append(effect0)
 
-        # Timing: EffectTiming.OnAllyAttack
+        # Timing: EffectTiming.OnUseAttack
         # [Your Turn] When you attack with a Digimon that has [Gammamon] in its name or is level 5 or higher, you may suspend this Tamer to have 1 of your Digimon get +2000 DP for the turn.
         effect1 = ICardEffect()
-        effect1.set_timing(EffectTiming.OnAllyAttack)
+        effect1.set_timing(EffectTiming.OnUseAttack)
         effect1.set_effect_name("BT8-086 DP +2000")
         effect1.set_effect_description("[Your Turn] When you attack with a Digimon that has [Gammamon] in its name or is level 5 or higher, you may suspend this Tamer to have 1 of your Digimon get +2000 DP for the turn.")
         effect1.is_optional = True

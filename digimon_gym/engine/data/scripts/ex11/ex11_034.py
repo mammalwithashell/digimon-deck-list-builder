@@ -110,10 +110,10 @@ class EX11_034(CardScript):
         effect2.set_on_process_callback(process2)
         effects.append(effect2)
 
-        # Timing: EffectTiming.OnAllyAttack
+        # Timing: EffectTiming.OnUseAttack
         # Delete, Add To Security
         effect3 = ICardEffect()
-        effect3.set_timing(EffectTiming.OnAllyAttack)
+        effect3.set_timing(EffectTiming.OnUseAttack)
         effect3.set_effect_name("EX11-034 Delete, Add To Security")
         effect3.set_effect_description("Delete, Add To Security")
         effect3.is_on_attack = True
@@ -185,10 +185,10 @@ class EX11_034(CardScript):
         effect4.set_on_process_callback(process4)
         effects.append(effect4)
 
-        # Timing: EffectTiming.OnAllyAttack
+        # Timing: EffectTiming.OnUseAttack
         # Play Card
         effect5 = ICardEffect()
-        effect5.set_timing(EffectTiming.OnAllyAttack)
+        effect5.set_timing(EffectTiming.OnUseAttack)
         effect5.set_effect_name("EX11-034 Play Card")
         effect5.set_effect_description("Play Card")
         effect5.is_on_attack = True

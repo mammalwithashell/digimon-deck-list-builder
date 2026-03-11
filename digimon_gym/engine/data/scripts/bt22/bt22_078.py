@@ -70,10 +70,10 @@ class BT22_078(CardScript):
         effect2.set_on_process_callback(process2)
         effects.append(effect2)
 
-        # Timing: EffectTiming.OnAllyAttack
+        # Timing: EffectTiming.OnUseAttack
         # [When Attacking] [Once Per Turn] Delete 1 of your opponent's Digimon with the lowest level.
         effect3 = ICardEffect()
-        effect3.set_timing(EffectTiming.OnAllyAttack)
+        effect3.set_timing(EffectTiming.OnUseAttack)
         effect3.set_effect_name("BT22-078 Delete 1 Digimon with lowest level")
         effect3.set_effect_description("[When Attacking] [Once Per Turn] Delete 1 of your opponent's Digimon with the lowest level.")
         effect3.set_max_count_per_turn(1)

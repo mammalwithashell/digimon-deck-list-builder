@@ -105,10 +105,10 @@ class BT22_063(CardScript):
         effect5.set_can_use_condition(condition5)
         effects.append(effect5)
 
-        # Timing: EffectTiming.OnAllyAttack
+        # Timing: EffectTiming.OnUseAttack
         # [When Attacking] 1 of your opponent's Digimon gets -5000 DP for the turn.
         effect6 = ICardEffect()
-        effect6.set_timing(EffectTiming.OnAllyAttack)
+        effect6.set_timing(EffectTiming.OnUseAttack)
         effect6.set_effect_name("BT22-063 -5K DP to 1 digimon")
         effect6.set_effect_description("[When Attacking] 1 of your opponent's Digimon gets -5000 DP for the turn.")
         effect6.is_on_attack = True

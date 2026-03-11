@@ -49,10 +49,10 @@ class BT15_066(CardScript):
         effect0.set_on_process_callback(process0)
         effects.append(effect0)
 
-        # Timing: EffectTiming.OnAllyAttack
+        # Timing: EffectTiming.OnUseAttack
         # De Digivolve
         effect1 = ICardEffect()
-        effect1.set_timing(EffectTiming.OnAllyAttack)
+        effect1.set_timing(EffectTiming.OnUseAttack)
         effect1.set_effect_name("BT15-066 De Digivolve")
         effect1.set_effect_description("De Digivolve")
         effect1.is_on_attack = True

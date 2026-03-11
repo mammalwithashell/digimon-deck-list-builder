@@ -159,10 +159,10 @@ class EX5_048(CardScript):
         effect4.set_on_process_callback(process4)
         effects.append(effect4)
 
-        # Timing: EffectTiming.OnAllyAttack
+        # Timing: EffectTiming.OnUseAttack
         # [Opponent's Turn] [Once Per Turn] When an opponent's Digimon attacks, you may reveal the top 3 cards of your deck. You may play 1 black or yellow Digimon with a play cost of 3 or less among them without paying the cost. Trash the rest.
         effect5 = ICardEffect()
-        effect5.set_timing(EffectTiming.OnAllyAttack)
+        effect5.set_timing(EffectTiming.OnUseAttack)
         effect5.set_effect_name("EX5-048 Reveal the top 3 cards of deck")
         effect5.set_effect_description("[Opponent's Turn] [Once Per Turn] When an opponent's Digimon attacks, you may reveal the top 3 cards of your deck. You may play 1 black or yellow Digimon with a play cost of 3 or less among them without paying the cost. Trash the rest.")
         effect5.is_inherited_effect = True

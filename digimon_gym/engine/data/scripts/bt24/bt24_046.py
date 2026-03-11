@@ -15,25 +15,30 @@ class BT24_046(CardScript):
         effects = []
 
         # Factory effect: alt_digivolve_req
-        # Alternate digivolution requirement
+        # Alternate digivolution: named [Gabumon] OR Lv.3 with [TS] trait, cost 2
         effect0 = ICardEffect()
         effect0.set_effect_name("BT24-046 Alternate digivolution requirement")
         effect0.set_effect_description("Alternate digivolution requirement")
-        # Alternate digivolution: Lv.3 with [TS] trait for cost 0
         effect0._alt_digi_cost = 2
         effect0._alt_digi_level = 3
+        effect0._alt_digi_name = "Gabumon"
         effect0._alt_digi_trait = "TS"
 
         def condition0(context: Dict[str, Any]) -> bool:
             permanent = card.permanent_of_this_card() if card else None
-            if not (permanent and permanent.top_card and (any('TS' in tr for tr in (getattr(permanent.top_card, 'card_traits', []) or [])))):
+            if permanent is None:
                 return False
-            return True
+            top = getattr(permanent, 'top_card', None)
+            if top is None:
+                return False
+            has_name = any('Gabumon' in n for n in getattr(top, 'card_names', []))
+            has_ts = any('TS' in t for t in getattr(top, 'card_traits', []))
+            is_lv3 = getattr(top, 'level', 0) == 3
+            return has_name or (is_lv3 and has_ts)
         effect0.set_can_use_condition(condition0)
         effects.append(effect0)
 
         # Factory effect: jamming
-        # Jamming
         effect1 = ICardEffect()
         effect1.set_effect_name("BT24-046 Jamming")
         effect1.set_effect_description("Jamming")
@@ -44,78 +49,62 @@ class BT24_046(CardScript):
         effect1.set_can_use_condition(condition1)
         effects.append(effect1)
 
-        # Timing: EffectTiming.OnEnterFieldAnyone
-        # Suspend
+        # Shared process for On Play / When Digivolving: Suspend 1 opponent's Digimon
+        def make_shared_process():
+            def process(ctx: Dict[str, Any]):
+                player = ctx.get('player')
+                game = ctx.get('game')
+                if not (player and game):
+                    return
+
+                def target_filter(p):
+                    return (getattr(p, 'is_digimon', False) and
+                            getattr(p, 'owner', None) == player.enemy)
+
+                def on_suspend(target_perm):
+                    target_perm.suspend()
+
+                game.effect_select_opponent_permanent(
+                    player, on_suspend, filter_fn=target_filter, is_optional=False
+                )
+            return process
+
+        # Timing: EffectTiming.OnEnterFieldAnyone — On Play
         effect2 = ICardEffect()
         effect2.set_timing(EffectTiming.OnEnterFieldAnyone)
-        effect2.set_effect_name("BT24-046 Suspend")
-        effect2.set_effect_description("Suspend")
+        effect2.set_effect_name("BT24-046 Suspend 1 opponent's Digimon")
+        effect2.set_effect_description("[On Play] Suspend 1 of your opponent's Digimon.")
         effect2.is_on_play = True
 
-        effect = effect2  # alias for condition closure
         def condition2(context: Dict[str, Any]) -> bool:
             if card and card.permanent_of_this_card() is None:
                 return False
-            # Triggered on play — validated by engine timing
             return True
 
         effect2.set_can_use_condition(condition2)
-
-        def process2(ctx: Dict[str, Any]):
-            """Action: Suspend"""
-            player = ctx.get('player')
-            perm = ctx.get('permanent')
-            game = ctx.get('game')
-            if not (player and game):
-                return
-            def target_filter(p):
-                return True
-            def on_suspend(target_perm):
-                target_perm.suspend()
-            game.effect_select_opponent_permanent(
-                player, on_suspend, filter_fn=target_filter, is_optional=False)
-
-        effect2.set_on_process_callback(process2)
+        effect2.set_on_process_callback(make_shared_process())
         effects.append(effect2)
 
-        # Timing: EffectTiming.OnEnterFieldAnyone
-        # Suspend
+        # Timing: EffectTiming.OnEnterFieldAnyone — When Digivolving
         effect3 = ICardEffect()
         effect3.set_timing(EffectTiming.OnEnterFieldAnyone)
-        effect3.set_effect_name("BT24-046 Suspend")
-        effect3.set_effect_description("Suspend")
+        effect3.set_effect_name("BT24-046 Suspend 1 opponent's Digimon")
+        effect3.set_effect_description("[When Digivolving] Suspend 1 of your opponent's Digimon.")
         effect3.is_when_digivolving = True
 
-        effect = effect3  # alias for condition closure
         def condition3(context: Dict[str, Any]) -> bool:
             if card and card.permanent_of_this_card() is None:
                 return False
-            # Triggered when digivolving — validated by engine timing
             return True
 
         effect3.set_can_use_condition(condition3)
-
-        def process3(ctx: Dict[str, Any]):
-            """Action: Suspend"""
-            player = ctx.get('player')
-            perm = ctx.get('permanent')
-            game = ctx.get('game')
-            if not (player and game):
-                return
-            def target_filter(p):
-                return True
-            def on_suspend(target_perm):
-                target_perm.suspend()
-            game.effect_select_opponent_permanent(
-                player, on_suspend, filter_fn=target_filter, is_optional=False)
-
-        effect3.set_on_process_callback(process3)
+        effect3.set_on_process_callback(make_shared_process())
         effects.append(effect3)
 
-        # Timing: EffectTiming.OnAllyAttack
-        # [When Attacking] [Once Per Turn] Suspend 1 of your opponent's Digimon.
+        # Timing: EffectTiming.OnUseAttack — Inherited [When Attacking] [Once Per Turn]
+        # Suspend 1 of your opponent's Digimon.
         effect4 = ICardEffect()
-        effect4.set_timing(EffectTiming.OnAllyAttack)
+        effect4.set_timing(EffectTiming.OnUseAttack)
         effect4.set_effect_name("BT24-046 Suspend 1 opponent's Digimon")
         effect4.set_effect_description("[When Attacking] [Once Per Turn] Suspend 1 of your opponent's Digimon.")
         effect4.is_inherited_effect = True
@@ -123,28 +112,30 @@ class BT24_046(CardScript):
         effect4.set_hash_string("BT24_046_Inherited")
         effect4.is_on_attack = True
 
-        effect = effect4  # alias for condition closure
         def condition4(context: Dict[str, Any]) -> bool:
             if card and card.permanent_of_this_card() is None:
                 return False
-            # Triggered on attack — validated by engine timing
             return True
 
         effect4.set_can_use_condition(condition4)
 
         def process4(ctx: Dict[str, Any]):
-            """Action: Suspend"""
+            """Action: Suspend 1 opponent's Digimon"""
             player = ctx.get('player')
-            perm = ctx.get('permanent')
             game = ctx.get('game')
             if not (player and game):
                 return
+
             def target_filter(p):
-                return True
+                return (getattr(p, 'is_digimon', False) and
+                        getattr(p, 'owner', None) == player.enemy)
+
             def on_suspend(target_perm):
                 target_perm.suspend()
+
             game.effect_select_opponent_permanent(
-                player, on_suspend, filter_fn=target_filter, is_optional=False)
+                player, on_suspend, filter_fn=target_filter, is_optional=False
+            )
 
         effect4.set_on_process_callback(process4)
         effects.append(effect4)

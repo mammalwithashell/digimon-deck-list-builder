@@ -14,10 +14,10 @@ class BT14_048(CardScript):
     def get_card_effects(self, card: 'CardSource') -> List['ICardEffect']:
         effects = []
 
-        # Timing: EffectTiming.OnAllyAttack
+        # Timing: EffectTiming.OnUseAttack
         # [When Attacking] If attacked a Digimon with higher DP than this Digimon, this Digimon may digivolve into 1 level 6 Digimon card with [Leomon] in its name in your hand for a digivolution cost of 6, ignoring its digivolution requirements.
         effect0 = ICardEffect()
-        effect0.set_timing(EffectTiming.OnAllyAttack)
+        effect0.set_timing(EffectTiming.OnUseAttack)
         effect0.set_effect_name("BT14-048 Digivolve this Digimon")
         effect0.set_effect_description("[When Attacking] If attacked a Digimon with higher DP than this Digimon, this Digimon may digivolve into 1 level 6 Digimon card with [Leomon] in its name in your hand for a digivolution cost of 6, ignoring its digivolution requirements.")
         effect0.is_optional = True

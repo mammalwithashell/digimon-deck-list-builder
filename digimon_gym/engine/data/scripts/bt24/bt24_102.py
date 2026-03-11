@@ -9,19 +9,21 @@ if TYPE_CHECKING:
 
 
 class BT24_102(CardScript):
-    """BT24-102 Homeros"""
+    """BT24-102 Homeros | Tamer"""
 
     def get_card_effects(self, card: 'CardSource') -> List['ICardEffect']:
         effects = []
 
-        # Timing: EffectTiming.OnStartMainPhase
-        # [Start of Your Main Phase] Gain 1 memory. Then, if you have 5 or more memory, suspend this Tamer and ＜Draw 1＞.
+        # [Start of Your Main Phase] Gain 1 memory. Then, if you have 5 or more memory,
+        # suspend this Tamer and <Draw 1>.
         effect0 = ICardEffect()
         effect0.set_timing(EffectTiming.OnStartMainPhase)
         effect0.set_effect_name("BT24-102 Gain 1 Memory. If 5+ Memory, suspend and Draw 1.")
-        effect0.set_effect_description("[Start of Your Main Phase] Gain 1 memory. Then, if you have 5 or more memory, suspend this Tamer and ＜Draw 1＞.")
+        effect0.set_effect_description(
+            "[Start of Your Main Phase] Gain 1 memory. Then, if you have 5 or more memory, "
+            "suspend this Tamer and \uff1cDraw 1\uff1e."
+        )
 
-        effect = effect0  # alias for condition closure
         def condition0(context: Dict[str, Any]) -> bool:
             if card and card.permanent_of_this_card() is None:
                 return False
@@ -32,40 +34,60 @@ class BT24_102(CardScript):
         effect0.set_can_use_condition(condition0)
 
         def process0(ctx: Dict[str, Any]):
-            """Action: Draw 1, Gain 1 memory, Suspend"""
             player = ctx.get('player')
             perm = ctx.get('permanent')
             game = ctx.get('game')
-            if player:
-                player.add_memory(1)
-            if player and game and game.memory >= 5 and perm:
+            if not (player and game):
+                return
+            player.add_memory(1)
+            if game.memory >= 5 and perm:
                 perm.suspend()
                 player.draw_cards(1)
 
         effect0.set_on_process_callback(process0)
         effects.append(effect0)
 
-        # Factory effect: dp_modifier_all
-        # All your Digimon DP modifier
+        # [All Turns] All of your [TS] trait Digimon get +1000 DP.
         effect1 = ICardEffect()
-        effect1.set_effect_name("BT24-102 All your Digimon DP modifier")
-        effect1.set_effect_description("All your Digimon DP modifier")
+        effect1.set_effect_name("BT24-102 All your [TS] Digimon +1000 DP")
+        effect1.set_effect_description("[All Turns] All of your [TS] trait Digimon get +1000 DP.")
         effect1.dp_modifier = 1000
         effect1._applies_to_all_own_digimon = True
 
-        def condition1(context: Dict[str, Any]) -> bool:
+        def dp_condition(context: Dict[str, Any]) -> bool:
             if card and card.permanent_of_this_card() is None:
                 return False
+            # Only applies to permanents with [TS] trait (checked by engine via permanent filter)
             return True
-        effect1.set_can_use_condition(condition1)
+
+        def dp_permanent_condition(permanent) -> bool:
+            if not getattr(permanent, 'is_digimon', False):
+                return False
+            top = getattr(permanent, 'top_card', None)
+            if not top:
+                return False
+            # Must be owned by this tamer's owner
+            owner = card.owner if card else None
+            perm_owner = getattr(permanent, 'owner', None)
+            if owner and perm_owner and perm_owner is not owner:
+                return False
+            return any('TS' in _t for _t in (getattr(top, 'card_traits', []) or []))
+
+        effect1.set_can_use_condition(dp_condition)
+        effect1._dp_permanent_condition = dp_permanent_condition
         effects.append(effect1)
 
-        # Timing: EffectTiming.OnEndTurn
-        # [End of Your Turn] By suspending this Tamer, you may activate 1 [On Play] or [When Digivolving] effect of 1 of your [Olympos XII] trait Digimon.
+        # [End of Your Turn] By suspending this Tamer, you may activate 1 [On Play] or
+        # [When Digivolving] effect of 1 of your [Olympos XII] trait Digimon.
         effect2 = ICardEffect()
         effect2.set_timing(EffectTiming.OnEndTurn)
-        effect2.set_effect_name("BT24-102 Suspend this tamer to use an On Play or When Digivolving")
-        effect2.set_effect_description("[End of Your Turn] By suspending this Tamer, you may activate 1 [On Play] or [When Digivolving] effect of 1 of your [Olympos XII] trait Digimon.")
+        effect2.set_effect_name(
+            "BT24-102 Suspend to reactivate On Play or When Digivolving of Olympos XII Digimon"
+        )
+        effect2.set_effect_description(
+            "[End of Your Turn] By suspending this Tamer, you may activate 1 [On Play] or "
+            "[When Digivolving] effect of 1 of your [Olympos XII] trait Digimon."
+        )
         effect2.is_optional = True
 
         def condition2(context: Dict[str, Any]) -> bool:
@@ -75,9 +97,9 @@ class BT24_102(CardScript):
                 return False
             tamer_perm = card.permanent_of_this_card() if card else None
             if not tamer_perm or tamer_perm.is_suspended:
-                return False  # Can't pay cost if already suspended
-            player = card.owner
+                return False
             # Check for Olympos XII Digimon on field
+            player = card.owner
             for p in player.battle_area:
                 if not p.is_digimon:
                     continue
@@ -90,7 +112,6 @@ class BT24_102(CardScript):
         effect2.set_can_use_condition(condition2)
 
         def process2(ctx: Dict[str, Any]):
-            """Suspend Homeros, reactivate On Play/When Digivolving of Olympos XII."""
             player = ctx.get('player')
             perm = ctx.get('permanent')
             game = ctx.get('game')
@@ -113,32 +134,33 @@ class BT24_102(CardScript):
                 return False
 
             def on_selected(target):
-                # Re-trigger On Play / When Digivolving effects
+                # Re-trigger On Play effects
                 game.execute_effects(
                     EffectTiming.OnEnterFieldAnyone,
-                    {"played_card": target.top_card,
-                     "played_permanent": target,
-                     "event_player": player,
-                     "permanent": target},
+                    {
+                        "played_card": target.top_card,
+                        "played_permanent": target,
+                        "event_player": player,
+                        "permanent": target,
+                    },
                 )
 
             game.effect_select_own_permanent(
                 player, on_selected, filter_fn=olympos_filter,
                 is_optional=True,
-                prompt="Select an Olympos XII Digimon to reactivate.")
+                prompt="Select an Olympos XII Digimon to reactivate its [On Play] effect.")
 
         effect2.set_on_process_callback(process2)
         effects.append(effect2)
 
-        # Factory effect: security_play
-        # Security: Play this card
+        # [Security] Play this card without paying the cost.
         effect3 = ICardEffect()
         effect3.set_effect_name("BT24-102 Security: Play this card")
-        effect3.set_effect_description("Security: Play this card")
+        effect3.set_effect_description("[Security] Play this card without paying the cost.")
         effect3.is_security_effect = True
 
         def condition3(context: Dict[str, Any]) -> bool:
-            return False  # Security effects handled by engine
+            return True
         effect3.set_can_use_condition(condition3)
         effects.append(effect3)
 

@@ -98,10 +98,10 @@ class EX8_034(CardScript):
         effect2.set_on_process_callback(process2)
         effects.append(effect2)
 
-        # Timing: EffectTiming.OnAllyAttack
+        # Timing: EffectTiming.OnUseAttack
         # [When Attacking] (Once Per Turn) 1 of your opponent's Digimon gets -4000 DP for the turn.
         effect3 = ICardEffect()
-        effect3.set_timing(EffectTiming.OnAllyAttack)
+        effect3.set_timing(EffectTiming.OnUseAttack)
         effect3.set_effect_name("EX8-034 DP -4000")
         effect3.set_effect_description("[When Attacking] (Once Per Turn) 1 of your opponent's Digimon gets -4000 DP for the turn.")
         effect3.is_inherited_effect = True

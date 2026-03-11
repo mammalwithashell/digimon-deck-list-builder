@@ -14,10 +14,10 @@ class BT10_081(CardScript):
     def get_card_effects(self, card: 'CardSource') -> List['ICardEffect']:
         effects = []
 
-        # Timing: EffectTiming.OnAllyAttack
+        # Timing: EffectTiming.OnUseAttack
         # [When Attacking] You may trash up to 3 cards from the top of your deck.
         effect0 = ICardEffect()
-        effect0.set_timing(EffectTiming.OnAllyAttack)
+        effect0.set_timing(EffectTiming.OnUseAttack)
         effect0.set_effect_name("BT10-081 Trash up to 3 cards from deck top")
         effect0.set_effect_description("[When Attacking] You may trash up to 3 cards from the top of your deck.")
         effect0.is_optional = True

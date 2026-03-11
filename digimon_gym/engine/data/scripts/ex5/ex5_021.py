@@ -80,10 +80,10 @@ class EX5_021(CardScript):
         effect1.set_on_process_callback(process1)
         effects.append(effect1)
 
-        # Timing: EffectTiming.OnAllyAttack
+        # Timing: EffectTiming.OnUseAttack
         # [When Attacking] [Once Per Turn] If this Digimon has the [Four Sovereigns]/[God Beast] trait, gain 1 memory.
         effect2 = ICardEffect()
-        effect2.set_timing(EffectTiming.OnAllyAttack)
+        effect2.set_timing(EffectTiming.OnUseAttack)
         effect2.set_effect_name("EX5-021 Memory +1")
         effect2.set_effect_description("[When Attacking] [Once Per Turn] If this Digimon has the [Four Sovereigns]/[God Beast] trait, gain 1 memory.")
         effect2.is_inherited_effect = True

@@ -14,10 +14,10 @@ class P_148(CardScript):
     def get_card_effects(self, card: 'CardSource') -> List['ICardEffect']:
         effects = []
 
-        # Timing: EffectTiming.OnAllyAttack
+        # Timing: EffectTiming.OnUseAttack
         # [When Attacking] [Once Per Turn] If this Digimon has the [NSp] trait, <Draw 1>.
         effect0 = ICardEffect()
-        effect0.set_timing(EffectTiming.OnAllyAttack)
+        effect0.set_timing(EffectTiming.OnUseAttack)
         effect0.set_effect_name("P-148 Draw 1")
         effect0.set_effect_description("[When Attacking] [Once Per Turn] If this Digimon has the [NSp] trait, <Draw 1>.")
         effect0.is_inherited_effect = True

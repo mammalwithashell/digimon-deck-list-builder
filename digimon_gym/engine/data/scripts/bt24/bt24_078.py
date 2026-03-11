@@ -31,10 +31,10 @@ class BT24_078(CardScript):
         effect0.set_can_use_condition(condition0)
         effects.append(effect0)
 
-        # Timing: EffectTiming.OnAllyAttack
+        # Timing: EffectTiming.OnUseAttack
         # Digivolve, Destroy Security
         effect1 = ICardEffect()
-        effect1.set_timing(EffectTiming.OnAllyAttack)
+        effect1.set_timing(EffectTiming.OnUseAttack)
         effect1.set_effect_name("BT24-078 Digivolve into this to trash top opponent security")
         effect1.set_effect_description("Digivolve, Destroy Security")
         effect1.is_optional = True

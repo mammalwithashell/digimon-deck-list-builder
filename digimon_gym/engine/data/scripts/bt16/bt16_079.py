@@ -41,10 +41,10 @@ class BT16_079(CardScript):
         effect1.set_can_use_condition(condition1)
         effects.append(effect1)
 
-        # Timing: EffectTiming.OnAllyAttack
+        # Timing: EffectTiming.OnUseAttack
         # [When Attacking] [Once Per Turn] You may play 1 level 4 or lower yellow or green Digimon from your hand or trash without paying the cost.
         effect2 = ICardEffect()
-        effect2.set_timing(EffectTiming.OnAllyAttack)
+        effect2.set_timing(EffectTiming.OnUseAttack)
         effect2.set_effect_name("BT16-079 Play a level 4 or lower Digimon from your hand or trash.")
         effect2.set_effect_description("[When Attacking] [Once Per Turn] You may play 1 level 4 or lower yellow or green Digimon from your hand or trash without paying the cost.")
         effect2.is_optional = True
