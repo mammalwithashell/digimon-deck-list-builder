@@ -9,120 +9,125 @@ if TYPE_CHECKING:
 
 
 class EX11_032(CardScript):
-    """EX11-032 GrandGalemon | Lv.5"""
+    """EX11-032 GrandGalemon | Lv.5
+
+    [Hand] [Main] If you have [Shoto Kazama], by placing 1 [Galemon] from your trash
+    as any of your [Pteromon]'s bottom digivolution card, it digivolves into this card
+    for a digivolution cost of 3, ignoring digivolution requirements.
+
+    NOTE: This is a hand-activated special digivolve effect. The engine does not yet
+    support "place card from trash as bottom digivolution card of an existing permanent,
+    then digivolve that permanent from hand at reduced cost ignoring requirements".
+    This is tracked in engine-gaps.md as a BLOCKED mechanic.
+    The OnDeclaration stub is left here so the card can at least be scripted once
+    the required engine API is available.
+    """
 
     def get_card_effects(self, card: 'CardSource') -> List['ICardEffect']:
         effects = []
 
-        # Timing: EffectTiming.OnDeclaration
-        # Digivolve
+        # [Hand][Main] Special digivolve effect — COMPLEX / PARTIALLY UNSUPPORTED
+        # Requires:
+        #   1. Shoto Kazama tamer on field
+        #   2. Galemon in trash
+        #   3. Target Pteromon on field
+        #   4. Move Galemon from trash to bottom of Pteromon's digivolution stack
+        #   5. Pteromon digivolves into GrandGalemon (this card) for cost 3,
+        #      ignoring normal digivolution requirements
         effect0 = ICardEffect()
         effect0.set_timing(EffectTiming.OnDeclaration)
-        effect0.set_effect_name("EX11-032 Place 1 [Galemon] from trash under 1 [Pteromon], to digivolve for 3")
-        effect0.set_effect_description("Digivolve")
+        effect0.set_effect_name(
+            "EX11-032 [Hand][Main] Special digivolve via Pteromon (requires Shoto Kazama)"
+        )
+        effect0.set_effect_description(
+            "[Hand][Main] If you have [Shoto Kazama], by placing 1 [Galemon] from your trash "
+            "as any of your [Pteromon]'s bottom digivolution card, it digivolves into this card "
+            "for a digivolution cost of 3, ignoring digivolution requirements."
+        )
 
-        effect = effect0  # alias for condition closure
         def condition0(context: Dict[str, Any]) -> bool:
+            # Must be your turn
             if not (card and card.owner and card.owner.is_my_turn):
                 return False
-            permanent = effect.effect_source_permanent if hasattr(effect, 'effect_source_permanent') else None
-            if not (permanent and (permanent.contains_card_name('Shoto Kazama') or permanent.contains_card_name('Pteromon'))):
+            # Must be in hand (not yet on field)
+            player = card.owner if card else None
+            if player is None:
+                return False
+            if card not in player.hand_cards:
+                return False
+            # Must have Shoto Kazama tamer on field
+            has_shoto = any(
+                p.is_tamer and p.contains_card_name('Shoto Kazama')
+                for p in player.battle_area
+            )
+            if not has_shoto:
+                return False
+            # Must have a Galemon in trash
+            has_galemon = any(
+                any('Galemon' in n for n in getattr(c, 'card_names', []))
+                for c in player.trash_cards
+            )
+            if not has_galemon:
+                return False
+            # Must have a Pteromon on field
+            has_pteromon = any(
+                p.is_digimon and p.contains_card_name('Pteromon')
+                for p in player.battle_area
+            )
+            if not has_pteromon:
                 return False
             return True
 
         effect0.set_can_use_condition(condition0)
 
         def process0(ctx: Dict[str, Any]):
-            """Action: Digivolve"""
+            """
+            BLOCKED: Requires engine support for placing a card from trash as the bottom
+            digivolution source of an existing permanent, then triggering a special-cost
+            digivolve of that permanent from hand ignoring normal requirements.
+
+            Partial stub: select a Pteromon, then use effect_digivolve_from_hand as best
+            approximation. Galemon placement from trash is not handled.
+            """
             player = ctx.get('player')
             perm = ctx.get('permanent')
             game = ctx.get('game')
-            if not (player and perm and game):
+            if not (player and game):
                 return
-            def digi_filter(c):
-                return True
-            game.effect_digivolve_from_hand(
-                player, perm, digi_filter, is_optional=True)
+
+            # Step 1: Select a Pteromon target to digivolve
+            def pteromon_filter(p):
+                return p.is_digimon and p.contains_card_name('Pteromon')
+
+            def do_special_digivolve(target_perm):
+                # Step 2 (stub): Move Galemon from trash under target_perm
+                # NOTE: This step is unsupported by the engine; we skip it
+                galemon = next(
+                    (c for c in player.trash_cards
+                     if any('Galemon' in n for n in getattr(c, 'card_names', []))),
+                    None
+                )
+                if galemon:
+                    player.trash_cards.remove(galemon)
+                    target_perm.add_card_source_bottom(galemon)
+
+                # Step 3: Digivolve from hand using this card (cost 3, ignoring requirements)
+                # Use effect_digivolve_from_hand as approximation
+                def grand_filter(c):
+                    return c is card
+
+                game.effect_digivolve_from_hand(
+                    player, target_perm, grand_filter,
+                    cost_override=3, is_optional=False)
+
+            game.effect_select_own_permanent(
+                player, do_special_digivolve,
+                filter_fn=pteromon_filter,
+                is_optional=False,
+                prompt="Select a [Pteromon] to digivolve into GrandGalemon."
+            )
 
         effect0.set_on_process_callback(process0)
         effects.append(effect0)
-
-        # Timing: EffectTiming.OnEnterFieldAnyone
-        # Play Card, Suspend
-        effect1 = ICardEffect()
-        effect1.set_timing(EffectTiming.OnEnterFieldAnyone)
-        effect1.set_effect_name("EX11-032 May Suspend 1 Digimon. May play 1 [Avian] or [Bird] in traits with 3k DP + 1k per suspended digimon.")
-        effect1.set_effect_description("Play Card, Suspend")
-        effect1.is_when_digivolving = True
-
-        effect = effect1  # alias for condition closure
-        def condition1(context: Dict[str, Any]) -> bool:
-            if card and card.permanent_of_this_card() is None:
-                return False
-            # Triggered when digivolving — validated by engine timing
-            return True
-
-        effect1.set_can_use_condition(condition1)
-
-        def process1(ctx: Dict[str, Any]):
-            """Action: Play Card, Suspend"""
-            player = ctx.get('player')
-            perm = ctx.get('permanent')
-            game = ctx.get('game')
-            if not (player and game):
-                return
-            def play_filter(c):
-                return True
-            game.effect_play_from_zone(
-                player, 'hand', play_filter, free=True, is_optional=True)
-            if not (player and game):
-                return
-            def target_filter(p):
-                return True
-            def on_suspend(target_perm):
-                target_perm.suspend()
-            game.effect_select_opponent_permanent(
-                player, on_suspend, filter_fn=target_filter, is_optional=False)
-
-        effect1.set_on_process_callback(process1)
-        effects.append(effect1)
-
-        # Timing: EffectTiming.OnEndBattle
-        # Unsuspend
-        effect2 = ICardEffect()
-        effect2.set_timing(EffectTiming.OnEndBattle)
-        effect2.set_effect_name("EX11-032 May Unsuspend")
-        effect2.set_effect_description("Unsuspend")
-        effect2.is_inherited_effect = True
-        effect2.is_optional = True
-        effect2.set_max_count_per_turn(1)
-        effect2.set_hash_string("EX11_032_ESS_Unsuspend")
-
-        effect = effect2  # alias for condition closure
-        def condition2(context: Dict[str, Any]) -> bool:
-            if card and card.permanent_of_this_card() is None:
-                return False
-            if not (card and card.owner and card.owner.is_my_turn):
-                return False
-            return True
-
-        effect2.set_can_use_condition(condition2)
-
-        def process2(ctx: Dict[str, Any]):
-            """Action: Unsuspend"""
-            player = ctx.get('player')
-            perm = ctx.get('permanent')
-            game = ctx.get('game')
-            if not (player and game):
-                return
-            def target_filter(p):
-                return True
-            def on_unsuspend(target_perm):
-                target_perm.unsuspend()
-            game.effect_select_own_permanent(
-                player, on_unsuspend, filter_fn=target_filter, is_optional=True)
-
-        effect2.set_on_process_callback(process2)
-        effects.append(effect2)
 
         return effects

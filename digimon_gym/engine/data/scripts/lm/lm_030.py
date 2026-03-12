@@ -14,8 +14,8 @@ class LM_030(CardScript):
     [Main] 1 of your green Digimon may digivolve into a green Digimon card in
         the hand with the digivolution cost reduced by 3. Then, place this card
         in the battle area.
-    [Start of Your Turn] If your opponent has a Digimon, <Delay> (by trashing
-        this card from the battle area, activate):
+    [Start of Your Turn] <Delay> (by trashing this card from the battle area,
+        activate):
         - Return 1 green Digimon card from your trash to the top of the deck.
           Then, if you don't have a Digimon, you may play 1 green Digimon card
           with 2000 DP or less from your trash without paying the cost.
@@ -88,17 +88,11 @@ class LM_030(CardScript):
         def condition1(context: Dict[str, Any]) -> bool:
             if card and card.permanent_of_this_card() is None:
                 return False
-            # Fires at start of owner's turn if opponent has a Digimon.
+            # Fires at start of owner's turn.
             owner = card.owner if card else None
             if not (owner and owner.is_my_turn):
                 return False
-            enemy = owner.enemy if owner else None
-            if enemy is None:
-                return False
-            has_opp_digimon = any(
-                p.is_digimon for p in (enemy.battle_area or [])
-            )
-            return has_opp_digimon
+            return True
 
         effect1.set_can_use_condition(condition1)
         effects.append(effect1)
@@ -111,7 +105,7 @@ class LM_030(CardScript):
             "LM-030 Delay: Return green Digimon from trash to deck top; "
             "if no Digimon, play green Digimon <=2000 DP from trash")
         effect2.set_effect_description(
-            "[Start of Your Turn] If your opponent has a Digimon, <Delay> — "
+            "[Start of Your Turn] <Delay> — "
             "Return 1 green Digimon card from your trash to the top of the "
             "deck. Then, if you don't have a Digimon, you may play 1 green "
             "Digimon card with 2000 DP or less from your trash without paying "
@@ -126,14 +120,7 @@ class LM_030(CardScript):
             owner = card.owner if card else None
             if not (owner and owner.is_my_turn):
                 return False
-            # Opponent must have a Digimon.
-            enemy = owner.enemy if owner else None
-            if enemy is None:
-                return False
-            has_opp_digimon = any(
-                p.is_digimon for p in (enemy.battle_area or [])
-            )
-            return has_opp_digimon
+            return True
 
         effect2.set_can_use_condition(condition2)
 
@@ -222,11 +209,12 @@ class LM_030(CardScript):
                 player, 'trash', play_filter,
                 free=True, is_optional=True)
 
-            # Add this card to hand. (The engine trashes the security card
-            # after the effect resolves; we re-add it here to reflect the
-            # card text "add this card to the hand".)
-            if card:
-                player.hand_cards.append(card)
+            # Add this card to hand. The engine trashes the security card
+            # before the security effect fires; pop the last trashed card
+            # (which is this card) back to hand.
+            if player and player.trash_cards:
+                card_to_add = player.trash_cards.pop()
+                player.hand_cards.append(card_to_add)
 
         effect3.set_on_process_callback(process3)
         effects.append(effect3)

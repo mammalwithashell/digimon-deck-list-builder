@@ -34,6 +34,7 @@ class ICardEffect(ABC):
         self.timing: Optional['EffectTiming'] = None
         self._activate_count: int = 0
         self._turn_activate_count: int = 0
+        self._source_permanent: Optional['Permanent'] = None  # For granted effects: the permanent that granted this
 
     @property
     def is_disabled(self) -> bool:

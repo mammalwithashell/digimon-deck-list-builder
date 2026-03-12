@@ -426,3 +426,47 @@ cd src-tauri && cargo tauri build  # production installers
 14. `state_filter.py` must redact both `handIds` and `handCards` for opponents — never leak card metadata.
 15. Game animation components (`DigivolveBanner`, `BattleEffect`) subscribe to `store.events` and track `lastSeqRef` to avoid replaying stale events.
 16. `Game.surrender()` must emit the `surrender` event before calling `declare_winner()` so event listeners see the surrender before game_over.
+
+## Pinecone MCP Integration
+
+### Overview
+
+The `/implement-archetype` skill uses Pinecone as a vector database to give sub-agents dynamic access to engine docs, card scripts, and metadata instead of static context packs.
+
+### Setup
+
+1. **API key**: Set `PINECONE_API_KEY` env var
+2. **Index**: `digimon-engine` (integrated inference — Pinecone handles embedding)
+3. **MCP server**: `@pinecone-database/mcp` configured in `.mcp.json` (project root)
+
+### Namespaces
+
+| Namespace | Content | ~Vectors |
+|-----------|---------|----------|
+| `engine-api` | Engine API reference doc + decomposed engine source (AST-chunked) | ~300 |
+| `card-scripts` | Python scripts (frozen + generated) + C# reference scripts | ~6,000 |
+| `card-metadata` | Per-card entries from `cards.json` (ID, name, kind, level, colors, traits, effect text) | ~4,000 |
+| `rules-docs` | RULES_CONTEXT.md, ACTION_SPEC.md, TENSOR_SPEC.md, engine-gaps.md | ~100 |
+
+### Ingestion CLI
+
+```bash
+python tools/ingest_pinecone.py --all                          # full rebuild
+python tools/ingest_pinecone.py --namespace card-scripts       # single namespace
+python tools/ingest_pinecone.py --namespace card-scripts --set bt10  # single set
+python tools/ingest_pinecone.py --all --dry-run                # preview counts
+```
+
+### Verification
+
+```bash
+python tools/verify_pinecone.py  # checks namespace stats + spot-check queries
+```
+
+### How Sub-Agents Use It
+
+Sub-agents dispatched by `/implement-archetype` inherit the Pinecone MCP connection and can:
+- Search `engine-api` for method signatures, patterns, and concepts
+- Search `card-scripts` with `{is_frozen: true}` filter for similar implementations
+- Search `card-metadata` for cards referenced by name in effect text
+- Self-recover from unfamiliar patterns instead of reporting BLOCKED

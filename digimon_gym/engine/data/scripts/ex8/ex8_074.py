@@ -132,10 +132,13 @@ class EX8_074(CardScript):
 
         def _do_delete(player, owner_perm, game):
             """Step 2: You MAY delete 1 opponent Digimon with DP <= base + scaling."""
-            # Count other suspended Digimon (not counting this permanent itself)
-            other_suspended = [p for p in player.battle_area
-                               if p.is_suspended and p is not owner_perm]
-            max_dp = 8000 + 3000 * len(other_suspended)
+            # Count all suspended Digimon on both fields ("other suspended Digimon")
+            enemy = player.enemy if player else None
+            all_suspended = sum(
+                1 for p in list(player.battle_area) + list(enemy.battle_area if enemy else [])
+                if p.is_suspended
+            )
+            max_dp = 8000 + 3000 * all_suspended
 
             def delete_filter(p):
                 return p.is_digimon and (p.dp or 0) <= max_dp

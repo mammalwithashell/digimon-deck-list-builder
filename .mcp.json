@@ -1,0 +1,12 @@
+{
+  "mcpServers": {
+    "pinecone-mcp": {
+      "type": "stdio",
+      "command": "npx",
+      "args": ["-y", "@pinecone-database/mcp"],
+      "env": {
+        "PINECONE_API_KEY": "${PINECONE_API_KEY}"
+      }
+    }
+  }
+}

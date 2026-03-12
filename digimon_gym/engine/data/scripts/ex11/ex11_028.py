@@ -8,124 +8,170 @@ if TYPE_CHECKING:
     from ....core.card_source import CardSource
 
 
+# Own-field selection indices: 100-113, opponent field: 114-127
+_SEL_MY_FIELD_START = 100
+_SEL_OPP_FIELD_START = 114
+
+
 class EX11_028(CardScript):
     """EX11-028 Galemon | Lv.4"""
 
     def get_card_effects(self, card: 'CardSource') -> List['ICardEffect']:
         effects = []
 
-        # Timing: EffectTiming.OnEnterFieldAnyone
-        # Suspend
-        effect0 = ICardEffect()
-        effect0.set_timing(EffectTiming.OnEnterFieldAnyone)
-        effect0.set_effect_name("EX11-028 Suspend")
-        effect0.set_effect_description("Suspend")
-        effect0.is_on_play = True
+        def _make_suspend_effect(*, is_on_play=False, is_when_digivolving=False, name_tag):
+            """
+            [On Play] / [When Digivolving] You may suspend 1 Digimon (own or opponent).
+            """
+            eff = ICardEffect()
+            eff.set_timing(EffectTiming.OnEnterFieldAnyone)
+            eff.is_optional = True
+            if is_on_play:
+                eff.is_on_play = True
+            elif is_when_digivolving:
+                eff.is_when_digivolving = True
+            eff.set_effect_name(f"EX11-028 [{name_tag}] You may suspend 1 Digimon")
+            eff.set_effect_description(
+                f"[{name_tag}] You may suspend 1 Digimon."
+            )
 
-        effect = effect0  # alias for condition closure
-        def condition0(context: Dict[str, Any]) -> bool:
-            if card and card.permanent_of_this_card() is None:
-                return False
-            # Triggered on play — validated by engine timing
-            return True
-
-        effect0.set_can_use_condition(condition0)
-
-        def process0(ctx: Dict[str, Any]):
-            """Action: Suspend"""
-            player = ctx.get('player')
-            perm = ctx.get('permanent')
-            game = ctx.get('game')
-            if not (player and game):
-                return
-            def target_filter(p):
+            def condition(context: Dict[str, Any]) -> bool:
+                if card and card.permanent_of_this_card() is None:
+                    return False
                 return True
-            def on_suspend(target_perm):
-                target_perm.suspend()
-            game.effect_select_opponent_permanent(
-                player, on_suspend, filter_fn=target_filter, is_optional=False)
 
-        effect0.set_on_process_callback(process0)
+            eff.set_can_use_condition(condition)
+
+            def process(ctx: Dict[str, Any]):
+                """Suspend any 1 Digimon (own or opponent), optionally."""
+                player = ctx.get('player')
+                game = ctx.get('game')
+                if not (player and game):
+                    return
+
+                from ....data.enums import GamePhase
+
+                opponent = player.enemy
+                own_area = player.battle_area
+                opp_area = opponent.battle_area if opponent else []
+
+                valid = []
+                for i, p in enumerate(own_area):
+                    if p.is_digimon:
+                        valid.append(_SEL_MY_FIELD_START + i)
+                for i, p in enumerate(opp_area):
+                    if p.is_digimon:
+                        if game.modifiers.can_be_selected_by_effect(p):
+                            valid.append(_SEL_OPP_FIELD_START + i)
+
+                if not valid:
+                    return
+
+                def on_select(action_id: int):
+                    target_perm = None
+                    if _SEL_MY_FIELD_START <= action_id < _SEL_MY_FIELD_START + len(own_area):
+                        idx = action_id - _SEL_MY_FIELD_START
+                        if 0 <= idx < len(own_area):
+                            target_perm = own_area[idx]
+                    elif _SEL_OPP_FIELD_START <= action_id < _SEL_OPP_FIELD_START + len(opp_area):
+                        idx = action_id - _SEL_OPP_FIELD_START
+                        if 0 <= idx < len(opp_area):
+                            target_perm = opp_area[idx]
+                    if target_perm:
+                        target_perm.suspend()
+
+                game.request_selection(
+                    GamePhase.SelectTarget, player, on_select, valid,
+                    is_optional=True,
+                    prompt="You may suspend 1 Digimon (own or opponent)."
+                )
+
+            eff.set_on_process_callback(process)
+            return eff
+
+        # Effect 0: [On Play] You may suspend 1 Digimon.
+        effect0 = _make_suspend_effect(is_on_play=True, name_tag="On Play")
         effects.append(effect0)
 
-        # Timing: EffectTiming.OnEnterFieldAnyone
-        # Suspend
-        effect1 = ICardEffect()
-        effect1.set_timing(EffectTiming.OnEnterFieldAnyone)
-        effect1.set_effect_name("EX11-028 Suspend")
-        effect1.set_effect_description("Suspend")
-        effect1.is_when_digivolving = True
-
-        effect = effect1  # alias for condition closure
-        def condition1(context: Dict[str, Any]) -> bool:
-            if card and card.permanent_of_this_card() is None:
-                return False
-            # Triggered when digivolving — validated by engine timing
-            return True
-
-        effect1.set_can_use_condition(condition1)
-
-        def process1(ctx: Dict[str, Any]):
-            """Action: Suspend"""
-            player = ctx.get('player')
-            perm = ctx.get('permanent')
-            game = ctx.get('game')
-            if not (player and game):
-                return
-            def target_filter(p):
-                return True
-            def on_suspend(target_perm):
-                target_perm.suspend()
-            game.effect_select_opponent_permanent(
-                player, on_suspend, filter_fn=target_filter, is_optional=False)
-
-        effect1.set_on_process_callback(process1)
+        # Effect 1: [When Digivolving] You may suspend 1 Digimon.
+        effect1 = _make_suspend_effect(is_when_digivolving=True, name_tag="When Digivolving")
         effects.append(effect1)
 
-        # Timing: EffectTiming.OnTappedAnyone
-        # [All Turns] [Once Per Turn] When any of your Digimon suspend, if you have 1 or fewer Tamers, you may play 1 [Shoto Kazama] from your hand without paying the cost.
+        # Effect 2: [All Turns] [Once Per Turn] When any of your Digimon suspend,
+        # if you have 1 or fewer Tamers, you may play 1 [Shoto Kazama] from your hand
+        # without paying the cost.
         effect2 = ICardEffect()
         effect2.set_timing(EffectTiming.OnTappedAnyone)
-        effect2.set_effect_name("EX11-028 Play 1 [Shoto Kazama] from your hand")
-        effect2.set_effect_description("[All Turns] [Once Per Turn] When any of your Digimon suspend, if you have 1 or fewer Tamers, you may play 1 [Shoto Kazama] from your hand without paying the cost.")
+        effect2.set_effect_name(
+            "EX11-028 [All Turns][OPT] Your Digimon suspends + <=1 Tamer -> Play Shoto Kazama"
+        )
+        effect2.set_effect_description(
+            "[All Turns] [Once Per Turn] When any of your Digimon suspend, if you have "
+            "1 or fewer Tamers, you may play 1 [Shoto Kazama] from your hand without "
+            "paying the cost."
+        )
         effect2.is_optional = True
         effect2.set_max_count_per_turn(1)
-        effect2.set_hash_string("EX11_028_AT")
+        effect2.set_hash_string("EX11_028_AT_SuspendShoto")
 
-        effect = effect2  # alias for condition closure
         def condition2(context: Dict[str, Any]) -> bool:
             if card and card.permanent_of_this_card() is None:
+                return False
+            # The suspended permanent must be owned by this player
+            player_owner = card.owner if card else None
+            if player_owner is None:
+                return False
+            event_perm = context.get('event_permanent')
+            if event_perm is None:
+                return False
+            # Must be your own Digimon that suspended
+            if event_perm not in player_owner.battle_area:
+                return False
+            if not event_perm.is_digimon:
+                return False
+            # Must have 1 or fewer Tamers
+            tamer_count = sum(1 for p in player_owner.battle_area if p.is_tamer)
+            if tamer_count > 1:
+                return False
+            # Must have a Shoto Kazama in hand to play
+            has_shoto = any(
+                any('Shoto Kazama' in n for n in getattr(c, 'card_names', []))
+                for c in player_owner.hand_cards
+            )
+            if not has_shoto:
                 return False
             return True
 
         effect2.set_can_use_condition(condition2)
 
         def process2(ctx: Dict[str, Any]):
-            """Action: Play Card"""
+            """Action: Play 1 [Shoto Kazama] from hand without paying the cost."""
             player = ctx.get('player')
-            perm = ctx.get('permanent')
             game = ctx.get('game')
             if not (player and game):
                 return
-            def play_filter(c):
-                return True
+
+            def shoto_filter(c):
+                return any('Shoto Kazama' in n for n in getattr(c, 'card_names', []))
+
             game.effect_play_from_zone(
-                player, 'hand', play_filter, free=True, is_optional=True)
+                player, 'hand', shoto_filter, free=True, is_optional=True)
 
         effect2.set_on_process_callback(process2)
         effects.append(effect2)
 
-        # Timing: EffectTiming.OnEndBattle
-        # Gain 1 memory
+        # Effect 3 (Inherited): [Your Turn] [Once Per Turn] When this Digimon wins a battle,
+        # gain 1 memory.
         effect3 = ICardEffect()
         effect3.set_timing(EffectTiming.OnEndBattle)
-        effect3.set_effect_name("EX11-028 Gain 1 memory.")
-        effect3.set_effect_description("Gain 1 memory")
+        effect3.set_effect_name("EX11-028 Inherited: Win battle -> Gain 1 memory")
+        effect3.set_effect_description(
+            "[Your Turn] [Once Per Turn] When this Digimon wins a battle, gain 1 memory."
+        )
         effect3.is_inherited_effect = True
         effect3.set_max_count_per_turn(1)
-        effect3.set_hash_string("EX11_032_ESS_Unsuspend")
+        effect3.set_hash_string("EX11_028_ESS_WinBattle_Mem")
 
-        effect = effect3  # alias for condition closure
         def condition3(context: Dict[str, Any]) -> bool:
             if card and card.permanent_of_this_card() is None:
                 return False
@@ -138,8 +184,6 @@ class EX11_028(CardScript):
         def process3(ctx: Dict[str, Any]):
             """Action: Gain 1 memory"""
             player = ctx.get('player')
-            perm = ctx.get('permanent')
-            game = ctx.get('game')
             if player:
                 player.add_memory(1)
 

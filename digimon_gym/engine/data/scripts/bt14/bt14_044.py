@@ -9,19 +9,31 @@ if TYPE_CHECKING:
 
 
 class BT14_044(CardScript):
-    """BT14-044 Palmon | Lv.3"""
+    """BT14-044 Palmon | Lv.3
+
+    [Start of Your Main Phase] 1 of your opponent's Digimon gains
+    "[All Turns] When this Digimon becomes suspended, lose 2 memory."
+    until the end of their turn.
+
+    [Inherited] [Your Turn] [Once Per Turn] When this Digimon would digivolve,
+    if you have a green Tamer, reduce the cost by 1.
+    """
 
     def get_card_effects(self, card: 'CardSource') -> List['ICardEffect']:
         effects = []
 
-        # Timing: EffectTiming.OnStartMainPhase
-        # Effect
+        # Effect 0: [Start of Your Main Phase] Grant suspend penalty to opponent's Digimon
         effect0 = ICardEffect()
         effect0.set_timing(EffectTiming.OnStartMainPhase)
-        effect0.set_effect_name("BT14-044 Opponent's 1 Digimon gains effect")
-        effect0.set_effect_description("Effect")
+        effect0.set_effect_name(
+            "BT14-044 Opponent's Digimon gains 'suspend -> lose 2 memory' until end of their turn"
+        )
+        effect0.set_effect_description(
+            "[Start of Your Main Phase] 1 of your opponent's Digimon gains "
+            "[All Turns] When this Digimon becomes suspended, lose 2 memory. "
+            "until the end of their turn."
+        )
 
-        effect = effect0  # alias for condition closure
         def condition0(context: Dict[str, Any]) -> bool:
             if card and card.permanent_of_this_card() is None:
                 return False
@@ -30,65 +42,100 @@ class BT14_044(CardScript):
             return True
 
         effect0.set_can_use_condition(condition0)
+
+        def process0(ctx: Dict[str, Any]):
+            player = ctx.get('player')
+            game = ctx.get('game')
+            if not (player and game):
+                return
+
+            source_perm = card.permanent_of_this_card() if card else None
+
+            def target_filter(p):
+                return p.is_digimon
+
+            def on_target(target_perm):
+                # Create a temporary OnTappedAnyone effect: "lose 2 memory"
+                granted = ICardEffect()
+                granted.set_timing(EffectTiming.OnTappedAnyone)
+                granted.set_effect_name(
+                    "BT14-044 Granted: When suspended, lose 2 memory"
+                )
+                granted._source_permanent = source_perm
+
+                def granted_condition(context: Dict[str, Any]) -> bool:
+                    perm_ctx = context.get('permanent')
+                    return perm_ctx is target_perm
+
+                granted.set_can_use_condition(granted_condition)
+
+                def granted_process(ctx2: Dict[str, Any]):
+                    # The opponent of the player who granted this effect loses memory
+                    # (i.e., the owner of the targeted Digimon loses 2 memory)
+                    owner = target_perm.top_card.owner if target_perm.top_card else None
+                    if owner:
+                        owner.lose_memory(2)
+                        if game:
+                            game.logger.log(
+                                f"[BT14-044] {target_perm.top_card.card_name} "
+                                f"suspended — {owner.player_name} loses 2 memory."
+                            )
+
+                granted.set_on_process_callback(granted_process)
+
+                # Grant until end of opponent's next turn
+                # expiry_turn = current turn + 1 (expires at start of our next turn)
+                target_perm.grant_temp_effect(granted, expiry_turn=game.turn_count + 1)
+
+            game.effect_select_opponent_permanent(
+                player, on_target,
+                filter_fn=target_filter,
+                is_optional=False,
+                prompt="Select 1 of your opponent's Digimon to gain the suspend penalty."
+            )
+
+        effect0.set_on_process_callback(process0)
         effects.append(effect0)
 
-        # Timing: EffectTiming.OnStartMainPhase
-        # [All Turns] When this Digimon becomes suspended, lose 2 memory.
+        # Effect 1 (Inherited): [Your Turn] [Once Per Turn] When this Digimon would digivolve,
+        # if you have a green Tamer, reduce the cost by 1.
         effect1 = ICardEffect()
-        effect1.set_timing(EffectTiming.OnStartMainPhase)
-        effect1.set_effect_name("BT14-044 Memory -2")
-        effect1.set_effect_description("[All Turns] When this Digimon becomes suspended, lose 2 memory.")
+        effect1.set_timing(EffectTiming.WhenWouldDigivolve)
+        effect1.set_effect_name(
+            "BT14-044 Inherited: When digivolving, if green Tamer, cost -1"
+        )
+        effect1.set_effect_description(
+            "[Your Turn] [Once Per Turn] When this Digimon would digivolve, "
+            "if you have a green Tamer, reduce the cost by 1."
+        )
+        effect1.is_inherited_effect = True
+        effect1.cost_reduction = 1
 
-        effect = effect1  # alias for condition closure
         def condition1(context: Dict[str, Any]) -> bool:
-            return True
-
-        effect1.set_can_use_condition(condition1)
-
-        def process1(ctx: Dict[str, Any]):
-            """Action: Add Temp Effect, Effect Immunity"""
-            player = ctx.get('player')
-            perm = ctx.get('permanent')
-            game = ctx.get('game')
-            # Grant temporary effect to target permanent
-            pass  # descriptive-tagged: add_temp_effect
-            # Grant effect immunity via modifier system
-            if perm and game:
-                from digimon_gym.engine.interfaces.modifiers import ModifierType
-                game.register_modifier(
-                    ModifierType.CANNOT_BE_SELECTED_BY_EFFECT, perm,
-                    value_fn=lambda: True, expiry='end_of_turn')
-
-        effect1.set_on_process_callback(process1)
-        effects.append(effect1)
-
-        # Timing: EffectTiming.None
-        # Cost -1
-        effect2 = ICardEffect()
-        effect2.set_effect_name("BT14-044 Cost -1")
-        effect2.set_effect_description("Cost -1")
-        effect2.is_inherited_effect = True
-        effect2.cost_reduction = 1
-
-        effect = effect2  # alias for condition closure
-        def condition2(context: Dict[str, Any]) -> bool:
             if card and card.permanent_of_this_card() is None:
                 return False
             if not (card and card.owner and card.owner.is_my_turn):
                 return False
-            return True
+            # Must have a green Tamer on field
+            player_owner = card.owner if card else None
+            if player_owner is None:
+                return False
+            from ....data.enums import CardColor
+            has_green_tamer = any(
+                p.is_tamer and CardColor.Green in getattr(
+                    p.top_card, 'card_colors', []
+                )
+                for p in player_owner.battle_area
+            )
+            return has_green_tamer
 
-        effect2.set_can_use_condition(condition2)
+        effect1.set_can_use_condition(condition1)
 
-        def process2(ctx: Dict[str, Any]):
-            """Action: Cost -1"""
-            player = ctx.get('player')
-            perm = ctx.get('permanent')
-            game = ctx.get('game')
-            # Cost reduction by 1 — handled via cost_reduction property
+        def process1(ctx: Dict[str, Any]):
+            """Action: Cost -1 — handled via cost_reduction property"""
             pass  # descriptive-tagged: cost_reduction
 
-        effect2.set_on_process_callback(process2)
-        effects.append(effect2)
+        effect1.set_on_process_callback(process1)
+        effects.append(effect1)
 
         return effects
