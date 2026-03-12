@@ -99,10 +99,10 @@ class EX10_014(CardScript):
         effect3.set_on_process_callback(process3)
         effects.append(effect3)
 
-        # Timing: EffectTiming.OnAllyAttack
+        # Timing: EffectTiming.OnUseAttack
         # [When Attacking] By trashing 1 of this Digimon's link cards, 1 of your opponent's Digimon gets -6000 DP for the turn.
         effect4 = ICardEffect()
-        effect4.set_timing(EffectTiming.OnAllyAttack)
+        effect4.set_timing(EffectTiming.OnUseAttack)
         effect4.set_effect_name("EX10-014 Trash 1 link card, give -6k DP")
         effect4.set_effect_description("[When Attacking] By trashing 1 of this Digimon's link cards, 1 of your opponent's Digimon gets -6000 DP for the turn.")
         effect4.is_on_attack = True

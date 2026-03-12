@@ -127,10 +127,10 @@ class P_203(CardScript):
         effect3.set_on_process_callback(process3)
         effects.append(effect3)
 
-        # Timing: EffectTiming.OnAllyAttack
+        # Timing: EffectTiming.OnUseAttack
         # [When Attacking] [Once Per Turn] <De-Digivolve 1> 1 of your opponent's Digimon. Then, by trashing 1 Option card in the battle area, this Digimon gains <Piercing> and <Security A. +1> for the turn.
         effect4 = ICardEffect()
-        effect4.set_timing(EffectTiming.OnAllyAttack)
+        effect4.set_timing(EffectTiming.OnUseAttack)
         effect4.set_effect_name("P-203 De-Digivolve 1, then by trashing 1 option in battle area, gain Piercing & Sec +1 for the turn")
         effect4.set_effect_description("[When Attacking] [Once Per Turn] <De-Digivolve 1> 1 of your opponent's Digimon. Then, by trashing 1 Option card in the battle area, this Digimon gains <Piercing> and <Security A. +1> for the turn.")
         effect4.set_hash_string("P_203_OP/WD/WA")

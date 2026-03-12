@@ -65,10 +65,10 @@ class P_197(CardScript):
         effect1.set_on_process_callback(process1)
         effects.append(effect1)
 
-        # Timing: EffectTiming.OnAllyAttack
+        # Timing: EffectTiming.OnUseAttack
         # [When Attacking] [Once Per Turn] 1 of your opponent's Digimon gets -2000 DP for the turn.
         effect2 = ICardEffect()
-        effect2.set_timing(EffectTiming.OnAllyAttack)
+        effect2.set_timing(EffectTiming.OnUseAttack)
         effect2.set_effect_name("P-197 -2k DP")
         effect2.set_effect_description("[When Attacking] [Once Per Turn] 1 of your opponent's Digimon gets -2000 DP for the turn.")
         effect2.is_inherited_effect = True

@@ -14,10 +14,10 @@ class EX11_001(CardScript):
     def get_card_effects(self, card: 'CardSource') -> List['ICardEffect']:
         effects = []
 
-        # Timing: EffectTiming.OnAllyAttack
+        # Timing: EffectTiming.OnUseAttack
         # Digivolve
         effect0 = ICardEffect()
-        effect0.set_timing(EffectTiming.OnAllyAttack)
+        effect0.set_timing(EffectTiming.OnUseAttack)
         effect0.set_effect_name("EX11-001 Digivolve this Digimon into [Tyrannnomon] in name or [Dinosaur] trait.")
         effect0.set_effect_description("Digivolve")
         effect0.is_inherited_effect = True

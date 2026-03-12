@@ -82,10 +82,10 @@ class BT20_021(CardScript):
         effect3.set_can_use_condition(condition3)
         effects.append(effect3)
 
-        # Timing: EffectTiming.OnAllyAttack
+        # Timing: EffectTiming.OnUseAttack
         # [When Attacking] [Once Per Turn] By placing 1 [Royal Knight] trait card from your hand or trash as this Digimon's bottom digivolution card, delete 1 of your opponent's Digimon with as much or less DP as this digimon.
         effect4 = ICardEffect()
-        effect4.set_timing(EffectTiming.OnAllyAttack)
+        effect4.set_timing(EffectTiming.OnUseAttack)
         effect4.set_effect_name("BT20-021 Select 1 card, delete 1 card")
         effect4.set_effect_description("[When Attacking] [Once Per Turn] By placing 1 [Royal Knight] trait card from your hand or trash as this Digimon's bottom digivolution card, delete 1 of your opponent's Digimon with as much or less DP as this digimon.")
         effect4.is_optional = True
@@ -103,10 +103,10 @@ class BT20_021(CardScript):
         effect4.set_can_use_condition(condition4)
         effects.append(effect4)
 
-        # Timing: EffectTiming.OnAllyAttack
+        # Timing: EffectTiming.OnUseAttack
         # [When Attacking] [Once per Turn] This Digimon unsuspends. Then, for every 2 [Royal Knight] trait cards in this Digimon's digivolution cards, trash your opponent's top security card
         effect5 = ICardEffect()
-        effect5.set_timing(EffectTiming.OnAllyAttack)
+        effect5.set_timing(EffectTiming.OnUseAttack)
         effect5.set_effect_name("BT20-021 Unsuspend, Then for every 2 [Royal Knight] traits in sources, trash opponent's top security")
         effect5.set_effect_description("[When Attacking] [Once per Turn] This Digimon unsuspends. Then, for every 2 [Royal Knight] trait cards in this Digimon's digivolution cards, trash your opponent's top security card")
         effect5.set_max_count_per_turn(1)

@@ -42,10 +42,10 @@ class EX10_040(CardScript):
         effect0.set_on_process_callback(process0)
         effects.append(effect0)
 
-        # Timing: EffectTiming.OnAllyAttack
+        # Timing: EffectTiming.OnUseAttack
         # [When Attacking] [Once Per Turn] Trash the top card of both players' decks.
         effect1 = ICardEffect()
-        effect1.set_timing(EffectTiming.OnAllyAttack)
+        effect1.set_timing(EffectTiming.OnUseAttack)
         effect1.set_effect_name("EX10-040 Trash top card from both players decks")
         effect1.set_effect_description("[When Attacking] [Once Per Turn] Trash the top card of both players' decks.")
         effect1.is_inherited_effect = True

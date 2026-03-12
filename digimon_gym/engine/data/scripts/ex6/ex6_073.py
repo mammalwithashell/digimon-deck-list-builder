@@ -66,10 +66,10 @@ class EX6_073(CardScript):
         effect1.set_on_process_callback(process1)
         effects.append(effect1)
 
-        # Timing: EffectTiming.OnAllyAttack
+        # Timing: EffectTiming.OnUseAttack
         # [When Attacking] You may place up to 7 cards with different names and the [Seven Great Demon Lords] trait from your trash as this Digimon's bottom digivolution cards. If you placed 4 or more cards with this effect, delete 1 of your opponent's Digimon or Tamers.
         effect2 = ICardEffect()
-        effect2.set_timing(EffectTiming.OnAllyAttack)
+        effect2.set_timing(EffectTiming.OnUseAttack)
         effect2.set_effect_name("EX6-073 Place up to 7 sources, delete digimon or tamer")
         effect2.set_effect_description("[When Attacking] You may place up to 7 cards with different names and the [Seven Great Demon Lords] trait from your trash as this Digimon's bottom digivolution cards. If you placed 4 or more cards with this effect, delete 1 of your opponent's Digimon or Tamers.")
         effect2.is_optional = True
@@ -103,10 +103,10 @@ class EX6_073(CardScript):
         effect2.set_on_process_callback(process2)
         effects.append(effect2)
 
-        # Timing: EffectTiming.OnAllyAttack
+        # Timing: EffectTiming.OnUseAttack
         # [When Attacking] By returning 7 cards with different names and the [Seven Great Demon Lords] trait from this Digimon's digivolution cards to the bottom of the deck, delete 7 of your opponent's Digimon or Tamers. Then, trash the top 7 cards of your opponent's security stack. For each card deleted by this effect, reduce the cards trashed by 1.
         effect3 = ICardEffect()
-        effect3.set_timing(EffectTiming.OnAllyAttack)
+        effect3.set_timing(EffectTiming.OnUseAttack)
         effect3.set_effect_name("EX6-073 Delete 7 Digimon/Tamers, Then Trash 7 security. For each card deleted, reduce that number by 1")
         effect3.set_effect_description("[When Attacking] By returning 7 cards with different names and the [Seven Great Demon Lords] trait from this Digimon's digivolution cards to the bottom of the deck, delete 7 of your opponent's Digimon or Tamers. Then, trash the top 7 cards of your opponent's security stack. For each card deleted by this effect, reduce the cards trashed by 1.")
         effect3.is_on_attack = True

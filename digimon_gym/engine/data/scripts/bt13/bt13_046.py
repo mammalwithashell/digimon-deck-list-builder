@@ -76,10 +76,10 @@ class BT13_046(CardScript):
         effect1.set_on_process_callback(process1)
         effects.append(effect1)
 
-        # Timing: EffectTiming.OnAllyAttack
+        # Timing: EffectTiming.OnUseAttack
         # [When Attacking][Once Per Turn] By trashing the top card of your security stack, unsuspend this Digimon, and 1 of your opponent's Digimon gets -7000 DP for the turn.
         effect2 = ICardEffect()
-        effect2.set_timing(EffectTiming.OnAllyAttack)
+        effect2.set_timing(EffectTiming.OnUseAttack)
         effect2.set_effect_name("BT13-046 Trash your 1 security to unsuspend this Digimon and DP -7000")
         effect2.set_effect_description("[When Attacking][Once Per Turn] By trashing the top card of your security stack, unsuspend this Digimon, and 1 of your opponent's Digimon gets -7000 DP for the turn.")
         effect2.is_optional = True

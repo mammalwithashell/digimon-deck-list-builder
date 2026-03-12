@@ -1,6 +1,6 @@
 {
   "version": 25,
-  "last_updated": "2026-03-09",
+  "last_updated": "2026-03-11",
   "cards": {
     "BT1-087": {
       "card_name": "T.K. Takaishi",
@@ -960,10 +960,10 @@
     },
     "BT24-020": {
       "card_name": "Gomamon",
-      "validated_date": "2026-03-01",
-      "report": "2026-03-01-ts-neptune.md",
+      "validated_date": "2026-03-11",
+      "report": "2026-03-11-ts-olympos-vs-imperialdramon.md",
       "status": "PASS",
-      "notes": "Play cost 3, evo cost 0 onto Lv2 correct. On Play reveals top 3, adds Sea Beast + TS card via 2-pass selection. Inherited Draw 1 on unsuspend present."
+      "notes": "On Play reveal correct, two-pass selection works, played for free from option effect"
     },
     "BT24-022": {
       "card_name": "Ikkakumon",
@@ -1009,24 +1009,24 @@
     },
     "BT24-030": {
       "card_name": "Neptunemon",
-      "validated_date": "2026-03-03",
-      "report": "2026-03-03-ts-neptune-gameplay.md",
-      "status": "PARTIAL",
-      "notes": "Play cost 12 correct. Duplicate cost reduction fixed (-5 not -10). On Play bottom-deck effect fires (fixed this session). Unsuspend fixed to target self. Cost reduction with opponent 2+ Digimon code-verified only. WhenRemoveField still wrong."
+      "validated_date": "2026-03-11",
+      "report": "2026-03-11-ts-olympos-vs-imperialdramon.md",
+      "status": "PASS",
+      "notes": "Cost reduction correct (12->7 with 2+ opp Digimon), On Play bounce correct"
     },
     "BT24-031": {
       "card_name": "Elecmon",
-      "validated_date": "2026-03-03",
-      "report": "2026-03-03-ts-neptune-gameplay.md",
+      "validated_date": "2026-03-11",
+      "report": "2026-03-11-ts-olympos-vs-imperialdramon.md",
       "status": "PARTIAL",
       "notes": "Play cost 3 correct. On Play broken \u2014 trashes from hand instead of revealing from deck. Inherited effect logic is inverted."
     },
     "BT24-034": {
       "card_name": "Aegiomon",
-      "validated_date": "2026-03-01",
-      "report": "2026-03-01-ts-neptune.md",
-      "status": "PASS",
-      "notes": "Evo cost 2 from Yellow Lv3 correct. Barrier keyword shown (both innate and inherited). When Digivolving optional 'By' effect correctly skippable."
+      "validated_date": "2026-03-11",
+      "report": "2026-03-11-ts-olympos-vs-imperialdramon.md",
+      "status": "PARTIAL",
+      "notes": "Fixes applied: by-cost checks valid targets first, OnMove uses moved_permanent key. Needs retest to verify"
     },
     "BT24-040": {
       "card_name": "Venusmon (BT24)",
@@ -1037,10 +1037,10 @@
     },
     "BT24-041": {
       "card_name": "Minervamon",
-      "validated_date": "2026-03-03",
-      "report": "2026-03-03-ts-neptune-gameplay.md",
+      "validated_date": "2026-03-11",
+      "report": "2026-03-11-ts-olympos-vs-imperialdramon.md",
       "status": "PARTIAL",
-      "notes": "Duplicate cost reduction fixed (-5 not -10). Keywords (Blocker, Reboot) present. Appeared on field during Merukimon On Play interaction. Cost reduction condition (Iliad on field) not directly tested."
+      "notes": "Fixes applied: free play now chains into de-digivolve via request_selection. De-Digivolve action IDs still outstanding"
     },
     "BT24-051": {
       "card_name": "Merukimon",
@@ -1087,10 +1087,10 @@
     },
     "BT24-083": {
       "card_name": "Hiroko Sagisaka",
-      "validated_date": "2026-03-01",
-      "report": "2026-03-01-ts-neptune.md",
+      "validated_date": "2026-03-11",
+      "report": "2026-03-11-ts-olympos-vs-imperialdramon.md",
       "status": "PASS",
-      "notes": "Play cost 3 correct. On Play reveals top 3, adds TS card. Start of Turn return-and-play effect triggers at turn boundary."
+      "notes": "Cost 3 correct, On Play reveal works"
     },
     "BT24-085": {
       "card_name": "Dan Yuki & Kanan Yuki",
@@ -1115,10 +1115,10 @@
     },
     "BT24-090": {
       "card_name": "Abyss Sanctuary: Throne Room",
-      "validated_date": "2026-03-03",
-      "report": "2026-03-03-ts-neptune-gameplay.md",
+      "validated_date": "2026-03-11",
+      "report": "2026-03-11-ts-olympos-vs-imperialdramon.md",
       "status": "PARTIAL",
-      "notes": "Play cost 3 correct. Option trashes after resolving. Security swap mechanic (swap hand card with face-up security) not implemented."
+      "notes": "Fixes applied: [Main] rewritten to play lv4- blue/yellow TS from hand/trash free + place in battle area. Needs retest"
     },
     "BT24-091": {
       "card_name": "Tidal Stream",
@@ -1136,10 +1136,10 @@
     },
     "BT24-102": {
       "card_name": "Homeros",
-      "validated_date": "2026-03-03",
-      "report": "2026-03-03-ts-neptune-gameplay.md",
+      "validated_date": "2026-03-11",
+      "report": "2026-03-11-ts-olympos-vs-imperialdramon.md",
       "status": "PARTIAL",
-      "notes": "Play cost 5 correct. DP+1000 aura not working (engine lacks field-wide DP aura \u2014 Report 10 Issue 3). EOT effect is a stub (only suspends, no Olympos XII reactivation)."
+      "notes": "Fixes applied: engine now supports _applies_to_all_own_digimon DP auras via _get_aura_dp_modifier(). Needs retest"
     },
     "BT3-006": {
       "card_name": "DemiMeramon",
@@ -1859,6 +1859,13 @@
       "validated_date": "2026-03-03",
       "report": "2026-03-03-millennium-retest.md",
       "notes": "Play cost 5 correct. Digivolve available onto Lv3 bases. Training present."
+    },
+    "BT24-043": {
+      "card_name": "Tapirmon",
+      "validated_date": "2026-03-11",
+      "report": "2026-03-11-ts-olympos-vs-imperialdramon.md",
+      "status": "PASS",
+      "notes": "On Play reveal correct, two-pass selection works, cost 3 correct"
     }
   }
 }

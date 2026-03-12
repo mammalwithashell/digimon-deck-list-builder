@@ -84,10 +84,10 @@ class BT24_097(CardScript):
         effect2.set_on_process_callback(process2)
         effects.append(effect2)
 
-        # Timing: EffectTiming.OnAllyAttack
+        # Timing: EffectTiming.OnUseAttack
         # [When Attacking] [Once Per Turn] Delete 1 of your opponent's level 5 or higher Digimon.
         effect3 = ICardEffect()
-        effect3.set_timing(EffectTiming.OnAllyAttack)
+        effect3.set_timing(EffectTiming.OnUseAttack)
         effect3.set_effect_name("BT24-097 Delete 1 opponent's level 5 or lower Digimon.")
         effect3.set_effect_description("[When Attacking] [Once Per Turn] Delete 1 of your opponent's level 5 or higher Digimon.")
         effect3.set_max_count_per_turn(1)

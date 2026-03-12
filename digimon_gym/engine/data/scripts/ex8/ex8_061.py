@@ -44,10 +44,10 @@ class EX8_061(CardScript):
         effect1.set_can_use_condition(condition1)
         effects.append(effect1)
 
-        # Timing: EffectTiming.OnAllyAttack
+        # Timing: EffectTiming.OnUseAttack
         # [When Attacking] [Once Per Turn] If you have 1 or more memory, you may play 1 level 4 or lower Digimon card with the [DS], [Mollusk], or [Crustacean] trait from your trash without paying the cost.
         effect2 = ICardEffect()
-        effect2.set_timing(EffectTiming.OnAllyAttack)
+        effect2.set_timing(EffectTiming.OnUseAttack)
         effect2.set_effect_name("EX8-061 You may play 1 level 4 or lower Digimon")
         effect2.set_effect_description("[When Attacking] [Once Per Turn] If you have 1 or more memory, you may play 1 level 4 or lower Digimon card with the [DS], [Mollusk], or [Crustacean] trait from your trash without paying the cost.")
         effect2.is_optional = True

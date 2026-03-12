@@ -62,10 +62,10 @@ class BT11_073(CardScript):
         effect1.set_on_process_callback(process1)
         effects.append(effect1)
 
-        # Timing: EffectTiming.OnAllyAttack
+        # Timing: EffectTiming.OnUseAttack
         # [When Attacking] If you have a Tamer in play, this Digimon can digivolve into a Digimon card with [Justimon] in its name other than [Justimon: Accel Arm] in your hand for a digivolution cost of 2, ignoring its digivolution requirements.
         effect2 = ICardEffect()
-        effect2.set_timing(EffectTiming.OnAllyAttack)
+        effect2.set_timing(EffectTiming.OnUseAttack)
         effect2.set_effect_name("BT11-073 This Digimon digivolves into a card with [Justimon] in its name")
         effect2.set_effect_description("[When Attacking] If you have a Tamer in play, this Digimon can digivolve into a Digimon card with [Justimon] in its name other than [Justimon: Accel Arm] in your hand for a digivolution cost of 2, ignoring its digivolution requirements.")
         effect2.is_optional = True

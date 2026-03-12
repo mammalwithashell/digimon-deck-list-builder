@@ -67,10 +67,10 @@ class BT22_085(CardScript):
         effect1.set_on_process_callback(process1)
         effects.append(effect1)
 
-        # Timing: EffectTiming.OnAllyAttack
+        # Timing: EffectTiming.OnUseAttack
         # [Your Turn] When one of your Digimon with [Veedramon] in its name attacks, by returning this Tamer to the hand, that Digimon gains <Jamming> for the turn. (This Digimon can't be deleted in battles against Security Digimon.)
         effect2 = ICardEffect()
-        effect2.set_timing(EffectTiming.OnAllyAttack)
+        effect2.set_timing(EffectTiming.OnUseAttack)
         effect2.set_effect_name("BT22-085 Bounce this tamer to hand, give attacking digimon <Jamming>")
         effect2.set_effect_description("[Your Turn] When one of your Digimon with [Veedramon] in its name attacks, by returning this Tamer to the hand, that Digimon gains <Jamming> for the turn. (This Digimon can't be deleted in battles against Security Digimon.)")
         effect2.is_optional = True

@@ -87,10 +87,10 @@ class BT23_094(CardScript):
         effect2.set_can_use_condition(condition2)
         effects.append(effect2)
 
-        # Timing: EffectTiming.OnAllyAttack
+        # Timing: EffectTiming.OnUseAttack
         # When one of your [CS] trait Digimon attacks <Delay>. Until your opponent's turn ends, give 1 of their Digimon <Security A. -1> and it can't activate [When Digivolving] or [When Attacking] effects.
         effect3 = ICardEffect()
-        effect3.set_timing(EffectTiming.OnAllyAttack)
+        effect3.set_timing(EffectTiming.OnUseAttack)
         effect3.set_effect_name("BT23-094 1 digimon gains Sec Atk -1 and cant use [When Digivolving] & [When Attacking effects].")
         effect3.set_effect_description("When one of your [CS] trait Digimon attacks <Delay>. Until your opponent's turn ends, give 1 of their Digimon <Security A. -1> and it can't activate [When Digivolving] or [When Attacking] effects.")
         effect3.is_optional = True

@@ -14,10 +14,10 @@ class EX6_003(CardScript):
     def get_card_effects(self, card: 'CardSource') -> List['ICardEffect']:
         effects = []
 
-        # Timing: EffectTiming.OnAllyAttack
+        # Timing: EffectTiming.OnUseAttack
         # [When Attacking] [Once Per Turn] By adding the top card of your security stack to the hand, you may place 1 Digimon card with the [Angel]/[Archangel]/[Three Great Angels] trait from your hand at the bottom of your security stack.
         effect0 = ICardEffect()
-        effect0.set_timing(EffectTiming.OnAllyAttack)
+        effect0.set_timing(EffectTiming.OnUseAttack)
         effect0.set_effect_name("EX6-003 Add 1 card from top of security to hand to place 1 card from hand at the bottom of security")
         effect0.set_effect_description("[When Attacking] [Once Per Turn] By adding the top card of your security stack to the hand, you may place 1 Digimon card with the [Angel]/[Archangel]/[Three Great Angels] trait from your hand at the bottom of your security stack.")
         effect0.is_inherited_effect = True

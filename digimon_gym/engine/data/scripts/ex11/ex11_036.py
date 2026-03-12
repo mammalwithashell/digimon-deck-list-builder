@@ -121,10 +121,10 @@ class EX11_036(CardScript):
         effect3.set_on_process_callback(process3)
         effects.append(effect3)
 
-        # Timing: EffectTiming.OnAllyAttack
+        # Timing: EffectTiming.OnUseAttack
         # Suspend, Gain Keyword Cannot Unsuspend
         effect4 = ICardEffect()
-        effect4.set_timing(EffectTiming.OnAllyAttack)
+        effect4.set_timing(EffectTiming.OnUseAttack)
         effect4.set_effect_name("EX11-036 Suspend, Gain Keyword Cannot Unsuspend")
         effect4.set_effect_description("Suspend, Gain Keyword Cannot Unsuspend")
         effect4.is_on_attack = True

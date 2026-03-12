@@ -104,10 +104,10 @@ class BT22_013(CardScript):
         effect2.set_on_process_callback(process2)
         effects.append(effect2)
 
-        # Timing: EffectTiming.OnAllyAttack
+        # Timing: EffectTiming.OnUseAttack
         # [When Attacking] [Once Per Turn] If this Digimon has [Omnimon] in its name, trash your opponent's top security card.
         effect3 = ICardEffect()
-        effect3.set_timing(EffectTiming.OnAllyAttack)
+        effect3.set_timing(EffectTiming.OnUseAttack)
         effect3.set_effect_name("BT22-013 Trash the top card of opponent's security")
         effect3.set_effect_description("[When Attacking] [Once Per Turn] If this Digimon has [Omnimon] in its name, trash your opponent's top security card.")
         effect3.is_inherited_effect = True

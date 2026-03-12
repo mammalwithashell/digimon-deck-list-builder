@@ -110,7 +110,7 @@ class EX5_061(CardScript):
         effects.append(effect2)
 
         effect3 = ICardEffect()
-        effect3.set_timing(EffectTiming.OnAllyAttack)
+        effect3.set_timing(EffectTiming.OnUseAttack)
         effect3.set_effect_name("EX5-061 Delete your another Digimon to unsuspend this Digimon")
         effect3.set_effect_description("[When Attacking] [Once Per Turn] By deleting 1 of your other Digimon, unsuspend this Digimon.")
         effect3.is_inherited_effect = True

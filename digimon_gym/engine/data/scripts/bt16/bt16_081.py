@@ -50,10 +50,10 @@ class BT16_081(CardScript):
         effect0.set_on_process_callback(process0)
         effects.append(effect0)
 
-        # Timing: EffectTiming.OnAllyAttack
+        # Timing: EffectTiming.OnUseAttack
         # [When Attacking] By deleting one of your Digimon or Tamers, delete 1 of your opponent's unsuspended Digimon. If no Digimon is deleted by this effect, delete one of your opponent's tamers.
         effect1 = ICardEffect()
-        effect1.set_timing(EffectTiming.OnAllyAttack)
+        effect1.set_timing(EffectTiming.OnUseAttack)
         effect1.set_effect_name("BT16-081 Delete your Digimon or Tamer to delete an opponent's unsuspended Digimon. Otherwise delete 1 of your opponent's tamers.")
         effect1.set_effect_description("[When Attacking] By deleting one of your Digimon or Tamers, delete 1 of your opponent's unsuspended Digimon. If no Digimon is deleted by this effect, delete one of your opponent's tamers.")
         effect1.is_on_attack = True

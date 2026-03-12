@@ -48,10 +48,10 @@ class BT15_029(CardScript):
         effect1.set_can_use_condition(condition1)
         effects.append(effect1)
 
-        # Timing: EffectTiming.OnAllyAttack
+        # Timing: EffectTiming.OnUseAttack
         # [When Attacking] [Once Per Turn] By placing 1 of your other blue Digimon as this Digimon's bottom digivolution card, unsuspend this Digimon.
         effect2 = ICardEffect()
-        effect2.set_timing(EffectTiming.OnAllyAttack)
+        effect2.set_timing(EffectTiming.OnUseAttack)
         effect2.set_effect_name("BT15-029 Unsuspend this Digimon, by placing 1 blue Digimon as bottom source")
         effect2.set_effect_description("[When Attacking] [Once Per Turn] By placing 1 of your other blue Digimon as this Digimon's bottom digivolution card, unsuspend this Digimon.")
         effect2.is_inherited_effect = True

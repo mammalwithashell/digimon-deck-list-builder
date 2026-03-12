@@ -123,10 +123,10 @@ class BT22_028(CardScript):
         effect3.set_on_process_callback(process3)
         effects.append(effect3)
 
-        # Timing: EffectTiming.OnAllyAttack
+        # Timing: EffectTiming.OnUseAttack
         # [When Attacking] [Once Per Turn] By placing 1 of your other Digimon as this Digimon's bottom digivolution card, return 1 of your opponent's Digimon to the bottom of the deck and this Digimon unsuspends.
         effect4 = ICardEffect()
-        effect4.set_timing(EffectTiming.OnAllyAttack)
+        effect4.set_timing(EffectTiming.OnUseAttack)
         effect4.set_effect_name("BT22-028 Place 1 digimon as bottom source, bottom deck 1 digimon & unsuspend")
         effect4.set_effect_description("[When Attacking] [Once Per Turn] By placing 1 of your other Digimon as this Digimon's bottom digivolution card, return 1 of your opponent's Digimon to the bottom of the deck and this Digimon unsuspends.")
         effect4.is_optional = True

@@ -32,10 +32,10 @@ class EX11_049(CardScript):
         effect0.set_can_use_condition(condition0)
         effects.append(effect0)
 
-        # Timing: EffectTiming.OnAllyAttack
+        # Timing: EffectTiming.OnUseAttack
         # [When Attacking] Trash 2 cards in your hand. Then, this Digimon may digivolve into a [Dark Dragon] or [Evil Dragon] trait Digimon card in the trash with the digivolution cost reduced by 2.
         effect1 = ICardEffect()
-        effect1.set_timing(EffectTiming.OnAllyAttack)
+        effect1.set_timing(EffectTiming.OnUseAttack)
         effect1.set_effect_name("EX11-049 Discard 2, then may digivolve into [Dark Dragon]/[Evil Dragon] for 2 less.")
         effect1.set_effect_description("[When Attacking] Trash 2 cards in your hand. Then, this Digimon may digivolve into a [Dark Dragon] or [Evil Dragon] trait Digimon card in the trash with the digivolution cost reduced by 2.")
         effect1.is_on_attack = True

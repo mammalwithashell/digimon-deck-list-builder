@@ -144,10 +144,10 @@ class BT24_050(CardScript):
         effect3.set_on_process_callback(process3)
         effects.append(effect3)
 
-        # Timing: EffectTiming.OnAllyAttack
+        # Timing: EffectTiming.OnUseAttack
         # [When Attacking] [Once Per Turn] You may play 1 4000 DP or lower Digimon card with the [Iliad] trait or [Beast], [Animal] or [Sovereign], other than [Sea Animal], in any of its traits from your hand without paying the cost.
         effect4 = ICardEffect()
-        effect4.set_timing(EffectTiming.OnAllyAttack)
+        effect4.set_timing(EffectTiming.OnUseAttack)
         effect4.set_effect_name("BT24-050 Play a Digimon")
         effect4.set_effect_description("[When Attacking] [Once Per Turn] You may play 1 4000 DP or lower Digimon card with the [Iliad] trait or [Beast], [Animal] or [Sovereign], other than [Sea Animal], in any of its traits from your hand without paying the cost.")
         effect4.is_inherited_effect = True

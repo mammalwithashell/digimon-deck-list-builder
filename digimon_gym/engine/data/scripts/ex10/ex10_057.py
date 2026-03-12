@@ -133,10 +133,10 @@ class EX10_057(CardScript):
         effect2.set_on_process_callback(process2)
         effects.append(effect2)
 
-        # Timing: EffectTiming.OnAllyAttack
+        # Timing: EffectTiming.OnUseAttack
         # [When Attacking] Delete 1 of your opponent's unsuspended Digimon.
         effect3 = ICardEffect()
-        effect3.set_timing(EffectTiming.OnAllyAttack)
+        effect3.set_timing(EffectTiming.OnUseAttack)
         effect3.set_effect_name("EX10-057 Delete 1 unsuspended Digimon")
         effect3.set_effect_description("[When Attacking] Delete 1 of your opponent's unsuspended Digimon.")
         effect3.is_on_attack = True

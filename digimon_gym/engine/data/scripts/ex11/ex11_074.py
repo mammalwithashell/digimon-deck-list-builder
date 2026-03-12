@@ -95,10 +95,10 @@ class EX11_074(CardScript):
         effect3.set_on_process_callback(process3)
         effects.append(effect3)
 
-        # Timing: EffectTiming.OnAllyAttack
+        # Timing: EffectTiming.OnUseAttack
         # Suspend, Effect Immunity
         effect4 = ICardEffect()
-        effect4.set_timing(EffectTiming.OnAllyAttack)
+        effect4.set_timing(EffectTiming.OnUseAttack)
         effect4.set_effect_name("EX11-074 Suspend, Effect Immunity")
         effect4.set_effect_description("Suspend, Effect Immunity")
         effect4.is_on_attack = True

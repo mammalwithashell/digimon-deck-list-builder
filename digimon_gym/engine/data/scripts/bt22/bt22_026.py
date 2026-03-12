@@ -104,10 +104,10 @@ class BT22_026(CardScript):
         effect2.set_on_process_callback(process2)
         effects.append(effect2)
 
-        # Timing: EffectTiming.OnAllyAttack
+        # Timing: EffectTiming.OnUseAttack
         # [When Attacking] [Once Per Turn] If this Digimon has [Omnimon] in its name, it unsuspends.
         effect3 = ICardEffect()
-        effect3.set_timing(EffectTiming.OnAllyAttack)
+        effect3.set_timing(EffectTiming.OnUseAttack)
         effect3.set_effect_name("BT22-026 Unsuspend this digimon")
         effect3.set_effect_description("[When Attacking] [Once Per Turn] If this Digimon has [Omnimon] in its name, it unsuspends.")
         effect3.is_inherited_effect = True

@@ -14,10 +14,10 @@ class BT13_026(CardScript):
     def get_card_effects(self, card: 'CardSource') -> List['ICardEffect']:
         effects = []
 
-        # Timing: EffectTiming.OnAllyAttack
+        # Timing: EffectTiming.OnUseAttack
         # [When Attacking] <Draw 1> (Draw 1 card from your deck.)
         effect0 = ICardEffect()
-        effect0.set_timing(EffectTiming.OnAllyAttack)
+        effect0.set_timing(EffectTiming.OnUseAttack)
         effect0.set_effect_name("BT13-026 Draw 1")
         effect0.set_effect_description("[When Attacking] <Draw 1> (Draw 1 card from your deck.)")
         effect0.is_on_attack = True
@@ -42,10 +42,10 @@ class BT13_026(CardScript):
         effect0.set_on_process_callback(process0)
         effects.append(effect0)
 
-        # Timing: EffectTiming.OnAllyAttack
+        # Timing: EffectTiming.OnUseAttack
         # [When Attacking] Trash the digivolution card at the bottom of 1 of your opponent's Digimon.
         effect1 = ICardEffect()
-        effect1.set_timing(EffectTiming.OnAllyAttack)
+        effect1.set_timing(EffectTiming.OnUseAttack)
         effect1.set_effect_name("BT13-026 Trash 1 digivolution card")
         effect1.set_effect_description("[When Attacking] Trash the digivolution card at the bottom of 1 of your opponent's Digimon.")
         effect1.is_inherited_effect = True

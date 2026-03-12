@@ -66,10 +66,10 @@ class EX10_016(CardScript):
         effect1.set_on_process_callback(process1)
         effects.append(effect1)
 
-        # Timing: EffectTiming.OnAllyAttack
+        # Timing: EffectTiming.OnUseAttack
         # [When Attacking] By trashing 1 of this Digimon's link cards, suspend 2 of your opponent's Digimon.
         effect2 = ICardEffect()
-        effect2.set_timing(EffectTiming.OnAllyAttack)
+        effect2.set_timing(EffectTiming.OnUseAttack)
         effect2.set_effect_name("EX10-016 Suspend 2 digimon")
         effect2.set_effect_description("[When Attacking] By trashing 1 of this Digimon's link cards, suspend 2 of your opponent's Digimon.")
         effect2.is_optional = True

@@ -45,10 +45,10 @@ class P_160(CardScript):
         effect1.set_can_use_condition(condition1)
         effects.append(effect1)
 
-        # Timing: EffectTiming.OnAllyAttack
+        # Timing: EffectTiming.OnUseAttack
         # [When Attacking] If a card with [Tyrannomon] in its name or [X Antibody] is in this Digimon's digivolution cards, this Digimon may digivolve into a Digimon card with [Tyrannomon] in its name or the [Dinosaur] trait in the hand with the digivolution cost reduced by 1.
         effect2 = ICardEffect()
-        effect2.set_timing(EffectTiming.OnAllyAttack)
+        effect2.set_timing(EffectTiming.OnUseAttack)
         effect2.set_effect_name("P-160 This Digimon digivolves")
         effect2.set_effect_description("[When Attacking] If a card with [Tyrannomon] in its name or [X Antibody] is in this Digimon's digivolution cards, this Digimon may digivolve into a Digimon card with [Tyrannomon] in its name or the [Dinosaur] trait in the hand with the digivolution cost reduced by 1.")
         effect2.is_optional = True

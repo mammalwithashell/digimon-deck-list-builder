@@ -26,10 +26,10 @@ class BT13_032(CardScript):
         effect0.set_can_use_condition(condition0)
         effects.append(effect0)
 
-        # Timing: EffectTiming.OnAllyAttack
+        # Timing: EffectTiming.OnUseAttack
         # [Opponent's Turn] When an opponent's Digimon attacks, you may play 1 level 5 or lower Digimon card from this Digimon's digivolution cards without paying the cost.
         effect1 = ICardEffect()
-        effect1.set_timing(EffectTiming.OnAllyAttack)
+        effect1.set_timing(EffectTiming.OnUseAttack)
         effect1.set_effect_name("BT13-032 Play 1 digivolution card")
         effect1.set_effect_description("[Opponent's Turn] When an opponent's Digimon attacks, you may play 1 level 5 or lower Digimon card from this Digimon's digivolution cards without paying the cost.")
         effect1.is_optional = True

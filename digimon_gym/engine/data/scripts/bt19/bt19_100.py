@@ -14,10 +14,10 @@ class BT19_100(CardScript):
     def get_card_effects(self, card: 'CardSource') -> List['ICardEffect']:
         effects = []
 
-        # Timing: EffectTiming.OnAllyAttack
+        # Timing: EffectTiming.OnUseAttack
         # [Security] [Opponent's Turn] When an opponent's Digimon attacks, if all of your Digimon and Tamers have the [D-Reaper] trait, for each of 1 of your [Mother D-Reaper]'s digivolution cards, the attacking Digimon get -1000 DP for the turn.
         effect0 = ICardEffect()
-        effect0.set_timing(EffectTiming.OnAllyAttack)
+        effect0.set_timing(EffectTiming.OnUseAttack)
         effect0.set_effect_name("BT19-100 -1000DP for each digivolution source")
         effect0.set_effect_description("[Security] [Opponent's Turn] When an opponent's Digimon attacks, if all of your Digimon and Tamers have the [D-Reaper] trait, for each of 1 of your [Mother D-Reaper]'s digivolution cards, the attacking Digimon get -1000 DP for the turn.")
         effect0.is_on_attack = True

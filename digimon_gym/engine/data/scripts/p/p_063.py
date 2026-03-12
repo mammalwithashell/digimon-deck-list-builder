@@ -14,10 +14,10 @@ class P_063(CardScript):
     def get_card_effects(self, card: 'CardSource') -> List['ICardEffect']:
         effects = []
 
-        # Timing: EffectTiming.OnAllyAttack
+        # Timing: EffectTiming.OnUseAttack
         # [Your Turn] When you attack with a Digimon that has [Angoramon] in its digivolution cards, you may suspend this Tamer to have that Digimon get +3000 DP for the turn.
         effect0 = ICardEffect()
-        effect0.set_timing(EffectTiming.OnAllyAttack)
+        effect0.set_timing(EffectTiming.OnUseAttack)
         effect0.set_effect_name("P-063 DP +3000")
         effect0.set_effect_description("[Your Turn] When you attack with a Digimon that has [Angoramon] in its digivolution cards, you may suspend this Tamer to have that Digimon get +3000 DP for the turn.")
         effect0.is_optional = True

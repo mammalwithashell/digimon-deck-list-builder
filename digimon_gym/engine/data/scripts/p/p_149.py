@@ -14,10 +14,10 @@ class P_149(CardScript):
     def get_card_effects(self, card: 'CardSource') -> List['ICardEffect']:
         effects = []
 
-        # Timing: EffectTiming.OnAllyAttack
+        # Timing: EffectTiming.OnUseAttack
         # [When Attacking] [Once Per Turn] If this Digimon is multicolored, by trashing 1 card in your hand, delete 1 of your opponent's level 3 Digimon.
         effect0 = ICardEffect()
-        effect0.set_timing(EffectTiming.OnAllyAttack)
+        effect0.set_timing(EffectTiming.OnUseAttack)
         effect0.set_effect_name("P-149 By trashing 1 card in hand, Delete opponents level 3 Digimon")
         effect0.set_effect_description("[When Attacking] [Once Per Turn] If this Digimon is multicolored, by trashing 1 card in your hand, delete 1 of your opponent's level 3 Digimon.")
         effect0.is_inherited_effect = True

@@ -68,10 +68,10 @@ class EX10_052(CardScript):
         effect1.set_on_process_callback(process1)
         effects.append(effect1)
 
-        # Timing: EffectTiming.OnAllyAttack
+        # Timing: EffectTiming.OnUseAttack
         # [When Attacking] By trashing 1 card in your hand, your opponent may delete 1 of their Digimon or Tamers. If this effect didn't delete, <Recovery +1 (Deck)> (Place the top card of your deck on top of your security stack.)
         effect2 = ICardEffect()
-        effect2.set_timing(EffectTiming.OnAllyAttack)
+        effect2.set_timing(EffectTiming.OnUseAttack)
         effect2.set_effect_name("EX10-052 By trashing 1 card in hand, your opponent may delete a digimon or tamer. if they didnt Recover +1")
         effect2.set_effect_description("[When Attacking] By trashing 1 card in your hand, your opponent may delete 1 of their Digimon or Tamers. If this effect didn't delete, <Recovery +1 (Deck)> (Place the top card of your deck on top of your security stack.)")
         effect2.is_on_attack = True

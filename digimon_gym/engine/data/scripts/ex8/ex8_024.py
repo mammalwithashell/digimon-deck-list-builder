@@ -99,10 +99,10 @@ class EX8_024(CardScript):
         effect2.set_on_process_callback(process2)
         effects.append(effect2)
 
-        # Timing: EffectTiming.OnAllyAttack
+        # Timing: EffectTiming.OnUseAttack
         # [When Attacking] [Once Per Turn] If you have 1 or more memory, 1 of your opponent's Digimon can't suspend until the end of their turn.
         effect3 = ICardEffect()
-        effect3.set_timing(EffectTiming.OnAllyAttack)
+        effect3.set_timing(EffectTiming.OnUseAttack)
         effect3.set_effect_name("EX8-024 1 opponents digimon can't suspend")
         effect3.set_effect_description("[When Attacking] [Once Per Turn] If you have 1 or more memory, 1 of your opponent's Digimon can't suspend until the end of their turn.")
         effect3.set_max_count_per_turn(1)
@@ -133,10 +133,10 @@ class EX8_024(CardScript):
         effect3.set_on_process_callback(process3)
         effects.append(effect3)
 
-        # Timing: EffectTiming.OnAllyAttack
+        # Timing: EffectTiming.OnUseAttack
         # [When Attacking] [Once Per Turn] By placing 1 of your other Digimon as this Digimon's bottom digivolution card, it unsuspends.
         effect4 = ICardEffect()
-        effect4.set_timing(EffectTiming.OnAllyAttack)
+        effect4.set_timing(EffectTiming.OnUseAttack)
         effect4.set_effect_name("EX8-024 Place 1 of your other Digimon as this Digimon's bottom digivolution card to unsuspend this Digimon.")
         effect4.set_effect_description("[When Attacking] [Once Per Turn] By placing 1 of your other Digimon as this Digimon's bottom digivolution card, it unsuspends.")
         effect4.is_inherited_effect = True

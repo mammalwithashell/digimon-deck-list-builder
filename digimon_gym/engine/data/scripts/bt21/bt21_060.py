@@ -97,10 +97,10 @@ class BT21_060(CardScript):
         effect2.set_on_process_callback(process2)
         effects.append(effect2)
 
-        # Timing: EffectTiming.OnAllyAttack
+        # Timing: EffectTiming.OnUseAttack
         # [Opponent's Turn] [Once Per Turn] When one of your opponent's Digimon attacks, by returning 2 [Vemmon] from this Digimon's digivolution cards to the bottom of the deck, end that attack.
         effect3 = ICardEffect()
-        effect3.set_timing(EffectTiming.OnAllyAttack)
+        effect3.set_timing(EffectTiming.OnUseAttack)
         effect3.set_effect_name("BT21-060 Return 2 [Vemmon] from source to bottom of deck to end the attack")
         effect3.set_effect_description("[Opponent's Turn] [Once Per Turn] When one of your opponent's Digimon attacks, by returning 2 [Vemmon] from this Digimon's digivolution cards to the bottom of the deck, end that attack.")
         effect3.is_inherited_effect = True

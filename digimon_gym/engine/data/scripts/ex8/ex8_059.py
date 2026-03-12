@@ -186,10 +186,10 @@ class EX8_059(CardScript):
         effect4.set_on_process_callback(process4)
         effects.append(effect4)
 
-        # Timing: EffectTiming.OnAllyAttack
+        # Timing: EffectTiming.OnUseAttack
         # [When Attacking] [Once Per Turn] <Draw 1> and trash 1 card in your hand.
         effect5 = ICardEffect()
-        effect5.set_timing(EffectTiming.OnAllyAttack)
+        effect5.set_timing(EffectTiming.OnUseAttack)
         effect5.set_effect_name("EX8-059 Draw 1 and trash 1 card from hand")
         effect5.set_effect_description("[When Attacking] [Once Per Turn] <Draw 1> and trash 1 card in your hand.")
         effect5.is_inherited_effect = True

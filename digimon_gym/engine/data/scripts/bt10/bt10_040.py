@@ -42,10 +42,10 @@ class BT10_040(CardScript):
         effect0.set_on_process_callback(process0)
         effects.append(effect0)
 
-        # Timing: EffectTiming.OnAllyAttack
+        # Timing: EffectTiming.OnUseAttack
         # [When Attacking][Once Per Turn] If you have 3 or more security cards, 1 of your opponent's Digimon gets -5000 DP for the turn. If you have 3 or fewer security cards, gain 2 memory.
         effect1 = ICardEffect()
-        effect1.set_timing(EffectTiming.OnAllyAttack)
+        effect1.set_timing(EffectTiming.OnUseAttack)
         effect1.set_effect_name("BT10-040 Opponent's 1 Digimon gets DP -5000 or get Memory +2")
         effect1.set_effect_description("[When Attacking][Once Per Turn] If you have 3 or more security cards, 1 of your opponent's Digimon gets -5000 DP for the turn. If you have 3 or fewer security cards, gain 2 memory.")
         effect1.set_max_count_per_turn(1)

@@ -29,10 +29,10 @@ class BT11_076(CardScript):
         effect0.set_can_use_condition(condition0)
         effects.append(effect0)
 
-        # Timing: EffectTiming.OnAllyAttack
+        # Timing: EffectTiming.OnUseAttack
         # [When Attacking] By deleting 1 of your other Digimon, delete 1 of your opponent's unsuspended Digimon with a level less than or equal to the deleted Digimon's level.
         effect1 = ICardEffect()
-        effect1.set_timing(EffectTiming.OnAllyAttack)
+        effect1.set_timing(EffectTiming.OnUseAttack)
         effect1.set_effect_name("BT11-076 Delete your 1 Digimon and delete 1 unsuspended Digimon")
         effect1.set_effect_description("[When Attacking] By deleting 1 of your other Digimon, delete 1 of your opponent's unsuspended Digimon with a level less than or equal to the deleted Digimon's level.")
         effect1.is_optional = True

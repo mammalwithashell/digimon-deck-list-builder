@@ -15,19 +15,64 @@ class BT24_028(CardScript):
         effects = []
 
         # Factory effect: alt_digivolve_req
-        # Alternate digivolution requirement
+        # Alternate digivolution: Lv.4 with [Aqua] or [TS] trait for cost 3
         effect0 = ICardEffect()
         effect0.set_effect_name("BT24-028 Alternate digivolution requirement")
         effect0.set_effect_description("Alternate digivolution requirement")
-        # Alternate digivolution: Lv.4 with [TS] trait for cost 3
         effect0._alt_digi_cost = 3
         effect0._alt_digi_level = 4
-        effect0._alt_digi_trait = "TS"
+        # C# checks HasAquaTraits OR HasTSTraits — use multi-trait alt digi
+        effect0._alt_digi_trait = "Aqua|TS"
 
         def condition0(context: Dict[str, Any]) -> bool:
             return True
         effect0.set_can_use_condition(condition0)
         effects.append(effect0)
+
+        # Shared helper: tuck filter for On Play / When Digivolving
+        # C# CardCondition: IsDigimon && Level <= 5 && Blue && HasTSTraits
+        def _tuck_card_ok(c) -> bool:
+            if not getattr(c, 'is_digimon', False):
+                return False
+            level = getattr(c, 'level', None)
+            if level is None or level > 5:
+                return False
+            colors = [col.name for col in (getattr(c, 'card_colors', None) or [])]
+            if 'Blue' not in colors:
+                return False
+            traits = getattr(c, 'card_traits', []) or []
+            return any('TS' in t for t in traits)
+
+        def _shared_process(ctx: Dict[str, Any]):
+            """By tucking a Lv.5- blue TS Digimon from hand, gain Blocker + cannot be deleted in battle until opp turn ends."""
+            player = ctx.get('player')
+            perm = ctx.get('permanent')
+            game = ctx.get('game')
+            if not (player and perm and game):
+                return
+
+            def on_tuck(selected):
+                if selected is None:
+                    return
+                # Place selected card as bottom digivolution card
+                if selected in player.hand_cards:
+                    player.hand_cards.remove(selected)
+                perm.card_sources.insert(0, selected)
+                # Verify it was actually placed (matches C# check)
+                if selected not in perm.card_sources:
+                    return
+                # Grant Blocker and cannot-be-deleted-by-battle until opponent's turn ends
+                from digimon_gym.engine.interfaces.modifiers import ModifierType
+                game.register_modifier(
+                    ModifierType.GRANT_BLOCKER, perm,
+                    value_fn=lambda: True, expiry='end_of_opponent_turn')
+                game.register_modifier(
+                    ModifierType.CANNOT_BE_DESTROYED_BY_BATTLE, perm,
+                    value_fn=lambda: True, expiry='end_of_opponent_turn')
+
+            game.effect_select_hand_card(
+                player, _tuck_card_ok, on_tuck, is_optional=True,
+                prompt="Select 1 level 5 or lower blue [TS] Digimon to place as bottom digivolution card.")
 
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [On Play] By placing 1 level 5 or lower blue [TS] trait Digimon card from your hand as this Digimon's bottom digivolution card, until your opponent's turn ends, this Digimon can't be deleted in battle and gains <Blocker>
@@ -36,28 +81,18 @@ class BT24_028(CardScript):
         effect1.set_effect_name("BT24-028 By placing 1 level 5 or lower [TS digimon] as bottom source card, gain battle immunity & <Blocker>")
         effect1.set_effect_description("[On Play] By placing 1 level 5 or lower blue [TS] trait Digimon card from your hand as this Digimon's bottom digivolution card, until your opponent's turn ends, this Digimon can't be deleted in battle and gains <Blocker>")
         effect1.is_on_play = True
-        effect1._is_blocker = True
-        effect1._is_cannot_be_deleted_by_battle = True
+        effect1.is_optional = True
 
-        effect = effect1  # alias for condition closure
         def condition1(context: Dict[str, Any]) -> bool:
             if card and card.permanent_of_this_card() is None:
                 return False
-            # Triggered on play — validated by engine timing
-            return True
+            player = card.owner if card else None
+            if not player:
+                return False
+            return any(_tuck_card_ok(c) for c in player.hand_cards)
 
         effect1.set_can_use_condition(condition1)
-
-        def process1(ctx: Dict[str, Any]):
-            """Action: Gain Keyword Blocker, Gain Keyword Cannot Be Deleted By Battle"""
-            player = ctx.get('player')
-            perm = ctx.get('permanent')
-            game = ctx.get('game')
-            if perm:
-                perm.grant_keyword('_is_blocker')
-                perm.grant_keyword('_is_cannot_be_deleted_by_battle')
-
-        effect1.set_on_process_callback(process1)
+        effect1.set_on_process_callback(_shared_process)
         effects.append(effect1)
 
         # Timing: EffectTiming.OnEnterFieldAnyone
@@ -67,68 +102,72 @@ class BT24_028(CardScript):
         effect2.set_effect_name("BT24-028 By placing 1 level 5 or lower [TS digimon] as bottom source card, gain battle immunity & <Blocker>")
         effect2.set_effect_description("[When Digivolving] By placing 1 level 5 or lower blue [TS] trait Digimon card from your hand as this Digimon's bottom digivolution card, until your opponent's turn ends, this Digimon can't be deleted in battle and gains <Blocker>")
         effect2.is_when_digivolving = True
-        effect2._is_blocker = True
-        effect2._is_cannot_be_deleted_by_battle = True
+        effect2.is_optional = True
 
-        effect = effect2  # alias for condition closure
         def condition2(context: Dict[str, Any]) -> bool:
             if card and card.permanent_of_this_card() is None:
                 return False
-            # Triggered when digivolving — validated by engine timing
-            return True
+            player = card.owner if card else None
+            if not player:
+                return False
+            return any(_tuck_card_ok(c) for c in player.hand_cards)
 
         effect2.set_can_use_condition(condition2)
-
-        def process2(ctx: Dict[str, Any]):
-            """Action: Gain Keyword Blocker, Gain Keyword Cannot Be Deleted By Battle"""
-            player = ctx.get('player')
-            perm = ctx.get('permanent')
-            game = ctx.get('game')
-            if perm:
-                perm.grant_keyword('_is_blocker')
-                perm.grant_keyword('_is_cannot_be_deleted_by_battle')
-
-        effect2.set_on_process_callback(process2)
+        effect2.set_on_process_callback(_shared_process)
         effects.append(effect2)
 
         # Timing: EffectTiming.OnUnTappedAnyone
         # [Your Turn] When this Digimon unsuspends, it may digivolve into [Neptunemon] in the hand without paying the cost.
+        # C# condition: CanTriggerWhenSelfPermanentUnsuspends (self unsuspend trigger) + HasMatchConditionOwnersHand for Neptunemon + IsOwnerTurn
         effect3 = ICardEffect()
         effect3.set_timing(EffectTiming.OnUnTappedAnyone)
         effect3.set_effect_name("BT24-028 You may digivolve into [Neptunemon]")
         effect3.set_effect_description("[Your Turn] When this Digimon unsuspends, it may digivolve into [Neptunemon] in the hand without paying the cost.")
+        effect3.is_optional = True
 
-        effect = effect3  # alias for condition closure
         def condition3(context: Dict[str, Any]) -> bool:
             if card and card.permanent_of_this_card() is None:
                 return False
+            # Must be owner's turn
             if not (card and card.owner and card.owner.is_my_turn):
                 return False
-            return True
+            # Must be self-unsuspend trigger
+            unsuspended_perm = context.get('permanent') or context.get('unsuspended_permanent')
+            my_perm = card.permanent_of_this_card() if card else None
+            if unsuspended_perm and my_perm and unsuspended_perm is not my_perm:
+                return False
+            # Must have Neptunemon in hand
+            player = card.owner if card else None
+            if not player:
+                return False
+            return any(
+                any('Neptunemon' in _n for _n in getattr(c, 'card_names', []))
+                for c in player.hand_cards
+            )
 
         effect3.set_can_use_condition(condition3)
 
         def process3(ctx: Dict[str, Any]):
-            """Action: Digivolve"""
+            """Digivolve into Neptunemon from hand for free."""
             player = ctx.get('player')
             perm = ctx.get('permanent')
             game = ctx.get('game')
             if not (player and perm and game):
                 return
             def digi_filter(c):
-                if not (any('Neptunemon' in _n for _n in getattr(c, 'card_names', []))):
-                    return False
-                return True
+                return any('Neptunemon' in _n for _n in getattr(c, 'card_names', []))
             game.effect_digivolve_from_hand(
                 player, perm, digi_filter, is_optional=True)
 
         effect3.set_on_process_callback(process3)
         effects.append(effect3)
 
-        # Timing: EffectTiming.OnAllyAttack
+        # Timing: EffectTiming.OnUseAttack (inherited When Attacking)
         # [When Attacking] [Once Per Turn] You may play 1 level 4 or lower blue Digimon card with the [TS] trait from this Digimon's digivolution cards without paying the cost.
+        # NOTE: C# CardCondition does NOT check HasTSTraits — only IsDigimon + Blue + Level<=4
+        # However card text specifies [TS] trait. Keep TS check to match card text.
         effect4 = ICardEffect()
-        effect4.set_timing(EffectTiming.OnAllyAttack)
+        effect4.set_timing(EffectTiming.OnUseAttack)
         effect4.set_effect_name("BT24-028 Play 1 level 4 or lower blue [TS] digimon in digivolution sources")
         effect4.set_effect_description("[When Attacking] [Once Per Turn] You may play 1 level 4 or lower blue Digimon card with the [TS] trait from this Digimon's digivolution cards without paying the cost.")
         effect4.is_inherited_effect = True
@@ -137,60 +176,53 @@ class BT24_028(CardScript):
         effect4.set_hash_string("BT24_028_ESS")
         effect4.is_on_attack = True
 
+        def _digi_source_filter(cs, check_ts=True) -> bool:
+            if not getattr(cs, 'is_digimon', False):
+                return False
+            level = getattr(cs, 'level', None)
+            if level is None or level > 4:
+                return False
+            colors = [c.name for c in (getattr(cs, 'card_colors', None) or [])]
+            if 'Blue' not in colors:
+                return False
+            if check_ts:
+                traits = getattr(cs, 'card_traits', []) or []
+                if not any('TS' in t for t in traits):
+                    return False
+            return True
+
         def condition4(context: Dict[str, Any]) -> bool:
             if card and card.permanent_of_this_card() is None:
                 return False
             perm = card.permanent_of_this_card() if card else None
             if not perm:
                 return False
-            # Check if any eligible digi source cards exist
             top = perm.top_card
             for cs in perm.card_sources:
                 if cs is top:
                     continue
-                if not getattr(cs, 'is_digimon', False):
-                    continue
-                level = getattr(cs, 'level', None)
-                if level is None or level > 4:
-                    continue
-                colors = [c.name for c in (getattr(cs, 'card_colors', None) or [])]
-                if 'Blue' not in colors:
-                    continue
-                traits = getattr(cs, 'card_traits', []) or []
-                if any('TS' in t for t in traits):
+                if _digi_source_filter(cs):
                     return True
             return False
 
         effect4.set_can_use_condition(condition4)
 
         def process4(ctx: Dict[str, Any]):
-            """Play 1 Lv.4 or lower blue [TS] Digimon from digi sources."""
+            """Play Lv.4 or lower blue [TS] Digimon from digi sources."""
             player = ctx.get('player')
             perm = ctx.get('permanent')
             game = ctx.get('game')
             if not (player and perm and game):
                 return
-            # Find eligible cards in digi sources (not top card)
             top = perm.top_card
             eligible = []
             for cs in perm.card_sources:
                 if cs is top:
                     continue
-                if not getattr(cs, 'is_digimon', False):
-                    continue
-                level = getattr(cs, 'level', None)
-                if level is None or level > 4:
-                    continue
-                colors = [c.name for c in (getattr(cs, 'card_colors', None) or [])]
-                if 'Blue' not in colors:
-                    continue
-                traits = getattr(cs, 'card_traits', []) or []
-                if not any('TS' in t for t in traits):
-                    continue
-                eligible.append(cs)
+                if _digi_source_filter(cs):
+                    eligible.append(cs)
             if not eligible:
                 return
-            # Auto-select first eligible (digi source selection not supported)
             selected = eligible[0]
             perm.card_sources.remove(selected)
             played = player.play_card_from_source(selected, pay_cost=False)

@@ -51,10 +51,10 @@ class BT21_102(CardScript):
         effect0.set_on_process_callback(process0)
         effects.append(effect0)
 
-        # Timing: EffectTiming.OnAllyAttack
+        # Timing: EffectTiming.OnUseAttack
         # Draw 1, Suspend
         effect1 = ICardEffect()
-        effect1.set_timing(EffectTiming.OnAllyAttack)
+        effect1.set_timing(EffectTiming.OnUseAttack)
         effect1.set_effect_name("BT21-102 Suspend to draw 1")
         effect1.set_effect_description("Draw 1, Suspend")
         effect1.is_optional = True

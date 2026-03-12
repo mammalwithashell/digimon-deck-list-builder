@@ -74,10 +74,10 @@ class BT13_092(CardScript):
         effect1.set_on_process_callback(process1)
         effects.append(effect1)
 
-        # Timing: EffectTiming.OnAllyAttack
+        # Timing: EffectTiming.OnUseAttack
         # [When Attacking] By returning 1 Digimon card from your opponent's trash to the bottom of the deck, delete all of your opponent's Digimon with the same name as that card.
         effect2 = ICardEffect()
-        effect2.set_timing(EffectTiming.OnAllyAttack)
+        effect2.set_timing(EffectTiming.OnUseAttack)
         effect2.set_effect_name("BT13-092 Return opponent's 1 card from trash to the bottom of deck to delete opponent's Digimon")
         effect2.set_effect_description("[When Attacking] By returning 1 Digimon card from your opponent's trash to the bottom of the deck, delete all of your opponent's Digimon with the same name as that card.")
         effect2.is_optional = True

@@ -29,10 +29,10 @@ class BT13_069(CardScript):
         effect0.set_can_use_condition(condition0)
         effects.append(effect0)
 
-        # Timing: EffectTiming.OnAllyAttack
+        # Timing: EffectTiming.OnUseAttack
         # [When Attacking] You may play 1 level 4 or lower Digimon card with [Sukamon] in its name from your hand without paying the cost.
         effect1 = ICardEffect()
-        effect1.set_timing(EffectTiming.OnAllyAttack)
+        effect1.set_timing(EffectTiming.OnUseAttack)
         effect1.set_effect_name("BT13-069 Play 1 Digimon card with [Sukamon] in its name from hand")
         effect1.set_effect_description("[When Attacking] You may play 1 level 4 or lower Digimon card with [Sukamon] in its name from your hand without paying the cost.")
         effect1.is_optional = True

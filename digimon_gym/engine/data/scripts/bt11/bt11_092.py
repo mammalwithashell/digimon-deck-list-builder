@@ -57,10 +57,10 @@ class BT11_092(CardScript):
         effect0.set_on_process_callback(process0)
         effects.append(effect0)
 
-        # Timing: EffectTiming.OnAllyAttack
+        # Timing: EffectTiming.OnUseAttack
         # [Opponent's Turn] When an opponent's Digimon attacks a player, by suspending this Tamer, switch the target of attack to 1 of your level 6 Digimon with [Machine] in its traits.
         effect1 = ICardEffect()
-        effect1.set_timing(EffectTiming.OnAllyAttack)
+        effect1.set_timing(EffectTiming.OnUseAttack)
         effect1.set_effect_name("BT11-092 Switch Attack Target to your Digimon")
         effect1.set_effect_description("[Opponent's Turn] When an opponent's Digimon attacks a player, by suspending this Tamer, switch the target of attack to 1 of your level 6 Digimon with [Machine] in its traits.")
         effect1.is_optional = True

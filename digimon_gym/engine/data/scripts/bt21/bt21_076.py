@@ -99,10 +99,10 @@ class BT21_076(CardScript):
         effect2.set_on_process_callback(process2)
         effects.append(effect2)
 
-        # Timing: EffectTiming.OnAllyAttack
+        # Timing: EffectTiming.OnUseAttack
         # [When Attacking][Once Per Turn] This Digimon may digivolve into a Digimon card with [Megidramon] or [ChaosGallantmon] in its name in the hand. For every 10 total cards in both players' trashes, reduce this effect's digivolution cost by 1.
         effect3 = ICardEffect()
-        effect3.set_timing(EffectTiming.OnAllyAttack)
+        effect3.set_timing(EffectTiming.OnUseAttack)
         effect3.set_effect_name("BT21-076 Digivolve to Megidra or ChaosGallant")
         effect3.set_effect_description("[When Attacking][Once Per Turn] This Digimon may digivolve into a Digimon card with [Megidramon] or [ChaosGallantmon] in its name in the hand. For every 10 total cards in both players' trashes, reduce this effect's digivolution cost by 1.")
         effect3.is_optional = True

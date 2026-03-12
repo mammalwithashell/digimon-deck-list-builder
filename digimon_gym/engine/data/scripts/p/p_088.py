@@ -44,10 +44,10 @@ class P_088(CardScript):
         effect0.set_on_process_callback(process0)
         effects.append(effect0)
 
-        # Timing: EffectTiming.OnAllyAttack
+        # Timing: EffectTiming.OnUseAttack
         # [When Attacking] Delete 1 of your opponent's Digimon with 6000 DP or less. If this Digimon has 12000 DP or more, Delete 2 of your opponent's Digimon with 6000 DP or less instead.
         effect1 = ICardEffect()
-        effect1.set_timing(EffectTiming.OnAllyAttack)
+        effect1.set_timing(EffectTiming.OnUseAttack)
         effect1.set_effect_name("P-088 Delete Digimon with 6000 DP or less")
         effect1.set_effect_description("[When Attacking] Delete 1 of your opponent's Digimon with 6000 DP or less. If this Digimon has 12000 DP or more, Delete 2 of your opponent's Digimon with 6000 DP or less instead.")
         effect1.is_on_attack = True

@@ -95,10 +95,10 @@ class BT19_014(CardScript):
         effect4.set_on_process_callback(process4)
         effects.append(effect4)
 
-        # Timing: EffectTiming.OnAllyAttack
+        # Timing: EffectTiming.OnUseAttack
         # [When Attacking] Delete 1 of your opponent's Digimon with as much or less DP than this Digimon.
         effect5 = ICardEffect()
-        effect5.set_timing(EffectTiming.OnAllyAttack)
+        effect5.set_timing(EffectTiming.OnUseAttack)
         effect5.set_effect_name("BT19-014 Delete 1 Digimon")
         effect5.set_effect_description("[When Attacking] Delete 1 of your opponent's Digimon with as much or less DP than this Digimon.")
         effect5.is_on_attack = True

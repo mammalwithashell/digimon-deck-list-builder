@@ -65,10 +65,10 @@ class BT15_078(CardScript):
         effect1.set_can_use_condition(condition1)
         effects.append(effect1)
 
-        # Timing: EffectTiming.OnAllyAttack
+        # Timing: EffectTiming.OnUseAttack
         # [When Attacking] Your opponent plays 1 level 4 or lower Digimon card from their trash suspended without paying the cost. [On Play] effects on Digimon played by this effect don't activate. Then, you may switch the target of attack to that Digimon.
         effect2 = ICardEffect()
-        effect2.set_timing(EffectTiming.OnAllyAttack)
+        effect2.set_timing(EffectTiming.OnUseAttack)
         effect2.set_effect_name("BT15-078 Opponent plays 1  Digimon from trash")
         effect2.set_effect_description("[When Attacking] Your opponent plays 1 level 4 or lower Digimon card from their trash suspended without paying the cost. [On Play] effects on Digimon played by this effect don't activate. Then, you may switch the target of attack to that Digimon.")
         effect2.is_on_attack = True

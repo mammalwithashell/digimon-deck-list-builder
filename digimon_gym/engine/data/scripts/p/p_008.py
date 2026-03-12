@@ -14,10 +14,10 @@ class P_008(CardScript):
     def get_card_effects(self, card: 'CardSource') -> List['ICardEffect']:
         effects = []
 
-        # Timing: EffectTiming.OnAllyAttack
+        # Timing: EffectTiming.OnUseAttack
         # [When Attacking][Once Per Turn] If this Digimon has a [Garurumon] digivolution card�Cunsuspend this Digimon.
         effect0 = ICardEffect()
-        effect0.set_timing(EffectTiming.OnAllyAttack)
+        effect0.set_timing(EffectTiming.OnUseAttack)
         effect0.set_effect_name("P-008 Unsuspend this Digimon")
         effect0.set_effect_description("[When Attacking][Once Per Turn] If this Digimon has a [Garurumon] digivolution card�Cunsuspend this Digimon.")
         effect0.set_max_count_per_turn(1)

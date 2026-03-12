@@ -38,10 +38,10 @@ class BT13_097(CardScript):
         effect0.set_on_process_callback(process0)
         effects.append(effect0)
 
-        # Timing: EffectTiming.OnAllyAttack
+        # Timing: EffectTiming.OnUseAttack
         # [Your Turn] When one of your Digimon with [Gaomon] or [GaoGamon] in its name attacks, by suspending this Tamer, both players draw 1 card from their decks.
         effect1 = ICardEffect()
-        effect1.set_timing(EffectTiming.OnAllyAttack)
+        effect1.set_timing(EffectTiming.OnUseAttack)
         effect1.set_effect_name("BT13-097 Both players draw 1 card")
         effect1.set_effect_description("[Your Turn] When one of your Digimon with [Gaomon] or [GaoGamon] in its name attacks, by suspending this Tamer, both players draw 1 card from their decks.")
         effect1.is_optional = True

@@ -84,10 +84,10 @@ class BT10_054(CardScript):
         effect1.set_on_process_callback(process1)
         effects.append(effect1)
 
-        # Timing: EffectTiming.OnAllyAttack
+        # Timing: EffectTiming.OnUseAttack
         # [When Attacking] If you don't have a Tamer in play, lose 2 memory.
         effect2 = ICardEffect()
-        effect2.set_timing(EffectTiming.OnAllyAttack)
+        effect2.set_timing(EffectTiming.OnUseAttack)
         effect2.set_effect_name("BT10-054 Memory -2")
         effect2.set_effect_description("[When Attacking] If you don't have a Tamer in play, lose 2 memory.")
         effect2.is_on_attack = True

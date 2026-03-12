@@ -45,10 +45,10 @@ class BT10_027(CardScript):
         effect0.set_on_process_callback(process0)
         effects.append(effect0)
 
-        # Timing: EffectTiming.OnAllyAttack
+        # Timing: EffectTiming.OnUseAttack
         # [When Attacking] If your opponent has a Digimon with no digivolution cards in play, you may play 1 level 3 Digimon card and 1 level 4 Digimon card from this Digimon's digivolution cards without paying their memory costs.
         effect1 = ICardEffect()
-        effect1.set_timing(EffectTiming.OnAllyAttack)
+        effect1.set_timing(EffectTiming.OnUseAttack)
         effect1.set_effect_name("BT10-027 Play level3 and level 4 digivolution cards")
         effect1.set_effect_description("[When Attacking] If your opponent has a Digimon with no digivolution cards in play, you may play 1 level 3 Digimon card and 1 level 4 Digimon card from this Digimon's digivolution cards without paying their memory costs.")
         effect1.is_optional = True

@@ -109,10 +109,10 @@ class P_207(CardScript):
         effect3.set_on_process_callback(process3)
         effects.append(effect3)
 
-        # Timing: EffectTiming.OnAllyAttack
+        # Timing: EffectTiming.OnUseAttack
         # You may play 1 level 4 or lower Digimon card with [Avian], [Bird], [Beast], [Animal] or [Sovereign] in any of its traits (other than [Sea Animal]) or the [TS] trait from your trash without paying the cost.
         effect4 = ICardEffect()
-        effect4.set_timing(EffectTiming.OnAllyAttack)
+        effect4.set_timing(EffectTiming.OnUseAttack)
         effect4.set_effect_name("P-207 Play 1 level 4 or lower [Avian]/[Bird]/[Beast]/[Animal]/Sovereign]/[TS] digimon from trash")
         effect4.set_effect_description("You may play 1 level 4 or lower Digimon card with [Avian], [Bird], [Beast], [Animal] or [Sovereign] in any of its traits (other than [Sea Animal]) or the [TS] trait from your trash without paying the cost.")
         effect4.is_optional = True

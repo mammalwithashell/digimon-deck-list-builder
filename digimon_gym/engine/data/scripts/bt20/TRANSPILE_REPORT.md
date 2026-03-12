@@ -47,11 +47,11 @@ BT20_053: 4 effects
   [factory] alt_digivolve_req
   [EffectTiming.OnEnterFieldAnyone] change_dp, play_card, effect_immunity
   [EffectTiming.OnEnterFieldAnyone] change_dp, play_card, effect_immunity
-  [EffectTiming.OnAllyAttack] redirect_attack (inherited) (1/turn)
+  [EffectTiming.OnUseAttack] redirect_attack (inherited) (1/turn)
 BT20_054: 3 effects
   [factory] blocker
   [EffectTiming.WhenRemoveField] play_card
-  [EffectTiming.OnAllyAttack] redirect_attack (inherited) (1/turn)
+  [EffectTiming.OnUseAttack] redirect_attack (inherited) (1/turn)
 BT20_055: 4 effects
   [EffectTiming.OnEndTurn] play_card
   [EffectTiming.OnEnterFieldAnyone] delete, de_digivolve, flip_security
@@ -94,7 +94,7 @@ BT20_086: 3 effects
 BT20_087: 4 effects
   [EffectTiming.None] also_treated_as (descriptive-tagged)
   [factory] set_memory_3
-  [EffectTiming.OnAllyAttack] suspend, digivolve
+  [EffectTiming.OnUseAttack] suspend, digivolve
   [factory] security_play
 BT20_095: 4 effects
   [EffectTiming.OptionSkill] add_to_hand, reveal_and_select
@@ -102,12 +102,12 @@ BT20_095: 4 effects
   [EffectTiming.OnDestroyedAnyone] digivolve
   [EffectTiming.SecuritySkill] play_card
 BT20_002: 1 effects
-  [EffectTiming.OnAllyAttack] draw (inherited) (1/turn)
+  [EffectTiming.OnUseAttack] draw (inherited) (1/turn)
 BT20_022: 4 effects
   [factory] alt_digivolve_req
   [EffectTiming.OnEnterFieldAnyone] gain_keyword_cannot_be_deleted_by_battle
   [EffectTiming.OnEnterFieldAnyone] gain_keyword_cannot_be_deleted_by_battle
-  [EffectTiming.OnAllyAttack] draw (inherited) (1/turn)
+  [EffectTiming.OnUseAttack] draw (inherited) (1/turn)
 BT20_023: 4 effects
   [factory] alt_digivolve_req
   [factory] jamming
@@ -117,7 +117,7 @@ BT20_024: 4 effects
   [factory] alt_digivolve_req
   [EffectTiming.OnEnterFieldAnyone] bounce
   [EffectTiming.OnEnterFieldAnyone] bounce
-  [EffectTiming.OnAllyAttack] draw (inherited) (1/turn)
+  [EffectTiming.OnUseAttack] draw (inherited) (1/turn)
 BT20_025: 6 effects
   [factory] alt_digivolve_req
   [EffectTiming.OnEnterFieldAnyone] delete
@@ -142,7 +142,7 @@ BT20_028: 7 effects
   [factory] reboot
   [factory] blocker
   [EffectTiming.OnEnterFieldAnyone] play_card (1/turn)
-  [EffectTiming.OnAllyAttack] play_card (1/turn)
+  [EffectTiming.OnUseAttack] play_card (1/turn)
   [EffectTiming.OnEnterFieldAnyone] de_digivolve (1/turn)
 BT20_102: 6 effects
   [factory] alt_digivolve_req
@@ -169,7 +169,7 @@ BT20_041: 4 effects
   [factory] alt_digivolve_req
   [EffectTiming.OnEnterFieldAnyone] change_dp, suspend, force_attack
   [EffectTiming.OnEnterFieldAnyone] change_dp, suspend, force_attack
-  [EffectTiming.OnAllyAttack] change_dp (inherited) (1/turn)
+  [EffectTiming.OnUseAttack] change_dp (inherited) (1/turn)
 BT20_042: 6 effects
   [factory] alt_digivolve_req
   [EffectTiming.OnEnterFieldAnyone] suspend, gain_keyword_cannot_unsuspend
@@ -184,7 +184,7 @@ BT20_043: 7 effects
   [EffectTiming.OnEnterFieldAnyone] change_dp, suspend, force_attack
   [EffectTiming.OnEnterFieldAnyone] change_dp, suspend, force_attack
   [EffectTiming.OnEndTurn] play_card, force_attack
-  [EffectTiming.OnAllyAttack] change_dp (inherited) (1/turn)
+  [EffectTiming.OnUseAttack] change_dp (inherited) (1/turn)
 BT20_044: 6 effects
   [factory] alt_digivolve_req
   [factory] blocker
@@ -311,7 +311,7 @@ BT20_081: 4 effects
   [EffectTiming.None] jogress_condition
   [EffectTiming.OnEnterFieldAnyone] change_dp, delete
   [EffectTiming.OnEnterFieldAnyone] change_dp, delete
-  [EffectTiming.OnAllyAttack] destroy_security
+  [EffectTiming.OnUseAttack] destroy_security
 BT20_082: 5 effects
   [factory] blocker
   [factory] reboot
@@ -368,7 +368,7 @@ BT20_011: 3 effects
   [factory] dp_modifier
 BT20_012: 3 effects
   [factory] alt_digivolve_req
-  [EffectTiming.OnAllyAttack] digivolve
+  [EffectTiming.OnUseAttack] digivolve
   [factory] dp_modifier
 BT20_013: 2 effects
   [EffectTiming.OnDeclaration] play_card, cost_reduction (1/turn)
@@ -401,7 +401,7 @@ BT20_018: 4 effects
   [EffectTiming.OnEnterFieldAnyone] de_digivolve, digivolve
   [EffectTiming.OnEnterFieldAnyone] de_digivolve, digivolve
   [EffectTiming.OnLoseSecurity] delete (1/turn)
-  [EffectTiming.OnAllyAttack] destroy_security (inherited) (1/turn)
+  [EffectTiming.OnUseAttack] destroy_security (inherited) (1/turn)
 BT20_019: 6 effects
   [factory] alt_digivolve_req
   [factory] alliance
@@ -419,8 +419,8 @@ BT20_021: 6 effects
   [factory] blast_digivolve
   [EffectTiming.OnEnterFieldAnyone] no-action (1/turn)
   [EffectTiming.OnEnterFieldAnyone] no-action (1/turn)
-  [EffectTiming.OnAllyAttack] no-action (1/turn)
-  [EffectTiming.OnAllyAttack] unsuspend (1/turn)
+  [EffectTiming.OnUseAttack] no-action (1/turn)
+  [EffectTiming.OnUseAttack] unsuspend (1/turn)
 BT20_093: 4 effects
   [EffectTiming.OptionSkill] play_card, cost_reduction
   [factory] delay
@@ -484,7 +484,7 @@ BT20_033: 4 effects
   [factory] alt_digivolve_req
   [EffectTiming.OnEnterFieldAnyone] change_dp, disable_effect
   [EffectTiming.OnEnterFieldAnyone] change_dp, disable_effect
-  [EffectTiming.OnAllyAttack] redirect_attack (inherited) (1/turn)
+  [EffectTiming.OnUseAttack] redirect_attack (inherited) (1/turn)
 BT20_034: 3 effects
   [factory] alt_digivolve_req
   [EffectTiming.OnAddDigivolutionCards] disable_effect (descriptive-tagged)
@@ -501,7 +501,7 @@ BT20_036: 7 effects
   [EffectTiming.OnEnterFieldAnyone] change_dp, de_digivolve
   [EffectTiming.OnEnterFieldAnyone] change_dp, de_digivolve
   [EffectTiming.OnEndTurn] play_card, force_attack
-  [EffectTiming.OnAllyAttack] redirect_attack (inherited) (1/turn)
+  [EffectTiming.OnUseAttack] redirect_attack (inherited) (1/turn)
 BT20_037: 4 effects
   [EffectTiming.None] jogress_condition
   [factory] partition

@@ -54,10 +54,10 @@ class P_152(CardScript):
         effect1.set_can_use_condition(condition1)
         effects.append(effect1)
 
-        # Timing: EffectTiming.OnAllyAttack
+        # Timing: EffectTiming.OnUseAttack
         # [When Attacking] 1 of your opponent�s Digimon gets -2000 DP for the turn. Then, by placing 1 Digimon card with the [Xros Heart] trait in this Digimon�s digivolution cards under 1 of your Tamers, delete 1 of their Digimon with 3000 DP or less.
         effect2 = ICardEffect()
-        effect2.set_timing(EffectTiming.OnAllyAttack)
+        effect2.set_timing(EffectTiming.OnUseAttack)
         effect2.set_effect_name("P-152 One of your opponents Digimon gets -2000 DP for the turn, then delete 1 of their Digimon wiht 3000 DP  or less")
         effect2.set_effect_description("[When Attacking] 1 of your opponent�s Digimon gets -2000 DP for the turn. Then, by placing 1 Digimon card with the [Xros Heart] trait in this Digimon�s digivolution cards under 1 of your Tamers, delete 1 of their Digimon with 3000 DP or less.")
         effect2.is_on_attack = True

@@ -37,7 +37,6 @@ class BT24_020(CardScript):
         effect1.set_effect_description("[On Play] Reveal the top 3 cards of your deck. Add 1 Digimon card with the [Sea Beast] or [Shaman] trait or [Aqua] or [Sea Animal] in any of its traits and 1 card with the [TS] trait among them to the hand. Return the rest to the bottom of the deck.")
         effect1.is_on_play = True
 
-        effect = effect1  # alias for condition closure
         def condition1(context: Dict[str, Any]) -> bool:
             if card and card.permanent_of_this_card() is None:
                 return False
@@ -47,14 +46,9 @@ class BT24_020(CardScript):
         effect1.set_can_use_condition(condition1)
 
         def process1(ctx: Dict[str, Any]):
-            """Action: Add To Hand, Reveal And Select"""
+            """Action: Reveal And Select"""
             player = ctx.get('player')
-            perm = ctx.get('permanent')
             game = ctx.get('game')
-            # Add card to hand (from trash/reveal)
-            if player and player.trash_cards:
-                card_to_add = player.trash_cards.pop()
-                player.hand_cards.append(card_to_add)
             if not (player and game):
                 return
             def reveal_filter_0(c):
@@ -75,20 +69,33 @@ class BT24_020(CardScript):
         effects.append(effect1)
 
         # Timing: EffectTiming.OnUnTappedAnyone
-        # Draw 1
+        # [Your Turn] [Once Per Turn] When this Digimon unsuspends, if you have 7 or fewer cards in your hand, <Draw 1>.
         effect2 = ICardEffect()
         effect2.set_timing(EffectTiming.OnUnTappedAnyone)
         effect2.set_effect_name("BT24-020 If you have 7 or fewer cards in hand, <Draw 1>.")
-        effect2.set_effect_description("Draw 1")
+        effect2.set_effect_description("[Your Turn] [Once Per Turn] When this Digimon unsuspends, if you have 7 or fewer cards in your hand, <Draw 1>.")
         effect2.is_inherited_effect = True
         effect2.set_max_count_per_turn(1)
         effect2.set_hash_string("BT24_020_YT_Draw1")
 
-        effect = effect2  # alias for condition closure
         def condition2(context: Dict[str, Any]) -> bool:
             if card and card.permanent_of_this_card() is None:
                 return False
             if not (card and card.owner and card.owner.is_my_turn):
+                return False
+            # Trigger only when this card's host permanent unsuspends
+            unsuspended_perm = context.get('permanent')
+            if unsuspended_perm is None:
+                return False
+            host_perm = card.permanent_of_this_card() if card else None
+            if unsuspended_perm is not host_perm:
+                return False
+            # Only if 7 or fewer cards in hand
+            player = card.owner if card else None
+            if player is None:
+                return False
+            hand = getattr(player, 'hand_cards', []) or []
+            if len(hand) > 7:
                 return False
             return True
 
@@ -97,8 +104,6 @@ class BT24_020(CardScript):
         def process2(ctx: Dict[str, Any]):
             """Action: Draw 1"""
             player = ctx.get('player')
-            perm = ctx.get('permanent')
-            game = ctx.get('game')
             if player:
                 player.draw_cards(1)
 

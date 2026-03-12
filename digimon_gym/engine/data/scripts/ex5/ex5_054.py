@@ -105,10 +105,10 @@ class EX5_054(CardScript):
         effect2.set_on_process_callback(process2)
         effects.append(effect2)
 
-        # Timing: EffectTiming.OnAllyAttack
+        # Timing: EffectTiming.OnUseAttack
         # [Opponent's Turn] [Once Per Turn] When an opponent's Digimon attacks, by placing 1 card with [Etemon]/[Sukamon] in its name from your hand on top of your security stack, you may switch the target of attack to this Digimon or the player.
         effect3 = ICardEffect()
-        effect3.set_timing(EffectTiming.OnAllyAttack)
+        effect3.set_timing(EffectTiming.OnUseAttack)
         effect3.set_effect_name("EX5-054 Place 1 card from hand at the top of security to switch attack target")
         effect3.set_effect_description("[Opponent's Turn] [Once Per Turn] When an opponent's Digimon attacks, by placing 1 card with [Etemon]/[Sukamon] in its name from your hand on top of your security stack, you may switch the target of attack to this Digimon or the player.")
         effect3.is_optional = True

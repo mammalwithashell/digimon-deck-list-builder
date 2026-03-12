@@ -102,10 +102,10 @@ class EX11_069(CardScript):
         effect2.set_on_process_callback(process2)
         effects.append(effect2)
 
-        # Timing: EffectTiming.OnAllyAttack
+        # Timing: EffectTiming.OnUseAttack
         # Digivolve
         effect3 = ICardEffect()
-        effect3.set_timing(EffectTiming.OnAllyAttack)
+        effect3.set_timing(EffectTiming.OnUseAttack)
         effect3.set_effect_name("EX11-069 Digivolve attacking digimon to [Dark Dragon]/[Evil Dragon] trait for 1 less.")
         effect3.set_effect_description("Digivolve")
         effect3.is_optional = True

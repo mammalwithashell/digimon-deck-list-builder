@@ -31,10 +31,10 @@ class P_076(CardScript):
         effect0.set_can_use_condition(condition0)
         effects.append(effect0)
 
-        # Timing: EffectTiming.OnAllyAttack
+        # Timing: EffectTiming.OnUseAttack
         # [When Attacking] For each of this Digimon�fs colors, delete 1 of your opponent's Digimon with 3000 DP or less.
         effect1 = ICardEffect()
-        effect1.set_timing(EffectTiming.OnAllyAttack)
+        effect1.set_timing(EffectTiming.OnUseAttack)
         effect1.set_effect_name("P-076 Delete Digimons with 3000 DP or less")
         effect1.set_effect_description("[When Attacking] For each of this Digimon�fs colors, delete 1 of your opponent's Digimon with 3000 DP or less.")
         effect1.is_inherited_effect = True

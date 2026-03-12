@@ -61,10 +61,10 @@ class BT20_087(CardScript):
         effect1.set_on_process_callback(process1)
         effects.append(effect1)
 
-        # Timing: EffectTiming.OnAllyAttack
+        # Timing: EffectTiming.OnUseAttack
         # [Your Turn] When one of your [Chronicle] trait Digimon attacks by suspending this Tamer, 1 of your Digimon on the field may digivolve into a level 6 or lower [Chronicle] trait Digimon card in the hand with the digivolution cost reduced by 1.
         effect2 = ICardEffect()
-        effect2.set_timing(EffectTiming.OnAllyAttack)
+        effect2.set_timing(EffectTiming.OnUseAttack)
         effect2.set_effect_name("BT20-087 Digivolve 1 of your Digimon")
         effect2.set_effect_description("[Your Turn] When one of your [Chronicle] trait Digimon attacks by suspending this Tamer, 1 of your Digimon on the field may digivolve into a level 6 or lower [Chronicle] trait Digimon card in the hand with the digivolution cost reduced by 1.")
         effect2.is_optional = True

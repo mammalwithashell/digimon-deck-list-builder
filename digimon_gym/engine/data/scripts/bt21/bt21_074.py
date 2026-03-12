@@ -162,10 +162,10 @@ class BT21_074(CardScript):
         effect4.set_on_process_callback(process4)
         effects.append(effect4)
 
-        # Timing: EffectTiming.OnAllyAttack
+        # Timing: EffectTiming.OnUseAttack
         # [When Digivolving][Once Per Turn] By trashing 1 card with the [Appmon] or [Three Musketeers] trait from your Digimon's digivolution cards, <De-Digivolve 1> 1 of your opponent's Digimon.
         effect5 = ICardEffect()
-        effect5.set_timing(EffectTiming.OnAllyAttack)
+        effect5.set_timing(EffectTiming.OnUseAttack)
         effect5.set_effect_name("BT21-074 Trash source to de-digivolve")
         effect5.set_effect_description("[When Digivolving][Once Per Turn] By trashing 1 card with the [Appmon] or [Three Musketeers] trait from your Digimon's digivolution cards, <De-Digivolve 1> 1 of your opponent's Digimon.")
         effect5.is_optional = True

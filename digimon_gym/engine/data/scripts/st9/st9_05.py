@@ -53,10 +53,10 @@ class ST9_05(CardScript):
         effect0.set_on_process_callback(process0)
         effects.append(effect0)
 
-        # Timing: EffectTiming.OnAllyAttack
+        # Timing: EffectTiming.OnUseAttack
         # [When Attacking] [Once Per Turn] Unsuspend this Digimon.
         effect1 = ICardEffect()
-        effect1.set_timing(EffectTiming.OnAllyAttack)
+        effect1.set_timing(EffectTiming.OnUseAttack)
         effect1.set_effect_name("ST9-05 Unsuspend this Digimon")
         effect1.set_effect_description("[When Attacking] [Once Per Turn] Unsuspend this Digimon.")
         effect1.is_on_attack = True

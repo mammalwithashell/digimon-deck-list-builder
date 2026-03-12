@@ -43,10 +43,10 @@ class BT10_041(CardScript):
         effect0.set_on_process_callback(process0)
         effects.append(effect0)
 
-        # Timing: EffectTiming.OnAllyAttack
+        # Timing: EffectTiming.OnUseAttack
         # [When Attacking] This Digimon may digivolve into a [Sakuyamon] in your hand for a cost of 1, ignoring its digivolution requirements.
         effect1 = ICardEffect()
-        effect1.set_timing(EffectTiming.OnAllyAttack)
+        effect1.set_timing(EffectTiming.OnUseAttack)
         effect1.set_effect_name("BT10-041 This Digimon digivolves")
         effect1.set_effect_description("[When Attacking] This Digimon may digivolve into a [Sakuyamon] in your hand for a cost of 1, ignoring its digivolution requirements.")
         effect1.is_optional = True

@@ -85,10 +85,10 @@ class BT23_022(CardScript):
         effect3.set_can_use_condition(condition3)
         effects.append(effect3)
 
-        # Timing: EffectTiming.OnAllyAttack
+        # Timing: EffectTiming.OnUseAttack
         # [When Attacking] [Once Per Turn] You may link 1 level 4 or lower Digimon card from your hand or this Digimon's digivolution cards to this Digimon without paying the cost.
         effect4 = ICardEffect()
-        effect4.set_timing(EffectTiming.OnAllyAttack)
+        effect4.set_timing(EffectTiming.OnUseAttack)
         effect4.set_effect_name("BT23-022 link 1 level 4 or lower digimon from hand or this cards sources to this card")
         effect4.set_effect_description("[When Attacking] [Once Per Turn] You may link 1 level 4 or lower Digimon card from your hand or this Digimon's digivolution cards to this Digimon without paying the cost.")
         effect4.set_hash_string("BT23-022_WD/WA")

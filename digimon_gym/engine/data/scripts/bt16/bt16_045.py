@@ -86,10 +86,10 @@ class BT16_045(CardScript):
         effect1.set_on_process_callback(process1)
         effects.append(effect1)
 
-        # Timing: EffectTiming.OnAllyAttack
+        # Timing: EffectTiming.OnUseAttack
         # [Opponent's Turn] [Once Per Turn] When one of your opponent's Digimon attacks, you may switch the target of attack to one of your suspended Digimon with the [Insectoid] trait.
         effect2 = ICardEffect()
-        effect2.set_timing(EffectTiming.OnAllyAttack)
+        effect2.set_timing(EffectTiming.OnUseAttack)
         effect2.set_effect_name("BT16-045 Switch attack target")
         effect2.set_effect_description("[Opponent's Turn] [Once Per Turn] When one of your opponent's Digimon attacks, you may switch the target of attack to one of your suspended Digimon with the [Insectoid] trait.")
         effect2.is_inherited_effect = True

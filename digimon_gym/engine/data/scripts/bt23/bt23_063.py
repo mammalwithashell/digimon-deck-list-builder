@@ -28,10 +28,10 @@ class BT23_063(CardScript):
         effect0.set_can_use_condition(condition0)
         effects.append(effect0)
 
-        # Timing: EffectTiming.OnAllyAttack
+        # Timing: EffectTiming.OnUseAttack
         # [When Attacking] This Digimon may digivolve into a Digimon card with the [Undead] or [CS] trait in the trash.
         effect1 = ICardEffect()
-        effect1.set_timing(EffectTiming.OnAllyAttack)
+        effect1.set_timing(EffectTiming.OnUseAttack)
         effect1.set_effect_name("BT23-063 Digivolve this Digimon into [Undead] or [CS] Digimon")
         effect1.set_effect_description("[When Attacking] This Digimon may digivolve into a Digimon card with the [Undead] or [CS] trait in the trash.")
         effect1.is_optional = True
@@ -65,10 +65,10 @@ class BT23_063(CardScript):
         effect1.set_on_process_callback(process1)
         effects.append(effect1)
 
-        # Timing: EffectTiming.OnAllyAttack
+        # Timing: EffectTiming.OnUseAttack
         # [When Attacking][Once Per Turn] 1 of your Digimon may digivolve into a Digimon card with the [Undead] or [Dark Animal] trait in the trash.
         effect2 = ICardEffect()
-        effect2.set_timing(EffectTiming.OnAllyAttack)
+        effect2.set_timing(EffectTiming.OnUseAttack)
         effect2.set_effect_name("BT23-063 Digivolve 1 of your Digimon into [Undead] or [Dark Animal] Digimon in trash")
         effect2.set_effect_description("[When Attacking][Once Per Turn] 1 of your Digimon may digivolve into a Digimon card with the [Undead] or [Dark Animal] trait in the trash.")
         effect2.is_inherited_effect = True

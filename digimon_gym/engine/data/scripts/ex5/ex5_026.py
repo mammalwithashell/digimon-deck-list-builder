@@ -90,10 +90,10 @@ class EX5_026(CardScript):
         effect3.set_can_use_condition(condition3)
         effects.append(effect3)
 
-        # Timing: EffectTiming.OnAllyAttack
+        # Timing: EffectTiming.OnUseAttack
         # [When Attacking] By returning 1 Digimon card from your trash to the bottom of the deck, delete 1 of your opponent's Digimon with the same level as that card.
         effect4 = ICardEffect()
-        effect4.set_timing(EffectTiming.OnAllyAttack)
+        effect4.set_timing(EffectTiming.OnUseAttack)
         effect4.set_effect_name("EX5-026 Return 1 card from trash to the bottom of deck to delete 1 Digimon")
         effect4.set_effect_description("[When Attacking] By returning 1 Digimon card from your trash to the bottom of the deck, delete 1 of your opponent's Digimon with the same level as that card.")
         effect4.is_optional = True

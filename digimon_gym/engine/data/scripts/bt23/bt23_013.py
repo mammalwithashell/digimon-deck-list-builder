@@ -108,10 +108,10 @@ class BT23_013(CardScript):
         effect4.set_on_process_callback(process4)
         effects.append(effect4)
 
-        # Timing: EffectTiming.OnAllyAttack
+        # Timing: EffectTiming.OnUseAttack
         # [When Attacking] You may play 1 [Atho, Ren� & Por] Token or, from your hand or trash, 1 Digimon card with [Sistermon] in its name without paying the cost. This effect can't play cards with the same names as any of your Digimon.
         effect5 = ICardEffect()
-        effect5.set_timing(EffectTiming.OnAllyAttack)
+        effect5.set_timing(EffectTiming.OnUseAttack)
         effect5.set_effect_name("BT23-013 Play 1 [Atho, Ren� & Por] token or 1 [Sistermon] in name digimon from hand or trash")
         effect5.set_effect_description("[When Attacking] You may play 1 [Atho, Ren� & Por] Token or, from your hand or trash, 1 Digimon card with [Sistermon] in its name without paying the cost. This effect can't play cards with the same names as any of your Digimon.")
         effect5.is_on_attack = True

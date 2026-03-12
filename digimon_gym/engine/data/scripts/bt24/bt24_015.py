@@ -110,10 +110,10 @@ class BT24_015(CardScript):
         effect3.set_on_process_callback(process3)
         effects.append(effect3)
 
-        # Timing: EffectTiming.OnAllyAttack
+        # Timing: EffectTiming.OnUseAttack
         # [When Attacking] [Once Per Turn] Delete 1 of your opponent's Digimon with ＜Blocker＞
         effect4 = ICardEffect()
-        effect4.set_timing(EffectTiming.OnAllyAttack)
+        effect4.set_timing(EffectTiming.OnUseAttack)
         effect4.set_effect_name("BT24-015 Delete 1 <Blocker>")
         effect4.set_effect_description("[When Attacking] [Once Per Turn] Delete 1 of your opponent's Digimon with ＜Blocker＞")
         effect4.is_inherited_effect = True

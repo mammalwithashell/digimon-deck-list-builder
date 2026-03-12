@@ -104,6 +104,11 @@ class BT23_069(CardScript):
         def condition3(context: Dict[str, Any]) -> bool:
             if card and card.permanent_of_this_card() is None:
                 return False
+            # "When another Digimon attacks" — exclude self
+            attacker = context.get('attacker')
+            perm = context.get('permanent')
+            if attacker is not None and perm is not None and attacker is perm:
+                return False
             return True
 
         effect3.set_can_use_condition(condition3)

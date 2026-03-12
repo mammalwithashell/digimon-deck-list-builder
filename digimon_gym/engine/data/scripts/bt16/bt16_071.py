@@ -28,10 +28,10 @@ class BT16_071(CardScript):
         effect0.set_can_use_condition(condition0)
         effects.append(effect0)
 
-        # Timing: EffectTiming.OnAllyAttack
+        # Timing: EffectTiming.OnUseAttack
         # [When Attacking] This Digimon may digivolve into a Digimon card with [Leomon] in it's name from your hand or trash.
         effect1 = ICardEffect()
-        effect1.set_timing(EffectTiming.OnAllyAttack)
+        effect1.set_timing(EffectTiming.OnUseAttack)
         effect1.set_effect_name("BT16-071 Digivolve into a [Leomon] in name Digimon from hand or trash.")
         effect1.set_effect_description("[When Attacking] This Digimon may digivolve into a Digimon card with [Leomon] in it's name from your hand or trash.")
         effect1.is_optional = True

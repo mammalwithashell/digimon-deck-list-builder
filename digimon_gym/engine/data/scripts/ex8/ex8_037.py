@@ -47,10 +47,10 @@ class EX8_037(CardScript):
         effect1.set_can_use_condition(condition1)
         effects.append(effect1)
 
-        # Timing: EffectTiming.OnAllyAttack
+        # Timing: EffectTiming.OnUseAttack
         # [Your Turn] [Once Per Turn] When any of your Digimon attack, you may use 1 single-color Option card with a cost of 5 or less from your hand without paying the cost. If you did, 1 of your Digimon unsuspends.
         effect2 = ICardEffect()
-        effect2.set_timing(EffectTiming.OnAllyAttack)
+        effect2.set_timing(EffectTiming.OnUseAttack)
         effect2.set_effect_name("EX8-037 Play 1 single-color option card")
         effect2.set_effect_description("[Your Turn] [Once Per Turn] When any of your Digimon attack, you may use 1 single-color Option card with a cost of 5 or less from your hand without paying the cost. If you did, 1 of your Digimon unsuspends.")
         effect2.is_optional = True

@@ -9,19 +9,19 @@ if TYPE_CHECKING:
 
 
 class BT24_085(CardScript):
-    """BT24-085 Dan Yuki & Kanan Yuki"""
+    """BT24-085 Dan Yuki & Kanan Yuki | Tamer"""
 
     def get_card_effects(self, card: 'CardSource') -> List['ICardEffect']:
         effects = []
 
-        # Timing: EffectTiming.OnStartMainPhase
-        # Gain 1 memory
+        # [Start of Your Main Phase] If you have 4 or less memory, gain 1 memory.
         effect0 = ICardEffect()
         effect0.set_timing(EffectTiming.OnStartMainPhase)
-        effect0.set_effect_name("BT24-085 Memory +1")
-        effect0.set_effect_description("Gain 1 memory")
+        effect0.set_effect_name("BT24-085 If 4 or less memory, gain 1 memory")
+        effect0.set_effect_description(
+            "[Start of Your Main Phase] If you have 4 or less memory, gain 1 memory."
+        )
 
-        effect = effect0  # alias for condition closure
         def condition0(context: Dict[str, Any]) -> bool:
             if card and card.permanent_of_this_card() is None:
                 return False
@@ -32,63 +32,150 @@ class BT24_085(CardScript):
         effect0.set_can_use_condition(condition0)
 
         def process0(ctx: Dict[str, Any]):
-            """Action: Gain 1 memory"""
             player = ctx.get('player')
-            perm = ctx.get('permanent')
             game = ctx.get('game')
-            if player:
+            if not (player and game):
+                return
+            # Only gain memory if player has 4 or less
+            if game.memory <= 4:
                 player.add_memory(1)
 
         effect0.set_on_process_callback(process0)
         effects.append(effect0)
 
-        # Timing: EffectTiming.OnEndTurn
-        # Suspend, Force Attack
+        # [End of Your Turn] By suspending this Tamer, you may use 1 [TS] trait Option card
+        # with as high or lower a use cost as your opponent's number of Digimon from your hand
+        # without paying the cost. Then, 1 of your Digimon with the [TS] trait may attack.
         effect1 = ICardEffect()
         effect1.set_timing(EffectTiming.OnEndTurn)
-        effect1.set_effect_name("BT24-085 Use a [TS] Option that costs less than your opponent's memory, 1 [TS] Digimon may attack")
-        effect1.set_effect_description("Suspend, Force Attack")
+        effect1.set_effect_name(
+            "BT24-085 Suspend to use a [TS] Option costing <= opp Digimon count; "
+            "then 1 [TS] Digimon may attack"
+        )
+        effect1.set_effect_description(
+            "[End of Your Turn] By suspending this Tamer, you may use 1 [TS] trait Option card "
+            "with as high or lower a use cost as your opponent's number of Digimon from your hand "
+            "without paying the cost. Then, 1 of your Digimon with the [TS] trait may attack."
+        )
         effect1.is_optional = True
 
-        effect = effect1  # alias for condition closure
         def condition1(context: Dict[str, Any]) -> bool:
             if card and card.permanent_of_this_card() is None:
                 return False
             if not (card and card.owner and card.owner.is_my_turn):
+                return False
+            # Cannot pay cost if already suspended
+            tamer_perm = card.permanent_of_this_card() if card else None
+            if tamer_perm and tamer_perm.is_suspended:
                 return False
             return True
 
         effect1.set_can_use_condition(condition1)
 
         def process1(ctx: Dict[str, Any]):
-            """Action: Suspend, Force Attack"""
             player = ctx.get('player')
-            perm = ctx.get('permanent')
             game = ctx.get('game')
             if not (player and game):
                 return
-            def target_filter(p):
-                return True
-            def on_suspend(target_perm):
-                target_perm.suspend()
-            game.effect_select_opponent_permanent(
-                player, on_suspend, filter_fn=target_filter, is_optional=True)
-            # Force attack — target Digimon may attack (requires engine SelectAttack)
-            pass  # descriptive-tagged: force_attack
+            # Cost: suspend this tamer
+            tamer_perm = card.permanent_of_this_card() if card else None
+            if not tamer_perm:
+                return
+            tamer_perm.suspend()
+
+            if not tamer_perm.is_suspended:
+                return  # Suspension failed
+
+            # Count opponent's Digimon on field
+            enemy = player.enemy
+            if not enemy:
+                return
+            opp_digimon_count = sum(
+                1 for p in enemy.battle_area if p.is_digimon
+            )
+
+            # Select and use 1 [TS] Option from hand with cost <= opponent Digimon count
+            def option_filter(c):
+                if not getattr(c, 'is_option', False):
+                    return False
+                if not any('TS' in _t for _t in (getattr(c, 'card_traits', []) or [])):
+                    return False
+                cost = getattr(c, 'get_cost_itself', 0)
+                return cost <= opp_digimon_count
+
+            game.effect_play_from_zone(
+                player, 'hand', option_filter, free=True, is_optional=True,
+                prompt="Select a [TS] Option to use for free.")
+
+            # Then 1 [TS] Digimon may attack (force_attack — engine SelectAttack phase)
+            pass  # descriptive-tagged: force_attack_ts_digimon
 
         effect1.set_on_process_callback(process1)
         effects.append(effect1)
 
-        # Factory effect: security_play
-        # Security: Play this card
+        # [All Turns][Once Per Turn] When any of your Digimon with the [TS] trait digivolves,
+        # by suspending this Tamer, gain 2 memory.
         effect2 = ICardEffect()
-        effect2.set_effect_name("BT24-085 Security: Play this card")
-        effect2.set_effect_description("Security: Play this card")
-        effect2.is_security_effect = True
+        effect2.set_timing(EffectTiming.OnEnterFieldAnyone)
+        effect2.set_effect_name("BT24-085 OPT: When [TS] digimon digivolves, suspend to gain 2 memory")
+        effect2.set_effect_description(
+            "[All Turns] [Once Per Turn] When any of your Digimon with the [TS] trait digivolves, "
+            "by suspending this Tamer, gain 2 memory."
+        )
+        effect2.is_optional = True
+        effect2.is_when_digivolving = True
+        effect2.set_max_count_per_turn(1)
+        effect2.set_hash_string("BT24_085_digi_suspend_memory")
 
         def condition2(context: Dict[str, Any]) -> bool:
+            if card and card.permanent_of_this_card() is None:
+                return False
+            # Check the digivolving permanent is owned by us and has [TS] trait
+            event_perm = context.get('digivolved_permanent') or context.get('permanent')
+            if not event_perm:
+                return False
+            if not event_perm.is_digimon:
+                return False
+            if not any('TS' in _t for _t in (getattr(event_perm.top_card, 'card_traits', []) or [])):
+                return False
+            # Must be our Digimon (all turns = both turns)
+            owner_player = card.owner if card else None
+            perm_owner = getattr(event_perm, 'owner', None)
+            if owner_player and perm_owner and perm_owner is not owner_player:
+                return False
+            # Cannot use if tamer is already suspended
+            tamer_perm = card.permanent_of_this_card() if card else None
+            if tamer_perm and tamer_perm.is_suspended:
+                return False
             return True
+
         effect2.set_can_use_condition(condition2)
+
+        def process2(ctx: Dict[str, Any]):
+            player = ctx.get('player')
+            game = ctx.get('game')
+            if not (player and game):
+                return
+            # Cost: suspend this tamer
+            tamer_perm = card.permanent_of_this_card() if card else None
+            if not tamer_perm:
+                return
+            tamer_perm.suspend()
+            if tamer_perm.is_suspended:
+                player.add_memory(2)
+
+        effect2.set_on_process_callback(process2)
         effects.append(effect2)
+
+        # [Security] Play this card without paying the cost.
+        effect3 = ICardEffect()
+        effect3.set_effect_name("BT24-085 Security: Play this card")
+        effect3.set_effect_description("[Security] Play this card without paying the cost.")
+        effect3.is_security_effect = True
+
+        def condition3(context: Dict[str, Any]) -> bool:
+            return True
+        effect3.set_can_use_condition(condition3)
+        effects.append(effect3)
 
         return effects

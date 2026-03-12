@@ -146,10 +146,10 @@ class BT23_060(CardScript):
         effect4.set_on_process_callback(process4)
         effects.append(effect4)
 
-        # Timing: EffectTiming.OnAllyAttack
+        # Timing: EffectTiming.OnUseAttack
         # [When Attacking] [Once Per Turn] Activate 1 [On Play] effect on a face-up [Zaxon] trait Digimon card in your security stack as an effect of this Digimon.
         effect5 = ICardEffect()
-        effect5.set_timing(EffectTiming.OnAllyAttack)
+        effect5.set_timing(EffectTiming.OnUseAttack)
         effect5.set_effect_name("BT23-060 Activate 1 [On Play] as an effect of this Digimon")
         effect5.set_effect_description("[When Attacking] [Once Per Turn] Activate 1 [On Play] effect on a face-up [Zaxon] trait Digimon card in your security stack as an effect of this Digimon.")
         effect5.set_max_count_per_turn(1)

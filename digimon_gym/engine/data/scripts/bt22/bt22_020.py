@@ -31,10 +31,10 @@ class BT22_020(CardScript):
         effect0.set_can_use_condition(condition0)
         effects.append(effect0)
 
-        # Timing: EffectTiming.OnAllyAttack
+        # Timing: EffectTiming.OnUseAttack
         # Draw 1
         effect1 = ICardEffect()
-        effect1.set_timing(EffectTiming.OnAllyAttack)
+        effect1.set_timing(EffectTiming.OnUseAttack)
         effect1.set_effect_name("BT22-020 Tuck Gammamon name to draw")
         effect1.set_effect_description("Draw 1")
         effect1.is_optional = True

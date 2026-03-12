@@ -14,10 +14,10 @@ class BT8_044(CardScript):
     def get_card_effects(self, card: 'CardSource') -> List['ICardEffect']:
         effects = []
 
-        # Timing: EffectTiming.OnAllyAttack
+        # Timing: EffectTiming.OnUseAttack
         # [When Attacking] You may trash the top card of your security stack to gain 2 memory.
         effect0 = ICardEffect()
-        effect0.set_timing(EffectTiming.OnAllyAttack)
+        effect0.set_timing(EffectTiming.OnUseAttack)
         effect0.set_effect_name("BT8-044 Trash a Security to get Memory +2")
         effect0.set_effect_description("[When Attacking] You may trash the top card of your security stack to gain 2 memory.")
         effect0.is_optional = True

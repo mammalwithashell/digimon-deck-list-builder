@@ -42,10 +42,10 @@ class BT8_089(CardScript):
         effect0.set_on_process_callback(process0)
         effects.append(effect0)
 
-        # Timing: EffectTiming.OnAllyAttack
+        # Timing: EffectTiming.OnUseAttack
         # [Your Turn] When one of your Digimon with 2 or more colors attacks, you may suspend this Tamer to give 1 of your opponent's Digimon -2000 DP for the turn.
         effect1 = ICardEffect()
-        effect1.set_timing(EffectTiming.OnAllyAttack)
+        effect1.set_timing(EffectTiming.OnUseAttack)
         effect1.set_effect_name("BT8-089 DP -2000")
         effect1.set_effect_description("[Your Turn] When one of your Digimon with 2 or more colors attacks, you may suspend this Tamer to give 1 of your opponent's Digimon -2000 DP for the turn.")
         effect1.is_optional = True

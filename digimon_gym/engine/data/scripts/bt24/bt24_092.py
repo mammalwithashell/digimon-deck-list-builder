@@ -64,10 +64,10 @@ class BT24_092(CardScript):
         effect2.set_can_use_condition(condition2)
         effects.append(effect2)
 
-        # Timing: EffectTiming.OnAllyAttack
+        # Timing: EffectTiming.OnUseAttack
         # [When Attacking] [Once Per Turn] 1 of your opponent's Digimon gets -6000 DP for the turn.
         effect3 = ICardEffect()
-        effect3.set_timing(EffectTiming.OnAllyAttack)
+        effect3.set_timing(EffectTiming.OnUseAttack)
         effect3.set_effect_name("BT24-092 1 Opponent's digimon gets -6K DP for the turn.")
         effect3.set_effect_description("[When Attacking] [Once Per Turn] 1 of your opponent's Digimon gets -6000 DP for the turn.")
         effect3.set_max_count_per_turn(1)

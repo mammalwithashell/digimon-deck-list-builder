@@ -38,10 +38,10 @@ class BT19_082(CardScript):
         effect0.set_on_process_callback(process0)
         effects.append(effect0)
 
-        # Timing: EffectTiming.OnAllyAttack
+        # Timing: EffectTiming.OnUseAttack
         # [Your Turn] When any of your Digimon with [Aqua]/[Sea Animal] in one of its traits attack, by suspending this Tamer, you may place 1 level 5 or lower Digimon card with [Aqua]/[Sea Animal] in one of its traits from your hand as that Digimon's bottom digivolution card.
         effect1 = ICardEffect()
-        effect1.set_timing(EffectTiming.OnAllyAttack)
+        effect1.set_timing(EffectTiming.OnUseAttack)
         effect1.set_effect_name("BT19-082 Place a card from hand as the bottom digivolution card of 1 of our Digimon")
         effect1.set_effect_description("[Your Turn] When any of your Digimon with [Aqua]/[Sea Animal] in one of its traits attack, by suspending this Tamer, you may place 1 level 5 or lower Digimon card with [Aqua]/[Sea Animal] in one of its traits from your hand as that Digimon's bottom digivolution card.")
         effect1.is_optional = True

@@ -132,10 +132,10 @@ class EX10_035(CardScript):
         effect2.set_on_process_callback(process2)
         effects.append(effect2)
 
-        # Timing: EffectTiming.OnAllyAttack
+        # Timing: EffectTiming.OnUseAttack
         # [When Attacking] <De-Digivolve 2> 2 of your opponent's Digimon. (Trash up to 2 cards from the top. You can't trash past level 3 cards.)
         effect3 = ICardEffect()
-        effect3.set_timing(EffectTiming.OnAllyAttack)
+        effect3.set_timing(EffectTiming.OnUseAttack)
         effect3.set_effect_name("EX10-035 De-digivolve 2, 2 digimon")
         effect3.set_effect_description("[When Attacking] <De-Digivolve 2> 2 of your opponent's Digimon. (Trash up to 2 cards from the top. You can't trash past level 3 cards.)")
         effect3.is_on_attack = True

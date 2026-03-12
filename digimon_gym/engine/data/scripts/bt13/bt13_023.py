@@ -26,10 +26,10 @@ class BT13_023(CardScript):
         effect0.set_can_use_condition(condition0)
         effects.append(effect0)
 
-        # Timing: EffectTiming.OnAllyAttack
+        # Timing: EffectTiming.OnUseAttack
         # [When Attacking] Trash the digivolution card at the bottom of 1 of your opponent's Digimon.
         effect1 = ICardEffect()
-        effect1.set_timing(EffectTiming.OnAllyAttack)
+        effect1.set_timing(EffectTiming.OnUseAttack)
         effect1.set_effect_name("BT13-023 Trash 1 digivolution card")
         effect1.set_effect_description("[When Attacking] Trash the digivolution card at the bottom of 1 of your opponent's Digimon.")
         effect1.is_inherited_effect = True

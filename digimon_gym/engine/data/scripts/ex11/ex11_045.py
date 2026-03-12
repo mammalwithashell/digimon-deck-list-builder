@@ -129,10 +129,10 @@ class EX11_045(CardScript):
         effect3.set_on_process_callback(process3)
         effects.append(effect3)
 
-        # Timing: EffectTiming.OnAllyAttack
+        # Timing: EffectTiming.OnUseAttack
         # De Digivolve, Effect Immunity
         effect4 = ICardEffect()
-        effect4.set_timing(EffectTiming.OnAllyAttack)
+        effect4.set_timing(EffectTiming.OnUseAttack)
         effect4.set_effect_name("EX11-045 De Digivolve, Effect Immunity")
         effect4.set_effect_description("De Digivolve, Effect Immunity")
         effect4.is_on_attack = True

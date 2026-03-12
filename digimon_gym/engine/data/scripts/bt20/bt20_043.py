@@ -199,10 +199,10 @@ class BT20_043(CardScript):
         effect5.set_on_process_callback(process5)
         effects.append(effect5)
 
-        # Timing: EffectTiming.OnAllyAttack
+        # Timing: EffectTiming.OnUseAttack
         # [When Attacking] [Once Per Turn] 1 of your opponent's Digimon gets -4000 DP for the turn.
         effect6 = ICardEffect()
-        effect6.set_timing(EffectTiming.OnAllyAttack)
+        effect6.set_timing(EffectTiming.OnUseAttack)
         effect6.set_effect_name("BT20-043 1 Opponent's Digimon gets -4000 DP")
         effect6.set_effect_description("[When Attacking] [Once Per Turn] 1 of your opponent's Digimon gets -4000 DP for the turn.")
         effect6.is_inherited_effect = True

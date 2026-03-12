@@ -63,10 +63,10 @@ class BT13_033(CardScript):
         effect1.set_on_process_callback(process1)
         effects.append(effect1)
 
-        # Timing: EffectTiming.OnAllyAttack
+        # Timing: EffectTiming.OnUseAttack
         # [When Attacking] If your opponent has 9 or more cards in their hand, by choosing cards in your opponent's hand without looking and returning them to the bottom of the deck so that 8 remain, unsuspend this Digimon.
         effect2 = ICardEffect()
-        effect2.set_timing(EffectTiming.OnAllyAttack)
+        effect2.set_timing(EffectTiming.OnUseAttack)
         effect2.set_effect_name("BT13-033 Return opponent's hand cards to the bottom of deck to unsuspend this Digimon")
         effect2.set_effect_description("[When Attacking] If your opponent has 9 or more cards in their hand, by choosing cards in your opponent's hand without looking and returning them to the bottom of the deck so that 8 remain, unsuspend this Digimon.")
         effect2.is_optional = True

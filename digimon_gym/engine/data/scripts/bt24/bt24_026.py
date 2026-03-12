@@ -95,10 +95,10 @@ class BT24_026(CardScript):
         effect2.set_on_process_callback(process2)
         effects.append(effect2)
 
-        # Timing: EffectTiming.OnAllyAttack
+        # Timing: EffectTiming.OnUseAttack
         # Trash From Hand, Gain Keyword Jamming, Gain Keyword Blocker
         effect3 = ICardEffect()
-        effect3.set_timing(EffectTiming.OnAllyAttack)
+        effect3.set_timing(EffectTiming.OnUseAttack)
         effect3.set_effect_name("BT24-026 Trash From Hand, Gain Keyword Jamming, Gain Keyword Blocker")
         effect3.set_effect_description("Trash From Hand, Gain Keyword Jamming, Gain Keyword Blocker")
         effect3.is_on_attack = True

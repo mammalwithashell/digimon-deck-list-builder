@@ -67,10 +67,10 @@ class BT15_020(CardScript):
         effect1.set_on_process_callback(process1)
         effects.append(effect1)
 
-        # Timing: EffectTiming.OnAllyAttack
+        # Timing: EffectTiming.OnUseAttack
         # [When Attacking][Once Per Turn] When this Digimon attacks a player, <Draw 1>. (Draw 1 card from your deck.)
         effect2 = ICardEffect()
-        effect2.set_timing(EffectTiming.OnAllyAttack)
+        effect2.set_timing(EffectTiming.OnUseAttack)
         effect2.set_effect_name("BT15-020 Draw 1")
         effect2.set_effect_description("[When Attacking][Once Per Turn] When this Digimon attacks a player, <Draw 1>. (Draw 1 card from your deck.)")
         effect2.is_inherited_effect = True

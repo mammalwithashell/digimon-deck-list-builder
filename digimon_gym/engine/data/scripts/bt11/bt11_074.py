@@ -40,10 +40,10 @@ class BT11_074(CardScript):
         effect1.set_can_use_condition(condition1)
         effects.append(effect1)
 
-        # Timing: EffectTiming.OnAllyAttack
+        # Timing: EffectTiming.OnUseAttack
         # [Opponent's Turn][Once Per Turn] When your opponent's Digimon with the highest DP attacks, you may switch the target of attack to this Digimon.
         effect2 = ICardEffect()
-        effect2.set_timing(EffectTiming.OnAllyAttack)
+        effect2.set_timing(EffectTiming.OnUseAttack)
         effect2.set_effect_name("BT11-074 Switch attack target to this Digimon")
         effect2.set_effect_description("[Opponent's Turn][Once Per Turn] When your opponent's Digimon with the highest DP attacks, you may switch the target of attack to this Digimon.")
         effect2.is_optional = True

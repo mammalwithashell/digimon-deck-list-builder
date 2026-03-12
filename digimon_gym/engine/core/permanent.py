@@ -67,7 +67,7 @@ class Permanent:
     @property
     def dp(self) -> Optional[int]:
         """DP of this permanent. None if the top card has no DP (egg/tamer/option).
-        For Digimon, returns base DP + effect modifiers (minimum 0).
+        For Digimon, returns base DP + effect modifiers + aura modifiers (minimum 0).
         Cards like Lucemon: Larva have 0 DP (a real value, not None).
 
         <Progress> immunity: while attacking with Progress, negative DP modifiers
@@ -78,12 +78,63 @@ class Permanent:
         base = self.top_card.base_dp
         active_effects = self.get_active_effects()
         modifier = sum(effect.dp_modifier for effect in active_effects)
+        aura_modifier = self._get_aura_dp_modifier()
         if self.is_immune_to_opponent_effects:
             # Progress: ignore all negative temp DP modifiers while attacking
             temp_modifier = sum(m for m in self._dp_modifiers if m >= 0)
         else:
             temp_modifier = sum(self._dp_modifiers)
-        return max(0, base + modifier + temp_modifier)
+        return max(0, base + modifier + aura_modifier + temp_modifier)
+
+    def _get_aura_dp_modifier(self) -> int:
+        """Sum DP modifiers from aura effects on other friendly permanents.
+
+        Scans the owner's battle_area for effects with _applies_to_all_own_digimon=True
+        and dp_modifier != 0. This supports cards like Tamers that grant "+X000 DP to
+        all your [Trait] Digimon" as a continuous effect.
+        """
+        if not self.is_digimon or not self.top_card or not self.top_card.owner:
+            return 0
+        owner = self.top_card.owner
+        if not hasattr(owner, 'battle_area'):
+            return 0
+        total = 0
+        for other_perm in owner.battle_area:
+            if other_perm is self:
+                continue
+            # Inherited effects from sources under top card
+            for source in other_perm.card_sources[:-1]:
+                for effect in source.effect_list(EffectTiming.NoTiming):
+                    if not effect.is_inherited_effect:
+                        continue
+                    if not getattr(effect, '_applies_to_all_own_digimon', False):
+                        continue
+                    if effect.dp_modifier == 0:
+                        continue
+                    ctx = {"permanent": self}
+                    if effect.can_use_condition and not effect.can_use_condition(ctx):
+                        continue
+                    perm_filter = getattr(effect, '_dp_permanent_condition', None)
+                    if perm_filter and not perm_filter(self):
+                        continue
+                    total += effect.dp_modifier
+            # Non-inherited effects from top card
+            if other_perm.top_card:
+                for effect in other_perm.top_card.effect_list(EffectTiming.NoTiming):
+                    if effect.is_inherited_effect:
+                        continue
+                    if not getattr(effect, '_applies_to_all_own_digimon', False):
+                        continue
+                    if effect.dp_modifier == 0:
+                        continue
+                    ctx = {"permanent": self}
+                    if effect.can_use_condition and not effect.can_use_condition(ctx):
+                        continue
+                    perm_filter = getattr(effect, '_dp_permanent_condition', None)
+                    if perm_filter and not perm_filter(self):
+                        continue
+                    total += effect.dp_modifier
+        return total
 
     def get_active_effects(self) -> List['ICardEffect']:
         active = []

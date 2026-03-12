@@ -102,10 +102,10 @@ class BT16_069(CardScript):
         effect2.set_on_process_callback(process2)
         effects.append(effect2)
 
-        # Timing: EffectTiming.OnAllyAttack
+        # Timing: EffectTiming.OnUseAttack
         # [When Attacking] [Once Per Turn] Trigger <Draw 1>. (Draw 1 cards from your deck.) Then trash 1 card from your hand.
         effect3 = ICardEffect()
-        effect3.set_timing(EffectTiming.OnAllyAttack)
+        effect3.set_timing(EffectTiming.OnUseAttack)
         effect3.set_effect_name("BT16-069 Draw 1 and trash 1 card from hand")
         effect3.set_effect_description("[When Attacking] [Once Per Turn] Trigger <Draw 1>. (Draw 1 cards from your deck.) Then trash 1 card from your hand.")
         effect3.is_inherited_effect = True

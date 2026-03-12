@@ -65,10 +65,10 @@ class BT21_098(CardScript):
         effect1.set_can_use_condition(condition1)
         effects.append(effect1)
 
-        # Timing: EffectTiming.OnAllyAttack
+        # Timing: EffectTiming.OnUseAttack
         # [Your Turn] When one of your [Galacticmon] attacks, <Delay>.\n• Delete 1 of your opponent's Digimon with the lowest play cost. If this effect didn't delete, trash the top cards of your opponent's security stack so that is has 1 card left.
         effect2 = ICardEffect()
-        effect2.set_timing(EffectTiming.OnAllyAttack)
+        effect2.set_timing(EffectTiming.OnUseAttack)
         effect2.set_effect_name("BT21-098 Delete 1 opponent's Digimon with lowest play cost, trash security until 1 left if didn't delete")
         effect2.set_effect_description("[Your Turn] When one of your [Galacticmon] attacks, <Delay>.\\n• Delete 1 of your opponent's Digimon with the lowest play cost. If this effect didn't delete, trash the top cards of your opponent's security stack so that is has 1 card left.")
         effect2.is_optional = True

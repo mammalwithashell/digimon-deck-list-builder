@@ -25,9 +25,6 @@ class BT24_031(CardScript):
         effect0._alt_digi_trait = "TS"
 
         def condition0(context: Dict[str, Any]) -> bool:
-            permanent = card.permanent_of_this_card() if card else None
-            if not (permanent and permanent.top_card and (any('TS' in tr for tr in (getattr(permanent.top_card, 'card_traits', []) or [])))):
-                return False
             return True
         effect0.set_can_use_condition(condition0)
         effects.append(effect0)
@@ -40,7 +37,6 @@ class BT24_031(CardScript):
         effect1.set_effect_description("[On Play] Reveal the top 3 cards of your deck. Add 1 card with the [Iliad] trait and 1 card with [TS] trait among them to the hand. Return the rest to the bottom of the deck.")
         effect1.is_on_play = True
 
-        effect = effect1  # alias for condition closure
         def condition1(context: Dict[str, Any]) -> bool:
             if card and card.permanent_of_this_card() is None:
                 return False
@@ -79,10 +75,10 @@ class BT24_031(CardScript):
         effect1.set_on_process_callback(process1)
         effects.append(effect1)
 
-        # Timing: EffectTiming.OnAllyAttack
+        # Timing: EffectTiming.OnUseAttack
         # [When Attacking] [Once Per Turn] You may add your top security card to the hand. Then, if you have 0 security cards, <Recovery +1 (Deck)>.
         effect2 = ICardEffect()
-        effect2.set_timing(EffectTiming.OnAllyAttack)
+        effect2.set_timing(EffectTiming.OnUseAttack)
         effect2.set_effect_name("BT24-031 May add 1 sec card to hand, if at 0 <Recovery +1>.")
         effect2.set_effect_description("[When Attacking] [Once Per Turn] You may add your top security card to the hand. Then, if you have 0 security cards, <Recovery +1 (Deck)>.")
         effect2.is_inherited_effect = True
@@ -94,12 +90,6 @@ class BT24_031(CardScript):
         def condition2(context: Dict[str, Any]) -> bool:
             if card and card.permanent_of_this_card() is None:
                 return False
-            player = card.owner if card else None
-            if not player:
-                return False
-            # Must have security cards to add to hand
-            if not player.security_cards:
-                return False
             return True
 
         effect2.set_can_use_condition(condition2)
@@ -110,10 +100,18 @@ class BT24_031(CardScript):
             game = ctx.get('game')
             if not (player and game):
                 return
-            # Add top security card to hand
+            # Only attempt to add if security cards exist
             if player.security_cards:
-                top_sec = player.security_cards.pop(0)
-                player.hand_cards.append(top_sec)
+                # Optional: player chooses whether to add
+                def on_choice(choice: int):
+                    if choice == 0:  # yes
+                        if player.security_cards:
+                            top_sec = player.security_cards.pop(0)
+                            player.hand_cards.append(top_sec)
+                game.effect_choose_branch(
+                    player, 2, on_choice,
+                    branch_labels=["Add to hand", "Don't add to hand"]
+                )
             # Then if 0 security, Recovery +1 (Deck)
             if not player.security_cards:
                 player.recovery(1)

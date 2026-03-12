@@ -142,10 +142,10 @@ class EX10_045(CardScript):
         effect5.set_on_process_callback(process5)
         effects.append(effect5)
 
-        # Timing: EffectTiming.OnAllyAttack
+        # Timing: EffectTiming.OnUseAttack
         # Trash Digivolution Cards, Gain Keyword Blocker, Gain Keyword Retaliation
         effect6 = ICardEffect()
-        effect6.set_timing(EffectTiming.OnAllyAttack)
+        effect6.set_timing(EffectTiming.OnUseAttack)
         effect6.set_effect_name("EX10-045 By trashing 1 source, 1 digimon gains Blocker, Retaliation")
         effect6.set_effect_description("Trash Digivolution Cards, Gain Keyword Blocker, Gain Keyword Retaliation")
         effect6.set_hash_string("OPWDWA_EX10_045")

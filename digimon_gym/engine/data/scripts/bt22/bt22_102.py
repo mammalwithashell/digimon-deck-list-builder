@@ -40,10 +40,10 @@ class BT22_102(CardScript):
         effect0.set_on_process_callback(process0)
         effects.append(effect0)
 
-        # Timing: EffectTiming.OnAllyAttack
+        # Timing: EffectTiming.OnUseAttack
         # [Your Turn] When one of your Digimon with 2 or more same-level cards in its stack attacks, by suspending this Tamer, digivolve it into a Digimon card with the [Night Claw], [Light Fang], [Galaxy] or [CS] trait in the trash with the digivolution cost reduced by 2.
         effect1 = ICardEffect()
-        effect1.set_timing(EffectTiming.OnAllyAttack)
+        effect1.set_timing(EffectTiming.OnUseAttack)
         effect1.set_effect_name("BT22-102 Digivolve for a reduced cost")
         effect1.set_effect_description("[Your Turn] When one of your Digimon with 2 or more same-level cards in its stack attacks, by suspending this Tamer, digivolve it into a Digimon card with the [Night Claw], [Light Fang], [Galaxy] or [CS] trait in the trash with the digivolution cost reduced by 2.")
         effect1.is_optional = True

@@ -14,10 +14,10 @@ class BT11_025(CardScript):
     def get_card_effects(self, card: 'CardSource') -> List['ICardEffect']:
         effects = []
 
-        # Timing: EffectTiming.OnAllyAttack
+        # Timing: EffectTiming.OnUseAttack
         # [When Attacking][Once Per Turn] If your opponent has 8 or more cards in their hand, gain 1 memory.
         effect0 = ICardEffect()
-        effect0.set_timing(EffectTiming.OnAllyAttack)
+        effect0.set_timing(EffectTiming.OnUseAttack)
         effect0.set_effect_name("BT11-025 Memory +1")
         effect0.set_effect_description("[When Attacking][Once Per Turn] If your opponent has 8 or more cards in their hand, gain 1 memory.")
         effect0.set_max_count_per_turn(1)
@@ -44,10 +44,10 @@ class BT11_025(CardScript):
         effect0.set_on_process_callback(process0)
         effects.append(effect0)
 
-        # Timing: EffectTiming.OnAllyAttack
+        # Timing: EffectTiming.OnUseAttack
         # [When Attacking][Once Per Turn] If you have a Tamer in play, return 1 of your opponent's level 3 Digimon to its owner's hand.
         effect1 = ICardEffect()
-        effect1.set_timing(EffectTiming.OnAllyAttack)
+        effect1.set_timing(EffectTiming.OnUseAttack)
         effect1.set_effect_name("BT11-025 Return 1 level 3 Digimon to hand")
         effect1.set_effect_description("[When Attacking][Once Per Turn] If you have a Tamer in play, return 1 of your opponent's level 3 Digimon to its owner's hand.")
         effect1.is_inherited_effect = True

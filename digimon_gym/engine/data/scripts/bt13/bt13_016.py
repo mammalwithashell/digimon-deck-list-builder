@@ -52,10 +52,10 @@ class BT13_016(CardScript):
         effect0.set_on_process_callback(process0)
         effects.append(effect0)
 
-        # Timing: EffectTiming.OnAllyAttack
+        # Timing: EffectTiming.OnUseAttack
         # [When Attacking][Once Per Turn] If this Digimon has the [Royal Knight] trait, you may play 1 Digimon card with [Sistermon] in its name from your hand or trash without paying the cost.
         effect1 = ICardEffect()
-        effect1.set_timing(EffectTiming.OnAllyAttack)
+        effect1.set_timing(EffectTiming.OnUseAttack)
         effect1.set_effect_name("BT13-016 Play 1 Digimon card with [Sistermon] in its name")
         effect1.set_effect_description("[When Attacking][Once Per Turn] If this Digimon has the [Royal Knight] trait, you may play 1 Digimon card with [Sistermon] in its name from your hand or trash without paying the cost.")
         effect1.is_inherited_effect = True

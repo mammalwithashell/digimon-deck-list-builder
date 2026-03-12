@@ -113,10 +113,10 @@ class BT22_076(CardScript):
         effect4.set_on_process_callback(process4)
         effects.append(effect4)
 
-        # Timing: EffectTiming.OnAllyAttack
+        # Timing: EffectTiming.OnUseAttack
         # [When Attacking] [Once Per Turn] By trashing this Digimon's bottom face-down digivolution card, place 1 Digimon with as much or less DP as this Digimon as the top security card.
         effect5 = ICardEffect()
-        effect5.set_timing(EffectTiming.OnAllyAttack)
+        effect5.set_timing(EffectTiming.OnUseAttack)
         effect5.set_effect_name("BT22-076 Trash face down source, Place 1 in security")
         effect5.set_effect_description("[When Attacking] [Once Per Turn] By trashing this Digimon's bottom face-down digivolution card, place 1 Digimon with as much or less DP as this Digimon as the top security card.")
         effect5.is_optional = True

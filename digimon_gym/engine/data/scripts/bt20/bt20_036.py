@@ -207,10 +207,10 @@ class BT20_036(CardScript):
         effect5.set_on_process_callback(process5)
         effects.append(effect5)
 
-        # Timing: EffectTiming.OnAllyAttack
+        # Timing: EffectTiming.OnUseAttack
         # [Opponent's Turn] [Once Per Turn] When any of your opponent's Digimon attack, you may change the attack target to this Digimon.
         effect6 = ICardEffect()
-        effect6.set_timing(EffectTiming.OnAllyAttack)
+        effect6.set_timing(EffectTiming.OnUseAttack)
         effect6.set_effect_name("BT20-036 You may change the attack target to this Digimon.")
         effect6.set_effect_description("[Opponent's Turn] [Once Per Turn] When any of your opponent's Digimon attack, you may change the attack target to this Digimon.")
         effect6.is_inherited_effect = True

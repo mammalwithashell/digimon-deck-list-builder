@@ -64,10 +64,10 @@ class BT15_032(CardScript):
         effect1.set_on_process_callback(process1)
         effects.append(effect1)
 
-        # Timing: EffectTiming.OnAllyAttack
+        # Timing: EffectTiming.OnUseAttack
         # Bounce
         effect2 = ICardEffect()
-        effect2.set_timing(EffectTiming.OnAllyAttack)
+        effect2.set_timing(EffectTiming.OnUseAttack)
         effect2.set_effect_name("BT15-032 Return 1 Digimon to hand")
         effect2.set_effect_description("Bounce")
         effect2.set_max_count_per_turn(1)
@@ -100,10 +100,10 @@ class BT15_032(CardScript):
         effect2.set_on_process_callback(process2)
         effects.append(effect2)
 
-        # Timing: EffectTiming.OnAllyAttack
+        # Timing: EffectTiming.OnUseAttack
         # [Opponent's Turn] When an opponent's Digimon with as many or fewer digivolution cards as this Digimon attacks, if [Plesiomon] or [X Antibody] is in this Digimon's digivolution cards, gain 2 memory.
         effect3 = ICardEffect()
-        effect3.set_timing(EffectTiming.OnAllyAttack)
+        effect3.set_timing(EffectTiming.OnUseAttack)
         effect3.set_effect_name("BT15-032 Memory +2")
         effect3.set_effect_description("[Opponent's Turn] When an opponent's Digimon with as many or fewer digivolution cards as this Digimon attacks, if [Plesiomon] or [X Antibody] is in this Digimon's digivolution cards, gain 2 memory.")
         effect3.is_on_attack = True

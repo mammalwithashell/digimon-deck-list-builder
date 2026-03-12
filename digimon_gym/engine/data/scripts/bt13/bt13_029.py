@@ -14,10 +14,10 @@ class BT13_029(CardScript):
     def get_card_effects(self, card: 'CardSource') -> List['ICardEffect']:
         effects = []
 
-        # Timing: EffectTiming.OnAllyAttack
+        # Timing: EffectTiming.OnUseAttack
         # [When Attacking] If your opponent has 8 or more cards in their hand, for the turn, this Digimon's attack target can't be switched.
         effect0 = ICardEffect()
-        effect0.set_timing(EffectTiming.OnAllyAttack)
+        effect0.set_timing(EffectTiming.OnUseAttack)
         effect0.set_effect_name("BT13-029 This Digimon's attack target can't be switched")
         effect0.set_effect_description("[When Attacking] If your opponent has 8 or more cards in their hand, for the turn, this Digimon's attack target can't be switched.")
         effect0.is_on_attack = True

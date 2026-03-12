@@ -65,10 +65,10 @@ class BT13_058(CardScript):
         effect1.set_on_process_callback(process1)
         effects.append(effect1)
 
-        # Timing: EffectTiming.OnAllyAttack
+        # Timing: EffectTiming.OnUseAttack
         # [When Attacking] By suspending 1 of your other Digimon, unsuspend this Digimon.
         effect2 = ICardEffect()
-        effect2.set_timing(EffectTiming.OnAllyAttack)
+        effect2.set_timing(EffectTiming.OnUseAttack)
         effect2.set_effect_name("BT13-058 Suspend your 1 Digimon to unsuspend this Digimon")
         effect2.set_effect_description("[When Attacking] By suspending 1 of your other Digimon, unsuspend this Digimon.")
         effect2.is_optional = True

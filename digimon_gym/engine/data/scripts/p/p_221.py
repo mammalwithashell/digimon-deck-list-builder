@@ -101,10 +101,10 @@ class P_221(CardScript):
         effect4.set_can_use_condition(condition4)
         effects.append(effect4)
 
-        # Timing: EffectTiming.OnAllyAttack
+        # Timing: EffectTiming.OnUseAttack
         # Effect
         effect5 = ICardEffect()
-        effect5.set_timing(EffectTiming.OnAllyAttack)
+        effect5.set_timing(EffectTiming.OnUseAttack)
         effect5.set_effect_name("P-221 Effect")
         effect5.set_effect_description("Effect")
         effect5.is_on_attack = True

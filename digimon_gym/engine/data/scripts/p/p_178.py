@@ -82,10 +82,10 @@ class P_178(CardScript):
         effect2.set_on_process_callback(process2)
         effects.append(effect2)
 
-        # Timing: EffectTiming.OnAllyAttack
+        # Timing: EffectTiming.OnUseAttack
         # Delete
         effect3 = ICardEffect()
-        effect3.set_timing(EffectTiming.OnAllyAttack)
+        effect3.set_timing(EffectTiming.OnUseAttack)
         effect3.set_effect_name("P-178 Delete 1 Digimon with 4000 DP or less")
         effect3.set_effect_description("Delete")
         effect3.is_on_attack = True

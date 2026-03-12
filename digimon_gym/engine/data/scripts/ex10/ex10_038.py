@@ -70,10 +70,10 @@ class EX10_038(CardScript):
         effect1.set_on_process_callback(process1)
         effects.append(effect1)
 
-        # Timing: EffectTiming.OnAllyAttack
+        # Timing: EffectTiming.OnUseAttack
         # [When Attacking] By trashing 1 of this Digimon's link cards, you may return 1 [Appmon] trait Digimon card from your trash to the hand.
         effect2 = ICardEffect()
-        effect2.set_timing(EffectTiming.OnAllyAttack)
+        effect2.set_timing(EffectTiming.OnUseAttack)
         effect2.set_effect_name("EX10-038 By trashing 1 linked card, return 1 [appmon] digimon from trash to hand")
         effect2.set_effect_description("[When Attacking] By trashing 1 of this Digimon's link cards, you may return 1 [Appmon] trait Digimon card from your trash to the hand.")
         effect2.is_on_attack = True

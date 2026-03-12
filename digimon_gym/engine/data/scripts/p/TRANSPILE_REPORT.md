@@ -32,18 +32,18 @@ P_070: 2 effects
   [EffectTiming.SecuritySkill] play_card, add_to_hand
 P_076: 2 effects
   [factory] change_digi_cost
-  [EffectTiming.OnAllyAttack] delete (inherited)
+  [EffectTiming.OnUseAttack] delete (inherited)
 P_078: 1 effects
   [EffectTiming.OnEnterFieldAnyone] draw
 P_094: 4 effects
   [EffectTiming.None] no-action
   [EffectTiming.OnEnterFieldAnyone] delete
   [EffectTiming.OnEnterFieldAnyone] delete
-  [EffectTiming.OnAllyAttack] redirect_attack (inherited) (1/turn)
+  [EffectTiming.OnUseAttack] redirect_attack (inherited) (1/turn)
 P_101: 3 effects
   [EffectTiming.OnEnterFieldAnyone] draw, trash_from_hand
   [EffectTiming.OnEnterFieldAnyone] draw, trash_from_hand
-  [EffectTiming.OnAllyAttack] delete, trash_from_hand (inherited)
+  [EffectTiming.OnUseAttack] delete, trash_from_hand (inherited)
 P_107: 3 effects
   [EffectTiming.OptionSkill] add_to_hand, reveal_and_select
   [factory] delay
@@ -51,7 +51,7 @@ P_107: 3 effects
 P_114: 4 effects
   [factory] blast_digivolve
   [EffectTiming.OnEnterFieldAnyone] play_token (descriptive-tagged)
-  [EffectTiming.OnAllyAttack] play_token (descriptive-tagged)
+  [EffectTiming.OnUseAttack] play_token (descriptive-tagged)
   [EffectTiming.OnEnterFieldAnyone] delete (1/turn)
 P_121: 2 effects
   [EffectTiming.OnEnterFieldAnyone] add_to_hand, reveal_and_select
@@ -104,13 +104,13 @@ P_174: 7 effects
   [EffectTiming.OnEnterFieldAnyone] delete, de_digivolve
   [EffectTiming.OnDestroyedAnyone] delete, de_digivolve
 P_176: 1 effects
-  [EffectTiming.OnAllyAttack] play_card (inherited) (1/turn)
+  [EffectTiming.OnUseAttack] play_card (inherited) (1/turn)
 P_179: 5 effects
   [factory] alt_digivolve_req
   [factory] alt_digivolve_req
   [EffectTiming.OnEnterFieldAnyone] change_dp
   [EffectTiming.OnEnterFieldAnyone] delete
-  [EffectTiming.OnAllyAttack] delete
+  [EffectTiming.OnUseAttack] delete
 P_183: 6 effects
   [EffectTiming.None] also_treated_as (descriptive-tagged)
   [factory] blocker
@@ -128,12 +128,12 @@ P_203: 6 effects
   [factory] alt_digivolve_req
   [EffectTiming.OnEnterFieldAnyone] de_digivolve, gain_keyword_piercing, change_security_attack
   [EffectTiming.OnEnterFieldAnyone] de_digivolve, gain_keyword_piercing, change_security_attack
-  [EffectTiming.OnAllyAttack] de_digivolve, gain_keyword_piercing, change_security_attack
+  [EffectTiming.OnUseAttack] de_digivolve, gain_keyword_piercing, change_security_attack
   [EffectTiming.OnDestroyedAnyone] gain_keyword_cannot_attack (1/turn)
 P_204: 3 effects
   [EffectTiming.OptionSkill] draw, trash_from_hand
   [factory] delay
-  [EffectTiming.OnAllyAttack] digivolve
+  [EffectTiming.OnUseAttack] digivolve
 P_211: 3 effects
   [factory] gain_memory_tamer
   [EffectTiming.OnEnterFieldAnyone] gain_keyword_cannot_attack
@@ -157,13 +157,13 @@ P_231: 3 effects
 P_003: 1 effects
   [EffectTiming.OnEnterFieldAnyone] trash_digivolution_cards
 P_007: 1 effects
-  [EffectTiming.OnAllyAttack] draw (inherited)
+  [EffectTiming.OnUseAttack] draw (inherited)
 P_008: 2 effects
-  [EffectTiming.OnAllyAttack] unsuspend (1/turn)
+  [EffectTiming.OnUseAttack] unsuspend (1/turn)
   [factory] security_attack_plus
 P_011: 2 effects
-  [EffectTiming.OnAllyAttack] change_dp, mill
-  [EffectTiming.OnAllyAttack] draw, return_to_deck (inherited)
+  [EffectTiming.OnUseAttack] change_dp, mill
+  [EffectTiming.OnUseAttack] draw, return_to_deck (inherited)
 P_012: 2 effects
   [EffectTiming.OnDeclaration] draw, change_dp, suspend
   [factory] security_play
@@ -182,7 +182,7 @@ P_042: 1 effects
   [EffectTiming.OnEnterFieldAnyone] reveal_and_select
 P_047: 2 effects
   [EffectTiming.OnEnterFieldAnyone] change_dp, mill
-  [EffectTiming.OnAllyAttack] change_dp, return_to_deck (inherited)
+  [EffectTiming.OnUseAttack] change_dp, return_to_deck (inherited)
 P_048: 2 effects
   [EffectTiming.OnEnterFieldAnyone] unsuspend, return_to_deck
   [EffectTiming.OnReturnCardsToLibraryFromTrash] gain_memory (1/turn)
@@ -190,11 +190,11 @@ P_051: 1 effects
   [EffectTiming.OnEnterFieldAnyone] draw
 P_052: 2 effects
   [EffectTiming.OnEnterFieldAnyone] gain_keyword_cannot_attack
-  [EffectTiming.OnAllyAttack] bounce (1/turn)
+  [EffectTiming.OnUseAttack] bounce (1/turn)
 P_061: 1 effects
-  [EffectTiming.OnAllyAttack] draw (inherited) (1/turn)
+  [EffectTiming.OnUseAttack] draw (inherited) (1/turn)
 P_064: 2 effects
-  [EffectTiming.OnAllyAttack] suspend, gain_keyword_jamming
+  [EffectTiming.OnUseAttack] suspend, gain_keyword_jamming
   [factory] security_play
 P_067: 2 effects
   [EffectTiming.SecuritySkill] no-action
@@ -208,7 +208,7 @@ P_086: 1 effects
   [EffectTiming.OnEnterFieldAnyone] no-action
 P_089: 2 effects
   [EffectTiming.OnEnterFieldAnyone] trash_from_hand, trash_digivolution_cards
-  [EffectTiming.OnAllyAttack] return_to_deck (1/turn)
+  [EffectTiming.OnUseAttack] return_to_deck (1/turn)
 P_092: 3 effects
   [factory] alt_digivolve_req
   [EffectTiming.OnEnterFieldAnyone] digivolve
@@ -229,7 +229,7 @@ P_109: 5 effects
   [EffectTiming.OnTappedAnyone] play_card (1/turn)
 P_117: 2 effects
   [EffectTiming.BeforePayCost] cost_reduction (1/turn)
-  [EffectTiming.OnAllyAttack] draw (inherited)
+  [EffectTiming.OnUseAttack] draw (inherited)
 P_124: 3 effects
   [EffectTiming.OnStartMainPhase] gain_memory
   [EffectTiming.OnEnterFieldAnyone] play_card, digivolve
@@ -239,7 +239,7 @@ P_138: 3 effects
   [EffectTiming.OnEnterFieldAnyone] add_to_hand, reveal_and_select
   [EffectTiming.OnUnTappedAnyone] gain_memory (inherited) (1/turn)
 P_148: 1 effects
-  [EffectTiming.OnAllyAttack] draw (inherited) (1/turn)
+  [EffectTiming.OnUseAttack] draw (inherited) (1/turn)
 P_161: 4 effects
   [EffectTiming.None] ignore_color_req (descriptive-tagged)
   [EffectTiming.OnDestroyedAnyone] no-action
@@ -270,7 +270,7 @@ P_190: 3 effects
 P_196: 3 effects
   [factory] alt_digivolve_req
   [EffectTiming.OnStartMainPhase] digivolve
-  [EffectTiming.OnAllyAttack] draw (inherited) (1/turn)
+  [EffectTiming.OnUseAttack] draw (inherited) (1/turn)
 P_214: 5 effects
   [factory] alt_digivolve_req
   [factory] decode
@@ -310,9 +310,9 @@ P_057: 2 effects
   [factory] dp_modifier
   [factory] dp_modifier
 P_060: 1 effects
-  [EffectTiming.OnAllyAttack] gain_memory (inherited) (1/turn)
+  [EffectTiming.OnUseAttack] gain_memory (inherited) (1/turn)
 P_063: 2 effects
-  [EffectTiming.OnAllyAttack] change_dp, suspend
+  [EffectTiming.OnUseAttack] change_dp, suspend
   [factory] security_play
 P_069: 2 effects
   [EffectTiming.SecuritySkill] no-action
@@ -416,7 +416,7 @@ P_208: 5 effects
   [factory] execute
   [EffectTiming.OnEnterFieldAnyone] play_card
   [EffectTiming.OnDestroyedAnyone] play_card
-  [EffectTiming.OnAllyAttack] bounce (1/turn)
+  [EffectTiming.OnUseAttack] bounce (1/turn)
 P_222: 6 effects
   [factory] alt_digivolve_req
   [EffectTiming.BeforePayCost] cost_reduction
@@ -447,7 +447,7 @@ P_071: 2 effects
   [EffectTiming.SecuritySkill] play_card, add_to_hand
 P_077: 2 effects
   [EffectTiming.OnDiscardLibrary] gain_memory
-  [EffectTiming.OnAllyAttack] no-action (inherited)
+  [EffectTiming.OnUseAttack] no-action (inherited)
 P_080: 1 effects
   [EffectTiming.OnEnterFieldAnyone] delete
 P_085: 1 effects
@@ -478,14 +478,14 @@ P_145: 4 effects
   [EffectTiming.OnEnterFieldAnyone] delete
   [EffectTiming.OnDestroyedAnyone] play_card
 P_149: 1 effects
-  [EffectTiming.OnAllyAttack] delete, trash_from_hand (inherited) (1/turn)
+  [EffectTiming.OnUseAttack] delete, trash_from_hand (inherited) (1/turn)
 P_177: 1 effects
   [EffectTiming.OnDestroyedAnyone] add_to_hand (inherited)
 P_187: 4 effects
   [EffectTiming.None] jogress_condition
   [EffectTiming.OnEnterFieldAnyone] recovery, destroy_security, put_to_security
   [EffectTiming.OnEnterFieldAnyone] play_card, destroy_security (1/turn)
-  [EffectTiming.OnAllyAttack] play_card, destroy_security (1/turn)
+  [EffectTiming.OnUseAttack] play_card, destroy_security (1/turn)
 P_192: 3 effects
   [EffectTiming.OnEnterFieldAnyone] delete, trash_from_hand
   [EffectTiming.OnEnterFieldAnyone] delete, trash_from_hand
@@ -497,7 +497,7 @@ P_193: 3 effects
 P_198: 3 effects
   [factory] alt_digivolve_req
   [EffectTiming.OnStartMainPhase] digivolve
-  [EffectTiming.OnAllyAttack] no-action (inherited) (1/turn)
+  [EffectTiming.OnUseAttack] no-action (inherited) (1/turn)
 P_205: 5 effects
   [EffectTiming.None] ignore_color_req (descriptive-tagged)
   [EffectTiming.OptionSkill] no-action
@@ -541,31 +541,31 @@ P_024: 2 effects
   [EffectTiming.OptionSkill] draw
   [EffectTiming.SecuritySkill] add_to_hand
 P_029: 3 effects
-  [EffectTiming.OnAllyAttack] digivolve
-  [EffectTiming.OnAllyAttack] delete
+  [EffectTiming.OnUseAttack] digivolve
+  [EffectTiming.OnUseAttack] delete
   [factory] change_digi_cost
 P_035: 3 effects
   [EffectTiming.OptionSkill] add_to_hand, reveal_and_select
   [factory] delay
   [EffectTiming.OnDeclaration] gain_memory
 P_041: 1 effects
-  [EffectTiming.OnAllyAttack] draw
+  [EffectTiming.OnUseAttack] draw
 P_049: 2 effects
   [EffectTiming.OnEnterFieldAnyone] no-action
   [EffectTiming.OnBlockAnyone] destroy_security (1/turn)
 P_050: 2 effects
   [EffectTiming.OnEnterFieldAnyone] delete
-  [EffectTiming.OnAllyAttack] delete
+  [EffectTiming.OnUseAttack] delete
 P_058: 1 effects
   [EffectTiming.None] attack_unsuspended
 P_059: 1 effects
   [factory] dp_modifier
 P_062: 2 effects
-  [EffectTiming.OnAllyAttack] suspend, change_security_attack
+  [EffectTiming.OnUseAttack] suspend, change_security_attack
   [factory] security_play
 P_065: 2 effects
   [EffectTiming.OnEnterFieldAnyone] delete
-  [EffectTiming.OnAllyAttack] delete (inherited)
+  [EffectTiming.OnUseAttack] delete (inherited)
 P_066: 2 effects
   [EffectTiming.SecuritySkill] no-action
   [EffectTiming.SecuritySkill] draw, add_to_hand
@@ -577,7 +577,7 @@ P_079: 1 effects
   [EffectTiming.OnEnterFieldAnyone] delete
 P_088: 2 effects
   [EffectTiming.OnEnterFieldAnyone] change_dp
-  [EffectTiming.OnAllyAttack] delete
+  [EffectTiming.OnUseAttack] delete
 P_091: 3 effects
   [factory] raid
   [factory] retaliation
@@ -608,7 +608,7 @@ P_137: 4 effects
 P_152: 4 effects
   [EffectTiming.None] also_treated_as (descriptive-tagged)
   [factory] alt_digivolve_req
-  [EffectTiming.OnAllyAttack] change_dp, delete
+  [EffectTiming.OnUseAttack] change_dp, delete
   [EffectTiming.None] no-action
 P_155: 5 effects
   [EffectTiming.None] ignore_color_req (descriptive-tagged)
@@ -619,7 +619,7 @@ P_155: 5 effects
 P_160: 3 effects
   [factory] alt_digivolve_req
   [factory] raid
-  [EffectTiming.OnAllyAttack] digivolve
+  [EffectTiming.OnUseAttack] digivolve
 P_170: 7 effects
   [factory] alt_digivolve_req
   [EffectTiming.BeforePayCost] cost_reduction, return_to_deck
@@ -632,7 +632,7 @@ P_178: 4 effects
   [factory] alt_digivolve_req
   [factory] alt_digivolve_req
   [EffectTiming.OnEnterFieldAnyone] change_dp
-  [EffectTiming.OnAllyAttack] delete
+  [EffectTiming.OnUseAttack] delete
 P_180: 4 effects
   [EffectTiming.None] ignore_color_req (descriptive-tagged)
   [EffectTiming.OnDigivolutionCardDiscarded] delete (inherited)
@@ -740,7 +740,7 @@ P_043: 2 effects
   [EffectTiming.OnDestroyedAnyone] change_dp (inherited)
 P_053: 2 effects
   [EffectTiming.OnEnterFieldAnyone] change_dp
-  [EffectTiming.OnAllyAttack] change_dp
+  [EffectTiming.OnUseAttack] change_dp
 P_054: 2 effects
   [EffectTiming.OnEnterFieldAnyone] recovery
   [EffectTiming.OnDestroyedAnyone] recovery
@@ -750,7 +750,7 @@ P_068: 2 effects
 P_074: 3 effects
   [EffectTiming.BeforePayCost] cost_reduction
   [EffectTiming.None] cost_reduction
-  [EffectTiming.OnAllyAttack] unsuspend (inherited) (1/turn)
+  [EffectTiming.OnUseAttack] unsuspend (inherited) (1/turn)
 P_081: 1 effects
   [EffectTiming.OnEnterFieldAnyone] change_dp
 P_084: 1 effects
@@ -775,7 +775,7 @@ P_111: 4 effects
   [factory] blocker
   [EffectTiming.OnEnterFieldAnyone] no-action
   [EffectTiming.OnEnterFieldAnyone] no-action
-  [EffectTiming.OnAllyAttack] play_card (inherited) (1/turn)
+  [EffectTiming.OnUseAttack] play_card (inherited) (1/turn)
 P_120: 1 effects
   [factory] barrier
 P_122: 1 effects
@@ -790,11 +790,11 @@ P_129: 3 effects
   [factory] security_play
 P_134: 2 effects
   [EffectTiming.OnEnterFieldAnyone] change_security_attack (descriptive-tagged)
-  [EffectTiming.OnAllyAttack] change_dp (inherited) (1/turn)
+  [EffectTiming.OnUseAttack] change_dp (inherited) (1/turn)
 P_135: 3 effects
   [EffectTiming.OnEnterFieldAnyone] gain_keyword_cannot_attack, change_security_attack
   [factory] jamming
-  [EffectTiming.OnAllyAttack] change_dp (inherited) (1/turn)
+  [EffectTiming.OnUseAttack] change_dp (inherited) (1/turn)
 P_136: 3 effects
   [EffectTiming.OnEnterFieldAnyone] play_card
   [EffectTiming.OnEnterFieldAnyone] gain_memory, suspend (1/turn)
@@ -813,7 +813,7 @@ P_146: 4 effects
 P_147: 4 effects
   [EffectTiming.None] also_treated_as (descriptive-tagged)
   [factory] alt_digivolve_req
-  [EffectTiming.OnAllyAttack] no-action
+  [EffectTiming.OnUseAttack] no-action
   [factory] dp_modifier
 P_153: 4 effects
   [factory] alt_digivolve_req
@@ -855,13 +855,13 @@ P_195: 3 effects
 P_197: 3 effects
   [factory] alt_digivolve_req
   [EffectTiming.OnStartMainPhase] digivolve
-  [EffectTiming.OnAllyAttack] change_dp (inherited) (1/turn)
+  [EffectTiming.OnUseAttack] change_dp (inherited) (1/turn)
 P_207: 5 effects
   [factory] alt_digivolve_req
   [factory] alliance
   [EffectTiming.OnEnterFieldAnyone] play_card
   [EffectTiming.OnEnterFieldAnyone] play_card
-  [EffectTiming.OnAllyAttack] play_card (1/turn)
+  [EffectTiming.OnUseAttack] play_card (1/turn)
 P_218: 3 effects
   [EffectTiming.OnEnterFieldAnyone] add_to_hand, reveal_and_select
   [EffectTiming.WhenLinked] gain_memory, suspend
@@ -872,7 +872,7 @@ P_221: 6 effects
   [factory] security_attack_plus
   [EffectTiming.OnEnterFieldAnyone] effect_immunity
   [EffectTiming.OnEnterFieldAnyone] no-action
-  [EffectTiming.OnAllyAttack] no-action
+  [EffectTiming.OnUseAttack] no-action
 P_229: 3 effects
   [EffectTiming.OptionSkill] add_to_hand, reveal_and_select
   [factory] delay

@@ -44,10 +44,10 @@ class BT10_070(CardScript):
         effect1.set_can_use_condition(condition1)
         effects.append(effect1)
 
-        # Timing: EffectTiming.OnAllyAttack
+        # Timing: EffectTiming.OnUseAttack
         # [Opponent's Turn][Once Per Turn] When an opponent's Digimon attacks, by trashing 1 of this Digimon's digivolution cards, delete 1 of your opponent's level 4 or lower Digimon.
         effect2 = ICardEffect()
-        effect2.set_timing(EffectTiming.OnAllyAttack)
+        effect2.set_timing(EffectTiming.OnUseAttack)
         effect2.set_effect_name("BT10-070 Trash 1 digivolution card to delete 1 level4 or lower Digimon")
         effect2.set_effect_description("[Opponent's Turn][Once Per Turn] When an opponent's Digimon attacks, by trashing 1 of this Digimon's digivolution cards, delete 1 of your opponent's level 4 or lower Digimon.")
         effect2.is_optional = True

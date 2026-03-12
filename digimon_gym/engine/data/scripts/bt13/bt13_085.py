@@ -14,10 +14,10 @@ class BT13_085(CardScript):
     def get_card_effects(self, card: 'CardSource') -> List['ICardEffect']:
         effects = []
 
-        # Timing: EffectTiming.OnAllyAttack
+        # Timing: EffectTiming.OnUseAttack
         # [When Attacking] If you have a Tamer, this Digimon may digivolve into [Ravemon] in your trash for the digivolution cost.
         effect0 = ICardEffect()
-        effect0.set_timing(EffectTiming.OnAllyAttack)
+        effect0.set_timing(EffectTiming.OnUseAttack)
         effect0.set_effect_name("BT13-085 Digivolve this Digimon into [Ravemon] in trash")
         effect0.set_effect_description("[When Attacking] If you have a Tamer, this Digimon may digivolve into [Ravemon] in your trash for the digivolution cost.")
         effect0.is_optional = True

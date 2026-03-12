@@ -14,8 +14,7 @@ class BT16_025(CardScript):
     def get_card_effects(self, card: 'CardSource') -> List['ICardEffect']:
         effects = []
 
-        # Factory effect: partition
-        # Partition
+        # ── Partition (non-inherited) ────────────────────────────────────
         effect0 = ICardEffect()
         effect0.set_effect_name("BT16-025 Partition")
         effect0.set_effect_description("Partition")
@@ -26,118 +25,146 @@ class BT16_025(CardScript):
         effect0.set_can_use_condition(condition0)
         effects.append(effect0)
 
-        # Timing: EffectTiming.None
-        # Jogress Condition
+        # ── Partition (inherited) ────────────────────────────────────────
+        effect0i = ICardEffect()
+        effect0i.set_effect_name("BT16-025 Partition")
+        effect0i.set_effect_description("Partition")
+        effect0i.is_inherited_effect = True
+        effect0i._is_partition = True
+
+        def condition0i(context: Dict[str, Any]) -> bool:
+            return True
+        effect0i.set_can_use_condition(condition0i)
+        effects.append(effect0i)
+
+        # ── DNA Digivolve condition ──────────────────────────────────────
         effect1 = ICardEffect()
         effect1.set_effect_name("BT16-025 Jogress Condition")
         effect1.set_effect_description("Jogress Condition")
 
-        effect = effect1  # alias for condition closure
         def condition1(context: Dict[str, Any]) -> bool:
             return True
-
         effect1.set_can_use_condition(condition1)
         effects.append(effect1)
 
-        # Timing: EffectTiming.OnEnterFieldAnyone
-        # [When Digivolving] Suspend all of your opponent's Digimon with as many or fewer digivolution cards as this Digimon. Then, if DNA digivolving, none of your opponent's Digimon can unsuspend until the end of their turn.
+        # ── [When Digivolving] ───────────────────────────────────────────
+        # Suspend all of your opponent's Digimon with as many or fewer
+        # digivolution cards as this Digimon. Then, if DNA digivolving,
+        # none of your opponent's Digimon can unsuspend until the end of
+        # their turn.
         effect2 = ICardEffect()
         effect2.set_timing(EffectTiming.OnEnterFieldAnyone)
-        effect2.set_effect_name("BT16-025 Suspend all your opponent's digimon")
-        effect2.set_effect_description("[When Digivolving] Suspend all of your opponent's Digimon with as many or fewer digivolution cards as this Digimon. Then, if DNA digivolving, none of your opponent's Digimon can unsuspend until the end of their turn.")
+        effect2.set_effect_name("BT16-025 Suspend opponent Digimon + DNA cannot unsuspend")
+        effect2.set_effect_description(
+            "[When Digivolving] Suspend all of your opponent's Digimon with "
+            "as many or fewer digivolution cards as this Digimon. Then, if "
+            "DNA digivolving, none of your opponent's Digimon can unsuspend "
+            "until the end of their turn."
+        )
         effect2.is_when_digivolving = True
-        effect2._is_cannot_unsuspend_player = True
 
-        effect = effect2  # alias for condition closure
         def condition2(context: Dict[str, Any]) -> bool:
             if card and card.permanent_of_this_card() is None:
                 return False
-            # Triggered when digivolving — validated by engine timing
             return True
-
         effect2.set_can_use_condition(condition2)
 
         def process2(ctx: Dict[str, Any]):
-            """Action: Suspend all opponent Digimon with <= source count, Grant Cannot Unsuspend, Effect Immunity"""
             player = ctx.get('player')
             perm = ctx.get('permanent')
             game = ctx.get('game')
-            if not (player and game):
+            if not (player and game and perm):
                 return
-            enemy = player.enemy if player else None
-            if enemy and perm:
-                my_source_count = len(perm.card_sources)
-                for opp_perm in enemy.battle_area:
-                    if opp_perm.is_digimon and len(opp_perm.card_sources) <= my_source_count:
-                        opp_perm.suspend()
-            if perm:
-                perm.grant_keyword('_is_cannot_unsuspend_player')
-            # Prevent suspended opponent Digimon from unsuspending (DNA digivolve bonus)
-            if not (player and game):
+            enemy = player.enemy
+            if not enemy:
                 return
+
+            # Digivolution cards = cards below the top card
+            # card_sources includes the top card, so digi card count =
+            # len(card_sources) - 1
+            my_digi_count = len(perm.card_sources) - 1
+
+            for opp_perm in list(enemy.battle_area):
+                if not opp_perm.is_digimon:
+                    continue
+                opp_digi_count = len(opp_perm.card_sources) - 1
+                if opp_digi_count <= my_digi_count:
+                    opp_perm.suspend()
+
+            # If DNA digivolving, ALL opponent Digimon cannot unsuspend
+            # until end of opponent's turn
+            is_dna = ctx.get('is_dna_digivolve', False)
+            if not is_dna:
+                return
+
             from digimon_gym.engine.interfaces.modifiers import ModifierType
-            if enemy:
-                for opp_perm in enemy.battle_area:
-                    if opp_perm.is_suspended:
-                        game.register_modifier(
-                            ModifierType.CANNOT_UNSUSPEND, opp_perm,
-                            value_fn=lambda: True, expiry='end_of_opponent_turn')
-            # Grant effect immunity via modifier system
-            if perm and game:
-                from digimon_gym.engine.interfaces.modifiers import ModifierType
-                game.register_modifier(
-                    ModifierType.CANNOT_BE_SELECTED_BY_EFFECT, perm,
-                    value_fn=lambda: True, expiry='end_of_turn')
+
+            for opp_perm in list(enemy.battle_area):
+                if opp_perm.is_digimon:
+                    game.register_modifier(
+                        ModifierType.CANNOT_UNSUSPEND, opp_perm,
+                        value_fn=lambda: True,
+                        expiry='end_of_opponent_turn'
+                    )
 
         effect2.set_on_process_callback(process2)
         effects.append(effect2)
 
-        # Timing: EffectTiming.OnAllyAttack
-        # [When Attacking] [Once Per Turn] Suspend 1 of your opponent's unsuspended Digimon. If this effect didn't suspend, unsuspend this Digimon.
+        # ── [When Attacking] [Once Per Turn] ─────────────────────────────
+        # Suspend 1 of your opponent's unsuspended Digimon. If this effect
+        # didn't suspend, unsuspend this Digimon.
         effect3 = ICardEffect()
-        effect3.set_timing(EffectTiming.OnAllyAttack)
-        effect3.set_effect_name("BT16-025 Suspend 1 opponent's digimon or unsuspend this digimon")
-        effect3.set_effect_description("[When Attacking] [Once Per Turn] Suspend 1 of your opponent's unsuspended Digimon. If this effect didn't suspend, unsuspend this Digimon.")
+        effect3.set_timing(EffectTiming.OnUseAttack)
+        effect3.set_effect_name("BT16-025 Suspend 1 opp Digimon or unsuspend self")
+        effect3.set_effect_description(
+            "[When Attacking] [Once Per Turn] Suspend 1 of your opponent's "
+            "unsuspended Digimon. If this effect didn't suspend, unsuspend "
+            "this Digimon."
+        )
         effect3.set_max_count_per_turn(1)
         effect3.set_hash_string("WhenAttacking_BT16_025")
         effect3.is_on_attack = True
 
-        effect = effect3  # alias for condition closure
         def condition3(context: Dict[str, Any]) -> bool:
             if card and card.permanent_of_this_card() is None:
                 return False
-            # Triggered on attack — validated by engine timing
             return True
-
         effect3.set_can_use_condition(condition3)
 
         def process3(ctx: Dict[str, Any]):
-            """Action: Suspend, Unsuspend, Effect Immunity"""
             player = ctx.get('player')
             perm = ctx.get('permanent')
             game = ctx.get('game')
-            if not (player and game):
+            if not (player and game and perm):
                 return
+            enemy = player.enemy
+            if not enemy:
+                return
+
+            # Check if there are valid targets: unsuspended opponent Digimon
+            suspended_one = [False]
+
             def target_filter(p):
-                return True
+                return p.is_digimon and not p.is_suspended
+
             def on_suspend(target_perm):
                 target_perm.suspend()
-            game.effect_select_opponent_permanent(
-                player, on_suspend, filter_fn=target_filter, is_optional=False)
-            if not (player and game):
-                return
-            def target_filter(p):
-                return True
-            def on_unsuspend(target_perm):
-                target_perm.unsuspend()
-            game.effect_select_own_permanent(
-                player, on_unsuspend, filter_fn=target_filter, is_optional=False)
-            # Grant effect immunity via modifier system
-            if perm and game:
-                from digimon_gym.engine.interfaces.modifiers import ModifierType
-                game.register_modifier(
-                    ModifierType.CANNOT_BE_SELECTED_BY_EFFECT, perm,
-                    value_fn=lambda: True, expiry='end_of_turn')
+                suspended_one[0] = True
+
+            has_targets = any(
+                target_filter(p) for p in enemy.battle_area
+            )
+
+            if has_targets:
+                game.effect_select_opponent_permanent(
+                    player, on_suspend,
+                    filter_fn=target_filter,
+                    is_optional=False
+                )
+
+            # If nothing was suspended, unsuspend this Digimon
+            if not suspended_one[0]:
+                perm.unsuspend()
 
         effect3.set_on_process_callback(process3)
         effects.append(effect3)

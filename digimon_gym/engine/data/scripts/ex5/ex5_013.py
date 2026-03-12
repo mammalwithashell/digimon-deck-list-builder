@@ -63,10 +63,10 @@ class EX5_013(CardScript):
         effect2.set_can_use_condition(condition2)
         effects.append(effect2)
 
-        # Timing: EffectTiming.OnAllyAttack
+        # Timing: EffectTiming.OnUseAttack
         # [When Attacking] [Once Per Turn] By deleting 1 Digimon with the [Deva] trait or 6000 DP or less, this Digimon gains <Security Attack +1> (This Digimon checks 1 additional security card) for the turn.
         effect3 = ICardEffect()
-        effect3.set_timing(EffectTiming.OnAllyAttack)
+        effect3.set_timing(EffectTiming.OnUseAttack)
         effect3.set_effect_name("EX5-013 Delete 1 Digimon to gain Security Attack +1")
         effect3.set_effect_description("[When Attacking] [Once Per Turn] By deleting 1 Digimon with the [Deva] trait or 6000 DP or less, this Digimon gains <Security Attack +1> (This Digimon checks 1 additional security card) for the turn.")
         effect3.is_optional = True

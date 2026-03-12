@@ -67,10 +67,10 @@ class BT19_025(CardScript):
         effect2.set_on_process_callback(process2)
         effects.append(effect2)
 
-        # Timing: EffectTiming.OnAllyAttack
+        # Timing: EffectTiming.OnUseAttack
         # [When Attacking] <De-Digivolve 1> 1 of your opponent's Digimon. Then, this Digimon may digivolve into a Digimon card with the [Blue Flare] trait from under your Tamers without paying the cost.
         effect3 = ICardEffect()
-        effect3.set_timing(EffectTiming.OnAllyAttack)
+        effect3.set_timing(EffectTiming.OnUseAttack)
         effect3.set_effect_name("BT19-025 <De-Digivolve 1> and digivolve into a [Blue Flare] card")
         effect3.set_effect_description("[When Attacking] <De-Digivolve 1> 1 of your opponent's Digimon. Then, this Digimon may digivolve into a Digimon card with the [Blue Flare] trait from under your Tamers without paying the cost.")
         effect3.is_on_attack = True

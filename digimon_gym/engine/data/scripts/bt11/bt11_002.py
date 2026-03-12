@@ -14,10 +14,10 @@ class BT11_002(CardScript):
     def get_card_effects(self, card: 'CardSource') -> List['ICardEffect']:
         effects = []
 
-        # Timing: EffectTiming.OnAllyAttack
+        # Timing: EffectTiming.OnUseAttack
         # [When Attacking][Once Per Turn] If you have a blue Tamer in play, <Draw 1>. (Draw 1 card from your deck.)
         effect0 = ICardEffect()
-        effect0.set_timing(EffectTiming.OnAllyAttack)
+        effect0.set_timing(EffectTiming.OnUseAttack)
         effect0.set_effect_name("BT11-002 Draw 1")
         effect0.set_effect_description("[When Attacking][Once Per Turn] If you have a blue Tamer in play, <Draw 1>. (Draw 1 card from your deck.)")
         effect0.is_inherited_effect = True

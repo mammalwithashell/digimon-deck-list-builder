@@ -108,10 +108,10 @@ class BT16_019(CardScript):
         effect3.set_on_process_callback(process3)
         effects.append(effect3)
 
-        # Timing: EffectTiming.OnAllyAttack
+        # Timing: EffectTiming.OnUseAttack
         # [When Attacking] Trash the top digivolution card of 1 of your opponent's Digimon.
         effect4 = ICardEffect()
-        effect4.set_timing(EffectTiming.OnAllyAttack)
+        effect4.set_timing(EffectTiming.OnUseAttack)
         effect4.set_effect_name("BT16-019 Trash 1 digivolution card")
         effect4.set_effect_description("[When Attacking] Trash the top digivolution card of 1 of your opponent's Digimon.")
         effect4.is_inherited_effect = True

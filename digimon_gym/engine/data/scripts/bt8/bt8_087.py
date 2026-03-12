@@ -38,10 +38,10 @@ class BT8_087(CardScript):
         effect0.set_on_process_callback(process0)
         effects.append(effect0)
 
-        # Timing: EffectTiming.OnAllyAttack
+        # Timing: EffectTiming.OnUseAttack
         # [Opponent's Turn] When one of your opponent's Digimon attacks one of your blue Digimon, you may suspend this Tamer to <Draw 1��. (Draw 1 card from your deck.)
         effect1 = ICardEffect()
-        effect1.set_timing(EffectTiming.OnAllyAttack)
+        effect1.set_timing(EffectTiming.OnUseAttack)
         effect1.set_effect_name("BT8-087 Draw 1")
         effect1.set_effect_description("[Opponent's Turn] When one of your opponent's Digimon attacks one of your blue Digimon, you may suspend this Tamer to <Draw 1��. (Draw 1 card from your deck.)")
         effect1.is_optional = True

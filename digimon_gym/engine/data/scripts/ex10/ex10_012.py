@@ -127,10 +127,10 @@ class EX10_012(CardScript):
         effect2.set_on_process_callback(process2)
         effects.append(effect2)
 
-        # Timing: EffectTiming.OnAllyAttack
+        # Timing: EffectTiming.OnUseAttack
         # [When Attacking] 1 of your opponent's Digimon and 1 of their Tamers can't suspend until their turn ends.
         effect3 = ICardEffect()
-        effect3.set_timing(EffectTiming.OnAllyAttack)
+        effect3.set_timing(EffectTiming.OnUseAttack)
         effect3.set_effect_name("EX10-012 1 Digimon and 1 Tamer cant suspend")
         effect3.set_effect_description("[When Attacking] 1 of your opponent's Digimon and 1 of their Tamers can't suspend until their turn ends.")
         effect3.is_on_attack = True

@@ -103,10 +103,10 @@ class EX8_022(CardScript):
         effect2.set_on_process_callback(process2)
         effects.append(effect2)
 
-        # Timing: EffectTiming.OnAllyAttack
+        # Timing: EffectTiming.OnUseAttack
         # [When Attacking] Give 1 of your opponent's Digimon <Security A. -1> until the end of their turn.
         effect3 = ICardEffect()
-        effect3.set_timing(EffectTiming.OnAllyAttack)
+        effect3.set_timing(EffectTiming.OnUseAttack)
         effect3.set_effect_name("EX8-022 Security Attack -1")
         effect3.set_effect_description("[When Attacking] Give 1 of your opponent's Digimon <Security A. -1> until the end of their turn.")
         effect3.is_inherited_effect = True

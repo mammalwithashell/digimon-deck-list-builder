@@ -86,10 +86,10 @@ class BT23_096(CardScript):
         effect2.set_can_use_condition(condition2)
         effects.append(effect2)
 
-        # Timing: EffectTiming.OnAllyAttack
+        # Timing: EffectTiming.OnUseAttack
         # [Your Turn] When one of your [CS] trait Digimon attacks <Delay>, draw 2.
         effect3 = ICardEffect()
-        effect3.set_timing(EffectTiming.OnAllyAttack)
+        effect3.set_timing(EffectTiming.OnUseAttack)
         effect3.set_effect_name("BT23-096 Delay draw 2")
         effect3.set_effect_description("[Your Turn] When one of your [CS] trait Digimon attacks <Delay>, draw 2.")
         effect3.is_optional = True

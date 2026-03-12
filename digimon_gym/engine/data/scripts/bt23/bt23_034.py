@@ -164,10 +164,10 @@ class BT23_034(CardScript):
         effect4.set_on_process_callback(process4)
         effects.append(effect4)
 
-        # Timing: EffectTiming.OnAllyAttack
+        # Timing: EffectTiming.OnUseAttack
         # [When Attacking] [Once Per Turn] Until your opponent's turn ends, 1 of their Digimon can't activate [When Digivolving] effects and gets -6000 DP.
         effect5 = ICardEffect()
-        effect5.set_timing(EffectTiming.OnAllyAttack)
+        effect5.set_timing(EffectTiming.OnUseAttack)
         effect5.set_effect_name("BT23-034 1 digimon gains 'cant activate [When Digivolving] effects' and -6K DP")
         effect5.set_effect_description("[When Attacking] [Once Per Turn] Until your opponent's turn ends, 1 of their Digimon can't activate [When Digivolving] effects and gets -6000 DP.")
         effect5.set_hash_string("BT23_034_OP_WD_WA")

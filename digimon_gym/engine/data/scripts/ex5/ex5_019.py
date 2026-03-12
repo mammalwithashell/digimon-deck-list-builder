@@ -50,10 +50,10 @@ class EX5_019(CardScript):
         effect0.set_on_process_callback(process0)
         effects.append(effect0)
 
-        # Timing: EffectTiming.OnAllyAttack
+        # Timing: EffectTiming.OnUseAttack
         # [When Attacking] Trash the bottom digivolution card of 1 of your opponent's Digimon.
         effect1 = ICardEffect()
-        effect1.set_timing(EffectTiming.OnAllyAttack)
+        effect1.set_timing(EffectTiming.OnUseAttack)
         effect1.set_effect_name("EX5-019 Trash 1 digivolution card")
         effect1.set_effect_description("[When Attacking] Trash the bottom digivolution card of 1 of your opponent's Digimon.")
         effect1.is_on_attack = True
@@ -81,10 +81,10 @@ class EX5_019(CardScript):
         effect1.set_on_process_callback(process1)
         effects.append(effect1)
 
-        # Timing: EffectTiming.OnAllyAttack
+        # Timing: EffectTiming.OnUseAttack
         # [When Attacking] [Once Per Turn] If this Digimon has the [Four Sovereigns]/[God Beast] trait, gain 1 memory.
         effect2 = ICardEffect()
-        effect2.set_timing(EffectTiming.OnAllyAttack)
+        effect2.set_timing(EffectTiming.OnUseAttack)
         effect2.set_effect_name("EX5-019 Memory +1")
         effect2.set_effect_description("[When Attacking] [Once Per Turn] If this Digimon has the [Four Sovereigns]/[God Beast] trait, gain 1 memory.")
         effect2.is_inherited_effect = True

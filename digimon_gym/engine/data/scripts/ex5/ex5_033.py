@@ -63,10 +63,10 @@ class EX5_033(CardScript):
         effect0.set_on_process_callback(process0)
         effects.append(effect0)
 
-        # Timing: EffectTiming.OnAllyAttack
+        # Timing: EffectTiming.OnUseAttack
         # [When Attacking] [Once Per Turn] By trashing the top card of your security stack, you may play 1 yellow level 4 or lower card from your hand without paying the cost. Any Digimon played by this effect gain <Rush> (This Digimon can attack the turn it comes into play), for the turn.
         effect1 = ICardEffect()
-        effect1.set_timing(EffectTiming.OnAllyAttack)
+        effect1.set_timing(EffectTiming.OnUseAttack)
         effect1.set_effect_name("EX5-033 Trash the top card of your security to play 1 Digimon from hand")
         effect1.set_effect_description("[When Attacking] [Once Per Turn] By trashing the top card of your security stack, you may play 1 yellow level 4 or lower card from your hand without paying the cost. Any Digimon played by this effect gain <Rush> (This Digimon can attack the turn it comes into play), for the turn.")
         effect1.is_optional = True

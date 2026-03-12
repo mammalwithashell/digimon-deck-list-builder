@@ -75,10 +75,10 @@ class BT14_101(CardScript):
         effect2.set_on_process_callback(process2)
         effects.append(effect2)
 
-        # Timing: EffectTiming.OnAllyAttack
+        # Timing: EffectTiming.OnUseAttack
         # [When Attacking] If you have a Tamer, this Digimon gains ��Security A. +1�� and <Piercing> for the turn.
         effect3 = ICardEffect()
-        effect3.set_timing(EffectTiming.OnAllyAttack)
+        effect3.set_timing(EffectTiming.OnUseAttack)
         effect3.set_effect_name("BT14-101 Gain Keyword Piercing")
         effect3.set_effect_description("[When Attacking] If you have a Tamer, this Digimon gains ��Security A. +1�� and <Piercing> for the turn.")
         effect3.is_on_attack = True

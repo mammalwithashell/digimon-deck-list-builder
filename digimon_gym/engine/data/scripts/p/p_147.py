@@ -51,10 +51,10 @@ class P_147(CardScript):
         effect1.set_can_use_condition(condition1)
         effects.append(effect1)
 
-        # Timing: EffectTiming.OnAllyAttack
+        # Timing: EffectTiming.OnUseAttack
         # [When Attacking] [Once Per Turn] By placing 1 level 4 card with [Pulsemon] in its text from your hand as this Digimon�s bottom digivolution card, activate one of that card's [When Digivolving] effects as an effect of this Digimon.
         effect2 = ICardEffect()
-        effect2.set_timing(EffectTiming.OnAllyAttack)
+        effect2.set_timing(EffectTiming.OnUseAttack)
         effect2.set_effect_name("P-147 Place 1 level 4 with [Pulsemon] in its text as bottom digivolution source, activate one of that card's [When Digivolving] effects")
         effect2.set_effect_description("[When Attacking] [Once Per Turn] By placing 1 level 4 card with [Pulsemon] in its text from your hand as this Digimon�s bottom digivolution card, activate one of that card's [When Digivolving] effects as an effect of this Digimon.")
         effect2.is_optional = True

@@ -80,10 +80,10 @@ class BT13_060(CardScript):
         effect1.set_on_process_callback(process1)
         effects.append(effect1)
 
-        # Timing: EffectTiming.OnAllyAttack
+        # Timing: EffectTiming.OnUseAttack
         # [When Attacking] Trash the top card of your opponent's security stack for every 2 of your opponent's suspended Digimon and Tamers.
         effect2 = ICardEffect()
-        effect2.set_timing(EffectTiming.OnAllyAttack)
+        effect2.set_timing(EffectTiming.OnUseAttack)
         effect2.set_effect_name("BT13-060 Effect")
         effect2.set_effect_description("[When Attacking] Trash the top card of your opponent's security stack for every 2 of your opponent's suspended Digimon and Tamers.")
         effect2.is_on_attack = True

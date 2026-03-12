@@ -32,10 +32,10 @@ class EX8_060(CardScript):
         effect0.set_can_use_condition(condition0)
         effects.append(effect0)
 
-        # Timing: EffectTiming.OnAllyAttack
+        # Timing: EffectTiming.OnUseAttack
         # [When Attacking] You may play 1 [NSo] trait Digimon card with a play cost of 3 or less from your trash without paying the cost.
         effect1 = ICardEffect()
-        effect1.set_timing(EffectTiming.OnAllyAttack)
+        effect1.set_timing(EffectTiming.OnUseAttack)
         effect1.set_effect_name("EX8-060 You may play 1 3 cost or less NSo Digimon")
         effect1.set_effect_description("[When Attacking] You may play 1 [NSo] trait Digimon card with a play cost of 3 or less from your trash without paying the cost.")
         effect1.is_optional = True
@@ -111,10 +111,10 @@ class EX8_060(CardScript):
         effect2.set_on_process_callback(process2)
         effects.append(effect2)
 
-        # Timing: EffectTiming.OnAllyAttack
+        # Timing: EffectTiming.OnUseAttack
         # [When Attacking] [Once Per Turn] By deleting 1 of your other Digimon, this Digimon unsuspends.
         effect3 = ICardEffect()
-        effect3.set_timing(EffectTiming.OnAllyAttack)
+        effect3.set_timing(EffectTiming.OnUseAttack)
         effect3.set_effect_name("EX8-060 Delete your another Digimon to unsuspend this Digimon")
         effect3.set_effect_description("[When Attacking] [Once Per Turn] By deleting 1 of your other Digimon, this Digimon unsuspends.")
         effect3.is_inherited_effect = True

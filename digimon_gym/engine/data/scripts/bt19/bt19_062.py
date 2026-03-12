@@ -55,10 +55,10 @@ class BT19_062(CardScript):
         effect2.set_can_use_condition(condition2)
         effects.append(effect2)
 
-        # Timing: EffectTiming.OnAllyAttack
+        # Timing: EffectTiming.OnUseAttack
         # [When Attacking] Trash 1 Option card in your battle area.
         effect3 = ICardEffect()
-        effect3.set_timing(EffectTiming.OnAllyAttack)
+        effect3.set_timing(EffectTiming.OnUseAttack)
         effect3.set_effect_name("BT19-062 Trash 1 Option card in your battle area")
         effect3.set_effect_description("[When Attacking] Trash 1 Option card in your battle area.")
         effect3.is_on_attack = True

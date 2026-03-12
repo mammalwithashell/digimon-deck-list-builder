@@ -28,10 +28,10 @@ class EX5_047(CardScript):
         effect0.set_can_use_condition(condition0)
         effects.append(effect0)
 
-        # Timing: EffectTiming.OnAllyAttack
+        # Timing: EffectTiming.OnUseAttack
         # [When Attacking] This Digimon may digivolve into a Digimon card with [Leomon] in its name in your hand with the digivolution cost reduced by 1.
         effect1 = ICardEffect()
-        effect1.set_timing(EffectTiming.OnAllyAttack)
+        effect1.set_timing(EffectTiming.OnUseAttack)
         effect1.set_effect_name("EX5-047 This Digimon digivolves")
         effect1.set_effect_description("[When Attacking] This Digimon may digivolve into a Digimon card with [Leomon] in its name in your hand with the digivolution cost reduced by 1.")
         effect1.is_optional = True

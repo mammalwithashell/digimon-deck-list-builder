@@ -93,10 +93,10 @@ class BT24_066(CardScript):
         effect1.set_on_process_callback(process1)
         effects.append(effect1)
 
-        # Timing: EffectTiming.OnAllyAttack
+        # Timing: EffectTiming.OnUseAttack
         # [When Attacking] [Once Per Turn] Delete 1 of your opponent's level 3 Digimon.
         effect2 = ICardEffect()
-        effect2.set_timing(EffectTiming.OnAllyAttack)
+        effect2.set_timing(EffectTiming.OnUseAttack)
         effect2.set_effect_name("BT24-066 Delete opponents level 3 Digimon")
         effect2.set_effect_description("[When Attacking] [Once Per Turn] Delete 1 of your opponent's level 3 Digimon.")
         effect2.is_inherited_effect = True

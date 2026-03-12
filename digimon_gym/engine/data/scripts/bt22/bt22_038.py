@@ -160,10 +160,10 @@ class BT22_038(CardScript):
         effect4.set_on_process_callback(process4)
         effects.append(effect4)
 
-        # Timing: EffectTiming.OnAllyAttack
+        # Timing: EffectTiming.OnUseAttack
         # [When Attacking] [Once Per Turn] By trashing this Digimon's bottom face-down digivolution card, until your opponent's turn ends, 1 of their Digimon can't activate [When Digivolving] effects and gets -4000 DP.
         effect5 = ICardEffect()
-        effect5.set_timing(EffectTiming.OnAllyAttack)
+        effect5.set_timing(EffectTiming.OnUseAttack)
         effect5.set_effect_name("BT22-038 by trashing bottom face down source, 1 digimon cant use When digivolving effects and get -4K DP")
         effect5.set_effect_description("[When Attacking] [Once Per Turn] By trashing this Digimon's bottom face-down digivolution card, until your opponent's turn ends, 1 of their Digimon can't activate [When Digivolving] effects and gets -4000 DP.")
         effect5.is_optional = True
@@ -209,10 +209,10 @@ class BT22_038(CardScript):
         effect5.set_on_process_callback(process5)
         effects.append(effect5)
 
-        # Timing: EffectTiming.OnAllyAttack
+        # Timing: EffectTiming.OnUseAttack
         # [When Attacking] [Once Per Turn] 1 of your opponent's Digimon gets -4000 DP for the turn.
         effect6 = ICardEffect()
-        effect6.set_timing(EffectTiming.OnAllyAttack)
+        effect6.set_timing(EffectTiming.OnUseAttack)
         effect6.set_effect_name("BT22-038 -4K DP")
         effect6.set_effect_description("[When Attacking] [Once Per Turn] 1 of your opponent's Digimon gets -4000 DP for the turn.")
         effect6.is_inherited_effect = True

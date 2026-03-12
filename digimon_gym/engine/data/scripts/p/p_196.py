@@ -19,8 +19,9 @@ class P_196(CardScript):
         effect0 = ICardEffect()
         effect0.set_effect_name("P-196 Alternate digivolution requirement")
         effect0.set_effect_description("Alternate digivolution requirement")
-        # Alternate digivolution: with [TS] trait for cost 0
+        # Alternate digivolution: Lv.2 with [TS] trait for cost 0
         effect0._alt_digi_cost = 0
+        effect0._alt_digi_level = 2
         effect0._alt_digi_trait = "TS"
 
         def condition0(context: Dict[str, Any]) -> bool:
@@ -36,11 +37,19 @@ class P_196(CardScript):
         effect1.set_effect_description("[Start of Your Main Phase] If you have 4 or less memory, this Digimon may digivolve into a Digimon card with the [Sea Beast] or [TS] trait in the hand without paying the cost.")
         effect1.is_optional = True
 
-        effect = effect1  # alias for condition closure
         def condition1(context: Dict[str, Any]) -> bool:
             if card and card.permanent_of_this_card() is None:
                 return False
             if not (card and card.owner and card.owner.is_my_turn):
+                return False
+            # Only activates if player has 4 or less memory
+            player = card.owner if card else None
+            if player is None:
+                return False
+            memory = getattr(player, 'memory', None)
+            if memory is None:
+                memory = getattr(player, 'memory_for_player', None)
+            if memory is not None and memory > 4:
                 return False
             return True
 
@@ -51,7 +60,10 @@ class P_196(CardScript):
             player = ctx.get('player')
             perm = ctx.get('permanent')
             game = ctx.get('game')
-            if not (player and perm and game):
+            if not (player and game):
+                return
+            host_perm = card.permanent_of_this_card() if card else None
+            if host_perm is None:
                 return
             def digi_filter(c):
                 if not getattr(c, 'is_digimon', False):
@@ -60,15 +72,15 @@ class P_196(CardScript):
                     return False
                 return True
             game.effect_digivolve_from_hand(
-                player, perm, digi_filter, is_optional=True)
+                player, host_perm, digi_filter, cost_override=0, is_optional=True)
 
         effect1.set_on_process_callback(process1)
         effects.append(effect1)
 
-        # Timing: EffectTiming.OnAllyAttack
+        # Timing: EffectTiming.OnUseAttack
         # [When Attacking] [Once Per Turn] If you have 7 or fewer cards in your hand, <Draw 1>
         effect2 = ICardEffect()
-        effect2.set_timing(EffectTiming.OnAllyAttack)
+        effect2.set_timing(EffectTiming.OnUseAttack)
         effect2.set_effect_name("P-196 Draw 1")
         effect2.set_effect_description("[When Attacking] [Once Per Turn] If you have 7 or fewer cards in your hand, <Draw 1>")
         effect2.is_inherited_effect = True
@@ -76,11 +88,16 @@ class P_196(CardScript):
         effect2.set_hash_string("P_196_Draw1")
         effect2.is_on_attack = True
 
-        effect = effect2  # alias for condition closure
         def condition2(context: Dict[str, Any]) -> bool:
             if card and card.permanent_of_this_card() is None:
                 return False
-            # Triggered on attack — validated by engine timing
+            # Only if 7 or fewer cards in hand
+            player = card.owner if card else None
+            if player is None:
+                return False
+            hand = getattr(player, 'hand_cards', []) or []
+            if len(hand) > 7:
+                return False
             return True
 
         effect2.set_can_use_condition(condition2)
@@ -88,8 +105,6 @@ class P_196(CardScript):
         def process2(ctx: Dict[str, Any]):
             """Action: Draw 1"""
             player = ctx.get('player')
-            perm = ctx.get('permanent')
-            game = ctx.get('game')
             if player:
                 player.draw_cards(1)
 

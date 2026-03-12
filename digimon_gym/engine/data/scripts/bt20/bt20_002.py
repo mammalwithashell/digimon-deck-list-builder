@@ -14,10 +14,10 @@ class BT20_002(CardScript):
     def get_card_effects(self, card: 'CardSource') -> List['ICardEffect']:
         effects = []
 
-        # Timing: EffectTiming.OnAllyAttack
+        # Timing: EffectTiming.OnUseAttack
         # [When Attacking] (Once Per Turn) If this Digimon has [Dracomon]/[Examon] in its text, <Draw 1>.
         effect0 = ICardEffect()
-        effect0.set_timing(EffectTiming.OnAllyAttack)
+        effect0.set_timing(EffectTiming.OnUseAttack)
         effect0.set_effect_name("BT20-002 Draw 1")
         effect0.set_effect_description("[When Attacking] (Once Per Turn) If this Digimon has [Dracomon]/[Examon] in its text, <Draw 1>.")
         effect0.is_inherited_effect = True

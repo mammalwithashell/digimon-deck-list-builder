@@ -56,10 +56,10 @@ class EX8_054(CardScript):
         effect2.set_can_use_condition(condition2)
         effects.append(effect2)
 
-        # Timing: EffectTiming.OnAllyAttack
+        # Timing: EffectTiming.OnUseAttack
         # [When Attacking] [Once Per Turn] Activate 1 [When Digivolving] effect of 1 Digimon card with [Justimon] in its name in this Digimon's digivolution cards as an effect of this Digimon.
         effect3 = ICardEffect()
-        effect3.set_timing(EffectTiming.OnAllyAttack)
+        effect3.set_timing(EffectTiming.OnUseAttack)
         effect3.set_effect_name("EX8-054 Activate 1 [When Digivolving] effect")
         effect3.set_effect_description("[When Attacking] [Once Per Turn] Activate 1 [When Digivolving] effect of 1 Digimon card with [Justimon] in its name in this Digimon's digivolution cards as an effect of this Digimon.")
         effect3.set_max_count_per_turn(1)

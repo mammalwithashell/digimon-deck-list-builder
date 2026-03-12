@@ -92,10 +92,10 @@ class BT23_091(CardScript):
         effect2.set_can_use_condition(condition2)
         effects.append(effect2)
 
-        # Timing: EffectTiming.OnAllyAttack
+        # Timing: EffectTiming.OnUseAttack
         # [Your Turn] When one of your [CS] trait Digimon attacks <Delay>, delete 1 lowest DP opp Digimon.
         effect3 = ICardEffect()
-        effect3.set_timing(EffectTiming.OnAllyAttack)
+        effect3.set_timing(EffectTiming.OnUseAttack)
         effect3.set_effect_name("BT23-091 Delay delete lowest DP")
         effect3.set_effect_description("[Your Turn] When one of your [CS] trait Digimon attacks <Delay>, delete 1 of your opponent's Digimon with the lowest DP.")
         effect3.is_optional = True

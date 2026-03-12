@@ -50,10 +50,10 @@ class BT10_059(CardScript):
         effect0.set_on_process_callback(process0)
         effects.append(effect0)
 
-        # Timing: EffectTiming.OnAllyAttack
+        # Timing: EffectTiming.OnUseAttack
         # [When Attacking][Once Per Turn] Reveal the top 3 cards of your deck. Add 1 card with [Legend-Arms] or [Xros Heart] in its traits among them to your hand. Place the rest at the bottom of your deck in any order.
         effect1 = ICardEffect()
-        effect1.set_timing(EffectTiming.OnAllyAttack)
+        effect1.set_timing(EffectTiming.OnUseAttack)
         effect1.set_effect_name("BT10-059 Reveal the top 3 cards of deck")
         effect1.set_effect_description("[When Attacking][Once Per Turn] Reveal the top 3 cards of your deck. Add 1 card with [Legend-Arms] or [Xros Heart] in its traits among them to your hand. Place the rest at the bottom of your deck in any order.")
         effect1.is_inherited_effect = True

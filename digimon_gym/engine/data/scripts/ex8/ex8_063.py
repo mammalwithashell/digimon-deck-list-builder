@@ -72,10 +72,10 @@ class EX8_063(CardScript):
         effect1.set_on_process_callback(process1)
         effects.append(effect1)
 
-        # Timing: EffectTiming.OnAllyAttack
+        # Timing: EffectTiming.OnUseAttack
         # [When Attacking] [Once Per Turn] Your opponent may trash 1 card in their hand. If this effect didn't trash, you may play 1 [Fallen Angel] trait Digimon card with a play cost of 7 or less from your trash without paying the cost.
         effect2 = ICardEffect()
-        effect2.set_timing(EffectTiming.OnAllyAttack)
+        effect2.set_timing(EffectTiming.OnUseAttack)
         effect2.set_effect_name("EX8-063 Opponent trashes 1 card, or you play a fallen angel")
         effect2.set_effect_description("[When Attacking] [Once Per Turn] Your opponent may trash 1 card in their hand. If this effect didn't trash, you may play 1 [Fallen Angel] trait Digimon card with a play cost of 7 or less from your trash without paying the cost.")
         effect2.set_max_count_per_turn(1)

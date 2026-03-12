@@ -50,10 +50,10 @@ class BT22_091(CardScript):
         effect1.set_on_process_callback(process1)
         effects.append(effect1)
 
-        # Timing: EffectTiming.OnAllyAttack
+        # Timing: EffectTiming.OnUseAttack
         # [Opponent's Turn] When one of your opponent's Digimon attacks, by suspending this Tamer, change the attack target to 1 of your Digimon with the [Unidentified] or [CS] traits.
         effect2 = ICardEffect()
-        effect2.set_timing(EffectTiming.OnAllyAttack)
+        effect2.set_timing(EffectTiming.OnUseAttack)
         effect2.set_effect_name("BT22-091 Suspend tamer, change attack target to 1 of your [CS]/[Unidentified] digimon")
         effect2.set_effect_description("[Opponent's Turn] When one of your opponent's Digimon attacks, by suspending this Tamer, change the attack target to 1 of your Digimon with the [Unidentified] or [CS] traits.")
         effect2.is_optional = True
@@ -86,10 +86,10 @@ class BT22_091(CardScript):
         effect2.set_on_process_callback(process2)
         effects.append(effect2)
 
-        # Timing: EffectTiming.OnAllyAttack
+        # Timing: EffectTiming.OnUseAttack
         # [Opponent's Turn] [Once Per Turn] When one of your opponent's Digimon attacks, if this Digimon is [Eater Adam], you may change the attack target to 1 of your [Unidentified] or [CS] trait Digimon.
         effect3 = ICardEffect()
-        effect3.set_timing(EffectTiming.OnAllyAttack)
+        effect3.set_timing(EffectTiming.OnUseAttack)
         effect3.set_effect_name("BT22-091 change attack target to 1 of your [CS]/[Unidentified] digimon")
         effect3.set_effect_description("[Opponent's Turn] [Once Per Turn] When one of your opponent's Digimon attacks, if this Digimon is [Eater Adam], you may change the attack target to 1 of your [Unidentified] or [CS] trait Digimon.")
         effect3.is_inherited_effect = True

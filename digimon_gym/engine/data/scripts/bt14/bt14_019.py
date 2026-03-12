@@ -14,10 +14,10 @@ class BT14_019(CardScript):
     def get_card_effects(self, card: 'CardSource') -> List['ICardEffect']:
         effects = []
 
-        # Timing: EffectTiming.OnAllyAttack
+        # Timing: EffectTiming.OnUseAttack
         # [Opponent's Turn][Once Per Turn] When an opponent's Digimon attacks, trash its bottom 2 digivolution cards.
         effect0 = ICardEffect()
-        effect0.set_timing(EffectTiming.OnAllyAttack)
+        effect0.set_timing(EffectTiming.OnUseAttack)
         effect0.set_effect_name("BT14-019 Trash 2 digivolution cards")
         effect0.set_effect_description("[Opponent's Turn][Once Per Turn] When an opponent's Digimon attacks, trash its bottom 2 digivolution cards.")
         effect0.is_inherited_effect = True

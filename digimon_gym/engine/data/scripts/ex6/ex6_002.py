@@ -14,10 +14,10 @@ class EX6_002(CardScript):
     def get_card_effects(self, card: 'CardSource') -> List['ICardEffect']:
         effects = []
 
-        # Timing: EffectTiming.OnAllyAttack
+        # Timing: EffectTiming.OnUseAttack
         # [When Attacking][Once Per Turn] You may place 1 level 3 blue Digimon card from your hand as this Digimon's bottom digivolution card.
         effect0 = ICardEffect()
-        effect0.set_timing(EffectTiming.OnAllyAttack)
+        effect0.set_timing(EffectTiming.OnUseAttack)
         effect0.set_effect_name("EX6-002 Place 1 level 3 blue Digimon card from your hand as this Digimon's bottom digivolution card.")
         effect0.set_effect_description("[When Attacking][Once Per Turn] You may place 1 level 3 blue Digimon card from your hand as this Digimon's bottom digivolution card.")
         effect0.is_inherited_effect = True

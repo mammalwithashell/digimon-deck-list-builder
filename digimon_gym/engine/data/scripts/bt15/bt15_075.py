@@ -72,10 +72,10 @@ class BT15_075(CardScript):
         effect1.set_on_process_callback(process1)
         effects.append(effect1)
 
-        # Timing: EffectTiming.OnAllyAttack
+        # Timing: EffectTiming.OnUseAttack
         # Draw 1, DP +2000, Trash From Hand
         effect2 = ICardEffect()
-        effect2.set_timing(EffectTiming.OnAllyAttack)
+        effect2.set_timing(EffectTiming.OnUseAttack)
         effect2.set_effect_name("BT15-075 DP +2000 and Draw 1")
         effect2.set_effect_description("Draw 1, DP +2000, Trash From Hand")
         effect2.is_optional = True

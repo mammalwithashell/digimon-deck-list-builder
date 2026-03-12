@@ -9,57 +9,77 @@ if TYPE_CHECKING:
 
 
 class BT24_083(CardScript):
-    """BT24-083 Hiroko Sagisaka"""
+    """BT24-083 Hiroko Sagisaka | Tamer"""
 
     def get_card_effects(self, card: 'CardSource') -> List['ICardEffect']:
         effects = []
 
-        # Timing: EffectTiming.OnStartTurn
-        # Play Card
+        # [Start of Your Turn] If you have 4 or less memory, by returning this Tamer to the
+        # bottom of the deck, you may play 1 [Hiroko Sagisaka] or 1 [TS] trait Digimon card
+        # with 5000 DP or less from your hand without paying the cost.
         effect0 = ICardEffect()
         effect0.set_timing(EffectTiming.OnStartTurn)
-        effect0.set_effect_name("BT24-083 Return to deck to play another or a 5k- [TS]")
-        effect0.set_effect_description("Play Card")
+        effect0.set_effect_name("BT24-083 Return to deck to play Hiroko or a 5k- [TS] from hand")
+        effect0.set_effect_description(
+            "[Start of Your Turn] If you have 4 or less memory, by returning this Tamer to the "
+            "bottom of the deck, you may play 1 [Hiroko Sagisaka] or 1 [TS] trait Digimon card "
+            "with 5000 DP or less from your hand without paying the cost."
+        )
         effect0.is_optional = True
 
-        effect = effect0  # alias for condition closure
         def condition0(context: Dict[str, Any]) -> bool:
             if card and card.permanent_of_this_card() is None:
                 return False
             if not (card and card.owner and card.owner.is_my_turn):
+                return False
+            # Condition: 4 or less memory (check from context game object)
+            game = context.get('game')
+            if game is not None and game.memory > 4:
                 return False
             return True
 
         effect0.set_can_use_condition(condition0)
 
         def process0(ctx: Dict[str, Any]):
-            """Action: Play Card"""
             player = ctx.get('player')
-            perm = ctx.get('permanent')
             game = ctx.get('game')
             if not (player and game):
                 return
+            # Cost: return this tamer to the bottom of the deck
+            tamer_perm = card.permanent_of_this_card() if card else None
+            if not tamer_perm:
+                return
+            player.return_permanent_to_deck_bottom(tamer_perm)
+            # Effect: play 1 [Hiroko Sagisaka] or 1 [TS] Digimon with DP <= 5000 from hand
             def play_filter(c):
-                if not getattr(c, 'is_digimon', False):
-                    return False
-                if not (any('Hiroko Sagisaka' in _n for _n in getattr(c, 'card_names', [])) or any('TS' in _t for _t in (getattr(c, 'card_traits', []) or []))):
-                    return False
-                return True
+                # Hiroko Sagisaka (any card type)
+                if any('Hiroko Sagisaka' in _n for _n in getattr(c, 'card_names', [])):
+                    return True
+                # [TS] trait Digimon with DP <= 5000
+                if getattr(c, 'is_digimon', False):
+                    if any('TS' in _t for _t in (getattr(c, 'card_traits', []) or [])):
+                        dp = getattr(c, 'base_dp', None)
+                        if dp is not None and dp <= 5000:
+                            return True
+                return False
+
             game.effect_play_from_zone(
                 player, 'hand', play_filter, free=True, is_optional=True)
 
         effect0.set_on_process_callback(process0)
         effects.append(effect0)
 
-        # Timing: EffectTiming.OnEnterFieldAnyone
-        # Add To Hand, Reveal And Select
+        # [On Play] Reveal the top 3 cards of your deck. Add 1 card with the [TS] trait among
+        # them to the hand. Return the rest to the bottom of the deck.
         effect1 = ICardEffect()
         effect1.set_timing(EffectTiming.OnEnterFieldAnyone)
-        effect1.set_effect_name("BT24-083 Reveal 3, Add 1, Bottom Deck the rest")
-        effect1.set_effect_description("Add To Hand, Reveal And Select")
+        effect1.set_effect_name("BT24-083 Reveal 3, Add 1 [TS] to hand, rest to deck bottom")
+        effect1.set_effect_description(
+            "[On Play] Reveal the top 3 cards of your deck. Add 1 card with the [TS] trait "
+            "among them to the hand. Return the rest to the bottom of the deck."
+        )
         effect1.is_on_play = True
 
-        effect = effect1  # alias for condition closure
         def condition1(context: Dict[str, Any]) -> bool:
             if card and card.permanent_of_this_card() is None:
                 return False
@@ -69,35 +89,32 @@ class BT24_083(CardScript):
         effect1.set_can_use_condition(condition1)
 
         def process1(ctx: Dict[str, Any]):
-            """Action: Add To Hand, Reveal And Select"""
             player = ctx.get('player')
-            perm = ctx.get('permanent')
             game = ctx.get('game')
-            # Add card to hand (from trash/reveal)
-            if player and player.trash_cards:
-                card_to_add = player.trash_cards.pop()
-                player.hand_cards.append(card_to_add)
             if not (player and game):
                 return
-            def reveal_filter(c):
-                if not (any('TS' in _t for _t in (getattr(c, 'card_traits', []) or []))):
-                    return False
-                return True
+
+            def ts_filter(c):
+                return any('TS' in _t for _t in (getattr(c, 'card_traits', []) or []))
+
             def on_revealed(selected, remaining):
                 player.hand_cards.append(selected)
-                for c in remaining:
-                    player.library_cards.append(c)
+                for r in reversed(remaining):
+                    player.library_cards.append(r)
+
             game.effect_reveal_and_select(
-                player, 3, reveal_filter, on_revealed, is_optional=True)
+                player, 3, ts_filter,
+                on_selected=on_revealed,
+                is_optional=False
+            )
 
         effect1.set_on_process_callback(process1)
         effects.append(effect1)
 
-        # Factory effect: security_play
-        # Security: Play this card
+        # [Security] Play this card without paying the cost.
         effect2 = ICardEffect()
         effect2.set_effect_name("BT24-083 Security: Play this card")
-        effect2.set_effect_description("Security: Play this card")
+        effect2.set_effect_description("[Security] Play this card without paying the cost.")
         effect2.is_security_effect = True
 
         def condition2(context: Dict[str, Any]) -> bool:

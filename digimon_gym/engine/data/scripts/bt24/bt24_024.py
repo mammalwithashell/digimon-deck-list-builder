@@ -15,11 +15,10 @@ class BT24_024(CardScript):
         effects = []
 
         # Factory effect: alt_digivolve_req
-        # Alternate digivolution requirement
+        # Alternate digivolution: Lv.3 named [Armadillomon] OR Lv.3 with [TS] trait, cost 2
         effect0 = ICardEffect()
         effect0.set_effect_name("BT24-024 Alternate digivolution requirement")
         effect0.set_effect_description("Alternate digivolution requirement")
-        # Alternate digivolution: Lv.3 from [Armadillomon] with [TS] trait for cost 2
         effect0._alt_digi_cost = 2
         effect0._alt_digi_level = 3
         effect0._alt_digi_name = "Armadillomon"
@@ -27,14 +26,20 @@ class BT24_024(CardScript):
 
         def condition0(context: Dict[str, Any]) -> bool:
             permanent = card.permanent_of_this_card() if card else None
-            if not (permanent and (permanent.contains_card_name('Armadillomon'))):
+            if permanent is None:
                 return False
-            return True
+            top = permanent.top_card if hasattr(permanent, 'top_card') else None
+            if top is None:
+                return False
+            # Armadillomon name OR (Lv.3 AND TS trait)
+            has_name = any('Armadillomon' in n for n in getattr(top, 'card_names', []))
+            has_ts = any('TS' in t for t in getattr(top, 'card_traits', []))
+            is_lv3 = getattr(top, 'level', 0) == 3
+            return has_name or (is_lv3 and has_ts)
         effect0.set_can_use_condition(condition0)
         effects.append(effect0)
 
         # Factory effect: armor_purge
-        # Armor Purge
         effect1 = ICardEffect()
         effect1.set_effect_name("BT24-024 Armor Purge")
         effect1.set_effect_description("Armor Purge")
@@ -45,40 +50,45 @@ class BT24_024(CardScript):
         effect1.set_can_use_condition(condition1)
         effects.append(effect1)
 
-        # Timing: EffectTiming.OnAllyAttack
-        # Cost -2, Play Card
+        # Timing: EffectTiming.OnUseAttack (inherited)
+        # [When Attacking] [Once Per Turn] You may play 1 Tamer card with the [TS] trait
+        # from your hand with the play cost reduced by 2.
         effect2 = ICardEffect()
-        effect2.set_timing(EffectTiming.OnAllyAttack)
-        effect2.set_effect_name("BT24-024 Play one [Ts] Tamer for cost reduced by 2.")
-        effect2.set_effect_description("Cost -2, Play Card")
+        effect2.set_timing(EffectTiming.OnUseAttack)
+        effect2.set_effect_name("BT24-024 Play one [TS] Tamer for cost reduced by 2.")
+        effect2.set_effect_description("[When Attacking] [Once Per Turn] You may play 1 Tamer card with the [TS] trait from your hand with the play cost reduced by 2.")
         effect2.is_optional = True
         effect2.set_max_count_per_turn(1)
         effect2.set_hash_string("BT24_024_WA_Play_Tamer")
         effect2.is_on_attack = True
-        effect2.cost_reduction = 2
 
-        effect = effect2  # alias for condition closure
         def condition2(context: Dict[str, Any]) -> bool:
             if card and card.permanent_of_this_card() is None:
                 return False
-            # Triggered on attack — validated by engine timing
             return True
 
         effect2.set_can_use_condition(condition2)
 
         def process2(ctx: Dict[str, Any]):
-            """Action: Cost -2, Play Card"""
+            """Action: Play 1 [TS] Tamer from hand for cost -2"""
             player = ctx.get('player')
-            perm = ctx.get('permanent')
             game = ctx.get('game')
             if not (player and game):
                 return
-            def play_filter(c):
-                return True
+
+            def tamer_filter(c):
+                if not getattr(c, 'is_tamer', False):
+                    return False
+                traits = getattr(c, 'card_traits', []) or []
+                return any('TS' in t for t in traits)
+
             game.effect_play_from_zone(
-                player, 'hand', play_filter, free=True, is_optional=True)
-            # Cost reduction by 2 — handled via cost_reduction property
-            pass  # descriptive-tagged: cost_reduction
+                player, 'hand',
+                filter_fn=tamer_filter,
+                free=False,
+                manual_reduction=2,
+                is_optional=True
+            )
 
         effect2.set_on_process_callback(process2)
         effects.append(effect2)

@@ -38,10 +38,10 @@ class BT10_091(CardScript):
         effect0.set_on_process_callback(process0)
         effects.append(effect0)
 
-        # Timing: EffectTiming.OnAllyAttack
+        # Timing: EffectTiming.OnUseAttack
         # [Your Turn] When you attack with a Digimon that has [Angoramon] in its name or is level 5 or higher, by suspending this Tamer, suspend 1 of your opponent's Digimon with 5000 DP or less.
         effect1 = ICardEffect()
-        effect1.set_timing(EffectTiming.OnAllyAttack)
+        effect1.set_timing(EffectTiming.OnUseAttack)
         effect1.set_effect_name("BT10-091 Suspend 1 Digimon")
         effect1.set_effect_description("[Your Turn] When you attack with a Digimon that has [Angoramon] in its name or is level 5 or higher, by suspending this Tamer, suspend 1 of your opponent's Digimon with 5000 DP or less.")
         effect1.is_optional = True

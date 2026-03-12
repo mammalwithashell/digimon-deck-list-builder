@@ -110,10 +110,10 @@ class P_187(CardScript):
         effect2.set_on_process_callback(process2)
         effects.append(effect2)
 
-        # Timing: EffectTiming.OnAllyAttack
+        # Timing: EffectTiming.OnUseAttack
         # Play Card, Destroy Security
         effect3 = ICardEffect()
-        effect3.set_timing(EffectTiming.OnAllyAttack)
+        effect3.set_timing(EffectTiming.OnUseAttack)
         effect3.set_effect_name("P-187 Trash top security to play a digimon")
         effect3.set_effect_description("Play Card, Destroy Security")
         effect3.is_optional = True
