@@ -45,6 +45,18 @@ class BT20_101(CardScript):
         effect1.set_can_use_condition(condition1)
         effects.append(effect1)
 
+        # Factory effect: piercing
+        # Piercing
+        effect_piercing = ICardEffect()
+        effect_piercing.set_effect_name("BT20-101 Piercing")
+        effect_piercing.set_effect_description("Piercing")
+        effect_piercing._is_piercing = True
+
+        def condition_piercing(context: Dict[str, Any]) -> bool:
+            return True
+        effect_piercing.set_can_use_condition(condition_piercing)
+        effects.append(effect_piercing)
+
         # Factory effect: vortex
         # Vortex
         effect2 = ICardEffect()
@@ -79,117 +91,190 @@ class BT20_101(CardScript):
         effect4.set_max_count_per_turn(1)
         effect4.set_hash_string("Unsuspend_BT20-101")
 
-        effect = effect4  # alias for condition closure
         def condition4(context: Dict[str, Any]) -> bool:
-            if card and card.permanent_of_this_card() is None:
+            perm = card.permanent_of_this_card() if card else None
+            if perm is None:
                 return False
+            # This Digimon must be on the field
             return True
 
         effect4.set_can_use_condition(condition4)
 
         def process4(ctx: Dict[str, Any]):
-            """Action: Unsuspend"""
-            player = ctx.get('player')
-            perm = ctx.get('permanent')
-            game = ctx.get('game')
-            if not (player and game):
+            """Action: Unsuspend this Digimon (self)."""
+            perm = card.permanent_of_this_card() if card else None
+            if perm is None:
                 return
-            def target_filter(p):
-                return True
-            def on_unsuspend(target_perm):
-                target_perm.unsuspend()
-            game.effect_select_own_permanent(
-                player, on_unsuspend, filter_fn=target_filter, is_optional=True)
+            perm.unsuspend()
 
         effect4.set_on_process_callback(process4)
         effects.append(effect4)
 
         # Timing: EffectTiming.OnEnterFieldAnyone
-        # [On Play] You may suspend 1 Digimon. Then, for every 2 suspended Digimon, you may return 1 of your opponent's suspended Digimon to the bottom of the deck.
+        # [On Play] You may suspend 1 Digimon. Then, for every 2 suspended Digimon,
+        # you may return 1 of your opponent's suspended Digimon to the bottom of the deck.
         effect5 = ICardEffect()
         effect5.set_timing(EffectTiming.OnEnterFieldAnyone)
-        effect5.set_effect_name("BT20-101 Suspend 1 Digimon, Then return 1 to bottom of deck for every 2 suspended")
+        effect5.set_effect_name("BT20-101 Suspend 1 Digimon, Then return suspended Digimon to deck bottom for every 2 suspended")
         effect5.set_effect_description("[On Play] You may suspend 1 Digimon. Then, for every 2 suspended Digimon, you may return 1 of your opponent's suspended Digimon to the bottom of the deck.")
         effect5.is_on_play = True
 
-        effect = effect5  # alias for condition closure
         def condition5(context: Dict[str, Any]) -> bool:
             if card and card.permanent_of_this_card() is None:
                 return False
-            # Triggered on play — validated by engine timing
             return True
 
         effect5.set_can_use_condition(condition5)
 
         def process5(ctx: Dict[str, Any]):
-            """Action: Suspend, Bounce"""
+            """Action: Suspend any Digimon (optional), then bounce for every 2 suspended."""
             player = ctx.get('player')
-            perm = ctx.get('permanent')
             game = ctx.get('game')
             if not (player and game):
                 return
-            def target_filter(p):
-                return True
-            def on_suspend(target_perm):
+
+            enemy = player.enemy if player else None
+
+            # Step 1: You may suspend 1 Digimon (any — own or opponent's).
+            # Try opponent first (if filter returns True for all). The card says "1 Digimon"
+            # without restriction, so the player can choose from any battle area.
+            # Use opponent select; if no opponent Digimon, try own.
+            suspended_happened = [False]
+
+            def on_suspend_opp(target_perm):
                 target_perm.suspend()
+                suspended_happened[0] = True
+
+            def on_suspend_own(target_perm):
+                target_perm.suspend()
+                suspended_happened[0] = True
+
+            # Offer selection from all permanents — select opponent's first, then own.
+            # Since the engine has no "any permanent" selector, offer opponent selection
+            # as the primary action (most common use case).
             game.effect_select_opponent_permanent(
-                player, on_suspend, filter_fn=target_filter, is_optional=False)
-            if not (player and game):
+                player, on_suspend_opp,
+                filter_fn=lambda p: p.is_digimon,
+                is_optional=True,
+                prompt="You may suspend 1 Digimon.")
+
+            # If no opponent Digimon was suspended (optional declined or no valid targets),
+            # offer own Digimon suspension.
+            if not suspended_happened[0]:
+                game.effect_select_own_permanent(
+                    player, on_suspend_own,
+                    filter_fn=lambda p: p.is_digimon,
+                    is_optional=True,
+                    prompt="You may suspend 1 of your Digimon.")
+
+            # Step 2: Count all suspended Digimon across both fields.
+            # For every 2 suspended Digimon, may return 1 opponent's suspended Digimon
+            # to the bottom of the deck.
+            if not (player and enemy and game):
                 return
-            def target_filter(p):
-                return True
-            def on_bounce(target_perm):
-                enemy = player.enemy if player else None
-                if enemy:
-                    enemy.bounce_permanent_to_hand(target_perm)
-            game.effect_select_opponent_permanent(
-                player, on_bounce, filter_fn=target_filter, is_optional=False)
+
+            all_perms = list(player.battle_area or []) + list(enemy.battle_area or [])
+            suspended_count = sum(1 for p in all_perms if p.is_digimon and p.is_suspended)
+            bounces = suspended_count // 2
+
+            for _ in range(bounces):
+                def on_bounce(target_perm):
+                    if enemy:
+                        enemy.return_permanent_to_deck_bottom(target_perm)
+
+                game.effect_select_opponent_permanent(
+                    player, on_bounce,
+                    filter_fn=lambda p: p.is_digimon and p.is_suspended,
+                    is_optional=True,
+                    prompt="You may return 1 of your opponent's suspended Digimon to the bottom of the deck.")
 
         effect5.set_on_process_callback(process5)
         effects.append(effect5)
 
         # Timing: EffectTiming.OnEnterFieldAnyone
-        # [When Digivolving] You may suspend 1 Digimon. Then, for every 2 suspended Digimon, you may return 1 of your opponent's suspended Digimon to the bottom of the deck.
+        # [When Digivolving] You may suspend 1 Digimon. Then, for every 2 suspended Digimon,
+        # you may return 1 of your opponent's suspended Digimon to the bottom of the deck.
         effect6 = ICardEffect()
         effect6.set_timing(EffectTiming.OnEnterFieldAnyone)
-        effect6.set_effect_name("BT20-101 Suspend 1 Digimon, Then return 1 to bottom of deck for every 2 suspended")
+        effect6.set_effect_name("BT20-101 Suspend 1 Digimon, Then return suspended Digimon to deck bottom for every 2 suspended")
         effect6.set_effect_description("[When Digivolving] You may suspend 1 Digimon. Then, for every 2 suspended Digimon, you may return 1 of your opponent's suspended Digimon to the bottom of the deck.")
         effect6.is_when_digivolving = True
 
-        effect = effect6  # alias for condition closure
         def condition6(context: Dict[str, Any]) -> bool:
             if card and card.permanent_of_this_card() is None:
                 return False
-            # Triggered when digivolving — validated by engine timing
             return True
 
         effect6.set_can_use_condition(condition6)
 
         def process6(ctx: Dict[str, Any]):
-            """Action: Suspend, Bounce"""
+            """Action: Suspend any Digimon (optional), then bounce for every 2 suspended."""
             player = ctx.get('player')
-            perm = ctx.get('permanent')
             game = ctx.get('game')
             if not (player and game):
                 return
-            def target_filter(p):
-                return True
-            def on_suspend(target_perm):
+
+            enemy = player.enemy if player else None
+
+            # Step 1: You may suspend 1 Digimon (any).
+            suspended_happened = [False]
+
+            def on_suspend_opp(target_perm):
                 target_perm.suspend()
+                suspended_happened[0] = True
+
+            def on_suspend_own(target_perm):
+                target_perm.suspend()
+                suspended_happened[0] = True
+
             game.effect_select_opponent_permanent(
-                player, on_suspend, filter_fn=target_filter, is_optional=False)
-            if not (player and game):
+                player, on_suspend_opp,
+                filter_fn=lambda p: p.is_digimon,
+                is_optional=True,
+                prompt="You may suspend 1 Digimon.")
+
+            if not suspended_happened[0]:
+                game.effect_select_own_permanent(
+                    player, on_suspend_own,
+                    filter_fn=lambda p: p.is_digimon,
+                    is_optional=True,
+                    prompt="You may suspend 1 of your Digimon.")
+
+            # Step 2: For every 2 suspended Digimon, bounce 1 opponent's suspended Digimon.
+            if not (player and enemy and game):
                 return
-            def target_filter(p):
-                return True
-            def on_bounce(target_perm):
-                enemy = player.enemy if player else None
-                if enemy:
-                    enemy.bounce_permanent_to_hand(target_perm)
-            game.effect_select_opponent_permanent(
-                player, on_bounce, filter_fn=target_filter, is_optional=False)
+
+            all_perms = list(player.battle_area or []) + list(enemy.battle_area or [])
+            suspended_count = sum(1 for p in all_perms if p.is_digimon and p.is_suspended)
+            bounces = suspended_count // 2
+
+            for _ in range(bounces):
+                def on_bounce(target_perm):
+                    if enemy:
+                        enemy.return_permanent_to_deck_bottom(target_perm)
+
+                game.effect_select_opponent_permanent(
+                    player, on_bounce,
+                    filter_fn=lambda p: p.is_digimon and p.is_suspended,
+                    is_optional=True,
+                    prompt="You may return 1 of your opponent's suspended Digimon to the bottom of the deck.")
 
         effect6.set_on_process_callback(process6)
         effects.append(effect6)
+
+        # Inherited: Ace Overflow <-4>
+        # Engine handles ACE Overflow via _apply_ace_overflow in player.py
+        # when the card leaves the field. The is_ace and ace_overflow_cost
+        # attributes on the card entity base drive this behavior automatically.
+        effect_ace = ICardEffect()
+        effect_ace.set_effect_name("BT20-101 Ace Overflow")
+        effect_ace.set_effect_description("Ace Overflow <-4>")
+        effect_ace.is_inherited_effect = True
+        pass  # descriptive-tagged: ace_overflow
+
+        def condition_ace(context: Dict[str, Any]) -> bool:
+            return True
+        effect_ace.set_can_use_condition(condition_ace)
+        effects.append(effect_ace)
 
         return effects

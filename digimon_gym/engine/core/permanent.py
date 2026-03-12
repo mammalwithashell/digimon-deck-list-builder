@@ -18,6 +18,7 @@ class Permanent:
         self._granted_keywords: dict = {}  # keyword_attr -> expiry_turn (or -1 for permanent)
         self.is_attacking: bool = False  # True while this permanent is the attacker in combat
         self._temp_sa_modifier: int = 0  # Temporary Security Attack modifier (e.g. from Alliance)
+        self._granted_effects: List[tuple] = []  # [(ICardEffect, expiry_turn)] granted by other cards
 
     @property
     def digivolution_cards(self) -> List['CardSource']:
@@ -336,7 +337,34 @@ class Permanent:
             for eff in linked_effects:
                 if not eff.is_inherited_effect:
                     effects.append(eff)
+        # Granted temporary effects from other cards
+        for eff, _expiry in self._granted_effects:
+            if eff.timing == timing:
+                effects.append(eff)
         return effects
+
+    def grant_temp_effect(self, effect: 'ICardEffect', expiry_turn: int = -1):
+        """Grant a temporary triggered effect to this permanent.
+
+        Args:
+            effect: The ICardEffect to attach.
+            expiry_turn: Turn number when effect expires (-1 = permanent).
+        """
+        self._granted_effects.append((effect, expiry_turn))
+
+    def clear_expired_effects(self, current_turn: int):
+        """Remove granted effects whose expiry_turn has passed."""
+        self._granted_effects = [
+            (eff, exp) for eff, exp in self._granted_effects
+            if exp == -1 or exp > current_turn
+        ]
+
+    def remove_granted_effects_by_source(self, source_perm: 'Permanent'):
+        """Remove all granted effects that were sourced from a specific permanent."""
+        self._granted_effects = [
+            (eff, exp) for eff, exp in self._granted_effects
+            if getattr(eff, '_source_permanent', None) is not source_perm
+        ]
 
     def add_card_source(self, card_source: 'CardSource'):
         self.card_sources.append(card_source)
@@ -501,6 +529,11 @@ class Permanent:
 
     def unsuspend(self):
         if self.is_suspended:
+            # Check CANNOT_UNSUSPEND modifier (aura-style, covers new permanents)
+            if self._owner_game and hasattr(self._owner_game, 'modifiers'):
+                from ..interfaces.modifiers import ModifierType
+                if self._owner_game.modifiers.has_modifier(self, ModifierType.CANNOT_UNSUSPEND):
+                    return  # blocked by modifier
             self.is_suspended = False
             self._fire_timing(EffectTiming.OnUnTappedAnyone, {"permanent": self})
 

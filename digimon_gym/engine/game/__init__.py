@@ -210,6 +210,7 @@ class Game(CombatMixin, ActionDecoderMixin, EffectHelpersMixin):
         self._clear_temp_dp()
         self.modifiers.clear_expiry('end_of_turn')
         self.modifiers.clear_opponent_turn_expiry(self.turn_player)
+        self.clear_expired_granted_effects()
         self.execute_effects(EffectTiming.OnStartTurn)
         self.next_phase()
 
@@ -745,8 +746,19 @@ class Game(CombatMixin, ActionDecoderMixin, EffectHelpersMixin):
         return entry
 
     def cleanup_modifiers_for_permanent(self, permanent: Permanent):
-        """Remove all modifiers sourced from a permanent that left the field."""
+        """Remove all modifiers sourced from a permanent that left the field.
+        Also removes any granted effects that were sourced from this permanent."""
         self.modifiers.unregister_by_source(permanent)
+        # Clean granted effects sourced from the leaving permanent
+        for pl in [self.player1, self.player2]:
+            for p in pl.battle_area:
+                p.remove_granted_effects_by_source(permanent)
+
+    def clear_expired_granted_effects(self):
+        """Remove expired granted effects from all permanents."""
+        for pl in [self.player1, self.player2]:
+            for p in pl.battle_area:
+                p.clear_expired_effects(self.turn_count)
 
     def force_end_attack(self):
         """Force the current attack to end early (DCGO: IsEndAttack flag)."""

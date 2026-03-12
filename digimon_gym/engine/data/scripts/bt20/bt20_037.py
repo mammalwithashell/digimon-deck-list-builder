@@ -52,10 +52,13 @@ class BT20_037(CardScript):
         effects.append(effect2)
 
         # Timing: EffectTiming.OnEnterFieldAnyone
-        # [When Digivolving] For each of this Digimon's level 6 digivolution cards, suspend 1 of your opponent's Digimon or Tamers and gain 1 memory. Then, none of their Digimon or Tamers can activate [On Play] effects or unsuspend until the end of their turn.
+        # [When Digivolving] For each of this Digimon's level 6 digivolution cards,
+        # suspend 1 of your opponent's Digimon or Tamers and gain 1 memory.
+        # Then, none of their Digimon or Tamers can activate [On Play] effects
+        # or unsuspend until the end of their turn.
         effect3 = ICardEffect()
         effect3.set_timing(EffectTiming.OnEnterFieldAnyone)
-        effect3.set_effect_name("BT20-037 For each level 6 in sources, suspend 1 Digimon and memory +1, Then Opponent's Digimon/Tamers can't activate [On Play] or unsuspend")
+        effect3.set_effect_name("BT20-037 For each level 6 in sources, suspend 1 Digimon/Tamer and memory +1, Then all opponent Digimon/Tamers can't unsuspend until end of their turn")
         effect3.set_effect_description("[When Digivolving] For each of this Digimon's level 6 digivolution cards, suspend 1 of your opponent's Digimon or Tamers and gain 1 memory. Then, none of their Digimon or Tamers can activate [On Play] effects or unsuspend until the end of their turn.")
         effect3.is_when_digivolving = True
         effect3._is_cannot_unsuspend_player = True
@@ -70,38 +73,49 @@ class BT20_037(CardScript):
         effect3.set_can_use_condition(condition3)
 
         def process3(ctx: Dict[str, Any]):
-            """Action: Suspend, Gain Keyword Cannot Unsuspend Player, Disable Effect, Grant Cannot Unsuspend, Effect Immunity"""
+            """For each level 6 digivolution source: suspend 1 opponent Digimon/Tamer + gain 1 memory.
+            Then: all opponent Digimon/Tamers cannot unsuspend until end of their turn."""
             player = ctx.get('player')
             perm = ctx.get('permanent')
             game = ctx.get('game')
             if not (player and game):
                 return
-            def target_filter(p):
-                return True
-            def on_suspend(target_perm):
-                target_perm.suspend()
-            game.effect_select_opponent_permanent(
-                player, on_suspend, filter_fn=target_filter, is_optional=False)
+
+            # Count level-6 digivolution sources (card_sources[:-1] = everything under top).
+            lv6_count = 0
+            if perm and len(perm.card_sources) > 1:
+                for src in perm.card_sources[:-1]:
+                    src_level = getattr(src, 'level', None)
+                    if src_level == 6:
+                        lv6_count += 1
+
+            # For each level-6 digivolution card: suspend 1 opponent Digimon or Tamer,
+            # and gain 1 memory.
+            for _ in range(lv6_count):
+                def on_suspend(target_perm):
+                    target_perm.suspend()
+
+                game.effect_select_opponent_permanent(
+                    player, on_suspend,
+                    filter_fn=lambda p: True,
+                    is_optional=False,
+                    prompt="Suspend 1 of your opponent's Digimon or Tamers.")
+
+                player.add_memory(1)
+
+            # Then: grant keyword so the effect marker is visible, then apply
+            # CANNOT_UNSUSPEND to ALL opponent Digimon and Tamers until end of their turn.
             if perm:
                 perm.grant_keyword('_is_cannot_unsuspend_player')
-            # Disable/invalidate effects on target — not yet in engine
-            pass  # descriptive-tagged: disable_effect
-            # Prevent target from unsuspending
-            if not (player and game):
-                return
+
             from digimon_gym.engine.interfaces.modifiers import ModifierType
-            def on_freeze(target_perm):
-                game.register_modifier(
-                    ModifierType.CANNOT_UNSUSPEND, target_perm,
-                    value_fn=lambda: True, expiry='end_of_opponent_turn')
-            game.effect_select_opponent_permanent(
-                player, on_freeze, filter_fn=lambda p: p.is_suspended, is_optional=False)
-            # Grant effect immunity via modifier system
-            if perm and game:
-                from digimon_gym.engine.interfaces.modifiers import ModifierType
-                game.register_modifier(
-                    ModifierType.CANNOT_BE_SELECTED_BY_EFFECT, perm,
-                    value_fn=lambda: True, expiry='end_of_turn')
+            enemy = player.enemy if player else None
+            if enemy and game:
+                for opp_perm in list(enemy.battle_area or []):
+                    game.register_modifier(
+                        ModifierType.CANNOT_UNSUSPEND, opp_perm,
+                        value_fn=lambda: True,
+                        expiry='end_of_opponent_turn')
 
         effect3.set_on_process_callback(process3)
         effects.append(effect3)

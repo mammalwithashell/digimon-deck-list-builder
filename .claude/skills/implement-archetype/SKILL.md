@@ -105,9 +105,9 @@ Estimated time: ~N minutes
 
 ## Phase 3: Assemble Context Packs and Dispatch Agents
 
-### 3a. Read the engine API reference
+### 3a. Prepare compact engine reference
 
-Read `docs/archetype-qa/engine-api-reference.md` — this goes into every agent's prompt.
+Read only the **Script Structure** and **Anti-Patterns** sections from `docs/archetype-qa/engine-api-reference.md` (~150 lines). Agents will use Pinecone MCP to look up full API details on demand.
 
 ### 3b. Read C# scripts
 
@@ -117,7 +117,11 @@ For each card with a C# source, read the file contents. Include inline in the ag
 
 For QA-only cards, read the frozen script. Include inline for the agent to review.
 
-### 3d. Dispatch agents
+### 3d. Select few-shot examples via Pinecone
+
+For each implementation batch (especially Complex cards), use Pinecone MCP to search the `card-scripts` namespace with filter `{is_frozen: true}` for 2-3 similar frozen scripts. Include the best matches inline in the agent prompt as few-shot examples.
+
+### 3e. Dispatch agents
 
 Use the Agent tool with `model: "sonnet"` and `isolation: "worktree"` for implementation agents.
 Use `model: "sonnet"` without worktree for QA-only agents (they don't write files).
@@ -135,8 +139,26 @@ and C# reference implementation. Report one of:
 - PASS: Script correctly implements all effects
 - QA-FAIL: Script has specific issues (list them with line numbers)
 
-## Engine API Reference
-{contents of engine-api-reference.md}
+## Engine Quick Reference
+{Script Structure + Anti-Patterns sections from engine-api-reference.md}
+
+## Dynamic Context (Pinecone MCP)
+You have access to Pinecone for searching the engine knowledge base. The index is "digimon-engine".
+
+- Engine API details: search namespace "engine-api" for methods, patterns, or concepts
+- Similar implementations: search namespace "card-scripts" with filter {is_frozen: true}
+- Card interactions: search namespace "card-metadata" for cards referenced by name in effects
+
+Examples:
+- Find Blocker implementation patterns: search "engine-api" for "Blocker keyword"
+- Find frozen scripts with Rush: search "card-scripts" for "Rush grant keyword"
+- Look up a card's text: search "card-metadata" for the card ID
+
+## Self-Recovery
+If you encounter an unfamiliar engine pattern or are unsure about a method:
+1. Search Pinecone "engine-api" namespace for the relevant method or concept
+2. Search Pinecone "card-scripts" namespace for frozen scripts with similar effects
+3. If still unsure, flag it in your review rather than guessing
 
 ## Cards to Review
 
@@ -189,8 +211,29 @@ CRITICAL RULES:
 3. Effects below the inheritance line need separate ICardEffect instances with is_inherited_effect = True
 4. Use the exact boilerplate and patterns from the engine API reference.
 
-## Engine API Reference
-{contents of engine-api-reference.md}
+## Engine Quick Reference
+{Script Structure + Anti-Patterns sections from engine-api-reference.md}
+
+## Dynamic Context (Pinecone MCP)
+You have access to Pinecone for searching the engine knowledge base. The index is "digimon-engine".
+
+- Engine API details: search namespace "engine-api" for methods, patterns, or concepts
+- Similar implementations: search namespace "card-scripts" with filter {is_frozen: true}
+- Card interactions: search namespace "card-metadata" for cards referenced by name in effects
+
+Examples:
+- Find how to grant Blocker: search "engine-api" for "Blocker keyword grant"
+- Find frozen scripts with Rush: search "card-scripts" for "Rush grant keyword"
+- Look up a card referenced in effect text: search "card-metadata" for the card name
+
+## Self-Recovery
+If you encounter an unfamiliar engine pattern or get stuck:
+1. Search Pinecone "engine-api" namespace for the relevant method or concept
+2. Search Pinecone "card-scripts" namespace for frozen scripts with similar effects
+3. If still blocked, report BLOCKED with details rather than guessing
+
+## Few-Shot Examples
+{2-3 similar frozen scripts selected via Pinecone search, if available}
 
 ## Cards to Implement
 
@@ -268,6 +311,15 @@ For each QA-FAIL card:
 3. Verify the fix addresses the reported issue
 
 Skip this phase if `--qa-only` flag was passed (just report, don't fix).
+
+### 5b. Update Pinecone with new scripts
+
+After fixing QA failures and writing new scripts, ingest updated card scripts into Pinecone
+so the next archetype run benefits from them:
+
+```bash
+python tools/ingest_pinecone.py --namespace card-scripts --set {set_id}
+```
 
 ---
 

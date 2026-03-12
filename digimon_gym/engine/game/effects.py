@@ -261,6 +261,16 @@ class EffectHelpersMixin:
                 },
             )
 
+    def _is_play_blocked_by_modifier(self, card: "CardSource") -> bool:
+        """Check if CANNOT_PLAY_CARD modifiers block playing this card by effect."""
+        if not hasattr(self, 'modifiers'):
+            return False
+        ctx = {'card': card}
+        for entry in self.modifiers._modifiers.get(ModifierType.CANNOT_PLAY_CARD, []):
+            if entry.condition is None or entry.condition(None, ctx):
+                return True
+        return False
+
     def effect_play_from_zone(
         self, player: "Player",
         zone: str,
@@ -277,10 +287,10 @@ class EffectHelpersMixin:
         if zone == 'hand_or_trash':
             valid = []
             for i, card in enumerate(player.hand_cards):
-                if filter_fn(card) and (SEL_HAND_START + i) < ACTION_SPACE_SIZE:
+                if filter_fn(card) and (SEL_HAND_START + i) < ACTION_SPACE_SIZE and not self._is_play_blocked_by_modifier(card):
                     valid.append(SEL_HAND_START + i)
             for i, card in enumerate(player.trash_cards):
-                if filter_fn(card) and (SEL_TRASH_START + i) < ACTION_SPACE_SIZE:
+                if filter_fn(card) and (SEL_TRASH_START + i) < ACTION_SPACE_SIZE and not self._is_play_blocked_by_modifier(card):
                     valid.append(SEL_TRASH_START + i)
             if not valid:
                 return
@@ -340,7 +350,7 @@ class EffectHelpersMixin:
 
         valid = []
         for i, card in enumerate(source_list):
-            if filter_fn(card) and (offset + i) < ACTION_SPACE_SIZE:
+            if filter_fn(card) and (offset + i) < ACTION_SPACE_SIZE and not self._is_play_blocked_by_modifier(card):
                 valid.append(offset + i)
         if not valid:
             return

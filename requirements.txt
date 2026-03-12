@@ -25,5 +25,6 @@ openai>=1.40
 anthropic>=0.39.0
 pypdf>=4.2
 rank_bm25>=0.2.2
+pinecone[grpc]>=5.0.0
 # Optional: DigiLab MotherDuck integration
 duckdb>=0.9

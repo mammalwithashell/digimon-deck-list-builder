@@ -9,112 +9,160 @@ if TYPE_CHECKING:
 
 
 class EX11_072(CardScript):
-    """EX11-072 Unique Emblem: Guardian Vortex"""
+    """EX11-072 Unique Emblem: Guardian Vortex | Option, Green, Vortex Warriors/LIBERATOR, Cost 3
+
+    [Main] You may play 1 [Pteromon], [Muchomon] or [Shoto Kazama] from your hand or trash
+        without paying the cost. Then, place this card in the battle area.
+    [Your Turn] When any of your [Shoto Kazama]s suspend, <Delay> — 1 of your Digimon with
+        [Avian] or [Bird] in any of its traits or the [Vortex Warriors] trait may digivolve
+        into a Digimon card with the [Bird Dragon] and [LIBERATOR] trait in the hand with the
+        digivolution cost reduced by 3.
+    [Security] Activate this card's [Main] effects.
+    """
 
     def get_card_effects(self, card: 'CardSource') -> List['ICardEffect']:
         effects = []
 
-        # Timing: EffectTiming.OptionSkill
-        # [Main] You may play 1 [Pteromon], [Muchomon] or [Shoto Kazama] from your hand or trash without paying the cost. Then, place this card in the battle area.
-        effect0 = ICardEffect()
-        effect0.set_timing(EffectTiming.OptionSkill)
-        effect0.set_effect_name("EX11-072 Play 1 [Pteromon]/[Muchomon]/[Shoto Kazama] from hand or trash, then place in battle area")
-        effect0.set_effect_description("[Main] You may play 1 [Pteromon], [Muchomon] or [Shoto Kazama] from your hand or trash without paying the cost. Then, place this card in the battle area.")
+        # --- [Main] Play 1 Pteromon/Muchomon/Shoto Kazama from hand or trash for free.
+        #     Then, place this card in the battle area.
+        #     Note: "_is_delay" on the factory effect causes _option_stays_on_field to return True,
+        #     so the engine keeps this card in the battle area after the main effect resolves.
+        effect_main = ICardEffect()
+        effect_main.set_timing(EffectTiming.OptionSkill)
+        effect_main.set_effect_name(
+            "EX11-072 [Main] Play 1 [Pteromon]/[Muchomon]/[Shoto Kazama] from hand or trash, "
+            "then place in battle area"
+        )
+        effect_main.set_effect_description(
+            "[Main] You may play 1 [Pteromon], [Muchomon] or [Shoto Kazama] from your hand "
+            "or trash without paying the cost. Then, place this card in the battle area."
+        )
 
-        effect = effect0  # alias for condition closure
-        def condition0(context: Dict[str, Any]) -> bool:
-            # Option main effect — validated by engine timing
+        def cond_main(context: Dict[str, Any]) -> bool:
             return True
+        effect_main.set_can_use_condition(cond_main)
 
-        effect0.set_can_use_condition(condition0)
-
-        def process0(ctx: Dict[str, Any]):
-            """Action: Play Card"""
+        def process_main(ctx: Dict[str, Any]):
             player = ctx.get('player')
-            perm = ctx.get('permanent')
             game = ctx.get('game')
             if not (player and game):
                 return
+
             def play_filter(c):
-                if not (any('Pteromon' in _n or 'Muchomon' in _n or 'Shoto Kazama' in _n for _n in getattr(c, 'card_names', []))):
-                    return False
-                return True
+                names = getattr(c, 'card_names', []) or []
+                return any(
+                    'Pteromon' in n or 'Muchomon' in n or 'Shoto Kazama' in n
+                    for n in names
+                )
+
             game.effect_play_from_zone(
-                player, 'hand_or_trash', play_filter, free=True, is_optional=True)
+                player, 'hand_or_trash', play_filter, free=True, is_optional=True,
+                prompt="You may play 1 [Pteromon], [Muchomon], or [Shoto Kazama] from hand or trash for free.",
+            )
+            # Placement in battle area is handled by _option_stays_on_field via _is_delay.
 
-        effect0.set_on_process_callback(process0)
-        effects.append(effect0)
+        effect_main.set_on_process_callback(process_main)
+        effects.append(effect_main)
 
-        # Factory effect: delay
-        # Delay
-        effect1 = ICardEffect()
-        effect1.set_effect_name("EX11-072 Delay")
-        effect1.set_effect_description("Delay")
-        effect1._is_delay = True
+        # --- Delay marker: keeps this option card in the battle area after resolution ---
+        effect_delay = ICardEffect()
+        effect_delay.set_effect_name("EX11-072 Delay")
+        effect_delay.set_effect_description("Delay")
+        effect_delay._is_delay = True
 
-        def condition1(context: Dict[str, Any]) -> bool:
-            if not (card and card.owner and card.owner.is_my_turn):
-                return False
+        def cond_delay(context: Dict[str, Any]) -> bool:
             if card and card.permanent_of_this_card() is None:
                 return False
-            permanent = card.permanent_of_this_card() if card else None
-            if not (permanent and (permanent.contains_card_name('Shoto Kazama'))):
-                return False
-            permanent = card.permanent_of_this_card() if card else None
-            if not (permanent and permanent.top_card and (any('Vortex Warriors' in tr for tr in (getattr(permanent.top_card, 'card_traits', []) or [])))):
-                return False
             return True
-        effect1.set_can_use_condition(condition1)
-        effects.append(effect1)
+        effect_delay.set_can_use_condition(cond_delay)
+        effects.append(effect_delay)
 
-        # Timing: EffectTiming.OnTappedAnyone
-        # [Your Turn] When any of your [Shoto Kazama]s suspend, <Delay>.\r\n• 1 of your Digimon with [Avian] or [Bird] in any of its traits or the [Vortex Warriors] trait may digivolve into a [Bird Dragon] and the [LIBERATOR] trait Digimon card in the hand with the digivolution cost reduced by 3.
-        effect2 = ICardEffect()
-        effect2.set_timing(EffectTiming.OnTappedAnyone)
-        effect2.set_effect_name("EX11-072 1 of your [Avian]/[Bird] in traits or [Vortex Warriors] trait may digivolve into [Bird Dragon]&[LIBERATOR] trait")
-        effect2.set_effect_description("[Your Turn] When any of your [Shoto Kazama]s suspend, <Delay>.\\r\\n• 1 of your Digimon with [Avian] or [Bird] in any of its traits or the [Vortex Warriors] trait may digivolve into a [Bird Dragon] and the [LIBERATOR] trait Digimon card in the hand with the digivolution cost reduced by 3.")
-        effect2.is_optional = True
+        # --- [Your Turn] When any of your [Shoto Kazama]s suspend, <Delay> — digivolve effect ---
+        effect_trig = ICardEffect()
+        effect_trig.set_timing(EffectTiming.OnTappedAnyone)
+        effect_trig.set_effect_name(
+            "EX11-072 [Your Turn] When your Shoto Kazama suspends, digivolve Avian/Bird/VW into Bird Dragon+LIBERATOR"
+        )
+        effect_trig.set_effect_description(
+            "[Your Turn] When any of your [Shoto Kazama]s suspend, <Delay> — "
+            "1 of your Digimon with [Avian] or [Bird] in any of its traits or the "
+            "[Vortex Warriors] trait may digivolve into a Digimon card with the "
+            "[Bird Dragon] and [LIBERATOR] trait in the hand with the digivolution cost reduced by 3."
+        )
+        effect_trig.is_optional = True
+        effect_trig.is_linked_effect = True
 
-        effect = effect2  # alias for condition closure
-        def condition2(context: Dict[str, Any]) -> bool:
+        def cond_trig(context: Dict[str, Any]) -> bool:
+            # This card must be in the battle area (delay is active)
             if card and card.permanent_of_this_card() is None:
                 return False
-            if not (card and card.owner and card.owner.is_my_turn):
+            # Must be the owner's turn
+            owner = card.owner if card else None
+            if not (owner and owner.is_my_turn):
                 return False
-            permanent = effect.effect_source_permanent if hasattr(effect, 'effect_source_permanent') else None
-            if not (permanent and (permanent.contains_card_name('Shoto Kazama'))):
+            # The triggering permanent must be one of our Shoto Kazama permanents
+            suspended_perm = context.get('permanent')
+            if not suspended_perm:
+                return False
+            if suspended_perm not in list(owner.battle_area):
+                return False
+            if not suspended_perm.contains_card_name('Shoto Kazama'):
                 return False
             return True
 
-        effect2.set_can_use_condition(condition2)
+        effect_trig.set_can_use_condition(cond_trig)
 
-        def process2(ctx: Dict[str, Any]):
-            """Action: Digivolve"""
+        def process_trig(ctx: Dict[str, Any]):
             player = ctx.get('player')
-            perm = ctx.get('permanent')
             game = ctx.get('game')
-            if not (player and perm and game):
+            if not (player and game):
                 return
-            def digi_filter(c):
-                if not (any('Pteromon' in _n or 'Muchomon' in _n or 'Shoto Kazama' in _n for _n in getattr(c, 'card_names', []))):
+
+            # Step 1: Select 1 of your Digimon with Avian/Bird in traits or Vortex Warriors trait
+            def source_filter(p):
+                if not p.is_digimon or not p.top_card:
                     return False
-                return True
-            game.effect_digivolve_from_hand(
-                player, perm, digi_filter, is_optional=True)
+                traits = getattr(p.top_card, 'card_traits', []) or []
+                return (
+                    any('Avian' in t or 'Bird' in t for t in traits)
+                    or any('Vortex Warriors' in t for t in traits)
+                )
 
-        effect2.set_on_process_callback(process2)
-        effects.append(effect2)
+            # Step 2: Digivolve that Digimon into a Bird Dragon + LIBERATOR card, cost reduced by 3
+            def on_source_selected(source_perm):
+                def digi_filter(c):
+                    if not getattr(c, 'is_digimon', False):
+                        return False
+                    traits = getattr(c, 'card_traits', []) or []
+                    has_bird_dragon = any('Bird Dragon' in t for t in traits)
+                    has_liberator = any('LIBERATOR' in t for t in traits)
+                    return has_bird_dragon and has_liberator
 
-        # Factory effect: security_play
-        # Security: Play this card
-        effect3 = ICardEffect()
-        effect3.set_effect_name("EX11-072 Security: Play this card")
-        effect3.set_effect_description("Security: Play this card")
-        effect3.is_security_effect = True
+                game.effect_digivolve_from_hand(
+                    player, source_perm, digi_filter,
+                    cost_reduction=3, is_optional=True,
+                    prompt="Select a Bird Dragon + LIBERATOR Digimon card to digivolve into (cost -3).",
+                )
 
-        def condition3(context: Dict[str, Any]) -> bool:
+            game.effect_select_own_permanent(
+                player, on_source_selected,
+                filter_fn=source_filter,
+                is_optional=True,
+                prompt="Select 1 of your Avian/Bird or Vortex Warriors Digimon to digivolve.",
+            )
+
+        effect_trig.set_on_process_callback(process_trig)
+        effects.append(effect_trig)
+
+        # --- [Security] Activate this card's [Main] effects ---
+        effect_sec = ICardEffect()
+        effect_sec.set_effect_name("EX11-072 Security: Play this card")
+        effect_sec.set_effect_description("Security: Activate this card's [Main] effects.")
+        effect_sec.is_security_effect = True
+
+        def cond_sec(context: Dict[str, Any]) -> bool:
             return True
-        effect3.set_can_use_condition(condition3)
-        effects.append(effect3)
+        effect_sec.set_can_use_condition(cond_sec)
+        effects.append(effect_sec)
 
         return effects
