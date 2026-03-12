@@ -1,6 +1,6 @@
 # QA Issue Resolution Index
 
-**Last updated**: 2026-03-11
+**Last updated**: 2026-03-12
 
 ## Summary
 
@@ -35,8 +35,10 @@
 | [royal-knights-gameplay](2026-03-03-royal-knights-gameplay.md) | 3 | 1 | 0 | 2 |
 | [ts-neptune-gameplay](2026-03-03-ts-neptune-gameplay.md) | 12 | 3 | 0 | 9 |
 | [royal-knights-script-audit](2026-03-03-royal-knights-script-audit.md) | 3 | 0 | 0 | 3 |
+| [medusamon-royal-knights](2026-03-08-medusamon-royal-knights.md) | 6 | 5 | 1 | 0 |
+| [medusa-regression](2026-03-09-medusa-regression.md) | 7 | 0 | 0 | 7 |
 | [ts-olympos-vs-imperialdramon](2026-03-11-ts-olympos-vs-imperialdramon.md) | 7 | 5 | 0 | 2 |
-| **Total** | **196** | **156** | **7** | **33** |
+| **Total** | **209** | **161** | **8** | **40** |
 
 ---
 
@@ -412,16 +414,43 @@ Full script audit of all 35 Royal Knights cards. Found 6 systemic bug patterns a
 | 44 | BeforePayCost process callbacks never fire | med | OUTSTANDING | action_play_card() never calls execute_effects(BeforePayCost). Scripts with trash-return costs (BT23-057) don't execute. |
 | 45 | CANNOT_ADD_SECURITY modifier not enforced | low | OUTSTANDING | BT9-103 registers modifier but engine recovery/add-security doesn't check it. |
 
-## Report 31: TS Olympos vs BG Imperial (2026-03-11)
+## Report 31: Medusamon & Royal Knights Cross-Archetype QA (2026-03-08)
+
+Live gameplay testing of both archetypes with targeted board states. Verified Omekamon deletion effects, King Drasil cost reduction bugs (user-reported), Medusamon When Digivolving regression, and cross-archetype interactions. 10 deterministic test games.
+
+| # | Issue | Sev | Status | Notes |
+|---|-------|-----|--------|-------|
+| 46 | King Drasil once-per-turn cost reduction never decrements | critical | FIXED | `record_activation()` added after cost reduction in `calculate_play_cost()` |
+| 47 | King Drasil cost reduction skips "may" optional prompt | critical | WONTFIX | `calculate_play_cost()` runs during action mask (synchronous), cannot prompt player |
+| 48 | Medusamon BT24-017 When Digivolving effect does not fire | high | FIXED | Removed `set_timing(OnEnterFieldAnyone)` — `is_when_digivolving=True` flag sufficient |
+| 49 | Lamiamon BT24-016 opponent hand card taken without choice | med | FIXED | Rewrote to use `effect_select_hand_card()` for opponent selection |
+| 50 | Lamiamon BT24-016 card placed at security TOP instead of BOTTOM | med | FIXED | Changed `insert(0, ...)` to `append()` for bottom placement |
+| 51 | BT20-083 Omekamon On Deletion optional auto-accepts | critical | FIXED | `execute_deletion_effects()` uses `effect_choose_branch()` for optional effects |
+
+## Report 32: Medusa Regression Testing (2026-03-09)
+
+Post-fix verification of Issues 46-51. Confirmed 5 fixes, 1 known limitation (WONTFIX). Found 7 new issues in Medusamon DP scaling and Owen Dreadnought script.
+
+| # | Issue | Sev | Status | Notes |
+|---|-------|-----|--------|-------|
+| 52 | BT24-017 Medusamon DP scaling happens BEFORE delete and tokens | critical | OUTSTANDING | `change_dp()` called at top of process2 instead of after `effect_play_token()`. DP counts pre-delete board, not post-token board. |
+| 53 | BT24-017 Medusamon missing trash-to-deck cost for tokens | high | OUTSTANDING | Card says "by returning 2 cards from their trash to deck, play 2 tokens". Script skips the cost entirely. |
+| 54 | BT24-082 Owen Dreadnought digivolve trigger uses `is_on_play` instead of `is_when_digivolving` | high | OUTSTANDING | Effect never fires on digivolve because it listens for On Play events. |
+| 55 | BT24-082 Owen Dreadnought digivolve trigger targets wrong entities | med | OUTSTANDING | Cost suspends opponent (should suspend self). Reward gives +3000 DP to self (should target digivolving Digimon). |
+| 56 | BT24-082 Owen Dreadnought Start of Main Phase filter missing | med | OUTSTANDING | `play_filter` returns True for all cards. Should filter to only [Owen Dreadnought]. |
+| 57 | BT24-082 Owen Dreadnought Start of Main Phase missing self-bottom-deck cost | med | OUTSTANDING | Card says "by returning this Tamer to the bottom of the deck" but the process never bottom-decks the tamer. |
+| 58 | BT24-017 Medusamon missing Piercing keyword | low | OUTSTANDING | Card has ＜Piercing＞ in text but script only defines Raid, Progress, and WhenDigivolving effects. |
+
+## Report 33: TS Olympos vs BG Imperial (2026-03-11)
 
 7 issues found across TS Olympos cards in live gameplay. Post-archetype-implementation QA session testing 31 newly implemented TS Olympos scripts.
 
 | # | Issue | Sev | Status | Notes |
 |---|-------|-----|--------|-------|
-| 46 | BT24-102 Homeros +1000 DP aura not applying to TS Digimon | high | FIXED | Engine: added `_get_aura_dp_modifier()` to `permanent.py` scanning `_applies_to_all_own_digimon` effects from field |
-| 47 | BT24-034 Aegiomon "by" cost auto-pays without player choice | high | FIXED | Script: check valid targets exist before paying security cost; skip entire effect if no targets |
-| 48 | BT24-034 Aegiomon When Moving fires for other Digimon's move | high | FIXED | Script: condition now checks `context.get('moved_permanent')` (engine key) instead of `'permanent'` |
-| 49 | BT24-041 Minervamon On Play skips free Iliad card play | high | FIXED | Script: chained selections via `request_selection` with `on_decline` callback to prevent overwrite |
-| 50 | BT24-090 Abyss Sanctuary multiple implementation errors | med | FIXED | Script: rewrote [Main] effect — free play lv4- blue/yellow TS from hand/trash, place in battle area |
-| 51 | SelectReveal action descriptions show wrong text | low | OUTSTANDING | Actions show "Trash X from hand" during reveal-and-select phases. Prompt text is correct. |
-| 52 | BT24-041 Minervamon De-Digivolve uses attack action IDs | med | OUTSTANDING | Target selection offers attack action IDs (114, 115) instead of target selection indices. |
+| 59 | BT24-102 Homeros +1000 DP aura not applying to TS Digimon | high | FIXED | Engine: added `_get_aura_dp_modifier()` to `permanent.py` scanning `_applies_to_all_own_digimon` effects from field |
+| 60 | BT24-034 Aegiomon "by" cost auto-pays without player choice | high | FIXED | Script: check valid targets exist before paying security cost; skip entire effect if no targets |
+| 61 | BT24-034 Aegiomon When Moving fires for other Digimon's move | high | FIXED | Script: condition now checks `context.get('moved_permanent')` (engine key) instead of `'permanent'` |
+| 62 | BT24-041 Minervamon On Play skips free Iliad card play | high | FIXED | Script: chained selections via `request_selection` with `on_decline` callback to prevent overwrite |
+| 63 | BT24-090 Abyss Sanctuary multiple implementation errors | med | FIXED | Script: rewrote [Main] effect — free play lv4- blue/yellow TS from hand/trash, place in battle area |
+| 64 | SelectReveal action descriptions show wrong text | low | OUTSTANDING | Actions show "Trash X from hand" during reveal-and-select phases. Prompt text is correct. |
+| 65 | BT24-041 Minervamon De-Digivolve uses attack action IDs | med | OUTSTANDING | Target selection offers attack action IDs (114, 115) instead of target selection indices. |
