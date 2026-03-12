@@ -108,6 +108,11 @@ class BT24_082(CardScript):
             digivolved = ctx.get('digivolved_permanent')
             if digivolved:
                 digivolved.change_dp(3000)
+                # "Then, that Digimon may attack"
+                from digimon_gym.engine.interfaces.modifiers import ModifierType
+                game.register_modifier(
+                    digivolved, ModifierType.FORCE_ATTACK,
+                    value_fn=lambda: True, expiry='end_of_turn')
 
         effect1.set_on_process_callback(process1)
         effects.append(effect1)

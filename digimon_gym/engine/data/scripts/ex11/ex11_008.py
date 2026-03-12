@@ -41,7 +41,7 @@ class EX11_008(CardScript):
                 return any('Reptile' in t or 'Dragonkin' in t for t in traits)
             def on_grant(target_perm):
                 target_perm.change_dp(3000)
-                target_perm.grant_keyword('_is_raid')
+                target_perm.grant_keyword('_is_raid', game.turn_count)
             game.effect_select_own_permanent(
                 player, on_grant, filter_fn=target_filter, is_optional=False)
 
@@ -77,7 +77,7 @@ class EX11_008(CardScript):
                 return any('Reptile' in t or 'Dragonkin' in t for t in traits)
             def on_grant(target_perm):
                 target_perm.change_dp(3000)
-                target_perm.grant_keyword('_is_raid')
+                target_perm.grant_keyword('_is_raid', game.turn_count)
             game.effect_select_own_permanent(
                 player, on_grant, filter_fn=target_filter, is_optional=False)
 

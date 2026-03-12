@@ -21,25 +21,25 @@ class BT9_103(CardScript):
         effects = []
 
         def _apply_main_effect(player, game):
-            """Shared logic for [Main] and [Security] -- apply both restrictions."""
+            """Shared logic for [Main] and [Security] — apply both restrictions."""
+            from digimon_gym.engine.interfaces.modifiers import ModifierType, ModifierEntry
             enemy = player.enemy
             if not enemy:
                 return
 
-            # Part 1: Opponent's Digimon with play costs 7 or less can't attack players
-            # Duration: until end of opponent's turn (turn_count + 1)
+            # Part 1: Opponent's Digimon with play cost 7 or less can't attack players.
+            # grant_keyword with duration = turn_count + 1 expires at start of granting
+            # player's next turn, covering the full opponent turn.
             expiry_turn = game.turn_count + 1
-            for perm in enemy.battle_area:
-                if perm.is_digimon:
-                    play_cost = perm.top_card.get_cost_itself if perm.top_card else 0
-                    if play_cost <= 7:
-                        perm.grant_keyword('_is_cannot_attack_player', duration=expiry_turn)
+            for perm in list(enemy.battle_area):
+                if not perm.is_digimon:
+                    continue
+                play_cost = perm.top_card.get_cost_itself if perm.top_card else 0
+                if play_cost <= 7:
+                    perm.grant_keyword('_is_cannot_attack_player', duration=expiry_turn)
 
-            # Part 2: Cards can't be added to security stacks by opponent's effects
-            # NOTE: Engine does not yet enforce CANNOT_ADD_SECURITY at
-            # recovery/add-security decision points. This registers the
-            # modifier for future engine support.
-            from digimon_gym.engine.interfaces.modifiers import ModifierType, ModifierEntry
+            # Part 2: Cards can't be added to security stacks by opponent's effects.
+            # Global restriction — no per-permanent target, registered via ModifierEntry.
             entry = ModifierEntry(
                 modifier_type=ModifierType.CANNOT_ADD_SECURITY,
                 condition=lambda perm, ctx: True,
@@ -63,7 +63,6 @@ class BT9_103(CardScript):
         effect0.set_can_use_condition(condition0)
 
         def process0(ctx: Dict[str, Any]):
-            """Apply both cannot-attack-player and cannot-add-security."""
             player = ctx.get('player')
             game = ctx.get('game')
             if not (player and game):
@@ -75,6 +74,7 @@ class BT9_103(CardScript):
 
         # --- Effect 1: [Security] Activate [Main] effects ---
         effect1 = ICardEffect()
+        effect1.set_timing(EffectTiming.SecuritySkill)
         effect1.set_effect_name("BT9-103 Security Effect")
         effect1.set_effect_description("[Security] Activate this card's [Main] effects.")
         effect1.is_security_effect = True
@@ -84,7 +84,6 @@ class BT9_103(CardScript):
         effect1.set_can_use_condition(condition1)
 
         def process1(ctx: Dict[str, Any]):
-            """Same as main effect -- apply both restrictions."""
             player = ctx.get('player')
             game = ctx.get('game')
             if not (player and game):

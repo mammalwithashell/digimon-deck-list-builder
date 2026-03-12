@@ -29,18 +29,15 @@ class P_103(CardScript):
         effect0.set_can_use_condition(condition0)
 
         def process0(ctx: Dict[str, Any]):
-            """Action: Add To Hand, Reveal And Select"""
+            """Action: Reveal top 2 cards, add 1 red card to hand, rest to bottom of deck"""
             player = ctx.get('player')
             perm = ctx.get('permanent')
             game = ctx.get('game')
-            # Add card to hand (from trash/reveal)
-            if player and player.trash_cards:
-                card_to_add = player.trash_cards.pop()
-                player.hand_cards.append(card_to_add)
             if not (player and game):
                 return
             def reveal_filter(c):
-                return True
+                colors = getattr(c, 'card_colors', [])
+                return any(col.name == 'Red' for col in colors)
             def on_revealed(selected, remaining):
                 player.hand_cards.append(selected)
                 for c in remaining:
@@ -77,7 +74,7 @@ class P_103(CardScript):
         effect2.set_can_use_condition(condition2)
 
         def process2(ctx: Dict[str, Any]):
-            """Action: Digivolve"""
+            """Action: Digivolve into a red Digimon card with cost reduction 2"""
             player = ctx.get('player')
             perm = ctx.get('permanent')
             game = ctx.get('game')
@@ -86,11 +83,23 @@ class P_103(CardScript):
             def digi_filter(c):
                 if not getattr(c, 'is_digimon', False):
                     return False
-                return True
+                colors = getattr(c, 'card_colors', [])
+                return any(col.name == 'Red' for col in colors)
             game.effect_digivolve_from_hand(
-                player, perm, digi_filter, is_optional=True)
+                player, perm, digi_filter, cost_reduction=2, is_optional=True)
 
         effect2.set_on_process_callback(process2)
         effects.append(effect2)
+
+        # SecuritySkill effect: play self from security
+        effect_sec = ICardEffect()
+        effect_sec.set_effect_name("P-103 Security: Play this card")
+        effect_sec.set_effect_description("[Security] Play this card without paying the cost.")
+        effect_sec.is_security_effect = True
+
+        def condition_sec(context: Dict[str, Any]) -> bool:
+            return True
+        effect_sec.set_can_use_condition(condition_sec)
+        effects.append(effect_sec)
 
         return effects

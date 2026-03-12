@@ -41,6 +41,13 @@ class BT21_025(CardScript):
                 return False
             if not (card and card.owner and card.owner.is_my_turn):
                 return False
+            # Only trigger if the attacking Digimon has Reptile or Dragonkin trait
+            attacker = context.get('permanent') or context.get('attacking_permanent')
+            if attacker:
+                top = getattr(attacker, 'top_card', None)
+                traits = getattr(top, 'card_traits', []) or []
+                if not any('Reptile' in t or 'Dragonkin' in t for t in traits):
+                    return False
             return True
 
         effect1.set_can_use_condition(condition1)
@@ -75,6 +82,8 @@ class BT21_025(CardScript):
         effect = effect2  # alias for condition closure
         def condition2(context: Dict[str, Any]) -> bool:
             if card and card.permanent_of_this_card() is None:
+                return False
+            if not (card and card.owner and card.owner.is_my_turn):
                 return False
             return True
 

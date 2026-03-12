@@ -72,23 +72,42 @@ class BT21_072(CardScript):
             if perm and game:
                 from digimon_gym.engine.interfaces.modifiers import ModifierType
                 game.register_modifier(
-                    ModifierType.CAN_ATTACK_UNSUSPENDED, perm,
-                    value_fn=lambda: True, expiry='persistent')
+                    perm, ModifierType.CAN_ATTACK_UNSUSPENDED,
+                    value_fn=lambda: True, expiry='permanent')
         effect2.set_on_process_callback(process2)
         effects.append(effect2)
 
-        # [All Turns] This Digimon gets +1000 DP for each of its digivolution cards.
+        # [All Turns] This Digimon gets +1000 DP for each of your opponent's Digimon in play.
         effect3 = ICardEffect()
-        effect3.set_effect_name("BT21-072 DP +1000 per evo card")
-        effect3.set_effect_description("[All Turns] This Digimon gets +1000 DP for each of its digivolution cards.")
+        effect3.set_timing(EffectTiming.OnEnterFieldAnyone)
+        effect3.set_effect_name("BT21-072 DP +1000 per opponent Digimon")
+        effect3.set_effect_description("[All Turns] This Digimon gets +1000 DP for each of your opponent's Digimon in play.")
 
-        # Static +1000 DP (approximation; truly should be dynamic per evo card count)
-        effect3.dp_modifier = 1000
         def condition3(context: Dict[str, Any]) -> bool:
             if card and card.permanent_of_this_card() is None:
                 return False
             return True
         effect3.set_can_use_condition(condition3)
+
+        def process3(ctx: Dict[str, Any]):
+            """Register dynamic DP modifier: +1000 per opponent Digimon in play"""
+            perm = ctx.get('permanent')
+            game = ctx.get('game')
+            if perm and game:
+                from digimon_gym.engine.interfaces.modifiers import ModifierType
+                owner = card.owner if card else (ctx.get('player'))
+                def dp_value_fn():
+                    if not owner:
+                        return 0
+                    enemy = owner.enemy if owner else None
+                    if not enemy:
+                        return 0
+                    return 1000 * len(list(enemy.battle_area))
+                game.register_modifier(
+                    perm, ModifierType.CHANGE_DP,
+                    value_fn=dp_value_fn, expiry='permanent')
+
+        effect3.set_on_process_callback(process3)
         effects.append(effect3)
 
         # Factory effect: dp_modifier

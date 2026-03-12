@@ -9,98 +9,131 @@ if TYPE_CHECKING:
 
 
 class BT20_055(CardScript):
-    """BT20-055 Invisimon | Lv.6"""
+    """BT20-055 Invisimon | Lv.6 Black Digimon"""
 
     def get_card_effects(self, card: 'CardSource') -> List['ICardEffect']:
         effects = []
 
+        # --- Effect 0: [Security][End of Opponent's Turn] Play this card without paying cost ---
+        # Modeled as a security effect with OnEndTurn timing — fires at end of opponent's turn
+        # when this card is in security, then plays it for free.
         effect0 = ICardEffect()
         effect0.set_timing(EffectTiming.OnEndTurn)
-        effect0.set_effect_name("BT20-055 Play this card")
-        effect0.set_effect_description("(Security) [End of Opponent's Turn] Play this card without paying the cost.")
+        effect0.set_effect_name("BT20-055 Security: play without cost at end of opponent's turn")
+        effect0.set_effect_description(
+            "[Security][End of Opponent's Turn] Play this card without paying the cost."
+        )
+        effect0.is_security_effect = True
 
         def condition0(context: Dict[str, Any]) -> bool:
+            owner = card.owner if card else None
+            if not owner:
+                return False
+            # Must be in owner's security stack to trigger
+            if card not in owner.security_cards:
+                return False
             return True
 
         effect0.set_can_use_condition(condition0)
 
         def process0(ctx: Dict[str, Any]):
             player = ctx.get('player')
-            game = ctx.get('game')
-            if not (player and game):
+            if not player:
                 return
-
-            def play_filter(c):
-                return True
-
-            game.effect_play_from_zone(
-                player, 'hand', play_filter, free=True, is_optional=True)
+            # Play this card from security without paying cost
+            if card and card in player.security_cards:
+                player.security_cards.remove(card)
+                player.play_card_from_source(card, pay_cost=False)
 
         effect0.set_on_process_callback(process0)
         effects.append(effect0)
 
-        def build_main_effect(is_on_play: bool = False, is_when_digivolving: bool = False):
-            effect = ICardEffect()
-            effect.set_timing(EffectTiming.OnEnterFieldAnyone)
-            effect.set_effect_name(
-                "BT20-055 <De-Digivolve 2> 1 opponent's Digimon, flip their security card faceup, then delete 1 Digimon"
+        # --- Effects 1+2: [On Play][When Digivolving]
+        #    <De-Digivolve 2> 1 opponent Digimon.
+        #    Flip opponent's top face-down security card face up.
+        #    Delete 1 opponent Digimon with 1 or fewer digivolution cards. ---
+        def make_enter_field_effect(is_digivolving: bool):
+            eff = ICardEffect()
+            eff.set_timing(EffectTiming.OnEnterFieldAnyone)
+            eff.set_effect_name(
+                "BT20-055 De-Digivolve 2 opponent, flip top security face-up, "
+                "delete Digimon with <=1 digi-cards"
             )
-            effect.set_effect_description(
-                "[On Play] <De-Digivolve 2> 1 of your opponent's Digimon and flip your opponent's top face-down security card face up. Then, delete 1 of their Digimon with 1 or fewer digivolution cards."
-                if is_on_play else
-                "[When Digivolving] <De-Digivolve 2> 1 of your opponent's Digimon and flip your opponent's top face-down security card face up. Then, delete 1 of their Digimon with 1 or fewer digivolution cards."
+            eff.set_effect_description(
+                "[On Play][When Digivolving] <De-Digivolve 2> 1 of your opponent's Digimon. "
+                "Then, flip your opponent's top face-down security card face up. "
+                "Then, delete 1 of your opponent's Digimon with 1 or fewer digivolution cards."
             )
-            effect.is_on_play = is_on_play
-            effect.is_when_digivolving = is_when_digivolving
+            if is_digivolving:
+                eff.is_when_digivolving = True
+            else:
+                eff.is_on_play = True
 
             def condition(context: Dict[str, Any]) -> bool:
                 if card and card.permanent_of_this_card() is None:
                     return False
                 return True
 
-            effect.set_can_use_condition(condition)
+            eff.set_can_use_condition(condition)
 
             def process(ctx: Dict[str, Any]):
                 player = ctx.get('player')
                 game = ctx.get('game')
                 if not (player and game):
                     return
+                enemy = player.enemy
+                if not enemy:
+                    return
 
+                # Step 1: <De-Digivolve 2> 1 opponent Digimon
                 def on_de_digivolve(target_perm):
                     removed = target_perm.de_digivolve(2)
-                    enemy = player.enemy if player else None
-                    if enemy:
-                        enemy.trash_cards.extend(removed)
+                    enemy.trash_cards.extend(removed)
 
                 game.effect_select_opponent_permanent(
-                    player, on_de_digivolve, filter_fn=lambda p: p.is_digimon, is_optional=False)
+                    player, on_de_digivolve,
+                    filter_fn=lambda p: p.is_digimon, is_optional=False
+                )
 
-                enemy = player.enemy if player else None
-                if enemy and enemy.security_cards:
-                    pass
+                # Step 2: Flip opponent's top face-down security card face up
+                # Security stack: index 0 = bottom, last index = top
+                for sec_card in reversed(enemy.security_cards):
+                    if not enemy.is_security_face_up(sec_card):
+                        enemy.face_up_security.add(sec_card)
+                        break
 
+                # Step 3: Delete 1 opponent Digimon with 1 or fewer digivolution cards
+                # "digivolution cards" = cards under the top card (len(card_sources) - 1)
                 def delete_filter(p):
-                    return p.is_digimon and len(p.digivolution_cards) <= 1
+                    if not p.is_digimon:
+                        return False
+                    digi_card_count = len(getattr(p, 'card_sources', [])) - 1
+                    return digi_card_count <= 1
 
                 def on_delete(target_perm):
-                    enemy = player.enemy if player else None
-                    if enemy:
-                        enemy.delete_permanent(target_perm)
+                    enemy.delete_permanent(target_perm)
 
                 game.effect_select_opponent_permanent(
-                    player, on_delete, filter_fn=delete_filter, is_optional=False)
+                    player, on_delete, filter_fn=delete_filter, is_optional=False
+                )
 
-            effect.set_on_process_callback(process)
-            return effect
+            eff.set_on_process_callback(process)
+            return eff
 
-        effects.append(build_main_effect(is_on_play=True))
-        effects.append(build_main_effect(is_when_digivolving=True))
+        effects.append(make_enter_field_effect(is_digivolving=False))
+        effects.append(make_enter_field_effect(is_digivolving=True))
 
+        # --- Effect 3: [Your Turn] When your Digimon checks a face-up security card,
+        #    you may place the top card of this Digimon face-up at the bottom of
+        #    your security stack. ---
         effect3 = ICardEffect()
         effect3.set_timing(EffectTiming.OnSecurityCheck)
-        effect3.set_effect_name("BT20-055 Place top card face up as bottom security")
+        effect3.set_effect_name(
+            "BT20-055 On face-up security check: place top digi-card face-up to own security bottom"
+        )
         effect3.set_effect_description(
-            "[Your Turn] When your Digimon check face-up security cards, you may place this Digimon's top stacked card face up as the bottom security card."
+            "[Your Turn] When your Digimon checks a face-up security card, you may place "
+            "the top card of this Digimon face-up at the bottom of your security stack."
         )
         effect3.is_optional = True
 
@@ -109,8 +142,22 @@ class BT20_055(CardScript):
                 return False
             if not (card and card.owner and card.owner.is_my_turn):
                 return False
-            permanent = effect3.effect_source_permanent if hasattr(effect3, 'effect_source_permanent') else None
-            if not (permanent and len(permanent.digivolution_cards) >= 0):
+            # The security check event must be triggered by our player's Digimon
+            event_player = context.get('event_player')
+            if event_player is None or event_player is not card.owner:
+                return False
+            # The checked security card must be face-up (in opponent's security)
+            checked_card = context.get('security_card')
+            if checked_card is None:
+                return False
+            enemy = card.owner.enemy if card.owner else None
+            if enemy is None:
+                return False
+            if not enemy.is_security_face_up(checked_card):
+                return False
+            # This permanent must have at least 1 digivolution card to give away
+            perm = card.permanent_of_this_card()
+            if perm is None or perm.has_no_digivolution_cards:
                 return False
             return True
 
@@ -118,8 +165,19 @@ class BT20_055(CardScript):
 
         def process3(ctx: Dict[str, Any]):
             player = ctx.get('player')
-            if player:
-                player.recovery(1)
+            perm = ctx.get('permanent')
+            if not (player and perm):
+                return
+            if perm.has_no_digivolution_cards:
+                return
+            # Trash the top digivolution card (topmost under-card), then move it
+            # from trash to security face-up at the bottom
+            trashed = perm.trash_digivolution_cards(1, from_top=True)
+            if trashed:
+                top_digi_card = trashed[0]
+                if top_digi_card in player.trash_cards:
+                    player.trash_cards.remove(top_digi_card)
+                player.add_to_security_face_up(top_digi_card, to_top=False)
 
         effect3.set_on_process_callback(process3)
         effects.append(effect3)

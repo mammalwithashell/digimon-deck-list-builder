@@ -14,11 +14,14 @@ class EX10_025(CardScript):
     def get_card_effects(self, card: 'CardSource') -> List['ICardEffect']:
         effects = []
 
+        # [On Play] You may place 2 cards with the [Mineral] or [Rock] trait from your trash
+        # as 1 of your [Mineral] or [Rock] trait Digimon's bottom digivolution cards.
         effect0 = ICardEffect()
         effect0.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect0.set_effect_name("EX10-025 Place 2 as bottom digivolution sources")
         effect0.set_effect_description(
-            "[On Play] You may place 2 cards with the [Mineral] or [Rock] trait from your trash as 1 of your [Mineral] or [Rock] trait Digimon's bottom digivolution cards."
+            "[On Play] You may place 2 cards with the [Mineral] or [Rock] trait from your trash "
+            "as 1 of your [Mineral] or [Rock] trait Digimon's bottom digivolution cards."
         )
         effect0.is_on_play = True
 
@@ -62,15 +65,29 @@ class EX10_025(CardScript):
         effect0.set_on_process_callback(process0)
         effects.append(effect0)
 
+        # Inherited Effect: When effects trash this card from a [Mineral] or [Rock] trait
+        # Digimon's digivolution cards, delete 1 of your opponent's Digimon with a play cost
+        # of 4 or less.
         effect1 = ICardEffect()
         effect1.set_timing(EffectTiming.OnDigivolutionCardDiscarded)
-        effect1.set_effect_name("EX10-025 Delete 4 cost or less Digimon")
+        effect1.set_effect_name("EX10-025 Delete opponent's Digimon cost 4 or less")
         effect1.set_effect_description(
-            "When effects trash this card from a [Mineral] or [Rock] trait Digimon's digivolution cards, delete 1 of your opponent's Digimon with a play cost of 4 or less."
+            "When effects trash this card from a [Mineral] or [Rock] trait Digimon's "
+            "digivolution cards, delete 1 of your opponent's Digimon with a play cost of 4 or less."
         )
         effect1.is_inherited_effect = True
 
         def condition1(context: Dict[str, Any]) -> bool:
+            # Check this card was the one trashed
+            trashed_cards = context.get('trashed_cards', [])
+            if card not in trashed_cards:
+                return False
+            # Check the permanent has [Mineral] or [Rock] trait
+            permanent = context.get('permanent')
+            if permanent is None:
+                return False
+            if not (permanent.has_trait('Mineral') or permanent.has_trait('Rock')):
+                return False
             return True
 
         effect1.set_can_use_condition(condition1)

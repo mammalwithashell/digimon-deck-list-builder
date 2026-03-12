@@ -135,8 +135,8 @@ class EX10_010(CardScript):
             if perm and game:
                 from digimon_gym.engine.interfaces.modifiers import ModifierType
                 game.register_modifier(
-                    ModifierType.CANNOT_BE_SELECTED_BY_EFFECT, perm,
-                    value_fn=lambda: True, expiry='end_of_turn')
+                    perm, ModifierType.CANNOT_BE_SELECTED_BY_EFFECT,
+                    value_fn=lambda: True, expiry='permanent')
 
         effect6.set_on_process_callback(process6)
         effects.append(effect6)

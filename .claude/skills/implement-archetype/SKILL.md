@@ -103,30 +103,134 @@ Estimated time: ~N minutes
 
 ---
 
-## Phase 3: Assemble Context Packs and Dispatch Agents
+## Phase 3: Assemble Context, Dispatch Agents, Review & Fix
 
-### 3a. Prepare compact engine reference
+### Phase 3A: Spawn Tech Lead Agent
 
-Read only the **Script Structure** and **Anti-Patterns** sections from `docs/archetype-qa/engine-api-reference.md` (~150 lines). Agents will use Pinecone MCP to look up full API details on demand.
+Spawn a dedicated Opus agent that owns research, review, and simple fixes. This agent runs with a clean context window focused on card correctness, separate from orchestration overhead.
 
-### 3b. Read C# scripts
+Use the Agent tool with `model: "opus"`.
+
+#### Tech Lead Prompt Template (Phase: Research)
+
+```
+You are the tech lead for a Digimon TCG card effect implementation batch.
+
+## Your Responsibilities
+1. RESEARCH: Query Pinecone to build curated context for implementation agents
+2. REVIEW: After implementations arrive (you will be resumed), QA each script for correctness AND faithfulness
+3. FIX: Apply simple fixes directly; send complex fixes back with specific instructions
+
+## Current Phase: Research
+For the cards below, prepare curated engine context that implementation agents will use.
+
+### Step 1: Identify mechanics
+Scan all card effect text below. Build a deduplicated list of mechanics needed
+(e.g., Blocker, Rush, Piercing, cost reduction, alt-digi, DNA, Delay, suspend,
+de-digivolve, trash recovery, reveal-and-play, tokens, etc.)
+
+### Step 2: Query Pinecone engine-api
+For each mechanic identified, search namespace "engine-api" in index "digimon-engine".
+Extract: method signatures, timing enums, required arguments, usage patterns.
+Format as labeled snippets grouped by mechanic.
+
+### Step 3: Query Pinecone card-scripts
+For each implementation batch, search namespace "card-scripts" with filter {is_frozen: true}
+using the most distinctive card's effect text. Select top 2-3 frozen scripts as few-shot examples.
+Prefer scripts that demonstrate the same mechanic combinations.
+
+### Step 4: Query Pinecone card-metadata
+For cards whose effect text references other cards by name (e.g., "when X is in play"),
+search namespace "card-metadata" to fetch the referenced card's metadata.
+
+### Step 5: Check engine gaps
+Cross-reference card effects against the Known Engine Gaps section below.
+Flag any cards that will be BLOCKED before implementation begins.
+Also flag any effects that look like they might hit a gap not yet documented.
+
+### Output Format
+Return your research as a structured context pack:
+
+```
+## Curated Engine Context
+
+### Mechanic: {mechanic_name}
+**API:** `game.method_name(args)` — description
+**Timing:** EffectTiming.{value} ({int_value})
+**Pattern:**
+```python
+{usage snippet}
+```
+**Gotchas:** {any pitfalls from anti-patterns or post-mortems}
+
+(repeat for each mechanic)
+
+### Few-Shot Examples
+#### Example 1: {CARD_ID} — {description of what it demonstrates}
+```python
+{frozen script}
+```
+(repeat for 2-3 examples per batch)
+
+### Cross-Card References
+- {CARD_ID} references "{other_card_name}" — {metadata summary}
+
+### Pre-Flagged BLOCKED Cards
+- {CARD_ID}: {reason — which gap it hits}
+```
+
+## Cards
+{full card manifest: card ID, name, kind, level, colors, traits, DP, play cost,
+ effect text, inherited text, security text, C# source if available}
+
+## Engine Quick Reference
+{~350 lines from engine-api-reference.md: sections 1 (Script Structure), 5 (EffectTiming Enum),
+ 10 (Common Patterns), 11 (Anti-Patterns), and 4 (Modifier System summary)}
+
+## Known Engine Gaps
+{contents of docs/archetype-qa/engine-gaps.md}
+
+## Error Checklist (save for review phase — you will use this when resumed)
+1. BeforePayCost condition MUST start with: if context.get('card_source') is not card: return False
+2. [When Attacking] uses EffectTiming.OnUseAttack (28), NOT OnAllyAttack (32)
+3. No stubs — every effect has a complete process callback with real logic
+4. Inherited effects have is_inherited_effect = True on separate ICardEffect instances
+5. Alt-digi includes ALL qualifying traits/names from card text (check for alternatives like Sea Animal, Aqua)
+6. Tamer [Start of Your Turn] effects check memory <= N gate where card text specifies it
+7. register_modifier args: game.register_modifier(target_perm, ModifierType.X, value, condition=, expiry=)
+8. Option main effect uses EffectTiming.OptionSkill; security effect uses EffectTiming.SecuritySkill
+9. "Ignore color requirements" conditions check specific context, NOT return True unconditionally
+10. Reveal flows use game.effect_reveal_from_deck(), NOT manual list operations or trash_cards.pop()
+11. Suspend/target selections offer ALL valid targets unless card text explicitly says "opponent's" or "your"
+12. Piercing grants use game.effect_grant_piercing_factory(), not manual flag setting
+13. OnTappedAnyone callbacks verify the suspended Digimon is the correct one (self or own field), not any Digimon
+14. DP modification uses game.register_modifier(perm, ModifierType.CHANGE_DP, ...) with proper expiry, not perm.change_dp()
+15. Field presence: conditions on field effects check card.permanent_of_this_card() is not None
+16. Use player.battle_area, NEVER player.field_cards
+```
+
+The orchestrator reads the engine quick reference by extracting sections 1, 4, 5, 10, and 11 from `docs/archetype-qa/engine-api-reference.md` (~350 lines total).
+
+The tech lead returns: **curated context pack** + **pre-flagged BLOCKED cards**.
+
+### Phase 3B: Dispatch Implementation & QA Agents
+
+#### 3B-i. Read C# scripts
 
 For each card with a C# source, read the file contents. Include inline in the agent prompt.
 
-### 3c. Read existing Python scripts
+#### 3B-ii. Read existing Python scripts
 
 For QA-only cards, read the frozen script. Include inline for the agent to review.
 
-### 3d. Select few-shot examples via Pinecone
-
-For each implementation batch (especially Complex cards), use Pinecone MCP to search the `card-scripts` namespace with filter `{is_frozen: true}` for 2-3 similar frozen scripts. Include the best matches inline in the agent prompt as few-shot examples.
-
-### 3e. Dispatch agents
+#### 3B-iii. Dispatch agents
 
 Use the Agent tool with `model: "sonnet"` and `isolation: "worktree"` for implementation agents.
 Use `model: "sonnet"` without worktree for QA-only agents (they don't write files).
 
 **Dispatch in parallel** — use a single message with multiple Agent tool calls.
+
+The key change from prior workflow: agents receive the **tech lead's curated context** as their primary reference, with Pinecone MCP retained only as a fallback for edge cases.
 
 #### QA Agent Prompt Template
 
@@ -139,26 +243,44 @@ and C# reference implementation. Report one of:
 - PASS: Script correctly implements all effects
 - QA-FAIL: Script has specific issues (list them with line numbers)
 
+## Curated Engine Context
+{paste the tech lead's curated context pack here — mechanic snippets, few-shot examples, cross-references}
+
 ## Engine Quick Reference
-{Script Structure + Anti-Patterns sections from engine-api-reference.md}
+{~350 lines from engine-api-reference.md: Script Structure + EffectTiming Enum + Common Patterns + Anti-Patterns + Modifier System summary}
 
-## Dynamic Context (Pinecone MCP)
-You have access to Pinecone for searching the engine knowledge base. The index is "digimon-engine".
+## Error Checklist — Verify EACH of these for every script
+1. BeforePayCost condition starts with: if context.get('card_source') is not card: return False
+2. [When Attacking] uses EffectTiming.OnUseAttack (28), NOT OnAllyAttack (32)
+3. No stubs — every effect has a complete process callback
+4. Inherited effects have is_inherited_effect = True
+5. Alt-digi includes ALL qualifying traits/names from card text
+6. Tamer [Start of Your Turn] checks memory <= N gate
+7. register_modifier args: game.register_modifier(target_perm, ModifierType.X, value, condition=, expiry=)
+8. Option: main=OptionSkill, security=SecuritySkill
+9. "Ignore color" conditions check specific context, not return True
+10. Reveal flows use game.effect_reveal_from_deck(), not manual list ops
+11. Suspend/target: ALL valid targets unless card text restricts scope
+12. Piercing: game.effect_grant_piercing_factory()
+13. OnTappedAnyone: verify the suspended Digimon is the correct target
+14. DP modification: register_modifier with CHANGE_DP + expiry, not change_dp()
+15. Field presence: check card.permanent_of_this_card() is not None
+16. Use player.battle_area, NEVER player.field_cards
 
-- Engine API details: search namespace "engine-api" for methods, patterns, or concepts
+## Pinecone MCP (fallback only)
+The curated context above covers the main patterns. Use Pinecone only for edge cases not
+covered above. Index: "digimon-engine".
+
+- Engine API details: search namespace "engine-api"
 - Similar implementations: search namespace "card-scripts" with filter {is_frozen: true}
-- Card interactions: search namespace "card-metadata" for cards referenced by name in effects
-
-Examples:
-- Find Blocker implementation patterns: search "engine-api" for "Blocker keyword"
-- Find frozen scripts with Rush: search "card-scripts" for "Rush grant keyword"
-- Look up a card's text: search "card-metadata" for the card ID
+- Card interactions: search namespace "card-metadata"
 
 ## Self-Recovery
 If you encounter an unfamiliar engine pattern or are unsure about a method:
-1. Search Pinecone "engine-api" namespace for the relevant method or concept
-2. Search Pinecone "card-scripts" namespace for frozen scripts with similar effects
-3. If still unsure, flag it in your review rather than guessing
+1. Check the Curated Engine Context above first
+2. Search Pinecone "engine-api" namespace for the relevant method or concept
+3. Search Pinecone "card-scripts" namespace for frozen scripts with similar effects
+4. If still unsure, flag it in your review rather than guessing
 
 ## Cards to Review
 
@@ -210,30 +332,46 @@ CRITICAL RULES:
 2. Every BeforePayCost condition MUST start with: if context.get('card_source') is not card: return False
 3. Effects below the inheritance line need separate ICardEffect instances with is_inherited_effect = True
 4. Use the exact boilerplate and patterns from the engine API reference.
+5. Before submitting each script, verify it against the Error Checklist below.
+
+## Curated Engine Context
+{paste the tech lead's curated context pack here — mechanic snippets, few-shot examples, cross-references}
 
 ## Engine Quick Reference
-{Script Structure + Anti-Patterns sections from engine-api-reference.md}
+{~350 lines from engine-api-reference.md: Script Structure + EffectTiming Enum + Common Patterns + Anti-Patterns + Modifier System summary}
 
-## Dynamic Context (Pinecone MCP)
-You have access to Pinecone for searching the engine knowledge base. The index is "digimon-engine".
+## Error Checklist — Verify EACH script against this before submitting
+1. BeforePayCost condition starts with: if context.get('card_source') is not card: return False
+2. [When Attacking] uses EffectTiming.OnUseAttack (28), NOT OnAllyAttack (32)
+3. No stubs — every effect has a complete process callback
+4. Inherited effects have is_inherited_effect = True
+5. Alt-digi includes ALL qualifying traits/names from card text
+6. Tamer [Start of Your Turn] checks memory <= N gate
+7. register_modifier args: game.register_modifier(target_perm, ModifierType.X, value, condition=, expiry=)
+8. Option: main=OptionSkill, security=SecuritySkill
+9. "Ignore color" conditions check specific context, not return True
+10. Reveal flows use game.effect_reveal_from_deck(), not manual list ops
+11. Suspend/target: ALL valid targets unless card text restricts scope
+12. Piercing: game.effect_grant_piercing_factory()
+13. OnTappedAnyone: verify the suspended Digimon is the correct target
+14. DP modification: register_modifier with CHANGE_DP + expiry, not change_dp()
+15. Field presence: check card.permanent_of_this_card() is not None
+16. Use player.battle_area, NEVER player.field_cards
 
-- Engine API details: search namespace "engine-api" for methods, patterns, or concepts
+## Pinecone MCP (fallback only)
+The curated context above covers the main patterns. Use Pinecone only for edge cases not
+covered above. Index: "digimon-engine".
+
+- Engine API details: search namespace "engine-api"
 - Similar implementations: search namespace "card-scripts" with filter {is_frozen: true}
-- Card interactions: search namespace "card-metadata" for cards referenced by name in effects
-
-Examples:
-- Find how to grant Blocker: search "engine-api" for "Blocker keyword grant"
-- Find frozen scripts with Rush: search "card-scripts" for "Rush grant keyword"
-- Look up a card referenced in effect text: search "card-metadata" for the card name
+- Card interactions: search namespace "card-metadata"
 
 ## Self-Recovery
 If you encounter an unfamiliar engine pattern or get stuck:
-1. Search Pinecone "engine-api" namespace for the relevant method or concept
-2. Search Pinecone "card-scripts" namespace for frozen scripts with similar effects
-3. If still blocked, report BLOCKED with details rather than guessing
-
-## Few-Shot Examples
-{2-3 similar frozen scripts selected via Pinecone search, if available}
+1. Check the Curated Engine Context above first
+2. Search Pinecone "engine-api" namespace for the relevant method or concept
+3. Search Pinecone "card-scripts" namespace for frozen scripts with similar effects
+4. If still blocked, report BLOCKED with details rather than guessing
 
 ## Cards to Implement
 
@@ -266,11 +404,131 @@ CARD_ID: BLOCKED
 ```
 ```
 
+### Phase 3C: Tech Lead Review + QA
+
+After all Sonnet agents return, **resume the tech lead agent** (using its agent ID) with the implementation results.
+
+#### Tech Lead Resume Prompt (Phase: Review)
+
+```
+## Phase: Review + QA
+
+The implementation agents have returned. Review each new/modified script below.
+Skip QA-only cards that were marked PASS — those are trusted.
+
+### Instructions
+
+For each IMPLEMENTED script:
+
+1. **Structural Review** — Run the 16-item Error Checklist (from your initial prompt) against the script:
+   - Check every BeforePayCost for leak guard
+   - Verify all timing enums match the card's trigger text
+   - Confirm no stubs, no manual list ops, no wrong API usage
+   - Verify modifier argument order and expiry types
+   - Check alt-digi completeness, memory gates, target scope
+
+2. **Faithfulness QA** — Compare the script against the card's official effect text:
+   - Does the script handle ALL effects mentioned in card text?
+   - Are timing enums correct for each effect type?
+   - Are conditions faithful (target restrictions, color requirements, trait filters)?
+   - Do optional effects have is_optional = True?
+   - Is "once per turn" enforced where card text says it?
+   - Are inherited effects separated with is_inherited_effect = True?
+   - Does security text get a SecuritySkill-timed effect?
+
+3. **Verdict** per script — one of:
+   - **CLEAN**: Script passes both structural and faithfulness checks
+   - **SIMPLE-FIX**: Wrong enum, missing guard, wrong argument order, minor condition error
+     → Include the exact fix (file, line, old code → new code)
+   - **COMPLEX-FIX**: Wrong effect logic, missing entire effect, needs significant rewrite
+     → Include: card ID, file path, what's wrong, correct pattern/approach
+   - **BLOCKED**: Hits a known engine gap → log to engine-gaps.md
+
+### Scripts to Review
+
+{For each IMPLEMENTED card, include:}
+
+#### {CARD_ID} — {card_name}
+**Card Text:** {effect_text}
+**Inherited Text:** {inherited_text}
+**Security Text:** {security_text}
+**File:** digimon_gym/engine/data/scripts/{set}/{set}_{nnn}.py
+
+```python
+{script contents written by Sonnet agent}
+```
+
+### Output Format
+
+For each script:
+```
+CARD_ID: CLEAN
+```
+or
+```
+CARD_ID: SIMPLE-FIX
+- Fix 1: Line {N}: `{old_code}` → `{new_code}` (reason)
+- Fix 2: Line {N}: `{old_code}` → `{new_code}` (reason)
+```
+or
+```
+CARD_ID: COMPLEX-FIX
+- Problem: {description of what's wrong}
+- Correct approach: {how to fix it, including patterns/examples}
+- Affected lines: {line range}
+```
+or
+```
+CARD_ID: BLOCKED
+- Engine gap: {description}
+- Card text: "{the specific effect text}"
+```
+```
+
+The orchestrator collects the tech lead's verdicts for Phase 3D.
+
+### Phase 3D: Hybrid Fix Round
+
+Based on tech lead verdicts from Phase 3C:
+
+#### SIMPLE-FIX scripts
+
+The **tech lead applies fixes directly**. Resume the tech lead agent one more time with instructions to apply its own SIMPLE-FIX edits in the worktree. The tech lead reads each file, applies the line-level fixes it identified, and confirms the fix.
+
+#### COMPLEX-FIX scripts
+
+The orchestrator **resumes the original Sonnet agent** (using its stored agent ID) with the tech lead's specific fix instructions:
+
+```
+## Revision Required
+
+The tech lead reviewed your implementation and found issues that need fixing.
+Apply these fixes and resubmit. One revision round only.
+
+### {CARD_ID}
+**Problem:** {tech lead's description}
+**Correct approach:** {tech lead's instructions}
+**Affected lines:** {line range}
+
+Re-read the card text and curated context, then fix the script.
+Output the corrected script and confirm: CARD_ID: REVISED
+```
+
+One revision round maximum per Sonnet agent.
+
+#### BLOCKED scripts
+
+Log to `docs/archetype-qa/engine-gaps.md`. No further action.
+
+#### Final spot-check
+
+After fixes are applied, resume the tech lead one last time for a quick spot-check on any SIMPLE-FIX or COMPLEX-FIX scripts that were revised. Verdict: CLEAN or STILL-BROKEN (with notes for Phase 5).
+
 ---
 
 ## Phase 4: Compile QA Index
 
-After all agents return, merge verdicts into `docs/archetype-qa/{archetype_name}.md`:
+After Phase 3D completes, merge all verdicts into `docs/archetype-qa/{archetype_name}.md`:
 
 ```markdown
 # Archetype QA: {name}
@@ -278,10 +536,25 @@ Date: {today}
 Total cards: N
 
 ## Summary
-- PASS: N
-- IMPLEMENTED: N
-- QA-FAIL: N
-- BLOCKED: N
+- PASS: N (existing frozen, QA-verified)
+- IMPLEMENTED: N total
+  - CLEAN (first pass): N
+  - SIMPLE-FIX (tech lead fixed): N
+  - COMPLEX-FIX (Sonnet revised): N
+  - STILL-BROKEN (needs Phase 5): N
+- QA-FAIL: N (existing scripts with issues)
+- BLOCKED: N (engine gaps)
+
+## Tech Lead Review
+### SIMPLE-FIX Applied
+| Card ID | Fix Summary |
+|---------|-------------|
+| {ID} | {one-line description} |
+
+### COMPLEX-FIX Revised
+| Card ID | Problem | Resolution |
+|---------|---------|------------|
+| {ID} | {problem} | {fixed/still-broken} |
 
 ## QA Failures
 ### {CARD_ID} {card_name}
@@ -303,10 +576,12 @@ Total cards: N
 
 ---
 
-## Phase 5: Fix QA Failures
+## Phase 5: Fix Remaining Issues
 
-For each QA-FAIL card:
-1. Read the issue details from the agent
+This phase handles only scripts that survived as STILL-BROKEN after Phase 3D, plus any QA-FAIL cards from QA-only agents. Most fixes should already be handled by the tech lead in Phase 3D.
+
+For each remaining issue:
+1. Read the issue details and tech lead notes (if any)
 2. Apply the fix to the script
 3. Verify the fix addresses the reported issue
 

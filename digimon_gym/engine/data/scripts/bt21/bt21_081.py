@@ -27,6 +27,9 @@ class BT21_081(CardScript):
                 return False
             if not (card and card.owner and card.owner.is_my_turn):
                 return False
+            enemy = card.owner.enemy if card and card.owner else None
+            if not enemy or not any(p.is_digimon for p in enemy.battle_area):
+                return False
             return True
 
         effect0.set_can_use_condition(condition0)
@@ -72,13 +75,18 @@ class BT21_081(CardScript):
             if perm:
                 perm.suspend()
             def target_filter(p):
-                return p.is_digimon
+                if not p.is_digimon:
+                    return False
+                traits = getattr(p.top_card, 'card_traits', []) or []
+                return any('Reptile' in t or 'Dragonkin' in t for t in traits)
             def on_grant(target_perm):
-                target_perm.grant_keyword('_is_piercing')
+                from ....interfaces.modifiers import ModifierType
+                target_perm.grant_keyword('_is_piercing', game.turn_count)
+                game.register_modifier(
+                    target_perm, ModifierType.FORCE_ATTACK,
+                    value_fn=lambda: True, expiry='end_of_turn')
             game.effect_select_own_permanent(
                 player, on_grant, filter_fn=target_filter, is_optional=True)
-            # Force attack — target Digimon may attack (requires engine SelectAttack)
-            pass  # descriptive-tagged: force_attack
 
         effect1.set_on_process_callback(process1)
         effects.append(effect1)

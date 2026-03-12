@@ -9,76 +9,107 @@ if TYPE_CHECKING:
 
 
 class EX8_067(CardScript):
-    """EX8-067 Close"""
+    """EX8-067 Close | Tamer"""
 
     def get_card_effects(self, card: 'CardSource') -> List['ICardEffect']:
         effects = []
 
-        # Factory effect: set_memory_3
-        # [Start of Your Turn] Set memory to 3 if <= 2
+        # [Start of Your Turn] If you have 2 or less memory, set it to 3.
         effect0 = ICardEffect()
-        effect0.set_timing(EffectTiming.OnStartMainPhase)
-        effect0.set_effect_name("EX8-067 Set memory to 3")
-        effect0.set_effect_description("[Start of Your Turn] If your memory is at 2 or less, it becomes 3.")
+        effect0.set_timing(EffectTiming.OnStartTurn)
+        effect0.set_effect_name("EX8-067 Set memory to 3 if 2 or less")
+        effect0.set_effect_description("[Start of Your Turn] If you have 2 or less memory, set it to 3.")
 
         def condition0(context: Dict[str, Any]) -> bool:
             if card and card.permanent_of_this_card() is None:
                 return False
-            if not (card and card.owner and card.owner.is_my_turn):
+            owner = card.owner if card else None
+            if not owner or not owner.is_my_turn:
                 return False
-            return True
+            return owner.memory <= 2
+
         effect0.set_can_use_condition(condition0)
 
         def process0(ctx: Dict[str, Any]):
-            """Action: Set memory to 3 if <= 2"""
             player = ctx.get('player')
-            game = ctx.get('game')
-            if player and game and game.memory <= 2:
-                game.memory = 3
+            if player and player.memory <= 2:
+                player.add_memory(3 - player.memory)
+
         effect0.set_on_process_callback(process0)
         effects.append(effect0)
 
-        # Timing: EffectTiming.OnEnterFieldAnyone
-        # [Your Turn] When any of your Digimon digivolve into a [Mineral] or [Rock] trait Digimon, by suspending this Tamer, place up to 2 cards with the [Mineral] or [Rock] trait from your trash as that Digimon’s bottom digivolution cards.
+        # [Your Turn] When any of your Digimon digivolve into a [Mineral] or [Rock] trait Digimon,
+        # by suspending this Tamer, place up to 2 cards with the [Mineral] or [Rock] trait from
+        # your trash as that Digimon's bottom digivolution cards.
+        #
+        # Uses WhenDigivolving timing without is_when_digivolving flag so it fires from all
+        # permanents (including this tamer). digivolved_permanent is available in context.
         effect1 = ICardEffect()
-        effect1.set_timing(EffectTiming.OnEnterFieldAnyone)
-        effect1.set_effect_name("EX8-067 place up to 2 cards with the [Mineral] or [Rock] trait from your trash as bottom digivolution sources")
-        effect1.set_effect_description("[Your Turn] When any of your Digimon digivolve into a [Mineral] or [Rock] trait Digimon, by suspending this Tamer, place up to 2 cards with the [Mineral] or [Rock] trait from your trash as that Digimon’s bottom digivolution cards.")
+        effect1.set_timing(EffectTiming.WhenDigivolving)
+        effect1.set_effect_name("EX8-067 Suspend tamer to place up to 2 Mineral/Rock sources")
+        effect1.set_effect_description(
+            "[Your Turn] When any of your Digimon digivolve into a [Mineral] or [Rock] trait "
+            "Digimon, by suspending this Tamer, place up to 2 cards with the [Mineral] or [Rock] "
+            "trait from your trash as that Digimon's bottom digivolution cards."
+        )
         effect1.is_optional = True
-        effect1.is_on_play = True
 
-        effect = effect1  # alias for condition closure
         def condition1(context: Dict[str, Any]) -> bool:
             if card and card.permanent_of_this_card() is None:
                 return False
-            if not (card and card.owner and card.owner.is_my_turn):
+            owner = card.owner if card else None
+            if not owner or not owner.is_my_turn:
                 return False
-            return True
+            # Tamer must not already be suspended (it will be suspended as cost)
+            tamer_perm = card.permanent_of_this_card()
+            if tamer_perm and tamer_perm.is_suspended:
+                return False
+            # The digivolving permanent must exist and have [Mineral] or [Rock] trait
+            digivolved_perm = context.get('digivolved_permanent')
+            if digivolved_perm is None:
+                return False
+            if not (digivolved_perm.has_trait('Mineral') or digivolved_perm.has_trait('Rock')):
+                return False
+            # Must own the digivolving permanent
+            if digivolved_perm not in owner.battle_area:
+                return False
+            # Must have at least 1 Mineral/Rock card in trash to place
+            return any(
+                'Mineral' in getattr(c, 'card_traits', []) or 'Rock' in getattr(c, 'card_traits', [])
+                for c in owner.trash_cards
+            )
 
         effect1.set_can_use_condition(condition1)
 
         def process1(ctx: Dict[str, Any]):
-            """Action: Suspend"""
             player = ctx.get('player')
-            perm = ctx.get('permanent')
-            game = ctx.get('game')
-            if not (player and game):
+            digivolved_perm = ctx.get('digivolved_permanent')
+            if not (player and digivolved_perm):
                 return
-            def target_filter(p):
-                return True
-            def on_suspend(target_perm):
-                target_perm.suspend()
-            game.effect_select_opponent_permanent(
-                player, on_suspend, filter_fn=target_filter, is_optional=True)
+            # Cost: suspend this tamer
+            tamer_perm = card.permanent_of_this_card() if card else None
+            if not tamer_perm:
+                return
+            tamer_perm.suspend()
+            # Place up to 2 Mineral/Rock cards from trash as bottom digivolution cards
+            placed = 0
+            for source_card in list(player.trash_cards):
+                if placed >= 2:
+                    break
+                traits = getattr(source_card, 'card_traits', [])
+                if 'Mineral' in traits or 'Rock' in traits:
+                    player.trash_cards.remove(source_card)
+                    digivolved_perm.add_card_source_bottom(source_card)
+                    placed += 1
 
         effect1.set_on_process_callback(process1)
         effects.append(effect1)
 
-        # Factory effect: security_play
-        # Security: Play this card
+        # Security: Play this card without paying the cost.
         effect2 = ICardEffect()
+        effect2.set_timing(EffectTiming.SecuritySkill)
         effect2.set_effect_name("EX8-067 Security: Play this card")
-        effect2.set_effect_description("Security: Play this card")
+        effect2.set_effect_description("Security: Play this card without paying the cost.")
         effect2.is_security_effect = True
 
         def condition2(context: Dict[str, Any]) -> bool:

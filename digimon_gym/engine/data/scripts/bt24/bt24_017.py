@@ -89,7 +89,7 @@ class BT24_017(CardScript):
                 for _ in range(2):
                     if enemy.trash_cards:
                         card_to_return = enemy.trash_cards.pop(0)
-                        enemy.deck_cards.append(card_to_return)
+                        enemy.library_cards.append(card_to_return)
                 game.effect_play_token(player, 'petrification', on_opponent_field=True, count=2)
             # 3. This Digimon gets +2000 DP for each of opponent's Digimon (AFTER tokens)
             if perm:
@@ -102,5 +102,38 @@ class BT24_017(CardScript):
 
         effect2.set_on_process_callback(process2)
         effects.append(effect2)
+
+        # Timing: EffectTiming.OnUseAttack
+        # [All Turns] [Once Per Turn] When any of your Digimon attacks, this Digimon gets +2000 DP for the turn.
+        effect3 = ICardEffect()
+        effect3.set_timing(EffectTiming.OnUseAttack)
+        effect3.set_effect_name("BT24-017 When any of your Digimon attacks, +2000 DP for the turn")
+        effect3.set_effect_description("[All Turns] [Once Per Turn] When any of your Digimon attacks, this Digimon gets +2000 DP for the turn.")
+        effect3.is_on_attack = True
+        effect3.set_max_count_per_turn(1)
+        effect3.set_hash_string("DPBoost_BT24_017")
+
+        def condition3(context: Dict[str, Any]) -> bool:
+            if card and card.permanent_of_this_card() is None:
+                return False
+            return True
+
+        effect3.set_can_use_condition(condition3)
+
+        def process3(ctx: Dict[str, Any]):
+            """Action: +2000 DP per opponent Digimon for the turn"""
+            player = ctx.get('player')
+            game = ctx.get('game')
+            if not (player and game):
+                return
+            perm = card.permanent_of_this_card() if card else None
+            if not perm:
+                return
+            enemy = player.enemy if player else None
+            count = len([p for p in enemy.battle_area if p.is_digimon]) if enemy else 0
+            perm.change_dp(2000 * count)
+
+        effect3.set_on_process_callback(process3)
+        effects.append(effect3)
 
         return effects

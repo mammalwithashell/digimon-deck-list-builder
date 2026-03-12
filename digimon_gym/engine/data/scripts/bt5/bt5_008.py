@@ -15,11 +15,23 @@ class BT5_008(CardScript):
         effects = []
 
         # Effect 0: [Your Turn] Your other [Gaossmon] all get +3000 DP.
+        # Uses the engine's aura dp_modifier system: _applies_to_all_own_digimon=True
+        # combined with _dp_permanent_condition to restrict to other Gaossmon only.
         effect0 = ICardEffect()
         effect0.set_effect_name("BT5-008 Other Gaossmon +3000 DP")
         effect0.set_effect_description("[Your Turn] Your other [Gaossmon] all get +3000 DP.")
         effect0.dp_modifier = 3000
         effect0._applies_to_all_own_digimon = True
+
+        def _gaossmon_filter(target_perm) -> bool:
+            """Only apply to other Gaossmon permanents."""
+            top = getattr(target_perm, 'top_card', None)
+            if not top:
+                return False
+            names = getattr(top, 'card_names', []) or []
+            return any('Gaossmon' in n for n in names)
+
+        effect0._dp_permanent_condition = _gaossmon_filter
 
         def condition0(context: Dict[str, Any]) -> bool:
             if card and card.permanent_of_this_card() is None:

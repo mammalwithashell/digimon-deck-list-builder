@@ -58,9 +58,12 @@ class BT8_097(CardScript):
             # Play restriction: opponent can't play Digimon by effects until end of their turn
             if enemy and game:
                 from digimon_gym.engine.interfaces.modifiers import ModifierType
-                game.register_modifier(
-                    ModifierType.CANNOT_PUT_ON_FIELD, enemy,
-                    value_fn=lambda: True, expiry='end_of_opponent_turn')
+                # Note: CANNOT_PUT_ON_FIELD is over-broad (known engine gap #6)
+                # but arg order must be (target_permanent, modifier_type, ...)
+                for opp_perm in list(enemy.battle_area):
+                    game.register_modifier(
+                        opp_perm, ModifierType.CANNOT_PUT_ON_FIELD,
+                        value_fn=lambda: True, expiry='end_of_opponent_turn')
             # Delete ALL opponent Digimon with 6000 DP or less
             if enemy:
                 to_delete = [p for p in list(enemy.battle_area)

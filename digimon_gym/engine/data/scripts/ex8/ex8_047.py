@@ -14,68 +14,90 @@ class EX8_047(CardScript):
     def get_card_effects(self, card: 'CardSource') -> List['ICardEffect']:
         effects = []
 
-        # Timing: EffectTiming.OnEnterFieldAnyone
-        # [On Play] Reveal the top 3 cards of your deck. Add 1 card with the [Mineral] or [Rock] trait and 1 card with the [LIBERATOR] trait among them to the hand. Return the rest to the bottom of the deck.
+        # [On Play] Reveal the top 3 cards of your deck. Add 1 card with the [Mineral] or
+        # [Rock] trait and 1 card with the [LIBERATOR] trait among them to the hand. Return
+        # the rest to the bottom of the deck.
         effect0 = ICardEffect()
         effect0.set_timing(EffectTiming.OnEnterFieldAnyone)
-        effect0.set_effect_name("EX8-047 Reveal 3, Add 1 [Mineral] or [Rock] trait, and 1 [LIBERATOR] trait")
-        effect0.set_effect_description("[On Play] Reveal the top 3 cards of your deck. Add 1 card with the [Mineral] or [Rock] trait and 1 card with the [LIBERATOR] trait among them to the hand. Return the rest to the bottom of the deck.")
+        effect0.set_effect_name("EX8-047 Reveal 3, add 1 [Mineral]/[Rock] and 1 [LIBERATOR] to hand")
+        effect0.set_effect_description(
+            "[On Play] Reveal the top 3 cards of your deck. Add 1 card with the [Mineral] or "
+            "[Rock] trait and 1 card with the [LIBERATOR] trait among them to the hand. Return "
+            "the rest to the bottom of the deck."
+        )
         effect0.is_on_play = True
 
-        effect = effect0  # alias for condition closure
         def condition0(context: Dict[str, Any]) -> bool:
             if card and card.permanent_of_this_card() is None:
                 return False
-            # Triggered on play — validated by engine timing
             return True
 
         effect0.set_can_use_condition(condition0)
 
         def process0(ctx: Dict[str, Any]):
-            """Action: Reveal And Select"""
             player = ctx.get('player')
             game = ctx.get('game')
             if not (player and game):
                 return
-            def reveal_filter_0(c):
+
+            def reveal_filter_mineral_rock(c) -> bool:
                 traits = getattr(c, 'card_traits', [])
                 return 'Mineral' in traits or 'Rock' in traits
-            def reveal_filter_1(c):
-                return 'LIBERATOR' in getattr(c, 'card_traits', [])
+
+            def reveal_filter_liberator(c) -> bool:
+                traits = getattr(c, 'card_traits', [])
+                return 'LIBERATOR' in traits
+
             game.effect_reveal_and_select_multi(
-                player, 3, [(reveal_filter_0, 'hand'), (reveal_filter_1, 'hand')],
-                remaining_placement='deck_bottom', is_optional=True)
+                player, 3,
+                [(reveal_filter_mineral_rock, 'hand'), (reveal_filter_liberator, 'hand')],
+                remaining_placement='deck_bottom',
+                is_optional=True)
 
         effect0.set_on_process_callback(process0)
         effects.append(effect0)
 
-        # Timing: EffectTiming.OnDigivolutionCardDiscarded
-        # When effects trash this card from a [Mineral] or [Rock] trait Digimon's digivolution cards, delete 1 of your opponent's Digimon with a play cost of 4 or less.
+        # Inherited Effect: When effects trash this card from a [Mineral] or [Rock] trait
+        # Digimon's digivolution cards, delete 1 of your opponent's Digimon with a play cost
+        # of 4 or less.
         effect1 = ICardEffect()
         effect1.set_timing(EffectTiming.OnDigivolutionCardDiscarded)
-        effect1.set_effect_name("EX8-047 Delete 4 cost or less Digimon")
-        effect1.set_effect_description("When effects trash this card from a [Mineral] or [Rock] trait Digimon's digivolution cards, delete 1 of your opponent's Digimon with a play cost of 4 or less.")
+        effect1.set_effect_name("EX8-047 Delete opponent's Digimon cost 4 or less")
+        effect1.set_effect_description(
+            "When effects trash this card from a [Mineral] or [Rock] trait Digimon's "
+            "digivolution cards, delete 1 of your opponent's Digimon with a play cost of 4 or less."
+        )
         effect1.is_inherited_effect = True
 
-        effect = effect1  # alias for condition closure
         def condition1(context: Dict[str, Any]) -> bool:
+            # Check this card was the one trashed
+            trashed_cards = context.get('trashed_cards', [])
+            if card not in trashed_cards:
+                return False
+            # Check the permanent has [Mineral] or [Rock] trait
+            permanent = context.get('permanent')
+            if permanent is None:
+                return False
+            if not (permanent.has_trait('Mineral') or permanent.has_trait('Rock')):
+                return False
             return True
 
         effect1.set_can_use_condition(condition1)
 
         def process1(ctx: Dict[str, Any]):
-            """Action: Delete"""
             player = ctx.get('player')
-            perm = ctx.get('permanent')
             game = ctx.get('game')
             if not (player and game):
                 return
+
             def target_filter(p):
-                return p.is_digimon
+                return p.is_digimon and getattr(p.top_card, 'get_cost_itself', 0) <= 4
+
             def on_delete(target_perm):
                 enemy = player.enemy if player else None
                 if enemy:
                     enemy.delete_permanent(target_perm)
+
             game.effect_select_opponent_permanent(
                 player, on_delete, filter_fn=target_filter, is_optional=False)
 

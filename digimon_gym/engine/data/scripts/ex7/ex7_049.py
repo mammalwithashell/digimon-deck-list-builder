@@ -39,7 +39,6 @@ class EX7_049(CardScript):
         effect0.set_can_use_condition(condition0)
 
         def process0(ctx: Dict[str, Any]):
-            """Action: De-Digivolve 4 (On Play)"""
             player = ctx.get('player')
             game = ctx.get('game')
             if not (player and game):
@@ -71,7 +70,6 @@ class EX7_049(CardScript):
         effect1.set_can_use_condition(condition1)
 
         def process1(ctx: Dict[str, Any]):
-            """Action: De-Digivolve 4 (When Attacking)"""
             player = ctx.get('player')
             game = ctx.get('game')
             if not (player and game):
@@ -104,17 +102,28 @@ class EX7_049(CardScript):
         effect2.set_can_use_condition(condition2)
 
         def process2(ctx: Dict[str, Any]):
-            """Action: Digivolve Restriction"""
             player = ctx.get('player')
             game = ctx.get('game')
-            # Digivolve restriction — opponent's Lv.4 or lower Digimon
-            # cannot digivolve until end of their turn
-            pass  # descriptive-tagged
+            if not (player and game):
+                return
+            from ....interfaces.modifiers import ModifierType
+            enemy = player.enemy
+            if not enemy:
+                return
+            for field_perm in enemy.battle_area:
+                lvl = getattr(field_perm, 'level', None)
+                if lvl is not None and lvl <= 4:
+                    game.register_modifier(
+                        field_perm,
+                        ModifierType.CANNOT_DIGIVOLVE,
+                        condition=lambda p, c, fp=field_perm: p is fp,
+                        expiry='end_of_opponent_turn',
+                    )
 
         effect2.set_on_process_callback(process2)
         effects.append(effect2)
 
-        # --- Effect 3: [All Turns] [Once Per Turn] When leaving, play from trash ---
+        # --- Effect 3: [All Turns] [Once Per Turn] When this Digimon would leave, play from trash ---
         effect3 = ICardEffect()
         effect3.set_timing(EffectTiming.WhenRemoveField)
         effect3.set_effect_name("EX7-049 Play Rock Dragon/Earth Dragon from trash")
@@ -131,11 +140,19 @@ class EX7_049(CardScript):
         def condition3(context: Dict[str, Any]) -> bool:
             if card and card.permanent_of_this_card() is None:
                 return False
-            return True
+            owner = card.owner if card else None
+            if not owner:
+                return False
+            # Check that trash has a qualifying Digimon
+            return any(
+                getattr(c, 'is_digimon', False) and
+                any('Rock Dragon' in t or 'Earth Dragon' in t
+                    for t in (getattr(c, 'card_traits', []) or []))
+                for c in owner.trash_cards
+            )
         effect3.set_can_use_condition(condition3)
 
         def process3(ctx: Dict[str, Any]):
-            """Action: Play Rock Dragon/Earth Dragon from trash"""
             player = ctx.get('player')
             game = ctx.get('game')
             if not (player and game):
@@ -144,11 +161,7 @@ class EX7_049(CardScript):
                 if not getattr(c, 'is_digimon', False):
                     return False
                 traits = getattr(c, 'card_traits', []) or []
-                has_trait = any(
-                    'Rock Dragon' in t or 'Earth Dragon' in t
-                    for t in traits
-                )
-                return has_trait
+                return any('Rock Dragon' in t or 'Earth Dragon' in t for t in traits)
             game.effect_play_from_zone(
                 player, 'trash', play_filter, free=True, is_optional=True)
 

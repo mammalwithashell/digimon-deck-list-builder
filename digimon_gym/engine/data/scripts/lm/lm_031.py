@@ -15,6 +15,7 @@ class LM_031(CardScript):
         the hand with the digivolution cost reduced by 3. Then, place this
         card in the battle area.
     [Start of Your Turn] If your opponent has a Digimon, <Delay>
+        (By trashing this card after the placing turn, activate the effect below.)
         - Return 1 black Digimon card from your trash to the top of the deck.
           Then, if you don't have a Digimon, you may play 1 black Digimon card
           with 2000 DP or less from your trash without paying the cost.
@@ -34,39 +35,39 @@ class LM_031(CardScript):
             "Digimon card in the hand with the digivolution cost reduced by 3. "
             "Then, place this card in the battle area."
         )
-        effect0.cost_reduction = 3
 
         def condition0(context: Dict[str, Any]) -> bool:
-            # Option main effect — validated by engine timing
             return True
         effect0.set_can_use_condition(condition0)
 
         def process0(ctx: Dict[str, Any]):
-            """Action: Digivolve"""
             player = ctx.get('player')
             game = ctx.get('game')
             if not (player and game):
                 return
+
             # Filter for black Digimon cards in hand
             def digi_filter(c):
                 if not getattr(c, 'is_digimon', False):
                     return False
-                if not any(col.name == 'Black' for col in getattr(c, 'card_colors', [])):
-                    return False
-                return True
-            # Select one of your black Digimon on the field to digivolve
+                colors = getattr(c, 'card_colors', []) or []
+                return any(col.name == 'Black' for col in colors)
+
+            # Select one of your black Digimon on the field as base
             def own_filter(p):
                 if not p.is_digimon:
                     return False
                 top = p.top_card
-                if top and hasattr(top, 'card_colors'):
-                    if not any(col.name == 'Black' for col in top.card_colors):
-                        return False
-                return True
+                if top is None:
+                    return False
+                colors = getattr(top, 'card_colors', []) or []
+                return any(col.name == 'Black' for col in colors)
+
             def on_select(target_perm):
-                if game:
-                    game.effect_digivolve_from_hand(
-                        player, target_perm, digi_filter, is_optional=True)
+                game.effect_digivolve_from_hand(
+                    player, target_perm, digi_filter,
+                    cost_reduction=3, is_optional=True)
+
             game.effect_select_own_permanent(
                 player, on_select, filter_fn=own_filter, is_optional=True)
 
@@ -74,80 +75,83 @@ class LM_031(CardScript):
         effects.append(effect0)
 
         # --- Effect 1: Delay marker ---
+        # Marks this option card to remain in the battle area after use.
         effect1 = ICardEffect()
         effect1.set_effect_name("LM-031 Delay")
         effect1.set_effect_description("Delay")
         effect1._is_delay = True
 
         def condition1(context: Dict[str, Any]) -> bool:
-            if not (card and card.owner and card.owner.is_my_turn):
-                return False
             if card and card.permanent_of_this_card() is None:
                 return False
-            # [Start of Your Turn] If your opponent has a Digimon
-            enemy = card.owner.enemy if card and card.owner else None
-            if not enemy:
-                return False
-            has_opp_digimon = any(
-                p.is_digimon for p in (enemy.battle_area or [])
-            )
-            if not has_opp_digimon:
+            owner = card.owner if card else None
+            if not (owner and owner.is_my_turn):
                 return False
             return True
         effect1.set_can_use_condition(condition1)
         effects.append(effect1)
 
-        # --- Effect 2: Delay effect — return black Digimon from trash, play ---
+        # --- Effect 2: [Start of Your Turn] If opponent has Digimon, activate Delay ---
+        # Timing: OnStartTurn. Condition requires: card on field + your turn + opponent has Digimon.
         effect2 = ICardEffect()
         effect2.set_timing(EffectTiming.OnStartTurn)
         effect2.set_effect_name(
             "LM-031 Return 1 black Digimon from trash to deck top, then play from trash"
         )
         effect2.set_effect_description(
-            "Return 1 black Digimon card from your trash to the top of the "
-            "deck. Then, if you don't have a Digimon, you may play 1 black "
-            "Digimon card with 2000 DP or less from your trash without paying "
-            "the cost."
+            "[Start of Your Turn] If your opponent has a Digimon, <Delay> "
+            "(By trashing this card after the placing turn, activate the effect below.)\n"
+            "- Return 1 black Digimon card from your trash to the top of the deck. "
+            "Then, if you don't have a Digimon, you may play 1 black Digimon card "
+            "with 2000 DP or less from your trash without paying the cost."
         )
         effect2.is_optional = True
 
         def condition2(context: Dict[str, Any]) -> bool:
+            # Card must be in the battle area
             if card and card.permanent_of_this_card() is None:
                 return False
-            if not (card and card.owner and card.owner.is_my_turn):
+            owner = card.owner if card else None
+            if not (owner and owner.is_my_turn):
                 return False
-            return True
+            # Condition: opponent must have at least 1 Digimon
+            enemy = owner.enemy if owner else None
+            if not enemy:
+                return False
+            return any(p.is_digimon for p in enemy.battle_area)
         effect2.set_can_use_condition(condition2)
 
         def process2(ctx: Dict[str, Any]):
-            """Action: Return to deck top, Play Card"""
             player = ctx.get('player')
             game = ctx.get('game')
             if not (player and game):
                 return
-            # Return 1 black Digimon from trash to top of deck
+
+            # Cost: trash this delay card from the battle area.
+            my_perm = card.permanent_of_this_card() if card else None
+            if my_perm is not None:
+                player.delete_permanent(my_perm)
+
+            # Return 1 black Digimon from trash to the top of the deck.
             for i, c in enumerate(player.trash_cards):
                 if getattr(c, 'is_digimon', False):
-                    colors = getattr(c, 'card_colors', [])
+                    colors = getattr(c, 'card_colors', []) or []
                     if any(col.name == 'Black' for col in colors):
-                        returned = player.trash_cards.pop(i)
-                        player.deck_cards.insert(0, returned)
+                        moved = player.trash_cards.pop(i)
+                        player.library_cards.insert(0, moved)
                         break
-            # Then, if you don't have a Digimon, play 1 black Digimon
-            # with 2000 DP or less from trash without paying cost
-            has_digimon = any(
-                p.is_digimon for p in (player.battle_area or [])
-            )
+
+            # Then, if you don't have a Digimon, play 1 black Digimon <= 2000 DP from trash
+            has_digimon = any(p.is_digimon for p in (player.battle_area or []))
             if not has_digimon:
                 def play_filter(c):
                     if not getattr(c, 'is_digimon', False):
                         return False
-                    if not any(
-                        col.name == 'Black'
-                        for col in getattr(c, 'card_colors', [])
-                    ):
+                    colors = getattr(c, 'card_colors', []) or []
+                    if not any(col.name == 'Black' for col in colors):
                         return False
-                    if getattr(c, 'dp', None) is not None and c.dp > 2000:
+                    dp = getattr(c, 'base_dp', None)
+                    if dp is not None and dp > 2000:
                         return False
                     return True
                 game.effect_play_from_zone(
@@ -156,8 +160,9 @@ class LM_031(CardScript):
         effect2.set_on_process_callback(process2)
         effects.append(effect2)
 
-        # --- Effect 3: [Security] Play black Digimon DP <= 2000 from trash ---
+        # --- Effect 3: [Security] Play black Digimon DP <= 2000 from trash, add to hand ---
         effect3 = ICardEffect()
+        effect3.set_timing(EffectTiming.SecuritySkill)
         effect3.set_effect_name("LM-031 Security Effect")
         effect3.set_effect_description(
             "[Security] You may play 1 black Digimon card with 2000 DP or "
@@ -171,27 +176,30 @@ class LM_031(CardScript):
         effect3.set_can_use_condition(condition3)
 
         def process3(ctx: Dict[str, Any]):
-            """Action: Security — play from trash, add to hand"""
             player = ctx.get('player')
             game = ctx.get('game')
             if not (player and game):
                 return
-            candidates = [
-                c for c in player.trash_cards
-                if getattr(c, 'is_digimon', False)
-                and any(
-                    col.name == 'Black'
-                    for col in getattr(c, 'card_colors', [])
-                )
-                and (getattr(c, 'dp', None) is None or c.dp <= 2000)
-            ]
-            if candidates:
-                to_play = candidates[0]
-                player.trash_cards.remove(to_play)
-                game.effect_play_card_without_cost(player, to_play)
-            # Add this card to hand
-            if card:
-                player.hand_cards.append(card)
+
+            # Play 1 black Digimon with 2000 DP or less from trash (optional)
+            def play_filter(c):
+                if not getattr(c, 'is_digimon', False):
+                    return False
+                colors = getattr(c, 'card_colors', []) or []
+                if not any(col.name == 'Black' for col in colors):
+                    return False
+                dp = getattr(c, 'base_dp', None)
+                return dp is None or dp <= 2000
+
+            game.effect_play_from_zone(
+                player, 'trash', play_filter, free=True, is_optional=True)
+
+            # Then, add this card to the hand.
+            # The engine trashes the security card before the security effect fires;
+            # pop the last trashed card (this card) back to hand.
+            if player and player.trash_cards:
+                card_to_add = player.trash_cards.pop()
+                player.hand_cards.append(card_to_add)
 
         effect3.set_on_process_callback(process3)
         effects.append(effect3)

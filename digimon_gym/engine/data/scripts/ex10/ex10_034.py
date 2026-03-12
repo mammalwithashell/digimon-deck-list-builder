@@ -14,191 +14,142 @@ class EX10_034(CardScript):
     def get_card_effects(self, card: 'CardSource') -> List['ICardEffect']:
         effects = []
 
-        # Timing: EffectTiming.None
-        # Effect
-        effect0 = ICardEffect()
-        effect0.set_effect_name("EX10-034 Effect")
-        effect0.set_effect_description("Effect")
+        # Keyword: Collision
+        effect_collision = ICardEffect()
+        effect_collision.set_effect_name("EX10-034 Collision")
+        effect_collision.set_effect_description("Collision")
+        effect_collision._is_collision = True
 
-        effect = effect0  # alias for condition closure
-        def condition0(context: Dict[str, Any]) -> bool:
+        def condition_collision(context: Dict[str, Any]) -> bool:
             return True
+        effect_collision.set_can_use_condition(condition_collision)
+        effects.append(effect_collision)
 
-        effect0.set_can_use_condition(condition0)
-        effects.append(effect0)
+        # Keyword: Fragment (3)
+        effect_fragment = ICardEffect()
+        effect_fragment.set_effect_name("EX10-034 Fragment")
+        effect_fragment.set_effect_description("Fragment")
+        effect_fragment._is_fragment = True
+        effect_fragment._fragment_count = 3
 
-        # Factory effect: collision
-        # Collision
-        effect1 = ICardEffect()
-        effect1.set_effect_name("EX10-034 Collision")
-        effect1.set_effect_description("Collision")
-        effect1._is_collision = True
-
-        def condition1(context: Dict[str, Any]) -> bool:
+        def condition_fragment(context: Dict[str, Any]) -> bool:
             return True
-        effect1.set_can_use_condition(condition1)
-        effects.append(effect1)
+        effect_fragment.set_can_use_condition(condition_fragment)
+        effects.append(effect_fragment)
 
-        # Factory effect: fragment
-        # Fragment
-        effect2 = ICardEffect()
-        effect2.set_effect_name("EX10-034 Fragment")
-        effect2.set_effect_description("Fragment")
-        effect2._is_fragment = True
+        # Keyword: Blocker
+        effect_blocker = ICardEffect()
+        effect_blocker.set_effect_name("EX10-034 Blocker")
+        effect_blocker.set_effect_description("Blocker")
+        effect_blocker._is_blocker = True
 
-        def condition2(context: Dict[str, Any]) -> bool:
+        def condition_blocker(context: Dict[str, Any]) -> bool:
             return True
-        effect2.set_can_use_condition(condition2)
-        effects.append(effect2)
+        effect_blocker.set_can_use_condition(condition_blocker)
+        effects.append(effect_blocker)
 
-        # Factory effect: blocker
-        # Blocker
-        effect3 = ICardEffect()
-        effect3.set_effect_name("EX10-034 Blocker")
-        effect3.set_effect_description("Blocker")
-        effect3._is_blocker = True
+        # [On Play] [When Digivolving] Give 1 opponent Digimon FORCE_ATTACK until opponent's turn ends
+        def build_force_attack_effect(is_on_play: bool):
+            effect = ICardEffect()
+            effect.set_timing(EffectTiming.OnEnterFieldAnyone)
+            effect.set_effect_name("EX10-034 Give opponent Digimon forced attack")
+            effect.set_effect_description(
+                "[On Play] [When Digivolving] Until your opponent's turn ends, give 1 of their "
+                "Digimon '[Start of Your Main Phase] This Digimon attacks.'"
+            )
+            if is_on_play:
+                effect.is_on_play = True
+            else:
+                effect.is_when_digivolving = True
 
-        def condition3(context: Dict[str, Any]) -> bool:
-            return True
-        effect3.set_can_use_condition(condition3)
-        effects.append(effect3)
+            def condition(context: Dict[str, Any]) -> bool:
+                if card and card.permanent_of_this_card() is None:
+                    return False
+                return True
+            effect.set_can_use_condition(condition)
 
-        # Timing: EffectTiming.OnEnterFieldAnyone
-        # Effect
-        effect4 = ICardEffect()
-        effect4.set_timing(EffectTiming.OnEnterFieldAnyone)
-        effect4.set_effect_name("EX10-034 1 digimon gains attack on Start of your main phase")
-        effect4.set_effect_description("Effect")
-        effect4.is_on_play = True
+            def process(ctx: Dict[str, Any]):
+                player = ctx.get('player')
+                game = ctx.get('game')
+                if not (player and game):
+                    return
+                from ....interfaces.modifiers import ModifierType
 
-        effect = effect4  # alias for condition closure
-        def condition4(context: Dict[str, Any]) -> bool:
+                def on_select(target_perm):
+                    game.register_modifier(
+                        target_perm,
+                        ModifierType.FORCE_ATTACK,
+                        condition=lambda p, c, tp=target_perm: p is tp,
+                        expiry='end_of_opponent_turn',
+                    )
+
+                game.effect_select_opponent_permanent(
+                    player, on_select,
+                    filter_fn=lambda p: p.is_digimon,
+                    is_optional=False,
+                    prompt="Select 1 opponent Digimon to force attack at start of their main phase.",
+                )
+
+            effect.set_on_process_callback(process)
+            return effect
+
+        effects.append(build_force_attack_effect(is_on_play=True))
+        effects.append(build_force_attack_effect(is_on_play=False))
+
+        # [All Turns] [Once Per Turn] When Digimon attack, by trashing any 2 of this
+        # Digimon's digivolution cards, gain <Security A. +1> and +3000 DP until your turn ends.
+        effect_at = ICardEffect()
+        effect_at.set_timing(EffectTiming.OnDeclaration)
+        effect_at.set_effect_name("EX10-034 Trash 2 sources, gain Security A. +1 and +3000 DP")
+        effect_at.set_effect_description(
+            "[All Turns] [Once Per Turn] When Digimon attack, by trashing any 2 of this "
+            "Digimon's digivolution cards, this Digimon gains <Security A. +1> and +3000 DP "
+            "until your turn ends."
+        )
+        effect_at.is_optional = True
+        effect_at.set_max_count_per_turn(1)
+        effect_at.set_hash_string("AT_EX10_034")
+
+        def condition_at(context: Dict[str, Any]) -> bool:
             if card and card.permanent_of_this_card() is None:
                 return False
-            # Triggered on play — validated by engine timing
-            return True
-
-        effect4.set_can_use_condition(condition4)
-        effects.append(effect4)
-
-        # Timing: EffectTiming.OnEnterFieldAnyone
-        # [Start of Your Main Phase] This Digimon attacks.
-        effect5 = ICardEffect()
-        effect5.set_timing(EffectTiming.OnEnterFieldAnyone)
-        effect5.set_effect_name("EX10-034 [Start of Your Main Phase] This Digimon attacks.")
-        effect5.set_effect_description("[Start of Your Main Phase] This Digimon attacks.")
-        effect5.is_on_play = True
-
-        effect = effect5  # alias for condition closure
-        def condition5(context: Dict[str, Any]) -> bool:
-            return True
-
-        effect5.set_can_use_condition(condition5)
-
-        def process5(ctx: Dict[str, Any]):
-            """Action: Force Attack, Effect Immunity"""
-            player = ctx.get('player')
-            perm = ctx.get('permanent')
-            game = ctx.get('game')
-            # Force attack — target Digimon may attack (requires engine SelectAttack)
-            pass  # descriptive-tagged: force_attack
-            # Grant effect immunity via modifier system
-            if perm and game:
-                from digimon_gym.engine.interfaces.modifiers import ModifierType
-                game.register_modifier(
-                    ModifierType.CANNOT_BE_SELECTED_BY_EFFECT, perm,
-                    value_fn=lambda: True, expiry='end_of_turn')
-
-        effect5.set_on_process_callback(process5)
-        effects.append(effect5)
-
-        # Timing: EffectTiming.OnEnterFieldAnyone
-        # Effect
-        effect6 = ICardEffect()
-        effect6.set_timing(EffectTiming.OnEnterFieldAnyone)
-        effect6.set_effect_name("EX10-034 1 digimon gains attack on Start of your main phase")
-        effect6.set_effect_description("Effect")
-        effect6.is_when_digivolving = True
-
-        effect = effect6  # alias for condition closure
-        def condition6(context: Dict[str, Any]) -> bool:
-            if card and card.permanent_of_this_card() is None:
+            perm = card.permanent_of_this_card()
+            if perm is None:
                 return False
-            # Triggered when digivolving — validated by engine timing
-            return True
-
-        effect6.set_can_use_condition(condition6)
-        effects.append(effect6)
-
-        # Timing: EffectTiming.OnEnterFieldAnyone
-        # [Start of Your Main Phase] This Digimon attacks.
-        effect7 = ICardEffect()
-        effect7.set_timing(EffectTiming.OnEnterFieldAnyone)
-        effect7.set_effect_name("EX10-034 [Start of Your Main Phase] This Digimon attacks.")
-        effect7.set_effect_description("[Start of Your Main Phase] This Digimon attacks.")
-        effect7.is_on_play = True
-
-        effect = effect7  # alias for condition closure
-        def condition7(context: Dict[str, Any]) -> bool:
-            return True
-
-        effect7.set_can_use_condition(condition7)
-
-        def process7(ctx: Dict[str, Any]):
-            """Action: Force Attack, Effect Immunity"""
-            player = ctx.get('player')
-            perm = ctx.get('permanent')
-            game = ctx.get('game')
-            # Force attack — target Digimon may attack (requires engine SelectAttack)
-            pass  # descriptive-tagged: force_attack
-            # Grant effect immunity via modifier system
-            if perm and game:
-                from digimon_gym.engine.interfaces.modifiers import ModifierType
-                game.register_modifier(
-                    ModifierType.CANNOT_BE_SELECTED_BY_EFFECT, perm,
-                    value_fn=lambda: True, expiry='end_of_turn')
-
-        effect7.set_on_process_callback(process7)
-        effects.append(effect7)
-
-        # Timing: EffectTiming.OnUseAttack
-        # [All Turns] [Once Per Turn] When Digimon attack, by trashing any 2 of this Digimon's digivolution cards, this Digimon gains <Security A. +1> and +3000 DP until your turn ends.
-        effect8 = ICardEffect()
-        effect8.set_timing(EffectTiming.OnUseAttack)
-        effect8.set_effect_name("EX10-034 Trash 2 source cards, gain <Security A. +1> and +3000 DP")
-        effect8.set_effect_description("[All Turns] [Once Per Turn] When Digimon attack, by trashing any 2 of this Digimon's digivolution cards, this Digimon gains <Security A. +1> and +3000 DP until your turn ends.")
-        effect8.is_optional = True
-        effect8.set_max_count_per_turn(1)
-        effect8.set_hash_string("AT_EX10_034")
-        effect8.is_on_attack = True
-        effect8._security_attack_modifier = 1
-
-        effect = effect8  # alias for condition closure
-        def condition8(context: Dict[str, Any]) -> bool:
-            if card and card.permanent_of_this_card() is None:
+            if perm.has_no_digivolution_cards:
                 return False
-            permanent = effect.effect_source_permanent if hasattr(effect, 'effect_source_permanent') else None
-            if not (permanent and len(permanent.digivolution_cards) >= 2):
-                return False
-            return True
+            return len(perm.digivolution_cards) >= 2
 
-        effect8.set_can_use_condition(condition8)
+        effect_at.set_can_use_condition(condition_at)
 
-        def process8(ctx: Dict[str, Any]):
-            """Action: DP +3000, Trash Digivolution Cards"""
+        def process_at(ctx: Dict[str, Any]):
             player = ctx.get('player')
-            perm = ctx.get('permanent')
             game = ctx.get('game')
-            if perm:
-                perm.change_dp(3000)
-                perm._temp_sa_modifier += 1
-            # Trash digivolution cards from this permanent
-            if perm and not perm.has_no_digivolution_cards:
-                trashed = perm.trash_digivolution_cards(2)
-                if player:
-                    player.trash_cards.extend(trashed)
+            if not (player and game):
+                return
+            perm = card.permanent_of_this_card() if card else None
+            if not perm:
+                return
+            from ....interfaces.modifiers import ModifierType
+            # Trash 2 digivolution cards
+            trashed = perm.trash_digivolution_cards(2)
+            player.trash_cards.extend(trashed)
+            # Grant +3000 DP until end of turn
+            game.register_modifier(
+                perm,
+                ModifierType.CHANGE_DP,
+                value_fn=lambda: 3000,
+                expiry='end_of_turn',
+            )
+            # Grant Security A. +1 until end of turn
+            game.register_modifier(
+                perm,
+                ModifierType.CHANGE_SECURITY_ATTACK,
+                value_fn=lambda: 1,
+                expiry='end_of_turn',
+            )
 
-        effect8.set_on_process_callback(process8)
-        effects.append(effect8)
+        effect_at.set_on_process_callback(process_at)
+        effects.append(effect_at)
 
         return effects

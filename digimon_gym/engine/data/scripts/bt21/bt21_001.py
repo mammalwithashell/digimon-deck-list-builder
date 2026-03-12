@@ -47,7 +47,7 @@ class BT21_001(CardScript):
                     return False
                 return True
             game.effect_digivolve_from_hand(
-                player, perm, digi_filter, is_optional=True)
+                player, perm, digi_filter, cost_reduction=1, is_optional=True)
 
         effect0.set_on_process_callback(process0)
         effects.append(effect0)

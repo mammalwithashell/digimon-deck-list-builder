@@ -104,6 +104,10 @@ class BT21_093(CardScript):
         def condition4(context: Dict[str, Any]) -> bool:
             if card and card.permanent_of_this_card() is None:
                 return False
+            # Must be opponent's security, not own
+            ctx_player = context.get('player')
+            if ctx_player and card and card.owner and ctx_player is card.owner:
+                return False
             return True
 
         effect4.set_can_use_condition(condition4)

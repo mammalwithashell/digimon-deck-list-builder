@@ -28,6 +28,12 @@ class BT23_005(CardScript):
                 return False
             if not (card and card.owner and card.owner.is_my_turn):
                 return False
+            # Only reduce when digivolving into Reptile/Dragonkin
+            target_card = context.get('card_source')
+            if target_card:
+                traits = getattr(target_card, 'card_traits', []) or []
+                if not any('Reptile' in t or 'Dragonkin' in t for t in traits):
+                    return False
             return True
 
         effect0.set_can_use_condition(condition0)

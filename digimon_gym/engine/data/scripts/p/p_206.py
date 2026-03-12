@@ -9,15 +9,18 @@ if TYPE_CHECKING:
 
 
 class P_206(CardScript):
-    """P-206 Digital Gate Open"""
+    """P-206 Digital Gate Open | Option (White, Cost 4)"""
 
     def get_card_effects(self, card: 'CardSource') -> List['ICardEffect']:
         effects = []
 
-        # ── Ignore color requirements (passive) ──────────────────────
+        # --- Effect 0: Ignore color requirements (passive) ---
+        # "You can ignore this card's color requirements."
         effect0 = ICardEffect()
         effect0.set_effect_name("P-206 Ignore color requirements")
-        effect0.set_effect_description("Ignore Color Req")
+        effect0.set_effect_description(
+            "You can ignore this card's color requirements."
+        )
 
         def condition0(context: Dict[str, Any]) -> bool:
             return True
@@ -25,26 +28,27 @@ class P_206(CardScript):
         effect0.set_can_use_condition(condition0)
 
         def process0(ctx: Dict[str, Any]):
-            # Ignores color requirement for playing Options — not modeled in engine
+            # Color requirement bypass — not modeled in engine
             pass
 
         effect0.set_on_process_callback(process0)
         effects.append(effect0)
 
-        # ── [Main] Reveal top 3, add 1 Digimon + 1 Tamer to hand ────
-        # Then, place this card in the battle area.
-        # NOTE: The "place this card in the battle area" part is handled
-        # by the engine via the _is_delay flag on the Delay marker below.
+        # --- Effect 1: [Main] Reveal top 3, add 1 Digimon + 1 Tamer to hand,
+        #    return rest to bottom. Then place this card in the battle area. ---
         effect1 = ICardEffect()
         effect1.set_timing(EffectTiming.OptionSkill)
-        effect1.set_effect_name("P-206 Reveal 3")
+        effect1.set_effect_name(
+            "P-206 Reveal top 3, add 1 Digimon and 1 Tamer to hand, rest to bottom"
+        )
         effect1.set_effect_description(
-            "[Main] Reveal the top 3 cards of your deck. Add 1 Digimon card "
-            "and 1 Tamer card among them to the hand. Return the rest to the "
-            "bottom of the deck. Then, place this card in the battle area."
+            "[Main] Reveal the top 3 cards of your deck. Add 1 Digimon card and "
+            "1 Tamer card among them to the hand. Return the rest to the bottom "
+            "of the deck. Then, place this card in the battle area."
         )
 
         def condition1(context: Dict[str, Any]) -> bool:
+            # Option main effect — validated by engine timing
             return True
 
         effect1.set_can_use_condition(condition1)
@@ -54,7 +58,7 @@ class P_206(CardScript):
             game = ctx.get('game')
             if not (player and game):
                 return
-
+            # Two sequential selection passes: first pick 1 Digimon, then 1 Tamer
             def reveal_filter_digimon(c):
                 return getattr(c, 'is_digimon', False)
 
@@ -65,13 +69,13 @@ class P_206(CardScript):
                 player, 3,
                 [(reveal_filter_digimon, 'hand'), (reveal_filter_tamer, 'hand')],
                 remaining_placement='deck_bottom',
-                is_optional=True)
+                is_optional=True
+            )
 
         effect1.set_on_process_callback(process1)
         effects.append(effect1)
 
-        # ── Delay marker ─────────────────────────────────────────────
-        # Causes the option to stay on field after resolution.
+        # --- Delay marker ---
         effect2 = ICardEffect()
         effect2.set_effect_name("P-206 Delay")
         effect2.set_effect_description("Delay")
@@ -83,18 +87,18 @@ class P_206(CardScript):
         effect2.set_can_use_condition(condition2)
         effects.append(effect2)
 
-        # ── Delay effect (must be immediately after _is_delay marker) ─
-        # You may play 1 Tamer card with the same color as any of your
-        # Digimon on the field from your hand with the play cost reduced by 4.
+        # --- Effect 3: [Main] <Delay> You may play 1 Tamer card with the same color
+        #    as any of your Digimon on the field from your hand with the play cost
+        #    reduced by 4. ---
         effect3 = ICardEffect()
         effect3.set_timing(EffectTiming.OnDeclaration)
         effect3.set_effect_name(
             "P-206 Play 1 color-matched Tamer from hand with cost -4"
         )
         effect3.set_effect_description(
-            "[Main] <Delay>. You may play 1 Tamer card with the same color "
-            "as any of your Digimon on the field from your hand with the play "
-            "cost reduced by 4."
+            "[Main] <Delay> (By trashing this card after the placing turn, activate "
+            "the effect below.) You may play 1 Tamer card with the same color as any "
+            "of your Digimon on the field from your hand with the play cost reduced by 4."
         )
 
         def condition3(context: Dict[str, Any]) -> bool:
@@ -107,45 +111,44 @@ class P_206(CardScript):
             game = ctx.get('game')
             if not (player and game):
                 return
-
-            # Collect all colors from Digimon on the field
+            # Collect all colors from player's Digimon on the field
             field_colors = set()
             for p in player.battle_area:
                 if p.is_digimon and p.top_card:
-                    for col in getattr(p.top_card, 'card_colors', []):
+                    for col in (getattr(p.top_card, 'card_colors', []) or []):
                         field_colors.add(col)
 
             def play_filter(c):
                 if not getattr(c, 'is_tamer', False):
                     return False
-                # Must share at least one color with any of your Digimon on field
-                tamer_colors = set(getattr(c, 'card_colors', []))
+                tamer_colors = set(getattr(c, 'card_colors', []) or [])
                 return bool(tamer_colors & field_colors)
 
             game.effect_play_from_zone(
                 player, 'hand', play_filter,
-                free=False, manual_reduction=4, is_optional=True)
+                free=False, manual_reduction=4, is_optional=True
+            )
 
         effect3.set_on_process_callback(process3)
         effects.append(effect3)
 
-        # ── [Security] ───────────────────────────────────────────────
-        # You may play 1 Digimon card with a play cost of 3 or less from
-        # your hand or trash without paying the cost.
-        # Then, add this card to the hand.
+        # --- Effect 4: [Security] You may play 1 Digimon card with a play cost of
+        #    3 or less from your hand or trash without paying the cost.
+        #    Then, add this card to the hand. ---
         effect4 = ICardEffect()
         effect4.set_timing(EffectTiming.SecuritySkill)
         effect4.set_effect_name(
-            "P-206 Security: play 3-cost Digimon, add this to hand"
+            "P-206 Security: play Digimon cost 3 or less free, add this to hand"
         )
         effect4.set_effect_description(
-            "[Security] You may play 1 Digimon card with a play cost of 3 "
-            "or less from your hand or trash without paying the cost. Then, "
-            "add this card to the hand."
+            "[Security] You may play 1 Digimon card with a play cost of 3 or less "
+            "from your hand or trash without paying the cost. Then, add this card "
+            "to the hand."
         )
         effect4.is_security_effect = True
 
         def condition4(context: Dict[str, Any]) -> bool:
+            # Security effect — validated by engine timing
             return True
 
         effect4.set_can_use_condition(condition4)
@@ -159,19 +162,16 @@ class P_206(CardScript):
             def play_filter(c):
                 if not getattr(c, 'is_digimon', False):
                     return False
-                if not getattr(c, 'has_play_cost', False):
+                cost = getattr(c, 'get_cost_itself', None)
+                if cost is None:
                     return False
-                return getattr(c, 'get_cost_itself', 0) <= 3
+                return cost <= 3
 
             game.effect_play_from_zone(
                 player, 'hand_or_trash', play_filter,
-                free=True, is_optional=True)
-
+                free=True, is_optional=True
+            )
             # "Then, add this card to the hand."
-            # The security callback fires before the engine trashes the
-            # security card. We pre-add the card reference to hand; the
-            # engine will also append it to trash (known engine limitation
-            # shared by all security "add to hand" scripts).
             if player and card:
                 player.hand_cards.append(card)
 

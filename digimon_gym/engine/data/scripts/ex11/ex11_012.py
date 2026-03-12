@@ -39,7 +39,7 @@ class EX11_012(CardScript):
         effects.append(effect1)
 
         # Timing: EffectTiming.WhenDigivolving
-        # Delete, Return To Deck, Play Token
+        # Delete 1 opponent Digimon with DP <= own DP, Return 1 to Deck, Play Token
         effect2 = ICardEffect()
         effect2.set_timing(EffectTiming.WhenDigivolving)
         effect2.set_effect_name("EX11-012 Delete, Return To Deck, Play Token")
@@ -63,7 +63,9 @@ class EX11_012(CardScript):
             if not (player and game):
                 return
             def target_filter(p):
-                return p.is_digimon
+                own_perm = card.permanent_of_this_card()
+                own_dp = own_perm.dp if own_perm else 0
+                return p.is_digimon and (p.dp or 0) <= (own_dp or 0)
             def on_delete(target_perm):
                 enemy = player.enemy if player else None
                 if enemy:
@@ -72,14 +74,14 @@ class EX11_012(CardScript):
                 player, on_delete, filter_fn=target_filter, is_optional=False)
             if not (player and game):
                 return
-            def target_filter(p):
+            def target_filter_return(p):
                 return True
             def on_return(target_perm):
                 enemy = player.enemy if player else None
                 if enemy:
                     enemy.return_permanent_to_deck_bottom(target_perm)
             game.effect_select_opponent_permanent(
-                player, on_return, filter_fn=target_filter, is_optional=False)
+                player, on_return, filter_fn=target_filter_return, is_optional=False)
             # Play 1 Petrification Token on opponent's field
             game.effect_play_token(player, 'petrification', on_opponent_field=True, count=1)
 
@@ -87,7 +89,7 @@ class EX11_012(CardScript):
         effects.append(effect2)
 
         # Timing: EffectTiming.OnEndAttack
-        # Delete, Return To Deck, Play Token
+        # Delete 1 opponent Digimon with DP <= own DP, Return 1 to Deck, Play Token
         effect3 = ICardEffect()
         effect3.set_timing(EffectTiming.OnEndAttack)
         effect3.set_effect_name("EX11-012 Delete, Return To Deck, Play Token")
@@ -110,7 +112,9 @@ class EX11_012(CardScript):
             if not (player and game):
                 return
             def target_filter(p):
-                return p.is_digimon
+                own_perm = card.permanent_of_this_card()
+                own_dp = own_perm.dp if own_perm else 0
+                return p.is_digimon and (p.dp or 0) <= (own_dp or 0)
             def on_delete(target_perm):
                 enemy = player.enemy if player else None
                 if enemy:
@@ -119,14 +123,14 @@ class EX11_012(CardScript):
                 player, on_delete, filter_fn=target_filter, is_optional=False)
             if not (player and game):
                 return
-            def target_filter(p):
+            def target_filter_return(p):
                 return True
             def on_return(target_perm):
                 enemy = player.enemy if player else None
                 if enemy:
                     enemy.return_permanent_to_deck_bottom(target_perm)
             game.effect_select_opponent_permanent(
-                player, on_return, filter_fn=target_filter, is_optional=False)
+                player, on_return, filter_fn=target_filter_return, is_optional=False)
             # Play 1 Petrification Token on opponent's field
             game.effect_play_token(player, 'petrification', on_opponent_field=True, count=1)
 
@@ -134,11 +138,11 @@ class EX11_012(CardScript):
         effects.append(effect3)
 
         # Timing: EffectTiming.WhenRemoveField
-        # Effect
+        # By deleting 1 of your tokens, this Digimon doesn't leave the battle area.
         effect4 = ICardEffect()
         effect4.set_timing(EffectTiming.WhenRemoveField)
         effect4.set_effect_name("EX11-012 By deleting a token, this does not leave")
-        effect4.set_effect_description("Effect")
+        effect4.set_effect_description("[When this Digimon would leave the battle area] By deleting 1 of your tokens, this Digimon doesn't leave.")
         effect4.is_optional = True
         effect4.set_hash_string("EX11_012_WHEN_REMOVED")
 
@@ -146,9 +150,42 @@ class EX11_012(CardScript):
         def condition4(context: Dict[str, Any]) -> bool:
             if card and card.permanent_of_this_card() is None:
                 return False
+            owner = getattr(card, 'owner', None)
+            if not owner:
+                return False
+            # Must be this Digimon leaving
+            leaving_perm = context.get('event_permanent') or context.get('permanent')
+            owner_perm = card.permanent_of_this_card()
+            if leaving_perm is None or leaving_perm is not owner_perm:
+                return False
+            # Player must have at least one token on the field
+            if not any(p.is_token for p in owner.battle_area):
+                return False
             return True
 
         effect4.set_can_use_condition(condition4)
+
+        def process4(ctx: Dict[str, Any]):
+            """Action: Delete 1 own token, prevent this Digimon from leaving."""
+            player = ctx.get('player')
+            game = ctx.get('game')
+            if not (player and game):
+                return
+            owner_perm = card.permanent_of_this_card()
+            def token_filter(p):
+                return p.is_token
+            def on_token_delete(token_perm):
+                player.delete_permanent(token_perm)
+                # Register CANNOT_BE_REMOVED on self to prevent leaving
+                if owner_perm and game:
+                    from ....interfaces.modifiers import ModifierType
+                    game.register_modifier(
+                        owner_perm, ModifierType.CANNOT_BE_REMOVED,
+                        value_fn=lambda: True, expiry='end_of_turn')
+            game.effect_select_own_permanent(
+                player, on_token_delete, filter_fn=token_filter, is_optional=False)
+
+        effect4.set_on_process_callback(process4)
         effects.append(effect4)
 
         return effects

@@ -51,6 +51,14 @@ class BT18_087(CardScript):
         def condition1(context: Dict[str, Any]) -> bool:
             if card and card.permanent_of_this_card() is None:
                 return False
+            # [All Turns] must be opponent's security, not own
+            ctx_player = context.get('player')
+            if ctx_player and card and card.owner and ctx_player is card.owner:
+                return False
+            # Tamer must not already be suspended
+            tamer_perm = card.permanent_of_this_card()
+            if tamer_perm and getattr(tamer_perm, 'is_suspended', False):
+                return False
             return True
 
         effect1.set_can_use_condition(condition1)

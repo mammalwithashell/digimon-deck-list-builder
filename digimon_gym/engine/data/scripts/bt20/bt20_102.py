@@ -75,7 +75,7 @@ class BT20_102(CardScript):
             for src in permanent.card_sources[:-1]:
                 if src.contains_card_name('Omnimon'):
                     return True
-                if any('X Antibody' in t for t in getattr(src, 'card_traits', [])):
+                if any('X Antibody' in n for n in getattr(src, 'card_names', [])):
                     return True
             return False
 

@@ -14,78 +14,187 @@ class EX10_032(CardScript):
     def get_card_effects(self, card: 'CardSource') -> List['ICardEffect']:
         effects = []
 
-        effect0 = ICardEffect()
-        effect0.set_timing(EffectTiming.OnDeclaration)
-        effect0.set_effect_name("EX10-032 Place 1 [Landramon] from trash under 1 [Sunarizamon], to digivolve for 3")
-        effect0.set_effect_description(
-            "[Hand] [Main] If you have [Close], by placing 1 [Landramon] from your trash as any of your [Sunarizamon]'s bottom digivolution card, it digivolves into this card for a digivolution cost of 3, ignoring digivolution requirements."
+        # [Hand] [Main] If you have [Close], by placing 1 [Landramon] from your trash as
+        # any of your [Sunarizamon]'s bottom digivolution card, it digivolves into this card
+        # for a digivolution cost of 3, ignoring digivolution requirements.
+        # This is a Hand/Main effect — fires from OnStartMainPhase while the card is in hand.
+        effect_hand = ICardEffect()
+        effect_hand.set_timing(EffectTiming.OnStartMainPhase)
+        effect_hand.set_effect_name("EX10-032 [Hand][Main] Digivolve Sunarizamon via Landramon from trash for 3")
+        effect_hand.set_effect_description(
+            "[Hand] [Main] If you have [Close], by placing 1 [Landramon] from your trash as "
+            "any of your [Sunarizamon]'s bottom digivolution card, it digivolves into this card "
+            "for a digivolution cost of 3, ignoring digivolution requirements."
         )
+        effect_hand.is_optional = True
 
-        def condition0(context: Dict[str, Any]) -> bool:
-            if not (card and card.owner and card.owner.is_my_turn):
+        def condition_hand(context: Dict[str, Any]) -> bool:
+            # Card must be in hand (not on field)
+            if card and card.permanent_of_this_card() is not None:
                 return False
-            permanent = effect0.effect_source_permanent if hasattr(effect0, 'effect_source_permanent') else None
-            if not (permanent and (permanent.contains_card_name('Close') or permanent.contains_card_name('Sunarizamon'))):
+            owner = card.owner if card else None
+            if not owner or not owner.is_my_turn:
+                return False
+            # Must have a card named [Close] on field
+            has_close = any(
+                p.contains_card_name('Close')
+                for p in owner.battle_area
+            )
+            if not has_close:
+                return False
+            # Must have a Landramon in trash
+            has_landramon = any(
+                any('Landramon' in n for n in getattr(c, 'card_names', []))
+                for c in owner.trash_cards
+            )
+            if not has_landramon:
+                return False
+            # Must have a Sunarizamon on field
+            has_sunarizamon = any(
+                p.contains_card_name('Sunarizamon')
+                for p in owner.battle_area
+            )
+            if not has_sunarizamon:
                 return False
             return True
 
-        effect0.set_can_use_condition(condition0)
+        effect_hand.set_can_use_condition(condition_hand)
 
-        def process0(ctx: Dict[str, Any]):
+        def process_hand(ctx: Dict[str, Any]):
             player = ctx.get('player')
-            perm = ctx.get('permanent')
             game = ctx.get('game')
-            if not (player and perm and game):
+            if not (player and game):
                 return
 
-            def digi_filter(c):
-                return True
+            # Find target Sunarizamon to digivolve
+            sunarizamon_targets = [
+                p for p in player.battle_area if p.contains_card_name('Sunarizamon')
+            ]
+            if not sunarizamon_targets:
+                return
 
-            game.effect_digivolve_from_hand(
-                player, perm, digi_filter, is_optional=True)
+            # Find Landramon in trash
+            landramon = None
+            for c in player.trash_cards:
+                if any('Landramon' in n for n in getattr(c, 'card_names', [])):
+                    landramon = c
+                    break
+            if not landramon:
+                return
 
-        effect0.set_on_process_callback(process0)
-        effects.append(effect0)
+            def on_target(target_perm):
+                # Place Landramon from trash as bottom digivolution card
+                player.trash_cards.remove(landramon)
+                target_perm.add_card_source_bottom(landramon)
+                # Now digivolve the selected Sunarizamon into this card for cost 3
+                def this_card_filter(c):
+                    return c is card
+                game.effect_digivolve_from_hand(
+                    player, target_perm,
+                    filter_fn=this_card_filter,
+                    cost_override=3,
+                    ignore_requirements=True,
+                    is_optional=False
+                )
 
-        def build_grant_effect(is_on_play: bool = False, is_when_digivolving: bool = False, is_on_attack: bool = False):
+            game.effect_select_own_permanent(
+                player, on_target,
+                filter_fn=lambda p: p.contains_card_name('Sunarizamon'),
+                is_optional=True
+            )
+
+        effect_hand.set_on_process_callback(process_hand)
+        effects.append(effect_hand)
+
+        # [On Play] [When Digivolving] [When Attacking] By trashing any 1 [Mineral] or [Rock]
+        # trait card from your Digimon's digivolution cards, 1 of your such Digimon gains
+        # <Collision>, <Piercing> and +3000 DP until your opponent's turn ends.
+        def build_grant_effect(is_on_play: bool = False, is_when_digivolving: bool = False,
+                               is_on_attack: bool = False):
             effect = ICardEffect()
-            timing = EffectTiming.OnEnterFieldAnyone if not is_on_attack else EffectTiming.OnUseAttack
-            effect.set_timing(timing)
-            effect.set_effect_name("EX10-032 By trashing 1 source, 1 digimon gains Collision, Piercing, +3K DP")
-            effect.set_effect_description("DP +3000, Trash Digivolution Cards, Gain Keyword Collision, Gain Keyword Piercing")
+            if is_on_attack:
+                effect.set_timing(EffectTiming.OnUseAttack)
+            else:
+                effect.set_timing(EffectTiming.OnEnterFieldAnyone)
+            effect.set_effect_name(
+                "EX10-032 By trashing 1 [Mineral]/[Rock] source, 1 Digimon gains "
+                "Collision, Piercing, +3000 DP until opponent's turn ends"
+            )
+            effect.set_effect_description(
+                "[On Play] [When Digivolving] [When Attacking] By trashing any 1 [Mineral] or "
+                "[Rock] trait card from your Digimon's digivolution cards, 1 of your such Digimon "
+                "gains <Collision>, <Piercing> and +3000 DP until your opponent's turn ends."
+            )
+            effect.is_optional = True
             effect.is_on_play = is_on_play
             effect.is_when_digivolving = is_when_digivolving
             effect.is_on_attack = is_on_attack
-            effect._is_collision = True
-            effect._is_piercing = True
 
             def condition(context: Dict[str, Any]) -> bool:
                 if card and card.permanent_of_this_card() is None:
                     return False
-                return True
+                owner = card.owner if card else None
+                if not owner:
+                    return False
+                # Must have at least one Mineral/Rock digimon with a source card to trash
+                for p in owner.battle_area:
+                    if not p.is_digimon:
+                        continue
+                    if not (p.has_trait('Mineral') or p.has_trait('Rock')):
+                        continue
+                    for src in p.card_sources:
+                        if src is p.top_card:
+                            continue
+                        traits = getattr(src, 'card_traits', [])
+                        if 'Mineral' in traits or 'Rock' in traits:
+                            return True
+                return False
 
             effect.set_can_use_condition(condition)
 
             def process(ctx: Dict[str, Any]):
                 player = ctx.get('player')
-                perm = ctx.get('permanent')
                 game = ctx.get('game')
-                if not (player and perm and game):
+                if not (player and game):
                     return
-                if not perm.has_no_digivolution_cards:
-                    trashed = perm.trash_digivolution_cards(1)
-                    player.trash_cards.extend(trashed)
+
+                from digimon_gym.engine.interfaces.modifiers import ModifierType
+                expiry_turn = game.turn_count + 1
 
                 def target_filter(p):
-                    return p.is_digimon
+                    if not p.is_digimon:
+                        return False
+                    return p.has_trait('Mineral') or p.has_trait('Rock')
 
                 def on_target(target_perm):
-                    target_perm.change_dp(3000)
-                    target_perm.grant_keyword('_is_collision')
-                    target_perm.grant_keyword('_is_piercing')
+                    # Trash 1 Mineral/Rock source from the selected Digimon
+                    trashed_card = None
+                    for src in list(target_perm.card_sources):
+                        if src is target_perm.top_card:
+                            continue
+                        traits = getattr(src, 'card_traits', [])
+                        if 'Mineral' in traits or 'Rock' in traits:
+                            trashed_card = src
+                            break
+                    if trashed_card is None:
+                        return
+                    target_perm.card_sources.remove(trashed_card)
+                    player.trash_cards.append(trashed_card)
+                    # Grant Collision, Piercing until end of opponent's turn
+                    target_perm.grant_keyword('_is_collision', expiry_turn)
+                    target_perm.grant_keyword('_is_piercing', expiry_turn)
+                    # Grant +3000 DP until end of opponent's turn
+                    game.register_modifier(
+                        ModifierType.CHANGE_DP, target_perm,
+                        value_fn=lambda: 3000,
+                        expiry='end_of_opponent_turn'
+                    )
 
                 game.effect_select_own_permanent(
-                    player, on_target, filter_fn=target_filter, is_optional=True)
+                    player, on_target,
+                    filter_fn=target_filter,
+                    is_optional=True
+                )
 
             effect.set_on_process_callback(process)
             return effect
@@ -94,20 +203,23 @@ class EX10_032(CardScript):
         effects.append(build_grant_effect(is_when_digivolving=True))
         effects.append(build_grant_effect(is_on_attack=True))
 
-        effect4 = ICardEffect()
-        effect4.set_timing(EffectTiming.OnDigivolutionCardDiscarded)
-        effect4.set_effect_name("EX10-032 De-Digivolve 1")
-        effect4.set_effect_description(
-            "When effects trash this card from a [Mineral] or [Rock] trait Digimon's digivolution cards, <De-Digivolve 1> 1 of your opponent's Digimon."
+        # Inherited: When effects trash this card from a [Mineral] or [Rock] trait Digimon's
+        # digivolution cards, <De-Digivolve 1> 1 of your opponent's Digimon.
+        effect_inh = ICardEffect()
+        effect_inh.set_timing(EffectTiming.OnDigivolutionCardDiscarded)
+        effect_inh.set_effect_name("EX10-032 inherited De-Digivolve 1")
+        effect_inh.set_effect_description(
+            "When effects trash this card from a [Mineral] or [Rock] trait Digimon's "
+            "digivolution cards, <De-Digivolve 1> 1 of your opponent's Digimon."
         )
-        effect4.is_inherited_effect = True
+        effect_inh.is_inherited_effect = True
 
-        def condition4(context: Dict[str, Any]) -> bool:
+        def condition_inh(context: Dict[str, Any]) -> bool:
             return True
 
-        effect4.set_can_use_condition(condition4)
+        effect_inh.set_can_use_condition(condition_inh)
 
-        def process4(ctx: Dict[str, Any]):
+        def process_inh(ctx: Dict[str, Any]):
             player = ctx.get('player')
             game = ctx.get('game')
             if not (player and game):
@@ -120,9 +232,12 @@ class EX10_032(CardScript):
                     enemy.trash_cards.extend(removed)
 
             game.effect_select_opponent_permanent(
-                player, on_de_digivolve, filter_fn=lambda p: p.is_digimon, is_optional=False)
+                player, on_de_digivolve,
+                filter_fn=lambda p: p.is_digimon,
+                is_optional=False
+            )
 
-        effect4.set_on_process_callback(process4)
-        effects.append(effect4)
+        effect_inh.set_on_process_callback(process_inh)
+        effects.append(effect_inh)
 
         return effects

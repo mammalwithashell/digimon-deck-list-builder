@@ -57,18 +57,23 @@ class BT24_089(CardScript):
                 return False
             if card and card.permanent_of_this_card() is None:
                 return False
-            permanent = card.permanent_of_this_card() if card else None
-            if not (permanent and (permanent.contains_card_name('Owen Dreadnought'))):
+            # Check that the suspended permanent is an Owen Dreadnought
+            suspended_perm = context.get('permanent')
+            if not (suspended_perm and suspended_perm.contains_card_name('Owen Dreadnought')):
                 return False
-            permanent = card.permanent_of_this_card() if card else None
-            if not (permanent and permanent.top_card and (any('Reptile' in tr for tr in (getattr(permanent.top_card, 'card_traits', []) or [])) or any('Dragonkin' in tr for tr in (getattr(permanent.top_card, 'card_traits', []) or [])))):
+            # Check that suspended perm has Reptile or Dragonkin trait
+            if not (suspended_perm and suspended_perm.top_card and (
+                any('Reptile' in tr for tr in (getattr(suspended_perm.top_card, 'card_traits', []) or []))
+                or any('Dragonkin' in tr for tr in (getattr(suspended_perm.top_card, 'card_traits', []) or []))
+            )):
                 return False
             return True
         effect1.set_can_use_condition(condition1)
         effects.append(effect1)
 
         # Timing: EffectTiming.OnTappedAnyone
-        # [Your Turn] When any of your [Owen Dreadnought] suspend, <Delay> (By trashing this card after the placing turn, activate the effect below.)\r\n・1 of your [Dragonkin] or [Reptile] trait Digimon may digivolve into a [Dragonkin] or [Reptile] and [LIBERATOR] trait Digimon card in the hand with the digivolution cost reduced by 3.
+        # [Your Turn] When any of your [Owen Dreadnought] suspend, <Delay> (By trashing this card after the placing turn, activate the effect below.)
+        # ・1 of your [Dragonkin] or [Reptile] trait Digimon may digivolve into a [Dragonkin] or [Reptile] and [LIBERATOR] trait Digimon card in the hand with the digivolution cost reduced by 3.
         effect2 = ICardEffect()
         effect2.set_timing(EffectTiming.OnTappedAnyone)
         effect2.set_effect_name("BT24-089 1 of your [Dragonkin] or [Reptile] trait Digimon may digivolve")
@@ -81,26 +86,40 @@ class BT24_089(CardScript):
                 return False
             if not (card and card.owner and card.owner.is_my_turn):
                 return False
-            permanent = effect.effect_source_permanent if hasattr(effect, 'effect_source_permanent') else None
-            if not (permanent and (permanent.contains_card_name('Owen Dreadnought'))):
+            # Check that the suspended permanent is an Owen Dreadnought
+            suspended_perm = context.get('permanent')
+            if not (suspended_perm and suspended_perm.contains_card_name('Owen Dreadnought')):
                 return False
             return True
 
         effect2.set_can_use_condition(condition2)
 
         def process2(ctx: Dict[str, Any]):
-            """Action: Digivolve"""
+            """Action: Select Reptile/Dragonkin source Digimon, then digivolve from hand with cost reduction 3"""
             player = ctx.get('player')
             perm = ctx.get('permanent')
             game = ctx.get('game')
-            if not (player and perm and game):
+            if not (player and game):
                 return
-            def digi_filter(c):
-                if not (any('Elizamon' in _n or 'Owen Dreadnought' in _n for _n in getattr(c, 'card_names', []))):
+            # Select 1 of own Digimon with Reptile or Dragonkin trait as the source
+            def source_filter(p):
+                if not p.is_digimon:
                     return False
-                return True
-            game.effect_digivolve_from_hand(
-                player, perm, digi_filter, is_optional=True)
+                traits = getattr(p.top_card, 'card_traits', []) or []
+                return any('Reptile' in t or 'Dragonkin' in t for t in traits)
+            def on_source_select(source_perm):
+                if not source_perm:
+                    return
+                # Digivolve that Digimon from hand with cost reduced by 3
+                def digi_filter(c):
+                    traits = getattr(c, 'card_traits', []) or []
+                    has_reptile_or_dragonkin = any('Reptile' in t or 'Dragonkin' in t for t in traits)
+                    has_liberator = any('LIBERATOR' in t for t in traits)
+                    return has_reptile_or_dragonkin and has_liberator
+                game.effect_digivolve_from_hand(
+                    player, source_perm, digi_filter, cost_reduction=3, is_optional=True)
+            game.effect_select_own_permanent(
+                player, on_source_select, filter_fn=source_filter, is_optional=True)
 
         effect2.set_on_process_callback(process2)
         effects.append(effect2)

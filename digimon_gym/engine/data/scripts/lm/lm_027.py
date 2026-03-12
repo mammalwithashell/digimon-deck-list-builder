@@ -57,7 +57,7 @@ class LM_027(CardScript):
             def on_select(target_perm):
                 if game:
                     game.effect_digivolve_from_hand(
-                        player, target_perm, digi_filter, is_optional=True)
+                        player, target_perm, digi_filter, cost_reduction=3, is_optional=True)
             game.effect_select_own_permanent(
                 player, on_select, filter_fn=own_filter, is_optional=True)
 
@@ -122,7 +122,7 @@ class LM_027(CardScript):
                     colors = getattr(c, 'card_colors', [])
                     if any(col.name == 'Red' for col in colors):
                         returned = player.trash_cards.pop(i)
-                        player.deck_cards.insert(0, returned)
+                        player.library_cards.insert(0, returned)
                         break
             # Then, if you don't have a Digimon, play 1 red Digimon
             # with 2000 DP or less from trash without paying cost

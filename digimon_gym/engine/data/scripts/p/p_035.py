@@ -87,4 +87,16 @@ class P_035(CardScript):
         effect2.set_on_process_callback(process2)
         effects.append(effect2)
 
+        # Factory effect: security_play
+        # [Security] Play this card without paying the cost.
+        effect_sec = ICardEffect()
+        effect_sec.set_effect_name("P-035 Security: Play this card")
+        effect_sec.set_effect_description("[Security] Play this card without paying the cost.")
+        effect_sec.is_security_effect = True
+
+        def condition_sec(context: Dict[str, Any]) -> bool:
+            return True
+        effect_sec.set_can_use_condition(condition_sec)
+        effects.append(effect_sec)
+
         return effects

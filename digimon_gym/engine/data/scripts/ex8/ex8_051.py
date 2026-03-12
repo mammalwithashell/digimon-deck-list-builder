@@ -14,60 +14,83 @@ class EX8_051(CardScript):
     def get_card_effects(self, card: 'CardSource') -> List['ICardEffect']:
         effects = []
 
-        # Factory effect: collision
-        # Collision
-        effect0 = ICardEffect()
-        effect0.set_effect_name("EX8-051 Collision")
-        effect0.set_effect_description("Collision")
-        effect0._is_collision = True
+        # Keyword: Collision
+        effect_collision = ICardEffect()
+        effect_collision.set_effect_name("EX8-051 Collision")
+        effect_collision.set_effect_description(
+            "<Collision> (During this Digimon's attack, all of your opponent's Digimon gain "
+            "<Blocker>, and must block if possible.)"
+        )
+        effect_collision._is_collision = True
 
-        def condition0(context: Dict[str, Any]) -> bool:
+        def condition_collision(context: Dict[str, Any]) -> bool:
             return True
-        effect0.set_can_use_condition(condition0)
-        effects.append(effect0)
+        effect_collision.set_can_use_condition(condition_collision)
+        effects.append(effect_collision)
 
-        # Factory effect: fragment
-        # Fragment
-        effect1 = ICardEffect()
-        effect1.set_effect_name("EX8-051 Fragment")
-        effect1.set_effect_description("Fragment")
-        effect1._is_fragment = True
+        # Keyword: Piercing
+        effect_piercing = ICardEffect()
+        effect_piercing.set_effect_name("EX8-051 Piercing")
+        effect_piercing.set_effect_description(
+            "<Piercing> (When this Digimon attacks and deletes an opponent's Digimon and "
+            "survives the battle, it performs any security checks it normally would.)"
+        )
+        effect_piercing._is_piercing = True
 
-        def condition1(context: Dict[str, Any]) -> bool:
+        def condition_piercing(context: Dict[str, Any]) -> bool:
             return True
-        effect1.set_can_use_condition(condition1)
-        effects.append(effect1)
+        effect_piercing.set_can_use_condition(condition_piercing)
+        effects.append(effect_piercing)
 
-        # Timing: EffectTiming.OnDigivolutionCardDiscarded
-        # When effects trash this card from digivolution cards of a [Mineral] or [Rock] trait Digimon, <De-Digivolve 1> 1 of your opponent's Digimon.
-        effect2 = ICardEffect()
-        effect2.set_timing(EffectTiming.OnDigivolutionCardDiscarded)
-        effect2.set_effect_name("EX8-051 De-Digivolve 1")
-        effect2.set_effect_description("When effects trash this card from digivolution cards of a [Mineral] or [Rock] trait Digimon, <De-Digivolve 1> 1 of your opponent's Digimon.")
-        effect2.is_inherited_effect = True
+        # Keyword: Fragment (3)
+        effect_fragment = ICardEffect()
+        effect_fragment.set_effect_name("EX8-051 Fragment")
+        effect_fragment.set_effect_description(
+            "<Fragment (3)> (When this Digimon would be deleted, by trashing any 3 of its "
+            "digivolution cards, it isn't deleted.)"
+        )
+        effect_fragment._is_fragment = True
 
-        effect = effect2  # alias for condition closure
-        def condition2(context: Dict[str, Any]) -> bool:
+        def condition_fragment(context: Dict[str, Any]) -> bool:
+            return True
+        effect_fragment.set_can_use_condition(condition_fragment)
+        effects.append(effect_fragment)
+
+        # Inherited: When effects trash this card from a [Mineral] or [Rock] trait
+        # Digimon's digivolution cards, <De-Digivolve 1> 1 of your opponent's Digimon.
+        effect_inh = ICardEffect()
+        effect_inh.set_timing(EffectTiming.OnDigivolutionCardDiscarded)
+        effect_inh.set_effect_name("EX8-051 inherited De-Digivolve 1")
+        effect_inh.set_effect_description(
+            "When effects trash this card from a [Mineral] or [Rock] trait Digimon's "
+            "digivolution cards, <De-Digivolve 1> 1 of your opponent's Digimon."
+        )
+        effect_inh.is_inherited_effect = True
+
+        def condition_inh(context: Dict[str, Any]) -> bool:
             return True
 
-        effect2.set_can_use_condition(condition2)
+        effect_inh.set_can_use_condition(condition_inh)
 
-        def process2(ctx: Dict[str, Any]):
-            """Action: De Digivolve"""
+        def process_inh(ctx: Dict[str, Any]):
             player = ctx.get('player')
-            perm = ctx.get('permanent')
             game = ctx.get('game')
             if not (player and game):
                 return
+
             def on_de_digivolve(target_perm):
                 removed = target_perm.de_digivolve(1)
                 enemy = player.enemy if player else None
                 if enemy:
                     enemy.trash_cards.extend(removed)
-            game.effect_select_opponent_permanent(
-                player, on_de_digivolve, filter_fn=lambda p: p.is_digimon, is_optional=False)
 
-        effect2.set_on_process_callback(process2)
-        effects.append(effect2)
+            game.effect_select_opponent_permanent(
+                player, on_de_digivolve,
+                filter_fn=lambda p: p.is_digimon,
+                is_optional=False
+            )
+
+        effect_inh.set_on_process_callback(process_inh)
+        effects.append(effect_inh)
 
         return effects
