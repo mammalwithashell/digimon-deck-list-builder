@@ -14,127 +14,168 @@ class BT13_075(CardScript):
     def get_card_effects(self, card: 'CardSource') -> List['ICardEffect']:
         effects = []
 
-        # Timing: EffectTiming.OnEnterFieldAnyone
-        # [On Play] By placing 1 Digimon card with the [X Antibody] or [Royal Knight] trait from your trash as this Digimon's bottom digivolution card, all of your opponent's play cost 10 or higher Digimon can't attack players until the end of their turn.
-        effect0 = ICardEffect()
-        effect0.set_timing(EffectTiming.OnEnterFieldAnyone)
-        effect0.set_effect_name("BT13-075 Place 1 card from trash to digivolution cards so that opponent Digimons can't attack")
-        effect0.set_effect_description("[On Play] By placing 1 Digimon card with the [X Antibody] or [Royal Knight] trait from your trash as this Digimon's bottom digivolution card, all of your opponent's play cost 10 or higher Digimon can't attack players until the end of their turn.")
-        effect0.is_optional = True
-        effect0.is_on_play = True
-        effect0._is_cannot_attack_player = True
+        def _make_on_enter_effect(is_when_digivolving: bool) -> ICardEffect:
+            """Factory for On Play / When Digivolving shared effect."""
+            effect = ICardEffect()
+            effect.set_timing(EffectTiming.OnEnterFieldAnyone)
+            effect.set_effect_name("BT13-075 Place 1 card from trash to digi-stack bottom, then opponent cost-10+ Digimon can't attack players")
+            if is_when_digivolving:
+                effect.is_when_digivolving = True
+                effect.set_effect_description(
+                    "[When Digivolving] By placing 1 Digimon card with the [X Antibody] or [Royal Knight] trait "
+                    "from your trash as this Digimon's bottom digivolution card, all of your opponent's play cost "
+                    "10 or higher Digimon can't attack players until the end of their turn."
+                )
+            else:
+                effect.is_on_play = True
+                effect.set_effect_description(
+                    "[On Play] By placing 1 Digimon card with the [X Antibody] or [Royal Knight] trait "
+                    "from your trash as this Digimon's bottom digivolution card, all of your opponent's play cost "
+                    "10 or higher Digimon can't attack players until the end of their turn."
+                )
+            effect.is_optional = True
 
-        effect = effect0  # alias for condition closure
-        def condition0(context: Dict[str, Any]) -> bool:
-            if card and card.permanent_of_this_card() is None:
+            def condition(context: Dict[str, Any]) -> bool:
+                if card and card.permanent_of_this_card() is None:
+                    return False
+                # Must have at least one qualifying Digimon card in trash
+                owner = card.owner if card else None
+                if not owner:
+                    return False
+                for c in owner.trash_cards:
+                    if not c.is_digimon:
+                        continue
+                    traits = getattr(c, 'card_traits', []) or []
+                    if any('X Antibody' in t for t in traits) or any('Royal Knight' in t for t in traits):
+                        return True
                 return False
-            # Triggered on play — validated by engine timing
-            return True
 
-        effect0.set_can_use_condition(condition0)
+            effect.set_can_use_condition(condition)
 
-        def process0(ctx: Dict[str, Any]):
-            """Action: Restrict Attack, Gain Keyword Cannot Attack Player, Grant Cannot Attack"""
-            player = ctx.get('player')
-            perm = ctx.get('permanent')
-            game = ctx.get('game')
-            # Attack restriction via modifier system
-            if not (player and game):
-                return
-            from digimon_gym.engine.interfaces.modifiers import ModifierType
-            def target_filter(p):
-                return p.is_digimon
-            def on_restrict(target_perm):
-                game.register_modifier(
-                    ModifierType.CANNOT_ATTACK, target_perm,
-                    value_fn=lambda: True, expiry='end_of_opponent_turn')
-            game.effect_select_opponent_permanent(
-                player, on_restrict, filter_fn=target_filter, is_optional=True)
-            if perm:
-                perm.grant_keyword('_is_cannot_attack_player')
-            # Prevent target from attacking
-            if not (player and game):
-                return
-            from digimon_gym.engine.interfaces.modifiers import ModifierType
-            def on_restrict(target_perm):
-                game.register_modifier(
-                    ModifierType.CANNOT_ATTACK, target_perm,
-                    value_fn=lambda: True, expiry='end_of_opponent_turn')
-            game.effect_select_opponent_permanent(
-                player, on_restrict, filter_fn=lambda p: p.is_digimon, is_optional=True)
+            def process(ctx: Dict[str, Any]):
+                player = ctx.get('player')
+                perm = ctx.get('permanent')
+                game = ctx.get('game')
+                if not (player and game):
+                    return
+                if perm is None:
+                    return
 
-        effect0.set_on_process_callback(process0)
-        effects.append(effect0)
+                # Step 1: Select 1 qualifying Digimon card from trash and place at bottom of digi-stack
+                def trash_filter(c):
+                    if not c.is_digimon:
+                        return False
+                    traits = getattr(c, 'card_traits', []) or []
+                    return (any('X Antibody' in t for t in traits) or
+                            any('Royal Knight' in t for t in traits))
 
-        # Timing: EffectTiming.OnEnterFieldAnyone
-        # [When Digivolving] By placing 1 Digimon card with the [X Antibody] or [Royal Knight] trait from your trash as this Digimon's bottom digivolution card, all of your opponent's play cost 10 or higher Digimon can't attack players until the end of their turn.
-        effect1 = ICardEffect()
-        effect1.set_timing(EffectTiming.OnEnterFieldAnyone)
-        effect1.set_effect_name("BT13-075 Place 1 card from trash to digivolution cards so that opponent Digimons can't attack")
-        effect1.set_effect_description("[When Digivolving] By placing 1 Digimon card with the [X Antibody] or [Royal Knight] trait from your trash as this Digimon's bottom digivolution card, all of your opponent's play cost 10 or higher Digimon can't attack players until the end of their turn.")
-        effect1.is_optional = True
-        effect1.is_when_digivolving = True
-        effect1._is_cannot_attack_player = True
+                selected_card = [None]
 
-        effect = effect1  # alias for condition closure
-        def condition1(context: Dict[str, Any]) -> bool:
-            if card and card.permanent_of_this_card() is None:
-                return False
-            # Triggered when digivolving — validated by engine timing
-            return True
+                def on_trash_select(chosen):
+                    selected_card[0] = chosen
+                    if chosen in player.trash_cards:
+                        player.trash_cards.remove(chosen)
+                    perm.add_card_source_bottom(chosen)
 
-        effect1.set_can_use_condition(condition1)
+                # Use select_hand_card adapted for trash by iterating trash directly
+                # Engine doesn't have effect_select_trash; use a direct approach:
+                qualifying = [c for c in player.trash_cards if trash_filter(c)]
+                if not qualifying:
+                    return
 
-        def process1(ctx: Dict[str, Any]):
-            """Action: Restrict Attack, Gain Keyword Cannot Attack Player, Grant Cannot Attack"""
-            player = ctx.get('player')
-            perm = ctx.get('permanent')
-            game = ctx.get('game')
-            # Attack restriction via modifier system
-            if not (player and game):
-                return
-            from digimon_gym.engine.interfaces.modifiers import ModifierType
-            def target_filter(p):
-                return p.is_digimon
-            def on_restrict(target_perm):
-                game.register_modifier(
-                    ModifierType.CANNOT_ATTACK, target_perm,
-                    value_fn=lambda: True, expiry='end_of_opponent_turn')
-            game.effect_select_opponent_permanent(
-                player, on_restrict, filter_fn=target_filter, is_optional=True)
-            if perm:
-                perm.grant_keyword('_is_cannot_attack_player')
-            # Prevent target from attacking
-            if not (player and game):
-                return
-            from digimon_gym.engine.interfaces.modifiers import ModifierType
-            def on_restrict(target_perm):
-                game.register_modifier(
-                    ModifierType.CANNOT_ATTACK, target_perm,
-                    value_fn=lambda: True, expiry='end_of_opponent_turn')
-            game.effect_select_opponent_permanent(
-                player, on_restrict, filter_fn=lambda p: p.is_digimon, is_optional=True)
+                # We need to select one — use greedy auto-select (engine resolves selection)
+                # Register as SelectTrash phase selection via effect_select_hand_card analog:
+                # Since there's no effect_select_trash API, pick the first qualifying card
+                # (engine limitation — deterministic choice for RL)
+                chosen = qualifying[0]
+                player.trash_cards.remove(chosen)
+                perm.add_card_source_bottom(chosen)
+                selected_card[0] = chosen
 
-        effect1.set_on_process_callback(process1)
-        effects.append(effect1)
+                # Step 2: Apply CANNOT_ATTACK to ALL opponent Digimon with play cost >= 10
+                from digimon_gym.engine.interfaces.modifiers import ModifierType
+                enemy = player.enemy
+                if not enemy:
+                    return
+                for opp_perm in list(enemy.battle_area):
+                    if not opp_perm.is_digimon:
+                        continue
+                    top = opp_perm.top_card
+                    if top is None:
+                        continue
+                    play_cost = top.get_cost_itself
+                    has_play_cost = getattr(top, 'has_play_cost', True)
+                    if has_play_cost and play_cost >= 10:
+                        game.register_modifier(
+                            opp_perm,
+                            ModifierType.CANNOT_ATTACK,
+                            value_fn=lambda: True,
+                            expiry='end_of_opponent_turn',
+                        )
 
-        # Timing: EffectTiming.WhenRemoveField
-        # [All Turns][Once Per Turn] When an effect would remove this Digimon from the battle area, by returning 1 card with the [X Antibody] or [Royal Knight] trait from this Digimon's digivolution cards to the bottom of the deck, prevent that removal.
+            effect.set_on_process_callback(process)
+            return effect
+
+        effects.append(_make_on_enter_effect(is_when_digivolving=False))
+        effects.append(_make_on_enter_effect(is_when_digivolving=True))
+
+        # [All Turns][Once Per Turn] When this Digimon would leave the battle area by an effect,
+        # by returning 1 Digimon card with the [X Antibody] or [Royal Knight] trait from this
+        # Digimon's digivolution cards to the bottom of your deck, prevent it from leaving play.
         effect2 = ICardEffect()
         effect2.set_timing(EffectTiming.WhenRemoveField)
-        effect2.set_effect_name("BT13-075 Prevent this Digimon from leaving play")
-        effect2.set_effect_description("[All Turns][Once Per Turn] When an effect would remove this Digimon from the battle area, by returning 1 card with the [X Antibody] or [Royal Knight] trait from this Digimon's digivolution cards to the bottom of the deck, prevent that removal.")
+        effect2.set_effect_name("BT13-075 Return digi-card to deck bottom to prevent leaving the battle area")
+        effect2.set_effect_description(
+            "[All Turns][Once Per Turn] When this Digimon would leave the battle area by an effect, "
+            "by returning 1 Digimon card with the [X Antibody] or [Royal Knight] trait from this "
+            "Digimon's digivolution cards to the bottom of your deck, prevent it from leaving play."
+        )
         effect2.is_optional = True
         effect2.set_max_count_per_turn(1)
         effect2.set_hash_string("Substitute_BT13_075")
 
-        effect = effect2  # alias for condition closure
         def condition2(context: Dict[str, Any]) -> bool:
             if card and card.permanent_of_this_card() is None:
                 return False
-            return True
+            perm = card.permanent_of_this_card()
+            if perm is None:
+                return False
+            # Must have at least one qualifying card in digi-stack
+            for c in perm.card_sources:
+                traits = getattr(c, 'card_traits', []) or []
+                if any('X Antibody' in t for t in traits) or any('Royal Knight' in t for t in traits):
+                    return True
+            return False
 
         effect2.set_can_use_condition(condition2)
+
+        def process2(ctx: Dict[str, Any]):
+            player = ctx.get('player')
+            perm = ctx.get('permanent')
+            game = ctx.get('game')
+            if not (player and perm):
+                return
+
+            # Find a qualifying card in the digi-stack
+            def stack_filter(c):
+                traits = getattr(c, 'card_traits', []) or []
+                return (any('X Antibody' in t for t in traits) or
+                        any('Royal Knight' in t for t in traits))
+
+            qualifying = [c for c in perm.card_sources if stack_filter(c)]
+            if not qualifying:
+                return
+
+            # Return one qualifying card to deck bottom (greedy: first qualifying)
+            chosen = qualifying[0]
+            if chosen in perm.card_sources:
+                perm.card_sources.remove(chosen)
+            player.library_cards.append(chosen)
+
+            # Prevention of removal is signaled to engine by not doing anything else;
+            # engine checks effect2.is_optional and the WhenRemoveField hook to cancel removal.
+
+        effect2.set_on_process_callback(process2)
         effects.append(effect2)
 
         return effects

@@ -48,13 +48,8 @@ Last updated: 2026-03-10
 - **Suggested change:** Add aura-style modifier registration that auto-applies to new permanents entering the field.
 - **Workaround:** CANNOT_UNSUSPEND applied to all permanents at digivolve time; new entries are not affected.
 
-### Hand-Activated Main Effects on Digimon Cards
-- **Discovered in:** Zephaga (2026-03-11)
-- **Card(s):** EX11-032 — GrandGalemon
-- **Effect text:** "[Hand] [Main] If you have [Shoto Kazama], by placing 1 [Galemon] from your trash as any of your [Pteromon]'s bottom digivolution card, it digivolves into this card for a digivolution cost of 3, ignoring digivolution requirements."
-- **What's missing:** Digimon cards with [Hand] [Main] effects that can be activated from hand during main phase (not a play or digivolve action). Requires special hand-activation UI flow.
-- **Suggested change:** Add hand-activation action type for cards with [Hand] [Main] effects. The engine would need to check hand cards for activatable main effects during main phase.
-- **Workaround:** Partially approximated with effect_digivolve_from_hand + add_card_source_bottom for the trash placement.
+### ~~Hand-Activated Main Effects on Digimon Cards~~ (RESOLVED)
+- **Resolved:** 2026-03-12 — Added `_is_hand_main` action type (actions 30-59 in Main phase). Scripts declare `effect._is_hand_main = True` with condition and process callbacks. See `docs/archetype-qa/engine-api-reference.md` Pattern 13.
 
 <!-- Entry template:
 ### {Gap Title}

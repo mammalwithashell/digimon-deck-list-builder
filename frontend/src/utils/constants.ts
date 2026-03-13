@@ -7,6 +7,8 @@ export const ACTION = {
   PLAY_END: 29,
   TRASH_START: 30,
   TRASH_END: 59,
+  HAND_MAIN_START: 30,
+  HAND_MAIN_END: 59,
   HATCH: 60,
   MOVE: 61,
   PASS: 62,

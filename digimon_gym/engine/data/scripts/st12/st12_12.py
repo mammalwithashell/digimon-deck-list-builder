@@ -58,9 +58,8 @@ class ST12_12(CardScript):
                 return True
 
             def on_trashed(selected):
-                if selected in player.hand_cards:
-                    player.hand_cards.remove(selected)
-                    player.trash_cards.append(selected)
+                # Use the player API to properly fire OnDiscardHand events
+                player.trash_from_hand([selected])
                 # Cost paid -- now draw 2
                 player.draw_cards(2)
 
@@ -73,10 +72,14 @@ class ST12_12(CardScript):
         # --- Effect 1: [All Turns] Conditional Decoy (Red/Black) ---
         # Gains <Decoy (Red/Black)> while you have a Digimon with
         # [Huckmon] in name or [Royal Knight] trait in play.
-        # NOTE: Engine decoy check (player.py) does not enforce color
-        # restriction -- it protects any allied Digimon. The (Red/Black)
-        # color filter requires engine-level support for full enforcement.
+        # The engine's _is_decoy allows THIS Digimon to be sacrificed to
+        # protect another ally Digimon from deletion by opponent effect.
+        # NOTE: The color restriction (Red/Black) is not enforced at the
+        # engine level — the engine's decoy check auto-activates without
+        # color filtering. This is an engine gap; full color restriction
+        # would require engine support for conditional decoy targets.
         effect1 = ICardEffect()
+        effect1.set_timing(EffectTiming.NoTiming)
         effect1.set_effect_name("ST12-12 Decoy (Red/Black)")
         effect1.set_effect_description(
             "<Decoy (Red/Black)> (When your other Red or Black Digimon "
@@ -84,6 +87,7 @@ class ST12_12(CardScript):
             "this Digimon to prevent 1 of those Digimon's deletion.)"
         )
         effect1._is_decoy = True
+        effect1.is_declarative = True
 
         def condition1(context: Dict[str, Any]) -> bool:
             if card and card.permanent_of_this_card() is None:
@@ -101,6 +105,7 @@ class ST12_12(CardScript):
                 if p.has_trait('Royal Knight'):
                     return True
             return False
+
         effect1.set_can_use_condition(condition1)
         effects.append(effect1)
 

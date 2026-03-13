@@ -9,14 +9,13 @@ if TYPE_CHECKING:
 
 
 class EX8_074(CardScript):
-    """EX8-074 MedievalGallantmon | Lv.6"""
+    """EX8-074 MedievalGallantmon | Lv.6 | Green/Red | Cost:11 | DP:11000"""
 
     def get_card_effects(self, card: 'CardSource') -> List['ICardEffect']:
         effects = []
 
-        # ── BeforePayCost ─────────────────────────────────────────────
-        # When this card would be played, by suspending 2 Digimon,
-        # reduce the play cost by 4.
+        # ── BeforePayCost ─────────────────────────────────────────────────────
+        # When this card would be played, by suspending 2 Digimon, reduce play cost by 4.
         effect0 = ICardEffect()
         effect0.set_timing(EffectTiming.BeforePayCost)
         effect0.set_effect_name("EX8-074 Suspend 2 Digimon to get Play Cost -4")
@@ -28,10 +27,10 @@ class EX8_074(CardScript):
         effect0.cost_reduction = 4
 
         def condition0(context: Dict[str, Any]) -> bool:
-            # Only for THIS card being played (prevent cost-reduction leak)
+            # LEAK GUARD: only for THIS card being played
             if context.get('card_source') is not card:
                 return False
-            # "by suspending 2 Digimon" — need 2+ unsuspended own Digimon
+            # Need 2+ unsuspended own Digimon to pay the cost
             if card and card.owner:
                 own_digimon = [p for p in card.owner.battle_area
                                if p.is_digimon and not p.is_suspended]
@@ -41,20 +40,49 @@ class EX8_074(CardScript):
         effect0.set_can_use_condition(condition0)
 
         def process0(ctx: Dict[str, Any]):
-            """Cost: Suspend 2 own unsuspended Digimon."""
+            """Cost: Player selects 2 own unsuspended Digimon to suspend."""
             player = ctx.get('player')
-            if not player:
+            game = ctx.get('game')
+            if not (player and game):
                 return
             own_digimon = [p for p in player.battle_area
                            if p.is_digimon and not p.is_suspended]
-            if len(own_digimon) >= 2:
-                own_digimon[0].suspend()
-                own_digimon[1].suspend()
+            if len(own_digimon) < 2:
+                return
+
+            # Track how many have been suspended
+            suspended_count = [0]
+            selected = []
+
+            def on_first_selected(target_perm):
+                target_perm.suspend()
+                selected.append(target_perm)
+                suspended_count[0] += 1
+                # Now select second
+                remaining = [p for p in player.battle_area
+                             if p.is_digimon and not p.is_suspended and p not in selected]
+                if remaining:
+                    def on_second_selected(target_perm2):
+                        target_perm2.suspend()
+                        suspended_count[0] += 1
+                    game.effect_select_own_permanent(
+                        player, on_second_selected,
+                        filter_fn=lambda p: p.is_digimon and not p.is_suspended and p not in selected,
+                        is_optional=False,
+                        prompt="Select 2nd Digimon to suspend (cost for -4 play cost).",
+                    )
+
+            game.effect_select_own_permanent(
+                player, on_first_selected,
+                filter_fn=lambda p: p.is_digimon and not p.is_suspended,
+                is_optional=False,
+                prompt="Select 1st Digimon to suspend (cost for -4 play cost).",
+            )
 
         effect0.set_on_process_callback(process0)
         effects.append(effect0)
 
-        # ── Alliance ──────────────────────────────────────────────────
+        # ── Alliance ──────────────────────────────────────────────────────────
         effect1 = ICardEffect()
         effect1.set_effect_name("EX8-074 Alliance")
         effect1.set_effect_description("Alliance")
@@ -66,7 +94,7 @@ class EX8_074(CardScript):
         effect1.set_can_use_condition(condition1)
         effects.append(effect1)
 
-        # ── Vortex ────────────────────────────────────────────────────
+        # ── Vortex ────────────────────────────────────────────────────────────
         effect2 = ICardEffect()
         effect2.set_effect_name("EX8-074 Vortex")
         effect2.set_effect_description("Vortex")
@@ -77,10 +105,10 @@ class EX8_074(CardScript):
         effect2.set_can_use_condition(condition2)
         effects.append(effect2)
 
-        # ── [When Digivolving] ────────────────────────────────────────
-        # You may suspend 1 Digimon. Then, you may delete 1 of your
-        # opponent's 8000 DP or lower Digimon. For each other suspended
-        # Digimon, add 3000 to this DP deletion effect's maximum.
+        # ── [When Digivolving] ────────────────────────────────────────────────
+        # You may suspend 1 Digimon. Then, you may delete 1 of your opponent's
+        # 8000 DP or lower Digimon. For each other suspended Digimon, add 3000 to
+        # this DP deletion effect's maximum.
         effect3 = ICardEffect()
         effect3.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect3.set_effect_name("EX8-074 Suspend then Delete")
@@ -98,45 +126,14 @@ class EX8_074(CardScript):
 
         effect3.set_can_use_condition(condition3)
 
-        def process3(ctx: Dict[str, Any]):
-            """You may suspend 1 Digimon, then optionally delete opponent Digimon."""
-            player = ctx.get('player')
-            perm = ctx.get('permanent')
-            game = ctx.get('game')
-            if not (player and game):
-                return
-
-            # Step 1: You MAY suspend 1 Digimon (own)
-            def on_suspend_done(target_perm):
-                target_perm.suspend()
-                # Step 2: After suspending, proceed to delete
-                _do_delete(player, perm, game)
-
-            def on_suspend_decline():
-                # Player chose not to suspend, still proceed to delete step
-                _do_delete(player, perm, game)
-
-            own_unsuspended = [p for p in player.battle_area
-                               if p.is_digimon and not p.is_suspended]
-            if own_unsuspended:
-                game.effect_select_own_permanent(
-                    player, on_suspend_done,
-                    filter_fn=lambda p: p.is_digimon and not p.is_suspended,
-                    is_optional=True,
-                    prompt="You may suspend 1 Digimon.")
-                if game.pending_selection:
-                    game.pending_selection.on_decline = on_suspend_decline
-            else:
-                # No unsuspended Digimon — skip to delete
-                _do_delete(player, perm, game)
-
-        def _do_delete(player, owner_perm, game):
-            """Step 2: You MAY delete 1 opponent Digimon with DP <= base + scaling."""
-            # Count all suspended Digimon on both fields ("other suspended Digimon")
+        def _do_delete(player, game):
+            """Step 2: You MAY delete 1 opponent Digimon with DP <= base + scaling.
+            'Other suspended Digimon' = all suspended Digimon except this card's permanent."""
             enemy = player.enemy if player else None
+            this_perm = card.permanent_of_this_card() if card else None
             all_suspended = sum(
-                1 for p in list(player.battle_area) + list(enemy.battle_area if enemy else [])
-                if p.is_suspended
+                1 for p in (list(player.battle_area) + list(enemy.battle_area if enemy else []))
+                if p.is_digimon and p.is_suspended and p is not this_perm
             )
             max_dp = 8000 + 3000 * all_suspended
 
@@ -144,19 +141,58 @@ class EX8_074(CardScript):
                 return p.is_digimon and (p.dp or 0) <= max_dp
 
             def on_delete(target_perm):
-                enemy = player.enemy if player else None
                 if enemy:
                     enemy.delete_permanent(target_perm)
 
-            game.effect_select_opponent_permanent(
-                player, on_delete, filter_fn=delete_filter,
-                is_optional=True,
-                prompt=f"You may delete 1 opponent Digimon with {max_dp} DP or less.")
+            opp_targets = [p for p in (enemy.battle_area if enemy else []) if delete_filter(p)]
+            if opp_targets:
+                game.effect_select_opponent_permanent(
+                    player, on_delete, filter_fn=delete_filter,
+                    is_optional=True,
+                    prompt=f"You may delete 1 opponent Digimon with {max_dp} DP or less.")
+
+        def process3(ctx: Dict[str, Any]):
+            """You may suspend 1 Digimon, then optionally delete opponent Digimon."""
+            player = ctx.get('player')
+            game = ctx.get('game')
+            if not (player and game):
+                return
+
+            # Step 1: You MAY suspend 1 own Digimon (then proceed to delete)
+            own_unsuspended = [p for p in player.battle_area
+                               if p.is_digimon and not p.is_suspended]
+
+            if own_unsuspended:
+                def on_suspend_done(target_perm):
+                    target_perm.suspend()
+                    _do_delete(player, game)
+
+                game.effect_select_own_permanent(
+                    player, on_suspend_done,
+                    filter_fn=lambda p: p.is_digimon and not p.is_suspended,
+                    is_optional=True,
+                    prompt="You may suspend 1 Digimon.")
+                # If player declines (optional), still run delete step
+                # The engine calls on_suspend_done only if a selection is made;
+                # we need to also handle decline to still run delete.
+                if game.pending_selection:
+                    _orig_decline = getattr(game.pending_selection, 'on_decline', None)
+                    def on_decline_wrap():
+                        if _orig_decline:
+                            _orig_decline()
+                        _do_delete(player, game)
+                    game.pending_selection.on_decline = on_decline_wrap
+                else:
+                    # Selection resolved synchronously with a suspension — delete already called
+                    pass
+            else:
+                # No own unsuspended Digimon — skip to delete
+                _do_delete(player, game)
 
         effect3.set_on_process_callback(process3)
         effects.append(effect3)
 
-        # ── [All Turns] [Once Per Turn] ───────────────────────────────
+        # ── [All Turns] [Once Per Turn] ───────────────────────────────────────
         # When Digimon are played, you may activate 1 of this Digimon's
         # [When Digivolving] effects.
         effect4 = ICardEffect()
@@ -173,19 +209,21 @@ class EX8_074(CardScript):
         def condition4(context: Dict[str, Any]) -> bool:
             if card and card.permanent_of_this_card() is None:
                 return False
-            # Check that a Digimon was played
-            played = context.get('played_card')
-            if played is None:
+            # Must be triggered by a Digimon being PLAYED (not digivolved)
+            played_perm = context.get('played_permanent') or context.get('permanent')
+            is_digivolve = context.get('is_digivolve', False)
+            if is_digivolve:
                 return False
-            played_perm = context.get('played_permanent')
-            if played_perm and not played_perm.is_digimon:
+            if played_perm is None:
+                return False
+            if not getattr(played_perm, 'is_digimon', False):
                 return False
             return True
 
         effect4.set_can_use_condition(condition4)
 
         def process4(ctx: Dict[str, Any]):
-            """Re-run the When Digivolving effect (suspend + delete)."""
+            """Re-run the [When Digivolving] effect (suspend + delete)."""
             process3(ctx)
 
         effect4.set_on_process_callback(process4)

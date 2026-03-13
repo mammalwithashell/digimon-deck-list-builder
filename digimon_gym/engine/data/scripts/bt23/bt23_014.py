@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....interfaces.modifiers import ModifierType
 from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
@@ -46,13 +47,38 @@ class BT23_014(CardScript):
         effect1.set_can_use_condition(condition1)
 
         def process1(ctx: Dict[str, Any]):
-            """Action: Play Restriction — opponent cannot play Digimon/Tamers from trash"""
+            """Action: Until opponent's turn ends, their effects can't play Digimon/Tamers from trash."""
             player = ctx.get('player')
-            perm = ctx.get('permanent')
             game = ctx.get('game')
-            # Global play restriction: opponent can't play Digimon/Tamers from trash
-            # Requires global modifier target (None) which engine may not support yet
-            pass  # descriptive-tagged: cannot_play_from_trash
+            if not (player and game):
+                return
+            perm = card.permanent_of_this_card() if card else None
+            if not perm:
+                return
+            enemy = player.enemy
+            if not enemy:
+                return
+            # CANNOT_PLAY_CARD modifier that blocks Digimon and Tamer cards
+            # coming from the opponent's trash. Expires end of opponent's next turn.
+            # The condition receives (target_permanent, ctx) where ctx['card'] is the card
+            # being played. We gate on the card being a Digimon/Tamer in the opponent's trash.
+            def _from_trash_digimon_or_tamer(target_perm, c):
+                being_played = c.get('card')
+                if not being_played:
+                    return False
+                if not (getattr(being_played, 'is_digimon', False) or
+                        getattr(being_played, 'is_tamer', False)):
+                    return False
+                # Only block plays originating from enemy trash
+                return being_played in enemy.trash_cards
+
+            game.register_modifier(
+                perm,
+                ModifierType.CANNOT_PLAY_CARD,
+                condition=_from_trash_digimon_or_tamer,
+                source_effect=effect1,
+                expiry='end_of_opponent_turn',
+            )
 
         effect1.set_on_process_callback(process1)
         effects.append(effect1)
@@ -75,13 +101,34 @@ class BT23_014(CardScript):
         effect2.set_can_use_condition(condition2)
 
         def process2(ctx: Dict[str, Any]):
-            """Action: Play Restriction — opponent cannot play Digimon/Tamers from trash"""
+            """Action: Until opponent's turn ends, their effects can't play Digimon/Tamers from trash."""
             player = ctx.get('player')
-            perm = ctx.get('permanent')
             game = ctx.get('game')
-            # Global play restriction: opponent can't play Digimon/Tamers from trash
-            # Requires global modifier target (None) which engine may not support yet
-            pass  # descriptive-tagged: cannot_play_from_trash
+            if not (player and game):
+                return
+            perm = card.permanent_of_this_card() if card else None
+            if not perm:
+                return
+            enemy = player.enemy
+            if not enemy:
+                return
+
+            def _from_trash_digimon_or_tamer(target_perm, c):
+                being_played = c.get('card')
+                if not being_played:
+                    return False
+                if not (getattr(being_played, 'is_digimon', False) or
+                        getattr(being_played, 'is_tamer', False)):
+                    return False
+                return being_played in enemy.trash_cards
+
+            game.register_modifier(
+                perm,
+                ModifierType.CANNOT_PLAY_CARD,
+                condition=_from_trash_digimon_or_tamer,
+                source_effect=effect2,
+                expiry='end_of_opponent_turn',
+            )
 
         effect2.set_on_process_callback(process2)
         effects.append(effect2)
@@ -114,7 +161,7 @@ class BT23_014(CardScript):
             if not enemy:
                 return
             # Calculate max DP: 8000 base + 2000 for each opponent Digimon and Tamer
-            max_dp = 8000 + 2000 * len([p for p in enemy.battle_area])
+            max_dp = 8000 + 2000 * len([p for p in enemy.battle_area if p.is_digimon or p.is_tamer])
             def target_filter(p):
                 return p.is_digimon and p.dp is not None and p.dp <= max_dp
             def on_delete(target_perm):
@@ -154,7 +201,7 @@ class BT23_014(CardScript):
             if not enemy:
                 return
             # Calculate max DP: 8000 base + 2000 for each opponent Digimon and Tamer
-            max_dp = 8000 + 2000 * len([p for p in enemy.battle_area])
+            max_dp = 8000 + 2000 * len([p for p in enemy.battle_area if p.is_digimon or p.is_tamer])
             def target_filter(p):
                 return p.is_digimon and p.dp is not None and p.dp <= max_dp
             def on_delete(target_perm):
@@ -194,7 +241,7 @@ class BT23_014(CardScript):
             if not enemy:
                 return
             # Calculate max DP: 8000 base + 2000 for each opponent Digimon and Tamer
-            max_dp = 8000 + 2000 * len([p for p in enemy.battle_area])
+            max_dp = 8000 + 2000 * len([p for p in enemy.battle_area if p.is_digimon or p.is_tamer])
             def target_filter(p):
                 return p.is_digimon and p.dp is not None and p.dp <= max_dp
             def on_delete(target_perm):

@@ -50,11 +50,12 @@ class BT23_057(CardScript):
         effect1.set_can_use_condition(condition1)
 
         def process1(ctx: Dict[str, Any]):
-            """Return 3 Huckmon/Sistermon/Jesmon cards from trash to deck bottom."""
+            """Return 3 Huckmon/Sistermon/Jesmon cards from trash to top of deck."""
             player = ctx.get('player')
             if not player:
                 return
             returned = 0
+            to_return = []
             for c in list(player.trash_cards):
                 if returned >= 3:
                     break
@@ -62,9 +63,11 @@ class BT23_057(CardScript):
                 if any('Huckmon' in n or 'Sistermon' in n or 'Jesmon' in n
                        for n in names):
                     player.trash_cards.remove(c)
-                    # TODO: player should choose top or bottom for each returned card
-                    player.library_cards.append(c)  # defaults to bottom of deck
+                    to_return.append(c)
                     returned += 1
+            # Place returned cards on top of deck (insert at end = top)
+            for c in to_return:
+                player.library_cards.append(c)
 
         effect1.set_on_process_callback(process1)
         effects.append(effect1)
@@ -90,7 +93,7 @@ class BT23_057(CardScript):
             def process(ctx: Dict[str, Any]):
                 player = ctx.get("player")
                 game = ctx.get("game")
-                owner_perm = ctx.get("permanent")
+                owner_perm = card.permanent_of_this_card() if card else None
                 if not (player and game and owner_perm):
                     return
 

@@ -21,11 +21,14 @@ class BT6_082(CardScript):
         effects = []
 
         # --- Effect 0: [All Turns] Grant Blocker to this Sistermon while Huckmon/RK exists ---
-        # Note: The card text says "all of your Digimon with [Sistermon]" but since each
-        # Sistermon carries its own copy of this effect via its own script, each will
-        # independently gain Blocker when the condition is met. This effect applies Blocker
-        # to THIS permanent only, gated on Huckmon/Royal Knight existing on the field.
+        # The card text says "all of your Digimon with [Sistermon]" gain Blocker.
+        # Each Sistermon variant carries its own copy of this aura; the engine's
+        # has_keyword() evaluates the condition per-permanent, so all Sistermons
+        # independently gain Blocker when the condition is met.
+        # The Sistermon name check is included so that if this card's name changes
+        # (e.g. via effect) Blocker is only granted while still a Sistermon.
         effect0 = ICardEffect()
+        effect0.set_timing(EffectTiming.NoTiming)
         effect0.set_effect_name("BT6-082 Blocker (conditional)")
         effect0.set_effect_description(
             "[All Turns] While you have a Digimon with [Huckmon] in its name "
@@ -33,6 +36,7 @@ class BT6_082(CardScript):
             "[Sistermon] in their name gain <Blocker>."
         )
         effect0._is_blocker = True
+        effect0.is_declarative = True
 
         def condition0(context: Dict[str, Any]) -> bool:
             if card and card.permanent_of_this_card() is None:
@@ -42,26 +46,21 @@ class BT6_082(CardScript):
                 return False
             # Check if this permanent is a Sistermon
             perm = card.permanent_of_this_card() if card else None
-            if perm:
+            if perm and perm.top_card:
                 names = getattr(perm.top_card, 'card_names', []) or []
                 name = names[0] if names else ''
                 if 'Sistermon' not in name:
                     return False
             # Check for Huckmon-name or Royal Knight trait ally
-            has_huckmon_or_rk = False
             for p in player.battle_area:
                 if not p.is_digimon:
                     continue
-                names = getattr(p.top_card, 'card_names', []) or []
-                name = names[0] if names else ''
-                if 'Huckmon' in name:
-                    has_huckmon_or_rk = True
-                    break
-                traits = getattr(p.top_card, 'card_traits', []) or []
-                if any('Royal Knight' in t for t in traits):
-                    has_huckmon_or_rk = True
-                    break
-            return has_huckmon_or_rk
+                if p.contains_card_name('Huckmon'):
+                    return True
+                if p.has_trait('Royal Knight'):
+                    return True
+            return False
+
         effect0.set_can_use_condition(condition0)
         effects.append(effect0)
 
@@ -74,12 +73,14 @@ class BT6_082(CardScript):
 
         def condition1(context: Dict[str, Any]) -> bool:
             return True
+
         effect1.set_can_use_condition(condition1)
 
         def process1(ctx: Dict[str, Any]):
             player = ctx.get('player')
             if player:
                 player.draw_cards(1)
+
         effect1.set_on_process_callback(process1)
         effects.append(effect1)
 

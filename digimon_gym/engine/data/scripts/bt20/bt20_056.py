@@ -14,8 +14,7 @@ class BT20_056(CardScript):
     def get_card_effects(self, card: 'CardSource') -> List['ICardEffect']:
         effects = []
 
-        # Factory effect: barrier
-        # Barrier
+        # Factory effect: Barrier
         effect0 = ICardEffect()
         effect0.set_effect_name("BT20-056 Barrier")
         effect0.set_effect_description("Barrier")
@@ -26,114 +25,106 @@ class BT20_056(CardScript):
         effect0.set_can_use_condition(condition0)
         effects.append(effect0)
 
-        # Timing: EffectTiming.OnEnterFieldAnyone
-        # [On Play] <Recovery +1 (Deck)>. Then, if during an attack, 1 of your Digimon in the breeding area may digivolve into a level 6 or lower [Chronicle] trait Digimon card in the hand or trash without paying the cost.
-        effect1 = ICardEffect()
-        effect1.set_timing(EffectTiming.OnEnterFieldAnyone)
-        effect1.set_effect_name("BT20-056 <Recovery +1 (Deck)>")
-        effect1.set_effect_description("[On Play] <Recovery +1 (Deck)>. Then, if during an attack, 1 of your Digimon in the breeding area may digivolve into a level 6 or lower [Chronicle] trait Digimon card in the hand or trash without paying the cost.")
-        effect1.is_on_play = True
+        # ── On Play / When Digivolving shared effect factory ─────────────────
+        def _make_on_enter_effect(is_when_digivolving: bool) -> ICardEffect:
+            effect = ICardEffect()
+            effect.set_timing(EffectTiming.OnEnterFieldAnyone)
+            effect.set_effect_name("BT20-056 Recovery +1, then if during attack breed area Digimon may digivolve into Chronicle")
+            if is_when_digivolving:
+                effect.is_when_digivolving = True
+                effect.set_effect_description(
+                    "[When Digivolving] Recovery +1 (Deck). Then, if during an attack, 1 of your Digimon "
+                    "in the breeding area may digivolve into a level 6 or lower [Chronicle] trait Digimon "
+                    "card in the hand or trash without paying the cost."
+                )
+            else:
+                effect.is_on_play = True
+                effect.set_effect_description(
+                    "[On Play] Recovery +1 (Deck). Then, if during an attack, 1 of your Digimon in the "
+                    "breeding area may digivolve into a level 6 or lower [Chronicle] trait Digimon card "
+                    "in the hand or trash without paying the cost."
+                )
 
-        effect = effect1  # alias for condition closure
-        def condition1(context: Dict[str, Any]) -> bool:
-            if card and card.permanent_of_this_card() is None:
-                return False
-            # Triggered on play — validated by engine timing
-            return True
-
-        effect1.set_can_use_condition(condition1)
-
-        def process1(ctx: Dict[str, Any]):
-            """Action: Recovery +1, then if during attack digivolve breeding area Digimon"""
-            player = ctx.get('player')
-            perm = ctx.get('permanent')
-            game = ctx.get('game')
-            if player:
-                player.recovery(1)
-            if not (player and perm and game):
-                return
-            # "if during an attack" — check if any of this player's Digimon is attacking
-            during_attack = any(
-                p.is_attacking for p in player.battle_area
-            )
-            if not during_attack:
-                return
-            # Target is a Digimon in the BREEDING AREA, not Alphamon itself
-            breeding = player.breeding_area
-            if breeding is None:
-                return
-            def digi_filter(c):
-                if getattr(c, 'level', None) is None or c.level > 6:
-                    return False
-                if not any('Chronicle' in t for t in getattr(c, 'card_traits', [])):
+            def condition(context: Dict[str, Any]) -> bool:
+                if card and card.permanent_of_this_card() is None:
                     return False
                 return True
-            # TODO: effect_digivolve_from_hand doesn't support trash zone
-            game.effect_digivolve_from_hand(
-                player, breeding, digi_filter, cost_override=0, is_optional=True)
 
-        effect1.set_on_process_callback(process1)
-        effects.append(effect1)
+            effect.set_can_use_condition(condition)
 
-        # Timing: EffectTiming.OnEnterFieldAnyone
-        # [When Digivolving] <Recovery +1 (Deck)>. Then, if during an attack, 1 of your Digimon in the breeding area may digivolve into a level 6 or lower [Chronicle] trait Digimon card in the hand or trash without paying the cost.
-        effect2 = ICardEffect()
-        effect2.set_timing(EffectTiming.OnEnterFieldAnyone)
-        effect2.set_effect_name("BT20-056 <Recovery +1 (Deck)>")
-        effect2.set_effect_description("[When Digivolving] <Recovery +1 (Deck)>. Then, if during an attack, 1 of your Digimon in the breeding area may digivolve into a level 6 or lower [Chronicle] trait Digimon card in the hand or trash without paying the cost.")
-        effect2.is_when_digivolving = True
+            def process(ctx: Dict[str, Any]):
+                player = ctx.get('player')
+                perm = ctx.get('permanent')
+                game = ctx.get('game')
+                if not player:
+                    return
 
-        effect = effect2  # alias for condition closure
-        def condition2(context: Dict[str, Any]) -> bool:
-            if card and card.permanent_of_this_card() is None:
-                return False
-            # Triggered when digivolving — validated by engine timing
-            return True
+                # Recovery +1 (Deck)
+                if player.library_cards:
+                    player.recovery(1)
 
-        effect2.set_can_use_condition(condition2)
+                if not (game and perm):
+                    return
 
-        def process2(ctx: Dict[str, Any]):
-            """Action: Recovery +1, then if during attack digivolve breeding area Digimon"""
-            player = ctx.get('player')
-            perm = ctx.get('permanent')
-            game = ctx.get('game')
-            if player:
-                player.recovery(1)
-            if not (player and perm and game):
-                return
-            # "if during an attack" — check if any of this player's Digimon is attacking
-            during_attack = any(
-                p.is_attacking for p in player.battle_area
-            )
-            if not during_attack:
-                return
-            # Target is a Digimon in the BREEDING AREA, not Alphamon itself
-            breeding = player.breeding_area
-            if breeding is None:
-                return
-            def digi_filter(c):
-                if getattr(c, 'level', None) is None or c.level > 6:
-                    return False
-                if not any('Chronicle' in t for t in getattr(c, 'card_traits', [])):
-                    return False
-                return True
-            # TODO: effect_digivolve_from_hand doesn't support trash zone
-            game.effect_digivolve_from_hand(
-                player, breeding, digi_filter, cost_override=0, is_optional=True)
+                # "if during an attack" — check if any Digimon is currently attacking
+                is_attacking = any(
+                    getattr(p, 'is_attacking', False) or getattr(p, 'is_suspended', False)
+                    for p in player.battle_area
+                )
+                # Also check game-level attack state if available
+                game_is_attacking = getattr(game, 'is_attacking', False)
+                if not (is_attacking or game_is_attacking):
+                    return
 
-        effect2.set_on_process_callback(process2)
-        effects.append(effect2)
+                # Must have a Digimon in the breeding area
+                breeding = player.breeding_area
+                if breeding is None:
+                    return
 
-        # Timing: EffectTiming.OnLoseSecurity
-        # [All Turns] (Once Per Turn) When security stacks are removed from, 1 of your opponent's Digimon gets -8000 DP for the turn.
+                def chronicle_filter(c):
+                    if not c.is_digimon:
+                        return False
+                    lvl = getattr(c, 'level', None)
+                    if lvl is None or lvl > 6:
+                        return False
+                    traits = getattr(c, 'card_traits', []) or []
+                    return any('Chronicle' in t for t in traits)
+
+                # Try hand first, then trash
+                hand_candidates = [c for c in player.hand_cards if chronicle_filter(c)]
+                trash_candidates = [c for c in player.trash_cards if chronicle_filter(c)]
+
+                if hand_candidates:
+                    game.effect_digivolve_from_hand(
+                        player, breeding, chronicle_filter,
+                        cost_override=0, is_optional=True,
+                        prompt="Select a Chronicle Digimon (Lv6 or lower) from hand to digivolve breeding Digimon."
+                    )
+                elif trash_candidates:
+                    # Digivolve from trash: pick first qualifying card
+                    chosen = trash_candidates[0]
+                    player.trash_cards.remove(chosen)
+                    breeding.add_card_source(chosen)
+                    breeding.turn_digivolved = game.turn_count
+
+            effect.set_on_process_callback(process)
+            return effect
+
+        effects.append(_make_on_enter_effect(is_when_digivolving=False))
+        effects.append(_make_on_enter_effect(is_when_digivolving=True))
+
+        # [All Turns][Once Per Turn] When security stacks are removed from,
+        # 1 of your opponent's Digimon gets -8000 DP for the turn.
         effect3 = ICardEffect()
         effect3.set_timing(EffectTiming.OnLoseSecurity)
-        effect3.set_effect_name("BT20-056 1 of your opponent's Digimon gets -8000 DP")
-        effect3.set_effect_description("[All Turns] (Once Per Turn) When security stacks are removed from, 1 of your opponent's Digimon gets -8000 DP for the turn.")
+        effect3.set_effect_name("BT20-056 1 of your opponent's Digimon gets -8000 DP for the turn")
+        effect3.set_effect_description(
+            "[All Turns] (Once Per Turn) When security stacks are removed from, "
+            "1 of your opponent's Digimon gets -8000 DP for the turn."
+        )
         effect3.set_max_count_per_turn(1)
         effect3.set_hash_string("RemovedSec_BT20_056")
 
-        effect = effect3  # alias for condition closure
         def condition3(context: Dict[str, Any]) -> bool:
             if card and card.permanent_of_this_card() is None:
                 return False
@@ -142,60 +133,76 @@ class BT20_056(CardScript):
         effect3.set_can_use_condition(condition3)
 
         def process3(ctx: Dict[str, Any]):
-            """Action: Select opponent's Digimon and apply -8000 DP"""
             player = ctx.get('player')
-            perm = ctx.get('permanent')
             game = ctx.get('game')
             if not (player and game):
                 return
+            from digimon_gym.engine.interfaces.modifiers import ModifierType
+
             def on_target(target_perm):
-                target_perm.change_dp(-8000)
+                game.register_modifier(
+                    target_perm,
+                    ModifierType.CHANGE_DP,
+                    value_fn=lambda current, p, c: current - 8000,
+                    expiry='end_of_turn',
+                )
+
             game.effect_select_opponent_permanent(
                 player, on_target,
                 filter_fn=lambda p: p.is_digimon and p.dp is not None,
-                is_optional=False)
+                is_optional=False,
+                prompt="Select 1 of your opponent's Digimon to give -8000 DP for the turn.",
+            )
 
         effect3.set_on_process_callback(process3)
         effects.append(effect3)
 
-        # Timing: EffectTiming.WhenRemoveField
-        # [All Turns] (Once Per Turn) When this Digimon would leave the battle area other than by your effects, if this Digimon is [Alphamon: Ouryuken], by trashing your top security card, it doesn't leave.
+        # [All Turns][Once Per Turn] When this Digimon would leave the battle area other than by
+        # your effects, if this Digimon is [Alphamon: Ouryuken], by trashing your top security card,
+        # it doesn't leave.  (Inherited — fires when digivolved under Alphamon: Ouryuken)
         effect4 = ICardEffect()
         effect4.set_timing(EffectTiming.WhenRemoveField)
-        effect4.set_effect_name("BT20-056 Trash your top security card to prevent this Digimon from leaving the battle area")
-        effect4.set_effect_description("[All Turns] (Once Per Turn) When this Digimon would leave the battle area other than by your effects, if this Digimon is [Alphamon: Ouryuken], by trashing your top security card, it doesn't leave.")
+        effect4.set_effect_name("BT20-056 ESS: Trash your top security card to prevent leaving the battle area")
+        effect4.set_effect_description(
+            "[All Turns] (Once Per Turn) When this Digimon would leave the battle area other than by "
+            "your effects, if this Digimon is [Alphamon: Ouryuken], by trashing your top security card, "
+            "it doesn't leave."
+        )
         effect4.is_inherited_effect = True
         effect4.is_optional = True
         effect4.set_max_count_per_turn(1)
         effect4.set_hash_string("TrashSecurityToStay_BT20_056")
 
-        effect = effect4  # alias for condition closure
         def condition4(context: Dict[str, Any]) -> bool:
             if card and card.permanent_of_this_card() is None:
                 return False
-            permanent = effect.effect_source_permanent if hasattr(effect, 'effect_source_permanent') else None
-            if not (permanent and (permanent.contains_card_name('Alphamon: Ouryuken'))):
+            perm = card.permanent_of_this_card()
+            if perm is None:
                 return False
-            # "other than by your effects" — only trigger if removal is by opponent
-            # TODO: check if removal is by opponent's effects (context key not yet standardized)
+            # Only fires if this Digimon's top card is Alphamon: Ouryuken
+            if not perm.contains_card_name('Alphamon: Ouryuken'):
+                return False
+            # "other than by your effects" — skip if removal is initiated by own effect
             if context.get('is_own_effect', False):
+                return False
+            # Must have a security card to pay the cost
+            owner = card.owner if card else None
+            if not owner or not owner.security_cards:
                 return False
             return True
 
         effect4.set_can_use_condition(condition4)
 
         def process4(ctx: Dict[str, Any]):
-            """Trash your top security card to prevent leaving the field."""
             player = ctx.get('player')
             perm = ctx.get('permanent')
-            game = ctx.get('game')
             if not player:
                 return
             # Cost: trash YOUR top security card
             if player.security_cards:
-                trashed = player.security_cards.pop(0)
-                player.trash_cards.append(trashed)
-            # The Digimon stays on field (removal prevention handled by engine)
+                player.trash_security_card(player.security_cards[0])
+            # Removal prevention is handled by the engine's WhenRemoveField hook
+            # when this optional effect fires and the process completes successfully.
 
         effect4.set_on_process_callback(process4)
         effects.append(effect4)

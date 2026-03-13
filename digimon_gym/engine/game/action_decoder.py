@@ -9,7 +9,7 @@ from typing import TYPE_CHECKING
 from .constants import (
     FIELD_SLOTS, TARGETS_PER_ATTACKER, FIELDS_PER_HAND, EFFECTS_PER_PERM,
     SOURCES_PER_FIELD, BREEDING_SLOT, SECURITY_TARGET, ACTION_SPACE_SIZE,
-    SEL_MY_FIELD_START, SEL_TRASH_START, SEL_TRASH_END,
+    SEL_MY_FIELD_START, SEL_TRASH_START, SEL_TRASH_END, HAND_MAIN_START,
 )
 from ..data.enums import GamePhase, EffectTiming
 
@@ -57,6 +57,8 @@ class ActionDecoderMixin:
     def _decode_main(self, action_id: int):
         if 0 <= action_id <= 29:
             self.action_play_card(action_id)
+        elif 30 <= action_id <= 59:
+            self._execute_hand_main_effect(action_id - HAND_MAIN_START)
         elif action_id == 62:
             self.action_pass_turn()
         elif 100 <= action_id <= 399:
@@ -366,6 +368,31 @@ class ActionDecoderMixin:
                 self._log_effect_activation(delay_effect, EffectTiming.AfterEffectsActivate)
                 delay_effect.record_activation()
                 delay_effect.on_process_callback(context)
+
+    def _execute_hand_main_effect(self, hand_idx: int):
+        """Execute a [Hand][Main] effect from a hand card."""
+        player = self.turn_player
+        if hand_idx >= len(player.hand_cards):
+            return
+        card = player.hand_cards[hand_idx]
+        effects = card.effect_list(EffectTiming.NoTiming)
+        for effect in effects:
+            if getattr(effect, '_is_hand_main', False):
+                context = {
+                    'game': self,
+                    'player': player,
+                    'card': card,
+                    'hand_idx': hand_idx,
+                    'permanent': None,
+                    'turn_player': self.turn_player,
+                    'opponent_player': self.opponent_player,
+                }
+                if effect.can_use_condition is None or effect.can_use_condition(context):
+                    self._log_effect_activation(effect, EffectTiming.NoTiming)
+                    effect.record_activation()
+                    effect.on_process_callback(context)
+                    self._recover_from_stale_selection()
+                    return
 
     def _decode_end_of_turn_action(self, action_id: int):
         """Handle end-of-turn keyword actions (Vortex, Overclock)."""

@@ -74,6 +74,8 @@ class BT13_007(CardScript):
         effect0.set_hash_string("CostReduce_BT13_007")
 
         def condition0(context: Dict[str, Any]) -> bool:
+            if context.get('card_source') is card:
+                return False
             if not (card and card.owner and card.owner.is_my_turn):
                 return False
             permanent = context.get("permanent")
@@ -86,9 +88,12 @@ class BT13_007(CardScript):
             return any("Royal Knight" in trait for trait in traits)
 
         effect0.set_can_use_condition(condition0)
-        effect0._cost_reduction_value_fn = (
-            lambda context: 4 + max(0, len(context.get("permanent").card_sources) - 1)
-        )
+        def _cost_reduction_fn(context):
+            perm = context.get("permanent") or card.permanent_of_this_card()
+            digi_card_count = max(0, len(perm.card_sources) - 1) if perm else 0
+            return 4 + digi_card_count
+
+        effect0._cost_reduction_value_fn = _cost_reduction_fn
 
         def process0(ctx: Dict[str, Any]):
             return

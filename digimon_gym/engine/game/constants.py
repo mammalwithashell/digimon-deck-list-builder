@@ -22,6 +22,7 @@ MAX_REVEALED = 10
 # Named slot indices for action formulas (breeding/security share index = FIELD_SLOTS)
 BREEDING_SLOT = FIELD_SLOTS       # 14 — virtual field index for breeding area
 SECURITY_TARGET = FIELD_SLOTS     # 14 — attack target index for security attack
+HAND_MAIN_START = 30              # [Hand][Main] effects: 30 + hand_idx
 
 # Per-slot layout: 1 (card_id) + 6 scalars + MAX_SOURCES * 3 (card_id + opt_state + dp_contribution)
 SOURCE_ENTRY_SIZE = 3             # card_id + opt_state + dp_contribution

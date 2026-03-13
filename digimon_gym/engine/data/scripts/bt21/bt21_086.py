@@ -33,7 +33,6 @@ class BT21_086(CardScript):
         effect1.set_effect_name("BT21-086 Memory +1")
         effect1.set_effect_description("[Start of Your Main Phase] If your opponent has a Digimon, gain 1 memory.")
 
-        effect = effect1  # alias for condition closure
         def condition1(context: Dict[str, Any]) -> bool:
             if card and card.permanent_of_this_card() is None:
                 return False
@@ -50,8 +49,6 @@ class BT21_086(CardScript):
         def process1(ctx: Dict[str, Any]):
             """Action: Gain 1 memory"""
             player = ctx.get('player')
-            perm = ctx.get('permanent')
-            game = ctx.get('game')
             if player:
                 player.add_memory(1)
 
@@ -66,7 +63,6 @@ class BT21_086(CardScript):
         effect2.set_effect_description("[On Play] 1 of your [Marcus Damon]s may suspend.")
         effect2.is_on_play = True
 
-        effect = effect2  # alias for condition closure
         def condition2(context: Dict[str, Any]) -> bool:
             if card and card.permanent_of_this_card() is None:
                 return False
@@ -76,14 +72,15 @@ class BT21_086(CardScript):
         effect2.set_can_use_condition(condition2)
 
         def process2(ctx: Dict[str, Any]):
-            """Action: Suspend 1 of your Marcus Damon tamers"""
+            """Action: Optionally suspend 1 of your Marcus Damon tamers."""
             player = ctx.get('player')
-            perm = ctx.get('permanent')
             game = ctx.get('game')
             if not (player and game):
                 return
+
             def on_suspend(target):
                 target.suspend()
+
             game.effect_select_own_permanent(
                 player, on_suspend,
                 filter_fn=lambda p: p.contains_card_name('Marcus Damon'),
@@ -93,7 +90,9 @@ class BT21_086(CardScript):
         effects.append(effect2)
 
         # Timing: EffectTiming.OnTappedAnyone
-        # [All Turns][Once Per Turn] When this Tamer suspends, 1 of your Digimon gains <Piercing> and +3000 DP for the turn. Then, 1 of your opponent's Digimon gets -3000 DP for the turn.
+        # [All Turns][Once Per Turn] When this Tamer suspends, 1 of your Digimon gains
+        # <Piercing> and +3000 DP for the turn. Then, 1 of your opponent's Digimon gets
+        # -3000 DP for the turn.
         effect3 = ICardEffect()
         effect3.set_timing(EffectTiming.OnTappedAnyone)
         effect3.set_effect_name("BT21-086 Piercing +3000 DP to ally, -3000 DP to enemy")
@@ -101,7 +100,6 @@ class BT21_086(CardScript):
         effect3.set_max_count_per_turn(1)
         effect3.set_hash_string("PiercingAndDPMinus_BT21_086")
 
-        effect = effect3  # alias for condition closure
         def condition3(context: Dict[str, Any]) -> bool:
             if card and card.permanent_of_this_card() is None:
                 return False
@@ -115,28 +113,32 @@ class BT21_086(CardScript):
         effect3.set_can_use_condition(condition3)
 
         def process3(ctx: Dict[str, Any]):
-            """Action: Select own Digimon for Piercing +3000 DP, then select opponent Digimon for -3000 DP"""
+            """Action: Select own Digimon for Piercing +3000 DP, then select opponent Digimon for -3000 DP."""
             player = ctx.get('player')
-            perm = ctx.get('permanent')
             game = ctx.get('game')
             if not (player and game):
                 return
 
-            # Step 1: 1 of your Digimon gains Piercing and +3000 DP
-            def on_ally_buff(target):
-                target.grant_keyword('_is_piercing')
-                target.change_dp(3000)
-
-            # Step 2: Then, 1 of your opponent's Digimon gets -3000 DP
+            # Step 2: Then, 1 of your opponent's Digimon gets -3000 DP (chained after step 1)
             def on_enemy_debuff(target):
                 target.change_dp(-3000)
 
+            def apply_enemy_debuff():
+                game.effect_select_opponent_permanent(
+                    player, on_enemy_debuff,
+                    filter_fn=lambda p: p.is_digimon,
+                    is_optional=False)
+
+            # Step 1: 1 of your Digimon gains Piercing and +3000 DP for the turn
+            def on_ally_buff(target):
+                # Grant Piercing for this turn only (duration = current turn count)
+                target.grant_keyword('_is_piercing', game.turn_count)
+                target.change_dp(3000)
+                # Chain: after ally selection resolves, select enemy target
+                apply_enemy_debuff()
+
             game.effect_select_own_permanent(
                 player, on_ally_buff,
-                filter_fn=lambda p: p.is_digimon,
-                is_optional=False)
-            game.effect_select_opponent_permanent(
-                player, on_enemy_debuff,
                 filter_fn=lambda p: p.is_digimon,
                 is_optional=False)
 

@@ -45,11 +45,26 @@ class BT23_072(CardScript):
         effect0.set_can_use_condition(condition0)
 
         def process0(ctx: Dict[str, Any]):
-            pass  # descriptive-tagged: hand_main_activation
-            # This is a hand-activated ability: pay 3 memory, place this card
-            # at index 0 (bottom) of the breeding permanent's card_sources,
-            # remove from hand, then draw 1. The engine does not currently
-            # support hand-activated [Main] abilities natively.
+            game = ctx.get('game')
+            player = ctx.get('player')
+            if not (game and player):
+                return
+            # Find the target breeding permanent (King Drasil_7D6 or Mother Eater)
+            breeding = player.breeding_area
+            if breeding is None:
+                return
+            if not (breeding.contains_card_name('King Drasil_7D6')
+                    or breeding.contains_card_name('Mother Eater')):
+                return
+            # Remove this card from hand
+            if card in player.hand_cards:
+                player.hand_cards.remove(card)
+            # Pay 3 cost
+            player.lose_memory(3)
+            # Place this card as the bottom digivolution card of the breeding permanent
+            breeding.add_card_source_bottom(card)
+            # Draw 1
+            player.draw_cards(1)
 
         effect0.set_on_process_callback(process0)
         effects.append(effect0)

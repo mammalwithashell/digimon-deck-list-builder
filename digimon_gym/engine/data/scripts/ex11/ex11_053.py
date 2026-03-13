@@ -106,38 +106,110 @@ class EX11_053(CardScript):
         effects.append(effect1)
 
         # Timing: EffectTiming.OnDestroyedAnyone
-        # Play Card
+        # [On Deletion] If you have 1 or fewer security cards, you may play 1
+        # [Omnimon (X Antibody)] from your hand or under your [King Drasil_7D6]s
+        # on the field without paying the cost. Then, place this card as the
+        # played Digimon's bottom digivolution card.
         effect2 = ICardEffect()
         effect2.set_timing(EffectTiming.OnDestroyedAnyone)
         effect2.set_effect_name("EX11-053 Play 1 [Omnimon (X Antibody)] and place this card under it.")
-        effect2.set_effect_description("Play Card")
+        effect2.set_effect_description(
+            "[On Deletion] If you have 1 or fewer security cards, you may play 1 "
+            "[Omnimon (X Antibody)] from your hand or under your [King Drasil_7D6]s "
+            "on the field without paying the cost. Then, place this card as the "
+            "played Digimon's bottom digivolution card."
+        )
         effect2.is_on_deletion = True
+        effect2.is_optional = True
 
-        effect = effect2  # alias for condition closure
         def condition2(context: Dict[str, Any]) -> bool:
-            # Triggered on deletion — validated by engine timing
-            permanent = effect.effect_source_permanent if hasattr(effect, 'effect_source_permanent') else None
-            if not (permanent and (permanent.contains_card_name('King Drasil_7D6'))):
+            player = card.owner if card else None
+            if not player:
                 return False
-            return True
+            # Condition: 1 or fewer security cards
+            if len(player.security_cards) > 1:
+                return False
+            # Must have an Omnimon (X Antibody) in hand OR under a King Drasil_7D6 on the field
+            def is_omnimon_xab(c):
+                return any('Omnimon (X Antibody)' in (n or '') for n in (getattr(c, 'card_names', []) or []))
+            has_target = any(is_omnimon_xab(c) for c in player.hand_cards)
+            if not has_target:
+                for p in player.battle_area:
+                    if p.contains_card_name('King Drasil_7D6'):
+                        # Search digivolution cards (card_sources[:-1])
+                        digi_sources = p.card_sources[:-1] if len(p.card_sources) > 1 else []
+                        if any(is_omnimon_xab(s) for s in digi_sources):
+                            has_target = True
+                            break
+            return has_target
 
         effect2.set_can_use_condition(condition2)
 
         def process2(ctx: Dict[str, Any]):
-            """Action: Play Card"""
+            """Action: Play Omnimon (X Antibody) from hand or King Drasil sources, then place this card under it."""
             player = ctx.get('player')
-            perm = ctx.get('permanent')
             game = ctx.get('game')
             if not (player and game):
                 return
-            def play_filter(c):
-                if not getattr(c, 'has_play_cost', False):
-                    return False
-                if not (any('Omnimon (X Antibody)' in _n for _n in getattr(c, 'card_names', []))):
-                    return False
-                return True
-            game.effect_play_from_zone(
-                player, 'hand', play_filter, free=True, is_optional=True)
+
+            def is_omnimon_xab(c):
+                return any('Omnimon (X Antibody)' in (n or '') for n in (getattr(c, 'card_names', []) or []))
+
+            # Build candidate list: Omnimon (X Antibody) from hand
+            candidates_hand = [c for c in player.hand_cards if is_omnimon_xab(c)]
+
+            # Omnimon (X Antibody) from under King Drasil_7D6s on field
+            candidates_drasil = []
+            for p in player.battle_area:
+                if p.contains_card_name('King Drasil_7D6'):
+                    digi_sources = list(p.card_sources[:-1]) if len(p.card_sources) > 1 else []
+                    for s in digi_sources:
+                        if is_omnimon_xab(s):
+                            candidates_drasil.append((p, s))
+
+            if not candidates_hand and not candidates_drasil:
+                return
+
+            def on_played(played_perm):
+                """After Omnimon is played, place this (deleted) Omekamon card under it."""
+                if played_perm is not None:
+                    played_perm.add_card_source_bottom(card)
+                    # Remove from trash if it was sent there on deletion
+                    if card in player.trash_cards:
+                        player.trash_cards.remove(card)
+
+            if candidates_hand:
+                # Play from hand
+                def hand_filter(c):
+                    return is_omnimon_xab(c)
+
+                def on_hand_select(selected_card):
+                    if selected_card in player.hand_cards:
+                        player.hand_cards.remove(selected_card)
+                    played_perm = player.play_card_from_source(selected_card, pay_cost=False)
+                    if played_perm:
+                        game.execute_effects(
+                            EffectTiming.OnEnterFieldAnyone,
+                            {"played_card": selected_card, "played_permanent": played_perm,
+                             "event_player": player},
+                        )
+                        on_played(played_perm)
+
+                game.effect_select_hand_card(
+                    player, hand_filter, on_hand_select, is_optional=True,
+                    prompt="Select [Omnimon (X Antibody)] from your hand to play.")
+            elif candidates_drasil:
+                # Play from under King Drasil_7D6
+                source_perm, source_card = candidates_drasil[0]
+                source_perm.card_sources.remove(source_card)
+                played_perm = player.play_card_from_source(source_card, pay_cost=False)
+                if played_perm:
+                    game.execute_effects(
+                        EffectTiming.OnEnterFieldAnyone,
+                        {"played_card": source_card, "played_permanent": played_perm,
+                         "event_player": player},
+                    )
+                    on_played(played_perm)
 
         effect2.set_on_process_callback(process2)
         effects.append(effect2)

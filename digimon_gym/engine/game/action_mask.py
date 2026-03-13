@@ -9,7 +9,7 @@ from typing import TYPE_CHECKING, List
 from .constants import (
     FIELD_SLOTS, TARGETS_PER_ATTACKER, FIELDS_PER_HAND, EFFECTS_PER_PERM,
     SOURCES_PER_FIELD, BREEDING_SLOT, SECURITY_TARGET, ACTION_SPACE_SIZE,
-    MAX_SOURCES, SEL_TRASH_START, SEL_TRASH_END,
+    MAX_SOURCES, SEL_TRASH_START, SEL_TRASH_END, HAND_MAIN_START,
 )
 from ..data.enums import GamePhase, EffectTiming
 from ..interfaces.modifiers import ModifierType
@@ -123,6 +123,17 @@ def build_action_mask(game: "Game", player_id: int) -> List[float]:
                 continue
             if has_valid_dna_targets(card, me.battle_area):
                 mask[63 + h] = 1.0
+
+        # [Hand][Main] effects (30-59): 30 + hand_idx
+        for h in range(min(len(me.hand_cards), 30)):
+            card = me.hand_cards[h]
+            effects = card.effect_list(EffectTiming.NoTiming)
+            for effect in effects:
+                if getattr(effect, '_is_hand_main', False):
+                    ctx = {'game': game, 'player': me}
+                    if effect.can_use_condition is None or effect.can_use_condition(ctx):
+                        mask[HAND_MAIN_START + h] = 1.0
+                        break
 
         # <Training>: suspend to place top deck card at bottom of digi stack (1000-1999)
         for i in range(min(len(me.battle_area), FIELD_SLOTS)):

@@ -75,6 +75,11 @@ class BT23_054(CardScript):
                 player.draw_cards(1)
             if not (player and game):
                 return
+            # Check if any valid targets exist before requesting selection
+            candidates = [p for p in player.battle_area if _rk_cs_filter(p)]
+            if not candidates:
+                return
+
             def on_select(selected_perm):
                 from digimon_gym.engine.interfaces.modifiers import ModifierType
                 game.register_modifier(
@@ -88,18 +93,17 @@ class BT23_054(CardScript):
                 prompt="Select a Digimon with [Royal Knight] or [CS] trait to protect from bouncing.")
 
         # Timing: EffectTiming.OnEnterFieldAnyone
-        # [On Play] <Draw 1> Then, 1 of your Digimon with the [Royal Knight] or [CS] trait can't be returned to hands or decks by your opponent's effects until their turn ends.
+        # [On Play] Draw 1. Then, 1 of your Digimon with [Royal Knight] or [CS] trait can't be returned
+        # to hands or decks by opponent's effects until their turn ends.
         effect3 = ICardEffect()
         effect3.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect3.set_effect_name("BT23-054 Draw 1, then give can't be returned to hand/deck")
         effect3.set_effect_description("[On Play] <Draw 1> Then, 1 of your Digimon with the [Royal Knight] or [CS] trait can't be returned to hands or decks by your opponent's effects until their turn ends.")
         effect3.is_on_play = True
 
-        effect = effect3  # alias for condition closure
         def condition3(context: Dict[str, Any]) -> bool:
             if card and card.permanent_of_this_card() is None:
                 return False
-            # Triggered on play — validated by engine timing
             return True
 
         effect3.set_can_use_condition(condition3)
@@ -112,18 +116,17 @@ class BT23_054(CardScript):
         effects.append(effect3)
 
         # Timing: EffectTiming.OnEnterFieldAnyone
-        # [When Digivolving] <Draw 1> Then, 1 of your Digimon with the [Royal Knight] or [CS] trait can't be returned to hands or decks by your opponent's effects until their turn ends.
+        # [When Digivolving] Draw 1. Then, 1 of your Digimon with [Royal Knight] or [CS] trait can't be returned
+        # to hands or decks by opponent's effects until their turn ends.
         effect4 = ICardEffect()
         effect4.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect4.set_effect_name("BT23-054 Draw 1, then give can't be returned to hand/deck")
         effect4.set_effect_description("[When Digivolving] <Draw 1> Then, 1 of your Digimon with the [Royal Knight] or [CS] trait can't be returned to hands or decks by your opponent's effects until their turn ends.")
         effect4.is_when_digivolving = True
 
-        effect = effect4  # alias for condition closure
         def condition4(context: Dict[str, Any]) -> bool:
             if card and card.permanent_of_this_card() is None:
                 return False
-            # Triggered when digivolving — validated by engine timing
             return True
 
         effect4.set_can_use_condition(condition4)

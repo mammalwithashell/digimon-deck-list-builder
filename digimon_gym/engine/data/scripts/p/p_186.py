@@ -19,9 +19,10 @@ class P_186(CardScript):
         effect0 = ICardEffect()
         effect0.set_effect_name("P-186 Alternate digivolution requirement")
         effect0.set_effect_description("Alternate digivolution requirement")
-        # Alternate digivolution: Lv.5 for cost 3
+        # Alternate digivolution: Lv.5 WarGrowlmon for cost 3
         effect0._alt_digi_cost = 3
         effect0._alt_digi_level = 5
+        effect0._alt_digi_name_filter = "WarGrowlmon"
 
         def condition0(context: Dict[str, Any]) -> bool:
             return True
@@ -98,20 +99,24 @@ class P_186(CardScript):
         effect4.set_can_use_condition(condition4)
 
         def _p186_delete_or_recovery(player, game):
-            """Delete 1 Digimon with 13000+ DP. If none deleted, Recovery +1."""
+            """Delete 1 Digimon (either field) with 13000+ DP. If none deleted, Recovery +1."""
             enemy = player.enemy if player else None
-            if not enemy:
-                player.recovery(1)
-                return
-
             high_filter = lambda p: p.is_digimon and p.dp is not None and p.dp >= 13000
-            has_target = any(high_filter(p) for p in enemy.battle_area)
+            # Check both fields for eligible targets
+            opp_targets = [p for p in enemy.battle_area if high_filter(p)] if enemy else []
+            own_targets = [p for p in player.battle_area if high_filter(p)] if player else []
 
-            if has_target:
-                def on_delete(target_perm):
+            if opp_targets:
+                # Prefer targeting opponent's Digimon if available
+                def on_delete_opp(target_perm):
                     enemy.delete_permanent(target_perm)
                 game.effect_select_opponent_permanent(
-                    player, on_delete, filter_fn=high_filter, is_optional=False)
+                    player, on_delete_opp, filter_fn=high_filter, is_optional=False)
+            elif own_targets:
+                def on_delete_own(target_perm):
+                    player.delete_permanent(target_perm)
+                game.effect_select_own_permanent(
+                    player, on_delete_own, filter_fn=high_filter, is_optional=False)
             else:
                 player.recovery(1)
 

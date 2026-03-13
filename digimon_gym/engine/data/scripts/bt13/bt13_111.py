@@ -22,6 +22,15 @@ class BT13_111(CardScript):
         effect0.set_effect_name("BT13-111 Reduce play cost by 2 per 5 trash cards")
         effect0.set_effect_description("When you would play this card, if you have no Digimon in play, reduce the play cost by 2 for every 5 cards in both players' trashes.")
 
+        def _trash_count():
+            owner = getattr(card, 'owner', None)
+            if not owner:
+                return 0
+            enemy = owner.enemy if owner else None
+            own_trash = len(owner.trash_cards)
+            opp_trash = len(enemy.trash_cards) if enemy else 0
+            return own_trash + opp_trash
+
         def condition0(context: Dict[str, Any]) -> bool:
             if context.get('card_source') is not card:
                 return False
@@ -31,12 +40,12 @@ class BT13_111(CardScript):
             # Must have no Digimon in play
             if any(p.is_digimon for p in owner.battle_area):
                 return False
-            return True
+            # Only active if there is at least a reduction of 1
+            return _trash_count() >= 5
 
         effect0.set_can_use_condition(condition0)
         effect0._cost_reduction_value_fn = (
-            lambda context: 2 * ((len(getattr(card, 'owner', None).trash_cards if getattr(card, 'owner', None) else []) +
-                                   len(getattr(card, 'owner', None).enemy.trash_cards if (getattr(card, 'owner', None) and getattr(card, 'owner', None).enemy) else [])) // 5)
+            lambda context: 2 * (_trash_count() // 5)
         )
         effects.append(effect0)
 

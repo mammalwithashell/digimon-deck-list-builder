@@ -24,7 +24,7 @@ class RB1_035(CardScript):
 
         # --- Effect 0: [Start of Your Turn] Memory gain if opponent has 3+ Tamers ---
         effect0 = ICardEffect()
-        effect0.set_timing(EffectTiming.OnStartMainPhase)
+        effect0.set_timing(EffectTiming.OnStartTurn)
         effect0.set_effect_name("RB1-035 Gain 1 memory if opponent has 3+ Tamers")
         effect0.set_effect_description(
             "[Start of Your Turn] If your opponent has 3 or more Tamers "

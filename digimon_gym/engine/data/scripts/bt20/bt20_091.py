@@ -77,7 +77,8 @@ class BT20_091(CardScript):
         # effect0b: [Your Turn] When any of your Digimon DIGIVOLVE, if they have
         # [Royal Knight] trait, by suspending this Tamer, <Draw 1> and gain 1 memory.
         effect0b = ICardEffect()
-        effect0b.set_timing(EffectTiming.WhenDigivolving)
+        effect0b.set_timing(EffectTiming.OnEnterFieldAnyone)
+        effect0b.is_when_digivolving = True
         effect0b.set_effect_name("BT20-091 Draw 1 and gain 1 memory (on digivolve)")
         effect0b.set_effect_description(
             "[Your Turn] When any of your Digimon digivolve, if any of them have "

@@ -7,7 +7,7 @@ The engine exposes `2168` discrete action IDs. Legal actions are provided by `ge
 | Range | Count | Meaning | Formula |
 |---|---:|---|---|
 | `0-29` | 30 | Play hand card | `hand_idx` |
-| `30-59` | 30 | Trash hand card | `30 + hand_idx` |
+| `30-59` | 30 | [Hand][Main] effect (Main) / Trash hand card (selection) | `30 + hand_idx` |
 | `60` | 1 | Hatch |
 | `61` | 1 | Move from breeding |
 | `62` | 1 | Pass / decline |
@@ -43,6 +43,7 @@ Action IDs are intentionally reused across phases.
 ### Main
 
 - `0-29`: play card from hand
+- `30-59`: activate [Hand][Main] effect on hand card (`30 + hand_idx`)
 - `62`: pass turn
 - `63-92`: initiate DNA digivolve
 - `100-399`: attack (`target=14` means security)

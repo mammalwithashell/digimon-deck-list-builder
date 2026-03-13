@@ -2,7 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
-from ....data.enums import EffectTiming
+from ....data.enums import EffectTiming, GamePhase
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -17,42 +17,39 @@ class EX10_032(CardScript):
         # [Hand] [Main] If you have [Close], by placing 1 [Landramon] from your trash as
         # any of your [Sunarizamon]'s bottom digivolution card, it digivolves into this card
         # for a digivolution cost of 3, ignoring digivolution requirements.
-        # This is a Hand/Main effect — fires from OnStartMainPhase while the card is in hand.
         effect_hand = ICardEffect()
-        effect_hand.set_timing(EffectTiming.OnStartMainPhase)
-        effect_hand.set_effect_name("EX10-032 [Hand][Main] Digivolve Sunarizamon via Landramon from trash for 3")
+        effect_hand._is_hand_main = True
+        effect_hand.set_effect_name("EX10-032 [Hand][Main] Place Landramon, digivolve onto Sunarizamon")
         effect_hand.set_effect_description(
             "[Hand] [Main] If you have [Close], by placing 1 [Landramon] from your trash as "
             "any of your [Sunarizamon]'s bottom digivolution card, it digivolves into this card "
             "for a digivolution cost of 3, ignoring digivolution requirements."
         )
-        effect_hand.is_optional = True
 
         def condition_hand(context: Dict[str, Any]) -> bool:
-            # Card must be in hand (not on field)
-            if card and card.permanent_of_this_card() is not None:
+            if card.permanent_of_this_card() is not None:
+                return False  # must be in hand
+            player = card.owner
+            if not player or not player.is_my_turn:
                 return False
-            owner = card.owner if card else None
-            if not owner or not owner.is_my_turn:
-                return False
-            # Must have a card named [Close] on field
+            # Must have Close tamer on field
             has_close = any(
                 p.contains_card_name('Close')
-                for p in owner.battle_area
+                for p in player.battle_area
             )
             if not has_close:
                 return False
-            # Must have a Landramon in trash
+            # Must have Landramon in trash
             has_landramon = any(
-                any('Landramon' in n for n in getattr(c, 'card_names', []))
-                for c in owner.trash_cards
+                any('Landramon' in (n or '') for n in (getattr(c, 'card_names', []) or []))
+                for c in player.trash_cards
             )
             if not has_landramon:
                 return False
-            # Must have a Sunarizamon on field
+            # Must have Sunarizamon on field
             has_sunarizamon = any(
                 p.contains_card_name('Sunarizamon')
-                for p in owner.battle_area
+                for p in player.battle_area
             )
             if not has_sunarizamon:
                 return False
@@ -61,47 +58,68 @@ class EX10_032(CardScript):
         effect_hand.set_can_use_condition(condition_hand)
 
         def process_hand(ctx: Dict[str, Any]):
-            player = ctx.get('player')
             game = ctx.get('game')
-            if not (player and game):
+            player = ctx.get('player')
+            hand_card = ctx.get('card')
+            if not (game and player and hand_card):
                 return
 
-            # Find target Sunarizamon to digivolve
-            sunarizamon_targets = [
-                p for p in player.battle_area if p.contains_card_name('Sunarizamon')
-            ]
-            if not sunarizamon_targets:
+            def _is_landramon(c):
+                names = getattr(c, 'card_names', []) or []
+                return any('Landramon' in (n or '') for n in names)
+
+            # Let agent choose which Landramon from trash
+            def on_landramon_selected(trash_idx):
+                if trash_idx >= len(player.trash_cards):
+                    return
+                landramon = player.trash_cards[trash_idx]
+
+                # Select a Sunarizamon on field to digivolve onto
+                def on_sunarizamon_selected(target_perm):
+                    # Place Landramon from trash as bottom digi card
+                    if landramon in player.trash_cards:
+                        player.trash_cards.remove(landramon)
+                    target_perm.add_card_source_bottom(landramon)
+                    game.logger.log(
+                        f"[Hand][Main] Placed {game._card_ref(landramon)} "
+                        f"under {game._perm_ref(target_perm)}")
+
+                    # Remove Proganomon from hand and digivolve
+                    if hand_card in player.hand_cards:
+                        player.hand_cards.remove(hand_card)
+                    target_perm.add_card_source(hand_card)
+                    target_perm.turn_digivolved = game.turn_count
+                    player.lose_memory(3)
+                    game.logger.log(
+                        f"[Hand][Main] Digivolved {game._card_ref(hand_card)} "
+                        f"onto {game._perm_ref(target_perm)} (cost: 3)")
+                    player.draw()
+                    game.execute_effects(EffectTiming.WhenDigivolving,
+                                         {"digivolved_permanent": target_perm})
+
+                game.effect_select_own_permanent(
+                    player, on_sunarizamon_selected,
+                    filter_fn=lambda p: p.contains_card_name('Sunarizamon'),
+                    is_optional=False,
+                    prompt="Select a [Sunarizamon] to digivolve into Proganomon.")
+
+            # Build valid trash indices for Landramon cards
+            _SEL_TRASH_START = 130
+            valid_trash = []
+            for i, c in enumerate(player.trash_cards):
+                if _is_landramon(c):
+                    valid_trash.append(_SEL_TRASH_START + i)
+            if not valid_trash:
                 return
 
-            # Find Landramon in trash
-            landramon = None
-            for c in player.trash_cards:
-                if any('Landramon' in n for n in getattr(c, 'card_names', [])):
-                    landramon = c
-                    break
-            if not landramon:
-                return
+            def _on_trash_action(action_id):
+                idx = action_id - _SEL_TRASH_START
+                on_landramon_selected(idx)
 
-            def on_target(target_perm):
-                # Place Landramon from trash as bottom digivolution card
-                player.trash_cards.remove(landramon)
-                target_perm.add_card_source_bottom(landramon)
-                # Now digivolve the selected Sunarizamon into this card for cost 3
-                def this_card_filter(c):
-                    return c is card
-                game.effect_digivolve_from_hand(
-                    player, target_perm,
-                    filter_fn=this_card_filter,
-                    cost_override=3,
-                    ignore_requirements=True,
-                    is_optional=False
-                )
-
-            game.effect_select_own_permanent(
-                player, on_target,
-                filter_fn=lambda p: p.contains_card_name('Sunarizamon'),
-                is_optional=True
-            )
+            game.request_selection(
+                GamePhase.SelectTrash, player, _on_trash_action,
+                valid_trash, is_optional=False,
+                prompt="Select a [Landramon] from your trash to place under [Sunarizamon].")
 
         effect_hand.set_on_process_callback(process_hand)
         effects.append(effect_hand)

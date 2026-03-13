@@ -2,7 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
-from ....data.enums import EffectTiming, GamePhase
+from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -23,7 +23,6 @@ class BT13_102(CardScript):
         effect0.set_effect_description("[On Play] Your opponent may trash 1 Tamer card or Option card in their hand. If they don't, gain 1 memory and <Draw 1>.")
         effect0.is_on_play = True
 
-        effect = effect0  # alias for condition closure
         def condition0(context: Dict[str, Any]) -> bool:
             if card and card.permanent_of_this_card() is None:
                 return False
@@ -34,7 +33,6 @@ class BT13_102(CardScript):
         def process0(ctx: Dict[str, Any]):
             """Action: Opponent may trash 1 Tamer/Option from hand; if not, gain 1 memory + draw 1."""
             player = ctx.get('player')
-            perm = ctx.get('permanent')
             game = ctx.get('game')
             if not (player and game):
                 return
@@ -50,7 +48,7 @@ class BT13_102(CardScript):
                 player.add_memory(1)
                 player.draw_cards(1)
 
-            # Build valid indices for the opponent's hand
+            # Build valid indices for the opponent's hand (Tamer or Option cards only)
             valid = []
             for i, c in enumerate(enemy.hand_cards):
                 if hand_filter(c):
@@ -68,6 +66,7 @@ class BT13_102(CardScript):
                     enemy.hand_cards.remove(selected)
                     enemy.trash_cards.append(selected)
 
+            from ....data.enums import GamePhase
             game.request_selection(
                 GamePhase.SelectHand, enemy, on_select, valid,
                 is_optional=True,
@@ -85,9 +84,9 @@ class BT13_102(CardScript):
         effect1.set_effect_name("BT13-102 Suspend to gain memory")
         effect1.set_effect_description("[Opponent's Turn] When an effect plays a Digimon, by suspending this Tamer, gain 1 memory.")
         effect1.is_optional = True
-        effect1.is_on_play = True
+        # NOTE: is_on_play must NOT be set here — this is a reactive trigger on opponent's turn,
+        # not an On Play effect of Keenan Crier itself.
 
-        effect = effect1  # alias for condition closure
         def condition1(context: Dict[str, Any]) -> bool:
             if card and card.permanent_of_this_card() is None:
                 return False
@@ -98,6 +97,12 @@ class BT13_102(CardScript):
             this_perm = card.permanent_of_this_card()
             if this_perm and this_perm.is_suspended:
                 return False
+            # Must be triggered by a Digimon entering the field (effect-played)
+            entering_perm = context.get('permanent')
+            if entering_perm is None:
+                return False
+            if not getattr(entering_perm, 'is_digimon', False):
+                return False
             return True
 
         effect1.set_can_use_condition(condition1)
@@ -105,12 +110,14 @@ class BT13_102(CardScript):
         def process1(ctx: Dict[str, Any]):
             """Action: Suspend this Tamer, gain 1 memory."""
             player = ctx.get('player')
-            perm = ctx.get('permanent')
             game = ctx.get('game')
-            if not (player and perm):
+            if not player:
+                return
+            this_perm = card.permanent_of_this_card() if card else None
+            if not this_perm:
                 return
             # Cost: suspend this Tamer
-            perm.suspend()
+            this_perm.suspend()
             # Reward: gain 1 memory
             player.add_memory(1)
 

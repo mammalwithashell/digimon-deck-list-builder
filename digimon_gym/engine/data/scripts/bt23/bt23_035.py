@@ -15,25 +15,31 @@ class BT23_035(CardScript):
         effects = []
 
         # Factory effect: alt_digivolve_req
-        # Alternate digivolution requirement
+        # Alternate digivolution: Lv.5 with [Witchelny] trait (or CS trait) for cost 3
         effect0 = ICardEffect()
         effect0.set_effect_name("BT23-035 Alternate digivolution requirement")
         effect0.set_effect_description("Alternate digivolution requirement")
-        # Alternate digivolution: Lv.5 with [Witchelny] trait for cost 3
         effect0._alt_digi_cost = 3
         effect0._alt_digi_level = 5
         effect0._alt_digi_trait = "Witchelny"
 
         def condition0(context: Dict[str, Any]) -> bool:
             permanent = card.permanent_of_this_card() if card else None
-            if not (permanent and permanent.top_card and (any('Witchelny' in tr for tr in (getattr(permanent.top_card, 'card_traits', []) or [])))):
+            if not permanent or not permanent.top_card:
                 return False
-            return True
+            traits = getattr(permanent.top_card, 'card_traits', []) or []
+            level = getattr(permanent.top_card, 'level', None)
+            if level != 5:
+                return False
+            return (
+                any('Witchelny' in tr for tr in traits)
+                or any('CS' in tr for tr in traits)
+            )
+
         effect0.set_can_use_condition(condition0)
         effects.append(effect0)
 
         # Factory effect: barrier
-        # Barrier
         effect1 = ICardEffect()
         effect1.set_effect_name("BT23-035 Barrier")
         effect1.set_effect_description("Barrier")
@@ -41,8 +47,32 @@ class BT23_035(CardScript):
 
         def condition1(context: Dict[str, Any]) -> bool:
             return True
+
         effect1.set_can_use_condition(condition1)
         effects.append(effect1)
+
+        def _shared_dp_debuff(ctx: Dict[str, Any]):
+            """Cost: trash top security. Effect: all opponent Digimon -6000 DP for the turn."""
+            player = ctx.get('player')
+            game = ctx.get('game')
+            if not player:
+                return
+            if not player.security_cards:
+                return
+            # Cost: trash the top security card (index 0)
+            top_security = player.security_cards[0]
+            player.trash_security_card(top_security)
+            # Effect: all opponent Digimon get -6000 DP for the turn via modifier
+            enemy = player.enemy if player else None
+            if enemy and game:
+                from digimon_gym.engine.interfaces.modifiers import ModifierType
+                for p in enemy.battle_area:
+                    if p.is_digimon:
+                        game.register_modifier(
+                            p, ModifierType.CHANGE_DP,
+                            value_fn=lambda: -6000,
+                            expiry='end_of_turn',
+                        )
 
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [On Play] By trashing your top security card, all of your opponent's Digimon get -6000 DP for the turn.
@@ -51,10 +81,8 @@ class BT23_035(CardScript):
         effect2.set_effect_name("BT23-035 By trashing your top security, -6000 all opponent digimon")
         effect2.set_effect_description("[On Play] By trashing your top security card, all of your opponent's Digimon get -6000 DP for the turn.")
         effect2.is_on_play = True
-
         effect2.is_optional = True
 
-        effect = effect2  # alias for condition closure
         def condition2(context: Dict[str, Any]) -> bool:
             if card and card.permanent_of_this_card() is None:
                 return False
@@ -66,24 +94,7 @@ class BT23_035(CardScript):
         effect2.set_can_use_condition(condition2)
 
         def process2(ctx: Dict[str, Any]):
-            """Action: Trash own top security, then all opponent Digimon get -6000 DP"""
-            player = ctx.get('player')
-            perm = ctx.get('permanent')
-            game = ctx.get('game')
-            if not player:
-                return
-            # Cost: Trash player's own top security card
-            if player.security_cards:
-                trashed = player.security_cards.pop(0)
-                player.trash_cards.append(trashed)
-            else:
-                return
-            # Effect: All opponent Digimon get -6000 DP for the turn
-            enemy = player.enemy if player else None
-            if enemy:
-                for p in enemy.battle_area:
-                    if p.is_digimon:
-                        p.change_dp(-6000)
+            _shared_dp_debuff(ctx)
 
         effect2.set_on_process_callback(process2)
         effects.append(effect2)
@@ -95,10 +106,8 @@ class BT23_035(CardScript):
         effect3.set_effect_name("BT23-035 By trashing your top security, -6000 all opponent digimon")
         effect3.set_effect_description("[When Digivolving] By trashing your top security card, all of your opponent's Digimon get -6000 DP for the turn.")
         effect3.is_when_digivolving = True
-
         effect3.is_optional = True
 
-        effect = effect3  # alias for condition closure
         def condition3(context: Dict[str, Any]) -> bool:
             if card and card.permanent_of_this_card() is None:
                 return False
@@ -110,30 +119,15 @@ class BT23_035(CardScript):
         effect3.set_can_use_condition(condition3)
 
         def process3(ctx: Dict[str, Any]):
-            """Action: Trash own top security, then all opponent Digimon get -6000 DP"""
-            player = ctx.get('player')
-            perm = ctx.get('permanent')
-            game = ctx.get('game')
-            if not player:
-                return
-            # Cost: Trash player's own top security card
-            if player.security_cards:
-                trashed = player.security_cards.pop(0)
-                player.trash_cards.append(trashed)
-            else:
-                return
-            # Effect: All opponent Digimon get -6000 DP for the turn
-            enemy = player.enemy if player else None
-            if enemy:
-                for p in enemy.battle_area:
-                    if p.is_digimon:
-                        p.change_dp(-6000)
+            _shared_dp_debuff(ctx)
 
         effect3.set_on_process_callback(process3)
         effects.append(effect3)
 
         # Timing: EffectTiming.OnLoseSecurity
-        # When your security stack is removed from, this Digimon gains <Security A. +1> until your turn ends. Then, if you have 3 or fewer security cards, <Recovery +1 (Deck)>
+        # [All Turns] [Once Per Turn] When your security stack is removed from, this Digimon gains
+        # <Security A. +1> until your turn ends. Then, if you have 3 or fewer security cards,
+        # <Recovery +1 (Deck)>.
         effect4 = ICardEffect()
         effect4.set_timing(EffectTiming.OnLoseSecurity)
         effect4.set_effect_name("BT23-035 Gain Sec +1. then if you are 3- security, Recovery")
@@ -141,9 +135,13 @@ class BT23_035(CardScript):
         effect4.set_max_count_per_turn(1)
         effect4.set_hash_string("BT23_035_AT")
 
-        effect = effect4  # alias for condition closure
         def condition4(context: Dict[str, Any]) -> bool:
             if card and card.permanent_of_this_card() is None:
+                return False
+            # Only fires when YOUR security is removed
+            losing_player = context.get('player')
+            owner = card.owner if card else None
+            if losing_player is not None and owner is not None and losing_player is not owner:
                 return False
             return True
 
@@ -154,19 +152,23 @@ class BT23_035(CardScript):
             player = ctx.get('player')
             perm = ctx.get('permanent')
             game = ctx.get('game')
-            if not (player and game and perm):
+            if not (player and game):
+                return
+            my_perm = card.permanent_of_this_card() if card else None
+            if my_perm is None:
                 return
             # Grant Security Attack +1 until your turn ends
             from digimon_gym.engine.interfaces.modifiers import ModifierType
             game.register_modifier(
-                perm, ModifierType.CHANGE_SECURITY_ATTACK,
-                value_fn=lambda current, target, ctx: current + 1,
-                source_effect=effect,
-                expiry='end_of_turn'
+                my_perm, ModifierType.CHANGE_SECURITY_ATTACK,
+                value_fn=lambda current, target, ctx2: current + 1,
+                source_effect=effect4,
+                expiry='end_of_turn',
             )
             # Then, if you have 3 or fewer security cards, Recovery +1 (Deck)
-            if len(player.security_cards) <= 3:
-                player.recovery(1)
+            owner = card.owner if card else None
+            if owner and len(owner.security_cards) <= 3:
+                owner.recovery(1)
 
         effect4.set_on_process_callback(process4)
         effects.append(effect4)

@@ -14,7 +14,7 @@ export function decodeAction(id: number): string {
     return `Play hand card ${id}`;
   }
   if (id >= ACTION.TRASH_START && id <= ACTION.TRASH_END) {
-    return `Trash hand card ${id - ACTION.TRASH_START}`;
+    return `Activate [Hand] effect on hand card ${id - ACTION.TRASH_START}`;
   }
   if (id === ACTION.HATCH) return 'Hatch from egg deck';
   if (id === ACTION.MOVE) return 'Move from breeding area';

@@ -14,13 +14,11 @@ class BT8_094(CardScript):
     def get_card_effects(self, card: 'CardSource') -> List['ICardEffect']:
         effects = []
 
-        # Timing: EffectTiming.OnRemovedField
+        # Timing: EffectTiming.OnDestroyedAnyone
         # [All Turns] When one of your opponent's level 5 or lower Digimon is deleted,
         # you may suspend this Tamer to <Draw 1>.
-        # Uses OnRemovedField so it fires from the global execute_effects scan
-        # (OnDestroyedAnyone only scans the deleted permanent's own card sources).
         effect0 = ICardEffect()
-        effect0.set_timing(EffectTiming.OnRemovedField)
+        effect0.set_timing(EffectTiming.OnDestroyedAnyone)
         effect0.set_effect_name("BT8-094 Draw 1")
         effect0.set_effect_description(
             "[All Turns] When one of your opponent's level 5 or lower Digimon is deleted, "

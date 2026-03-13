@@ -77,17 +77,26 @@ class BT20_100(CardScript):
         def condition2(context: Dict[str, Any]) -> bool:
             if card and card.permanent_of_this_card() is None:
                 return False
-            # Check if the permanent leaving is one of our Digimon with Omnimon in name
-            leaving_perm = context.get('permanent')
-            player_ctx = context.get('player')
-            if not leaving_perm or not player_ctx:
+            # The Delay can only be used after the placing turn
+            own_perm = card.permanent_of_this_card()
+            game_ctx = context.get('game')
+            if own_perm and game_ctx:
+                turn_played = getattr(own_perm, 'turn_played', None)
+                if turn_played is not None and game_ctx.turn_count <= turn_played:
+                    return False
+            # event_permanent is the permanent that is leaving the field
+            # (context['permanent'] is this effect's own permanent — BT20-100 itself)
+            leaving_perm = context.get('event_permanent')
+            event_player = context.get('event_player')
+            if not leaving_perm or not event_player:
                 return False
-            # Must be our Digimon
+            # Must be our own Digimon
             owner = card.owner if card else None
-            if not owner or player_ctx is not owner:
+            if not owner or event_player is not owner:
                 return False
             if not getattr(leaving_perm, 'is_digimon', False):
                 return False
+            # contains_card_name matches 'Omnimon' and 'Omnimon (X Antibody)' — correct
             if not leaving_perm.contains_card_name('Omnimon'):
                 return False
             return True
@@ -95,12 +104,19 @@ class BT20_100(CardScript):
         effect2.set_can_use_condition(condition2)
 
         def process2(ctx: Dict[str, Any]):
-            """Action: Prevent 1 Omnimon from leaving the battle area"""
-            # The WhenRemoveField timing fires when a permanent would leave.
-            # By activating the delay, the engine trashes this option card.
-            # The actual prevention is handled via the WhenRemoveField timing
-            # interaction with the engine's removal pipeline.
-            pass
+            """Delay activation cost: trash this option card from the battle area.
+            The engine handles keeping the Omnimon on field when a WhenRemoveField
+            optional effect resolves its process callback."""
+            player = ctx.get('player')
+            game = ctx.get('game')
+            if not player:
+                return
+            # Trash this option card's permanent from the battle area
+            own_perm = card.permanent_of_this_card() if card else None
+            if own_perm and own_perm in player.battle_area:
+                player.battle_area.remove(own_perm)
+                for cs in list(own_perm.card_sources):
+                    player.trash_cards.append(cs)
 
         effect2.set_on_process_callback(process2)
         effects.append(effect2)

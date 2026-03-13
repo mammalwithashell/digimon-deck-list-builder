@@ -2,7 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
-from ....data.enums import EffectTiming
+from ....data.enums import EffectTiming, GamePhase
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -14,19 +14,24 @@ class BT24_016(CardScript):
     def get_card_effects(self, card: 'CardSource') -> List['ICardEffect']:
         effects = []
 
-        # [Hand][Main] Alt-digi pattern:
-        # If you have [Owen Dreadnought] tamer on field AND [Dimetromon] in trash,
-        # digivolve from [Elizamon] for cost 3, ignoring digivolution requirements.
+        # [Hand][Main] If you have [Owen Dreadnought], by placing 1 [Dimetromon]
+        # from your trash as any of your [Elizamon]'s bottom digivolution card,
+        # it digivolves into this card for a cost of 3, ignoring requirements.
         effect0 = ICardEffect()
-        effect0.set_effect_name("BT24-016 Place 1 [Dimetromon] from trash under 1 [Elizamon], to digivolve for 3")
-        effect0.set_effect_description("[Hand] [Main] If you have [Owen Dreadnought], by placing 1 [Dimetromon] from your trash as any of your [Elizamon]'s bottom digivolution card, it digivolves into this card for a digivolution cost of 3, ignoring digivolution requirements.")
-        effect0._alt_digi_name = "Elizamon"
-        effect0._alt_digi_cost = 3
+        effect0._is_hand_main = True
+        effect0.set_effect_name("BT24-016 [Hand][Main] Place Dimetromon, digivolve onto Elizamon")
+        effect0.set_effect_description(
+            "[Hand] [Main] If you have [Owen Dreadnought], by placing 1 "
+            "[Dimetromon] from your trash as any of your [Elizamon]'s bottom "
+            "digivolution card, it digivolves into this card for a digivolution "
+            "cost of 3, ignoring digivolution requirements.")
 
         def condition0(context: Dict[str, Any]) -> bool:
-            if not (card and card.owner):
-                return False
+            if card.permanent_of_this_card() is not None:
+                return False  # must be in hand
             player = card.owner
+            if not player or not player.is_my_turn:
+                return False
             # Must have Owen Dreadnought tamer on field
             has_owen = any(
                 p.contains_card_name('Owen Dreadnought')
@@ -41,9 +46,82 @@ class BT24_016(CardScript):
             )
             if not has_dimetromon_in_trash:
                 return False
+            # Must have Elizamon on field
+            has_elizamon = any(
+                p.contains_card_name('Elizamon')
+                for p in player.battle_area
+            )
+            if not has_elizamon:
+                return False
             return True
 
         effect0.set_can_use_condition(condition0)
+
+        def process0(ctx: Dict[str, Any]):
+            game = ctx.get('game')
+            player = ctx.get('player')
+            hand_card = ctx.get('card')
+            if not (game and player and hand_card):
+                return
+
+            def _is_dimetromon(c):
+                names = getattr(c, 'card_names', []) or []
+                return any('Dimetromon' in (n or '') for n in names)
+
+            # Let agent choose which Dimetromon from trash
+            def on_dimetromon_selected(trash_idx):
+                if trash_idx >= len(player.trash_cards):
+                    return
+                dimetromon = player.trash_cards[trash_idx]
+
+                # Select an Elizamon on field to digivolve onto
+                def on_elizamon_selected(target_perm):
+                    # Place Dimetromon from trash as bottom digi card
+                    if dimetromon in player.trash_cards:
+                        player.trash_cards.remove(dimetromon)
+                    target_perm.add_card_source_bottom(dimetromon)
+                    game.logger.log(
+                        f"[Hand][Main] Placed {game._card_ref(dimetromon)} "
+                        f"under {game._perm_ref(target_perm)}")
+
+                    # Remove Lamiamon from hand and digivolve
+                    if hand_card in player.hand_cards:
+                        player.hand_cards.remove(hand_card)
+                    target_perm.add_card_source(hand_card)
+                    target_perm.turn_digivolved = game.turn_count
+                    player.lose_memory(3)
+                    game.logger.log(
+                        f"[Hand][Main] Digivolved {game._card_ref(hand_card)} "
+                        f"onto {game._perm_ref(target_perm)} (cost: 3)")
+                    player.draw()
+                    game.execute_effects(EffectTiming.WhenDigivolving,
+                                         {"digivolved_permanent": target_perm})
+
+                game.effect_select_own_permanent(
+                    player, on_elizamon_selected,
+                    filter_fn=lambda p: p.contains_card_name('Elizamon'),
+                    is_optional=False,
+                    prompt="Select an [Elizamon] to digivolve into Lamiamon.")
+
+            # Build valid trash indices for Dimetromon cards
+            _SEL_TRASH_START = 130
+            valid_trash = []
+            for i, c in enumerate(player.trash_cards):
+                if _is_dimetromon(c):
+                    valid_trash.append(_SEL_TRASH_START + i)
+            if not valid_trash:
+                return
+
+            def _on_trash_action(action_id):
+                idx = action_id - _SEL_TRASH_START
+                on_dimetromon_selected(idx)
+
+            game.request_selection(
+                GamePhase.SelectTrash, player, _on_trash_action,
+                valid_trash, is_optional=False,
+                prompt="Select a [Dimetromon] from your trash to place under [Elizamon].")
+
+        effect0.set_on_process_callback(process0)
         effects.append(effect0)
 
         # Shared process for the security-manipulation effect (used by both WhenDigivolving and OnUseAttack)

@@ -71,11 +71,11 @@ class BT20_102(CardScript):
             """Check if [Omnimon] or [X Antibody] is in this Digimon's digivolution cards."""
             if not permanent:
                 return False
-            # digivolution cards = card_sources[:-1] (everything under top card)
+            # digivolution cards = all card_sources under the top card (bottom-to-top, top is [-1])
             for src in permanent.card_sources[:-1]:
                 if src.contains_card_name('Omnimon'):
                     return True
-                if any('X Antibody' in n for n in getattr(src, 'card_names', [])):
+                if any('X Antibody' in t for t in getattr(src, 'card_traits', [])):
                     return True
             return False
 
@@ -226,6 +226,7 @@ class BT20_102(CardScript):
 
         def process5(ctx: Dict[str, Any]):
             """Action: 1 of your Digimon gains Rush + attack without suspending"""
+            from ....interfaces.modifiers import ModifierType
             player = ctx.get('player')
             perm = ctx.get('permanent')
             game = ctx.get('game')
@@ -235,7 +236,6 @@ class BT20_102(CardScript):
                 return p.is_digimon
             def on_grant(target_perm):
                 target_perm.grant_keyword('_is_rush')
-                from digimon_gym.engine.interfaces.modifiers import ModifierType
                 game.register_modifier(
                     target_perm, ModifierType.CAN_ATTACK_UNSUSPENDED,
                     value_fn=lambda: True, expiry='end_of_turn')

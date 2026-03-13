@@ -22,7 +22,6 @@ class EX11_071(CardScript):
         effect0.set_effect_description("[On Play] Reveal the top 3 cards of your deck. Add 1 [Omekamon] or [Omnimon (X Antibody)] and 1 [Royal Knight] or [LIBERATOR] trait card among them to the hand. Return the rest to the bottom of the deck.")
         effect0.is_on_play = True
 
-        effect = effect0  # alias for condition closure
         def condition0(context: Dict[str, Any]) -> bool:
             if card and card.permanent_of_this_card() is None:
                 return False
@@ -32,24 +31,17 @@ class EX11_071(CardScript):
         effect0.set_can_use_condition(condition0)
 
         def process0(ctx: Dict[str, Any]):
-            """Action: Add To Hand, Reveal And Select"""
+            """Action: Reveal And Select Multi"""
             player = ctx.get('player')
-            perm = ctx.get('permanent')
             game = ctx.get('game')
-            # Add card to hand (from trash/reveal)
-            if player and player.trash_cards:
-                card_to_add = player.trash_cards.pop()
-                player.hand_cards.append(card_to_add)
             if not (player and game):
                 return
             def reveal_filter_0(c):
-                if not (any('Omekamon' in _n or 'Omnimon (X Antibody)' in _n for _n in getattr(c, 'card_names', []))):
-                    return False
-                return True
+                # Exact name match for Omekamon, and exact full-string match for Omnimon (X Antibody)
+                names = getattr(c, 'card_names', []) or []
+                return any('Omekamon' in _n or 'Omnimon (X Antibody)' in _n for _n in names)
             def reveal_filter_1(c):
-                if not (any('Royal Knight' in _t or 'LIBERATOR' in _t for _t in (getattr(c, 'card_traits', []) or []))):
-                    return False
-                return True
+                return any('Royal Knight' in _t or 'LIBERATOR' in _t for _t in (getattr(c, 'card_traits', []) or []))
             game.effect_reveal_and_select_multi(
                 player, 3, [(reveal_filter_0, 'hand'), (reveal_filter_1, 'hand')],
                 remaining_placement='deck_bottom', is_optional=True)
@@ -64,9 +56,7 @@ class EX11_071(CardScript):
         effect1.set_effect_name("EX11-071 Return tamer to play 4 cost or higher [Royal Knight] or [LIBERATOR] trait card for 2 less")
         effect1.set_effect_description("[Main] By returning this Tamer to the bottom of the deck, you may play 1 play cost 4 or higher [Royal Knight] or [LIBERATOR] trait card from your hand with the play cost reduced by 2.")
         effect1.is_optional = True
-        effect1.cost_reduction = 2
 
-        effect = effect1  # alias for condition closure
         def condition1(context: Dict[str, Any]) -> bool:
             if card and card.permanent_of_this_card() is None:
                 return False
@@ -75,22 +65,27 @@ class EX11_071(CardScript):
         effect1.set_can_use_condition(condition1)
 
         def process1(ctx: Dict[str, Any]):
-            """Action: Cost -2, Play Card"""
+            """Cost: return this Tamer to deck bottom.
+            Action: play 1 Royal Knight/LIBERATOR cost 4+ from hand with cost -2."""
             player = ctx.get('player')
-            perm = ctx.get('permanent')
             game = ctx.get('game')
             if not (player and game):
                 return
+            # Cost: return this tamer to the bottom of the deck.
+            tamer_perm = card.permanent_of_this_card() if card else None
+            if not tamer_perm:
+                return
+            player.return_permanent_to_deck_bottom(tamer_perm)
+
             def play_filter(c):
-                if getattr(c, 'get_cost_itself', 0) < 4:
+                cost = getattr(c, 'get_cost_itself', None)
+                if cost is None or cost < 4:
                     return False
-                if not (any('Royal Knight' in _t or 'LIBERATOR' in _t for _t in (getattr(c, 'card_traits', []) or []))):
+                if not any('Royal Knight' in _t or 'LIBERATOR' in _t for _t in (getattr(c, 'card_traits', []) or [])):
                     return False
                 return True
             game.effect_play_from_zone(
-                player, 'hand', play_filter, free=True, is_optional=True)
-            # Cost reduction by 2 — handled via cost_reduction property
-            pass  # descriptive-tagged: cost_reduction
+                player, 'hand', play_filter, free=False, manual_reduction=2, is_optional=True)
 
         effect1.set_on_process_callback(process1)
         effects.append(effect1)

@@ -977,7 +977,173 @@ def process(ctx):
 - Fire `OnEnterFieldAnyone` effects after playing
 - Use `getattr` for safe attribute access on CardSource
 
-### Pattern 12: Partition (WhenRemoveField + Play from Trash)
+### Pattern 12: [Hand][Main] Effect
+
+Cards with `[Hand][Main]` effects — abilities activated from hand during Main phase that aren't
+standard play or digivolve actions (e.g., conditional digivolve with side-costs, place-under,
+DP buff from hand). Uses action range 30-59 (`30 + hand_idx`).
+
+#### Skeleton
+
+```python
+effect0 = ICardEffect()
+effect0._is_hand_main = True
+effect0.set_effect_name("CARD-ID [Hand][Main] description")
+effect0.set_effect_description("[Hand] [Main] ...")
+
+def condition0(context):
+    if card.permanent_of_this_card() is not None:
+        return False  # must be in hand
+    player = card.owner
+    if not player or not player.is_my_turn:
+        return False
+    # Card-specific checks (tamer in play, cards in trash, target on field, etc.)
+    ...
+    return True
+
+effect0.set_can_use_condition(condition0)
+
+def process0(ctx):
+    game, player = ctx['game'], ctx['player']
+    hand_card = ctx['card']       # the CardSource being activated
+    hand_idx = ctx['hand_idx']    # index in player.hand_cards
+    # Full resolution: select targets, place cards, digivolve, pay costs
+    ...
+
+effect0.set_on_process_callback(process0)
+effects.append(effect0)
+```
+
+#### Key rules
+
+- Condition IS checked during masking (unlike `_alt_digi`)
+- Always check `card.permanent_of_this_card() is not None → False` (must be in hand)
+- Always check `player.is_my_turn`
+- The process callback handles ALL resolution logic (target selection, cost payment, side effects)
+- Context dict keys: `'game'`, `'player'`, `'card'` (the CardSource), `'hand_idx'` (position in hand), `'permanent'` (always `None`), `'turn_player'`, `'opponent_player'`
+
+#### Resolution patterns
+
+| Pattern | Process callback flow |
+|---------|----------------------|
+| Conditional digivolve | Select trash card → select field target → `add_card_source_bottom` (place under) → `add_card_source` (digivolve) → `lose_memory` → `draw` → fire `WhenDigivolving` |
+| Place self under target | `effect_select_own_permanent` → remove from hand → `add_card_source_bottom` → `lose_memory` |
+| Legend-Arms DP buff | `effect_select_own_permanent` → remove from hand → `add_card_source_bottom` → `register_modifier(CHANGE_DP, ...)` |
+| Conditional play | Remove from hand → `play_card_from_source(card, pay_cost=...)` → register end-of-turn deletion |
+| Tamer hybrid | Select trash cards → select tamer → place under → digivolve |
+
+#### Selecting from trash inside a process callback
+
+When a [Hand][Main] effect needs the agent to choose a card from trash (e.g., which
+[Dimetromon] to place), use `game.request_selection` with `GamePhase.SelectTrash`:
+
+```python
+_SEL_TRASH_START = 130  # mirrors constants.SEL_TRASH_START
+
+valid_trash = []
+for i, c in enumerate(player.trash_cards):
+    if my_filter(c):
+        valid_trash.append(_SEL_TRASH_START + i)
+if not valid_trash:
+    return
+
+def on_trash_selected(action_id):
+    idx = action_id - _SEL_TRASH_START
+    chosen = player.trash_cards[idx]
+    # ... use chosen card ...
+
+game.request_selection(
+    GamePhase.SelectTrash, player, on_trash_selected,
+    valid_trash, is_optional=False,
+    prompt="Select a card from your trash.")
+```
+
+#### Complete example: BT24-016 Lamiamon (conditional digivolve with trash placement)
+
+Reference implementation in `scripts/bt24/bt24_016.py`. Effect text:
+> [Hand] [Main] If you have [Owen Dreadnought], by placing 1 [Dimetromon]
+> from your trash as any of your [Elizamon]'s bottom digivolution card,
+> it digivolves into this card for a cost of 3, ignoring requirements.
+
+```python
+effect0 = ICardEffect()
+effect0._is_hand_main = True
+effect0.set_effect_name("BT24-016 [Hand][Main] Place Dimetromon, digivolve onto Elizamon")
+effect0.set_effect_description("[Hand] [Main] ...")
+
+def condition0(context):
+    if card.permanent_of_this_card() is not None:
+        return False
+    player = card.owner
+    if not player or not player.is_my_turn:
+        return False
+    has_owen = any(p.contains_card_name('Owen Dreadnought') for p in player.battle_area)
+    if not has_owen:
+        return False
+    has_dimetromon_in_trash = any(
+        any('Dimetromon' in (n or '') for n in (getattr(c, 'card_names', []) or []))
+        for c in player.trash_cards
+    )
+    if not has_dimetromon_in_trash:
+        return False
+    has_elizamon = any(p.contains_card_name('Elizamon') for p in player.battle_area)
+    return has_elizamon
+
+effect0.set_can_use_condition(condition0)
+
+def process0(ctx):
+    game, player, hand_card = ctx.get('game'), ctx.get('player'), ctx.get('card')
+    if not (game and player and hand_card):
+        return
+
+    def _is_dimetromon(c):
+        names = getattr(c, 'card_names', []) or []
+        return any('Dimetromon' in (n or '') for n in names)
+
+    # Step 1: Agent chooses which Dimetromon from trash
+    def on_dimetromon_selected(trash_idx):
+        if trash_idx >= len(player.trash_cards):
+            return
+        dimetromon = player.trash_cards[trash_idx]
+
+        # Step 2: Agent chooses which Elizamon on field
+        def on_elizamon_selected(target_perm):
+            if dimetromon in player.trash_cards:
+                player.trash_cards.remove(dimetromon)
+            target_perm.add_card_source_bottom(dimetromon)
+
+            if hand_card in player.hand_cards:
+                player.hand_cards.remove(hand_card)
+            target_perm.add_card_source(hand_card)
+            target_perm.turn_digivolved = game.turn_count
+            player.lose_memory(3)
+            player.draw()
+            game.execute_effects(EffectTiming.WhenDigivolving,
+                                 {"digivolved_permanent": target_perm})
+
+        game.effect_select_own_permanent(
+            player, on_elizamon_selected,
+            filter_fn=lambda p: p.contains_card_name('Elizamon'),
+            is_optional=False)
+
+    _SEL_TRASH_START = 130
+    valid_trash = [_SEL_TRASH_START + i for i, c in enumerate(player.trash_cards)
+                   if _is_dimetromon(c)]
+    if not valid_trash:
+        return
+
+    def _on_trash_action(action_id):
+        on_dimetromon_selected(action_id - _SEL_TRASH_START)
+
+    game.request_selection(
+        GamePhase.SelectTrash, player, _on_trash_action,
+        valid_trash, is_optional=False,
+        prompt="Select a [Dimetromon] from your trash.")
+
+effect0.set_on_process_callback(process0)
+```
+
+### Pattern 13: Partition (WhenRemoveField + Play from Trash)
 
 Partition fires when the permanent would leave the field. By the time WhenRemoveField fires,
 the cards are already in `player.trash_cards`. Find them there and play them.

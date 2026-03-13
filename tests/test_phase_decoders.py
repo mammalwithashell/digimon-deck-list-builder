@@ -930,3 +930,145 @@ class TestDigivolveBonusDraw:
         assert len(p1.hand_cards) == 0
         # Stack grew
         assert len(p1.battle_area[0].card_sources) == 2
+
+
+# ═══════════════════════════════════════════════════════════════════════
+# G. [Hand][Main] Action Type Tests
+# ═══════════════════════════════════════════════════════════════════════
+
+class HandMainEffect(ICardEffect):
+    """Mock [Hand][Main] effect with configurable condition."""
+    def __init__(self, condition_result=True, callback=None):
+        super().__init__()
+        self._is_hand_main = True
+        self.timing = EffectTiming.NoTiming
+        self._condition_result = condition_result
+        self._process_called = False
+        self.set_can_use_condition(lambda ctx: self._condition_result)
+        self.set_on_process_callback(callback or self._default_process)
+
+    def _default_process(self, ctx):
+        self._process_called = True
+
+
+class TestHandMainMask:
+    """Test [Hand][Main] action masking."""
+
+    def test_hand_main_masked_on_when_condition_passes(self):
+        """Hand card with _is_hand_main and passing condition → action 30+h masked on."""
+        game = setup_game_at_phase(GamePhase.Main, memory=5)
+        p1 = game.player1
+        hm_effect = HandMainEffect(condition_result=True)
+        card = make_card_with_effects(
+            card_id="HM-001", name="HandMainMon", effects=[hm_effect], owner=p1)
+        p1.hand_cards.append(card)
+
+        from digimon_gym.engine.game.action_mask import build_action_mask
+        mask = build_action_mask(game, 1)
+        assert mask[30] == 1.0, "Action 30 (hand idx 0) should be masked on"
+
+    def test_hand_main_masked_off_when_condition_fails(self):
+        """Hand card with _is_hand_main and failing condition → action 30+h masked off."""
+        game = setup_game_at_phase(GamePhase.Main, memory=5)
+        p1 = game.player1
+        hm_effect = HandMainEffect(condition_result=False)
+        card = make_card_with_effects(
+            card_id="HM-002", name="HandMainMon", effects=[hm_effect], owner=p1)
+        p1.hand_cards.append(card)
+
+        from digimon_gym.engine.game.action_mask import build_action_mask
+        mask = build_action_mask(game, 1)
+        assert mask[30] == 0.0, "Action 30 should be masked off when condition fails"
+
+    def test_hand_main_multiple_hand_cards(self):
+        """Multiple hand cards, only the one with _is_hand_main gets 30+h masked."""
+        game = setup_game_at_phase(GamePhase.Main, memory=5)
+        p1 = game.player1
+        normal_card = make_card(card_id="NORM-001", name="NormalMon", owner=p1)
+        p1.hand_cards.append(normal_card)
+
+        hm_effect = HandMainEffect(condition_result=True)
+        hm_card = make_card_with_effects(
+            card_id="HM-003", name="HandMainMon", effects=[hm_effect], owner=p1)
+        p1.hand_cards.append(hm_card)
+
+        from digimon_gym.engine.game.action_mask import build_action_mask
+        mask = build_action_mask(game, 1)
+        assert mask[30] == 0.0, "Normal card at idx 0 should NOT have hand-main action"
+        assert mask[31] == 1.0, "Hand-main card at idx 1 should have action 31 masked on"
+
+    def test_hand_main_not_masked_in_breeding_phase(self):
+        """[Hand][Main] effects should NOT be masked on during Breeding phase."""
+        game = setup_game_at_phase(GamePhase.Breeding, memory=5)
+        p1 = game.player1
+        hm_effect = HandMainEffect(condition_result=True)
+        card = make_card_with_effects(
+            card_id="HM-004", name="HandMainMon", effects=[hm_effect], owner=p1)
+        p1.hand_cards.append(card)
+
+        from digimon_gym.engine.game.action_mask import build_action_mask
+        mask = build_action_mask(game, 1)
+        assert mask[30] == 0.0, "Hand-main should not be masked on in Breeding phase"
+
+
+class TestHandMainDecode:
+    """Test [Hand][Main] action decoding."""
+
+    def test_decode_hand_main_calls_process(self):
+        """Action 30 in Main phase → _execute_hand_main_effect(0) → process callback called."""
+        game = setup_game_at_phase(GamePhase.Main, memory=5)
+        p1 = game.player1
+        hm_effect = HandMainEffect(condition_result=True)
+        card = make_card_with_effects(
+            card_id="HM-005", name="HandMainMon", effects=[hm_effect], owner=p1)
+        p1.hand_cards.append(card)
+
+        game.decode_action(30, 1)
+        assert hm_effect._process_called, "Process callback should have been called"
+
+    def test_decode_hand_main_offset(self):
+        """Action 35 in Main phase → activates hand card at index 5."""
+        game = setup_game_at_phase(GamePhase.Main, memory=5)
+        p1 = game.player1
+        # Fill indices 0-4 with normal cards
+        for i in range(5):
+            p1.hand_cards.append(make_card(card_id=f"FILL-{i}", name=f"Fill{i}", owner=p1))
+        hm_effect = HandMainEffect(condition_result=True)
+        card = make_card_with_effects(
+            card_id="HM-006", name="HandMainMon", effects=[hm_effect], owner=p1)
+        p1.hand_cards.append(card)
+
+        game.decode_action(35, 1)
+        assert hm_effect._process_called, "Process callback for card at index 5 should be called"
+
+    def test_decode_hand_main_skips_when_condition_fails(self):
+        """Action decode skips process when condition fails."""
+        game = setup_game_at_phase(GamePhase.Main, memory=5)
+        p1 = game.player1
+        hm_effect = HandMainEffect(condition_result=False)
+        card = make_card_with_effects(
+            card_id="HM-007", name="HandMainMon", effects=[hm_effect], owner=p1)
+        p1.hand_cards.append(card)
+
+        game.decode_action(30, 1)
+        assert not hm_effect._process_called, "Process should NOT be called when condition fails"
+
+    def test_decode_hand_main_context_has_hand_idx(self):
+        """Process callback receives correct context with hand_idx."""
+        game = setup_game_at_phase(GamePhase.Main, memory=5)
+        p1 = game.player1
+        received_ctx = {}
+
+        def capture_ctx(ctx):
+            received_ctx.update(ctx)
+
+        hm_effect = HandMainEffect(condition_result=True, callback=capture_ctx)
+        card = make_card_with_effects(
+            card_id="HM-008", name="HandMainMon", effects=[hm_effect], owner=p1)
+        p1.hand_cards.append(card)
+
+        game.decode_action(30, 1)
+        assert received_ctx.get('hand_idx') == 0
+        assert received_ctx.get('card') is card
+        assert received_ctx.get('player') is p1
+        assert received_ctx.get('game') is game

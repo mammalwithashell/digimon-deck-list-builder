@@ -58,7 +58,6 @@ class BT13_112(CardScript):
                 def on_branch(branch_index: int):
                     if branch_index == 0:
                         # Branch 0: Delete 1 of your opponent's Digimon
-                        # Any opponent Digimon — no trait restriction
                         def delete_filter(p):
                             return p.is_digimon
 
@@ -73,17 +72,58 @@ class BT13_112(CardScript):
                             prompt="Delete 1 of your opponent's Digimon.")
 
                     elif branch_index == 1:
-                        # Branch 1: Play 1 of each Royal Knight with a
-                        # different name from breeding digi-sources, then
-                        # trash breeding and grant Rush to all your Digimon.
-                        pass  # descriptive-tagged: play_from_breeding_digi_sources
-                        # Full implementation requires iterating
-                        # player.breeding_area.card_sources[:-1] for unique-
-                        # named Royal Knight Digimon, playing each, trashing
-                        # the breeding area Digimon, and granting Rush.
-                        # The trash + Rush portion is implemented below for
-                        # when the play-from-sources mechanic is available.
-                        _trash_breeding_and_grant_rush(player, game)
+                        # Branch 1: Play 1 of each Royal Knight with a different
+                        # name from the breeding area's digivolution card sources,
+                        # then trash breeding area Digimon and grant Rush.
+                        breeding = player.breeding_area
+                        if not breeding:
+                            return
+
+                        # Collect all under-cards (digivolution sources — skip top_card)
+                        top = breeding.top_card
+                        played_names: set = set()
+                        any_played = False
+
+                        for cs in list(breeding.card_sources):
+                            if cs is top:
+                                continue
+                            if not getattr(cs, 'is_digimon', False):
+                                continue
+                            if not any('Royal Knight' in t
+                                       for t in getattr(cs, 'card_traits', [])):
+                                continue
+                            # Unique name check
+                            cs_names = getattr(cs, 'card_names', [])
+                            if not cs_names:
+                                continue
+                            primary_name = cs_names[0]
+                            if primary_name in played_names:
+                                continue
+                            played_names.add(primary_name)
+
+                            # Remove from breeding stack and play free
+                            breeding.card_sources.remove(cs)
+                            played = player.play_card_from_source(cs, pay_cost=False)
+                            if played:
+                                game.execute_effects(
+                                    EffectTiming.OnEnterFieldAnyone,
+                                    {"played_card": cs, "played_permanent": played,
+                                     "event_player": player},
+                                )
+                                any_played = True
+
+                        if any_played:
+                            # Trash 1 of your Digimon in the breeding area
+                            if player.breeding_area is not None:
+                                breeding_perm = player.breeding_area
+                                for cs in list(breeding_perm.card_sources):
+                                    player.trash_cards.append(cs)
+                                player.breeding_area = None
+
+                            # All of your Digimon gain Rush for the turn
+                            for p in list(player.battle_area):
+                                if p.is_digimon:
+                                    p.grant_keyword('_is_rush')
 
                 game.effect_choose_branch(
                     player, 2, on_branch,
@@ -96,23 +136,6 @@ class BT13_112(CardScript):
 
             eff.set_on_process_callback(process)
             return eff
-
-        def _trash_breeding_and_grant_rush(player, game):
-            """When a Digimon is played by this effect, trash 1 of your
-            Digimon in the breeding area, and all of your Digimon gain
-            <Rush> for the turn."""
-            # Trash breeding area Digimon
-            if player.breeding_area is not None:
-                breeding_perm = player.breeding_area
-                # Move all cards to trash
-                for cs in list(breeding_perm.card_sources):
-                    player.trash_cards.append(cs)
-                player.breeding_area = None
-
-            # All of your Digimon gain Rush for the turn
-            for p in list(player.battle_area):
-                if p.is_digimon:
-                    p.grant_keyword('_is_rush')
 
         # effect0: [On Play]
         effect0 = _make_effect(is_on_play=True)

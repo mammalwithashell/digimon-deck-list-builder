@@ -30,7 +30,6 @@ class BT13_087(CardScript):
         effect0.set_effect_description("[On Play] Reveal the top 4 cards of your deck. Add 2 cards with [Lucemon] in their names or the [Royal Knight] trait among them to the hand. Trash the rest.")
         effect0.is_on_play = True
 
-        effect = effect0  # alias for condition closure
         def condition0(context: Dict[str, Any]) -> bool:
             if card and card.permanent_of_this_card() is None:
                 return False
@@ -41,7 +40,6 @@ class BT13_087(CardScript):
         def process0(ctx: Dict[str, Any]):
             """Action: Reveal top 4, pick up to 2 Lucemon/Royal Knight to hand, trash rest."""
             player = ctx.get('player')
-            perm = ctx.get('permanent')
             game = ctx.get('game')
             if not (player and game):
                 return
@@ -66,7 +64,6 @@ class BT13_087(CardScript):
         effect1.set_effect_description("[When Digivolving] Reveal the top 4 cards of your deck. Add 2 cards with [Lucemon] in their names or the [Royal Knight] trait among them to the hand. Trash the rest.")
         effect1.is_when_digivolving = True
 
-        effect = effect1  # alias for condition closure
         def condition1(context: Dict[str, Any]) -> bool:
             if card and card.permanent_of_this_card() is None:
                 return False
@@ -77,7 +74,6 @@ class BT13_087(CardScript):
         def process1(ctx: Dict[str, Any]):
             """Action: Reveal top 4, pick up to 2 Lucemon/Royal Knight to hand, trash rest."""
             player = ctx.get('player')
-            perm = ctx.get('permanent')
             game = ctx.get('game')
             if not (player and game):
                 return
@@ -97,35 +93,40 @@ class BT13_087(CardScript):
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [Your Turn] When you play another Digimon with [Lucemon] in its name or the
         # [Royal Knight] trait, delete all of your opponent's level 4 or lower Digimon.
+        # NOTE: This effect is NOT self-triggered (is_on_play=False). It reacts to other
+        # permanents entering the field with matching name/trait on your turn.
         effect2 = ICardEffect()
         effect2.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect2.set_effect_name("BT13-087 Delete all opponent Lv.4 or lower Digimon")
         effect2.set_effect_description("[Your Turn] When you play another Digimon with [Lucemon] in its name or the [Royal Knight] trait, delete all of your opponent's level 4 or lower Digimon.")
-        effect2.is_on_play = True
 
-        effect = effect2  # alias for condition closure
         def condition2(context: Dict[str, Any]) -> bool:
             if card and card.permanent_of_this_card() is None:
                 return False
             # Must be your turn
             if not (card and card.owner and card.owner.is_my_turn):
                 return False
-            # Check that the played Digimon is "another" (not this Dynasmon)
-            # and has Lucemon in name or Royal Knight trait
+            # Must be triggered by another permanent being played
             played_perm = context.get('played_permanent')
             played_card_src = context.get('played_card')
-            check_target = played_perm or played_card_src
-            if check_target is None:
+            if played_perm is None and played_card_src is None:
                 return False
-            # "another" — not this card
+            # "another" — not this Dynasmon's permanent
             this_perm = card.permanent_of_this_card()
             if played_perm and this_perm and played_perm is this_perm:
                 return False
             # Must be a Digimon with Lucemon name or Royal Knight trait
-            tc = getattr(check_target, 'top_card', check_target)
-            names = getattr(tc, 'card_names', [])
-            traits = getattr(tc, 'card_traits', []) or []
+            check_card = played_card_src
+            if check_card is None and played_perm is not None:
+                check_card = getattr(played_perm, 'top_card', None)
+            if check_card is None:
+                return False
+            names = getattr(check_card, 'card_names', [])
+            traits = getattr(check_card, 'card_traits', []) or []
             if not (any('Lucemon' in n for n in names) or any('Royal Knight' in t for t in traits)):
+                return False
+            # Must be a Digimon (not a tamer or option)
+            if not getattr(check_card, 'is_digimon', False):
                 return False
             return True
 
@@ -134,7 +135,6 @@ class BT13_087(CardScript):
         def process2(ctx: Dict[str, Any]):
             """Action: Delete all opponent's level 4 or lower Digimon."""
             player = ctx.get('player')
-            perm = ctx.get('permanent')
             game = ctx.get('game')
             if not (player and game):
                 return

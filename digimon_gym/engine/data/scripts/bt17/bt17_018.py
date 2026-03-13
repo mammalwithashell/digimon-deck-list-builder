@@ -22,7 +22,20 @@ class BT17_018(CardScript):
     def get_card_effects(self, card: 'CardSource') -> List['ICardEffect']:
         effects = []
 
-        # --- Effect 0: Blast Digivolve ---
+        # --- Effect 0: Alternate digivolution — Lv.6 Gallantmon at cost 4 ---
+        effect_alt = ICardEffect()
+        effect_alt.set_effect_name("BT17-018 Alternate digivolution requirement")
+        effect_alt.set_effect_description("Alternate digivolution: Lv.6 [Gallantmon] for cost 4")
+        effect_alt._alt_digi_cost = 4
+        effect_alt._alt_digi_level = 6
+        effect_alt._alt_digi_name_filter = "Gallantmon"
+
+        def condition_alt(context: Dict[str, Any]) -> bool:
+            return True
+        effect_alt.set_can_use_condition(condition_alt)
+        effects.append(effect_alt)
+
+        # --- Effect 1: Blast Digivolve ---
         effect0 = ICardEffect()
         effect0.set_effect_name("BT17-018 Blast Digivolve")
         effect0.set_effect_description("[Hand] [Counter] <Blast Digivolve>")
@@ -124,13 +137,14 @@ class BT17_018(CardScript):
 
         # --- Effect 3: [When Attacking] [Once Per Turn] Trash security ---
         effect3 = ICardEffect()
-        effect3.set_timing(EffectTiming.OnTappedAnyone)
+        effect3.set_timing(EffectTiming.OnUseAttack)
         effect3.set_effect_name("BT17-018 Trash security per 10 cards in trash")
         effect3.set_effect_description(
             "[When Attacking] [Once Per Turn] For every 10 cards in both "
             "players' trash, trash 1 card from the top of your opponent's "
             "security stack."
         )
+        effect3.is_on_attack = True
         effect3.set_max_count_per_turn(1)
         effect3.set_hash_string("WhenAttacking_BT17-018_TrashSecurity")
 
@@ -157,8 +171,8 @@ class BT17_018(CardScript):
             security_to_trash = total_trash // 10
             for _ in range(security_to_trash):
                 if enemy.security_cards:
-                    trashed = enemy.security_cards.pop(0)
-                    enemy.trash_cards.append(trashed)
+                    top_sec = enemy.security_cards[-1]
+                    enemy.trash_security_card(top_sec)
 
         effect3.set_on_process_callback(process3)
         effects.append(effect3)

@@ -79,7 +79,7 @@ class BT20_083(CardScript):
             def digi_filter(c):
                 if not getattr(c, 'is_digimon', False):
                     return False
-                if not (any('Omnimon' in _n for _n in getattr(c, 'card_names', []))):
+                if not (any('Omnimon (X Antibody)' in _n for _n in getattr(c, 'card_names', []))):
                     return False
                 return True
             game.effect_digivolve_from_hand(
