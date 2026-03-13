@@ -40,6 +40,7 @@ class CombatMixin:
 
         # <Progress>: mark attacker as attacking (for effect immunity)
         attacker.is_attacking = True
+        attacker.attack_count_this_turn += 1
 
         # Clear FORCE_ATTACK modifier once the forced Digimon actually attacks
         if self.modifiers.has_modifier(attacker, ModifierType.FORCE_ATTACK):
@@ -168,11 +169,20 @@ class CombatMixin:
             self._execute_security_checks(attacker, target)
         elif isinstance(target, Permanent):
             self.execute_effects(EffectTiming.OnStartBattle, {"attacker": attacker, "defender": target})
-            a_dp = attacker.dp or 0
+
+            # <Iceclad>: compare digivolution card count instead of DP
+            if attacker.has_keyword('_is_iceclad') or target.has_keyword('_is_iceclad'):
+                a_val = len(attacker.card_sources) - 1  # exclude top card
+                t_val = len(target.card_sources) - 1
+            else:
+                a_val = attacker.dp or 0
+                t_val = target.dp or 0
+
+            a_dp = attacker.dp or 0  # kept for event emission
             t_dp = target.dp or 0
-            attacker_wins = a_dp > t_dp
-            defender_wins = a_dp < t_dp
-            tie = a_dp == t_dp
+            attacker_wins = a_val > t_val
+            defender_wins = a_val < t_val
+            tie = a_val == t_val
 
             if attacker_wins:
                 result_str = 'attacker_wins'
@@ -218,11 +228,12 @@ class CombatMixin:
                 self.turn_player.delete_permanent(attacker, is_battle=True)
             self.execute_effects(EffectTiming.OnEndBattle, {"attacker": attacker, "defender": target})
 
-        # Clear attacker state before end-of-attack effects
+        # DCGO order: OnEndAttack fires FIRST, then clear "until end of attack" state.
+        # This lets OnEndAttack effects still see end-of-attack modifiers.
+        self.execute_effects(EffectTiming.OnEndAttack)
+
         attacker.clear_attack_state()
         self.modifiers.clear_expiry('end_of_attack')
-
-        self.execute_effects(EffectTiming.OnEndAttack)
 
         # If we returned to EndOfTurnAction (from Vortex/Overclock attack), check for more
         if self.current_phase == GamePhase.EndOfTurnAction:

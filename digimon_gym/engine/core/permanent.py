@@ -17,6 +17,7 @@ class Permanent:
         self._owner_game: Optional[object] = None  # Back-reference to Game for turn tracking
         self._granted_keywords: dict = {}  # keyword_attr -> expiry_turn (or -1 for permanent)
         self.is_attacking: bool = False  # True while this permanent is the attacker in combat
+        self.attack_count_this_turn: int = 0  # Number of attacks declared this turn
         self._temp_sa_modifier: int = 0  # Temporary Security Attack modifier (e.g. from Alliance)
         self._granted_effects: List[tuple] = []  # [(ICardEffect, expiry_turn)] granted by other cards
 

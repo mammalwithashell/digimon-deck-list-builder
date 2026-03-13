@@ -19,7 +19,7 @@ class BT15_081(CardScript):
         effect0 = ICardEffect()
         effect0.set_effect_name("BT15-081 Security Attack +1")
         effect0.set_effect_description("Security Attack +1")
-        effect0._security_attack_modifier = 2
+        effect0._security_attack_modifier = 1
 
         def condition0(context: Dict[str, Any]) -> bool:
             return True

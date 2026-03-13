@@ -60,6 +60,15 @@ TOKENS = {
         'traits': [],
         'keywords': ['_is_alliance', '_is_reboot', '_is_blocker'],
     },
+    'familiar': {
+        'card_id': 'TOKEN_FAMILIAR',
+        'card_name': 'Familiar Token',
+        'card_kind': CardKind.Digimon,
+        'colors': [CardColor.Yellow],
+        'dp': 3000,
+        'level': None,
+        'traits': [],
+    },
 }
 
 
@@ -109,9 +118,64 @@ def _build_keyword_effects(keyword_attrs: List[str], label: str) -> List[ICardEf
     return [effect]
 
 
+def _build_familiar_effects(card_source: CardSource) -> List[ICardEffect]:
+    """Build effects for a Familiar Token.
+
+    [On Deletion] 1 of your opponent's Digimon gets -3000 DP for the turn.
+    """
+    effects = []
+
+    effect0 = ICardEffect()
+    effect0.set_timing(EffectTiming.OnDestroyedAnyone)
+    effect0.set_effect_name("Familiar Token On Deletion")
+    effect0.set_effect_description(
+        "[On Deletion] 1 of your opponent's Digimon gets -3000 DP for the turn."
+    )
+    effect0.is_on_deletion = True
+
+    def condition0(context: Dict[str, Any]) -> bool:
+        return True
+
+    effect0.set_can_use_condition(condition0)
+
+    def process0(ctx: Dict[str, Any]):
+        game = ctx.get('game')
+        player = ctx.get('player')
+        if not (game and player):
+            owner = card_source.owner
+            if not owner:
+                return
+            player = owner
+            game = getattr(player, 'game', None)
+            if not game:
+                return
+        enemy = player.enemy if player else None
+        if not enemy:
+            return
+        opp_digimon = [p for p in enemy.battle_area if p.is_digimon]
+        if not opp_digimon:
+            return
+
+        def on_select(target_perm):
+            target_perm.change_dp(-3000)
+
+        game.effect_select_opponent_permanent(
+            player, on_select,
+            filter_fn=lambda p: p.is_digimon,
+            is_optional=False,
+            prompt="Select 1 of your opponent's Digimon to get -3000 DP.",
+        )
+
+    effect0.set_on_process_callback(process0)
+    effects.append(effect0)
+
+    return effects
+
+
 # Map token type -> effect builder
 _EFFECT_BUILDERS = {
     'petrification': _build_petrification_effects,
+    'familiar': _build_familiar_effects,
 }
 
 

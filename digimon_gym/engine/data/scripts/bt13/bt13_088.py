@@ -42,24 +42,44 @@ class BT13_088(CardScript):
         def condition1(context: Dict[str, Any]) -> bool:
             if card and card.permanent_of_this_card() is None:
                 return False
-            # Triggered on play — validated by engine timing
+            # Must have a Belphemon: Rage Mode in trash to pay cost
+            player = card.owner if card else None
+            if not player:
+                return False
+            has_rage = any(
+                any('Belphemon: Rage Mode' in name for name in getattr(c, 'card_names', []))
+                for c in player.trash_cards
+            )
+            if not has_rage:
+                return False
             return True
 
         effect1.set_can_use_condition(condition1)
 
         def process1(ctx: Dict[str, Any]):
-            """Action: Gain Keyword Cannot Attack, Effect Immunity"""
+            """Action: Place Belphemon: Rage Mode from trash, gain Cannot Attack + Effect Immunity"""
             player = ctx.get('player')
             perm = ctx.get('permanent')
             game = ctx.get('game')
-            if perm:
-                perm.grant_keyword('_is_cannot_attack')
+            if not (player and perm and game):
+                return
+            # Cost: place 1 [Belphemon: Rage Mode] from trash as top digi-card
+            rage_card = None
+            for c in player.trash_cards:
+                if any('Belphemon: Rage Mode' in name for name in getattr(c, 'card_names', [])):
+                    rage_card = c
+                    break
+            if not rage_card:
+                return  # cost cannot be paid
+            player.trash_cards.remove(rage_card)
+            perm.add_card_source(rage_card)
+            # Grant cannot attack
+            perm.grant_keyword('_is_cannot_attack')
             # Grant effect immunity via modifier system
-            if perm and game:
-                from digimon_gym.engine.interfaces.modifiers import ModifierType
-                game.register_modifier(
-                    ModifierType.CANNOT_BE_SELECTED_BY_EFFECT, perm,
-                    value_fn=lambda: True, expiry='end_of_turn')
+            from digimon_gym.engine.interfaces.modifiers import ModifierType
+            game.register_modifier(
+                perm, ModifierType.CANNOT_BE_AFFECTED,
+                value_fn=lambda: True, expiry='end_of_opponent_turn')
 
         effect1.set_on_process_callback(process1)
         effects.append(effect1)

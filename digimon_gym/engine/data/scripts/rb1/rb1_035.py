@@ -118,9 +118,8 @@ class RB1_035(CardScript):
         effect2.is_security_effect = True
 
         def condition2(context: Dict[str, Any]) -> bool:
-            # Security effects are handled by the engine's security check
-            # system — never fire as a processable effect
-            return False
+            # Security effect — validated by engine timing
+            return True
         effect2.set_can_use_condition(condition2)
         effects.append(effect2)
 

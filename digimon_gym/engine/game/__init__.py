@@ -588,6 +588,9 @@ class Game(CombatMixin, ActionDecoderMixin, EffectHelpersMixin):
             self._log_effect_activation(te.effect, timing)
             te.effect.record_activation()
             te.effect.on_process_callback(te.context)
+            self._rule_process()
+            if self.game_over:
+                return
 
             chain_count = 0
             while chain_count < max_chain:
@@ -607,6 +610,9 @@ class Game(CombatMixin, ActionDecoderMixin, EffectHelpersMixin):
                     self._log_effect_activation(cte.effect, timing)
                     cte.effect.record_activation()
                     cte.effect.on_process_callback(cte.context)
+                    self._rule_process()
+                    if self.game_over:
+                        return
                 chain_count += 1
 
     @staticmethod
@@ -760,6 +766,58 @@ class Game(CombatMixin, ActionDecoderMixin, EffectHelpersMixin):
             for p in pl.battle_area:
                 p.clear_expired_effects(self.turn_count)
 
+    def _rule_process(self):
+        """DCGO AutoProcessing: run rule-based state checks after every effect resolution.
+
+        Loops until no more rule actions are needed (stable state).
+        Checks:
+        - Digimon with DP <= 0 → destroy
+        - Non-Digimon in breeding area → trash
+        - Linked cards that no longer meet conditions → unlink and trash
+
+        Note: Deck-out loss is NOT checked here — DCGO only triggers loss when a
+        player would draw and cannot (handled in phase_draw / Player.draw).
+        """
+        if self.game_over:
+            return
+        max_loops = 20
+        for _ in range(max_loops):
+            changed = False
+
+            # 1. Digimon with DP <= 0 → destroy (DCGO: DigimonLackDPProcess)
+            for player in [self.player1, self.player2]:
+                for perm in list(player.battle_area):
+                    if perm.is_digimon and perm.dp is not None and perm.dp <= 0:
+                        self.logger.log(f"[Rule Process] {self._perm_ref(perm)} has 0 DP — destroyed")
+                        player.delete_permanent(perm)
+                        changed = True
+
+            # 2. Non-Digimon in breeding area → trash (DCGO: TrashNonDigimonProcess)
+            for player in [self.player1, self.player2]:
+                if player.breeding_area is not None and not player.breeding_area.is_digimon:
+                    perm = player.breeding_area
+                    self.logger.log(f"[Rule Process] Non-Digimon in breeding area — trashed")
+                    player.breeding_area = None
+                    player.trash_cards.extend(perm.card_sources)
+                    changed = True
+
+            # 3. Linked cards that no longer meet conditions → unlink and trash
+            #    (DCGO: DigimonLackLinkCondition + DigimonLackLinkMaxCount)
+            for player in [self.player1, self.player2]:
+                for perm in list(player.battle_area):
+                    if not perm.linked_cards:
+                        continue
+                    for linked in list(perm.linked_cards):
+                        link_condition = getattr(linked, '_link_condition', None)
+                        if link_condition and not link_condition(perm):
+                            self.logger.log(f"[Rule Process] Linked card condition no longer met — unlinked and trashed")
+                            perm.linked_cards.remove(linked)
+                            player.trash_cards.append(linked)
+                            changed = True
+
+            if not changed:
+                break
+
     def force_end_attack(self):
         """Force the current attack to end early (DCGO: IsEndAttack flag)."""
         if self.pending_attack:
@@ -791,11 +849,12 @@ class Game(CombatMixin, ActionDecoderMixin, EffectHelpersMixin):
                         effect.reset_turn_count()
 
     def _clear_temp_dp(self):
-        """Clear temporary DP modifiers and expired keyword grants at start of turn."""
+        """Clear temporary DP modifiers, expired keyword grants, and attack counts at start of turn."""
         for player in [self.player1, self.player2]:
             for perm in player.battle_area:
                 perm.clear_temp_dp()
                 perm.clear_expired_grants(self.turn_count)
+                perm.attack_count_this_turn = 0
 
     # ─── Game Actions ────────────────────────────────────────────────
 

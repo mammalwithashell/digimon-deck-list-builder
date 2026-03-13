@@ -24,6 +24,9 @@ class EX2_046(CardScript):
         effect0.cost_reduction = 2
 
         def condition0(context: Dict[str, Any]) -> bool:
+            # BeforePayCost leak guard: only apply when this card is being played
+            if context.get('card_source') is not card:
+                return False
             if card and card.owner:
                 # Check that no other ADR-02 Searcher is in play
                 has_other = any(
@@ -37,14 +40,12 @@ class EX2_046(CardScript):
         effects.append(effect0)
 
         # --- Effect 1: [Your Turn] This Digimon can't attack players ---
-        # NOTE: Attack restriction (can't attack player) is partially modeled.
-        # The engine checks _is_cannot_attack but distinguishing player-only
-        # restriction is not directly supported. Marked PARTIAL.
         effect1 = ICardEffect()
         effect1.set_effect_name("EX2-046 Can't attack players")
         effect1.set_effect_description(
             "[Your Turn] This Digimon can't attack players."
         )
+        effect1._is_cannot_attack_player = True
 
         def condition1(context: Dict[str, Any]) -> bool:
             if card and card.permanent_of_this_card() is None:

@@ -51,7 +51,7 @@ class BT15_080(CardScript):
             if not (player and game):
                 return
             def target_filter(p):
-                return p.is_digimon
+                return p.is_digimon and getattr(p.top_card, 'level', 99) <= 5
             def on_delete(target_perm):
                 enemy = player.enemy if player else None
                 if enemy:
@@ -87,7 +87,7 @@ class BT15_080(CardScript):
             if not (player and game):
                 return
             def target_filter(p):
-                return p.is_digimon
+                return p.is_digimon and getattr(p.top_card, 'level', 99) <= 5
             def on_delete(target_perm):
                 enemy = player.enemy if player else None
                 if enemy:
@@ -121,7 +121,7 @@ class BT15_080(CardScript):
             if not (player and game):
                 return
             def target_filter(p):
-                return p.is_digimon
+                return p.is_digimon and getattr(p.top_card, 'level', 99) <= 5
             def on_delete(target_perm):
                 enemy = player.enemy if player else None
                 if enemy:
