@@ -5,6 +5,8 @@ import {
   type GauntletItem,
   type GauntletDetailItem,
   type ArchetypeInfo,
+  type StoreInfo,
+  type SceneInfo,
   type DeckPoolItem,
   type DeckPoolDetail,
   getAgents,
@@ -12,6 +14,8 @@ import {
   getGauntlets,
   getGauntletDetail,
   getDeckLibraryArchetypes,
+  getMetaScopeStores,
+  getMetaScopeScenes,
   getDeckPools,
   getDeckPoolDetail,
 } from '@/api/trainingApi';
@@ -22,6 +26,8 @@ interface TrainingState {
   gauntlets: GauntletItem[];
   selectedGauntlet: GauntletDetailItem | null;
   deckLibraryArchetypes: ArchetypeInfo[];
+  metaStores: StoreInfo[];
+  metaScenes: SceneInfo[];
   deckPools: DeckPoolItem[];
   selectedDeckPool: DeckPoolDetail | null;
   isLoading: boolean;
@@ -31,7 +37,9 @@ interface TrainingState {
   fetchJobs: (params?: { status?: string; agent_id?: string; gauntlet_id?: string }) => Promise<void>;
   fetchGauntlets: () => Promise<void>;
   fetchGauntletDetail: (id: string) => Promise<void>;
-  fetchDeckLibrary: () => Promise<void>;
+  fetchDeckLibrary: (params?: { scope?: 'global' | 'store' | 'scene'; store_ids?: string; scene_id?: number }) => Promise<void>;
+  fetchMetaStores: () => Promise<void>;
+  fetchMetaScenes: () => Promise<void>;
   fetchDeckPools: (params?: { archetype?: string }) => Promise<void>;
   fetchDeckPoolDetail: (id: string) => Promise<void>;
   clearError: () => void;
@@ -43,6 +51,8 @@ export const useTrainingStore = create<TrainingState>((set) => ({
   gauntlets: [],
   selectedGauntlet: null,
   deckLibraryArchetypes: [],
+  metaStores: [],
+  metaScenes: [],
   deckPools: [],
   selectedDeckPool: null,
   isLoading: false,
@@ -88,13 +98,31 @@ export const useTrainingStore = create<TrainingState>((set) => ({
     }
   },
 
-  fetchDeckLibrary: async () => {
+  fetchDeckLibrary: async (params) => {
     set({ isLoading: true, error: null });
     try {
-      const archetypes = await getDeckLibraryArchetypes();
+      const archetypes = await getDeckLibraryArchetypes(params);
       set({ deckLibraryArchetypes: archetypes, isLoading: false });
     } catch (e) {
       set({ error: e instanceof Error ? e.message : 'Failed to fetch deck library', isLoading: false });
+    }
+  },
+
+  fetchMetaStores: async () => {
+    try {
+      const stores = await getMetaScopeStores();
+      set({ metaStores: stores });
+    } catch (e) {
+      set({ error: e instanceof Error ? e.message : 'Failed to fetch meta stores' });
+    }
+  },
+
+  fetchMetaScenes: async () => {
+    try {
+      const scenes = await getMetaScopeScenes();
+      set({ metaScenes: scenes });
+    } catch (e) {
+      set({ error: e instanceof Error ? e.message : 'Failed to fetch meta scenes' });
     }
   },
 

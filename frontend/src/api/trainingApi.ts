@@ -107,6 +107,24 @@ export interface ArchetypeInfo {
   threat_index: number;
   decklists_count: number;
   sample_decklist: string[];
+  scope: string;
+  local_times_played?: number | null;
+}
+
+export interface StoreInfo {
+  store_id: number;
+  name: string;
+  city: string;
+  state: string;
+  scene_id: number | null;
+  tournament_count: number;
+}
+
+export interface SceneInfo {
+  scene_id: number;
+  name: string;
+  display_name: string;
+  tournament_count: number;
 }
 
 export interface DeckPoolItem {
@@ -266,8 +284,22 @@ export async function getMatchups(gauntletId: string): Promise<MatchupResultItem
 
 // ── Deck Library ───────────────────────────────────────────────────
 
-export async function getDeckLibraryArchetypes(): Promise<ArchetypeInfo[]> {
-  const { data } = await client.get<ArchetypeInfo[]>('/admin/training/deck-library/archetypes');
+export async function getDeckLibraryArchetypes(params?: {
+  scope?: 'global' | 'store' | 'scene';
+  store_ids?: string;
+  scene_id?: number;
+}): Promise<ArchetypeInfo[]> {
+  const { data } = await client.get<ArchetypeInfo[]>('/admin/training/deck-library/archetypes', { params });
+  return data;
+}
+
+export async function getMetaScopeStores(): Promise<StoreInfo[]> {
+  const { data } = await client.get<StoreInfo[]>('/admin/training/meta-scope/stores');
+  return data;
+}
+
+export async function getMetaScopeScenes(): Promise<SceneInfo[]> {
+  const { data } = await client.get<SceneInfo[]>('/admin/training/meta-scope/scenes');
   return data;
 }
 

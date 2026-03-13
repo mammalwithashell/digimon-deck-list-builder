@@ -1,0 +1,42 @@
+{
+  "_comment": "Canonical archetype names with their known aliases. Applied during ingestion and scoped meta queries so data from different sources merges correctly. Matching is case-insensitive. Add new aliases as naming drift is discovered.",
+
+  "TS Jupitermon": ["TS Jupiter"],
+  "TS Neptunemon": ["TS Neptune"],
+  "TS Merukimon": ["TS Meruki", "TS Minerva"],
+  "Digi-Police": ["Digipolice"],
+  "TS Olympos": ["Olympus XII"],
+  "Zephagamon": ["Vortex", "Vortex Warriors", "Zephaga"],
+  "Garuru Alter-S": ["GAS (Garuru Alter-S)"],
+  "Puppets": ["Nyabootmon"],
+  "Jesmon GX (Gankoomon)": ["Jess-Ganko", "Jesmon GX"],
+
+  "Medusamon": ["Medusa"],
+  "Myotismon Loop": ["Myotis"],
+  "Sakuyamon": ["Sakuya"],
+  "Royal Knights": ["RK"],
+  "Millenniummon": ["Millennium"],
+  "Dark Masters": ["DarkMaster", "Dark Master"],
+
+  "Galacticmon": ["Galaticmon"],
+  "Rocks": ["RockClose"],
+  "Hudiemon": ["Hudie", "CS Hudiemon"],
+
+  "Creepymon": ["Beelze-Creepy", "CreepyX"],
+  "Bloomlordmon": ["Bloomlord"],
+  "Mastemon (Tribal)": ["Mastemon"],
+
+  "LordKnightmon": ["Leopardmon"],
+  "Lucemon": ["Lucemon X"],
+  "Jesmon": ["Red Jesmon"],
+
+  "Belphemon": ["Belphemon X"],
+  "Leviamon": ["Leviamon X"],
+  "Gallantmon": ["Gallantmon X", "DukemonX"],
+  "Beelzemon": ["Beelzemon X"],
+  "Magnamon Armors": ["MagnaX", "TS Armor MagnaX"],
+
+  "DNA Omnimon": ["Nokia Omni", "AlterS"],
+  "Gigaseadramon": ["Seadramon", "MetalSea X Chronicle"],
+  "Megidramon": ["Growlmon X"]
+}

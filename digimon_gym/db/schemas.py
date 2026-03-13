@@ -830,3 +830,21 @@ class ArchetypeInfoResponse(BaseModel):
     threat_index: float = 0.0
     decklists_count: int = 0
     sample_decklist: List[str] = Field(default_factory=list)
+    scope: str = "global"
+    local_times_played: Optional[int] = None
+
+
+class StoreInfoResponse(BaseModel):
+    store_id: int
+    name: str
+    city: str
+    state: str
+    scene_id: Optional[int] = None
+    tournament_count: int = 0
+
+
+class SceneInfoResponse(BaseModel):
+    scene_id: int
+    name: str
+    display_name: str
+    tournament_count: int = 0

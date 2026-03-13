@@ -566,3 +566,60 @@ class TestGauntletWrapper:
         wrapper.reset()
         assert wrapper.current_opponent is not None
         assert isinstance(wrapper.current_opponent, DeckEntry)
+
+
+# ─── Override Meta Shares ─────────────────────────────────────────────
+
+
+class TestOverrideMetaShares:
+    """Tests for MetaGauntlet.override_meta_shares()."""
+
+    def test_override_recomputes_ti(self, basic_library):
+        """After override, TI reflects new meta_share values."""
+        mg = MetaGauntlet(seed=42)
+        mg.load(basic_library)
+
+        old_ti = {n: s.threat_index for n, s in mg.archetypes.items()}
+
+        # Invert the meta: Rogue becomes dominant
+        mg.override_meta_shares({"Rogue": 0.60, "MetaKing": 0.05, "MidTier": 0.10})
+
+        # Rogue should now have higher TI than MetaKing
+        assert mg.archetypes["Rogue"].threat_index > mg.archetypes["MetaKing"].threat_index
+        # MetaKing's TI should have dropped
+        assert mg.archetypes["MetaKing"].threat_index < old_ti["MetaKing"]
+
+    def test_override_zeroes_missing_archetypes(self, basic_library):
+        """Archetypes not in overrides dict get meta_share = 0."""
+        mg = MetaGauntlet(seed=42)
+        mg.load(basic_library)
+
+        mg.override_meta_shares({"MetaKing": 0.80})
+
+        assert mg.archetypes["MidTier"].digilab_meta_share == 0.0
+        assert mg.archetypes["Rogue"].digilab_meta_share == 0.0
+        assert mg.archetypes["MetaKing"].digilab_meta_share == 0.80
+
+    def test_override_rebuilds_sampling_weights(self, basic_library):
+        """After override, sampling weights are recomputed and sum to 1."""
+        mg = MetaGauntlet(seed=42)
+        mg.load(basic_library)
+
+        mg.override_meta_shares({"Rogue": 0.90, "MetaKing": 0.05, "MidTier": 0.05})
+
+        assert mg._weights is not None
+        assert abs(mg._weights.sum() - 1.0) < 1e-6
+        assert len(mg._weights) == len(mg._deck_pool)
+
+    def test_override_preserves_conversion_in_ti(self, basic_library):
+        """Override changes meta_share but conversion_rate still contributes to TI."""
+        mg = MetaGauntlet(seed=42)
+        mg.load(basic_library)
+
+        # Give Rogue high meta share; it also has high conversion (0.60)
+        mg.override_meta_shares({"Rogue": 0.50, "MetaKing": 0.25, "MidTier": 0.25})
+
+        rogue_ti = mg.archetypes["Rogue"].threat_index
+        # TI = meta_share * alpha + conversion * beta = 0.50 * 1.0 + 0.60 * 2.0 = 1.70
+        expected_ti = 0.50 * mg.alpha + 0.60 * mg.beta
+        assert abs(rogue_ti - expected_ti) < 1e-6

@@ -1,13 +1,15 @@
 """Fetch meta stats and scrape decklists from external sources, build deck_library.json.
 
-Ingests tournament decklists from DigimonMeta.com, Egman Events, and DigimonCard.io.
-Optionally enriches with meta stats from DigiLab MotherDuck database.
+Ingests tournament decklists from DigimonMeta.com, Egman Events, DigimonCard.io,
+and DigiLab PostgreSQL database.
+Optionally enriches with meta stats from DigiLab.
 Computes meta share and conversion rate from scraped placement data.
 
 Usage:
     python tools/meta_loader.py --scrape-digimonmeta URL   # Scrape BT24/EX11 decks
     python tools/meta_loader.py --scrape-egman URL          # Scrape Egman tournament decks
     python tools/meta_loader.py --scrape-digimoncard-io URL # Scrape DigimonCard.io tourney
+    python tools/meta_loader.py --scrape-digilab            # Scrape decklists from DigiLab DB
     python tools/meta_loader.py --import-file FILE          # Import local deck file
     python tools/meta_loader.py --fetch-meta                # DigiLab stats (optional)
     python tools/meta_loader.py --build                     # Resolve + dedup + stats + write
@@ -46,8 +48,50 @@ DECK_LIBRARY_PATH = os.path.join(
     os.path.dirname(__file__), "..", "digimon_gym", "engine", "data", "deck_library.json"
 )
 
+ARCHETYPE_ALIASES_PATH = os.path.join(
+    os.path.dirname(__file__), "..", "digimon_gym", "engine", "data", "archetype_aliases.json"
+)
+
 # Source priority for deduplication (higher = preferred)
-SOURCE_PRIORITY = {"digimonmeta": 3, "egman": 2, "digimoncard_io": 1, "manual": 0, "file": 0}
+SOURCE_PRIORITY = {"digimonmeta": 3, "digilab": 2, "egman": 2, "digimoncard_io": 1, "manual": 0, "file": 0}
+
+
+# ─── Archetype Alias Resolution ─────────────────────────────────────
+
+def _load_alias_map() -> Dict[str, str]:
+    """Load the archetype alias index, returning {lowercase_alias: canonical_name}."""
+    path = os.environ.get("ARCHETYPE_ALIASES_PATH", ARCHETYPE_ALIASES_PATH)
+    try:
+        with open(path, "r", encoding="utf-8") as f:
+            raw = json.load(f)
+    except FileNotFoundError:
+        logger.warning("Archetype aliases file not found: %s", path)
+        return {}
+    result: Dict[str, str] = {}
+    for canonical, aliases in raw.items():
+        if canonical.startswith("_"):
+            continue
+        for alias in aliases:
+            result[alias.lower()] = canonical
+    return result
+
+
+_ALIAS_MAP: Optional[Dict[str, str]] = None
+
+
+def canonicalize_archetype(name: str) -> str:
+    """Resolve an archetype name to its canonical form via the alias index."""
+    global _ALIAS_MAP
+    if _ALIAS_MAP is None:
+        _ALIAS_MAP = _load_alias_map()
+    return _ALIAS_MAP.get(name.lower(), name)
+
+# DigiLab PostgreSQL connection string
+DIGILAB_CONN_STR = (
+    "postgresql://neondb_owner:npg_S85ItviFhMPE@"
+    "ep-tiny-morning-ajc7jhvm-pooler.c-3.us-east-2.aws.neon.tech/"
+    "digilab-db?sslmode=require"
+)
 
 # Top-cut placement patterns
 RE_PLACEMENT_NUM = re.compile(r"(\d+)")
@@ -529,97 +573,254 @@ class DeckIngestor:
             archetype_name=archetype_name,
         )
 
-    # ── DigiLab MotherDuck (enrichment) ──────────────────────────
+    # ── DigiLab PostgreSQL ───────────────────────────────────────
+
+    @staticmethod
+    def _digilab_connect():
+        """Connect to DigiLab PostgreSQL database.
+
+        Uses DIGILAB_CONN_STR env var if set, otherwise falls back to default.
+        """
+        import psycopg2
+        conn_str = os.environ.get("DIGILAB_CONN_STR", DIGILAB_CONN_STR)
+        return psycopg2.connect(conn_str)
+
+    @staticmethod
+    def _digilab_json_to_card_ids(decklist_json: Dict[str, Any]) -> Tuple[List[str], Dict[str, int]]:
+        """Convert DigiLab structured decklist JSON to flat card ID list.
+
+        DigiLab format:
+            {"digimon": [{"count": 4, "name": "...", "set": "BT12", "number": "073"}, ...],
+             "tamer": [...], "option": [...], "egg": [...]}
+
+        Returns (card_ids, card_counts).
+        """
+        card_ids: List[str] = []
+        card_counts: Dict[str, int] = {}
+        for category in ("egg", "digimon", "tamer", "option"):
+            for entry in decklist_json.get(category, []):
+                set_code = entry.get("set", "")
+                number = entry.get("number", "")
+                count = entry.get("count", 0)
+                if not set_code or not number or not count:
+                    continue
+                card_id = f"{set_code}-{number}"
+                card_ids.extend([card_id] * count)
+                card_counts[card_id] = card_counts.get(card_id, 0) + count
+        return card_ids, card_counts
+
+    def scrape_digilab(self, min_placement: Optional[int] = None) -> int:
+        """Scrape decklists from DigiLab PostgreSQL database.
+
+        Fetches tournament results that have decklist_json, joined with
+        deck_archetypes for archetype names and tournaments for event metadata.
+
+        Args:
+            min_placement: Only include results with placement <= this value.
+                If None, includes all results with decklists.
+
+        Returns number of decklists scraped.
+        """
+        try:
+            import psycopg2
+        except ImportError:
+            logger.warning("psycopg2 not installed — pip install psycopg2-binary")
+            return 0
+
+        logger.info("Scraping decklists from DigiLab PostgreSQL...")
+        conn = self._digilab_connect()
+        try:
+            cur = conn.cursor()
+            query = """
+                SELECT r.result_id, r.decklist_json, r.placement,
+                       r.wins, r.losses, r.decklist_url,
+                       da.archetype_name, da.primary_color, da.secondary_color,
+                       da.display_card_id,
+                       t.event_date, t.player_count, t.event_type
+                FROM results r
+                JOIN deck_archetypes da ON da.archetype_id = r.archetype_id
+                JOIN tournaments t ON t.tournament_id = r.tournament_id
+                WHERE r.decklist_json IS NOT NULL
+                  AND r.decklist_json != ''
+            """
+            params: list = []
+            if min_placement is not None:
+                query += " AND r.placement <= %s"
+                params.append(min_placement)
+            query += " ORDER BY t.event_date DESC"
+
+            cur.execute(query, params)
+            rows = cur.fetchall()
+        finally:
+            conn.close()
+
+        count = 0
+        for row in rows:
+            result_id, decklist_str, placement, wins, losses, decklist_url, \
+                raw_archetype_name, primary_color, secondary_color, display_card_id, \
+                event_date, player_count, event_type = row
+
+            archetype_name = canonicalize_archetype(raw_archetype_name)
+
+            # Parse the decklist JSON
+            try:
+                decklist_json = json.loads(decklist_str)
+            except (json.JSONDecodeError, TypeError):
+                logger.debug("Invalid decklist JSON for result %s", result_id)
+                continue
+
+            card_ids, card_counts = self._digilab_json_to_card_ids(decklist_json)
+            if not card_ids:
+                continue
+
+            deck_id = f"digilab_{_deck_fingerprint(card_counts)[:12]}"
+            placement_str = str(placement) if placement is not None else None
+            event_date_str = event_date.strftime("%Y-%m-%d") if event_date else None
+
+            deck = IngestedDeck(
+                deck_id=deck_id,
+                source="digilab",
+                source_url=decklist_url or "",
+                card_ids=card_ids,
+                card_counts=card_counts,
+                archetype_name=archetype_name,
+                placement=placement_str,
+                is_top_cut=_is_top_cut(placement_str, player_count),
+                event_date=event_date_str,
+                event_players=player_count,
+            )
+
+            # Ensure archetype exists with metadata from DB
+            if archetype_name not in self.archetypes:
+                self.archetypes[archetype_name] = ArchetypeMeta(
+                    archetype_name=archetype_name,
+                    primary_color=primary_color,
+                    secondary_color=secondary_color,
+                    display_card_id=display_card_id,
+                )
+            else:
+                arch = self.archetypes[archetype_name]
+                if arch.display_card_id is None and display_card_id:
+                    arch.display_card_id = display_card_id
+                if arch.primary_color is None and primary_color:
+                    arch.primary_color = primary_color
+                if arch.secondary_color is None and secondary_color:
+                    arch.secondary_color = secondary_color
+
+            self._add_deck_to_archetype(archetype_name, deck)
+            count += 1
+
+        logger.info("DigiLab: scraped %d decklists", count)
+        return count
 
     def fetch_digilab_meta(self) -> int:
-        """Fetch archetype stats from DigiLab MotherDuck database.
+        """Fetch archetype stats from DigiLab PostgreSQL database.
 
-        Reads MOTHERDUCK_TOKEN from .env file.
+        Computes stats from deck_archetypes, results, and matches tables.
         These stats supplement (not replace) the computed stats from scraped data.
 
         Returns number of archetypes loaded.
         """
-        token = self._get_motherduck_token()
-        if not token:
-            logger.warning("No MOTHERDUCK_TOKEN found in .env — skipping DigiLab fetch")
-            return 0
-
         try:
-            import duckdb
+            import psycopg2
         except ImportError:
-            logger.warning("duckdb not installed — skipping DigiLab fetch (pip install duckdb)")
+            logger.warning("psycopg2 not installed — pip install psycopg2-binary")
             return 0
 
-        logger.info("Fetching meta stats from DigiLab MotherDuck...")
-        conn_str = "md:_share/digilab-digimontcg/68ea21a1-6e57-4c50-9102-ae3d583e16c0"
-        con = duckdb.connect(conn_str, config={"motherduck_token": token})
-        con.sql('USE "digilab-digimontcg"')
+        logger.info("Fetching meta stats from DigiLab PostgreSQL...")
+        conn = self._digilab_connect()
+        try:
+            cur = conn.cursor()
 
-        rows = con.sql("""
-            SELECT archetype_name, primary_color, secondary_color,
-                   display_card_id, times_played, conversion_rate,
-                   win_rate, top4_rate, total_match_wins, total_match_losses
-            FROM archetype_meta
-            WHERE times_played > 0
-            ORDER BY times_played DESC
-        """).fetchall()
-        con.close()
+            # Get archetype metadata and computed stats from results
+            cur.execute("""
+                SELECT da.archetype_name, da.primary_color, da.secondary_color,
+                       da.display_card_id,
+                       COUNT(r.result_id) AS times_played,
+                       SUM(r.wins) AS total_wins,
+                       SUM(r.losses) AS total_losses,
+                       COUNT(CASE WHEN r.placement <= 4 THEN 1 END) AS top4_count
+                FROM deck_archetypes da
+                LEFT JOIN results r ON r.archetype_id = da.archetype_id
+                WHERE da.is_active = true
+                GROUP BY da.archetype_id, da.archetype_name, da.primary_color,
+                         da.secondary_color, da.display_card_id
+                HAVING COUNT(r.result_id) > 0
+                ORDER BY COUNT(r.result_id) DESC
+            """)
+            rows = cur.fetchall()
+        finally:
+            conn.close()
+
+        # Pre-aggregate rows that alias to the same canonical name
+        aggregated: Dict[str, list] = defaultdict(list)
+        for row in rows:
+            raw_name = row[0]
+            canonical = canonicalize_archetype(raw_name)
+            aggregated[canonical].append(row)
 
         count = 0
-        for row in rows:
-            name = row[0]
+        for name, agg_rows in aggregated.items():
+            # Merge stats across aliased rows
+            primary_color = secondary_color = display_card_id = None
+            times_played = total_wins = total_losses = top4_count = 0
+            for row in agg_rows:
+                _, pc, sc, dci, tp, tw, tl, t4 = row
+                times_played += tp or 0
+                total_wins += tw or 0
+                total_losses += tl or 0
+                top4_count += t4 or 0
+                if primary_color is None and pc:
+                    primary_color = pc
+                if secondary_color is None and sc:
+                    secondary_color = sc
+                if display_card_id is None and dci:
+                    display_card_id = dci
+
+            total_games = total_wins + total_losses
+            win_rate = total_wins / total_games if total_games > 0 else 0.0
+            top4_rate = top4_count / times_played if times_played > 0 else 0.0
+            conversion_rate = top4_rate  # top4 = conversion in this context
+
             self._digilab_meta[name] = {
-                "primary_color": row[1],
-                "secondary_color": row[2],
-                "display_card_id": row[3],
-                "times_played": row[4],
-                "conversion_rate": (row[5] or 0.0) / 100.0,  # DB stores as percent
-                "win_rate": (row[6] or 0.0) / 100.0,
-                "top4_rate": (row[7] or 0.0) / 100.0,
-                "total_match_wins": row[8] or 0,
-                "total_match_losses": row[9] or 0,
+                "primary_color": primary_color,
+                "secondary_color": secondary_color,
+                "display_card_id": display_card_id,
+                "times_played": times_played,
+                "conversion_rate": conversion_rate,
+                "win_rate": win_rate,
+                "top4_rate": top4_rate,
+                "total_match_wins": total_wins or 0,
+                "total_match_losses": total_losses or 0,
             }
 
             # Ensure archetype exists
             if name not in self.archetypes:
                 self.archetypes[name] = ArchetypeMeta(
                     archetype_name=name,
-                    primary_color=row[1],
-                    secondary_color=row[2],
-                    display_card_id=row[3],
+                    primary_color=primary_color,
+                    secondary_color=secondary_color,
+                    display_card_id=display_card_id,
                 )
 
-            # Set digilab_stats as enrichment
             arch = self.archetypes[name]
-            if arch.display_card_id is None and row[3]:
-                arch.display_card_id = row[3]
-            if arch.primary_color is None and row[1]:
-                arch.primary_color = row[1]
+            if arch.display_card_id is None and display_card_id:
+                arch.display_card_id = display_card_id
+            if arch.primary_color is None and primary_color:
+                arch.primary_color = primary_color
+            if arch.secondary_color is None and secondary_color:
+                arch.secondary_color = secondary_color
 
             arch.digilab_stats = DigiLabStats(
-                times_played=row[4] or 0,
-                conversion_rate=(row[5] or 0.0) / 100.0,
-                win_rate=(row[6] or 0.0) / 100.0,
-                top4_rate=(row[7] or 0.0) / 100.0,
+                times_played=times_played or 0,
+                conversion_rate=conversion_rate,
+                win_rate=win_rate,
+                top4_rate=top4_rate,
             )
             count += 1
 
         logger.info("DigiLab: loaded stats for %d archetypes", count)
         return count
-
-    @staticmethod
-    def _get_motherduck_token() -> Optional[str]:
-        """Read MOTHERDUCK_TOKEN from .env file or environment."""
-        # Try python-dotenv
-        try:
-            from dotenv import load_dotenv
-            env_path = os.path.join(_PROJECT_ROOT, ".env")
-            if os.path.exists(env_path):
-                load_dotenv(env_path)
-        except ImportError:
-            pass
-
-        return os.environ.get("MOTHERDUCK_TOKEN")
 
     # ── File Import ──────────────────────────────────────────────
 
@@ -659,6 +860,8 @@ class DeckIngestor:
 
     def _add_deck_to_archetype(self, archetype_name: str, deck: IngestedDeck) -> None:
         """Add a deck to an archetype, creating the archetype if needed."""
+        archetype_name = canonicalize_archetype(archetype_name)
+        deck.archetype_name = archetype_name
         if archetype_name not in self.archetypes:
             self.archetypes[archetype_name] = ArchetypeMeta(
                 archetype_name=archetype_name,
@@ -899,7 +1102,8 @@ class DeckIngestor:
         with open(path, "r", encoding="utf-8") as f:
             data = json.load(f)
 
-        for name, arch_data in data.get("archetypes", {}).items():
+        for raw_name, arch_data in data.get("archetypes", {}).items():
+            name = canonicalize_archetype(raw_name)
             if name not in self.archetypes:
                 self.archetypes[name] = ArchetypeMeta(
                     archetype_name=name,
@@ -909,6 +1113,13 @@ class DeckIngestor:
                 )
 
             arch = self.archetypes[name]
+            # Backfill metadata from aliases
+            if arch.display_card_id is None and arch_data.get("display_card_id"):
+                arch.display_card_id = arch_data["display_card_id"]
+            if arch.primary_color is None and arch_data.get("primary_color"):
+                arch.primary_color = arch_data["primary_color"]
+            if arch.secondary_color is None and arch_data.get("secondary_color"):
+                arch.secondary_color = arch_data["secondary_color"]
 
             # Load existing decklists
             existing_ids = {d.deck_id for d in arch.decklists}
@@ -941,15 +1152,35 @@ class DeckIngestor:
                 )
                 arch.decklists.append(deck)
 
-            # Load digilab stats
+            # Load digilab stats (merge if alias brings in additional stats)
             digilab = arch_data.get("digilab_stats")
-            if digilab and arch.digilab_stats is None:
-                arch.digilab_stats = DigiLabStats(
-                    times_played=digilab.get("times_played", 0),
-                    conversion_rate=digilab.get("conversion_rate", 0.0),
-                    win_rate=digilab.get("win_rate", 0.0),
-                    top4_rate=digilab.get("top4_rate", 0.0),
-                )
+            if digilab:
+                new_tp = digilab.get("times_played", 0)
+                if arch.digilab_stats is None:
+                    arch.digilab_stats = DigiLabStats(
+                        times_played=new_tp,
+                        conversion_rate=digilab.get("conversion_rate", 0.0),
+                        win_rate=digilab.get("win_rate", 0.0),
+                        top4_rate=digilab.get("top4_rate", 0.0),
+                    )
+                elif new_tp > 0:
+                    # Merge: combine times_played, weighted-average rates
+                    old = arch.digilab_stats
+                    combined_tp = old.times_played + new_tp
+                    if combined_tp > 0:
+                        old.conversion_rate = (
+                            old.conversion_rate * old.times_played
+                            + digilab.get("conversion_rate", 0.0) * new_tp
+                        ) / combined_tp
+                        old.win_rate = (
+                            old.win_rate * old.times_played
+                            + digilab.get("win_rate", 0.0) * new_tp
+                        ) / combined_tp
+                        old.top4_rate = (
+                            old.top4_rate * old.times_played
+                            + digilab.get("top4_rate", 0.0) * new_tp
+                        ) / combined_tp
+                    old.times_played = combined_tp
 
         total = sum(len(a.decklists) for a in self.archetypes.values())
         logger.info("Loaded deck library: %d archetypes, %d decklists", len(self.archetypes), total)
@@ -1011,6 +1242,120 @@ class DeckIngestor:
         return "\n".join(lines)
 
 
+# ─── Local Meta Report ────────────────────────────────────────────────
+
+def _print_local_meta_report(args):
+    """Print scoped meta report comparing local vs global meta shares."""
+    # Lazy import to avoid requiring psycopg2 for other commands
+    from digimon_gym.digilab_client import (
+        get_scoped_meta,
+        list_stores as digilab_list_stores,
+        list_scenes as digilab_list_scenes,
+    )
+
+    # Resolve store names to IDs, or scene name to ID
+    store_ids = None
+    scene_id = None
+    scope_label = ""
+
+    if args.stores:
+        store_names = [n.strip() for n in args.stores.split(",")]
+        all_stores = digilab_list_stores(min_tournaments=0)
+        store_map = {s.name.lower(): s for s in all_stores}
+        store_ids = []
+        for name in store_names:
+            match = store_map.get(name.lower())
+            if match:
+                store_ids.append(match.store_id)
+            else:
+                logger.warning("Store not found: %s", name)
+        if not store_ids:
+            print("ERROR: No matching stores found.")
+            return
+        scope_label = ", ".join(store_names)
+    elif args.scene:
+        all_scenes = digilab_list_scenes(min_tournaments=0)
+        scene_match = None
+        for s in all_scenes:
+            if s.display_name.lower() == args.scene.lower() or s.name.lower() == args.scene.lower():
+                scene_match = s
+                break
+        if not scene_match:
+            print(f"ERROR: Scene not found: {args.scene}")
+            print("Available scenes:")
+            for s in all_scenes:
+                print(f"  {s.display_name} (ID: {s.scene_id}, {s.tournament_count} events)")
+            return
+        scene_id = scene_match.scene_id
+        scope_label = scene_match.display_name
+    else:
+        print("ERROR: --local-meta requires --stores or --scene")
+        return
+
+    # Get scoped meta from DigiLab
+    scoped = get_scoped_meta(store_ids=store_ids, scene_id=scene_id)
+
+    # Load deck library for global comparison and decklist availability
+    # Canonicalize names so aliases merge correctly
+    library_path = args.output if hasattr(args, "output") else DECK_LIBRARY_PATH
+    with open(library_path, "r", encoding="utf-8") as f:
+        library = json.load(f)
+
+    # Aggregate library entries under canonical names
+    global_archetypes: Dict[str, dict] = {}
+    for raw_name, arch_data in library.get("archetypes", {}).items():
+        canon = canonicalize_archetype(raw_name)
+        if canon not in global_archetypes:
+            global_archetypes[canon] = {"digilab_tp": 0, "decklists": 0}
+        entry = global_archetypes[canon]
+        entry["digilab_tp"] += arch_data.get("digilab_stats", {}).get("times_played", 0)
+        entry["decklists"] += len(arch_data.get("decklists", []))
+
+    # Compute global total for meta_share
+    global_total = sum(e["digilab_tp"] for e in global_archetypes.values())
+
+    # Merge: all archetypes from both sources
+    all_names = set(scoped.keys()) | set(global_archetypes.keys())
+
+    rows = []
+    for name in sorted(all_names):
+        local = scoped.get(name)
+        gdata = global_archetypes.get(name, {"digilab_tp": 0, "decklists": 0})
+        global_tp = gdata["digilab_tp"]
+        global_ms = global_tp / global_total if global_total > 0 else 0.0
+        has_decklists = gdata["decklists"] > 0
+
+        local_ms = local.meta_share if local else 0.0
+        local_tp = local.times_played if local else 0
+
+        if local_tp == 0 and not has_decklists:
+            continue  # skip if no local data and no decklists
+
+        rows.append((name, local_ms, global_ms, local_tp, has_decklists))
+
+    # Sort by local meta share descending
+    rows.sort(key=lambda r: r[1], reverse=True)
+
+    # Print report
+    print(f"\n{'=' * 80}")
+    print(f"  Local Meta Report: {scope_label}")
+    print(f"  {len(scoped)} archetypes found locally")
+    print(f"{'=' * 80}\n")
+    print(f"  {'Archetype':<30} {'Local%':>7} {'Global%':>8} {'Plays':>6} {'Decks':>6}")
+    print(f"  {'-' * 30} {'-' * 7} {'-' * 8} {'-' * 6} {'-' * 6}")
+
+    for name, local_ms, global_ms, local_tp, has_decks in rows:
+        deck_flag = "Y" if has_decks else "N"
+        print(f"  {name:<30} {local_ms * 100:>6.1f}% {global_ms * 100:>7.1f}% {local_tp:>6} {deck_flag:>6}")
+
+    # Summary
+    trainable = sum(1 for _, lms, _, _, hd in rows if lms > 0 and hd)
+    local_only = sum(1 for _, lms, _, _, hd in rows if lms > 0 and not hd)
+    print(f"\n  Trainable (local meta + decklists): {trainable}")
+    print(f"  Local-only (no decklists): {local_only}")
+    print()
+
+
 # ─── CLI ─────────────────────────────────────────────────────────────
 
 def main():
@@ -1030,6 +1375,14 @@ def main():
         help="Scrape tournament decklists from DigimonCard.io",
     )
     parser.add_argument(
+        "--scrape-digilab", action="store_true",
+        help="Scrape decklists from DigiLab PostgreSQL database",
+    )
+    parser.add_argument(
+        "--digilab-min-placement", metavar="N", type=int, default=None,
+        help="Only import DigiLab decklists with placement <= N",
+    )
+    parser.add_argument(
         "--import-file", metavar="FILE",
         help="Import a local deck file (TTS/text format)",
     )
@@ -1039,7 +1392,7 @@ def main():
     )
     parser.add_argument(
         "--fetch-meta", action="store_true",
-        help="Fetch meta stats from DigiLab MotherDuck (requires .env token)",
+        help="Fetch meta stats from DigiLab PostgreSQL database",
     )
     parser.add_argument(
         "--build", action="store_true",
@@ -1056,6 +1409,18 @@ def main():
     parser.add_argument(
         "--output", metavar="PATH", default=DECK_LIBRARY_PATH,
         help=f"Output path for deck_library.json (default: {DECK_LIBRARY_PATH})",
+    )
+    parser.add_argument(
+        "--local-meta", action="store_true",
+        help="Print local meta report for specified stores or scene",
+    )
+    parser.add_argument(
+        "--stores", metavar="NAMES",
+        help="Comma-separated store names for --local-meta (e.g. 'Card Haven,Boardwalk Games')",
+    )
+    parser.add_argument(
+        "--scene", metavar="NAME",
+        help="Scene display name for --local-meta (e.g. 'Texas (Dallas-Fort Worth)')",
     )
     parser.add_argument(
         "-v", "--verbose", action="store_true",
@@ -1089,6 +1454,10 @@ def main():
         ingestor.scrape_digimoncard_io(args.scrape_digimoncard_io)
         actions_taken = True
 
+    if args.scrape_digilab:
+        ingestor.scrape_digilab(min_placement=args.digilab_min_placement)
+        actions_taken = True
+
     if args.import_file:
         ingestor.import_file(args.import_file, archetype=args.import_archetype)
         actions_taken = True
@@ -1108,6 +1477,10 @@ def main():
 
     if args.report or actions_taken:
         print(ingestor.report())
+
+    if args.local_meta:
+        _print_local_meta_report(args)
+        actions_taken = True
 
     if not actions_taken and not args.report:
         parser.print_help()

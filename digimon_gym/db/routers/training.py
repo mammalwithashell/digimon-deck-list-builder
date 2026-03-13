@@ -38,6 +38,8 @@ from digimon_gym.db.schemas import (
     GauntletParticipantResponse,
     GauntletResponse,
     MatchupResultResponse,
+    SceneInfoResponse,
+    StoreInfoResponse,
     TrainingJobCreateRequest,
     TrainingJobResponse,
 )
@@ -538,12 +540,70 @@ async def get_gauntlet_matchups(
 # ── Deck Library ─────────────────────────────────────────────────────────
 
 
+@router.get("/meta-scope/stores", response_model=List[StoreInfoResponse])
+async def list_meta_scope_stores(
+    _: User = Depends(require_roles(ROLE_ADMIN)),
+):
+    """List DigiLab stores with tournament data."""
+    import asyncio
+    from digimon_gym.digilab_client import list_stores
+    stores = await asyncio.to_thread(list_stores)
+    return [
+        StoreInfoResponse(
+            store_id=s.store_id,
+            name=s.name,
+            city=s.city,
+            state=s.state,
+            scene_id=s.scene_id,
+            tournament_count=s.tournament_count,
+        )
+        for s in stores
+    ]
+
+
+@router.get("/meta-scope/scenes", response_model=List[SceneInfoResponse])
+async def list_meta_scope_scenes(
+    _: User = Depends(require_roles(ROLE_ADMIN)),
+):
+    """List DigiLab scenes with tournament data."""
+    import asyncio
+    from digimon_gym.digilab_client import list_scenes
+    scenes = await asyncio.to_thread(list_scenes)
+    return [
+        SceneInfoResponse(
+            scene_id=s.scene_id,
+            name=s.name,
+            display_name=s.display_name,
+            tournament_count=s.tournament_count,
+        )
+        for s in scenes
+    ]
+
+
 @router.get("/deck-library/archetypes", response_model=List[ArchetypeInfoResponse])
 async def list_deck_library_archetypes(
     _: User = Depends(require_roles(ROLE_ADMIN)),
+    scope: str = Query("global", pattern="^(global|store|scene)$"),
+    store_ids: Optional[str] = Query(None, description="Comma-separated store IDs"),
+    scene_id: Optional[int] = Query(None),
 ):
     mg = MetaGauntlet()
     mg.load()
+
+    # Apply scoped meta if requested
+    scoped_stats = None
+    if scope == "store" and store_ids:
+        import asyncio
+        from digimon_gym.digilab_client import get_scoped_meta
+        ids = [int(x.strip()) for x in store_ids.split(",") if x.strip()]
+        if ids:
+            scoped_stats = await asyncio.to_thread(get_scoped_meta, store_ids=ids)
+            mg.override_meta_shares({n: s.meta_share for n, s in scoped_stats.items()})
+    elif scope == "scene" and scene_id is not None:
+        import asyncio
+        from digimon_gym.digilab_client import get_scoped_meta
+        scoped_stats = await asyncio.to_thread(get_scoped_meta, scene_id=scene_id)
+        mg.override_meta_shares({n: s.meta_share for n, s in scoped_stats.items()})
 
     responses: list[ArchetypeInfoResponse] = []
     for stats in sorted(
@@ -552,6 +612,9 @@ async def list_deck_library_archetypes(
         reverse=True,
     ):
         sample = stats.decks[0].card_ids if stats.decks else []
+        local_played = None
+        if scoped_stats is not None and stats.archetype_name in scoped_stats:
+            local_played = scoped_stats[stats.archetype_name].times_played
         responses.append(
             ArchetypeInfoResponse(
                 name=stats.archetype_name,
@@ -561,6 +624,8 @@ async def list_deck_library_archetypes(
                 threat_index=round(stats.threat_index, 4),
                 decklists_count=len(stats.decks),
                 sample_decklist=sample,
+                scope=scope,
+                local_times_played=local_played,
             )
         )
     return responses

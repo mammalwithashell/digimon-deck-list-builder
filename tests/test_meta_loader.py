@@ -482,3 +482,89 @@ class TestJPFormatFilter:
         """JP_REGIONS should NOT include western regions."""
         assert "USA" not in DeckIngestor.JP_REGIONS
         assert "Europe" not in DeckIngestor.JP_REGIONS
+
+
+# ─── DigiLab JSON Conversion ──────────────────────────────────────────
+
+class TestDigiLabJsonConversion:
+    """Tests for DigiLab structured JSON → flat card ID list conversion."""
+
+    def test_basic_conversion(self):
+        """Standard DigiLab decklist JSON converts to flat card IDs."""
+        decklist_json = {
+            "digimon": [
+                {"count": 4, "name": "Impmon (X Antibody)", "set": "BT12", "number": "073"},
+                {"count": 2, "name": "Beelzemon", "set": "EX10", "number": "037"},
+            ],
+            "tamer": [
+                {"count": 4, "name": "Ai & Mako", "set": "ST14", "number": "11"},
+            ],
+            "option": [
+                {"count": 3, "name": "Death Slinger", "set": "EX2", "number": "071"},
+            ],
+            "egg": [
+                {"count": 4, "name": "Yaamon", "set": "ST14", "number": "01"},
+            ],
+        }
+
+        card_ids, card_counts = DeckIngestor._digilab_json_to_card_ids(decklist_json)
+
+        assert card_counts["BT12-073"] == 4
+        assert card_counts["EX10-037"] == 2
+        assert card_counts["ST14-11"] == 4
+        assert card_counts["EX2-071"] == 3
+        assert card_counts["ST14-01"] == 4
+        assert len(card_ids) == 17  # 4+2+4+3+4
+
+    def test_empty_categories(self):
+        """Missing or empty categories are handled gracefully."""
+        decklist_json = {
+            "digimon": [
+                {"count": 4, "name": "Agumon", "set": "BT1", "number": "010"},
+            ],
+        }
+
+        card_ids, card_counts = DeckIngestor._digilab_json_to_card_ids(decklist_json)
+
+        assert card_counts == {"BT1-010": 4}
+        assert len(card_ids) == 4
+
+    def test_empty_decklist(self):
+        """Empty JSON returns empty lists."""
+        card_ids, card_counts = DeckIngestor._digilab_json_to_card_ids({})
+        assert card_ids == []
+        assert card_counts == {}
+
+    def test_missing_fields_skipped(self):
+        """Entries with missing set/number/count are skipped."""
+        decklist_json = {
+            "digimon": [
+                {"count": 4, "name": "Agumon", "set": "BT1", "number": "010"},
+                {"count": 0, "name": "BadCard", "set": "BT1", "number": "999"},  # count=0
+                {"name": "NoCount", "set": "BT1", "number": "888"},  # missing count
+                {"count": 2, "name": "NoSet", "number": "777"},  # missing set
+            ],
+        }
+
+        card_ids, card_counts = DeckIngestor._digilab_json_to_card_ids(decklist_json)
+        assert card_counts == {"BT1-010": 4}
+
+    def test_promo_and_st_card_ids(self):
+        """Promo (P-xxx) and Starter (ST-xx) card IDs format correctly."""
+        decklist_json = {
+            "tamer": [
+                {"count": 2, "name": "Promo Tamer", "set": "P", "number": "077"},
+            ],
+            "egg": [
+                {"count": 4, "name": "Starter Egg", "set": "ST14", "number": "01"},
+            ],
+        }
+
+        card_ids, card_counts = DeckIngestor._digilab_json_to_card_ids(decklist_json)
+        assert "P-077" in card_counts
+        assert "ST14-01" in card_counts
+
+    def test_digilab_source_priority(self):
+        """DigiLab source has priority 2 (same as egman)."""
+        from tools.meta_loader import SOURCE_PRIORITY
+        assert SOURCE_PRIORITY["digilab"] == 2

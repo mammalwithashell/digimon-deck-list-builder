@@ -50,6 +50,37 @@ DECK_LIBRARY_PATH = os.path.join(
     os.path.dirname(__file__), "..", "engine", "data", "deck_library.json"
 )
 
+ARCHETYPE_ALIASES_PATH = os.path.join(
+    os.path.dirname(__file__), "..", "engine", "data", "archetype_aliases.json"
+)
+
+
+def _load_alias_map() -> Dict[str, str]:
+    path = os.environ.get("ARCHETYPE_ALIASES_PATH", ARCHETYPE_ALIASES_PATH)
+    try:
+        with open(path, "r", encoding="utf-8") as f:
+            raw = json.load(f)
+    except FileNotFoundError:
+        return {}
+    result: Dict[str, str] = {}
+    for canonical, aliases in raw.items():
+        if canonical.startswith("_"):
+            continue
+        for alias in aliases:
+            result[alias.lower()] = canonical
+    return result
+
+
+_ALIAS_MAP: Optional[Dict[str, str]] = None
+
+
+def canonicalize_archetype(name: str) -> str:
+    """Resolve an archetype name to its canonical form via the alias index."""
+    global _ALIAS_MAP
+    if _ALIAS_MAP is None:
+        _ALIAS_MAP = _load_alias_map()
+    return _ALIAS_MAP.get(name.lower(), name)
+
 # Deck source priority for within-archetype selection (higher = preferred).
 # DigimonMeta lists are highly-optimised top-cut builds.
 _SOURCE_PREFERENCE = {"digimonmeta": 3, "egman": 2, "digimoncard_io": 1, "file": 0, "manual": 0, "test": 0}
@@ -134,18 +165,49 @@ class MetaGauntlet:
             data = json.load(f)
 
         # First pass: gather DigiLab total_appearances for meta_share denominator
+        # Aggregate aliased entries under canonical names
         digilab_total_appearances = 0
         arch_digilab: Dict[str, dict] = {}
 
-        for arch_name, arch_data in data.get("archetypes", {}).items():
+        for raw_name, arch_data in data.get("archetypes", {}).items():
+            arch_name = canonicalize_archetype(raw_name)
             digilab = arch_data.get("digilab_stats")
             if digilab:
                 tp = digilab.get("times_played", 0)
                 digilab_total_appearances += tp
-                arch_digilab[arch_name] = digilab
+                if arch_name in arch_digilab:
+                    # Merge stats from alias
+                    existing = arch_digilab[arch_name]
+                    old_tp = existing.get("times_played", 0)
+                    new_tp = old_tp + tp
+                    if new_tp > 0:
+                        for key in ("conversion_rate", "win_rate", "top4_rate"):
+                            existing[key] = (
+                                existing.get(key, 0.0) * old_tp
+                                + digilab.get(key, 0.0) * tp
+                            ) / new_tp
+                    existing["times_played"] = new_tp
+                else:
+                    arch_digilab[arch_name] = dict(digilab)
+
+        # Group raw archetype data by canonical name for merging
+        canonical_groups: Dict[str, List[tuple]] = {}
+        for raw_name, arch_data in data.get("archetypes", {}).items():
+            arch_name = canonicalize_archetype(raw_name)
+            if arch_name not in canonical_groups:
+                canonical_groups[arch_name] = []
+            canonical_groups[arch_name].append((raw_name, arch_data))
 
         # Second pass: build archetype stats and deck pools
-        for arch_name, arch_data in data.get("archetypes", {}).items():
+        for arch_name, group in canonical_groups.items():
+            # Merge all entries in the group
+            arch_data_merged = {}
+            for _, ad in group:
+                for key in ("display_card_id", "primary_color"):
+                    if not arch_data_merged.get(key) and ad.get(key):
+                        arch_data_merged[key] = ad[key]
+                arch_data_merged.setdefault("decklists", []).extend(ad.get("decklists", []))
+            arch_data = arch_data_merged
             decks: List[DeckEntry] = []
             for dl in arch_data.get("decklists", []):
                 # Parse TTS format decklist (JSON array string from digimoncard.io export)
@@ -208,6 +270,18 @@ class MetaGauntlet:
             "MetaGauntlet loaded: %d archetypes, %d total decks",
             len(self.archetypes), len(self._deck_pool),
         )
+
+    def override_meta_shares(self, overrides: Dict[str, float]) -> None:
+        """Replace digilab_meta_share with scoped values, recompute TI + weights.
+
+        Archetypes not present in *overrides* get meta_share = 0.0 (they may
+        still have non-zero TI from conversion rate if they meet the confidence
+        threshold).
+        """
+        for name, stats in self.archetypes.items():
+            stats.digilab_meta_share = overrides.get(name, 0.0)
+        self._compute_threat_indices()
+        self._compute_sampling_weights()
 
     def _compute_threat_indices(self) -> None:
         """Compute TI using DigiLab stats only.

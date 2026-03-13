@@ -6,6 +6,9 @@ import {
   startGauntlet,
   cancelGauntlet,
   getDeckPools,
+  getMetaScopeStores,
+  getMetaScopeScenes,
+  getDeckLibraryArchetypes,
 } from '@/api/trainingApi';
 import type {
   GauntletItem,
@@ -13,6 +16,8 @@ import type {
   ArchetypeInfo,
   GauntletParticipantItem,
   DeckPoolItem,
+  StoreInfo,
+  SceneInfo,
 } from '@/api/trainingApi';
 
 // ── Types ──────────────────────────────────────────────────────────
@@ -117,13 +122,60 @@ function CreateWizardModal({
   const [error, setError] = useState<string | null>(null);
   const [deckPools, setDeckPools] = useState<DeckPoolItem[]>([]);
 
+  // Meta scope state
+  const [scopeMode, setScopeMode] = useState<'global' | 'store' | 'scene'>('global');
+  const [stores, setStores] = useState<StoreInfo[]>([]);
+  const [scenes, setScenes] = useState<SceneInfo[]>([]);
+  const [selectedStoreIds, setSelectedStoreIds] = useState<number[]>([]);
+  const [selectedSceneId, setSelectedSceneId] = useState<number | null>(null);
+  const [scopedArchetypes, setScopedArchetypes] = useState<ArchetypeInfo[] | null>(null);
+  const [scopeLoading, setScopeLoading] = useState(false);
+  const [storeSearch, setStoreSearch] = useState('');
+
   // Fetch available deck pools on mount
   useEffect(() => {
     void getDeckPools().then(setDeckPools).catch(() => {});
   }, []);
 
+  // Fetch stores/scenes when scope mode changes
+  useEffect(() => {
+    if (scopeMode === 'store' && stores.length === 0) {
+      void getMetaScopeStores().then(setStores).catch(() => {});
+    }
+    if (scopeMode === 'scene' && scenes.length === 0) {
+      void getMetaScopeScenes().then(setScenes).catch(() => {});
+    }
+  }, [scopeMode, stores.length, scenes.length]);
+
+  // Re-fetch archetypes when scope selection changes
+  useEffect(() => {
+    if (scopeMode === 'global') {
+      setScopedArchetypes(null);
+      return;
+    }
+    if (scopeMode === 'store' && selectedStoreIds.length === 0) {
+      setScopedArchetypes(null);
+      return;
+    }
+    if (scopeMode === 'scene' && selectedSceneId === null) {
+      setScopedArchetypes(null);
+      return;
+    }
+    setScopeLoading(true);
+    const params = scopeMode === 'store'
+      ? { scope: 'store' as const, store_ids: selectedStoreIds.join(',') }
+      : { scope: 'scene' as const, scene_id: selectedSceneId! };
+    void getDeckLibraryArchetypes(params)
+      .then(setScopedArchetypes)
+      .catch(() => setScopedArchetypes(null))
+      .finally(() => setScopeLoading(false));
+  }, [scopeMode, selectedStoreIds, selectedSceneId]);
+
+  // Use scoped archetypes when available, otherwise fall back to global
+  const activeArchetypes = scopedArchetypes ?? archetypes;
+
   // Sort archetypes by threat_index descending for auto-suggestions
-  const sortedArchetypes = [...archetypes].sort((a, b) => b.threat_index - a.threat_index);
+  const sortedArchetypes = [...activeArchetypes].sort((a, b) => b.threat_index - a.threat_index);
   const suggestedCore = sortedArchetypes.slice(0, 8);
 
   const coreSlots = slots.filter(s => s.role === 'core');
@@ -225,7 +277,7 @@ function CreateWizardModal({
   };
 
   // Available archetypes not yet added
-  const availableArchetypes = archetypes.filter(
+  const availableArchetypes = activeArchetypes.filter(
     a => !slots.some(s => s.archetypeName === a.name)
   );
 
@@ -309,6 +361,87 @@ function CreateWizardModal({
         {/* ── Step 2: Deck Selection ────────────────────────── */}
         {step === 2 && (
           <div className="space-y-4">
+            {/* Meta Scope selector */}
+            <div className="border border-gray-700 rounded p-3 bg-gray-800/50 space-y-3">
+              <div className="text-xs font-medium text-gray-400">Meta Scope</div>
+              <div className="flex gap-3">
+                {(['global', 'store', 'scene'] as const).map(mode => (
+                  <label key={mode} className="flex items-center gap-1.5 text-sm text-gray-300 cursor-pointer">
+                    <input
+                      type="radio"
+                      name="metaScope"
+                      checked={scopeMode === mode}
+                      onChange={() => { setScopeMode(mode); setSlots([]); }}
+                      className="accent-blue-500"
+                    />
+                    {mode === 'global' ? 'Global' : mode === 'store' ? 'By Store' : 'By Scene'}
+                  </label>
+                ))}
+              </div>
+
+              {scopeMode === 'store' && (
+                <div className="space-y-2">
+                  <input
+                    type="text"
+                    placeholder="Search stores..."
+                    value={storeSearch}
+                    onChange={e => setStoreSearch(e.target.value)}
+                    className="w-full px-2 py-1 rounded bg-gray-900 border border-gray-600 text-sm text-white placeholder-gray-500"
+                  />
+                  <div className="max-h-40 overflow-y-auto space-y-1">
+                    {stores
+                      .filter(s => !storeSearch || s.name.toLowerCase().includes(storeSearch.toLowerCase()) || s.city.toLowerCase().includes(storeSearch.toLowerCase()))
+                      .map(s => (
+                        <label key={s.store_id} className="flex items-center gap-2 text-xs text-gray-300 cursor-pointer hover:bg-gray-700/50 px-1 py-0.5 rounded">
+                          <input
+                            type="checkbox"
+                            checked={selectedStoreIds.includes(s.store_id)}
+                            onChange={e => {
+                              setSelectedStoreIds(prev =>
+                                e.target.checked
+                                  ? [...prev, s.store_id]
+                                  : prev.filter(id => id !== s.store_id)
+                              );
+                            }}
+                            className="accent-blue-500"
+                          />
+                          {s.name} <span className="text-gray-500">({s.city}, {s.state}) — {s.tournament_count} events</span>
+                        </label>
+                      ))}
+                  </div>
+                </div>
+              )}
+
+              {scopeMode === 'scene' && (
+                <select
+                  value={selectedSceneId ?? ''}
+                  onChange={e => setSelectedSceneId(e.target.value ? Number(e.target.value) : null)}
+                  className="w-full px-2 py-1 rounded bg-gray-900 border border-gray-600 text-sm text-white"
+                >
+                  <option value="">Select a scene...</option>
+                  {scenes.map(s => (
+                    <option key={s.scene_id} value={s.scene_id}>
+                      {s.display_name} ({s.tournament_count} events)
+                    </option>
+                  ))}
+                </select>
+              )}
+
+              {scopeLoading && <div className="text-xs text-blue-400">Loading scoped meta...</div>}
+
+              {scopeMode !== 'global' && scopedArchetypes && (
+                <div className="text-xs text-green-400">
+                  Showing {scopedArchetypes.length} archetypes with local data
+                  {scopeMode === 'store' && selectedStoreIds.length > 0 && (
+                    <> from {stores.filter(s => selectedStoreIds.includes(s.store_id)).map(s => s.name).join(' + ')}</>
+                  )}
+                  {scopeMode === 'scene' && selectedSceneId && (
+                    <> from {scenes.find(s => s.scene_id === selectedSceneId)?.display_name}</>
+                  )}
+                </div>
+              )}
+            </div>
+
             {/* Auto-suggestion banner */}
             {slots.length === 0 && suggestedCore.length > 0 && (
               <div className="border border-gray-700 rounded p-3 bg-gray-800/50 space-y-2">
@@ -342,7 +475,7 @@ function CreateWizardModal({
                       key={index}
                       slot={slot}
                       index={index}
-                      archetypes={archetypes}
+                      archetypes={activeArchetypes}
                       deckPools={deckPools}
                       onUpdateArchetype={updateSlotArchetype}
                       onUpdateDeckPool={updateSlotDeckPool}
@@ -372,7 +505,7 @@ function CreateWizardModal({
                       key={index}
                       slot={slot}
                       index={index}
-                      archetypes={archetypes}
+                      archetypes={activeArchetypes}
                       deckPools={deckPools}
                       onUpdateArchetype={updateSlotArchetype}
                       onUpdateDeckPool={updateSlotDeckPool}
@@ -396,7 +529,7 @@ function CreateWizardModal({
                   <select
                     defaultValue=""
                     onChange={e => {
-                      const arch = archetypes.find(a => a.name === e.target.value);
+                      const arch = activeArchetypes.find(a => a.name === e.target.value);
                       if (!arch) return;
                       const role = coreSlots.length < 8 ? 'core' : 'exploiter';
                       addFromLibrary(arch, role);
@@ -407,7 +540,7 @@ function CreateWizardModal({
                     <option value="" disabled>Add from Library...</option>
                     {availableArchetypes.map(a => (
                       <option key={a.name} value={a.name}>
-                        {a.name} (TI: {a.threat_index.toFixed(2)}, share: {(a.meta_share * 100).toFixed(1)}%)
+                        {a.name} (TI: {a.threat_index.toFixed(2)}, share: {(a.meta_share * 100).toFixed(1)}%{a.local_times_played != null ? `, ${a.local_times_played} local` : ''})
                       </option>
                     ))}
                   </select>
