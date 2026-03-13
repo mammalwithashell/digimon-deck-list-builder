@@ -43,9 +43,14 @@ class BT24_003(CardScript):
             if not (player and perm and game):
                 return
             def digi_filter(c):
+                if not getattr(c, 'is_digimon', False):
+                    return False
+                traits = getattr(c, 'card_traits', []) or []
+                if not any('Shaman' in t for t in traits):
+                    return False
                 return True
             game.effect_digivolve_from_hand(
-                player, perm, digi_filter, is_optional=True)
+                player, perm, digi_filter, cost_reduction=1, is_optional=True)
 
         effect0.set_on_process_callback(process0)
         effects.append(effect0)

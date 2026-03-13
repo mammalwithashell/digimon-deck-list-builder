@@ -42,6 +42,13 @@ class P_197(CardScript):
                 return False
             if not (card and card.owner and card.owner.is_my_turn):
                 return False
+            # Only activates if player has 4 or less memory
+            player = card.owner if card else None
+            if player is None:
+                return False
+            game = getattr(player, 'game', None)
+            if game is not None and game.memory > 4:
+                return False
             return True
 
         effect1.set_can_use_condition(condition1)
@@ -56,11 +63,12 @@ class P_197(CardScript):
             def digi_filter(c):
                 if not getattr(c, 'is_digimon', False):
                     return False
-                if not (any('TS' in _t for _t in (getattr(c, 'card_traits', []) or []))):
+                traits = getattr(c, 'card_traits', []) or []
+                if not any('Angel' in _t or 'TS' in _t for _t in traits):
                     return False
                 return True
             game.effect_digivolve_from_hand(
-                player, perm, digi_filter, is_optional=True)
+                player, perm, digi_filter, cost_override=0, is_optional=True)
 
         effect1.set_on_process_callback(process1)
         effects.append(effect1)

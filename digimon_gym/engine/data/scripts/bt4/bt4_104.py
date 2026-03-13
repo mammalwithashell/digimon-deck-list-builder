@@ -33,7 +33,7 @@ class BT4_104(CardScript):
             if not player:
                 return
             if player.security_cards:
-                trashed = player.security_cards.pop()
+                trashed = player.security_cards.pop(0)
                 player.trash_cards.append(trashed)
             player.add_memory(2)
 

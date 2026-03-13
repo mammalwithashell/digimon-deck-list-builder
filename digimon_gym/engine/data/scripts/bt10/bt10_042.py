@@ -40,11 +40,16 @@ class BT10_042(CardScript):
             enemy = player.enemy if player else None
             if not enemy:
                 return
-            # Apply Security Attack -1 to all opponent Digimon
-            # Note: _temp_sa_modifier clears per attack; partial approximation
+            from ....interfaces.modifiers import ModifierType
+            # Apply Security Attack -1 to all opponent Digimon until end of opponent's turn
             for opp_perm in list(enemy.battle_area):
                 if opp_perm.is_digimon:
-                    opp_perm._temp_sa_modifier -= 1
+                    game.register_modifier(
+                        opp_perm,
+                        ModifierType.CHANGE_SECURITY_ATTACK,
+                        value_fn=lambda: -1,
+                        expiry='end_of_opponent_turn',
+                    )
 
         effect0.set_on_process_callback(process0)
         effects.append(effect0)

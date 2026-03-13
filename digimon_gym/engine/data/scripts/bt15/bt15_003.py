@@ -30,18 +30,33 @@ class BT15_003(CardScript):
         def condition0(context: Dict[str, Any]) -> bool:
             if card and card.permanent_of_this_card() is None:
                 return False
-            # Triggered on attack — validated by engine timing
+            # Must have security cards to pay the cost
+            player = card.owner if card else None
+            if player is None or not player.security_cards:
+                return False
             return True
 
         effect0.set_can_use_condition(condition0)
 
         def process0(ctx: Dict[str, Any]):
-            """Action: Gain 1 memory"""
+            """Action: Trash top or bottom security, gain 1 memory"""
             player = ctx.get('player')
             perm = ctx.get('permanent')
             game = ctx.get('game')
-            if player:
+            if not (player and game and player.security_cards):
+                return
+            def on_choice(choice):
+                if not player.security_cards:
+                    return
+                if choice == 0:
+                    # Trash top
+                    trashed = player.security_cards.pop(0)
+                else:
+                    # Trash bottom
+                    trashed = player.security_cards.pop(-1)
+                player.trash_cards.append(trashed)
                 player.add_memory(1)
+            game.effect_choose_branch(player, 2, on_choice, branch_labels=["Trash top security", "Trash bottom security"])
 
         effect0.set_on_process_callback(process0)
         effects.append(effect0)

@@ -19,7 +19,26 @@ class EX4_074(CardScript):
     """
 
     def get_card_effects(self, card: 'CardSource') -> List['ICardEffect']:
+        from ....interfaces.modifiers import ModifierType
+
         effects = []
+
+        def _apply_minus_5000(ctx):
+            """Apply -5000 DP to all opponent Digimon until end of opponent's next turn."""
+            player = ctx.get('player')
+            game = ctx.get('game')
+            if not (player and game):
+                return
+            enemy = player.enemy
+            if not enemy:
+                return
+            for perm in list(enemy.battle_area):
+                if perm.is_digimon:
+                    game.register_modifier(
+                        perm, ModifierType.CHANGE_DP,
+                        value_fn=lambda: -5000,
+                        expiry='end_of_opponent_turn'
+                    )
 
         # --- Effect 0: [When Digivolving] Opponent Digimon get -5000 DP ---
         effect0 = ICardEffect()
@@ -36,20 +55,7 @@ class EX4_074(CardScript):
                 return False
             return True
         effect0.set_can_use_condition(condition0)
-
-        def process0(ctx: Dict[str, Any]):
-            """Apply -5000 DP to all opponent Digimon."""
-            player = ctx.get('player')
-            game = ctx.get('game')
-            if not (player and game):
-                return
-            enemy = player.enemy
-            if not enemy:
-                return
-            for perm in enemy.battle_area:
-                if perm.is_digimon:
-                    perm.dp_modifier -= 5000
-        effect0.set_on_process_callback(process0)
+        effect0.set_on_process_callback(_apply_minus_5000)
         effects.append(effect0)
 
         # --- Effect 1: [On Deletion] Opponent Digimon get -5000 DP ---
@@ -65,20 +71,7 @@ class EX4_074(CardScript):
         def condition1(context: Dict[str, Any]) -> bool:
             return True
         effect1.set_can_use_condition(condition1)
-
-        def process1(ctx: Dict[str, Any]):
-            """Apply -5000 DP to all opponent Digimon on deletion."""
-            player = ctx.get('player')
-            game = ctx.get('game')
-            if not (player and game):
-                return
-            enemy = player.enemy
-            if not enemy:
-                return
-            for perm in enemy.battle_area:
-                if perm.is_digimon:
-                    perm.dp_modifier -= 5000
-        effect1.set_on_process_callback(process1)
+        effect1.set_on_process_callback(_apply_minus_5000)
         effects.append(effect1)
 
         # --- Effect 2: [End of Attack] Delete self + 1 opponent + recovery + hatch ---
@@ -96,7 +89,7 @@ class EX4_074(CardScript):
                 return False
             perm = card.permanent_of_this_card() if card else None
             ctx_perm = context.get('attacking_permanent') or context.get('permanent')
-            if perm and ctx_perm and perm != ctx_perm:
+            if perm and ctx_perm and perm is not ctx_perm:
                 return False
             return True
         effect2.set_can_use_condition(condition2)
@@ -116,29 +109,30 @@ class EX4_074(CardScript):
             if perm and perm in player.battle_area:
                 player.delete_permanent(perm)
 
-            # Delete 1 opponent Digimon
+            # Delete 1 opponent Digimon (selection)
+            def after_delete(target):
+                if target and enemy:
+                    enemy.delete_permanent(target)
+                # Recovery +1
+                player.recovery(1)
+                # If you have a tamer, hatch 1 Digi-Egg
+                has_tamer = any(p.is_tamer for p in player.battle_area)
+                if has_tamer and not player.breeding_area:
+                    player.hatch()
+
             opp_digimon = [p for p in enemy.battle_area if p.is_digimon]
             if opp_digimon:
-                target = opp_digimon[0]
-                enemy.delete_permanent(target)
-
-            # Recovery +1
-            player.recovery(1)
-
-            # If you have a tamer, hatch 1 Digi-Egg
-            has_tamer = any(
-                p.is_tamer for p in player.battle_area
-            )
-            if has_tamer and player.egg_deck:
-                # Hatch: move top egg to breeding area if empty
-                if not player.breeding_area:
-                    from ....core.permanent import Permanent
-                    egg_card = player.egg_deck.pop(0)
-                    egg_perm = Permanent([egg_card])
-                    if game:
-                        egg_perm.turn_played = game.turn_count
-                        egg_perm._owner_game = game
-                    player.breeding_area.append(egg_perm)
+                game.effect_select_opponent_permanent(
+                    player, after_delete,
+                    filter_fn=lambda p: p.is_digimon,
+                    is_optional=False
+                )
+            else:
+                # No opponent Digimon to delete, still do recovery + hatch
+                player.recovery(1)
+                has_tamer = any(p.is_tamer for p in player.battle_area)
+                if has_tamer and not player.breeding_area:
+                    player.hatch()
 
         effect2.set_on_process_callback(process2)
         effects.append(effect2)

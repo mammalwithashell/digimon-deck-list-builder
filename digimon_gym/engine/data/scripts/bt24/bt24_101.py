@@ -49,6 +49,7 @@ class BT24_101(CardScript):
         # 1 or fewer security cards, <Recovery +2 (Deck)>.
         # ----------------------------------------------------------------
         effect2 = ICardEffect()
+        effect2.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect2.set_effect_name("BT24-101 Trash own security, -13000 DP, conditional Recovery +2")
         effect2.set_effect_description("[On Play] Trash your top security card and 1 of your opponent's Digimon gets -13000 DP. Then, if you have 1 or fewer security cards, Recovery +2.")
         effect2.is_on_play = True
@@ -88,6 +89,7 @@ class BT24_101(CardScript):
         # [When Digivolving] Same effect as On Play
         # ----------------------------------------------------------------
         effect3 = ICardEffect()
+        effect3.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect3.set_effect_name("BT24-101 Trash own security, -13000 DP, conditional Recovery +2")
         effect3.set_effect_description("[When Digivolving] Trash your top security card and 1 of your opponent's Digimon gets -13000 DP. Then, if you have 1 or fewer security cards, Recovery +2.")
         effect3.is_when_digivolving = True
@@ -128,6 +130,7 @@ class BT24_101(CardScript):
         # from, trash your opponent's top security card.
         # ----------------------------------------------------------------
         effect4 = ICardEffect()
+        effect4.set_timing(EffectTiming.OnLoseSecurity)
         effect4.set_effect_name("BT24-101 Trash Opponent's top security")
         effect4.set_effect_description("[All Turns] [Once Per Turn] When your security stack is removed from, trash your opponent's top security card.")
         effect4.set_max_count_per_turn(1)

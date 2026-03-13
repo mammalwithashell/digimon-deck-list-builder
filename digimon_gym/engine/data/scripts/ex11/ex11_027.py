@@ -60,18 +60,21 @@ class EX11_027(CardScript):
         effect1.set_can_use_condition(condition1)
 
         def process1(ctx: Dict[str, Any]):
-            """Action: Add To Hand, Reveal And Select"""
+            """Action: Reveal top 3, add 1 card with [Maquinamon] in name or 1 card with [Maquinamon] in text."""
             player = ctx.get('player')
             perm = ctx.get('permanent')
             game = ctx.get('game')
-            # Add card to hand (from trash/reveal)
-            if player and player.trash_cards:
-                card_to_add = player.trash_cards.pop()
-                player.hand_cards.append(card_to_add)
             if not (player and game):
                 return
             def reveal_filter(c):
-                return True
+                # Card must have [Maquinamon] in its name OR [Maquinamon] in its text
+                names = getattr(c, 'card_names', []) or []
+                if any('Maquinamon' in n for n in names):
+                    return True
+                text = getattr(c, 'card_text', '') or ''
+                if 'Maquinamon' in text:
+                    return True
+                return False
             def on_revealed(selected, remaining):
                 player.hand_cards.append(selected)
                 for c in remaining:
@@ -92,9 +95,40 @@ class EX11_027(CardScript):
 
         effect = effect2  # alias for condition closure
         def condition2(context: Dict[str, Any]) -> bool:
+            if card and card.permanent_of_this_card() is None:
+                return False
+            # Only trigger when THIS permanent would leave
+            leaving_perm = context.get('permanent')
+            my_perm = card.permanent_of_this_card() if card else None
+            if leaving_perm is not my_perm:
+                return False
+            # Must have linked cards to sacrifice
+            if not my_perm or not my_perm.linked_cards:
+                return False
             return True
 
         effect2.set_can_use_condition(condition2)
+
+        def process2(ctx: Dict[str, Any]):
+            """Action: Place 1 linked card as bottom digivolution card to prevent leaving."""
+            player = ctx.get('player')
+            perm = ctx.get('permanent')
+            game = ctx.get('game')
+            if not (player and perm):
+                return
+            my_perm = card.permanent_of_this_card() if card else perm
+            if my_perm and my_perm.linked_cards:
+                linked = my_perm.linked_cards.pop(0)
+                my_perm.add_card_source_bottom(linked)
+                # Re-add to battle area if already removed
+                if my_perm not in player.battle_area:
+                    # Restore from trash
+                    for cs in list(my_perm.card_sources):
+                        if cs in player.trash_cards:
+                            player.trash_cards.remove(cs)
+                    player.battle_area.append(my_perm)
+
+        effect2.set_on_process_callback(process2)
         effects.append(effect2)
 
         return effects

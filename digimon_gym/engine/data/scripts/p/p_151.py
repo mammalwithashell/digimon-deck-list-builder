@@ -52,28 +52,38 @@ class P_151(CardScript):
         effect1.set_can_use_condition(condition1)
 
         def process1(ctx: Dict[str, Any]):
-            """Action: Play Card, Add To Hand, Reveal And Select"""
+            """Action: Reveal top 3, add 1 [LIBERATOR] to hand, rest to deck bottom, then play 1 [LIBERATOR] cost<=3 free."""
             player = ctx.get('player')
             perm = ctx.get('permanent')
             game = ctx.get('game')
             if not (player and game):
                 return
-            def play_filter(c):
-                return True
-            game.effect_play_from_zone(
-                player, 'hand', play_filter, free=True, is_optional=True)
-            # Add card to hand (from trash/reveal)
-            if player and player.trash_cards:
-                card_to_add = player.trash_cards.pop()
-                player.hand_cards.append(card_to_add)
-            if not (player and game):
-                return
+            # Step 1: Reveal top 3 cards, select 1 with [LIBERATOR] trait to add to hand.
+            # Remaining cards go to deck bottom.
             def reveal_filter(c):
-                return True
+                traits = getattr(c, 'card_traits', []) or []
+                return 'LIBERATOR' in traits
+
             def on_revealed(selected, remaining):
+                # Add selected card to hand
                 player.hand_cards.append(selected)
+                # Return the rest to deck bottom
                 for c in remaining:
                     player.library_cards.append(c)
+                # Step 2: Play 1 [LIBERATOR] trait card with cost <= 3 from hand free
+                def play_filter(c):
+                    traits = getattr(c, 'card_traits', []) or []
+                    if 'LIBERATOR' not in traits:
+                        return False
+                    cost = getattr(c, 'get_cost_itself', None)
+                    if cost is None:
+                        cost = getattr(c, 'play_cost', None)
+                    if cost is None or cost > 3:
+                        return False
+                    return True
+                game.effect_play_from_zone(
+                    player, 'hand', play_filter, free=True, is_optional=True)
+
             game.effect_reveal_and_select(
                 player, 3, reveal_filter, on_revealed, is_optional=True)
 

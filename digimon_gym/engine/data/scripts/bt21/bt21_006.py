@@ -25,6 +25,16 @@ class BT21_006(CardScript):
         def condition0(context: Dict[str, Any]) -> bool:
             if card and card.permanent_of_this_card() is None:
                 return False
+            perm = card.permanent_of_this_card()
+            if perm is None:
+                return False
+            # Count [Vemmon] in digivolution cards (exclude top card)
+            vemmon_count = sum(
+                1 for cs in perm.card_sources[:-1]
+                if any('Vemmon' in n for n in getattr(cs, 'card_names', []))
+            )
+            if vemmon_count < 4:
+                return False
             return True
         effect0.set_can_use_condition(condition0)
         effects.append(effect0)

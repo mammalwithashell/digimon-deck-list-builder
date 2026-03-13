@@ -52,19 +52,20 @@ class EX11_042(CardScript):
 
         effect1.set_can_use_condition(condition1)
 
-        def process1(ctx: Dict[str, Any]):
-            """Action: Play Card"""
+        def _play_maquinamon(ctx: Dict[str, Any]):
+            """Play 1 [Maquinamon] from hand without paying the cost."""
             player = ctx.get('player')
             perm = ctx.get('permanent')
             game = ctx.get('game')
             if not (player and game):
                 return
             def play_filter(c):
-                return True
+                names = getattr(c, 'card_names', []) or []
+                return any('Maquinamon' in n for n in names)
             game.effect_play_from_zone(
                 player, 'hand', play_filter, free=True, is_optional=True)
 
-        effect1.set_on_process_callback(process1)
+        effect1.set_on_process_callback(_play_maquinamon)
         effects.append(effect1)
 
         # Timing: EffectTiming.OnEnterFieldAnyone
@@ -84,19 +85,7 @@ class EX11_042(CardScript):
 
         effect2.set_can_use_condition(condition2)
 
-        def process2(ctx: Dict[str, Any]):
-            """Action: Play Card"""
-            player = ctx.get('player')
-            perm = ctx.get('permanent')
-            game = ctx.get('game')
-            if not (player and game):
-                return
-            def play_filter(c):
-                return True
-            game.effect_play_from_zone(
-                player, 'hand', play_filter, free=True, is_optional=True)
-
-        effect2.set_on_process_callback(process2)
+        effect2.set_on_process_callback(_play_maquinamon)
         effects.append(effect2)
 
         # Timing: EffectTiming.WhenLinked
@@ -124,7 +113,10 @@ class EX11_042(CardScript):
             if not (player and game):
                 return
             def target_filter(p):
-                return p.is_digimon
+                if not p.is_digimon:
+                    return False
+                cost = getattr(p.top_card, 'get_cost_itself', 0) if p.top_card else 0
+                return cost <= 5
             def on_delete(target_perm):
                 enemy = player.enemy if player else None
                 if enemy:

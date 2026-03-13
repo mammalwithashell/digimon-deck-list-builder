@@ -86,6 +86,9 @@ class BT24_014(CardScript):
                     target.change_dp(-5000)
             if not (player and game):
                 return
+            # Then, if you have 3 or fewer security cards, delete 1 opponent Digimon with 7000 DP or less
+            if len(player.security_cards) > 3:
+                return
             def target_filter(p):
                 if p.dp is None or p.dp > 7000:
                     return False

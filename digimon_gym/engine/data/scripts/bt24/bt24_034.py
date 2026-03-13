@@ -93,22 +93,30 @@ class BT24_034(CardScript):
                     # No valid targets or no security — skip entire "by" effect
                     return
 
-                # "By" cost: add top security to hand, then play Tamer
-                # The effect_play_from_zone handles optionality (player can decline)
-                def on_play_callback(action_id):
-                    """Called when player selects a Tamer to play (cost already paid)."""
-                    pass  # effect_play_from_zone handles the actual play
+                # "By" = cost that is only paid if the player opts in.
+                # Use effect_choose_branch so the player can decline before paying.
+                def on_choice(choice: int):
+                    if choice == 0:  # Player opts in
+                        # Pay cost: move top security to hand
+                        if not player.security_cards:
+                            return
+                        top_sec = player.security_cards.pop(0)
+                        player.hand_cards.append(top_sec)
+                        # Then play the Tamer (re-check filter since hand changed)
+                        game.effect_play_from_zone(
+                            player, 'hand',
+                            filter_fn=tamer_filter,
+                            free=True,
+                            is_optional=False
+                        )
+                    # choice == 1: player declines, no cost paid
 
-                # Pay cost: move top security to hand
-                top_sec = player.security_cards.pop(0)
-                player.hand_cards.append(top_sec)
-
-                # Then offer the Tamer play (optional — player can decline)
-                game.effect_play_from_zone(
-                    player, 'hand',
-                    filter_fn=tamer_filter,
-                    free=True,
-                    is_optional=True
+                game.effect_choose_branch(
+                    player, 2, on_choice,
+                    branch_labels=[
+                        "Add top security to hand and play a [TS] Tamer",
+                        "Don't use this effect"
+                    ]
                 )
 
             return process

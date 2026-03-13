@@ -9,127 +9,180 @@ if TYPE_CHECKING:
 
 
 class BT21_098(CardScript):
-    """BT21-098 Ragnarok Cannon"""
+    """BT21-098 Ragnarok Cannon | Option
+
+    [Main] Delete 1 of your opponent's Digimon with the lowest play cost.
+    Then, place this card in the battle area.
+
+    [Your Turn] When one of your [Galacticmon] attacks, <Delay>.
+    * Delete 1 of your opponent's Digimon with the lowest play cost. If this
+      effect didn't delete, trash the top cards of your opponent's security
+      stack so that it has 1 card left.
+
+    [Security] You may play 1 card with [Vemmon] in its text and a play cost
+    of 6 or less from your hand or trash without paying the cost. Then, add
+    this card to the hand.
+    """
 
     def get_card_effects(self, card: 'CardSource') -> List['ICardEffect']:
         effects = []
 
-        # Timing: EffectTiming.OptionSkill
-        # [Main] Delete 1 of your opponent's Digimon with the lowest play cost. Then, place this card in the battle area.
+        def _has_vemmon_text(c) -> bool:
+            return 'Vemmon' in getattr(c, 'card_text', '')
+
+        def _delete_lowest_cost_digimon(player, game):
+            """Delete 1 of opponent's Digimon with the lowest play cost. Returns True if deleted."""
+            enemy = player.enemy if player else None
+            if not enemy:
+                return False
+            opp_digimon = [p for p in enemy.battle_area if p.is_digimon]
+            if not opp_digimon:
+                return False
+            # Find lowest play cost
+            def get_play_cost(p):
+                top = p.top_card
+                if top is None:
+                    return 999
+                return getattr(top, 'get_cost_itself', 999)
+            lowest_cost = min(get_play_cost(p) for p in opp_digimon)
+            lowest_digimon = [p for p in opp_digimon if get_play_cost(p) == lowest_cost]
+            if not lowest_digimon:
+                return False
+
+            def on_delete(target_perm):
+                if enemy:
+                    enemy.delete_permanent(target_perm)
+
+            def lowest_filter(p):
+                return p.is_digimon and get_play_cost(p) == lowest_cost
+
+            game.effect_select_opponent_permanent(
+                player, on_delete, filter_fn=lowest_filter, is_optional=False)
+            return True
+
+        # ─── Effect 0: [Main] Delete 1 opponent's Digimon with lowest play cost.
+        #     Then place this card in the battle area.
         effect0 = ICardEffect()
         effect0.set_timing(EffectTiming.OptionSkill)
-        effect0.set_effect_name("BT21-098 Delete")
+        effect0.set_effect_name("BT21-098 Delete lowest cost Digimon")
         effect0.set_effect_description("[Main] Delete 1 of your opponent's Digimon with the lowest play cost. Then, place this card in the battle area.")
 
-        effect = effect0  # alias for condition closure
         def condition0(context: Dict[str, Any]) -> bool:
-            # Option main effect — validated by engine timing
             return True
 
         effect0.set_can_use_condition(condition0)
 
         def process0(ctx: Dict[str, Any]):
-            """Action: Delete"""
+            """Delete lowest-cost opponent Digimon."""
             player = ctx.get('player')
-            perm = ctx.get('permanent')
             game = ctx.get('game')
             if not (player and game):
                 return
-            def target_filter(p):
-                return p.is_digimon
-            def on_delete(target_perm):
-                enemy = player.enemy if player else None
-                if enemy:
-                    enemy.delete_permanent(target_perm)
-            game.effect_select_opponent_permanent(
-                player, on_delete, filter_fn=target_filter, is_optional=False)
+            _delete_lowest_cost_digimon(player, game)
+            # Placement in battle area is handled by the engine for Option cards
+            # with OptionSkill timing (they stay in battle area as delayed cards)
 
         effect0.set_on_process_callback(process0)
         effects.append(effect0)
 
-        # Factory effect: delay
-        # Delay
+        # ─── Effect 1: Delay marker — triggers when [Galacticmon] attacks on your turn.
         effect1 = ICardEffect()
         effect1.set_effect_name("BT21-098 Delay")
         effect1.set_effect_description("Delay")
-        effect1.is_on_attack = True
         effect1._is_delay = True
 
         def condition1(context: Dict[str, Any]) -> bool:
-            if card and card.permanent_of_this_card() is None:
+            if not (card and card.owner and card.owner.is_my_turn):
                 return False
-            permanent = card.permanent_of_this_card() if card else None
-            if not (permanent and (permanent.contains_card_name('Galacticmon'))):
+            if card and card.permanent_of_this_card() is None:
                 return False
             return True
         effect1.set_can_use_condition(condition1)
         effects.append(effect1)
 
-        # Timing: EffectTiming.OnUseAttack
-        # [Your Turn] When one of your [Galacticmon] attacks, <Delay>.\n• Delete 1 of your opponent's Digimon with the lowest play cost. If this effect didn't delete, trash the top cards of your opponent's security stack so that is has 1 card left.
+        # ─── Effect 2: Delay effect — [Your Turn] When [Galacticmon] attacks.
+        #     Delete 1 lowest-cost opponent Digimon. If didn't delete, trash
+        #     opponent's security until 1 left.
         effect2 = ICardEffect()
-        effect2.set_timing(EffectTiming.OnUseAttack)
-        effect2.set_effect_name("BT21-098 Delete 1 opponent's Digimon with lowest play cost, trash security until 1 left if didn't delete")
-        effect2.set_effect_description("[Your Turn] When one of your [Galacticmon] attacks, <Delay>.\\n• Delete 1 of your opponent's Digimon with the lowest play cost. If this effect didn't delete, trash the top cards of your opponent's security stack so that is has 1 card left.")
+        effect2.set_timing(EffectTiming.OnDeclaration)
+        effect2.set_effect_name("BT21-098 Delay: Delete lowest cost or trash security")
+        effect2.set_effect_description("[Your Turn] When one of your [Galacticmon] attacks, <Delay>. Delete 1 of your opponent's Digimon with the lowest play cost. If this effect didn't delete, trash the top cards of your opponent's security stack so that it has 1 card left.")
+        effect2._is_delay_effect = True
         effect2.is_optional = True
-        effect2.is_on_attack = True
 
-        effect = effect2  # alias for condition closure
         def condition2(context: Dict[str, Any]) -> bool:
             if card and card.permanent_of_this_card() is None:
                 return False
-            permanent = effect.effect_source_permanent if hasattr(effect, 'effect_source_permanent') else None
-            if not (permanent and (permanent.contains_card_name('Galacticmon'))):
+            if not (card and card.owner and card.owner.is_my_turn):
+                return False
+            # The attacker must be [Galacticmon]
+            attacker = context.get('permanent')
+            if attacker is None or not attacker.is_digimon:
+                return False
+            if not attacker.contains_card_name('Galacticmon'):
                 return False
             return True
 
         effect2.set_can_use_condition(condition2)
+
+        def process2(ctx: Dict[str, Any]):
+            """Delete lowest-cost opponent Digimon. If no delete, trash security to 1."""
+            player = ctx.get('player')
+            game = ctx.get('game')
+            if not (player and game):
+                return
+
+            enemy = player.enemy if player else None
+            if not enemy:
+                return
+
+            # Check if opponent has Digimon to delete
+            opp_digimon = [p for p in enemy.battle_area if p.is_digimon]
+            if opp_digimon:
+                _delete_lowest_cost_digimon(player, game)
+            else:
+                # Didn't delete — trash security until 1 left
+                while len(enemy.security_cards) > 1:
+                    sec_card = enemy.security_cards.pop(0)
+                    enemy.trash_cards.append(sec_card)
+
+        effect2.set_on_process_callback(process2)
         effects.append(effect2)
 
-        # Timing: EffectTiming.SecuritySkill
-        # [Security] You may play 1 card with [Vemmon] in its text and a play cost of 6 or less from your hand or trash without paying the cost. Then, add this card to the hand.
+        # ─── Effect 3: [Security] Play 1 Vemmon-text card with play cost <= 6
+        #     from hand or trash free. Then add this card to hand.
         effect3 = ICardEffect()
         effect3.set_timing(EffectTiming.SecuritySkill)
-        effect3.set_effect_name("BT21-098 Play Card, Add To Hand")
+        effect3.set_effect_name("BT21-098 Security: Play Vemmon-text, add to hand")
         effect3.set_effect_description("[Security] You may play 1 card with [Vemmon] in its text and a play cost of 6 or less from your hand or trash without paying the cost. Then, add this card to the hand.")
         effect3.is_security_effect = True
-        effect3.is_security_effect = True
 
-        effect = effect3  # alias for condition closure
         def condition3(context: Dict[str, Any]) -> bool:
-            # Security effect — validated by engine timing
-            permanent = effect.effect_source_permanent if hasattr(effect, 'effect_source_permanent') else None
-            if permanent and permanent.top_card:
-                text = permanent.top_card.card_text
-                if not ('Vemmon' in text):
-                    return False
-            else:
-                return False
+            # Security effect — always valid when revealed from security
             return True
 
         effect3.set_can_use_condition(condition3)
 
         def process3(ctx: Dict[str, Any]):
-            """Action: Play Card, Add To Hand"""
+            """Play 1 Vemmon-text card cost<=6 from hand/trash free, then add this card to hand."""
             player = ctx.get('player')
             perm = ctx.get('permanent')
             game = ctx.get('game')
             if not (player and game):
                 return
+
             def play_filter(c):
-                if getattr(c, 'is_digi_egg', False):
+                if not _has_vemmon_text(c):
                     return False
-                if not getattr(c, 'has_play_cost', False):
-                    return False
-                if getattr(c, 'get_cost_itself', 0) > 6:
-                    return False
-                return True
+                cost = getattr(c, 'get_cost_itself', 99)
+                return cost <= 6
+
             game.effect_play_from_zone(
-                player, 'trash', play_filter, free=True, is_optional=True)
-            # Add card to hand (from trash/reveal)
-            if player and player.trash_cards:
-                card_to_add = player.trash_cards.pop()
-                player.hand_cards.append(card_to_add)
+                player, 'hand_or_trash', play_filter, free=True, is_optional=True)
+
+            # Add this card (Ragnarok Cannon) to hand
+            if card:
+                player.hand_cards.append(card)
 
         effect3.set_on_process_callback(process3)
         effects.append(effect3)

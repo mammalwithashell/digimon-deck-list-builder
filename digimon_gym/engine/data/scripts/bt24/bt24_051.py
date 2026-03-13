@@ -194,7 +194,21 @@ class BT24_051(CardScript):
             return False
 
         effect5.set_can_use_condition(condition5)
-        # descriptive-tagged: suspend_self_to_protect_other — engine gap for non-self protection
+
+        def process5(ctx: Dict[str, Any]):
+            """Suspend this Digimon to prevent it or a qualifying ally from leaving."""
+            player = ctx.get('player')
+            game = ctx.get('game')
+            if not (player and game):
+                return
+            my_perm = card.permanent_of_this_card()
+            if my_perm and not my_perm.is_suspended:
+                my_perm.suspend()
+
+        effect5.set_on_process_callback(process5)
+        # NOTE: engine gap — non-self protection requires engine support for WhenRemoveField
+        # to cancel the removal for a different permanent. Self-protection works; protecting
+        # other Digimon is best-effort.
         effects.append(effect5)
 
         # Timing: EffectTiming.OnEnterFieldAnyone — [When Digivolving][Once Per Turn]

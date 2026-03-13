@@ -48,6 +48,38 @@ Last updated: 2026-03-10
 - **Suggested change:** Add aura-style modifier registration that auto-applies to new permanents entering the field.
 - **Workaround:** CANNOT_UNSUSPEND applied to all permanents at digivolve time; new entries are not affected.
 
+### Redirect Attack
+- **Discovered in:** ExMaquinamon (2026-03-13)
+- **Card(s):** EX11-042 — Maneuvermon
+- **Effect text:** Inherited [When Attacking] redirect the attack target to another of your opponent's Digimon
+- **What's missing:** Engine API to change the current attack target to a specific Digimon mid-resolution.
+- **Suggested change:** Add `game.redirect_attack(new_target_perm)` or `game.set_attack_target(perm)` callable from effect callbacks during OnDeclaration.
+- **Workaround:** None — BLOCKED. Stub in script.
+
+### Force Attack
+- **Discovered in:** ExMaquinamon (2026-03-13)
+- **Card(s):** EX11-036 — Dalphomon
+- **Effect text:** "[Your Turn] When a [Maquinamon] is played linked to 1 of your Digimon, suspend 1 of your opponent's Digimon, it can't unsuspend..., and it must attack during their next attack phase."
+- **What's missing:** Engine API to force a specific Digimon to attack on its next available attack opportunity.
+- **Suggested change:** Add `ModifierType.FORCE_ATTACK` modifier that the attack phase checks, requiring the modified Digimon to be selected as attacker.
+- **Workaround:** None — BLOCKED. Stub in script.
+
+### DP Floor (Minimum DP)
+- **Discovered in:** ExMaquinamon (2026-03-13)
+- **Card(s):** EX11-070 — Unchained (Tamer)
+- **Effect text:** Effect that prevents a Digimon's DP from going below 1000.
+- **What's missing:** `ModifierType.CHANGE_DP` doesn't support floor semantics; `permanent.dp` doesn't query the modifier registry for DP floor modifiers.
+- **Suggested change:** Add `ModifierType.DP_FLOOR` that `permanent.dp` checks as a minimum after all other DP modifiers.
+- **Workaround:** Registered as CHANGE_DP modifier — semantically correct registration but not enforced until engine integrates DP floor logic.
+
+### OnDigivolutionCardReturnToDeckBottom Not Auto-Fired
+- **Discovered in:** Galacticmon (2026-03-13)
+- **Card(s):** BT18-065 (Snatchmon), BT18-092 (Zenith) — all Vemmon-archetype cards
+- **Effect text:** Various — inherited effects that trigger when [Vemmon] returns to deck bottom from digi-cards.
+- **What's missing:** `EffectTiming.OnDigivolutionCardReturnToDeckBottom` (47) is defined in the enum but `permanent.py` never fires it. Scripts must manually call `game.execute_effects(EffectTiming.OnDigivolutionCardReturnToDeckBottom, {...})`.
+- **Suggested change:** Add `_fire_timing(OnDigivolutionCardReturnToDeckBottom, ...)` in the engine wherever digi-cards are returned to deck bottom (e.g., in a new `permanent.return_card_source_to_deck_bottom()` method).
+- **Workaround:** Scripts manually fire the timing via `game.execute_effects()`. Functional but fragile — any script that returns digi-cards to deck must remember to fire it.
+
 ### ~~Hand-Activated Main Effects on Digimon Cards~~ (RESOLVED)
 - **Resolved:** 2026-03-12 — Added `_is_hand_main` action type (actions 30-59 in Main phase). Scripts declare `effect._is_hand_main = True` with condition and process callbacks. See `docs/archetype-qa/engine-api-reference.md` Pattern 13.
 

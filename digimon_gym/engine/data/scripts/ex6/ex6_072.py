@@ -65,22 +65,22 @@ class EX6_072(CardScript):
         effect2.set_can_use_condition(condition2)
 
         def process2(ctx: Dict[str, Any]):
-            """Action: Play Card, Jogress Condition"""
+            """Action: 2 of your Digimon may DNA digivolve into a Lv.6+ Digimon from hand."""
             player = ctx.get('player')
             perm = ctx.get('permanent')
             game = ctx.get('game')
             if not (player and game):
                 return
-            def play_filter(c):
+            # DNA digivolve: 2 of your Digimon may DNA digivolve into a Digimon
+            # card with a play cost of 0 (free) that is Lv.6+
+            def dna_filter(c):
                 if not getattr(c, 'is_digimon', False):
                     return False
-                if getattr(c, 'level', None) is None or c.level < 6:
+                lv = getattr(c, 'level', None)
+                if lv is None or lv < 6:
                     return False
                 return True
-            game.effect_play_from_zone(
-                player, 'hand', play_filter, free=True, is_optional=True)
-            # DNA/Jogress digivolution condition — handled by engine
-            pass
+            game.effect_dna_digivolve_from_hand(player, dna_filter, is_optional=True)
 
         effect2.set_on_process_callback(process2)
         effects.append(effect2)
@@ -102,14 +102,33 @@ class EX6_072(CardScript):
         effect3.set_can_use_condition(condition3)
 
         def process3(ctx: Dict[str, Any]):
-            """Action: Add To Hand"""
+            """Action: Return 1 Lv.6+ Digimon from trash to hand, then add this card to hand."""
             player = ctx.get('player')
             perm = ctx.get('permanent')
             game = ctx.get('game')
-            # Add card to hand (from trash/reveal)
-            if player and player.trash_cards:
-                card_to_add = player.trash_cards.pop()
-                player.hand_cards.append(card_to_add)
+            if not (player and game):
+                return
+            # Select a level 6+ Digimon from trash and return to hand
+            def trash_filter(c):
+                if not getattr(c, 'is_digimon', False):
+                    return False
+                lv = getattr(c, 'level', None)
+                if lv is None or lv < 6:
+                    return False
+                return True
+            matching = [c for c in player.trash_cards if trash_filter(c)]
+            if matching:
+                # Use the last matching card (most recently trashed)
+                chosen = matching[-1]
+                if chosen in player.trash_cards:
+                    player.trash_cards.remove(chosen)
+                    player.hand_cards.append(chosen)
+            # Then add this card (the option) to hand
+            if card:
+                # The option card should be in trash after security check
+                if card in player.trash_cards:
+                    player.trash_cards.remove(card)
+                    player.hand_cards.append(card)
 
         effect3.set_on_process_callback(process3)
         effects.append(effect3)

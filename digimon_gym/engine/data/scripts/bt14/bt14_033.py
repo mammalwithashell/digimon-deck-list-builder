@@ -1,4 +1,5 @@
 from __future__ import annotations
+import random
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
@@ -52,6 +53,8 @@ class BT14_033(CardScript):
                 perm.add_card_source(sec_card)
                 perm.turn_digivolved = game.turn_count
                 player.draw()
+                # Card text: "Then, shuffle your security stack."
+                random.shuffle(player.security_cards)
                 game.execute_effects(
                     EffectTiming.WhenDigivolving,
                     {"digivolved_permanent": perm},

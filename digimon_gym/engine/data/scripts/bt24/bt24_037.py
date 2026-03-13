@@ -135,24 +135,37 @@ class BT24_037(CardScript):
         effect4.set_can_use_condition(condition4)
 
         def process4(ctx: Dict[str, Any]):
-            """Action: Play Card"""
+            """Action: Play 1 lv4- yellow/red/[TS] Digimon from digivolution cards."""
             player = ctx.get('player')
             perm = ctx.get('permanent')
             game = ctx.get('game')
-            if not (player and game):
+            if not (player and perm and game):
                 return
             def play_filter(c):
                 if not getattr(c, 'is_digimon', False):
                     return False
                 if getattr(c, 'level', None) is None or c.level > 4:
                     return False
-                if not ('Yellow' in [col.name for col in getattr(c, 'card_colors', [])] or 'Red' in [col.name for col in getattr(c, 'card_colors', [])]):
-                    return False
-                if not (any('TS' in _t for _t in (getattr(c, 'card_traits', []) or []))):
-                    return False
-                return True
-            game.effect_play_from_zone(
-                player, 'hand', play_filter, free=True, is_optional=True)
+                colors = [col.name for col in (getattr(c, 'card_colors', []) or [])]
+                traits = getattr(c, 'card_traits', []) or []
+                # Yellow OR Red OR [TS] trait — three independent conditions
+                if 'Yellow' in colors or 'Red' in colors or any('TS' in t for t in traits):
+                    return True
+                return False
+            # Play from this Digimon's digivolution cards (not hand)
+            top = perm.top_card
+            candidates = [cs for cs in perm.card_sources if cs is not top and play_filter(cs)]
+            if not candidates:
+                return
+            # Auto-select best candidate (first matching) for RL simplicity
+            chosen = candidates[0]
+            perm.card_sources.remove(chosen)
+            played = player.play_card_from_source(chosen, pay_cost=False)
+            if played:
+                game.execute_effects(
+                    EffectTiming.OnEnterFieldAnyone,
+                    {'played_card': chosen, 'played_permanent': played, 'event_player': player},
+                )
 
         effect4.set_on_process_callback(process4)
         effects.append(effect4)
@@ -177,24 +190,36 @@ class BT24_037(CardScript):
         effect5.set_can_use_condition(condition5)
 
         def process5(ctx: Dict[str, Any]):
-            """Action: Play Card"""
+            """Action: Play 1 lv4- yellow/red/[TS] Digimon from digivolution cards (inherited)."""
             player = ctx.get('player')
             perm = ctx.get('permanent')
             game = ctx.get('game')
-            if not (player and game):
+            if not (player and perm and game):
                 return
             def play_filter(c):
                 if not getattr(c, 'is_digimon', False):
                     return False
                 if getattr(c, 'level', None) is None or c.level > 4:
                     return False
-                if not ('Yellow' in [col.name for col in getattr(c, 'card_colors', [])] or 'Red' in [col.name for col in getattr(c, 'card_colors', [])]):
-                    return False
-                if not (any('TS' in _t for _t in (getattr(c, 'card_traits', []) or []))):
-                    return False
-                return True
-            game.effect_play_from_zone(
-                player, 'hand', play_filter, free=True, is_optional=True)
+                colors = [col.name for col in (getattr(c, 'card_colors', []) or [])]
+                traits = getattr(c, 'card_traits', []) or []
+                # Yellow OR Red OR [TS] trait — three independent conditions
+                if 'Yellow' in colors or 'Red' in colors or any('TS' in t for t in traits):
+                    return True
+                return False
+            # Play from this Digimon's digivolution cards (not hand)
+            top = perm.top_card
+            candidates = [cs for cs in perm.card_sources if cs is not top and play_filter(cs)]
+            if not candidates:
+                return
+            chosen = candidates[0]
+            perm.card_sources.remove(chosen)
+            played = player.play_card_from_source(chosen, pay_cost=False)
+            if played:
+                game.execute_effects(
+                    EffectTiming.OnEnterFieldAnyone,
+                    {'played_card': chosen, 'played_permanent': played, 'event_player': player},
+                )
 
         effect5.set_on_process_callback(process5)
         effects.append(effect5)

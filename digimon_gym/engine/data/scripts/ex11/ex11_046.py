@@ -9,17 +9,38 @@ if TYPE_CHECKING:
 
 
 class EX11_046(CardScript):
-    """EX11-046 Galacticmon | Lv.6"""
+    """EX11-046 Galacticmon | Lv.6
+
+    Digivolve: from [Snatchmon] for cost 9
+    Digivolve: from [Galacticmon] for cost 5
+    Assembly: 8 cards with [Vemmon] in text, reduce cost by 6
+
+    [On Play] [When Digivolving] Choose 1 of your opponent's highest play cost
+    Digimon and delete all of their other Digimon. Then, if this Digimon has 4
+    or more [Vemmon] in its digivolution cards, until your opponent's turn ends,
+    it gains <Blocker> and isn't affected by their effects.
+
+    [End of Opponent's Turn] This Digimon may digivolve into [Galacticmon] in
+    the hand or trash, ignoring digivolution requirements and without paying
+    the cost.
+    """
 
     def get_card_effects(self, card: 'CardSource') -> List['ICardEffect']:
         effects = []
 
-        # Factory effect: alt_digivolve_req
-        # Alternate digivolution requirement
+        def _count_vemmon_in_digi_cards(perm) -> int:
+            """Count [Vemmon] in digivolution cards (exclude top card)."""
+            if perm is None or len(perm.card_sources) <= 1:
+                return 0
+            return sum(
+                1 for cs in perm.card_sources[:-1]
+                if any('Vemmon' in n for n in getattr(cs, 'card_names', []))
+            )
+
+        # ─── Effect 0: Alt digivolve from [Snatchmon] for cost 9
         effect0 = ICardEffect()
         effect0.set_effect_name("EX11-046 Alternate digivolution requirement")
         effect0.set_effect_description("Alternate digivolution requirement")
-        # Alternate digivolution: from [Snatchmon] for cost 9
         effect0._alt_digi_cost = 9
         effect0._alt_digi_name = "Snatchmon"
 
@@ -31,12 +52,10 @@ class EX11_046(CardScript):
         effect0.set_can_use_condition(condition0)
         effects.append(effect0)
 
-        # Factory effect: alt_digivolve_req
-        # Alternate digivolution requirement
+        # ─── Effect 1: Alt digivolve from [Galacticmon] for cost 5
         effect1 = ICardEffect()
         effect1.set_effect_name("EX11-046 Alternate digivolution requirement")
         effect1.set_effect_description("Alternate digivolution requirement")
-        # Alternate digivolution: from [Galacticmon] for cost 5
         effect1._alt_digi_cost = 5
         effect1._alt_digi_name = "Galacticmon"
 
@@ -48,145 +67,147 @@ class EX11_046(CardScript):
         effect1.set_can_use_condition(condition1)
         effects.append(effect1)
 
-        # Timing: EffectTiming.OnEnterFieldAnyone
-        # Delete, Gain Keyword Blocker, Effect Immunity
+        # ─── Shared On Play / When Digivolving logic
+        def _shared_process(ctx: Dict[str, Any]):
+            """Choose 1 highest-cost opponent Digimon, delete all others.
+            Then if 4+ Vemmon in digi-cards, gain Blocker + immunity until
+            opponent's turn ends."""
+            player = ctx.get('player')
+            perm = ctx.get('permanent')
+            game = ctx.get('game')
+            if not (player and game):
+                return
+            enemy = player.enemy if player else None
+            if not enemy:
+                return
+
+            # Step 1: Find opponent's highest play cost Digimon
+            opp_digimon = [p for p in enemy.battle_area if p.is_digimon]
+            if not opp_digimon:
+                return
+
+            max_cost = max(
+                (p.top_card.get_cost_itself if p.top_card else 0)
+                for p in opp_digimon
+            )
+            highest_cost_digimon = [
+                p for p in opp_digimon
+                if (p.top_card.get_cost_itself if p.top_card else 0) == max_cost
+            ]
+
+            # If there are multiple Digimon tied for highest cost, player chooses 1
+            # to KEEP; all others get deleted.
+            def highest_filter(p):
+                return p.is_digimon and p in highest_cost_digimon
+
+            def on_chosen(chosen_perm):
+                # Delete all OTHER opponent Digimon (not the chosen one)
+                to_delete = [
+                    p for p in list(enemy.battle_area)
+                    if p.is_digimon and p is not chosen_perm
+                ]
+                for target in to_delete:
+                    enemy.delete_permanent(target)
+
+            if len(highest_cost_digimon) == 1:
+                # Only one at highest cost — auto-choose it, delete all others
+                on_chosen(highest_cost_digimon[0])
+            else:
+                # Multiple tied for highest — player selects which to keep
+                game.effect_select_opponent_permanent(
+                    player, on_chosen, filter_fn=highest_filter, is_optional=False)
+
+            # Step 2: If 4+ Vemmon in digi-cards, gain Blocker + immunity
+            if perm and _count_vemmon_in_digi_cards(perm) >= 4:
+                from ....interfaces.modifiers import ModifierType
+                game.register_modifier(
+                    perm, ModifierType.GRANT_BLOCKER,
+                    value_fn=lambda: True, expiry='end_of_opponent_turn')
+                game.register_modifier(
+                    perm, ModifierType.CANNOT_BE_AFFECTED,
+                    value_fn=lambda: True, expiry='end_of_opponent_turn')
+
+        # ─── Effect 2: [On Play]
         effect2 = ICardEffect()
         effect2.set_timing(EffectTiming.OnEnterFieldAnyone)
-        effect2.set_effect_name("EX11-046 Delete, Gain Keyword Blocker, Effect Immunity")
-        effect2.set_effect_description("Delete, Gain Keyword Blocker, Effect Immunity")
+        effect2.set_effect_name("EX11-046 Choose 1 highest cost, delete rest, conditional Blocker+immunity")
+        effect2.set_effect_description("[On Play] Choose 1 of your opponent's highest play cost Digimon and delete all of their other Digimon. Then, if this Digimon has 4 or more [Vemmon] in its digivolution cards, until your opponent's turn ends, it gains <Blocker> and isn't affected by their effects.")
         effect2.is_on_play = True
-        effect2._is_blocker = True
 
-        effect = effect2  # alias for condition closure
         def condition2(context: Dict[str, Any]) -> bool:
             if card and card.permanent_of_this_card() is None:
                 return False
-            # Triggered on play — validated by engine timing
             return True
 
         effect2.set_can_use_condition(condition2)
-
-        def process2(ctx: Dict[str, Any]):
-            """Action: Delete, Gain Keyword Blocker, Effect Immunity"""
-            player = ctx.get('player')
-            perm = ctx.get('permanent')
-            game = ctx.get('game')
-            if not (player and game):
-                return
-            def target_filter(p):
-                return p.is_digimon
-            def on_delete(target_perm):
-                enemy = player.enemy if player else None
-                if enemy:
-                    enemy.delete_permanent(target_perm)
-            game.effect_select_opponent_permanent(
-                player, on_delete, filter_fn=target_filter, is_optional=False)
-            if perm:
-                perm.grant_keyword('_is_blocker')
-            # Grant effect immunity via modifier system
-            if perm and game:
-                from digimon_gym.engine.interfaces.modifiers import ModifierType
-                game.register_modifier(
-                    ModifierType.CANNOT_BE_SELECTED_BY_EFFECT, perm,
-                    value_fn=lambda: True, expiry='end_of_turn')
-
-        effect2.set_on_process_callback(process2)
+        effect2.set_on_process_callback(_shared_process)
         effects.append(effect2)
 
-        # Timing: EffectTiming.OnEnterFieldAnyone
-        # Delete, Gain Keyword Blocker, Effect Immunity
+        # ─── Effect 3: [When Digivolving]
         effect3 = ICardEffect()
         effect3.set_timing(EffectTiming.OnEnterFieldAnyone)
-        effect3.set_effect_name("EX11-046 Delete, Gain Keyword Blocker, Effect Immunity")
-        effect3.set_effect_description("Delete, Gain Keyword Blocker, Effect Immunity")
+        effect3.set_effect_name("EX11-046 Choose 1 highest cost, delete rest, conditional Blocker+immunity")
+        effect3.set_effect_description("[When Digivolving] Choose 1 of your opponent's highest play cost Digimon and delete all of their other Digimon. Then, if this Digimon has 4 or more [Vemmon] in its digivolution cards, until your opponent's turn ends, it gains <Blocker> and isn't affected by their effects.")
         effect3.is_when_digivolving = True
-        effect3._is_blocker = True
 
-        effect = effect3  # alias for condition closure
         def condition3(context: Dict[str, Any]) -> bool:
             if card and card.permanent_of_this_card() is None:
                 return False
-            # Triggered when digivolving — validated by engine timing
             return True
 
         effect3.set_can_use_condition(condition3)
-
-        def process3(ctx: Dict[str, Any]):
-            """Action: Delete, Gain Keyword Blocker, Effect Immunity"""
-            player = ctx.get('player')
-            perm = ctx.get('permanent')
-            game = ctx.get('game')
-            if not (player and game):
-                return
-            def target_filter(p):
-                return p.is_digimon
-            def on_delete(target_perm):
-                enemy = player.enemy if player else None
-                if enemy:
-                    enemy.delete_permanent(target_perm)
-            game.effect_select_opponent_permanent(
-                player, on_delete, filter_fn=target_filter, is_optional=False)
-            if perm:
-                perm.grant_keyword('_is_blocker')
-            # Grant effect immunity via modifier system
-            if perm and game:
-                from digimon_gym.engine.interfaces.modifiers import ModifierType
-                game.register_modifier(
-                    ModifierType.CANNOT_BE_SELECTED_BY_EFFECT, perm,
-                    value_fn=lambda: True, expiry='end_of_turn')
-
-        effect3.set_on_process_callback(process3)
+        effect3.set_on_process_callback(_shared_process)
         effects.append(effect3)
 
-        # Timing: EffectTiming.OnEndTurn
-        # Digivolve
+        # ─── Effect 4: [End of Opponent's Turn] Digivolve into [Galacticmon]
+        #     from hand or trash, ignoring requirements, without paying cost.
         effect4 = ICardEffect()
         effect4.set_timing(EffectTiming.OnEndTurn)
-        effect4.set_effect_name("EX11-046 Digivolve into Galacticmon")
-        effect4.set_effect_description("Digivolve")
+        effect4.set_effect_name("EX11-046 Digivolve into Galacticmon from hand or trash")
+        effect4.set_effect_description("[End of Opponent's Turn] This Digimon may digivolve into [Galacticmon] in the hand or trash, ignoring digivolution requirements and without paying the cost.")
         effect4.is_optional = True
 
-        effect = effect4  # alias for condition closure
         def condition4(context: Dict[str, Any]) -> bool:
             if card and card.permanent_of_this_card() is None:
+                return False
+            # Must be opponent's turn
+            if card and card.owner and card.owner.is_my_turn:
                 return False
             return True
 
         effect4.set_can_use_condition(condition4)
 
         def process4(ctx: Dict[str, Any]):
-            """Action: Digivolve"""
+            """Digivolve into [Galacticmon] from hand or trash, free, ignore requirements."""
             player = ctx.get('player')
             perm = ctx.get('permanent')
             game = ctx.get('game')
             if not (player and perm and game):
                 return
-            def digi_filter(c):
-                return True
-            game.effect_digivolve_from_hand(
-                player, perm, digi_filter, is_optional=True)
+
+            def galacticmon_filter(c):
+                return any('Galacticmon' in n for n in getattr(c, 'card_names', []))
+
+            # Check hand first
+            hand_candidates = [c for c in player.hand_cards if galacticmon_filter(c)]
+            # Check trash
+            trash_candidates = [c for c in player.trash_cards if galacticmon_filter(c)]
+
+            if hand_candidates:
+                # Digivolve from hand, free, ignore requirements
+                game.effect_digivolve_from_hand(
+                    player, perm, galacticmon_filter,
+                    cost_override=0, ignore_requirements=True, is_optional=True)
+            elif trash_candidates:
+                # Digivolve from trash — move card to hand first, then digivolve
+                chosen = trash_candidates[0]
+                player.trash_cards.remove(chosen)
+                player.hand_cards.append(chosen)
+                game.effect_digivolve_from_hand(
+                    player, perm, galacticmon_filter,
+                    cost_override=0, ignore_requirements=True, is_optional=True)
 
         effect4.set_on_process_callback(process4)
         effects.append(effect4)
-
-        # Timing: EffectTiming.None
-        # Effect
-        effect5 = ICardEffect()
-        effect5.set_effect_name("EX11-046 Effect")
-        effect5.set_effect_description("Effect")
-
-        effect = effect5  # alias for condition closure
-        def condition5(context: Dict[str, Any]) -> bool:
-            permanent = effect.effect_source_permanent if hasattr(effect, 'effect_source_permanent') else None
-            if permanent and permanent.top_card:
-                text = permanent.top_card.card_text
-                if not ('Vemmon' in text):
-                    return False
-            else:
-                return False
-            return True
-
-        effect5.set_can_use_condition(condition5)
-        effects.append(effect5)
 
         return effects

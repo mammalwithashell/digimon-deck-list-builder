@@ -108,13 +108,17 @@ class BT24_031(CardScript):
                         if player.security_cards:
                             top_sec = player.security_cards.pop(0)
                             player.hand_cards.append(top_sec)
+                    # Then if 0 security after the choice, Recovery +1 (Deck)
+                    if not player.security_cards:
+                        player.recovery(1)
                 game.effect_choose_branch(
                     player, 2, on_choice,
                     branch_labels=["Add to hand", "Don't add to hand"]
                 )
-            # Then if 0 security, Recovery +1 (Deck)
-            if not player.security_cards:
-                player.recovery(1)
+            else:
+                # No security cards — check for Recovery +1
+                if not player.security_cards:
+                    player.recovery(1)
 
         effect2.set_on_process_callback(process2)
         effects.append(effect2)

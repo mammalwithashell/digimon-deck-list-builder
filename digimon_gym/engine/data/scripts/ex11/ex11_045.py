@@ -232,6 +232,12 @@ class EX11_045(CardScript):
             return True
 
         effect6.set_can_use_condition(condition6)
+
+        def process6(ctx: Dict[str, Any]):
+            """Action: Continuous effect marker — condition gate for inherited effects."""
+            pass
+
+        effect6.set_on_process_callback(process6)
         effects.append(effect6)
 
         # Timing: EffectTiming.OnAddDigivolutionCards
@@ -253,20 +259,37 @@ class EX11_045(CardScript):
         effect7.set_can_use_condition(condition7)
 
         def process7(ctx: Dict[str, Any]):
-            """Action: Delete"""
+            """Action: Delete opponent's Digimon with lowest play cost (auto-target)."""
             player = ctx.get('player')
             perm = ctx.get('permanent')
             game = ctx.get('game')
             if not (player and game):
                 return
-            def target_filter(p):
-                return p.is_digimon
-            def on_delete(target_perm):
-                enemy = player.enemy if player else None
-                if enemy:
+            enemy = player.enemy if player else None
+            if not enemy:
+                return
+            # Find the Digimon with the lowest play cost on opponent's field
+            digimon_perms = [p for p in enemy.battle_area if p.is_digimon]
+            if not digimon_perms:
+                return
+            min_cost = min(
+                (p.top_card.get_cost_itself if p.top_card else 999)
+                for p in digimon_perms
+            )
+            lowest = [
+                p for p in digimon_perms
+                if (p.top_card.get_cost_itself if p.top_card else 999) == min_cost
+            ]
+            # If there's a tie, let the player choose among the tied Digimon
+            if len(lowest) == 1:
+                enemy.delete_permanent(lowest[0])
+            else:
+                def target_filter(p):
+                    return p in lowest
+                def on_delete(target_perm):
                     enemy.delete_permanent(target_perm)
-            game.effect_select_opponent_permanent(
-                player, on_delete, filter_fn=target_filter, is_optional=False)
+                game.effect_select_opponent_permanent(
+                    player, on_delete, filter_fn=target_filter, is_optional=False)
 
         effect7.set_on_process_callback(process7)
         effects.append(effect7)

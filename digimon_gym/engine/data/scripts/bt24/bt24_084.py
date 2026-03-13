@@ -52,38 +52,41 @@ class BT24_084(CardScript):
 
         effect = effect1  # alias for condition closure
         def condition1(context: Dict[str, Any]) -> bool:
+            # This Tamer must be on the field
             if card and card.permanent_of_this_card() is None:
                 return False
-            permanent = effect.effect_source_permanent if hasattr(effect, 'effect_source_permanent') else None
-            if not (permanent and (permanent.contains_card_name('Aegiomon'))):
+            # Check that you have an Aegiomon on the field
+            owner = getattr(card, 'owner', None)
+            if not owner:
                 return False
-            return True
+            has_aegiomon = any(
+                p.contains_card_name('Aegiomon') for p in owner.battle_area if p.is_digimon
+            )
+            return has_aegiomon
 
         effect1.set_can_use_condition(condition1)
 
         def process1(ctx: Dict[str, Any]):
-            """Action: Suspend, Digivolve"""
+            """Action: Suspend this Tamer, then digivolve 1 of your [Aegiomon] into [Aegiochusmon] from hand."""
             player = ctx.get('player')
             perm = ctx.get('permanent')
             game = ctx.get('game')
             if not (player and game):
                 return
-            def target_filter(p):
-                if not (p.contains_card_name('Aegiochusmon')):
-                    return False
-                return True
-            def on_suspend(target_perm):
-                target_perm.suspend()
-            game.effect_select_opponent_permanent(
-                player, on_suspend, filter_fn=target_filter, is_optional=True)
-            if not (player and perm and game):
-                return
-            def digi_filter(c):
-                if not (any('Aegiochusmon' in _n for _n in getattr(c, 'card_names', []))):
-                    return False
-                return True
-            game.effect_digivolve_from_hand(
-                player, perm, digi_filter, is_optional=True)
+            # Suspend this Tamer as a cost
+            my_perm = card.permanent_of_this_card()
+            if my_perm:
+                my_perm.suspend()
+            # Select one of your Aegiomon to digivolve into Aegiochusmon from hand
+            def aegiomon_filter(p):
+                return p.is_digimon and p.contains_card_name('Aegiomon')
+            def on_select_aegiomon(target_perm):
+                def digi_filter(c):
+                    return any('Aegiochusmon' in _n for _n in getattr(c, 'card_names', []))
+                game.effect_digivolve_from_hand(
+                    player, target_perm, digi_filter, is_optional=True)
+            game.effect_select_own_permanent(
+                player, on_select_aegiomon, filter_fn=aegiomon_filter, is_optional=True)
 
         effect1.set_on_process_callback(process1)
         effects.append(effect1)

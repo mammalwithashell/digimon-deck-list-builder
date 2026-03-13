@@ -76,10 +76,9 @@ class EX11_036(CardScript):
                 return True
             def on_suspend(target_perm):
                 target_perm.suspend()
+                target_perm.grant_keyword('_is_cannot_unsuspend')
             game.effect_select_opponent_permanent(
                 player, on_suspend, filter_fn=target_filter, is_optional=False)
-            if perm:
-                perm.grant_keyword('_is_cannot_unsuspend')
 
         effect2.set_on_process_callback(process2)
         effects.append(effect2)
@@ -113,10 +112,9 @@ class EX11_036(CardScript):
                 return True
             def on_suspend(target_perm):
                 target_perm.suspend()
+                target_perm.grant_keyword('_is_cannot_unsuspend')
             game.effect_select_opponent_permanent(
                 player, on_suspend, filter_fn=target_filter, is_optional=False)
-            if perm:
-                perm.grant_keyword('_is_cannot_unsuspend')
 
         effect3.set_on_process_callback(process3)
         effects.append(effect3)
@@ -150,10 +148,9 @@ class EX11_036(CardScript):
                 return True
             def on_suspend(target_perm):
                 target_perm.suspend()
+                target_perm.grant_keyword('_is_cannot_unsuspend')
             game.effect_select_opponent_permanent(
                 player, on_suspend, filter_fn=target_filter, is_optional=False)
-            if perm:
-                perm.grant_keyword('_is_cannot_unsuspend')
 
         effect4.set_on_process_callback(process4)
         effects.append(effect4)
@@ -220,6 +217,12 @@ class EX11_036(CardScript):
             return True
 
         effect6.set_can_use_condition(condition6)
+
+        def process6(ctx: Dict[str, Any]):
+            """Action: Continuous effect marker — condition gate for inherited effects."""
+            pass
+
+        effect6.set_on_process_callback(process6)
         effects.append(effect6)
 
         # Timing: EffectTiming.WhenLinked
@@ -251,13 +254,15 @@ class EX11_036(CardScript):
             if not (player and game):
                 return
             def target_filter(p):
-                return True
+                return p.is_digimon
             def on_suspend(target_perm):
                 target_perm.suspend()
+                target_perm.grant_keyword('_is_cannot_unsuspend')
             game.effect_select_opponent_permanent(
                 player, on_suspend, filter_fn=target_filter, is_optional=True)
-            # Force attack — target Digimon may attack (requires engine SelectAttack)
-            pass  # descriptive-tagged: force_attack
+            # BLOCKED: force_attack — engine cannot force a Digimon to attack.
+            # The card text says "then, this Digimon may attack" but there is no
+            # engine API to initiate an attack from within an effect callback.
 
         effect7.set_on_process_callback(process7)
         effects.append(effect7)

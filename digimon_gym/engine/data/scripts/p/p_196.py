@@ -46,10 +46,8 @@ class P_196(CardScript):
             player = card.owner if card else None
             if player is None:
                 return False
-            memory = getattr(player, 'memory', None)
-            if memory is None:
-                memory = getattr(player, 'memory_for_player', None)
-            if memory is not None and memory > 4:
+            game = getattr(player, 'game', None)
+            if game is not None and game.memory > 4:
                 return False
             return True
 

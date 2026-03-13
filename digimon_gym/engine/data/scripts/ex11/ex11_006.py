@@ -50,7 +50,8 @@ class EX11_006(CardScript):
             if not (player and perm and game):
                 return
             def digi_filter(c):
-                return True
+                text = getattr(c, 'card_text', '') or ''
+                return 'Maquinamon' in text
             game.effect_digivolve_from_hand(
                 player, perm, digi_filter, is_optional=True)
 

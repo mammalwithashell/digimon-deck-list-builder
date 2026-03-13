@@ -238,6 +238,18 @@ class BT24_041(CardScript):
             # for other permanents; full multi-Digimon protection requires engine support
 
         effect6.set_can_use_condition(condition6)
+
+        def process6(ctx: Dict[str, Any]):
+            """Trash 1 card from top of security stack to prevent deletion."""
+            player = ctx.get('player')
+            game = ctx.get('game')
+            if not (player and game):
+                return
+            if player.security_cards:
+                top_sec = player.security_cards.pop(0)
+                player.trash_cards.append(top_sec)
+
+        effect6.set_on_process_callback(process6)
         effects.append(effect6)
 
         # Factory effect: blocker (Opponent's turn only, while an Iliad Digimon is in play)

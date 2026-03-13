@@ -63,34 +63,38 @@ class EX11_070(CardScript):
                 return False
             if not (card and card.owner and card.owner.is_my_turn):
                 return False
-            permanent = effect.effect_source_permanent if hasattr(effect, 'effect_source_permanent') else None
-            if permanent and permanent.top_card:
-                text = permanent.top_card.card_text
-                if not ('Maquinamon' in text):
-                    return False
-            else:
-                return False
             return True
 
         effect2.set_can_use_condition(condition2)
 
         def process2(ctx: Dict[str, Any]):
-            """Action: Mind Link"""
+            """Action: DNA digivolve into ExMaquinamon, then Mind Link"""
             player = ctx.get('player')
             perm = ctx.get('permanent')
             game = ctx.get('game')
             if not (player and game):
                 return
-            game.effect_link_to_permanent(player, card, is_optional=True)
+            # Step 1: DNA digivolve into [ExMaquinamon] from hand
+            def dna_filter(c):
+                names = getattr(c, 'card_names', []) or []
+                return any('ExMaquinamon' in n for n in names)
+            game.effect_dna_digivolve_from_hand(player, dna_filter, is_optional=True)
+            # Step 2: Mind Link with a Digimon that has [Maquinamon] in its text
+            def link_filter(p):
+                if not p.top_card:
+                    return False
+                text = getattr(p.top_card, 'card_text', '') or ''
+                return 'Maquinamon' in text
+            game.effect_link_to_permanent(player, card, filter_fn=link_filter, is_optional=True)
 
         effect2.set_on_process_callback(process2)
         effects.append(effect2)
 
         # Timing: EffectTiming.None
-        # Effect Immunity
+        # DP Floor — this Digimon's DP can't be reduced below 1000
         effect3 = ICardEffect()
         effect3.set_effect_name("EX11-070 Can't have less than 1000 DP")
-        effect3.set_effect_description("Effect Immunity")
+        effect3.set_effect_description("This Digimon's DP can't become less than 1000.")
         effect3.is_inherited_effect = True
 
         effect = effect3  # alias for condition closure
@@ -99,8 +103,8 @@ class EX11_070(CardScript):
                 return False
             permanent = effect.effect_source_permanent if hasattr(effect, 'effect_source_permanent') else None
             if permanent and permanent.top_card:
-                text = permanent.top_card.card_text
-                if not ('Maquinamon' in text):
+                text = getattr(permanent.top_card, 'card_text', '') or ''
+                if 'Maquinamon' not in text:
                     return False
             else:
                 return False
@@ -109,16 +113,20 @@ class EX11_070(CardScript):
         effect3.set_can_use_condition(condition3)
 
         def process3(ctx: Dict[str, Any]):
-            """Action: Effect Immunity"""
+            """Action: DP Floor — register modifier so DP can't go below 1000.
+            Note: permanent.dp does not yet query CHANGE_DP from ModifierRegistry;
+            this registers the correct semantic modifier for when the engine integrates it.
+            """
             player = ctx.get('player')
             perm = ctx.get('permanent')
             game = ctx.get('game')
-            # Grant effect immunity via modifier system
             if perm and game:
                 from digimon_gym.engine.interfaces.modifiers import ModifierType
+                def dp_floor_fn(current_dp, target, context):
+                    return max(1000, current_dp)
                 game.register_modifier(
-                    ModifierType.CANNOT_BE_SELECTED_BY_EFFECT, perm,
-                    value_fn=lambda: True, expiry='end_of_turn')
+                    perm, ModifierType.CHANGE_DP,
+                    value_fn=dp_floor_fn, expiry='permanent')
 
         effect3.set_on_process_callback(process3)
         effects.append(effect3)

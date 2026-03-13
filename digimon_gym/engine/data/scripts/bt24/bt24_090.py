@@ -58,6 +58,7 @@ class BT24_090(CardScript):
         effect1._applies_to_all_own_digimon = True
 
         def dp_permanent_condition(permanent) -> bool:
+            """Only applies to blue or yellow Digimon with [TS] trait."""
             top = getattr(permanent, 'top_card', None)
             if not top:
                 return False
@@ -68,6 +69,8 @@ class BT24_090(CardScript):
             if not any('TS' in t for t in traits):
                 return False
             return True
+
+        effect1._dp_permanent_condition = dp_permanent_condition
 
         def condition1(context: Dict[str, Any]) -> bool:
             # Active while card is in security (face-down)
@@ -162,11 +165,7 @@ class BT24_090(CardScript):
 
             # Place this option card in the battle area
             if card:
-                from ....core.permanent import Permanent
-                from ....core.card_source import CardSource
-                perm = Permanent([card])
-                perm._owner_game = game
-                player.battle_area.append(perm)
+                player.play_card_from_source(card, pay_cost=False)
 
         effect3.set_on_process_callback(process3)
         effects.append(effect3)

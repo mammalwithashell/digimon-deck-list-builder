@@ -66,8 +66,7 @@ class BT24_088(CardScript):
                     if lv is not None and lv <= 4:
                         if any('TS' in _t for _t in (getattr(c, 'card_traits', []) or [])):
                             return True
-                        card_text = getattr(c, 'card_text', '') or ''
-                        if 'Three Musketeers' in card_text:
+                        if any('Three Musketeers' in _t for _t in (getattr(c, 'card_traits', []) or [])):
                             return True
                 return False
 
@@ -108,8 +107,7 @@ class BT24_088(CardScript):
                 traits = getattr(c, 'card_traits', []) or []
                 if any('TS' in t for t in traits):
                     return True
-                text = getattr(c, 'card_text', '') or ''
-                if 'Three Musketeers' in text:
+                if any('Three Musketeers' in t for t in (getattr(c, 'card_traits', []) or [])):
                     return True
                 return False
 

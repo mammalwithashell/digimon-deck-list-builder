@@ -14,6 +14,9 @@ class BT11_111(CardScript):
     def get_card_effects(self, card: 'CardSource') -> List['ICardEffect']:
         effects = []
 
+        def _is_vemmon_name(c) -> bool:
+            return any('Vemmon' in n for n in getattr(c, 'card_names', []))
+
         # Factory effect: alt_digivolve_req
         # Alternate digivolution requirement
         effect0 = ICardEffect()
@@ -28,67 +31,136 @@ class BT11_111(CardScript):
         effect0.set_can_use_condition(condition0)
         effects.append(effect0)
 
-        # Timing: EffectTiming.OnEnterFieldAnyone
-        # [When Digivolving] You may place up to 4 [Vemmon] from your trash under this Digimon as its bottom digivolution cards. Then, if there are 8 or more [Vemmon] in this Digimon's digivolution cards, delete 1 of your opponent's Digimon.
+        # ─── Effect 1: [When Digivolving] You may place up to 4 [Vemmon] from
+        # your trash under this Digimon as its bottom digivolution cards. Then,
+        # if there are 8 or more [Vemmon] in this Digimon's digivolution cards,
+        # delete 1 of your opponent's Digimon.
         effect1 = ICardEffect()
         effect1.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect1.set_effect_name("BT11-111 Place up to 4 [Vemmon] from trash to digivolution cards and delete 1 Digimon")
-        effect1.set_effect_description("[When Digivolving] You may place up to 4 [Vemmon] from your trash under this Digimon as its bottom digivolution cards. Then, if there are 8 or more [Vemmon] in this Digimon's digivolution cards, delete 1 of your opponent's Digimon.")
+        effect1.set_effect_description(
+            "[When Digivolving] You may place up to 4 [Vemmon] from your trash "
+            "under this Digimon as its bottom digivolution cards. Then, if there "
+            "are 8 or more [Vemmon] in this Digimon's digivolution cards, delete "
+            "1 of your opponent's Digimon.")
         effect1.is_when_digivolving = True
 
-        effect = effect1  # alias for condition closure
         def condition1(context: Dict[str, Any]) -> bool:
             if card and card.permanent_of_this_card() is None:
                 return False
-            # Triggered when digivolving — validated by engine timing
             return True
 
         effect1.set_can_use_condition(condition1)
 
         def process1(ctx: Dict[str, Any]):
-            """Action: Delete"""
+            """[When Digivolving] Place up to 4 Vemmon from trash, then if 8+ Vemmon in digi-cards, delete 1 opponent Digimon."""
             player = ctx.get('player')
             perm = ctx.get('permanent')
             game = ctx.get('game')
-            if not (player and game):
+            if not (player and game and perm):
                 return
-            def target_filter(p):
-                return p.is_digimon
-            def on_delete(target_perm):
+
+            # Place up to 4 [Vemmon] from trash as bottom digi-cards
+            placed = 0
+            for c in list(player.trash_cards):
+                if placed >= 4:
+                    break
+                if _is_vemmon_name(c):
+                    player.trash_cards.remove(c)
+                    perm.add_card_source_bottom(c)
+                    placed += 1
+
+            # Then, if 8+ [Vemmon] in digi-cards (excluding top card)
+            vemmon_count = sum(
+                1 for cs in perm.card_sources[:-1]
+                if any('Vemmon' in n for n in getattr(cs, 'card_names', []))
+            )
+            if vemmon_count >= 8:
+                # Delete 1 of opponent's Digimon
                 enemy = player.enemy if player else None
                 if enemy:
-                    enemy.delete_permanent(target_perm)
-            game.effect_select_opponent_permanent(
-                player, on_delete, filter_fn=target_filter, is_optional=False)
+                    def target_filter(p):
+                        return p.is_digimon
+                    def on_delete(target_perm):
+                        enemy.delete_permanent(target_perm)
+                    game.effect_select_opponent_permanent(
+                        player, on_delete, filter_fn=target_filter, is_optional=False)
 
         effect1.set_on_process_callback(process1)
         effects.append(effect1)
 
-        # Timing: EffectTiming.WhenRemoveField
-        # [All Turns] When this Digimon would leave the battle area, by placing 4 [Vemmon] from this Digimon's digivolution cards at the bottom of their owners' decks, prevent it from leaving play.
+        # ─── Effect 2: [All Turns] When this Digimon would leave the battle
+        # area, by placing 4 [Vemmon] from this Digimon's digivolution cards at
+        # the bottom of their owners' decks, prevent it from leaving play.
         effect2 = ICardEffect()
         effect2.set_timing(EffectTiming.WhenRemoveField)
         effect2.set_effect_name("BT11-111 Prevent this Digimon from leaving play")
-        effect2.set_effect_description("[All Turns] When this Digimon would leave the battle area, by placing 4 [Vemmon] from this Digimon's digivolution cards at the bottom of their owners' decks, prevent it from leaving play.")
+        effect2.set_effect_description(
+            "[All Turns] When this Digimon would leave the battle area, by "
+            "placing 4 [Vemmon] from this Digimon's digivolution cards at the "
+            "bottom of their owners' decks, prevent it from leaving play.")
         effect2.is_optional = True
 
-        effect = effect2  # alias for condition closure
         def condition2(context: Dict[str, Any]) -> bool:
             if card and card.permanent_of_this_card() is None:
                 return False
-            return True
+            # Must be THIS Digimon leaving
+            leaving_perm = context.get('permanent')
+            my_perm = card.permanent_of_this_card()
+            if leaving_perm is not my_perm:
+                return False
+            # Must have at least 4 [Vemmon] in digi-cards
+            if my_perm is None:
+                return False
+            vemmon_in_stack = [
+                cs for cs in my_perm.card_sources[:-1]
+                if any('Vemmon' in n for n in getattr(cs, 'card_names', []))
+            ]
+            return len(vemmon_in_stack) >= 4
 
         effect2.set_can_use_condition(condition2)
+
+        def process2(ctx: Dict[str, Any]):
+            """Place 4 [Vemmon] from digi-cards to deck bottom to prevent leaving."""
+            player = ctx.get('player')
+            perm = ctx.get('permanent')
+            game = ctx.get('game')
+            if not (player and perm):
+                return
+
+            # Find [Vemmon] in digi-stack (excluding top card)
+            vemmon_cards = [
+                cs for cs in perm.card_sources[:-1]
+                if any('Vemmon' in n for n in getattr(cs, 'card_names', []))
+            ]
+            if len(vemmon_cards) < 4:
+                return
+
+            # Return 4 [Vemmon] to deck bottom
+            for i in range(4):
+                chosen = vemmon_cards[i]
+                if chosen in perm.card_sources:
+                    perm.card_sources.remove(chosen)
+                owner = getattr(chosen, 'owner', player)
+                if owner:
+                    owner.library_cards.append(chosen)
+
+            # Prevention of removal is signaled to engine by WhenRemoveField
+            # with is_optional=True — engine cancels the removal when this
+            # effect fires.
+
+        effect2.set_on_process_callback(process2)
         effects.append(effect2)
 
-        # Timing: EffectTiming.OnStartMainPhase
-        # [Start of Your Main Phase] Trash the top card of your opponent's security stack.
+        # ─── Effect 3: [Start of Your Main Phase] Trash the top card of your
+        # opponent's security stack.
         effect3 = ICardEffect()
         effect3.set_timing(EffectTiming.OnStartMainPhase)
         effect3.set_effect_name("BT11-111 Trash the top card of opponent's security")
-        effect3.set_effect_description("[Start of Your Main Phase] Trash the top card of your opponent's security stack.")
+        effect3.set_effect_description(
+            "[Start of Your Main Phase] Trash the top card of your opponent's "
+            "security stack.")
 
-        effect = effect3  # alias for condition closure
         def condition3(context: Dict[str, Any]) -> bool:
             if card and card.permanent_of_this_card() is None:
                 return False
@@ -99,17 +171,14 @@ class BT11_111(CardScript):
         effect3.set_can_use_condition(condition3)
 
         def process3(ctx: Dict[str, Any]):
-            """Action: Destroy Security"""
+            """Trash opponent's top security card."""
             player = ctx.get('player')
-            perm = ctx.get('permanent')
-            game = ctx.get('game')
-            # Trash opponent's top security card(s)
+            if not player:
+                return
             enemy = player.enemy if player else None
-            if enemy:
-                for _ in range(1):
-                    if enemy.security_cards:
-                        trashed = enemy.security_cards.pop(0)
-                        enemy.trash_cards.append(trashed)
+            if enemy and enemy.security_cards:
+                top_sec = enemy.security_cards[0]
+                enemy.trash_security_card(top_sec)
 
         effect3.set_on_process_callback(process3)
         effects.append(effect3)

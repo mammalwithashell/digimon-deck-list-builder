@@ -106,7 +106,7 @@ class BT24_043(CardScript):
             if not (player and game):
                 return
             def target_filter(p):
-                return True
+                return p.is_digimon
             def on_suspend(target_perm):
                 target_perm.suspend()
             game.effect_select_opponent_permanent(

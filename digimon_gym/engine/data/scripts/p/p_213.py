@@ -69,7 +69,10 @@ class P_213(CardScript):
         def condition3(context: Dict[str, Any]) -> bool:
             if card and card.permanent_of_this_card() is None:
                 return False
-            # Triggered when digivolving — validated by engine timing
+            # If you have 3 or fewer security cards
+            player = card.owner if card else None
+            if player is None or len(player.security_cards) > 3:
+                return False
             return True
 
         effect3.set_can_use_condition(condition3)

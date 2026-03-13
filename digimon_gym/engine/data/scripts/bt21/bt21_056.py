@@ -9,94 +9,107 @@ if TYPE_CHECKING:
 
 
 class BT21_056(CardScript):
-    """BT21-056 Vemmon | Lv.3"""
+    """BT21-056 Vemmon | Lv.3
+
+    [On Play] By trashing 1 card with [Vemmon] in its text from your hand,
+    you may return 1 non-Digi-Egg card with [Vemmon] in its text from your
+    trash to the hand.
+
+    --- Inherited ---
+    [Your Turn] When this Digimon with [Vemmon] in its text would digivolve,
+    reduce the digivolution cost by 1.
+    """
 
     def get_card_effects(self, card: 'CardSource') -> List['ICardEffect']:
         effects = []
 
-        # Timing: EffectTiming.OnEnterFieldAnyone
-        # [On Play] By trashing 1 card with [Vemmon] in its text from your hand, you may return 1 non-Digi-Egg card with [Vemmon] in its text from your trash to the hand.
+        def _has_vemmon_text(c) -> bool:
+            return 'Vemmon' in getattr(c, 'card_text', '')
+
+        # ─── Effect 0: [On Play] Trash 1 Vemmon-text from hand to return 1 non-egg Vemmon-text from trash
         effect0 = ICardEffect()
         effect0.set_timing(EffectTiming.OnEnterFieldAnyone)
-        effect0.set_effect_name("BT21-056 Trash 1 card with [Vemmon] in text from hand to return 1 non-Digi-Egg card with [Vemmon] in text from trash to hand")
+        effect0.set_effect_name("BT21-056 Trash Vemmon-text from hand to return Vemmon-text from trash")
         effect0.set_effect_description("[On Play] By trashing 1 card with [Vemmon] in its text from your hand, you may return 1 non-Digi-Egg card with [Vemmon] in its text from your trash to the hand.")
         effect0.is_on_play = True
+        effect0.is_optional = True
 
-        effect = effect0  # alias for condition closure
         def condition0(context: Dict[str, Any]) -> bool:
             if card and card.permanent_of_this_card() is None:
                 return False
-            # Triggered on play — validated by engine timing
-            permanent = effect.effect_source_permanent if hasattr(effect, 'effect_source_permanent') else None
-            if permanent and permanent.top_card:
-                text = permanent.top_card.card_text
-                if not ('Vemmon' in text):
-                    return False
-            else:
+            # Must have a Vemmon-text card in hand to trash
+            owner = card.owner if card else None
+            if not owner:
+                return False
+            has_hand = any(_has_vemmon_text(c) for c in owner.hand_cards)
+            if not has_hand:
+                return False
+            # Must have a non-egg Vemmon-text card in trash to return
+            has_trash = any(
+                _has_vemmon_text(c) and not getattr(c, 'is_digi_egg', False)
+                for c in owner.trash_cards
+            )
+            if not has_trash:
                 return False
             return True
 
         effect0.set_can_use_condition(condition0)
 
         def process0(ctx: Dict[str, Any]):
-            """Action: Trash From Hand, Add To Hand"""
+            """Trash 1 Vemmon-text from hand, then return 1 non-egg Vemmon-text from trash to hand."""
             player = ctx.get('player')
             perm = ctx.get('permanent')
             game = ctx.get('game')
             if not (player and game):
                 return
+
             def hand_filter(c):
-                if getattr(c, 'is_digi_egg', False):
-                    return False
-                return True
+                return _has_vemmon_text(c)
+
             def on_trashed(selected):
                 if selected in player.hand_cards:
                     player.hand_cards.remove(selected)
                     player.trash_cards.append(selected)
+                # Now return 1 non-egg Vemmon-text from trash to hand
+                qualifying = [
+                    c for c in player.trash_cards
+                    if _has_vemmon_text(c) and not getattr(c, 'is_digi_egg', False)
+                ]
+                if qualifying:
+                    chosen = qualifying[0]
+                    player.trash_cards.remove(chosen)
+                    player.hand_cards.append(chosen)
+
             game.effect_select_hand_card(
                 player, hand_filter, on_trashed, is_optional=False)
-            # Add card to hand (from trash/reveal)
-            if player and player.trash_cards:
-                card_to_add = player.trash_cards.pop()
-                player.hand_cards.append(card_to_add)
 
         effect0.set_on_process_callback(process0)
         effects.append(effect0)
 
-        # Timing: EffectTiming.None
-        # Cost -1
+        # ─── Effect 1 (Inherited): [Your Turn] When this Digimon with [Vemmon] in its text
+        #     would digivolve, reduce the cost by 1.
         effect1 = ICardEffect()
-        effect1.set_effect_name("BT21-056 Cost -1")
-        effect1.set_effect_description("Cost -1")
+        effect1.set_timing(EffectTiming.WhenWouldDigivolve)
+        effect1.set_effect_name("BT21-056 Inherited: Digi cost -1 for Vemmon-text Digimon")
+        effect1.set_effect_description("[Your Turn] When this Digimon with [Vemmon] in its text would digivolve, reduce the digivolution cost by 1.")
         effect1.is_inherited_effect = True
         effect1.cost_reduction = 1
 
-        effect = effect1  # alias for condition closure
         def condition1(context: Dict[str, Any]) -> bool:
             if card and card.permanent_of_this_card() is None:
                 return False
             if not (card and card.owner and card.owner.is_my_turn):
                 return False
-            permanent = effect.effect_source_permanent if hasattr(effect, 'effect_source_permanent') else None
-            if permanent and permanent.top_card:
-                text = permanent.top_card.card_text
-                if not ('Vemmon' in text):
-                    return False
-            else:
+            # This Digimon must have [Vemmon] in its text (top card)
+            perm = card.permanent_of_this_card()
+            if perm is None:
+                return False
+            top = perm.top_card
+            if top is None or not _has_vemmon_text(top):
                 return False
             return True
 
         effect1.set_can_use_condition(condition1)
-
-        def process1(ctx: Dict[str, Any]):
-            """Action: Cost -1"""
-            player = ctx.get('player')
-            perm = ctx.get('permanent')
-            game = ctx.get('game')
-            # Cost reduction by 1 — handled via cost_reduction property
-            pass  # descriptive-tagged: cost_reduction
-
-        effect1.set_on_process_callback(process1)
         effects.append(effect1)
 
         return effects

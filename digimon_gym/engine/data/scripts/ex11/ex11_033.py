@@ -50,19 +50,20 @@ class EX11_033(CardScript):
 
         effect1.set_can_use_condition(condition1)
 
-        def process1(ctx: Dict[str, Any]):
-            """Action: Play Card"""
+        def _play_maquinamon(ctx: Dict[str, Any]):
+            """Play 1 [Maquinamon] from hand without paying the cost."""
             player = ctx.get('player')
             perm = ctx.get('permanent')
             game = ctx.get('game')
             if not (player and game):
                 return
             def play_filter(c):
-                return True
+                names = getattr(c, 'card_names', []) or []
+                return any('Maquinamon' in n for n in names)
             game.effect_play_from_zone(
                 player, 'hand', play_filter, free=True, is_optional=True)
 
-        effect1.set_on_process_callback(process1)
+        effect1.set_on_process_callback(_play_maquinamon)
         effects.append(effect1)
 
         # Timing: EffectTiming.OnEnterFieldAnyone
@@ -82,19 +83,7 @@ class EX11_033(CardScript):
 
         effect2.set_can_use_condition(condition2)
 
-        def process2(ctx: Dict[str, Any]):
-            """Action: Play Card"""
-            player = ctx.get('player')
-            perm = ctx.get('permanent')
-            game = ctx.get('game')
-            if not (player and game):
-                return
-            def play_filter(c):
-                return True
-            game.effect_play_from_zone(
-                player, 'hand', play_filter, free=True, is_optional=True)
-
-        effect2.set_on_process_callback(process2)
+        effect2.set_on_process_callback(_play_maquinamon)
         effects.append(effect2)
 
         # Timing: EffectTiming.WhenLinked
@@ -116,20 +105,25 @@ class EX11_033(CardScript):
         effect3.set_can_use_condition(condition3)
 
         def process3(ctx: Dict[str, Any]):
-            """Action: Suspend, Gain Keyword Cannot Unsuspend"""
+            """Action: Suspend 1 opponent's Digimon. Then, 1 of their Digimon can't unsuspend until their turn ends."""
             player = ctx.get('player')
             perm = ctx.get('permanent')
             game = ctx.get('game')
             if not (player and game):
                 return
             def target_filter(p):
-                return True
+                return p.is_digimon
             def on_suspend(target_perm):
                 target_perm.suspend()
             game.effect_select_opponent_permanent(
                 player, on_suspend, filter_fn=target_filter, is_optional=False)
-            if perm:
-                perm.grant_keyword('_is_cannot_unsuspend')
+            # Then, 1 of opponent's Digimon can't unsuspend until their turn ends
+            def cannot_unsuspend_filter(p):
+                return p.is_digimon
+            def on_cannot_unsuspend(target_perm):
+                target_perm.grant_keyword('_is_cannot_unsuspend')
+            game.effect_select_opponent_permanent(
+                player, on_cannot_unsuspend, filter_fn=cannot_unsuspend_filter, is_optional=False)
 
         effect3.set_on_process_callback(process3)
         effects.append(effect3)
@@ -154,18 +148,13 @@ class EX11_033(CardScript):
         effect4.set_can_use_condition(condition4)
 
         def process4(ctx: Dict[str, Any]):
-            """Action: Unsuspend"""
+            """Action: Unsuspend this Digimon."""
             player = ctx.get('player')
             perm = ctx.get('permanent')
             game = ctx.get('game')
-            if not (player and game):
+            if not (player and perm):
                 return
-            def target_filter(p):
-                return True
-            def on_unsuspend(target_perm):
-                target_perm.unsuspend()
-            game.effect_select_own_permanent(
-                player, on_unsuspend, filter_fn=target_filter, is_optional=True)
+            perm.unsuspend()
 
         effect4.set_on_process_callback(process4)
         effects.append(effect4)
