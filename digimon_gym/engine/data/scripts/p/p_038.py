@@ -72,6 +72,7 @@ class P_038(CardScript):
         # [Main] <Delay> — Gain 2 memory.
         effect2 = ICardEffect()
         effect2.set_timing(EffectTiming.OnDeclaration)
+        effect2._is_field_main = True
         effect2.set_effect_name("P-038 Delay: Gain 2 memory")
         effect2.set_effect_description(
             "[Main] <Delay> — Gain 2 memory."

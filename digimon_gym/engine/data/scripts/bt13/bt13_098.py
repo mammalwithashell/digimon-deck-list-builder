@@ -75,6 +75,7 @@ class BT13_098(CardScript):
         # [Main] If there're 6 or fewer total cards in both players' security stacks, by suspending this Tamer, 1 of your [Kudamon] may digivolve into [Kentaurosmon] in the hand for the digivolution cost, ignoring its level.
         effect2 = ICardEffect()
         effect2.set_timing(EffectTiming.OnDeclaration)
+        effect2._is_field_main = True
         effect2.set_effect_name("BT13-098 Your [Kudamon] digivolves into [Kentaurosmon]")
         effect2.set_effect_description("[Main] If there're 6 or fewer total cards in both players' security stacks, by suspending this Tamer, 1 of your [Kudamon] may digivolve into [Kentaurosmon] in the hand for the digivolution cost, ignoring its level.")
 

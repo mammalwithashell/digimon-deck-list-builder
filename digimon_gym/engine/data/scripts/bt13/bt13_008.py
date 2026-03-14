@@ -32,6 +32,7 @@ class BT13_008(CardScript):
         # [Main][Once Per Turn] For the turn, 1 of your [Marcus Damon]s is also treated as a 3000 DP Digimon and can't digivolve.
         effect1 = ICardEffect()
         effect1.set_timing(EffectTiming.OnDeclaration)
+        effect1._is_field_main = True
         effect1.set_effect_name("BT13-008 Your 1 [Marcus Damon] becomes Digimon")
         effect1.set_effect_description("[Main][Once Per Turn] For the turn, 1 of your [Marcus Damon]s is also treated as a 3000 DP Digimon and can't digivolve.")
         effect1.set_max_count_per_turn(1)

@@ -101,6 +101,12 @@ class BT23_096(CardScript):
                 return False
             if not (card and card.owner and card.owner.is_my_turn):
                 return False
+            # Check attacking Digimon has CS trait
+            atk_perm = context.get('attacking_permanent') or context.get('permanent')
+            if atk_perm:
+                traits = getattr(atk_perm.top_card, 'card_traits', []) or []
+                if not any('CS' in t for t in traits):
+                    return False
             return True
 
         effect3.set_can_use_condition(condition3)

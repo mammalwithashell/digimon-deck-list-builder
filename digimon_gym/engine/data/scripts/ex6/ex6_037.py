@@ -32,6 +32,7 @@ class EX6_037(CardScript):
         # [Hand] [Main] By paying 1 cost and placing this card as the bottom digivolution card of 1 of your Digimon that's level 3 or has the [Legend-Arms] trait, <Draw 1>.
         effect1 = ICardEffect()
         effect1.set_timing(EffectTiming.OnDeclaration)
+        effect1._is_field_main = True
         effect1.set_effect_name("EX6-037 Pay 1 Memory, Place as bottom Digivolution source to Draw 1")
         effect1.set_effect_description("[Hand] [Main] By paying 1 cost and placing this card as the bottom digivolution card of 1 of your Digimon that's level 3 or has the [Legend-Arms] trait, <Draw 1>.")
         effect1.is_optional = True

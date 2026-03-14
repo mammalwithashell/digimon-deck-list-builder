@@ -48,30 +48,43 @@ class BT13_108(CardScript):
                 return
 
             def on_select(target_perm):
-                # Grant option immunity until end of opponent's turn
+                # 1. Grant option immunity via CANNOT_BE_AFFECTED modifier
+                # Condition: only blocks effects from opponent's option cards
+                def option_immunity_condition(check_ctx):
+                    effect_source = check_ctx.get('source_effect')
+                    if effect_source is None:
+                        return False
+                    source_card = getattr(effect_source, 'effect_source_card', None)
+                    if source_card is None:
+                        return False
+                    # Must be opponent's option card
+                    if getattr(source_card, 'is_option', False):
+                        card_owner = getattr(source_card, 'owner', None)
+                        if card_owner and card_owner is player.enemy:
+                            return True
+                    return False
+
                 game.register_modifier(
                     target_perm, ModifierType.CANNOT_BE_AFFECTED,
+                    condition=option_immunity_condition,
                     value_fn=lambda: True,
                     expiry='end_of_opponent_turn'
                 )
-                # The suspend-trigger delete is a granted triggered effect.
-                # Engine gap: cannot grant temporary triggered effects to permanents.
-                # Workaround: register a OnTappedAnyone listener that checks if
-                # the suspended permanent is the target and fires the mass delete.
-                # This is an approximation since the effect lives on the option card,
-                # not on the permanent itself.
-                target_ref = [target_perm]
 
+                # 2. Grant the suspend-trigger delete as a temp effect on the permanent
                 suspend_effect = ICardEffect()
                 suspend_effect.set_timing(EffectTiming.OnTappedAnyone)
                 suspend_effect.set_effect_name("BT13-108 Granted suspend-trigger mass delete")
+                suspend_effect.set_effect_description(
+                    "[Opponent's Turn] When this Digimon becomes suspended, delete all "
+                    "of your opponent's Digimon with a play cost <= this Digimon's."
+                )
+
+                target_ref = [target_perm]
 
                 def suspend_condition(context2: Dict[str, Any]) -> bool:
                     tp = target_ref[0]
-                    if tp is None or tp not in (player.enemy.battle_area if player.enemy else []):
-                        # Target no longer on opponent's field — but this is OUR Digimon
-                        pass
-                    if tp not in player.battle_area:
+                    if tp is None or tp not in player.battle_area:
                         return False
                     # Must be opponent's turn
                     if player.is_my_turn:
@@ -84,29 +97,30 @@ class BT13_108(CardScript):
                 suspend_effect.set_can_use_condition(suspend_condition)
 
                 def suspend_process(ctx2: Dict[str, Any]):
-                    p = ctx2.get('player')
                     g = ctx2.get('game')
-                    if not (p and g):
+                    if not g:
                         return
                     tp = target_ref[0]
                     if tp is None:
                         return
-                    my_cost = getattr(tp.top_card, 'get_cost_itself', 99)
-                    enemy = p.enemy
+                    my_cost = tp.top_card.get_cost_itself if tp.top_card else 99
+                    enemy = player.enemy
                     if not enemy:
                         return
                     # Delete ALL opponent Digimon with play cost <= this Digimon's
                     to_delete = [
                         opp for opp in list(enemy.battle_area)
-                        if opp.is_digimon and getattr(opp.top_card, 'get_cost_itself', 99) <= my_cost
+                        if opp.is_digimon
+                        and hasattr(opp.top_card, 'get_cost_itself')
+                        and opp.top_card.get_cost_itself <= my_cost
                     ]
                     for opp in to_delete:
                         enemy.delete_permanent(opp)
                 suspend_effect.set_on_process_callback(suspend_process)
-                # Note: This effect won't be registered on the target permanent
-                # through the standard system since we can't grant_temp_effect.
-                # The effect is appended to the card's effects list but won't
-                # be properly scoped to the target. This is a best-effort workaround.
+
+                # Grant the effect until end of opponent's turn
+                # expiry_turn = game.turn_count + 1 covers "until end of opponent's turn"
+                target_perm.grant_temp_effect(suspend_effect, expiry_turn=game.turn_count + 1)
 
             game.effect_select_own_permanent(
                 player, on_select,
@@ -141,9 +155,17 @@ class BT13_108(CardScript):
             opp_digimon = [p for p in enemy.battle_area if p.is_digimon]
             if not opp_digimon:
                 return
-            # Find minimum play cost
-            min_cost = min(getattr(p.top_card, 'get_cost_itself', 99) for p in opp_digimon)
-            lowest = [p for p in opp_digimon if getattr(p.top_card, 'get_cost_itself', 99) == min_cost]
+            # Find minimum play cost among opponent's Digimon
+            min_cost = min(
+                p.top_card.get_cost_itself
+                for p in opp_digimon
+                if hasattr(p.top_card, 'get_cost_itself')
+            )
+            lowest = [
+                p for p in opp_digimon
+                if hasattr(p.top_card, 'get_cost_itself')
+                and p.top_card.get_cost_itself == min_cost
+            ]
             if len(lowest) == 1:
                 enemy.delete_permanent(lowest[0])
             else:
@@ -151,7 +173,11 @@ class BT13_108(CardScript):
                 game.effect_select_opponent_permanent(
                     player,
                     lambda target: enemy.delete_permanent(target),
-                    filter_fn=lambda p: p.is_digimon and getattr(p.top_card, 'get_cost_itself', 99) == min_cost,
+                    filter_fn=lambda p: (
+                        p.is_digimon
+                        and hasattr(p.top_card, 'get_cost_itself')
+                        and p.top_card.get_cost_itself == min_cost
+                    ),
                     is_optional=False
                 )
 

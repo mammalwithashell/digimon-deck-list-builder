@@ -132,14 +132,32 @@ class LM_031(CardScript):
             if my_perm is not None:
                 player.delete_permanent(my_perm)
 
-            # Return 1 black Digimon from trash to the top of the deck.
+            # Return 1 black Digimon from trash to the top of the deck (player chooses).
+            from ....data.enums import GamePhase
+            _SEL_TRASH_START = 130
+
+            def _is_black_digimon(c):
+                if not getattr(c, 'is_digimon', False):
+                    return False
+                colors = getattr(c, 'card_colors', []) or []
+                return any(col.name == 'Black' for col in colors)
+
+            valid_trash = []
             for i, c in enumerate(player.trash_cards):
-                if getattr(c, 'is_digimon', False):
-                    colors = getattr(c, 'card_colors', []) or []
-                    if any(col.name == 'Black' for col in colors):
-                        moved = player.trash_cards.pop(i)
+                if _is_black_digimon(c):
+                    valid_trash.append(_SEL_TRASH_START + i)
+
+            if valid_trash:
+                def on_trash_selected(idx):
+                    if idx < len(player.trash_cards):
+                        moved = player.trash_cards[idx]
+                        player.trash_cards.remove(moved)
                         player.library_cards.insert(0, moved)
-                        break
+
+                game.request_selection(
+                    GamePhase.SelectTrash, player, on_trash_selected,
+                    valid_trash, is_optional=False,
+                    prompt="Select a black Digimon card from trash to return to the top of the deck.")
 
             # Then, if you don't have a Digimon, play 1 black Digimon <= 2000 DP from trash
             has_digimon = any(p.is_digimon for p in (player.battle_area or []))
@@ -196,10 +214,10 @@ class LM_031(CardScript):
 
             # Then, add this card to the hand.
             # The engine trashes the security card before the security effect fires;
-            # pop the last trashed card (this card) back to hand.
-            if player and player.trash_cards:
-                card_to_add = player.trash_cards.pop()
-                player.hand_cards.append(card_to_add)
+            # locate by identity reference rather than position.
+            if player and card in player.trash_cards:
+                player.trash_cards.remove(card)
+                player.hand_cards.append(card)
 
         effect3.set_on_process_callback(process3)
         effects.append(effect3)

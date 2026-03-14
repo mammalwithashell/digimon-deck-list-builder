@@ -570,6 +570,9 @@ class Game(CombatMixin, ActionDecoderMixin, EffectHelpersMixin):
                     continue
                 if not self._effect_matches_timing(effect, timing, perm, played_card, digivolved_perm, extra_context):
                     continue
+                # DCGO: IDisableCardEffect check — skip if effect is disabled
+                if self.modifiers.has_modifier(perm, ModifierType.DISABLE_EFFECT, {'effect': effect}):
+                    continue
 
                 owner = self._find_owner(perm)
                 context = {
@@ -738,6 +741,14 @@ class Game(CombatMixin, ActionDecoderMixin, EffectHelpersMixin):
         played_card, digivolved_perm, extra_context=None,
     ) -> bool:
         """Check whether an effect should fire for the given timing."""
+        # Security effects only fire during security checks — never on field enter
+        if getattr(effect, 'is_security_effect', False):
+            return timing == EffectTiming.OnSecurityCheck or timing == EffectTiming.SecuritySkill
+
+        # Suppress On Play: when _suppress_on_play is set in context, skip on_play effects
+        if effect.is_on_play and extra_context and extra_context.get('_suppress_on_play'):
+            return False
+
         has_flag = (effect.is_on_play or effect.is_when_digivolving
                     or effect.is_on_attack or effect.is_on_deletion)
 

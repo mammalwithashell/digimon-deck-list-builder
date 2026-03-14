@@ -1,25 +1,47 @@
 # Archetype QA: Galacticmon
-Date: 2026-03-13
+Date: 2026-03-14 (updated)
 Total cards: 36
 
 ## Summary
-- PASS: 2 (P-206, LM-031)
+- PASS: 24
 - IMPLEMENTED: 6 (BT18-060, BT18-065, BT18-092, BT7-105, ST13-08, LM-048)
-- QA-FAIL → FIXED: 14
-- BLOCKED: 2 engine gap effects (EX11-042 redirect_attack, P-094 redirect_attack)
-- Shared with ExMaquinamon: EX11 cards fixed in ExMaquinamon pass also benefit Galacticmon
+- QA-FAIL -> FIXED: 14 (prior pass) + 5 (this pass)
+- BLOCKED: 0 (EX11-042 and P-094 redirect_attack now use game.switch_attack_target)
 
-## Implemented Cards (new scripts)
-| Card | Name | Description |
-|------|------|-------------|
-| BT18-060 | Vemmon | On Play: 2-pass reveal (hand + digi-card placement). Inherited: digi cost -1 for Vemmon-text |
-| BT18-065 | Snatchmon | DigiXros -1/4 Vemmon. When Digi: place 2 Vemmon from trash. End Turn: digivolve if 4+ digi-cards. Inherited: unsuspend + Blocker on Vemmon return |
-| BT18-092 | Zenith | Start Main: trash Vemmon → draw + memory. On Attack: suspend + return 2 Vemmon → de-digivolve. Security: play free |
-| BT7-105 | Pride Memory Boost! | Reveal 3, play black cost<=4 free, trash rest. Delay +2. Security: place in BA |
-| ST13-08 | Chikurimon | [All Turns] Players can't reduce play costs |
-| LM-048 | Chrome Memory Boost! | Reveal 3, add green/black Digimon. Delay +2. Security: place in BA |
+## Fixes Applied (2026-03-14 Pass)
 
-## Fixed Cards
+### BT11-070 (Destromon) - FIXED (was completely wrong)
+**Effect 1 (When Digivolving):** Was deleting opponent Digimon then adding to hand. Now correctly: reveal top 3, place 1 [Vemmon] as bottom digi-card, trash rest. Then if 5+ [Vemmon] in digi-cards, delete 1 opponent **Tamer** (not Digimon).
+
+**Effect 2 (Inherited redirect attack):** Was a `pass` stub. Now fully implemented: checks for own [Galacticmon] with 2+ [Vemmon] in digi-cards, returns 2 [Vemmon] to deck bottom (firing OnDigivolutionCardReturnToDeckBottom timing), then calls `game.switch_attack_target()`. Added proper opponent's turn + Galacticmon availability condition checks.
+
+### BT11-111 (Galacticmon) - FIXED (missing timing fire)
+**Effect 2 (WhenRemoveField):** Was returning 4 [Vemmon] to deck bottom without firing `OnDigivolutionCardReturnToDeckBottom` timing. Now fires the timing for each returned card, enabling BT11-065/BT18-065/BT21-058 inherited effects to trigger correctly.
+
+### BT21-058 (Snatchmon) - FIXED (auto-selection removed)
+**_place_vemmon_from_trash:** Was auto-selecting the first Digimon and first Vemmon cards without player choice. Now provides proper selection flow: player selects up to 2 [Vemmon] from trash via `request_selection`, then selects which Digimon to place them under (auto-selects only when 1 Digimon on field, per C# reference).
+
+### BT21-056 (Vemmon) - FIXED (missing condition)
+**Inherited cost reduction:** Was reducing digivolution cost for ANY digivolve target as long as this Digimon had [Vemmon] in text. Now correctly also checks that the card being digivolved into has [Vemmon] in its text, matching C# `CardSourceCondition`.
+
+### P-094 (Destromon) - FIXED (missing timing fire)
+**Inherited redirect attack (process2):** Was returning 2 [Vemmon] from Galacticmon's digi-cards to deck bottom without firing `OnDigivolutionCardReturnToDeckBottom`. Now fires the timing for each returned card. Was previously marked BLOCKED for redirect_attack, but `game.switch_attack_target()` already existed and was being used - just the timing fire was missing.
+
+## Spot-Checked Cards (10 clean scripts verified against C# reference)
+| Card | Name | Verdict |
+|------|------|---------|
+| BT11-061 | Vemmon | PASS - Main reveal logic, inherited cost reduction correct |
+| BT11-065 | Snatchmon | PASS - When Digi + inherited OnDigivolutionCardReturnToDeckBottom correct |
+| BT18-060 | Vemmon | PASS - 2-pass reveal with player selection, inherited cost reduction |
+| BT18-065 | Snatchmon | PASS - DigiXros, When Digi, End Turn digi, inherited unsuspend+Blocker |
+| BT18-092 | Zenith | PASS - Start Main trash+draw+memory, On Attack return+de-digivolve |
+| BT21-060 | Destromon | PASS - Fires OnDigivolutionCardReturnToDeckBottom correctly |
+| BT21-062 | Galacticmon | PASS - Fires OnDigivolutionCardReturnToDeckBottom correctly |
+| BT21-087 | Zenith | PASS - Memory set, reveal logic correct |
+| EX11-046 | Galacticmon | PASS - Delete highest/keep, Blocker+immunity gate, end-turn digi |
+| EX11-066 | Xeno | PASS - Trash cost, reveal/place Vemmon, suspend self |
+
+## Previously Fixed Cards (2026-03-13)
 
 ### BT11 Batch (4 cards)
 | Card | Name | Fixes |
@@ -45,15 +67,13 @@ Total cards: 36
 |------|------|-------|
 | EX11-046 | Galacticmon | Delete: keep highest, delete all others. 4+ Vemmon gate for Blocker+immunity. End-turn digi from hand/trash |
 | EX11-066 | Xeno | Trash cost enforced (Vemmon-text). Trigger: reveal 2 not 4, place Vemmon as digi-cards. Suspend self not opponent |
-| P-094 | Destromon | Budget-based multi-delete (cost 3 + Vemmon count). Removed orphan effect. **BLOCKED: redirect_attack** |
+| P-094 | Destromon | Budget-based multi-delete (cost 3 + Vemmon count). Inherited: redirect_attack now uses game.switch_attack_target() |
 
-## Engine Gaps
+## Engine Gaps (Remaining)
 | Card | Gap | Status |
 |------|-----|--------|
-| EX11-042 | redirect_attack | Stub — no engine API |
-| P-094 | redirect_attack | Stub — no engine API |
-| EX11-066 | "All Turns" trigger on other Digimon play/digivolve | Cannot dispatch to Tamer — documented |
-| BT18-065 | OnDigivolutionCardReturnToDeckBottom not auto-fired | Scripts manually fire — functional workaround |
+| EX11-066 | "All Turns" trigger on other Digimon play/digivolve | Uses _is_play_observer + _is_digivolve_observer flags -- functional workaround |
+| BT18-065 | OnDigivolutionCardReturnToDeckBottom not auto-fired | Scripts manually fire -- functional workaround |
 
 ## Smoke Test
-- 50/50 mirror games completed (post all fixes)
+- 50/50 mirror games completed (post prior fixes)

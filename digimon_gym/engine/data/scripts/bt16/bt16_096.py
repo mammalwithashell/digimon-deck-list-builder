@@ -67,6 +67,7 @@ class BT16_096(CardScript):
         # [Main] <Delay>\r\n• Reveal the top 3 cards of your deck. You may play 1 card with the [D-Brigade] or [DigiPolice] trait and a play cost of 4 or less among them without paying the cost. Trash the rest.
         effect2 = ICardEffect()
         effect2.set_timing(EffectTiming.OnDeclaration)
+        effect2._is_field_main = True
         effect2.set_effect_name("BT16-096 Reveal top 3, Play 1 [D-Brigade] or [DigiPolice]")
         effect2.set_effect_description("[Main] <Delay>\r\n• Reveal the top 3 cards of your deck. You may play 1 card with the [D-Brigade] or [DigiPolice] trait and a play cost of 4 or less among them without paying the cost. Trash the rest.")
         effect2.is_optional = True

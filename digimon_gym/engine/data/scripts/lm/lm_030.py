@@ -2,7 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
-from ....data.enums import EffectTiming
+from ....data.enums import EffectTiming, GamePhase
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -36,8 +36,6 @@ class LM_030(CardScript):
             "Digimon card in the hand with the digivolution cost reduced by 3. "
             "Then, place this card in the battle area."
         )
-        effect0.cost_reduction = 3
-
         def condition0(context: Dict[str, Any]) -> bool:
             # Option main effect — validated by engine timing
             return True
@@ -120,9 +118,16 @@ class LM_030(CardScript):
             owner = card.owner if card else None
             if not (owner and owner.is_my_turn):
                 return False
+            # C# requires opponent to have at least 1 Digimon
+            enemy = owner.enemy if owner else None
+            if not enemy or not any(p.is_digimon for p in enemy.battle_area):
+                return False
             return True
 
         effect2.set_can_use_condition(condition2)
+
+        # Trash selection action-ID offset (mirrors game.py SEL_TRASH_START)
+        _SEL_TRASH_START = 130
 
         def process2(ctx: Dict[str, Any]):
             """Trash this delay card; return green Digimon to deck top; play if no field Digimon."""
@@ -136,34 +141,57 @@ class LM_030(CardScript):
             if my_perm is not None:
                 player.delete_permanent(my_perm)
 
-            # Return 1 green Digimon from trash to the top of the deck.
+            def _green_digimon_filter(c):
+                if not getattr(c, 'is_digimon', False):
+                    return False
+                colors = getattr(c, 'card_colors', []) or []
+                return any(col.name == 'Green' for col in colors)
+
+            # Return 1 green Digimon from trash to the top of the deck (player selection).
+            valid_trash = []
             for i, c in enumerate(player.trash_cards):
-                if getattr(c, 'is_digimon', False):
-                    colors = getattr(c, 'card_colors', []) or []
-                    if any(col.name == 'Green' for col in colors):
-                        moved = player.trash_cards.pop(i)
+                if _green_digimon_filter(c):
+                    valid_trash.append(_SEL_TRASH_START + i)
+
+            def _after_return():
+                # Then, if you don't have a Digimon on field, play green <= 2000 DP.
+                has_digimon = any(
+                    p.is_digimon for p in (player.battle_area or [])
+                )
+                if not has_digimon:
+                    def play_filter(c):
+                        if not getattr(c, 'is_digimon', False):
+                            return False
+                        colors = getattr(c, 'card_colors', []) or []
+                        if not any(col.name == 'Green' for col in colors):
+                            return False
+                        dp = getattr(c, 'base_dp', None)
+                        if dp is not None and dp > 2000:
+                            return False
+                        return True
+
+                    game.effect_play_from_zone(
+                        player, 'trash', play_filter,
+                        free=True, is_optional=True)
+
+            if valid_trash:
+                def on_trash_selected(action_id: int):
+                    idx = action_id - _SEL_TRASH_START
+                    if 0 <= idx < len(player.trash_cards):
+                        moved = player.trash_cards.pop(idx)
                         player.library_cards.insert(0, moved)
-                        break
+                    _after_return()
 
-            # Then, if you don't have a Digimon on field, play green ≤ 2000 DP.
-            has_digimon = any(
-                p.is_digimon for p in (player.battle_area or [])
-            )
-            if not has_digimon:
-                def play_filter(c):
-                    if not getattr(c, 'is_digimon', False):
-                        return False
-                    colors = getattr(c, 'card_colors', []) or []
-                    if not any(col.name == 'Green' for col in colors):
-                        return False
-                    dp = getattr(c, 'base_dp', None)
-                    if dp is not None and dp > 2000:
-                        return False
-                    return True
-
-                game.effect_play_from_zone(
-                    player, 'trash', play_filter,
-                    free=True, is_optional=True)
+                game.request_selection(
+                    GamePhase.SelectTrash,
+                    player,
+                    on_trash_selected,
+                    valid_trash,
+                    is_optional=False,
+                    prompt="Select a green Digimon from your trash to place at the top of your deck.",
+                )
+            else:
+                _after_return()
 
         effect2.set_on_process_callback(process2)
         effects.append(effect2)

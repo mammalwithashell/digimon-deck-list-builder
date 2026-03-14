@@ -17,7 +17,7 @@ class BT18_087(CardScript):
         # Factory effect: set_memory_3
         # [Start of Your Turn] If you have 2 or less memory, set it to 3.
         effect0 = ICardEffect()
-        effect0.set_timing(EffectTiming.OnStartMainPhase)
+        effect0.set_timing(EffectTiming.OnStartTurn)
         effect0.set_effect_name("BT18-087 Set memory to 3")
         effect0.set_effect_description("[Start of Your Turn] If your memory is at 2 or less, it becomes 3.")
 
@@ -51,11 +51,13 @@ class BT18_087(CardScript):
         def condition1(context: Dict[str, Any]) -> bool:
             if card and card.permanent_of_this_card() is None:
                 return False
-            # [All Turns] must be opponent's security, not own
-            ctx_player = context.get('player')
-            if ctx_player and card and card.owner and ctx_player is card.owner:
-                return False
-            # Tamer must not already be suspended
+            # [All Turns] Triggers when OPPONENT's security is removed
+            event_player = context.get('event_player') or context.get('player')
+            if event_player and card and card.owner:
+                # The player who lost security must be the opponent
+                if event_player is card.owner:
+                    return False
+            # Tamer must not already be suspended (suspend is cost)
             tamer_perm = card.permanent_of_this_card()
             if tamer_perm and getattr(tamer_perm, 'is_suspended', False):
                 return False

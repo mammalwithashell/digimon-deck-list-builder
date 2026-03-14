@@ -73,32 +73,43 @@ class BT24_014(CardScript):
         effect3.set_can_use_condition(condition3)
 
         def process3(ctx: Dict[str, Any]):
-            """Action: DP -5000, Delete"""
+            """Action: DP -5000 to 1 opponent Digimon, then delete 1 with 7000 DP or less"""
             player = ctx.get('player')
             perm = ctx.get('permanent')
             game = ctx.get('game')
-            # DP change targets opponent digimon
-            enemy = player.enemy if player else None
-            if enemy and enemy.battle_area:
-                dp_targets = [p for p in enemy.battle_area if p.is_digimon and p.dp is not None]
-                if dp_targets:
-                    target = min(dp_targets, key=lambda p: p.dp)
-                    target.change_dp(-5000)
             if not (player and game):
                 return
-            # Then, if you have 3 or fewer security cards, delete 1 opponent Digimon with 7000 DP or less
-            if len(player.security_cards) > 3:
+            enemy = player.enemy if player else None
+            if not enemy:
                 return
-            def target_filter(p):
-                if p.dp is None or p.dp > 7000:
-                    return False
-                return p.is_digimon
-            def on_delete(target_perm):
-                enemy = player.enemy if player else None
-                if enemy:
-                    enemy.delete_permanent(target_perm)
-            game.effect_select_opponent_permanent(
-                player, on_delete, filter_fn=target_filter, is_optional=False)
+
+            # Step 1: Select 1 opponent Digimon to give -5000 DP
+            def dp_filter(p):
+                return p.is_digimon and p.dp is not None
+
+            def on_dp_target(target_perm):
+                if target_perm:
+                    target_perm.change_dp(-5000)
+
+                # Step 2: Then, if 3 or fewer security cards, delete 1 opponent Digimon with 7000 DP or less
+                if len(player.security_cards) > 3:
+                    return
+                def delete_filter(p):
+                    if p.dp is None or p.dp > 7000:
+                        return False
+                    return p.is_digimon
+                def on_delete(del_perm):
+                    if del_perm and enemy:
+                        enemy.delete_permanent(del_perm)
+                if any(delete_filter(p) for p in enemy.battle_area):
+                    game.effect_select_opponent_permanent(
+                        player, on_delete, filter_fn=delete_filter, is_optional=False,
+                        prompt="Delete 1 of your opponent's Digimon with 7000 DP or less.")
+
+            if any(dp_filter(p) for p in enemy.battle_area):
+                game.effect_select_opponent_permanent(
+                    player, on_dp_target, filter_fn=dp_filter, is_optional=False,
+                    prompt="Select 1 of your opponent's Digimon to give -5000 DP.")
 
         effect3.set_on_process_callback(process3)
         effects.append(effect3)

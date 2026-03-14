@@ -46,30 +46,44 @@ class BT11_070(CardScript):
         effect1.set_can_use_condition(condition1)
 
         def process1(ctx: Dict[str, Any]):
-            """Action: Delete, Reveal And Select"""
+            """[When Digivolving] Reveal top 3, place 1 [Vemmon] as bottom digi-card, trash rest.
+            Then if 5+ [Vemmon] in digi-cards, delete 1 opponent Tamer."""
             player = ctx.get('player')
             perm = ctx.get('permanent')
             game = ctx.get('game')
-            if not (player and game):
+            if not (player and game and perm):
                 return
-            def target_filter(p):
-                return p.is_digimon
-            def on_delete(target_perm):
-                enemy = player.enemy if player else None
-                if enemy:
-                    enemy.delete_permanent(target_perm)
-            game.effect_select_opponent_permanent(
-                player, on_delete, filter_fn=target_filter, is_optional=False)
-            if not (player and game):
-                return
-            def reveal_filter(c):
-                return True
+
+            # Step 1: Reveal top 3, place 1 [Vemmon] as bottom digi-card, trash the rest
+            def vemmon_filter(c):
+                return any('Vemmon' in n for n in getattr(c, 'card_names', []))
+
             def on_revealed(selected, remaining):
-                player.hand_cards.append(selected)
+                # Place the selected [Vemmon] as this Digimon's bottom digi-card
+                perm.add_card_source_bottom(selected)
+                # Trash the rest (per C#: remainingCardsPlace: Trash)
                 for c in remaining:
-                    player.library_cards.append(c)
+                    player.trash_cards.append(c)
+
+                # Step 2: If 5+ [Vemmon] in digi-cards, delete 1 opponent Tamer
+                vemmon_count = sum(
+                    1 for cs in perm.card_sources[:-1]
+                    if any('Vemmon' in n for n in getattr(cs, 'card_names', []))
+                )
+                if vemmon_count >= 5:
+                    enemy = player.enemy if player else None
+                    if enemy:
+                        def tamer_filter(p):
+                            return getattr(p, 'is_tamer', False)
+                        def on_delete(target_perm):
+                            enemy.delete_permanent(target_perm)
+                        opp_tamers = [p for p in enemy.battle_area if tamer_filter(p)]
+                        if opp_tamers:
+                            game.effect_select_opponent_permanent(
+                                player, on_delete, filter_fn=tamer_filter, is_optional=False)
+
             game.effect_reveal_and_select(
-                player, 3, reveal_filter, on_revealed, is_optional=True)
+                player, 3, vemmon_filter, on_revealed, is_optional=True)
 
         effect1.set_on_process_callback(process1)
         effects.append(effect1)
@@ -90,17 +104,71 @@ class BT11_070(CardScript):
         def condition2(context: Dict[str, Any]) -> bool:
             if card and card.permanent_of_this_card() is None:
                 return False
-            return True
+            # Must be opponent's turn
+            if card and card.owner and card.owner.is_my_turn:
+                return False
+            # Must have a [Galacticmon] on our field with 2+ [Vemmon] in its digi-cards
+            owner = card.owner if card else None
+            if not owner:
+                return False
+            has_valid_galacticmon = False
+            for p in owner.battle_area:
+                if p.is_digimon and p.contains_card_name('Galacticmon'):
+                    vemmon_in_stack = sum(
+                        1 for cs in p.card_sources[:-1]
+                        if any('Vemmon' in n for n in getattr(cs, 'card_names', []))
+                    )
+                    if vemmon_in_stack >= 2:
+                        has_valid_galacticmon = True
+                        break
+            return has_valid_galacticmon
 
         effect2.set_can_use_condition(condition2)
 
         def process2(ctx: Dict[str, Any]):
-            """Action: Redirect Attack"""
+            """Return 2 [Vemmon] from 1 of your [Galacticmon]'s digi-cards to deck bottom,
+            then switch attack target to this Digimon."""
             player = ctx.get('player')
             perm = ctx.get('permanent')
             game = ctx.get('game')
-            # Redirect attack target (SwitchDefender) — not yet in engine
-            pass  # descriptive-tagged: redirect_attack
+            if not (player and game):
+                return
+            my_perm = card.permanent_of_this_card() if card else None
+            if not my_perm:
+                return
+
+            # Find a [Galacticmon] on our field with 2+ [Vemmon] in digi-cards
+            galacticmon_perm = None
+            for p in player.battle_area:
+                if p.is_digimon and p.contains_card_name('Galacticmon'):
+                    vemmon_in_stack = [
+                        cs for cs in p.card_sources[:-1]
+                        if any('Vemmon' in n for n in getattr(cs, 'card_names', []))
+                    ]
+                    if len(vemmon_in_stack) >= 2:
+                        galacticmon_perm = p
+                        break
+
+            if not galacticmon_perm:
+                return
+
+            # Return 2 [Vemmon] from that Galacticmon's digi-cards to deck bottom
+            returned = 0
+            for cs in list(galacticmon_perm.card_sources[:-1]):
+                if returned >= 2:
+                    break
+                if any('Vemmon' in n for n in getattr(cs, 'card_names', [])):
+                    galacticmon_perm.card_sources.remove(cs)
+                    player.library_cards.append(cs)
+                    # Fire OnDigivolutionCardReturnToDeckBottom timing
+                    game.execute_effects(
+                        EffectTiming.OnDigivolutionCardReturnToDeckBottom,
+                        {"permanent": galacticmon_perm, "returned_card": cs})
+                    returned += 1
+
+            # Switch the attack target to this Digimon
+            if returned == 2:
+                game.switch_attack_target(my_perm)
 
         effect2.set_on_process_callback(process2)
         effects.append(effect2)

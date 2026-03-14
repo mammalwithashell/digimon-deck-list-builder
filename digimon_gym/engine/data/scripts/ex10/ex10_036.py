@@ -56,12 +56,12 @@ class EX10_036(CardScript):
                         return True
             return False
 
-        # Helper: check if any of player's Digimon have at least 3 [Mineral] or [Rock] divi-cards
+        # Helper: check if player has at least 3 [Mineral] or [Rock] divi-cards across all Digimon
         def _has_mineral_rock_in_sources(player) -> bool:
             if not player:
                 return False
+            count = 0
             for perm in player.battle_area:
-                count = 0
                 for c in perm.digivolution_cards:
                     traits = set(getattr(c, 'card_traits', []) or [])
                     if 'Mineral' in traits or 'Rock' in traits:
@@ -177,21 +177,47 @@ class EX10_036(CardScript):
             def process(ctx: Dict[str, Any]):
                 player = ctx.get('player')
                 perm = ctx.get('permanent')
-                if not (player and perm):
+                game = ctx.get('game')
+                if not (player and perm and game):
                     return
-                # Place exactly 3 Mineral/Rock cards from trash as bottom divi-cards
-                placed = 0
-                for source_card in list(player.trash_cards):
-                    if placed >= 3:
-                        break
-                    traits = set(getattr(source_card, 'card_traits', []) or [])
-                    if 'Mineral' not in traits and 'Rock' not in traits:
-                        continue
-                    player.trash_cards.remove(source_card)
-                    perm.add_card_source_bottom(source_card)
-                    placed += 1
-                if placed >= 3:
-                    perm.unsuspend()
+
+                def _mineral_rock_filter(c):
+                    traits = set(getattr(c, 'card_traits', []) or [])
+                    return 'Mineral' in traits or 'Rock' in traits
+
+                # Place exactly 3 Mineral/Rock cards from trash (player selects)
+                placed_holder = [0]
+
+                def _place_one():
+                    if placed_holder[0] >= 3:
+                        # All 3 placed, unsuspend
+                        perm.unsuspend()
+                        return
+
+                    from ....data.enums import GamePhase
+                    _SEL_TRASH_START = 130
+                    valid_trash = []
+                    for i, c in enumerate(player.trash_cards):
+                        if _mineral_rock_filter(c):
+                            valid_trash.append(_SEL_TRASH_START + i)
+                    if not valid_trash:
+                        return  # Not enough cards, don't unsuspend
+
+                    def on_trash_selected(idx):
+                        if idx < len(player.trash_cards):
+                            selected = player.trash_cards[idx]
+                            player.trash_cards.remove(selected)
+                            perm.add_card_source_bottom(selected)
+                            placed_holder[0] += 1
+                            _place_one()
+
+                    # Must place all 3 (not optional for individual selections)
+                    game.request_selection(
+                        GamePhase.SelectTrash, player, on_trash_selected,
+                        valid_trash, is_optional=False,
+                        prompt=f"Select a [Mineral] or [Rock] card from trash ({placed_holder[0]+1}/3).")
+
+                _place_one()
 
             effect.set_on_process_callback(process)
             return effect

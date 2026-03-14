@@ -107,6 +107,10 @@ class BT21_056(CardScript):
             top = perm.top_card
             if top is None or not _has_vemmon_text(top):
                 return False
+            # The card being digivolved into must also have [Vemmon] in text
+            card_source = context.get('card_source')
+            if card_source is not None and not _has_vemmon_text(card_source):
+                return False
             return True
 
         effect1.set_can_use_condition(condition1)

@@ -3,7 +3,7 @@ from typing import TYPE_CHECKING, List, Dict, Any
 
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
-from ....data.enums import EffectTiming
+from ....data.enums import EffectTiming, GamePhase
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -50,24 +50,44 @@ class BT23_057(CardScript):
         effect1.set_can_use_condition(condition1)
 
         def process1(ctx: Dict[str, Any]):
-            """Return 3 Huckmon/Sistermon/Jesmon cards from trash to top of deck."""
+            """Return 3 Huckmon/Sistermon/Jesmon cards from trash to top or bottom of deck."""
             player = ctx.get('player')
-            if not player:
+            game = ctx.get('game')
+            if not (player and game):
                 return
-            returned = 0
-            to_return = []
-            for c in list(player.trash_cards):
-                if returned >= 3:
-                    break
+
+            def name_filter(c):
                 names = getattr(c, 'card_names', [])
-                if any('Huckmon' in n or 'Sistermon' in n or 'Jesmon' in n
-                       for n in names):
-                    player.trash_cards.remove(c)
-                    to_return.append(c)
-                    returned += 1
-            # Place returned cards on top of deck (insert at end = top)
-            for c in to_return:
-                player.library_cards.append(c)
+                return any('Huckmon' in n or 'Sistermon' in n or 'Jesmon' in n
+                           for n in names)
+
+            remaining = [0]  # count of cards still to select
+            remaining[0] = 3
+
+            def select_next_trash_card():
+                if remaining[0] <= 0:
+                    return
+                from digimon_gym.engine.game.constants import SEL_TRASH_START
+                valid = [SEL_TRASH_START + i for i, c in enumerate(player.trash_cards) if name_filter(c)]
+                if not valid:
+                    return
+
+                def on_trash_selected(idx: int):
+                    if not (0 <= idx < len(player.trash_cards)):
+                        return
+                    chosen = player.trash_cards[idx]
+                    player.trash_cards.remove(chosen)
+                    player.library_cards.append(chosen)
+                    remaining[0] -= 1
+                    select_next_trash_card()
+
+                game.request_selection(
+                    GamePhase.SelectTrash, player, on_trash_selected, valid,
+                    is_optional=False,
+                    prompt=f"Select a card with [Huckmon], [Sistermon], or [Jesmon] in its name from your trash to return to the deck ({remaining[0]} remaining)."
+                )
+
+            select_next_trash_card()
 
         effect1.set_on_process_callback(process1)
         effects.append(effect1)

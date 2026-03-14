@@ -55,6 +55,7 @@ class BT19_078(CardScript):
         # [Main] Place this Digimon as the bottom digivolution card of 1 of your [Mother D-Reaper] without [ADR-01 Jeri] in its digivolution cards.
         effect1 = ICardEffect()
         effect1.set_timing(EffectTiming.OnDeclaration)
+        effect1._is_field_main = True
         effect1.set_effect_name("BT19-078 Place 1 this card as 1 of your [Mother D-Reaper] digivolution cards")
         effect1.set_effect_description("[Main] Place this Digimon as the bottom digivolution card of 1 of your [Mother D-Reaper] without [ADR-01 Jeri] in its digivolution cards.")
         effect1.set_max_count_per_turn(1)

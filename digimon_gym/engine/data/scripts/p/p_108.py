@@ -67,6 +67,7 @@ class P_108(CardScript):
         # [Main] <Delay> (Trash this card in your battle area to activate the effect below. You can't activate this effect the turn this card enters play.) - 1 of your Digimon may digivolve into a purple Digimon card in your hand for its digivolution cost. When it would digivolve by this effect, reduce the cost by 2.
         effect2 = ICardEffect()
         effect2.set_timing(EffectTiming.OnDeclaration)
+        effect2._is_field_main = True
         effect2.set_effect_name("P-108 Your 1 Digimon digivolves")
         effect2.set_effect_description("[Main] <Delay> (Trash this card in your battle area to activate the effect below. You can't activate this effect the turn this card enters play.) - 1 of your Digimon may digivolve into a purple Digimon card in your hand for its digivolution cost. When it would digivolve by this effect, reduce the cost by 2.")
 

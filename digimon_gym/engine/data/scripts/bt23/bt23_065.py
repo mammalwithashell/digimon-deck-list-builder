@@ -18,6 +18,7 @@ class BT23_065(CardScript):
         # [Hand] [Main] If you have [Violet Inboots], by placing 1 [Bakemon] from your trash as any of your [Ghostmon]'s bottom digivolution card, it digivolves into this card for a digivolution cost of 3, ignoring digivolution requirements.
         effect0 = ICardEffect()
         effect0.set_timing(EffectTiming.OnDeclaration)
+        effect0._is_field_main = True
         effect0.set_effect_name("BT23-065 Place 1 [Bakemon] from trash under 1 [Ghostmon], to digivolve for 3")
         effect0.set_effect_description("[Hand] [Main] If you have [Violet Inboots], by placing 1 [Bakemon] from your trash as any of your [Ghostmon]'s bottom digivolution card, it digivolves into this card for a digivolution cost of 3, ignoring digivolution requirements.")
 

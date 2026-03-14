@@ -207,8 +207,8 @@ class BT12_031(CardScript):
                         return
                     from digimon_gym.engine.interfaces.modifiers import ModifierType
                     game.register_modifier(
-                        ModifierType.CHANGE_DP, perm,
-                        value_fn=lambda: 1000 * _digi_stack_color_count(card),
+                        perm, ModifierType.CHANGE_DP,
+                        value_fn=lambda current, target, ctx: current + 1000 * _digi_stack_color_count(card),
                         expiry='permanent'
                     )
                 return process_dp

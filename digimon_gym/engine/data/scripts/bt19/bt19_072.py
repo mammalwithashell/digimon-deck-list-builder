@@ -74,19 +74,16 @@ class BT19_072(CardScript):
         effect1.set_on_process_callback(process1)
         effects.append(effect1)
 
-        # Timing: EffectTiming.OnAllyAttack
         # [Opponent's Turn] [Once Per Turn] When any of your opponent's Digimon attack, you may
         # change the attack target to 1 of your Digimon with the [Royal Knight] trait.
-        # C# uses OnAllyAttack (CanTriggerOnPermanentAttack with opponent permanent condition).
-        # Attack redirect (SwitchDefender) is not supported in the engine — stub with pass.
+        # Uses _is_when_attacked_observer pattern + game.switch_attack_target()
         effect2 = ICardEffect()
-        effect2.set_timing(EffectTiming.OnAllyAttack)
         effect2.set_effect_name("BT19-072 You may change the attack target to 1 of your Digimon with the [Royal Knight] trait.")
         effect2.set_effect_description("[Opponent's Turn] [Once Per Turn] When any of your opponent's Digimon attack, you may change the attack target to 1 of your Digimon with the [Royal Knight] trait.")
         effect2.is_optional = True
         effect2.set_max_count_per_turn(1)
         effect2.set_hash_string("Redirect_BT19-072")
-        effect2.is_on_attack = True
+        effect2._is_when_attacked_observer = True
 
         def condition2(context: Dict[str, Any]) -> bool:
             if card and card.permanent_of_this_card() is None:
@@ -94,12 +91,6 @@ class BT19_072(CardScript):
             # [Opponent's Turn] — only active when it's not our turn
             owner = card.owner if card else None
             if not owner or owner.is_my_turn:
-                return False
-            # The attacker must be an opponent's Digimon
-            attacker = context.get('attacker')
-            if attacker is None:
-                return False
-            if attacker not in (owner.enemy.battle_area if owner.enemy else []):
                 return False
             # Must have at least one Royal Knight Digimon on our side to redirect to
             has_royal_knight = any(
@@ -113,8 +104,24 @@ class BT19_072(CardScript):
 
         def process2(ctx: Dict[str, Any]):
             """Action: Redirect attack to a Royal Knight Digimon (SwitchDefender)"""
-            # descriptive-tagged: attack target redirection is not yet supported in the engine
-            pass
+            player = ctx.get('player')
+            game = ctx.get('game')
+            if not (player and game):
+                return
+
+            def royal_knight_filter(p):
+                return (p.is_digimon and p.top_card
+                        and any('Royal Knight' in t
+                                for t in (getattr(p.top_card, 'card_traits', []) or [])))
+
+            def on_select_redirect(target_perm):
+                game.switch_attack_target(target_perm)
+
+            game.effect_select_own_permanent(
+                player, on_select_redirect,
+                filter_fn=royal_knight_filter,
+                is_optional=False,
+                prompt="Select 1 of your Digimon with the [Royal Knight] trait to redirect the attack to.")
 
         effect2.set_on_process_callback(process2)
         effects.append(effect2)

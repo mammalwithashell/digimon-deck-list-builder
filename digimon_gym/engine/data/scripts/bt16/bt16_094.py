@@ -57,6 +57,7 @@ class BT16_094(CardScript):
         # [Main] <Delay>\r\n� Place 1 [Trial of the Four Great Dragons] from your hand in the battle area, or you may trash 1 card with the [Four Great Dragons] trait in your hand. If you did either, 1 of your opponent's Digimon gets -7000 DP for the turn.
         effect2 = ICardEffect()
         effect2.set_timing(EffectTiming.OnDeclaration)
+        effect2._is_field_main = True
         effect2.set_effect_name("BT16-094 Play 1 [Trial of the Four Great Dragons] or trash 1 card and apply effects.")
         effect2.set_effect_description("[Main] <Delay>\r\n� Place 1 [Trial of the Four Great Dragons] from your hand in the battle area, or you may trash 1 card with the [Four Great Dragons] trait in your hand. If you did either, 1 of your opponent's Digimon gets -7000 DP for the turn.")
 

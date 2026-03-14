@@ -62,6 +62,7 @@ class EX5_016(CardScript):
         # [Main] [Once Per Turn] By placing the top card of this Digimon with the [Night Claw] or [Light Fang] trait as this Digimon's bottom digivolution card, gain 2 memory.
         effect2 = ICardEffect()
         effect2.set_timing(EffectTiming.OnDeclaration)
+        effect2._is_field_main = True
         effect2.set_effect_name("EX5-016 Place the top card of this Digimon at the bottom of digivolution cards to gain Memory +2 (Lunamon)")
         effect2.set_effect_description("[Main] [Once Per Turn] By placing the top card of this Digimon with the [Night Claw] or [Light Fang] trait as this Digimon's bottom digivolution card, gain 2 memory.")
         effect2.is_inherited_effect = True

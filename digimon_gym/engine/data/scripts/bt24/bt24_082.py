@@ -108,9 +108,11 @@ class BT24_082(CardScript):
             digivolved = ctx.get('digivolved_permanent')
             if digivolved:
                 digivolved.change_dp(3000)
-                # "Then, that Digimon may attack" — unsuspend so it can attack this turn
-                if digivolved.is_suspended:
-                    digivolved.unsuspend()
+                # "Then, it may attack" — grant FORCE_ATTACK so it can attack
+                from ....interfaces.modifiers import ModifierType
+                game.register_modifier(
+                    digivolved, ModifierType.FORCE_ATTACK,
+                    value_fn=lambda: True, expiry='end_of_turn')
 
         effect1.set_on_process_callback(process1)
         effects.append(effect1)

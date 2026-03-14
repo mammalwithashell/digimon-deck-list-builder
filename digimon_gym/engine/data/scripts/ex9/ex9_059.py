@@ -53,8 +53,8 @@ class EX9_059(CardScript):
             return True
         effect1.set_can_use_condition(condition1)
 
-        def process1(ctx: Dict[str, Any]):
-            """Action: Place 1 hand card as bottom evo, delete opponent Lv4 or lower"""
+        def _place_hand_and_delete_lv4(ctx: Dict[str, Any]):
+            """Place 1 hand card as bottom evo, delete opponent Lv4 or lower."""
             player = ctx.get('player')
             game = ctx.get('game')
             perm = ctx.get('permanent')
@@ -63,19 +63,30 @@ class EX9_059(CardScript):
             enemy = player.enemy if player else None
             if not enemy:
                 return
-            # Place 1 hand card as bottom digivolution card
-            if player.hand_cards and perm:
-                placed = player.hand_cards.pop()
-                perm.add_card_source_bottom(placed)
-            # Delete 1 opponent Digimon Lv.4 or lower
-            def target_filter(p):
-                return p.is_digimon and p.level is not None and p.level <= 4
-            def on_delete(target_perm):
-                enemy.delete_permanent(target_perm)
-            game.effect_select_opponent_permanent(
-                player, on_delete, filter_fn=target_filter, is_optional=False)
+            if not player.hand_cards or not perm:
+                return
 
-        effect1.set_on_process_callback(process1)
+            def on_hand_selected(selected_card):
+                if selected_card is None:
+                    return
+                if selected_card in player.hand_cards:
+                    player.hand_cards.remove(selected_card)
+                    perm.add_card_source_bottom(selected_card)
+
+                def target_filter(p):
+                    return p.is_digimon and p.level is not None and p.level <= 4
+
+                def on_delete(target_perm):
+                    enemy.delete_permanent(target_perm)
+
+                game.effect_select_opponent_permanent(
+                    player, on_delete, filter_fn=target_filter, is_optional=False)
+
+            game.effect_select_hand_card(
+                player, lambda c: True, on_hand_selected, is_optional=True,
+                prompt="Select 1 card to place face down as bottom digivolution card.")
+
+        effect1.set_on_process_callback(_place_hand_and_delete_lv4)
         effects.append(effect1)
 
         # --- Effect 1b: Same but for [When Attacking] ---
@@ -99,27 +110,7 @@ class EX9_059(CardScript):
             return True
         effect1b.set_can_use_condition(condition1b)
 
-        def process1b(ctx: Dict[str, Any]):
-            """Action: Place hand card as bottom evo, delete opponent Lv4 or lower"""
-            player = ctx.get('player')
-            game = ctx.get('game')
-            perm = ctx.get('permanent')
-            if not (player and game):
-                return
-            enemy = player.enemy if player else None
-            if not enemy:
-                return
-            if player.hand_cards and perm:
-                placed = player.hand_cards.pop()
-                perm.add_card_source_bottom(placed)
-            def target_filter(p):
-                return p.is_digimon and p.level is not None and p.level <= 4
-            def on_delete(target_perm):
-                enemy.delete_permanent(target_perm)
-            game.effect_select_opponent_permanent(
-                player, on_delete, filter_fn=target_filter, is_optional=False)
-
-        effect1b.set_on_process_callback(process1b)
+        effect1b.set_on_process_callback(_place_hand_and_delete_lv4)
         effects.append(effect1b)
 
         # --- Effect 2: Inherited [When Attacking][Once Per Turn]
@@ -143,12 +134,18 @@ class EX9_059(CardScript):
         def process2(ctx: Dict[str, Any]):
             """Action: Draw 1, trash 1"""
             player = ctx.get('player')
+            game = ctx.get('game')
             if not player:
                 return
             player.draw_cards(1)
-            if player.hand_cards:
-                trashed = player.hand_cards.pop()
-                player.trash_cards.append(trashed)
+            if player.hand_cards and game:
+                def on_trashed(selected):
+                    if selected and selected in player.hand_cards:
+                        player.hand_cards.remove(selected)
+                        player.trash_cards.append(selected)
+                game.effect_select_hand_card(
+                    player, lambda c: True, on_trashed, is_optional=False,
+                    prompt="Trash 1 card from your hand.")
 
         effect2.set_on_process_callback(process2)
         effects.append(effect2)

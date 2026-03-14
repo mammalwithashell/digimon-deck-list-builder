@@ -90,23 +90,33 @@ class BT16_077(CardScript):
             game = ctx.get('game')
             if not (player and game):
                 return
+            # Check if DNA digivolving
+            is_jogress = ctx.get('is_jogress', False) or ctx.get('is_dna', False)
+            if not is_jogress:
+                return
             def play_filter(c):
+                if not getattr(c, 'is_digimon', False):
+                    return False
                 if getattr(c, 'level', None) is None or c.level > 5:
                     return False
-                if not (any('Free' in _t for _t in (getattr(c, 'card_traits', []) or []))):
+                traits = getattr(c, 'card_traits', []) or []
+                if not any('Free' in _t for _t in traits):
                     return False
                 return True
             game.effect_play_from_zone(
                 player, 'trash', play_filter, free=True, is_optional=True)
-            # Grant Rush to 1 of your Digimon for the turn
+            # Then, 1 of your Digimon may gain Rush for the turn and attack a player
             def rush_filter(p):
                 return p.is_digimon
             def on_rush(target_perm):
+                from ....interfaces.modifiers import ModifierType
                 target_perm.grant_keyword('_is_rush')
+                # Force attack on the player
+                game.register_modifier(
+                    target_perm, ModifierType.FORCE_ATTACK,
+                    value_fn=lambda: True, expiry='end_of_turn')
             game.effect_select_own_permanent(
                 player, on_rush, filter_fn=rush_filter, is_optional=True)
-            # Force attack — target Digimon may attack (requires engine SelectAttack)
-            pass  # descriptive-tagged: force_attack
 
         effect4.set_on_process_callback(process4)
         effects.append(effect4)

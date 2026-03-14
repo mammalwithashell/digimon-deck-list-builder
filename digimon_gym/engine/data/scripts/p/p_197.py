@@ -95,17 +95,27 @@ class P_197(CardScript):
         effect2.set_can_use_condition(condition2)
 
         def process2(ctx: Dict[str, Any]):
-            """Action: DP -2000"""
+            """Action: DP -2000 to 1 opponent Digimon (player selects)"""
             player = ctx.get('player')
             perm = ctx.get('permanent')
             game = ctx.get('game')
-            # DP change targets opponent digimon
+            if not (player and game):
+                return
             enemy = player.enemy if player else None
-            if enemy and enemy.battle_area:
-                dp_targets = [p for p in enemy.battle_area if p.is_digimon and p.dp is not None]
-                if dp_targets:
-                    target = min(dp_targets, key=lambda p: p.dp)
-                    target.change_dp(-2000)
+            if not enemy:
+                return
+
+            def dp_filter(p):
+                return p.is_digimon and p.dp is not None
+
+            def on_dp_target(target_perm):
+                if target_perm:
+                    target_perm.change_dp(-2000)
+
+            if any(dp_filter(p) for p in enemy.battle_area):
+                game.effect_select_opponent_permanent(
+                    player, on_dp_target, filter_fn=dp_filter, is_optional=False,
+                    prompt="Select 1 of your opponent's Digimon to give -2000 DP.")
 
         effect2.set_on_process_callback(process2)
         effects.append(effect2)

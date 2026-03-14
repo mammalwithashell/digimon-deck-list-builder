@@ -32,36 +32,41 @@ class ST12_14(CardScript):
         def process0(ctx: Dict[str, Any]):
             """Action: DP +2000, then conditionally gain 1 memory + Piercing"""
             player = ctx.get('player')
-            perm = ctx.get('permanent')
             game = ctx.get('game')
             if not (player and game):
                 return
-            # Step 1: 1 of your Digimon gets +2000 DP (any Digimon, unconditional)
+
             def dp_filter(p):
                 return p.is_digimon
+
+            def _check_conditional_piercing():
+                """After DP grant resolves, check condition and grant Piercing."""
+                has_huckmon_or_rk = any(
+                    p.is_digimon and (
+                        p.contains_card_name('Huckmon') or
+                        any('Royal Knight' in t for t in (getattr(p.top_card, 'card_traits', []) or []))
+                    )
+                    for p in player.battle_area
+                )
+                if not has_huckmon_or_rk:
+                    return
+                # Gain 1 memory
+                player.add_memory(1)
+                # 1 of your Digimon gains Piercing for the turn
+                def piercing_filter(p):
+                    return p.is_digimon
+                def on_piercing_grant(target_perm):
+                    target_perm.grant_keyword('_is_piercing')
+                game.effect_select_own_permanent(
+                    player, on_piercing_grant, filter_fn=piercing_filter, is_optional=False)
+
+            # Step 1: 1 of your Digimon gets +2000 DP (chained: Piercing in callback)
             def on_dp_grant(target_perm):
                 target_perm.change_dp(2000)
+                _check_conditional_piercing()
+
             game.effect_select_own_permanent(
                 player, on_dp_grant, filter_fn=dp_filter, is_optional=False)
-            # Step 2: Check if you have a Huckmon or Royal Knight in play
-            has_huckmon_or_rk = any(
-                p.is_digimon and (
-                    p.contains_card_name('Huckmon') or
-                    any('Royal Knight' in t for t in (getattr(p.top_card, 'card_traits', []) or []))
-                )
-                for p in player.battle_area
-            )
-            if not has_huckmon_or_rk:
-                return
-            # Gain 1 memory
-            player.add_memory(1)
-            # 1 of your Digimon gains Piercing (any Digimon)
-            def piercing_filter(p):
-                return p.is_digimon
-            def on_piercing_grant(target_perm):
-                target_perm.grant_keyword('_is_piercing')
-            game.effect_select_own_permanent(
-                player, on_piercing_grant, filter_fn=piercing_filter, is_optional=False)
 
         effect0.set_on_process_callback(process0)
         effects.append(effect0)
@@ -83,16 +88,14 @@ class ST12_14(CardScript):
         effect1.set_can_use_condition(condition1)
 
         def process1(ctx: Dict[str, Any]):
-            """Action: Gain 1 memory, Add To Hand"""
+            """Action: Gain 1 memory, Add this card to hand"""
             player = ctx.get('player')
-            perm = ctx.get('permanent')
-            game = ctx.get('game')
             if player:
                 player.add_memory(1)
-            # Add card to hand (from trash/reveal)
-            if player and player.trash_cards:
-                card_to_add = player.trash_cards.pop()
-                player.hand_cards.append(card_to_add)
+                # Add THIS card to hand (it's in security/trash after security check)
+                if card in player.trash_cards:
+                    player.trash_cards.remove(card)
+                player.hand_cards.append(card)
 
         effect1.set_on_process_callback(process1)
         effects.append(effect1)

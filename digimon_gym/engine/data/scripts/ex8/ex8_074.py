@@ -51,26 +51,20 @@ class EX8_074(CardScript):
                 return
 
             # Track how many have been suspended
-            suspended_count = [0]
             selected = []
 
             def on_first_selected(target_perm):
                 target_perm.suspend()
                 selected.append(target_perm)
-                suspended_count[0] += 1
                 # Now select second
-                remaining = [p for p in player.battle_area
-                             if p.is_digimon and not p.is_suspended and p not in selected]
-                if remaining:
-                    def on_second_selected(target_perm2):
-                        target_perm2.suspend()
-                        suspended_count[0] += 1
-                    game.effect_select_own_permanent(
-                        player, on_second_selected,
-                        filter_fn=lambda p: p.is_digimon and not p.is_suspended and p not in selected,
-                        is_optional=False,
-                        prompt="Select 2nd Digimon to suspend (cost for -4 play cost).",
-                    )
+                def on_second_selected(target_perm2):
+                    target_perm2.suspend()
+                game.effect_select_own_permanent(
+                    player, on_second_selected,
+                    filter_fn=lambda p: p.is_digimon and not p.is_suspended and p not in selected,
+                    is_optional=False,
+                    prompt="Select 2nd Digimon to suspend (cost for -4 play cost).",
+                )
 
             game.effect_select_own_permanent(
                 player, on_first_selected,
@@ -151,43 +145,111 @@ class EX8_074(CardScript):
                     is_optional=True,
                     prompt=f"You may delete 1 opponent Digimon with {max_dp} DP or less.")
 
+        def _suspend_any_then_delete(player, game):
+            """Step 1: You MAY suspend 1 Digimon (any on the field — own or opponent's).
+            Then proceed to deletion step regardless of whether a suspension happened.
+            C# ref: CanSelectSuspendPermanentCondition uses IsPermanentExistsOnBattleAreaDigimon
+            which includes all Digimon on both fields."""
+            enemy = player.enemy if player else None
+
+            # Check if any Digimon exist on either field
+            has_opp_digimon = any(p.is_digimon for p in (enemy.battle_area if enemy else []))
+            has_own_digimon = any(p.is_digimon for p in player.battle_area)
+
+            if not has_opp_digimon and not has_own_digimon:
+                _do_delete(player, game)
+                return
+
+            # Card text says "1 Digimon" without restriction — any Digimon on the field.
+            # Since the engine has no combined selector, offer opponent Digimon first
+            # (more strategically useful), then own.
+            suspended_happened = [False]
+
+            def on_suspend_opp(target_perm):
+                target_perm.suspend()
+                suspended_happened[0] = True
+                _do_delete(player, game)
+
+            def on_suspend_own(target_perm):
+                target_perm.suspend()
+                suspended_happened[0] = True
+                _do_delete(player, game)
+
+            if has_opp_digimon:
+                game.effect_select_opponent_permanent(
+                    player, on_suspend_opp,
+                    filter_fn=lambda p: p.is_digimon,
+                    is_optional=True,
+                    prompt="You may suspend 1 Digimon (opponent's).")
+
+                if game.pending_selection:
+                    _orig_decline = getattr(game.pending_selection, 'on_decline', None)
+                    def on_decline_opp():
+                        if _orig_decline:
+                            _orig_decline()
+                        # Declined opponent — offer own Digimon
+                        if has_own_digimon:
+                            game.effect_select_own_permanent(
+                                player, on_suspend_own,
+                                filter_fn=lambda p: p.is_digimon,
+                                is_optional=True,
+                                prompt="You may suspend 1 of your Digimon.")
+                            if game.pending_selection:
+                                _orig_decline2 = getattr(game.pending_selection, 'on_decline', None)
+                                def on_decline_own():
+                                    if _orig_decline2:
+                                        _orig_decline2()
+                                    _do_delete(player, game)
+                                game.pending_selection.on_decline = on_decline_own
+                            elif not suspended_happened[0]:
+                                _do_delete(player, game)
+                        else:
+                            _do_delete(player, game)
+                    game.pending_selection.on_decline = on_decline_opp
+                elif not suspended_happened[0]:
+                    # No opponent Digimon after filter or resolved synchronously
+                    if has_own_digimon:
+                        game.effect_select_own_permanent(
+                            player, on_suspend_own,
+                            filter_fn=lambda p: p.is_digimon,
+                            is_optional=True,
+                            prompt="You may suspend 1 of your Digimon.")
+                        if game.pending_selection:
+                            _orig_decline3 = getattr(game.pending_selection, 'on_decline', None)
+                            def on_decline_own2():
+                                if _orig_decline3:
+                                    _orig_decline3()
+                                _do_delete(player, game)
+                            game.pending_selection.on_decline = on_decline_own2
+                        elif not suspended_happened[0]:
+                            _do_delete(player, game)
+                    else:
+                        _do_delete(player, game)
+            elif has_own_digimon:
+                game.effect_select_own_permanent(
+                    player, on_suspend_own,
+                    filter_fn=lambda p: p.is_digimon,
+                    is_optional=True,
+                    prompt="You may suspend 1 of your Digimon.")
+                if game.pending_selection:
+                    _orig_decline4 = getattr(game.pending_selection, 'on_decline', None)
+                    def on_decline_own3():
+                        if _orig_decline4:
+                            _orig_decline4()
+                        _do_delete(player, game)
+                    game.pending_selection.on_decline = on_decline_own3
+                elif not suspended_happened[0]:
+                    _do_delete(player, game)
+            else:
+                _do_delete(player, game)
+
         def process3(ctx: Dict[str, Any]):
-            """You may suspend 1 Digimon, then optionally delete opponent Digimon."""
+            """You may suspend 1 Digimon (any), then optionally delete opponent Digimon."""
             player = ctx.get('player')
             game = ctx.get('game')
             if not (player and game):
                 return
-
-            # Step 1: You MAY suspend 1 own Digimon (then proceed to delete)
-            own_unsuspended = [p for p in player.battle_area
-                               if p.is_digimon and not p.is_suspended]
-
-            if own_unsuspended:
-                def on_suspend_done(target_perm):
-                    target_perm.suspend()
-                    _do_delete(player, game)
-
-                game.effect_select_own_permanent(
-                    player, on_suspend_done,
-                    filter_fn=lambda p: p.is_digimon and not p.is_suspended,
-                    is_optional=True,
-                    prompt="You may suspend 1 Digimon.")
-                # If player declines (optional), still run delete step
-                # The engine calls on_suspend_done only if a selection is made;
-                # we need to also handle decline to still run delete.
-                if game.pending_selection:
-                    _orig_decline = getattr(game.pending_selection, 'on_decline', None)
-                    def on_decline_wrap():
-                        if _orig_decline:
-                            _orig_decline()
-                        _do_delete(player, game)
-                    game.pending_selection.on_decline = on_decline_wrap
-                else:
-                    # Selection resolved synchronously with a suspension — delete already called
-                    pass
-            else:
-                # No own unsuspended Digimon — skip to delete
-                _do_delete(player, game)
+            _suspend_any_then_delete(player, game)
 
         effect3.set_on_process_callback(process3)
         effects.append(effect3)

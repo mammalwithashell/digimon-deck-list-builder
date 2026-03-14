@@ -66,6 +66,8 @@ class ModifierType(Enum):
     DONT_HAVE_DP = auto()
     # IChangeDPDeleteEffectMaxDPEffect
     CHANGE_DP_DELETE_MAX = auto()
+    # DP floor — computed DP cannot go below this value
+    DP_FLOOR = auto()
 
     # ── Cost Modification ───────────────────────────────────────────
     # IChangeCostEffect

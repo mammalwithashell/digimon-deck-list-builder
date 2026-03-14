@@ -18,6 +18,7 @@ class BT10_053(CardScript):
         # [Main][Once Per Turn] By suspending 1 of your green Digimon, you may play 1 Digimon card with [Vegetation], [Plant] or [Fairy] in its traits and 3000 DP or less from your hand without paying its memory cost.
         effect0 = ICardEffect()
         effect0.set_timing(EffectTiming.OnDeclaration)
+        effect0._is_field_main = True
         effect0.set_effect_name("BT10-053 Suspend your Digimon to play a Digimon from hand")
         effect0.set_effect_description("[Main][Once Per Turn] By suspending 1 of your green Digimon, you may play 1 Digimon card with [Vegetation], [Plant] or [Fairy] in its traits and 3000 DP or less from your hand without paying its memory cost.")
         effect0.set_max_count_per_turn(1)

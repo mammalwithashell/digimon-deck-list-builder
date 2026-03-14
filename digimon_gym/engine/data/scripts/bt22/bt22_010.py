@@ -32,6 +32,7 @@ class BT22_010(CardScript):
         # [Main] [Once Per Turn] By paying 2 cost, this Digimon gains <Raid> (When this Digimon attacks, you may switch the target of attack to 1 of your opponent's unsuspended Digimon with the highest DP) and <Piercing> (When this Digimon attacks and deletes an opponent's Digimon and survives the battle, it performs any security checks it normally would) for the turn. Then, this Digimon may attack.
         effect1 = ICardEffect()
         effect1.set_timing(EffectTiming.OnDeclaration)
+        effect1._is_field_main = True
         effect1.set_effect_name("BT22-010 Pay 2, Gain raid & piercing. then it may attack")
         effect1.set_effect_description("[Main] [Once Per Turn] By paying 2 cost, this Digimon gains <Raid> (When this Digimon attacks, you may switch the target of attack to 1 of your opponent's unsuspended Digimon with the highest DP) and <Piercing> (When this Digimon attacks and deletes an opponent's Digimon and survives the battle, it performs any security checks it normally would) for the turn. Then, this Digimon may attack.")
         effect1.set_max_count_per_turn(1)

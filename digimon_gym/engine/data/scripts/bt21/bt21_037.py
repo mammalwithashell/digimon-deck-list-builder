@@ -63,7 +63,6 @@ class BT21_037(CardScript):
         effect2.set_effect_description("[When Digivolving] Suspend 1 of your opponent's Digimon. Then, this Digimon gets +2000 DP until your opponent's turn ends.")
         effect2.is_when_digivolving = True
 
-        effect = effect2  # alias for condition closure
         def condition2(context: Dict[str, Any]) -> bool:
             if card and card.permanent_of_this_card() is None:
                 return False
@@ -73,20 +72,36 @@ class BT21_037(CardScript):
         effect2.set_can_use_condition(condition2)
 
         def process2(ctx: Dict[str, Any]):
-            """Action: DP +2000, Suspend"""
+            """Action: Suspend 1 opponent Digimon, then DP +2000 (C# order)."""
             player = ctx.get('player')
             perm = ctx.get('permanent')
             game = ctx.get('game')
-            if perm:
-                perm.change_dp(2000)
             if not (player and game):
                 return
+
+            # Step 1: Suspend 1 of opponent's Digimon (must be able to suspend)
             def target_filter(p):
-                return True
-            def on_suspend(target_perm):
-                target_perm.suspend()
-            game.effect_select_opponent_permanent(
-                player, on_suspend, filter_fn=target_filter, is_optional=False)
+                return p.is_digimon and not p.is_suspended
+
+            has_targets = any(
+                target_filter(p) for p in (player.enemy.battle_area if player.enemy else [])
+            )
+            if has_targets:
+                def on_suspend(target_perm):
+                    target_perm.suspend()
+
+                game.effect_select_opponent_permanent(
+                    player, on_suspend, filter_fn=target_filter, is_optional=False,
+                    prompt="Select 1 of your opponent's Digimon to suspend.")
+
+            # Step 2: This Digimon gets +2000 DP until opponent's turn ends
+            if perm:
+                from ....interfaces.modifiers import ModifierType
+                game.register_modifier(
+                    perm, ModifierType.CHANGE_DP,
+                    value_fn=lambda current, target, ctx: current + 2000,
+                    expiry='end_of_opponent_turn',
+                )
 
         effect2.set_on_process_callback(process2)
         effects.append(effect2)

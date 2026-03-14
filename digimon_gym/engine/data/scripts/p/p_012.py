@@ -18,6 +18,7 @@ class P_012(CardScript):
         # [Main] If you have a Digimon with [Veedramon] in its name, you may suspend this Tamer to activate one of the following effects: - Trigger <Draw 1>. (Draw 1 card from your deck. - 1 of your Digimon gets +1000 DP for the turn.
         effect0 = ICardEffect()
         effect0.set_timing(EffectTiming.OnDeclaration)
+        effect0._is_field_main = True
         effect0.set_effect_name("P-012 Draw 1 or your 1 Digimon gains DP +1000")
         effect0.set_effect_description("[Main] If you have a Digimon with [Veedramon] in its name, you may suspend this Tamer to activate one of the following effects: - Trigger <Draw 1>. (Draw 1 card from your deck. - 1 of your Digimon gets +1000 DP for the turn.")
 

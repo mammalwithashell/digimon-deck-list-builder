@@ -50,7 +50,7 @@ class EX9_010(CardScript):
             return True
         effect1.set_can_use_condition(condition1)
 
-        def process1(ctx: Dict[str, Any]):
+        def _place_hand_and_delete(ctx: Dict[str, Any]):
             player = ctx.get('player')
             perm = ctx.get('permanent')
             game = ctx.get('game')
@@ -59,19 +59,29 @@ class EX9_010(CardScript):
             enemy = player.enemy if player else None
             if not enemy:
                 return
-            if player.hand_cards:
-                placed = player.hand_cards.pop()
-                perm.add_card_source_bottom(placed)
+            if not player.hand_cards:
+                return
 
-            def target_filter(p):
-                return p.is_digimon and p.dp <= 4000
+            def on_hand_selected(selected_card):
+                if selected_card is None:
+                    return
+                if selected_card in player.hand_cards:
+                    player.hand_cards.remove(selected_card)
+                    perm.add_card_source_bottom(selected_card)
 
-            def on_delete(target_perm):
-                enemy.delete_permanent(target_perm)
+                def target_filter(p):
+                    return p.is_digimon and p.dp is not None and p.dp <= 4000
 
-            game.effect_select_opponent_permanent(
-                player, on_delete, filter_fn=target_filter, is_optional=False)
-        effect1.set_on_process_callback(process1)
+                def on_delete(target_perm):
+                    enemy.delete_permanent(target_perm)
+
+                game.effect_select_opponent_permanent(
+                    player, on_delete, filter_fn=target_filter, is_optional=False)
+
+            game.effect_select_hand_card(
+                player, lambda c: True, on_hand_selected, is_optional=True,
+                prompt="Select 1 card to place face down as bottom digivolution card.")
+        effect1.set_on_process_callback(_place_hand_and_delete)
         effects.append(effect1)
 
         # [When Attacking][Once Per Turn] Same effect
@@ -94,28 +104,7 @@ class EX9_010(CardScript):
             return True
         effect1b.set_can_use_condition(condition1b)
 
-        def process1b(ctx: Dict[str, Any]):
-            player = ctx.get('player')
-            perm = ctx.get('permanent')
-            game = ctx.get('game')
-            if not (player and game and perm):
-                return
-            enemy = player.enemy if player else None
-            if not enemy:
-                return
-            if player.hand_cards:
-                placed = player.hand_cards.pop()
-                perm.add_card_source_bottom(placed)
-
-            def target_filter(p):
-                return p.is_digimon and p.dp <= 4000
-
-            def on_delete(target_perm):
-                enemy.delete_permanent(target_perm)
-
-            game.effect_select_opponent_permanent(
-                player, on_delete, filter_fn=target_filter, is_optional=False)
-        effect1b.set_on_process_callback(process1b)
+        effect1b.set_on_process_callback(_place_hand_and_delete)
         effects.append(effect1b)
 
         # Inherited: <Raid>

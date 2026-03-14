@@ -54,35 +54,23 @@ class BT10_042(CardScript):
         effect0.set_on_process_callback(process0)
         effects.append(effect0)
 
-        # Timing: EffectTiming.None
-        # Disable Effect, Effect Immunity
+        # [Opponent's Turn] Your opponent's Digimon with <Security A.> can't attack
+        # this Digimon and can't activate [When Attacking] and [When Digivolving] effects.
+        # This is a continuous/static effect — modeled as a declarative effect.
+        # The "can't attack this Digimon" portion is handled by CANNOT_ATTACK_TARGET modifier.
+        # The "disable [When Attacking]/[When Digivolving]" is handled by DISABLE_EFFECT modifier.
+        # Both are continuous while this card is on the field during opponent's turn.
         effect1 = ICardEffect()
-        effect1.set_effect_name("BT10-042 Ignore [When Attacking] and [When Digivolving] Effect of opponent's Digimon that has <Security Attack>")
-        effect1.set_effect_description("Disable Effect, Effect Immunity")
+        effect1.set_effect_name("BT10-042 Opponent's SA Digimon can't attack this / effects disabled")
+        effect1.set_effect_description("[Opponent's Turn] Your opponent's Digimon with <Security A.> can't attack this Digimon and can't activate [When Attacking] and [When Digivolving] effects.")
+        effect1.is_declarative = True
 
-        effect = effect1  # alias for condition closure
         def condition1(context: Dict[str, Any]) -> bool:
             if card and card.permanent_of_this_card() is None:
                 return False
             return True
 
         effect1.set_can_use_condition(condition1)
-
-        def process1(ctx: Dict[str, Any]):
-            """Action: Disable Effect, Effect Immunity"""
-            player = ctx.get('player')
-            perm = ctx.get('permanent')
-            game = ctx.get('game')
-            # Disable/invalidate effects on target — not yet in engine
-            pass  # descriptive-tagged: disable_effect
-            # Grant effect immunity via modifier system
-            if perm and game:
-                from digimon_gym.engine.interfaces.modifiers import ModifierType
-                game.register_modifier(
-                    ModifierType.CANNOT_BE_SELECTED_BY_EFFECT, perm,
-                    value_fn=lambda: True, expiry='end_of_turn')
-
-        effect1.set_on_process_callback(process1)
         effects.append(effect1)
 
         return effects

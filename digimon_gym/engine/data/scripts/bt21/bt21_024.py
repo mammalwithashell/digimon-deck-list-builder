@@ -2,7 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
-from ....data.enums import EffectTiming
+from ....data.enums import EffectTiming, GamePhase
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -34,15 +34,32 @@ class BT21_024(CardScript):
             if len(enemy.security_cards) > 5:
                 return
             # Opponent places 1 card from their hand as bottom security card
-            if enemy.hand_cards:
-                # Auto-select first hand card for the opponent (engine limitation)
-                hand_card = enemy.hand_cards[0]
+            if not enemy.hand_cards:
+                # No hand cards — skip to trashing top security
+                if enemy.security_cards:
+                    top_sec = enemy.security_cards.pop()  # top = last element
+                    enemy.trash_cards.append(top_sec)
+                return
+
+            # Let the opponent choose which hand card to place as bottom security
+            valid = list(range(len(enemy.hand_cards)))  # SEL_HAND_START is 0
+
+            def on_hand_selected(idx: int):
+                if not (0 <= idx < len(enemy.hand_cards)):
+                    return
+                hand_card = enemy.hand_cards[idx]
                 enemy.hand_cards.remove(hand_card)
                 enemy.security_cards.insert(0, hand_card)  # bottom = index 0
-            # Then, trash their top security card
-            if enemy.security_cards:
-                top_sec = enemy.security_cards.pop()  # top = last element
-                enemy.trash_cards.append(top_sec)
+                # Then, trash their top security card
+                if enemy.security_cards:
+                    top_sec = enemy.security_cards.pop()  # top = last element
+                    enemy.trash_cards.append(top_sec)
+
+            game.request_selection(
+                GamePhase.SelectHand, enemy, on_hand_selected, valid,
+                is_optional=False,
+                prompt="Place 1 card from your hand as the bottom security card."
+            )
 
         # [On Play]
         effect0 = ICardEffect()

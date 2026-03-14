@@ -18,6 +18,7 @@ class BT15_009(CardScript):
         # [Main][Once per turn] By paying 2 memory, delete 1 of your opponent's Digimon with DP less than or equal to this Digimon.
         effect0 = ICardEffect()
         effect0.set_timing(EffectTiming.OnDeclaration)
+        effect0._is_field_main = True
         effect0.set_effect_name("BT15-009 Delete 1 Digimon with DP less than or equal to this Digimon's DP")
         effect0.set_effect_description("[Main][Once per turn] By paying 2 memory, delete 1 of your opponent's Digimon with DP less than or equal to this Digimon.")
         effect0.set_max_count_per_turn(1)

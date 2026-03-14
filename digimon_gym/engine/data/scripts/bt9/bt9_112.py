@@ -31,6 +31,16 @@ class BT9_112(CardScript):
             "each Digimon and Tamer your opponent has in play."
         )
 
+        def _cost_reduction_fn(context):
+            player = card.owner if card else None
+            if not player or not player.enemy:
+                return 0
+            enemy = player.enemy
+            count = sum(1 for p in enemy.battle_area if p.is_digimon or p.is_tamer)
+            return 3 * count
+
+        effect0._cost_reduction_value_fn = _cost_reduction_fn
+
         def condition0(context: Dict[str, Any]) -> bool:
             if context.get('card_source') is not card:
                 return False

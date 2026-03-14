@@ -270,7 +270,7 @@ class BT20_101(CardScript):
         effect_ace.set_effect_name("BT20-101 Ace Overflow")
         effect_ace.set_effect_description("Ace Overflow <-4>")
         effect_ace.is_inherited_effect = True
-        pass  # descriptive-tagged: ace_overflow
+        # ace_overflow driven by card entity attributes, not by process callback
 
         def condition_ace(context: Dict[str, Any]) -> bool:
             return True

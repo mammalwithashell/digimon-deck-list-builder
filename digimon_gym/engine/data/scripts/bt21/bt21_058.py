@@ -96,7 +96,8 @@ class BT21_058(CardScript):
                     on_no_select()
 
             def _place_vemmon_from_trash(player, game):
-                """Place up to 2 [Vemmon] from trash as 1 of your Digimon's bottom digi-cards."""
+                """Place up to 2 [Vemmon] from trash as 1 of your Digimon's bottom digi-cards.
+                Player selects which Vemmon from trash, then which Digimon to place under."""
                 qualifying = [c for c in player.trash_cards if _is_vemmon_name(c)]
                 if not qualifying:
                     return
@@ -104,18 +105,79 @@ class BT21_058(CardScript):
                 if not digimon_on_field:
                     return
 
-                # Auto-select target Digimon (first available, or use own permanent
-                # if only 1 Digimon); place up to 2 Vemmon
-                target_perm = digimon_on_field[0]
+                from ....data.enums import GamePhase
 
-                placed = 0
-                for c in list(player.trash_cards):
-                    if placed >= 2:
-                        break
+                # C# uses SelectCardEffect from trash (up to 2, canNoSelect=true,
+                # canEndNotMax=true), then SelectPermanentEffect if >1 Digimon.
+                # Step 1: Select up to 2 [Vemmon] from trash
+                SEL_TRASH_START = 1500
+                trash_valid = []
+                for i, c in enumerate(player.trash_cards):
                     if _is_vemmon_name(c):
-                        player.trash_cards.remove(c)
-                        target_perm.add_card_source_bottom(c)
-                        placed += 1
+                        trash_valid.append(SEL_TRASH_START + i)
+
+                if not trash_valid:
+                    return
+
+                selected_cards = []
+
+                def on_trash_select(action_id: int):
+                    idx = action_id - SEL_TRASH_START
+                    if 0 <= idx < len(player.trash_cards):
+                        chosen = player.trash_cards[idx]
+                        selected_cards.append(chosen)
+
+                    if len(selected_cards) < 2:
+                        # Check if more Vemmon remain in trash
+                        remaining = [
+                            SEL_TRASH_START + i
+                            for i, c in enumerate(player.trash_cards)
+                            if _is_vemmon_name(c) and c not in selected_cards
+                        ]
+                        if remaining:
+                            game.request_selection(
+                                GamePhase.SelectTrash, player, on_trash_select_2,
+                                remaining, is_optional=True,
+                                prompt="Select another [Vemmon] from trash (optional).")
+                            return
+
+                    _finish_place(player, game, selected_cards, digimon_on_field)
+
+                def on_trash_select_2(action_id: int):
+                    idx = action_id - SEL_TRASH_START
+                    if 0 <= idx < len(player.trash_cards):
+                        chosen = player.trash_cards[idx]
+                        selected_cards.append(chosen)
+                    _finish_place(player, game, selected_cards, digimon_on_field)
+
+                def _finish_place(player, game, selected_cards, digimon_on_field):
+                    if not selected_cards:
+                        return
+                    # Remove selected cards from trash
+                    for sc in selected_cards:
+                        if sc in player.trash_cards:
+                            player.trash_cards.remove(sc)
+
+                    # Step 2: Select which Digimon to place them under
+                    if len(digimon_on_field) == 1:
+                        target = digimon_on_field[0]
+                        for sc in selected_cards:
+                            target.add_card_source_bottom(sc)
+                    else:
+                        def on_perm_selected(target_perm):
+                            if target_perm:
+                                for sc in selected_cards:
+                                    target_perm.add_card_source_bottom(sc)
+                        game.effect_select_own_permanent(
+                            player, on_perm_selected,
+                            filter_fn=lambda p: p.is_digimon,
+                            is_optional=False,
+                            prompt="Select 1 of your Digimon to place [Vemmon] under as bottom digivolution cards.")
+
+                game.request_selection(
+                    GamePhase.SelectTrash, player, on_trash_select,
+                    trash_valid, is_optional=True,
+                    prompt="Select up to 2 [Vemmon] from trash to place as bottom digivolution cards.")
 
             effect.set_on_process_callback(process)
             return effect

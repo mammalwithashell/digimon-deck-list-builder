@@ -14,10 +14,10 @@ class EX11_073(CardScript):
     DNA Digivolution: Green Lv.6 + Black Lv.6
     <Security Attack +1>
     <Blocker>
-    Link: Up to 3 [Maquinamon]
+    <Link +2>
 
     [When Digivolving] If DNA Digivolving, you may link up to 3 [Maquinamon]
-    from your hand, trash, or this Digimon's digivolution cards to this
+    from your hand, trash or this Digimon's digivolution cards to this
     Digimon without paying the cost.
 
     [End of Opponent's Turn] [Once Per Turn] For each of this Digimon's link
@@ -28,6 +28,10 @@ class EX11_073(CardScript):
     def get_card_effects(self, card: 'CardSource') -> List['ICardEffect']:
         effects = []
 
+        def _is_maquinamon(c):
+            names = getattr(c, 'card_names', []) or []
+            return any('Maquinamon' in n for n in names)
+
         # --- Jogress Condition marker ---
         effect0 = ICardEffect()
         effect0.set_effect_name("EX11-073 Jogress Condition")
@@ -36,6 +40,7 @@ class EX11_073(CardScript):
         def condition0(context: Dict[str, Any]) -> bool:
             return True
         effect0.set_can_use_condition(condition0)
+
         def process0(ctx: Dict[str, Any]):
             pass
         effect0.set_on_process_callback(process0)
@@ -67,7 +72,7 @@ class EX11_073(CardScript):
         effect_blocker.set_can_use_condition(condition_blocker)
         effects.append(effect_blocker)
 
-        # --- Link slot markers (up to 3 links) ---
+        # --- Link +2 (up to 3 links total) ---
         for i in range(1, 4):
             link_effect = ICardEffect()
             link_effect.set_effect_name(f"EX11-073 Link slot {i} [Maquinamon]")
@@ -90,109 +95,170 @@ class EX11_073(CardScript):
         effect4 = ICardEffect()
         effect4.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect4.set_effect_name("EX11-073 You may link up to 3 [Maquinamon] from hand, trash or digivolution cards")
-        effect4.set_effect_description("[When Digivolving] If DNA Digivolving, you may link up to 3 [Maquinamon] from your hand, trash or this Digimon's digivolution cards to this Digimon without paying the cost.")
+        effect4.set_effect_description(
+            "[When Digivolving] If DNA digivolving, you may link up to 3 "
+            "[Maquinamon] from your hand, trash or this Digimon's digivolution "
+            "cards to this Digimon without paying the cost.")
         effect4.is_when_digivolving = True
 
         def condition4(context: Dict[str, Any]) -> bool:
             if card and card.permanent_of_this_card() is None:
                 return False
-            # Must be DNA digivolving
             if not context.get('is_dna_digivolve', False):
                 return False
             return True
-
         effect4.set_can_use_condition(condition4)
 
         def process4(ctx: Dict[str, Any]):
-            """Link up to 3 [Maquinamon] cards from hand, trash, or digi cards to THIS Digimon."""
+            """Link up to 3 [Maquinamon] from hand, trash, or digi cards to THIS Digimon.
+            Uses zone-choice selection like C# reference."""
             player = ctx.get('player')
             perm = ctx.get('permanent')
             game = ctx.get('game')
             if not (player and perm and game):
                 return
+            from ....game.constants import SEL_TRASH_START, SEL_EFFECT_CHOICE_START
+            from ....data.enums import GamePhase
 
-            def is_maquinamon(c):
-                names = getattr(c, 'card_names', []) or []
-                return any('Maquinamon' in n for n in names)
-
-            links_remaining = [3]
+            linked_so_far = []
 
             def link_next():
-                if links_remaining[0] <= 0:
+                if len(linked_so_far) >= 3:
                     return
-                # Gather candidates from hand
-                hand_candidates = [
-                    c for c in player.hand_cards if is_maquinamon(c)
-                ]
-                # Gather candidates from trash
-                trash_candidates = [
-                    c for c in player.trash_cards if is_maquinamon(c)
-                ]
-                # Gather candidates from this permanent's digivolution cards (excluding top)
+
+                hand_candidates = [c for c in player.hand_cards
+                                   if _is_maquinamon(c) and c not in linked_so_far]
+                trash_candidates = [c for c in player.trash_cards
+                                    if _is_maquinamon(c) and c not in linked_so_far]
                 digi_candidates = []
                 if perm and len(perm.card_sources) > 1:
-                    digi_candidates = [
-                        c for c in perm.card_sources[:-1] if is_maquinamon(c)
-                    ]
+                    digi_candidates = [c for c in perm.card_sources[:-1]
+                                       if _is_maquinamon(c) and c not in linked_so_far]
 
-                if not (hand_candidates or trash_candidates or digi_candidates):
+                has_hand = len(hand_candidates) > 0
+                has_trash = len(trash_candidates) > 0
+                has_digi = len(digi_candidates) > 0
+
+                if not (has_hand or has_trash or has_digi):
                     return
 
-                # Prefer hand selection since we have an API for it
-                if hand_candidates:
-                    def on_hand_select(selected_card):
-                        if selected_card in player.hand_cards:
-                            player.hand_cards.remove(selected_card)
+                # Count available zones
+                zones = []
+                zone_labels = []
+                if has_hand:
+                    zones.append('hand')
+                    zone_labels.append("From hand")
+                if has_trash:
+                    zones.append('trash')
+                    zone_labels.append("From trash")
+                if has_digi:
+                    zones.append('digi')
+                    zone_labels.append("From digivolution cards")
+
+                def on_zone_choice(branch: int):
+                    if branch < 0 or branch >= len(zones):
+                        return
+                    zone = zones[branch]
+                    if zone == 'hand':
+                        _link_from_hand()
+                    elif zone == 'trash':
+                        _link_from_trash()
+                    elif zone == 'digi':
+                        _link_from_digi()
+
+                game.effect_choose_branch(
+                    player, len(zones), on_zone_choice,
+                    prompt=f"Link a [Maquinamon] ({len(linked_so_far)+1}/3)? Choose zone.",
+                    branch_labels=zone_labels)
+
+            def _link_from_hand():
+                def on_hand_selected(selected_card):
+                    if selected_card and selected_card in player.hand_cards:
+                        player.hand_cards.remove(selected_card)
                         perm.link_card(selected_card)
-                        links_remaining[0] -= 1
+                        linked_so_far.append(selected_card)
                         link_next()
 
-                    game.effect_select_hand_card(
-                        player,
-                        filter_fn=is_maquinamon,
-                        callback=on_hand_select,
-                        is_optional=True,
-                        prompt="Select a [Maquinamon] card from hand to link.")
-                elif trash_candidates:
-                    tc = trash_candidates[0]
-                    if tc in player.trash_cards:
-                        player.trash_cards.remove(tc)
-                        perm.link_card(tc)
-                        links_remaining[0] -= 1
+                game.effect_select_hand_card(
+                    player, lambda c: _is_maquinamon(c) and c not in linked_so_far,
+                    on_hand_selected,
+                    is_optional=True,
+                    prompt="Select a [Maquinamon] from hand to link.")
+
+            def _link_from_trash():
+                valid_trash = []
+                for i, c in enumerate(player.trash_cards):
+                    if _is_maquinamon(c) and c not in linked_so_far:
+                        valid_trash.append(SEL_TRASH_START + i)
+                if not valid_trash:
+                    return
+
+                def on_trash_action(action_id: int):
+                    idx = action_id - SEL_TRASH_START
+                    if 0 <= idx < len(player.trash_cards):
+                        selected_card = player.trash_cards[idx]
+                        player.trash_cards.remove(selected_card)
+                        perm.link_card(selected_card)
+                        linked_so_far.append(selected_card)
                         link_next()
-                elif digi_candidates:
-                    dc = digi_candidates[0]
-                    if dc in perm.card_sources:
-                        perm.card_sources.remove(dc)
-                        perm.link_card(dc)
-                        links_remaining[0] -= 1
+
+                game.request_selection(
+                    GamePhase.SelectTrash, player, on_trash_action,
+                    valid_trash, is_optional=True,
+                    prompt="Select a [Maquinamon] from trash to link.")
+
+            def _link_from_digi():
+                valid = []
+                for i, cs in enumerate(perm.card_sources):
+                    if cs is perm.top_card:
+                        continue
+                    if _is_maquinamon(cs) and cs not in linked_so_far:
+                        valid.append(SEL_EFFECT_CHOICE_START + i)
+                if not valid:
+                    return
+
+                def on_select_digi(action_id: int):
+                    idx = action_id - SEL_EFFECT_CHOICE_START
+                    if 0 <= idx < len(perm.card_sources):
+                        cs = perm.card_sources[idx]
+                        if cs in perm.card_sources:
+                            perm.card_sources.remove(cs)
+                        perm.link_card(cs)
+                        linked_so_far.append(cs)
                         link_next()
+
+                game.request_selection(
+                    GamePhase.SelectEffectChoice, player, on_select_digi, valid,
+                    is_optional=True,
+                    prompt="Select a [Maquinamon] from digivolution cards to link.")
 
             link_next()
 
         effect4.set_on_process_callback(process4)
         effects.append(effect4)
 
-        # --- End of Opponent's Turn: trash OPPONENT's security + bottom-deck opponent Digimon ---
+        # --- End of Opponent's Turn: trash security + bottom-deck Digimon ---
         effect5 = ICardEffect()
         effect5.set_timing(EffectTiming.OnEndTurn)
         effect5.set_effect_name("EX11-073 Trash opponent security and bottom deck opponent digimon per link card")
-        effect5.set_effect_description("[End of Opponent's Turn] [Once Per Turn] For each of this Digimon's link cards, trash your opponent's top security card and return 1 of their Digimon to the bottom of the deck.")
+        effect5.set_effect_description(
+            "[End of Opponent's Turn] [Once Per Turn] For each of this "
+            "Digimon's link cards, trash your opponent's top security card "
+            "and return 1 of their Digimon to the bottom of the deck.")
         effect5.set_max_count_per_turn(1)
         effect5.set_hash_string("EX11_073_EOOT_TRASH_BOUNCE")
 
         def condition5(context: Dict[str, Any]) -> bool:
             if card and card.permanent_of_this_card() is None:
                 return False
-            # End of opponent's turn
             if card and card.owner and card.owner.is_my_turn:
                 return False
             return True
-
         effect5.set_can_use_condition(condition5)
 
         def process5(ctx: Dict[str, Any]):
-            """For each linked card, trash 1 OPPONENT's security, then bottom-deck 1 opponent Digimon."""
+            """For each linked card, trash 1 opponent's security, then
+            bottom-deck 1 opponent Digimon."""
             player = ctx.get('player')
             perm = ctx.get('permanent')
             game = ctx.get('game')
@@ -207,33 +273,37 @@ class EX11_073(CardScript):
                 return
 
             # Trash opponent's top security cards (1 per link card)
-            security_trashed = 0
             for _ in range(link_count):
                 if enemy.security_cards:
                     trashed = enemy.security_cards.pop()
                     enemy.trash_cards.append(trashed)
-                    security_trashed += 1
 
             # Bottom-deck opponent Digimon (1 per link card)
-            iterations_left = [min(link_count, len([p for p in enemy.battle_area if p.is_digimon]))]
+            opp_digimon = [p for p in enemy.battle_area if p.is_digimon]
+            bounce_count = min(link_count, len(opp_digimon))
+            if bounce_count <= 0:
+                return
+
+            bounced_so_far = []
 
             def do_iteration():
-                if iterations_left[0] <= 0:
+                if len(bounced_so_far) >= bounce_count:
                     return
-                opp_digimon = [p for p in enemy.battle_area if p.is_digimon]
-                if not opp_digimon:
+                remaining_opp = [p for p in enemy.battle_area if p.is_digimon]
+                if not remaining_opp:
                     return
-                iterations_left[0] -= 1
 
                 def target_filter(p):
                     return p.is_digimon
 
                 def on_bottom_deck(target_perm):
                     enemy.return_permanent_to_deck_bottom(target_perm)
+                    bounced_so_far.append(target_perm)
                     do_iteration()
 
                 game.effect_select_opponent_permanent(
-                    player, on_bottom_deck, filter_fn=target_filter, is_optional=False)
+                    player, on_bottom_deck, filter_fn=target_filter, is_optional=False,
+                    prompt=f"Select opponent's Digimon to return to bottom of deck ({len(bounced_so_far)+1}/{bounce_count}).")
 
             do_iteration()
 

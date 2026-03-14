@@ -87,11 +87,30 @@ class BT17_007(CardScript):
             matching = [c for c in player.trash_cards if trash_filter(c)]
             if not matching:
                 return
-            # Pick one and add to hand
-            selected = matching[0]
-            if selected in player.trash_cards:
-                player.trash_cards.remove(selected)
-                player.hand_cards.append(selected)
+
+            from ....game.constants import SEL_TRASH_START
+            from ....data.enums import GamePhase
+
+            valid = []
+            for i, c in enumerate(player.trash_cards):
+                if trash_filter(c):
+                    valid.append(SEL_TRASH_START + i)
+            if not valid:
+                return
+
+            def on_select(action_id: int):
+                idx = action_id - SEL_TRASH_START
+                if not (0 <= idx < len(player.trash_cards)):
+                    return
+                chosen = player.trash_cards[idx]
+                player.trash_cards.remove(chosen)
+                player.hand_cards.append(chosen)
+
+            game.request_selection(
+                GamePhase.SelectTrash, player, on_select, valid,
+                is_optional=False,
+                prompt="Select 1 card with [Garurumon]/[Greymon]/[Omnimon] from trash to return to hand."
+            )
 
         effect1.set_on_process_callback(process1)
         effects.append(effect1)

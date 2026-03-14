@@ -48,7 +48,7 @@ class P_107(CardScript):
                     player.library_cards.append(c)
 
             game.effect_reveal_and_select(
-                player, 2, reveal_filter, on_revealed, is_optional=True
+                player, 2, reveal_filter, on_revealed, is_optional=False
             )
 
         effect0.set_on_process_callback(process0)
@@ -70,6 +70,7 @@ class P_107(CardScript):
         #    card in your hand for its digivolution cost reduced by 2. ---
         effect2 = ICardEffect()
         effect2.set_timing(EffectTiming.OnDeclaration)
+        effect2._is_field_main = True
         effect2.set_effect_name(
             "P-107 1 Digimon may digivolve into a black Digimon in hand, cost -2"
         )
@@ -87,9 +88,8 @@ class P_107(CardScript):
 
         def process2(ctx: Dict[str, Any]):
             player = ctx.get('player')
-            perm = ctx.get('permanent')
             game = ctx.get('game')
-            if not (player and perm and game):
+            if not (player and game):
                 return
 
             def digi_filter(c):
@@ -99,9 +99,18 @@ class P_107(CardScript):
                 colors = getattr(c, 'card_colors', []) or []
                 return CardColor.Black in colors
 
-            game.effect_digivolve_from_hand(
-                player, perm, digi_filter,
-                cost_reduction=2, is_optional=True
+            # Player must first choose which of their Digimon to digivolve
+            def on_target_selected(target_perm):
+                game.effect_digivolve_from_hand(
+                    player, target_perm, digi_filter,
+                    cost_reduction=2, is_optional=True
+                )
+
+            game.effect_select_own_permanent(
+                player, on_target_selected,
+                filter_fn=lambda p: p.is_digimon,
+                is_optional=True,
+                prompt="Select 1 of your Digimon to digivolve."
             )
 
         effect2.set_on_process_callback(process2)

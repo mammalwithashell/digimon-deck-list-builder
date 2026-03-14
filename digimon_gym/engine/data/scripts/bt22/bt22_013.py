@@ -41,6 +41,7 @@ class BT22_013(CardScript):
         # --- Effect 1: [Hand][Main] Nokia warp digivolve Agumon into this for 6 ---
         effect1 = ICardEffect()
         effect1.set_timing(EffectTiming.OnDeclaration)
+        effect1._is_field_main = True
         effect1._is_hand_main = True
         effect1.set_effect_name("BT22-013 Digivolve for a cost of 6")
         effect1.set_effect_description(

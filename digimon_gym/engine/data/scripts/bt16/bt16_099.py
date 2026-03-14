@@ -81,6 +81,7 @@ class BT16_099(CardScript):
         # [Main] You may play 1 card with the [SoC] trait from your trash with the play cost reduced by 2.
         effect2 = ICardEffect()
         effect2.set_timing(EffectTiming.OnDeclaration)
+        effect2._is_field_main = True
         effect2.set_effect_name("BT16-099 Play 1 card from trash")
         effect2.set_effect_description("[Main] You may play 1 card with the [SoC] trait from your trash with the play cost reduced by 2.")
         effect2.set_max_count_per_turn(1)

@@ -25,6 +25,7 @@ class BT24_080(CardScript):
 
     def get_card_effects(self, card: 'CardSource') -> List['ICardEffect']:
         effects = []
+        card.also_treated_as_names = ['ChaosGallantmon']
 
         # --- Effect 0: Also treated as [ChaosGallantmon] ---
         effect0 = ICardEffect()

@@ -52,21 +52,29 @@ class EX9_060(CardScript):
             return True
         effect1.set_can_use_condition(condition1)
 
-        def process1(ctx: Dict[str, Any]):
-            """Action: Place 1 hand card as bottom evo, Draw 1"""
+        def _place_hand_and_draw(ctx: Dict[str, Any]):
+            """Place 1 hand card as bottom evo, Draw 1."""
             player = ctx.get('player')
             game = ctx.get('game')
             perm = ctx.get('permanent')
             if not (player and game):
                 return
-            # Place 1 hand card as bottom digivolution card
-            if player.hand_cards and perm:
-                placed = player.hand_cards.pop()
-                perm.add_card_source_bottom(placed)
-            # Draw 1
-            player.draw_cards(1)
+            if not player.hand_cards or not perm:
+                return
 
-        effect1.set_on_process_callback(process1)
+            def on_hand_selected(selected_card):
+                if selected_card is None:
+                    return
+                if selected_card in player.hand_cards:
+                    player.hand_cards.remove(selected_card)
+                    perm.add_card_source_bottom(selected_card)
+                player.draw_cards(1)
+
+            game.effect_select_hand_card(
+                player, lambda c: True, on_hand_selected, is_optional=True,
+                prompt="Select 1 card to place face down as bottom digivolution card.")
+
+        effect1.set_on_process_callback(_place_hand_and_draw)
         effects.append(effect1)
 
         # --- Effect 1b: Same but for [When Attacking] ---
@@ -89,19 +97,7 @@ class EX9_060(CardScript):
             return True
         effect1b.set_can_use_condition(condition1b)
 
-        def process1b(ctx: Dict[str, Any]):
-            """Action: Place hand card as bottom evo, Draw 1"""
-            player = ctx.get('player')
-            game = ctx.get('game')
-            perm = ctx.get('permanent')
-            if not (player and game):
-                return
-            if player.hand_cards and perm:
-                placed = player.hand_cards.pop()
-                perm.add_card_source_bottom(placed)
-            player.draw_cards(1)
-
-        effect1b.set_on_process_callback(process1b)
+        effect1b.set_on_process_callback(_place_hand_and_draw)
         effects.append(effect1b)
 
         # --- Effect 2: Inherited [On Deletion]

@@ -20,7 +20,7 @@ class BT24_101(CardScript):
         effect0.set_effect_name("BT24-101 Alternate digivolution requirement")
         effect0.set_effect_description("Alternate digivolution requirement")
         # Alternate digivolution: Lv.5 with [TS] trait for cost 5
-        effect0._alt_digi_cost = 3
+        effect0._alt_digi_cost = 5
         effect0._alt_digi_level = 5
         effect0._alt_digi_trait = "TS"
 
@@ -30,16 +30,22 @@ class BT24_101(CardScript):
         effects.append(effect0)
 
         # Factory effect: alt_digivolve_req
-        # Alternate digivolution requirement
+        # Alternate digivolution: Lv.5 named [Aegiochusmon], cost = your security count
         effect1 = ICardEffect()
-        effect1.set_effect_name("BT24-101 Alternate digivolution requirement")
-        effect1.set_effect_description("Alternate digivolution requirement")
-        # Alternate digivolution: Lv.5 for cost 5
-        effect1._alt_digi_cost = 3
+        effect1.set_effect_name("BT24-101 Alternate digivolution requirement (Aegiochusmon)")
+        effect1.set_effect_description(
+            "Alternate digivolution: Lv.5 named [Aegiochusmon], cost = security count")
+        effect1._alt_digi_cost = 5  # default, overridden by _alt_digi_cost_fn
         effect1._alt_digi_level = 5
+        effect1._alt_digi_name = "Aegiochusmon"
 
         def condition1(context: Dict[str, Any]) -> bool:
-            return True
+            permanent = card.permanent_of_this_card() if card else None
+            if not (permanent and permanent.top_card):
+                return False
+            return permanent.top_card.level == 5 and any(
+                'Aegiochusmon' in n
+                for n in getattr(permanent.top_card, 'card_names', []))
         effect1.set_can_use_condition(condition1)
         effects.append(effect1)
 
@@ -65,22 +71,24 @@ class BT24_101(CardScript):
             """[On Play] Trash own security, -13000 DP opponent, conditional Recovery +2."""
             player = ctx.get('player')
             game = ctx.get('game')
-            if not player:
+            if not (player and game):
                 return
             # Step 1: Trash YOUR top security card (cost of the effect)
             if player.security_cards:
                 top_sec = player.security_cards[0]
                 player.trash_security_card(top_sec)
-            # Step 2: 1 of opponent's Digimon gets -13000 DP
-            enemy = player.enemy if player else None
-            if enemy and enemy.battle_area:
-                dp_targets = [p for p in enemy.battle_area if p.is_digimon and p.dp is not None]
-                if dp_targets:
-                    target = min(dp_targets, key=lambda p: p.dp)
-                    target.change_dp(-13000)
-            # Step 3: If you have 1 or fewer security cards, Recovery +2
-            if len(player.security_cards) <= 1:
-                player.recovery(2)
+            # Step 2: Player selects 1 of opponent's Digimon to get -13000 DP
+            def on_dp_target(target_perm):
+                target_perm.change_dp(-13000)
+                # Step 3: If you have 1 or fewer security cards, Recovery +2
+                if len(player.security_cards) <= 1:
+                    player.recovery(2)
+
+            game.effect_select_opponent_permanent(
+                player, on_dp_target,
+                filter_fn=lambda p: p.is_digimon,
+                is_optional=False,
+                prompt="Select 1 opponent's Digimon to get -13000 DP.")
 
         effect2.set_on_process_callback(process2_fixed)
         effects.append(effect2)
@@ -105,22 +113,24 @@ class BT24_101(CardScript):
             """[When Digivolving] Trash own security, -13000 DP opponent, conditional Recovery +2."""
             player = ctx.get('player')
             game = ctx.get('game')
-            if not player:
+            if not (player and game):
                 return
             # Step 1: Trash YOUR top security card (cost of the effect)
             if player.security_cards:
                 top_sec = player.security_cards[0]
                 player.trash_security_card(top_sec)
-            # Step 2: 1 of opponent's Digimon gets -13000 DP
-            enemy = player.enemy if player else None
-            if enemy and enemy.battle_area:
-                dp_targets = [p for p in enemy.battle_area if p.is_digimon and p.dp is not None]
-                if dp_targets:
-                    target = min(dp_targets, key=lambda p: p.dp)
-                    target.change_dp(-13000)
-            # Step 3: If you have 1 or fewer security cards, Recovery +2
-            if len(player.security_cards) <= 1:
-                player.recovery(2)
+            # Step 2: Player selects 1 of opponent's Digimon to get -13000 DP
+            def on_dp_target(target_perm):
+                target_perm.change_dp(-13000)
+                # Step 3: If you have 1 or fewer security cards, Recovery +2
+                if len(player.security_cards) <= 1:
+                    player.recovery(2)
+
+            game.effect_select_opponent_permanent(
+                player, on_dp_target,
+                filter_fn=lambda p: p.is_digimon,
+                is_optional=False,
+                prompt="Select 1 opponent's Digimon to get -13000 DP.")
 
         effect3.set_on_process_callback(process3)
         effects.append(effect3)

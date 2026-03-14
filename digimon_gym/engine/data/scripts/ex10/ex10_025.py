@@ -49,15 +49,39 @@ class EX10_025(CardScript):
                 return p.is_digimon and (p.has_trait('Mineral') or p.has_trait('Rock'))
 
             def on_target(target_perm):
-                placed = 0
-                for source_card in list(player.trash_cards):
-                    if placed >= 2:
-                        break
-                    if not source_filter(source_card):
-                        continue
-                    player.trash_cards.remove(source_card)
-                    target_perm.add_card_source_bottom(source_card)
-                    placed += 1
+                # Player selects up to 2 Mineral/Rock cards from trash
+                placed_holder = [0]
+
+                def _place_one():
+                    if placed_holder[0] >= 2:
+                        return
+                    eligible = [c for c in player.trash_cards if source_filter(c)]
+                    if not eligible:
+                        return
+
+                    from ....data.enums import GamePhase
+                    _SEL_TRASH_START = 130
+                    valid_trash = []
+                    for i, c in enumerate(player.trash_cards):
+                        if source_filter(c):
+                            valid_trash.append(_SEL_TRASH_START + i)
+                    if not valid_trash:
+                        return
+
+                    def on_trash_selected(idx):
+                        if idx < len(player.trash_cards):
+                            selected = player.trash_cards[idx]
+                            player.trash_cards.remove(selected)
+                            target_perm.add_card_source_bottom(selected)
+                            placed_holder[0] += 1
+                            _place_one()
+
+                    game.request_selection(
+                        GamePhase.SelectTrash, player, on_trash_selected,
+                        valid_trash, is_optional=True,
+                        prompt=f"Select a [Mineral] or [Rock] card from trash ({placed_holder[0]+1}/2).")
+
+                _place_one()
 
             game.effect_select_own_permanent(
                 player, on_target, filter_fn=target_filter, is_optional=True)

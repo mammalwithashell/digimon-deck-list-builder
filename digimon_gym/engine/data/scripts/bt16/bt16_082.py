@@ -67,11 +67,18 @@ class BT16_082(CardScript):
                     player.library_cards.append(c)
 
             game.effect_reveal_and_select(
-                player, 3, reveal_filter, on_selected, is_optional=True
+                player, 3, reveal_filter, on_selected, is_optional=False
             )
-            # You may hatch in your breeding area
+            # You may hatch in your breeding area (optional)
             if player.digitama_library_cards and player.breeding_area is None:
-                player.hatch()
+                def on_hatch_choice(choice_idx):
+                    if choice_idx == 0:
+                        player.hatch()
+                game.effect_choose_branch(
+                    player, 2, on_hatch_choice,
+                    prompt="Hatch in your breeding area?",
+                    branch_labels=["Yes, hatch", "No, skip"],
+                )
 
         effect0.set_on_process_callback(process0)
         effects.append(effect0)

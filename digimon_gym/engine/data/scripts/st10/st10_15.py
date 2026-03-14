@@ -2,7 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
-from ....data.enums import EffectTiming
+from ....data.enums import EffectTiming, CardColor
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -14,7 +14,6 @@ class ST10_15(CardScript):
     [Main] Trash the top 3 cards of your deck. Then, if you have a yellow
         Digimon in play, return 1 yellow or purple Digimon card from your
         trash to your hand.
-
     [Security] Activate this card's [Main] effect.
     """
 
@@ -27,8 +26,6 @@ class ST10_15(CardScript):
             game = ctx.get('game')
             if not (player and game):
                 return
-
-            from ....data.enums import CardColor
 
             # Step 1: Trash the top 3 cards of your deck
             mill_count = min(3, len(player.library_cards))
@@ -57,12 +54,32 @@ class ST10_15(CardScript):
                 return CardColor.Yellow in colors or CardColor.Purple in colors
 
             qualifying = [c for c in player.trash_cards if trash_filter(c)]
-            if qualifying:
-                chosen = qualifying[0]
+            if not qualifying:
+                return
+
+            from ....game.constants import SEL_TRASH_START
+            from ....data.enums import GamePhase
+
+            valid = [SEL_TRASH_START + i
+                     for i, c in enumerate(player.trash_cards)
+                     if trash_filter(c)]
+            if not valid:
+                return
+
+            def on_select(action_id: int):
+                idx = action_id - SEL_TRASH_START
+                if not (0 <= idx < len(player.trash_cards)):
+                    return
+                chosen = player.trash_cards[idx]
                 player.trash_cards.remove(chosen)
                 player.hand_cards.append(chosen)
 
-        # --- Effect 0: [Main] Trash top 3, conditionally return from trash ---
+            game.request_selection(
+                GamePhase.SelectTarget, player, on_select, valid,
+                is_optional=False,
+                prompt="Return 1 yellow or purple Digimon from trash to hand.")
+
+        # --- Effect 0: [Main] ---
         effect0 = ICardEffect()
         effect0.set_timing(EffectTiming.OptionSkill)
         effect0.set_effect_name("ST10-15 Trash 3, return yellow/purple Digimon")
@@ -78,7 +95,7 @@ class ST10_15(CardScript):
         effect0.set_on_process_callback(_main_effect_logic)
         effects.append(effect0)
 
-        # --- Effect 1: [Security] Activate this card's [Main] effect ---
+        # --- Effect 1: [Security] Activate [Main] effect ---
         effect1 = ICardEffect()
         effect1.set_timing(EffectTiming.SecuritySkill)
         effect1.set_effect_name("ST10-15 Security: Activate [Main] effect")

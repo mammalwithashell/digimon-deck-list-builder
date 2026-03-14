@@ -9,13 +9,21 @@ if TYPE_CHECKING:
 
 
 class EX1_066(CardScript):
-    """EX1-066 Analog Youth | Tamer White"""
+    """EX1-066 Analog Youth | Tamer White
+
+    [On Play] Reveal the top 3 cards of your deck. Add 1 Digimon card
+        among them to your hand. Trash the remaining cards.
+    [All Turns] When one of your level 5 or higher Digimon with
+        digivolution cards is deleted, you may suspend this Tamer. If
+        you do, gain 1 memory, then hatch 1 Digi-Egg card to an empty
+        space in your Breeding Area.
+    [Security] Play this card without paying the cost.
+    """
 
     def get_card_effects(self, card: 'CardSource') -> List['ICardEffect']:
         effects = []
 
-        # --- Effect 0: [On Play] Reveal top 3, add 1 Digimon card to hand,
-        #     trash the remaining ---
+        # --- Effect 0: [On Play] Reveal top 3, add 1 Digimon, trash rest ---
         effect0 = ICardEffect()
         effect0.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect0.set_effect_name("EX1-066 Reveal top 3, add 1 Digimon to hand")
@@ -32,34 +40,43 @@ class EX1_066(CardScript):
         effect0.set_can_use_condition(condition0)
 
         def process0(ctx: Dict[str, Any]):
-            """Action: Reveal top 3, add 1 Digimon, trash rest"""
             player = ctx.get('player')
             game = ctx.get('game')
             if not (player and game):
                 return
+
             # Reveal top 3
-            revealed = []
-            for _ in range(min(3, len(player.library_cards))):
-                revealed.append(player.library_cards.pop(0))
+            count = min(3, len(player.library_cards))
+            revealed = player.library_cards[:count]
+            if not revealed:
+                return
 
-            added = []
-            # Add 1 Digimon card to hand
-            for c in revealed:
-                if c.is_digimon:
-                    added.append(c)
-                    player.hand_cards.append(c)
-                    break
+            def digimon_filter(c):
+                return getattr(c, 'is_digimon', False)
 
-            # Trash the remaining
-            remaining = [c for c in revealed if c not in added]
-            for c in remaining:
-                player.trash_cards.append(c)
+            has_digimon = any(digimon_filter(c) for c in revealed)
+
+            if has_digimon:
+                # Use engine API - select 1 Digimon, remaining get trashed
+                def on_selected(selected, remaining):
+                    player.hand_cards.append(selected)
+                    for c in remaining:
+                        player.trash_cards.append(c)
+
+                game.effect_reveal_and_select(
+                    player, count, digimon_filter, on_selected,
+                    is_optional=False,
+                    prompt="Select 1 Digimon card to add to your hand.")
+            else:
+                # No Digimon among revealed - trash all
+                for c in revealed:
+                    player.library_cards.remove(c)
+                    player.trash_cards.append(c)
 
         effect0.set_on_process_callback(process0)
         effects.append(effect0)
 
-        # --- Effect 1: [All Turns] When a Lv.5+ Digimon with digivolution
-        #     cards is deleted, suspend this Tamer to gain 1 memory and hatch ---
+        # --- Effect 1: [All Turns] On ally Lv5+ deletion, suspend for memory + hatch ---
         effect1 = ICardEffect()
         effect1.set_timing(EffectTiming.OnDestroyedAnyone)
         effect1.set_effect_name("EX1-066 On ally Lv5+ deletion: gain memory + hatch")
@@ -78,11 +95,24 @@ class EX1_066(CardScript):
             # Must not already be suspended
             if perm and perm.is_suspended:
                 return False
+            # The deleted Digimon must be ours, lv5+, with digi cards
+            deleted = context.get('event_permanent')
+            if deleted is None:
+                return False
+            event_player = context.get('event_player')
+            owner = card.owner if card else None
+            if event_player is None or event_player is not owner:
+                return False
+            if not deleted.is_digimon:
+                return False
+            if deleted.level is None or deleted.level < 5:
+                return False
+            if deleted.has_no_digivolution_cards:
+                return False
             return True
         effect1.set_can_use_condition(condition1)
 
         def process1(ctx: Dict[str, Any]):
-            """Action: Suspend this Tamer, gain 1 memory, hatch"""
             player = ctx.get('player')
             game = ctx.get('game')
             if not (player and game and card):

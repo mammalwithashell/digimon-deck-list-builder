@@ -29,6 +29,9 @@ class BT20_055(CardScript):
             owner = card.owner if card else None
             if not owner:
                 return False
+            # Must fire at end of opponent's turn only
+            if owner.is_my_turn:
+                return False
             # Must be in owner's security stack to trigger
             if card not in owner.security_cards:
                 return False

@@ -9,108 +9,166 @@ if TYPE_CHECKING:
 
 
 class P_205(CardScript):
-    """P-205 Insane Synthetic Monster"""
+    """P-205 Insane Synthetic Monster | Option
+
+    While you have a Digimon or Tamer with the [DM] trait on the field,
+        you can ignore this card's color requirements.
+    [Main] <Draw 2> and trash 2 cards in your hand. Then, place this card
+        in the battle area.
+    [Main] <Delay>. By deleting 1 of your play cost 7 or lower Digimon,
+        you may play 1 Digimon card with [Kimeramon] or [Millenniummon] in
+        its name from your trash with the play cost reduced by 3.
+    [Security] <Draw 2> and trash 2 cards in your hand. Then, place this
+        card in the battle area.
+    """
 
     def get_card_effects(self, card: 'CardSource') -> List['ICardEffect']:
         effects = []
 
-        # Timing: EffectTiming.None
-        # Ignore Color Req
+        # --- Effect 0: Ignore color requirements if [DM] trait on field ---
         effect0 = ICardEffect()
         effect0.set_effect_name("P-205 Ignore color requirements")
         effect0.set_effect_description("Ignore Color Req")
 
-        effect = effect0  # alias for condition closure
         def condition0(context: Dict[str, Any]) -> bool:
             return True
-
         effect0.set_can_use_condition(condition0)
 
         def process0(ctx: Dict[str, Any]):
-            """Action: Ignore Color Req"""
-            player = ctx.get('player')
-            perm = ctx.get('permanent')
-            game = ctx.get('game')
-            # Ignores color requirement for playing Options — not modeled in engine
-            pass  # descriptive-tagged
-
+            pass  # descriptive-tagged: engine handles color requirement ignoring
         effect0.set_on_process_callback(process0)
         effects.append(effect0)
 
-        # Timing: EffectTiming.OptionSkill
-        # [Main] <Draw 2> and trash 2 cards in your hand. Then, place this card in the battle area.
+        # --- Shared Main/Security draw+trash logic ---
+        def _draw_and_trash(ctx: Dict[str, Any]):
+            """Draw 2, then trash 2 from hand."""
+            player = ctx.get('player')
+            game = ctx.get('game')
+            if not (player and game):
+                return
+
+            # Draw 2
+            player.draw_cards(2)
+
+            # Trash 2 from hand
+            _trash_count = [0]
+
+            def _trash_one():
+                if _trash_count[0] >= 2 or not player.hand_cards:
+                    return
+
+                def on_trashed(selected):
+                    if selected in player.hand_cards:
+                        player.hand_cards.remove(selected)
+                        player.trash_cards.append(selected)
+                    _trash_count[0] += 1
+                    _trash_one()
+
+                game.effect_select_hand_card(
+                    player, lambda c: True, on_trashed,
+                    is_optional=False,
+                    prompt=f"Trash card {_trash_count[0]+1}/2 from your hand.")
+
+            _trash_one()
+
+        # --- Effect 1: [Main] Draw 2, trash 2, place in battle area ---
         effect1 = ICardEffect()
         effect1.set_timing(EffectTiming.OptionSkill)
-        effect1.set_effect_name("P-205 Draw 2, Trash 2.")
-        effect1.set_effect_description("[Main] <Draw 2> and trash 2 cards in your hand. Then, place this card in the battle area.")
+        effect1.set_effect_name("P-205 Draw 2, Trash 2")
+        effect1.set_effect_description(
+            "[Main] <Draw 2> and trash 2 cards in your hand. Then, place "
+            "this card in the battle area.")
 
-        effect = effect1  # alias for condition closure
         def condition1(context: Dict[str, Any]) -> bool:
-            # Option main effect — validated by engine timing
             return True
-
         effect1.set_can_use_condition(condition1)
+        effect1.set_on_process_callback(_draw_and_trash)
         effects.append(effect1)
 
-        # Factory effect: delay
-        # Delay
+        # --- Effect 2: Delay ---
         effect2 = ICardEffect()
         effect2.set_effect_name("P-205 Delay")
         effect2.set_effect_description("Delay")
         effect2._is_delay = True
+        effect2.is_on_deletion = True
 
         def condition2(context: Dict[str, Any]) -> bool:
             return True
         effect2.set_can_use_condition(condition2)
         effects.append(effect2)
 
-        # Timing: EffectTiming.OnDeclaration
-        # [Main] <Delay>. By deleting 1 of your play cost 7 or lower Digimon, you may play 1 Digimon card with [Kimeramon] or [Millenniummon] in its name from your trash with the play cost reduced by 3.
+        # --- Effect 3: [Main] <Delay> Delete own Digimon (cost 7 or less),
+        #     play [Kimeramon]/[Millenniummon] from trash with cost -3 ---
         effect3 = ICardEffect()
         effect3.set_timing(EffectTiming.OnDeclaration)
-        effect3.set_effect_name("P-205 By delete 1 7 play cost or less digimon, play 1 [Kimeramon]/[Millenniummon] in its name digimon from trash for 3 reduced play cost")
-        effect3.set_effect_description("[Main] <Delay>. By deleting 1 of your play cost 7 or lower Digimon, you may play 1 Digimon card with [Kimeramon] or [Millenniummon] in its name from your trash with the play cost reduced by 3.")
+        effect3._is_field_main = True
+        effect3.set_effect_name(
+            "P-205 Delay: delete own Digimon, play Kimeramon/Millenniummon from trash")
+        effect3.set_effect_description(
+            "[Main] <Delay>. By deleting 1 of your play cost 7 or lower Digimon, "
+            "you may play 1 Digimon card with [Kimeramon] or [Millenniummon] in "
+            "its name from your trash with the play cost reduced by 3.")
 
-        effect = effect3  # alias for condition closure
         def condition3(context: Dict[str, Any]) -> bool:
             return True
-
         effect3.set_can_use_condition(condition3)
 
         def process3(ctx: Dict[str, Any]):
-            """Action: Play Card"""
             player = ctx.get('player')
-            perm = ctx.get('permanent')
             game = ctx.get('game')
             if not (player and game):
                 return
-            def play_filter(c):
-                if not getattr(c, 'is_digimon', False):
+
+            # Step 1: Select 1 of your Digimon with play cost 7 or lower to delete
+            def own_digi_filter(p):
+                if not p.is_digimon or not p.top_card:
                     return False
-                if not (any('Kimeramon' in _n or 'Millenniummon' in _n for _n in getattr(c, 'card_names', []))):
-                    return False
-                return True
-            game.effect_play_from_zone(
-                player, 'hand', play_filter, free=True, is_optional=True)
+                cost = p.top_card.get_cost_itself
+                return cost is not None and cost <= 7
+
+            own_qualifying = [p for p in player.battle_area if own_digi_filter(p)]
+            if not own_qualifying:
+                return
+
+            def on_own_deleted(own_perm):
+                if own_perm is None:
+                    return
+                player.delete_permanent(own_perm)
+
+                # Step 2: Play 1 [Kimeramon]/[Millenniummon] from trash with cost -3
+                def kim_filter(c):
+                    if not getattr(c, 'is_digimon', False):
+                        return False
+                    names = getattr(c, 'card_names', []) or []
+                    return any('Kimeramon' in n or 'Millenniummon' in n for n in names)
+
+                game.effect_play_from_zone(
+                    player, 'trash', kim_filter,
+                    free=False, manual_reduction=3, is_optional=True,
+                    prompt="Play 1 [Kimeramon]/[Millenniummon] from trash (cost -3).")
+
+            game.effect_select_own_permanent(
+                player, on_own_deleted,
+                filter_fn=own_digi_filter,
+                is_optional=True,
+                prompt="Delete 1 of your Digimon (play cost 7 or lower).")
 
         effect3.set_on_process_callback(process3)
         effects.append(effect3)
 
-        # Timing: EffectTiming.SecuritySkill
-        # [Security] <Draw 2> and trash 2 cards in your hand. Then, place this card in the battle area.
+        # --- Effect 4: [Security] Draw 2, trash 2, place in battle area ---
         effect4 = ICardEffect()
         effect4.set_timing(EffectTiming.SecuritySkill)
-        effect4.set_effect_name("P-205 Draw 2, Trash 2.")
-        effect4.set_effect_description("[Security] <Draw 2> and trash 2 cards in your hand. Then, place this card in the battle area.")
-        effect4.is_security_effect = True
+        effect4.set_effect_name("P-205 Security: Draw 2, Trash 2")
+        effect4.set_effect_description(
+            "[Security] <Draw 2> and trash 2 cards in your hand. Then, place "
+            "this card in the battle area.")
         effect4.is_security_effect = True
 
-        effect = effect4  # alias for condition closure
         def condition4(context: Dict[str, Any]) -> bool:
-            # Security effect — validated by engine timing
             return True
-
         effect4.set_can_use_condition(condition4)
+        effect4.set_on_process_callback(_draw_and_trash)
         effects.append(effect4)
 
         return effects

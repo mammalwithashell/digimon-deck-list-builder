@@ -54,6 +54,7 @@ class BT15_087(CardScript):
         # [Main] <Mind Link> with 1 of your Digimon with the [X Antibody] or the [DigiPolice] trait. (Place this Tamer as that Digimon's bottom digivolution card if there are no Tamer cards in its digivolution cards.)
         effect2 = ICardEffect()
         effect2.set_timing(EffectTiming.OnDeclaration)
+        effect2._is_field_main = True
         effect2.set_effect_name("BT15-087 Mind Link")
         effect2.set_effect_description("[Main] <Mind Link> with 1 of your Digimon with the [X Antibody] or the [DigiPolice] trait. (Place this Tamer as that Digimon's bottom digivolution card if there are no Tamer cards in its digivolution cards.)")
 

@@ -61,6 +61,7 @@ class EX2_007(CardScript):
         # from field or hand under this Digimon as bottom digivolution card.
         effect2 = ICardEffect()
         effect2.set_timing(EffectTiming.OnDeclaration)
+        effect2._is_field_main = True
         effect2.set_effect_name("EX2-007 Main: Place ADR-02 Searcher as digi card")
         effect2.set_effect_description(
             "[Main] [Once Per Turn] If you don't have another [Mother D-Reaper] "

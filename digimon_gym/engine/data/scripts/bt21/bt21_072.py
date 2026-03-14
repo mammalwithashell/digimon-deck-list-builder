@@ -77,11 +77,11 @@ class BT21_072(CardScript):
         effect2.set_on_process_callback(process2)
         effects.append(effect2)
 
-        # [All Turns] This Digimon gets +1000 DP for each of your opponent's Digimon in play.
+        # [All Turns] This Digimon gets +1000 DP for each of its digivolution cards.
         effect3 = ICardEffect()
         effect3.set_timing(EffectTiming.OnEnterFieldAnyone)
-        effect3.set_effect_name("BT21-072 DP +1000 per opponent Digimon")
-        effect3.set_effect_description("[All Turns] This Digimon gets +1000 DP for each of your opponent's Digimon in play.")
+        effect3.set_effect_name("BT21-072 DP +1000 per digivolution card")
+        effect3.set_effect_description("[All Turns] This Digimon gets +1000 DP for each of its digivolution cards.")
 
         def condition3(context: Dict[str, Any]) -> bool:
             if card and card.permanent_of_this_card() is None:
@@ -90,19 +90,18 @@ class BT21_072(CardScript):
         effect3.set_can_use_condition(condition3)
 
         def process3(ctx: Dict[str, Any]):
-            """Register dynamic DP modifier: +1000 per opponent Digimon in play"""
+            """Register dynamic DP modifier: +1000 per digivolution card"""
             perm = ctx.get('permanent')
             game = ctx.get('game')
             if perm and game:
                 from digimon_gym.engine.interfaces.modifiers import ModifierType
-                owner = card.owner if card else (ctx.get('player'))
                 def dp_value_fn():
-                    if not owner:
+                    this_perm = card.permanent_of_this_card() if card else None
+                    if not this_perm:
                         return 0
-                    enemy = owner.enemy if owner else None
-                    if not enemy:
-                        return 0
-                    return 1000 * len(list(enemy.battle_area))
+                    # Digivolution cards = all card_sources except the top card
+                    digi_card_count = max(0, len(this_perm.card_sources) - 1)
+                    return 1000 * digi_card_count
                 game.register_modifier(
                     perm, ModifierType.CHANGE_DP,
                     value_fn=dp_value_fn, expiry='permanent')

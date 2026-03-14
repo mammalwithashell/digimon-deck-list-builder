@@ -39,19 +39,29 @@ class EX9_051(CardScript):
             enemy = player.enemy if player else None
             if not enemy:
                 return
-            if player.hand_cards:
-                placed = player.hand_cards.pop()
-                perm.add_card_source_bottom(placed)
+            if not player.hand_cards:
+                return
 
-            def target_filter(p):
-                return p.is_digimon
+            def on_hand_selected(selected_card):
+                if selected_card is None:
+                    return
+                if selected_card in player.hand_cards:
+                    player.hand_cards.remove(selected_card)
+                    perm.add_card_source_bottom(selected_card)
 
-            def on_dedigivolve(target_perm):
-                removed = target_perm.de_digivolve(1)
-                enemy.trash_cards.extend(removed)
+                def target_filter(p):
+                    return p.is_digimon
 
-            game.effect_select_opponent_permanent(
-                player, on_dedigivolve, filter_fn=target_filter, is_optional=False)
+                def on_dedigivolve(target_perm):
+                    removed = target_perm.de_digivolve(1)
+                    enemy.trash_cards.extend(removed)
+
+                game.effect_select_opponent_permanent(
+                    player, on_dedigivolve, filter_fn=target_filter, is_optional=False)
+
+            game.effect_select_hand_card(
+                player, lambda c: True, on_hand_selected, is_optional=True,
+                prompt="Select 1 card to place face down as bottom digivolution card.")
 
         # [On Play]
         effect1 = ICardEffect()

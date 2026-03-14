@@ -9,17 +9,25 @@ if TYPE_CHECKING:
 
 
 class BT13_095(CardScript):
-    """BT13-095 Marcus Damon"""
+    """BT13-095 Marcus Damon | Tamer | Red/Yellow | Cost 5
+
+    [Start of Your Turn] If you have 2 or less memory, set it to 3.
+    [On Play] You may suspend this Tamer.
+    [All Turns] When this Tamer becomes suspended, 1 of your opponent's
+        Digimon gets -3000 DP for the turn. Then, if one of your Digimon
+        has [Agumon] or [Greymon] in its name, gain 1 memory.
+    """
 
     def get_card_effects(self, card: 'CardSource') -> List['ICardEffect']:
         effects = []
 
-        # Factory effect: set_memory_3
-        # [Start of Your Turn] Set memory to 3 if <= 2
+        # --- Effect 0: [Start of Your Turn] Set memory to 3 if <= 2 ---
         effect0 = ICardEffect()
-        effect0.set_timing(EffectTiming.OnStartMainPhase)
+        effect0.set_timing(EffectTiming.OnStartTurn)
         effect0.set_effect_name("BT13-095 Set memory to 3")
-        effect0.set_effect_description("[Start of Your Turn] If your memory is at 2 or less, it becomes 3.")
+        effect0.set_effect_description(
+            "[Start of Your Turn] If you have 2 or less memory, set it to 3."
+        )
 
         def condition0(context: Dict[str, Any]) -> bool:
             if card and card.permanent_of_this_card() is None:
@@ -30,7 +38,6 @@ class BT13_095(CardScript):
         effect0.set_can_use_condition(condition0)
 
         def process0(ctx: Dict[str, Any]):
-            """Action: Set memory to 3 if <= 2"""
             player = ctx.get('player')
             game = ctx.get('game')
             if player and game and game.memory <= 2:
@@ -38,8 +45,7 @@ class BT13_095(CardScript):
         effect0.set_on_process_callback(process0)
         effects.append(effect0)
 
-        # Timing: EffectTiming.OnEnterFieldAnyone
-        # [On Play] You may suspend this Tamer.
+        # --- Effect 1: [On Play] You may suspend this Tamer. ---
         effect1 = ICardEffect()
         effect1.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect1.set_effect_name("BT13-095 Suspend this Tamer")
@@ -47,68 +53,87 @@ class BT13_095(CardScript):
         effect1.is_optional = True
         effect1.is_on_play = True
 
-        effect = effect1  # alias for condition closure
         def condition1(context: Dict[str, Any]) -> bool:
             if card and card.permanent_of_this_card() is None:
                 return False
-            # Triggered on play — validated by engine timing
+            perm = card.permanent_of_this_card()
+            # Can only activate if not already suspended
+            if perm and perm.is_suspended:
+                return False
             return True
 
         effect1.set_can_use_condition(condition1)
 
         def process1(ctx: Dict[str, Any]):
-            """Action: Suspend"""
-            player = ctx.get('player')
-            perm = ctx.get('permanent')
-            game = ctx.get('game')
-            if not (player and game):
-                return
-            def target_filter(p):
-                return True
-            def on_suspend(target_perm):
-                target_perm.suspend()
-            game.effect_select_opponent_permanent(
-                player, on_suspend, filter_fn=target_filter, is_optional=True)
+            """Suspend this Tamer."""
+            perm = card.permanent_of_this_card() if card else None
+            if perm:
+                perm.suspend()
 
         effect1.set_on_process_callback(process1)
         effects.append(effect1)
 
-        # Timing: EffectTiming.OnTappedAnyone
-        # [All Turns] When this Tamer becomes suspended, 1 of your opponent's Digimon gets -3000 DP for the turn. Then, if you have a Digimon with [Agumon] or [Greymon] in its name, gain 1 memory.
+        # --- Effect 2: [All Turns] When this Tamer becomes suspended ---
         effect2 = ICardEffect()
         effect2.set_timing(EffectTiming.OnTappedAnyone)
         effect2.set_effect_name("BT13-095 DP -3000 and Memory +1")
-        effect2.set_effect_description("[All Turns] When this Tamer becomes suspended, 1 of your opponent's Digimon gets -3000 DP for the turn. Then, if you have a Digimon with [Agumon] or [Greymon] in its name, gain 1 memory.")
+        effect2.set_effect_description(
+            "[All Turns] When this Tamer becomes suspended, 1 of your opponent's "
+            "Digimon gets -3000 DP for the turn. Then, if one of your Digimon has "
+            "[Agumon] or [Greymon] in its name, gain 1 memory."
+        )
 
-        effect = effect2  # alias for condition closure
         def condition2(context: Dict[str, Any]) -> bool:
             if card and card.permanent_of_this_card() is None:
+                return False
+            # Must be THIS tamer that became suspended
+            ctx_perm = context.get('permanent')
+            my_perm = card.permanent_of_this_card()
+            if my_perm and ctx_perm and ctx_perm is not my_perm:
                 return False
             return True
 
         effect2.set_can_use_condition(condition2)
 
         def process2(ctx: Dict[str, Any]):
-            """Action: Gain 1 memory, DP -3000"""
+            """Select 1 opponent Digimon: -3000 DP for the turn. Then memory +1 if Agumon/Greymon."""
             player = ctx.get('player')
-            perm = ctx.get('permanent')
             game = ctx.get('game')
-            if player:
-                player.add_memory(1)
-            # DP change targets opponent digimon
+            if not (player and game):
+                return
             enemy = player.enemy if player else None
-            if enemy and enemy.battle_area:
-                dp_targets = [p for p in enemy.battle_area if p.is_digimon and p.dp is not None]
-                if dp_targets:
-                    target = min(dp_targets, key=lambda p: p.dp)
-                    target.change_dp(-3000)
+            if not enemy:
+                return
+
+            def target_filter(p):
+                return p.is_digimon
+
+            def on_select(target_perm):
+                target_perm.change_dp(-3000)
+
+            # Select 1 opponent Digimon to give -3000 DP
+            opp_digimon = [p for p in enemy.battle_area if p.is_digimon]
+            if opp_digimon:
+                game.effect_select_opponent_permanent(
+                    player, on_select, filter_fn=target_filter, is_optional=False)
+
+            # Then, if one of your Digimon has [Agumon] or [Greymon] in its name, gain 1 memory
+            has_agumon_greymon = any(
+                p.is_digimon and p.top_card and (
+                    p.top_card.contains_card_name('Agumon') or
+                    p.top_card.contains_card_name('Greymon')
+                )
+                for p in player.battle_area
+            )
+            if has_agumon_greymon:
+                player.add_memory(1)
 
         effect2.set_on_process_callback(process2)
         effects.append(effect2)
 
-        # Factory effect: security_play
-        # Security: Play this card
+        # --- Effect 3: Security: Play this card ---
         effect3 = ICardEffect()
+        effect3.set_timing(EffectTiming.SecuritySkill)
         effect3.set_effect_name("BT13-095 Security: Play this card")
         effect3.set_effect_description("Security: Play this card")
         effect3.is_security_effect = True

@@ -28,10 +28,11 @@ class EX10_069(CardScript):
             """Shared play logic for [Main] and [Security]."""
             def play_filter(c):
                 # Match [Sunarizamon] by name
-                if any('Sunarizamon' in n for n in getattr(c, 'card_names', [])):
+                names = getattr(c, 'card_names', []) or []
+                if any('Sunarizamon' in n for n in names):
                     return True
-                # Match [Close] trait
-                if any('Close' in t for t in getattr(c, 'card_traits', [])):
+                # Match [Close] by name (Close is a card name, not a trait)
+                if any('Close' in n for n in names):
                     return True
                 return False
             game.effect_play_from_zone(
@@ -110,7 +111,7 @@ class EX10_069(CardScript):
                 return False
             if event_perm not in owner.battle_area:
                 return False
-            if not event_perm.has_trait('Close'):
+            if not event_perm.contains_card_name('Close'):
                 return False
             return True
         effect2.set_can_use_condition(condition2)

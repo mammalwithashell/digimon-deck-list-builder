@@ -2,7 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
-from ....data.enums import EffectTiming
+from ....data.enums import EffectTiming, GamePhase
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -69,49 +69,44 @@ class BT13_075(CardScript):
                     return (any('X Antibody' in t for t in traits) or
                             any('Royal Knight' in t for t in traits))
 
-                selected_card = [None]
+                from digimon_gym.engine.game.constants import SEL_TRASH_START
+                valid = [SEL_TRASH_START + i for i, c in enumerate(player.trash_cards) if trash_filter(c)]
+                if not valid:
+                    return
 
-                def on_trash_select(chosen):
-                    selected_card[0] = chosen
-                    if chosen in player.trash_cards:
-                        player.trash_cards.remove(chosen)
+                def on_trash_selected(idx: int):
+                    if not (0 <= idx < len(player.trash_cards)):
+                        return
+                    chosen = player.trash_cards[idx]
+                    player.trash_cards.remove(chosen)
                     perm.add_card_source_bottom(chosen)
 
-                # Use select_hand_card adapted for trash by iterating trash directly
-                # Engine doesn't have effect_select_trash; use a direct approach:
-                qualifying = [c for c in player.trash_cards if trash_filter(c)]
-                if not qualifying:
-                    return
+                    # Step 2: Apply CANNOT_ATTACK to ALL opponent Digimon with play cost >= 10
+                    from digimon_gym.engine.interfaces.modifiers import ModifierType
+                    enemy = player.enemy
+                    if not enemy:
+                        return
+                    for opp_perm in list(enemy.battle_area):
+                        if not opp_perm.is_digimon:
+                            continue
+                        top = opp_perm.top_card
+                        if top is None:
+                            continue
+                        play_cost = top.get_cost_itself
+                        has_play_cost = getattr(top, 'has_play_cost', True)
+                        if has_play_cost and play_cost >= 10:
+                            game.register_modifier(
+                                opp_perm,
+                                ModifierType.CANNOT_ATTACK,
+                                value_fn=lambda: True,
+                                expiry='end_of_opponent_turn',
+                            )
 
-                # We need to select one — use greedy auto-select (engine resolves selection)
-                # Register as SelectTrash phase selection via effect_select_hand_card analog:
-                # Since there's no effect_select_trash API, pick the first qualifying card
-                # (engine limitation — deterministic choice for RL)
-                chosen = qualifying[0]
-                player.trash_cards.remove(chosen)
-                perm.add_card_source_bottom(chosen)
-                selected_card[0] = chosen
-
-                # Step 2: Apply CANNOT_ATTACK to ALL opponent Digimon with play cost >= 10
-                from digimon_gym.engine.interfaces.modifiers import ModifierType
-                enemy = player.enemy
-                if not enemy:
-                    return
-                for opp_perm in list(enemy.battle_area):
-                    if not opp_perm.is_digimon:
-                        continue
-                    top = opp_perm.top_card
-                    if top is None:
-                        continue
-                    play_cost = top.get_cost_itself
-                    has_play_cost = getattr(top, 'has_play_cost', True)
-                    if has_play_cost and play_cost >= 10:
-                        game.register_modifier(
-                            opp_perm,
-                            ModifierType.CANNOT_ATTACK,
-                            value_fn=lambda: True,
-                            expiry='end_of_opponent_turn',
-                        )
+                game.request_selection(
+                    GamePhase.SelectTrash, player, on_trash_selected, valid,
+                    is_optional=False,
+                    prompt="Select 1 Digimon card with [X Antibody] or [Royal Knight] trait from your trash to place as a bottom digivolution card."
+                )
 
             effect.set_on_process_callback(process)
             return effect

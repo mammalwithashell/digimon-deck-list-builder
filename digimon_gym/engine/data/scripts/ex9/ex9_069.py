@@ -52,19 +52,36 @@ class EX9_069(CardScript):
             game = ctx.get('game')
             if not (player and game):
                 return
-            if player.hand_cards:
-                hand_card = player.hand_cards.pop()
-                # Find a DM Digimon to place under
-                for perm in player.battle_area:
-                    if perm.is_digimon and perm.has_trait('DM'):
-                        perm.add_card_source_bottom(hand_card)
-                        break
+            if not player.hand_cards:
+                return
+
+            def on_hand_selected(selected_card):
+                if selected_card is None:
+                    return
+                if selected_card in player.hand_cards:
+                    player.hand_cards.remove(selected_card)
+
+                # Select which DM Digimon to place the card under
+                def dm_filter(p):
+                    return p.is_digimon and p.has_trait('DM')
+
+                def on_perm_selected(target_perm):
+                    target_perm.add_card_source_bottom(selected_card)
+
+                game.effect_select_own_permanent(
+                    player, on_perm_selected, filter_fn=dm_filter,
+                    is_optional=False,
+                    prompt="Select a [DM] Digimon to place the card under.")
+
+            game.effect_select_hand_card(
+                player, lambda c: True, on_hand_selected, is_optional=True,
+                prompt="Select 1 card to place face down as bottom digivolution card.")
         effect0.set_on_process_callback(process0)
         effects.append(effect0)
 
         # [Your Turn] When face-down cards placed, suspend for memory + draw
         effect1 = ICardEffect()
-        effect1.set_timing(EffectTiming.OnEnterFieldAnyone)
+        effect1.set_timing(EffectTiming.OnAddDigivolutionCards)
         effect1.set_effect_name("EX9-069 Your Turn: Suspend for memory on face-down placement")
         effect1.set_effect_description(
             "[Your Turn] When face-down cards placed, suspend to gain 1 memory "

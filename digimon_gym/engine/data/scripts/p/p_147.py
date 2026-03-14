@@ -13,6 +13,7 @@ class P_147(CardScript):
 
     def get_card_effects(self, card: 'CardSource') -> List['ICardEffect']:
         effects = []
+        card.also_treated_as_names = ['Pulsemon']
 
         # Timing: EffectTiming.None
         # Also Treated As

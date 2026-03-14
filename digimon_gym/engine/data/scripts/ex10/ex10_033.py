@@ -66,18 +66,47 @@ class EX10_033(CardScript):
             def process(ctx: Dict[str, Any]):
                 player = ctx.get('player')
                 perm = ctx.get('permanent')
-                if not (player and perm):
+                game = ctx.get('game')
+                if not (player and perm and game):
                     return
-                placed = 0
-                for source_card in list(player.trash_cards):
-                    if placed >= 3:
-                        break
-                    traits = getattr(source_card, 'card_traits', [])
-                    if 'Mineral' not in traits and 'Rock' not in traits:
-                        continue
-                    player.trash_cards.remove(source_card)
-                    perm.add_card_source_bottom(source_card)
-                    placed += 1
+
+                def _mineral_rock_filter(c):
+                    traits = getattr(c, 'card_traits', [])
+                    return 'Mineral' in traits or 'Rock' in traits
+
+                # Let agent select up to 3 Mineral/Rock cards from trash
+                placed_holder = [0]
+
+                def _place_one():
+                    if placed_holder[0] >= 3:
+                        return
+                    eligible = [c for c in player.trash_cards if _mineral_rock_filter(c)]
+                    if not eligible:
+                        return
+
+                    from ....data.enums import GamePhase
+                    _SEL_TRASH_START = 130
+                    valid_trash = []
+                    for i, c in enumerate(player.trash_cards):
+                        if _mineral_rock_filter(c):
+                            valid_trash.append(_SEL_TRASH_START + i)
+                    if not valid_trash:
+                        return
+
+                    def on_trash_selected(idx):
+                        if idx < len(player.trash_cards):
+                            selected = player.trash_cards[idx]
+                            player.trash_cards.remove(selected)
+                            perm.add_card_source_bottom(selected)
+                            placed_holder[0] += 1
+                            _place_one()
+
+                    game.request_selection(
+                        GamePhase.SelectTrash, player, on_trash_selected,
+                        valid_trash, is_optional=True,
+                        prompt=f"Select a [Mineral] or [Rock] card from trash ({placed_holder[0]+1}/3).")
+
+                _place_one()
 
             effect.set_on_process_callback(process)
             return effect
@@ -161,9 +190,14 @@ class EX10_033(CardScript):
                 reduction = trashed_count * 2
 
                 def on_target(target_perm):
+                    # Reduce play cost of the specific target by reduction amount
+                    # The value_fn must scope to the selected target permanent
+                    _target_ref = target_perm
                     game.register_modifier(
-                        ModifierType.CHANGE_PLAY_COST, target_perm,
-                        value_fn=lambda: -reduction,
+                        target_perm,
+                        ModifierType.CHANGE_PLAY_COST,
+                        value_fn=lambda cur, card_arg, ctx, _r=reduction: cur - _r,
+                        condition=lambda p, c, _tp=_target_ref: p is _tp,
                         expiry='end_of_opponent_turn'
                     )
 

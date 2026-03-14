@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....interfaces.modifiers import ModifierType
 from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
@@ -11,8 +12,8 @@ if TYPE_CHECKING:
 class EX9_037(CardScript):
     """EX9-037 Kabuterimon | Lv.4 | Insectoid/DM/Ver.2
     <Training>
-    [On Play][When Digivolving] By placing 1 hand card as bottom digi card,
-    suspend 1 opponent Digimon. It can't unsuspend in their next unsuspend phase.
+    [On Play][When Digivolving] By placing 1 hand card face down as bottom digi
+    card, suspend 1 opponent Digimon. It can't unsuspend in their next unsuspend phase.
     Inherited: [When Attacking][Once Per Turn] Suspend 1 opponent Digimon.
     """
 
@@ -36,27 +37,46 @@ class EX9_037(CardScript):
             game = ctx.get('game')
             if not (player and perm and game):
                 return
-            if player.hand_cards:
-                placed = player.hand_cards.pop()
-                perm.add_card_source_bottom(placed)
+            if not player.hand_cards:
+                return
 
-            def target_filter(p):
-                return p.is_digimon
+            def on_hand_selected(selected_card):
+                if selected_card is None:
+                    return
+                if selected_card in player.hand_cards:
+                    player.hand_cards.remove(selected_card)
+                    perm.add_card_source_bottom(selected_card)
 
-            def on_freeze(target_perm):
-                target_perm.suspend()
-                target_perm._skip_unsuspend = True
+                def target_filter(p):
+                    return p.is_digimon
 
-            game.effect_select_opponent_permanent(
-                player, on_freeze, filter_fn=target_filter, is_optional=False,
-                prompt="Suspend 1 opponent Digimon (can't unsuspend).")
+                def on_freeze(target_perm):
+                    target_perm.suspend()
+                    # Register CANNOT_UNSUSPEND modifier until opponent's next unsuspend phase
+                    game.register_modifier(
+                        perm,
+                        ModifierType.CANNOT_UNSUSPEND,
+                        condition=lambda target, ctx_: target is target_perm,
+                        source_effect=None,
+                        expiry='end_of_opponent_turn',
+                    )
+
+                game.effect_select_opponent_permanent(
+                    player, on_freeze, filter_fn=target_filter, is_optional=False,
+                    prompt="Suspend 1 opponent Digimon (can't unsuspend).")
+
+            game.effect_select_hand_card(
+                player, lambda c: True, on_hand_selected, is_optional=True,
+                prompt="Select 1 card to place face down as bottom digivolution card.")
 
         # [On Play]
         effect1 = ICardEffect()
         effect1.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect1.set_effect_name("EX9-037 On Play: Place hand, freeze opponent")
         effect1.set_effect_description(
-            "[On Play] Place 1 hand card as bottom digi card, suspend+freeze opponent."
+            "[On Play] By placing 1 card in your hand face down as this "
+            "Digimon's bottom digivolution card, suspend 1 of your opponent's "
+            "Digimon. It can't unsuspend in their next unsuspend phase."
         )
         effect1.is_on_play = True
 
@@ -75,7 +95,9 @@ class EX9_037(CardScript):
         effect2.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect2.set_effect_name("EX9-037 When Digivolving: Place hand, freeze opponent")
         effect2.set_effect_description(
-            "[When Digivolving] Place 1 hand card as bottom digi card, suspend+freeze."
+            "[When Digivolving] By placing 1 card in your hand face down as this "
+            "Digimon's bottom digivolution card, suspend 1 of your opponent's "
+            "Digimon. It can't unsuspend in their next unsuspend phase."
         )
         effect2.is_when_digivolving = True
 
@@ -89,12 +111,13 @@ class EX9_037(CardScript):
         effect2.set_on_process_callback(_place_and_freeze)
         effects.append(effect2)
 
-        # Inherited: [When Attacking][Once Per Turn] Suspend 1 opponent
+        # Inherited: [When Attacking][Once Per Turn] Suspend 1 opponent Digimon
         effect3 = ICardEffect()
         effect3.set_timing(EffectTiming.OnTappedAnyone)
         effect3.set_effect_name("EX9-037 Inherited: When Attacking suspend opponent")
         effect3.set_effect_description(
-            "Inherited: [When Attacking][Once Per Turn] Suspend 1 opponent Digimon."
+            "Inherited: [When Attacking][Once Per Turn] Suspend 1 of your "
+            "opponent's Digimon."
         )
         effect3.is_inherited_effect = True
         effect3.is_on_attack = True

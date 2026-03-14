@@ -21,6 +21,7 @@ class CardSource:
         self.is_being_revealed: bool = False
         self.permanent_just_before_remove_field: Optional['Permanent'] = None
         self._cached_effects: Optional[List['ICardEffect']] = None
+        self.also_treated_as_names: List[str] = []  # "This card is also treated as [X]"
 
     @property
     def can_play_from_hand_during_main_phase(self) -> bool:
@@ -64,7 +65,10 @@ class CardSource:
 
     @property
     def card_names(self) -> List[str]:
-        return [self.c_entity_base.card_name_eng] if self.c_entity_base else []
+        base = [self.c_entity_base.card_name_eng] if self.c_entity_base else []
+        if self.also_treated_as_names:
+            return base + self.also_treated_as_names
+        return base
 
     @property
     def card_traits(self) -> List[str]:

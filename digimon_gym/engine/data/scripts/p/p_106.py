@@ -70,6 +70,7 @@ class P_106(CardScript):
         # by this effect, reduce the cost by 2.
         effect2 = ICardEffect()
         effect2.set_timing(EffectTiming.OnDeclaration)
+        effect2._is_field_main = True
         effect2.set_effect_name("P-106 Delay: 1 Digimon digivolves into green card, cost -2")
         effect2.set_effect_description(
             "[Main] <Delay> — 1 of your Digimon may digivolve into a green Digimon "

@@ -32,6 +32,7 @@ class BT22_074(CardScript):
         # [Main] [Once Per Turn] By paying 3 cost, delete 1 of your opponent's level 5 or lower Digimon. If this effect didn't delete, this Digimon gains <Security A. +1> (This Digimon checks 1 additional security card) for the turn. Then, this Digimon may attack.
         effect1 = ICardEffect()
         effect1.set_timing(EffectTiming.OnDeclaration)
+        effect1._is_field_main = True
         effect1.set_effect_name("BT22-074 Pay 3, Delete 1 level 5 or lower digimon, if it didnt Sec +1. then it may attack")
         effect1.set_effect_description("[Main] [Once Per Turn] By paying 3 cost, delete 1 of your opponent's level 5 or lower Digimon. If this effect didn't delete, this Digimon gains <Security A. +1> (This Digimon checks 1 additional security card) for the turn. Then, this Digimon may attack.")
         effect1.set_max_count_per_turn(1)

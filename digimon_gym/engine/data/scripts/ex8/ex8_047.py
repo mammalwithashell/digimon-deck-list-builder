@@ -52,7 +52,7 @@ class EX8_047(CardScript):
                 player, 3,
                 [(reveal_filter_mineral_rock, 'hand'), (reveal_filter_liberator, 'hand')],
                 remaining_placement='deck_bottom',
-                is_optional=True)
+                is_optional=False)
 
         effect0.set_on_process_callback(process0)
         effects.append(effect0)

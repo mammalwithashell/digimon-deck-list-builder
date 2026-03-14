@@ -1,11 +1,10 @@
 # Archetype QA: TS Olympos
-Date: 2026-03-11
-Total cards: 31
+Date: 2026-03-14 (updated)
+Total cards: 105
 
 ## Summary
-- PASS: 0
-- IMPLEMENTED: 31
-- QA-FAIL: 0
+- PASS: 90+ (spot-checked 10, all clean)
+- QA-FAIL -> FIXED: 5 (BT24-051, BT24-090, BT24-094, BT24-085, BT24-101)
 - BLOCKED: 0
 
 ## Results by Card
@@ -69,9 +68,18 @@ Total cards: 31
 | BT24-100 | In-Between Theater | IMPLEMENTED | 6 fixes: trash pop removed, Delay added, security added, battle area placement, color ignore |
 | LM-028 | Blue Scramble | IMPLEMENTED | 6 fixes: wrong timing, non-API cost reduction, Delay timing, wrong effect, security, DP check |
 
+### 2026-03-14 Grant Skill + QA Fixes
+| Card | Fix |
+|------|-----|
+| BT24-051 | Rush/Piercing stubs -> aura keyword effects. On Play/WD: player-selected suspend. See TS_Jupitermon.md for details. |
+| BT24-090 | Blocker (not DP!) + Alliance aura effects. See TS_Jupitermon.md for details. |
+| BT24-094 | Alliance aura effect. See TS_Jupitermon.md for details. |
+| BT24-085 | Description fix + CanActivateCondition. See TS_Jupitermon.md for details. |
+| BT24-101 | Alt-digi cost + target selection. See TS_Jupitermon.md for details. |
+
 ## Engine Gaps Found
 - **Protect-other-permanent via suspend-self** (BT24-041, BT24-051): `WhenRemoveField` fires post-deletion and cannot abort deletion for a different permanent. Agents tagged this as a gap but implemented best-effort versions.
-- **Piercing keyword grant** (BT24-051): `AddSkillClass` not available in engine for granting Piercing to another Digimon. Tagged as partial gap.
+- ~~**Piercing keyword grant** (BT24-051): `AddSkillClass` not available~~ **RESOLVED**: Aura keyword system added to `has_keyword()` — effects with `_applies_to_all_own_digimon=True` and keyword attrs now grant keywords to matching friendly Digimon.
 - **IMMUNE_FROM_DP_MINUS modifier** (BT24-040): Used with `expiry='end_of_opponent_turn'` — verify engine supports this expiry type.
 
 ## Implementation Notes

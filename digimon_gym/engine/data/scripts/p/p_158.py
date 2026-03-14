@@ -60,6 +60,7 @@ class P_158(CardScript):
         # [Main] By returning this Tamer to the bottom of the deck, you may play 1 Digimon card with the [D-Reaper] trait and play cost of 3 or less from your hand without paying the cost. For each digivolution card of 1 of your [Mother D-Reaper], add 1 to the maximum play cost you may play with this effect.
         effect1 = ICardEffect()
         effect1.set_timing(EffectTiming.OnDeclaration)
+        effect1._is_field_main = True
         effect1.set_effect_name("P-158 Play 1 Digimon card with the [D-Reaper] trait")
         effect1.set_effect_description("[Main] By returning this Tamer to the bottom of the deck, you may play 1 Digimon card with the [D-Reaper] trait and play cost of 3 or less from your hand without paying the cost. For each digivolution card of 1 of your [Mother D-Reaper], add 1 to the maximum play cost you may play with this effect.")
         effect1.is_optional = True

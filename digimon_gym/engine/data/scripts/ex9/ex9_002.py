@@ -19,12 +19,9 @@ class EX9_002(CardScript):
         effects = []
 
         # Inherited: When face-down cards placed, digivolve into Ver.2 from hand cost -1
-        # This is a triggered effect that fires when face-down digi cards are placed.
-        # The engine triggers OnEnterFieldAnyone-like events for this.
-        # Since this is a complex trigger, we approximate with a [Your Turn] timing
-        # that checks for the right conditions.
+        # Fires when digivolution cards are added to this permanent's stack.
         effect0 = ICardEffect()
-        effect0.set_timing(EffectTiming.OnEnterFieldAnyone)
+        effect0.set_timing(EffectTiming.OnAddDigivolutionCards)
         effect0.set_effect_name("EX9-002 Inherited: Digivolve into Ver.2 on face-down placement")
         effect0.set_effect_description(
             "Inherited: [Your Turn][Once Per Turn] When face-down cards are "

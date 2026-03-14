@@ -32,26 +32,26 @@ class BT15_077(CardScript):
         effect0.set_can_use_condition(condition0)
 
         def process0(ctx: Dict[str, Any]):
-            """Action: Add To Hand, Reveal And Select"""
+            """Action: Reveal top 4, add up to 2 Lv6+ to hand, rest to deck bottom"""
             player = ctx.get('player')
             perm = ctx.get('permanent')
             game = ctx.get('game')
-            # Add card to hand (from trash/reveal)
-            if player and player.trash_cards:
-                card_to_add = player.trash_cards.pop()
-                player.hand_cards.append(card_to_add)
             if not (player and game):
                 return
-            def reveal_filter(c):
-                if getattr(c, 'level', None) is None or c.level < 6:
-                    return False
-                return True
-            def on_revealed(selected, remaining):
-                player.hand_cards.append(selected)
-                for c in remaining:
-                    player.library_cards.append(c)
-            game.effect_reveal_and_select(
-                player, 4, reveal_filter, on_revealed, is_optional=True)
+
+            def lv6_filter(c):
+                level = getattr(c, 'level', None)
+                return level is not None and level >= 6
+
+            # Use multi-pass reveal: 2 passes selecting Lv6+ to hand, rest to bottom
+            passes = [
+                (lv6_filter, 'hand'),
+                (lv6_filter, 'hand'),
+            ]
+            game.effect_reveal_and_select_multi(
+                player, 4, passes,
+                remaining_placement='deck_bottom',
+                is_optional=True)
 
         effect0.set_on_process_callback(process0)
         effects.append(effect0)
@@ -75,18 +75,39 @@ class BT15_077(CardScript):
         effect1.set_can_use_condition(condition1)
 
         def process1(ctx: Dict[str, Any]):
-            """Action: Play Card"""
+            """Action: Delete 1 of your Digimon, then play 1 Dark Masters from hand to breeding free"""
             player = ctx.get('player')
             perm = ctx.get('permanent')
             game = ctx.get('game')
             if not (player and game):
                 return
-            def play_filter(c):
-                if not getattr(c, 'is_digimon', False):
-                    return False
-                return True
-            game.effect_play_from_zone(
-                player, 'hand', play_filter, free=True, is_optional=True)
+
+            # Step 1: Delete 1 of your Digimon (as cost)
+            own_digimon = [p for p in player.battle_area if p.is_digimon]
+            if not own_digimon:
+                return
+
+            def digimon_filter(p):
+                return p.is_digimon
+
+            def on_delete_own(target_perm):
+                if target_perm in player.battle_area:
+                    player.delete_permanent(target_perm)
+                # Step 2: Play 1 Dark Masters Digimon from hand to breeding area
+                # (only if breeding area is empty)
+                if player.breeding_area is not None:
+                    return  # Breeding area not empty
+                def play_filter(c):
+                    if not getattr(c, 'is_digimon', False):
+                        return False
+                    traits = getattr(c, 'card_traits', []) or []
+                    return any('Dark Masters' in t for t in traits)
+                game.effect_play_from_zone(
+                    player, 'hand', play_filter, free=True, is_optional=True)
+
+            game.effect_select_own_permanent(
+                player, on_delete_own, filter_fn=digimon_filter, is_optional=True,
+                prompt="Select 1 of your Digimon to delete.")
 
         effect1.set_on_process_callback(process1)
         effects.append(effect1)

@@ -15,12 +15,11 @@ class BT22_099(CardScript):
         effects = []
 
         # Timing: EffectTiming.None
-        # Ignore Color Req
+        # Ignore Color Req — while you have a [CS] trait Digimon or Tamer
         effect0 = ICardEffect()
         effect0.set_effect_name("BT22-099 Ignore color requirements")
-        effect0.set_effect_description("Ignore Color Req")
+        effect0.set_effect_description("While you have a [CS] trait Digimon or Tamer on the field, you can ignore this card's color requirements.")
 
-        effect = effect0  # alias for condition closure
         def condition0(context: Dict[str, Any]) -> bool:
             return True
 
@@ -28,9 +27,6 @@ class BT22_099(CardScript):
 
         def process0(ctx: Dict[str, Any]):
             """Action: Ignore Color Req"""
-            player = ctx.get('player')
-            perm = ctx.get('permanent')
-            game = ctx.get('game')
             # Ignores color requirement for playing Options — not modeled in engine
             pass  # descriptive-tagged
 
@@ -38,40 +34,38 @@ class BT22_099(CardScript):
         effects.append(effect0)
 
         # Timing: EffectTiming.OptionSkill
-        # [Main] Reveal the top 3 cards of your deck. Add 1 [CS] trait card among them to the hand. Return the rest to the bottom of the deck. Then, place this card in the battle area.
+        # [Main] Reveal the top 3 cards of your deck. Add 1 [CS] trait card
+        # among them to the hand. Return the rest to the bottom of the deck.
+        # Then, place this card in the battle area.
         effect1 = ICardEffect()
         effect1.set_timing(EffectTiming.OptionSkill)
         effect1.set_effect_name("BT22-099 Reveal top 3, add 1 [CS] card to hand, bottom deck the rest")
         effect1.set_effect_description("[Main] Reveal the top 3 cards of your deck. Add 1 [CS] trait card among them to the hand. Return the rest to the bottom of the deck. Then, place this card in the battle area.")
 
-        effect = effect1  # alias for condition closure
         def condition1(context: Dict[str, Any]) -> bool:
-            # Option main effect — validated by engine timing
             return True
 
         effect1.set_can_use_condition(condition1)
 
         def process1(ctx: Dict[str, Any]):
-            """Action: Add To Hand, Reveal And Select"""
+            """Action: Reveal top 3, add 1 CS card to hand"""
             player = ctx.get('player')
-            perm = ctx.get('permanent')
             game = ctx.get('game')
-            # Add card to hand (from trash/reveal)
-            if player and player.trash_cards:
-                card_to_add = player.trash_cards.pop()
-                player.hand_cards.append(card_to_add)
             if not (player and game):
                 return
+
             def reveal_filter(c):
-                if not (any('CS' in _t for _t in (getattr(c, 'card_traits', []) or []))):
-                    return False
-                return True
-            def on_revealed(selected, remaining):
-                player.hand_cards.append(selected)
-                for c in remaining:
-                    player.library_cards.append(c)
-            game.effect_reveal_and_select(
-                player, 3, reveal_filter, on_revealed, is_optional=True)
+                traits = getattr(c, 'card_traits', []) or []
+                return any('CS' in t for t in traits)
+
+            game.effect_reveal_and_select_multi(
+                player, 3,
+                passes=[
+                    (reveal_filter, 'hand'),
+                ],
+                remaining_placement='deck_bottom',
+                is_optional=True
+            )
 
         effect1.set_on_process_callback(process1)
         effects.append(effect1)
@@ -84,8 +78,46 @@ class BT22_099(CardScript):
         effect2._is_delay = True
 
         def condition2(context: Dict[str, Any]) -> bool:
+            if card and card.permanent_of_this_card() is None:
+                return False
             return True
         effect2.set_can_use_condition(condition2)
         effects.append(effect2)
+
+        # Timing: EffectTiming.OnDeclaration
+        # [Main] <Delay> Gain 2 memory.
+        effect3 = ICardEffect()
+        effect3.set_timing(EffectTiming.OnDeclaration)
+        effect3._is_field_main = True
+        effect3.set_effect_name("BT22-099 Delay: Gain 2 memory")
+        effect3.set_effect_description("[Main] <Delay> Gain 2 memory.")
+
+        def condition3(context: Dict[str, Any]) -> bool:
+            if card and card.permanent_of_this_card() is None:
+                return False
+            return True
+
+        effect3.set_can_use_condition(condition3)
+
+        def process3(ctx: Dict[str, Any]):
+            """Action: Gain 2 memory"""
+            player = ctx.get('player')
+            if player:
+                player.add_memory(2)
+
+        effect3.set_on_process_callback(process3)
+        effects.append(effect3)
+
+        # Security Effect: Place this card in the battle area
+        effect4 = ICardEffect()
+        effect4.set_timing(EffectTiming.SecuritySkill)
+        effect4.set_effect_name("BT22-099 Security: Place in battle area")
+        effect4.set_effect_description("[Security] Place this card in the battle area.")
+        effect4.is_security_effect = True
+
+        def condition4(context: Dict[str, Any]) -> bool:
+            return True
+        effect4.set_can_use_condition(condition4)
+        effects.append(effect4)
 
         return effects

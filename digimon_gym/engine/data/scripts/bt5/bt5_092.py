@@ -80,21 +80,24 @@ class BT5_092(CardScript):
         effect1.set_hash_string("Digisorption-1_BT5_092")
 
         def condition1(context: Dict[str, Any]) -> bool:
-            # Leak guard: only when this card is the source being digivolved into
-            if context.get('card_source') is not card:
-                return False
             # Must be on field and not suspended
             if card and card.permanent_of_this_card() is None:
                 return False
             own_perm = card.permanent_of_this_card()
             if own_perm and own_perm.is_suspended:
                 return False
+            # Leak guard: the permanent being digivolved must NOT be this tamer
+            card_source = context.get('card_source')
+            if card_source is card:
+                return False
+            # Must be digivolving own Digimon
+            if card_source and card_source.owner is not card.owner:
+                return False
             # Check the digivolving card has Garurumon/Omnimon/Greymon in name
-            digivolve_card = context.get('digivolve_card')
-            if digivolve_card:
-                if (digivolve_card.contains_card_name('Garurumon')
-                        or digivolve_card.contains_card_name('Omnimon')
-                        or digivolve_card.contains_card_name('Greymon')):
+            if card_source:
+                if (card_source.contains_card_name('Garurumon')
+                        or card_source.contains_card_name('Omnimon')
+                        or card_source.contains_card_name('Greymon')):
                     return True
             return False
         effect1.set_can_use_condition(condition1)

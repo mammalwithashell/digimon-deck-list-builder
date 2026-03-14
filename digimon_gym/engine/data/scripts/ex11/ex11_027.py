@@ -42,7 +42,6 @@ class EX11_027(CardScript):
         effect0._alt_digi_level = 2
 
         def condition0(context: Dict[str, Any]) -> bool:
-            # C# checks: Lv.2 AND has [Maquinamon] in text
             permanent = card.permanent_of_this_card() if card else None
             if not permanent or not permanent.top_card:
                 return False
@@ -68,21 +67,19 @@ class EX11_027(CardScript):
             if card and card.permanent_of_this_card() is None:
                 return False
             return True
-
         effect1.set_can_use_condition(condition1)
 
         def process1(ctx: Dict[str, Any]):
-            """Reveal top 3, two-pass selection (1 Maquinamon + 1 Maquinamon-text), rest to deck bottom. Then link."""
+            """Reveal top 3, two-pass selection, rest to deck bottom. Then link."""
             player = ctx.get('player')
             perm = ctx.get('permanent')
             game = ctx.get('game')
             if not (player and game):
                 return
 
-            # Two-pass reveal: first pick 1 [Maquinamon] by name, then pick 1 with [Maquinamon] in text
             passes = [
-                (_is_maquinamon_name, 'hand'),     # Pass 1: add 1 [Maquinamon]
-                (_has_maquinamon_text, 'hand'),     # Pass 2: add 1 with [Maquinamon] text
+                (_is_maquinamon_name, 'hand'),
+                (_has_maquinamon_text, 'hand'),
             ]
 
             game.effect_reveal_and_select_multi(
@@ -90,37 +87,67 @@ class EX11_027(CardScript):
                 remaining_placement='deck_bottom',
                 is_optional=False)
 
-            # Then, may link this Digimon or 1 [Maquinamon] from hand to another Digimon
+            # Then, may link this Digimon or 1 [Maquinamon] from hand to
+            # another Digimon. C# offers a 3-way choice.
             _try_link_after_reveal(player, perm, game)
 
         def _try_link_after_reveal(player, perm, game):
             """May link this Digimon or 1 [Maquinamon] from hand to another Digimon."""
             if not player.battle_area:
                 return
-            # Check if there's another Digimon to link to
             other_digimon = [p for p in player.battle_area
                             if p.is_digimon and p is not perm]
             if not other_digimon:
                 return
 
-            # Try to link from hand first (Maquinamon cards)
             hand_maq = [c for c in player.hand_cards if _is_maquinamon_name(c)]
-            if hand_maq:
-                def on_hand_selected(selected_card):
-                    if selected_card and selected_card in player.hand_cards:
-                        player.hand_cards.remove(selected_card)
-                        game.effect_link_to_permanent(player, selected_card, is_optional=True)
+            can_link_self = perm is not None
+            can_link_hand = len(hand_maq) > 0
 
-                game.effect_select_hand_card(
-                    player, _is_maquinamon_name, on_hand_selected,
-                    is_optional=True,
-                    prompt="Select a [Maquinamon] from hand to link to 1 of your other Digimon.")
-            elif perm:
-                # Link this Digimon itself to another
-                game.effect_link_to_permanent(
-                    player, card, is_optional=True,
-                    filter_fn=lambda p: p.is_digimon and p is not perm,
-                    prompt="Select a Digimon to link this Maquinamon to.")
+            if not can_link_self and not can_link_hand:
+                return
+
+            # Build choices
+            zones = []
+            labels = []
+            if can_link_self:
+                zones.append('self')
+                labels.append("Link this Maquinamon")
+            if can_link_hand:
+                zones.append('hand')
+                labels.append("Link from hand")
+
+            if not zones:
+                return
+
+            def on_zone_choice(branch: int):
+                if branch < 0 or branch >= len(zones):
+                    return
+                zone = zones[branch]
+                if zone == 'self':
+                    # Link this Digimon to another one of your Digimon
+                    game.effect_link_to_permanent(
+                        player, card, is_optional=True,
+                        filter_fn=lambda p: p.is_digimon and p is not perm,
+                        prompt="Select a Digimon to link this Maquinamon to.")
+                elif zone == 'hand':
+                    def on_hand_selected(selected_card):
+                        if selected_card and selected_card in player.hand_cards:
+                            player.hand_cards.remove(selected_card)
+                            game.effect_link_to_permanent(
+                                player, selected_card, is_optional=True,
+                                filter_fn=lambda p: p.is_digimon and p is not perm,
+                                prompt="Select a Digimon to link Maquinamon to.")
+
+                    game.effect_select_hand_card(
+                        player, _is_maquinamon_name, on_hand_selected,
+                        is_optional=True,
+                        prompt="Select a [Maquinamon] from hand to link.")
+
+            game.effect_choose_branch(
+                player, len(zones), on_zone_choice,
+                prompt="Link this Maquinamon or a [Maquinamon] from hand?",
+                branch_labels=labels)
 
         effect1.set_on_process_callback(process1)
         effects.append(effect1)
@@ -144,18 +171,22 @@ class EX11_027(CardScript):
             if not my_perm or not my_perm.linked_cards:
                 return False
             return True
-
         effect2.set_can_use_condition(condition2)
 
         def process2(ctx: Dict[str, Any]):
-            """Place 1 linked card as bottom digivolution card to prevent leaving."""
+            """Place 1 linked card as bottom digivolution card to prevent leaving.
+            Lets agent choose which linked card if multiple exist."""
             player = ctx.get('player')
             perm = ctx.get('permanent')
             game = ctx.get('game')
             if not (player and perm):
                 return
             my_perm = card.permanent_of_this_card() if card else perm
-            if my_perm and my_perm.linked_cards:
+            if not my_perm or not my_perm.linked_cards:
+                return
+
+            if len(my_perm.linked_cards) == 1:
+                # Only one linked card, auto-select
                 linked = my_perm.linked_cards.pop(0)
                 my_perm.add_card_source_bottom(linked)
                 if my_perm not in player.battle_area:
@@ -163,6 +194,30 @@ class EX11_027(CardScript):
                         if cs in player.trash_cards:
                             player.trash_cards.remove(cs)
                     player.battle_area.append(my_perm)
+            else:
+                # Multiple linked cards, let agent choose
+                from ....game.constants import SEL_EFFECT_CHOICE_START
+                from ....data.enums import GamePhase
+
+                valid = [SEL_EFFECT_CHOICE_START + i
+                         for i in range(len(my_perm.linked_cards))]
+
+                def on_select_link(action_id: int):
+                    idx = action_id - SEL_EFFECT_CHOICE_START
+                    if idx < 0 or idx >= len(my_perm.linked_cards):
+                        return
+                    linked = my_perm.linked_cards.pop(idx)
+                    my_perm.add_card_source_bottom(linked)
+                    if my_perm not in player.battle_area:
+                        for cs in list(my_perm.card_sources):
+                            if cs in player.trash_cards:
+                                player.trash_cards.remove(cs)
+                        player.battle_area.append(my_perm)
+
+                game.request_selection(
+                    GamePhase.SelectEffectChoice, player, on_select_link, valid,
+                    is_optional=False,
+                    prompt="Select a link card to place as bottom digivolution card.")
 
         effect2.set_on_process_callback(process2)
         effects.append(effect2)

@@ -185,8 +185,10 @@ class P_094(CardScript):
                     for vc in vemmon_cards[:2]:
                         galacticmon.card_sources.remove(vc)
                         player.library_cards.append(vc)
-                    game.logger.log(
-                        "[P-094] Placed 2 Vemmon from Galacticmon's digi-cards to deck bottom")
+                        # Fire OnDigivolutionCardReturnToDeckBottom timing
+                        game.execute_effects(
+                            EffectTiming.OnDigivolutionCardReturnToDeckBottom,
+                            {"permanent": galacticmon, "returned_card": vc})
                     # Redirect attack
                     game.switch_attack_target(perm)
                     break

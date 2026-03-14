@@ -45,6 +45,7 @@ class BT23_030(CardScript):
         # [Main] [Once Per Turn] By paying 1 cost, you may play 1 play cost 3 or lower card with [Chuumon] or [Sukamon] in its name or the [CS] trait from your hand without paying the cost. Then, 1 of your level 3 or higher Digimon gains <Reboot> and <Blocker> until your opponent's turn ends.
         effect2 = ICardEffect()
         effect2.set_timing(EffectTiming.OnDeclaration)
+        effect2._is_field_main = True
         effect2.set_effect_name("BT23-030 By paying 1 cost, play 3 cost or lower [Chuumon]/[Sukamon] in name /[CS] trait from your hand, then 1 level 3+ digimon gains <Reboot> and <Blocker>")
         effect2.set_effect_description("[Main] [Once Per Turn] By paying 1 cost, you may play 1 play cost 3 or lower card with [Chuumon] or [Sukamon] in its name or the [CS] trait from your hand without paying the cost. Then, 1 of your level 3 or higher Digimon gains <Reboot> and <Blocker> until your opponent's turn ends.")
         effect2.set_max_count_per_turn(1)

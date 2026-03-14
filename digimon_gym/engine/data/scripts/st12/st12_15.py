@@ -73,6 +73,7 @@ class ST12_15(CardScript):
         # - The next time one of your Digimon would digivolve this turn, reduce the digivolution cost by 1.
         effect2 = ICardEffect()
         effect2.set_timing(EffectTiming.OnDeclaration)
+        effect2._is_field_main = True
         effect2.set_effect_name("ST12-15 Digivolution Cost -1")
         effect2.set_effect_description("[Main] <Delay> - The next time one of your Digimon would digivolve this turn, reduce the digivolution cost by 1.")
         effect2._is_delay_effect = True

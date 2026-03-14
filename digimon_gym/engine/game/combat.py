@@ -83,6 +83,31 @@ class CombatMixin:
         # No Alliance — enter counter timing (DCGO: counter before block)
         self._enter_counter_timing()
 
+    def redirect_attack(self, new_target: 'Permanent'):
+        """Redirect the current attack to a different target.
+
+        DCGO ref: attackProcess.SwitchDefender(activateClass, false, card.PermanentOfThisCard())
+        Called by card effects that redirect attacks (e.g. EX11-042, P-094, BT22-061).
+        """
+        pa = self.pending_attack
+        if pa is None:
+            return
+        old_target = pa.effective_target
+        pa.effective_target = new_target
+        self.logger.log(f"[Attack] Attack redirected to {self._perm_ref(new_target)}")
+        self._emit(
+            'attack_redirect',
+            source_card_id=self._card_id(pa.attacker.top_card),
+            target_card_id=self._card_id(new_target.top_card),
+            target_slot=self._perm_slot(new_target),
+        )
+        # Fire OnAttackTargetChanged timing
+        self.execute_effects(EffectTiming.OnAttackTargetChanged, {
+            'attacker': pa.attacker,
+            'old_target': old_target,
+            'new_target': new_target,
+        })
+
     def _enter_counter_timing(self):
         """Check for counter opportunities and enter CounterTiming if any exist."""
         pa = self.pending_attack

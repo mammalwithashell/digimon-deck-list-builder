@@ -85,7 +85,7 @@ class BT12_028(CardScript):
 
             for target in selected:
                 game.register_modifier(
-                    ModifierType.CANNOT_ATTACK, target,
+                    target, ModifierType.CANNOT_ATTACK,
                     value_fn=lambda: True,
                     expiry='end_of_opponent_turn'
                 )

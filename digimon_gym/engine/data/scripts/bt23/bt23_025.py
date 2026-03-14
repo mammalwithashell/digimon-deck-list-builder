@@ -32,6 +32,7 @@ class BT23_025(CardScript):
         # [Hand] [Main] If you have a Digimon or Tamer with the [CS] trait, by paying 5 cost, give 3 of your opponent's Digimon <Security A. -1> until their turn ends. Then, place this card as the top security card.
         effect1 = ICardEffect()
         effect1.set_timing(EffectTiming.OnDeclaration)
+        effect1._is_field_main = True
         effect1.set_effect_name("BT23-025 Give 3 Digimon Sec-1")
         effect1.set_effect_description("[Hand] [Main] If you have a Digimon or Tamer with the [CS] trait, by paying 5 cost, give 3 of your opponent's Digimon <Security A. -1> until their turn ends. Then, place this card as the top security card.")
         effect1.is_optional = True

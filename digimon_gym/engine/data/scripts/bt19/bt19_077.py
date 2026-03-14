@@ -18,6 +18,7 @@ class BT19_077(CardScript):
         # [Main] By suspending this Digimon, 1 of your Digimon may digivolve into a Digimon card in the hand with the digivolution cost reduced by 2.
         effect0 = ICardEffect()
         effect0.set_timing(EffectTiming.OnDeclaration)
+        effect0._is_field_main = True
         effect0.set_effect_name("BT19-077 Your Digimon digivolves")
         effect0.set_effect_description("[Main] By suspending this Digimon, 1 of your Digimon may digivolve into a Digimon card in the hand with the digivolution cost reduced by 2.")
 

@@ -245,8 +245,8 @@ class BT23_059(CardScript):
             if self_perm and game:
                 from digimon_gym.engine.interfaces.modifiers import ModifierType
                 game.register_modifier(
-                    ModifierType.CANNOT_BE_SELECTED_BY_EFFECT, self_perm,
-                    value_fn=lambda: True, expiry='end_of_turn')
+                    self_perm, ModifierType.CANNOT_BE_SELECTED_BY_EFFECT,
+                    expiry='end_of_turn')
 
         effect6.set_on_process_callback(process6)
         effects.append(effect6)

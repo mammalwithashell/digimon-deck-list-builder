@@ -54,21 +54,20 @@ class BT23_091(CardScript):
         def process1(ctx: Dict[str, Any]):
             """Action: Delete opponent's lowest DP Digimon"""
             player = ctx.get('player')
-            perm = ctx.get('permanent')
             game = ctx.get('game')
             if not (player and game):
                 return
             enemy = player.enemy if player else None
             if not enemy:
                 return
-            # Find lowest DP among opponent Digimon
-            dps = [p.dp or 0 for p in enemy.battle_area if p.is_digimon]
-            min_dp = min(dps) if dps else 0
+            opp_digimon = [p for p in enemy.battle_area if p.is_digimon]
+            if not opp_digimon:
+                return
+            min_dp = min((p.dp or 0) for p in opp_digimon)
             def target_filter(p):
                 return p.is_digimon and (p.dp or 0) <= min_dp
             def on_delete(target_perm):
-                if enemy:
-                    enemy.delete_permanent(target_perm)
+                enemy.delete_permanent(target_perm)
             game.effect_select_opponent_permanent(
                 player, on_delete, filter_fn=target_filter, is_optional=False)
 
@@ -118,7 +117,7 @@ class BT23_091(CardScript):
         effect3.set_can_use_condition(condition3)
 
         def process3(ctx: Dict[str, Any]):
-            """Action: Delete opponent's lowest DP Digimon"""
+            """Action: Delete opponent's lowest DP Digimon (Delay)"""
             player = ctx.get('player')
             game = ctx.get('game')
             if not (player and game):
@@ -126,13 +125,14 @@ class BT23_091(CardScript):
             enemy = player.enemy if player else None
             if not enemy:
                 return
-            dps = [p.dp or 0 for p in enemy.battle_area if p.is_digimon]
-            min_dp = min(dps) if dps else 0
+            opp_digimon = [p for p in enemy.battle_area if p.is_digimon]
+            if not opp_digimon:
+                return
+            min_dp = min((p.dp or 0) for p in opp_digimon)
             def target_filter(p):
                 return p.is_digimon and (p.dp or 0) <= min_dp
             def on_delete(target_perm):
-                if enemy:
-                    enemy.delete_permanent(target_perm)
+                enemy.delete_permanent(target_perm)
             game.effect_select_opponent_permanent(
                 player, on_delete, filter_fn=target_filter, is_optional=False)
 
@@ -157,20 +157,20 @@ class BT23_091(CardScript):
         def process4(ctx: Dict[str, Any]):
             """Action: Delete opponent's lowest DP Digimon (security)"""
             player = ctx.get('player')
-            perm = ctx.get('permanent')
             game = ctx.get('game')
             if not (player and game):
                 return
             enemy = player.enemy if player else None
             if not enemy:
                 return
-            dps = [p.dp or 0 for p in enemy.battle_area if p.is_digimon]
-            min_dp = min(dps) if dps else 0
+            opp_digimon = [p for p in enemy.battle_area if p.is_digimon]
+            if not opp_digimon:
+                return
+            min_dp = min((p.dp or 0) for p in opp_digimon)
             def target_filter(p):
                 return p.is_digimon and (p.dp or 0) <= min_dp
             def on_delete(target_perm):
-                if enemy:
-                    enemy.delete_permanent(target_perm)
+                enemy.delete_permanent(target_perm)
             game.effect_select_opponent_permanent(
                 player, on_delete, filter_fn=target_filter, is_optional=False)
 

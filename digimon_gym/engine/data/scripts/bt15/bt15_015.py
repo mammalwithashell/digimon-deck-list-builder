@@ -18,6 +18,7 @@ class BT15_015(CardScript):
         # [Main][Once per turn] By paying 2 memory, this Digimon gains [Security A+1] for the turn. Then, this Digimon may attack.
         effect0 = ICardEffect()
         effect0.set_timing(EffectTiming.OnDeclaration)
+        effect0._is_field_main = True
         effect0.set_effect_name("BT15-015 This Digimon gains Security Attack +1 and can attack")
         effect0.set_effect_description("[Main][Once per turn] By paying 2 memory, this Digimon gains [Security A+1] for the turn. Then, this Digimon may attack.")
         effect0.set_max_count_per_turn(1)

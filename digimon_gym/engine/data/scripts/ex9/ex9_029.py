@@ -56,14 +56,24 @@ class EX9_029(CardScript):
             game = ctx.get('game')
             if not (player and perm and game):
                 return
-            if player.hand_cards:
-                placed = player.hand_cards.pop()
-                perm.add_card_source_bottom(placed)
-            face_down_count = len(perm.digivolution_cards)
-            if len(player.security_cards) <= face_down_count:
-                if player.library_cards:
-                    top_card = player.library_cards.pop(0)
-                    player.security_cards.append(top_card)
+            if not player.hand_cards:
+                return
+
+            def on_hand_selected(selected_card):
+                if selected_card is None:
+                    return
+                if selected_card in player.hand_cards:
+                    player.hand_cards.remove(selected_card)
+                    perm.add_card_source_bottom(selected_card)
+                face_down_count = len(perm.digivolution_cards)
+                if len(player.security_cards) <= face_down_count:
+                    if player.library_cards:
+                        top_card = player.library_cards.pop(0)
+                        player.security_cards.append(top_card)
+
+            game.effect_select_hand_card(
+                player, lambda c: True, on_hand_selected, is_optional=True,
+                prompt="Select 1 card to place face down as bottom digivolution card.")
 
         effect1.set_on_process_callback(_place_and_recover)
         effects.append(effect1)

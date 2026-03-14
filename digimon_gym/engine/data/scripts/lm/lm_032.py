@@ -42,22 +42,27 @@ class LM_032(CardScript):
                 return
             from ....data.enums import CardColor
 
-            # Find a purple Digimon to digivolve
-            own_purple = [p for p in player.battle_area
-                         if p.is_digimon and p.top_card and
-                         CardColor.Purple in (getattr(p.top_card, 'card_colors', []) or [])]
-            if own_purple:
-                target = own_purple[0]
+            # Find a purple Digimon to digivolve - player chooses
+            def purple_perm_filter(p):
+                if not p.is_digimon or not p.top_card:
+                    return False
+                return CardColor.Purple in (getattr(p.top_card, 'card_colors', []) or [])
 
-                def purple_digi_filter(c):
-                    if not getattr(c, 'is_digimon', False):
-                        return False
-                    colors = getattr(c, 'card_colors', []) or []
-                    return CardColor.Purple in colors
+            def purple_digi_filter(c):
+                if not getattr(c, 'is_digimon', False):
+                    return False
+                colors = getattr(c, 'card_colors', []) or []
+                return CardColor.Purple in colors
 
+            def on_target_selected(target_perm):
                 game.effect_digivolve_from_hand(
-                    player, target, purple_digi_filter,
+                    player, target_perm, purple_digi_filter,
                     cost_reduction=3, is_optional=True)
+
+            game.effect_select_own_permanent(
+                player, on_target_selected,
+                filter_fn=purple_perm_filter,
+                is_optional=True)
 
             # Place this card in battle area
             if card and player:
@@ -115,14 +120,32 @@ class LM_032(CardScript):
             if perm:
                 player.delete_permanent(perm)
 
-            # Return 1 purple Digimon from trash to top of deck
-            for c in list(player.trash_cards):
-                if getattr(c, 'is_digimon', False):
-                    colors = getattr(c, 'card_colors', []) or []
-                    if CardColor.Purple in colors:
-                        player.trash_cards.remove(c)
-                        player.library_cards.insert(0, c)
-                        break
+            # Return 1 purple Digimon from trash to top of deck (player chooses)
+            from ....data.enums import GamePhase
+            _SEL_TRASH_START = 130
+
+            def _is_purple_digimon(c):
+                if not getattr(c, 'is_digimon', False):
+                    return False
+                colors = getattr(c, 'card_colors', []) or []
+                return CardColor.Purple in colors
+
+            valid_trash = []
+            for i, c in enumerate(player.trash_cards):
+                if _is_purple_digimon(c):
+                    valid_trash.append(_SEL_TRASH_START + i)
+
+            if valid_trash:
+                def on_trash_selected(idx):
+                    if idx < len(player.trash_cards):
+                        moved = player.trash_cards[idx]
+                        player.trash_cards.remove(moved)
+                        player.library_cards.insert(0, moved)
+
+                game.request_selection(
+                    GamePhase.SelectTrash, player, on_trash_selected,
+                    valid_trash, is_optional=False,
+                    prompt="Select a purple Digimon from trash to return to the top of the deck.")
 
             # If no Digimon, play 1 purple 2000 DP or less from trash
             has_digimon = any(p.is_digimon for p in player.battle_area)

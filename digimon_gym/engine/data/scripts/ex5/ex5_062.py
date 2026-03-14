@@ -72,6 +72,7 @@ class EX5_062(CardScript):
         # [Main] [Once Per Turn] You may trash up to 3 cards from your hand. Then, play 1 purple Digimon card from your trash with the play cost reduced by 3. For each card trashed by this effect, further reduce it by 1.
         effect1 = ICardEffect()
         effect1.set_timing(EffectTiming.OnDeclaration)
+        effect1._is_field_main = True
         effect1.set_effect_name("EX5-062 Trash cards from hand and play 1 Digimon from trash")
         effect1.set_effect_description("[Main] [Once Per Turn] You may trash up to 3 cards from your hand. Then, play 1 purple Digimon card from your trash with the play cost reduced by 3. For each card trashed by this effect, further reduce it by 1.")
         effect1.set_max_count_per_turn(1)

@@ -86,8 +86,14 @@ class EX8_012(CardScript):
 
         def condition2(context: Dict[str, Any]) -> bool:
             # This On Deletion only activates if Growlmon or X Antibody is in digi cards
-            # (granted by When Digivolving effect). Approximate by always allowing.
-            return True
+            perm = card.permanent_of_this_card() if card else None
+            if perm is None:
+                return False
+            digi_cards = getattr(perm, 'card_sources', []) or []
+            return any(
+                c.contains_card_name('Growlmon') or c.contains_card_name('X Antibody')
+                for c in digi_cards if c is not perm.top_card
+            )
         effect2.set_can_use_condition(condition2)
 
         def process2(ctx: Dict[str, Any]):

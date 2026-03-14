@@ -14,8 +14,11 @@ class BT22_032(CardScript):
     def get_card_effects(self, card: 'CardSource') -> List['ICardEffect']:
         effects = []
 
-        # Timing: EffectTiming.OnDestroyedAnyone
-        # [On Deletion] You may play 1 level 3 Digimon card with the [Puppet] trait from your hand without paying the cost.
+        def _is_puppet_trait(c) -> bool:
+            traits = getattr(c, 'card_traits', []) or []
+            return any('Puppet' in t for t in traits)
+
+        # --- Effect 0: [On Deletion] Play 1 level 3 [Puppet] Digimon from hand ---
         effect0 = ICardEffect()
         effect0.set_timing(EffectTiming.OnDestroyedAnyone)
         effect0.set_effect_name("BT22-032 Play 1 level 3 [Puppet] digimon")
@@ -23,30 +26,33 @@ class BT22_032(CardScript):
         effect0.is_optional = True
         effect0.is_on_deletion = True
 
-        effect = effect0  # alias for condition closure
         def condition0(context: Dict[str, Any]) -> bool:
-            # Triggered on deletion — validated by engine timing
             return True
 
         effect0.set_can_use_condition(condition0)
 
         def process0(ctx: Dict[str, Any]):
-            """Action: Play Card"""
             player = ctx.get('player')
-            perm = ctx.get('permanent')
             game = ctx.get('game')
             if not (player and game):
                 return
+
             def play_filter(c):
-                return True
+                if not getattr(c, 'is_digimon', False):
+                    return False
+                level = getattr(c, 'level', None)
+                if level is None or level != 3:
+                    return False
+                return _is_puppet_trait(c)
+
             game.effect_play_from_zone(
-                player, 'hand', play_filter, free=True, is_optional=True)
+                player, 'hand', play_filter, free=True, is_optional=True,
+                prompt="You may play 1 level 3 [Puppet] Digimon from hand.")
 
         effect0.set_on_process_callback(process0)
         effects.append(effect0)
 
-        # Timing: EffectTiming.OnUseAttack
-        # [When Attacking] [Once Per Turn] 1 of your opponent's Digimon gets -2000 DP for the turn.
+        # --- Effect 1 (Inherited): [When Attacking][Once Per Turn] -2000 DP ---
         effect1 = ICardEffect()
         effect1.set_timing(EffectTiming.OnUseAttack)
         effect1.set_effect_name("BT22-032 -2K DP")
@@ -55,29 +61,36 @@ class BT22_032(CardScript):
         effect1.set_max_count_per_turn(1)
         effect1.set_hash_string("BT22_032_WA")
         effect1.is_on_attack = True
-        effect1.dp_modifier = -2000
 
-        effect = effect1  # alias for condition closure
         def condition1(context: Dict[str, Any]) -> bool:
             if card and card.permanent_of_this_card() is None:
                 return False
-            # Triggered on attack — validated by engine timing
             return True
 
         effect1.set_can_use_condition(condition1)
 
         def process1(ctx: Dict[str, Any]):
-            """Action: DP -2000"""
             player = ctx.get('player')
-            perm = ctx.get('permanent')
             game = ctx.get('game')
-            # DP change targets opponent digimon
+            if not (player and game):
+                return
             enemy = player.enemy if player else None
-            if enemy and enemy.battle_area:
-                dp_targets = [p for p in enemy.battle_area if p.is_digimon and p.dp is not None]
-                if dp_targets:
-                    target = min(dp_targets, key=lambda p: p.dp)
-                    target.change_dp(-2000)
+            if not enemy:
+                return
+            opp_digimon = [p for p in enemy.battle_area if p.is_digimon]
+            if not opp_digimon:
+                return
+
+            def target_filter(p):
+                return p.is_digimon
+
+            def on_select(target_perm):
+                target_perm.change_dp(-2000)
+
+            game.effect_select_opponent_permanent(
+                player, on_select, filter_fn=target_filter, is_optional=False,
+                prompt="Select 1 opponent's Digimon to give -2000 DP."
+            )
 
         effect1.set_on_process_callback(process1)
         effects.append(effect1)

@@ -94,15 +94,15 @@ class BT24_100(CardScript):
         effect1.set_on_process_callback(process1)
         effects.append(effect1)
 
-        # --- Effect 2: Delay — [When Attacking] gain 2 memory ---
+        # --- Effect 2: Delay — Gain 2 memory ---
         effect2 = ICardEffect()
         effect2.set_timing(EffectTiming.OnDeclaration)
-        effect2.set_effect_name("BT24-100 Delay: gain 2 memory when attacking")
+        effect2._is_field_main = True
+        effect2.set_effect_name("BT24-100 Delay: Gain 2 memory")
         effect2.set_effect_description(
-            "[When Attacking] Gain 2 memory."
+            "[Main] <Delay> Gain 2 memory."
         )
-        effect2._is_delay = True
-        effect2.is_on_attack = True
+        effect2._is_delay_effect = True
 
         def condition2(context: Dict[str, Any]) -> bool:
             if card and card.permanent_of_this_card() is None:

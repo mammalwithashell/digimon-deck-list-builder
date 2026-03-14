@@ -54,7 +54,7 @@ class BT24_085(CardScript):
         )
         effect1.set_effect_description(
             "[End of Your Turn] By suspending this Tamer, you may use 1 [TS] trait Option card "
-            "with as high or lower a use cost as your opponent's number of Digimon from your hand "
+            "with as high or lower a use cost as your opponent's memory from your hand "
             "without paying the cost. Then, 1 of your Digimon with the [TS] trait may attack."
         )
         effect1.is_optional = True
@@ -67,6 +67,10 @@ class BT24_085(CardScript):
             # Cannot pay cost if already suspended
             tamer_perm = card.permanent_of_this_card() if card else None
             if tamer_perm and tamer_perm.is_suspended:
+                return False
+            # Only activatable when memory is on opponent's side (player memory <= 0)
+            game = context.get('game')
+            if game is not None and game.memory > 0:
                 return False
             return True
 
@@ -86,22 +90,28 @@ class BT24_085(CardScript):
             if not tamer_perm.is_suspended:
                 return  # Suspension failed
 
-            # Count opponent's Digimon on field
+            # Card text: "with as high or lower a use cost as your opponent's memory"
+            # Opponent's memory = how much memory is on the opponent's side
+            # In the engine, memory gauge is from player's perspective;
+            # opponent's memory = abs(min(0, game.memory)) when it's our turn
+            # (i.e. if memory is negative, opponent has that much)
+            # But at end of turn the memory may have shifted. We use the absolute
+            # value of negative memory or 0.
             enemy = player.enemy
             if not enemy:
                 return
-            opp_digimon_count = sum(
-                1 for p in enemy.battle_area if p.is_digimon
-            )
+            # Memory from opponent's perspective: if game.memory <= 0, opponent has abs(game.memory)
+            # If game.memory > 0, opponent has 0
+            opp_memory = abs(min(0, game.memory)) if game else 0
 
-            # Select and use 1 [TS] Option from hand with cost <= opponent Digimon count
+            # Select and use 1 [TS] Option from hand with use cost <= opponent's memory
             def option_filter(c):
                 if not getattr(c, 'is_option', False):
                     return False
                 if not any('TS' in _t for _t in (getattr(c, 'card_traits', []) or [])):
                     return False
-                cost = getattr(c, 'get_cost_itself', 0)
-                return cost <= opp_digimon_count
+                cost = c.get_cost_itself if hasattr(c, 'get_cost_itself') else getattr(c, 'play_cost', 0)
+                return cost <= opp_memory
 
             game.effect_play_from_zone(
                 player, 'hand', option_filter, free=True, is_optional=True,

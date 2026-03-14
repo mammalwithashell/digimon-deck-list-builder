@@ -46,28 +46,59 @@ class EX1_071(CardScript):
             if not (player and game):
                 return
 
-            # One-shot flag: consumed after first digivolve uses it
-            consumed = [False]
-
-            def digi_cost_condition(target, context):
-                return not consumed[0]
-
-            def digi_cost_value(current, target, context):
-                return current - 4
-
-            # Register on ALL current Digimon (covers the "next" one that digivolves)
+            # Collect all colors from Digimon on field to determine valid
+            # hand cards (same color as any digivolving candidate)
+            field_colors = set()
             for field_perm in player.battle_area:
-                if field_perm.is_digimon:
-                    entry = game.register_modifier(
-                        field_perm, ModifierType.CHANGE_DIGIVOLUTION_COST,
-                        condition=digi_cost_condition,
-                        value_fn=digi_cost_value,
-                        expiry='end_of_turn',
-                    )
+                if field_perm.is_digimon and field_perm.top_card:
+                    for c in (getattr(field_perm.top_card, 'colors', []) or []):
+                        field_colors.add(c)
 
-            # Auto-trash a same-color Digimon from hand after the next digivolve
-            # (approximation: we trash the first matching card when the modifier
-            # is consumed, via a WhenDigivolving observer on each Digimon)
+            if not field_colors:
+                return
+
+            def color_match_filter(c):
+                if not getattr(c, 'is_digimon', False):
+                    return False
+                hc_colors = set(getattr(c, 'colors', []) or [])
+                return bool(hc_colors & field_colors)
+
+            # Check there is at least one valid hand card to trash
+            if not any(color_match_filter(hc) for hc in player.hand_cards):
+                return
+
+            def on_hand_selected(trashed_card):
+                player.hand_cards.remove(trashed_card)
+                player.trash_cards.append(trashed_card)
+                game.logger.log(
+                    f"[EX1-071] Trashed {game._card_ref(trashed_card)} "
+                    f"from hand to reduce next digivolution cost by 4.")
+
+                # One-shot flag: consumed after first digivolve uses it
+                consumed = [False]
+
+                def digi_cost_condition(target, context):
+                    return not consumed[0]
+
+                def digi_cost_value(current, target, context):
+                    consumed[0] = True
+                    return current - 4
+
+                # Register cost reduction on ALL current Digimon
+                for field_perm in player.battle_area:
+                    if field_perm.is_digimon:
+                        game.register_modifier(
+                            field_perm, ModifierType.CHANGE_DIGIVOLUTION_COST,
+                            condition=digi_cost_condition,
+                            value_fn=digi_cost_value,
+                            expiry='end_of_turn',
+                        )
+
+            game.effect_select_hand_card(
+                player, color_match_filter, on_hand_selected,
+                is_optional=True,
+                prompt="Select a same-color Digimon card from hand to trash (reduces next digi cost by 4)."
+            )
 
         effect0.set_on_process_callback(process0)
         effects.append(effect0)

@@ -2,7 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
-from ....data.enums import EffectTiming
+from ....data.enums import EffectTiming, GamePhase
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -132,6 +132,9 @@ class LM_029(CardScript):
             return any(p.is_digimon for p in enemy.battle_area)
         effect2.set_can_use_condition(condition2)
 
+        # Trash selection action-ID offset (mirrors game.py SEL_TRASH_START)
+        _SEL_TRASH_START = 130
+
         def process2(ctx: Dict[str, Any]):
             player = ctx.get('player')
             game = ctx.get('game')
@@ -143,21 +146,42 @@ class LM_029(CardScript):
             if perm:
                 player.delete_permanent(perm)
 
-            # Return 1 yellow Digimon card from trash to top of deck
-            qualifying = [c for c in player.trash_cards if _is_yellow_digimon(c)]
-            if qualifying:
-                chosen = qualifying[0]
-                player.trash_cards.remove(chosen)
-                player.library_cards.insert(0, chosen)
-
-            # Then, if you don't have a Digimon, play 1 yellow Digimon DP <= 2000 from trash
-            own_digimon = [p for p in player.battle_area if p.is_digimon]
-            if not own_digimon:
-                game.effect_play_from_zone(
-                    player, 'trash', _is_yellow_digimon_dp_2000,
-                    free=True, is_optional=True,
-                    prompt="Select 1 yellow Digimon with 2000 DP or less from trash to play."
+            def _after_return():
+                # Then, if you don't have a Digimon, play 1 yellow Digimon DP <= 2000 from trash
+                has_digimon = any(
+                    p.is_digimon for p in (player.battle_area or [])
                 )
+                if not has_digimon:
+                    game.effect_play_from_zone(
+                        player, 'trash', _is_yellow_digimon_dp_2000,
+                        free=True, is_optional=True,
+                        prompt="Select 1 yellow Digimon with 2000 DP or less from trash to play."
+                    )
+
+            # Return 1 yellow Digimon card from trash to top of deck (player selection)
+            valid_trash = []
+            for i, c in enumerate(player.trash_cards):
+                if _is_yellow_digimon(c):
+                    valid_trash.append(_SEL_TRASH_START + i)
+
+            if valid_trash:
+                def on_trash_selected(action_id: int):
+                    idx = action_id - _SEL_TRASH_START
+                    if 0 <= idx < len(player.trash_cards):
+                        moved = player.trash_cards.pop(idx)
+                        player.library_cards.insert(0, moved)
+                    _after_return()
+
+                game.request_selection(
+                    GamePhase.SelectTrash,
+                    player,
+                    on_trash_selected,
+                    valid_trash,
+                    is_optional=False,
+                    prompt="Select a yellow Digimon from your trash to place at the top of your deck.",
+                )
+            else:
+                _after_return()
 
         effect2.set_on_process_callback(process2)
         effects.append(effect2)

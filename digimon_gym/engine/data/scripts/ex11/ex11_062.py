@@ -12,10 +12,12 @@ class EX11_062(CardScript):
     """EX11-062 Shoto Kazama | Tamer, Green, LIBERATOR, Cost 4
 
     [Start of Your Turn] If you have 2 or less memory, set it to 3.
-    [All Turns] When any Digimon suspend, by suspending this Tamer, if effects suspended
-        those Digimon, <Draw 1>. After, 1 of your Digimon with [Avian] or [Bird] in any of
-        its traits or the [Vortex Warriors] trait gets +3000 DP until your opponent's turn ends.
-    [Your Turn] While your opponent has no unsuspended Digimon, your <Vortex> can also attack players.
+    [All Turns] When any Digimon suspend, by suspending this Tamer, if effects
+        suspended those Digimon, <Draw 1>. After, 1 of your Digimon with
+        [Avian] or [Bird] in any of its traits or the [Vortex Warriors] trait
+        gets +3000 DP until your opponent's turn ends.
+    [Your Turn] While your opponent has no unsuspended Digimon, your <Vortex>
+        can also attack players.
     [Security] Play this card without paying the cost.
     """
 
@@ -47,11 +49,7 @@ class EX11_062(CardScript):
         effects.append(effect_mem)
 
         # --- [All Turns] When any Digimon suspend, by suspending this Tamer,
-        #     if effects suspended those Digimon: Draw 1. Then buff 1 Avian/Bird/Vortex Warriors Digimon +3000 DP. ---
-        #
-        # "By suspending this Tamer" = cost: this Tamer must not be suspended yet.
-        # "If effects suspended those Digimon" = the suspending Digimon was NOT suspended by
-        #   attacking (detected via is_attacking flag, which is True only when suspended by attack).
+        #     if effects suspended those Digimon: Draw 1. Then buff Avian/Bird/VW ---
         effect_tap = ICardEffect()
         effect_tap.set_effect_name(
             "EX11-062 By suspending this Tamer (if effects suspended): Draw 1, buff Avian/Bird/VW Digimon +3k DP"
@@ -68,15 +66,12 @@ class EX11_062(CardScript):
         def cond_tap(context: Dict[str, Any]) -> bool:
             if card and card.permanent_of_this_card() is None:
                 return False
-            # This tamer must not already be suspended (it is the cost)
             tamer_perm = card.permanent_of_this_card() if card else None
             if not tamer_perm or tamer_perm.is_suspended:
                 return False
-            # The triggering permanent must be a Digimon
             suspended_perm = context.get('suspended_permanent')
             if not suspended_perm or not suspended_perm.is_digimon:
                 return False
-            # The Digimon must have been suspended by an effect (not by attacking)
             if getattr(suspended_perm, 'is_attacking', False):
                 return False
             return True
@@ -88,15 +83,14 @@ class EX11_062(CardScript):
             game = ctx.get('game')
             if not (player and game):
                 return
-            # Cost: suspend this Tamer
             tamer_perm = card.permanent_of_this_card() if card else None
             if not tamer_perm:
                 return
             tamer_perm.suspend()
-            # Effect: Draw 1
+            # Draw 1
             player.draw_cards(1)
-            # Effect: 1 of your Digimon with [Avian]/[Bird] in traits or [Vortex Warriors] gets +3000 DP
-            from digimon_gym.engine.interfaces.modifiers import ModifierType
+            # 1 of your Digimon with [Avian]/[Bird] in traits or [Vortex Warriors] gets +3000 DP
+            from ....interfaces.modifiers import ModifierType
 
             def buff_filter(p):
                 if not p.is_digimon or not p.top_card:
@@ -109,8 +103,8 @@ class EX11_062(CardScript):
 
             def on_buff(target_perm):
                 game.register_modifier(
-                    ModifierType.CHANGE_DP,
                     target_perm,
+                    ModifierType.CHANGE_DP,
                     value_fn=lambda: 3000,
                     expiry='end_of_opponent_turn',
                 )
@@ -125,12 +119,8 @@ class EX11_062(CardScript):
         effect_tap.set_on_process_callback(process_tap)
         effects.append(effect_tap)
 
-        # --- [Your Turn] While opponent has no unsuspended Digimon, your <Vortex> can also attack players.
-        #     Implemented as a continuous VORTEX_CAN_ATTACK_PLAYERS modifier registered for each
-        #     Vortex Digimon, with a condition that checks the state dynamically. ---
-        #
-        # This is a field-presence continuous effect: registered once when this Tamer enters the
-        # field, active while condition holds, expires when Tamer leaves field.
+        # --- [Your Turn] While opponent has no unsuspended Digimon,
+        #     your <Vortex> can also attack players. ---
         effect_cont = ICardEffect()
         effect_cont.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect_cont.set_effect_name(
@@ -145,7 +135,6 @@ class EX11_062(CardScript):
         def cond_cont(context: Dict[str, Any]) -> bool:
             if card and card.permanent_of_this_card() is None:
                 return False
-            # Triggered when this Tamer enters the field
             played_perm = context.get('played_permanent') or context.get('permanent')
             this_perm = card.permanent_of_this_card() if card else None
             if played_perm is not this_perm:
@@ -160,20 +149,12 @@ class EX11_062(CardScript):
             tamer_perm = card.permanent_of_this_card() if card else None
             if not (player and game and tamer_perm):
                 return
-            from digimon_gym.engine.interfaces.modifiers import ModifierType
+            from ....interfaces.modifiers import ModifierType
 
-            # Register VORTEX_CAN_ATTACK_PLAYERS on each own Vortex Digimon, conditioned on:
-            # 1. It is the owner's turn
-            # 2. Opponent has no unsuspended Digimon
-            # We register it once on the tamer itself as a marker, and the action_mask
-            # will query this. However, since modifiers target permanents, we register it
-            # on each Vortex Digimon currently in play, plus rely on OnEnterField for future ones.
-            # Practical approach: register a permanent-scoped modifier on each current Vortex Digimon.
             def has_vortex(perm):
                 return perm.is_digimon and perm.has_keyword('_is_vortex')
 
             def condition_fn(target_perm, context_inner):
-                # Active only on player's own turn and while opponent has no unsuspended Digimon
                 owner = card.owner if card else None
                 if not (owner and owner.is_my_turn):
                     return False
@@ -189,8 +170,8 @@ class EX11_062(CardScript):
             for vortex_perm in list(player.battle_area):
                 if has_vortex(vortex_perm):
                     game.register_modifier(
-                        ModifierType.VORTEX_CAN_ATTACK_PLAYERS,
                         vortex_perm,
+                        ModifierType.VORTEX_CAN_ATTACK_PLAYERS,
                         condition=condition_fn,
                         value_fn=lambda: True,
                         source_effect=effect_cont,

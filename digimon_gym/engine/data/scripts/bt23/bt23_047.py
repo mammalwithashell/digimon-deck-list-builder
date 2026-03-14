@@ -83,37 +83,73 @@ class BT23_047(CardScript):
         effect3.set_can_use_condition(condition3)
         effects.append(effect3)
 
+        def _apply_cannot_unsuspend_and_attack(player, game, enemy):
+            """Apply CANNOT_UNSUSPEND to all opponent Digimon and grant FORCE_ATTACK."""
+            from ....interfaces.modifiers import ModifierType
+            for p in enemy.battle_area:
+                if p.is_digimon:
+                    game.register_modifier(
+                        p, ModifierType.CANNOT_UNSUSPEND,
+                        expiry='end_of_opponent_turn',
+                    )
+            # Then, this Digimon may attack
+            owner_perm = card.permanent_of_this_card() if card else None
+            if owner_perm and not owner_perm.is_suspended:
+                game.register_modifier(
+                    owner_perm, ModifierType.FORCE_ATTACK,
+                    value_fn=lambda: True, expiry='end_of_turn')
+
         def _shared_suspend_effect(ctx: Dict[str, Any]):
             """
-            Suspend up to 5 opponent Digimon or Tamers.
-            Apply CANNOT_UNSUSPEND to all existing opponent Digimon until their next
-            unsuspend phase (gap: does not cover Digimon that enter after this resolves).
-            Then this Digimon may attack (force_attack — engine stub).
+            Suspend 5 of opponent's Digimon or Tamers (player selects each via chained callbacks).
+            None of opponent's Digimon can unsuspend in their next unsuspend phase.
+            Then this Digimon may attack (FORCE_ATTACK).
             """
             player = ctx.get('player')
             game = ctx.get('game')
             if not (player and game):
                 return
             enemy = player.enemy if player else None
-            if enemy:
-                # Suspend up to 5 opponent Digimon or Tamers (player selects)
-                targets = [
-                    p for p in enemy.battle_area
-                    if (p.is_digimon or p.is_tamer) and not p.is_suspended
-                ][:5]
-                for t in targets:
-                    t.suspend()
-                # Apply CANNOT_UNSUSPEND to all current opponent Digimon for their next unsuspend phase
-                # NOTE: Aura-style gap — permanents that enter the field after this won't be covered.
-                from digimon_gym.engine.interfaces.modifiers import ModifierType
-                for p in enemy.battle_area:
-                    if p.is_digimon:
-                        game.register_modifier(
-                            p, ModifierType.CANNOT_UNSUSPEND,
-                            expiry='end_of_opponent_turn',
-                        )
-            # Then, this Digimon may attack
-            pass  # descriptive-tagged: force_attack — engine does not yet support optional self-attack
+            if not enemy:
+                return
+
+            def suspend_filter(p):
+                return (p.is_digimon or p.is_tamer) and not p.is_suspended
+
+            # Count how many we need to suspend (up to 5, mandatory)
+            num_available = sum(1 for p in enemy.battle_area if suspend_filter(p))
+            num_to_suspend = min(5, num_available)
+
+            if num_to_suspend == 0:
+                _apply_cannot_unsuspend_and_attack(player, game, enemy)
+                return
+
+            def _make_suspend_callback(remaining):
+                """Create a callback that suspends the selected target and chains the next selection."""
+                def on_suspend(target_perm):
+                    target_perm.suspend()
+                    if remaining <= 1:
+                        # All suspends done
+                        _apply_cannot_unsuspend_and_attack(player, game, enemy)
+                    else:
+                        # Chain next selection (filter re-evaluated at call time)
+                        has_next = any(suspend_filter(p) for p in enemy.battle_area)
+                        if has_next:
+                            game.effect_select_opponent_permanent(
+                                player, _make_suspend_callback(remaining - 1),
+                                filter_fn=suspend_filter,
+                                is_optional=False,
+                                prompt=f"Suspend opponent's Digimon or Tamer ({num_to_suspend - remaining + 2}/{num_to_suspend}).")
+                        else:
+                            _apply_cannot_unsuspend_and_attack(player, game, enemy)
+                return on_suspend
+
+            # Start the chain with the first selection
+            game.effect_select_opponent_permanent(
+                player, _make_suspend_callback(num_to_suspend),
+                filter_fn=suspend_filter,
+                is_optional=False,
+                prompt=f"Suspend opponent's Digimon or Tamer (1/{num_to_suspend}).")
 
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [On Play] Suspend 5 of your opponent's Digimon or Tamers. None can unsuspend next

@@ -46,6 +46,7 @@ class BT21_085(CardScript):
         # [Main] By suspending this Tamer and trashing the top stacked card of 1 of your [Armor Form] trait Digimon, <Draw 1> and gain 1 memory.
         effect1 = ICardEffect()
         effect1.set_timing(EffectTiming.OnDeclaration)
+        effect1._is_field_main = True
         effect1.set_effect_name("BT21-085 Trash top card of [Armor Form] Digimon to <Draw 1> and gain 1 memory")
         effect1.set_effect_description("[Main] By suspending this Tamer and trashing the top stacked card of 1 of your [Armor Form] trait Digimon, <Draw 1> and gain 1 memory.")
 

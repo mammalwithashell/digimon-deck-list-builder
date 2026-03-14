@@ -42,6 +42,7 @@ class BT16_090(CardScript):
         # [Main] [Once Per Turn] By deleting 1 of your [Ukkomon] and trashing 1 of your Digimon in the breeding area, you may play 1 [BigUkkomon] in your breeding area from your hand for a cost of 3.
         effect1 = ICardEffect()
         effect1.set_timing(EffectTiming.OnDeclaration)
+        effect1._is_field_main = True
         effect1.set_effect_name("BT16-090 Delete [Ukkomon] and breeding area Digimon to play [BigUkkomon]")
         effect1.set_effect_description("[Main] [Once Per Turn] By deleting 1 of your [Ukkomon] and trashing 1 of your Digimon in the breeding area, you may play 1 [BigUkkomon] in your breeding area from your hand for a cost of 3.")
         effect1.is_optional = True

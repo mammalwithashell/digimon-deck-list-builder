@@ -82,6 +82,7 @@ class P_225(CardScript):
         # [Main] <Delay>, By placing the top stacked card of any of your level 4 or higher [CS] Trait Digimon as its bottom digivolution card, gain 2 memory.
         effect3 = ICardEffect()
         effect3.set_timing(EffectTiming.OnDeclaration)
+        effect3._is_field_main = True
         effect3.set_effect_name("P-225 By placing the top stacked card of any of your level 4 or higher [CS] Trait Digimon as its bottom digivolution card, gain 2 memory.")
         effect3.set_effect_description("[Main] <Delay>, By placing the top stacked card of any of your level 4 or higher [CS] Trait Digimon as its bottom digivolution card, gain 2 memory.")
 

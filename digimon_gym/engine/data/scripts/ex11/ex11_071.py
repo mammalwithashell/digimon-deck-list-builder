@@ -53,6 +53,7 @@ class EX11_071(CardScript):
         # [Main] By returning this Tamer to the bottom of the deck, you may play 1 play cost 4 or higher [Royal Knight] or [LIBERATOR] trait card from your hand with the play cost reduced by 2.
         effect1 = ICardEffect()
         effect1.set_timing(EffectTiming.OnDeclaration)
+        effect1._is_field_main = True
         effect1.set_effect_name("EX11-071 Return tamer to play 4 cost or higher [Royal Knight] or [LIBERATOR] trait card for 2 less")
         effect1.set_effect_description("[Main] By returning this Tamer to the bottom of the deck, you may play 1 play cost 4 or higher [Royal Knight] or [LIBERATOR] trait card from your hand with the play cost reduced by 2.")
         effect1.is_optional = True

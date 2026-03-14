@@ -198,35 +198,57 @@ class BT24_029(CardScript):
 
         effect3.set_can_use_condition(condition3)
 
+        def _ts_cost5_filter(cs) -> bool:
+            cost = getattr(cs, 'play_cost', None)
+            if cost is None or cost > 5:
+                return False
+            traits = getattr(cs, 'card_traits', []) or []
+            return any('TS' in t for t in traits)
+
         def process3(ctx: Dict[str, Any]):
-            """Play cost 5 or lower [TS] card from digi sources."""
+            """Play cost 5 or lower [TS] card from digi sources (player selects)."""
             player = ctx.get('player')
             perm = ctx.get('permanent')
             game = ctx.get('game')
             if not (player and perm and game):
                 return
+            from ....data.enums import GamePhase
+            from ....game.constants import SOURCES_PER_FIELD
+            field_idx = None
+            for fi, fp in enumerate(player.battle_area):
+                if fp is perm:
+                    field_idx = fi
+                    break
+            if field_idx is None:
+                return
+            base = 2000 + field_idx * SOURCES_PER_FIELD
             top = perm.top_card
-            eligible = []
-            for cs in perm.card_sources:
+            valid = []
+            for i, cs in enumerate(perm.card_sources):
                 if cs is top:
                     continue
-                cost = getattr(cs, 'play_cost', None)
-                if cost is None or cost > 5:
-                    continue
-                traits = getattr(cs, 'card_traits', []) or []
-                if not any('TS' in t for t in traits):
-                    continue
-                eligible.append(cs)
-            if not eligible:
+                if _ts_cost5_filter(cs) and (base + i) < 2168:
+                    valid.append(base + i)
+            if not valid:
                 return
-            selected = eligible[0]
-            perm.card_sources.remove(selected)
-            played = player.play_card_from_source(selected, pay_cost=False)
-            game.execute_effects(
-                EffectTiming.OnEnterFieldAnyone,
-                {"played_card": selected, "played_permanent": played,
-                 "event_player": player},
-            )
+
+            def on_source_selected(action_id):
+                idx = action_id - base
+                if not (0 <= idx < len(perm.card_sources)):
+                    return
+                selected = perm.card_sources[idx]
+                perm.card_sources.remove(selected)
+                played = player.play_card_from_source(selected, pay_cost=False)
+                game.execute_effects(
+                    EffectTiming.OnEnterFieldAnyone,
+                    {"played_card": selected, "played_permanent": played,
+                     "event_player": player},
+                )
+
+            game.request_selection(
+                GamePhase.SelectSource, player, on_source_selected,
+                valid, is_optional=True,
+                prompt="Select 1 play cost 5 or lower [TS] card from digivolution cards to play.")
 
         effect3.set_on_process_callback(process3)
         effects.append(effect3)
@@ -268,40 +290,62 @@ class BT24_029(CardScript):
 
         effect4.set_can_use_condition(condition4)
 
+        def _blue_ts_lv4_filter(cs) -> bool:
+            if not getattr(cs, 'is_digimon', False):
+                return False
+            level = getattr(cs, 'level', None)
+            if level is None or level > 4:
+                return False
+            colors = [c.name for c in (getattr(cs, 'card_colors', None) or [])]
+            if 'Blue' not in colors:
+                return False
+            traits = getattr(cs, 'card_traits', []) or []
+            return any('TS' in t for t in traits)
+
         def process4(ctx: Dict[str, Any]):
-            """Play Lv.4 or lower blue [TS] Digimon from digi sources."""
+            """Play Lv.4 or lower blue [TS] Digimon from digi sources (player selects)."""
             player = ctx.get('player')
             perm = ctx.get('permanent')
             game = ctx.get('game')
             if not (player and perm and game):
                 return
+            from ....data.enums import GamePhase
+            from ....game.constants import SOURCES_PER_FIELD
+            field_idx = None
+            for fi, fp in enumerate(player.battle_area):
+                if fp is perm:
+                    field_idx = fi
+                    break
+            if field_idx is None:
+                return
+            base = 2000 + field_idx * SOURCES_PER_FIELD
             top = perm.top_card
-            eligible = []
-            for cs in perm.card_sources:
+            valid = []
+            for i, cs in enumerate(perm.card_sources):
                 if cs is top:
                     continue
-                if not getattr(cs, 'is_digimon', False):
-                    continue
-                level = getattr(cs, 'level', None)
-                if level is None or level > 4:
-                    continue
-                colors = [c.name for c in (getattr(cs, 'card_colors', None) or [])]
-                if 'Blue' not in colors:
-                    continue
-                traits = getattr(cs, 'card_traits', []) or []
-                if not any('TS' in t for t in traits):
-                    continue
-                eligible.append(cs)
-            if not eligible:
+                if _blue_ts_lv4_filter(cs) and (base + i) < 2168:
+                    valid.append(base + i)
+            if not valid:
                 return
-            selected = eligible[0]
-            perm.card_sources.remove(selected)
-            played = player.play_card_from_source(selected, pay_cost=False)
-            game.execute_effects(
-                EffectTiming.OnEnterFieldAnyone,
-                {"played_card": selected, "played_permanent": played,
-                 "event_player": player},
-            )
+
+            def on_source_selected(action_id):
+                idx = action_id - base
+                if not (0 <= idx < len(perm.card_sources)):
+                    return
+                selected = perm.card_sources[idx]
+                perm.card_sources.remove(selected)
+                played = player.play_card_from_source(selected, pay_cost=False)
+                game.execute_effects(
+                    EffectTiming.OnEnterFieldAnyone,
+                    {"played_card": selected, "played_permanent": played,
+                     "event_player": player},
+                )
+
+            game.request_selection(
+                GamePhase.SelectSource, player, on_source_selected,
+                valid, is_optional=True,
+                prompt="Select 1 level 4 or lower blue [TS] Digimon from digivolution cards to play.")
 
         effect4.set_on_process_callback(process4)
         effects.append(effect4)

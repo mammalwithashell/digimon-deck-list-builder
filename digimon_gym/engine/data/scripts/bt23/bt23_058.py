@@ -93,7 +93,10 @@ class BT23_058(CardScript):
             my_perm = card.permanent_of_this_card() if card else None
             if my_perm:
                 my_perm.suspend()
-            # Engine handles removal prevention via WhenRemoveField callback interaction
+            # Prevent the leaving permanent from being removed
+            leaving_perm = ctx.get('event_permanent') or perm
+            if leaving_perm:
+                leaving_perm._will_not_be_removed = True
 
         effect3.set_on_process_callback(process3)
         effects.append(effect3)

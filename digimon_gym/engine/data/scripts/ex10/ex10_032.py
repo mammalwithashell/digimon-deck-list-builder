@@ -186,6 +186,7 @@ class EX10_032(CardScript):
 
                 def on_target(target_perm):
                     # Trash 1 Mineral/Rock source from the selected Digimon
+                    # Use trash_digivolution_cards for proper engine handling
                     trashed_card = None
                     for src in list(target_perm.card_sources):
                         if src is target_perm.top_card:
@@ -196,15 +197,20 @@ class EX10_032(CardScript):
                             break
                     if trashed_card is None:
                         return
-                    target_perm.card_sources.remove(trashed_card)
+                    if trashed_card in target_perm.card_sources:
+                        target_perm.card_sources.remove(trashed_card)
                     player.trash_cards.append(trashed_card)
+                    game.execute_effects(EffectTiming.OnDigivolutionCardDiscarded,
+                                         {'trashed_cards': [trashed_card],
+                                          'permanent': target_perm})
                     # Grant Collision, Piercing until end of opponent's turn
                     target_perm.grant_keyword('_is_collision', expiry_turn)
                     target_perm.grant_keyword('_is_piercing', expiry_turn)
                     # Grant +3000 DP until end of opponent's turn
                     game.register_modifier(
-                        ModifierType.CHANGE_DP, target_perm,
-                        value_fn=lambda: 3000,
+                        target_perm,
+                        ModifierType.CHANGE_DP,
+                        value_fn=lambda cur, t, c: cur + 3000,
                         expiry='end_of_opponent_turn'
                     )
 
@@ -233,6 +239,16 @@ class EX10_032(CardScript):
         effect_inh.is_inherited_effect = True
 
         def condition_inh(context: Dict[str, Any]) -> bool:
+            # Check this card was the one trashed
+            trashed_cards = context.get('trashed_cards', [])
+            if card not in trashed_cards:
+                return False
+            # Check the permanent has [Mineral] or [Rock] trait
+            permanent = context.get('permanent')
+            if permanent is None:
+                return False
+            if not (permanent.has_trait('Mineral') or permanent.has_trait('Rock')):
+                return False
             return True
 
         effect_inh.set_can_use_condition(condition_inh)

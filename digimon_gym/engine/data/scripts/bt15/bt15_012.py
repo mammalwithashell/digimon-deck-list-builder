@@ -13,6 +13,7 @@ class BT15_012(CardScript):
 
     def get_card_effects(self, card: 'CardSource') -> List['ICardEffect']:
         effects = []
+        card.also_treated_as_names = ['Shoutmon', 'Ballistamon']
 
         # Timing: EffectTiming.None
         # Also Treated As

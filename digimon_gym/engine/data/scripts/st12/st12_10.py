@@ -64,35 +64,40 @@ class ST12_10(CardScript):
         effect1.set_on_process_callback(process1)
         effects.append(effect1)
 
-        # Timing: EffectTiming.OnEnterFieldAnyone
-        # [Your Turn][Once Per Turn] When you play another Digimon by an effect, this Digimon gets +3000 DP and gains <Security Attack +1> for the turn. (This Digimon checks 1 additional security card.)
+        # [Your Turn][Once Per Turn] When you play another Digimon by an effect,
+        # this Digimon gets +3000 DP and gains <Security Attack +1> for the turn.
+        # Uses _is_play_observer pattern: engine fires this via _fire_play_observers()
+        # which only fires on OTHER permanents entering (excludes self).
+        # NOTE: Engine gap — cannot distinguish "by an effect" vs normal play.
+        # In Jesmon decks, most Digimon plays during combat ARE by effect (Sistermon
+        # from When Attacking), so this is a reasonable approximation.
         effect2 = ICardEffect()
-        effect2.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect2.set_effect_name("ST12-10 This Digimon gains DP +3000 and Security Attack +1")
         effect2.set_effect_description("[Your Turn][Once Per Turn] When you play another Digimon by an effect, this Digimon gets +3000 DP and gains <Security Attack +1> for the turn. (This Digimon checks 1 additional security card.)")
         effect2.set_max_count_per_turn(1)
         effect2.set_hash_string("DP+3000AndSAttack+1_ST12_10")
-        effect2.is_on_play = True
-        effect2.dp_modifier = 3000
+        effect2._is_play_observer = True
 
-        effect = effect2  # alias for condition closure
         def condition2(context: Dict[str, Any]) -> bool:
             if card and card.permanent_of_this_card() is None:
                 return False
+            # Must be your turn
             if not (card and card.owner and card.owner.is_my_turn):
+                return False
+            # Must be a Digimon that was played
+            played_perm = context.get('played_permanent')
+            if played_perm and not played_perm.is_digimon:
                 return False
             return True
 
         effect2.set_can_use_condition(condition2)
 
         def process2(ctx: Dict[str, Any]):
-            """Action: DP +3000 and SA+1"""
-            player = ctx.get('player')
-            perm = ctx.get('permanent')
-            game = ctx.get('game')
-            if perm:
-                perm.change_dp(3000)
-                perm._temp_sa_modifier += 1
+            """Action: DP +3000 and SA+1 for the turn"""
+            this_perm = card.permanent_of_this_card() if card else None
+            if this_perm:
+                this_perm.change_dp(3000)
+                this_perm._temp_sa_modifier += 1
 
         effect2.set_on_process_callback(process2)
         effects.append(effect2)

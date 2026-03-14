@@ -65,6 +65,7 @@ class BT1_087(CardScript):
 
         def process1(ctx: Dict[str, Any]):
             """Search security, add 1 to hand, recovery if yellow, shuffle."""
+            import random
             player = ctx.get('player')
             game = ctx.get('game')
             if not (player and game):
@@ -72,20 +73,24 @@ class BT1_087(CardScript):
             if not player.security_cards:
                 return
 
-            # Pick first card from security (simplified — no interactive pick)
-            import random
-            if player.security_cards:
-                picked = player.security_cards.pop(0)
-                player.hand_cards.append(picked)
+            def on_security_selected(selected):
+                if selected in player.security_cards:
+                    player.security_cards.remove(selected)
+                    player.hand_cards.append(selected)
 
-                # If it's yellow, recovery +1
-                colors = getattr(picked, 'card_colors', []) or []
-                color_names = [col.name for col in colors]
-                if 'Yellow' in color_names:
-                    player.recovery(1)
+                    # If it's yellow, recovery +1
+                    colors = getattr(selected, 'card_colors', []) or []
+                    color_names = [col.name for col in colors]
+                    if 'Yellow' in color_names:
+                        player.recovery(1)
 
                 # Shuffle remaining security
                 random.shuffle(player.security_cards)
+
+            game.effect_select_own_security(
+                player, lambda c: True, on_security_selected, is_optional=False,
+                prompt="Select 1 card from your security stack to add to your hand."
+            )
 
         effect1.set_on_process_callback(process1)
         effects.append(effect1)

@@ -2,7 +2,8 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
-from ....data.enums import EffectTiming
+from ....data.enums import EffectTiming, GamePhase
+from ....game.constants import SEL_TRASH_START
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -80,14 +81,26 @@ class EX9_024(CardScript):
                 player.trash_cards.append(trashed_card)
 
                 # Then return 1 [Puppet] Digimon from trash to hand
-                qualifying = [c for c in player.trash_cards if _puppet_digimon_filter(c)]
-                if not qualifying:
+                valid_trash = [
+                    SEL_TRASH_START + i
+                    for i, c in enumerate(player.trash_cards)
+                    if _puppet_digimon_filter(c)
+                ]
+                if not valid_trash:
                     return
 
-                # Use simplified selection: pick first qualifying
-                chosen = qualifying[0]
-                player.trash_cards.remove(chosen)
-                player.hand_cards.append(chosen)
+                def on_puppet_selected(action_id):
+                    idx = action_id - SEL_TRASH_START
+                    if 0 <= idx < len(player.trash_cards):
+                        chosen = player.trash_cards[idx]
+                        player.trash_cards.remove(chosen)
+                        player.hand_cards.append(chosen)
+
+                game.request_selection(
+                    GamePhase.SelectTrash, player, on_puppet_selected,
+                    valid_trash, is_optional=True,
+                    prompt="Select 1 Digimon with [Puppet] trait from trash to return to hand."
+                )
 
             game.effect_select_hand_card(
                 player, lambda c: True, on_trash, is_optional=True,

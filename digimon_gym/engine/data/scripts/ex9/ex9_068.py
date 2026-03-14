@@ -131,11 +131,19 @@ class EX9_068(CardScript):
             if not player.hand_cards:
                 return
 
-            # Place the first card from hand (simplified selection)
-            # In the full engine, this would be a selection prompt
-            hand_card = player.hand_cards[0]
-            player.hand_cards.remove(hand_card)
-            trigger_perm.add_card_source_bottom(hand_card)
+            def on_hand_selected(selected_card):
+                if selected_card in player.hand_cards:
+                    player.hand_cards.remove(selected_card)
+                trigger_perm.add_card_source_bottom(selected_card)
+                game.logger.log(
+                    f"[EX9-068] Placed {game._card_ref(selected_card)} "
+                    f"as bottom digivolution card of {game._perm_ref(trigger_perm)}.")
+
+            game.effect_select_hand_card(
+                player, lambda c: True, on_hand_selected,
+                is_optional=True,
+                prompt="Select 1 card from hand to place as bottom digivolution card."
+            )
 
         effect1.set_on_process_callback(process1)
         effects.append(effect1)

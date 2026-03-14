@@ -207,17 +207,27 @@ class BT22_036(CardScript):
             if not own_perm:
                 return
 
-            # Auto-select first matching Token/Puppet (no selection phase during deletion)
-            for p in list(player.battle_area):
+            def sub_filter(p):
                 if not p.is_digimon or p is own_perm:
-                    continue
-                if getattr(p, 'is_token', False) or (p.top_card and _is_puppet_trait(p.top_card)):
-                    player.delete_permanent(p)
-                    own_perm._will_not_be_removed = True
-                    game.logger.log(
-                        "[BT22-036] Deleted a Token/Puppet to prevent "
-                        "this Digimon from leaving the battle area.")
-                    break
+                    return False
+                if getattr(p, 'is_token', False):
+                    return True
+                if p.top_card and _is_puppet_trait(p.top_card):
+                    return True
+                return False
+
+            def on_substitute_selected(target_perm):
+                player.delete_permanent(target_perm)
+                own_perm._will_not_be_removed = True
+                game.logger.log(
+                    "[BT22-036] Deleted a Token/Puppet to prevent "
+                    "this Digimon from leaving the battle area.")
+
+            game.effect_select_own_permanent(
+                player, on_substitute_selected, filter_fn=sub_filter,
+                is_optional=False,
+                prompt="Select 1 of your Tokens or [Puppet] trait Digimon to delete (prevents this Digimon from leaving)."
+            )
 
         effect2.set_on_process_callback(process2)
         effects.append(effect2)

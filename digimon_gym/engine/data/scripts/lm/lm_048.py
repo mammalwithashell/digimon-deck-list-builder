@@ -11,6 +11,7 @@ if TYPE_CHECKING:
 class LM_048(CardScript):
     """LM-048 Chrome Memory Boost! | Option (Green/Black, Cost 3)
 
+    Black also meets this card's color requirements.
     [Main] Reveal the top 3 cards of your deck. Add 1 green or black
         Digimon card among them to the hand. Return the rest to the bottom
         of deck. Then, place this card in the battle area.
@@ -39,30 +40,26 @@ class LM_048(CardScript):
         effect0.set_can_use_condition(condition0)
 
         def process0(ctx: Dict[str, Any]):
-            """Reveal top 3, add 1 green or black Digimon to hand."""
+            """Reveal top 3, let agent pick 1 green or black Digimon."""
             player = ctx.get('player')
             game = ctx.get('game')
             if not (player and game):
                 return
-            revealed = []
-            for _ in range(min(3, len(player.library_cards))):
-                revealed.append(player.library_cards.pop(0))
 
-            added = False
-            to_bottom = []
-            for c in revealed:
+            def reveal_filter(c):
                 colors = getattr(c, 'card_colors', []) or []
                 color_names = [col.name for col in colors]
                 is_digimon = getattr(c, 'is_digimon', False)
-                if (is_digimon and not added
-                        and ('Green' in color_names or 'Black' in color_names)):
-                    player.hand_cards.append(c)
-                    added = True
-                else:
-                    to_bottom.append(c)
+                return is_digimon and ('Green' in color_names or 'Black' in color_names)
 
-            for c in to_bottom:
-                player.library_cards.append(c)
+            def on_revealed(selected, remaining):
+                player.hand_cards.append(selected)
+                for c in remaining:
+                    player.library_cards.append(c)
+
+            game.effect_reveal_and_select(
+                player, 3, reveal_filter, on_revealed, is_optional=True)
+
         effect0.set_on_process_callback(process0)
         effects.append(effect0)
 
@@ -81,13 +78,11 @@ class LM_048(CardScript):
         effect1.set_can_use_condition(condition1)
         effects.append(effect1)
 
-        # --- Effect 2: Delay effect — Gain 2 memory ---
+        # --- Effect 2: Delay effect -- Gain 2 memory ---
         effect2 = ICardEffect()
         effect2.set_timing(EffectTiming.OnStartMainPhase)
         effect2.set_effect_name("LM-048 Delay: Gain 2 memory")
-        effect2.set_effect_description(
-            "<Delay> Gain 2 memory."
-        )
+        effect2.set_effect_description("<Delay> Gain 2 memory.")
         effect2._is_delay_effect = True
 
         def condition2(context: Dict[str, Any]) -> bool:

@@ -23,7 +23,7 @@ class BT3_093(CardScript):
 
         # --- Effect 0: [Start of Your Turn] Set memory to 3 ---
         effect0 = ICardEffect()
-        effect0.set_timing(EffectTiming.OnStartMainPhase)
+        effect0.set_timing(EffectTiming.OnStartTurn)
         effect0.set_effect_name("BT3-093 Set memory to 3")
         effect0.set_effect_description(
             "[Start of Your Turn] If you have 2 or less memory, set it to 3."

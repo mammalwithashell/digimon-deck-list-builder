@@ -13,6 +13,7 @@ class EX5_046(CardScript):
 
     def get_card_effects(self, card: 'CardSource') -> List['ICardEffect']:
         effects = []
+        card.also_treated_as_names = ['Etemon', 'Sukamon']
 
         # Timing: EffectTiming.None
         # Also Treated As

@@ -19,9 +19,11 @@ class BT23_077(CardScript):
 
     def get_card_effects(self, card: 'CardSource') -> List['ICardEffect']:
         effects = []
+        card.also_treated_as_names = ['Sistermon Noir']
 
         # --- Effect 0: Also Treated As [Sistermon Noir] ---
-        # Name aliasing is not modeled in the engine; this is a stub.
+        # Name aliasing handled by card.also_treated_as_names above.
+        # No-op effect for UI/logging visibility.
         effect0 = ICardEffect()
         effect0.set_timing(EffectTiming.NoTiming)
         effect0.set_effect_name("BT23-077 Also treated as [Sistermon Noir]")
@@ -31,12 +33,6 @@ class BT23_077(CardScript):
             return True
 
         effect0.set_can_use_condition(condition0)
-
-        def process0(ctx: Dict[str, Any]):
-            """Also treated as [Sistermon Noir] — name aliasing not modeled in engine."""
-            pass  # descriptive-tagged: also_treated_as_name
-
-        effect0.set_on_process_callback(process0)
         effects.append(effect0)
 
         # --- Effect 1: Blocker ---

@@ -2,7 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
-from ....data.enums import EffectTiming, CardColor
+from ....data.enums import EffectTiming, GamePhase, CardColor
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -40,39 +40,57 @@ class BT7_107(CardScript):
                 return
 
             # Step 1: Delete 1 of your own Digimon (mandatory)
+            own_digimon = [p for p in player.battle_area if p.is_digimon]
+            if not own_digimon:
+                return
+
             def on_delete(target_perm):
                 if target_perm is None:
                     return
                 player.delete_permanent(target_perm)
+                # Step 2: Return up to 2 purple Digimon cards from trash to hand
+                _select_purple_from_trash(player, game, 2)
 
-            own_digimon = [p for p in player.battle_area if p.is_digimon]
-            if own_digimon:
-                game.effect_select_own_permanent(
-                    player, on_delete,
-                    filter_fn=lambda p: p.is_digimon,
-                    is_optional=False,
-                    prompt="Delete 1 of your Digimon."
-                )
+            game.effect_select_own_permanent(
+                player, on_delete,
+                filter_fn=lambda p: p.is_digimon,
+                is_optional=False,
+                prompt="Delete 1 of your Digimon."
+            )
 
-            # Step 2: Return up to 2 purple Digimon cards from trash to hand
+        def _select_purple_from_trash(player, game, remaining):
+            """Select up to `remaining` purple Digimon from trash to hand."""
+            if remaining <= 0:
+                return
+
+            from ....game.constants import SEL_TRASH_START
+
             def purple_digimon_filter(c):
                 if not getattr(c, 'is_digimon', False):
                     return False
                 colors = getattr(c, 'card_colors', []) or []
                 return CardColor.Purple in colors
 
-            qualifying = [c for c in player.trash_cards if purple_digimon_filter(c)]
-            if not qualifying:
+            valid_indices = []
+            for i, c in enumerate(player.trash_cards):
+                if purple_digimon_filter(c):
+                    valid_indices.append(SEL_TRASH_START + i)
+            if not valid_indices:
                 return
 
-            # Auto-select up to 2 (engine doesn't have a trash-to-hand selection API)
-            count = min(2, len(qualifying))
-            for i in range(count):
-                remaining = [c for c in player.trash_cards if purple_digimon_filter(c)]
-                if remaining:
-                    chosen = remaining[0]
+            def on_trash_selected(action_id):
+                idx = action_id - SEL_TRASH_START
+                if 0 <= idx < len(player.trash_cards):
+                    chosen = player.trash_cards[idx]
                     player.trash_cards.remove(chosen)
                     player.hand_cards.append(chosen)
+                    # Recurse for the next selection
+                    _select_purple_from_trash(player, game, remaining - 1)
+
+            game.request_selection(
+                GamePhase.SelectTrash, player, on_trash_selected,
+                valid_indices, is_optional=True,
+                prompt="Select a purple Digimon card from trash to add to hand.")
 
         effect0.set_on_process_callback(process0)
         effects.append(effect0)

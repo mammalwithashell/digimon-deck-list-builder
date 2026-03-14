@@ -79,7 +79,6 @@ class EX10_034(CardScript):
                     game.register_modifier(
                         target_perm,
                         ModifierType.FORCE_ATTACK,
-                        condition=lambda p, c, tp=target_perm: p is tp,
                         expiry='end_of_opponent_turn',
                     )
 
@@ -99,7 +98,7 @@ class EX10_034(CardScript):
         # [All Turns] [Once Per Turn] When Digimon attack, by trashing any 2 of this
         # Digimon's digivolution cards, gain <Security A. +1> and +3000 DP until your turn ends.
         effect_at = ICardEffect()
-        effect_at.set_timing(EffectTiming.OnDeclaration)
+        effect_at.set_timing(EffectTiming.OnUseAttack)
         effect_at.set_effect_name("EX10-034 Trash 2 sources, gain Security A. +1 and +3000 DP")
         effect_at.set_effect_description(
             "[All Turns] [Once Per Turn] When Digimon attack, by trashing any 2 of this "
@@ -138,14 +137,14 @@ class EX10_034(CardScript):
             game.register_modifier(
                 perm,
                 ModifierType.CHANGE_DP,
-                value_fn=lambda: 3000,
+                value_fn=lambda cur, t, c: cur + 3000,
                 expiry='end_of_turn',
             )
             # Grant Security A. +1 until end of turn
             game.register_modifier(
                 perm,
                 ModifierType.CHANGE_SECURITY_ATTACK,
-                value_fn=lambda: 1,
+                value_fn=lambda cur, t, c: cur + 1,
                 expiry='end_of_turn',
             )
 

@@ -13,6 +13,7 @@ class P_223(CardScript):
 
     def get_card_effects(self, card: 'CardSource') -> List['ICardEffect']:
         effects = []
+        card.also_treated_as_names = ['Sakuyamon']
 
         # Factory effect: alt_digivolve_req
         # Alternate digivolution requirement

@@ -18,6 +18,7 @@ class P_026(CardScript):
         # [Main] <Digi-Burst 2> (Trash 2 of this Digimon's digivolution cards to activate the effect below.) - Unsuspend this Digimon.
         effect0 = ICardEffect()
         effect0.set_timing(EffectTiming.OnDeclaration)
+        effect0._is_field_main = True
         effect0.set_effect_name("P-026 Unsuspend this Digimon")
         effect0.set_effect_description("[Main] <Digi-Burst 2> (Trash 2 of this Digimon's digivolution cards to activate the effect below.) - Unsuspend this Digimon.")
 

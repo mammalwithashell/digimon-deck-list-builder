@@ -13,6 +13,7 @@ class BT20_025(CardScript):
 
     def get_card_effects(self, card: 'CardSource') -> List['ICardEffect']:
         effects = []
+        card.also_treated_as_names = ['Slayerdramon']
 
         # Factory effect: alt_digivolve_req
         # Alternate digivolution requirement

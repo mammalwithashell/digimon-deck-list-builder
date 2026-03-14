@@ -9,30 +9,35 @@ if TYPE_CHECKING:
 
 
 class BT18_015(CardScript):
-    """BT18-015 Kimeramon | Lv.5 Red/Purple Composite"""
+    """BT18-015 Kimeramon | Lv.5 Red/Purple Composite
+
+    Alt digi: Lv.4 [Composite] trait, cost 3.
+    [When Digivolving] [When Attacking] By deleting 1 of your Digimon, delete
+    1 of your opponent's Digimon with the lowest DP.
+    [On Deletion] You may DNA digivolve 1 of your [Machinedramon] in play and
+    1 [Kimeramon] in the trash into [Millenniummon] in the hand.
+    Inherited: <Security Attack +1>
+    """
 
     def get_card_effects(self, card: 'CardSource') -> List['ICardEffect']:
         effects = []
 
-        # --- Effect 0: [When Digivolving] [When Attacking] Delete 1 own Digimon
-        #     to delete 1 opponent's Digimon with lowest DP ---
-        effect0 = ICardEffect()
-        effect0.set_timing(EffectTiming.OnEnterFieldAnyone)
-        effect0.set_effect_name("BT18-015 Delete own Digimon, delete opponent's lowest DP")
-        effect0.set_effect_description(
-            "[When Digivolving] [When Attacking] By deleting 1 of your "
-            "Digimon, delete 1 of your opponent's Digimon with the lowest DP."
-        )
-        effect0.is_when_digivolving = True
+        # --- Alt-Digi: From Lv.4 Composite trait, cost 3 ---
+        effect_alt = ICardEffect()
+        effect_alt.set_effect_name("BT18-015 Alt digi: Lv.4 Composite cost 3")
+        effect_alt.set_effect_description("Alternate digivolution: Lv.4 with [Composite] trait, cost 3")
+        effect_alt._alt_digi_cost = 3
+        effect_alt._alt_digi_level = 4
+        effect_alt._alt_digi_trait = "Composite"
 
-        def condition0(context: Dict[str, Any]) -> bool:
-            if card and card.permanent_of_this_card() is None:
-                return False
+        def condition_alt(context: Dict[str, Any]) -> bool:
             return True
-        effect0.set_can_use_condition(condition0)
+        effect_alt.set_can_use_condition(condition_alt)
+        effects.append(effect_alt)
 
-        def process0(ctx: Dict[str, Any]):
-            """Action: Delete own Digimon, then delete opponent's lowest DP Digimon"""
+        # --- Shared process for [When Digivolving] and [When Attacking] ---
+        def _delete_own_then_delete_lowest(ctx: Dict[str, Any]):
+            """Delete own Digimon, then delete opponent's lowest DP Digimon."""
             player = ctx.get('player')
             game = ctx.get('game')
             if not (player and game):
@@ -41,28 +46,56 @@ class BT18_015(CardScript):
             if not enemy:
                 return
 
-            # Delete 1 of your own Digimon as cost
             def own_filter(p):
                 return p.is_digimon
+
             def on_own_delete(target_perm):
                 player.delete_permanent(target_perm)
                 # Then delete 1 opponent's Digimon with lowest DP
                 opp_digimon = [p for p in enemy.battle_area if p.is_digimon and p.dp is not None]
-                if opp_digimon:
-                    lowest_dp = min(p.dp for p in opp_digimon)
-                    lowest = [p for p in opp_digimon if p.dp == lowest_dp]
-                    if lowest:
-                        enemy.delete_permanent(lowest[0])
-            game.effect_select_own_permanent(
-                player, on_own_delete, filter_fn=own_filter, is_optional=True)
+                if not opp_digimon:
+                    return
+                lowest_dp = min(p.dp for p in opp_digimon)
+                lowest = [p for p in opp_digimon if p.dp == lowest_dp]
+                if len(lowest) == 1:
+                    enemy.delete_permanent(lowest[0])
+                elif len(lowest) > 1:
+                    # Let agent select which lowest DP Digimon to delete
+                    def lowest_filter(p):
+                        return p in lowest
+                    def on_lowest_selected(sel_perm):
+                        enemy.delete_permanent(sel_perm)
+                    game.effect_select_opponent_permanent(
+                        player, on_lowest_selected, filter_fn=lowest_filter,
+                        is_optional=False,
+                        prompt="Delete 1 opponent Digimon with the lowest DP.")
 
-        effect0.set_on_process_callback(process0)
+            game.effect_select_own_permanent(
+                player, on_own_delete, filter_fn=own_filter, is_optional=True,
+                prompt="Delete 1 of your Digimon.")
+
+        # --- Effect 0: [When Digivolving] ---
+        effect0 = ICardEffect()
+        effect0.set_timing(EffectTiming.OnEnterFieldAnyone)
+        effect0.set_effect_name("BT18-015 When Digivolving: Delete own, delete opponent's lowest DP")
+        effect0.set_effect_description(
+            "[When Digivolving] By deleting 1 of your Digimon, delete 1 of "
+            "your opponent's Digimon with the lowest DP."
+        )
+        effect0.is_when_digivolving = True
+
+        def condition0(context: Dict[str, Any]) -> bool:
+            if card and card.permanent_of_this_card() is None:
+                return False
+            return True
+        effect0.set_can_use_condition(condition0)
+        effect0.set_on_process_callback(_delete_own_then_delete_lowest)
         effects.append(effect0)
 
-        # --- Effect 0b: Same effect but triggered [When Attacking] ---
+        # --- Effect 0b: [When Attacking] ---
         effect0b = ICardEffect()
         effect0b.set_timing(EffectTiming.OnTappedAnyone)
-        effect0b.set_effect_name("BT18-015 When Attacking: Delete own Digimon, delete opponent's lowest DP")
+        effect0b.set_effect_name("BT18-015 When Attacking: Delete own, delete opponent's lowest DP")
         effect0b.set_effect_description(
             "[When Attacking] By deleting 1 of your Digimon, delete 1 of "
             "your opponent's Digimon with the lowest DP."
@@ -74,37 +107,11 @@ class BT18_015(CardScript):
                 return False
             return True
         effect0b.set_can_use_condition(condition0b)
-
-        def process0b(ctx: Dict[str, Any]):
-            """Action: Delete own Digimon, then delete opponent's lowest DP Digimon"""
-            player = ctx.get('player')
-            game = ctx.get('game')
-            if not (player and game):
-                return
-            enemy = player.enemy if player else None
-            if not enemy:
-                return
-
-            def own_filter(p):
-                return p.is_digimon
-            def on_own_delete(target_perm):
-                player.delete_permanent(target_perm)
-                opp_digimon = [p for p in enemy.battle_area if p.is_digimon and p.dp is not None]
-                if opp_digimon:
-                    lowest_dp = min(p.dp for p in opp_digimon)
-                    lowest = [p for p in opp_digimon if p.dp == lowest_dp]
-                    if lowest:
-                        enemy.delete_permanent(lowest[0])
-            game.effect_select_own_permanent(
-                player, on_own_delete, filter_fn=own_filter, is_optional=True)
-
-        effect0b.set_on_process_callback(process0b)
+        effect0b.set_on_process_callback(_delete_own_then_delete_lowest)
         effects.append(effect0b)
 
-        # --- Effect 1: [On Deletion] DNA digivolve Machinedramon in play +
-        #     Kimeramon in trash into Millenniummon in hand ---
-        # NOTE: DNA digivolution from trash is a complex mechanic that the
-        # engine does not fully support. Marked PARTIAL.
+        # --- Effect 1: [On Deletion] DNA digivolve Machinedramon + Kimeramon
+        #     (trash) into Millenniummon (hand) ---
         effect1 = ICardEffect()
         effect1.set_timing(EffectTiming.OnDestroyedAnyone)
         effect1.set_effect_name("BT18-015 On Deletion: DNA digivolve into Millenniummon")
@@ -116,7 +123,6 @@ class BT18_015(CardScript):
         effect1.is_optional = True
 
         def condition1(context: Dict[str, Any]) -> bool:
-            # Need a Machinedramon in play and Millenniummon in hand
             if not (card and card.owner):
                 return False
             player = card.owner
@@ -125,7 +131,7 @@ class BT18_015(CardScript):
                 for p in player.battle_area
             )
             has_millenniummon_in_hand = any(
-                c.contains_card_name('Millenniummon')
+                c.contains_card_name('Millenniummon') and getattr(c, 'is_digimon', False)
                 for c in player.hand_cards
             )
             has_kimeramon_in_trash = any(
@@ -136,11 +142,21 @@ class BT18_015(CardScript):
         effect1.set_can_use_condition(condition1)
 
         def process1(ctx: Dict[str, Any]):
-            """Action: DNA digivolve Machinedramon + Kimeramon into Millenniummon"""
-            # descriptive-tagged: DNA digivolution from trash into hand card
-            # is a complex mechanic requiring engine-level support for DNA
-            # digivolve. Partial implementation: we just mark the intent.
-            pass
+            """DNA digivolve: Machinedramon (field) + Kimeramon (trash) -> Millenniummon (hand)"""
+            player = ctx.get('player')
+            game = ctx.get('game')
+            if not (player and game):
+                return
+
+            # Use effect_dna_digivolve_from_hand which handles the multi-step
+            # selection: pick Millenniummon from hand, then pick field targets.
+            # The engine's DNA digivolve already validates jogress conditions.
+            def millenniummon_filter(c):
+                return c.contains_card_name('Millenniummon') and getattr(c, 'is_digimon', False)
+
+            game.effect_dna_digivolve_from_hand(
+                player, millenniummon_filter, is_optional=True,
+                prompt="Select [Millenniummon] from hand to DNA digivolve.")
 
         effect1.set_on_process_callback(process1)
         effects.append(effect1)

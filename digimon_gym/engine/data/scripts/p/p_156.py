@@ -52,33 +52,40 @@ class P_156(CardScript):
             tamer_perms = [p for p in player.battle_area if p.is_tamer]
             if not tamer_perms:
                 return
-            # Collect colors from all our Tamers for filtering
-            # In the engine, we pick a Tamer via selection, then filter by its colors.
-            # Since the engine doesn't have multi-step selection easily, we collect
-            # all Tamer colors and allow playing a Digimon matching ANY of them.
-            # This is a simplification — ideally we'd select a specific Tamer first.
-            tamer_colors = set()
-            for tp in tamer_perms:
-                if tp.top_card:
-                    colors = getattr(tp.top_card, 'card_colors', []) or []
+
+            def tamer_filter(p):
+                return p.is_tamer
+
+            def on_tamer_selected(selected_tamer):
+                # Get colors of the chosen Tamer
+                tamer_colors = set()
+                if selected_tamer.top_card:
+                    colors = getattr(selected_tamer.top_card, 'card_colors', []) or []
                     for c in colors:
                         tamer_colors.add(c)
 
-            def play_filter(c):
-                if not getattr(c, 'is_digimon', False):
-                    return False
-                cost = getattr(c, 'get_cost_itself', None)
-                if cost is None:
-                    return False
-                if cost > 3:
-                    return False
-                # Must share a color with one of our Tamers
-                card_colors = getattr(c, 'card_colors', []) or []
-                return any(cc in tamer_colors for cc in card_colors)
+                def play_filter(c):
+                    if not getattr(c, 'is_digimon', False):
+                        return False
+                    cost = getattr(c, 'get_cost_itself', None)
+                    if cost is None:
+                        return False
+                    if cost > 3:
+                        return False
+                    # Must share a color with the chosen Tamer
+                    card_colors = getattr(c, 'card_colors', []) or []
+                    return any(cc in tamer_colors for cc in card_colors)
 
-            game.effect_play_from_zone(
-                player, 'hand_or_trash', play_filter, free=True, is_optional=True,
-                prompt="Play 1 Digimon (cost 3 or less) matching a Tamer's color.")
+                game.effect_play_from_zone(
+                    player, 'hand_or_trash', play_filter, free=True, is_optional=True,
+                    prompt="Play 1 Digimon (cost 3 or less) matching the chosen Tamer's color.")
+
+            game.effect_select_own_permanent(
+                player, on_tamer_selected,
+                filter_fn=tamer_filter,
+                is_optional=False,
+                prompt="Choose 1 of your Tamers."
+            )
 
         effect1.set_on_process_callback(process1)
         effects.append(effect1)

@@ -81,6 +81,7 @@ class BT15_096(CardScript):
         # [Main][Delay] You may play 1 level 5 or higher Digimon card with the [Machine] or [Cyborg] trait from your hand with the play cost reduced by 3.
         effect2 = ICardEffect()
         effect2.set_timing(EffectTiming.OnDeclaration)
+        effect2._is_field_main = True
         effect2.set_effect_name("BT15-096 Play 1 Digimon from hand")
         effect2.set_effect_description("[Main][Delay] You may play 1 level 5 or higher Digimon card with the [Machine] or [Cyborg] trait from your hand with the play cost reduced by 3.")
         effect2.cost_reduction = 3

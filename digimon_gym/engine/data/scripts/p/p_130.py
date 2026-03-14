@@ -41,31 +41,30 @@ class P_130(CardScript):
         effect1.set_effect_description("[Your Turn] When one of your Digimon moves from the breeding area to the battle area, by suspending this Tamer, gain 1 memory.")
         effect1.is_optional = True
 
-        effect = effect1  # alias for condition closure
-        def condition1(context: Dict[str, Any]) -> bool:
+        def condition1_suspend(context: Dict[str, Any]) -> bool:
             if card and card.permanent_of_this_card() is None:
                 return False
             if not (card and card.owner and card.owner.is_my_turn):
                 return False
+            # Must not be suspended already (cost: suspend this Tamer)
+            tamer_perm = card.permanent_of_this_card()
+            if tamer_perm and tamer_perm.is_suspended:
+                return False
             return True
 
-        effect1.set_can_use_condition(condition1)
+        # Override condition to check suspend cost
+        effect1.set_can_use_condition(condition1_suspend)
 
         def process1(ctx: Dict[str, Any]):
-            """Action: Gain 1 memory, Suspend"""
+            """By suspending this Tamer, gain 1 memory."""
             player = ctx.get('player')
             perm = ctx.get('permanent')
-            game = ctx.get('game')
-            if player:
-                player.add_memory(1)
-            if not (player and game):
+            if not (player and perm):
                 return
-            def target_filter(p):
-                return True
-            def on_suspend(target_perm):
-                target_perm.suspend()
-            game.effect_select_opponent_permanent(
-                player, on_suspend, filter_fn=target_filter, is_optional=True)
+            # Cost: suspend this Tamer
+            perm.suspend()
+            # Reward: gain 1 memory
+            player.add_memory(1)
 
         effect1.set_on_process_callback(process1)
         effects.append(effect1)

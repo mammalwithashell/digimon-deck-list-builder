@@ -71,6 +71,7 @@ class BT15_086(CardScript):
         # [Main] <Mind Link> with 1 of your Digimon with the [Machine] or the [Cyborg] or [SoC] trait. (Place this Tamer as that Digimon's bottom digivolution card if there are no Tamer cards in its digivolution cards.)
         effect2 = ICardEffect()
         effect2.set_timing(EffectTiming.OnDeclaration)
+        effect2._is_field_main = True
         effect2.set_effect_name("BT15-086 Mind Link")
         effect2.set_effect_description("[Main] <Mind Link> with 1 of your Digimon with the [Machine] or the [Cyborg] or [SoC] trait. (Place this Tamer as that Digimon's bottom digivolution card if there are no Tamer cards in its digivolution cards.)")
 

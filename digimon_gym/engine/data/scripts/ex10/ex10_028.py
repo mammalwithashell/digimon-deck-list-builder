@@ -79,42 +79,58 @@ class EX10_028(CardScript):
                     if not mineral_rock_sources:
                         return
 
-                    # Trash the first available (engine will handle selection if needed).
-                    # Per card text it is "any 1", treated as player choice of 1.
-                    # Use trash_digivolution_cards targeting the specific card.
-                    cs_to_trash = mineral_rock_sources[0]
-                    if cs_to_trash in trash_perm.card_sources:
-                        trash_perm.card_sources.remove(cs_to_trash)
+                    def _do_trash_and_grant(cs_to_trash):
+                        if cs_to_trash in trash_perm.card_sources:
+                            trash_perm.card_sources.remove(cs_to_trash)
                         player.trash_cards.append(cs_to_trash)
+                        game.execute_effects(EffectTiming.OnDigivolutionCardDiscarded,
+                                             {'trashed_cards': [cs_to_trash],
+                                              'permanent': trash_perm})
 
-                    # Step 2: Select a Mineral/Rock Digimon to receive the buff.
-                    def grant_filter(perm2):
-                        return perm2.is_digimon and (
-                            perm2.has_trait('Mineral') or perm2.has_trait('Rock')
-                        )
+                        # Step 2: Select a Mineral/Rock Digimon to receive the buff.
+                        def grant_filter(perm2):
+                            return perm2.is_digimon and (
+                                perm2.has_trait('Mineral') or perm2.has_trait('Rock')
+                            )
 
-                    def on_grant_selected(target_perm):
-                        game.register_modifier(
-                            target_perm,
-                            ModifierType.GRANT_REBOOT,
-                            value_fn=lambda: True,
-                            expiry='end_of_opponent_turn',
-                        )
-                        game.register_modifier(
-                            target_perm,
-                            ModifierType.GRANT_BLOCKER,
-                            value_fn=lambda: True,
-                            expiry='end_of_opponent_turn',
-                        )
-                        game.register_modifier(
-                            target_perm,
-                            ModifierType.CHANGE_DP,
-                            value_fn=lambda: 3000,
-                            expiry='end_of_opponent_turn',
-                        )
+                        def on_grant_selected(target_perm):
+                            game.register_modifier(
+                                target_perm,
+                                ModifierType.GRANT_REBOOT,
+                                expiry='end_of_opponent_turn',
+                            )
+                            game.register_modifier(
+                                target_perm,
+                                ModifierType.GRANT_BLOCKER,
+                                expiry='end_of_opponent_turn',
+                            )
+                            game.register_modifier(
+                                target_perm,
+                                ModifierType.CHANGE_DP,
+                                value_fn=lambda cur, t, c: cur + 3000,
+                                expiry='end_of_opponent_turn',
+                            )
 
-                    game.effect_select_own_permanent(
-                        player, on_grant_selected, filter_fn=grant_filter, is_optional=False)
+                        game.effect_select_own_permanent(
+                            player, on_grant_selected, filter_fn=grant_filter, is_optional=False)
+
+                    # Player selects which source to trash if multiple options
+                    if len(mineral_rock_sources) == 1:
+                        _do_trash_and_grant(mineral_rock_sources[0])
+                    else:
+                        labels = [
+                            ', '.join(getattr(c, 'card_names', ['?'])) for c in mineral_rock_sources
+                        ]
+
+                        def on_source_chosen(idx):
+                            chosen = mineral_rock_sources[idx] if idx < len(mineral_rock_sources) else mineral_rock_sources[0]
+                            _do_trash_and_grant(chosen)
+
+                        game.effect_choose_branch(
+                            player, len(mineral_rock_sources), on_source_chosen,
+                            prompt="Select 1 [Mineral] or [Rock] digivolution card to trash",
+                            branch_labels=labels,
+                        )
 
                 game.effect_select_own_permanent(
                     player, on_trash_perm_selected, filter_fn=trash_source_filter, is_optional=True)

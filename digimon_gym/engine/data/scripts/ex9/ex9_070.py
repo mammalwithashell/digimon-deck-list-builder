@@ -85,14 +85,25 @@ class EX9_070(CardScript):
             if perm:
                 player.delete_permanent(perm)
 
-            # Place 1 hand card as DM Digimon's bottom digi card
-            if player.hand_cards:
-                dm_digimon = [p for p in player.battle_area
-                             if p.is_digimon and p.has_trait('DM')]
-                if dm_digimon:
-                    hand_card = player.hand_cards.pop()
-                    target_perm = dm_digimon[0]
-                    target_perm.add_card_source_bottom(hand_card)
+            # Place 1 hand card as DM Digimon's bottom digi card, then digivolve
+            if not player.hand_cards:
+                return
+            dm_digimon = [p for p in player.battle_area
+                         if p.is_digimon and p.has_trait('DM')]
+            if not dm_digimon:
+                return
+
+            def on_hand_selected(selected_card):
+                if selected_card is None:
+                    return
+                if selected_card in player.hand_cards:
+                    player.hand_cards.remove(selected_card)
+
+                def dm_filter_perm(p):
+                    return p.is_digimon and p.has_trait('DM')
+
+                def on_dm_perm_selected(target_perm):
+                    target_perm.add_card_source_bottom(selected_card)
 
                     # Digivolve into DM from hand with cost -2
                     def digi_filter(c):
@@ -104,6 +115,15 @@ class EX9_070(CardScript):
                     game.effect_digivolve_from_hand(
                         player, target_perm, digi_filter,
                         cost_reduction=2, is_optional=True)
+
+                game.effect_select_own_permanent(
+                    player, on_dm_perm_selected, filter_fn=dm_filter_perm,
+                    is_optional=False,
+                    prompt="Select a [DM] Digimon to place the card under.")
+
+            game.effect_select_hand_card(
+                player, lambda c: True, on_hand_selected, is_optional=True,
+                prompt="Select 1 card to place face down as bottom digivolution card.")
         effect2.set_on_process_callback(process2)
         effects.append(effect2)
 

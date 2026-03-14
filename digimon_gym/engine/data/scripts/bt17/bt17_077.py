@@ -111,10 +111,14 @@ class BT17_077(CardScript):
             def on_bottom_deck(target_perm):
                 enemy = player.enemy if player else None
                 if enemy:
+                    # Check if the permanent is still on the field before bouncing
+                    was_on_field = target_perm in enemy.battle_area
                     enemy.return_permanent_to_deck_bottom(target_perm)
-                # Unsuspend this Digimon on success
-                if perm:
-                    perm.unsuspend()
+                    # Unsuspend this Digimon ONLY if the bounce succeeded
+                    # (permanent was on field and is no longer there)
+                    bounce_succeeded = was_on_field and target_perm not in enemy.battle_area
+                    if bounce_succeeded and perm:
+                        perm.unsuspend()
 
             game.effect_select_opponent_permanent(
                 player, on_bottom_deck,

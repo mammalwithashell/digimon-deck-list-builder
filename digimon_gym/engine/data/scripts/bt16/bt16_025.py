@@ -102,7 +102,7 @@ class BT16_025(CardScript):
             for opp_perm in list(enemy.battle_area):
                 if opp_perm.is_digimon:
                     game.register_modifier(
-                        ModifierType.CANNOT_UNSUSPEND, opp_perm,
+                        opp_perm, ModifierType.CANNOT_UNSUSPEND,
                         value_fn=lambda: True,
                         expiry='end_of_opponent_turn'
                     )

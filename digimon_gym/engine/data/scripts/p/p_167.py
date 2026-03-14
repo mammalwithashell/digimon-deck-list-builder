@@ -104,10 +104,23 @@ class P_167(CardScript):
                     else:
                         player.hand_cards.append(selected)
 
-                # Return remaining to top (card text says top or bottom;
-                # without a secondary engine hook for the choice we default to top)
-                for c in remaining:
-                    player.library_cards.insert(0, c)
+                # Return remaining to top or bottom (player chooses)
+                if remaining:
+                    def on_top_bottom(choice_idx):
+                        if choice_idx == 0:
+                            # Top of deck
+                            for c in reversed(remaining):
+                                player.library_cards.insert(0, c)
+                        else:
+                            # Bottom of deck
+                            for c in remaining:
+                                player.library_cards.append(c)
+
+                    game.effect_choose_branch(
+                        player, 2, on_top_bottom,
+                        prompt="Return remaining cards to top or bottom of deck?",
+                        branch_labels=["Top of deck", "Bottom of deck"],
+                    )
 
             game.effect_choose_branch(
                 player, 2, on_branch,
@@ -159,7 +172,10 @@ class P_167(CardScript):
                 def do_trash_and_reveal(cs_to_trash):
                     if cs_to_trash in trash_perm.card_sources:
                         trash_perm.card_sources.remove(cs_to_trash)
-                        player.trash_cards.append(cs_to_trash)
+                    player.trash_cards.append(cs_to_trash)
+                    game.execute_effects(EffectTiming.OnDigivolutionCardDiscarded,
+                                         {'trashed_cards': [cs_to_trash],
+                                          'permanent': trash_perm})
                     _execute_reveal_and_select_branch(player, game, this_perm)
 
                 if len(mr_sources) == 1:
@@ -226,7 +242,10 @@ class P_167(CardScript):
                 def do_trash_and_reveal(cs_to_trash):
                     if cs_to_trash in trash_perm.card_sources:
                         trash_perm.card_sources.remove(cs_to_trash)
-                        player.trash_cards.append(cs_to_trash)
+                    player.trash_cards.append(cs_to_trash)
+                    game.execute_effects(EffectTiming.OnDigivolutionCardDiscarded,
+                                         {'trashed_cards': [cs_to_trash],
+                                          'permanent': trash_perm})
                     _execute_reveal_and_select_branch(player, game, this_perm)
 
                 if len(mr_sources) == 1:

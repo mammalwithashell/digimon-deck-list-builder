@@ -23,10 +23,6 @@ class BT3_103(CardScript):
 
         # [Main] Grant a one-shot digivolution cost reduction of 5 for
         # the next green digivolve this turn, with suspend-as-cost.
-        # Approximation: We register a CHANGE_DIGIVOLUTION_COST modifier
-        # that reduces cost by 5 for green Digimon, expiring at end of turn.
-        # The "suspend 1 Digimon" cost is paid upfront (select + suspend).
-        # The "next digivolve" one-shot nature is approximated by end_of_turn.
         effect0 = ICardEffect()
         effect0.set_timing(EffectTiming.OptionSkill)
         effect0.set_effect_name("BT3-103 Suspend to reduce next green digi cost by 5")
@@ -58,15 +54,19 @@ class BT3_103(CardScript):
             def on_suspend(target_perm):
                 target_perm.suspend()
 
-                # Register digivolution cost reduction for green Digimon
-                # This applies to all of player's Digimon for the turn
+                # Register digivolution cost reduction for GREEN Digimon only
                 for field_perm in player.battle_area:
                     if field_perm.is_digimon:
-                        game.register_modifier(
-                            field_perm, ModifierType.CHANGE_DIGIVOLUTION_COST,
-                            value_fn=lambda current, target, c: current - 5,
-                            expiry='end_of_turn',
-                        )
+                        # Check if this Digimon is green
+                        top = field_perm.top_card
+                        if top:
+                            colors = [col.name for col in getattr(top, 'card_colors', [])]
+                            if 'Green' in colors:
+                                game.register_modifier(
+                                    field_perm, ModifierType.CHANGE_DIGIVOLUTION_COST,
+                                    value_fn=lambda current, target, c: current - 5,
+                                    expiry='end_of_turn',
+                                )
 
             game.effect_select_own_permanent(
                 player, on_suspend,

@@ -32,14 +32,34 @@ class EX9_062(CardScript):
             player.library_cards = player.library_cards[mill_count:]
             player.trash_cards.extend(trashed)
 
-            # Return 1 DM Digimon from trash to hand
-            for c in player.trash_cards:
-                if getattr(c, 'is_digimon', False):
-                    traits = getattr(c, 'card_traits', []) or []
-                    if any('DM' in t for t in traits):
-                        player.trash_cards.remove(c)
-                        player.hand_cards.append(c)
-                        break
+            # Return 1 DM Digimon from trash to hand (via selection)
+            from ....game.constants import SEL_TRASH_START
+            from ....data.enums import GamePhase
+
+            def dm_digimon_filter(c):
+                if not getattr(c, 'is_digimon', False):
+                    return False
+                traits = getattr(c, 'card_traits', []) or []
+                return any('DM' in t for t in traits)
+
+            valid_indices = []
+            for i, c in enumerate(player.trash_cards):
+                if dm_digimon_filter(c):
+                    valid_indices.append(SEL_TRASH_START + i)
+            if not valid_indices:
+                return
+
+            def on_trash_selected(action_id):
+                idx = action_id - SEL_TRASH_START
+                if 0 <= idx < len(player.trash_cards):
+                    chosen = player.trash_cards[idx]
+                    player.trash_cards.remove(chosen)
+                    player.hand_cards.append(chosen)
+
+            game.request_selection(
+                GamePhase.SelectTrash, player, on_trash_selected,
+                valid_indices, is_optional=True,
+                prompt="Select 1 [DM] trait Digimon from trash to return to hand.")
 
         def _play_dm_lv4(ctx: Dict[str, Any]):
             player = ctx.get('player')

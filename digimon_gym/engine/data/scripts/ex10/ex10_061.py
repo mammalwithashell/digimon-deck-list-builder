@@ -8,18 +8,83 @@ if TYPE_CHECKING:
     from ....core.card_source import CardSource
 
 
+def _is_dark_masters_digimon(c) -> bool:
+    """Check if a card is a Digimon with the [Dark Masters] trait."""
+    if not getattr(c, 'is_digimon', False):
+        return False
+    traits = getattr(c, 'card_traits', []) or []
+    return any('Dark Masters' in t for t in traits)
+
+
+def _has_dark_masters_trait(perm) -> bool:
+    """Check if a permanent has the [Dark Masters] trait."""
+    top = perm.top_card if perm else None
+    if not top:
+        return False
+    traits = getattr(top, 'card_traits', []) or []
+    return any('Dark Masters' in t for t in traits)
+
+
+def _count_face_up_dm_security(player, max_count=4):
+    """Count distinct-named face-up Dark Masters Digimon in security."""
+    seen_names = set()
+    count = 0
+    for c in player.security_cards:
+        if not player.is_security_face_up(c):
+            continue
+        if not _is_dark_masters_digimon(c):
+            continue
+        names = getattr(c, 'card_names', []) or []
+        name = names[0] if names else None
+        if name and name not in seen_names:
+            seen_names.add(name)
+            count += 1
+            if count >= max_count:
+                break
+    return count
+
+
+def _get_face_up_dm_from_security(player, max_count=4):
+    """Get up to max_count distinct-named face-up Dark Masters Digimon from security."""
+    seen_names = set()
+    result = []
+    for c in player.security_cards:
+        if not player.is_security_face_up(c):
+            continue
+        if not _is_dark_masters_digimon(c):
+            continue
+        names = getattr(c, 'card_names', []) or []
+        name = names[0] if names else None
+        if name and name not in seen_names:
+            seen_names.add(name)
+            result.append(c)
+            if len(result) >= max_count:
+                break
+    return result
+
+
 class EX10_061(CardScript):
-    """EX10-061 Apocalymon | Lv.7"""
+    """EX10-061 Apocalymon | Lv.7
+
+    Digivolve: Lv.6 w/[Dark Masters] trait for 5 cost
+
+    When this card would be played, by placing 1 of each face-up [Dark Masters]
+    trait card with different names from your security stack under this card,
+    reduce the play cost by 4 for each card placed.
+
+    [On Play] [When Digivolving] You may play 1 of each [Dark Masters] trait
+    card with different names from this Digimon's digivolution cards without
+    paying the costs. Then, all of your [Dark Masters] trait Digimon gain
+    <Rush> for the turn. At turn end, delete the Digimon this effect played.
+    """
 
     def get_card_effects(self, card: 'CardSource') -> List['ICardEffect']:
         effects = []
 
-        # Factory effect: alt_digivolve_req
-        # Alternate digivolution requirement
+        # --- Effect 0: Alt digivolve requirement ---
         effect0 = ICardEffect()
         effect0.set_effect_name("EX10-061 Alternate digivolution requirement")
         effect0.set_effect_description("Alternate digivolution requirement")
-        # Alternate digivolution: Lv.6 for cost 5
         effect0._alt_digi_cost = 5
         effect0._alt_digi_level = 6
 
@@ -28,213 +93,193 @@ class EX10_061(CardScript):
         effect0.set_can_use_condition(condition0)
         effects.append(effect0)
 
-        # Timing: EffectTiming.BeforePayCost
-        # When this card would be played, by placing 1 of each face-up [Dark Masters] trait card with different names from your security stack under this card, reduce the play cost by 4 for each card placed.
+        # --- Effect 1: BeforePayCost - place face-up Dark Masters from security ---
         effect1 = ICardEffect()
         effect1.set_timing(EffectTiming.BeforePayCost)
         effect1.set_effect_name("EX10-061 Placing 1 [Dark Masters] to get Play Cost -4")
-        effect1.set_effect_description("When this card would be played, by placing 1 of each face-up [Dark Masters] trait card with different names from your security stack under this card, reduce the play cost by 4 for each card placed.")
+        effect1.set_effect_description(
+            "When this card would be played, by placing 1 of each face-up "
+            "[Dark Masters] trait card with different names from your security "
+            "stack under this card, reduce the play cost by 4 for each card placed."
+        )
         effect1.set_hash_string("PlayCost-_EX10-061")
 
-        effect = effect1  # alias for condition closure
+        def _cost_reduction_fn(context):
+            player = card.owner if card else None
+            if not player:
+                return 0
+            return _count_face_up_dm_security(player) * 4
+
+        effect1._cost_reduction_value_fn = _cost_reduction_fn
+
         def condition1(context: Dict[str, Any]) -> bool:
-            return True
+            if context.get('card_source') is not card:
+                return False
+            player = card.owner if card else None
+            if not player:
+                return False
+            return _count_face_up_dm_security(player) > 0
 
         effect1.set_can_use_condition(condition1)
 
         def process1(ctx: Dict[str, Any]):
-            """Action: Destroy Security"""
+            """Place face-up Dark Masters cards from security under this card."""
             player = ctx.get('player')
-            perm = ctx.get('permanent')
-            game = ctx.get('game')
-            # Cost reduction (variable amount) — handled via cost_reduction property
-            pass  # descriptive-tagged: cost_reduction
-            # Trash opponent's top security card(s)
-            enemy = player.enemy if player else None
-            if enemy:
-                for _ in range(1):
-                    if enemy.security_cards:
-                        trashed = enemy.security_cards.pop(0)
-                        enemy.trash_cards.append(trashed)
+            if not player:
+                return
+            to_place = _get_face_up_dm_from_security(player)
+            for c in to_place:
+                removed = player.remove_from_security(c)
+                if removed:
+                    if not hasattr(card, '_pending_digi_sources'):
+                        card._pending_digi_sources = []
+                    card._pending_digi_sources.append(removed)
 
         effect1.set_on_process_callback(process1)
         effects.append(effect1)
 
-        # Timing: EffectTiming.None
-        # Effect
-        effect2 = ICardEffect()
-        effect2.set_effect_name("EX10-061 Play Cost -4")
-        effect2.set_effect_description("Effect")
+        # --- Shared On Play / When Digivolving logic ---
+        def _shared_process(ctx: Dict[str, Any]):
+            """Play Dark Masters from digi cards, grant Rush, delete played at turn end."""
+            player = ctx.get('player')
+            perm = ctx.get('permanent')
+            game = ctx.get('game')
+            if not (player and game and perm):
+                return
 
-        effect = effect2  # alias for condition closure
+            # Find playable Dark Masters Digimon in digivolution cards
+            # "1 of each with different names" = up to 1 per distinct name
+            seen_names = set()
+            playable = []
+            for cs in list(perm.card_sources):
+                if cs is perm.top_card:
+                    continue  # Don't play top card
+                if not _is_dark_masters_digimon(cs):
+                    continue
+                names = getattr(cs, 'card_names', []) or []
+                name = names[0] if names else None
+                if name and name not in seen_names:
+                    seen_names.add(name)
+                    playable.append(cs)
+
+            if not playable:
+                # No Dark Masters in digi cards to play — still grant Rush
+                _grant_rush_to_dm(player, game)
+                return
+
+            # Play each distinct Dark Masters from digivolution cards
+            played_perms = []
+            for cs in playable:
+                # Remove from digivolution sources
+                if cs in perm.card_sources:
+                    perm.card_sources.remove(cs)
+                # Play as new permanent without paying cost
+                played_perm = player.play_card_from_source(cs, pay_cost=False)
+                if played_perm:
+                    played_perms.append(played_perm)
+                    game.execute_effects(
+                        EffectTiming.OnEnterFieldAnyone,
+                        {
+                            'played_card': cs,
+                            'played_permanent': played_perm,
+                            'event_player': player,
+                        },
+                    )
+
+            # Grant <Rush> to all Dark Masters trait Digimon for the turn
+            _grant_rush_to_dm(player, game)
+
+            # Register end-of-turn deletion for the Digimon this effect played
+            if played_perms and game:
+                _register_eot_deletion(player, perm, played_perms, game)
+
+        def _grant_rush_to_dm(player, game):
+            """Grant Rush to all of owner's Dark Masters trait Digimon for the turn."""
+            if not player:
+                return
+            current_turn = game.turn_count if hasattr(game, 'turn_count') else -1
+            for p in player.battle_area:
+                if p.is_digimon and _has_dark_masters_trait(p):
+                    p.grant_keyword('_is_rush', current_turn)
+
+        def _register_eot_deletion(player, source_perm, played_perms, game):
+            """Register an end-of-turn effect to delete Digimon played by this effect."""
+            eot_effect = ICardEffect()
+            eot_effect.set_timing(EffectTiming.OnEndTurn)
+            eot_effect.set_effect_name("EX10-061 Delete the played Digimon")
+            eot_effect.set_effect_description(
+                "[End of Your Turn] Delete the Digimon that were played by Apocalymon."
+            )
+
+            def eot_condition(context: Dict[str, Any]) -> bool:
+                # Only fire on owner's end of turn
+                if not (card and card.owner and card.owner.is_my_turn):
+                    return False
+                # Only fire if there are still played permanents on field
+                return any(pp in player.battle_area for pp in played_perms)
+
+            eot_effect.set_can_use_condition(eot_condition)
+
+            def eot_process(ctx: Dict[str, Any]):
+                for pp in list(played_perms):
+                    if pp in player.battle_area:
+                        player.delete_permanent(pp)
+
+            eot_effect.set_on_process_callback(eot_process)
+
+            # Register as a player permanent effect so it fires at end of turn
+            if hasattr(card, '_granted_eot_effects'):
+                card._granted_eot_effects.append(eot_effect)
+            else:
+                card._granted_eot_effects = [eot_effect]
+
+            # Also register on the source permanent's granted effects
+            if source_perm:
+                current_turn = game.turn_count if hasattr(game, 'turn_count') else -1
+                source_perm._granted_effects.append((eot_effect, current_turn))
+
+        # --- Effect 2: [On Play] ---
+        effect2 = ICardEffect()
+        effect2.set_timing(EffectTiming.OnEnterFieldAnyone)
+        effect2.set_effect_name("EX10-061 Play 1 [Dark Masters] from sources, give <Rush>, Delete them at end of turn")
+        effect2.set_effect_description(
+            "[On Play] You may play 1 of each [Dark Masters] trait card with "
+            "different names from this Digimon's digivolution cards without "
+            "paying the costs. Then, all of your [Dark Masters] trait Digimon "
+            "gain <Rush> for the turn. At turn end, delete the Digimon this "
+            "effect played."
+        )
+        effect2.is_on_play = True
+
         def condition2(context: Dict[str, Any]) -> bool:
+            if card and card.permanent_of_this_card() is None:
+                return False
             return True
 
         effect2.set_can_use_condition(condition2)
-
-        def process2(ctx: Dict[str, Any]):
-            """Action: Effect"""
-            player = ctx.get('player')
-            perm = ctx.get('permanent')
-            game = ctx.get('game')
-            # Cost reduction (variable amount) — handled via cost_reduction property
-            pass  # descriptive-tagged: cost_reduction
-
-        effect2.set_on_process_callback(process2)
+        effect2.set_on_process_callback(_shared_process)
         effects.append(effect2)
 
-        # Timing: EffectTiming.OnEnterFieldAnyone
-        # [On Play] You may play 1 of each [Dark Masters] trait card with different names from this Digimon's digivolution cards without paying the costs. Then, all of your [Dark Masters] trait Digimon gain <Rush> for the turn. At turn end, delete the Digimon this effect played.
+        # --- Effect 3: [When Digivolving] ---
         effect3 = ICardEffect()
         effect3.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect3.set_effect_name("EX10-061 Play 1 [Dark Masters] from sources, give <Rush>, Delete them at end of turn")
-        effect3.set_effect_description("[On Play] You may play 1 of each [Dark Masters] trait card with different names from this Digimon's digivolution cards without paying the costs. Then, all of your [Dark Masters] trait Digimon gain <Rush> for the turn. At turn end, delete the Digimon this effect played.")
-        effect3.is_on_play = True
+        effect3.set_effect_description(
+            "[When Digivolving] You may play 1 of each [Dark Masters] trait card "
+            "with different names from this Digimon's digivolution cards without "
+            "paying the costs. Then, all of your [Dark Masters] trait Digimon "
+            "gain <Rush> for the turn. At turn end, delete the Digimon this "
+            "effect played."
+        )
+        effect3.is_when_digivolving = True
 
-        effect = effect3  # alias for condition closure
         def condition3(context: Dict[str, Any]) -> bool:
             if card and card.permanent_of_this_card() is None:
                 return False
-            # Triggered on play — validated by engine timing
             return True
 
         effect3.set_can_use_condition(condition3)
-
-        def process3(ctx: Dict[str, Any]):
-            """Action: Play Card"""
-            player = ctx.get('player')
-            perm = ctx.get('permanent')
-            game = ctx.get('game')
-            if not (player and game):
-                return
-            def play_filter(c):
-                if not getattr(c, 'is_digimon', False):
-                    return False
-                if not (any('Dark Masters' in _t for _t in (getattr(c, 'card_traits', []) or []))):
-                    return False
-                return True
-            game.effect_play_from_zone(
-                player, 'hand', play_filter, free=True, is_optional=True)
-
-        effect3.set_on_process_callback(process3)
+        effect3.set_on_process_callback(_shared_process)
         effects.append(effect3)
-
-        # Timing: EffectTiming.OnEnterFieldAnyone
-        # [End of Your Turn] Delete this Digimon.
-        effect4 = ICardEffect()
-        effect4.set_timing(EffectTiming.OnEnterFieldAnyone)
-        effect4.set_effect_name("EX10-061 Delete, Effect Immunity")
-        effect4.set_effect_description("[End of Your Turn] Delete this Digimon.")
-        effect4.is_on_play = True
-
-        effect = effect4  # alias for condition closure
-        def condition4(context: Dict[str, Any]) -> bool:
-            if not (card and card.owner and card.owner.is_my_turn):
-                return False
-            return True
-
-        effect4.set_can_use_condition(condition4)
-
-        def process4(ctx: Dict[str, Any]):
-            """Action: Delete, Effect Immunity"""
-            player = ctx.get('player')
-            perm = ctx.get('permanent')
-            game = ctx.get('game')
-            if not (player and game):
-                return
-            def target_filter(p):
-                return p.is_digimon
-            def on_delete(target_perm):
-                enemy = player.enemy if player else None
-                if enemy:
-                    enemy.delete_permanent(target_perm)
-            game.effect_select_opponent_permanent(
-                player, on_delete, filter_fn=target_filter, is_optional=False)
-            # Grant effect immunity via modifier system
-            if perm and game:
-                from digimon_gym.engine.interfaces.modifiers import ModifierType
-                game.register_modifier(
-                    ModifierType.CANNOT_BE_SELECTED_BY_EFFECT, perm,
-                    value_fn=lambda: True, expiry='end_of_turn')
-
-        effect4.set_on_process_callback(process4)
-        effects.append(effect4)
-
-        # Timing: EffectTiming.OnEnterFieldAnyone
-        # [When Digivolving] You may play 1 of each [Dark Masters] trait card with different names from this Digimon's digivolution cards without paying the costs. Then, all of your [Dark Masters] trait Digimon gain <Rush> for the turn. (This Digimon can attack the turn it comes into play.) At turn end, delete the Digimon this effect played.
-        effect5 = ICardEffect()
-        effect5.set_timing(EffectTiming.OnEnterFieldAnyone)
-        effect5.set_effect_name("EX10-061 Play 1 [Dark Masters] from sources, give <Rush>, Delete them at end of turn")
-        effect5.set_effect_description("[When Digivolving] You may play 1 of each [Dark Masters] trait card with different names from this Digimon's digivolution cards without paying the costs. Then, all of your [Dark Masters] trait Digimon gain <Rush> for the turn. (This Digimon can attack the turn it comes into play.) At turn end, delete the Digimon this effect played.")
-        effect5.is_when_digivolving = True
-
-        effect = effect5  # alias for condition closure
-        def condition5(context: Dict[str, Any]) -> bool:
-            if card and card.permanent_of_this_card() is None:
-                return False
-            # Triggered when digivolving — validated by engine timing
-            return True
-
-        effect5.set_can_use_condition(condition5)
-
-        def process5(ctx: Dict[str, Any]):
-            """Action: Play Card"""
-            player = ctx.get('player')
-            perm = ctx.get('permanent')
-            game = ctx.get('game')
-            if not (player and game):
-                return
-            def play_filter(c):
-                if not getattr(c, 'is_digimon', False):
-                    return False
-                if not (any('Dark Masters' in _t for _t in (getattr(c, 'card_traits', []) or []))):
-                    return False
-                return True
-            game.effect_play_from_zone(
-                player, 'hand', play_filter, free=True, is_optional=True)
-
-        effect5.set_on_process_callback(process5)
-        effects.append(effect5)
-
-        # Timing: EffectTiming.OnEnterFieldAnyone
-        # [End of Your Turn] Delete this Digimon.
-        effect6 = ICardEffect()
-        effect6.set_timing(EffectTiming.OnEnterFieldAnyone)
-        effect6.set_effect_name("EX10-061 Delete the Digimon")
-        effect6.set_effect_description("[End of Your Turn] Delete this Digimon.")
-        effect6.is_on_play = True
-
-        effect = effect6  # alias for condition closure
-        def condition6(context: Dict[str, Any]) -> bool:
-            if not (card and card.owner and card.owner.is_my_turn):
-                return False
-            return True
-
-        effect6.set_can_use_condition(condition6)
-
-        def process6(ctx: Dict[str, Any]):
-            """Action: Delete, Effect Immunity"""
-            player = ctx.get('player')
-            perm = ctx.get('permanent')
-            game = ctx.get('game')
-            if not (player and game):
-                return
-            def target_filter(p):
-                return p.is_digimon
-            def on_delete(target_perm):
-                enemy = player.enemy if player else None
-                if enemy:
-                    enemy.delete_permanent(target_perm)
-            game.effect_select_opponent_permanent(
-                player, on_delete, filter_fn=target_filter, is_optional=False)
-            # Grant effect immunity via modifier system
-            if perm and game:
-                from digimon_gym.engine.interfaces.modifiers import ModifierType
-                game.register_modifier(
-                    ModifierType.CANNOT_BE_SELECTED_BY_EFFECT, perm,
-                    value_fn=lambda: True, expiry='end_of_turn')
-
-        effect6.set_on_process_callback(process6)
-        effects.append(effect6)
 
         return effects

@@ -90,6 +90,7 @@ class EX5_064(CardScript):
         # [Main] By suspending this Tamer and placing the top top card of one of your [Light Fang]/[Night Claw] trait Digimon as that Digimon's bottom digivolution card, 1 of your Digimon may digivolve into a Digimon card in your hand without paying the cost.
         effect2 = ICardEffect()
         effect2.set_timing(EffectTiming.OnDeclaration)
+        effect2._is_field_main = True
         effect2.set_effect_name("EX5-064 Your Digimon digivolves")
         effect2.set_effect_description("[Main] By suspending this Tamer and placing the top top card of one of your [Light Fang]/[Night Claw] trait Digimon as that Digimon's bottom digivolution card, 1 of your Digimon may digivolve into a Digimon card in your hand without paying the cost.")
 

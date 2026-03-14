@@ -136,7 +136,7 @@ class BT11_111(CardScript):
             if len(vemmon_cards) < 4:
                 return
 
-            # Return 4 [Vemmon] to deck bottom
+            # Return 4 [Vemmon] to deck bottom, firing the timing for each
             for i in range(4):
                 chosen = vemmon_cards[i]
                 if chosen in perm.card_sources:
@@ -144,6 +144,11 @@ class BT11_111(CardScript):
                 owner = getattr(chosen, 'owner', player)
                 if owner:
                     owner.library_cards.append(chosen)
+                # Fire OnDigivolutionCardReturnToDeckBottom timing
+                if game:
+                    game.execute_effects(
+                        EffectTiming.OnDigivolutionCardReturnToDeckBottom,
+                        {"permanent": perm, "returned_card": chosen})
 
             # Prevention of removal is signaled to engine by WhenRemoveField
             # with is_optional=True — engine cancels the removal when this

@@ -2,7 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
-from ....data.enums import EffectTiming
+from ....data.enums import EffectTiming, GamePhase
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -43,13 +43,24 @@ class BT21_007(CardScript):
                     return False
                 traits = getattr(c, 'card_traits', []) or []
                 return any('Reptile' in t or 'Dragonkin' in t for t in traits)
-            qualifying = [c for c in player.trash_cards if trait_filter(c)]
-            if not qualifying:
+
+            from digimon_gym.engine.game.constants import SEL_TRASH_START
+            valid = [SEL_TRASH_START + i for i, c in enumerate(player.trash_cards) if trait_filter(c)]
+            if not valid:
                 return
-            # Auto-select first qualifying card (engine limitation for trash selection)
-            chosen = qualifying[0]
-            player.trash_cards.remove(chosen)
-            player.hand_cards.append(chosen)
+
+            def on_trash_selected(idx: int):
+                if not (0 <= idx < len(player.trash_cards)):
+                    return
+                chosen = player.trash_cards[idx]
+                player.trash_cards.remove(chosen)
+                player.hand_cards.append(chosen)
+
+            game.request_selection(
+                GamePhase.SelectTrash, player, on_trash_selected, valid,
+                is_optional=True,
+                prompt="Select 1 Digimon with [Reptile] or [Dragonkin] trait from your trash to add to your hand."
+            )
 
         effect0.set_on_process_callback(process0)
         effects.append(effect0)

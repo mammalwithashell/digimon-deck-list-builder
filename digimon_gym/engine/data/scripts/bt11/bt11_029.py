@@ -18,6 +18,7 @@ class BT11_029(CardScript):
         # [Main][Once Per Turn] By suspending this Digimon, reveal the top 3 cards of your deck. Add all blue Tamer cards among them to your hand. Place the rest at the bottom of your deck in any order.
         effect0 = ICardEffect()
         effect0.set_timing(EffectTiming.OnDeclaration)
+        effect0._is_field_main = True
         effect0.set_effect_name("BT11-029 Reveal the top 3 cards of deck")
         effect0.set_effect_description("[Main][Once Per Turn] By suspending this Digimon, reveal the top 3 cards of your deck. Add all blue Tamer cards among them to your hand. Place the rest at the bottom of your deck in any order.")
         effect0.set_max_count_per_turn(1)

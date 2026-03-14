@@ -141,7 +141,8 @@ class BT7_082(CardScript):
 
         def process1(ctx: Dict[str, Any]):
             player = ctx.get('player')
-            if not player:
+            game = ctx.get('game')
+            if not (player and game):
                 return
 
             def trash_filter(c):
@@ -158,11 +159,27 @@ class BT7_082(CardScript):
                     return True
                 return False
 
-            qualifying = [c for c in player.trash_cards if trash_filter(c)]
-            if qualifying:
-                chosen = qualifying[0]
+            from ....game.constants import SEL_TRASH_START
+            from ....data.enums import GamePhase
+
+            valid = [SEL_TRASH_START + i
+                     for i, c in enumerate(player.trash_cards)
+                     if trash_filter(c)]
+            if not valid:
+                return
+
+            def on_select(action_id: int):
+                idx = action_id - SEL_TRASH_START
+                if not (0 <= idx < len(player.trash_cards)):
+                    return
+                chosen = player.trash_cards[idx]
                 player.trash_cards.remove(chosen)
                 player.hand_cards.append(chosen)
+
+            game.request_selection(
+                GamePhase.SelectTrash, player, on_select, valid,
+                is_optional=False,
+                prompt="Return 1 card with [Jesmon], [Huckmon], or [Sistermon] from trash to hand.")
 
         effect1.set_on_process_callback(process1)
         effects.append(effect1)

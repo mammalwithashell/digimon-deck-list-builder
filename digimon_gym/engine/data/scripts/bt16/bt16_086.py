@@ -13,6 +13,7 @@ class BT16_086(CardScript):
 
     def get_card_effects(self, card: 'CardSource') -> List['ICardEffect']:
         effects = []
+        card.also_treated_as_names = ['Leon Alexander']
 
         # Factory effect: set_memory_3
         # [Start of Your Turn] Set memory to 3 if <= 2
@@ -54,6 +55,7 @@ class BT16_086(CardScript):
         # [Main] <Mind Link> with 1 of your Digimon with [Pulsemon] in text. (Place this Tamer as that Digimon's bottom digivolution card if there are no Tamer cards in its digivolution cards.)
         effect2 = ICardEffect()
         effect2.set_timing(EffectTiming.OnDeclaration)
+        effect2._is_field_main = True
         effect2.set_effect_name("BT16-086 Mind Link")
         effect2.set_effect_description("[Main] <Mind Link> with 1 of your Digimon with [Pulsemon] in text. (Place this Tamer as that Digimon's bottom digivolution card if there are no Tamer cards in its digivolution cards.)")
 

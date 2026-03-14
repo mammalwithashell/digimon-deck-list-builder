@@ -148,6 +148,9 @@ class EX9_021(CardScript):
             if not perm:
                 return
 
+            from ....data.enums import GamePhase
+            from ....game.constants import SOURCES_PER_FIELD
+
             def _is_greymon_or_ver1(c) -> bool:
                 if not getattr(c, 'is_digimon', False):
                     return False
@@ -166,33 +169,94 @@ class EX9_021(CardScript):
                     return True
                 return False
 
-            played_any = False
-
-            # Play 1 Greymon/Ver.1 from evo cards
-            evo_cards = perm.card_sources[:-1] if len(perm.card_sources) > 1 else []
-            for c in evo_cards:
-                if _is_greymon_or_ver1(c):
-                    if c in perm.card_sources:
-                        perm.card_sources.remove(c)
-                        played_perm = player.play_card_from_source(c, pay_cost=False)
-                        if played_perm:
-                            played_any = True
+            # Find field index of this permanent
+            field_idx = None
+            for fi, fp in enumerate(player.battle_area):
+                if fp is perm:
+                    field_idx = fi
                     break
+            if field_idx is None:
+                return
+            base = 2000 + field_idx * SOURCES_PER_FIELD
 
-            # Play 1 Garurumon/Ver.2 from evo cards
-            evo_cards = perm.card_sources[:-1] if len(perm.card_sources) > 1 else []
-            for c in evo_cards:
-                if _is_garurumon_or_ver2(c):
-                    if c in perm.card_sources:
-                        perm.card_sources.remove(c)
-                        played_perm = player.play_card_from_source(c, pay_cost=False)
-                        if played_perm:
-                            played_any = True
-                    break
+            played_any = [False]
 
-            # If at least 1 card was played, place this Digimon as top security
-            if played_any and perm in player.battle_area:
-                player.put_permanent_to_security(perm)
+            def _select_greymon():
+                """Let agent select 1 Greymon/Ver.1 from evo cards to play."""
+                evo_cards = perm.card_sources[:-1] if len(perm.card_sources) > 1 else []
+                greymon_candidates = [c for c in evo_cards if _is_greymon_or_ver1(c)]
+                if not greymon_candidates:
+                    _select_garurumon()
+                    return
+
+                valid = []
+                for i, cs in enumerate(perm.card_sources):
+                    if cs in greymon_candidates and (base + i) < 2168:
+                        valid.append(base + i)
+                if not valid:
+                    _select_garurumon()
+                    return
+
+                def on_select(action_id: int):
+                    idx = action_id - base
+                    if 0 <= idx < len(perm.card_sources):
+                        chosen = perm.card_sources[idx]
+                        if chosen in perm.card_sources:
+                            perm.card_sources.remove(chosen)
+                            played_perm = player.play_card_from_source(
+                                chosen, pay_cost=False)
+                            if played_perm:
+                                played_any[0] = True
+                    _select_garurumon()
+
+                game.request_selection(
+                    GamePhase.SelectSource, player, on_select, valid,
+                    is_optional=False,
+                    prompt="Select 1 card with [Greymon] or [Ver.1] trait to play."
+                )
+
+            def _select_garurumon():
+                """Let agent select 1 Garurumon/Ver.2 from evo cards to play."""
+                evo_cards = perm.card_sources[:-1] if len(perm.card_sources) > 1 else []
+                garurumon_candidates = [c for c in evo_cards
+                                        if _is_garurumon_or_ver2(c)]
+                if not garurumon_candidates:
+                    _finalize()
+                    return
+
+                valid = []
+                for i, cs in enumerate(perm.card_sources):
+                    if cs in garurumon_candidates and (base + i) < 2168:
+                        valid.append(base + i)
+                if not valid:
+                    _finalize()
+                    return
+
+                def on_select(action_id: int):
+                    idx = action_id - base
+                    if 0 <= idx < len(perm.card_sources):
+                        chosen = perm.card_sources[idx]
+                        if chosen in perm.card_sources:
+                            perm.card_sources.remove(chosen)
+                            played_perm = player.play_card_from_source(
+                                chosen, pay_cost=False)
+                            if played_perm:
+                                played_any[0] = True
+                    _finalize()
+
+                game.request_selection(
+                    GamePhase.SelectSource, player, on_select, valid,
+                    is_optional=False,
+                    prompt="Select 1 card with [Garurumon] or [Ver.2] trait to play."
+                )
+
+            def _finalize():
+                """If at least 1 card was played, place this Digimon as
+                top security card."""
+                if played_any[0] and perm in player.battle_area:
+                    player.put_permanent_to_security(perm)
+
+            _select_greymon()
 
         effect3.set_on_process_callback(process3)
         effects.append(effect3)

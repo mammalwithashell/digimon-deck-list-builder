@@ -112,33 +112,59 @@ class EX10_010(CardScript):
         effect5.set_on_process_callback(_delete_opp_play_cost_7_or_less)
         effects.append(effect5)
 
-        # Timing: EffectTiming.None
-        # Effect Immunity
-        effect6 = ICardEffect()
-        effect6.set_effect_name("EX10-010 Isn't affected by opponent's Digimon's effects")
-        effect6.set_effect_description("Effect Immunity")
+        # [All Turns] While your opponent has a Digimon with 13000 DP or more,
+        # your opponent's Digimon's effects don't affect this Digimon, and it gets +3000 DP.
 
-        effect = effect6  # alias for condition closure
+        # DP modifier (+3000 when opponent has 13000+ DP Digimon)
+        effect6 = ICardEffect()
+        effect6.set_effect_name("EX10-010 +3000 DP vs 13000+ opponent")
+        effect6.set_effect_description(
+            "[All Turns] While your opponent has a Digimon with 13000 DP or more, "
+            "this Digimon gets +3000 DP."
+        )
+        effect6.dp_modifier = 3000
+
+        def _opp_has_13k_dp():
+            """Check if opponent has a Digimon with 13000+ DP."""
+            player = card.owner if card else None
+            if not player or not player.enemy:
+                return False
+            enemy = player.enemy
+            for p in enemy.battle_area:
+                if p.is_digimon:
+                    dp = p.current_dp
+                    if dp is not None and dp >= 13000:
+                        return True
+            return False
+
         def condition6(context: Dict[str, Any]) -> bool:
             if card and card.permanent_of_this_card() is None:
                 return False
-            return True
+            return _opp_has_13k_dp()
 
         effect6.set_can_use_condition(condition6)
 
         def process6(ctx: Dict[str, Any]):
-            """Action: Effect Immunity"""
-            player = ctx.get('player')
-            perm = ctx.get('permanent')
-            game = ctx.get('game')
-            # Grant effect immunity via modifier system
-            if perm and game:
-                from digimon_gym.engine.interfaces.modifiers import ModifierType
-                game.register_modifier(
-                    perm, ModifierType.CANNOT_BE_SELECTED_BY_EFFECT,
-                    value_fn=lambda: True, expiry='permanent')
+            pass  # Declarative DP modifier
 
         effect6.set_on_process_callback(process6)
         effects.append(effect6)
+
+        # Effect immunity (opponent's Digimon effects don't affect this)
+        effect7 = ICardEffect()
+        effect7.set_effect_name("EX10-010 Effect immunity vs 13000+ opponent")
+        effect7.set_effect_description(
+            "[All Turns] While your opponent has a Digimon with 13000 DP or more, "
+            "your opponent's Digimon's effects don't affect this Digimon."
+        )
+        effect7._is_immune_to_opponent_digimon_effects = True
+
+        def condition7(context: Dict[str, Any]) -> bool:
+            if card and card.permanent_of_this_card() is None:
+                return False
+            return _opp_has_13k_dp()
+
+        effect7.set_can_use_condition(condition7)
+        effects.append(effect7)
 
         return effects

@@ -22,6 +22,7 @@ class BT23_072(CardScript):
         # ---------------------------------------------------------------
         effect0 = ICardEffect()
         effect0.set_timing(EffectTiming.OnDeclaration)
+        effect0._is_field_main = True
         effect0.set_effect_name("BT23-072 draw 1")
         effect0.set_effect_description(
             "[Hand][Main] By paying 3 cost and placing this card as the bottom "

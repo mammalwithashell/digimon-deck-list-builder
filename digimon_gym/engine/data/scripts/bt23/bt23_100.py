@@ -80,6 +80,7 @@ class BT23_100(CardScript):
         # [Main] <Delay>, You may play 1 Tamer card with the [CS] trait from your hand without paying the cost.
         effect3 = ICardEffect()
         effect3.set_timing(EffectTiming.OnDeclaration)
+        effect3._is_field_main = True
         effect3.set_effect_name("BT23-100 Play 1 tamer with [CS] trait in hand")
         effect3.set_effect_description("[Main] <Delay>, You may play 1 Tamer card with the [CS] trait from your hand without paying the cost.")
 

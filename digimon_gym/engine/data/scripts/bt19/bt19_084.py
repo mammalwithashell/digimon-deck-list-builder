@@ -44,6 +44,7 @@ class BT19_084(CardScript):
         # [Main] By suspending this Tamer, 1 of your Digimon digivolves into a Digimon card in your face up security cards. If this effect digivolved, you may place 1 Digimon card with the [Royal Base] trait from your hand face up as your bottom security card.
         effect1 = ICardEffect()
         effect1.set_timing(EffectTiming.OnDeclaration)
+        effect1._is_field_main = True
         effect1.set_effect_name("BT19-084 One of your Digimon digivolves into Digimon card in security")
         effect1.set_effect_description("[Main] By suspending this Tamer, 1 of your Digimon digivolves into a Digimon card in your face up security cards. If this effect digivolved, you may place 1 Digimon card with the [Royal Base] trait from your hand face up as your bottom security card.")
 

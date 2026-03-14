@@ -92,7 +92,16 @@ class Permanent:
             temp_modifier = sum(m for m in self._dp_modifiers if m >= 0)
         else:
             temp_modifier = sum(self._dp_modifiers)
-        return max(0, base + modifier + aura_modifier + temp_modifier)
+        computed = max(0, base + modifier + aura_modifier + temp_modifier)
+        # Apply DP floor if any (e.g. "DP cannot be reduced below X")
+        owner = self.owner
+        if owner and hasattr(owner, 'game') and owner.game:
+            from ..interfaces.modifiers import ModifierType
+            floor = owner.game.modifiers.get_int_modifier(
+                self, ModifierType.DP_FLOOR, 0)
+            if floor > 0:
+                computed = max(floor, computed)
+        return computed
 
     def _get_aura_dp_modifier(self) -> int:
         """Sum DP modifiers from aura effects on other friendly permanents.
@@ -129,6 +138,24 @@ class Permanent:
             # Non-inherited effects from top card
             if other_perm.top_card:
                 for effect in other_perm.top_card.effect_list(EffectTiming.NoTiming):
+                    if effect.is_inherited_effect:
+                        continue
+                    if not getattr(effect, '_applies_to_all_own_digimon', False):
+                        continue
+                    if effect.dp_modifier == 0:
+                        continue
+                    ctx = {"permanent": self}
+                    if effect.can_use_condition and not effect.can_use_condition(ctx):
+                        continue
+                    perm_filter = getattr(effect, '_dp_permanent_condition', None)
+                    if perm_filter and not perm_filter(self):
+                        continue
+                    total += effect.dp_modifier
+        # Also scan security cards for DP aura effects
+        # (e.g. option cards placed face-up in security that grant DP)
+        if hasattr(owner, 'security_cards'):
+            for sec_card in owner.security_cards:
+                for effect in sec_card.effect_list(EffectTiming.NoTiming):
                     if effect.is_inherited_effect:
                         continue
                     if not getattr(effect, '_applies_to_all_own_digimon', False):
@@ -224,6 +251,64 @@ class Permanent:
                     and effect_is_active(effect, linked)
                 ):
                     return True
+        # Aura keywords from other friendly permanents
+        # (mirrors _get_aura_dp_modifier pattern for keyword granting)
+        if self.is_digimon and self.top_card and self.top_card.owner:
+            owner = self.top_card.owner
+            if hasattr(owner, 'battle_area'):
+                for other_perm in owner.battle_area:
+                    if other_perm is self:
+                        continue
+                    # Check non-inherited effects from other permanent's top card
+                    if other_perm.top_card:
+                        for effect in other_perm.top_card.effect_list(EffectTiming.NoTiming):
+                            if effect.is_inherited_effect:
+                                continue
+                            if not getattr(effect, '_applies_to_all_own_digimon', False):
+                                continue
+                            if not getattr(effect, keyword_attr, False):
+                                continue
+                            ctx = {"permanent": self}
+                            if effect.can_use_condition and not effect.can_use_condition(ctx):
+                                continue
+                            perm_filter = getattr(effect, '_keyword_permanent_condition', None)
+                            if perm_filter and not perm_filter(self):
+                                continue
+                            return True
+                    # Check linked option cards on other permanents
+                    for linked in other_perm.linked_cards:
+                        for effect in linked.effect_list(EffectTiming.NoTiming):
+                            if effect.is_inherited_effect:
+                                continue
+                            if not getattr(effect, '_applies_to_all_own_digimon', False):
+                                continue
+                            if not getattr(effect, keyword_attr, False):
+                                continue
+                            ctx = {"permanent": self}
+                            if effect.can_use_condition and not effect.can_use_condition(ctx):
+                                continue
+                            perm_filter = getattr(effect, '_keyword_permanent_condition', None)
+                            if perm_filter and not perm_filter(self):
+                                continue
+                            return True
+            # Also scan security cards for aura keyword effects
+            # (e.g. option cards placed face-up in security that grant keywords)
+            if hasattr(owner, 'security_cards'):
+                for sec_card in owner.security_cards:
+                    for effect in sec_card.effect_list(EffectTiming.NoTiming):
+                        if effect.is_inherited_effect:
+                            continue
+                        if not getattr(effect, '_applies_to_all_own_digimon', False):
+                            continue
+                        if not getattr(effect, keyword_attr, False):
+                            continue
+                        ctx = {"permanent": self}
+                        if effect.can_use_condition and not effect.can_use_condition(ctx):
+                            continue
+                        perm_filter = getattr(effect, '_keyword_permanent_condition', None)
+                        if perm_filter and not perm_filter(self):
+                            continue
+                        return True
         return False
 
     def grant_keyword(self, keyword_attr: str, duration: int = -1):
@@ -380,6 +465,7 @@ class Permanent:
     def add_card_source_bottom(self, card_source: 'CardSource'):
         """Add a card source at the bottom of the digivolution stack."""
         self.card_sources.insert(0, card_source)
+        self._fire_timing(EffectTiming.OnAddDigivolutionCards, {"permanent": self, "added_card": card_source})
 
     # ─── Effect Action Methods ───────────────────────────────────────
 

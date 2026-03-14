@@ -33,12 +33,25 @@ class P_123(CardScript):
         effect0.set_can_use_condition(condition0)
 
         def process0(ctx: Dict[str, Any]):
-            """Action: Gain 1 memory"""
+            """You may hatch, then gain 1 memory."""
             player = ctx.get('player')
             perm = ctx.get('permanent')
             game = ctx.get('game')
-            if player:
-                player.add_memory(1)
+            if not (player and game):
+                return
+            # You may hatch in your breeding area (optional)
+            if player.digitama_library_cards and player.breeding_area is None:
+                def on_hatch_choice(choice_idx):
+                    if choice_idx == 0:
+                        player.hatch()
+
+                game.effect_choose_branch(
+                    player, 2, on_hatch_choice,
+                    prompt="Hatch in your breeding area?",
+                    branch_labels=["Yes, hatch", "No, skip"],
+                )
+            # Then, gain 1 memory
+            player.add_memory(1)
 
         effect0.set_on_process_callback(process0)
         effects.append(effect0)

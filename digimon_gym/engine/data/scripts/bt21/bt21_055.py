@@ -17,6 +17,7 @@ class BT21_055(CardScript):
         # [Your Turn] When this Digimon would digivolve into a card with the [Mineral] or
         # [Rock] trait, reduce the digivolution cost by 1.
         effect0 = ICardEffect()
+        effect0.set_timing(EffectTiming.BeforePayCost)
         effect0.set_effect_name("BT21-055 Digi cost -1 for [Mineral] or [Rock]")
         effect0.set_effect_description(
             "[Your Turn] When this Digimon would digivolve into a card with the [Mineral] or "
@@ -26,6 +27,9 @@ class BT21_055(CardScript):
 
         def condition0(context: Dict[str, Any]) -> bool:
             if not (card and card.owner and card.owner.is_my_turn):
+                return False
+            # Leak guard: only apply when this card is on the permanent being digivolved
+            if context.get('card_source') is not card:
                 return False
             if card and card.permanent_of_this_card() is None:
                 return False

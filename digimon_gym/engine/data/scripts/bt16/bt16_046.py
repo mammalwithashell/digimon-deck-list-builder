@@ -60,30 +60,42 @@ class BT16_046(CardScript):
         effect2.set_can_use_condition(condition2)
 
         def process2(ctx: Dict[str, Any]):
-            """Action: Delete, Suspend, Gain Keyword Cannot Unsuspend"""
+            """Action: Suspend 2 opp Digimon/Tamers (cannot unsuspend), then delete 1 suspended Tamer"""
             player = ctx.get('player')
             perm = ctx.get('permanent')
             game = ctx.get('game')
             if not (player and game):
                 return
-            def target_filter(p):
-                return p.is_digimon
-            def on_delete(target_perm):
-                enemy = player.enemy if player else None
-                if enemy:
-                    enemy.delete_permanent(target_perm)
-            game.effect_select_opponent_permanent(
-                player, on_delete, filter_fn=target_filter, is_optional=False)
-            if not (player and game):
+            enemy = player.enemy if player else None
+            if not enemy:
                 return
-            def target_filter(p):
-                return True
+            # Track which permanents we suspend so we can grant cannot-unsuspend
+            suspended_by_effect = []
+
+            def suspend_filter(p):
+                return p.is_digimon or p.is_tamer
+
             def on_suspend(target_perm):
+                was_already_suspended = target_perm.is_suspended
                 target_perm.suspend()
+                if not was_already_suspended:
+                    suspended_by_effect.append(target_perm)
+                    # Grant cannot-unsuspend during opponent's next unsuspend phase
+                    target_perm.grant_keyword('_is_cannot_unsuspend')
+
+            # Suspend up to 2 opponent Digimon or Tamers
+            opp_targets = [p for p in enemy.battle_area if suspend_filter(p)]
+            for _ in range(min(2, len(opp_targets))):
+                game.effect_select_opponent_permanent(
+                    player, on_suspend, filter_fn=suspend_filter, is_optional=False)
+
+            # Then, delete 1 of their suspended Tamers
+            def suspended_tamer_filter(p):
+                return p.is_tamer and p.is_suspended
+
             game.effect_select_opponent_permanent(
-                player, on_suspend, filter_fn=target_filter, is_optional=False)
-            if perm:
-                perm.grant_keyword('_is_cannot_unsuspend')
+                player, lambda tp: enemy.delete_permanent(tp),
+                filter_fn=suspended_tamer_filter, is_optional=False)
 
         effect2.set_on_process_callback(process2)
         effects.append(effect2)
@@ -107,30 +119,38 @@ class BT16_046(CardScript):
         effect3.set_can_use_condition(condition3)
 
         def process3(ctx: Dict[str, Any]):
-            """Action: Delete, Suspend, Gain Keyword Cannot Unsuspend"""
+            """Action: Suspend 2 opp Digimon/Tamers (cannot unsuspend), then delete 1 suspended Tamer"""
             player = ctx.get('player')
             perm = ctx.get('permanent')
             game = ctx.get('game')
             if not (player and game):
                 return
-            def target_filter(p):
-                return p.is_digimon
-            def on_delete(target_perm):
-                enemy = player.enemy if player else None
-                if enemy:
-                    enemy.delete_permanent(target_perm)
-            game.effect_select_opponent_permanent(
-                player, on_delete, filter_fn=target_filter, is_optional=False)
-            if not (player and game):
+            enemy = player.enemy if player else None
+            if not enemy:
                 return
-            def target_filter(p):
-                return True
+            suspended_by_effect = []
+
+            def suspend_filter(p):
+                return p.is_digimon or p.is_tamer
+
             def on_suspend(target_perm):
+                was_already_suspended = target_perm.is_suspended
                 target_perm.suspend()
+                if not was_already_suspended:
+                    suspended_by_effect.append(target_perm)
+                    target_perm.grant_keyword('_is_cannot_unsuspend')
+
+            opp_targets = [p for p in enemy.battle_area if suspend_filter(p)]
+            for _ in range(min(2, len(opp_targets))):
+                game.effect_select_opponent_permanent(
+                    player, on_suspend, filter_fn=suspend_filter, is_optional=False)
+
+            def suspended_tamer_filter(p):
+                return p.is_tamer and p.is_suspended
+
             game.effect_select_opponent_permanent(
-                player, on_suspend, filter_fn=target_filter, is_optional=False)
-            if perm:
-                perm.grant_keyword('_is_cannot_unsuspend')
+                player, lambda tp: enemy.delete_permanent(tp),
+                filter_fn=suspended_tamer_filter, is_optional=False)
 
         effect3.set_on_process_callback(process3)
         effects.append(effect3)
@@ -150,17 +170,31 @@ class BT16_046(CardScript):
                 return False
             if not (card and card.owner and card.owner.is_my_turn):
                 return False
+            # Must be triggered by THIS Digimon becoming suspended
+            ctx_perm = context.get('permanent')
+            if ctx_perm is not card.permanent_of_this_card():
+                return False
             return True
 
         effect4.set_can_use_condition(condition4)
 
         def process4(ctx: Dict[str, Any]):
-            """Action: Change Security Attack"""
+            """Action: Grant 1 of your Digimon Security A. +1 for the turn"""
             player = ctx.get('player')
             perm = ctx.get('permanent')
             game = ctx.get('game')
-            # Grant Security Attack modifier to target permanent
-            pass  # descriptive-tagged: change_security_attack
+            if not (player and game):
+                return
+
+            def digimon_filter(p):
+                return p.is_digimon
+
+            def on_sa_grant(target_perm):
+                target_perm._temp_sa_modifier += 1
+
+            game.effect_select_own_permanent(
+                player, on_sa_grant, filter_fn=digimon_filter, is_optional=False,
+                prompt="Select 1 Digimon to gain Security A. +1.")
 
         effect4.set_on_process_callback(process4)
         effects.append(effect4)

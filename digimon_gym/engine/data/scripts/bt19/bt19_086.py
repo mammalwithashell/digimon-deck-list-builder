@@ -47,6 +47,7 @@ class BT19_086(CardScript):
         # [Main] By suspending this Tamer and trashing 4 Option cards with the [Device] trait in your battle area, you may play 1 [Cyberdramon] from your hand or trash without paying the cost.
         effect1 = ICardEffect()
         effect1.set_timing(EffectTiming.OnDeclaration)
+        effect1._is_field_main = True
         effect1.set_effect_name("BT19-086 Trash 4 Device options in battle area, play a Cyberdramon without paying the cost")
         effect1.set_effect_description("[Main] By suspending this Tamer and trashing 4 Option cards with the [Device] trait in your battle area, you may play 1 [Cyberdramon] from your hand or trash without paying the cost.")
         effect1.is_optional = True

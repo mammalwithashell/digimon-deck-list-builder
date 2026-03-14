@@ -57,21 +57,31 @@ class EX9_026(CardScript):
             enemy = player.enemy if player else None
             if not enemy:
                 return
-            if player.hand_cards:
-                placed = player.hand_cards.pop()
-                perm.add_card_source_bottom(placed)
+            if not player.hand_cards:
+                return
 
-            def target_filter(p):
-                return p.is_digimon
+            def on_hand_selected(selected_card):
+                if selected_card is None:
+                    return
+                if selected_card in player.hand_cards:
+                    player.hand_cards.remove(selected_card)
+                    perm.add_card_source_bottom(selected_card)
 
-            def on_debuff(target_perm):
-                target_perm.security_attack_modifier = getattr(
-                    target_perm, 'security_attack_modifier', 0) - 1
-                target_perm.dp_modifier -= 3000
+                def target_filter(p):
+                    return p.is_digimon
 
-            game.effect_select_opponent_permanent(
-                player, on_debuff, filter_fn=target_filter, is_optional=False,
-                prompt="Select opponent Digimon to give SA-1 and -3000 DP.")
+                def on_debuff(target_perm):
+                    target_perm.security_attack_modifier = getattr(
+                        target_perm, 'security_attack_modifier', 0) - 1
+                    target_perm.dp_modifier -= 3000
+
+                game.effect_select_opponent_permanent(
+                    player, on_debuff, filter_fn=target_filter, is_optional=False,
+                    prompt="Select opponent Digimon to give SA-1 and -3000 DP.")
+
+            game.effect_select_hand_card(
+                player, lambda c: True, on_hand_selected, is_optional=True,
+                prompt="Select 1 card to place face down as bottom digivolution card.")
 
         effect1.set_on_process_callback(_place_and_debuff)
         effects.append(effect1)

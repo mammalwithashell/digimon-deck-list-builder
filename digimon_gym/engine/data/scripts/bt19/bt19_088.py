@@ -46,6 +46,7 @@ class BT19_088(CardScript):
         # [Main] If you have 20 or more cards in your trash, by suspending this Tamer, 1 of your [Impmon] may digivolve into [Beelzemon] in the hand or trash for a digivolution cost of 4, ignoring its digivolution requirements.
         effect1 = ICardEffect()
         effect1.set_timing(EffectTiming.OnDeclaration)
+        effect1._is_field_main = True
         effect1.set_effect_name("BT19-088 Suspend this tamer to digivolve from trash or hand")
         effect1.set_effect_description("[Main] If you have 20 or more cards in your trash, by suspending this Tamer, 1 of your [Impmon] may digivolve into [Beelzemon] in the hand or trash for a digivolution cost of 4, ignoring its digivolution requirements.")
         effect1.is_optional = True

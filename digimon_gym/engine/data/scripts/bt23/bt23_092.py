@@ -61,12 +61,18 @@ class BT23_092(CardScript):
             def digi_filter(p):
                 return p.is_digimon
             def on_digi_grant(target_perm):
-                target_perm.grant_keyword('_is_cannot_suspend')
+                from ....interfaces.modifiers import ModifierType
+                game.register_modifier(
+                    target_perm, ModifierType.CANNOT_SUSPEND,
+                    value_fn=lambda: True, expiry='end_of_opponent_turn')
                 # Step 2: Select 1 opponent Tamer
                 def tamer_filter(p):
                     return p.is_tamer
                 def on_tamer_grant(tamer_perm):
-                    tamer_perm.grant_keyword('_is_cannot_suspend')
+                    from ....interfaces.modifiers import ModifierType as MT2
+                    game.register_modifier(
+                        tamer_perm, MT2.CANNOT_SUSPEND,
+                        value_fn=lambda: True, expiry='end_of_opponent_turn')
                 game.effect_select_opponent_permanent(
                     player, on_tamer_grant, filter_fn=tamer_filter, is_optional=True)
             game.effect_select_opponent_permanent(
@@ -126,11 +132,17 @@ class BT23_092(CardScript):
             def digi_filter(p):
                 return p.is_digimon
             def on_digi_grant(target_perm):
-                target_perm.grant_keyword('_is_cannot_suspend')
+                from ....interfaces.modifiers import ModifierType
+                game.register_modifier(
+                    target_perm, ModifierType.CANNOT_SUSPEND,
+                    value_fn=lambda: True, expiry='end_of_opponent_turn')
                 def tamer_filter(p):
                     return p.is_tamer
                 def on_tamer_grant(tamer_perm):
-                    tamer_perm.grant_keyword('_is_cannot_suspend')
+                    from ....interfaces.modifiers import ModifierType as MT2
+                    game.register_modifier(
+                        tamer_perm, MT2.CANNOT_SUSPEND,
+                        value_fn=lambda: True, expiry='end_of_opponent_turn')
                 game.effect_select_opponent_permanent(
                     player, on_tamer_grant, filter_fn=tamer_filter, is_optional=True)
             game.effect_select_opponent_permanent(
@@ -164,11 +176,17 @@ class BT23_092(CardScript):
             def digi_filter(p):
                 return p.is_digimon
             def on_digi_grant(target_perm):
-                target_perm.grant_keyword('_is_cannot_suspend')
+                from ....interfaces.modifiers import ModifierType
+                game.register_modifier(
+                    target_perm, ModifierType.CANNOT_SUSPEND,
+                    value_fn=lambda: True, expiry='end_of_opponent_turn')
                 def tamer_filter(p):
                     return p.is_tamer
                 def on_tamer_grant(tamer_perm):
-                    tamer_perm.grant_keyword('_is_cannot_suspend')
+                    from ....interfaces.modifiers import ModifierType as MT2
+                    game.register_modifier(
+                        tamer_perm, MT2.CANNOT_SUSPEND,
+                        value_fn=lambda: True, expiry='end_of_opponent_turn')
                 game.effect_select_opponent_permanent(
                     player, on_tamer_grant, filter_fn=tamer_filter, is_optional=True)
             game.effect_select_opponent_permanent(

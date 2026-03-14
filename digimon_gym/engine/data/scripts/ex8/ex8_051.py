@@ -68,6 +68,16 @@ class EX8_051(CardScript):
         effect_inh.is_inherited_effect = True
 
         def condition_inh(context: Dict[str, Any]) -> bool:
+            # Check this card was the one trashed
+            trashed_cards = context.get('trashed_cards', [])
+            if card not in trashed_cards:
+                return False
+            # Check the permanent has [Mineral] or [Rock] trait
+            permanent = context.get('permanent')
+            if permanent is None:
+                return False
+            if not (permanent.has_trait('Mineral') or permanent.has_trait('Rock')):
+                return False
             return True
 
         effect_inh.set_can_use_condition(condition_inh)

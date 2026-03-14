@@ -68,6 +68,7 @@ class BT22_095(CardScript):
         # [Main] Place this Tamer as any of your [Mother Eater]s' bottom digivolution card.
         effect2 = ICardEffect()
         effect2.set_timing(EffectTiming.OnDeclaration)
+        effect2._is_field_main = True
         effect2.set_effect_name("BT22-095 Place underneath a [Mother Eater]")
         effect2.set_effect_description("[Main] Place this Tamer as any of your [Mother Eater]s' bottom digivolution card.")
 

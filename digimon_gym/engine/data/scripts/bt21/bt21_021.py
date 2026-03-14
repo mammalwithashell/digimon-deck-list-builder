@@ -89,6 +89,78 @@ class BT21_021(CardScript):
             return True
 
         effect4.set_can_use_condition(condition4)
+
+        def process4(ctx: Dict[str, Any]):
+            """[On Deletion] Place 1 Xros Heart/Blue Flare Digimon from hand/trash under tamer, then Save."""
+            player = ctx.get('player')
+            game = ctx.get('game')
+            if not (player and game):
+                return
+
+            # Find eligible Digimon cards (Xros Heart or Blue Flare trait) in hand/trash
+            def _is_xros_blue_flare_digimon(c):
+                if not getattr(c, 'is_digimon', False):
+                    return False
+                traits = getattr(c, 'card_traits', []) or []
+                return any('Xros Heart' in t or 'Blue Flare' in t for t in traits)
+
+            # Build combined hand+trash selection
+            from ....data.enums import GamePhase
+            _SEL_HAND_START = 100
+            _SEL_TRASH_START = 130
+
+            valid = []
+            for i, c in enumerate(player.hand_cards):
+                if _is_xros_blue_flare_digimon(c):
+                    valid.append(_SEL_HAND_START + i)
+            for i, c in enumerate(player.trash_cards):
+                if _is_xros_blue_flare_digimon(c):
+                    valid.append(_SEL_TRASH_START + i)
+
+            if not valid:
+                return
+
+            def on_card_selected(action_id):
+                # Determine which card was selected
+                if action_id >= _SEL_TRASH_START:
+                    idx = action_id - _SEL_TRASH_START
+                    if idx < len(player.trash_cards):
+                        selected = player.trash_cards[idx]
+                        player.trash_cards.remove(selected)
+                    else:
+                        return
+                elif action_id >= _SEL_HAND_START:
+                    idx = action_id - _SEL_HAND_START
+                    if idx < len(player.hand_cards):
+                        selected = player.hand_cards[idx]
+                        player.hand_cards.remove(selected)
+                    else:
+                        return
+                else:
+                    return
+
+                # Select a tamer to place the card under
+                def tamer_filter(p):
+                    return p.is_tamer
+
+                def on_tamer_selected(tamer_perm):
+                    tamer_perm.add_card_source_bottom(selected)
+
+                tamers = [p for p in player.battle_area if p.is_tamer]
+                if tamers:
+                    game.effect_select_own_permanent(
+                        player, on_tamer_selected,
+                        filter_fn=tamer_filter,
+                        is_optional=False,
+                        prompt="Select a Tamer to place the Digimon card under."
+                    )
+
+            game.request_selection(
+                GamePhase.SelectHand, player, on_card_selected,
+                valid, is_optional=True,
+                prompt="Select 1 [Xros Heart] or [Blue Flare] Digimon from hand or trash to place under a Tamer.")
+
+        effect4.set_on_process_callback(process4)
         effects.append(effect4)
 
         # Timing: EffectTiming.OnEndAttack
@@ -108,32 +180,21 @@ class BT21_021(CardScript):
         effect5.set_can_use_condition(condition5)
 
         def process5(ctx: Dict[str, Any]):
-            """Action: Cost -5, Delete, Play Card"""
+            """[End of Attack] Play 1 Xros Heart/Blue Flare/Hero from hand cost -5, then delete this Digimon."""
             player = ctx.get('player')
             perm = ctx.get('permanent')
             game = ctx.get('game')
             if not (player and game):
                 return
-            def target_filter(p):
-                return p.is_digimon
-            def on_delete(target_perm):
-                enemy = player.enemy if player else None
-                if enemy:
-                    enemy.delete_permanent(target_perm)
-            game.effect_select_opponent_permanent(
-                player, on_delete, filter_fn=target_filter, is_optional=False)
-            if not (player and game):
-                return
+
             def play_filter(c):
-                if not (getattr(c, 'is_digimon', False) or getattr(c, 'is_tamer', False)):
-                    return False
-                if not (any('Xros Heart' in _t or 'Blue Flare' in _t or 'Hero' in _t for _t in (getattr(c, 'card_traits', []) or []))):
-                    return False
-                return True
+                traits = getattr(c, 'card_traits', []) or []
+                return any('Xros Heart' in t or 'Blue Flare' in t or 'Hero' in t for t in traits)
+
+            # Play from hand with cost reduction of 5
             game.effect_play_from_zone(
-                player, 'hand', play_filter, free=True, is_optional=True)
-            # Cost reduction by 5 — handled via cost_reduction property
-            pass  # descriptive-tagged: cost_reduction
+                player, 'hand', play_filter, free=False, manual_reduction=5,
+                is_optional=True)
 
         effect5.set_on_process_callback(process5)
         effects.append(effect5)

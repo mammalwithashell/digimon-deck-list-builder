@@ -9,7 +9,7 @@ if TYPE_CHECKING:
 
 
 class BT9_092(CardScript):
-    """BT9-092 Hina Kurihara | Tamer | White | Cost 3
+    """BT9-092 Cool Boy | Tamer | White | Cost 2
 
     [On Play] Reveal the top 3 cards of your deck. Add 1 Digimon card
         with [X Antibody] in its traits and 1 Option card with
@@ -163,12 +163,6 @@ class BT9_092(CardScript):
         def condition2(context: Dict[str, Any]) -> bool:
             return True
         effect2.set_can_use_condition(condition2)
-
-        def process2(ctx: Dict[str, Any]):
-            player = ctx.get('player')
-            if player and card:
-                player.play_card_from_source(card, pay_cost=False)
-        effect2.set_on_process_callback(process2)
         effects.append(effect2)
 
         return effects

@@ -57,6 +57,7 @@ class EX6_044(CardScript):
         # [Hand][Main] By paying 3 cost and placing this card as the bottom digivolution card of 1 of your Digimon that's level 6 or has the [Legend-Arms] trait, <De-Digivolve 1> all of your opponent's Digimon with as much or less DP than that Digimon.
         effect3 = ICardEffect()
         effect3.set_timing(EffectTiming.OnDeclaration)
+        effect3._is_field_main = True
         effect3.set_effect_name("EX6-044 <De-Digivolve 1> all of your opponent's Digimon")
         effect3.set_effect_description("[Hand][Main] By paying 3 cost and placing this card as the bottom digivolution card of 1 of your Digimon that's level 6 or has the [Legend-Arms] trait, <De-Digivolve 1> all of your opponent's Digimon with as much or less DP than that Digimon.")
         effect3.is_optional = True

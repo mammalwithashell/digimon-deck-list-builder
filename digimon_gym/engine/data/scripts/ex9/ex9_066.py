@@ -65,9 +65,30 @@ class EX9_066(CardScript):
             # Try to return a matching Digimon from trash to hand
             qualifying = [c for c in player.trash_cards if _is_target_digimon(c)]
             if qualifying:
-                chosen = qualifying[0]
-                player.trash_cards.remove(chosen)
-                player.hand_cards.append(chosen)
+                from ....game.constants import SEL_TRASH_START
+                from ....data.enums import GamePhase
+
+                valid = []
+                for i, c in enumerate(player.trash_cards):
+                    if _is_target_digimon(c):
+                        valid.append(SEL_TRASH_START + i)
+                if not valid:
+                    player.draw()
+                    return
+
+                def on_select(action_id: int):
+                    idx = action_id - SEL_TRASH_START
+                    if not (0 <= idx < len(player.trash_cards)):
+                        return
+                    chosen = player.trash_cards[idx]
+                    player.trash_cards.remove(chosen)
+                    player.hand_cards.append(chosen)
+
+                game.request_selection(
+                    GamePhase.SelectTrash, player, on_select, valid,
+                    is_optional=True,
+                    prompt="Select 1 Digimon with [Greymon], [Garurumon], or [Omnimon] from trash to return to hand."
+                )
             else:
                 # Didn't return, so Draw 1
                 player.draw()

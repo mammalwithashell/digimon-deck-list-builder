@@ -14,25 +14,10 @@ class P_206(CardScript):
     def get_card_effects(self, card: 'CardSource') -> List['ICardEffect']:
         effects = []
 
-        # --- Effect 0: Ignore color requirements (passive) ---
+        # --- Effect 0: Ignore color requirements ---
         # "You can ignore this card's color requirements."
-        effect0 = ICardEffect()
-        effect0.set_effect_name("P-206 Ignore color requirements")
-        effect0.set_effect_description(
-            "You can ignore this card's color requirements."
-        )
-
-        def condition0(context: Dict[str, Any]) -> bool:
-            return True
-
-        effect0.set_can_use_condition(condition0)
-
-        def process0(ctx: Dict[str, Any]):
-            # Color requirement bypass — not modeled in engine
-            pass
-
-        effect0.set_on_process_callback(process0)
-        effects.append(effect0)
+        # Set on the card so the action mask allows playing without matching color.
+        card._match_color_requirement = False
 
         # --- Effect 1: [Main] Reveal top 3, add 1 Digimon + 1 Tamer to hand,
         #    return rest to bottom. Then place this card in the battle area. ---
@@ -69,7 +54,7 @@ class P_206(CardScript):
                 player, 3,
                 [(reveal_filter_digimon, 'hand'), (reveal_filter_tamer, 'hand')],
                 remaining_placement='deck_bottom',
-                is_optional=True
+                is_optional=False
             )
 
         effect1.set_on_process_callback(process1)
@@ -92,6 +77,7 @@ class P_206(CardScript):
         #    reduced by 4. ---
         effect3 = ICardEffect()
         effect3.set_timing(EffectTiming.OnDeclaration)
+        effect3._is_field_main = True
         effect3.set_effect_name(
             "P-206 Play 1 color-matched Tamer from hand with cost -4"
         )
@@ -172,7 +158,10 @@ class P_206(CardScript):
                 free=True, is_optional=True
             )
             # "Then, add this card to the hand."
-            if player and card:
+            if card and player:
+                # Card may be in trash after security resolution
+                if card in player.trash_cards:
+                    player.trash_cards.remove(card)
                 player.hand_cards.append(card)
 
         effect4.set_on_process_callback(process4)

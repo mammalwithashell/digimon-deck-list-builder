@@ -71,11 +71,30 @@ class BT22_008(CardScript):
             matching = [c for c in player.trash_cards if _trash_name_filter(c)]
             if not matching:
                 return
-            # Pick first qualifying card (agent selection via SelectTrash
-            # isn't available, so pick the best one deterministically)
-            chosen = matching[0]
-            player.trash_cards.remove(chosen)
-            player.hand_cards.append(chosen)
+
+            from ....game.constants import SEL_TRASH_START
+            from ....data.enums import GamePhase
+
+            valid = []
+            for i, c in enumerate(player.trash_cards):
+                if _trash_name_filter(c):
+                    valid.append(SEL_TRASH_START + i)
+            if not valid:
+                return
+
+            def on_select(action_id: int):
+                idx = action_id - SEL_TRASH_START
+                if not (0 <= idx < len(player.trash_cards)):
+                    return
+                chosen = player.trash_cards[idx]
+                player.trash_cards.remove(chosen)
+                player.hand_cards.append(chosen)
+
+            game.request_selection(
+                GamePhase.SelectTrash, player, on_select, valid,
+                is_optional=True,
+                prompt="Select 1 Digimon with [Greymon], [Garurumon], or [Omnimon] from trash to return to hand."
+            )
 
         effect1.set_on_process_callback(process1)
         effects.append(effect1)

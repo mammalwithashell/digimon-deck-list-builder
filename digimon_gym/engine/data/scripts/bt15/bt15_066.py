@@ -95,31 +95,32 @@ class BT15_066(CardScript):
         def condition2(context: Dict[str, Any]) -> bool:
             if card and card.permanent_of_this_card() is None:
                 return False
+            # End of OPPONENT's turn
+            if card and card.owner and card.owner.is_my_turn:
+                return False
             return True
 
         effect2.set_can_use_condition(condition2)
 
         def process2(ctx: Dict[str, Any]):
-            """Action: Delete, Play Card"""
+            """Action: Delete THIS Digimon, then play 1 Dark Masters (not Machinedramon) from hand free"""
             player = ctx.get('player')
             perm = ctx.get('permanent')
             game = ctx.get('game')
             if not (player and game):
                 return
-            def target_filter(p):
-                if not (any('Dark Masters' in t for t in (getattr(p.top_card, 'card_traits', []) or [])) or any('DarkMasters' in t for t in (getattr(p.top_card, 'card_traits', []) or []))):
-                    return False
-                return p.is_digimon
-            def on_delete(target_perm):
-                enemy = player.enemy if player else None
-                if enemy:
-                    enemy.delete_permanent(target_perm)
-            game.effect_select_opponent_permanent(
-                player, on_delete, filter_fn=target_filter, is_optional=False)
-            if not (player and game):
-                return
+            # Step 1: Delete THIS Digimon
+            if perm and perm in player.battle_area:
+                player.delete_permanent(perm)
+            # Step 2: Play 1 Digimon with Dark Masters trait (not Machinedramon) from hand free
             def play_filter(c):
                 if not getattr(c, 'is_digimon', False):
+                    return False
+                traits = getattr(c, 'card_traits', []) or []
+                if not any('Dark Masters' in t for t in traits):
+                    return False
+                names = getattr(c, 'card_names', []) or []
+                if any('Machinedramon' in n for n in names):
                     return False
                 return True
             game.effect_play_from_zone(

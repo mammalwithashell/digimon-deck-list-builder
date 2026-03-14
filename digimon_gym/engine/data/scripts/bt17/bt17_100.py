@@ -199,17 +199,23 @@ class BT17_100(CardScript):
             if not own_perm:
                 return
 
-            # Find another Diaboromon and delete it
-            for p in list(player.battle_area):
-                if p is not own_perm and p.is_digimon and p.contains_card_name('Diaboromon'):
-                    player.delete_permanent(p)
-                    # Set flag to cancel the original deletion
-                    own_perm._will_not_be_removed = True
-                    game.logger.log(
-                        "[BT17-100] Deleted another Diaboromon to prevent "
-                        "this Digimon from leaving the battle area."
-                    )
-                    break
+            def diaboromon_filter(p):
+                return (p is not own_perm and p.is_digimon
+                        and p.contains_card_name('Diaboromon'))
+
+            def on_diaboromon_selected(target_perm):
+                player.delete_permanent(target_perm)
+                own_perm._will_not_be_removed = True
+                game.logger.log(
+                    "[BT17-100] Deleted another Diaboromon to prevent "
+                    "this Digimon from leaving the battle area."
+                )
+
+            game.effect_select_own_permanent(
+                player, on_diaboromon_selected, filter_fn=diaboromon_filter,
+                is_optional=False,
+                prompt="Select 1 of your other [Diaboromon] to delete (prevents this Digimon from leaving)."
+            )
 
         effect3.set_on_process_callback(process3)
         effects.append(effect3)

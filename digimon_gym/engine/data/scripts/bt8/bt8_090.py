@@ -9,17 +9,23 @@ if TYPE_CHECKING:
 
 
 class BT8_090(CardScript):
-    """BT8-090 Kari Kamiya"""
+    """BT8-090 Kari Kamiya | Tamer | Yellow | Cost 4
+
+    [Start of Your Turn] If you have 2 or less memory, set it to 3.
+    [Your Turn] When a card is added to your security stack, you may
+        suspend this Tamer to gain 1 memory.
+    """
 
     def get_card_effects(self, card: 'CardSource') -> List['ICardEffect']:
         effects = []
 
-        # Factory effect: set_memory_3
-        # [Start of Your Turn] Set memory to 3 if <= 2
+        # --- Effect 0: [Start of Your Turn] Set memory to 3 if <= 2 ---
         effect0 = ICardEffect()
-        effect0.set_timing(EffectTiming.OnStartMainPhase)
+        effect0.set_timing(EffectTiming.OnStartTurn)
         effect0.set_effect_name("BT8-090 Set memory to 3")
-        effect0.set_effect_description("[Start of Your Turn] If your memory is at 2 or less, it becomes 3.")
+        effect0.set_effect_description(
+            "[Start of Your Turn] If you have 2 or less memory, set it to 3."
+        )
 
         def condition0(context: Dict[str, Any]) -> bool:
             if card and card.permanent_of_this_card() is None:
@@ -30,7 +36,6 @@ class BT8_090(CardScript):
         effect0.set_can_use_condition(condition0)
 
         def process0(ctx: Dict[str, Any]):
-            """Action: Set memory to 3 if <= 2"""
             player = ctx.get('player')
             game = ctx.get('game')
             if player and game and game.memory <= 2:
@@ -38,39 +43,50 @@ class BT8_090(CardScript):
         effect0.set_on_process_callback(process0)
         effects.append(effect0)
 
-        # Timing: EffectTiming.OnAddSecurity
-        # [Your Turn] When a card is added to your security stack, you may suspend this Tamer to gain 1 memory.
+        # --- Effect 1: [Your Turn] When a card is added to YOUR security, suspend for +1 memory ---
         effect1 = ICardEffect()
         effect1.set_timing(EffectTiming.OnAddSecurity)
         effect1.set_effect_name("BT8-090 Memory +1")
-        effect1.set_effect_description("[Your Turn] When a card is added to your security stack, you may suspend this Tamer to gain 1 memory.")
+        effect1.set_effect_description(
+            "[Your Turn] When a card is added to your security stack, you may "
+            "suspend this Tamer to gain 1 memory."
+        )
         effect1.is_optional = True
 
-        effect = effect1  # alias for condition closure
         def condition1(context: Dict[str, Any]) -> bool:
             if card and card.permanent_of_this_card() is None:
                 return False
             if not (card and card.owner and card.owner.is_my_turn):
+                return False
+            # Must be this player's security that gained a card
+            event_player = context.get('event_player') or context.get('player')
+            if event_player and card.owner and event_player is not card.owner:
+                return False
+            # Tamer must not already be suspended (suspend is cost)
+            perm = card.permanent_of_this_card()
+            if perm and perm.is_suspended:
                 return False
             return True
 
         effect1.set_can_use_condition(condition1)
 
         def process1(ctx: Dict[str, Any]):
-            """Action: Gain 1 memory, Suspend"""
+            """Suspend this Tamer, then gain 1 memory."""
+            perm = card.permanent_of_this_card() if card else None
             player = ctx.get('player')
-            perm = ctx.get('permanent')
-            if perm:
-                perm.suspend()
-            if player:
-                player.add_memory(1)
+            if not (perm and player):
+                return
+            # Cost: suspend
+            perm.suspend()
+            # Gain 1 memory
+            player.add_memory(1)
 
         effect1.set_on_process_callback(process1)
         effects.append(effect1)
 
-        # Factory effect: security_play
-        # Security: Play this card
+        # --- Effect 2: Security: Play this card ---
         effect2 = ICardEffect()
+        effect2.set_timing(EffectTiming.SecuritySkill)
         effect2.set_effect_name("BT8-090 Security: Play this card")
         effect2.set_effect_description("Security: Play this card")
         effect2.is_security_effect = True

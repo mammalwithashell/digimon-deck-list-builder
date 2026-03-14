@@ -18,6 +18,7 @@ class BT10_025(CardScript):
         # [Hand][Main] If you have a Digimon with [Blue Flare] in its traits in play, by paying 3 memory, place this card under 1 of those Digimon as its bottom digivolution card. Then, unsuspend that Digimon.
         effect0 = ICardEffect()
         effect0.set_timing(EffectTiming.OnDeclaration)
+        effect0._is_field_main = True
         effect0.set_effect_name("BT10-025 Place this card to digivolution cards")
         effect0.set_effect_description("[Hand][Main] If you have a Digimon with [Blue Flare] in its traits in play, by paying 3 memory, place this card under 1 of those Digimon as its bottom digivolution card. Then, unsuspend that Digimon.")
 

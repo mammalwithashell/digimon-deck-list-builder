@@ -18,6 +18,7 @@ class P_027(CardScript):
         # [Main] <Digi-Burst 2> (Trash 2 of this Digimon's digivolution cards to activate the effect below.) - Use a purple Option card with a memory cost of 7 or less in your hand without paying its memory cost.
         effect0 = ICardEffect()
         effect0.set_timing(EffectTiming.OnDeclaration)
+        effect0._is_field_main = True
         effect0.set_effect_name("P-027 Use 1 Option from hand")
         effect0.set_effect_description("[Main] <Digi-Burst 2> (Trash 2 of this Digimon's digivolution cards to activate the effect below.) - Use a purple Option card with a memory cost of 7 or less in your hand without paying its memory cost.")
 

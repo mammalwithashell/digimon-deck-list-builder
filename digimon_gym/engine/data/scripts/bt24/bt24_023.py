@@ -70,40 +70,94 @@ class BT24_023(CardScript):
         effect3.set_can_use_condition(condition3)
         effects.append(effect3)
 
-        # Timing: EffectTiming.OnEnterFieldAnyone
-        # Effect
+        # Shared process for On Play / When Digivolving:
+        # Return 1 of your opponent's level 4 or lower Digimon to the bottom of the deck.
+        # Then, if played by effects, 1 of their Digimon or Tamers can't suspend until their turn ends.
+        def make_shared_process(is_on_play_flag):
+            def process(ctx: Dict[str, Any]):
+                player = ctx.get('player')
+                game = ctx.get('game')
+                if not (player and game):
+                    return
+                enemy = player.enemy if player else None
+                if not enemy:
+                    return
+
+                # Step 1: Return 1 opponent's level 4 or lower Digimon to bottom of deck
+                def bot_deck_filter(p):
+                    if not p.is_digimon:
+                        return False
+                    level = getattr(p, 'level', None)
+                    if level is None or level > 4:
+                        return False
+                    return True
+
+                def on_bot_deck(target_perm):
+                    if target_perm:
+                        enemy.return_permanent_to_deck_bottom(target_perm)
+
+                if any(bot_deck_filter(p) for p in enemy.battle_area):
+                    game.effect_select_opponent_permanent(
+                        player, on_bot_deck,
+                        filter_fn=bot_deck_filter,
+                        is_optional=False,
+                        prompt="Select 1 of your opponent's level 4 or lower Digimon to return to the bottom of the deck.")
+
+                # Step 2: "Then, if played by effects" — check if this was played by effects
+                # The C# checks IsByEffect(hashtable) && CanTriggerOnPlay(hashtable, card)
+                # In our engine, 'played_by_effect' context flag indicates this
+                is_by_effect = ctx.get('played_by_effect', False)
+                if is_by_effect:
+                    # 1 of their Digimon or Tamers can't suspend until their turn ends
+                    def stun_filter(p):
+                        return p.is_digimon or p.is_tamer
+
+                    def on_stun(target_perm):
+                        if target_perm and game:
+                            from digimon_gym.engine.interfaces.modifiers import ModifierType
+                            game.register_modifier(
+                                target_perm, ModifierType.CANNOT_SUSPEND,
+                                value_fn=lambda: True, expiry='end_of_opponent_turn')
+
+                    if any(stun_filter(p) for p in enemy.battle_area):
+                        game.effect_select_opponent_permanent(
+                            player, on_stun,
+                            filter_fn=stun_filter,
+                            is_optional=False,
+                            prompt="Select 1 opponent's Digimon or Tamer that can't suspend.")
+
+            return process
+
+        # Timing: EffectTiming.OnEnterFieldAnyone — [On Play]
         effect4 = ICardEffect()
         effect4.set_timing(EffectTiming.OnEnterFieldAnyone)
-        effect4.set_effect_name("BT24-023 Effect")
-        effect4.set_effect_description("Effect")
+        effect4.set_effect_name("BT24-023 Bottom deck lv4- Digimon, stun if by effect")
+        effect4.set_effect_description("[On Play] Return 1 of your opponent's level 4 or lower Digimon to the bottom of the deck. Then, if played by effects, 1 of their Digimon or Tamers can't suspend until their turn ends.")
         effect4.is_on_play = True
 
-        effect = effect4  # alias for condition closure
         def condition4(context: Dict[str, Any]) -> bool:
             if card and card.permanent_of_this_card() is None:
                 return False
-            # Triggered on play — validated by engine timing
             return True
 
         effect4.set_can_use_condition(condition4)
+        effect4.set_on_process_callback(make_shared_process(True))
         effects.append(effect4)
 
-        # Timing: EffectTiming.OnEnterFieldAnyone
-        # Effect
+        # Timing: EffectTiming.OnEnterFieldAnyone — [When Digivolving]
         effect5 = ICardEffect()
         effect5.set_timing(EffectTiming.OnEnterFieldAnyone)
-        effect5.set_effect_name("BT24-023 Effect")
-        effect5.set_effect_description("Effect")
+        effect5.set_effect_name("BT24-023 Bottom deck lv4- Digimon, stun if by effect")
+        effect5.set_effect_description("[When Digivolving] Return 1 of your opponent's level 4 or lower Digimon to the bottom of the deck. Then, if played by effects, 1 of their Digimon or Tamers can't suspend until their turn ends.")
         effect5.is_when_digivolving = True
 
-        effect = effect5  # alias for condition closure
         def condition5(context: Dict[str, Any]) -> bool:
             if card and card.permanent_of_this_card() is None:
                 return False
-            # Triggered when digivolving — validated by engine timing
             return True
 
         effect5.set_can_use_condition(condition5)
+        effect5.set_on_process_callback(make_shared_process(False))
         effects.append(effect5)
 
         # Factory effect: jamming

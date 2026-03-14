@@ -62,6 +62,7 @@ class BT13_056(CardScript):
         # [Main][Once Per Turn] You may play 1 green or [Royal Knight] trait Digimon card from your hand for the cost. When it would be played by this effect, reduce the play cost by 4.
         effect1 = ICardEffect()
         effect1.set_timing(EffectTiming.OnDeclaration)
+        effect1._is_field_main = True
         effect1.set_effect_name("BT13-056 Play 1 Digimon from hand")
         effect1.set_effect_description("[Main][Once Per Turn] You may play 1 green or [Royal Knight] trait Digimon card from your hand for the cost. When it would be played by this effect, reduce the play cost by 4.")
         effect1.set_max_count_per_turn(1)

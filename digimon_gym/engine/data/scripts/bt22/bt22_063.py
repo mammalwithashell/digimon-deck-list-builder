@@ -85,6 +85,21 @@ class BT22_063(CardScript):
             return True
 
         effect4.set_can_use_condition(condition4)
+
+        def process4(ctx: Dict[str, Any]):
+            """Action: 1 opponent Digimon gets -5000 DP"""
+            player = ctx.get('player')
+            game = ctx.get('game')
+            if not (player and game):
+                return
+            def dp_filter(p):
+                return p.is_digimon
+            def on_dp_reduce(target_perm):
+                target_perm.change_dp(-5000)
+            game.effect_select_opponent_permanent(
+                player, on_dp_reduce, filter_fn=dp_filter, is_optional=False)
+
+        effect4.set_on_process_callback(process4)
         effects.append(effect4)
 
         # Timing: EffectTiming.OnEnterFieldAnyone
@@ -95,14 +110,27 @@ class BT22_063(CardScript):
         effect5.set_effect_description("[When Digivolving] 1 of your opponent's Digimon gets -5000 DP for the turn.")
         effect5.is_when_digivolving = True
 
-        effect = effect5  # alias for condition closure
         def condition5(context: Dict[str, Any]) -> bool:
             if card and card.permanent_of_this_card() is None:
                 return False
-            # Triggered when digivolving — validated by engine timing
             return True
 
         effect5.set_can_use_condition(condition5)
+
+        def process5(ctx: Dict[str, Any]):
+            """Action: 1 opponent Digimon gets -5000 DP"""
+            player = ctx.get('player')
+            game = ctx.get('game')
+            if not (player and game):
+                return
+            def dp_filter(p):
+                return p.is_digimon
+            def on_dp_reduce(target_perm):
+                target_perm.change_dp(-5000)
+            game.effect_select_opponent_permanent(
+                player, on_dp_reduce, filter_fn=dp_filter, is_optional=False)
+
+        effect5.set_on_process_callback(process5)
         effects.append(effect5)
 
         # Timing: EffectTiming.OnUseAttack
@@ -113,14 +141,27 @@ class BT22_063(CardScript):
         effect6.set_effect_description("[When Attacking] 1 of your opponent's Digimon gets -5000 DP for the turn.")
         effect6.is_on_attack = True
 
-        effect = effect6  # alias for condition closure
         def condition6(context: Dict[str, Any]) -> bool:
             if card and card.permanent_of_this_card() is None:
                 return False
-            # Triggered on attack — validated by engine timing
             return True
 
         effect6.set_can_use_condition(condition6)
+
+        def process6(ctx: Dict[str, Any]):
+            """Action: 1 opponent Digimon gets -5000 DP"""
+            player = ctx.get('player')
+            game = ctx.get('game')
+            if not (player and game):
+                return
+            def dp_filter(p):
+                return p.is_digimon
+            def on_dp_reduce(target_perm):
+                target_perm.change_dp(-5000)
+            game.effect_select_opponent_permanent(
+                player, on_dp_reduce, filter_fn=dp_filter, is_optional=False)
+
+        effect6.set_on_process_callback(process6)
         effects.append(effect6)
 
         # Timing: EffectTiming.OnTappedAnyone
@@ -136,23 +177,44 @@ class BT22_063(CardScript):
         def condition7(context: Dict[str, Any]) -> bool:
             if card and card.permanent_of_this_card() is None:
                 return False
+            # Only triggers when THIS Digimon suspends
+            tapped_perm = context.get('permanent')
+            my_perm = card.permanent_of_this_card()
+            if tapped_perm is not my_perm:
+                return False
+            # Check: Kyoko Kuremi in evo cards OR 2+ same-level cards in stack
+            if my_perm:
+                has_kyoko = any(
+                    any('Kyoko Kuremi' in n for n in (getattr(cs, 'card_names', []) or []))
+                    for cs in my_perm.card_sources if cs is not my_perm.top_card
+                )
+                if not has_kyoko:
+                    # Check for 2+ same-level cards
+                    levels = {}
+                    for cs in my_perm.card_sources:
+                        lv = getattr(cs, 'level', None)
+                        if lv is not None:
+                            levels[lv] = levels.get(lv, 0) + 1
+                    has_same_level = any(cnt >= 2 for cnt in levels.values())
+                    if not has_same_level:
+                        return False
             return True
 
         effect7.set_can_use_condition(condition7)
 
         def process7(ctx: Dict[str, Any]):
-            """Action: Unsuspend"""
+            """Action: +3000 DP until opponent's turn ends, then unsuspend THIS Digimon"""
             player = ctx.get('player')
-            perm = ctx.get('permanent')
             game = ctx.get('game')
             if not (player and game):
                 return
-            def target_filter(p):
-                return True
-            def on_unsuspend(target_perm):
-                target_perm.unsuspend()
-            game.effect_select_own_permanent(
-                player, on_unsuspend, filter_fn=target_filter, is_optional=False)
+            my_perm = card.permanent_of_this_card() if card else None
+            if my_perm:
+                from ....interfaces.modifiers import ModifierType
+                game.register_modifier(
+                    my_perm, ModifierType.CHANGE_DP,
+                    value_fn=lambda: 3000, expiry='end_of_opponent_turn')
+                my_perm.unsuspend()
 
         effect7.set_on_process_callback(process7)
         effects.append(effect7)

@@ -87,7 +87,7 @@ class EX7_074(CardScript):
                     player.library_cards.append(c)  # bottom of deck
 
             game.effect_reveal_and_select(
-                player, 3, liberator_filter, on_revealed, is_optional=True)
+                player, 3, liberator_filter, on_revealed, is_optional=False)
 
             # Then, 1 of your Digimon may digivolve from hand with cost -4
             def digimon_hand_filter(c):

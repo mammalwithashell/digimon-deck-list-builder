@@ -45,6 +45,7 @@ class BT22_011(CardScript):
         # [Main] [Once Per Turn] By paying 3 cost, you may play 1 play cost 5 or lower Digimon card with the [Flame] or [CS] trait from your trash without paying the cost. Then, this Digimon may attack.
         effect2 = ICardEffect()
         effect2.set_timing(EffectTiming.OnDeclaration)
+        effect2._is_field_main = True
         effect2.set_effect_name("BT22-011 Pay 3, Play 1 level 5 or lower [Flame]/[CS] digimon from trash. then it may attack")
         effect2.set_effect_description("[Main] [Once Per Turn] By paying 3 cost, you may play 1 play cost 5 or lower Digimon card with the [Flame] or [CS] trait from your trash without paying the cost. Then, this Digimon may attack.")
         effect2.set_max_count_per_turn(1)

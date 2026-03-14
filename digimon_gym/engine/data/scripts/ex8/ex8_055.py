@@ -76,9 +76,11 @@ class EX8_055(CardScript):
                 player = ctx.get('player')
                 perm = ctx.get('permanent')
                 game = ctx.get('game')
-                if not (player and perm):
+                if not (player and perm and game):
                     return
+                from ....interfaces.modifiers import ModifierType
                 # Trash 3 Mineral/Rock trait source cards from any of your Digimon
+                # Collect all eligible sources across all Digimon
                 trashed_count = 0
                 for p in list(player.battle_area):
                     if trashed_count >= 3:
@@ -94,10 +96,19 @@ class EX8_055(CardScript):
                         if 'Mineral' in traits or 'Rock' in traits:
                             p.card_sources.remove(src)
                             player.trash_cards.append(src)
+                            game.execute_effects(EffectTiming.OnDigivolutionCardDiscarded,
+                                                 {'trashed_cards': [src],
+                                                  'permanent': p})
                             trashed_count += 1
                 if trashed_count >= 3:
                     perm.unsuspend()
-                    perm._temp_sa_modifier += 1
+                    # Grant SA+1 for the turn (persists across multiple attacks)
+                    game.register_modifier(
+                        perm,
+                        ModifierType.CHANGE_SECURITY_ATTACK,
+                        value_fn=lambda cur, t, c: cur + 1,
+                        expiry='end_of_turn',
+                    )
 
             effect.set_on_process_callback(process)
             return effect
@@ -135,18 +146,47 @@ class EX8_055(CardScript):
         def process_eot(ctx: Dict[str, Any]):
             player = ctx.get('player')
             perm = ctx.get('permanent')
-            if not (player and perm):
+            game = ctx.get('game')
+            if not (player and perm and game):
                 return
-            placed = 0
-            for source_card in list(player.trash_cards):
-                if placed >= 3:
-                    break
-                traits = getattr(source_card, 'card_traits', [])
-                if 'Mineral' not in traits and 'Rock' not in traits:
-                    continue
-                player.trash_cards.remove(source_card)
-                perm.add_card_source_bottom(source_card)
-                placed += 1
+
+            def _mineral_rock_filter(c):
+                traits = getattr(c, 'card_traits', [])
+                return 'Mineral' in traits or 'Rock' in traits
+
+            # Let agent select up to 3 Mineral/Rock cards from trash
+            placed_holder = [0]
+
+            def _place_one():
+                if placed_holder[0] >= 3:
+                    return
+                eligible = [c for c in player.trash_cards if _mineral_rock_filter(c)]
+                if not eligible:
+                    return
+
+                from ....data.enums import GamePhase
+                _SEL_TRASH_START = 130
+                valid_trash = []
+                for i, c in enumerate(player.trash_cards):
+                    if _mineral_rock_filter(c):
+                        valid_trash.append(_SEL_TRASH_START + i)
+                if not valid_trash:
+                    return
+
+                def on_trash_selected(idx):
+                    if idx < len(player.trash_cards):
+                        selected = player.trash_cards[idx]
+                        player.trash_cards.remove(selected)
+                        perm.add_card_source_bottom(selected)
+                        placed_holder[0] += 1
+                        _place_one()  # recurse for next selection
+
+                game.request_selection(
+                    GamePhase.SelectTrash, player, on_trash_selected,
+                    valid_trash, is_optional=True,
+                    prompt=f"Select a [Mineral] or [Rock] card from trash to place as bottom digivolution card ({placed_holder[0]+1}/3).")
+
+            _place_one()
 
         effect_eot.set_on_process_callback(process_eot)
         effects.append(effect_eot)

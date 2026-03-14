@@ -61,12 +61,6 @@ class BT24_089(CardScript):
             suspended_perm = context.get('permanent')
             if not (suspended_perm and suspended_perm.contains_card_name('Owen Dreadnought')):
                 return False
-            # Check that suspended perm has Reptile or Dragonkin trait
-            if not (suspended_perm and suspended_perm.top_card and (
-                any('Reptile' in tr for tr in (getattr(suspended_perm.top_card, 'card_traits', []) or []))
-                or any('Dragonkin' in tr for tr in (getattr(suspended_perm.top_card, 'card_traits', []) or []))
-            )):
-                return False
             return True
         effect1.set_can_use_condition(condition1)
         effects.append(effect1)

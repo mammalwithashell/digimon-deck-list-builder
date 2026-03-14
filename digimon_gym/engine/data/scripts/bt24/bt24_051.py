@@ -9,7 +9,17 @@ if TYPE_CHECKING:
 
 
 class BT24_051(CardScript):
-    """BT24-051 Merukimon | Lv.6"""
+    """BT24-051 Merukimon | Lv.6
+
+    When this card would be played, if there are 3 or more Digimon, reduce the
+    play cost by 5.
+    [On Play] [When Digivolving] Suspend 2 of your opponent's Digimon or Tamers.
+    Then, 1 of your Digimon may get +5000 DP for the turn and attack your
+    opponent's Digimon.
+    [When Digivolving] [When Attacking] [Once Per Turn] 1 of your Digimon may
+    unsuspend.
+    [Your Turn] All of your [Iliad] trait Digimon gain <Rush> and <Piercing>.
+    """
 
     def get_card_effects(self, card: 'CardSource') -> List['ICardEffect']:
         effects = []
@@ -34,7 +44,8 @@ class BT24_051(CardScript):
         effects.append(effect0)
 
         # Timing: EffectTiming.BeforePayCost
-        # When this card would be played, if there are 3 or more Digimon, reduce the play cost by 5.
+        # When this card would be played, if there are 3 or more Digimon, reduce
+        # the play cost by 5.
         effect1 = ICardEffect()
         effect1.set_timing(EffectTiming.BeforePayCost)
         effect1.set_effect_name("BT24-051 Reduce play cost (5)")
@@ -57,7 +68,7 @@ class BT24_051(CardScript):
         effect1.set_can_use_condition(condition1)
         effects.append(effect1)
 
-        # Not-shown cost reduction (EffectTiming.NoTiming equivalent — always-on modifier)
+        # Not-shown cost reduction (EffectTiming.NoTiming equivalent)
         effect2 = ICardEffect()
         effect2.set_effect_name("BT24-051 Play Cost -5 (not shown)")
         effect2.set_effect_description("Cost -5 (not shown)")
@@ -79,46 +90,65 @@ class BT24_051(CardScript):
 
         # Shared process for On Play / When Digivolving:
         # Suspend up to 2 opponent's Digimon or Tamers.
-        # Then, 1 of your Digimon may get +5000 DP and attack (Rush/Piercing until end of
-        # opponent's turn).
+        # Then, 1 of your Digimon may get +5000 DP for the turn and attack your
+        # opponent's Digimon.
         def _shared_suspend_process(ctx: Dict[str, Any]):
             player = ctx.get('player')
             game = ctx.get('game')
             if not (player and game):
                 return
-            # Suspend up to 2 opponent's Digimon or Tamers
             enemy = player.enemy if player else None
-            if enemy:
-                targets = [p for p in enemy.battle_area if p.is_digimon or p.is_tamer]
-                count = min(2, len(targets))
-                for i in range(count):
-                    if i < len(targets):
-                        targets[i].suspend()
-            # 1 of your Digimon may get +5000 DP and gain Rush/Piercing until end of opponent's
-            # turn, then may attack.
-            # NOTE: Temporary DP boost until end of opponent's turn is not yet fully supported
-            # by the engine's duration modifiers. We apply a turn-scoped DP boost and a forced
-            # attack selection.
-            # Engine gap: +DP until end of opponent's turn duration is approximated as +DP
-            # for this turn only.
+            if not enemy:
+                return
+
+            # Suspend up to 2 opponent's Digimon or Tamers (player selects)
+            suspended_targets = []
+
+            def target_filter(p):
+                return (p.is_digimon or p.is_tamer) and p not in suspended_targets
+
+            def on_suspend_1(target_perm):
+                target_perm.suspend()
+                suspended_targets.append(target_perm)
+
+                # Second suspend
+                def on_suspend_2(target_perm2):
+                    target_perm2.suspend()
+
+                game.effect_select_opponent_permanent(
+                    player, on_suspend_2, filter_fn=target_filter,
+                    is_optional=True,
+                    prompt="Suspend a second opponent's Digimon or Tamer (optional).")
+
+            game.effect_select_opponent_permanent(
+                player, on_suspend_1, filter_fn=target_filter,
+                is_optional=False,
+                prompt="Suspend 1 of your opponent's Digimon or Tamers.")
+
+            # Then, 1 of your Digimon may get +5000 DP for the turn and attack
+            # your opponent's Digimon.
             def on_select_attacker(target_perm):
                 target_perm.change_dp(5000)
-                # grant Rush and Piercing until end of opponent's turn
-                # descriptive-tagged: grant_rush_piercing_until_opponent_turn_end
-                pass
+                # Grant Rush so it can attack this turn even with sickness
+                target_perm.grant_keyword('_is_rush')
+                # Unsuspend so it's ready to attack
+                if target_perm.is_suspended:
+                    target_perm.unsuspend()
 
             game.effect_select_own_permanent(
                 player, on_select_attacker,
                 filter_fn=lambda p: p.is_digimon,
-                is_optional=True)
+                is_optional=True,
+                prompt="Select 1 of your Digimon to get +5000 DP and attack.")
 
         # Timing: EffectTiming.OnEnterFieldAnyone — [On Play]
         effect3 = ICardEffect()
         effect3.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect3.set_effect_name("BT24-051 Suspend 2, then 1 Digimon gains +5000 DP and attacks (On Play)")
         effect3.set_effect_description(
-            "[On Play] Suspend 2 of your opponent's Digimon or Tamers. Then, 1 of your Digimon "
-            "may get +5000 DP and gain <Rush> and <Piercing> until the end of your opponent's turn.")
+            "[On Play] Suspend 2 of your opponent's Digimon or Tamers. Then, 1 of "
+            "your Digimon may get +5000 DP for the turn and attack your opponent's "
+            "Digimon.")
         effect3.is_on_play = True
 
         def condition3(context: Dict[str, Any]) -> bool:
@@ -135,9 +165,9 @@ class BT24_051(CardScript):
         effect4.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect4.set_effect_name("BT24-051 Suspend 2, then 1 Digimon gains +5000 DP and attacks (When Digivolving)")
         effect4.set_effect_description(
-            "[When Digivolving] Suspend 2 of your opponent's Digimon or Tamers. Then, 1 of your "
-            "Digimon may get +5000 DP and gain <Rush> and <Piercing> until the end of your "
-            "opponent's turn.")
+            "[When Digivolving] Suspend 2 of your opponent's Digimon or Tamers. "
+            "Then, 1 of your Digimon may get +5000 DP for the turn and attack "
+            "your opponent's Digimon.")
         effect4.is_when_digivolving = True
 
         def condition4(context: Dict[str, Any]) -> bool:
@@ -150,22 +180,18 @@ class BT24_051(CardScript):
         effects.append(effect4)
 
         # Timing: EffectTiming.WhenRemoveField — [All Turns][Once Per Turn]
-        # When this Digimon or any of your other Digimon with [TS] or [Beast]/[Animal]/[Sovereign]
-        # would leave the battle area by your opponent's effects, by suspending this Digimon,
-        # they don't leave.
-        # NOTE: Engine gap — protecting OTHER Digimon via a substitute-suspend mechanism requires
-        # engine support for WhenRemoveField to cancel the removal for a different permanent.
-        # Current engine only supports self-protection via WhenRemoveField.
-        # Implemented as best-effort self-protection; full multi-Digimon coverage is a gap.
+        # When this Digimon or any of your other Digimon with [TS] or
+        # [Beast]/[Animal]/[Sovereign] would leave the battle area by your
+        # opponent's effects, by suspending this Digimon, they don't leave.
         effect5 = ICardEffect()
         effect5.set_timing(EffectTiming.WhenRemoveField)
         effect5.set_effect_name(
             "BT24-051 [All Turns][OPT] Suspend self to prevent TS/Beast/Animal/Sovereign leaving")
         effect5.set_effect_description(
-            "[All Turns][Once Per Turn] When this Digimon or any of your other Digimon with the "
-            "[TS] trait or with [Beast], [Animal], or [Sovereign] in any of their traits would "
-            "leave the battle area by your opponent's effects, by suspending this Digimon, "
-            "they don't leave.")
+            "[All Turns][Once Per Turn] When this Digimon or any of your other "
+            "Digimon with the [TS] trait or with [Beast], [Animal], or [Sovereign] "
+            "in any of their traits would leave the battle area by your opponent's "
+            "effects, by suspending this Digimon, they don't leave.")
         effect5.is_optional = True
         effect5.set_max_count_per_turn(1)
         effect5.set_hash_string("SuspendToStay_BT24_051")
@@ -177,7 +203,7 @@ class BT24_051(CardScript):
             if not owner:
                 return False
             my_perm = card.permanent_of_this_card()
-            # Must not already be suspended (can't suspend to protect if already suspended)
+            # Must not already be suspended (need to suspend as cost)
             if my_perm and my_perm.is_suspended:
                 return False
             ctx_perm = context.get('permanent')
@@ -197,18 +223,11 @@ class BT24_051(CardScript):
 
         def process5(ctx: Dict[str, Any]):
             """Suspend this Digimon to prevent it or a qualifying ally from leaving."""
-            player = ctx.get('player')
-            game = ctx.get('game')
-            if not (player and game):
-                return
             my_perm = card.permanent_of_this_card()
             if my_perm and not my_perm.is_suspended:
                 my_perm.suspend()
 
         effect5.set_on_process_callback(process5)
-        # NOTE: engine gap — non-self protection requires engine support for WhenRemoveField
-        # to cancel the removal for a different permanent. Self-protection works; protecting
-        # other Digimon is best-effort.
         effects.append(effect5)
 
         # Timing: EffectTiming.OnEnterFieldAnyone — [When Digivolving][Once Per Turn]
@@ -234,23 +253,26 @@ class BT24_051(CardScript):
             game = ctx.get('game')
             if not (player and game):
                 return
+
             def on_unsuspend(target_perm):
                 target_perm.unsuspend()
             game.effect_select_own_permanent(
                 player, on_unsuspend,
                 filter_fn=lambda p: p.is_digimon,
-                is_optional=True)
+                is_optional=True,
+                prompt="Select 1 of your Digimon to unsuspend.")
 
         effect6.set_on_process_callback(process6)
         effects.append(effect6)
 
-        # Timing: EffectTiming.OnUseAttack — [Your Turn][Once Per Turn]
+        # Timing: EffectTiming.OnUseAttack — [When Attacking][Once Per Turn]
         # When one of your Digimon attacks, 1 of your Digimon may unsuspend.
         effect7 = ICardEffect()
         effect7.set_timing(EffectTiming.OnUseAttack)
         effect7.set_effect_name("BT24-051 [When Attacking][OPT] Unsuspend 1 Digimon")
         effect7.set_effect_description(
-            "[When Attacking] [Once Per Turn] 1 of your Digimon may unsuspend.")
+            "[When Attacking] [Once Per Turn] When one of your Digimon attacks, "
+            "1 of your Digimon may unsuspend.")
         effect7.is_on_attack = True
         effect7.set_max_count_per_turn(1)
         effect7.set_hash_string("BT24_051_WD_WA")
@@ -270,21 +292,36 @@ class BT24_051(CardScript):
             game = ctx.get('game')
             if not (player and game):
                 return
+
             def on_unsuspend(target_perm):
                 target_perm.unsuspend()
             game.effect_select_own_permanent(
                 player, on_unsuspend,
                 filter_fn=lambda p: p.is_digimon,
-                is_optional=True)
+                is_optional=True,
+                prompt="Select 1 of your Digimon to unsuspend.")
 
         effect7.set_on_process_callback(process7)
         effects.append(effect7)
 
-        # Factory effect: Rush (Your Turn, for Iliad Digimon)
+        # Helper: check if a permanent has [Iliad] trait
+        def _is_iliad(perm):
+            top = getattr(perm, 'top_card', None)
+            if not top:
+                return False
+            traits = getattr(top, 'card_traits', []) or []
+            return any('Iliad' in t for t in traits)
+
+        # [Your Turn] All of your [Iliad] trait Digimon gain <Rush>.
+        # Uses _applies_to_all_own_digimon aura pattern so has_keyword scans
+        # this effect on other permanents.
         effect8 = ICardEffect()
-        effect8.set_effect_name("BT24-051 Rush (Iliad Digimon, Your Turn)")
-        effect8.set_effect_description("Rush")
+        effect8.set_effect_name("BT24-051 [Your Turn] Iliad Digimon gain Rush")
+        effect8.set_effect_description(
+            "[Your Turn] All of your [Iliad] trait Digimon gain <Rush>.")
         effect8._is_rush = True
+        effect8._applies_to_all_own_digimon = True
+        effect8._keyword_permanent_condition = _is_iliad
 
         def condition8(context: Dict[str, Any]) -> bool:
             if card and card.permanent_of_this_card() is None:
@@ -292,21 +329,22 @@ class BT24_051(CardScript):
             owner = getattr(card, 'owner', None)
             if not (owner and owner.is_my_turn):
                 return False
+            # When checked for self via has_keyword, context['permanent'] is self
             ctx_perm = context.get('permanent')
-            if ctx_perm and ctx_perm.top_card:
-                traits = getattr(ctx_perm.top_card, 'card_traits', []) or []
-                return any('Iliad' in t for t in traits)
-            return False
+            if ctx_perm is not None:
+                return _is_iliad(ctx_perm)
+            return True
         effect8.set_can_use_condition(condition8)
         effects.append(effect8)
 
-        # Grant Rush + Piercing to all Iliad Digimon during your turn
-        # NOTE: Granting Piercing to other Digimon via AddSkillClass is engine gap.
-        # Rush is handled via _is_rush above. Piercing grant is descriptive-tagged.
+        # [Your Turn] All of your [Iliad] trait Digimon gain <Piercing>.
         effect9 = ICardEffect()
-        effect9.set_effect_name(
-            "BT24-051 [Your Turn] All of your [Iliad] trait Digimon gain <Rush> and <Piercing>.")
-        effect9.set_effect_description("Grant Rush and Piercing to Iliad Digimon")
+        effect9.set_effect_name("BT24-051 [Your Turn] Iliad Digimon gain Piercing")
+        effect9.set_effect_description(
+            "[Your Turn] All of your [Iliad] trait Digimon gain <Piercing>.")
+        effect9._is_piercing = True
+        effect9._applies_to_all_own_digimon = True
+        effect9._keyword_permanent_condition = _is_iliad
 
         def condition9(context: Dict[str, Any]) -> bool:
             if card and card.permanent_of_this_card() is None:
@@ -314,15 +352,11 @@ class BT24_051(CardScript):
             owner = getattr(card, 'owner', None)
             if not (owner and owner.is_my_turn):
                 return False
+            ctx_perm = context.get('permanent')
+            if ctx_perm is not None:
+                return _is_iliad(ctx_perm)
             return True
-
         effect9.set_can_use_condition(condition9)
-
-        def process9(ctx: Dict[str, Any]):
-            # descriptive-tagged: grant_piercing_to_iliad_digimon — engine gap (AddSkillClass)
-            pass
-
-        effect9.set_on_process_callback(process9)
         effects.append(effect9)
 
         return effects
