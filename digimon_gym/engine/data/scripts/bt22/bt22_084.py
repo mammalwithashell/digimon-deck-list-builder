@@ -9,17 +9,28 @@ if TYPE_CHECKING:
 
 
 class BT22_084(CardScript):
-    """BT22-084 Nokia Shiramine"""
+    """BT22-084 Nokia Shiramine
+
+    [Start of Your Turn] If your memory is at 2 or less, it becomes 3.
+    [Start of Your Main Phase] If you have 1 or fewer Digimon, you may play
+        1 [Agumon] or [Gabumon] from your hand without paying the cost.
+    [On Play] If you have 1 or fewer Digimon, you may play 1 [Agumon] or
+        [Gabumon] from your hand without paying the cost.
+    [All Turns] Your Digimon with [Greymon], [Garurumon], or [Omnimon] in
+        their names get +1000 DP.
+    Security: Play this card without paying its cost.
+    """
 
     def get_card_effects(self, card: 'CardSource') -> List['ICardEffect']:
         effects = []
 
-        # Factory effect: set_memory_3
-        # [Start of Your Turn] Set memory to 3 if <= 2
+        # --- Effect 0: [Start of Your Turn] Set memory to 3 if <= 2 ---
         effect0 = ICardEffect()
-        effect0.set_timing(EffectTiming.OnStartMainPhase)
+        effect0.set_timing(EffectTiming.OnStartTurn)
         effect0.set_effect_name("BT22-084 Set memory to 3")
-        effect0.set_effect_description("[Start of Your Turn] If your memory is at 2 or less, it becomes 3.")
+        effect0.set_effect_description(
+            "[Start of Your Turn] If your memory is at 2 or less, it becomes 3."
+        )
 
         def condition0(context: Dict[str, Any]) -> bool:
             if card and card.permanent_of_this_card() is None:
@@ -30,7 +41,7 @@ class BT22_084(CardScript):
         effect0.set_can_use_condition(condition0)
 
         def process0(ctx: Dict[str, Any]):
-            """Action: Set memory to 3 if <= 2"""
+            """Set memory to 3 if <= 2."""
             player = ctx.get('player')
             game = ctx.get('game')
             if player and game and game.memory <= 2:
@@ -38,83 +49,86 @@ class BT22_084(CardScript):
         effect0.set_on_process_callback(process0)
         effects.append(effect0)
 
-        # Timing: EffectTiming.OnStartMainPhase
-        # [Start of Your Main Phase] If you have 1 or fewer Digimon, you may play 1 [Agumon] or [Gabumon] from your hand without paying the cost.
+        # --- Shared play filter and process for Start of Main / On Play ---
+        def _play_agumon_gabumon(ctx: Dict[str, Any]):
+            player = ctx.get('player')
+            game = ctx.get('game')
+            if not (player and game):
+                return
+            # Check 1 or fewer Digimon condition
+            digimon_count = sum(1 for p in player.battle_area if p.is_digimon)
+            if digimon_count > 1:
+                return
+
+            def play_filter(c):
+                if not getattr(c, 'is_digimon', False):
+                    return False
+                names = getattr(c, 'card_names', []) or []
+                return 'Agumon' in names or 'Gabumon' in names
+
+            game.effect_play_from_zone(
+                player, 'hand', play_filter, free=True, is_optional=True)
+
+        # --- Effect 1: [Start of Your Main Phase] Play Agumon/Gabumon ---
         effect1 = ICardEffect()
         effect1.set_timing(EffectTiming.OnStartMainPhase)
         effect1.set_effect_name("BT22-084 Play 1 [Agumon] or [Gabumon]")
-        effect1.set_effect_description("[Start of Your Main Phase] If you have 1 or fewer Digimon, you may play 1 [Agumon] or [Gabumon] from your hand without paying the cost.")
+        effect1.set_effect_description(
+            "[Start of Your Main Phase] If you have 1 or fewer Digimon, you "
+            "may play 1 [Agumon] or [Gabumon] from your hand without paying "
+            "the cost."
+        )
         effect1.is_optional = True
 
-        effect = effect1  # alias for condition closure
         def condition1(context: Dict[str, Any]) -> bool:
+            if card and card.permanent_of_this_card() is None:
+                return False
             if not (card and card.owner and card.owner.is_my_turn):
                 return False
             return True
 
         effect1.set_can_use_condition(condition1)
-
-        def process1(ctx: Dict[str, Any]):
-            """Action: Play Card"""
-            player = ctx.get('player')
-            perm = ctx.get('permanent')
-            game = ctx.get('game')
-            if not (player and game):
-                return
-            def play_filter(c):
-                if not getattr(c, 'is_digimon', False):
-                    return False
-                if not (any('Agumon' in _n or 'Gabumon' in _n for _n in getattr(c, 'card_names', []))):
-                    return False
-                return True
-            game.effect_play_from_zone(
-                player, 'hand', play_filter, free=True, is_optional=True)
-
-        effect1.set_on_process_callback(process1)
+        effect1.set_on_process_callback(_play_agumon_gabumon)
         effects.append(effect1)
 
-        # Timing: EffectTiming.OnEnterFieldAnyone
-        # [On Play] If you have 1 or fewer Digimon, you may play 1 [Agumon] or [Gabumon] from your hand without paying the cost.
+        # --- Effect 2: [On Play] Play Agumon/Gabumon ---
         effect2 = ICardEffect()
         effect2.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect2.set_effect_name("BT22-084 Play 1 [Agumon] or [Gabumon]")
-        effect2.set_effect_description("[On Play] If you have 1 or fewer Digimon, you may play 1 [Agumon] or [Gabumon] from your hand without paying the cost.")
+        effect2.set_effect_description(
+            "[On Play] If you have 1 or fewer Digimon, you may play 1 "
+            "[Agumon] or [Gabumon] from your hand without paying the cost."
+        )
         effect2.is_optional = True
         effect2.is_on_play = True
 
-        effect = effect2  # alias for condition closure
         def condition2(context: Dict[str, Any]) -> bool:
-            # Triggered on play — validated by engine timing
+            if card and card.permanent_of_this_card() is None:
+                return False
             return True
 
         effect2.set_can_use_condition(condition2)
-
-        def process2(ctx: Dict[str, Any]):
-            """Action: Play Card"""
-            player = ctx.get('player')
-            perm = ctx.get('permanent')
-            game = ctx.get('game')
-            if not (player and game):
-                return
-            def play_filter(c):
-                if not getattr(c, 'is_digimon', False):
-                    return False
-                if not (any('Agumon' in _n or 'Gabumon' in _n for _n in getattr(c, 'card_names', []))):
-                    return False
-                return True
-            game.effect_play_from_zone(
-                player, 'hand', play_filter, free=True, is_optional=True)
-
-        effect2.set_on_process_callback(process2)
+        effect2.set_on_process_callback(_play_agumon_gabumon)
         effects.append(effect2)
 
-        # Factory effect: dp_modifier_all
-        # All your Digimon DP modifier
+        # --- Effect 3: [All Turns] DP +1000 to Greymon/Garurumon/Omnimon ---
         effect3 = ICardEffect()
-        effect3.set_effect_name("BT22-084 All your Digimon DP modifier")
-        effect3.set_effect_description("All your Digimon DP modifier")
+        effect3.set_effect_name("BT22-084 Greymon/Garurumon/Omnimon DP +1000")
+        effect3.set_effect_description(
+            "Your Digimon with [Greymon], [Garurumon], or [Omnimon] in their "
+            "names get +1000 DP."
+        )
         effect3.dp_modifier = 1000
         effect3._applies_to_all_own_digimon = True
+
+        def dp_perm_filter(perm):
+            tc = perm.top_card if perm else None
+            if not tc:
+                return False
+            return (tc.contains_card_name('Greymon') or
+                    tc.contains_card_name('Garurumon') or
+                    tc.contains_card_name('Omnimon'))
+        effect3._dp_permanent_condition = dp_perm_filter
 
         def condition3(context: Dict[str, Any]) -> bool:
             if card and card.permanent_of_this_card() is None:
@@ -123,8 +137,7 @@ class BT22_084(CardScript):
         effect3.set_can_use_condition(condition3)
         effects.append(effect3)
 
-        # Factory effect: security_play
-        # Security: Play this card
+        # --- Effect 4: Security: Play this card ---
         effect4 = ICardEffect()
         effect4.set_effect_name("BT22-084 Security: Play this card")
         effect4.set_effect_description("Security: Play this card")

@@ -9,17 +9,23 @@ if TYPE_CHECKING:
 
 
 class BT23_008(CardScript):
-    """BT23-008 Greymon | Lv.4"""
+    """BT23-008 Greymon | Lv.4
+
+    Alt digivolve: from Lv.3 w/ [Agumon] name or CS trait for 2.
+    Raid.
+    [Main][Once Per Turn] By placing this Digimon's top stacked card as its
+        bottom digivolution card, you may play 1 [Gabumon] or
+        [Nokia Shiramine] from your hand with the play cost reduced by 2.
+    Inherited: [Your Turn] This Digimon gets +2000 DP.
+    """
 
     def get_card_effects(self, card: 'CardSource') -> List['ICardEffect']:
         effects = []
 
-        # Factory effect: alt_digivolve_req
-        # Alternate digivolution requirement
+        # --- Effect 0: Alt digivolve from Lv.3 w/ Agumon or CS trait for 2 ---
         effect0 = ICardEffect()
         effect0.set_effect_name("BT23-008 Alternate digivolution requirement")
         effect0.set_effect_description("Alternate digivolution requirement")
-        # Alternate digivolution: Lv.3 for cost 2
         effect0._alt_digi_cost = 2
         effect0._alt_digi_level = 3
 
@@ -28,8 +34,7 @@ class BT23_008(CardScript):
         effect0.set_can_use_condition(condition0)
         effects.append(effect0)
 
-        # Factory effect: raid
-        # Raid
+        # --- Effect 1: Raid ---
         effect1 = ICardEffect()
         effect1.set_effect_name("BT23-008 Raid")
         effect1.set_effect_description("Raid")
@@ -41,49 +46,77 @@ class BT23_008(CardScript):
         effect1.set_can_use_condition(condition1)
         effects.append(effect1)
 
-        # Timing: EffectTiming.OnDeclaration
-        # [Main] [Once Per Turn] By placing this Digimon's top stacked card as its bottom digivolution card, you may play 1 [Gabumon] or [Nokia Shiramine] from your hand with the play cost reduced by 2.
+        # --- Effect 2: [Main][OPT] Stack-shift + play Gabumon/Nokia for -2 cost ---
         effect2 = ICardEffect()
         effect2.set_timing(EffectTiming.OnDeclaration)
-        effect2.set_effect_name("BT23-008 By placing the top card of this Digimon as bottom digivolution card, play 1 [Gabumon]/[Nokia Shiramine] from hand for 2 less")
-        effect2.set_effect_description("[Main] [Once Per Turn] By placing this Digimon's top stacked card as its bottom digivolution card, you may play 1 [Gabumon] or [Nokia Shiramine] from your hand with the play cost reduced by 2.")
+        effect2.set_effect_name(
+            "BT23-008 Stack-shift, play [Gabumon]/[Nokia Shiramine] for -2"
+        )
+        effect2.set_effect_description(
+            "[Main] [Once Per Turn] By placing this Digimon's top stacked "
+            "card as its bottom digivolution card, you may play 1 [Gabumon] "
+            "or [Nokia Shiramine] from your hand with the play cost reduced by 2."
+        )
         effect2.set_max_count_per_turn(1)
         effect2.set_hash_string("BT23_008_Main")
 
-        effect = effect2  # alias for condition closure
         def condition2(context: Dict[str, Any]) -> bool:
             if card and card.permanent_of_this_card() is None:
                 return False
             if not (card and card.owner and card.owner.is_my_turn):
+                return False
+            # Must have at least 1 digivolution card (stack_cards)
+            perm = card.permanent_of_this_card()
+            if perm and len(perm.card_sources) < 2:
                 return False
             return True
 
         effect2.set_can_use_condition(condition2)
 
         def process2(ctx: Dict[str, Any]):
-            """Action: Play Card"""
+            """Stack-shift top to bottom, then play Gabumon/Nokia for -2."""
             player = ctx.get('player')
-            perm = ctx.get('permanent')
             game = ctx.get('game')
             if not (player and game):
                 return
+            perm = card.permanent_of_this_card() if card else None
+            if not perm or len(perm.card_sources) < 2:
+                return
+
+            # Cost: move top stacked card to bottom of digivolution stack
+            # top_card is the topmost; the "top stacked card" is the one
+            # just below top_card in the stack (the highest digivolution card)
+            # Per C#: topCard = perm.TopCard, then AddDigivolutionCardsBottom
+            # In the engine, card_sources is bottom-to-top, so card_sources[-1]
+            # is top_card. The "top stacked card" means the top card of the
+            # digivolution stack = card_sources[-1] = top_card itself per C# ref.
+            # C# does: TopCard -> AddDigivolutionCardsBottom({topCard})
+            # which moves the current top card to the bottom of the stack.
+            top = perm.card_sources[-1]
+            perm.card_sources.remove(top)
+            perm.card_sources.insert(0, top)
+            # Update top_card reference
+            if hasattr(perm, '_refresh_top_card'):
+                perm._refresh_top_card()
+
+            # Reward: play 1 [Gabumon] or [Nokia Shiramine] with -2 cost
             def play_filter(c):
-                if not (getattr(c, 'is_digimon', False) or getattr(c, 'is_tamer', False)):
-                    return False
-                if not (any('Gabumon' in _n or 'Nokia Shiramine' in _n for _n in getattr(c, 'card_names', []))):
-                    return False
-                return True
+                names = getattr(c, 'card_names', []) or []
+                is_gabumon = getattr(c, 'is_digimon', False) and 'Gabumon' in names
+                is_nokia = getattr(c, 'is_tamer', False) and 'Nokia Shiramine' in names
+                return is_gabumon or is_nokia
+
             game.effect_play_from_zone(
-                player, 'hand', play_filter, free=True, is_optional=True)
+                player, 'hand', play_filter,
+                free=False, manual_reduction=2, is_optional=True)
 
         effect2.set_on_process_callback(process2)
         effects.append(effect2)
 
-        # Factory effect: dp_modifier
-        # DP modifier
+        # --- Effect 3: Inherited [Your Turn] +2000 DP ---
         effect3 = ICardEffect()
         effect3.set_effect_name("BT23-008 DP modifier")
-        effect3.set_effect_description("DP modifier")
+        effect3.set_effect_description("[Your Turn] This Digimon gets +2000 DP.")
         effect3.is_inherited_effect = True
         effect3.dp_modifier = 2000
 

@@ -14,221 +14,184 @@ class EX10_072(CardScript):
     def get_card_effects(self, card: 'CardSource') -> List['ICardEffect']:
         effects = []
 
-        # Timing: EffectTiming.None
-        # Ignore Color Req
-        effect0 = ICardEffect()
-        effect0.set_effect_name("EX10-072 Ignore color requirements")
-        effect0.set_effect_description("Ignore Color Req")
+        # Color bypass: "While you don't have [Spiral Mountain] in the battle
+        # area, you can ignore this card's color requirements."
+        # Setting unconditionally is safe: if a Spiral Mountain is already in
+        # the battle area, its black color already satisfies the requirement.
+        card._match_color_requirement = False
 
-        effect = effect0  # alias for condition closure
+        # --- Effect 0: [Main] <Draw 2>, then place in battle area ---
+        effect0 = ICardEffect()
+        effect0.set_timing(EffectTiming.OptionSkill)
+        effect0.set_effect_name("EX10-072 <Draw 2>, Place in battle area")
+        effect0.set_effect_description(
+            "[Main] <Draw 2> (Draw 2 cards from your deck.) Then, place this "
+            "card in the battle area."
+        )
+
         def condition0(context: Dict[str, Any]) -> bool:
-            permanent = effect.effect_source_permanent if hasattr(effect, 'effect_source_permanent') else None
-            if not (permanent and (permanent.contains_card_name('Spiral Mountain'))):
-                return False
             return True
 
         effect0.set_can_use_condition(condition0)
 
         def process0(ctx: Dict[str, Any]):
-            """Action: Ignore Color Req"""
+            """Draw 2 cards. Placement handled by engine."""
             player = ctx.get('player')
-            perm = ctx.get('permanent')
-            game = ctx.get('game')
-            # Ignores color requirement for playing Options — not modeled in engine
-            pass  # descriptive-tagged
+            if player:
+                player.draw_cards(2)
 
         effect0.set_on_process_callback(process0)
         effects.append(effect0)
 
-        # Timing: EffectTiming.OptionSkill
-        # [Main] <Draw 2> (Draw 2 cards from your deck.) Then, place this card in the battle area.
+        # --- Delay marker ---
         effect1 = ICardEffect()
-        effect1.set_timing(EffectTiming.OptionSkill)
-        effect1.set_effect_name("EX10-072 <Draw 2>, Place in battle area")
-        effect1.set_effect_description("[Main] <Draw 2> (Draw 2 cards from your deck.) Then, place this card in the battle area.")
+        effect1.set_effect_name("EX10-072 Delay")
+        effect1.set_effect_description("Delay")
+        effect1._is_delay = True
 
-        effect = effect1  # alias for condition closure
         def condition1(context: Dict[str, Any]) -> bool:
-            # Option main effect — validated by engine timing
-            return True
-
-        effect1.set_can_use_condition(condition1)
-
-        def process1(ctx: Dict[str, Any]):
-            """Action: Draw 2"""
-            player = ctx.get('player')
-            perm = ctx.get('permanent')
-            game = ctx.get('game')
-            if player:
-                player.draw_cards(2)
-
-        effect1.set_on_process_callback(process1)
-        effects.append(effect1)
-
-        # Factory effect: delay
-        # Delay
-        effect2 = ICardEffect()
-        effect2.set_effect_name("EX10-072 Delay")
-        effect2.set_effect_description("Delay")
-        effect2._is_delay = True
-
-        def condition2(context: Dict[str, Any]) -> bool:
             if not (card and card.owner and card.owner.is_my_turn):
                 return False
             return True
+        effect1.set_can_use_condition(condition1)
+        effects.append(effect1)
+
+        # --- Effect 2: [End of Opponent's Turn] <Delay> ---
+        # "You may play 1 face-up Digimon card with the [Dark Masters] trait
+        #  from your security stack without paying the cost. At the end of your
+        #  turn, delete the Digimon this effect played."
+        effect2 = ICardEffect()
+        effect2.set_timing(EffectTiming.OnEndTurn)
+        effect2.set_effect_name("EX10-072 Delay: Play Dark Masters from security")
+        effect2.set_effect_description(
+            "[End of Opponent's Turn] <Delay> Play 1 face-up Digimon card with "
+            "the [Dark Masters] trait from your security stack without paying "
+            "the cost. At the end of your turn, delete the Digimon this effect played."
+        )
+        effect2.is_optional = True
+
+        effect = effect2
+        def condition2(context: Dict[str, Any]) -> bool:
+            return True
+
         effect2.set_can_use_condition(condition2)
+
+        def process2(ctx: Dict[str, Any]):
+            """Play 1 face-up [Dark Masters] Digimon from security for free."""
+            player = ctx.get('player')
+            game = ctx.get('game')
+            if not (player and game):
+                return
+
+            def sec_filter(c):
+                if getattr(c, 'is_flipped', True):
+                    return False
+                if not getattr(c, 'is_digimon', False):
+                    return False
+                traits = getattr(c, 'card_traits', []) or []
+                return any('Dark Masters' in t for t in traits)
+
+            has_target = any(sec_filter(c) for c in player.security_cards)
+            if not has_target:
+                return
+
+            def after_selection(selected_card):
+                removed = player.remove_from_security(selected_card)
+                if removed:
+                    played_perm = player.play_card_from_source(removed, pay_cost=False)
+                    if played_perm and game:
+                        game.execute_effects(EffectTiming.OnEnterFieldAnyone, {
+                            'played_card': removed,
+                            'played_permanent': played_perm,
+                            'event_permanent': played_perm,
+                            'event_player': player,
+                        })
+                        # "At the end of your turn, delete the Digimon this
+                        #  effect played." — schedule deletion
+                        _schedule_end_of_turn_delete(game, player, played_perm)
+
+            game.effect_select_own_security(
+                player, sec_filter, after_selection, is_optional=True,
+                prompt="You may play 1 face-up [Dark Masters] Digimon from your security stack without paying the cost.")
+
+        effect2.set_on_process_callback(process2)
         effects.append(effect2)
 
-        # Timing: EffectTiming.OnEndTurn
-        # [End of Opponent's Turn] <Delay> (By trashing this card after the placing turn, activate the effect below.)\r\n・You may play 1 face-up Digimon card with the [Dark Masters] trait from your security stack without paying the cost. At the end of your turn, delete the Digimon this effect played.
+        # --- Effect 3: [Security] ---
+        # "[Security] You may play 1 Digimon card with the [Dark Masters] trait
+        #  from your hand or trash without paying the cost. Then, add this card
+        #  to the hand. At turn end, delete the Digimon this effect played."
         effect3 = ICardEffect()
-        effect3.set_timing(EffectTiming.OnEndTurn)
-        effect3.set_effect_name("EX10-072 Play 1 [Dark Masters], delete it at end of your turn")
-        effect3.set_effect_description("[End of Opponent's Turn] <Delay> (By trashing this card after the placing turn, activate the effect below.)\\r\\n・You may play 1 face-up Digimon card with the [Dark Masters] trait from your security stack without paying the cost. At the end of your turn, delete the Digimon this effect played.")
-        effect3.is_optional = True
+        effect3.set_timing(EffectTiming.SecuritySkill)
+        effect3.set_effect_name("EX10-072 Security: Play Dark Masters from hand/trash")
+        effect3.set_effect_description(
+            "[Security] You may play 1 Digimon card with the [Dark Masters] "
+            "trait from your hand or trash without paying the cost. Then, add "
+            "this card to the hand. At turn end, delete the Digimon this effect played."
+        )
+        effect3.is_security_effect = True
 
-        effect = effect3  # alias for condition closure
+        effect = effect3
         def condition3(context: Dict[str, Any]) -> bool:
             return True
 
         effect3.set_can_use_condition(condition3)
 
         def process3(ctx: Dict[str, Any]):
-            """Action: Play Card"""
+            """Play 1 [Dark Masters] Digimon from hand or trash for free, add this to hand."""
             player = ctx.get('player')
-            perm = ctx.get('permanent')
             game = ctx.get('game')
             if not (player and game):
                 return
+
             def play_filter(c):
                 if not getattr(c, 'is_digimon', False):
                     return False
-                if not (any('Dark Masters' in _t for _t in (getattr(c, 'card_traits', []) or []))):
-                    return False
-                return True
+                traits = getattr(c, 'card_traits', []) or []
+                return any('Dark Masters' in t for t in traits)
+
             game.effect_play_from_zone(
-                player, 'hand', play_filter, free=True, is_optional=True)
+                player, 'hand_or_trash', play_filter, free=True, is_optional=True,
+                prompt="You may play 1 [Dark Masters] Digimon from your hand or trash without paying the cost.")
+
+            # "Then, add this card to the hand."
+            if card in player.trash_cards:
+                player.trash_cards.remove(card)
+                player.hand_cards.append(card)
 
         effect3.set_on_process_callback(process3)
         effects.append(effect3)
 
-        # Timing: EffectTiming.OnEndTurn
-        # Delete, Effect Immunity
-        effect4 = ICardEffect()
-        effect4.set_timing(EffectTiming.OnEndTurn)
-        effect4.set_effect_name("EX10-072 Delete this Digimon")
-        effect4.set_effect_description("Delete, Effect Immunity")
-
-        effect = effect4  # alias for condition closure
-        def condition4(context: Dict[str, Any]) -> bool:
-            if not (card and card.owner and card.owner.is_my_turn):
-                return False
-            return True
-
-        effect4.set_can_use_condition(condition4)
-
-        def process4(ctx: Dict[str, Any]):
-            """Action: Delete, Effect Immunity"""
-            player = ctx.get('player')
-            perm = ctx.get('permanent')
-            game = ctx.get('game')
-            if not (player and game):
-                return
-            def target_filter(p):
-                return p.is_digimon
-            def on_delete(target_perm):
-                enemy = player.enemy if player else None
-                if enemy:
-                    enemy.delete_permanent(target_perm)
-            game.effect_select_opponent_permanent(
-                player, on_delete, filter_fn=target_filter, is_optional=False)
-            # Grant effect immunity via modifier system
-            if perm and game:
-                from digimon_gym.engine.interfaces.modifiers import ModifierType
-                game.register_modifier(
-                    ModifierType.CANNOT_BE_SELECTED_BY_EFFECT, perm,
-                    value_fn=lambda: True, expiry='end_of_turn')
-
-        effect4.set_on_process_callback(process4)
-        effects.append(effect4)
-
-        # Timing: EffectTiming.SecuritySkill
-        # [Security] You may play 1 Digimon card with the [Dark Masters] trait from your hand or trash without paying the cost. Then, add this card to the hand. At turn end, delete the Digimon this effect played.
-        effect5 = ICardEffect()
-        effect5.set_timing(EffectTiming.SecuritySkill)
-        effect5.set_effect_name("EX10-072 Play 1 [Dark Masters], delete it at end of your turn")
-        effect5.set_effect_description("[Security] You may play 1 Digimon card with the [Dark Masters] trait from your hand or trash without paying the cost. Then, add this card to the hand. At turn end, delete the Digimon this effect played.")
-        effect5.is_security_effect = True
-        effect5.is_security_effect = True
-
-        effect = effect5  # alias for condition closure
-        def condition5(context: Dict[str, Any]) -> bool:
-            # Security effect — validated by engine timing
-            return True
-
-        effect5.set_can_use_condition(condition5)
-
-        def process5(ctx: Dict[str, Any]):
-            """Action: Play Card"""
-            player = ctx.get('player')
-            perm = ctx.get('permanent')
-            game = ctx.get('game')
-            if not (player and game):
-                return
-            def play_filter(c):
-                if not getattr(c, 'is_digimon', False):
-                    return False
-                if not (any('Dark Masters' in _t for _t in (getattr(c, 'card_traits', []) or []))):
-                    return False
-                return True
-            game.effect_play_from_zone(
-                player, 'hand', play_filter, free=True, is_optional=True)
-
-        effect5.set_on_process_callback(process5)
-        effects.append(effect5)
-
-        # Timing: EffectTiming.SecuritySkill
-        # Delete, Add To Hand, Effect Immunity
-        effect6 = ICardEffect()
-        effect6.set_timing(EffectTiming.SecuritySkill)
-        effect6.set_effect_name("EX10-072 Delete this Digimon")
-        effect6.set_effect_description("Delete, Add To Hand, Effect Immunity")
-        effect6.is_security_effect = True
-        effect6.is_security_effect = True
-
-        effect = effect6  # alias for condition closure
-        def condition6(context: Dict[str, Any]) -> bool:
-            return True
-
-        effect6.set_can_use_condition(condition6)
-
-        def process6(ctx: Dict[str, Any]):
-            """Action: Delete, Add To Hand, Effect Immunity"""
-            player = ctx.get('player')
-            perm = ctx.get('permanent')
-            game = ctx.get('game')
-            if not (player and game):
-                return
-            def target_filter(p):
-                return p.is_digimon
-            def on_delete(target_perm):
-                enemy = player.enemy if player else None
-                if enemy:
-                    enemy.delete_permanent(target_perm)
-            game.effect_select_opponent_permanent(
-                player, on_delete, filter_fn=target_filter, is_optional=False)
-            # Add card to hand (from trash/reveal)
-            if player and player.trash_cards:
-                card_to_add = player.trash_cards.pop()
-                player.hand_cards.append(card_to_add)
-            # Grant effect immunity via modifier system
-            if perm and game:
-                from digimon_gym.engine.interfaces.modifiers import ModifierType
-                game.register_modifier(
-                    ModifierType.CANNOT_BE_SELECTED_BY_EFFECT, perm,
-                    value_fn=lambda: True, expiry='end_of_turn')
-
-        effect6.set_on_process_callback(process6)
-        effects.append(effect6)
-
         return effects
+
+
+def _schedule_end_of_turn_delete(game, player, played_perm):
+    """Register an end-of-turn effect that deletes the played Digimon.
+
+    Uses a granted effect on the permanent that fires at end of owner's turn.
+    Since the engine doesn't have a formal delayed-delete registry, we add the
+    effect to the permanent's granted effects list so it fires on the next
+    end-of-turn for the owner.
+    """
+    delete_effect = ICardEffect()
+    delete_effect.set_timing(EffectTiming.OnEndTurn)
+    delete_effect.set_effect_name("EX10-072 Delete played Digimon at end of turn")
+
+    def delete_condition(context):
+        # Only fire on the card owner's turn end
+        if not (player and player.is_my_turn):
+            return False
+        # Only if the permanent is still on the field
+        return played_perm in player.battle_area
+
+    delete_effect.set_can_use_condition(delete_condition)
+
+    def delete_process(ctx):
+        if played_perm in player.battle_area:
+            player.delete_permanent(played_perm)
+
+    delete_effect.set_on_process_callback(delete_process)
+
+    # Grant the effect to the permanent so it activates at end of turn
+    # expiry_turn=-1 means permanent (it self-destructs on first activation)
+    played_perm._granted_effects.append((delete_effect, -1))

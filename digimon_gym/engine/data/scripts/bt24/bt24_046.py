@@ -59,7 +59,7 @@ class BT24_046(CardScript):
 
                 def target_filter(p):
                     return (getattr(p, 'is_digimon', False) and
-                            getattr(p, 'owner', None) == player.enemy)
+                            p in player.enemy.battle_area)
 
                 def on_suspend(target_perm):
                     target_perm.suspend()
@@ -128,7 +128,7 @@ class BT24_046(CardScript):
 
             def target_filter(p):
                 return (getattr(p, 'is_digimon', False) and
-                        getattr(p, 'owner', None) == player.enemy)
+                        p in player.enemy.battle_area)
 
             def on_suspend(target_perm):
                 target_perm.suspend()

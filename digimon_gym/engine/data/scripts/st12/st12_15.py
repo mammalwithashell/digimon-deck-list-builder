@@ -29,24 +29,26 @@ class ST12_15(CardScript):
         effect0.set_can_use_condition(condition0)
 
         def process0(ctx: Dict[str, Any]):
-            """Action: Add To Hand, Reveal And Select"""
+            """Action: Reveal top 3, select 1 matching card to hand, trash the rest"""
             player = ctx.get('player')
             perm = ctx.get('permanent')
             game = ctx.get('game')
-            # Add card to hand (from trash/reveal)
-            if player and player.trash_cards:
-                card_to_add = player.trash_cards.pop()
-                player.hand_cards.append(card_to_add)
             if not (player and game):
                 return
             def reveal_filter(c):
-                if not (any('Huckmon' in _n or 'Sistermon' in _n for _n in getattr(c, 'card_names', [])) or any('Royal Knight' in _t for _t in (getattr(c, 'card_traits', []) or []))):
-                    return False
-                return True
+                # Card with [Huckmon] or [Sistermon] in name
+                if c.contains_card_name('Huckmon') or c.contains_card_name('Sistermon'):
+                    return True
+                # Or [Royal Knight] in traits
+                traits = c.type_eng if hasattr(c, 'type_eng') else []
+                if any('Royal Knight' in t for t in (traits or [])):
+                    return True
+                return False
             def on_revealed(selected, remaining):
                 player.hand_cards.append(selected)
+                # Trash the rest (not library bottom)
                 for c in remaining:
-                    player.library_cards.append(c)
+                    player.trash_cards.append(c)
             game.effect_reveal_and_select(
                 player, 3, reveal_filter, on_revealed, is_optional=True)
 
@@ -66,11 +68,14 @@ class ST12_15(CardScript):
         effects.append(effect1)
 
         # Timing: EffectTiming.OnDeclaration
-        # [Main] <Delay> (Trash this card in your battle area to activate the effect below. You can't activate this effect the turn this card enters play.) - The next time one of your Digimon would digivolve this turn, reduce the digivolution cost by 1.
+        # [Main] <Delay> (Trash this card in your battle area to activate the effect below.
+        # You can't activate this effect the turn this card enters play.)
+        # - The next time one of your Digimon would digivolve this turn, reduce the digivolution cost by 1.
         effect2 = ICardEffect()
         effect2.set_timing(EffectTiming.OnDeclaration)
         effect2.set_effect_name("ST12-15 Digivolution Cost -1")
-        effect2.set_effect_description("[Main] <Delay> (Trash this card in your battle area to activate the effect below. You can't activate this effect the turn this card enters play.) - The next time one of your Digimon would digivolve this turn, reduce the digivolution cost by 1.")
+        effect2.set_effect_description("[Main] <Delay> - The next time one of your Digimon would digivolve this turn, reduce the digivolution cost by 1.")
+        effect2._is_delay_effect = True
 
         effect = effect2  # alias for condition closure
         def condition2(context: Dict[str, Any]) -> bool:
@@ -79,40 +84,33 @@ class ST12_15(CardScript):
         effect2.set_can_use_condition(condition2)
 
         def process2(ctx: Dict[str, Any]):
-            """Action: Effect"""
+            """Action: Grant digivolution cost -1 for next digivolve this turn"""
             player = ctx.get('player')
-            perm = ctx.get('permanent')
             game = ctx.get('game')
-            # Cost reduction (variable amount) — handled via cost_reduction property
-            pass  # descriptive-tagged: cost_reduction
+            if not (player and game):
+                return
+            # Grant a one-shot evo cost reduction of 1 to all own permanents
+            # by adding a temporary WhenWouldDigivolve effect with cost_reduction=1
+            # The effect is consumed after the first digivolution
+            temp_effect = ICardEffect()
+            temp_effect.set_timing(EffectTiming.WhenWouldDigivolve)
+            temp_effect.set_effect_name("ST12-15 Evo Cost -1 (one-shot)")
+            temp_effect.is_inherited_effect = True  # So it's picked up from sources
+            temp_effect.cost_reduction = 1
+            consumed = [False]
+            def temp_condition(context: Dict[str, Any]) -> bool:
+                if consumed[0]:
+                    return False
+                consumed[0] = True
+                return True
+            temp_effect.set_can_use_condition(temp_condition)
+            # Grant this temp effect to all own Digimon on field
+            for perm in player.battle_area:
+                if perm.is_digimon:
+                    perm.grant_temp_effect(temp_effect, expiry_turn=game.turn_count)
 
         effect2.set_on_process_callback(process2)
         effects.append(effect2)
-
-        # Timing: EffectTiming.OnDeclaration
-        # Cost -1
-        effect3 = ICardEffect()
-        effect3.set_timing(EffectTiming.OnDeclaration)
-        effect3.set_effect_name("ST12-15 Remove Effect")
-        effect3.set_effect_description("Cost -1")
-        effect3.cost_reduction = 1
-
-        effect = effect3  # alias for condition closure
-        def condition3(context: Dict[str, Any]) -> bool:
-            return True
-
-        effect3.set_can_use_condition(condition3)
-
-        def process3(ctx: Dict[str, Any]):
-            """Action: Cost -1"""
-            player = ctx.get('player')
-            perm = ctx.get('permanent')
-            game = ctx.get('game')
-            # Cost reduction by 1 — handled via cost_reduction property
-            pass  # descriptive-tagged: cost_reduction
-
-        effect3.set_on_process_callback(process3)
-        effects.append(effect3)
 
         # Timing: EffectTiming.SecuritySkill
         # [Security] Reveal 3 cards from the top of your deck. Add 1 card with [Huckmon] or [Sistermon] in its name or [Royal Knight] in its traits among them to your hand. Trash the rest. Then, place this card in your Battle Area.
@@ -120,7 +118,6 @@ class ST12_15(CardScript):
         effect4.set_timing(EffectTiming.SecuritySkill)
         effect4.set_effect_name("ST12-15 Reveal the top 3 cards of deck and place this card in battle area")
         effect4.set_effect_description("[Security] Reveal 3 cards from the top of your deck. Add 1 card with [Huckmon] or [Sistermon] in its name or [Royal Knight] in its traits among them to your hand. Trash the rest. Then, place this card in your Battle Area.")
-        effect4.is_security_effect = True
         effect4.is_security_effect = True
 
         effect = effect4  # alias for condition closure
@@ -131,24 +128,26 @@ class ST12_15(CardScript):
         effect4.set_can_use_condition(condition4)
 
         def process4(ctx: Dict[str, Any]):
-            """Action: Add To Hand, Reveal And Select"""
+            """Action: Reveal top 3, select 1 matching card to hand, trash the rest"""
             player = ctx.get('player')
             perm = ctx.get('permanent')
             game = ctx.get('game')
-            # Add card to hand (from trash/reveal)
-            if player and player.trash_cards:
-                card_to_add = player.trash_cards.pop()
-                player.hand_cards.append(card_to_add)
             if not (player and game):
                 return
             def reveal_filter(c):
-                if not (any('Huckmon' in _n or 'Sistermon' in _n for _n in getattr(c, 'card_names', [])) or any('Royal Knight' in _t for _t in (getattr(c, 'card_traits', []) or []))):
-                    return False
-                return True
+                # Card with [Huckmon] or [Sistermon] in name
+                if c.contains_card_name('Huckmon') or c.contains_card_name('Sistermon'):
+                    return True
+                # Or [Royal Knight] in traits
+                traits = c.type_eng if hasattr(c, 'type_eng') else []
+                if any('Royal Knight' in t for t in (traits or [])):
+                    return True
+                return False
             def on_revealed(selected, remaining):
                 player.hand_cards.append(selected)
+                # Trash the rest (not library bottom)
                 for c in remaining:
-                    player.library_cards.append(c)
+                    player.trash_cards.append(c)
             game.effect_reveal_and_select(
                 player, 3, reveal_filter, on_revealed, is_optional=True)
 

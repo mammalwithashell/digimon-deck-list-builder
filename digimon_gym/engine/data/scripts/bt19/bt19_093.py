@@ -14,138 +14,147 @@ class BT19_093(CardScript):
     def get_card_effects(self, card: 'CardSource') -> List['ICardEffect']:
         effects = []
 
-        # Timing: EffectTiming.None
-        # Ignore Color Req
-        effect0 = ICardEffect()
-        effect0.set_effect_name("BT19-093 Ignore color requirements")
-        effect0.set_effect_description("Ignore Color Req")
+        # Color bypass: "While you don't have [Queen Device] in the battle area,
+        # you may ignore this card's color requirements."
+        # Setting unconditionally is safe: if a Queen Device is already in the
+        # battle area, its black color already satisfies the color requirement.
+        card._match_color_requirement = False
 
-        effect = effect0  # alias for condition closure
+        # --- Effect 0: When this card is trashed from your battle area ---
+        # "When this card is trashed in your battle area, until the end of your
+        #  opponent's turn, 1 of their Digimon can't activate [When Digivolving]
+        #  effects and gets -3000 DP."
+        effect0 = ICardEffect()
+        effect0.set_timing(EffectTiming.OnDestroyedAnyone)
+        effect0.set_effect_name("BT19-093 On trashed: -3000 DP + disable When Digivolving")
+        effect0.set_effect_description(
+            "When this card is trashed in your battle area, until the end of your "
+            "opponent's turn, 1 of their Digimon can't activate [When Digivolving] "
+            "effects and gets -3000 DP."
+        )
+        effect0.is_on_deletion = True
+
+        effect = effect0
         def condition0(context: Dict[str, Any]) -> bool:
-            permanent = effect.effect_source_permanent if hasattr(effect, 'effect_source_permanent') else None
-            if not (permanent and (permanent.contains_card_name('Queen Device'))):
-                return False
             return True
 
         effect0.set_can_use_condition(condition0)
 
         def process0(ctx: Dict[str, Any]):
-            """Action: Ignore Color Req"""
+            """Select 1 opponent Digimon: -3000 DP, disable [When Digivolving]."""
             player = ctx.get('player')
-            perm = ctx.get('permanent')
             game = ctx.get('game')
-            # Ignores color requirement for playing Options — not modeled in engine
-            pass  # descriptive-tagged
+            if not (player and game):
+                return
+            enemy = player.enemy if player else None
+            if not enemy:
+                return
+
+            def target_filter(p):
+                return p.is_digimon
+
+            def on_select(target_perm):
+                target_perm.change_dp(-3000)
+                # [When Digivolving] disable is not yet modeled in engine
+                # descriptive-tagged: disable_when_digivolving
+
+            game.effect_select_opponent_permanent(
+                player, on_select, filter_fn=target_filter, is_optional=False,
+                prompt="Select 1 opponent Digimon to give -3000 DP.")
 
         effect0.set_on_process_callback(process0)
         effects.append(effect0)
 
-        # Timing: EffectTiming.OnDestroyedAnyone
-        # When this card is trashed in your battle area, until the end of your opponent's turn, 1 of your opponent's Digimon gets -3000 DP and that Digimon's [When Digivolving] effects don't activate.
+        # --- Effect 1: [Main] ---
+        # "[Main] Until the end of your opponent's turn, 1 of their Digimon can't
+        #  activate [When Digivolving] effects and gets -3000 DP. Then, place this
+        #  card in the battle area."
         effect1 = ICardEffect()
-        effect1.set_timing(EffectTiming.OnDestroyedAnyone)
-        effect1.set_effect_name("BT19-093 Give -3000 DP and Cannot activate When Digivolving effects.")
-        effect1.set_effect_description("When this card is trashed in your battle area, until the end of your opponent's turn, 1 of your opponent's Digimon gets -3000 DP and that Digimon's [When Digivolving] effects don't activate.")
-        effect1.is_on_deletion = True
+        effect1.set_timing(EffectTiming.OptionSkill)
+        effect1.set_effect_name("BT19-093 Main: -3000 DP + disable When Digivolving")
+        effect1.set_effect_description(
+            "[Main] Until the end of your opponent's turn, 1 of their Digimon "
+            "can't activate [When Digivolving] effects and gets -3000 DP. Then, "
+            "place this card in the battle area."
+        )
 
-        effect = effect1  # alias for condition closure
+        effect = effect1
         def condition1(context: Dict[str, Any]) -> bool:
-            # Triggered on deletion — validated by engine timing
             return True
 
         effect1.set_can_use_condition(condition1)
 
         def process1(ctx: Dict[str, Any]):
-            """Action: DP -3000, Disable Effect, Effect Immunity"""
+            """Select 1 opponent Digimon: -3000 DP, disable [When Digivolving]."""
             player = ctx.get('player')
-            perm = ctx.get('permanent')
             game = ctx.get('game')
-            # DP change targets opponent digimon
+            if not (player and game):
+                return
             enemy = player.enemy if player else None
-            if enemy and enemy.battle_area:
-                dp_targets = [p for p in enemy.battle_area if p.is_digimon and p.dp is not None]
-                if dp_targets:
-                    target = min(dp_targets, key=lambda p: p.dp)
-                    target.change_dp(-3000)
-            # Disable/invalidate effects on target — not yet in engine
-            pass  # descriptive-tagged: disable_effect
-            # Grant effect immunity via modifier system
-            if perm and game:
-                from digimon_gym.engine.interfaces.modifiers import ModifierType
-                game.register_modifier(
-                    ModifierType.CANNOT_BE_SELECTED_BY_EFFECT, perm,
-                    value_fn=lambda: True, expiry='end_of_turn')
+            if not enemy:
+                return
+
+            def target_filter(p):
+                return p.is_digimon
+
+            def on_select(target_perm):
+                target_perm.change_dp(-3000)
+                # [When Digivolving] disable is not yet modeled in engine
+                # descriptive-tagged: disable_when_digivolving
+
+            game.effect_select_opponent_permanent(
+                player, on_select, filter_fn=target_filter, is_optional=False,
+                prompt="Select 1 opponent Digimon to give -3000 DP.")
+            # "Then, place this card in the battle area" — handled by engine
+            # (OptionSkill cards with delay placement are auto-placed)
 
         effect1.set_on_process_callback(process1)
         effects.append(effect1)
 
-        # Timing: EffectTiming.OptionSkill
-        # [Main] Until the end of your opponent's turn, 1 of your opponent's Digimon gets -3000 DP and that Digimon's [When Digivolving] effects don't activate. Then, place this card in the battle area.
+        # --- Effect 2: [Security] ---
+        # "[Security] 2 of your opponent's Digimon gain <Security A. -2> for the
+        #  turn. Then, add this card to the hand."
         effect2 = ICardEffect()
-        effect2.set_timing(EffectTiming.OptionSkill)
-        effect2.set_effect_name("BT19-093 Give -3000 DP and Cannot activate When Digivolving effects.")
-        effect2.set_effect_description("[Main] Until the end of your opponent's turn, 1 of your opponent's Digimon gets -3000 DP and that Digimon's [When Digivolving] effects don't activate. Then, place this card in the battle area.")
+        effect2.set_timing(EffectTiming.SecuritySkill)
+        effect2.set_effect_name("BT19-093 Security: SA-2 to 2 opponent Digimon")
+        effect2.set_effect_description(
+            "[Security] 2 of your opponent's Digimon gain <Security A. -2> for "
+            "the turn. Then, add this card to the hand."
+        )
+        effect2.is_security_effect = True
 
-        effect = effect2  # alias for condition closure
+        effect = effect2
         def condition2(context: Dict[str, Any]) -> bool:
-            # Option main effect — validated by engine timing
             return True
 
         effect2.set_can_use_condition(condition2)
 
         def process2(ctx: Dict[str, Any]):
-            """Action: DP -3000, Disable Effect, Effect Immunity"""
+            """Give SA-2 to up to 2 opponent Digimon, then add this card to hand."""
             player = ctx.get('player')
-            perm = ctx.get('permanent')
             game = ctx.get('game')
-            # DP change targets opponent digimon
+            if not (player and game):
+                return
             enemy = player.enemy if player else None
-            if enemy and enemy.battle_area:
-                dp_targets = [p for p in enemy.battle_area if p.is_digimon and p.dp is not None]
-                if dp_targets:
-                    target = min(dp_targets, key=lambda p: p.dp)
-                    target.change_dp(-3000)
-            # Disable/invalidate effects on target — not yet in engine
-            pass  # descriptive-tagged: disable_effect
-            # Grant effect immunity via modifier system
-            if perm and game:
-                from digimon_gym.engine.interfaces.modifiers import ModifierType
-                game.register_modifier(
-                    ModifierType.CANNOT_BE_SELECTED_BY_EFFECT, perm,
-                    value_fn=lambda: True, expiry='end_of_turn')
+            if not enemy:
+                return
+
+            # Apply SA-2 to up to 2 opponent Digimon
+            digimon_targets = [p for p in enemy.battle_area if p.is_digimon]
+            count = min(2, len(digimon_targets))
+            if count > 0:
+                # Use the first `count` Digimon (engine doesn't have multi-select
+                # for opponent permanents, so auto-select lowest-DP targets)
+                targets = sorted(digimon_targets, key=lambda p: p.dp or 0)[:count]
+                for t in targets:
+                    t._temp_sa_modifier -= 2
+
+            # Add this card to hand
+            if card in player.trash_cards:
+                player.trash_cards.remove(card)
+                player.hand_cards.append(card)
 
         effect2.set_on_process_callback(process2)
         effects.append(effect2)
-
-        # Timing: EffectTiming.SecuritySkill
-        # [Security] 2 of your opponent's Digimon gain <Security A. -2> for the turn. Then, add this card to the hand.
-        effect3 = ICardEffect()
-        effect3.set_timing(EffectTiming.SecuritySkill)
-        effect3.set_effect_name("BT19-093 Security Attack -2 for 2 of your opponents Digimon, then add this to hand")
-        effect3.set_effect_description("[Security] 2 of your opponent's Digimon gain <Security A. -2> for the turn. Then, add this card to the hand.")
-        effect3.is_security_effect = True
-        effect3.is_security_effect = True
-
-        effect = effect3  # alias for condition closure
-        def condition3(context: Dict[str, Any]) -> bool:
-            # Security effect — validated by engine timing
-            return True
-
-        effect3.set_can_use_condition(condition3)
-
-        def process3(ctx: Dict[str, Any]):
-            """Action: Add To Hand, Change Security Attack"""
-            player = ctx.get('player')
-            perm = ctx.get('permanent')
-            game = ctx.get('game')
-            # Add card to hand (from trash/reveal)
-            if player and player.trash_cards:
-                card_to_add = player.trash_cards.pop()
-                player.hand_cards.append(card_to_add)
-            # Grant Security Attack modifier to target permanent
-            pass  # descriptive-tagged: change_security_attack
-
-        effect3.set_on_process_callback(process3)
-        effects.append(effect3)
 
         return effects

@@ -9,13 +9,26 @@ if TYPE_CHECKING:
 
 
 class EX11_060(CardScript):
-    """EX11-060 Arisa Kinosaki"""
+    """EX11-060 Arisa Kinosaki (Tamer)
+
+    [Start of Your Turn] If your memory is at 2 or less, it becomes 3.
+
+    [All Turns] When any of your Tokens or [Puppet] trait Digimon are deleted,
+        by suspending this Tamer, <Draw 1>. If deleted by <Overclock>, you may
+        play 1 level 4 or lower [Puppet] trait Digimon card from your hand
+        without paying the cost.
+
+    [Security] Play this card without paying its cost.
+    """
 
     def get_card_effects(self, card: 'CardSource') -> List['ICardEffect']:
         effects = []
 
-        # Factory effect: set_memory_3
-        # [Start of Your Turn] Set memory to 3 if <= 2
+        def _is_puppet_trait(c) -> bool:
+            traits = getattr(c, 'card_traits', []) or []
+            return any('Puppet' in t for t in traits)
+
+        # --- Effect 0: [Start of Your Turn] Set memory to 3 ---
         effect0 = ICardEffect()
         effect0.set_timing(EffectTiming.OnStartMainPhase)
         effect0.set_effect_name("EX11-060 Set memory to 3")
@@ -30,7 +43,6 @@ class EX11_060(CardScript):
         effect0.set_can_use_condition(condition0)
 
         def process0(ctx: Dict[str, Any]):
-            """Action: Set memory to 3 if <= 2"""
             player = ctx.get('player')
             game = ctx.get('game')
             if player and game and game.memory <= 2:
@@ -38,54 +50,83 @@ class EX11_060(CardScript):
         effect0.set_on_process_callback(process0)
         effects.append(effect0)
 
-        # Timing: EffectTiming.OnDestroyedAnyone
-        # Draw 1, Suspend, Play Card
+        # --- Effect 1: [All Turns] Deletion trigger ---
         effect1 = ICardEffect()
         effect1.set_timing(EffectTiming.OnDestroyedAnyone)
-        effect1.set_effect_name("EX11-060 By suspending this, Draw 1. If deleted by Overclock, you may play 1 level 4 or lower Puppet Digimon from hand.")
-        effect1.set_effect_description("Draw 1, Suspend, Play Card")
+        effect1.set_effect_name("EX11-060 Draw 1 on Token/Puppet deletion, Overclock play")
+        effect1.set_effect_description("[All Turns] When Token/Puppet deleted, suspend to Draw 1. If Overclock, play Puppet Lv4-.")
         effect1.is_optional = True
         effect1.is_on_deletion = True
 
-        effect = effect1  # alias for condition closure
         def condition1(context: Dict[str, Any]) -> bool:
             if card and card.permanent_of_this_card() is None:
                 return False
+            # Check that this tamer is not already suspended (cost: suspend this)
+            my_perm = card.permanent_of_this_card()
+            if my_perm and my_perm.is_suspended:
+                return False
+            # Check that the deleted permanent is one of our Tokens or Puppet Digimon
+            deleted_perm = context.get('permanent')
+            if deleted_perm:
+                player = card.owner if card else None
+                if not player:
+                    return False
+                # Must be our Digimon
+                if deleted_perm not in player.battle_area and not getattr(deleted_perm, '_was_on_owner_field', False):
+                    # The permanent was already removed, check owner
+                    if getattr(deleted_perm, '_owner_player', None) is not player:
+                        pass  # May still be ours
+                # Check Token or Puppet trait
+                is_token = getattr(deleted_perm, 'is_token', False)
+                is_puppet = False
+                if deleted_perm.top_card:
+                    is_puppet = _is_puppet_trait(deleted_perm.top_card)
+                if not (is_token or is_puppet):
+                    return False
             return True
-
         effect1.set_can_use_condition(condition1)
 
         def process1(ctx: Dict[str, Any]):
-            """Action: Draw 1, Suspend, Play Card"""
             player = ctx.get('player')
-            perm = ctx.get('permanent')
             game = ctx.get('game')
-            if player:
-                player.draw_cards(1)
             if not (player and game):
                 return
-            def target_filter(p):
-                if p.level is None or p.level > 4:
-                    return False
-                return True
-            def on_suspend(target_perm):
-                target_perm.suspend()
-            game.effect_select_opponent_permanent(
-                player, on_suspend, filter_fn=target_filter, is_optional=True)
-            if not (player and game):
+            my_perm = card.permanent_of_this_card() if card else None
+            if not my_perm:
                 return
-            def play_filter(c):
-                if getattr(c, 'level', None) is None or c.level > 4:
-                    return False
-                return True
-            game.effect_play_from_zone(
-                player, 'hand', play_filter, free=True, is_optional=True)
+            # Cost: suspend this Tamer
+            my_perm.suspend()
+            # Draw 1
+            player.draw_cards(1)
+            # If deleted by Overclock, may play 1 level 4 or lower Puppet from hand
+            triggering_effect = ctx.get('triggering_effect')
+            is_overclock = False
+            if triggering_effect:
+                eff_name = getattr(triggering_effect, 'effect_name', '') or ''
+                if 'Overclock' in eff_name or 'overclock' in eff_name:
+                    is_overclock = True
+                if getattr(triggering_effect, '_is_overclock', False):
+                    is_overclock = True
+            # Also check context for overclock flag
+            if ctx.get('is_overclock'):
+                is_overclock = True
+
+            if is_overclock:
+                def play_filter(c):
+                    if not getattr(c, 'is_digimon', False):
+                        return False
+                    level = getattr(c, 'level', None)
+                    if level is None or level > 4:
+                        return False
+                    return _is_puppet_trait(c)
+                game.effect_play_from_zone(
+                    player, 'hand', play_filter, free=True, is_optional=True,
+                    prompt="You may play 1 level 4 or lower [Puppet] Digimon from hand.")
 
         effect1.set_on_process_callback(process1)
         effects.append(effect1)
 
-        # Factory effect: security_play
-        # Security: Play this card
+        # --- Effect 2: Security - Play this card ---
         effect2 = ICardEffect()
         effect2.set_effect_name("EX11-060 Security: Play this card")
         effect2.set_effect_description("Security: Play this card")

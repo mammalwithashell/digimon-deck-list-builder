@@ -9,17 +9,25 @@ if TYPE_CHECKING:
 
 
 class BT15_101(CardScript):
-    """BT15-101 MetalGarurumon | Lv.6"""
+    """BT15-101 MetalGarurumon | Lv.6
+
+    Alt digivolve: from Lv.5 [Garurumon] for 4.
+    Alt digivolve: If you have [Matt Ishida] and opponent has Digimon with
+        10000+ DP, from [Gabumon] for 4 ignoring requirements.
+    Evade.
+    [When Digivolving] 3 of your opponent's Digimon and Tamers can't suspend
+        until the end of their turn.
+    [All Turns][Once Per Turn] When this Digimon becomes suspended, you may
+        unsuspend it.
+    """
 
     def get_card_effects(self, card: 'CardSource') -> List['ICardEffect']:
         effects = []
 
-        # Factory effect: alt_digivolve_req
-        # Alternate digivolution requirement
+        # --- Effect 0: Alt digivolve from Lv.5 Garurumon for 4 ---
         effect0 = ICardEffect()
         effect0.set_effect_name("BT15-101 Alternate digivolution requirement")
         effect0.set_effect_description("Alternate digivolution requirement")
-        # Alternate digivolution: alternate source for cost 4
         effect0._alt_digi_cost = 4
         effect0._alt_digi_level = 5
         effect0._alt_digi_name = "Garurumon"
@@ -29,98 +37,106 @@ class BT15_101(CardScript):
         effect0.set_can_use_condition(condition0)
         effects.append(effect0)
 
-        # Factory effect: alt_digivolve_req
-        # Alternate digivolution requirement
+        # --- Effect 1: Evade ---
         effect1 = ICardEffect()
-        effect1.set_effect_name("BT15-101 Alternate digivolution requirement")
-        effect1.set_effect_description("Alternate digivolution requirement")
-        # Alternate digivolution: alternate source for cost 4
-        effect1._alt_digi_cost = 4
-        effect1._alt_digi_level = 5
-        effect1._alt_digi_name = "Garurumon"
+        effect1.set_effect_name("BT15-101 Evade")
+        effect1.set_effect_description("Evade")
+        effect1._is_evade = True
 
         def condition1(context: Dict[str, Any]) -> bool:
             return True
         effect1.set_can_use_condition(condition1)
         effects.append(effect1)
 
-        # Factory effect: evade
-        # Evade
+        # --- Effect 2: [When Digivolving] 3 opponent Digimon/Tamers can't suspend ---
         effect2 = ICardEffect()
-        effect2.set_effect_name("BT15-101 Evade")
-        effect2.set_effect_description("Evade")
-        effect2._is_evade = True
+        effect2.set_timing(EffectTiming.OnEnterFieldAnyone)
+        effect2.set_effect_name("BT15-101 Opponent's 3 Digimon/Tamers can't suspend")
+        effect2.set_effect_description(
+            "[When Digivolving] 3 of your opponent's Digimon and Tamers can't "
+            "suspend until the end of their turn."
+        )
+        effect2.is_when_digivolving = True
 
         def condition2(context: Dict[str, Any]) -> bool:
+            if card and card.permanent_of_this_card() is None:
+                return False
             return True
+
         effect2.set_can_use_condition(condition2)
+
+        def process2(ctx: Dict[str, Any]):
+            """Select up to 3 opponent Digimon/Tamers, apply CANNOT_SUSPEND."""
+            player = ctx.get('player')
+            game = ctx.get('game')
+            if not (player and game):
+                return
+            enemy = player.enemy
+            if not enemy:
+                return
+
+            # Filter for opponent Digimon and Tamers
+            targets = [p for p in enemy.battle_area
+                       if p.is_digimon or p.is_tamer]
+            if not targets:
+                return
+
+            from digimon_gym.engine.interfaces.modifiers import ModifierType
+
+            count = min(3, len(targets))
+            for i in range(count):
+                remaining = [p for p in enemy.battle_area
+                             if p.is_digimon or p.is_tamer]
+                if not remaining:
+                    break
+
+                def opp_filter(p):
+                    return p.is_digimon or p.is_tamer
+
+                def on_select(target_perm):
+                    game.register_modifier(
+                        ModifierType.CANNOT_SUSPEND, target_perm,
+                        value_fn=lambda: True, expiry='end_of_opponent_turn')
+
+                game.effect_select_opponent_permanent(
+                    player, on_select,
+                    filter_fn=opp_filter,
+                    is_optional=False)
+
+        effect2.set_on_process_callback(process2)
         effects.append(effect2)
 
-        # Timing: EffectTiming.OnEnterFieldAnyone
-        # [When Digivolving] 3 of your opponent's Digimon and Tamers can't suspend until the end of their turn.
+        # --- Effect 3: [All Turns][OPT] When THIS Digimon suspends, unsuspend it ---
         effect3 = ICardEffect()
-        effect3.set_timing(EffectTiming.OnEnterFieldAnyone)
-        effect3.set_effect_name("BT15-101 Opponent's 3 Digimons or Tamers can't suspend")
-        effect3.set_effect_description("[When Digivolving] 3 of your opponent's Digimon and Tamers can't suspend until the end of their turn.")
-        effect3.is_when_digivolving = True
+        effect3.set_timing(EffectTiming.OnTappedAnyone)
+        effect3.set_effect_name("BT15-101 Unsuspend this Digimon")
+        effect3.set_effect_description(
+            "[All Turns] [Once Per Turn] When this Digimon becomes suspended, "
+            "you may unsuspend it."
+        )
+        effect3.is_optional = True
+        effect3.set_max_count_per_turn(1)
+        effect3.set_hash_string("Unsuspen_BT15_101")
 
-        effect = effect3  # alias for condition closure
         def condition3(context: Dict[str, Any]) -> bool:
             if card and card.permanent_of_this_card() is None:
                 return False
-            # Triggered when digivolving — validated by engine timing
+            # Only trigger when THIS Digimon is the one being suspended
+            event_perm = context.get('event_permanent')
+            owner_perm = card.permanent_of_this_card()
+            if event_perm and owner_perm and event_perm is not owner_perm:
+                return False
             return True
 
         effect3.set_can_use_condition(condition3)
 
         def process3(ctx: Dict[str, Any]):
-            """Action: Effect Immunity"""
-            player = ctx.get('player')
-            perm = ctx.get('permanent')
-            game = ctx.get('game')
-            # Grant effect immunity via modifier system
-            if perm and game:
-                from digimon_gym.engine.interfaces.modifiers import ModifierType
-                game.register_modifier(
-                    ModifierType.CANNOT_BE_SELECTED_BY_EFFECT, perm,
-                    value_fn=lambda: True, expiry='end_of_turn')
+            """Unsuspend this Digimon (self only)."""
+            perm = card.permanent_of_this_card() if card else None
+            if perm and perm.is_suspended:
+                perm.unsuspend()
 
         effect3.set_on_process_callback(process3)
         effects.append(effect3)
-
-        # Timing: EffectTiming.OnTappedAnyone
-        # [All Turns] [Once Per Turn] When this Digimon becomes suspended, you may unsuspend it.
-        effect4 = ICardEffect()
-        effect4.set_timing(EffectTiming.OnTappedAnyone)
-        effect4.set_effect_name("BT15-101 Unsuspend this Digimon")
-        effect4.set_effect_description("[All Turns] [Once Per Turn] When this Digimon becomes suspended, you may unsuspend it.")
-        effect4.is_optional = True
-        effect4.set_max_count_per_turn(1)
-        effect4.set_hash_string("Unsuspen_BT15_101")
-
-        effect = effect4  # alias for condition closure
-        def condition4(context: Dict[str, Any]) -> bool:
-            if card and card.permanent_of_this_card() is None:
-                return False
-            return True
-
-        effect4.set_can_use_condition(condition4)
-
-        def process4(ctx: Dict[str, Any]):
-            """Action: Unsuspend"""
-            player = ctx.get('player')
-            perm = ctx.get('permanent')
-            game = ctx.get('game')
-            if not (player and game):
-                return
-            def target_filter(p):
-                return True
-            def on_unsuspend(target_perm):
-                target_perm.unsuspend()
-            game.effect_select_own_permanent(
-                player, on_unsuspend, filter_fn=target_filter, is_optional=True)
-
-        effect4.set_on_process_callback(process4)
-        effects.append(effect4)
 
         return effects

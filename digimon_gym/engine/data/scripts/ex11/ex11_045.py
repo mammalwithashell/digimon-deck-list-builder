@@ -48,29 +48,32 @@ class EX11_045(CardScript):
         effects.append(effect1)
 
         # Timing: EffectTiming.OnEnterFieldAnyone
-        # De Digivolve, Effect Immunity
+        # [On Play] De-Digivolve 2, can't digivolve
         effect2 = ICardEffect()
         effect2.set_timing(EffectTiming.OnEnterFieldAnyone)
-        effect2.set_effect_name("EX11-045 De Digivolve, Effect Immunity")
-        effect2.set_effect_description("De Digivolve, Effect Immunity")
+        effect2.set_effect_name("EX11-045 <De-Digivolve 2>, can't digivolve")
+        effect2.set_effect_description("[On Play] [Once Per Turn] <De-Digivolve 2> 1 of your opponent's Digimon. Then, 1 of their Digimon or Tamers can't digivolve until their turn ends.")
         effect2.is_on_play = True
+        effect2.set_max_count_per_turn(1)
+        effect2.set_hash_string("EX11_045_OP_WD_WA")
 
         effect = effect2  # alias for condition closure
         def condition2(context: Dict[str, Any]) -> bool:
             if card and card.permanent_of_this_card() is None:
                 return False
-            # Triggered on play — validated by engine timing
             return True
 
         effect2.set_can_use_condition(condition2)
 
-        def process2(ctx: Dict[str, Any]):
-            """Action: De Digivolve, Effect Immunity"""
+        # Shared process callback for On Play / When Digivolving / When Attacking
+        def _shared_de_digivolve_and_cannot_digivolve(ctx: Dict[str, Any]):
+            """Action: <De-Digivolve 2> 1 opponent Digimon. Then 1 opponent Digimon/Tamer can't digivolve until their turn ends."""
             player = ctx.get('player')
             perm = ctx.get('permanent')
             game = ctx.get('game')
             if not (player and game):
                 return
+            # Step 1: De-Digivolve 2 one of opponent's Digimon
             def on_de_digivolve(target_perm):
                 removed = target_perm.de_digivolve(2)
                 enemy = player.enemy if player else None
@@ -78,96 +81,61 @@ class EX11_045(CardScript):
                     enemy.trash_cards.extend(removed)
             game.effect_select_opponent_permanent(
                 player, on_de_digivolve, filter_fn=lambda p: p.is_digimon, is_optional=False)
-            # Grant effect immunity via modifier system
-            if perm and game:
-                from digimon_gym.engine.interfaces.modifiers import ModifierType
+            # Step 2: 1 opponent's Digimon or Tamer can't digivolve until their turn ends
+            from digimon_gym.engine.interfaces.modifiers import ModifierType
+            def cannot_digi_filter(p):
+                return p.is_digimon or p.is_tamer
+            def on_cannot_digivolve(target_perm):
                 game.register_modifier(
-                    ModifierType.CANNOT_BE_SELECTED_BY_EFFECT, perm,
-                    value_fn=lambda: True, expiry='end_of_turn')
+                    target_perm,
+                    ModifierType.CANNOT_DIGIVOLVE,
+                    condition=lambda p, c, tp=target_perm: p is tp,
+                    expiry='end_of_opponent_turn',
+                )
+            game.effect_select_opponent_permanent(
+                player, on_cannot_digivolve, filter_fn=cannot_digi_filter, is_optional=False)
 
-        effect2.set_on_process_callback(process2)
+        effect2.set_on_process_callback(_shared_de_digivolve_and_cannot_digivolve)
         effects.append(effect2)
 
         # Timing: EffectTiming.OnEnterFieldAnyone
-        # De Digivolve, Effect Immunity
+        # [When Digivolving] De-Digivolve 2, can't digivolve
         effect3 = ICardEffect()
         effect3.set_timing(EffectTiming.OnEnterFieldAnyone)
-        effect3.set_effect_name("EX11-045 De Digivolve, Effect Immunity")
-        effect3.set_effect_description("De Digivolve, Effect Immunity")
+        effect3.set_effect_name("EX11-045 <De-Digivolve 2>, can't digivolve")
+        effect3.set_effect_description("[When Digivolving] [Once Per Turn] <De-Digivolve 2> 1 of your opponent's Digimon. Then, 1 of their Digimon or Tamers can't digivolve until their turn ends.")
         effect3.is_when_digivolving = True
+        effect3.set_max_count_per_turn(1)
+        effect3.set_hash_string("EX11_045_OP_WD_WA")
 
         effect = effect3  # alias for condition closure
         def condition3(context: Dict[str, Any]) -> bool:
             if card and card.permanent_of_this_card() is None:
                 return False
-            # Triggered when digivolving — validated by engine timing
             return True
 
         effect3.set_can_use_condition(condition3)
-
-        def process3(ctx: Dict[str, Any]):
-            """Action: De Digivolve, Effect Immunity"""
-            player = ctx.get('player')
-            perm = ctx.get('permanent')
-            game = ctx.get('game')
-            if not (player and game):
-                return
-            def on_de_digivolve(target_perm):
-                removed = target_perm.de_digivolve(2)
-                enemy = player.enemy if player else None
-                if enemy:
-                    enemy.trash_cards.extend(removed)
-            game.effect_select_opponent_permanent(
-                player, on_de_digivolve, filter_fn=lambda p: p.is_digimon, is_optional=False)
-            # Grant effect immunity via modifier system
-            if perm and game:
-                from digimon_gym.engine.interfaces.modifiers import ModifierType
-                game.register_modifier(
-                    ModifierType.CANNOT_BE_SELECTED_BY_EFFECT, perm,
-                    value_fn=lambda: True, expiry='end_of_turn')
-
-        effect3.set_on_process_callback(process3)
+        effect3.set_on_process_callback(_shared_de_digivolve_and_cannot_digivolve)
         effects.append(effect3)
 
         # Timing: EffectTiming.OnUseAttack
-        # De Digivolve, Effect Immunity
+        # [When Attacking] De-Digivolve 2, can't digivolve
         effect4 = ICardEffect()
         effect4.set_timing(EffectTiming.OnUseAttack)
-        effect4.set_effect_name("EX11-045 De Digivolve, Effect Immunity")
-        effect4.set_effect_description("De Digivolve, Effect Immunity")
+        effect4.set_effect_name("EX11-045 <De-Digivolve 2>, can't digivolve")
+        effect4.set_effect_description("[When Attacking] [Once Per Turn] <De-Digivolve 2> 1 of your opponent's Digimon. Then, 1 of their Digimon or Tamers can't digivolve until their turn ends.")
         effect4.is_on_attack = True
+        effect4.set_max_count_per_turn(1)
+        effect4.set_hash_string("EX11_045_OP_WD_WA")
 
         effect = effect4  # alias for condition closure
         def condition4(context: Dict[str, Any]) -> bool:
             if card and card.permanent_of_this_card() is None:
                 return False
-            # Triggered on attack — validated by engine timing
             return True
 
         effect4.set_can_use_condition(condition4)
-
-        def process4(ctx: Dict[str, Any]):
-            """Action: De Digivolve, Effect Immunity"""
-            player = ctx.get('player')
-            perm = ctx.get('permanent')
-            game = ctx.get('game')
-            if not (player and game):
-                return
-            def on_de_digivolve(target_perm):
-                removed = target_perm.de_digivolve(2)
-                enemy = player.enemy if player else None
-                if enemy:
-                    enemy.trash_cards.extend(removed)
-            game.effect_select_opponent_permanent(
-                player, on_de_digivolve, filter_fn=lambda p: p.is_digimon, is_optional=False)
-            # Grant effect immunity via modifier system
-            if perm and game:
-                from digimon_gym.engine.interfaces.modifiers import ModifierType
-                game.register_modifier(
-                    ModifierType.CANNOT_BE_SELECTED_BY_EFFECT, perm,
-                    value_fn=lambda: True, expiry='end_of_turn')
-
-        effect4.set_on_process_callback(process4)
+        effect4.set_on_process_callback(_shared_de_digivolve_and_cannot_digivolve)
         effects.append(effect4)
 
         # Timing: EffectTiming.OnEndTurn

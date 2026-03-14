@@ -9,7 +9,16 @@ if TYPE_CHECKING:
 
 
 class BT11_105(CardScript):
-    """BT11-105 Fusionize"""
+    """BT11-105 Fusionize
+
+    [Main] By placing 1 [Vemmon] or [Destromon] from your trash under 1 of
+    your Digimon as its bottom digivolution card, you may digivolve 1 of your
+    Digimon into 1 [Destromon] or [Galacticmon] from your trash for its
+    digivolution cost.
+
+    [Security] You may reveal the top 3 cards of your deck. Play 1 [Vemmon]
+    among them without paying the cost. Trash the rest.
+    """
 
     def get_card_effects(self, card: 'CardSource') -> List['ICardEffect']:
         effects = []
@@ -33,7 +42,7 @@ class BT11_105(CardScript):
                     return True
             return False
 
-        # ─── Effect 0: Cost reduction — if you have a [Snatchmon] in play,
+        # --- Effect 0: Cost reduction --- if you have a [Snatchmon] in play,
         # reduce this option's play cost by 1.
         effect0 = ICardEffect()
         effect0.set_timing(EffectTiming.BeforePayCost)
@@ -43,7 +52,6 @@ class BT11_105(CardScript):
         effect0.cost_reduction = 1
 
         def condition0(context: Dict[str, Any]) -> bool:
-            # Leak guard: only apply when THIS card is being played
             if context.get('card_source') is not card:
                 return False
             owner = getattr(card, 'owner', None)
@@ -52,13 +60,12 @@ class BT11_105(CardScript):
         effect0.set_can_use_condition(condition0)
 
         def process0(ctx: Dict[str, Any]):
-            """Cost reduction handled via cost_reduction property."""
             pass
 
         effect0.set_on_process_callback(process0)
         effects.append(effect0)
 
-        # ─── Effect 1: [Main] By placing 1 [Vemmon] or [Destromon] from your
+        # --- Effect 1: [Main] By placing 1 [Vemmon] or [Destromon] from your
         # trash under 1 of your Digimon as its bottom digivolution card, you may
         # digivolve 1 of your Digimon into 1 [Destromon] or [Galacticmon] from
         # your trash for its digivolution cost.
@@ -77,61 +84,78 @@ class BT11_105(CardScript):
         effect1.set_can_use_condition(condition1)
 
         def process1(ctx: Dict[str, Any]):
-            """Place 1 Vemmon/Destromon from trash as bottom digi-card, then digivolve from trash into Destromon/Galacticmon."""
+            """Place 1 Vemmon/Destromon from trash as bottom digi-card, then digivolve from trash."""
             player = ctx.get('player')
             game = ctx.get('game')
             if not (player and game):
                 return
 
-            # Step 1: Place 1 [Vemmon] or [Destromon] from trash under 1 of
-            # your Digimon as bottom digi-card
+            # Step 1: Select and place 1 [Vemmon] or [Destromon] from trash under
+            # 1 of your Digimon as bottom digi-card.
             qualifying_trash = [c for c in player.trash_cards if _is_vemmon_or_destromon(c)]
             if not qualifying_trash or not player.battle_area:
                 return
 
-            # Pick the first qualifying card from trash
+            # Select a card from trash (auto-pick first qualifying)
             chosen_card = qualifying_trash[0]
-            # Pick a Digimon to place it under (first available)
-            target_perm = None
-            for p in player.battle_area:
-                if p.is_digimon:
-                    target_perm = p
-                    break
-            if not target_perm:
-                return
 
-            player.trash_cards.remove(chosen_card)
-            target_perm.add_card_source_bottom(chosen_card)
+            # Select a Digimon to place it under (player choice via selection)
+            def perm_filter(p):
+                return p.is_digimon and not getattr(p, 'is_token', False)
 
-            # Step 2: Digivolve 1 of your Digimon into [Destromon] or
-            # [Galacticmon] from trash for its digivolution cost.
-            # Find qualifying cards in trash
-            digi_candidates = [
-                c for c in player.trash_cards
-                if _is_destromon_or_galacticmon(c) and getattr(c, 'is_digimon', False)
-            ]
-            if not digi_candidates or not player.battle_area:
-                return
+            def on_perm_selected(target_perm):
+                if target_perm is None:
+                    return
+                if chosen_card in player.trash_cards:
+                    player.trash_cards.remove(chosen_card)
+                target_perm.add_card_source_bottom(chosen_card)
 
-            # Pick a Digimon to digivolve (prefer the one we just placed under)
-            digi_target_perm = target_perm
-            digi_card = digi_candidates[0]
+                # Step 2: "you may" digivolve 1 of your Digimon into
+                # [Destromon] or [Galacticmon] from trash for its digivolution cost.
+                digi_candidates = [
+                    c for c in player.trash_cards
+                    if _is_destromon_or_galacticmon(c) and getattr(c, 'is_digimon', False)
+                ]
+                if not digi_candidates or not player.battle_area:
+                    return
 
-            # Pay digivolution cost and digivolve
-            evo_costs = getattr(digi_card, 'evo_costs', []) or []
-            cost = evo_costs[0] if evo_costs else getattr(digi_card, 'get_cost_itself', 0)
-            if isinstance(cost, dict):
-                cost = cost.get('cost', 0)
-            if isinstance(cost, property):
+                digi_card = digi_candidates[0]
+
+                # Find digivolution cost
+                evo_costs = getattr(digi_card, 'evo_costs', []) or []
                 cost = 0
+                if evo_costs:
+                    first_evo = evo_costs[0]
+                    if isinstance(first_evo, dict):
+                        cost = first_evo.get('cost', 0)
+                    elif isinstance(first_evo, int):
+                        cost = first_evo
 
-            player.trash_cards.remove(digi_card)
-            digi_target_perm.add_card_source(digi_card)
+                # Select which Digimon to digivolve (player choice)
+                def on_digi_target(digi_target_perm):
+                    if digi_target_perm is None:
+                        return
+                    if digi_card in player.trash_cards:
+                        player.trash_cards.remove(digi_card)
+                    # Pay digivolution cost (deduct from memory)
+                    if cost > 0:
+                        player.lose_memory(cost)
+                    digi_target_perm.add_card_source(digi_card)
+
+                game.effect_select_own_permanent(
+                    player, on_digi_target, filter_fn=perm_filter,
+                    is_optional=True,
+                    prompt="Select 1 of your Digimon to digivolve into [Destromon] or [Galacticmon] from trash.")
+
+            game.effect_select_own_permanent(
+                player, on_perm_selected, filter_fn=perm_filter,
+                is_optional=True,
+                prompt="Select 1 of your Digimon to place a [Vemmon]/[Destromon] from trash under as bottom digi-card.")
 
         effect1.set_on_process_callback(process1)
         effects.append(effect1)
 
-        # ─── Effect 2: [Security] You may reveal the top 3 cards of your deck.
+        # --- Effect 2: [Security] You may reveal the top 3 cards of your deck.
         # Play 1 [Vemmon] among them without paying the cost. Trash the rest.
         effect2 = ICardEffect()
         effect2.set_timing(EffectTiming.SecuritySkill)

@@ -104,8 +104,11 @@ class EX11_040(CardScript):
         # Play Card
         effect3 = ICardEffect()
         effect3.set_timing(EffectTiming.WhenLinked)
-        effect3.set_effect_name("EX11-040 Play 1 [Unchained] form hand or trash")
-        effect3.set_effect_description("Play Card")
+        effect3.set_effect_name("EX11-040 Play 1 [Unchained] from hand or trash")
+        effect3.set_effect_description(
+            "[Your Turn] [Once Per Turn] When this Digimon gets linked, if you "
+            "have 1 or fewer Tamers, you may play 1 [Unchained] from your hand "
+            "or trash without paying the cost.")
         effect3.is_optional = True
         effect3.set_max_count_per_turn(1)
         effect3.set_hash_string("EX11_040_YT")
@@ -113,6 +116,14 @@ class EX11_040(CardScript):
         effect = effect3  # alias for condition closure
         def condition3(context: Dict[str, Any]) -> bool:
             if card and card.permanent_of_this_card() is None:
+                return False
+            # Your Turn only
+            if not (card and card.owner and card.owner.is_my_turn):
+                return False
+            # 1 or fewer Tamers
+            owner = card.owner
+            tamer_count = sum(1 for p in owner.battle_area if getattr(p, 'is_tamer', False))
+            if tamer_count > 1:
                 return False
             return True
 

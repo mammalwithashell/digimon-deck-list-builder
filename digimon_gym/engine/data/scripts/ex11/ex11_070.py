@@ -131,4 +131,92 @@ class EX11_070(CardScript):
         effect3.set_on_process_callback(process3)
         effects.append(effect3)
 
+        # Inherited effect: opponent's effects can't trash this Digimon's stacked cards
+        # (Continuous — condition-gated on [Maquinamon] in text)
+        effect4 = ICardEffect()
+        effect4.set_effect_name("EX11-070 Immune to opponent stack trashing")
+        effect4.set_effect_description("[All Turns] Your opponent's effects can't trash this Digimon's stacked cards.")
+        effect4.is_inherited_effect = True
+
+        effect = effect4  # alias for condition closure
+        def condition4(context: Dict[str, Any]) -> bool:
+            if card and card.permanent_of_this_card() is None:
+                return False
+            permanent = effect.effect_source_permanent if hasattr(effect, 'effect_source_permanent') else None
+            if permanent and permanent.top_card:
+                text = getattr(permanent.top_card, 'card_text', '') or ''
+                if 'Maquinamon' not in text:
+                    return False
+            else:
+                return False
+            return True
+
+        effect4.set_can_use_condition(condition4)
+
+        def process4(ctx: Dict[str, Any]):
+            """Action: Register IMMUNE_FROM_STACK_TRASHING modifier."""
+            player = ctx.get('player')
+            perm = ctx.get('permanent')
+            game = ctx.get('game')
+            if perm and game:
+                from digimon_gym.engine.interfaces.modifiers import ModifierType
+                game.register_modifier(
+                    perm, ModifierType.IMMUNE_FROM_STACK_TRASHING,
+                    condition=lambda p, c, src=perm: p is src,
+                    expiry='permanent')
+
+        effect4.set_on_process_callback(process4)
+        effects.append(effect4)
+
+        # [End of All Turns] You may play 1 [Unchained] from this Digimon's
+        # digivolution cards without paying the cost.
+        effect5 = ICardEffect()
+        effect5.set_timing(EffectTiming.OnEndTurn)
+        effect5.set_effect_name("EX11-070 Play 1 [Unchained] from digivolution cards")
+        effect5.set_effect_description("[End of All Turns] You may play 1 [Unchained] from this Digimon's digivolution cards without paying the cost.")
+        effect5.is_inherited_effect = True
+        effect5.is_optional = True
+
+        effect = effect5  # alias for condition closure
+        def condition5(context: Dict[str, Any]) -> bool:
+            # End of All Turns — no is_my_turn check
+            if card and card.permanent_of_this_card() is None:
+                return False
+            return True
+
+        effect5.set_can_use_condition(condition5)
+
+        def process5(ctx: Dict[str, Any]):
+            """Action: Play 1 [Unchained] from this Digimon's digivolution cards without paying the cost."""
+            player = ctx.get('player')
+            perm = ctx.get('permanent')
+            game = ctx.get('game')
+            if not (player and perm and game):
+                return
+            # Find [Unchained] in digivolution cards (card_sources excluding top card)
+            def is_unchained(c):
+                names = getattr(c, 'card_names', []) or []
+                return any('Unchained' in n for n in names)
+
+            unchained_sources = [
+                cs for cs in perm.card_sources
+                if cs is not perm.top_card and is_unchained(cs)
+            ]
+            if not unchained_sources:
+                return
+            # Auto-select the first match (engine doesn't have source selection UI)
+            selected = unchained_sources[0]
+            perm.card_sources.remove(selected)
+            played_perm = player.play_card_from_source(selected, pay_cost=False)
+            game.logger.log(
+                f"[Effect] {player.player_name} played "
+                f"{game._card_ref(selected)} from digivolution cards")
+            game.execute_effects(
+                EffectTiming.OnEnterFieldAnyone,
+                {"played_card": selected, "played_permanent": played_perm, "event_player": player},
+            )
+
+        effect5.set_on_process_callback(process5)
+        effects.append(effect5)
+
         return effects

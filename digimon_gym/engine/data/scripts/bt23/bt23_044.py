@@ -41,23 +41,36 @@ class BT23_044(CardScript):
         def condition1(context: Dict[str, Any]) -> bool:
             if context.get('card_source') is not card:
                 return False
-            return True
+            # Must have Yuuko Kamishiro (Tamer) or a CS-trait Digimon on field
+            owner = card.owner if card else None
+            if not owner:
+                return False
+            has_yuuko_or_cs = False
+            for p in owner.battle_area:
+                tc = p.top_card
+                if not tc:
+                    continue
+                # Check for Yuuko Kamishiro tamer
+                if p.is_tamer and tc.contains_card_name('Yuuko Kamishiro'):
+                    has_yuuko_or_cs = True
+                    break
+                # Check for CS-trait Digimon
+                if p.is_digimon and any('CS' in t for t in (tc.type_eng or [])):
+                    has_yuuko_or_cs = True
+                    break
+            return has_yuuko_or_cs
 
         effect1.set_can_use_condition(condition1)
 
         def process1(ctx: Dict[str, Any]):
             """Action: Cost -3"""
-            player = ctx.get('player')
-            perm = ctx.get('permanent')
-            game = ctx.get('game')
-            # Cost reduction by 3 — handled via cost_reduction property
-            pass  # descriptive-tagged: cost_reduction
+            # Cost reduction by 3 — handled via cost_reduction property on effect1
+            pass
 
         effect1.set_on_process_callback(process1)
         effects.append(effect1)
 
-        # Timing: EffectTiming.None
-        # Cost -3
+        # Hidden cost display effect (mirrors C# "Not Shown" ChangeCostClass)
         effect2 = ICardEffect()
         effect2.set_effect_name("BT23-044 Play Cost -3")
         effect2.set_effect_description("Cost -3")
@@ -65,17 +78,29 @@ class BT23_044(CardScript):
 
         effect = effect2  # alias for condition closure
         def condition2(context: Dict[str, Any]) -> bool:
-            return True
+            if context.get('card_source') is not card:
+                return False
+            owner = card.owner if card else None
+            if not owner:
+                return False
+            has_yuuko_or_cs = False
+            for p in owner.battle_area:
+                tc = p.top_card
+                if not tc:
+                    continue
+                if p.is_tamer and tc.contains_card_name('Yuuko Kamishiro'):
+                    has_yuuko_or_cs = True
+                    break
+                if p.is_digimon and any('CS' in t for t in (tc.type_eng or [])):
+                    has_yuuko_or_cs = True
+                    break
+            return has_yuuko_or_cs
 
         effect2.set_can_use_condition(condition2)
 
         def process2(ctx: Dict[str, Any]):
             """Action: Cost -3"""
-            player = ctx.get('player')
-            perm = ctx.get('permanent')
-            game = ctx.get('game')
-            # Cost reduction by 3 — handled via cost_reduction property
-            pass  # descriptive-tagged: cost_reduction
+            pass
 
         effect2.set_on_process_callback(process2)
         effects.append(effect2)
@@ -100,27 +125,40 @@ class BT23_044(CardScript):
         effect3.set_can_use_condition(condition3)
 
         def process3(ctx: Dict[str, Any]):
-            """Action: Suspend, Gain Keyword Cannot Return To Hand, Gain Keyword Cannot Return To Deck, Grant Bounce Immunity"""
+            """Action: Suspend own Digimon as cost, then grant bounce immunity to 1 qualifying Digimon"""
             player = ctx.get('player')
             perm = ctx.get('permanent')
             game = ctx.get('game')
             if not (player and game):
                 return
-            def target_filter(p):
-                return True
+            # "By suspending 1 Digimon" — cost: select own unsuspended Digimon to suspend
+            def suspend_filter(p):
+                return p.is_digimon and not p.is_suspended
             def on_suspend(target_perm):
                 target_perm.suspend()
-            game.effect_select_opponent_permanent(
-                player, on_suspend, filter_fn=target_filter, is_optional=False)
-            if perm:
-                perm.grant_keyword('_is_cannot_return_to_hand')
-                perm.grant_keyword('_is_cannot_return_to_deck')
-            # Prevent return to hand/deck via modifier system
-            if perm and game:
-                from digimon_gym.engine.interfaces.modifiers import ModifierType
-                game.register_modifier(
-                    ModifierType.CANNOT_BE_RETURNED, perm,
-                    value_fn=lambda: True, expiry='end_of_turn')
+                # After paying the cost (suspend), grant bounce immunity to 1 qualifying Digimon
+                def bounce_filter(p2):
+                    if not p2.is_digimon:
+                        return False
+                    tc = p2.top_card
+                    if not tc:
+                        return False
+                    traits = tc.type_eng or []
+                    has_trait = (any('Vegetation' in t for t in traits)
+                                or any('Plant' in t for t in traits)
+                                or any('Fairy' in t for t in traits)
+                                or any('CS' in t for t in traits))
+                    return has_trait
+                def on_protect(protected_perm):
+                    if protected_perm and game:
+                        from ....interfaces.modifiers import ModifierType
+                        game.register_modifier(
+                            protected_perm, ModifierType.CANNOT_BE_RETURNED,
+                            value_fn=lambda: True, expiry='end_of_opponent_turn')
+                game.effect_select_own_permanent(
+                    player, on_protect, filter_fn=bounce_filter, is_optional=False)
+            game.effect_select_own_permanent(
+                player, on_suspend, filter_fn=suspend_filter, is_optional=False)
 
         effect3.set_on_process_callback(process3)
         effects.append(effect3)
@@ -145,27 +183,40 @@ class BT23_044(CardScript):
         effect4.set_can_use_condition(condition4)
 
         def process4(ctx: Dict[str, Any]):
-            """Action: Suspend, Gain Keyword Cannot Return To Hand, Gain Keyword Cannot Return To Deck, Grant Bounce Immunity"""
+            """Action: Suspend own Digimon as cost, then grant bounce immunity to 1 qualifying Digimon"""
             player = ctx.get('player')
             perm = ctx.get('permanent')
             game = ctx.get('game')
             if not (player and game):
                 return
-            def target_filter(p):
-                return True
+            # "By suspending 1 Digimon" — cost: select own unsuspended Digimon to suspend
+            def suspend_filter(p):
+                return p.is_digimon and not p.is_suspended
             def on_suspend(target_perm):
                 target_perm.suspend()
-            game.effect_select_opponent_permanent(
-                player, on_suspend, filter_fn=target_filter, is_optional=False)
-            if perm:
-                perm.grant_keyword('_is_cannot_return_to_hand')
-                perm.grant_keyword('_is_cannot_return_to_deck')
-            # Prevent return to hand/deck via modifier system
-            if perm and game:
-                from digimon_gym.engine.interfaces.modifiers import ModifierType
-                game.register_modifier(
-                    ModifierType.CANNOT_BE_RETURNED, perm,
-                    value_fn=lambda: True, expiry='end_of_turn')
+                # After paying the cost (suspend), grant bounce immunity to 1 qualifying Digimon
+                def bounce_filter(p2):
+                    if not p2.is_digimon:
+                        return False
+                    tc = p2.top_card
+                    if not tc:
+                        return False
+                    traits = tc.type_eng or []
+                    has_trait = (any('Vegetation' in t for t in traits)
+                                or any('Plant' in t for t in traits)
+                                or any('Fairy' in t for t in traits)
+                                or any('CS' in t for t in traits))
+                    return has_trait
+                def on_protect(protected_perm):
+                    if protected_perm and game:
+                        from ....interfaces.modifiers import ModifierType
+                        game.register_modifier(
+                            protected_perm, ModifierType.CANNOT_BE_RETURNED,
+                            value_fn=lambda: True, expiry='end_of_opponent_turn')
+                game.effect_select_own_permanent(
+                    player, on_protect, filter_fn=bounce_filter, is_optional=False)
+            game.effect_select_own_permanent(
+                player, on_suspend, filter_fn=suspend_filter, is_optional=False)
 
         effect4.set_on_process_callback(process4)
         effects.append(effect4)

@@ -12,9 +12,9 @@ class BT21_058(CardScript):
     """BT21-058 Snatchmon | Lv.4
 
     [On Play][When Digivolving] Reveal the top 3 cards of your deck. Add 1
-    card with [Vemmon] in its text among them to the hand. Place the rest at
-    the bottom of the deck in any order. Then, you may place 1 [Vemmon] from
-    your trash as this Digimon's bottom digivolution card.
+    card with [Vemmon] in its text among them to the hand. Trash the rest.
+    Then, you may place up to 2 [Vemmon] from your trash as 1 of your
+    Digimon's bottom digivolution cards.
 
     --- Inherited ---
     [All Turns] [Once Per Turn] When any [Vemmon] are returned to the bottom
@@ -42,9 +42,9 @@ class BT21_058(CardScript):
                 effect.is_on_play = True
             effect.set_effect_description(
                 "[On Play][When Digivolving] Reveal the top 3 cards of your deck. Add 1 "
-                "card with [Vemmon] in its text among them to the hand. Place the rest at "
-                "the bottom of the deck. Then, you may place 1 [Vemmon] from your trash "
-                "as this Digimon's bottom digivolution card.")
+                "card with [Vemmon] in its text among them to the hand. Trash the rest. "
+                "Then, you may place up to 2 [Vemmon] from your trash as 1 of your "
+                "Digimon's bottom digivolution cards.")
 
             def condition(context: Dict[str, Any]) -> bool:
                 if card and card.permanent_of_this_card() is None:
@@ -60,47 +60,62 @@ class BT21_058(CardScript):
                 if not (player and game):
                     return
 
-                # Step 1: Reveal top 3 cards
-                revealed = []
-                for _ in range(min(3, len(player.library_cards))):
-                    revealed.append(player.library_cards.pop(0))
-                if not revealed:
-                    return
-
-                # Step 2: Add 1 card with Vemmon text to hand, rest to deck bottom
+                # Step 1: Reveal top 3 cards, add 1 with [Vemmon] text to hand,
+                # TRASH the rest (per C# remainingCardsPlace: Trash)
                 def reveal_filter(c):
                     return _has_vemmon_text(c)
 
                 def on_revealed(selected, remaining):
                     player.hand_cards.append(selected)
+                    # Trash the remaining cards (not deck bottom)
                     for c in remaining:
-                        player.library_cards.append(c)
-                    # Step 3: Place 1 [Vemmon] from trash as bottom digi-card
-                    _place_vemmon_from_trash(player, perm, game)
+                        player.trash_cards.append(c)
+                    # Step 2: Place up to 2 [Vemmon] from trash as 1 of your
+                    # Digimon's bottom digi-cards
+                    _place_vemmon_from_trash(player, game)
 
                 def on_no_select():
-                    # No Vemmon-text card found; all go to deck bottom
+                    # No Vemmon-text card found; all go to trash
                     for c in revealed:
-                        player.library_cards.append(c)
-                    _place_vemmon_from_trash(player, perm, game)
+                        if c in player.library_cards:
+                            player.library_cards.remove(c)
+                        player.trash_cards.append(c)
+                    _place_vemmon_from_trash(player, game)
+
+                # Reveal top 3
+                revealed = player.library_cards[:3]
+                if not revealed:
+                    return
 
                 vemmon_text_cards = [c for c in revealed if _has_vemmon_text(c)]
                 if vemmon_text_cards:
+                    # Use reveal_and_select for player choice; remaining go to trash
                     game.effect_reveal_and_select(
-                        player, 3, reveal_filter, on_revealed, is_optional=True)
+                        player, 3, reveal_filter, on_revealed, is_optional=False)
                 else:
                     on_no_select()
 
-            def _place_vemmon_from_trash(player, perm, game):
-                """Place 1 [Vemmon] from trash as this Digimon's bottom digi-card."""
-                if perm is None:
-                    return
+            def _place_vemmon_from_trash(player, game):
+                """Place up to 2 [Vemmon] from trash as 1 of your Digimon's bottom digi-cards."""
                 qualifying = [c for c in player.trash_cards if _is_vemmon_name(c)]
                 if not qualifying:
                     return
-                chosen = qualifying[0]
-                player.trash_cards.remove(chosen)
-                perm.add_card_source_bottom(chosen)
+                digimon_on_field = [p for p in player.battle_area if p.is_digimon]
+                if not digimon_on_field:
+                    return
+
+                # Auto-select target Digimon (first available, or use own permanent
+                # if only 1 Digimon); place up to 2 Vemmon
+                target_perm = digimon_on_field[0]
+
+                placed = 0
+                for c in list(player.trash_cards):
+                    if placed >= 2:
+                        break
+                    if _is_vemmon_name(c):
+                        player.trash_cards.remove(c)
+                        target_perm.add_card_source_bottom(c)
+                        placed += 1
 
             effect.set_on_process_callback(process)
             return effect
@@ -108,7 +123,7 @@ class BT21_058(CardScript):
         effects.append(_make_on_enter_effect(is_when_digivolving=False))
         effects.append(_make_on_enter_effect(is_when_digivolving=True))
 
-        # ─── Inherited: [All Turns] [Once Per Turn] When any [Vemmon] are returned
+        # --- Inherited: [All Turns] [Once Per Turn] When any [Vemmon] are returned
         #     to deck bottom from this Digimon's digi-cards, delete 1 opponent Digimon
         #     with play cost 4 or less.
         effect2 = ICardEffect()

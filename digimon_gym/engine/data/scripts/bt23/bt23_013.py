@@ -97,11 +97,46 @@ class BT23_013(CardScript):
             game = ctx.get('game')
             if not (player and game):
                 return
+            # Get names of all Digimon currently on the field to enforce
+            # "can't play cards with the same names as any of your Digimon"
+            field_names = set()
+            for p in player.battle_area:
+                if p.top_card:
+                    for n in p.top_card.card_names:
+                        field_names.add(n.lower())
+
             def play_filter(c):
+                if not c.is_digimon:
+                    return False
+                if not c.contains_card_name('Sistermon'):
+                    return False
+                # Can't play cards with the same names as any of your Digimon
+                for n in c.card_names:
+                    if n.lower() in field_names:
+                        return False
                 return True
-            game.effect_play_from_zone(
-                player, 'hand_or_trash', play_filter, free=True, is_optional=True)
-            game.effect_play_token(player, 'atho_rene_por')
+
+            # Check if we can play a token (no "Atho, René & Por" already on field)
+            has_token = any(
+                p.contains_card_name('Atho') for p in player.battle_area
+            )
+            has_sistermon = any(
+                play_filter(c) for c in player.hand_cards
+            ) or any(
+                play_filter(c) for c in player.trash_cards
+            )
+
+            if has_sistermon and not has_token:
+                # Both options available — play from zone (Sistermon) or token
+                # Engine selects between them via action mask; try Sistermon first
+                game.effect_play_from_zone(
+                    player, 'hand_or_trash', play_filter, free=True, is_optional=True)
+            elif has_sistermon:
+                game.effect_play_from_zone(
+                    player, 'hand_or_trash', play_filter, free=True, is_optional=True)
+            elif not has_token:
+                game.effect_play_token(player, 'atho_rene_por')
+            # If neither available, nothing happens
 
         effect4.set_on_process_callback(process4)
         effects.append(effect4)
@@ -129,11 +164,44 @@ class BT23_013(CardScript):
             game = ctx.get('game')
             if not (player and game):
                 return
+            # Get names of all Digimon currently on the field to enforce
+            # "can't play cards with the same names as any of your Digimon"
+            field_names = set()
+            for p in player.battle_area:
+                if p.top_card:
+                    for n in p.top_card.card_names:
+                        field_names.add(n.lower())
+
             def play_filter(c):
+                if not c.is_digimon:
+                    return False
+                if not c.contains_card_name('Sistermon'):
+                    return False
+                # Can't play cards with the same names as any of your Digimon
+                for n in c.card_names:
+                    if n.lower() in field_names:
+                        return False
                 return True
-            game.effect_play_from_zone(
-                player, 'hand_or_trash', play_filter, free=True, is_optional=True)
-            game.effect_play_token(player, 'atho_rene_por')
+
+            # Check if we can play a token (no "Atho, René & Por" already on field)
+            has_token = any(
+                p.contains_card_name('Atho') for p in player.battle_area
+            )
+            has_sistermon = any(
+                play_filter(c) for c in player.hand_cards
+            ) or any(
+                play_filter(c) for c in player.trash_cards
+            )
+
+            if has_sistermon and not has_token:
+                game.effect_play_from_zone(
+                    player, 'hand_or_trash', play_filter, free=True, is_optional=True)
+            elif has_sistermon:
+                game.effect_play_from_zone(
+                    player, 'hand_or_trash', play_filter, free=True, is_optional=True)
+            elif not has_token:
+                game.effect_play_token(player, 'atho_rene_por')
+            # If neither available, nothing happens
 
         effect5.set_on_process_callback(process5)
         effects.append(effect5)
@@ -164,8 +232,13 @@ class BT23_013(CardScript):
             player = ctx.get('player')
             perm = ctx.get('permanent')
             game = ctx.get('game')
-            # Force attack — target Digimon may attack (requires engine SelectAttack)
-            pass  # descriptive-tagged: force_attack
+            if not (player and game and perm):
+                return
+            # "this Digimon may attack" — register FORCE_ATTACK modifier
+            from ....interfaces.modifiers import ModifierType
+            game.register_modifier(
+                perm, ModifierType.FORCE_ATTACK,
+                value_fn=lambda: True, expiry='end_of_turn')
 
         effect6.set_on_process_callback(process6)
         effects.append(effect6)

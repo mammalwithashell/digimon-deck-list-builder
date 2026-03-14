@@ -9,17 +9,25 @@ if TYPE_CHECKING:
 
 
 class BT22_015(CardScript):
-    """BT22-015 Omnimon | Lv.7"""
+    """BT22-015 Omnimon | Lv.7
+
+    Alt digivolve: from Lv.6 w/ CS trait for 5.
+    DNA: Lv.6 w/ [Greymon] + Lv.6 w/ [Garurumon] for 0.
+    Blocker. Decode (Red/Black) Lv.3. Decode (Blue/Yellow) Lv.3.
+    [On Play] Delete 1 of your opponent's Digimon with the lowest DP.
+    [When Attacking] Delete 1 of your opponent's Digimon with the lowest DP.
+    [When Digivolving] For every 2 same-level cards this Digimon's stack has,
+        return 1 of your opponent's Digimon to the bottom of the deck.
+        Then, this Digimon may attack.
+    """
 
     def get_card_effects(self, card: 'CardSource') -> List['ICardEffect']:
         effects = []
 
-        # Factory effect: alt_digivolve_req
-        # Alternate digivolution requirement
+        # --- Effect 0: Alt digivolve from Lv.6 w/ CS trait for 5 ---
         effect0 = ICardEffect()
         effect0.set_effect_name("BT22-015 Alternate digivolution requirement")
         effect0.set_effect_description("Alternate digivolution requirement")
-        # Alternate digivolution: Lv.6 for cost 5
         effect0._alt_digi_cost = 5
         effect0._alt_digi_level = 6
 
@@ -28,21 +36,17 @@ class BT22_015(CardScript):
         effect0.set_can_use_condition(condition0)
         effects.append(effect0)
 
-        # Timing: EffectTiming.None
-        # Jogress Condition
+        # --- Effect 1: Jogress Condition ---
         effect1 = ICardEffect()
         effect1.set_effect_name("BT22-015 Jogress Condition")
         effect1.set_effect_description("Jogress Condition")
 
-        effect = effect1  # alias for condition closure
         def condition1(context: Dict[str, Any]) -> bool:
             return True
-
         effect1.set_can_use_condition(condition1)
         effects.append(effect1)
 
-        # Factory effect: blocker
-        # Blocker
+        # --- Effect 2: Blocker ---
         effect2 = ICardEffect()
         effect2.set_effect_name("BT22-015 Blocker")
         effect2.set_effect_description("Blocker")
@@ -53,8 +57,7 @@ class BT22_015(CardScript):
         effect2.set_can_use_condition(condition2)
         effects.append(effect2)
 
-        # Factory effect: decode
-        # Decode
+        # --- Effect 3: Decode (Red/Black) ---
         effect3 = ICardEffect()
         effect3.set_effect_name("BT22-015 Decode")
         effect3.set_effect_description("Decode")
@@ -65,8 +68,7 @@ class BT22_015(CardScript):
         effect3.set_can_use_condition(condition3)
         effects.append(effect3)
 
-        # Factory effect: decode
-        # Decode
+        # --- Effect 4: Decode (Blue/Yellow) ---
         effect4 = ICardEffect()
         effect4.set_effect_name("BT22-015 Decode")
         effect4.set_effect_description("Decode")
@@ -77,112 +79,132 @@ class BT22_015(CardScript):
         effect4.set_can_use_condition(condition4)
         effects.append(effect4)
 
-        # Timing: EffectTiming.OnEnterFieldAnyone
-        # [On Play] Delete 1 of your opponent's Digimon with the lowest DP.
+        # --- Helper: delete lowest DP opponent Digimon ---
+        def _delete_lowest_dp(ctx: Dict[str, Any]):
+            player = ctx.get('player')
+            game = ctx.get('game')
+            if not (player and game):
+                return
+            enemy = player.enemy
+            if not enemy:
+                return
+            enemy_digimon = [p for p in enemy.battle_area
+                             if p.is_digimon and p.dp is not None]
+            if not enemy_digimon:
+                return
+            min_dp = min(p.dp for p in enemy_digimon)
+
+            def lowest_dp_filter(p):
+                return p.is_digimon and p.dp is not None and p.dp == min_dp
+
+            def on_delete(target_perm):
+                enemy.delete_permanent(target_perm)
+
+            game.effect_select_opponent_permanent(
+                player, on_delete,
+                filter_fn=lowest_dp_filter,
+                is_optional=False)
+
+        # --- Effect 5: [On Play] Delete 1 lowest DP ---
         effect5 = ICardEffect()
         effect5.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect5.set_effect_name("BT22-015 Delete 1 Digimon")
-        effect5.set_effect_description("[On Play] Delete 1 of your opponent's Digimon with the lowest DP.")
+        effect5.set_effect_description(
+            "[On Play] Delete 1 of your opponent's Digimon with the lowest DP."
+        )
         effect5.is_on_play = True
 
-        effect = effect5  # alias for condition closure
         def condition5(context: Dict[str, Any]) -> bool:
             if card and card.permanent_of_this_card() is None:
                 return False
-            # Triggered on play — validated by engine timing
             return True
-
         effect5.set_can_use_condition(condition5)
-
-        def process5(ctx: Dict[str, Any]):
-            """Action: Delete"""
-            player = ctx.get('player')
-            perm = ctx.get('permanent')
-            game = ctx.get('game')
-            if not (player and game):
-                return
-            def target_filter(p):
-                return p.is_digimon
-            def on_delete(target_perm):
-                enemy = player.enemy if player else None
-                if enemy:
-                    enemy.delete_permanent(target_perm)
-            game.effect_select_opponent_permanent(
-                player, on_delete, filter_fn=target_filter, is_optional=False)
-
-        effect5.set_on_process_callback(process5)
+        effect5.set_on_process_callback(_delete_lowest_dp)
         effects.append(effect5)
 
-        # Timing: EffectTiming.OnUseAttack
-        # [When Attacking] Delete 1 of your opponent's Digimon with the lowest DP.
+        # --- Effect 6: [When Attacking] Delete 1 lowest DP ---
         effect6 = ICardEffect()
         effect6.set_timing(EffectTiming.OnUseAttack)
         effect6.set_effect_name("BT22-015 Delete 1 Digimon")
-        effect6.set_effect_description("[When Attacking] Delete 1 of your opponent's Digimon with the lowest DP.")
+        effect6.set_effect_description(
+            "[When Attacking] Delete 1 of your opponent's Digimon with the lowest DP."
+        )
         effect6.is_on_attack = True
 
-        effect = effect6  # alias for condition closure
         def condition6(context: Dict[str, Any]) -> bool:
             if card and card.permanent_of_this_card() is None:
                 return False
-            # Triggered on attack — validated by engine timing
             return True
-
         effect6.set_can_use_condition(condition6)
-
-        def process6(ctx: Dict[str, Any]):
-            """Action: Delete"""
-            player = ctx.get('player')
-            perm = ctx.get('permanent')
-            game = ctx.get('game')
-            if not (player and game):
-                return
-            def target_filter(p):
-                return p.is_digimon
-            def on_delete(target_perm):
-                enemy = player.enemy if player else None
-                if enemy:
-                    enemy.delete_permanent(target_perm)
-            game.effect_select_opponent_permanent(
-                player, on_delete, filter_fn=target_filter, is_optional=False)
-
-        effect6.set_on_process_callback(process6)
+        effect6.set_on_process_callback(_delete_lowest_dp)
         effects.append(effect6)
 
-        # Timing: EffectTiming.OnEnterFieldAnyone
-        # [When Digivolving] For every 2 same-level cards this Digimon's stack has, return 1 of your opponent's Digimon to the bottom of the deck. Then, this Digimon may attack.
+        # --- Effect 7: [When Digivolving] Bottom-deck per 2 same-level, then attack ---
         effect7 = ICardEffect()
         effect7.set_timing(EffectTiming.OnEnterFieldAnyone)
-        effect7.set_effect_name("BT22-015 Return 1 digimon, then attack")
-        effect7.set_effect_description("[When Digivolving] For every 2 same-level cards this Digimon's stack has, return 1 of your opponent's Digimon to the bottom of the deck. Then, this Digimon may attack.")
+        effect7.set_effect_name("BT22-015 Return digimon, then attack")
+        effect7.set_effect_description(
+            "[When Digivolving] For every 2 same-level cards this Digimon's "
+            "stack has, return 1 of your opponent's Digimon to the bottom of "
+            "the deck. Then, this Digimon may attack."
+        )
         effect7.is_when_digivolving = True
 
-        effect = effect7  # alias for condition closure
         def condition7(context: Dict[str, Any]) -> bool:
             if card and card.permanent_of_this_card() is None:
                 return False
-            # Triggered when digivolving — validated by engine timing
             return True
 
         effect7.set_can_use_condition(condition7)
 
         def process7(ctx: Dict[str, Any]):
-            """Action: Bounce, Force Attack"""
+            """Count same-level pairs, bottom-deck that many, then may attack."""
             player = ctx.get('player')
-            perm = ctx.get('permanent')
             game = ctx.get('game')
             if not (player and game):
                 return
-            def target_filter(p):
-                return True
-            def on_bounce(target_perm):
-                enemy = player.enemy if player else None
+            perm = card.permanent_of_this_card() if card else None
+            if not perm:
+                return
+
+            # Count same-level pairs in digi-stack
+            level_counts = {}
+            for cs in perm.card_sources:
+                lvl = getattr(cs, 'level', None)
+                if lvl is not None:
+                    level_counts[lvl] = level_counts.get(lvl, 0) + 1
+            target_count = sum(count // 2 for count in level_counts.values())
+
+            if target_count > 0:
+                enemy = player.enemy
                 if enemy:
-                    enemy.bounce_permanent_to_hand(target_perm)
-            game.effect_select_opponent_permanent(
-                player, on_bounce, filter_fn=target_filter, is_optional=False)
-            # Force attack — target Digimon may attack (requires engine SelectAttack)
-            pass  # descriptive-tagged: force_attack
+                    enemy_digimon = [p for p in enemy.battle_area if p.is_digimon]
+                    bounced = 0
+                    for _ in range(min(target_count, len(enemy_digimon))):
+                        remaining = [p for p in enemy.battle_area if p.is_digimon]
+                        if not remaining:
+                            break
+
+                        def opp_digimon_filter(p):
+                            return p.is_digimon
+
+                        def on_bottom_deck(target_perm):
+                            nonlocal bounced
+                            enemy.return_permanent_to_deck_bottom(target_perm)
+                            bounced += 1
+
+                        game.effect_select_opponent_permanent(
+                            player, on_bottom_deck,
+                            filter_fn=opp_digimon_filter,
+                            is_optional=False)
+
+            # Then, this Digimon may attack
+            perm = card.permanent_of_this_card() if card else None
+            if perm and perm.is_suspended:
+                perm.unsuspend()
+            # Force attack is handled by engine if supported; mark as may attack
+            if perm and hasattr(game, 'effect_force_attack'):
+                game.effect_force_attack(perm, is_optional=True)
 
         effect7.set_on_process_callback(process7)
         effects.append(effect7)

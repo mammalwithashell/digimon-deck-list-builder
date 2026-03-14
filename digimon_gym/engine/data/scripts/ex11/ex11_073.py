@@ -9,109 +9,102 @@ if TYPE_CHECKING:
 
 
 class EX11_073(CardScript):
-    """EX11-073 ExMaquinamon | Lv.7"""
+    """EX11-073 ExMaquinamon | Lv.7
+
+    DNA Digivolution: Green Lv.6 + Black Lv.6
+    <Security Attack +1>
+    <Blocker>
+    Link: Up to 3 [Maquinamon]
+
+    [When Digivolving] If DNA Digivolving, you may link up to 3 [Maquinamon]
+    from your hand, trash, or this Digimon's digivolution cards to this
+    Digimon without paying the cost.
+
+    [End of Opponent's Turn] [Once Per Turn] For each of this Digimon's link
+    cards, trash your opponent's top security card and return 1 of their
+    Digimon to the bottom of the deck.
+    """
 
     def get_card_effects(self, card: 'CardSource') -> List['ICardEffect']:
         effects = []
 
-        # Timing: EffectTiming.None
-        # Jogress Condition
+        # --- Jogress Condition marker ---
         effect0 = ICardEffect()
         effect0.set_effect_name("EX11-073 Jogress Condition")
         effect0.set_effect_description("Jogress Condition")
 
-        effect = effect0  # alias for condition closure
         def condition0(context: Dict[str, Any]) -> bool:
             return True
-
         effect0.set_can_use_condition(condition0)
-
         def process0(ctx: Dict[str, Any]):
-            """Action: Jogress condition marker — no runtime action."""
             pass
-
         effect0.set_on_process_callback(process0)
         effects.append(effect0)
 
-        # Timing: EffectTiming.None
-        # Effect — link slot markers (up to 3 links). These are condition-gate
-        # markers for the linking mechanic; the actual linking happens in effect4.
-        effect1 = ICardEffect()
-        effect1.set_effect_name("EX11-073 Link slot 1 [Maquinamon]")
-        effect1.set_effect_description("Effect")
+        # --- Security Attack +1 ---
+        effect_sa = ICardEffect()
+        effect_sa.set_effect_name("EX11-073 Security Attack +1")
+        effect_sa.set_effect_description("Security Attack +1")
+        effect_sa._security_attack_modifier = 1
 
-        effect = effect1  # alias for condition closure
-        def condition1(context: Dict[str, Any]) -> bool:
+        def condition_sa(context: Dict[str, Any]) -> bool:
             if card and card.permanent_of_this_card() is None:
                 return False
             return True
+        effect_sa.set_can_use_condition(condition_sa)
+        effects.append(effect_sa)
 
-        effect1.set_can_use_condition(condition1)
+        # --- Blocker ---
+        effect_blocker = ICardEffect()
+        effect_blocker.set_effect_name("EX11-073 Blocker")
+        effect_blocker.set_effect_description("Blocker")
+        effect_blocker._is_blocker = True
 
-        def process1(ctx: Dict[str, Any]):
-            """Action: Link slot marker — no runtime action."""
-            pass
-
-        effect1.set_on_process_callback(process1)
-        effects.append(effect1)
-
-        effect2 = ICardEffect()
-        effect2.set_effect_name("EX11-073 Link slot 2 [Maquinamon]")
-        effect2.set_effect_description("Effect")
-
-        effect = effect2  # alias for condition closure
-        def condition2(context: Dict[str, Any]) -> bool:
+        def condition_blocker(context: Dict[str, Any]) -> bool:
             if card and card.permanent_of_this_card() is None:
                 return False
             return True
+        effect_blocker.set_can_use_condition(condition_blocker)
+        effects.append(effect_blocker)
 
-        effect2.set_can_use_condition(condition2)
+        # --- Link slot markers (up to 3 links) ---
+        for i in range(1, 4):
+            link_effect = ICardEffect()
+            link_effect.set_effect_name(f"EX11-073 Link slot {i} [Maquinamon]")
+            link_effect.set_effect_description("Effect")
 
-        def process2(ctx: Dict[str, Any]):
-            """Action: Link slot marker — no runtime action."""
-            pass
+            def make_link_condition():
+                def cond(context: Dict[str, Any]) -> bool:
+                    if card and card.permanent_of_this_card() is None:
+                        return False
+                    return True
+                return cond
+            link_effect.set_can_use_condition(make_link_condition())
 
-        effect2.set_on_process_callback(process2)
-        effects.append(effect2)
+            def link_process(ctx: Dict[str, Any]):
+                pass
+            link_effect.set_on_process_callback(link_process)
+            effects.append(link_effect)
 
-        effect3 = ICardEffect()
-        effect3.set_effect_name("EX11-073 Link slot 3 [Maquinamon]")
-        effect3.set_effect_description("Effect")
-
-        effect = effect3  # alias for condition closure
-        def condition3(context: Dict[str, Any]) -> bool:
-            if card and card.permanent_of_this_card() is None:
-                return False
-            return True
-
-        effect3.set_can_use_condition(condition3)
-
-        def process3(ctx: Dict[str, Any]):
-            """Action: Link slot marker — no runtime action."""
-            pass
-
-        effect3.set_on_process_callback(process3)
-        effects.append(effect3)
-
-        # Timing: EffectTiming.OnEnterFieldAnyone
-        # [When Digivolving] You may link up to 3 cards with [Maquinamon] in name
-        # from your hand, trash, or this Digimon's digivolution cards.
+        # --- When Digivolving: If DNA Digivolving, link up to 3 [Maquinamon] ---
         effect4 = ICardEffect()
         effect4.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect4.set_effect_name("EX11-073 You may link up to 3 [Maquinamon] from hand, trash or digivolution cards")
-        effect4.set_effect_description("Effect")
+        effect4.set_effect_description("[When Digivolving] If DNA Digivolving, you may link up to 3 [Maquinamon] from your hand, trash or this Digimon's digivolution cards to this Digimon without paying the cost.")
         effect4.is_when_digivolving = True
 
-        effect = effect4  # alias for condition closure
         def condition4(context: Dict[str, Any]) -> bool:
             if card and card.permanent_of_this_card() is None:
+                return False
+            # Must be DNA digivolving
+            if not context.get('is_dna_digivolve', False):
                 return False
             return True
 
         effect4.set_can_use_condition(condition4)
 
         def process4(ctx: Dict[str, Any]):
-            """Action: Link up to 3 [Maquinamon] cards from hand, trash, or digi cards."""
+            """Link up to 3 [Maquinamon] cards from hand, trash, or digi cards to THIS Digimon."""
             player = ctx.get('player')
             perm = ctx.get('permanent')
             game = ctx.get('game')
@@ -122,7 +115,7 @@ class EX11_073(CardScript):
                 names = getattr(c, 'card_names', []) or []
                 return any('Maquinamon' in n for n in names)
 
-            links_remaining = [3]  # mutable counter
+            links_remaining = [3]
 
             def link_next():
                 if links_remaining[0] <= 0:
@@ -161,41 +154,33 @@ class EX11_073(CardScript):
                         is_optional=True,
                         prompt="Select a [Maquinamon] card from hand to link.")
                 elif trash_candidates:
-                    # Link from trash — take the first matching card
-                    for tc in trash_candidates:
-                        if tc in player.trash_cards:
-                            player.trash_cards.remove(tc)
-                            perm.link_card(tc)
-                            links_remaining[0] -= 1
-                            link_next()
-                            return
+                    tc = trash_candidates[0]
+                    if tc in player.trash_cards:
+                        player.trash_cards.remove(tc)
+                        perm.link_card(tc)
+                        links_remaining[0] -= 1
+                        link_next()
                 elif digi_candidates:
-                    # Link from digivolution cards — take the first matching card
-                    for dc in digi_candidates:
-                        if dc in perm.card_sources:
-                            perm.card_sources.remove(dc)
-                            perm.link_card(dc)
-                            links_remaining[0] -= 1
-                            link_next()
-                            return
+                    dc = digi_candidates[0]
+                    if dc in perm.card_sources:
+                        perm.card_sources.remove(dc)
+                        perm.link_card(dc)
+                        links_remaining[0] -= 1
+                        link_next()
 
             link_next()
 
         effect4.set_on_process_callback(process4)
         effects.append(effect4)
 
-        # Timing: EffectTiming.OnEndTurn
-        # [End of Opponent's Turn] [Once Per Turn] For each of this Digimon's linked cards,
-        # trash 1 of your security cards to place 1 of your opponent's Digimon at the
-        # bottom of its owner's deck.
+        # --- End of Opponent's Turn: trash OPPONENT's security + bottom-deck opponent Digimon ---
         effect5 = ICardEffect()
         effect5.set_timing(EffectTiming.OnEndTurn)
-        effect5.set_effect_name("EX11-073 Trash a security and bottom deck a digimon per link card")
-        effect5.set_effect_description("Trash security + bottom-deck opponent Digimon per linked card")
+        effect5.set_effect_name("EX11-073 Trash opponent security and bottom deck opponent digimon per link card")
+        effect5.set_effect_description("[End of Opponent's Turn] [Once Per Turn] For each of this Digimon's link cards, trash your opponent's top security card and return 1 of their Digimon to the bottom of the deck.")
         effect5.set_max_count_per_turn(1)
         effect5.set_hash_string("EX11_073_EOOT_TRASH_BOUNCE")
 
-        effect = effect5  # alias for condition closure
         def condition5(context: Dict[str, Any]) -> bool:
             if card and card.permanent_of_this_card() is None:
                 return False
@@ -207,7 +192,7 @@ class EX11_073(CardScript):
         effect5.set_can_use_condition(condition5)
 
         def process5(ctx: Dict[str, Any]):
-            """Action: For each linked card, trash 1 security to bottom-deck 1 opponent Digimon."""
+            """For each linked card, trash 1 OPPONENT's security, then bottom-deck 1 opponent Digimon."""
             player = ctx.get('player')
             perm = ctx.get('permanent')
             game = ctx.get('game')
@@ -217,31 +202,36 @@ class EX11_073(CardScript):
             if link_count <= 0:
                 return
 
-            iterations_left = [link_count]
+            enemy = player.enemy if player else None
+            if not enemy:
+                return
+
+            # Trash opponent's top security cards (1 per link card)
+            security_trashed = 0
+            for _ in range(link_count):
+                if enemy.security_cards:
+                    trashed = enemy.security_cards.pop()
+                    enemy.trash_cards.append(trashed)
+                    security_trashed += 1
+
+            # Bottom-deck opponent Digimon (1 per link card)
+            iterations_left = [min(link_count, len([p for p in enemy.battle_area if p.is_digimon]))]
 
             def do_iteration():
                 if iterations_left[0] <= 0:
                     return
-                # Must have security to trash
-                if not player.security_cards:
-                    return
-                # Must have opponent Digimon to bottom-deck
-                enemy = player.enemy if player else None
-                if not enemy:
-                    return
                 opp_digimon = [p for p in enemy.battle_area if p.is_digimon]
                 if not opp_digimon:
                     return
-                # Trash top security card
-                trashed = player.security_cards.pop()
-                player.trash_cards.append(trashed)
                 iterations_left[0] -= 1
-                # Select opponent Digimon to place at bottom of deck
+
                 def target_filter(p):
                     return p.is_digimon
+
                 def on_bottom_deck(target_perm):
                     enemy.return_permanent_to_deck_bottom(target_perm)
                     do_iteration()
+
                 game.effect_select_opponent_permanent(
                     player, on_bottom_deck, filter_fn=target_filter, is_optional=False)
 

@@ -43,6 +43,11 @@ class BT22_046(CardScript):
                 return False
             if not (card and card.owner and card.owner.is_my_turn):
                 return False
+            # Precondition: 1 or fewer Tamers on field
+            player = card.owner
+            tamer_count = len([p for p in player.battle_area if p.is_tamer])
+            if tamer_count > 1:
+                return False
             # Triggered when digivolving — validated by engine timing
             return True
 
@@ -56,6 +61,11 @@ class BT22_046(CardScript):
             if not (player and game):
                 return
             def play_filter(c):
+                # Must be a Tamer card with [CS] trait
+                if not c.is_tamer:
+                    return False
+                if not any('CS' in t for t in (c.type_eng or [])):
+                    return False
                 return True
             game.effect_play_from_zone(
                 player, 'hand', play_filter, free=True, is_optional=True)

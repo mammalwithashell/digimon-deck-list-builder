@@ -14,9 +14,7 @@ class ST19_08(CardScript):
     [Security] You may play 1 card with the [LIBERATOR] trait and a play cost
     of 4 or less from your hand or trash without paying the cost.
 
-    <Overclock ([Puppet] Trait)> (At the end of your turn, by deleting 1 of
-    your Tokens or other [Puppet] trait Digimon, this Digimon attacks a player
-    without suspending.)
+    <Overclock ([Puppet] Trait)>
 
     Inherited Effect:
     [Your Turn] All of your opponent's security Digimon get -3000 DP.
@@ -84,7 +82,11 @@ class ST19_08(CardScript):
         effects.append(effect1)
 
         # --- Effect 2 (Inherited): [Your Turn] Opponent's security Digimon get -3000 DP ---
+        # This is a continuous/declarative static effect (EffectTiming.NoTiming).
+        # The engine applies dp_modifier from active inherited effects during
+        # security battle DP calculation.
         effect2 = ICardEffect()
+        effect2.set_timing(EffectTiming.NoTiming)
         effect2.set_effect_name("ST19-08 Opponent's Security Digimon -3000 DP")
         effect2.set_effect_description(
             "[Your Turn] All of your opponent's security Digimon get -3000 DP."
@@ -104,7 +106,7 @@ class ST19_08(CardScript):
         effect2.set_can_use_condition(condition2)
 
         def process2(ctx: Dict[str, Any]):
-            pass  # Declarative DP modifier for security Digimon
+            pass  # Declarative DP modifier for security Digimon — applied by engine
 
         effect2.set_on_process_callback(process2)
         effects.append(effect2)

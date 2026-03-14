@@ -9,31 +9,42 @@ if TYPE_CHECKING:
 
 
 class EX11_022(CardScript):
-    """EX11-022 Karakurumon | Lv.5"""
+    """EX11-022 Karakurumon | Lv.5
+
+    Alt digivolve: Lv.4 with [Puppet] trait (Yellow/Purple) for cost 3.
+    <Scapegoat>
+
+    [On Play][When Digivolving] You may play 1 [Puppet] trait Digimon card with
+        4000 DP or less from your hand or trash without paying the cost. At the
+        end of the turn, delete the Digimon played by this effect.
+
+    --- Inherited ---
+    [All Turns][Once Per Turn] When this Digimon would leave the battle area
+        other than by your effects, by deleting 1 of your Tokens or other
+        [Puppet] trait Digimon, prevent it from leaving.
+    """
 
     def get_card_effects(self, card: 'CardSource') -> List['ICardEffect']:
         effects = []
 
-        # Factory effect: alt_digivolve_req
-        # Alternate digivolution requirement
+        def _is_puppet_trait(c) -> bool:
+            traits = getattr(c, 'card_traits', []) or []
+            return any('Puppet' in t for t in traits)
+
+        # --- Effect 0: Alt digivolve from Lv.4 [Puppet] for cost 3 ---
         effect0 = ICardEffect()
         effect0.set_effect_name("EX11-022 Alternate digivolution requirement")
         effect0.set_effect_description("Alternate digivolution requirement")
-        # Alternate digivolution: Lv.4 with [Puppet] trait for cost 3
-        effect0._alt_digi_cost = 2
-        effect0._alt_digi_level = 3
+        effect0._alt_digi_cost = 3
+        effect0._alt_digi_level = 4
         effect0._alt_digi_trait = "Puppet"
 
         def condition0(context: Dict[str, Any]) -> bool:
-            permanent = card.permanent_of_this_card() if card else None
-            if not (permanent and permanent.top_card and (any('Puppet' in tr for tr in (getattr(permanent.top_card, 'card_traits', []) or [])))):
-                return False
             return True
         effect0.set_can_use_condition(condition0)
         effects.append(effect0)
 
-        # Factory effect: scapegoat
-        # Scapegoat
+        # --- Effect 1: Scapegoat ---
         effect1 = ICardEffect()
         effect1.set_effect_name("EX11-022 Scapegoat")
         effect1.set_effect_description("Scapegoat")
@@ -44,128 +55,145 @@ class EX11_022(CardScript):
         effect1.set_can_use_condition(condition1)
         effects.append(effect1)
 
-        # Timing: EffectTiming.OnEnterFieldAnyone
-        # Delete, Play Card, Effect Immunity
+        # --- Shared: Play Puppet DP<=4000 from hand/trash, delete at end of turn ---
+        def _play_puppet_and_schedule_delete(ctx: Dict[str, Any]):
+            player = ctx.get('player')
+            game = ctx.get('game')
+            if not (player and game):
+                return
+
+            def play_filter(c):
+                if not getattr(c, 'is_digimon', False):
+                    return False
+                dp = getattr(c, 'base_dp', None) or getattr(c, 'dp', None)
+                if dp is None or dp > 4000:
+                    return False
+                return _is_puppet_trait(c)
+
+            # Track field before play
+            before_perms = set(player.battle_area)
+            game.effect_play_from_zone(
+                player, 'hand_or_trash', play_filter, free=True, is_optional=True,
+                prompt="You may play 1 [Puppet] Digimon with 4000 DP or less.")
+            # Find the newly played permanent and schedule end-of-turn deletion
+            after_perms = set(player.battle_area)
+            new_perms = after_perms - before_perms
+            for new_perm in new_perms:
+                # Register an end-of-turn deletion effect
+                eot_effect = ICardEffect()
+                eot_effect.set_timing(EffectTiming.OnEndTurn)
+                eot_effect.set_effect_name("EX11-022 Delete played Digimon at turn end")
+                eot_effect.set_effect_description("Delete the Digimon played by this effect at end of turn.")
+                _perm_ref = new_perm
+
+                def eot_condition(context: Dict[str, Any], p=_perm_ref) -> bool:
+                    return p in (card.owner.battle_area if card and card.owner else [])
+                eot_effect.set_can_use_condition(eot_condition)
+
+                def eot_process(ctx: Dict[str, Any], p=_perm_ref):
+                    owner = card.owner if card else None
+                    if owner and p in owner.battle_area:
+                        owner.delete_permanent(p)
+                eot_effect.set_on_process_callback(eot_process)
+
+                if new_perm.top_card:
+                    new_perm.top_card._card_effects.append(eot_effect)
+
+        # --- Effect 2: [On Play] Play Puppet ---
         effect2 = ICardEffect()
         effect2.set_timing(EffectTiming.OnEnterFieldAnyone)
-        effect2.set_effect_name("EX11-022 Delete, Play Card, Effect Immunity")
-        effect2.set_effect_description("Delete, Play Card, Effect Immunity")
+        effect2.set_effect_name("EX11-022 Play Puppet DP<=4000, delete at turn end")
+        effect2.set_effect_description("[On Play] Play 1 [Puppet] Digimon with 4000 DP or less from hand or trash. Delete it at turn end.")
         effect2.is_on_play = True
 
-        effect = effect2  # alias for condition closure
         def condition2(context: Dict[str, Any]) -> bool:
             if card and card.permanent_of_this_card() is None:
                 return False
-            # Triggered on play — validated by engine timing
             return True
-
         effect2.set_can_use_condition(condition2)
-
-        def process2(ctx: Dict[str, Any]):
-            """Action: Delete, Play Card, Effect Immunity"""
-            player = ctx.get('player')
-            perm = ctx.get('permanent')
-            game = ctx.get('game')
-            if not (player and game):
-                return
-            def target_filter(p):
-                return p.is_digimon
-            def on_delete(target_perm):
-                enemy = player.enemy if player else None
-                if enemy:
-                    enemy.delete_permanent(target_perm)
-            game.effect_select_opponent_permanent(
-                player, on_delete, filter_fn=target_filter, is_optional=False)
-            if not (player and game):
-                return
-            def play_filter(c):
-                if not getattr(c, 'is_digimon', False):
-                    return False
-                if not (any('Puppet' in _t for _t in (getattr(c, 'card_traits', []) or []))):
-                    return False
-                return True
-            game.effect_play_from_zone(
-                player, 'hand_or_trash', play_filter, free=True, is_optional=True)
-            # Grant effect immunity via modifier system
-            if perm and game:
-                from digimon_gym.engine.interfaces.modifiers import ModifierType
-                game.register_modifier(
-                    ModifierType.CANNOT_BE_SELECTED_BY_EFFECT, perm,
-                    value_fn=lambda: True, expiry='end_of_turn')
-
-        effect2.set_on_process_callback(process2)
+        effect2.set_on_process_callback(_play_puppet_and_schedule_delete)
         effects.append(effect2)
 
-        # Timing: EffectTiming.OnEnterFieldAnyone
-        # Delete, Play Card, Effect Immunity
+        # --- Effect 3: [When Digivolving] Play Puppet ---
         effect3 = ICardEffect()
         effect3.set_timing(EffectTiming.OnEnterFieldAnyone)
-        effect3.set_effect_name("EX11-022 Delete, Play Card, Effect Immunity")
-        effect3.set_effect_description("Delete, Play Card, Effect Immunity")
+        effect3.set_effect_name("EX11-022 Play Puppet DP<=4000, delete at turn end")
+        effect3.set_effect_description("[When Digivolving] Play 1 [Puppet] Digimon with 4000 DP or less from hand or trash. Delete it at turn end.")
         effect3.is_when_digivolving = True
 
-        effect = effect3  # alias for condition closure
         def condition3(context: Dict[str, Any]) -> bool:
             if card and card.permanent_of_this_card() is None:
                 return False
-            # Triggered when digivolving — validated by engine timing
             return True
-
         effect3.set_can_use_condition(condition3)
-
-        def process3(ctx: Dict[str, Any]):
-            """Action: Delete, Play Card, Effect Immunity"""
-            player = ctx.get('player')
-            perm = ctx.get('permanent')
-            game = ctx.get('game')
-            if not (player and game):
-                return
-            def target_filter(p):
-                return p.is_digimon
-            def on_delete(target_perm):
-                enemy = player.enemy if player else None
-                if enemy:
-                    enemy.delete_permanent(target_perm)
-            game.effect_select_opponent_permanent(
-                player, on_delete, filter_fn=target_filter, is_optional=False)
-            if not (player and game):
-                return
-            def play_filter(c):
-                if not getattr(c, 'is_digimon', False):
-                    return False
-                if not (any('Puppet' in _t for _t in (getattr(c, 'card_traits', []) or []))):
-                    return False
-                return True
-            game.effect_play_from_zone(
-                player, 'hand_or_trash', play_filter, free=True, is_optional=True)
-            # Grant effect immunity via modifier system
-            if perm and game:
-                from digimon_gym.engine.interfaces.modifiers import ModifierType
-                game.register_modifier(
-                    ModifierType.CANNOT_BE_SELECTED_BY_EFFECT, perm,
-                    value_fn=lambda: True, expiry='end_of_turn')
-
-        effect3.set_on_process_callback(process3)
+        effect3.set_on_process_callback(_play_puppet_and_schedule_delete)
         effects.append(effect3)
 
-        # Timing: EffectTiming.WhenRemoveField
-        # [All Turns] [Once Per Turn] When this Digimon would leave the battle area other than by your effects, by deleting 1 of your Tokens or other [Puppet] trait trait Digimon, prevent it from leaving.
+        # --- Effect 4 (Inherited): WhenRemoveField - Delete Puppet/Token to prevent leaving ---
         effect4 = ICardEffect()
         effect4.set_timing(EffectTiming.WhenRemoveField)
-        effect4.set_effect_name("EX11-022 Delete your 1 other token or [Puppet] Digimon to prevent this Digimon from leaving Battle Area")
-        effect4.set_effect_description("[All Turns] [Once Per Turn] When this Digimon would leave the battle area other than by your effects, by deleting 1 of your Tokens or other [Puppet] trait trait Digimon, prevent it from leaving.")
+        effect4.set_effect_name("EX11-022 Delete Token/Puppet to prevent leaving")
+        effect4.set_effect_description("[All Turns][Once Per Turn] When this Digimon would leave the battle area other than by your effects, by deleting 1 of your Tokens or other [Puppet] trait Digimon, prevent it from leaving.")
         effect4.is_inherited_effect = True
         effect4.is_optional = True
         effect4.set_max_count_per_turn(1)
         effect4.set_hash_string("Substitute_EX11_022")
 
-        effect = effect4  # alias for condition closure
         def condition4(context: Dict[str, Any]) -> bool:
             if card and card.permanent_of_this_card() is None:
                 return False
-            return True
+            player = card.owner if card else None
+            if not player:
+                return False
+            my_perm = card.permanent_of_this_card()
 
+            def sub_filter(p):
+                if not p.is_digimon:
+                    return False
+                if p is my_perm:
+                    return False
+                if getattr(p, 'is_token', False):
+                    return True
+                if p.top_card and _is_puppet_trait(p.top_card):
+                    return True
+                return False
+
+            return any(sub_filter(p) for p in player.battle_area)
         effect4.set_can_use_condition(condition4)
+
+        def process4(ctx: Dict[str, Any]):
+            player = ctx.get('player')
+            game = ctx.get('game')
+            if not (player and game):
+                return
+            my_perm = card.permanent_of_this_card() if card else None
+            if not my_perm:
+                return
+
+            def sub_filter(p):
+                if not p.is_digimon:
+                    return False
+                if p is my_perm:
+                    return False
+                if getattr(p, 'is_token', False):
+                    return True
+                if p.top_card and _is_puppet_trait(p.top_card):
+                    return True
+                return False
+
+            def on_delete_substitute(target_perm):
+                player.delete_permanent(target_perm)
+                if my_perm and hasattr(my_perm, 'willBeRemoveField'):
+                    my_perm.willBeRemoveField = False
+                if my_perm and hasattr(my_perm, 'will_be_removed'):
+                    my_perm.will_be_removed = False
+
+            game.effect_select_own_permanent(
+                player, on_delete_substitute, filter_fn=sub_filter,
+                is_optional=True,
+                prompt="Select 1 Token or [Puppet] Digimon to delete to prevent leaving.")
+
+        effect4.set_on_process_callback(process4)
         effects.append(effect4)
 
         return effects

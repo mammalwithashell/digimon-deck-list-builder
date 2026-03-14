@@ -35,12 +35,97 @@ class EX11_033(CardScript):
         effect0.set_can_use_condition(condition0)
         effects.append(effect0)
 
-        # Timing: EffectTiming.OnMove
-        # Play Card
+        # Shared callback: select a [Maquinamon] from hand, then link it to one of your Digimon.
+        def _play_maquinamon_linked(ctx: Dict[str, Any]):
+            """Play 1 [Maquinamon] from hand to 1 of your Digimon without paying the cost."""
+            player = ctx.get('player')
+            perm = ctx.get('permanent')
+            game = ctx.get('game')
+            if not (player and game):
+                return
+            from ....data.enums import GamePhase
+            from ....game.constants import (
+                SEL_HAND_START, SEL_MY_FIELD_START, SEL_MY_BREEDING,
+                ACTION_SPACE_SIZE,
+            )
+
+            def is_maquinamon(c):
+                names = getattr(c, 'card_names', []) or []
+                return any('Maquinamon' in n for n in names)
+
+            # Step 1: find valid Maquinamon in hand
+            hand_valid = []
+            for i, c in enumerate(player.hand_cards):
+                if is_maquinamon(c) and (SEL_HAND_START + i) < ACTION_SPACE_SIZE:
+                    hand_valid.append(SEL_HAND_START + i)
+            if not hand_valid:
+                return
+
+            def on_select_card(action_id: int):
+                idx = action_id - SEL_HAND_START
+                if idx < 0 or idx >= len(player.hand_cards):
+                    return
+                selected_card = player.hand_cards[idx]
+                # Remove from hand
+                player.hand_cards.pop(idx)
+
+                # Step 2: choose a Digimon to link it to
+                link_valid = []
+                for fi, fp in enumerate(player.battle_area):
+                    if fp.is_token:
+                        continue
+                    if not fp.is_digimon:
+                        continue
+                    link_valid.append(SEL_MY_FIELD_START + fi)
+                ba = player.breeding_area
+                if ba is not None and ba.is_digimon and (ba.level or 0) > 2:
+                    link_valid.append(SEL_MY_BREEDING)
+
+                if not link_valid:
+                    # No valid target — play standalone as fallback
+                    played_perm = player.play_card_from_source(selected_card, pay_cost=False)
+                    game.logger.log(f"[Effect] {player.player_name} played "
+                                    f"{game._card_ref(selected_card)} from hand (no link target)")
+                    game.execute_effects(
+                        EffectTiming.OnEnterFieldAnyone,
+                        {"played_card": selected_card, "played_permanent": played_perm, "event_player": player},
+                    )
+                    return
+
+                def on_select_target(target_action_id: int):
+                    if target_action_id == SEL_MY_BREEDING:
+                        target = player.breeding_area
+                    else:
+                        tidx = target_action_id - SEL_MY_FIELD_START
+                        if 0 <= tidx < len(player.battle_area):
+                            target = player.battle_area[tidx]
+                        else:
+                            return
+                    if target is None:
+                        return
+                    target.link_card(selected_card)
+                    game.logger.log(
+                        f"[Effect] {player.player_name} played "
+                        f"{game._card_ref(selected_card)} from hand linked to "
+                        f"{game._perm_ref(target)}")
+
+                game.request_selection(
+                    GamePhase.SelectTarget, player, on_select_target, link_valid,
+                    is_optional=False,
+                    prompt="Select a Digimon to link [Maquinamon] to.")
+
+            game.request_selection(
+                GamePhase.SelectTarget, player, on_select_card, hand_valid,
+                is_optional=True,
+                prompt="Select a [Maquinamon] from hand to play to 1 of your Digimon.")
+
+        # Timing: EffectTiming.OnEnterFieldAnyone
+        # [On Play] Play [Maquinamon] linked to a Digimon
         effect1 = ICardEffect()
-        effect1.set_timing(EffectTiming.OnMove)
-        effect1.set_effect_name("EX11-033 Play Card")
-        effect1.set_effect_description("Play Card")
+        effect1.set_timing(EffectTiming.OnEnterFieldAnyone)
+        effect1.set_effect_name("EX11-033 Play [Maquinamon] to 1 of your Digimon")
+        effect1.set_effect_description("[On Play] You may play 1 [Maquinamon] from your hand to 1 of your Digimon without paying the cost.")
+        effect1.is_on_play = True
 
         effect = effect1  # alias for condition closure
         def condition1(context: Dict[str, Any]) -> bool:
@@ -49,41 +134,25 @@ class EX11_033(CardScript):
             return True
 
         effect1.set_can_use_condition(condition1)
-
-        def _play_maquinamon(ctx: Dict[str, Any]):
-            """Play 1 [Maquinamon] from hand without paying the cost."""
-            player = ctx.get('player')
-            perm = ctx.get('permanent')
-            game = ctx.get('game')
-            if not (player and game):
-                return
-            def play_filter(c):
-                names = getattr(c, 'card_names', []) or []
-                return any('Maquinamon' in n for n in names)
-            game.effect_play_from_zone(
-                player, 'hand', play_filter, free=True, is_optional=True)
-
-        effect1.set_on_process_callback(_play_maquinamon)
+        effect1.set_on_process_callback(_play_maquinamon_linked)
         effects.append(effect1)
 
         # Timing: EffectTiming.OnEnterFieldAnyone
-        # Play Card
+        # [When Digivolving] Play [Maquinamon] linked to a Digimon
         effect2 = ICardEffect()
         effect2.set_timing(EffectTiming.OnEnterFieldAnyone)
-        effect2.set_effect_name("EX11-033 Play Card")
-        effect2.set_effect_description("Play Card")
+        effect2.set_effect_name("EX11-033 Play [Maquinamon] to 1 of your Digimon")
+        effect2.set_effect_description("[When Digivolving] You may play 1 [Maquinamon] from your hand to 1 of your Digimon without paying the cost.")
         effect2.is_when_digivolving = True
 
         effect = effect2  # alias for condition closure
         def condition2(context: Dict[str, Any]) -> bool:
             if card and card.permanent_of_this_card() is None:
                 return False
-            # Triggered when digivolving — validated by engine timing
             return True
 
         effect2.set_can_use_condition(condition2)
-
-        effect2.set_on_process_callback(_play_maquinamon)
+        effect2.set_on_process_callback(_play_maquinamon_linked)
         effects.append(effect2)
 
         # Timing: EffectTiming.WhenLinked
