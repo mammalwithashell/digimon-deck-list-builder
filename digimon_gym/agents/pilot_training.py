@@ -755,6 +755,10 @@ def main():
         help="Path to player 1 deck file (TTS/text format)"
     )
     parser.add_argument(
+        "--deck-json", type=str, default=None,
+        help="Path to JSON file containing a flat list of card IDs"
+    )
+    parser.add_argument(
         "--bounty-threshold", type=float, default=0.15,
         help="Threat index above which bounty bonus applies (default: 0.15)"
     )
@@ -795,6 +799,11 @@ def main():
         with open(args.deck1, "r") as f:
             deck1 = parse_deck(f.read())
         print(f"  Player deck: {len(deck1)} cards from {args.deck1}")
+    if args.deck_json:
+        import json as _json
+        with open(args.deck_json, "r") as f:
+            deck1 = _json.load(f)
+        print(f"  Player deck: {len(deck1)} cards from {args.deck_json}")
 
     train(
         total_timesteps=args.timesteps,

@@ -90,10 +90,12 @@ class TriggeredEffect:
     even if the board state has since changed.
     """
     effect: Any  # ICardEffect
-    permanent: Any  # Permanent that owns this effect
-    owner: Any  # Player who owns the permanent
+    permanent: Any  # Permanent that owns this effect (or None for zone cards)
+    owner: Any  # Player who owns the permanent/card
     context: Dict[str, Any]  # full context dict for on_process_callback
     is_turn_player: bool = False  # whether owner is the current turn player
+    source_zone: str = 'field'  # 'field', 'trash', 'hand', 'security'
+    source_card: Any = None  # CardSource for non-field effects (trash/hand/security)
 
 
 @dataclass

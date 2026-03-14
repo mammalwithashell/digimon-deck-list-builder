@@ -521,7 +521,12 @@ class Game(CombatMixin, ActionDecoderMixin, EffectHelpersMixin):
     def _collect_triggered_effects(
         self, timing: EffectTiming, extra_context: Optional[dict] = None
     ) -> List[TriggeredEffect]:
-        """Collect all activatable effects for a timing into a sorted stack."""
+        """Collect all activatable effects for a timing into a sorted stack.
+
+        DCGO scans 5 zones per player (turn player first): player effects, field
+        permanents, trash cards, hand cards, face-up security. We scan field
+        permanents (battle area + breeding) and now also trash/hand/security cards.
+        """
         all_perms: List[Permanent] = list(self.turn_player.battle_area) + list(self.opponent_player.battle_area)
         if self.turn_player.breeding_area is not None:
             all_perms.append(self.turn_player.breeding_area)
@@ -533,6 +538,7 @@ class Game(CombatMixin, ActionDecoderMixin, EffectHelpersMixin):
 
         stack: List[TriggeredEffect] = []
 
+        # 1. Field permanents (battle area + breeding) — existing behavior
         for perm in all_perms:
             effects = perm.effect_list(timing)
             for effect in effects:
@@ -574,6 +580,56 @@ class Game(CombatMixin, ActionDecoderMixin, EffectHelpersMixin):
                     context=context,
                     is_turn_player=is_tp,
                 ))
+
+        # 2. Non-field zones: trash, hand, face-up security (DCGO order: turn player first)
+        #    Skip OnDeclaration (active [Trash][Main] effects — need action mask, not auto-trigger)
+        #    and flag-based timings (on_play, when_digivolving, on_attack) which only fire from field.
+        if timing != EffectTiming.OnDeclaration:
+            for player in [self.turn_player, self.opponent_player]:
+                is_tp = (player is self.turn_player)
+                zone_cards = [
+                    (player.trash_cards, 'trash'),
+                    (player.hand_cards, 'hand'),
+                ]
+                for card_list, zone_name in zone_cards:
+                    for card_source in list(card_list):
+                        effects = card_source.effect_list(timing)
+                        for effect in effects:
+                            if not effect.on_process_callback:
+                                continue
+                            if not effect.can_activate_this_turn():
+                                continue
+                            # Zone cards use direct timing match only — skip flag-based checks
+                            if effect.timing != timing:
+                                continue
+                            # Skip inherited effects (only active under a Digimon on field)
+                            if effect.is_inherited_effect:
+                                continue
+
+                            effect.set_effect_source_permanent(None)
+                            context = {
+                                "game": self,
+                                "player": player,
+                                "permanent": None,
+                                "card": card_source,
+                                "turn_player": self.turn_player,
+                                "opponent_player": self.opponent_player,
+                            }
+                            if extra_context:
+                                for key, value in extra_context.items():
+                                    if key in {"player", "permanent"}:
+                                        continue
+                                    context[key] = value
+
+                            stack.append(TriggeredEffect(
+                                effect=effect,
+                                permanent=None,
+                                owner=player,
+                                context=context,
+                                is_turn_player=is_tp,
+                                source_zone=zone_name,
+                                source_card=card_source,
+                            ))
 
         def sort_key(te: TriggeredEffect):
             player_order = 0 if te.is_turn_player else 1
@@ -633,8 +689,21 @@ class Game(CombatMixin, ActionDecoderMixin, EffectHelpersMixin):
     @staticmethod
     def _triggered_effect_still_valid(te: TriggeredEffect) -> bool:
         """Check that a triggered effect's source is still in a valid state."""
+        # Non-field zone effects: verify card is still in its source zone
+        if te.source_zone != 'field':
+            owner = te.owner
+            card = te.source_card
+            if card is None or owner is None:
+                return False
+            if te.source_zone == 'trash':
+                return card in owner.trash_cards
+            elif te.source_zone == 'hand':
+                return card in owner.hand_cards
+            return True
+
+        # Field effects: verify permanent is still on field
         perm = te.permanent
-        if perm.top_card is None:
+        if perm is None or perm.top_card is None:
             return False
         owner = te.owner
         if hasattr(owner, 'battle_area') and perm not in owner.battle_area:

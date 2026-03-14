@@ -406,50 +406,35 @@ class CoTrainer:
         with open(deck_json_path, "w", encoding="utf-8") as f:
             json.dump(deck, f)
 
-        # TODO: pilot_training.py does not yet accept --deck-json.
-        # When that flag is added, uncomment the subprocess call below and
-        # remove the early return.
-        logger.warning(
-            "Cycle %d pilot training: pilot_training.py does not yet support "
-            "--deck-json. Skipping pilot retraining. Add --deck-json to "
-            "pilot_training.py to enable full co-training.",
-            cycle,
-        )
-        return None
+        save_dir = str(pilot_dir)
+        cmd = [
+            sys.executable, "-m", "digimon_gym.agents.pilot_training",
+            "--timesteps", str(timesteps),
+            "--deck-json", str(deck_json_path),
+            "--save-dir", save_dir,
+            "--opponent", "greedy",
+            "--eval-freq", str(max(timesteps // 10, 1000)),
+            "--eval-episodes", "20",
+        ]
 
-        # --- Subprocess invocation (activate when --deck-json is supported) ---
-        # save_dir = str(pilot_dir)
-        # cmd = [
-        #     sys.executable, "-m", "digimon_gym.agents.pilot_training",
-        #     "--timesteps", str(timesteps),
-        #     "--deck-json", str(deck_json_path),
-        #     "--save-dir", save_dir,
-        #     "--opponent", "greedy",
-        #     "--eval-freq", str(max(timesteps // 10, 1000)),
-        #     "--eval-episodes", "20",
-        # ]
-        # if seed is not None:
-        #     # pilot_training does not have --seed yet; add if needed
-        #     pass
-        #
-        # logger.info("Cycle %d pilot training: %s", cycle, " ".join(cmd))
-        #
-        # try:
-        #     subprocess.run(cmd, check=True, timeout=3600)
-        # except subprocess.CalledProcessError as exc:
-        #     logger.error("Pilot training failed (exit %d)", exc.returncode)
-        #     return None
-        # except subprocess.TimeoutExpired:
-        #     logger.error("Pilot training timed out (1h limit)")
-        #     return None
-        #
-        # # Find the latest .zip model in the save dir
-        # zips = sorted(Path(save_dir).glob("*.zip"), key=lambda p: p.stat().st_mtime)
-        # if not zips:
-        #     logger.error("No .zip model found after pilot training in %s", save_dir)
-        #     return None
-        #
-        # return str(zips[-1])
+        logger.info("Cycle %d pilot training: %s", cycle, " ".join(cmd))
+
+        try:
+            subprocess.run(cmd, check=True, timeout=3600)
+        except subprocess.CalledProcessError as exc:
+            logger.error("Pilot training failed (exit %d)", exc.returncode)
+            return None
+        except subprocess.TimeoutExpired:
+            logger.error("Pilot training timed out (1h limit)")
+            return None
+
+        # Find the latest .zip model in the save dir
+        zips = sorted(Path(save_dir).glob("*.zip"), key=lambda p: p.stat().st_mtime)
+        if not zips:
+            logger.error("No .zip model found after pilot training in %s", save_dir)
+            return None
+
+        return str(zips[-1])
 
     def _export_onnx(self, zip_path: str, onnx_path: str) -> Optional[str]:
         """Export an SB3 .zip model to ONNX format.

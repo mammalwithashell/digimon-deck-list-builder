@@ -87,6 +87,11 @@ class CombatMixin:
             self._resolve_battle()
             return
 
+        # DCGO: attacker validity check at every state transition
+        if pa.attacker not in self.turn_player.battle_area or not pa.attacker.is_digimon:
+            self._end_attack_early()
+            return
+
         has_counter = self._opponent_has_counter_options()
 
         if has_counter:
@@ -102,6 +107,11 @@ class CombatMixin:
         pa = self.pending_attack
         if pa is None or pa.is_end_attack:
             self._resolve_battle()
+            return
+
+        # DCGO: attacker validity check at every state transition
+        if pa.attacker not in self.turn_player.battle_area or not pa.attacker.is_digimon:
+            self._end_attack_early()
             return
 
         has_blockers = any(
@@ -132,8 +142,15 @@ class CombatMixin:
         return False
 
     def _execute_security_checks(self, attacker: Permanent, defender_player: Player) -> bool:
-        """Run security check loop for an attacker against a defending player."""
-        self.execute_effects(EffectTiming.OnSecurityCheck, {"attacker": attacker})
+        """Run security check loop for an attacker against a defending player.
+
+        DCGO order per check:
+        1. Break top security card (reveal + pop)
+        2. Activate the card's [Security] effects
+        3. Fire OnLoseSecurity + OnSecurityCheck (per-check, after security effects)
+        4. Battle security Digimon if applicable
+        5. Trash card, clear per-check effects
+        """
         sa_mod = attacker.security_attack_modifier()
         num_checks = max(0, 1 + sa_mod)
         for _ in range(num_checks):
@@ -142,11 +159,45 @@ class CombatMixin:
             if attacker not in self.turn_player.battle_area:
                 return False
             result = defender_player.security_attack(attacker)
+            # Fire OnSecurityCheck per check, AFTER security effects (DCGO deferred timing)
+            self.execute_effects(EffectTiming.OnSecurityCheck, {"attacker": attacker})
             if result == AttackResolution.AttackerDeleted:
                 self.turn_player.delete_permanent(attacker, is_battle=True)
                 return False
             elif result == AttackResolution.GameEnd:
                 self.declare_winner(self.turn_player)
+                return False
+        return True
+
+    def _end_attack_early(self):
+        """End an attack early when attacker/target becomes invalid mid-attack."""
+        pa = self.pending_attack
+        if pa is None:
+            return
+        attacker = pa.attacker
+        return_phase = pa.return_phase or GamePhase.Main
+        self.active_player = None
+        self.pending_attack = None
+        self.current_phase = return_phase
+
+        # Still fire OnEndAttack if attacker exists (DCGO skips if attacker TopCard is null)
+        if attacker.top_card is not None:
+            self.execute_effects(EffectTiming.OnEndAttack)
+
+        attacker.clear_attack_state()
+        self.modifiers.clear_expiry('end_of_attack')
+
+    @staticmethod
+    def _can_be_destroyed_by_battle(perm: Permanent) -> bool:
+        """Check if a permanent can be destroyed by battle resolution.
+
+        DCGO: CanBeDestroyedByBattle() checks CanBeDestroyed() first, then scans
+        for ICanNotBeDestroyedByBattleEffect. Jamming is one such effect but only
+        applies vs security Digimon (handled in security_attack), not field battles.
+        Other effects (e.g. "can't be destroyed by battle") are checked via modifiers.
+        """
+        if perm._owner_game and hasattr(perm._owner_game, 'modifiers'):
+            if not perm._owner_game.modifiers.can_be_destroyed(perm, is_battle=True):
                 return False
         return True
 
@@ -165,68 +216,98 @@ class CombatMixin:
         self.pending_attack = None
         self.current_phase = return_phase
 
+        # DCGO: final attacker validity check before battle
+        if attacker not in self.turn_player.battle_area or not attacker.is_digimon:
+            # Attacker gone — skip battle, still clean up attack state
+            if attacker.top_card is not None:
+                self.execute_effects(EffectTiming.OnEndAttack)
+            attacker.clear_attack_state()
+            self.modifiers.clear_expiry('end_of_attack')
+            return
+
         if isinstance(target, Player):
             self._execute_security_checks(attacker, target)
         elif isinstance(target, Permanent):
-            self.execute_effects(EffectTiming.OnStartBattle, {"attacker": attacker, "defender": target})
-
-            # <Iceclad>: compare digivolution card count instead of DP
-            if attacker.has_keyword('_is_iceclad') or target.has_keyword('_is_iceclad'):
-                a_val = len(attacker.card_sources) - 1  # exclude top card
-                t_val = len(target.card_sources) - 1
+            # DCGO: if defender was removed mid-attack, skip battle (no security check either)
+            if target not in self.opponent_player.battle_area:
+                self.logger.log("[Battle] Defender removed mid-attack — skipping battle")
+            elif not target.is_digimon:
+                self.logger.log("[Battle] Defender is no longer a Digimon — skipping battle")
             else:
-                a_val = attacker.dp or 0
-                t_val = target.dp or 0
+                self.execute_effects(EffectTiming.OnStartBattle, {"attacker": attacker, "defender": target})
 
-            a_dp = attacker.dp or 0  # kept for event emission
-            t_dp = target.dp or 0
-            attacker_wins = a_val > t_val
-            defender_wins = a_val < t_val
-            tie = a_val == t_val
+                # <Iceclad>: compare digivolution card count instead of DP
+                if attacker.has_keyword('_is_iceclad') or target.has_keyword('_is_iceclad'):
+                    a_val = len(attacker.card_sources) - 1  # exclude top card
+                    t_val = len(target.card_sources) - 1
+                else:
+                    a_val = attacker.dp or 0
+                    t_val = target.dp or 0
 
-            if attacker_wins:
-                result_str = 'attacker_wins'
-            elif defender_wins:
-                result_str = 'defender_wins'
-            else:
-                result_str = 'tie'
-            self._emit(
-                'battle_result',
-                source_card_id=self._card_id(attacker.top_card),
-                target_card_id=self._card_id(target.top_card),
-                attacker_dp=a_dp,
-                defender_dp=t_dp,
-                result=result_str,
-            )
+                a_dp = attacker.dp or 0  # kept for event emission
+                t_dp = target.dp or 0
+                attacker_wins = a_val > t_val
+                defender_wins = a_val < t_val
+                tie = a_val == t_val
 
-            if attacker_wins:
-                # <Retaliation>: when this Digimon is deleted in battle, delete the winner
-                has_retaliation = target.has_keyword('_is_retaliation')
-                was_deleted = self.opponent_player.delete_permanent(target, is_battle=True)
-                if has_retaliation and was_deleted:
-                    self.logger.log(f"[Retaliation] {self._perm_ref(target)} retaliates!")
-                    self._emit('keyword_trigger', source_card_id=self._card_id(target.top_card),
-                               keyword='Retaliation', card_name=self._card_name(target.top_card))
-                    self.turn_player.delete_permanent(attacker, is_battle=True, is_opponent_effect=True)
-                # <Piercing>: after winning battle vs Digimon, check security
-                elif was_deleted and attacker.has_keyword('_is_piercing') and attacker in self.turn_player.battle_area:
-                    self.logger.log(f"[Piercing] {self._perm_ref(attacker)} pierces through!")
-                    self._emit('keyword_trigger', source_card_id=self._card_id(attacker.top_card),
-                               keyword='Piercing', card_name=self._card_name(attacker.top_card))
-                    self._execute_security_checks(attacker, self.opponent_player)
-            elif defender_wins:
-                has_retaliation = attacker.has_keyword('_is_retaliation')
-                was_deleted = self.turn_player.delete_permanent(attacker, is_battle=True)
-                if has_retaliation and was_deleted:
-                    self.logger.log(f"[Retaliation] {self._perm_ref(attacker)} retaliates!")
-                    self._emit('keyword_trigger', source_card_id=self._card_id(attacker.top_card),
-                               keyword='Retaliation', card_name=self._card_name(attacker.top_card))
-                    self.opponent_player.delete_permanent(target, is_battle=True, is_opponent_effect=True)
-            else:
-                # Tie: both deleted
-                self.opponent_player.delete_permanent(target, is_battle=True)
-                self.turn_player.delete_permanent(attacker, is_battle=True)
-            self.execute_effects(EffectTiming.OnEndBattle, {"attacker": attacker, "defender": target})
+                if attacker_wins:
+                    result_str = 'attacker_wins'
+                elif defender_wins:
+                    result_str = 'defender_wins'
+                else:
+                    result_str = 'tie'
+                self._emit(
+                    'battle_result',
+                    source_card_id=self._card_id(attacker.top_card),
+                    target_card_id=self._card_id(target.top_card),
+                    attacker_dp=a_dp,
+                    defender_dp=t_dp,
+                    result=result_str,
+                )
+
+                if attacker_wins:
+                    # <Retaliation>: when this Digimon is deleted in battle, delete the winner
+                    has_retaliation = target.has_keyword('_is_retaliation')
+                    # DCGO: check CanBeDestroyedByBattle before adding to losers
+                    if self._can_be_destroyed_by_battle(target):
+                        was_deleted = self.opponent_player.delete_permanent(target, is_battle=True)
+                    else:
+                        was_deleted = False
+                        self.logger.log(f"[Battle] {self._perm_ref(target)} survives — can't be destroyed by battle")
+                    if has_retaliation and was_deleted:
+                        self.logger.log(f"[Retaliation] {self._perm_ref(target)} retaliates!")
+                        self._emit('keyword_trigger', source_card_id=self._card_id(target.top_card),
+                                   keyword='Retaliation', card_name=self._card_name(target.top_card))
+                        self.turn_player.delete_permanent(attacker, is_battle=True, is_opponent_effect=True)
+                    # <Piercing>: after winning battle vs Digimon, check security
+                    elif was_deleted and attacker.has_keyword('_is_piercing') and attacker in self.turn_player.battle_area:
+                        self.logger.log(f"[Piercing] {self._perm_ref(attacker)} pierces through!")
+                        self._emit('keyword_trigger', source_card_id=self._card_id(attacker.top_card),
+                                   keyword='Piercing', card_name=self._card_name(attacker.top_card))
+                        self._execute_security_checks(attacker, self.opponent_player)
+                elif defender_wins:
+                    has_retaliation = attacker.has_keyword('_is_retaliation')
+                    if self._can_be_destroyed_by_battle(attacker):
+                        was_deleted = self.turn_player.delete_permanent(attacker, is_battle=True)
+                    else:
+                        was_deleted = False
+                        self.logger.log(f"[Battle] {self._perm_ref(attacker)} survives — can't be destroyed by battle")
+                    if has_retaliation and was_deleted:
+                        self.logger.log(f"[Retaliation] {self._perm_ref(attacker)} retaliates!")
+                        self._emit('keyword_trigger', source_card_id=self._card_id(attacker.top_card),
+                                   keyword='Retaliation', card_name=self._card_name(attacker.top_card))
+                        self.opponent_player.delete_permanent(target, is_battle=True, is_opponent_effect=True)
+                else:
+                    # Tie: both are winners AND losers (DCGO). Check CanBeDestroyedByBattle independently.
+                    if self._can_be_destroyed_by_battle(target):
+                        self.opponent_player.delete_permanent(target, is_battle=True)
+                    else:
+                        self.logger.log(f"[Battle] {self._perm_ref(target)} survives tie — can't be destroyed by battle")
+                    if self._can_be_destroyed_by_battle(attacker):
+                        self.turn_player.delete_permanent(attacker, is_battle=True)
+                    else:
+                        self.logger.log(f"[Battle] {self._perm_ref(attacker)} survives tie — can't be destroyed by battle")
+                self.execute_effects(EffectTiming.OnEndBattle, {"attacker": attacker, "defender": target})
 
         # DCGO order: OnEndAttack fires FIRST, then clear "until end of attack" state.
         # This lets OnEndAttack effects still see end-of-attack modifiers.

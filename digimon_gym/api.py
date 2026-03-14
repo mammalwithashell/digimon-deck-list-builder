@@ -30,6 +30,7 @@ from digimon_gym.routers import recordings
 from digimon_gym.routers import replays
 from digimon_gym.routers import simulations
 from digimon_gym.routers import ws_games
+from digimon_gym.routers import deck_optimizer
 
 
 @asynccontextmanager
@@ -79,6 +80,7 @@ app.include_router(replays.router)
 app.include_router(deck_tools.router)
 app.include_router(lobby.router)
 app.include_router(ws_games.router)
+app.include_router(deck_optimizer.router)
 
 # Debug endpoints (only in debug mode)
 if os.getenv("DEBUG_MODE") == "1":

@@ -240,10 +240,11 @@ def create_desktop_app(models_dir: str = "./models") -> FastAPI:
     app.include_router(router)
 
     # Engine-only routers — no DB deps, safe for sidecar
-    from digimon_gym.routers import deck_tools, simulations, replays
+    from digimon_gym.routers import deck_tools, simulations, replays, deck_optimizer
     app.include_router(deck_tools.router)
     app.include_router(simulations.router)
     app.include_router(replays.router)
+    app.include_router(deck_optimizer.router)
 
     return app
 
