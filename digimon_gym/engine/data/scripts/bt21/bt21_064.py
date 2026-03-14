@@ -60,9 +60,14 @@ class BT21_064(CardScript):
             if not (player and game):
                 return
             def hand_filter(c):
-                if not (any('Guilmon' in _n or 'Growlmon' in _n or 'Gallantmon' in _n or 'Megidramon' in _n for _n in getattr(c, 'card_names', []))):
-                    return False
-                return True
+                # Card with Guilmon/Growlmon/Gallantmon/Megidramon in name OR Hero trait
+                names = getattr(c, 'card_names', [])
+                if any('Guilmon' in _n or 'Growlmon' in _n or 'Gallantmon' in _n or 'Megidramon' in _n for _n in names):
+                    return True
+                traits = getattr(c, 'card_traits', []) or []
+                if any('Hero' in t for t in traits):
+                    return True
+                return False
             def on_trashed(selected):
                 if selected in player.hand_cards:
                     player.hand_cards.remove(selected)

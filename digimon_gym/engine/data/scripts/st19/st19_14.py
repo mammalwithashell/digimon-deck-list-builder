@@ -74,14 +74,10 @@ class ST19_14(CardScript):
             if tamer_perm and tamer_perm.is_suspended:
                 return False
             # The played permanent must be ours and played by an effect
-            played_perm = context.get('played_permanent')
+            played_perm = context.get('played_permanent') or context.get('event_permanent')
             if played_perm is None:
                 return False
-            if played_perm.owner is not owner:
-                return False
-            # Must be played by an effect (not a normal play action)
-            is_by_effect = context.get('by_effect', False)
-            if not is_by_effect:
+            if played_perm not in owner.battle_area:
                 return False
             # Must be a Token or a Digimon with Puppet trait
             if played_perm.is_token:
@@ -105,7 +101,7 @@ class ST19_14(CardScript):
             # Pay cost: suspend this Tamer
             tamer_perm.suspend()
             # Grant Rush to the played permanent
-            played_perm = ctx.get('played_permanent')
+            played_perm = ctx.get('played_permanent') or ctx.get('event_permanent')
             if played_perm:
                 played_perm.grant_keyword('_is_rush')
 

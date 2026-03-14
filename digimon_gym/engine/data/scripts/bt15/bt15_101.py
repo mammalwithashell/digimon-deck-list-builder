@@ -37,6 +37,78 @@ class BT15_101(CardScript):
         effect0.set_can_use_condition(condition0)
         effects.append(effect0)
 
+        # --- Effect 0b: [Hand] Matt Ishida warp digivolve from Gabumon for 4 ---
+        effect0b = ICardEffect()
+        effect0b.set_timing(EffectTiming.OnDeclaration)
+        effect0b._is_hand_main = True
+        effect0b.set_effect_name("BT15-101 Warp digivolve from Gabumon for 4")
+        effect0b.set_effect_description(
+            "If you have a Tamer with [Matt Ishida] in its name and your "
+            "opponent has a 10000 DP or higher Digimon, one of your [Gabumon] "
+            "may digivolve into this card for a digivolution cost of 4, "
+            "ignoring its digivolution requirements."
+        )
+
+        def condition0b(context: Dict[str, Any]) -> bool:
+            # Card must be in hand
+            if not card or card.permanent_of_this_card() is not None:
+                return False
+            player = card.owner
+            if not player or not player.is_my_turn:
+                return False
+            # Must have a Tamer with Matt Ishida in name
+            has_matt = any(
+                p.is_tamer and p.contains_card_name('Matt Ishida')
+                for p in player.battle_area
+            )
+            if not has_matt:
+                return False
+            # Opponent must have a Digimon with 10000+ DP
+            enemy = player.enemy
+            if not enemy:
+                return False
+            has_high_dp = any(
+                p.is_digimon and p.dp is not None and p.dp >= 10000
+                for p in enemy.battle_area
+            )
+            if not has_high_dp:
+                return False
+            # Must have Gabumon on field
+            has_gabumon = any(
+                p.is_digimon and p.contains_card_name('Gabumon')
+                for p in player.battle_area
+            )
+            return has_gabumon
+
+        effect0b.set_can_use_condition(condition0b)
+
+        def process0b(ctx: Dict[str, Any]):
+            """Select a Gabumon and digivolve into this card for cost 4."""
+            player = ctx.get('player')
+            game = ctx.get('game')
+            if not (player and game):
+                return
+
+            def gabumon_filter(p):
+                return p.is_digimon and p.contains_card_name('Gabumon')
+
+            def hand_filter(c):
+                return c is card
+
+            def on_select_gabumon(target_perm):
+                game.effect_digivolve_from_hand(
+                    player, target_perm, hand_filter,
+                    cost_override=4, ignore_requirements=True,
+                    is_optional=True)
+
+            game.effect_select_own_permanent(
+                player, on_select_gabumon,
+                filter_fn=gabumon_filter,
+                is_optional=True)
+
+        effect0b.set_on_process_callback(process0b)
+        effects.append(effect0b)
+
         # --- Effect 1: Evade ---
         effect1 = ICardEffect()
         effect1.set_effect_name("BT15-101 Evade")
@@ -95,7 +167,7 @@ class BT15_101(CardScript):
 
                 def on_select(target_perm):
                     game.register_modifier(
-                        ModifierType.CANNOT_SUSPEND, target_perm,
+                        target_perm, ModifierType.CANNOT_SUSPEND,
                         value_fn=lambda: True, expiry='end_of_opponent_turn')
 
                 game.effect_select_opponent_permanent(

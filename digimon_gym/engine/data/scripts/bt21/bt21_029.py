@@ -72,9 +72,11 @@ class BT21_029(CardScript):
             min_dp = min((getattr(p.top_card, 'dp', 0) or 0) for p in opponents if p.top_card)
             lowest = [p for p in opponents if p.top_card and (getattr(p.top_card, 'dp', 0) or 0) == min_dp]
             if lowest:
+                def on_delete(selected, _enemy=enemy):
+                    _enemy.delete_permanent(selected)
                 game.effect_select_opponent_permanent(
                     player,
-                    lambda selected: game.delete_permanent(selected),
+                    on_delete,
                     lambda p: p in lowest,
                     is_optional=True)
 
@@ -115,9 +117,11 @@ class BT21_029(CardScript):
             min_dp = min((getattr(p.top_card, 'dp', 0) or 0) for p in opponents if p.top_card)
             lowest = [p for p in opponents if p.top_card and (getattr(p.top_card, 'dp', 0) or 0) == min_dp]
             if lowest:
+                def on_delete(selected, _enemy=enemy):
+                    _enemy.delete_permanent(selected)
                 game.effect_select_opponent_permanent(
                     player,
-                    lambda selected: game.delete_permanent(selected),
+                    on_delete,
                     lambda p: p in lowest,
                     is_optional=True)
 

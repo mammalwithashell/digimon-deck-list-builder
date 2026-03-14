@@ -75,7 +75,8 @@ class BT24_064(CardScript):
                 return
 
             def reveal_filter(c):
-                if getattr(c, 'get_cost_itself', 0) > 7:
+                cost = c.get_cost_itself if hasattr(c, 'get_cost_itself') else 0
+                if cost > 7:
                     return False
                 traits = getattr(c, 'card_traits', []) or []
                 return any('DigiPolice' in t or 'SEEKERS' in t for t in traits)
@@ -83,13 +84,12 @@ class BT24_064(CardScript):
             def on_revealed(selected, remaining):
                 # Play the selected card without paying the cost
                 played_perm = player.play_card_from_source(selected, pay_cost=False)
-                game.logger.log(f"[Effect] {player.player_name} played {getattr(selected, 'card_name_eng', '?')} from revealed cards")
-                game.execute_effects(
-                    EffectTiming.OnEnterFieldAnyone,
-                    {"played_card": selected, "played_permanent": played_perm, "event_player": player},
-                )
-                if selected.is_option:
-                    game._trash_option_after_resolution(player, played_perm)
+                if played_perm:
+                    game.execute_effects(
+                        EffectTiming.OnEnterFieldAnyone,
+                        {"played_card": selected, "played_permanent": played_perm,
+                         "event_player": player},
+                    )
                 # Return remaining to bottom of deck
                 for c in remaining:
                     player.library_cards.append(c)

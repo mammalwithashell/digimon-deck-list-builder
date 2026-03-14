@@ -9,12 +9,20 @@ if TYPE_CHECKING:
 
 
 class BT15_038(CardScript):
-    """BT15-038 Angewomon | Lv.5"""
+    """BT15-038 Angewomon | Lv.5
+
+    [Hand] [Counter] <Blast Digivolve>
+    [On Play] [When Digivolving] By trashing the top or bottom card of your
+        security stack, 1 of your opponent's Digimon gets -6000 DP until the
+        end of their turn.
+    [All Turns] [Once Per Turn] When a card is removed from your security
+        stack, if you have 3 or fewer security cards, Recovery +1 (Deck).
+    Inherited: Ace Overflow <-3>
+    """
 
     def get_card_effects(self, card: 'CardSource') -> List['ICardEffect']:
         effects = []
 
-        # Factory effect: blast_digivolve
         # Blast Digivolve
         effect0 = ICardEffect()
         effect0.set_effect_name("BT15-038 Blast Digivolve")
@@ -27,102 +35,115 @@ class BT15_038(CardScript):
         effect0.set_can_use_condition(condition0)
         effects.append(effect0)
 
-        # Timing: EffectTiming.OnEnterFieldAnyone
-        # [On Play] By trashing the top or bottom card of your security stack, 1 of your opponent's Digimon gets -6000 DP until the end of your opponent's turn.
-        effect1 = ICardEffect()
-        effect1.set_timing(EffectTiming.OnEnterFieldAnyone)
-        effect1.set_effect_name("BT15-038 Trash the top card of your security so that opponent's 1 Digimon gains DP -6000")
-        effect1.set_effect_description("[On Play] By trashing the top or bottom card of your security stack, 1 of your opponent's Digimon gets -6000 DP until the end of your opponent's turn.")
-        effect1.is_optional = True
-        effect1.is_on_play = True
-        effect1.dp_modifier = -6000
+        # [On Play] [When Digivolving] By trashing top/bottom security,
+        # opponent Digimon gets -6000 DP until end of their turn
+        def _build_dp_effect(is_on_play=False, is_when_digivolving=False):
+            effect = ICardEffect()
+            effect.set_timing(EffectTiming.OnEnterFieldAnyone)
+            effect.is_on_play = is_on_play
+            effect.is_when_digivolving = is_when_digivolving
+            effect.is_optional = True
+            effect.set_effect_name("BT15-038 Trash security, opponent -6000 DP")
+            effect.set_effect_description(
+                "By trashing the top or bottom card of your security stack, "
+                "1 of your opponent's Digimon gets -6000 DP until the end of their turn."
+            )
 
-        effect = effect1  # alias for condition closure
-        def condition1(context: Dict[str, Any]) -> bool:
-            if card and card.permanent_of_this_card() is None:
-                return False
-            # Triggered on play — validated by engine timing
-            return True
+            def condition(context: Dict[str, Any]) -> bool:
+                if card and card.permanent_of_this_card() is None:
+                    return False
+                player = card.owner if card else None
+                if not player or not player.security_cards:
+                    return False
+                return True
+            effect.set_can_use_condition(condition)
 
-        effect1.set_can_use_condition(condition1)
+            def process(ctx: Dict[str, Any]):
+                player = ctx.get('player')
+                game = ctx.get('game')
+                if not (player and game):
+                    return
+                if not player.security_cards:
+                    return
 
-        def process1(ctx: Dict[str, Any]):
-            """Action: DP -6000"""
-            player = ctx.get('player')
-            perm = ctx.get('permanent')
-            game = ctx.get('game')
-            # DP change targets opponent digimon
-            enemy = player.enemy if player else None
-            if enemy and enemy.battle_area:
-                dp_targets = [p for p in enemy.battle_area if p.is_digimon and p.dp is not None]
-                if dp_targets:
-                    target = min(dp_targets, key=lambda p: p.dp)
-                    target.change_dp(-6000)
+                from ....interfaces.modifiers import ModifierType
 
-        effect1.set_on_process_callback(process1)
-        effects.append(effect1)
+                def on_choice(choice):
+                    if not player.security_cards:
+                        return
+                    if choice == 0:
+                        trashed = player.security_cards.pop(0)
+                    else:
+                        trashed = player.security_cards.pop(-1)
+                    player.trash_cards.append(trashed)
 
-        # Timing: EffectTiming.OnEnterFieldAnyone
-        # [On Play] By trashing the top or bottom card of your security stack, 1 of your opponent's Digimon gets -6000 DP until the end of your opponent's turn.
-        effect2 = ICardEffect()
-        effect2.set_timing(EffectTiming.OnEnterFieldAnyone)
-        effect2.set_effect_name("BT15-038 Trash the top card of your security so that opponent's 1 Digimon gains DP -6000")
-        effect2.set_effect_description("[On Play] By trashing the top or bottom card of your security stack, 1 of your opponent's Digimon gets -6000 DP until the end of your opponent's turn.")
-        effect2.is_optional = True
-        effect2.is_when_digivolving = True
-        effect2.dp_modifier = -6000
+                    # Give 1 opponent Digimon -6000 DP
+                    def target_filter(p):
+                        return p.is_digimon
 
-        effect = effect2  # alias for condition closure
-        def condition2(context: Dict[str, Any]) -> bool:
-            if card and card.permanent_of_this_card() is None:
-                return False
-            # Triggered when digivolving — validated by engine timing
-            return True
+                    def on_target(target_perm):
+                        game.register_modifier(
+                            target_perm, ModifierType.CHANGE_DP,
+                            value_fn=lambda: -6000,
+                            expiry='end_of_opponent_turn',
+                        )
 
-        effect2.set_can_use_condition(condition2)
+                    enemy = player.enemy
+                    if enemy and any(p.is_digimon for p in enemy.battle_area):
+                        game.effect_select_opponent_permanent(
+                            player, on_target, filter_fn=target_filter, is_optional=False)
 
-        def process2(ctx: Dict[str, Any]):
-            """Action: DP -6000"""
-            player = ctx.get('player')
-            perm = ctx.get('permanent')
-            game = ctx.get('game')
-            # DP change targets opponent digimon
-            enemy = player.enemy if player else None
-            if enemy and enemy.battle_area:
-                dp_targets = [p for p in enemy.battle_area if p.is_digimon and p.dp is not None]
-                if dp_targets:
-                    target = min(dp_targets, key=lambda p: p.dp)
-                    target.change_dp(-6000)
+                game.effect_choose_branch(
+                    player, 2, on_choice,
+                    branch_labels=["Trash top security", "Trash bottom security"])
 
-        effect2.set_on_process_callback(process2)
-        effects.append(effect2)
+            effect.set_on_process_callback(process)
+            return effect
 
-        # Timing: EffectTiming.OnLoseSecurity
-        # [All Turns][Once Per Turn] When a card is removed from your security stack, if you have 3 or fewer security cards, trigger <Recovery +1 (Deck)>. (Place the top card of your deck on top of your security stack.)
+        effects.append(_build_dp_effect(is_on_play=True))
+        effects.append(_build_dp_effect(is_when_digivolving=True))
+
+        # [All Turns] [Once Per Turn] When a card is removed from your security,
+        # if you have 3 or fewer security cards, Recovery +1
         effect3 = ICardEffect()
         effect3.set_timing(EffectTiming.OnLoseSecurity)
-        effect3.set_effect_name("BT15-038 Recovery +1 (Deck)")
-        effect3.set_effect_description("[All Turns][Once Per Turn] When a card is removed from your security stack, if you have 3 or fewer security cards, trigger <Recovery +1 (Deck)>. (Place the top card of your deck on top of your security stack.)")
+        effect3.set_effect_name("BT15-038 Recovery +1 when 3 or fewer security")
+        effect3.set_effect_description(
+            "[All Turns] [Once Per Turn] When a card is removed from your "
+            "security stack, if you have 3 or fewer security cards, Recovery +1 (Deck)."
+        )
         effect3.set_max_count_per_turn(1)
         effect3.set_hash_string("Recovery1_BT15_038")
 
-        effect = effect3  # alias for condition closure
         def condition3(context: Dict[str, Any]) -> bool:
             if card and card.permanent_of_this_card() is None:
                 return False
+            player = card.owner if card else None
+            if not player:
+                return False
+            if len(player.security_cards) > 3:
+                return False
             return True
-
         effect3.set_can_use_condition(condition3)
 
         def process3(ctx: Dict[str, Any]):
-            """Action: Recovery +1"""
             player = ctx.get('player')
-            perm = ctx.get('permanent')
-            game = ctx.get('game')
             if player:
                 player.recovery(1)
 
         effect3.set_on_process_callback(process3)
         effects.append(effect3)
+
+        # Ace Overflow <-3>
+        effect4 = ICardEffect()
+        effect4.set_effect_name("BT15-038 Ace Overflow -3")
+        effect4.set_effect_description("Ace Overflow <-3>")
+        effect4.is_inherited_effect = True
+        effect4._ace_overflow = -3
+
+        def condition4(context: Dict[str, Any]) -> bool:
+            return True
+        effect4.set_can_use_condition(condition4)
+        effects.append(effect4)
 
         return effects

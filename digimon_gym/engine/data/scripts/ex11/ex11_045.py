@@ -166,7 +166,7 @@ class EX11_045(CardScript):
         effect5.set_can_use_condition(condition5)
 
         def process5(ctx: Dict[str, Any]):
-            """Action: Digivolve"""
+            """Action: 1 of your OTHER Digimon may digivolve into a green card with [Maquinamon] in text."""
             player = ctx.get('player')
             perm = ctx.get('permanent')
             game = ctx.get('game')
@@ -175,9 +175,23 @@ class EX11_045(CardScript):
             def digi_filter(c):
                 if not ('Green' in [col.name for col in getattr(c, 'card_colors', [])]):
                     return False
+                text = getattr(c, 'card_text', '') or ''
+                if 'Maquinamon' not in text:
+                    return False
                 return True
-            game.effect_digivolve_from_hand(
-                player, perm, digi_filter, is_optional=True)
+            # Must target OTHER Digimon, not this one
+            def other_digimon_filter(p):
+                return p.is_digimon and p is not perm
+            def on_target_selected(target_perm):
+                if target_perm is None:
+                    return
+                game.effect_digivolve_from_hand(
+                    player, target_perm, digi_filter, is_optional=True,
+                    cost_override=0)
+            game.effect_select_own_permanent(
+                player, on_target_selected, filter_fn=other_digimon_filter,
+                is_optional=True,
+                prompt="Select 1 of your other Digimon to digivolve into a green [Maquinamon] card.")
 
         effect5.set_on_process_callback(process5)
         effects.append(effect5)

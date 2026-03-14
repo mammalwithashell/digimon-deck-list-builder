@@ -64,27 +64,42 @@ class BT13_101(CardScript):
         def condition1(context: Dict[str, Any]) -> bool:
             if card and card.permanent_of_this_card() is None:
                 return False
+            # Tamer must not already be suspended (suspend is cost)
+            tamer_perm = card.permanent_of_this_card()
+            if tamer_perm and tamer_perm.is_suspended:
+                return False
+            # The played card must be a 2-color black+yellow Digimon
+            played_card = context.get('played_card')
+            if not played_card:
+                return False
+            if not getattr(played_card, 'is_digimon', False):
+                return False
+            colors = [c.name for c in (getattr(played_card, 'card_colors', []) or [])]
+            if not ('Black' in colors and 'Yellow' in colors):
+                return False
+            # Must be our Digimon (played by same player)
+            event_player = context.get('event_player')
+            owner = card.owner if card else None
+            if event_player and owner and event_player is not owner:
+                return False
             return True
 
         effect1.set_can_use_condition(condition1)
 
         def process1(ctx: Dict[str, Any]):
-            """Action: Draw 1, Gain 1 memory, Suspend"""
+            """Action: Suspend this Tamer, then Draw 1 and Gain 1 memory."""
             player = ctx.get('player')
-            perm = ctx.get('permanent')
             game = ctx.get('game')
-            if player:
-                player.draw_cards(1)
-            if player:
-                player.add_memory(1)
             if not (player and game):
                 return
-            def target_filter(p):
-                return True
-            def on_suspend(target_perm):
-                target_perm.suspend()
-            game.effect_select_opponent_permanent(
-                player, on_suspend, filter_fn=target_filter, is_optional=True)
+            # Cost: suspend this Tamer
+            tamer_perm = card.permanent_of_this_card() if card else None
+            if not tamer_perm:
+                return
+            tamer_perm.suspend()
+            # Effect: Draw 1 and gain 1 memory
+            player.draw_cards(1)
+            player.add_memory(1)
 
         effect1.set_on_process_callback(process1)
         effects.append(effect1)

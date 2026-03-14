@@ -64,6 +64,9 @@ class BT13_078(CardScript):
         def condition1(context: Dict[str, Any]) -> bool:
             if card and card.permanent_of_this_card() is None:
                 return False
+            # End of Opponent's Turn: only activate when it's NOT our turn
+            if card and card.owner and card.owner.is_my_turn:
+                return False
             return True
 
         effect1.set_can_use_condition(condition1)

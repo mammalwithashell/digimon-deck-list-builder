@@ -60,15 +60,15 @@ class BT24_082(CardScript):
         effect0.set_on_process_callback(process0)
         effects.append(effect0)
 
-        # Timing: EffectTiming.WhenDigivolving (observer — watches other permanents digivolve)
-        # [Your Turn] When any of your Digimon digivolve into a [Reptile] or [Dragonkin] trait Digimon, by suspending this Tamer, that Digimon gets +3000 DP for the turn. Then, it may attack.
+        # [Your Turn] When any of your Digimon digivolve into a [Reptile] or [Dragonkin] trait Digimon,
+        # by suspending this Tamer, that Digimon gets +3000 DP for the turn. Then, it may attack.
+        # Uses _is_digivolve_observer pattern so the engine fires this via _fire_digivolve_observers.
         effect1 = ICardEffect()
-        effect1.set_timing(EffectTiming.WhenDigivolving)
         effect1.set_effect_name("BT24-082 +3k and may attack")
         effect1.set_effect_description("[Your Turn] When any of your Digimon digivolve into a [Reptile] or [Dragonkin] trait Digimon, by suspending this Tamer, that Digimon gets +3000 DP for the turn. Then, it may attack.")
         effect1.is_optional = True
+        effect1._is_digivolve_observer = True
 
-        effect = effect1  # alias for condition closure
         def condition1(context: Dict[str, Any]) -> bool:
             if card and card.permanent_of_this_card() is None:
                 return False
@@ -108,11 +108,9 @@ class BT24_082(CardScript):
             digivolved = ctx.get('digivolved_permanent')
             if digivolved:
                 digivolved.change_dp(3000)
-                # "Then, that Digimon may attack"
-                from digimon_gym.engine.interfaces.modifiers import ModifierType
-                game.register_modifier(
-                    digivolved, ModifierType.FORCE_ATTACK,
-                    value_fn=lambda: True, expiry='end_of_turn')
+                # "Then, that Digimon may attack" — unsuspend so it can attack this turn
+                if digivolved.is_suspended:
+                    digivolved.unsuspend()
 
         effect1.set_on_process_callback(process1)
         effects.append(effect1)

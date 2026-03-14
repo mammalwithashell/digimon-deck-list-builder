@@ -98,25 +98,52 @@ class P_114(CardScript):
         def condition3(context: Dict[str, Any]) -> bool:
             if card and card.permanent_of_this_card() is None:
                 return False
+            # Triggers when another Digimon is played (by an effect)
+            trigger_perm = context.get('played_permanent') or context.get('event_permanent')
+            own_perm = card.permanent_of_this_card() if card else None
+            if trigger_perm is None or trigger_perm is own_perm:
+                return False
+            if not (trigger_perm.is_digimon):
+                return False
             return True
 
         effect3.set_can_use_condition(condition3)
 
         def process3(ctx: Dict[str, Any]):
-            """Action: Delete"""
+            """Delete opponent Digimon with play cost <= 3 + 2 per Diaboromon."""
             player = ctx.get('player')
-            perm = ctx.get('permanent')
             game = ctx.get('game')
             if not (player and game):
                 return
+            enemy = player.enemy
+            if not enemy:
+                return
+            # Calculate max play cost: 3 + 2 per Diaboromon
+            diaboromon_count = sum(
+                1 for p in player.battle_area
+                if p.is_digimon and p.contains_card_name('Diaboromon')
+            )
+            max_cost = 3 + (diaboromon_count * 2)
+
             def target_filter(p):
-                return p.is_digimon
+                if not p.is_digimon:
+                    return False
+                top = p.top_card
+                if top is None:
+                    return False
+                return (top.get_cost_itself or 0) <= max_cost
+
             def on_delete(target_perm):
-                enemy = player.enemy if player else None
-                if enemy:
-                    enemy.delete_permanent(target_perm)
-            game.effect_select_opponent_permanent(
-                player, on_delete, filter_fn=target_filter, is_optional=True)
+                enemy.delete_permanent(target_perm)
+
+            has_target = any(target_filter(p) for p in enemy.battle_area)
+            if has_target:
+                game.effect_select_opponent_permanent(
+                    player, on_delete, filter_fn=target_filter, is_optional=True)
+            else:
+                game.logger.log(
+                    f"[P-114] No opponent Digimon with play cost <= {max_cost} to delete."
+                )
 
         effect3.set_on_process_callback(process3)
         effects.append(effect3)

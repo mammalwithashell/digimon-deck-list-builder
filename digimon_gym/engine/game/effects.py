@@ -313,6 +313,7 @@ class EffectHelpersMixin:
                         cost = self.calculate_play_cost(
                             player, card, source_zone=src_name,
                             free=False, manual_reduction=manual_reduction,
+                            commit=True,
                         )
                         player.lose_memory(cost)
                         if hasattr(player, "_temp_play_cost_reduction"):
@@ -366,6 +367,7 @@ class EffectHelpersMixin:
                     cost = self.calculate_play_cost(
                         player, card, source_zone=zone,
                         free=False, manual_reduction=manual_reduction,
+                        commit=True,
                     )
                     player.lose_memory(cost)
                     if hasattr(player, "_temp_play_cost_reduction"):

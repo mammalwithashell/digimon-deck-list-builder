@@ -41,6 +41,7 @@ class BT22_013(CardScript):
         # --- Effect 1: [Hand][Main] Nokia warp digivolve Agumon into this for 6 ---
         effect1 = ICardEffect()
         effect1.set_timing(EffectTiming.OnDeclaration)
+        effect1._is_hand_main = True
         effect1.set_effect_name("BT22-013 Digivolve for a cost of 6")
         effect1.set_effect_description(
             "[Hand][Main] If you have [Nokia Shiramine], 1 of your [Agumon] "
@@ -57,16 +58,14 @@ class BT22_013(CardScript):
                 return False
             # Must have Nokia Shiramine on field
             has_nokia = any(
-                p.is_tamer and p.top_card and
-                any('Nokia Shiramine' == n for n in (p.top_card.card_names or []))
+                p.is_tamer and p.contains_card_name('Nokia Shiramine')
                 for p in player.battle_area
             )
             if not has_nokia:
                 return False
             # Must have Agumon on field
             has_agumon = any(
-                p.is_digimon and p.top_card and
-                any('Agumon' == n for n in (p.top_card.card_names or []))
+                p.is_digimon and p.contains_card_name('Agumon')
                 for p in player.battle_area
             )
             return has_agumon
@@ -81,8 +80,7 @@ class BT22_013(CardScript):
                 return
 
             def agumon_filter(p):
-                return (p.is_digimon and p.top_card and
-                        any('Agumon' == n for n in (p.top_card.card_names or [])))
+                return p.is_digimon and p.contains_card_name('Agumon')
 
             def hand_filter(c):
                 return c is card
@@ -132,13 +130,12 @@ class BT22_013(CardScript):
                 if choice == 0:
                     # Digivolve 1 of your [Gabumon] into [MetalGarurumon]
                     def gabumon_filter(p):
-                        return (p.is_digimon and p.top_card and
-                                any('Gabumon' == n for n in (p.top_card.card_names or [])))
+                        return p.is_digimon and p.contains_card_name('Gabumon')
 
                     def mg_hand_filter(c):
                         if not getattr(c, 'is_digimon', False):
                             return False
-                        return any('MetalGarurumon' == n for n in (getattr(c, 'card_names', []) or []))
+                        return c.contains_card_name('MetalGarurumon')
 
                     def on_select_gabumon(target_perm):
                         game.effect_digivolve_from_hand(

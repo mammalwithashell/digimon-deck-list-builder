@@ -9,17 +9,25 @@ if TYPE_CHECKING:
 
 
 class EX6_054(CardScript):
-    """EX6-054 Lucemon: Chaos Mode | Lv.5"""
+    """EX6-054 Lucemon: Chaos Mode | Lv.5
+
+    [On Play] [When Digivolving] Your opponent may delete 1 of their Digimon
+        or Tamers. If this effect didn't delete, trash the top card of your
+        opponent's security stack and Recovery +1 (Deck).
+    [All Turns] When this Digimon would leave the battle area, by returning
+        1 [Lucemon] from this Digimon's digivolution cards or from your trash
+        to the bottom of the deck, you may play 1 [Lucemon: Satan Mode] or
+        level 6 Digimon card with the [Seven Great Demon Lords] trait from
+        your trash without paying the cost.
+    """
 
     def get_card_effects(self, card: 'CardSource') -> List['ICardEffect']:
         effects = []
 
-        # Factory effect: alt_digivolve_req
-        # Alternate digivolution requirement
+        # Alt digi from Lucemon for cost 6
         effect0 = ICardEffect()
         effect0.set_effect_name("EX6-054 Alternate digivolution requirement")
         effect0.set_effect_description("Alternate digivolution requirement")
-        # Alternate digivolution: alternate source for cost 6
         effect0._alt_digi_cost = 6
         effect0._alt_digi_name = "Lucemon"
 
@@ -28,117 +36,132 @@ class EX6_054(CardScript):
         effect0.set_can_use_condition(condition0)
         effects.append(effect0)
 
-        # Timing: EffectTiming.OnEnterFieldAnyone
-        # [On Play] Your opponent may delete 1 of their Digimon or Tamers. If this effect didn't delete, trash the top card of your opponents security stack and <Recovery +1>.
-        effect1 = ICardEffect()
-        effect1.set_timing(EffectTiming.OnEnterFieldAnyone)
-        effect1.set_effect_name("EX6-054 Opponent deletes 1 Digimon or Tamer/Trash and Recover")
-        effect1.set_effect_description("[On Play] Your opponent may delete 1 of their Digimon or Tamers. If this effect didn't delete, trash the top card of your opponents security stack and <Recovery +1>.")
-        effect1.is_on_play = True
+        # [On Play] [When Digivolving] opponent may delete or trash security + recovery
+        def _build_main_effect(is_on_play=False, is_when_digivolving=False):
+            effect = ICardEffect()
+            effect.set_timing(EffectTiming.OnEnterFieldAnyone)
+            effect.is_on_play = is_on_play
+            effect.is_when_digivolving = is_when_digivolving
+            effect.set_effect_name("EX6-054 Opponent delete or trash security + recovery")
+            effect.set_effect_description(
+                "Your opponent may delete 1 of their Digimon or Tamers. If this "
+                "effect didn't delete, trash the top card of your opponent's "
+                "security stack and Recovery +1 (Deck)."
+            )
 
-        effect = effect1  # alias for condition closure
-        def condition1(context: Dict[str, Any]) -> bool:
-            if card and card.permanent_of_this_card() is None:
-                return False
-            # Triggered on play — validated by engine timing
-            return True
+            def condition(context: Dict[str, Any]) -> bool:
+                if card and card.permanent_of_this_card() is None:
+                    return False
+                return True
+            effect.set_can_use_condition(condition)
 
-        effect1.set_can_use_condition(condition1)
+            def process(ctx: Dict[str, Any]):
+                player = ctx.get('player')
+                game = ctx.get('game')
+                if not (player and game):
+                    return
+                enemy = player.enemy
+                if not enemy:
+                    return
 
-        def process1(ctx: Dict[str, Any]):
-            """Action: Recovery +1, Destroy Security"""
-            player = ctx.get('player')
-            perm = ctx.get('permanent')
-            game = ctx.get('game')
-            if player:
-                player.recovery(1)
-            # Trash opponent's top security card(s)
-            enemy = player.enemy if player else None
-            if enemy:
-                for _ in range(1):
+                # Opponent may delete 1 of their Digimon or Tamers
+                opp_targets = [p for p in enemy.battle_area if p.is_digimon or p.is_tamer]
+                if opp_targets:
+                    # Simplified: opponent auto-deletes
+                    target = opp_targets[0]
+                    if target in enemy.battle_area:
+                        enemy.delete_permanent(target)
+                else:
+                    # Didn't delete -> trash opponent security + recovery
                     if enemy.security_cards:
                         trashed = enemy.security_cards.pop(0)
                         enemy.trash_cards.append(trashed)
+                    player.recovery(1)
 
-        effect1.set_on_process_callback(process1)
-        effects.append(effect1)
+            effect.set_on_process_callback(process)
+            return effect
 
-        # Timing: EffectTiming.OnEnterFieldAnyone
-        # [When Digivolving] Your opponent may delete 1 of their Digimon or Tamers. If this effect didn't delete, trash the top card of your opponents security stack and <Recovery +1>.
-        effect2 = ICardEffect()
-        effect2.set_timing(EffectTiming.OnEnterFieldAnyone)
-        effect2.set_effect_name("EX6-054 Opponent deletes 1 Digimon or Tamer/Trash and Recover")
-        effect2.set_effect_description("[When Digivolving] Your opponent may delete 1 of their Digimon or Tamers. If this effect didn't delete, trash the top card of your opponents security stack and <Recovery +1>.")
-        effect2.is_when_digivolving = True
+        effects.append(_build_main_effect(is_on_play=True))
+        effects.append(_build_main_effect(is_when_digivolving=True))
 
-        effect = effect2  # alias for condition closure
-        def condition2(context: Dict[str, Any]) -> bool:
-            if card and card.permanent_of_this_card() is None:
-                return False
-            # Triggered when digivolving — validated by engine timing
-            return True
-
-        effect2.set_can_use_condition(condition2)
-
-        def process2(ctx: Dict[str, Any]):
-            """Action: Recovery +1, Destroy Security"""
-            player = ctx.get('player')
-            perm = ctx.get('permanent')
-            game = ctx.get('game')
-            if player:
-                player.recovery(1)
-            # Trash opponent's top security card(s)
-            enemy = player.enemy if player else None
-            if enemy:
-                for _ in range(1):
-                    if enemy.security_cards:
-                        trashed = enemy.security_cards.pop(0)
-                        enemy.trash_cards.append(trashed)
-
-        effect2.set_on_process_callback(process2)
-        effects.append(effect2)
-
-        # Timing: EffectTiming.WhenRemoveField
-        # [All Turns] When this Digimon would leave the battle area; by returning 1 [Lucemon] from this Digimon's digivolution cards or from your trash to the bottom of the deck, you may play 1 [Lucemon: Satan Mode] or 1 level 6 Digimon card with the [Seven Great Demon Lords] trait from your trash without paying the cost.
+        # [All Turns] When would leave, return 1 [Lucemon] to deck bottom,
+        # play Satan Mode or Lv6 Seven Great Demon Lords from trash
         effect3 = ICardEffect()
         effect3.set_timing(EffectTiming.WhenRemoveField)
-        effect3.set_effect_name("EX6-054 Play 1 [Lucemon: Satan Mode] or level 6 with [Seven Great Demon Lords] trait")
-        effect3.set_effect_description("[All Turns] When this Digimon would leave the battle area; by returning 1 [Lucemon] from this Digimon's digivolution cards or from your trash to the bottom of the deck, you may play 1 [Lucemon: Satan Mode] or 1 level 6 Digimon card with the [Seven Great Demon Lords] trait from your trash without paying the cost.")
+        effect3.set_effect_name("EX6-054 Leave: return Lucemon, play from trash")
+        effect3.set_effect_description(
+            "[All Turns] When this Digimon would leave the battle area, by "
+            "returning 1 [Lucemon] from this Digimon's digivolution cards or "
+            "from your trash to the bottom of the deck, you may play 1 "
+            "[Lucemon: Satan Mode] or level 6 Digimon card with the "
+            "[Seven Great Demon Lords] trait from your trash without paying the cost."
+        )
         effect3.is_optional = True
 
-        effect = effect3  # alias for condition closure
         def condition3(context: Dict[str, Any]) -> bool:
             if card and card.permanent_of_this_card() is None:
                 return False
-            return True
-
+            player = card.owner if card else None
+            if not player:
+                return False
+            perm = card.permanent_of_this_card()
+            # Check if Lucemon exists in digi cards or trash
+            has_lucemon_source = False
+            if perm:
+                has_lucemon_source = any(
+                    any(n == 'Lucemon' for n in (getattr(cs, 'card_names', []) or []))
+                    for cs in perm.card_sources[:-1]
+                )
+            if not has_lucemon_source:
+                has_lucemon_source = any(
+                    any(n == 'Lucemon' for n in (getattr(c, 'card_names', []) or []))
+                    for c in player.trash_cards
+                )
+            return has_lucemon_source
         effect3.set_can_use_condition(condition3)
 
         def process3(ctx: Dict[str, Any]):
-            """Action: Play Card, Return To Deck"""
             player = ctx.get('player')
             perm = ctx.get('permanent')
             game = ctx.get('game')
-            if not (player and game):
+            if not (player and game and perm):
                 return
+
+            # Cost: return 1 [Lucemon] from digi cards or trash to deck bottom
+            returned = False
+            for cs in list(perm.card_sources[:-1]):
+                names = getattr(cs, 'card_names', []) or []
+                if any(n == 'Lucemon' for n in names):
+                    perm.card_sources.remove(cs)
+                    player.library_cards.append(cs)
+                    returned = True
+                    break
+            if not returned:
+                for c in list(player.trash_cards):
+                    names = getattr(c, 'card_names', []) or []
+                    if any(n == 'Lucemon' for n in names):
+                        player.trash_cards.remove(c)
+                        player.library_cards.append(c)
+                        returned = True
+                        break
+            if not returned:
+                return
+
+            # Play 1 [Lucemon: Satan Mode] or Lv6 with Seven Great Demon Lords
             def play_filter(c):
-                if not (any('Seven Great Demon Lords' in _t or 'SevenGreatDemonLords' in _t for _t in (getattr(c, 'card_traits', []) or []))):
+                if not getattr(c, 'is_digimon', False):
                     return False
-                return True
+                names = getattr(c, 'card_names', []) or []
+                if any('Lucemon: Satan Mode' in n or 'Lucemon Satan Mode' in n for n in names):
+                    return True
+                if getattr(c, 'level', None) == 6:
+                    traits = getattr(c, 'card_traits', []) or []
+                    if any('Seven Great Demon Lords' in t for t in traits):
+                        return True
+                return False
+
             game.effect_play_from_zone(
                 player, 'trash', play_filter, free=True, is_optional=True)
-            if not (player and game):
-                return
-            def target_filter(p):
-                if not (any('Seven Great Demon Lords' in t for t in (getattr(p.top_card, 'card_traits', []) or [])) or any('SevenGreatDemonLords' in t for t in (getattr(p.top_card, 'card_traits', []) or []))):
-                    return False
-                return True
-            def on_return(target_perm):
-                enemy = player.enemy if player else None
-                if enemy:
-                    enemy.return_permanent_to_deck_bottom(target_perm)
-            game.effect_select_opponent_permanent(
-                player, on_return, filter_fn=target_filter, is_optional=True)
 
         effect3.set_on_process_callback(process3)
         effects.append(effect3)

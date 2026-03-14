@@ -131,15 +131,22 @@ class EX5_061(CardScript):
             game = ctx.get('game')
             if not (player and game):
                 return
+            perm = card.permanent_of_this_card() if card else None
+            if not perm:
+                return
 
             def target_filter(p):
-                return True
+                return p.is_digimon and p is not perm
 
-            def on_unsuspend(target_perm):
-                target_perm.unsuspend()
+            def on_delete_other(target_perm):
+                if target_perm in player.battle_area:
+                    player.delete_permanent(target_perm)
+                cur_perm = card.permanent_of_this_card() if card else None
+                if cur_perm:
+                    cur_perm.unsuspend()
 
             game.effect_select_own_permanent(
-                player, on_unsuspend, filter_fn=target_filter, is_optional=True)
+                player, on_delete_other, filter_fn=target_filter, is_optional=True)
 
         effect3.set_on_process_callback(process3)
         effects.append(effect3)

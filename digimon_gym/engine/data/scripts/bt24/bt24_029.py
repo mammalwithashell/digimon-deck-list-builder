@@ -77,14 +77,14 @@ class BT24_029(CardScript):
                     return
                 if selected in player.hand_cards:
                     player.hand_cards.remove(selected)
-                    perm.card_sources.insert(0, selected)
+                    perm.add_card_source_bottom(selected)
                 # Only freeze opponent perm if card was successfully placed (matches C# guard)
                 if selected not in perm.card_sources:
                     return
                 def on_target(target):
                     from digimon_gym.engine.interfaces.modifiers import ModifierType
                     game.register_modifier(
-                        ModifierType.CANNOT_SUSPEND, target,
+                        target, ModifierType.CANNOT_SUSPEND,
                         value_fn=lambda: True, expiry='end_of_opponent_turn')
                 game.effect_select_opponent_permanent(
                     player, on_target,
@@ -146,14 +146,14 @@ class BT24_029(CardScript):
                     return
                 if selected in player.hand_cards:
                     player.hand_cards.remove(selected)
-                    perm.card_sources.insert(0, selected)
+                    perm.add_card_source_bottom(selected)
                 # Only freeze opponent perm if card was successfully placed
                 if selected not in perm.card_sources:
                     return
                 def on_target(target):
                     from digimon_gym.engine.interfaces.modifiers import ModifierType
                     game.register_modifier(
-                        ModifierType.CANNOT_SUSPEND, target,
+                        target, ModifierType.CANNOT_SUSPEND,
                         value_fn=lambda: True, expiry='end_of_opponent_turn')
                 game.effect_select_opponent_permanent(
                     player, on_target,

@@ -58,12 +58,16 @@ class EX6_022(CardScript):
                 )
 
                 if has_mirei:
+                    from ....interfaces.modifiers import ModifierType
                     def target_filter(p):
                         return p.is_digimon
 
                     def on_target(target_perm):
-                        # Approximated as a temporary modifier on the permanent.
-                        target_perm._temp_sa_modifier -= 2
+                        game.register_modifier(
+                            target_perm, ModifierType.CHANGE_SECURITY_ATTACK,
+                            value_fn=lambda: -2,
+                            expiry='end_of_opponent_turn',
+                        )
 
                     game.effect_select_opponent_permanent(
                         player, on_target, filter_fn=target_filter, is_optional=False)
@@ -93,7 +97,18 @@ class EX6_022(CardScript):
         def condition3(context: Dict[str, Any]) -> bool:
             if card and card.permanent_of_this_card() is None:
                 return False
-            return True
+            perm = card.permanent_of_this_card()
+            if not perm:
+                return False
+            # Only active if this Digimon has [Angel] or [Three Great Angels] trait
+            all_traits = []
+            for cs in perm.card_sources:
+                all_traits.extend(getattr(cs, 'card_traits', []) or [])
+            has_required_trait = any(
+                'Angel' in t or 'Three Great Angels' in t
+                for t in all_traits
+            )
+            return has_required_trait
 
         effect3.set_can_use_condition(condition3)
         effects.append(effect3)

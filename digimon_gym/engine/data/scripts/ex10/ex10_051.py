@@ -9,93 +9,118 @@ if TYPE_CHECKING:
 
 
 class EX10_051(CardScript):
-    """EX10-051 Mummymon | Lv.5"""
+    """EX10-051 Mummymon | Lv.5
+
+    [On Play] By trashing 1 card in your hand, De-Digivolve 1 one of your
+        opponent's Digimon.
+    [On Deletion] You may play 1 Tamer card with [Myotismon] in its text
+        from your trash without paying the cost. This effect can't play
+        cards with the same name as any of your Tamers.
+    """
 
     def get_card_effects(self, card: 'CardSource') -> List['ICardEffect']:
         effects = []
 
-        # Timing: EffectTiming.OnEnterFieldAnyone
-        # [On Play] By trashing 1 card in your hand, <De-Digivolve 1> 1 of your opponent's Digimon.
+        # [On Play] By trashing 1 hand card, De-Digivolve 1 opponent Digimon
         effect0 = ICardEffect()
         effect0.set_timing(EffectTiming.OnEnterFieldAnyone)
-        effect0.set_effect_name("EX10-051 Trash 1 card from hand to De-Digivolve-1 1 of your opponent's Digimon")
-        effect0.set_effect_description("[On Play] By trashing 1 card in your hand, <De-Digivolve 1> 1 of your opponent's Digimon.")
+        effect0.set_effect_name("EX10-051 On Play: trash hand, De-Digivolve 1")
+        effect0.set_effect_description(
+            "[On Play] By trashing 1 card in your hand, De-Digivolve 1 one of "
+            "your opponent's Digimon."
+        )
         effect0.is_optional = True
         effect0.is_on_play = True
 
-        effect = effect0  # alias for condition closure
         def condition0(context: Dict[str, Any]) -> bool:
             if card and card.permanent_of_this_card() is None:
                 return False
-            # Triggered on play — validated by engine timing
+            player = card.owner if card else None
+            if not player or not player.hand_cards:
+                return False
             return True
-
         effect0.set_can_use_condition(condition0)
 
         def process0(ctx: Dict[str, Any]):
-            """Action: Trash From Hand, De Digivolve"""
             player = ctx.get('player')
-            perm = ctx.get('permanent')
             game = ctx.get('game')
             if not (player and game):
                 return
+
             def hand_filter(c):
                 return True
+
             def on_trashed(selected):
                 if selected in player.hand_cards:
                     player.hand_cards.remove(selected)
                     player.trash_cards.append(selected)
-            game.effect_select_hand_card(
-                player, hand_filter, on_trashed, is_optional=True)
-            if not (player and game):
-                return
-            def on_de_digivolve(target_perm):
-                removed = target_perm.de_digivolve(1)
-                enemy = player.enemy if player else None
-                if enemy:
-                    enemy.trash_cards.extend(removed)
-            game.effect_select_opponent_permanent(
-                player, on_de_digivolve, filter_fn=lambda p: p.is_digimon, is_optional=True)
+
+                # De-Digivolve 1 opponent Digimon
+                def on_de_digivolve(target_perm):
+                    removed = target_perm.de_digivolve(1)
+                    enemy = player.enemy
+                    if enemy:
+                        enemy.trash_cards.extend(removed)
+
+                enemy = player.enemy
+                if enemy and any(p.is_digimon for p in enemy.battle_area):
+                    game.effect_select_opponent_permanent(
+                        player, on_de_digivolve,
+                        filter_fn=lambda p: p.is_digimon,
+                        is_optional=False)
+
+            if player.hand_cards:
+                game.effect_select_hand_card(
+                    player, hand_filter, on_trashed, is_optional=False)
 
         effect0.set_on_process_callback(process0)
         effects.append(effect0)
 
-        # Timing: EffectTiming.OnDestroyedAnyone
-        # [On Deletion] You may play 1 Tamer card with [Myotismon] in its text from your trash without paying the cost. This effect can't play cards with the same name as any of your Tamers.
+        # [On Deletion] Play 1 Tamer with [Myotismon] in text from trash
+        # (can't play same name as existing Tamers)
         effect1 = ICardEffect()
         effect1.set_timing(EffectTiming.OnDestroyedAnyone)
-        effect1.set_effect_name("EX10-051 Play 1 tamer with [Myotismon] in it's text from your trash.")
-        effect1.set_effect_description("[On Deletion] You may play 1 Tamer card with [Myotismon] in its text from your trash without paying the cost. This effect can't play cards with the same name as any of your Tamers.")
+        effect1.set_effect_name("EX10-051 On Deletion: play Myotismon-text Tamer from trash")
+        effect1.set_effect_description(
+            "[On Deletion] You may play 1 Tamer card with [Myotismon] in its "
+            "text from your trash without paying the cost. This effect can't "
+            "play cards with the same name as any of your Tamers."
+        )
         effect1.is_optional = True
         effect1.is_on_deletion = True
 
-        effect = effect1  # alias for condition closure
         def condition1(context: Dict[str, Any]) -> bool:
-            # Triggered on deletion — validated by engine timing
-            permanent = effect.effect_source_permanent if hasattr(effect, 'effect_source_permanent') else None
-            if permanent and permanent.top_card:
-                text = permanent.top_card.card_text
-                if not ('Myotismon' in text):
-                    return False
-            else:
-                return False
             return True
-
         effect1.set_can_use_condition(condition1)
 
         def process1(ctx: Dict[str, Any]):
-            """Action: Play Card"""
             player = ctx.get('player')
-            perm = ctx.get('permanent')
             game = ctx.get('game')
             if not (player and game):
                 return
+
+            # Get names of existing Tamers
+            existing_tamer_names = set()
+            for p in player.battle_area:
+                if p.is_tamer and p.top_card:
+                    for n in (getattr(p.top_card, 'card_names', []) or []):
+                        existing_tamer_names.add(n)
+
             def play_filter(c):
                 if not getattr(c, 'is_tamer', False):
                     return False
+                # Must have [Myotismon] in text
+                text = getattr(c, 'card_text', '') or ''
+                if 'Myotismon' not in text:
+                    return False
+                # Can't play same name as existing Tamers
+                names = getattr(c, 'card_names', []) or []
+                if any(n in existing_tamer_names for n in names):
+                    return False
                 return True
+
             game.effect_play_from_zone(
-                player, 'hand', play_filter, free=True, is_optional=True)
+                player, 'trash', play_filter, free=True, is_optional=True)
 
         effect1.set_on_process_callback(process1)
         effects.append(effect1)

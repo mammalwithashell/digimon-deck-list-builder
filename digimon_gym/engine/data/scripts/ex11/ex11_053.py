@@ -95,7 +95,7 @@ class EX11_053(CardScript):
                         king_drasil = player.breeding_area
                 if king_drasil and selected_card:
                     player.hand_cards.remove(selected_card)
-                    king_drasil.add_card_source(selected_card)
+                    king_drasil.add_card_source_bottom(selected_card)
                     # Reward: draw 1
                     player.draw_cards(1)
             game.effect_select_hand_card(

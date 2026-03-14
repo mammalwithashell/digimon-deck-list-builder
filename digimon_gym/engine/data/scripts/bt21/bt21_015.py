@@ -51,7 +51,7 @@ class BT21_015(CardScript):
             if not (player and game):
                 return
             def target_filter(p):
-                return p.is_digimon
+                return p.is_digimon and (p.dp or 0) <= 4000
             def on_delete(target_perm):
                 enemy = player.enemy if player else None
                 if enemy:
@@ -87,7 +87,7 @@ class BT21_015(CardScript):
             if not (player and game):
                 return
             def target_filter(p):
-                return p.is_digimon
+                return p.is_digimon and (p.dp or 0) <= 4000
             def on_delete(target_perm):
                 enemy = player.enemy if player else None
                 if enemy:

@@ -99,45 +99,6 @@ class EX11_061(CardScript):
         effect1.set_on_process_callback(process1)
         effects.append(effect1)
 
-        # Timing: EffectTiming.OnEnterFieldAnyone
-        # Delete, Effect Immunity
-        effect2 = ICardEffect()
-        effect2.set_timing(EffectTiming.OnEnterFieldAnyone)
-        effect2.set_effect_name("EX11-061 Delete this Digimon")
-        effect2.set_effect_description("Delete, Effect Immunity")
-        effect2.is_on_play = True
-
-        effect = effect2  # alias for condition closure
-        def condition2(context: Dict[str, Any]) -> bool:
-            return True
-
-        effect2.set_can_use_condition(condition2)
-
-        def process2(ctx: Dict[str, Any]):
-            """Action: Delete, Effect Immunity"""
-            player = ctx.get('player')
-            perm = ctx.get('permanent')
-            game = ctx.get('game')
-            if not (player and game):
-                return
-            def target_filter(p):
-                return p.is_digimon
-            def on_delete(target_perm):
-                enemy = player.enemy if player else None
-                if enemy:
-                    enemy.delete_permanent(target_perm)
-            game.effect_select_opponent_permanent(
-                player, on_delete, filter_fn=target_filter, is_optional=False)
-            # Grant effect immunity via modifier system
-            if perm and game:
-                from digimon_gym.engine.interfaces.modifiers import ModifierType
-                game.register_modifier(
-                    ModifierType.CANNOT_BE_SELECTED_BY_EFFECT, perm,
-                    value_fn=lambda: True, expiry='end_of_turn')
-
-        effect2.set_on_process_callback(process2)
-        effects.append(effect2)
-
         # Factory effect: security_play
         # Security: Play this card
         effect3 = ICardEffect()

@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....interfaces.modifiers import ModifierType
 from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
@@ -9,17 +10,24 @@ if TYPE_CHECKING:
 
 
 class EX10_023(CardScript):
-    """EX10-023 Quartzmon | Lv.7"""
+    """EX10-023 Quartzmon | Lv.7 (Green, Cost 9)
+
+    [Hand] [Counter] <Blast Digivolve>
+    [On Play] [When Digivolving] Suspend all other Digimon and Tamers.
+    [When Digivolving] [When Attacking] [Once Per Turn] Delete 1 of your
+        opponent's suspended Digimon.
+    [All Turns] Other than this Digimon, no Digimon or Tamers can unsuspend
+        in the unsuspend phase.
+    Inherited: Ace Overflow <-5>
+    """
 
     def get_card_effects(self, card: 'CardSource') -> List['ICardEffect']:
         effects = []
 
-        # Factory effect: alt_digivolve_req
-        # Alternate digivolution requirement
+        # --- Alt digivolve from Ryoma Mogami or Astamon ---
         effect0 = ICardEffect()
         effect0.set_effect_name("EX10-023 Alternate digivolution requirement")
         effect0.set_effect_description("Alternate digivolution requirement")
-        # Alternate digivolution: from [Ryoma Mogami] for cost 7
         effect0._alt_digi_cost = 7
         effect0._alt_digi_name = "Ryoma Mogami"
 
@@ -31,8 +39,7 @@ class EX10_023(CardScript):
         effect0.set_can_use_condition(condition0)
         effects.append(effect0)
 
-        # Factory effect: blast_digivolve
-        # Blast Digivolve
+        # --- Blast Digivolve ---
         effect1 = ICardEffect()
         effect1.set_effect_name("EX10-023 Blast Digivolve")
         effect1.set_effect_description("Blast Digivolve")
@@ -44,114 +51,140 @@ class EX10_023(CardScript):
         effect1.set_can_use_condition(condition1)
         effects.append(effect1)
 
-        # Timing: EffectTiming.OnEnterFieldAnyone
-        # Effect
+        # --- Shared suspend logic ---
+        def _suspend_all_others(player, game):
+            own_perm = card.permanent_of_this_card() if card else None
+            if not own_perm:
+                return
+            for pl in [game.player1, game.player2]:
+                for p in pl.battle_area:
+                    if p is own_perm:
+                        continue
+                    if (p.is_digimon or p.is_tamer) and not p.is_suspended:
+                        p.suspend()
+            # Register CANNOT_UNSUSPEND aura for all other Digimon/Tamers
+            game.register_modifier(
+                own_perm,
+                ModifierType.CANNOT_UNSUSPEND,
+                condition=lambda target, ctx: (
+                    target is not own_perm
+                    and (target.is_digimon or target.is_tamer)
+                ),
+                expiry='permanent',
+            )
+
+        # --- [On Play] Suspend all other Digimon and Tamers ---
         effect2 = ICardEffect()
         effect2.set_timing(EffectTiming.OnEnterFieldAnyone)
-        effect2.set_effect_name("EX10-023 Suspend all other Digimon")
-        effect2.set_effect_description("Effect")
+        effect2.set_effect_name("EX10-023 On Play: Suspend all others")
+        effect2.set_effect_description(
+            "[On Play] Suspend all other Digimon and Tamers."
+        )
         effect2.is_on_play = True
 
-        effect = effect2  # alias for condition closure
         def condition2(context: Dict[str, Any]) -> bool:
             if card and card.permanent_of_this_card() is None:
                 return False
-            # Triggered on play — validated by engine timing
             return True
-
         effect2.set_can_use_condition(condition2)
+
+        def process2(ctx: Dict[str, Any]):
+            player = ctx.get('player')
+            game = ctx.get('game')
+            if player and game:
+                _suspend_all_others(player, game)
+        effect2.set_on_process_callback(process2)
         effects.append(effect2)
 
-        # Timing: EffectTiming.OnEnterFieldAnyone
-        # Effect
+        # --- [When Digivolving] Suspend all other Digimon and Tamers ---
         effect3 = ICardEffect()
         effect3.set_timing(EffectTiming.OnEnterFieldAnyone)
-        effect3.set_effect_name("EX10-023 Suspend all other Digimon")
-        effect3.set_effect_description("Effect")
+        effect3.set_effect_name("EX10-023 When Digivolving: Suspend all others")
+        effect3.set_effect_description(
+            "[When Digivolving] Suspend all other Digimon and Tamers."
+        )
         effect3.is_when_digivolving = True
 
-        effect = effect3  # alias for condition closure
         def condition3(context: Dict[str, Any]) -> bool:
             if card and card.permanent_of_this_card() is None:
                 return False
-            # Triggered when digivolving — validated by engine timing
             return True
-
         effect3.set_can_use_condition(condition3)
+        effect3.set_on_process_callback(process2)  # same logic
         effects.append(effect3)
 
-        # Timing: EffectTiming.OnEnterFieldAnyone
-        # Delete
+        # --- [When Digivolving] [When Attacking] [OPT] Delete suspended opponent Digimon ---
         effect4 = ICardEffect()
         effect4.set_timing(EffectTiming.OnEnterFieldAnyone)
-        effect4.set_effect_name("EX10-023 Delete 1 Suspended Digimon")
-        effect4.set_effect_description("Delete")
-        effect4.set_hash_string("WD_EX10-023")
+        effect4.set_effect_name("EX10-023 Delete 1 suspended opponent Digimon")
+        effect4.set_effect_description(
+            "[When Digivolving] [Once Per Turn] Delete 1 of your opponent's "
+            "suspended Digimon."
+        )
+        effect4.set_max_count_per_turn(1)
+        effect4.set_hash_string("EX10_023_DeleteSuspended")
         effect4.is_when_digivolving = True
 
-        effect = effect4  # alias for condition closure
         def condition4(context: Dict[str, Any]) -> bool:
             if card and card.permanent_of_this_card() is None:
                 return False
-            # Triggered when digivolving — validated by engine timing
             return True
-
         effect4.set_can_use_condition(condition4)
 
         def process4(ctx: Dict[str, Any]):
-            """Action: Delete"""
             player = ctx.get('player')
-            perm = ctx.get('permanent')
             game = ctx.get('game')
             if not (player and game):
                 return
+            enemy = player.enemy
+            if not enemy:
+                return
+
             def target_filter(p):
-                return p.is_digimon
+                return p.is_digimon and p.is_suspended
+
             def on_delete(target_perm):
-                enemy = player.enemy if player else None
-                if enemy:
-                    enemy.delete_permanent(target_perm)
-            game.effect_select_opponent_permanent(
-                player, on_delete, filter_fn=target_filter, is_optional=False)
+                enemy.delete_permanent(target_perm)
+
+            has_target = any(target_filter(p) for p in enemy.battle_area)
+            if has_target:
+                game.effect_select_opponent_permanent(
+                    player, on_delete, filter_fn=target_filter, is_optional=False)
 
         effect4.set_on_process_callback(process4)
         effects.append(effect4)
 
-        # Timing: EffectTiming.OnUseAttack
-        # Delete
+        # --- [When Attacking] [OPT] Delete suspended opponent Digimon ---
         effect5 = ICardEffect()
         effect5.set_timing(EffectTiming.OnUseAttack)
-        effect5.set_effect_name("EX10-023 Delete 1 Suspended Digimon/Tamer")
-        effect5.set_effect_description("Delete")
-        effect5.set_hash_string("WD_EX10-023")
+        effect5.set_effect_name("EX10-023 When Attacking: Delete 1 suspended Digimon")
+        effect5.set_effect_description(
+            "[When Attacking] [Once Per Turn] Delete 1 of your opponent's "
+            "suspended Digimon."
+        )
+        effect5.set_max_count_per_turn(1)
+        effect5.set_hash_string("EX10_023_DeleteSuspended")
         effect5.is_on_attack = True
 
-        effect = effect5  # alias for condition closure
         def condition5(context: Dict[str, Any]) -> bool:
             if card and card.permanent_of_this_card() is None:
                 return False
-            # Triggered on attack — validated by engine timing
             return True
-
         effect5.set_can_use_condition(condition5)
-
-        def process5(ctx: Dict[str, Any]):
-            """Action: Delete"""
-            player = ctx.get('player')
-            perm = ctx.get('permanent')
-            game = ctx.get('game')
-            if not (player and game):
-                return
-            def target_filter(p):
-                return p.is_digimon
-            def on_delete(target_perm):
-                enemy = player.enemy if player else None
-                if enemy:
-                    enemy.delete_permanent(target_perm)
-            game.effect_select_opponent_permanent(
-                player, on_delete, filter_fn=target_filter, is_optional=False)
-
-        effect5.set_on_process_callback(process5)
+        effect5.set_on_process_callback(process4)  # same delete logic
         effects.append(effect5)
+
+        # --- Ace Overflow <-5> ---
+        effect6 = ICardEffect()
+        effect6.set_effect_name("EX10-023 Ace Overflow -5")
+        effect6.set_effect_description("Ace Overflow <-5>")
+        effect6.is_inherited_effect = True
+        effect6._is_ace_overflow = True
+        effect6._ace_overflow_value = -5
+
+        def condition6(context: Dict[str, Any]) -> bool:
+            return True
+        effect6.set_can_use_condition(condition6)
+        effects.append(effect6)
 
         return effects

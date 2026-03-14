@@ -57,6 +57,7 @@ class BT23_008(CardScript):
             "card as its bottom digivolution card, you may play 1 [Gabumon] "
             "or [Nokia Shiramine] from your hand with the play cost reduced by 2."
         )
+        effect2._is_field_main = True
         effect2.set_max_count_per_turn(1)
         effect2.set_hash_string("BT23_008_Main")
 

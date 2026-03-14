@@ -84,7 +84,7 @@ class EX7_074(CardScript):
             def on_revealed(selected, remaining):
                 player.hand_cards.append(selected)
                 for c in remaining:
-                    player.library_cards.insert(0, c)
+                    player.library_cards.append(c)  # bottom of deck
 
             game.effect_reveal_and_select(
                 player, 3, liberator_filter, on_revealed, is_optional=True)
@@ -156,16 +156,8 @@ class EX7_074(CardScript):
                     return False
                 return not getattr(c, 'is_digi_egg', False)
 
-            # Try from hand first, fall back to trash
-            hand_candidates = [c for c in player.hand_cards if play_filter(c)]
-            trash_candidates = [c for c in player.trash_cards if play_filter(c)]
-
-            if hand_candidates:
-                game.effect_play_from_zone(
-                    player, 'hand', play_filter, free=True, is_optional=True)
-            elif trash_candidates:
-                game.effect_play_from_zone(
-                    player, 'trash', play_filter, free=True, is_optional=True)
+            game.effect_play_from_zone(
+                player, 'hand_or_trash', play_filter, free=True, is_optional=True)
 
             # Then, add this card to hand
             if card:

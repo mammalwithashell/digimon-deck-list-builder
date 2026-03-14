@@ -118,30 +118,38 @@ class BT13_083(CardScript):
         effect3.set_can_use_condition(condition3)
 
         def process3(ctx: Dict[str, Any]):
-            """Action: Play Card, Return To Deck"""
+            """Action: Return 2 [Gizmon] from trash to deck bottom, then play [Gizmon: XT] from trash."""
             player = ctx.get('player')
             perm = ctx.get('permanent')
             game = ctx.get('game')
             if not (player and game):
                 return
-            def play_filter(c):
-                if not (any('Gizmon' in _n for _n in getattr(c, 'card_names', []))):
-                    return False
-                return True
-            game.effect_play_from_zone(
-                player, 'trash', play_filter, free=True, is_optional=True)
-            if not (player and game):
+
+            # Cost: Return 2 cards with [Gizmon] in name from trash to deck bottom
+            gizmon_in_trash = [c for c in player.trash_cards
+                              if c.contains_card_name('Gizmon')]
+            if len(gizmon_in_trash) < 2:
+                return  # Can't pay cost
+
+            returned = 0
+            for c in list(player.trash_cards):
+                if returned >= 2:
+                    break
+                if c.contains_card_name('Gizmon'):
+                    player.trash_cards.remove(c)
+                    player.library_cards.append(c)
+                    returned += 1
+
+            if returned < 2:
                 return
-            def target_filter(p):
-                if not (p.contains_card_name('Gizmon')):
-                    return False
-                return True
-            def on_return(target_perm):
-                enemy = player.enemy if player else None
-                if enemy:
-                    enemy.return_permanent_to_deck_bottom(target_perm)
-            game.effect_select_opponent_permanent(
-                player, on_return, filter_fn=target_filter, is_optional=True)
+
+            # Effect: Play 1 [Gizmon: XT] from trash without paying cost
+            def xt_filter(c):
+                return c.contains_card_name('Gizmon: XT')
+
+            game.effect_play_from_zone(
+                player, 'trash', xt_filter, free=True, is_optional=True,
+                prompt="Select [Gizmon: XT] from trash to play.")
 
         effect3.set_on_process_callback(process3)
         effects.append(effect3)

@@ -113,8 +113,7 @@ class BT24_088(CardScript):
 
             def on_trashed(selected):
                 if selected in player.hand_cards:
-                    player.hand_cards.remove(selected)
-                    player.trash_cards.append(selected)
+                    player.trash_from_hand([selected])
                     player.draw_cards(2)
 
             game.effect_select_hand_card(

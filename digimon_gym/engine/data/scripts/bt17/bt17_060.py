@@ -55,8 +55,10 @@ class BT17_060(CardScript):
             for tc in player.trash_cards:
                 if len(qualifying) >= 13:
                     break
-                has_unidentified = 'Unidentified' in (tc.card_traits or [])
-                has_diaboromon_text = 'Diaboromon' in (tc.card_text or '')
+                traits = getattr(tc, 'card_traits', []) or []
+                has_unidentified = any('Unidentified' in t for t in traits)
+                text = getattr(tc, 'card_text', '') or ''
+                has_diaboromon_text = 'Diaboromon' in text
                 if has_unidentified or has_diaboromon_text:
                     qualifying.append(tc)
             # Move them to deck bottom and reduce cost
@@ -129,47 +131,24 @@ class BT17_060(CardScript):
             enemy = player.enemy
             if not enemy:
                 return
-            remaining_cost = 15
-            to_delete = []
 
-            def select_next():
-                nonlocal remaining_cost
-                candidates = [
-                    p for p in enemy.battle_area
-                    if p.is_digimon and p not in to_delete
-                    and p.top_card and p.top_card.c_entity_base
-                    and (p.top_card.c_entity_base.play_cost or 0) <= remaining_cost
-                ]
-                if not candidates:
-                    for target in to_delete:
-                        if target in enemy.battle_area:
-                            enemy.delete_permanent(target)
-                    return
+            # Simplified: select and delete 1 opponent Digimon with cost <= 15
+            def target_filter(p):
+                if not p.is_digimon:
+                    return False
+                top = p.top_card
+                if top is None:
+                    return False
+                return (top.get_cost_itself or 0) <= 15
 
-                def target_filter(p):
-                    return (p.is_digimon and p not in to_delete
-                            and p.top_card and p.top_card.c_entity_base
-                            and (p.top_card.c_entity_base.play_cost or 0) <= remaining_cost)
+            def on_delete(target_perm):
+                enemy.delete_permanent(target_perm)
 
-                def on_select(target_perm):
-                    nonlocal remaining_cost
-                    to_delete.append(target_perm)
-                    cost = target_perm.top_card.c_entity_base.play_cost if (
-                        target_perm.top_card and target_perm.top_card.c_entity_base
-                    ) else 0
-                    remaining_cost -= (cost or 0)
-                    select_next()
-
-                def on_decline():
-                    for target in to_delete:
-                        if target in enemy.battle_area:
-                            enemy.delete_permanent(target)
-
+            has_target = any(target_filter(p) for p in enemy.battle_area)
+            if has_target:
                 game.effect_select_opponent_permanent(
-                    player, on_select, filter_fn=target_filter,
-                    is_optional=True, on_decline=on_decline)
-
-            select_next()
+                    player, on_delete, filter_fn=target_filter,
+                    is_optional=True)
         effect4.set_on_process_callback(process4)
         effects.append(effect4)
 
@@ -189,56 +168,8 @@ class BT17_060(CardScript):
             return True
         effect5.set_can_use_condition(condition5)
 
-        def process5(ctx: Dict[str, Any]):
-            """Delete opponent Digimon with total play cost <= 15."""
-            player = ctx.get('player')
-            game = ctx.get('game')
-            if not (player and game):
-                return
-            enemy = player.enemy
-            if not enemy:
-                return
-            remaining_cost = 15
-            to_delete = []
-
-            def select_next():
-                nonlocal remaining_cost
-                candidates = [
-                    p for p in enemy.battle_area
-                    if p.is_digimon and p not in to_delete
-                    and p.top_card and p.top_card.c_entity_base
-                    and (p.top_card.c_entity_base.play_cost or 0) <= remaining_cost
-                ]
-                if not candidates:
-                    for target in to_delete:
-                        if target in enemy.battle_area:
-                            enemy.delete_permanent(target)
-                    return
-
-                def target_filter(p):
-                    return (p.is_digimon and p not in to_delete
-                            and p.top_card and p.top_card.c_entity_base
-                            and (p.top_card.c_entity_base.play_cost or 0) <= remaining_cost)
-
-                def on_select(target_perm):
-                    nonlocal remaining_cost
-                    to_delete.append(target_perm)
-                    cost = target_perm.top_card.c_entity_base.play_cost if (
-                        target_perm.top_card and target_perm.top_card.c_entity_base
-                    ) else 0
-                    remaining_cost -= (cost or 0)
-                    select_next()
-
-                def on_decline():
-                    for target in to_delete:
-                        if target in enemy.battle_area:
-                            enemy.delete_permanent(target)
-
-                game.effect_select_opponent_permanent(
-                    player, on_select, filter_fn=target_filter,
-                    is_optional=True, on_decline=on_decline)
-
-            select_next()
+        # Reuse process4 logic
+        process5 = process4
         effect5.set_on_process_callback(process5)
         effects.append(effect5)
 

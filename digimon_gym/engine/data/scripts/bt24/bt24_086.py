@@ -67,11 +67,13 @@ class BT24_086(CardScript):
         effect2.set_can_use_condition(condition2)
 
         def process2(ctx: Dict[str, Any]):
-            """Action: Gain 1 memory"""
+            """Action: Gain 1 memory if opponent has a Digimon"""
             player = ctx.get('player')
-            perm = ctx.get('permanent')
             game = ctx.get('game')
-            if player:
+            if not player:
+                return
+            enemy = player.enemy
+            if enemy and any(p.is_digimon for p in enemy.battle_area):
                 player.add_memory(1)
 
         effect2.set_on_process_callback(process2)
@@ -118,7 +120,8 @@ class BT24_086(CardScript):
             if card and card.permanent_of_this_card() is None:
                 return False
             permanent = card.permanent_of_this_card() if card else None
-            if not (permanent and permanent.top_card and (any('DigiPolice' in tr for tr in (getattr(permanent.top_card, 'card_traits', []) or [])))):
+            traits = getattr(permanent.top_card, 'card_traits', []) or [] if permanent and permanent.top_card else []
+            if not any('X Antibody' in t or 'DigiPolice' in t or 'SEEKERS' in t for t in traits):
                 return False
             return True
         effect4.set_can_use_condition(condition4)
@@ -137,7 +140,8 @@ class BT24_086(CardScript):
             if card and card.permanent_of_this_card() is None:
                 return False
             permanent = card.permanent_of_this_card() if card else None
-            if not (permanent and permanent.top_card and (any('DigiPolice' in tr for tr in (getattr(permanent.top_card, 'card_traits', []) or [])))):
+            traits = getattr(permanent.top_card, 'card_traits', []) or [] if permanent and permanent.top_card else []
+            if not any('X Antibody' in t or 'DigiPolice' in t or 'SEEKERS' in t for t in traits):
                 return False
             return True
         effect5.set_can_use_condition(condition5)

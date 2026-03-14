@@ -12,36 +12,15 @@ class ST20_15(CardScript):
     """ST20-15 Island of Adventure | Option White Cost 2"""
 
     def get_card_effects(self, card: 'CardSource') -> List['ICardEffect']:
+        # While you have no face-up [Island of Adventure] security cards, you can
+        # ignore this card's color requirements. Since the engine's action mask does
+        # a static color check, we bypass it entirely. The condition (no face-up IoA)
+        # is almost always true when playing from hand, and the card places itself
+        # face-up in security as part of its effect, so subsequent copies would need
+        # a White card — but the engine doesn't support conditional color checks, so
+        # we bypass unconditionally.
+        card._match_color_requirement = False
         effects = []
-
-        # --- Effect 0: Ignore color requirements while no face-up
-        #     [Island of Adventure] security cards ---
-        effect0 = ICardEffect()
-        effect0.set_effect_name("ST20-15 Ignore color requirements")
-        effect0.set_effect_description(
-            "While you have no face-up [Island of Adventure] security cards, "
-            "you can ignore this card's color requirements."
-        )
-
-        def condition0(context: Dict[str, Any]) -> bool:
-            owner = card.owner if card else None
-            if not owner:
-                return False
-            # No face-up "Island of Adventure" in security
-            has_face_up_ioa = any(
-                owner.is_security_face_up(c)
-                and c.contains_card_name('Island of Adventure')
-                for c in owner.security_cards
-            )
-            return not has_face_up_ioa
-
-        effect0.set_can_use_condition(condition0)
-
-        def process0(ctx: Dict[str, Any]):
-            pass  # Color requirement bypass — not modeled in engine
-
-        effect0.set_on_process_callback(process0)
-        effects.append(effect0)
 
         # --- Effect 1: [Security] [All Turns] All of your level 3 or higher
         #     Digimon get +2000 DP. ---

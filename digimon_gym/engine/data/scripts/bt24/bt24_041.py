@@ -98,34 +98,30 @@ class BT24_041(CardScript):
             if not (player and game):
                 return
 
-            # Check if any valid Iliad cards exist in hand
+            from ....game.constants import SEL_HAND_START, ACTION_SPACE_SIZE
             from ....data.enums import GamePhase
-            SEL_HAND_START = 1600
-            ACTION_SPACE_SIZE = 2168
             valid = []
             for i, c in enumerate(player.hand_cards):
                 if _iliad_play_filter(c) and (SEL_HAND_START + i) < ACTION_SPACE_SIZE:
                     valid.append(SEL_HAND_START + i)
 
             if not valid:
-                # No valid play targets — skip directly to de-digivolve
                 _do_de_digivolve(player, game)
                 return
 
-            # Offer the free play, then chain de-digivolve in callback/decline
             def on_select(action_id):
                 idx = action_id - SEL_HAND_START
                 if 0 <= idx < len(player.hand_cards):
                     sel_card = player.hand_cards[idx]
                     played_perm = player.play_card_from_source(sel_card, pay_cost=False)
-                    game.logger.log(f"[Effect] {player.player_name} played "
-                                    f"{sel_card.card_names[0] if sel_card.card_names else sel_card.card_id} from hand")
+                    game.logger.log(
+                        f"[Effect] {player.player_name} played "
+                        f"{game._card_ref(sel_card)} from hand")
                     game.execute_effects(
                         EffectTiming.OnEnterFieldAnyone,
                         {"played_card": sel_card, "played_permanent": played_perm,
                          "event_player": player},
                     )
-                # Then do de-digivolve
                 _do_de_digivolve(player, game)
 
             def on_decline():
@@ -134,7 +130,8 @@ class BT24_041(CardScript):
             game.request_selection(
                 GamePhase.SelectTarget, player, on_select, valid,
                 is_optional=True,
-                prompt="You may play 1 play cost 5 or lower [Iliad] trait card from your hand without paying the cost.",
+                prompt="You may play 1 play cost 5 or lower [Iliad] trait card from your "
+                       "hand without paying the cost.",
                 on_decline=on_decline,
             )
 
@@ -252,75 +249,29 @@ class BT24_041(CardScript):
         effect6.set_on_process_callback(process6)
         effects.append(effect6)
 
-        # Factory effect: blocker (Opponent's turn only, while an Iliad Digimon is in play)
-        effect7 = ICardEffect()
-        effect7.set_effect_name("BT24-041 Blocker")
-        effect7.set_effect_description("Blocker")
-        effect7._is_blocker = True
-
-        def condition7(context: Dict[str, Any]) -> bool:
+        # [Opponent's Turn] All of your [Iliad] trait Digimon gain <Reboot> and <Blocker>.
+        # Use _applies_to_all_own_digimon with condition checking Iliad trait
+        def _iliad_opp_turn_condition(context: Dict[str, Any]) -> bool:
             if card and card.permanent_of_this_card() is None:
                 return False
             owner = getattr(card, 'owner', None)
             if not owner:
                 return False
-            # Only active on opponent's turn
             if owner.is_my_turn:
                 return False
-            permanent = card.permanent_of_this_card()
-            if not permanent or not permanent.top_card:
-                return False
-            traits = getattr(permanent.top_card, 'card_traits', []) or []
-            return any('Iliad' in t for t in traits)
-        effect7.set_can_use_condition(condition7)
-        effects.append(effect7)
-
-        # Factory effect: reboot (Opponent's turn only, while an Iliad Digimon is in play)
-        effect8 = ICardEffect()
-        effect8.set_effect_name("BT24-041 Reboot")
-        effect8.set_effect_description("Reboot")
-        effect8._is_reboot = True
-
-        def condition8(context: Dict[str, Any]) -> bool:
-            if card and card.permanent_of_this_card() is None:
-                return False
-            owner = getattr(card, 'owner', None)
-            if not owner:
-                return False
-            # Only active on opponent's turn
-            if owner.is_my_turn:
-                return False
-            permanent = card.permanent_of_this_card()
-            if not permanent or not permanent.top_card:
-                return False
-            traits = getattr(permanent.top_card, 'card_traits', []) or []
-            return any('Iliad' in t for t in traits)
-        effect8.set_can_use_condition(condition8)
-        effects.append(effect8)
-
-        # Factory effect: reboot granted to all own Iliad Digimon (Opponent's turn only)
-        effect9 = ICardEffect()
-        effect9.set_effect_name("BT24-041 Reboot (grant to Iliad Digimon)")
-        effect9.set_effect_description("Reboot (grant to Iliad Digimon)")
-        effect9._is_reboot = True
-        effect9._applies_to_all_own_digimon = True
-
-        def condition9(context: Dict[str, Any]) -> bool:
-            if card and card.permanent_of_this_card() is None:
-                return False
-            owner = getattr(card, 'owner', None)
-            if not owner:
-                return False
-            # Only active on opponent's turn
-            if owner.is_my_turn:
-                return False
-            # Only applies to Iliad Digimon
             ctx_perm = context.get('permanent')
             if ctx_perm and ctx_perm.top_card:
                 traits = getattr(ctx_perm.top_card, 'card_traits', []) or []
                 return any('Iliad' in t for t in traits)
             return False
-        effect9.set_can_use_condition(condition9)
-        effects.append(effect9)
+
+        for kw_name, kw_attr in [('Reboot', '_is_reboot'), ('Blocker', '_is_blocker')]:
+            eff = ICardEffect()
+            eff.set_effect_name(f"BT24-041 {kw_name} (grant to Iliad Digimon)")
+            eff.set_effect_description(f"{kw_name} (grant to all Iliad Digimon)")
+            setattr(eff, kw_attr, True)
+            eff._applies_to_all_own_digimon = True
+            eff.set_can_use_condition(_iliad_opp_turn_condition)
+            effects.append(eff)
 
         return effects

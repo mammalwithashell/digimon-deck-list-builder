@@ -93,6 +93,31 @@ class BT20_045(CardScript):
             return True
 
         effect5.set_can_use_condition(condition5)
+
+        def process5(ctx: Dict[str, Any]):
+            """Return all opponent's highest DP Digimon to deck bottom (DNA only)."""
+            player = ctx.get('player')
+            perm = ctx.get('permanent')
+            game = ctx.get('game')
+            if not (player and game):
+                return
+            # Check if this was a DNA digivolution (has 2+ sources from different permanents)
+            if perm and len(perm.card_sources) < 3:
+                # Not a DNA digivolve (DNA typically has sources from 2 permanents)
+                return
+            enemy = player.enemy if player else None
+            if not enemy:
+                return
+            opp_digimon = [p for p in enemy.battle_area if p.is_digimon and p.dp is not None]
+            if not opp_digimon:
+                return
+            max_dp = max(p.dp for p in opp_digimon)
+            highest = [p for p in opp_digimon if p.dp == max_dp]
+            for target in highest:
+                if target in enemy.battle_area:
+                    enemy.return_permanent_to_deck_bottom(target)
+
+        effect5.set_on_process_callback(process5)
         effects.append(effect5)
 
         # Timing: EffectTiming.OnTappedAnyone
@@ -114,18 +139,10 @@ class BT20_045(CardScript):
         effect6.set_can_use_condition(condition6)
 
         def process6(ctx: Dict[str, Any]):
-            """Action: Unsuspend"""
-            player = ctx.get('player')
-            perm = ctx.get('permanent')
-            game = ctx.get('game')
-            if not (player and game):
-                return
-            def target_filter(p):
-                return True
-            def on_unsuspend(target_perm):
-                target_perm.unsuspend()
-            game.effect_select_own_permanent(
-                player, on_unsuspend, filter_fn=target_filter, is_optional=True)
+            """Action: Unsuspend this Digimon"""
+            my_perm = card.permanent_of_this_card() if card else None
+            if my_perm and my_perm.is_suspended:
+                my_perm.unsuspend()
 
         effect6.set_on_process_callback(process6)
         effects.append(effect6)

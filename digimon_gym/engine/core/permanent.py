@@ -22,6 +22,12 @@ class Permanent:
         self._granted_effects: List[tuple] = []  # [(ICardEffect, expiry_turn)] granted by other cards
 
     @property
+    def owner(self):
+        """Return the Player who owns this permanent (via top card)."""
+        top = self.top_card
+        return top.owner if top else None
+
+    @property
     def digivolution_cards(self) -> List['CardSource']:
         return self.card_sources
 

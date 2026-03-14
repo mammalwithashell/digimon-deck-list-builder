@@ -63,7 +63,8 @@ class P_134(CardScript):
                 sa_effect.set_can_use_condition(sa_condition)
 
                 if target_perm.top_card:
-                    target_perm.top_card._card_effects.append(sa_effect)
+                    target_perm.top_card._cached_effects = target_perm.top_card._cached_effects or []
+                    target_perm.top_card._cached_effects.append(sa_effect)
 
             game.effect_select_opponent_permanent(
                 player, on_select, filter_fn=target_filter, is_optional=False,

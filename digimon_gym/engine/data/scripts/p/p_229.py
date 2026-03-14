@@ -29,14 +29,9 @@ class P_229(CardScript):
         effect0.set_can_use_condition(condition0)
 
         def process0(ctx: Dict[str, Any]):
-            """Action: Add To Hand, Reveal And Select"""
+            """Reveal top 3, add 1 Puppet Digimon and 1 LIBERATOR to hand, rest to deck bottom."""
             player = ctx.get('player')
-            perm = ctx.get('permanent')
             game = ctx.get('game')
-            # Add card to hand (from trash/reveal)
-            if player and player.trash_cards:
-                card_to_add = player.trash_cards.pop()
-                player.hand_cards.append(card_to_add)
             if not (player and game):
                 return
             def reveal_filter_0(c):
@@ -97,18 +92,35 @@ class P_229(CardScript):
         effect2.set_can_use_condition(condition2)
 
         def process2(ctx: Dict[str, Any]):
-            """Action: Digivolve"""
+            """1 of your Digimon may digivolve into Lv6- LIBERATOR with cost -3."""
             player = ctx.get('player')
-            perm = ctx.get('permanent')
             game = ctx.get('game')
-            if not (player and perm and game):
+            if not (player and game):
                 return
+            # Trash this delay card
+            delay_perm = card.permanent_of_this_card() if card else None
+            if delay_perm and delay_perm in player.battle_area:
+                player.delete_permanent(delay_perm)
+
             def digi_filter(c):
-                if not (any('Puppet' in _t or 'LIBERATOR' in _t for _t in (getattr(c, 'card_traits', []) or []))):
+                if not getattr(c, 'is_digimon', False):
                     return False
-                return True
-            game.effect_digivolve_from_hand(
-                player, perm, digi_filter, is_optional=True)
+                lv = getattr(c, 'level', None)
+                if lv is None or lv > 6:
+                    return False
+                traits = getattr(c, 'card_traits', []) or []
+                return any('LIBERATOR' in t or 'Liberator' in t for t in traits)
+
+            def own_filter(p):
+                return p.is_digimon
+
+            def on_select(target_perm):
+                game.effect_digivolve_from_hand(
+                    player, target_perm, digi_filter,
+                    cost_reduction=3, is_optional=True)
+
+            game.effect_select_own_permanent(
+                player, on_select, filter_fn=own_filter, is_optional=True)
 
         effect2.set_on_process_callback(process2)
         effects.append(effect2)

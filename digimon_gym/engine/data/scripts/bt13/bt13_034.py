@@ -32,14 +32,10 @@ class BT13_034(CardScript):
         effect0.set_can_use_condition(condition0)
 
         def process0(ctx: Dict[str, Any]):
-            """Action: Add To Hand, Reveal And Select"""
+            """Action: Reveal top 3, add 1 yellow Vaccine Digimon and 1 yellow Tamer"""
             player = ctx.get('player')
             perm = ctx.get('permanent')
             game = ctx.get('game')
-            # Add card to hand (from trash/reveal)
-            if player and player.trash_cards:
-                card_to_add = player.trash_cards.pop()
-                player.hand_cards.append(card_to_add)
             if not (player and game):
                 return
             def reveal_filter_0(c):
@@ -47,7 +43,8 @@ class BT13_034(CardScript):
                     return False
                 if not ('Yellow' in [col.name for col in getattr(c, 'card_colors', [])]):
                     return False
-                return True
+                traits = getattr(c, 'card_traits', []) or []
+                return any('Vaccine' in t for t in traits)
             def reveal_filter_1(c):
                 if not getattr(c, 'is_tamer', False):
                     return False
@@ -77,23 +74,37 @@ class BT13_034(CardScript):
         def condition1(context: Dict[str, Any]) -> bool:
             if card and card.permanent_of_this_card() is None:
                 return False
-            # Triggered on attack — validated by engine timing
+            player = card.owner if card else None
+            if not player:
+                return False
+            enemy = player.enemy
+            if not enemy:
+                return False
+            total_sec = len(player.security_cards) + len(enemy.security_cards)
+            if total_sec > 6:
+                return False
             return True
 
         effect1.set_can_use_condition(condition1)
 
         def process1(ctx: Dict[str, Any]):
-            """Action: DP -2000"""
+            """Action: DP -2000 to 1 opponent Digimon for the turn"""
             player = ctx.get('player')
             perm = ctx.get('permanent')
             game = ctx.get('game')
-            # DP change targets opponent digimon
-            enemy = player.enemy if player else None
-            if enemy and enemy.battle_area:
-                dp_targets = [p for p in enemy.battle_area if p.is_digimon and p.dp is not None]
-                if dp_targets:
-                    target = min(dp_targets, key=lambda p: p.dp)
-                    target.change_dp(-2000)
+            if not (player and game):
+                return
+            from ....interfaces.modifiers import ModifierType
+            def target_filter(p):
+                return p.is_digimon
+            def on_target(target_perm):
+                game.register_modifier(
+                    target_perm, ModifierType.CHANGE_DP,
+                    value_fn=lambda: -2000,
+                    expiry='end_of_turn',
+                )
+            game.effect_select_opponent_permanent(
+                player, on_target, filter_fn=target_filter, is_optional=False)
 
         effect1.set_on_process_callback(process1)
         effects.append(effect1)

@@ -30,13 +30,25 @@ class BT15_069(CardScript):
         effect0.set_can_use_condition(condition0)
 
         def process0(ctx: Dict[str, Any]):
-            """Action: Draw 1, Gain 1 memory"""
+            """Action: Draw 1 if opponent has <=1 memory, gain 1 if opponent has >=1."""
             player = ctx.get('player')
-            perm = ctx.get('permanent')
             game = ctx.get('game')
-            if player:
+            if not (player and game):
+                return
+            enemy = player.enemy if player else None
+            # "opponent has X memory" means the memory gauge is on opponent's side
+            # In the engine, memory is from P1 perspective; positive = P1's, negative = P2's
+            # We check if opponent has 1 or less memory (their memory)
+            opponent_memory = game.memory if not player.is_player_one else -game.memory
+            if not player.is_player_one:
+                opponent_memory = game.memory
+            else:
+                opponent_memory = -game.memory
+            # If opponent has 1 or less memory, Draw 1
+            if opponent_memory <= 1:
                 player.draw_cards(1)
-            if player:
+            # If opponent has 1 or more memory, gain 1
+            if opponent_memory >= 1:
                 player.add_memory(1)
 
         effect0.set_on_process_callback(process0)

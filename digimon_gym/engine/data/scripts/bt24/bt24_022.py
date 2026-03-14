@@ -84,7 +84,7 @@ class BT24_022(CardScript):
                     if target_perm and game:
                         from digimon_gym.engine.interfaces.modifiers import ModifierType
                         game.register_modifier(
-                            ModifierType.CANNOT_SUSPEND, target_perm,
+                            target_perm, ModifierType.CANNOT_SUSPEND,
                             value_fn=lambda: True, expiry='end_of_opponent_turn'
                         )
 

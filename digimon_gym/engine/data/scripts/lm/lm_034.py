@@ -22,29 +22,10 @@ class LM_034(CardScript):
     """
 
     def get_card_effects(self, card: 'CardSource') -> List['ICardEffect']:
+        # Red also meets this card's color requirements — bypass engine color check
+        # so that having a Red Digimon/Tamer on field also allows playing this Blue option.
+        card._match_color_requirement = False
         effects = []
-
-        # --- Effect 0: Ignore color requirements (Red also meets this card's color) ---
-        effect0 = ICardEffect()
-        effect0.set_effect_name("LM-034 Ignore color requirements")
-        effect0.set_effect_description(
-            "Red also meets this card's color requirements."
-        )
-
-        def condition0(context: Dict[str, Any]) -> bool:
-            # Active while you have a red Digimon or Tamer
-            owner = card.owner if card else None
-            if not owner:
-                return False
-            for p in owner.battle_area:
-                if (p.is_digimon or p.is_tamer) and p.top_card:
-                    colors = getattr(p.top_card, 'card_colors', []) or []
-                    color_names = [col.name for col in colors]
-                    if 'Red' in color_names:
-                        return True
-            return False
-        effect0.set_can_use_condition(condition0)
-        effects.append(effect0)
 
         # --- Effect 1: [Main] Reveal top 3, add 1 blue/red Digimon, place in battle area ---
         effect1 = ICardEffect()

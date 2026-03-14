@@ -33,14 +33,14 @@ class P_136(CardScript):
         effect0.set_can_use_condition(condition0)
 
         def process0(ctx: Dict[str, Any]):
-            """Action: Play Card"""
+            """Action: Play 1 [Shoemon] from hand free."""
             player = ctx.get('player')
             perm = ctx.get('permanent')
             game = ctx.get('game')
             if not (player and game):
                 return
             def play_filter(c):
-                return True
+                return c.contains_card_name('Shoemon')
             game.effect_play_from_zone(
                 player, 'hand', play_filter, free=True, is_optional=True)
 

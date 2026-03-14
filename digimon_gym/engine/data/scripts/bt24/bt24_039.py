@@ -50,7 +50,7 @@ class BT24_039(CardScript):
             if perm and game:
                 from digimon_gym.engine.interfaces.modifiers import ModifierType
                 game.register_modifier(
-                    ModifierType.DONT_BATTLE_SECURITY_DIGIMON, perm,
+                    perm, ModifierType.DONT_BATTLE_SECURITY_DIGIMON,
                     value_fn=lambda: True, expiry='end_of_attack')
 
         effect1.set_on_process_callback(process1)

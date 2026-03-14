@@ -115,46 +115,25 @@ class EX9_067(CardScript):
             if not (player and game):
                 return
 
-            # Return this Tamer to the bottom of the deck
+            # Cost: Return this Tamer to the bottom of the deck
             my_perm = card.permanent_of_this_card() if card else None
             if not my_perm:
                 return
-            if my_perm in player.battle_area:
-                player.battle_area.remove(my_perm)
-            for cs in my_perm.card_sources:
-                player.library_cards.append(cs)
+            player.return_permanent_to_deck_bottom(my_perm)
 
             # Play 1 [Arisa Kinosaki] or [Puppet] Digimon from hand with cost -3
             def play_filter(c):
-                # Arisa Kinosaki tamer
-                if getattr(c, 'is_tamer', False):
-                    names = getattr(c, 'card_names', []) or []
-                    if any('Arisa Kinosaki' in n for n in names):
-                        return True
-                # Puppet Digimon
-                if getattr(c, 'is_digimon', False) and _is_puppet_trait(c):
+                if c.is_tamer and c.contains_card_name('Arisa Kinosaki'):
+                    return True
+                if c.is_digimon and _is_puppet_trait(c):
                     return True
                 return False
 
-            qualifying = [c for c in player.hand_cards if play_filter(c)]
-            if not qualifying:
-                return
-
-            # Use simplified: play first qualifying card with cost -3
-            chosen = qualifying[0]
-            base_cost = getattr(chosen, 'get_cost_itself', 0)
-            if callable(base_cost):
-                base_cost = base_cost
-            else:
-                base_cost = int(base_cost)
-            reduced_cost = max(0, base_cost - 3)
-
-            player.hand_cards.remove(chosen)
-            played_perm = player.play_card_from_source(chosen, pay_cost=False)
-            player.lose_memory(reduced_cost)
-            if played_perm:
-                game.execute_effects(EffectTiming.OnEnterFieldAnyone,
-                    {"played_card": chosen, "played_permanent": played_perm, "event_player": player})
+            game.effect_play_from_zone(
+                player, 'hand', play_filter, free=False,
+                manual_reduction=3, is_optional=True,
+                prompt="Select 1 [Arisa Kinosaki] or [Puppet] Digimon to play with cost reduced by 3."
+            )
 
         effect1.set_on_process_callback(process1)
         effects.append(effect1)

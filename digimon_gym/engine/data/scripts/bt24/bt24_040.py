@@ -2,7 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
-from ....data.enums import EffectTiming
+from ....data.enums import EffectTiming, CardColor
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -28,12 +28,15 @@ class BT24_040(CardScript):
         effect0.set_can_use_condition(condition0)
         effects.append(effect0)
 
-        # Timing: EffectTiming.BeforePayCost
-        # When this card would be played, if you have 3 or fewer security cards, reduce the play cost by 5.
+        # When this card would be played, if you have 3 or fewer security cards,
+        # reduce the play cost by 5.
         effect1 = ICardEffect()
         effect1.set_timing(EffectTiming.BeforePayCost)
         effect1.set_effect_name("BT24-040 Reduce play cost (5)")
-        effect1.set_effect_description("When this card would be played, if you have 3 or fewer security cards, reduce the play cost by 5.")
+        effect1.set_effect_description(
+            "When this card would be played, if you have 3 or fewer security cards, "
+            "reduce the play cost by 5."
+        )
         effect1.cost_reduction = 5
 
         def condition1(context: Dict[str, Any]) -> bool:
@@ -47,174 +50,173 @@ class BT24_040(CardScript):
         effect1.set_can_use_condition(condition1)
         effects.append(effect1)
 
-        # Shared logic for On Play / When Digivolving:
-        # Trash ALL digivolution cards of 1 of your opponent's Digimon.
-        # Then, until the end of your opponent's turn, all of your Digimon with the [TS] trait
-        # can't have their DP reduced.
-        def _venusmon_on_play_when_digivolving(player, game):
-            if not (player and game):
-                return
-            # Select 1 opponent Digimon to trash ALL its digivolution cards
-            def opp_filter(p):
-                return p.is_digimon
-
-            def on_select_opp(target_perm):
-                if not target_perm:
-                    return
-                # Trash ALL digivolution cards (all sources except top card)
-                digi_count = max(0, len(target_perm.card_sources) - 1)
-                if digi_count > 0:
-                    trashed = target_perm.trash_digivolution_cards(digi_count)
-                    if player.enemy:
-                        player.enemy.trash_cards.extend(trashed)
-
-            game.effect_select_opponent_permanent(
-                player, on_select_opp,
-                filter_fn=opp_filter,
-                is_optional=False
+        # [On Play] [When Digivolving] Trash all digivolution cards of 1 of your
+        # opponent's Digimon. Then, until your opponent's turn ends, 2 of their
+        # Digimon or Tamers can't suspend or activate [When Digivolving] effects.
+        for is_play in [True, False]:
+            eff = ICardEffect()
+            eff.set_timing(EffectTiming.OnEnterFieldAnyone)
+            eff.set_effect_name("BT24-040 Trash digi cards, 2 opp can't suspend/digivolve")
+            eff.set_effect_description(
+                "[On Play] [When Digivolving] Trash all digivolution cards of 1 of your "
+                "opponent's Digimon. Then, until your opponent's turn ends, 2 of their "
+                "Digimon or Tamers can't suspend or activate [When Digivolving] effects."
             )
+            if is_play:
+                eff.is_on_play = True
+            else:
+                eff.is_when_digivolving = True
 
-            # Grant IMMUNE_FROM_DP_MINUS to all own [TS]-trait Digimon until end of opponent's turn
-            from digimon_gym.engine.interfaces.modifiers import ModifierType
-            for perm in list(player.battle_area):
-                if not perm.is_digimon:
-                    continue
-                traits = getattr(perm.top_card, 'card_traits', []) or []
-                if 'TS' in traits:
-                    game.register_modifier(
-                        ModifierType.IMMUNE_FROM_DP_MINUS, perm,
-                        value_fn=lambda: True, expiry='end_of_opponent_turn'
-                    )
+            def make_cond():
+                def cond(context: Dict[str, Any]) -> bool:
+                    if card and card.permanent_of_this_card() is None:
+                        return False
+                    return True
+                return cond
 
-        # Timing: EffectTiming.OnEnterFieldAnyone
-        # [On Play] Trash all digivolution cards of 1 of your opponent's Digimon.
-        # Then, until the end of your opponent's turn, all of your Digimon with the [TS] trait can't have their DP reduced.
-        effect3 = ICardEffect()
-        effect3.set_timing(EffectTiming.OnEnterFieldAnyone)
-        effect3.set_effect_name("BT24-040 Trash digi cards, TS digimon immune to DP reduction")
-        effect3.set_effect_description("[On Play] Trash all digivolution cards of 1 of your opponent's Digimon. Then, until the end of your opponent's turn, all of your Digimon with the [TS] trait can't have their DP reduced.")
-        effect3.is_on_play = True
+            eff.set_can_use_condition(make_cond())
 
-        def condition3(context: Dict[str, Any]) -> bool:
-            if card and card.permanent_of_this_card() is None:
-                return False
-            return True
+            def make_proc():
+                def proc(ctx: Dict[str, Any]):
+                    player = ctx.get('player')
+                    game = ctx.get('game')
+                    if not (player and game):
+                        return
+                    enemy = player.enemy
+                    if not enemy:
+                        return
 
-        def process3(ctx: Dict[str, Any]):
-            player = ctx.get('player')
-            game = ctx.get('game')
-            _venusmon_on_play_when_digivolving(player, game)
+                    # Trash all digivolution cards of 1 opponent Digimon
+                    def opp_digi_filter(p):
+                        return p.is_digimon
 
-        effect3.set_on_process_callback(process3)
-        effect3.set_can_use_condition(condition3)
-        effects.append(effect3)
+                    def on_select_opp(target_perm):
+                        if not target_perm:
+                            return
+                        digi_count = max(0, len(target_perm.card_sources) - 1)
+                        if digi_count > 0:
+                            trashed = target_perm.trash_digivolution_cards(digi_count)
+                            enemy.trash_cards.extend(trashed)
+                            game.logger.log(
+                                f"[Effect] Trashed {digi_count} digivolution cards from "
+                                f"{game._perm_ref(target_perm)}")
 
-        # Timing: EffectTiming.OnEnterFieldAnyone
-        # [When Digivolving] Trash all digivolution cards of 1 of your opponent's Digimon.
-        # Then, until the end of your opponent's turn, all of your Digimon with the [TS] trait can't have their DP reduced.
-        effect4 = ICardEffect()
-        effect4.set_timing(EffectTiming.OnEnterFieldAnyone)
-        effect4.set_effect_name("BT24-040 Trash digi cards, TS digimon immune to DP reduction")
-        effect4.set_effect_description("[When Digivolving] Trash all digivolution cards of 1 of your opponent's Digimon. Then, until the end of your opponent's turn, all of your Digimon with the [TS] trait can't have their DP reduced.")
-        effect4.is_when_digivolving = True
+                        # Then freeze 2 opponent Digimon/Tamers
+                        _freeze_count = [0]
 
-        def condition4(context: Dict[str, Any]) -> bool:
-            if card and card.permanent_of_this_card() is None:
-                return False
-            return True
+                        def freeze_filter(p):
+                            return p.is_digimon or p.is_tamer
 
-        def process4(ctx: Dict[str, Any]):
-            player = ctx.get('player')
-            game = ctx.get('game')
-            _venusmon_on_play_when_digivolving(player, game)
+                        def on_freeze(t):
+                            from digimon_gym.engine.interfaces.modifiers import ModifierType
+                            game.register_modifier(
+                                t, ModifierType.CANNOT_SUSPEND,
+                                value_fn=lambda: True, expiry='end_of_opponent_turn')
+                            game.logger.log(
+                                f"[Effect] {game._perm_ref(t)} can't suspend or "
+                                f"activate [When Digivolving] effects")
+                            _freeze_count[0] += 1
+                            if _freeze_count[0] < 2:
+                                game.effect_select_opponent_permanent(
+                                    player, on_freeze, filter_fn=freeze_filter,
+                                    is_optional=False,
+                                    prompt="Select opponent's Digimon/Tamer that can't "
+                                           "suspend (2nd).")
 
-        effect4.set_on_process_callback(process4)
-        effect4.set_can_use_condition(condition4)
-        effects.append(effect4)
+                        if any(freeze_filter(p) for p in enemy.battle_area):
+                            game.effect_select_opponent_permanent(
+                                player, on_freeze, filter_fn=freeze_filter,
+                                is_optional=False,
+                                prompt="Select opponent's Digimon/Tamer that can't "
+                                       "suspend (1st).")
 
-        # Timing: EffectTiming.WhenRemoveField
-        # [All Turns] [Once Per Turn] When this Digimon would leave the battle area by your opponent's effects,
-        # it doesn't leave.
+                    if any(opp_digi_filter(p) for p in enemy.battle_area):
+                        game.effect_select_opponent_permanent(
+                            player, on_select_opp, filter_fn=opp_digi_filter,
+                            is_optional=False,
+                            prompt="Select 1 of your opponent's Digimon to trash all "
+                                   "digivolution cards.")
+                return proc
+
+            eff.set_on_process_callback(make_proc())
+            effects.append(eff)
+
+        # [All Turns] [Once Per Turn] When any of your [TS] trait Digimon would leave
+        # the battle area other than by your effects, by placing 1 other Digimon with
+        # no digivolution cards as the bottom security card, they don't leave.
         effect5 = ICardEffect()
         effect5.set_timing(EffectTiming.WhenRemoveField)
-        effect5.set_effect_name("BT24-040 This digimon won't leave by opponent's effects (OPT)")
-        effect5.set_effect_description("[All Turns] [Once Per Turn] When this Digimon would leave the battle area by your opponent's effects, it doesn't leave.")
+        effect5.set_effect_name("BT24-040 Protect TS Digimon by tucking to security")
+        effect5.set_effect_description(
+            "[All Turns] [Once Per Turn] When any of your [TS] trait Digimon would leave "
+            "the battle area other than by your effects, by placing 1 other Digimon with "
+            "no digivolution cards as the bottom security card, they don't leave."
+        )
         effect5.is_optional = True
         effect5.set_max_count_per_turn(1)
-        effect5.set_hash_string("BT24_040_AT_self")
+        effect5.set_hash_string("BT24_040_AT_protect")
 
         def condition5(context: Dict[str, Any]) -> bool:
             if card and card.permanent_of_this_card() is None:
                 return False
+            # The leaving permanent must be one of our TS Digimon
+            leaving_perm = context.get('event_permanent') or context.get('permanent')
+            if not leaving_perm or not leaving_perm.is_digimon:
+                return False
+            traits = leaving_perm.top_card.card_traits if leaving_perm.top_card else []
+            if not any('TS' in t for t in (traits or [])):
+                return False
+            # Must not be by our own effects
+            if context.get('is_own_effect', False):
+                return False
+            # Must have another Digimon with no digivolution cards to sacrifice
             owner = getattr(card, 'owner', None)
             if not owner:
                 return False
-            # Must be this Digimon leaving
-            event_perm = context.get('event_permanent') or context.get('permanent')
-            owner_perm = card.permanent_of_this_card()
-            if event_perm is None or event_perm is not owner_perm:
-                return False
-            # Must be by opponent's effect
-            if not context.get('is_opponent_effect', False):
-                return False
-            return True
+            my_perm = card.permanent_of_this_card()
+            for p in owner.battle_area:
+                if p is leaving_perm or p is my_perm:
+                    continue
+                if p.is_digimon and len(p.card_sources) <= 1:
+                    return True
+            return False
 
         effect5.set_can_use_condition(condition5)
 
         def process5(ctx: Dict[str, Any]):
-            """Action: Cancel this Digimon leaving by opponent's effect."""
-            owner_perm = card.permanent_of_this_card()
+            player = ctx.get('player')
             game = ctx.get('game')
-            if owner_perm and game:
-                from digimon_gym.engine.interfaces.modifiers import ModifierType
-                game.register_modifier(
-                    ModifierType.CANNOT_BE_REMOVED, owner_perm,
-                    value_fn=lambda: True, expiry='end_of_turn'
-                )
+            if not (player and game):
+                return
+            leaving_perm = ctx.get('event_permanent') or ctx.get('permanent')
+            my_perm = card.permanent_of_this_card() if card else None
+
+            def sacrifice_filter(p):
+                if p is leaving_perm or p is my_perm:
+                    return False
+                return p.is_digimon and len(p.card_sources) <= 1
+
+            def on_sacrifice(target):
+                # Place as bottom security card
+                player.battle_area.remove(target)
+                for cs in target.card_sources:
+                    player.security_cards.append(cs)
+                game.logger.log(
+                    f"[Effect] Placed {game._perm_ref(target)} as bottom security card "
+                    f"to protect {game._perm_ref(leaving_perm)}")
+                # Prevent the leaving
+                if leaving_perm:
+                    leaving_perm.will_be_remove_field = False
+                    if hasattr(leaving_perm, 'willBeRemoveField'):
+                        leaving_perm.willBeRemoveField = False
+
+            game.effect_select_own_permanent(
+                player, on_sacrifice, filter_fn=sacrifice_filter,
+                is_optional=False,
+                prompt="Select a Digimon with no digivolution cards to place as "
+                       "bottom security card.")
 
         effect5.set_on_process_callback(process5)
         effects.append(effect5)
-
-        # Timing: EffectTiming.OnDestroyedAnyone
-        # [All Turns] [Once Per Turn] When another Digimon is deleted, if you have a blue Tamer, gain 1 memory.
-        effect6 = ICardEffect()
-        effect6.set_timing(EffectTiming.OnDestroyedAnyone)
-        effect6.set_effect_name("BT24-040 When another Digimon deleted, if blue Tamer, gain 1 memory")
-        effect6.set_effect_description("[All Turns] [Once Per Turn] When another Digimon is deleted, if you have a blue Tamer, gain 1 memory.")
-        effect6.set_max_count_per_turn(1)
-        effect6.set_hash_string("BT24_040_AT_mem")
-
-        def condition6(context: Dict[str, Any]) -> bool:
-            if card and card.permanent_of_this_card() is None:
-                return False
-            owner = getattr(card, 'owner', None)
-            if not owner:
-                return False
-            # The deleted permanent must not be this card's permanent
-            deleted = context.get('deleted_permanent')
-            owner_perm = card.permanent_of_this_card()
-            if deleted is not None and owner_perm is not None and deleted is owner_perm:
-                return False
-            # Must be a Digimon that was deleted
-            if deleted is not None and not deleted.is_digimon:
-                return False
-            # Must have a blue Tamer on own field
-            from digimon_gym.engine.data.enums import CardColor
-            has_blue_tamer = any(
-                p.is_tamer and CardColor.Blue in getattr(p.top_card, 'card_colors', [])
-                for p in owner.battle_area
-            )
-            return has_blue_tamer
-
-        effect6.set_can_use_condition(condition6)
-
-        def process6(ctx: Dict[str, Any]):
-            """Action: Gain 1 memory."""
-            player = ctx.get('player')
-            if player:
-                player.add_memory(1)
-
-        effect6.set_on_process_callback(process6)
-        effects.append(effect6)
 
         return effects

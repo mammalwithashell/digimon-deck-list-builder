@@ -26,7 +26,7 @@ class BT7_105(CardScript):
 
         # --- Effect 0: [Main] Reveal top 3, play 1 black Digimon cost<=4, trash rest ---
         effect0 = ICardEffect()
-        effect0.set_timing(EffectTiming.OnEnterFieldAnyone)
+        effect0.set_timing(EffectTiming.OptionSkill)
         effect0.set_effect_name("BT7-105 Reveal top 3 play black Digimon cost<=4")
         effect0.set_effect_description(
             "[Main] Reveal the top 3 cards of your deck. You may play 1 black "
@@ -34,7 +34,6 @@ class BT7_105(CardScript):
             "paying its memory cost. Trash the remaining cards. Then, place "
             "this card in your battle area."
         )
-        effect0.is_on_play = True
 
         def condition0(context: Dict[str, Any]) -> bool:
             return True

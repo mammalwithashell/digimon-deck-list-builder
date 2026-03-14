@@ -32,14 +32,16 @@ class P_177(CardScript):
         effect0.set_can_use_condition(condition0)
 
         def process0(ctx: Dict[str, Any]):
-            """Action: Add To Hand"""
+            """Action: Return 1 card with [Growlmon] or [Gallantmon] from trash to hand."""
             player = ctx.get('player')
-            perm = ctx.get('permanent')
-            game = ctx.get('game')
-            # Add card to hand (from trash/reveal)
-            if player and player.trash_cards:
-                card_to_add = player.trash_cards.pop()
-                player.hand_cards.append(card_to_add)
+            if not player:
+                return
+            for c in list(player.trash_cards):
+                if (c.contains_card_name('Growlmon') or
+                    c.contains_card_name('Gallantmon')):
+                    player.trash_cards.remove(c)
+                    player.hand_cards.append(c)
+                    break
 
         effect0.set_on_process_callback(process0)
         effects.append(effect0)

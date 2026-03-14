@@ -62,8 +62,8 @@ class BT17_055(CardScript):
                 def restrict_filter(p):
                     if not p.is_digimon:
                         return False
-                    if p.top_card and p.top_card.c_entity_base:
-                        return (p.top_card.c_entity_base.play_cost or 0) <= 8
+                    if p.top_card:
+                        return (p.top_card.get_cost_itself or 0) <= 8
                     return False
 
                 def on_restrict(target_perm2):

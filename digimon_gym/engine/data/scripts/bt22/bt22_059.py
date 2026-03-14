@@ -56,7 +56,7 @@ class BT22_059(CardScript):
             if not (player and game):
                 return
             def target_filter(p):
-                return p.is_digimon and getattr(p.top_card, 'get_cost_itself', 0) <= 5
+                return p.is_digimon and p.top_card and (p.top_card.get_cost_itself or 0) <= 5
             def on_delete(target_perm):
                 enemy = player.enemy if player else None
                 if enemy:
@@ -75,7 +75,10 @@ class BT22_059(CardScript):
             if perm and game and has_support:
                 from digimon_gym.engine.interfaces.modifiers import ModifierType
                 game.register_modifier(
-                    ModifierType.CANNOT_BE_RETURNED, perm,
+                    perm, ModifierType.CANNOT_RETURN_TO_HAND,
+                    value_fn=lambda: True, expiry='end_of_turn')
+                game.register_modifier(
+                    perm, ModifierType.CANNOT_RETURN_TO_DECK,
                     value_fn=lambda: True, expiry='end_of_turn')
 
         effect1.set_on_process_callback(process1)
@@ -109,7 +112,7 @@ class BT22_059(CardScript):
             if not (player and game):
                 return
             def target_filter(p):
-                return p.is_digimon and getattr(p.top_card, 'get_cost_itself', 0) <= 5
+                return p.is_digimon and p.top_card and (p.top_card.get_cost_itself or 0) <= 5
             def on_delete(target_perm):
                 enemy = player.enemy if player else None
                 if enemy:
@@ -128,7 +131,10 @@ class BT22_059(CardScript):
             if perm and game and has_support:
                 from digimon_gym.engine.interfaces.modifiers import ModifierType
                 game.register_modifier(
-                    ModifierType.CANNOT_BE_RETURNED, perm,
+                    perm, ModifierType.CANNOT_RETURN_TO_HAND,
+                    value_fn=lambda: True, expiry='end_of_turn')
+                game.register_modifier(
+                    perm, ModifierType.CANNOT_RETURN_TO_DECK,
                     value_fn=lambda: True, expiry='end_of_turn')
 
         effect2.set_on_process_callback(process2)

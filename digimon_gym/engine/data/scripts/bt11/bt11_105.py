@@ -126,8 +126,10 @@ class BT11_105(CardScript):
                 cost = 0
                 if evo_costs:
                     first_evo = evo_costs[0]
-                    if isinstance(first_evo, dict):
-                        cost = first_evo.get('cost', 0)
+                    if hasattr(first_evo, 'memory_cost'):
+                        cost = first_evo.memory_cost
+                    elif isinstance(first_evo, dict):
+                        cost = first_evo.get('cost', first_evo.get('memory_cost', 0))
                     elif isinstance(first_evo, int):
                         cost = first_evo
 

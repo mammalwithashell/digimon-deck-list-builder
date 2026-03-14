@@ -25,20 +25,28 @@ class BT19_006(CardScript):
 
         effect = effect0  # alias for condition closure
         def condition0(context: Dict[str, Any]) -> bool:
-            # Triggered on deletion — validated by engine timing
+            # Only if deleted other than by battle
+            deleted_by_battle = context.get('deleted_by_battle', False)
+            if deleted_by_battle:
+                return False
             return True
 
         effect0.set_can_use_condition(condition0)
 
         def process0(ctx: Dict[str, Any]):
-            """Action: Add To Hand"""
+            """Action: Return 1 level 3 purple Digimon from trash to hand."""
             player = ctx.get('player')
-            perm = ctx.get('permanent')
             game = ctx.get('game')
-            # Add card to hand (from trash/reveal)
-            if player and player.trash_cards:
-                card_to_add = player.trash_cards.pop()
-                player.hand_cards.append(card_to_add)
+            if not player:
+                return
+            from ....data.enums import CardColor
+            for c in list(player.trash_cards):
+                if (getattr(c, 'is_digimon', False) and
+                    getattr(c, 'level', None) == 3 and
+                    CardColor.Purple in (getattr(c, 'card_colors', []) or [])):
+                    player.trash_cards.remove(c)
+                    player.hand_cards.append(c)
+                    break
 
         effect0.set_on_process_callback(process0)
         effects.append(effect0)

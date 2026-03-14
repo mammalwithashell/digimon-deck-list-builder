@@ -86,18 +86,37 @@ class BT22_098(CardScript):
         effect2.set_can_use_condition(condition2)
 
         def process2(ctx: Dict[str, Any]):
-            """Action: Digivolve"""
+            """1 of your [Puppet] trait Digimon may digivolve into a [Puppet]+[LIBERATOR] card with cost -3."""
             player = ctx.get('player')
-            perm = ctx.get('permanent')
             game = ctx.get('game')
-            if not (player and perm and game):
+            if not (player and game):
                 return
-            def digi_filter(c):
-                if not (any('Shoemon' in _n or 'Arisa Kinosaki' in _n for _n in getattr(c, 'card_names', []))):
+            # Trash this delay card from battle area
+            delay_perm = card.permanent_of_this_card() if card else None
+            if delay_perm and delay_perm in player.battle_area:
+                player.delete_permanent(delay_perm)
+
+            def hand_filter(c):
+                if not getattr(c, 'is_digimon', False):
                     return False
-                return True
-            game.effect_digivolve_from_hand(
-                player, perm, digi_filter, is_optional=True)
+                traits = getattr(c, 'card_traits', []) or []
+                has_puppet = any('Puppet' in t for t in traits)
+                has_liberator = any('LIBERATOR' in t or 'Liberator' in t for t in traits)
+                return has_puppet and has_liberator
+
+            def own_filter(p):
+                if not p.is_digimon:
+                    return False
+                traits = getattr(p.top_card, 'card_traits', []) or [] if p.top_card else []
+                return any('Puppet' in t for t in traits)
+
+            def on_select(target_perm):
+                game.effect_digivolve_from_hand(
+                    player, target_perm, hand_filter,
+                    cost_reduction=3, is_optional=True)
+
+            game.effect_select_own_permanent(
+                player, on_select, filter_fn=own_filter, is_optional=True)
 
         effect2.set_on_process_callback(process2)
         effects.append(effect2)

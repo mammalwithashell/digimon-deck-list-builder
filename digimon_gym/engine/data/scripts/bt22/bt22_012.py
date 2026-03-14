@@ -54,22 +54,40 @@ class BT22_012(CardScript):
         def condition2(context: Dict[str, Any]) -> bool:
             if card and card.permanent_of_this_card() is None:
                 return False
-            if not (card and card.owner and card.owner.is_my_turn):
+            owner = card.owner if card else None
+            if not owner:
                 return False
-            # Triggered when digivolving — validated by engine timing
-            return True
+            # Must have 1 or fewer Tamers
+            tamer_count = sum(1 for p in owner.battle_area if p.is_tamer)
+            return tamer_count <= 1
 
         effect2.set_can_use_condition(condition2)
 
         def process2(ctx: Dict[str, Any]):
-            """Action: Play Card"""
+            """Play 1 red/black Tamer cost 4- or 1 CS trait Tamer from hand."""
             player = ctx.get('player')
-            perm = ctx.get('permanent')
             game = ctx.get('game')
             if not (player and game):
                 return
+            from ....data.enums import CardColor
             def play_filter(c):
-                return True
+                if not getattr(c, 'is_tamer', False):
+                    return False
+                # CS trait tamer: any cost
+                traits = getattr(c, 'card_traits', []) or []
+                if any('CS' == t for t in traits):
+                    return True
+                # Red or black tamer with cost 4 or less
+                colors = getattr(c, 'card_colors', []) or []
+                is_red_or_black = any(
+                    clr in (CardColor.Red, CardColor.Black)
+                    for clr in colors
+                )
+                try:
+                    cost = c.get_cost_itself
+                except Exception:
+                    cost = getattr(c, 'play_cost', 99)
+                return is_red_or_black and cost is not None and cost <= 4
             game.effect_play_from_zone(
                 player, 'hand', play_filter, free=True, is_optional=True)
 

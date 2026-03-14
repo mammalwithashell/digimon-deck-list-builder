@@ -109,7 +109,7 @@ class EX11_023(CardScript):
         effect3.set_effect_description("[When Digivolving][Once Per Turn] Delete 1 opponent's lowest level Digimon.")
         effect3.is_when_digivolving = True
         effect3.set_max_count_per_turn(1)
-        effect3.set_hash_string("EX11_023_WD_EoOT")
+        effect3.set_hash_string("EX11_023_WD")
 
         def condition3(context: Dict[str, Any]) -> bool:
             if card and card.permanent_of_this_card() is None:

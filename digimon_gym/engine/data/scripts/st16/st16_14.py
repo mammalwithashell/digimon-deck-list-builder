@@ -70,14 +70,8 @@ class ST16_14(CardScript):
             if perm.is_suspended:
                 return False
             # Must be triggered by one of our effects trashing our hand card
-            source_effect = context.get('source_effect')
-            if source_effect is not None:
-                src_card = getattr(source_effect, 'effect_source_card', None)
-                if src_card is not None and src_card.owner != owner:
-                    return False
-            # The trashed card must belong to us
-            trashed_card = context.get('card')
-            if trashed_card is not None and trashed_card.owner != owner:
+            event_player = context.get('event_player')
+            if event_player is not None and event_player is not owner:
                 return False
             return True
         effect1.set_can_use_condition(condition1)

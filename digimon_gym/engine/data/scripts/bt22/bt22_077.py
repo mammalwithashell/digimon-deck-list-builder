@@ -29,6 +29,18 @@ class BT22_077(CardScript):
         effect0.set_can_use_condition(condition0)
         effects.append(effect0)
 
+        # Factory effect: iceclad
+        # Iceclad
+        eff_iceclad = ICardEffect()
+        eff_iceclad.set_effect_name("BT22-077 Iceclad")
+        eff_iceclad.set_effect_description("Iceclad")
+        eff_iceclad._is_iceclad = True
+
+        def cond_iceclad(context: Dict[str, Any]) -> bool:
+            return True
+        eff_iceclad.set_can_use_condition(cond_iceclad)
+        effects.append(eff_iceclad)
+
         # Factory effect: blocker
         # Blocker
         effect1 = ICardEffect()
@@ -53,31 +65,51 @@ class BT22_077(CardScript):
         def condition2(context: Dict[str, Any]) -> bool:
             if card and card.permanent_of_this_card() is None:
                 return False
-            # Triggered when digivolving — validated by engine timing
-            return True
+            # Must have 2+ same-level cards in stack
+            perm = card.permanent_of_this_card()
+            if not perm:
+                return False
+            from collections import Counter
+            levels = [getattr(cs, 'level', None) for cs in perm.card_sources if getattr(cs, 'level', None) is not None]
+            level_counts = Counter(levels)
+            return any(c >= 2 for c in level_counts.values())
 
         effect2.set_can_use_condition(condition2)
 
         def process2(ctx: Dict[str, Any]):
-            """Action: Trash Digivolution Cards, Bounce"""
+            """Trash 4 from opponent sources, return 1 to deck bottom."""
             player = ctx.get('player')
-            perm = ctx.get('permanent')
             game = ctx.get('game')
-            # Trash digivolution cards from this permanent
-            if perm and not perm.has_no_digivolution_cards:
-                trashed = perm.trash_digivolution_cards(1)
-                if player:
-                    player.trash_cards.extend(trashed)
             if not (player and game):
                 return
+            enemy = player.enemy
+            if not enemy:
+                return
+            # Trash any 4 digivolution cards from opponent's Digimon
+            trashed_count = 0
+            for opp_perm in list(enemy.battle_area):
+                if trashed_count >= 4:
+                    break
+                if not opp_perm.is_digimon:
+                    continue
+                needed = 4 - trashed_count
+                removed = opp_perm.trash_digivolution_cards(needed)
+                enemy.trash_cards.extend(removed)
+                trashed_count += len(removed)
+            # Return 1 opponent Digimon with 1 or fewer evo cards to deck bottom
             def target_filter(p):
-                return True
-            def on_bounce(target_perm):
-                enemy = player.enemy if player else None
-                if enemy:
-                    enemy.bounce_permanent_to_hand(target_perm)
-            game.effect_select_opponent_permanent(
-                player, on_bounce, filter_fn=target_filter, is_optional=False)
+                return p.is_digimon and len(p.card_sources) <= 2
+            def on_return(target_perm):
+                enemy2 = player.enemy if player else None
+                if enemy2 and target_perm in enemy2.battle_area:
+                    enemy2.battle_area.remove(target_perm)
+                    for cs in target_perm.card_sources:
+                        enemy2.library_cards.append(cs)
+            targets = [p for p in enemy.battle_area if target_filter(p)]
+            if targets:
+                game.effect_select_opponent_permanent(
+                    player, on_return, filter_fn=target_filter, is_optional=False,
+                    prompt="Return 1 opponent Digimon with 1 or fewer evo cards to deck bottom.")
 
         effect2.set_on_process_callback(process2)
         effects.append(effect2)

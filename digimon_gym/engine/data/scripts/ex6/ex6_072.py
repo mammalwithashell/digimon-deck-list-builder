@@ -77,7 +77,7 @@ class EX6_072(CardScript):
                 if not getattr(c, 'is_digimon', False):
                     return False
                 lv = getattr(c, 'level', None)
-                if lv is None or lv < 6:
+                if lv is None or lv < 7:
                     return False
                 return True
             game.effect_dna_digivolve_from_hand(player, dna_filter, is_optional=True)

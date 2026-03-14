@@ -9,36 +9,44 @@ if TYPE_CHECKING:
 
 
 class BT21_026(CardScript):
-    """BT21-026 WarGreymon | Lv.6"""
+    """BT21-026 WarGreymon | Lv.6
+
+    When this card would be played, reduce the play cost by 2 for each of your opponent's Digimon.
+    <Rush> <Raid> <Blocker>
+    [All Turns] [Once Per Turn] When any of your opponent's Digimon are deleted,
+    this Digimon may unsuspend.
+    """
 
     def get_card_effects(self, card: 'CardSource') -> List['ICardEffect']:
         effects = []
 
-        # Timing: EffectTiming.None
-        # Effect
+        # Cost reduction: -2 per opponent Digimon
         effect0 = ICardEffect()
-        effect0.set_effect_name("BT21-026 Effect")
-        effect0.set_effect_description("Effect")
+        effect0.set_timing(EffectTiming.BeforePayCost)
+        effect0.set_effect_name("BT21-026 Play cost -2 per opponent Digimon")
+        effect0.set_effect_description(
+            "When this card would be played, reduce the play cost by 2 for each of your opponent's Digimon."
+        )
 
-        effect = effect0  # alias for condition closure
         def condition0(context: Dict[str, Any]) -> bool:
+            target_card = context.get('card_source')
+            if target_card is not card:
+                return False
             return True
 
         effect0.set_can_use_condition(condition0)
 
-        def process0(ctx: Dict[str, Any]):
-            """Action: Effect"""
-            player = ctx.get('player')
-            perm = ctx.get('permanent')
-            game = ctx.get('game')
-            # Cost reduction (variable amount) — handled via cost_reduction property
-            pass  # descriptive-tagged: cost_reduction
+        def _cost_reduction_fn(context):
+            owner = card.owner if card else None
+            if not owner or not owner.enemy:
+                return 0
+            opp_digimon_count = sum(1 for p in owner.enemy.battle_area if p.is_digimon)
+            return 2 * opp_digimon_count
 
-        effect0.set_on_process_callback(process0)
+        effect0._cost_reduction_value_fn = _cost_reduction_fn
         effects.append(effect0)
 
         # Factory effect: blocker
-        # Blocker
         effect1 = ICardEffect()
         effect1.set_effect_name("BT21-026 Blocker")
         effect1.set_effect_description("Blocker")
@@ -50,7 +58,6 @@ class BT21_026(CardScript):
         effects.append(effect1)
 
         # Factory effect: rush
-        # Rush
         effect2 = ICardEffect()
         effect2.set_effect_name("BT21-026 Rush")
         effect2.set_effect_description("Rush")
@@ -62,7 +69,6 @@ class BT21_026(CardScript):
         effects.append(effect2)
 
         # Factory effect: raid
-        # Raid
         effect3 = ICardEffect()
         effect3.set_effect_name("BT21-026 Raid")
         effect3.set_effect_description("Raid")
@@ -74,38 +80,38 @@ class BT21_026(CardScript):
         effect3.set_can_use_condition(condition3)
         effects.append(effect3)
 
-        # Timing: EffectTiming.OnDestroyedAnyone
-        # [All Turns] [Once Per Turn] When any of your opponent's Digimon are deleted, this Digimon may unsuspend.
+        # [All Turns] [Once Per Turn] When any of your opponent's Digimon are deleted,
+        # this Digimon may unsuspend.
         effect4 = ICardEffect()
         effect4.set_timing(EffectTiming.OnDestroyedAnyone)
         effect4.set_effect_name("BT21-026 Unsuspend")
         effect4.set_effect_description("[All Turns] [Once Per Turn] When any of your opponent's Digimon are deleted, this Digimon may unsuspend.")
         effect4.is_optional = True
         effect4.set_max_count_per_turn(1)
-        effect4.set_hash_string("Unsuspend_BT21-026")
+        effect4.set_hash_string("Unsuspend_BT21_026")
         effect4.is_on_deletion = True
 
-        effect = effect4  # alias for condition closure
         def condition4(context: Dict[str, Any]) -> bool:
             if card and card.permanent_of_this_card() is None:
                 return False
+            # Only trigger when an opponent's Digimon is destroyed
+            destroyed = context.get('permanent') or context.get('destroyed_permanent')
+            owner = card.owner if card else None
+            if destroyed and owner:
+                destroyed_owner = None
+                if getattr(destroyed, 'top_card', None):
+                    destroyed_owner = getattr(destroyed.top_card, 'owner', None)
+                if destroyed_owner is owner:
+                    return False  # Own Digimon deleted, not opponent's
             return True
 
         effect4.set_can_use_condition(condition4)
 
         def process4(ctx: Dict[str, Any]):
-            """Action: Unsuspend"""
-            player = ctx.get('player')
-            perm = ctx.get('permanent')
-            game = ctx.get('game')
-            if not (player and game):
-                return
-            def target_filter(p):
-                return True
-            def on_unsuspend(target_perm):
-                target_perm.unsuspend()
-            game.effect_select_own_permanent(
-                player, on_unsuspend, filter_fn=target_filter, is_optional=True)
+            """Unsuspend this Digimon."""
+            my_perm = card.permanent_of_this_card() if card else None
+            if my_perm and my_perm.is_suspended:
+                my_perm.unsuspend()
 
         effect4.set_on_process_callback(process4)
         effects.append(effect4)

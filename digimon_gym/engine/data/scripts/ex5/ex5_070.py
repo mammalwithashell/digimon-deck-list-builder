@@ -14,141 +14,160 @@ class EX5_070(CardScript):
     def get_card_effects(self, card: 'CardSource') -> List['ICardEffect']:
         effects = []
 
-        # Timing: EffectTiming.None
-        # Also Treated As
+        # Also Treated As [X Antibody]
         effect0 = ICardEffect()
         effect0.set_effect_name("EX5-070 Also treated as [X Antibody]")
         effect0.set_effect_description("Also Treated As")
 
-        effect = effect0  # alias for condition closure
         def condition0(context: Dict[str, Any]) -> bool:
             return True
-
         effect0.set_can_use_condition(condition0)
-
-        def process0(ctx: Dict[str, Any]):
-            """Action: Also Treated As"""
-            player = ctx.get('player')
-            perm = ctx.get('permanent')
-            game = ctx.get('game')
-            # Also treated as [Name] — name aliasing not modeled in engine
-            pass  # descriptive-tagged: also_treated_as_name
-
-        effect0.set_on_process_callback(process0)
         effects.append(effect0)
 
-        # Timing: EffectTiming.None
-        # Ignore Color Req
+        # Ignore Color Req (while you have a Digimon)
         effect1 = ICardEffect()
         effect1.set_effect_name("EX5-070 Ignore color requirements")
-        effect1.set_effect_description("Ignore Color Req")
+        effect1.set_effect_description("While you have a Digimon, you can ignore this card's color requirements.")
+        effect1._ignore_color_requirements = True
 
-        effect = effect1  # alias for condition closure
         def condition1(context: Dict[str, Any]) -> bool:
             return True
-
         effect1.set_can_use_condition(condition1)
-
-        def process1(ctx: Dict[str, Any]):
-            """Action: Ignore Color Req"""
-            player = ctx.get('player')
-            perm = ctx.get('permanent')
-            game = ctx.get('game')
-            # Ignores color requirement for playing Options — not modeled in engine
-            pass  # descriptive-tagged
-
-        effect1.set_on_process_callback(process1)
         effects.append(effect1)
 
-        # Timing: EffectTiming.SecuritySkill
-        # [Security] Add this card to its owner's hand.
+        # [Security] Add this card to hand
         effect2 = ICardEffect()
         effect2.set_timing(EffectTiming.SecuritySkill)
-        effect2.set_effect_name("EX5-070 Add To Hand")
+        effect2.set_effect_name("EX5-070 Security: Add to hand")
         effect2.set_effect_description("[Security] Add this card to its owner's hand.")
         effect2.is_security_effect = True
-        effect2.is_security_effect = True
+        effect2._security_add_to_hand = True
 
-        effect = effect2  # alias for condition closure
         def condition2(context: Dict[str, Any]) -> bool:
-            # Security effect — validated by engine timing
             return True
-
         effect2.set_can_use_condition(condition2)
 
         def process2(ctx: Dict[str, Any]):
-            """Action: Add To Hand"""
             player = ctx.get('player')
-            perm = ctx.get('permanent')
-            game = ctx.get('game')
-            # Add card to hand (from trash/reveal)
-            if player and player.trash_cards:
-                card_to_add = player.trash_cards.pop()
-                player.hand_cards.append(card_to_add)
+            if player and card:
+                # Security effect adds this card to hand
+                if card in player.trash_cards:
+                    player.trash_cards.remove(card)
+                    player.hand_cards.append(card)
 
         effect2.set_on_process_callback(process2)
         effects.append(effect2)
 
-        # Timing: EffectTiming.OptionSkill
-        # [Main] 1 of your Digimon without [X Antibody] in its digivolution cards may digivolve into a Digimon card with the [X Antibody] trait in your hand with the digivolution cost reduced by 1. If it did, place this card as its bottom digivolution card.
+        # [Main] 1 of your Digimon without [X Antibody] in its digivolution cards
+        # may digivolve into a Digimon card with the [X Antibody] trait in your hand
+        # with the digivolution cost reduced by 1. If it did, place this card as its
+        # bottom digivolution card.
         effect3 = ICardEffect()
         effect3.set_timing(EffectTiming.OptionSkill)
-        effect3.set_effect_name("EX5-070 Digivolve")
-        effect3.set_effect_description("[Main] 1 of your Digimon without [X Antibody] in its digivolution cards may digivolve into a Digimon card with the [X Antibody] trait in your hand with the digivolution cost reduced by 1. If it did, place this card as its bottom digivolution card.")
+        effect3.set_effect_name("EX5-070 Main: digivolve into X Antibody trait Digimon")
+        effect3.set_effect_description(
+            "[Main] 1 of your Digimon without [X Antibody] in its digivolution cards "
+            "may digivolve into a Digimon card with the [X Antibody] trait in your hand "
+            "with the digivolution cost reduced by 1. If it did, place this card as its "
+            "bottom digivolution card."
+        )
 
-        effect = effect3  # alias for condition closure
         def condition3(context: Dict[str, Any]) -> bool:
-            # Option main effect — validated by engine timing
             return True
-
         effect3.set_can_use_condition(condition3)
 
         def process3(ctx: Dict[str, Any]):
-            """Action: Digivolve"""
             player = ctx.get('player')
-            perm = ctx.get('permanent')
             game = ctx.get('game')
-            if not (player and perm and game):
+            if not (player and game):
                 return
-            def digi_filter(c):
-                if not getattr(c, 'is_digimon', False):
-                    return False
-                return True
-            game.effect_digivolve_from_hand(
-                player, perm, digi_filter, is_optional=True)
+
+            def _has_x_antibody_in_sources(perm):
+                for cs in perm.card_sources[:-1]:
+                    traits = getattr(cs, 'card_traits', []) or []
+                    if any('X Antibody' in t for t in traits):
+                        return True
+                return False
+
+            def perm_filter(p):
+                return p.is_digimon and not _has_x_antibody_in_sources(p)
+
+            def on_select_perm(target_perm):
+                def digi_filter(c):
+                    if not getattr(c, 'is_digimon', False):
+                        return False
+                    traits = getattr(c, 'card_traits', []) or []
+                    return any('X Antibody' in t for t in traits)
+
+                game.effect_digivolve_from_hand(
+                    player, target_perm, digi_filter,
+                    cost_reduction=1, is_optional=True)
+                # Place this card as bottom digivolution card
+                cur_perm = target_perm
+                if cur_perm and cur_perm in player.battle_area and card:
+                    if card in player.trash_cards:
+                        player.trash_cards.remove(card)
+                    cur_perm.card_sources.insert(0, card)
+
+            game.effect_select_own_permanent(
+                player, on_select_perm, filter_fn=perm_filter, is_optional=True)
 
         effect3.set_on_process_callback(process3)
         effects.append(effect3)
 
-        # Timing: EffectTiming.WhenRemoveField
-        # [All Turns] When this Digimon would leave the battle area other than by one of your effects, from this Digimon's digivolution cards, return 1 Digimon card to the hand and place 1 [X Antibody] on top of your security stack.
+        # Inherited: [All Turns] When this Digimon would leave the battle area
+        # other than by one of your effects, from this Digimon's digivolution cards,
+        # return 1 Digimon card to the hand and place 1 [X Antibody] on top of your
+        # security stack.
         effect4 = ICardEffect()
         effect4.set_timing(EffectTiming.WhenRemoveField)
-        effect4.set_effect_name("EX5-070 Return 1 card from digivolution cards and place 1 [XAntibody] to the top of security")
-        effect4.set_effect_description("[All Turns] When this Digimon would leave the battle area other than by one of your effects, from this Digimon's digivolution cards, return 1 Digimon card to the hand and place 1 [X Antibody] on top of your security stack.")
+        effect4.set_effect_name("EX5-070 Leave field: return Digimon card, place X Antibody to security")
+        effect4.set_effect_description(
+            "[All Turns] When this Digimon would leave the battle area other than by "
+            "one of your effects, from this Digimon's digivolution cards, return 1 "
+            "Digimon card to the hand and place 1 [X Antibody] on top of your security stack."
+        )
         effect4.is_inherited_effect = True
         effect4.set_hash_string("ReturnCard_EX5_070")
 
-        effect = effect4  # alias for condition closure
         def condition4(context: Dict[str, Any]) -> bool:
             if card and card.permanent_of_this_card() is None:
                 return False
+            # Only triggers from opponent's effects (not your own)
+            source_player = context.get('source_player')
+            if source_player and card and card.owner and source_player is card.owner:
+                return False
             return True
-
         effect4.set_can_use_condition(condition4)
 
         def process4(ctx: Dict[str, Any]):
-            """Action: Add To Hand, Add To Security"""
             player = ctx.get('player')
             perm = ctx.get('permanent')
             game = ctx.get('game')
-            # Add card to hand (from trash/reveal)
-            if player and player.trash_cards:
-                card_to_add = player.trash_cards.pop()
-                player.hand_cards.append(card_to_add)
-            # Add top card of deck to security
-            if player:
-                player.recovery(1)
+            if not (player and perm):
+                return
+
+            # Return 1 Digimon card from digivolution cards to hand
+            digi_sources = [
+                cs for cs in perm.card_sources[:-1]
+                if getattr(cs, 'is_digimon', False)
+            ]
+            if digi_sources:
+                return_card = digi_sources[0]
+                if return_card in perm.card_sources:
+                    perm.card_sources.remove(return_card)
+                    player.hand_cards.append(return_card)
+
+            # Place 1 [X Antibody] from digivolution cards on top of security
+            x_sources = [
+                cs for cs in perm.card_sources[:-1]
+                if any('X Antibody' in t for t in (getattr(cs, 'card_traits', []) or []))
+            ]
+            if x_sources:
+                x_card = x_sources[0]
+                if x_card in perm.card_sources:
+                    perm.card_sources.remove(x_card)
+                    player.security_cards.insert(0, x_card)
 
         effect4.set_on_process_callback(process4)
         effects.append(effect4)

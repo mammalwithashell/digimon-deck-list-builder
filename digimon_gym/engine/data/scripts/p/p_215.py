@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....interfaces.modifiers import ModifierType, ModifierEntry
 from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
@@ -9,145 +10,178 @@ if TYPE_CHECKING:
 
 
 class P_215(CardScript):
-    """P-215 Icemon | Lv.4"""
+    """P-215 Icemon | Lv.4
+
+    [When Moving] [On Play] [When Digivolving] By placing 1 level 4 or
+    lower [Ice-Snow], [Mineral] or [Rock] trait card from your hand or
+    trash as this Digimon's bottom digivolution card, until your opponent's
+    turn ends, their effects can't return 1 of your [Ice-Snow], [Mineral]
+    or [Rock] trait Digimon to hands or decks or affect it with
+    De-Digivolve effects.
+
+    Inherited: Blocker
+    """
 
     def get_card_effects(self, card: 'CardSource') -> List['ICardEffect']:
         effects = []
 
-        # Factory effect: alt_digivolve_req
-        # Alternate digivolution requirement
+        # Alt digi: from Lv.3 [Ice-Snow] trait for cost 2
         effect0 = ICardEffect()
         effect0.set_effect_name("P-215 Alternate digivolution requirement")
         effect0.set_effect_description("Alternate digivolution requirement")
-        # Alternate digivolution: Lv.3 with [Ice-Snow] trait for cost 2
         effect0._alt_digi_cost = 2
         effect0._alt_digi_level = 3
         effect0._alt_digi_trait = "Ice-Snow"
 
         def condition0(context: Dict[str, Any]) -> bool:
             permanent = card.permanent_of_this_card() if card else None
-            if not (permanent and permanent.top_card and (any('Ice-Snow' in tr for tr in (getattr(permanent.top_card, 'card_traits', []) or [])))):
+            if not (permanent and permanent.top_card and
+                    any('Ice-Snow' in tr for tr in (getattr(permanent.top_card, 'card_traits', []) or []))):
                 return False
             return True
         effect0.set_can_use_condition(condition0)
         effects.append(effect0)
 
-        # Timing: EffectTiming.OnMove
-        # Gain Keyword Cannot Return To Hand, Gain Keyword Cannot Return To Deck, Grant Bounce Immunity
-        effect1 = ICardEffect()
-        effect1.set_timing(EffectTiming.OnMove)
-        effect1.set_effect_name("P-215 Gain Keyword Cannot Return To Hand, Gain Keyword Cannot Return To Deck, Grant Bounce Immunity")
-        effect1.set_effect_description("Gain Keyword Cannot Return To Hand, Gain Keyword Cannot Return To Deck, Grant Bounce Immunity")
-        effect1._is_cannot_return_to_hand = True
-        effect1._is_cannot_return_to_deck = True
+        def _has_valid_card_in_hand_or_trash(player) -> bool:
+            """Check for Lv.4 or lower [Ice-Snow]/[Mineral]/[Rock] card."""
+            if not player:
+                return False
+            for c in list(player.hand_cards) + list(player.trash_cards):
+                level = getattr(c, 'level', None)
+                if level is not None and level <= 4:
+                    traits = getattr(c, 'card_traits', []) or []
+                    if 'Ice-Snow' in traits or 'Mineral' in traits or 'Rock' in traits:
+                        return True
+            return False
 
-        effect = effect1  # alias for condition closure
-        def condition1(context: Dict[str, Any]) -> bool:
+        def _place_and_protect(ctx: Dict[str, Any]):
+            """Place 1 Lv.4- card as bottom source, then grant protection."""
+            player = ctx.get('player')
+            perm = ctx.get('permanent')
+            game = ctx.get('game')
+            if not (player and perm and game):
+                return
+
+            def hand_filter(c):
+                level = getattr(c, 'level', None)
+                if level is None or level > 4:
+                    return False
+                traits = getattr(c, 'card_traits', []) or []
+                return 'Ice-Snow' in traits or 'Mineral' in traits or 'Rock' in traits
+
+            hand_candidates = [c for c in player.hand_cards if hand_filter(c)]
+
+            if hand_candidates:
+                def on_selected(selected):
+                    if selected in player.hand_cards:
+                        player.hand_cards.remove(selected)
+                        perm.add_card_source_bottom(selected)
+                    _apply_protection(player, game)
+
+                game.effect_select_hand_card(
+                    player, hand_filter, on_selected, is_optional=True,
+                    prompt="Place 1 Lv.4- [Ice-Snow/Mineral/Rock] card from hand as bottom source.")
+            else:
+                # Place from trash
+                placed = False
+                for c in list(player.trash_cards):
+                    if placed:
+                        break
+                    if hand_filter(c):
+                        player.trash_cards.remove(c)
+                        perm.add_card_source_bottom(c)
+                        placed = True
+                if placed:
+                    _apply_protection(player, game)
+
+        def _apply_protection(player, game):
+            """Grant protection to Ice-Snow/Mineral/Rock Digimon."""
+            for field_perm in player.battle_area:
+                if not field_perm.is_digimon:
+                    continue
+                if not (field_perm.has_trait('Ice-Snow') or
+                        field_perm.has_trait('Mineral') or
+                        field_perm.has_trait('Rock')):
+                    continue
+                # Cannot be returned to hand by opponent effects
+                game.register_modifier(
+                    field_perm, ModifierType.CANNOT_RETURN_TO_HAND,
+                    condition=lambda p, c, fp=field_perm: p is fp,
+                    expiry='end_of_opponent_turn',
+                )
+                # Cannot be returned to deck by opponent effects
+                game.register_modifier(
+                    field_perm, ModifierType.CANNOT_RETURN_TO_DECK,
+                    condition=lambda p, c, fp=field_perm: p is fp,
+                    expiry='end_of_opponent_turn',
+                )
+                # Immune from De-Digivolve
+                game.register_modifier(
+                    field_perm, ModifierType.IMMUNE_FROM_DE_DIGIVOLVE,
+                    condition=lambda p, c, fp=field_perm: p is fp,
+                    expiry='end_of_opponent_turn',
+                )
+
+        # [When Moving]
+        eff_move = ICardEffect()
+        eff_move.set_timing(EffectTiming.OnMove)
+        eff_move.set_effect_name("P-215 Place card and protect from return/de-digivolve")
+        eff_move.set_effect_description("[When Moving] Place 1 card and grant protection.")
+        eff_move.is_optional = True
+
+        def cond_move(context: Dict[str, Any]) -> bool:
             if card and card.permanent_of_this_card() is None:
                 return False
+            return _has_valid_card_in_hand_or_trash(card.owner if card else None)
+
+        eff_move.set_can_use_condition(cond_move)
+        eff_move.set_on_process_callback(_place_and_protect)
+        effects.append(eff_move)
+
+        # [On Play]
+        eff_play = ICardEffect()
+        eff_play.set_timing(EffectTiming.OnEnterFieldAnyone)
+        eff_play.set_effect_name("P-215 Place card and protect from return/de-digivolve")
+        eff_play.set_effect_description("[On Play] Place 1 card and grant protection.")
+        eff_play.is_on_play = True
+        eff_play.is_optional = True
+
+        def cond_play(context: Dict[str, Any]) -> bool:
+            if card and card.permanent_of_this_card() is None:
+                return False
+            return _has_valid_card_in_hand_or_trash(card.owner if card else None)
+
+        eff_play.set_can_use_condition(cond_play)
+        eff_play.set_on_process_callback(_place_and_protect)
+        effects.append(eff_play)
+
+        # [When Digivolving]
+        eff_digi = ICardEffect()
+        eff_digi.set_timing(EffectTiming.OnEnterFieldAnyone)
+        eff_digi.set_effect_name("P-215 Place card and protect from return/de-digivolve")
+        eff_digi.set_effect_description("[When Digivolving] Place 1 card and grant protection.")
+        eff_digi.is_when_digivolving = True
+        eff_digi.is_optional = True
+
+        def cond_digi(context: Dict[str, Any]) -> bool:
+            if card and card.permanent_of_this_card() is None:
+                return False
+            return _has_valid_card_in_hand_or_trash(card.owner if card else None)
+
+        eff_digi.set_can_use_condition(cond_digi)
+        eff_digi.set_on_process_callback(_place_and_protect)
+        effects.append(eff_digi)
+
+        # Inherited: Blocker
+        eff_blocker = ICardEffect()
+        eff_blocker.set_effect_name("P-215 Blocker")
+        eff_blocker.set_effect_description("Blocker")
+        eff_blocker.is_inherited_effect = True
+        eff_blocker._is_blocker = True
+
+        def cond_blocker(context: Dict[str, Any]) -> bool:
             return True
-
-        effect1.set_can_use_condition(condition1)
-
-        def process1(ctx: Dict[str, Any]):
-            """Action: Gain Keyword Cannot Return To Hand, Gain Keyword Cannot Return To Deck, Grant Bounce Immunity"""
-            player = ctx.get('player')
-            perm = ctx.get('permanent')
-            game = ctx.get('game')
-            if perm:
-                perm.grant_keyword('_is_cannot_return_to_hand')
-                perm.grant_keyword('_is_cannot_return_to_deck')
-            # Prevent return to hand/deck via modifier system
-            if perm and game:
-                from digimon_gym.engine.interfaces.modifiers import ModifierType
-                game.register_modifier(
-                    ModifierType.CANNOT_BE_RETURNED, perm,
-                    value_fn=lambda: True, expiry='end_of_turn')
-
-        effect1.set_on_process_callback(process1)
-        effects.append(effect1)
-
-        # Timing: EffectTiming.OnEnterFieldAnyone
-        # Gain Keyword Cannot Return To Hand, Gain Keyword Cannot Return To Deck, Grant Bounce Immunity
-        effect2 = ICardEffect()
-        effect2.set_timing(EffectTiming.OnEnterFieldAnyone)
-        effect2.set_effect_name("P-215 Gain Keyword Cannot Return To Hand, Gain Keyword Cannot Return To Deck, Grant Bounce Immunity")
-        effect2.set_effect_description("Gain Keyword Cannot Return To Hand, Gain Keyword Cannot Return To Deck, Grant Bounce Immunity")
-        effect2.is_on_play = True
-        effect2._is_cannot_return_to_hand = True
-        effect2._is_cannot_return_to_deck = True
-
-        effect = effect2  # alias for condition closure
-        def condition2(context: Dict[str, Any]) -> bool:
-            # Triggered on play — validated by engine timing
-            return True
-
-        effect2.set_can_use_condition(condition2)
-
-        def process2(ctx: Dict[str, Any]):
-            """Action: Gain Keyword Cannot Return To Hand, Gain Keyword Cannot Return To Deck, Grant Bounce Immunity"""
-            player = ctx.get('player')
-            perm = ctx.get('permanent')
-            game = ctx.get('game')
-            if perm:
-                perm.grant_keyword('_is_cannot_return_to_hand')
-                perm.grant_keyword('_is_cannot_return_to_deck')
-            # Prevent return to hand/deck via modifier system
-            if perm and game:
-                from digimon_gym.engine.interfaces.modifiers import ModifierType
-                game.register_modifier(
-                    ModifierType.CANNOT_BE_RETURNED, perm,
-                    value_fn=lambda: True, expiry='end_of_turn')
-
-        effect2.set_on_process_callback(process2)
-        effects.append(effect2)
-
-        # Timing: EffectTiming.OnEnterFieldAnyone
-        # Gain Keyword Cannot Return To Hand, Gain Keyword Cannot Return To Deck, Grant Bounce Immunity
-        effect3 = ICardEffect()
-        effect3.set_timing(EffectTiming.OnEnterFieldAnyone)
-        effect3.set_effect_name("P-215 Gain Keyword Cannot Return To Hand, Gain Keyword Cannot Return To Deck, Grant Bounce Immunity")
-        effect3.set_effect_description("Gain Keyword Cannot Return To Hand, Gain Keyword Cannot Return To Deck, Grant Bounce Immunity")
-        effect3.is_when_digivolving = True
-        effect3._is_cannot_return_to_hand = True
-        effect3._is_cannot_return_to_deck = True
-
-        effect = effect3  # alias for condition closure
-        def condition3(context: Dict[str, Any]) -> bool:
-            # Triggered when digivolving — validated by engine timing
-            return True
-
-        effect3.set_can_use_condition(condition3)
-
-        def process3(ctx: Dict[str, Any]):
-            """Action: Gain Keyword Cannot Return To Hand, Gain Keyword Cannot Return To Deck, Grant Bounce Immunity"""
-            player = ctx.get('player')
-            perm = ctx.get('permanent')
-            game = ctx.get('game')
-            if perm:
-                perm.grant_keyword('_is_cannot_return_to_hand')
-                perm.grant_keyword('_is_cannot_return_to_deck')
-            # Prevent return to hand/deck via modifier system
-            if perm and game:
-                from digimon_gym.engine.interfaces.modifiers import ModifierType
-                game.register_modifier(
-                    ModifierType.CANNOT_BE_RETURNED, perm,
-                    value_fn=lambda: True, expiry='end_of_turn')
-
-        effect3.set_on_process_callback(process3)
-        effects.append(effect3)
-
-        # Factory effect: blocker
-        # Blocker
-        effect4 = ICardEffect()
-        effect4.set_effect_name("P-215 Blocker")
-        effect4.set_effect_description("Blocker")
-        effect4.is_inherited_effect = True
-        effect4._is_blocker = True
-
-        def condition4(context: Dict[str, Any]) -> bool:
-            return True
-        effect4.set_can_use_condition(condition4)
-        effects.append(effect4)
+        eff_blocker.set_can_use_condition(cond_blocker)
+        effects.append(eff_blocker)
 
         return effects

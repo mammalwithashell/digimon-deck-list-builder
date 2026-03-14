@@ -80,7 +80,7 @@ class BT24_050(CardScript):
             from digimon_gym.engine.interfaces.modifiers import ModifierType
             def on_freeze(target_perm):
                 game.register_modifier(
-                    ModifierType.CANNOT_UNSUSPEND, target_perm,
+                    target_perm, ModifierType.CANNOT_UNSUSPEND,
                     value_fn=lambda: True, expiry='end_of_opponent_turn')
             game.effect_select_opponent_permanent(
                 player, on_freeze, filter_fn=lambda p: p.is_suspended, is_optional=False)
@@ -88,7 +88,7 @@ class BT24_050(CardScript):
             if perm and game:
                 from digimon_gym.engine.interfaces.modifiers import ModifierType
                 game.register_modifier(
-                    ModifierType.CANNOT_BE_SELECTED_BY_EFFECT, perm,
+                    perm, ModifierType.CANNOT_BE_SELECTED_BY_EFFECT,
                     value_fn=lambda: True, expiry='end_of_turn')
 
         effect2.set_on_process_callback(process2)
@@ -130,7 +130,7 @@ class BT24_050(CardScript):
             from digimon_gym.engine.interfaces.modifiers import ModifierType
             def on_freeze(target_perm):
                 game.register_modifier(
-                    ModifierType.CANNOT_UNSUSPEND, target_perm,
+                    target_perm, ModifierType.CANNOT_UNSUSPEND,
                     value_fn=lambda: True, expiry='end_of_opponent_turn')
             game.effect_select_opponent_permanent(
                 player, on_freeze, filter_fn=lambda p: p.is_suspended, is_optional=False)
@@ -138,7 +138,7 @@ class BT24_050(CardScript):
             if perm and game:
                 from digimon_gym.engine.interfaces.modifiers import ModifierType
                 game.register_modifier(
-                    ModifierType.CANNOT_BE_SELECTED_BY_EFFECT, perm,
+                    perm, ModifierType.CANNOT_BE_SELECTED_BY_EFFECT,
                     value_fn=lambda: True, expiry='end_of_turn')
 
         effect3.set_on_process_callback(process3)

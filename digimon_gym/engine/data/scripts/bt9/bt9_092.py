@@ -146,7 +146,7 @@ class BT9_092(CardScript):
             player.add_memory(1)
 
             # Draw 1
-            player.draw(1)
+            player.draw()
 
         effect1.set_on_process_callback(process1)
         effects.append(effect1)

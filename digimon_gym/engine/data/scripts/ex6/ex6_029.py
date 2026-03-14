@@ -66,6 +66,8 @@ class EX6_029(CardScript):
             if not (player and game):
                 return
             def play_filter(c):
+                if not getattr(c, 'is_digimon', False):
+                    return False
                 if getattr(c, 'level', None) is None or c.level > 5:
                     return False
                 traits = getattr(c, 'card_traits', []) or []
@@ -117,6 +119,8 @@ class EX6_029(CardScript):
             if not (player and game):
                 return
             def play_filter(c):
+                if not getattr(c, 'is_digimon', False):
+                    return False
                 if getattr(c, 'level', None) is None or c.level > 5:
                     return False
                 traits = getattr(c, 'card_traits', []) or []

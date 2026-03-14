@@ -2,7 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
-from ....data.enums import EffectTiming
+from ....data.enums import EffectTiming, CardColor
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -15,11 +15,10 @@ class BT24_037(CardScript):
         effects = []
 
         # Factory effect: alt_digivolve_req
-        # Alternate digivolution requirement
+        # Alternate digivolution: Lv.4 with [TS] trait for cost 3
         effect0 = ICardEffect()
         effect0.set_effect_name("BT24-037 Alternate digivolution requirement")
         effect0.set_effect_description("Alternate digivolution requirement")
-        # Alternate digivolution: Lv.4 with [TS] trait for cost 3
         effect0._alt_digi_cost = 3
         effect0._alt_digi_level = 4
         effect0._alt_digi_trait = "TS"
@@ -29,199 +28,156 @@ class BT24_037(CardScript):
         effect0.set_can_use_condition(condition0)
         effects.append(effect0)
 
-        # Timing: EffectTiming.None
-        # Jogress Condition
+        # Factory effect: jogress
         effect1 = ICardEffect()
         effect1.set_effect_name("BT24-037 Jogress Condition")
         effect1.set_effect_description("Jogress Condition")
-
-        effect = effect1  # alias for condition closure
         def condition1(context: Dict[str, Any]) -> bool:
             return True
-
         effect1.set_can_use_condition(condition1)
         effects.append(effect1)
 
-        # Timing: EffectTiming.OnEnterFieldAnyone
-        # DP -5000, Force Attack, Change Security Attack
-        effect2 = ICardEffect()
-        effect2.set_timing(EffectTiming.OnEnterFieldAnyone)
-        effect2.set_effect_name("BT24-037 DP -5000, Force Attack, Change Security Attack")
-        effect2.set_effect_description("DP -5000, Force Attack, Change Security Attack")
-        effect2.is_on_play = True
+        # [On Play] [When Digivolving] 1 of your opponent's Digimon gets -5000 DP
+        # for the turn. Then, 1 of your Digimon may attack. If DNA digivolving,
+        # 1 of your Digimon gains <Security A. +1> and +5000 DP for the turn.
+        for is_play in [True, False]:
+            effect_n = ICardEffect()
+            effect_n.set_timing(EffectTiming.OnEnterFieldAnyone)
+            effect_n.set_effect_name("BT24-037 DP -5000, may attack, DNA bonus")
+            effect_n.set_effect_description(
+                "[On Play] [When Digivolving] 1 of your opponent's Digimon gets -5000 DP "
+                "for the turn. Then, 1 of your Digimon may attack. If DNA digivolving, "
+                "1 of your Digimon gains <Security A. +1> and +5000 DP for the turn."
+            )
+            if is_play:
+                effect_n.is_on_play = True
+            else:
+                effect_n.is_when_digivolving = True
 
-        effect = effect2  # alias for condition closure
-        def condition2(context: Dict[str, Any]) -> bool:
-            if card and card.permanent_of_this_card() is None:
-                return False
-            # Triggered on play — validated by engine timing
-            return True
-
-        effect2.set_can_use_condition(condition2)
-
-        def process2(ctx: Dict[str, Any]):
-            """Action: DP -5000, Force Attack, Change Security Attack"""
-            player = ctx.get('player')
-            perm = ctx.get('permanent')
-            game = ctx.get('game')
-            # DP change targets opponent digimon
-            enemy = player.enemy if player else None
-            if enemy and enemy.battle_area:
-                dp_targets = [p for p in enemy.battle_area if p.is_digimon and p.dp is not None]
-                if dp_targets:
-                    target = min(dp_targets, key=lambda p: p.dp)
-                    target.change_dp(-5000)
-            # Force attack — target Digimon may attack (requires engine SelectAttack)
-            pass  # descriptive-tagged: force_attack
-            # Grant Security Attack modifier to target permanent
-            pass  # descriptive-tagged: change_security_attack
-
-        effect2.set_on_process_callback(process2)
-        effects.append(effect2)
-
-        # Timing: EffectTiming.OnEnterFieldAnyone
-        # DP -5000, Force Attack, Change Security Attack
-        effect3 = ICardEffect()
-        effect3.set_timing(EffectTiming.OnEnterFieldAnyone)
-        effect3.set_effect_name("BT24-037 DP -5000, Force Attack, Change Security Attack")
-        effect3.set_effect_description("DP -5000, Force Attack, Change Security Attack")
-        effect3.is_when_digivolving = True
-
-        effect = effect3  # alias for condition closure
-        def condition3(context: Dict[str, Any]) -> bool:
-            if card and card.permanent_of_this_card() is None:
-                return False
-            # Triggered when digivolving — validated by engine timing
-            return True
-
-        effect3.set_can_use_condition(condition3)
-
-        def process3(ctx: Dict[str, Any]):
-            """Action: DP -5000, Force Attack, Change Security Attack"""
-            player = ctx.get('player')
-            perm = ctx.get('permanent')
-            game = ctx.get('game')
-            # DP change targets opponent digimon
-            enemy = player.enemy if player else None
-            if enemy and enemy.battle_area:
-                dp_targets = [p for p in enemy.battle_area if p.is_digimon and p.dp is not None]
-                if dp_targets:
-                    target = min(dp_targets, key=lambda p: p.dp)
-                    target.change_dp(-5000)
-            # Force attack — target Digimon may attack (requires engine SelectAttack)
-            pass  # descriptive-tagged: force_attack
-            # Grant Security Attack modifier to target permanent
-            pass  # descriptive-tagged: change_security_attack
-
-        effect3.set_on_process_callback(process3)
-        effects.append(effect3)
-
-        # Timing: EffectTiming.WhenRemoveField
-        # [All Turns] [Once Per Turn] When this Digimon would leave the battle area other than by your effects, you may play 1 level 4 or lower yellow, red or [TS] trait Digimon card from its digivolution cards without paying the cost.
-        effect4 = ICardEffect()
-        effect4.set_timing(EffectTiming.WhenRemoveField)
-        effect4.set_effect_name("BT24-037 Play 1 level 4- [Yellow]/[Red]/[TS] trait digimon from digivolution sources")
-        effect4.set_effect_description("[All Turns] [Once Per Turn] When this Digimon would leave the battle area other than by your effects, you may play 1 level 4 or lower yellow, red or [TS] trait Digimon card from its digivolution cards without paying the cost.")
-        effect4.is_optional = True
-        effect4.set_max_count_per_turn(1)
-        effect4.set_hash_string("BT24_037_AT")
-
-        effect = effect4  # alias for condition closure
-        def condition4(context: Dict[str, Any]) -> bool:
-            if card and card.permanent_of_this_card() is None:
-                return False
-            return True
-
-        effect4.set_can_use_condition(condition4)
-
-        def process4(ctx: Dict[str, Any]):
-            """Action: Play 1 lv4- yellow/red/[TS] Digimon from digivolution cards."""
-            player = ctx.get('player')
-            perm = ctx.get('permanent')
-            game = ctx.get('game')
-            if not (player and perm and game):
-                return
-            def play_filter(c):
-                if not getattr(c, 'is_digimon', False):
-                    return False
-                if getattr(c, 'level', None) is None or c.level > 4:
-                    return False
-                colors = [col.name for col in (getattr(c, 'card_colors', []) or [])]
-                traits = getattr(c, 'card_traits', []) or []
-                # Yellow OR Red OR [TS] trait — three independent conditions
-                if 'Yellow' in colors or 'Red' in colors or any('TS' in t for t in traits):
+            def make_condition():
+                def cond(context: Dict[str, Any]) -> bool:
+                    if card and card.permanent_of_this_card() is None:
+                        return False
                     return True
-                return False
-            # Play from this Digimon's digivolution cards (not hand)
-            top = perm.top_card
-            candidates = [cs for cs in perm.card_sources if cs is not top and play_filter(cs)]
-            if not candidates:
-                return
-            # Auto-select best candidate (first matching) for RL simplicity
-            chosen = candidates[0]
-            perm.card_sources.remove(chosen)
-            played = player.play_card_from_source(chosen, pay_cost=False)
-            if played:
-                game.execute_effects(
-                    EffectTiming.OnEnterFieldAnyone,
-                    {'played_card': chosen, 'played_permanent': played, 'event_player': player},
-                )
+                return cond
 
-        effect4.set_on_process_callback(process4)
-        effects.append(effect4)
+            effect_n.set_can_use_condition(make_condition())
 
-        # Timing: EffectTiming.WhenRemoveField
-        # [All Turns] [Once Per Turn] When this Digimon would leave the battle area other than by your effects, you may play 1 level 4 or lower yellow, red or [TS] trait Digimon card from its digivolution cards without paying the cost.
-        effect5 = ICardEffect()
-        effect5.set_timing(EffectTiming.WhenRemoveField)
-        effect5.set_effect_name("BT24-037 Play 1 level 4- [Yellow]/[Red]/[CS] trait digimon from digivolution sources")
-        effect5.set_effect_description("[All Turns] [Once Per Turn] When this Digimon would leave the battle area other than by your effects, you may play 1 level 4 or lower yellow, red or [TS] trait Digimon card from its digivolution cards without paying the cost.")
-        effect5.is_inherited_effect = True
-        effect5.is_optional = True
-        effect5.set_max_count_per_turn(1)
-        effect5.set_hash_string("BT24_037_AT_ESS")
+            def make_process(is_play_flag):
+                def process_n(ctx: Dict[str, Any]):
+                    player = ctx.get('player')
+                    game = ctx.get('game')
+                    if not (player and game):
+                        return
+                    enemy = player.enemy if player else None
 
-        effect = effect5  # alias for condition closure
-        def condition5(context: Dict[str, Any]) -> bool:
-            if card and card.permanent_of_this_card() is None:
-                return False
-            return True
+                    # 1) DP -5000 to 1 opponent Digimon (player chooses)
+                    if enemy and enemy.battle_area:
+                        def opp_filter(p):
+                            return p.is_digimon
+                        def on_dp_target(target_perm):
+                            target_perm.change_dp(-5000)
+                            game.logger.log(
+                                f"[Effect] {game._perm_ref(target_perm)} gets -5000 DP")
+                            _after_dp(ctx)
+                        game.effect_select_opponent_permanent(
+                            player, on_dp_target, filter_fn=opp_filter,
+                            is_optional=False,
+                            prompt="Select 1 of your opponent's Digimon to give -5000 DP.")
+                    else:
+                        _after_dp(ctx)
 
-        effect5.set_can_use_condition(condition5)
+                def _after_dp(ctx):
+                    player = ctx.get('player')
+                    game = ctx.get('game')
+                    if not (player and game):
+                        return
+                    # 2) 1 of your Digimon may attack
+                    # Force attack not yet supported in engine — skipped
 
-        def process5(ctx: Dict[str, Any]):
-            """Action: Play 1 lv4- yellow/red/[TS] Digimon from digivolution cards (inherited)."""
-            player = ctx.get('player')
-            perm = ctx.get('permanent')
-            game = ctx.get('game')
-            if not (player and perm and game):
-                return
-            def play_filter(c):
-                if not getattr(c, 'is_digimon', False):
+                    # 3) If DNA digivolving, grant SA+1 and +5000 DP to 1 of your Digimon
+                    is_dna = ctx.get('is_dna_digivolve', False)
+                    if is_dna:
+                        def own_digi_filter(p):
+                            return p.is_digimon
+                        def on_dna_target(target_perm):
+                            target_perm._temp_sa_modifier += 1
+                            target_perm.change_dp(5000)
+                            game.logger.log(
+                                f"[Effect] {game._perm_ref(target_perm)} gains "
+                                f"<Security A. +1> and +5000 DP (DNA bonus)")
+                        game.effect_select_own_permanent(
+                            player, on_dna_target, filter_fn=own_digi_filter,
+                            is_optional=False,
+                            prompt="Select 1 of your Digimon to gain <Security A. +1> "
+                                   "and +5000 DP (DNA bonus).")
+
+                return process_n
+
+            effect_n.set_on_process_callback(make_process(is_play))
+            effects.append(effect_n)
+
+        # [All Turns] [Once Per Turn] When this Digimon would leave the battle area
+        # other than by your effects, you may play 1 level 4 or lower yellow, red
+        # or [TS] trait Digimon card from its digivolution cards without paying the cost.
+        def _make_leave_effect(is_inherited):
+            eff = ICardEffect()
+            eff.set_timing(EffectTiming.WhenRemoveField)
+            eff.set_effect_name("BT24-037 Play lv4- yellow/red/TS from digi sources")
+            eff.set_effect_description(
+                "[All Turns] [Once Per Turn] When this Digimon would leave the battle area "
+                "other than by your effects, you may play 1 level 4 or lower yellow, red or "
+                "[TS] trait Digimon card from its digivolution cards without paying the cost."
+            )
+            if is_inherited:
+                eff.is_inherited_effect = True
+            eff.is_optional = True
+            eff.set_max_count_per_turn(1)
+            eff.set_hash_string("BT24_037_AT" + ("_ESS" if is_inherited else ""))
+
+            def cond(context: Dict[str, Any]) -> bool:
+                if card and card.permanent_of_this_card() is None:
                     return False
-                if getattr(c, 'level', None) is None or c.level > 4:
-                    return False
-                colors = [col.name for col in (getattr(c, 'card_colors', []) or [])]
-                traits = getattr(c, 'card_traits', []) or []
-                # Yellow OR Red OR [TS] trait — three independent conditions
-                if 'Yellow' in colors or 'Red' in colors or any('TS' in t for t in traits):
-                    return True
-                return False
-            # Play from this Digimon's digivolution cards (not hand)
-            top = perm.top_card
-            candidates = [cs for cs in perm.card_sources if cs is not top and play_filter(cs)]
-            if not candidates:
-                return
-            chosen = candidates[0]
-            perm.card_sources.remove(chosen)
-            played = player.play_card_from_source(chosen, pay_cost=False)
-            if played:
-                game.execute_effects(
-                    EffectTiming.OnEnterFieldAnyone,
-                    {'played_card': chosen, 'played_permanent': played, 'event_player': player},
-                )
+                return True
+            eff.set_can_use_condition(cond)
 
-        effect5.set_on_process_callback(process5)
-        effects.append(effect5)
+            def proc(ctx: Dict[str, Any]):
+                player = ctx.get('player')
+                perm = ctx.get('permanent')
+                game = ctx.get('game')
+                if not (player and perm and game):
+                    return
+
+                def play_filter(c):
+                    if not getattr(c, 'is_digimon', False):
+                        return False
+                    if (c.level or 99) > 4:
+                        return False
+                    colors = c.card_colors or []
+                    traits = c.card_traits or []
+                    return (CardColor.Yellow in colors
+                            or CardColor.Red in colors
+                            or any('TS' in t for t in traits))
+
+                top = perm.top_card
+                candidates = [cs for cs in perm.card_sources
+                              if cs is not top and play_filter(cs)]
+                if not candidates:
+                    return
+                chosen = candidates[0]
+                perm.card_sources.remove(chosen)
+                played = player.play_card_from_source(chosen, pay_cost=False)
+                if played:
+                    game.execute_effects(
+                        EffectTiming.OnEnterFieldAnyone,
+                        {'played_card': chosen, 'played_permanent': played,
+                         'event_player': player},
+                    )
+
+            eff.set_on_process_callback(proc)
+            return eff
+
+        effects.append(_make_leave_effect(is_inherited=False))
+        effects.append(_make_leave_effect(is_inherited=True))
 
         return effects

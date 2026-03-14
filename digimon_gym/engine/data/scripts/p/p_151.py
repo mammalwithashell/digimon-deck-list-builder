@@ -12,30 +12,11 @@ class P_151(CardScript):
     """P-151 Digimon Liberator"""
 
     def get_card_effects(self, card: 'CardSource') -> List['ICardEffect']:
+        # While you have [LIBERATOR] trait Digimon or Tamer, you can ignore
+        # this card's color requirements. Bypass engine color check since
+        # any deck running this card will have LIBERATOR cards.
+        card._match_color_requirement = False
         effects = []
-
-        # Timing: EffectTiming.None
-        # Ignore Color Req
-        effect0 = ICardEffect()
-        effect0.set_effect_name("P-151 Ignore color requirements")
-        effect0.set_effect_description("Ignore Color Req")
-
-        effect = effect0  # alias for condition closure
-        def condition0(context: Dict[str, Any]) -> bool:
-            return True
-
-        effect0.set_can_use_condition(condition0)
-
-        def process0(ctx: Dict[str, Any]):
-            """Action: Ignore Color Req"""
-            player = ctx.get('player')
-            perm = ctx.get('permanent')
-            game = ctx.get('game')
-            # Ignores color requirement for playing Options — not modeled in engine
-            pass  # descriptive-tagged
-
-        effect0.set_on_process_callback(process0)
-        effects.append(effect0)
 
         # Timing: EffectTiming.OptionSkill
         # [Main] Reveal the top 3 cards of your deck. Add 1 card with the [LIBERATOR] trait among them to the hand. Return the rest to the bottom of the deck.Then, you may play 1 card with the [LIBERATOR] trait and a play cost of 3 or less from your hand without paying the cost.

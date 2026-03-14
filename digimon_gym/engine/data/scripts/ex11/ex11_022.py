@@ -97,7 +97,8 @@ class EX11_022(CardScript):
                 eot_effect.set_on_process_callback(eot_process)
 
                 if new_perm.top_card:
-                    new_perm.top_card._card_effects.append(eot_effect)
+                    new_perm.top_card._cached_effects = new_perm.top_card._cached_effects or []
+                    new_perm.top_card._cached_effects.append(eot_effect)
 
         # --- Effect 2: [On Play] Play Puppet ---
         effect2 = ICardEffect()

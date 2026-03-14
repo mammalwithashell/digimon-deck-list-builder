@@ -100,6 +100,7 @@ class BT21_102(CardScript):
             "of the deck."
         )
         effect2.is_optional = True
+        effect2._is_field_main = True
         effect2.set_max_count_per_turn(1)
         effect2.set_hash_string("Play_BT21_102")
 

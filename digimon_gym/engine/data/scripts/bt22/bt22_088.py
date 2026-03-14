@@ -33,16 +33,36 @@ class BT22_088(CardScript):
         effect0.set_can_use_condition(condition0)
 
         def process0(ctx: Dict[str, Any]):
-            """Action: Play Card"""
+            """Return this Tamer to deck bottom, play Arisa from hand, then Shoemon from trash if no Digimon."""
             player = ctx.get('player')
             perm = ctx.get('permanent')
             game = ctx.get('game')
             if not (player and game):
                 return
-            def play_filter(c):
-                return True
+            # Cost: return this Tamer to the bottom of the deck
+            tamer_perm = card.permanent_of_this_card() if card else None
+            if not tamer_perm:
+                return
+            if tamer_perm in player.battle_area:
+                player.battle_area.remove(tamer_perm)
+                for cs in tamer_perm.card_sources:
+                    player.library_cards.append(cs)
+
+            # Play 1 [Arisa Kinosaki] from hand without paying the cost
+            def arisa_filter(c):
+                names = getattr(c, 'card_names', []) or []
+                return any('Arisa Kinosaki' in n for n in names)
             game.effect_play_from_zone(
-                player, 'hand_or_trash', play_filter, free=True, is_optional=True)
+                player, 'hand', arisa_filter, free=True, is_optional=True)
+
+            # Then, if you don't have a Digimon, play 1 [Shoemon] from trash free
+            has_digimon = any(p.is_digimon for p in player.battle_area)
+            if not has_digimon:
+                def shoemon_filter(c):
+                    names = getattr(c, 'card_names', []) or []
+                    return any('Shoemon' in n and 'ShoeShoemon' not in n for n in names)
+                game.effect_play_from_zone(
+                    player, 'trash', shoemon_filter, free=True, is_optional=True)
 
         effect0.set_on_process_callback(process0)
         effects.append(effect0)
@@ -60,25 +80,42 @@ class BT22_088(CardScript):
         def condition1(context: Dict[str, Any]) -> bool:
             if card and card.permanent_of_this_card() is None:
                 return False
-            return True
+            # Tamer must not already be suspended (suspend is cost)
+            tamer_perm = card.permanent_of_this_card()
+            if tamer_perm and tamer_perm.is_suspended:
+                return False
+            # The played card must be a Token or [Puppet] trait Digimon owned by us
+            played_card = context.get('played_card')
+            if not played_card:
+                return False
+            event_player = context.get('event_player')
+            owner = card.owner if card else None
+            if event_player and owner and event_player is not owner:
+                return False
+            is_token = getattr(played_card, 'is_token', False)
+            if is_token:
+                return True
+            if getattr(played_card, 'is_digimon', False):
+                traits = getattr(played_card, 'card_traits', []) or []
+                if any('Puppet' in t for t in traits):
+                    return True
+            return False
 
         effect1.set_can_use_condition(condition1)
 
         def process1(ctx: Dict[str, Any]):
-            """Action: Draw 1, Suspend"""
+            """Suspend this Tamer, then Draw 1."""
             player = ctx.get('player')
-            perm = ctx.get('permanent')
             game = ctx.get('game')
-            if player:
-                player.draw_cards(1)
             if not (player and game):
                 return
-            def target_filter(p):
-                return True
-            def on_suspend(target_perm):
-                target_perm.suspend()
-            game.effect_select_opponent_permanent(
-                player, on_suspend, filter_fn=target_filter, is_optional=True)
+            # Cost: suspend this Tamer
+            tamer_perm = card.permanent_of_this_card() if card else None
+            if not tamer_perm:
+                return
+            tamer_perm.suspend()
+            # Effect: Draw 1
+            player.draw_cards(1)
 
         effect1.set_on_process_callback(process1)
         effects.append(effect1)

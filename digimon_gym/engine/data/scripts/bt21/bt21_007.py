@@ -33,14 +33,23 @@ class BT21_007(CardScript):
         effect0.set_can_use_condition(condition0)
 
         def process0(ctx: Dict[str, Any]):
-            """Action: Add To Hand"""
+            """Action: Return 1 Reptile/Dragonkin Digimon from trash to hand"""
             player = ctx.get('player')
-            perm = ctx.get('permanent')
             game = ctx.get('game')
-            # Add card to hand (from trash/reveal)
-            if player and player.trash_cards:
-                card_to_add = player.trash_cards.pop()
-                player.hand_cards.append(card_to_add)
+            if not (player and game):
+                return
+            def trait_filter(c):
+                if not getattr(c, 'is_digimon', False):
+                    return False
+                traits = getattr(c, 'card_traits', []) or []
+                return any('Reptile' in t or 'Dragonkin' in t for t in traits)
+            qualifying = [c for c in player.trash_cards if trait_filter(c)]
+            if not qualifying:
+                return
+            # Auto-select first qualifying card (engine limitation for trash selection)
+            chosen = qualifying[0]
+            player.trash_cards.remove(chosen)
+            player.hand_cards.append(chosen)
 
         effect0.set_on_process_callback(process0)
         effects.append(effect0)

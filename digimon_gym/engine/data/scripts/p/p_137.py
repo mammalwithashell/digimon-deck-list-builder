@@ -73,21 +73,14 @@ class P_137(CardScript):
         effect3.set_can_use_condition(condition3)
 
         def process3(ctx: Dict[str, Any]):
-            """Action: Add To Hand, Destroy Security"""
+            """Opponent adds the top card of their security stack to their hand."""
             player = ctx.get('player')
-            perm = ctx.get('permanent')
-            game = ctx.get('game')
-            # Add card to hand (from trash/reveal)
-            if player and player.trash_cards:
-                card_to_add = player.trash_cards.pop()
-                player.hand_cards.append(card_to_add)
-            # Trash opponent's top security card(s)
+            if not player:
+                return
             enemy = player.enemy if player else None
-            if enemy:
-                for _ in range(1):
-                    if enemy.security_cards:
-                        trashed = enemy.security_cards.pop(0)
-                        enemy.trash_cards.append(trashed)
+            if enemy and enemy.security_cards:
+                top_sec = enemy.security_cards.pop()  # top = last element
+                enemy.hand_cards.append(top_sec)
 
         effect3.set_on_process_callback(process3)
         effects.append(effect3)

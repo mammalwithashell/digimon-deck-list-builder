@@ -9,231 +9,224 @@ if TYPE_CHECKING:
 
 
 class EX10_057(CardScript):
-    """EX10-057 Piedmon | Lv.6"""
+    """EX10-057 Piedmon | Lv.6 Purple | Dark Masters
+
+    [Hand] [Main] If you don't have any Digimon other than Digimon with
+        [Dark Masters] in their texts, you may play this card with the play
+        cost reduced by 5. At turn end, delete the Digimon this effect played.
+    [On Play] [When Attacking] Delete 1 of your opponent's unsuspended Digimon.
+    [All Turns] This Digimon can only digivolve into [Apocalymon].
+    [On Deletion] If you have no purple face-up security cards, place this
+        Digimon face up as the bottom security card.
+    Inherited: [Security] If this card was face-up, you may play 1 level 5
+        or lower card with [Dark Masters] in its text from your hand or trash
+        without paying the cost.
+    """
 
     def get_card_effects(self, card: 'CardSource') -> List['ICardEffect']:
         effects = []
 
-        # Timing: EffectTiming.OnDeclaration
-        # [Hand] [Main] If you don't have any Digimon other than Digimon with [Dark Masters] in their texts, you may play this card with the play cost reduced by 5. At turn end, delete the Digimon this effect played.
-        effect0 = ICardEffect()
-        effect0.set_timing(EffectTiming.OnDeclaration)
-        effect0.set_effect_name("EX10-057 Play for reduced cost of 5, delete at end of turn")
-        effect0.set_effect_description("[Hand] [Main] If you don't have any Digimon other than Digimon with [Dark Masters] in their texts, you may play this card with the play cost reduced by 5. At turn end, delete the Digimon this effect played.")
-        effect0.is_optional = True
-        effect0.cost_reduction = 5
-
-        effect = effect0  # alias for condition closure
-        def condition0(context: Dict[str, Any]) -> bool:
-            permanent = effect.effect_source_permanent if hasattr(effect, 'effect_source_permanent') else None
-            if permanent and permanent.top_card:
-                text = permanent.top_card.card_text
-                if not ('Dark Masters' in text):
+        def _only_dark_masters_on_field(player) -> bool:
+            for p in player.battle_area:
+                if not p.is_digimon:
+                    continue
+                has_dm = False
+                for cs in p.card_sources:
+                    text = getattr(cs, 'card_text', '') or ''
+                    if 'Dark Masters' in text:
+                        has_dm = True
+                        break
+                if not has_dm:
                     return False
-            else:
-                return False
             return True
 
+        # --- Effect 0: BeforePayCost — self cost reduction by 5 ---
+        effect0 = ICardEffect()
+        effect0.set_timing(EffectTiming.BeforePayCost)
+        effect0.set_effect_name("EX10-057 Play cost reduced by 5")
+        effect0.set_effect_description(
+            "[Hand] [Main] If you don't have any Digimon other than Digimon "
+            "with [Dark Masters] in their texts, you may play this card with "
+            "the play cost reduced by 5."
+        )
+        effect0.is_optional = True
+
+        def condition0(context: Dict[str, Any]) -> bool:
+            if context.get('card_source') is not card:
+                return False
+            player = context.get('player')
+            if not player:
+                return False
+            return _only_dark_masters_on_field(player)
         effect0.set_can_use_condition(condition0)
 
         def process0(ctx: Dict[str, Any]):
-            """Action: Cost -5, Play Card"""
             player = ctx.get('player')
-            perm = ctx.get('permanent')
-            game = ctx.get('game')
-            if not (player and game):
+            if not player:
                 return
-            def play_filter(c):
-                if not getattr(c, 'is_digimon', False):
-                    return False
-                if getattr(c, 'level', None) is None or c.level > 5:
-                    return False
-                return True
-            game.effect_play_from_zone(
-                player, 'hand', play_filter, free=True, is_optional=True)
-            # Cost reduction by 5 — handled via cost_reduction property
-            pass  # descriptive-tagged: cost_reduction
-
+            if hasattr(player, '_temp_play_cost_reduction'):
+                player._temp_play_cost_reduction += 5
+            else:
+                player._temp_play_cost_reduction = 5
+            card._ex10_eot_delete = True
         effect0.set_on_process_callback(process0)
         effects.append(effect0)
 
-        # Timing: EffectTiming.OnDeclaration
-        # [End of Your Turn] Delete this Digimon.
+        # --- Effect 1: End of turn — delete this Digimon if played via cost reduction ---
         effect1 = ICardEffect()
-        effect1.set_timing(EffectTiming.OnDeclaration)
-        effect1.set_effect_name("EX10-057 Delete the Digimon")
-        effect1.set_effect_description("[End of Your Turn] Delete this Digimon.")
+        effect1.set_timing(EffectTiming.OnEndTurn)
+        effect1.set_effect_name("EX10-057 End of turn delete")
+        effect1.set_effect_description("At turn end, delete the Digimon this effect played.")
 
-        effect = effect1  # alias for condition closure
         def condition1(context: Dict[str, Any]) -> bool:
+            if not getattr(card, '_ex10_eot_delete', False):
+                return False
+            if card and card.permanent_of_this_card() is None:
+                return False
             if not (card and card.owner and card.owner.is_my_turn):
                 return False
             return True
-
         effect1.set_can_use_condition(condition1)
 
         def process1(ctx: Dict[str, Any]):
-            """Action: Delete, Effect Immunity"""
             player = ctx.get('player')
-            perm = ctx.get('permanent')
             game = ctx.get('game')
             if not (player and game):
                 return
-            def target_filter(p):
-                return p.is_digimon
-            def on_delete(target_perm):
-                enemy = player.enemy if player else None
-                if enemy:
-                    enemy.delete_permanent(target_perm)
-            game.effect_select_opponent_permanent(
-                player, on_delete, filter_fn=target_filter, is_optional=False)
-            # Grant effect immunity via modifier system
-            if perm and game:
-                from digimon_gym.engine.interfaces.modifiers import ModifierType
-                game.register_modifier(
-                    ModifierType.CANNOT_BE_SELECTED_BY_EFFECT, perm,
-                    value_fn=lambda: True, expiry='end_of_turn')
-
+            perm = card.permanent_of_this_card() if card else None
+            if perm and perm in player.battle_area:
+                player.delete_permanent(perm)
+                card._ex10_eot_delete = False
         effect1.set_on_process_callback(process1)
         effects.append(effect1)
 
-        # Timing: EffectTiming.OnEnterFieldAnyone
-        # [On Play] Delete 1 of your opponent's unsuspended Digimon.
+        # --- Shared delete unsuspended process for On Play / When Attacking ---
+        def _delete_unsuspended(ctx: Dict[str, Any]):
+            """Delete 1 of opponent's unsuspended Digimon."""
+            player = ctx.get('player')
+            game = ctx.get('game')
+            if not (player and game):
+                return
+            enemy = player.enemy
+            if not enemy:
+                return
+
+            def target_filter(p):
+                return p.is_digimon and not p.is_suspended
+
+            def on_delete(target_perm):
+                enemy.delete_permanent(target_perm)
+
+            game.effect_select_opponent_permanent(
+                player, on_delete, filter_fn=target_filter, is_optional=False)
+
+        # --- Effect 2: [On Play] ---
         effect2 = ICardEffect()
         effect2.set_timing(EffectTiming.OnEnterFieldAnyone)
-        effect2.set_effect_name("EX10-057 Delete 1 unsuspended Digimon")
-        effect2.set_effect_description("[On Play] Delete 1 of your opponent's unsuspended Digimon.")
+        effect2.set_effect_name("EX10-057 On Play: Delete unsuspended Digimon")
+        effect2.set_effect_description(
+            "[On Play] Delete 1 of your opponent's unsuspended Digimon."
+        )
         effect2.is_on_play = True
 
-        effect = effect2  # alias for condition closure
         def condition2(context: Dict[str, Any]) -> bool:
             if card and card.permanent_of_this_card() is None:
                 return False
-            # Triggered on play — validated by engine timing
             return True
-
         effect2.set_can_use_condition(condition2)
-
-        def process2(ctx: Dict[str, Any]):
-            """Action: Delete"""
-            player = ctx.get('player')
-            perm = ctx.get('permanent')
-            game = ctx.get('game')
-            if not (player and game):
-                return
-            def target_filter(p):
-                return p.is_digimon
-            def on_delete(target_perm):
-                enemy = player.enemy if player else None
-                if enemy:
-                    enemy.delete_permanent(target_perm)
-            game.effect_select_opponent_permanent(
-                player, on_delete, filter_fn=target_filter, is_optional=False)
-
-        effect2.set_on_process_callback(process2)
+        effect2.set_on_process_callback(_delete_unsuspended)
         effects.append(effect2)
 
-        # Timing: EffectTiming.OnUseAttack
-        # [When Attacking] Delete 1 of your opponent's unsuspended Digimon.
+        # --- Effect 3: [When Attacking] ---
         effect3 = ICardEffect()
         effect3.set_timing(EffectTiming.OnUseAttack)
-        effect3.set_effect_name("EX10-057 Delete 1 unsuspended Digimon")
-        effect3.set_effect_description("[When Attacking] Delete 1 of your opponent's unsuspended Digimon.")
+        effect3.set_effect_name("EX10-057 When Attacking: Delete unsuspended Digimon")
+        effect3.set_effect_description(
+            "[When Attacking] Delete 1 of your opponent's unsuspended Digimon."
+        )
         effect3.is_on_attack = True
 
-        effect = effect3  # alias for condition closure
         def condition3(context: Dict[str, Any]) -> bool:
-            # Triggered on attack — validated by engine timing
+            if card and card.permanent_of_this_card() is None:
+                return False
+            perm = card.permanent_of_this_card()
+            ctx_perm = context.get('attacker') or context.get('permanent')
+            if perm and ctx_perm and ctx_perm is not perm:
+                return False
             return True
-
         effect3.set_can_use_condition(condition3)
-
-        def process3(ctx: Dict[str, Any]):
-            """Action: Delete"""
-            player = ctx.get('player')
-            perm = ctx.get('permanent')
-            game = ctx.get('game')
-            if not (player and game):
-                return
-            def target_filter(p):
-                return p.is_digimon
-            def on_delete(target_perm):
-                enemy = player.enemy if player else None
-                if enemy:
-                    enemy.delete_permanent(target_perm)
-            game.effect_select_opponent_permanent(
-                player, on_delete, filter_fn=target_filter, is_optional=False)
-
-        effect3.set_on_process_callback(process3)
+        effect3.set_on_process_callback(_delete_unsuspended)
         effects.append(effect3)
 
-        # Timing: EffectTiming.OnDestroyedAnyone
-        # [On Deletion] If you have no purple face-up security cards, place this Digimon face up as the bottom security card.
+        # --- Effect 4: [On Deletion] Place face-up as bottom security ---
         effect4 = ICardEffect()
         effect4.set_timing(EffectTiming.OnDestroyedAnyone)
-        effect4.set_effect_name("EX10-057 Place this Digimon face up as bottom security")
-        effect4.set_effect_description("[On Deletion] If you have no purple face-up security cards, place this Digimon face up as the bottom security card.")
+        effect4.set_effect_name("EX10-057 On Deletion: Place as bottom security")
+        effect4.set_effect_description(
+            "[On Deletion] If you have no purple face-up security cards, place "
+            "this Digimon face up as the bottom security card."
+        )
         effect4.is_on_deletion = True
 
-        effect = effect4  # alias for condition closure
         def condition4(context: Dict[str, Any]) -> bool:
-            # Triggered on deletion — validated by engine timing
+            if card and card.permanent_of_this_card() is None:
+                return False
+            player = card.owner if card else None
+            if not player:
+                return False
+            for sec in player.security_cards:
+                if sec in player.face_up_security:
+                    sec_colors = [c.name for c in (getattr(sec, 'card_colors', []) or [])]
+                    if 'Purple' in sec_colors:
+                        return False
             return True
-
         effect4.set_can_use_condition(condition4)
 
         def process4(ctx: Dict[str, Any]):
-            """Action: Add To Security"""
             player = ctx.get('player')
-            perm = ctx.get('permanent')
-            game = ctx.get('game')
-            # Add top card of deck to security
-            if player:
-                player.recovery(1)
-
+            if not (player and card):
+                return
+            player.security_cards.append(card)
+            player.face_up_security.add(card)
         effect4.set_on_process_callback(process4)
         effects.append(effect4)
 
-        # Timing: EffectTiming.SecuritySkill
-        # [Security] If this card was face-up, you may play 1 level 5 or lower card with [Dark Masters] in its text from your hand or trash without paying the cost.
+        # --- Effect 5: Inherited [Security] Play Lv5 Dark Masters from hand/trash free ---
         effect5 = ICardEffect()
         effect5.set_timing(EffectTiming.SecuritySkill)
-        effect5.set_effect_name("EX10-057 Play Card")
-        effect5.set_effect_description("[Security] If this card was face-up, you may play 1 level 5 or lower card with [Dark Masters] in its text from your hand or trash without paying the cost.")
+        effect5.set_effect_name("EX10-057 Security: Play Dark Masters Lv5")
+        effect5.set_effect_description(
+            "[Security] If this card was face-up, you may play 1 level 5 or "
+            "lower card with [Dark Masters] in its text from your hand or "
+            "trash without paying the cost."
+        )
         effect5.is_optional = True
         effect5.is_security_effect = True
-        effect5.is_security_effect = True
+        effect5.is_inherited_effect = True
 
-        effect = effect5  # alias for condition closure
         def condition5(context: Dict[str, Any]) -> bool:
-            # Security effect — validated by engine timing
-            permanent = effect.effect_source_permanent if hasattr(effect, 'effect_source_permanent') else None
-            if permanent and permanent.top_card:
-                text = permanent.top_card.card_text
-                if not ('Dark Masters' in text):
-                    return False
-            else:
-                return False
-            return True
-
+            player = card.owner if card else None
+            if player and card in player.face_up_security:
+                return True
+            return False
         effect5.set_can_use_condition(condition5)
 
         def process5(ctx: Dict[str, Any]):
-            """Action: Play Card"""
             player = ctx.get('player')
-            perm = ctx.get('permanent')
             game = ctx.get('game')
             if not (player and game):
                 return
+
             def play_filter(c):
-                if not getattr(c, 'is_digimon', False):
+                if getattr(c, 'is_digi_egg', False):
                     return False
-                if getattr(c, 'level', None) is None or c.level > 5:
+                lv = getattr(c, 'level', None)
+                if lv is None or lv > 5:
                     return False
-                return True
+                text = getattr(c, 'card_text', '') or ''
+                return 'Dark Masters' in text
             game.effect_play_from_zone(
                 player, 'hand_or_trash', play_filter, free=True, is_optional=True)
-
         effect5.set_on_process_callback(process5)
         effects.append(effect5)
 

@@ -70,7 +70,7 @@ class EX9_066(CardScript):
                 player.hand_cards.append(chosen)
             else:
                 # Didn't return, so Draw 1
-                player.draw(1)
+                player.draw()
 
         effect0.set_on_process_callback(process0)
         effects.append(effect0)

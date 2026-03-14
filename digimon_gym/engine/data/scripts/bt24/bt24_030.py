@@ -232,7 +232,7 @@ class BT24_030(CardScript):
                     # Cancel the removal by registering protection
                     from digimon_gym.engine.interfaces.modifiers import ModifierType
                     game.register_modifier(
-                        ModifierType.CANNOT_BE_REMOVED, event_perm,
+                        event_perm, ModifierType.CANNOT_BE_REMOVED,
                         value_fn=lambda: True, expiry='end_of_turn'
                     )
 

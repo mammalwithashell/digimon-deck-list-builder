@@ -55,9 +55,8 @@ class EX6_041(CardScript):
                 player.delete_permanent(target_perm)
                 # After paying the cost, digivolve into Diaboromon from hand
                 def digi_filter(c):
-                    if not (any('Diaboromon' in _n for _n in getattr(c, 'card_names', []))):
-                        return False
-                    return True
+                    names = getattr(c, 'card_names', []) or []
+                    return any('Diaboromon' in n for n in names)
                 game.effect_digivolve_from_hand(
                     player, perm, digi_filter, is_optional=True)
 
@@ -109,9 +108,8 @@ class EX6_041(CardScript):
                 player.delete_permanent(target_perm)
                 # After paying the cost, digivolve into Diaboromon from hand
                 def digi_filter(c):
-                    if not (any('Diaboromon' in _n for _n in getattr(c, 'card_names', []))):
-                        return False
-                    return True
+                    names = getattr(c, 'card_names', []) or []
+                    return any('Diaboromon' in n for n in names)
                 game.effect_digivolve_from_hand(
                     player, perm, digi_filter, is_optional=True)
 
@@ -136,6 +134,19 @@ class EX6_041(CardScript):
         effect = effect2  # alias for condition closure
         def condition2(context: Dict[str, Any]) -> bool:
             if card and card.permanent_of_this_card() is None:
+                return False
+            # The played permanent must be another Diaboromon we own
+            trigger_perm = context.get('played_permanent') or context.get('event_permanent')
+            own_perm = card.permanent_of_this_card()
+            if not trigger_perm or trigger_perm is own_perm:
+                return False
+            if not trigger_perm.is_digimon:
+                return False
+            if not trigger_perm.contains_card_name('Diaboromon'):
+                return False
+            # Must be our Digimon
+            owner = card.owner if card else None
+            if owner and trigger_perm not in owner.battle_area:
                 return False
             return True
 

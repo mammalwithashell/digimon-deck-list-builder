@@ -31,21 +31,30 @@ class BT22_004(CardScript):
                 return False
             if not (card and card.owner and card.owner.is_my_turn):
                 return False
+            # Check that the added card has CS trait
+            added_card = context.get('added_card')
+            if added_card:
+                traits = getattr(added_card, 'card_traits', []) or []
+                if not any('CS' == t for t in traits):
+                    return False
             return True
 
         effect0.set_can_use_condition(condition0)
 
         def process0(ctx: Dict[str, Any]):
-            """Action: Digivolve"""
+            """Action: Digivolve into a CS trait Digimon from hand, cost -1"""
             player = ctx.get('player')
             perm = ctx.get('permanent')
             game = ctx.get('game')
             if not (player and perm and game):
                 return
             def digi_filter(c):
-                return True
+                if not getattr(c, 'is_digimon', False):
+                    return False
+                traits = getattr(c, 'card_traits', []) or []
+                return any('CS' == t for t in traits)
             game.effect_digivolve_from_hand(
-                player, perm, digi_filter, is_optional=True)
+                player, perm, digi_filter, cost_reduction=1, is_optional=True)
 
         effect0.set_on_process_callback(process0)
         effects.append(effect0)

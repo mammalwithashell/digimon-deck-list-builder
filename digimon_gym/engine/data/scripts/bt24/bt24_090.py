@@ -118,18 +118,19 @@ class BT24_090(CardScript):
         effect2.set_on_process_callback(process2)
         effects.append(effect2)
 
-        # --- Effect 3: [Main] You may play 1 level 4 or lower blue or yellow [TS] trait
-        #    Digimon card from your hand or trash without paying the cost.
-        #    Then, place this card in the battle area. ---
+        # --- Effect 3: [Main] Add your bottom security card to the hand and place
+        #    this card face up as the bottom security card. Then, you may play
+        #    1 blue or yellow [TS] trait Digimon card from your hand with the
+        #    play cost reduced by 3. ---
         effect3 = ICardEffect()
         effect3.set_timing(EffectTiming.OptionSkill)
         effect3.set_effect_name(
-            "BT24-090 Play Lv4- blue/yellow [TS] Digimon free, place this in battle area"
+            "BT24-090 Swap security, play blue/yellow TS with cost -3"
         )
         effect3.set_effect_description(
-            "[Main] You may play 1 level 4 or lower blue or yellow [TS] trait Digimon card "
-            "from your hand or trash without paying the cost. Then, place this card in the "
-            "battle area."
+            "[Main] Add your bottom security card to the hand and place this card face up "
+            "as the bottom security card. Then, you may play 1 blue or yellow [TS] trait "
+            "Digimon card from your hand with the play cost reduced by 3."
         )
 
         def condition3(context: Dict[str, Any]) -> bool:
@@ -143,11 +144,22 @@ class BT24_090(CardScript):
             if not (player and game):
                 return
 
+            # Add bottom security card to hand
+            if player.security_cards:
+                bottom_sec = player.security_cards.pop(-1)
+                player.hand_cards.append(bottom_sec)
+
+            # Place this option card face up as bottom security card
+            # (The option is already being played/resolved, card stays as security)
+            if card:
+                player.security_cards.append(card)
+                # Mark as face-up in security
+                if hasattr(card, 'is_flipped'):
+                    card.is_flipped = True
+
+            # Then play blue/yellow TS Digimon from hand with cost -3
             def play_filter(c):
                 if not getattr(c, 'is_digimon', False):
-                    return False
-                lv = getattr(c, 'level', None)
-                if lv is None or lv > 4:
                     return False
                 colors = [col.name for col in (getattr(c, 'card_colors', None) or [])]
                 if 'Blue' not in colors and 'Yellow' not in colors:
@@ -156,16 +168,12 @@ class BT24_090(CardScript):
                     return False
                 return True
 
-            # Play from hand or trash without paying cost
             game.effect_play_from_zone(
-                player, 'hand_or_trash', play_filter,
-                free=True, is_optional=True,
-                prompt="You may play 1 level 4 or lower blue or yellow [TS] Digimon from hand or trash without paying the cost."
+                player, 'hand', play_filter,
+                free=False, manual_reduction=3, is_optional=True,
+                prompt="You may play 1 blue or yellow [TS] trait Digimon from hand "
+                       "with the play cost reduced by 3."
             )
-
-            # Place this option card in the battle area
-            if card:
-                player.play_card_from_source(card, pay_cost=False)
 
         effect3.set_on_process_callback(process3)
         effects.append(effect3)

@@ -45,16 +45,24 @@ class BT8_042(CardScript):
         effect1.set_can_use_condition(condition1)
 
         def process1(ctx: Dict[str, Any]):
-            """Action: Recovery +1, Bounce"""
+            """Recovery +1 if 5 or fewer security. Then if DNA, bounce 1."""
             player = ctx.get('player')
-            perm = ctx.get('permanent')
             game = ctx.get('game')
-            if player:
-                player.recovery(1)
             if not (player and game):
                 return
+            # Recovery +1 if 5 or fewer security
+            if len(player.security_cards) <= 5:
+                player.recovery(1)
+            # Then, if DNA digivolving, bounce 1 opponent Digimon
+            is_dna = ctx.get('is_dna_digivolve', False)
+            if not is_dna:
+                return
+            sec_count = len(player.security_cards)
             def target_filter(p):
-                return True
+                if not p.is_digimon:
+                    return False
+                lvl = getattr(p, 'level', None)
+                return lvl is not None and lvl <= sec_count
             def on_bounce(target_perm):
                 enemy = player.enemy if player else None
                 if enemy:
@@ -85,17 +93,18 @@ class BT8_042(CardScript):
         effect2.set_can_use_condition(condition2)
 
         def process2(ctx: Dict[str, Any]):
-            """Action: DP -3000"""
+            """1 opponent Digimon gets -3000 DP for the turn."""
             player = ctx.get('player')
-            perm = ctx.get('permanent')
             game = ctx.get('game')
-            # DP change targets opponent digimon
-            enemy = player.enemy if player else None
-            if enemy and enemy.battle_area:
-                dp_targets = [p for p in enemy.battle_area if p.is_digimon and p.dp is not None]
-                if dp_targets:
-                    target = min(dp_targets, key=lambda p: p.dp)
-                    target.change_dp(-3000)
+            if not (player and game):
+                return
+            def on_target(target_perm):
+                target_perm.change_dp(-3000)
+            game.effect_select_opponent_permanent(
+                player, on_target,
+                filter_fn=lambda p: p.is_digimon,
+                is_optional=False,
+                prompt="Select 1 opponent Digimon to give -3000 DP.")
 
         effect2.set_on_process_callback(process2)
         effects.append(effect2)

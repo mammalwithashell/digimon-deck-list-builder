@@ -35,11 +35,14 @@ class BT9_082(CardScript):
         def condition0(context: Dict[str, Any]) -> bool:
             if card and card.permanent_of_this_card() is None:
                 return False
+            # Only activates when DNA digivolving
+            if not context.get('is_dna_digivolve'):
+                return False
             return True
         effect0.set_can_use_condition(condition0)
 
         def process0(ctx: Dict[str, Any]):
-            """Delete opponent Lv6+ (1) and all Lv5-, then recovery for each."""
+            """Delete 1 opponent Lv6+ and all Lv5-, then recovery for each."""
             player = ctx.get('player')
             game = ctx.get('game')
             if not (player and game):
@@ -48,33 +51,40 @@ class BT9_082(CardScript):
             if not enemy:
                 return
 
-            deleted_count = 0
+            deleted_count = [0]  # Use list for closure mutation
 
-            # Delete all level 5 or lower Digimon
-            to_delete_low = [
-                p for p in enemy.battle_area
-                if p.is_digimon and p.level is not None and p.level <= 5
-            ]
-            for perm in to_delete_low:
-                if perm in enemy.battle_area:
-                    enemy.delete_permanent(perm)
-                    deleted_count += 1
+            def _delete_low_and_recover():
+                """Delete all level 5 or lower Digimon, then recovery."""
+                to_delete_low = [
+                    p for p in enemy.battle_area
+                    if p.is_digimon and p.level is not None and p.level <= 5
+                ]
+                for perm in to_delete_low:
+                    if perm in enemy.battle_area:
+                        enemy.delete_permanent(perm)
+                        deleted_count[0] += 1
+                # Recovery +1 for each deleted
+                if deleted_count[0] > 0:
+                    player.recovery(deleted_count[0])
 
-            # Delete 1 level 6 or higher Digimon
+            # Delete 1 level 6 or higher Digimon (player selects)
             high_targets = [
                 p for p in enemy.battle_area
                 if p.is_digimon and p.level is not None and p.level >= 6
             ]
             if high_targets:
-                # Auto-select first (simplified — no target selection phase)
-                target = high_targets[0]
-                if target in enemy.battle_area:
-                    enemy.delete_permanent(target)
-                    deleted_count += 1
+                def on_delete_high(target_perm):
+                    if target_perm and target_perm in enemy.battle_area:
+                        enemy.delete_permanent(target_perm)
+                        deleted_count[0] += 1
+                    _delete_low_and_recover()
 
-            # Recovery +1 for each deleted
-            if deleted_count > 0:
-                player.recovery(deleted_count)
+                game.effect_select_opponent_permanent(
+                    player, on_delete_high,
+                    filter_fn=lambda p: p.is_digimon and p.level is not None and p.level >= 6,
+                    is_optional=False)
+            else:
+                _delete_low_and_recover()
 
         effect0.set_on_process_callback(process0)
         effects.append(effect0)

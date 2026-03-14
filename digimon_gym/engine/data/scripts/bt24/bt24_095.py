@@ -103,7 +103,7 @@ class BT24_095(CardScript):
                 # Grant cannot-unsuspend in next unsuspend phase via modifier
                 from ....interfaces.modifiers import ModifierType
                 game.register_modifier(
-                    ModifierType.CANNOT_UNSUSPEND, target_perm,
+                    target_perm, ModifierType.CANNOT_UNSUSPEND,
                     value_fn=lambda: True, expiry='end_of_opponent_turn'
                 )
 

@@ -101,15 +101,9 @@ class BT19_039(CardScript):
             game = ctx.get('game')
             if not (player and game):
                 return
-
-            def target_filter(p):
-                return True
-
-            def on_unsuspend(target_perm):
-                target_perm.unsuspend()
-
-            game.effect_select_own_permanent(
-                player, on_unsuspend, filter_fn=target_filter, is_optional=True)
+            perm = card.permanent_of_this_card() if card else None
+            if perm and perm.is_suspended:
+                perm.unsuspend()
 
         effect3.set_on_process_callback(process3)
         effects.append(effect3)

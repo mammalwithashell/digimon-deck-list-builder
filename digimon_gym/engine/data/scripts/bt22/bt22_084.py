@@ -63,8 +63,7 @@ class BT22_084(CardScript):
             def play_filter(c):
                 if not getattr(c, 'is_digimon', False):
                     return False
-                names = getattr(c, 'card_names', []) or []
-                return 'Agumon' in names or 'Gabumon' in names
+                return c.contains_card_name('Agumon') or c.contains_card_name('Gabumon')
 
             game.effect_play_from_zone(
                 player, 'hand', play_filter, free=True, is_optional=True)

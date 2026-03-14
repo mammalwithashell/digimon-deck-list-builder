@@ -15,11 +15,10 @@ class BT22_031(CardScript):
         effects = []
 
         # Factory effect: alt_digivolve_req
-        # Alternate digivolution requirement
+        # Alternate digivolution: Lv.4 + Yellow for cost 2
         effect0 = ICardEffect()
         effect0.set_effect_name("BT22-031 Alternate digivolution requirement")
         effect0.set_effect_description("Alternate digivolution requirement")
-        # Alternate digivolution: Lv.4 for cost 2
         effect0._alt_digi_cost = 2
         effect0._alt_digi_level = 4
         effect0._alt_digi_color = CardColor.Yellow
@@ -29,97 +28,132 @@ class BT22_031(CardScript):
         effect0.set_can_use_condition(condition0)
         effects.append(effect0)
 
-        # Timing: EffectTiming.OnEnterFieldAnyone
-        # [On Play] Give 1 of your opponent's Digimon <Security A. -2> (This Digimon checks 2 additional security cards.) until their turn ends. Then, if this Digimon's stack has 2 or more same-level cards, this Digimon may digivolve into [PlatinumNumemon] in the hand for a digivolution cost of 4, ignoring digivolution requirements.
-        effect1 = ICardEffect()
-        effect1.set_timing(EffectTiming.OnEnterFieldAnyone)
-        effect1.set_effect_name("BT22-031 Give 1 digimon -2 Sec Atk. then if sources has 2 same level digimon, digivolve into [PlatinumNumemon]")
-        effect1.set_effect_description("[On Play] Give 1 of your opponent's Digimon <Security A. -2> (This Digimon checks 2 additional security cards.) until their turn ends. Then, if this Digimon's stack has 2 or more same-level cards, this Digimon may digivolve into [PlatinumNumemon] in the hand for a digivolution cost of 4, ignoring digivolution requirements.")
-        effect1.is_on_play = True
+        def _build_main_effect(is_on_play=False, is_when_digivolving=False):
+            effect = ICardEffect()
+            effect.set_timing(EffectTiming.OnEnterFieldAnyone)
+            trigger = "[On Play]" if is_on_play else "[When Digivolving]"
+            effect.set_effect_name(f"BT22-031 {trigger} SA-2, then digivolve into PlatinumNumemon")
+            effect.set_effect_description(
+                f"{trigger} Give 1 of your opponent's Digimon <Security A. -2> until their turn ends. "
+                "Then, if this Digimon's stack has 2 or more same-level cards, this Digimon may "
+                "digivolve into [PlatinumNumemon] in the hand for a digivolution cost of 4, "
+                "ignoring digivolution requirements."
+            )
+            effect.is_on_play = is_on_play
+            effect.is_when_digivolving = is_when_digivolving
 
-        effect = effect1  # alias for condition closure
-        def condition1(context: Dict[str, Any]) -> bool:
-            if card and card.permanent_of_this_card() is None:
-                return False
-            # Triggered on play — validated by engine timing
-            return True
-
-        effect1.set_can_use_condition(condition1)
-
-        def process1(ctx: Dict[str, Any]):
-            """Action: Digivolve"""
-            player = ctx.get('player')
-            perm = ctx.get('permanent')
-            game = ctx.get('game')
-            if not (player and perm and game):
-                return
-            def digi_filter(c):
+            def condition(context: Dict[str, Any]) -> bool:
+                if card and card.permanent_of_this_card() is None:
+                    return False
                 return True
-            game.effect_digivolve_from_hand(
-                player, perm, digi_filter, is_optional=True)
 
-        effect1.set_on_process_callback(process1)
-        effects.append(effect1)
+            effect.set_can_use_condition(condition)
 
-        # Timing: EffectTiming.OnEnterFieldAnyone
-        # [When Digivolving] Give 1 of your opponent's Digimon <Security A. -2> (This Digimon checks 2 additional security cards.) until their turn ends. Then, if this Digimon's stack has 2 or more same-level cards, this Digimon may digivolve into [PlatinumNumemon] in the hand for a digivolution cost of 4, ignoring digivolution requirements.
-        effect2 = ICardEffect()
-        effect2.set_timing(EffectTiming.OnEnterFieldAnyone)
-        effect2.set_effect_name("BT22-031 Give 1 digimon -2 Sec Atk. then if sources has 2 same level digimon, digivolve into [PlatinumNumemon]")
-        effect2.set_effect_description("[When Digivolving] Give 1 of your opponent's Digimon <Security A. -2> (This Digimon checks 2 additional security cards.) until their turn ends. Then, if this Digimon's stack has 2 or more same-level cards, this Digimon may digivolve into [PlatinumNumemon] in the hand for a digivolution cost of 4, ignoring digivolution requirements.")
-        effect2.is_when_digivolving = True
+            def process(ctx: Dict[str, Any]):
+                player = ctx.get('player')
+                perm = ctx.get('permanent')
+                game = ctx.get('game')
+                if not (player and perm and game):
+                    return
 
-        effect = effect2  # alias for condition closure
-        def condition2(context: Dict[str, Any]) -> bool:
-            if card and card.permanent_of_this_card() is None:
-                return False
-            # Triggered when digivolving — validated by engine timing
-            return True
+                from ....interfaces.modifiers import ModifierType
 
-        effect2.set_can_use_condition(condition2)
+                # Step 1: Give 1 opponent Digimon Security A. -2
+                def target_filter(p):
+                    return p.is_digimon
 
-        def process2(ctx: Dict[str, Any]):
-            """Action: Digivolve"""
-            player = ctx.get('player')
-            perm = ctx.get('permanent')
-            game = ctx.get('game')
-            if not (player and perm and game):
-                return
-            def digi_filter(c):
-                return True
-            game.effect_digivolve_from_hand(
-                player, perm, digi_filter, is_optional=True)
+                def on_sa_target(target_perm):
+                    target_perm._temp_sa_modifier -= 2
 
-        effect2.set_on_process_callback(process2)
-        effects.append(effect2)
+                    # Step 2: Check same-level condition in stack
+                    cur_perm = card.permanent_of_this_card() if card else None
+                    if not cur_perm:
+                        return
+                    levels = [
+                        getattr(cs, 'level', None)
+                        for cs in cur_perm.card_sources
+                        if getattr(cs, 'level', None) is not None
+                    ]
+                    from collections import Counter
+                    level_counts = Counter(levels)
+                    has_same_level = any(c >= 2 for c in level_counts.values())
 
-        # Timing: EffectTiming.None
-        # Cost -1
+                    if has_same_level:
+                        def digi_filter(c):
+                            if not getattr(c, 'is_digimon', False):
+                                return False
+                            names = getattr(c, 'card_names', []) or []
+                            return any('PlatinumNumemon' in n for n in names)
+
+                        game.effect_digivolve_from_hand(
+                            player, cur_perm, digi_filter,
+                            cost_override=4,
+                            ignore_requirements=True,
+                            is_optional=True)
+
+                enemy = player.enemy
+                opp_digimon = [p for p in enemy.battle_area if p.is_digimon] if enemy else []
+                if opp_digimon:
+                    game.effect_select_opponent_permanent(
+                        player, on_sa_target, filter_fn=target_filter, is_optional=False)
+                else:
+                    # No opponent Digimon, still check digivolve condition
+                    cur_perm = card.permanent_of_this_card() if card else None
+                    if cur_perm:
+                        levels = [
+                            getattr(cs, 'level', None)
+                            for cs in cur_perm.card_sources
+                            if getattr(cs, 'level', None) is not None
+                        ]
+                        from collections import Counter
+                        level_counts = Counter(levels)
+                        has_same_level = any(c >= 2 for c in level_counts.values())
+                        if has_same_level:
+                            def digi_filter2(c):
+                                if not getattr(c, 'is_digimon', False):
+                                    return False
+                                names = getattr(c, 'card_names', []) or []
+                                return any('PlatinumNumemon' in n for n in names)
+                            game.effect_digivolve_from_hand(
+                                player, cur_perm, digi_filter2,
+                                cost_override=4,
+                                ignore_requirements=True,
+                                is_optional=True)
+
+            effect.set_on_process_callback(process)
+            return effect
+
+        effects.append(_build_main_effect(is_on_play=True))
+        effects.append(_build_main_effect(is_when_digivolving=True))
+
+        # Inherited: [Your Turn] [Once Per Turn] When this Digimon would digivolve
+        # into a Digimon card with the [CS] trait, reduce the digivolution cost by 1.
         effect3 = ICardEffect()
-        effect3.set_effect_name("BT22-031 Cost -1")
-        effect3.set_effect_description("Cost -1")
+        effect3.set_timing(EffectTiming.BeforePayCost)
+        effect3.set_effect_name("BT22-031 CS digi cost -1")
+        effect3.set_effect_description(
+            "[Your Turn] [Once Per Turn] When this Digimon would digivolve into a "
+            "Digimon card with the [CS] trait, reduce the digivolution cost by 1."
+        )
         effect3.is_inherited_effect = True
+        effect3.set_max_count_per_turn(1)
+        effect3.set_hash_string("CSDigiCostReduce_BT22_031")
         effect3.cost_reduction = 1
 
-        effect = effect3  # alias for condition closure
         def condition3(context: Dict[str, Any]) -> bool:
             if card and card.permanent_of_this_card() is None:
                 return False
             if not (card and card.owner and card.owner.is_my_turn):
                 return False
+            # Check that the card being digivolved into has CS trait
+            digi_card = context.get('card_source')
+            if digi_card:
+                traits = getattr(digi_card, 'card_traits', []) or []
+                if not any('CS' == t for t in traits):
+                    return False
             return True
 
         effect3.set_can_use_condition(condition3)
-
-        def process3(ctx: Dict[str, Any]):
-            """Action: Cost -1"""
-            player = ctx.get('player')
-            perm = ctx.get('permanent')
-            game = ctx.get('game')
-            # Cost reduction by 1 — handled via cost_reduction property
-            pass  # descriptive-tagged: cost_reduction
-
-        effect3.set_on_process_callback(process3)
         effects.append(effect3)
 
         return effects

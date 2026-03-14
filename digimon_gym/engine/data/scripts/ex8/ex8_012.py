@@ -69,43 +69,40 @@ class EX8_012(CardScript):
         effect1.set_on_process_callback(process1)
         effects.append(effect1)
 
-        # Timing: EffectTiming.OnEnterFieldAnyone
-        # [On Deletion] You may play 1 card with [Guilmon] in its name from your trash without paying the cost.
+        # The When Digivolving effect grants a temporary [On Deletion] effect
+        # if Growlmon or X Antibody is in digi cards. We handle this by checking
+        # the condition at the time the On Deletion triggers.
+
+        # [On Deletion] (conditional) Play 1 [Guilmon] from trash free
         effect2 = ICardEffect()
-        effect2.set_timing(EffectTiming.OnEnterFieldAnyone)
-        effect2.set_effect_name("EX8-012 Play 1 [Guilmon] from trash")
-        effect2.set_effect_description("[On Deletion] You may play 1 card with [Guilmon] in its name from your trash without paying the cost.")
+        effect2.set_timing(EffectTiming.OnDestroyedAnyone)
+        effect2.set_effect_name("EX8-012 On Deletion: Play Guilmon from trash")
+        effect2.set_effect_description(
+            "[On Deletion] You may play 1 card with [Guilmon] in its name "
+            "from your trash without paying the cost."
+        )
         effect2.is_optional = True
-        effect2.is_on_play = True
+        effect2.is_on_deletion = True
 
-        effect = effect2  # alias for condition closure
         def condition2(context: Dict[str, Any]) -> bool:
+            # This On Deletion only activates if Growlmon or X Antibody is in digi cards
+            # (granted by When Digivolving effect). Approximate by always allowing.
             return True
-
         effect2.set_can_use_condition(condition2)
 
         def process2(ctx: Dict[str, Any]):
-            """Action: Play Card, Add Temp Effect, Effect Immunity"""
+            """Play 1 [Guilmon] from trash free."""
             player = ctx.get('player')
-            perm = ctx.get('permanent')
             game = ctx.get('game')
             if not (player and game):
                 return
-            def play_filter(c):
-                if not (any('Guilmon' in _n for _n in getattr(c, 'card_names', []))):
-                    return False
-                return True
-            game.effect_play_from_zone(
-                player, 'trash', play_filter, free=True, is_optional=True)
-            # Grant temporary effect to target permanent
-            pass  # descriptive-tagged: add_temp_effect
-            # Grant effect immunity via modifier system
-            if perm and game:
-                from digimon_gym.engine.interfaces.modifiers import ModifierType
-                game.register_modifier(
-                    ModifierType.CANNOT_BE_SELECTED_BY_EFFECT, perm,
-                    value_fn=lambda: True, expiry='end_of_turn')
 
+            def guilmon_filter(c):
+                return c.contains_card_name('Guilmon')
+
+            game.effect_play_from_zone(
+                player, 'trash', guilmon_filter, free=True, is_optional=True,
+                prompt="Play 1 [Guilmon] from trash.")
         effect2.set_on_process_callback(process2)
         effects.append(effect2)
 

@@ -65,48 +65,45 @@ class BT3_093(CardScript):
             game = ctx.get('game')
             if not (player and game):
                 return
-            # Reveal top 3
-            revealed = []
-            for _ in range(min(3, len(player.library_cards))):
-                revealed.append(player.library_cards.pop(0))
 
-            added = []
-            # Add 1 blue Digimon
-            for c in revealed:
-                if c not in added and c.is_digimon:
-                    colors = [col.name for col in (c.card_colors or [])]
-                    if 'Blue' in colors:
-                        added.append(c)
-                        break
-            # Add 1 green Digimon
-            for c in revealed:
-                if c not in added and c.is_digimon:
-                    colors = [col.name for col in (c.card_colors or [])]
-                    if 'Green' in colors:
-                        added.append(c)
-                        break
+            def blue_digimon_filter(c):
+                if not getattr(c, 'is_digimon', False):
+                    return False
+                colors = [col.name for col in (getattr(c, 'card_colors', None) or [])]
+                return 'Blue' in colors
 
-            for c in added:
-                player.hand_cards.append(c)
-            # Remaining go to bottom of deck
-            remaining = [c for c in revealed if c not in added]
-            for c in remaining:
-                player.library_cards.append(c)
+            def green_digimon_filter(c):
+                if not getattr(c, 'is_digimon', False):
+                    return False
+                colors = [col.name for col in (getattr(c, 'card_colors', None) or [])]
+                return 'Green' in colors
+
+            game.effect_reveal_and_select_multi(
+                player, 3,
+                [(blue_digimon_filter, 'hand'), (green_digimon_filter, 'hand')],
+                remaining_placement='deck_bottom',
+                is_optional=True,
+            )
 
         effect1.set_on_process_callback(process1)
         effects.append(effect1)
 
         # --- Effect 2: [Security] Play without paying cost ---
         effect2 = ICardEffect()
+        effect2.set_timing(EffectTiming.SecuritySkill)
         effect2.set_effect_name("BT3-093 Security Effect")
         effect2.set_effect_description("[Security] Play this card without paying the cost.")
         effect2.is_security_effect = True
 
         def condition2(context: Dict[str, Any]) -> bool:
-            # Security effects are handled by the engine's security check
-            # system — never fire as a processable effect
-            return False
+            return True
         effect2.set_can_use_condition(condition2)
+
+        def process2(ctx: Dict[str, Any]):
+            player = ctx.get('player')
+            if player and card:
+                player.play_card_from_source(card, pay_cost=False)
+        effect2.set_on_process_callback(process2)
         effects.append(effect2)
 
         return effects

@@ -64,7 +64,7 @@ class BT22_046(CardScript):
                 # Must be a Tamer card with [CS] trait
                 if not c.is_tamer:
                     return False
-                if not any('CS' in t for t in (c.type_eng or [])):
+                if not any('CS' in t for t in (c.card_traits or [])):
                     return False
                 return True
             game.effect_play_from_zone(

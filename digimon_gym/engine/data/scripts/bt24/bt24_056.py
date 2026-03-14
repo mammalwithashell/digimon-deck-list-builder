@@ -70,7 +70,7 @@ class BT24_056(CardScript):
             if perm and game:
                 from digimon_gym.engine.interfaces.modifiers import ModifierType
                 game.register_modifier(
-                    ModifierType.CANNOT_BE_RETURNED, perm,
+                    perm, ModifierType.CANNOT_BE_RETURNED,
                     value_fn=lambda: True, expiry='end_of_turn')
 
         effect2.set_on_process_callback(process2)
@@ -107,7 +107,7 @@ class BT24_056(CardScript):
             if perm and game:
                 from digimon_gym.engine.interfaces.modifiers import ModifierType
                 game.register_modifier(
-                    ModifierType.CANNOT_BE_RETURNED, perm,
+                    perm, ModifierType.CANNOT_BE_RETURNED,
                     value_fn=lambda: True, expiry='end_of_turn')
 
         effect3.set_on_process_callback(process3)

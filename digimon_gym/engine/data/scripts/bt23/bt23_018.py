@@ -57,6 +57,7 @@ class BT23_018(CardScript):
             "or [Nokia Shiramine] from your hand with the play cost reduced by 2."
         )
         effect2.is_optional = True
+        effect2._is_field_main = True
         effect2.set_max_count_per_turn(1)
         effect2.set_hash_string("BT23_018_Main")
 

@@ -92,6 +92,17 @@ class EX6_035(CardScript):
                 return True
             game.effect_play_from_zone(
                 player, 'hand', play_filter, free=True, is_optional=True)
+            # Then, 1 opponent Digimon gets -4000 DP per your other Digimon
+            other_digimon = sum(1 for p in player.battle_area if p.is_digimon and p is not perm)
+            if other_digimon > 0:
+                dp_reduction = -4000 * other_digimon
+                def on_dp_target(target_perm, dr=dp_reduction):
+                    target_perm.change_dp(dr)
+                game.effect_select_opponent_permanent(
+                    player, on_dp_target,
+                    filter_fn=lambda p: p.is_digimon,
+                    is_optional=False,
+                    prompt=f"Select 1 opponent Digimon to give {dp_reduction} DP.")
 
         effect3.set_on_process_callback(process3)
         effects.append(effect3)
@@ -134,5 +145,18 @@ class EX6_035(CardScript):
 
         effect4.set_on_process_callback(process4)
         effects.append(effect4)
+
+        # Inherited: Ace Overflow -4
+        effect5 = ICardEffect()
+        effect5.set_effect_name("EX6-035 Ace Overflow -4")
+        effect5.set_effect_description("Ace Overflow -4")
+        effect5.is_inherited_effect = True
+        effect5._is_ace_overflow = True
+        effect5._overflow_amount = -4
+
+        def condition5(context: Dict[str, Any]) -> bool:
+            return True
+        effect5.set_can_use_condition(condition5)
+        effects.append(effect5)
 
         return effects

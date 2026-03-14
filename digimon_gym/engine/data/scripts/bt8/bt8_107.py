@@ -29,20 +29,39 @@ class BT8_107(CardScript):
         effect0.set_can_use_condition(condition0)
 
         def process0(ctx: Dict[str, Any]):
-            """Action: Delete"""
+            """Action: Delete own Digimon, then delete opponent's unsuspended Digimon with level <= deleted's."""
             player = ctx.get('player')
-            perm = ctx.get('permanent')
             game = ctx.get('game')
             if not (player and game):
                 return
-            def target_filter(p):
+            enemy = player.enemy if player else None
+            if not enemy:
+                return
+
+            own_digimon = [p for p in player.battle_area if p.is_digimon]
+            if not own_digimon:
+                return
+
+            def own_filter(p):
                 return p.is_digimon
-            def on_delete(target_perm):
-                enemy = player.enemy if player else None
-                if enemy:
-                    enemy.delete_permanent(target_perm)
-            game.effect_select_opponent_permanent(
-                player, on_delete, filter_fn=target_filter, is_optional=False)
+
+            def on_delete_own(target_perm):
+                deleted_level = target_perm.level if target_perm.level is not None else 0
+                player.delete_permanent(target_perm)
+                # Then delete opponent's unsuspended Digimon with level <= deleted
+                def opp_filter(p):
+                    return (p.is_digimon and not p.is_suspended and
+                            p.level is not None and p.level <= deleted_level)
+
+                def on_delete_opp(opp_perm):
+                    enemy.delete_permanent(opp_perm)
+
+                game.effect_select_opponent_permanent(
+                    player, on_delete_opp, filter_fn=opp_filter, is_optional=False)
+
+            game.effect_select_own_permanent(
+                player, on_delete_own, filter_fn=own_filter, is_optional=True,
+                prompt="Delete 1 of your Digimon.")
 
         effect0.set_on_process_callback(process0)
         effects.append(effect0)
@@ -64,18 +83,21 @@ class BT8_107(CardScript):
         effect1.set_can_use_condition(condition1)
 
         def process1(ctx: Dict[str, Any]):
-            """Action: Delete"""
+            """Action: Delete 1 opponent's unsuspended Digimon."""
             player = ctx.get('player')
-            perm = ctx.get('permanent')
             game = ctx.get('game')
             if not (player and game):
                 return
+            enemy = player.enemy if player else None
+            if not enemy:
+                return
+
             def target_filter(p):
-                return p.is_digimon
+                return p.is_digimon and not p.is_suspended
+
             def on_delete(target_perm):
-                enemy = player.enemy if player else None
-                if enemy:
-                    enemy.delete_permanent(target_perm)
+                enemy.delete_permanent(target_perm)
+
             game.effect_select_opponent_permanent(
                 player, on_delete, filter_fn=target_filter, is_optional=False)
 

@@ -49,20 +49,48 @@ class BT22_049(CardScript):
         effect1.set_can_use_condition(condition1)
 
         def process1(ctx: Dict[str, Any]):
-            """Action: Digivolve"""
+            """Action: Place 3 Ver.2 from trash, digivolve into Ver.2"""
             player = ctx.get('player')
             perm = ctx.get('permanent')
             game = ctx.get('game')
             if not (player and perm and game):
                 return
+            # Cost: Place 3 Ver.2 Digimon from trash as bottom digi cards
+            placed_count = 0
+            for c in list(player.trash_cards):
+                if placed_count >= 3:
+                    break
+                if getattr(c, 'is_digimon', False):
+                    traits = getattr(c, 'card_traits', []) or []
+                    if any('Ver.2' in t for t in traits):
+                        player.trash_cards.remove(c)
+                        perm.add_card_source_bottom(c)
+                        placed_count += 1
+            if placed_count < 3:
+                return  # Can't pay cost
+
             def digi_filter(c):
-                if not (any('Ver.2' in _t for _t in (getattr(c, 'card_traits', []) or []))):
+                if not getattr(c, 'is_digimon', False):
                     return False
-                return True
+                traits = getattr(c, 'card_traits', []) or []
+                return any('Ver.2' in t for t in traits)
+
             game.effect_digivolve_from_hand(
                 player, perm, digi_filter, is_optional=True)
 
         effect1.set_on_process_callback(process1)
         effects.append(effect1)
+
+        # Inherited: <Piercing>
+        effect2 = ICardEffect()
+        effect2.set_effect_name("BT22-049 Inherited: Piercing")
+        effect2.set_effect_description("Inherited: <Piercing>")
+        effect2.is_inherited_effect = True
+        effect2._is_piercing = True
+
+        def condition2(context: Dict[str, Any]) -> bool:
+            return True
+        effect2.set_can_use_condition(condition2)
+        effects.append(effect2)
 
         return effects

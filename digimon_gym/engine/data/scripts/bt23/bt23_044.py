@@ -55,7 +55,7 @@ class BT23_044(CardScript):
                     has_yuuko_or_cs = True
                     break
                 # Check for CS-trait Digimon
-                if p.is_digimon and any('CS' in t for t in (tc.type_eng or [])):
+                if p.is_digimon and any('CS' in t for t in (tc.card_traits or [])):
                     has_yuuko_or_cs = True
                     break
             return has_yuuko_or_cs
@@ -91,7 +91,7 @@ class BT23_044(CardScript):
                 if p.is_tamer and tc.contains_card_name('Yuuko Kamishiro'):
                     has_yuuko_or_cs = True
                     break
-                if p.is_digimon and any('CS' in t for t in (tc.type_eng or [])):
+                if p.is_digimon and any('CS' in t for t in (tc.card_traits or [])):
                     has_yuuko_or_cs = True
                     break
             return has_yuuko_or_cs
@@ -143,7 +143,7 @@ class BT23_044(CardScript):
                     tc = p2.top_card
                     if not tc:
                         return False
-                    traits = tc.type_eng or []
+                    traits = tc.card_traits or []
                     has_trait = (any('Vegetation' in t for t in traits)
                                 or any('Plant' in t for t in traits)
                                 or any('Fairy' in t for t in traits)
@@ -201,7 +201,7 @@ class BT23_044(CardScript):
                     tc = p2.top_card
                     if not tc:
                         return False
-                    traits = tc.type_eng or []
+                    traits = tc.card_traits or []
                     has_trait = (any('Vegetation' in t for t in traits)
                                 or any('Plant' in t for t in traits)
                                 or any('Fairy' in t for t in traits)

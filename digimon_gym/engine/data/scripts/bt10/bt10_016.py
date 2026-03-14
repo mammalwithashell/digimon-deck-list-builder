@@ -46,7 +46,7 @@ class BT10_016(CardScript):
         effect1.set_can_use_condition(condition1)
 
         def process1(ctx: Dict[str, Any]):
-            """Action: Play Card, Attack Unsuspended"""
+            """Play Sistermon from hand/trash, then conditionally grant effects."""
             player = ctx.get('player')
             perm = ctx.get('permanent')
             game = ctx.get('game')
@@ -55,17 +55,28 @@ class BT10_016(CardScript):
             def play_filter(c):
                 if not getattr(c, 'is_digimon', False):
                     return False
-                if not (any('Sistermon' in _n for _n in getattr(c, 'card_names', []))):
-                    return False
-                return True
+                return any('Sistermon' in _n for _n in getattr(c, 'card_names', []))
             game.effect_play_from_zone(
                 player, 'hand', play_filter, free=True, is_optional=True)
-            # Can attack unsuspended Digimon via modifier system
-            if perm and game:
+
+            if not perm:
+                return
+            has_jesmon_evo = any(
+                'Jesmon' in n
+                for cs in perm.card_sources[1:]
+                for n in getattr(cs, 'card_names', [])
+            )
+            has_sistermon_in_play = any(
+                p.is_digimon and p.contains_card_name('Sistermon')
+                for p in player.battle_area if p is not perm
+            )
+            if has_jesmon_evo or has_sistermon_in_play:
                 from digimon_gym.engine.interfaces.modifiers import ModifierType
-                game.register_modifier(
-                    ModifierType.CAN_ATTACK_UNSUSPENDED, perm,
-                    value_fn=lambda: True, expiry='persistent')
+                for p in player.battle_area:
+                    if p.is_digimon:
+                        game.register_modifier(
+                            p, ModifierType.CAN_ATTACK_UNSUSPENDED,
+                            value_fn=lambda: True, expiry='end_of_opponent_turn')
 
         effect1.set_on_process_callback(process1)
         effects.append(effect1)

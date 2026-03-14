@@ -27,6 +27,10 @@ class BT24_084(CardScript):
                 return False
             if not (card and card.owner and card.owner.is_my_turn):
                 return False
+            # Only if you have 4 or less memory
+            game = context.get('game')
+            if game is not None and game.memory > 4:
+                return False
             return True
 
         effect0.set_can_use_condition(condition0)
@@ -84,7 +88,7 @@ class BT24_084(CardScript):
                 def digi_filter(c):
                     return any('Aegiochusmon' in _n for _n in getattr(c, 'card_names', []))
                 game.effect_digivolve_from_hand(
-                    player, target_perm, digi_filter, is_optional=True)
+                    player, target_perm, digi_filter, cost_override=0, is_optional=True)
             game.effect_select_own_permanent(
                 player, on_select_aegiomon, filter_fn=aegiomon_filter, is_optional=True)
 

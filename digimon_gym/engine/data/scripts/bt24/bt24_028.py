@@ -57,17 +57,14 @@ class BT24_028(CardScript):
                 # Place selected card as bottom digivolution card
                 if selected in player.hand_cards:
                     player.hand_cards.remove(selected)
-                perm.card_sources.insert(0, selected)
-                # Verify it was actually placed (matches C# check)
-                if selected not in perm.card_sources:
-                    return
+                perm.add_card_source_bottom(selected)
                 # Grant Blocker and cannot-be-deleted-by-battle until opponent's turn ends
                 from digimon_gym.engine.interfaces.modifiers import ModifierType
                 game.register_modifier(
-                    ModifierType.GRANT_BLOCKER, perm,
+                    perm, ModifierType.GRANT_BLOCKER,
                     value_fn=lambda: True, expiry='end_of_opponent_turn')
                 game.register_modifier(
-                    ModifierType.CANNOT_BE_DESTROYED_BY_BATTLE, perm,
+                    perm, ModifierType.CANNOT_BE_DESTROYED_BY_BATTLE,
                     value_fn=lambda: True, expiry='end_of_opponent_turn')
 
             game.effect_select_hand_card(
@@ -157,7 +154,7 @@ class BT24_028(CardScript):
             def digi_filter(c):
                 return any('Neptunemon' in _n for _n in getattr(c, 'card_names', []))
             game.effect_digivolve_from_hand(
-                player, perm, digi_filter, is_optional=True)
+                player, perm, digi_filter, cost_override=0, is_optional=True)
 
         effect3.set_on_process_callback(process3)
         effects.append(effect3)

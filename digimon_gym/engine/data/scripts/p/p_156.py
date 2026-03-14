@@ -24,19 +24,10 @@ class P_156(CardScript):
     def get_card_effects(self, card: 'CardSource') -> List['ICardEffect']:
         effects = []
 
-        # --- Effect 0: Ignore Color Requirements ---
-        effect0 = ICardEffect()
-        effect0.set_effect_name("P-156 Ignore color requirements")
-        effect0.set_effect_description("Ignore Color Req")
-
-        def condition0(context: Dict[str, Any]) -> bool:
-            return True
-        effect0.set_can_use_condition(condition0)
-
-        def process0(ctx: Dict[str, Any]):
-            pass  # Declarative: engine handles color requirement bypass
-        effect0.set_on_process_callback(process0)
-        effects.append(effect0)
+        # --- Ignore Color Requirements ---
+        # "While you have a Tamer, you can ignore this card's color requirements."
+        # Set unconditionally; the Main effect itself guards on having a Tamer.
+        card._match_color_requirement = False
 
         # --- Effect 1: [Main] Choose Tamer, play matching-color Digimon cost<=3 ---
         effect1 = ICardEffect()

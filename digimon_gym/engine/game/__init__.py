@@ -432,12 +432,14 @@ class Game(CombatMixin, ActionDecoderMixin, EffectHelpersMixin):
         source_zone: str = "hand",
         free: bool = False,
         manual_reduction: int = 0,
+        commit: bool = False,
     ) -> int:
         if free:
             return 0
 
         base_cost = card.get_cost_itself
         reduction = max(0, manual_reduction)
+        activated_effects: list = []
 
         def apply_effect(effect, context: Dict[str, Any]) -> None:
             nonlocal reduction
@@ -453,10 +455,12 @@ class Game(CombatMixin, ActionDecoderMixin, EffectHelpersMixin):
                     reduction += max(0, int(dynamic_reduction(context)))
                 except Exception:
                     return
+                activated_effects.append(effect)
                 return
             effect_reduction = getattr(effect, 'cost_reduction', 0)
             if effect_reduction:
                 reduction += max(0, int(effect_reduction))
+                activated_effects.append(effect)
 
         for perm in list(player.battle_area):
             for effect in perm.effect_list(EffectTiming.NoTiming):
@@ -509,6 +513,11 @@ class Game(CombatMixin, ActionDecoderMixin, EffectHelpersMixin):
             )
 
         reduction += max(0, int(getattr(player, "_temp_play_cost_reduction", 0)))
+
+        if commit:
+            for effect in activated_effects:
+                effect.record_activation()
+
         return max(0, base_cost - reduction)
 
     def execute_effects(self, timing: EffectTiming, extra_context: Optional[dict] = None):
@@ -1015,7 +1024,7 @@ class Game(CombatMixin, ActionDecoderMixin, EffectHelpersMixin):
             return
 
         card = self.turn_player.hand_cards[card_index]
-        cost = self.calculate_play_cost(self.turn_player, card)
+        cost = self.calculate_play_cost(self.turn_player, card, commit=True)
 
         self.logger.log(f"[Play] {self.turn_player.player_name} plays {self._card_ref(card)} (cost: {cost})")
         is_option = card.is_option

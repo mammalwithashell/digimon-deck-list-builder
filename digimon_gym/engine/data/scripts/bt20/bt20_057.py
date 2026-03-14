@@ -27,7 +27,15 @@ class BT20_057(CardScript):
         def condition0(context: Dict[str, Any]) -> bool:
             if context.get('card_source') is not card:
                 return False
-            return True
+            owner = card.owner if card else None
+            if not owner:
+                return False
+            return any(
+                p.is_digimon and p.top_card and
+                any('Huckmon' in n or 'Jesmon' in n or 'Sistermon' in n
+                    for n in (getattr(p.top_card, 'card_names', []) or []))
+                for p in owner.battle_area
+            )
 
         effect0.set_can_use_condition(condition0)
 
@@ -41,30 +49,6 @@ class BT20_057(CardScript):
 
         effect0.set_on_process_callback(process0)
         effects.append(effect0)
-
-        # Timing: EffectTiming.None
-        # Cost -4
-        effect1 = ICardEffect()
-        effect1.set_effect_name("BT20-057 Play Cost -4")
-        effect1.set_effect_description("Cost -4")
-        effect1.cost_reduction = 4
-
-        effect = effect1  # alias for condition closure
-        def condition1(context: Dict[str, Any]) -> bool:
-            return True
-
-        effect1.set_can_use_condition(condition1)
-
-        def process1(ctx: Dict[str, Any]):
-            """Action: Cost -4"""
-            player = ctx.get('player')
-            perm = ctx.get('permanent')
-            game = ctx.get('game')
-            # Cost reduction by 4 — handled via cost_reduction property
-            pass  # descriptive-tagged: cost_reduction
-
-        effect1.set_on_process_callback(process1)
-        effects.append(effect1)
 
         # Factory effect: blocker
         # Blocker

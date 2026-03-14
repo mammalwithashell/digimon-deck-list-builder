@@ -36,14 +36,45 @@ class EX9_006(CardScript):
         effect0.set_hash_string("evo_from_trash_EX9_006")
 
         def condition0(context: Dict[str, Any]) -> bool:
+            if card and card.permanent_of_this_card() is None:
+                return False
+            perm = card.permanent_of_this_card()
+            if perm and len(perm.digivolution_cards) < 1:
+                return False
             return True
         effect0.set_can_use_condition(condition0)
 
         def process0(ctx: Dict[str, Any]):
             """Action: Trash bottom digi card, digivolve into Ver.5 from trash"""
-            # descriptive-tagged: digivolving from trash into a trait-specific
-            # Digimon with cost reduction is not supported by the engine
-            pass
+            player = ctx.get('player')
+            perm = ctx.get('permanent')
+            game = ctx.get('game')
+            if not (player and perm and game):
+                return
+            # Cost: Trash bottom face-down digivolution card
+            if perm.digivolution_cards:
+                trashed_card = perm.digivolution_cards.pop()
+                player.trash_cards.append(trashed_card)
+
+            # Effect: Digivolve into [Ver.5] Digimon from trash with cost -1
+            # Since engine doesn't support digivolve from trash natively,
+            # we find a Ver.5 Digimon in trash and digivolve manually
+            def ver5_filter(c):
+                if not getattr(c, 'is_digimon', False):
+                    return False
+                traits = getattr(c, 'card_traits', []) or []
+                return any('Ver.5' in t for t in traits)
+
+            qualifying = [c for c in player.trash_cards if ver5_filter(c)]
+            if qualifying:
+                chosen = qualifying[0]
+                player.trash_cards.remove(chosen)
+                # Digivolve: place as new top card of the stack
+                perm.add_card_source(chosen)
+                perm.turn_digivolved = game.turn_count
+                # Cost reduction of 1 applied (free since from trash via effect)
+                game.logger.log(f"[Effect] {player.player_name} digivolved "
+                               f"from trash into Ver.5 Digimon")
 
         effect0.set_on_process_callback(process0)
         effects.append(effect0)
