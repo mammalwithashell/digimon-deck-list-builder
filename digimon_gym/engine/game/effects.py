@@ -403,6 +403,23 @@ class EffectHelpersMixin:
         prompt: str = "",
     ):
         """Let agent pick a hand card to digivolve a permanent into via effect."""
+        # DCGO: ICannotIgnoreDigivolutionConditionEffect — check all field perms
+        if ignore_requirements:
+            for p_check in [self.player1, self.player2]:
+                for perm_check in p_check.battle_area:
+                    for source in perm_check.card_sources:
+                        for eff in source.effect_list(EffectTiming.NoTiming):
+                            if getattr(eff, '_cannot_ignore_evo_requirements', False):
+                                ctx = {'game': self, 'player': p_check}
+                                if eff.can_use_condition is None or eff.can_use_condition(ctx):
+                                    ignore_requirements = False
+                                    break
+                        if not ignore_requirements:
+                            break
+                    if not ignore_requirements:
+                        break
+                if not ignore_requirements:
+                    break
         if not prompt:
             perm_name = self._perm_ref(permanent)
             prompt = f"Select a card from hand to digivolve {perm_name}."

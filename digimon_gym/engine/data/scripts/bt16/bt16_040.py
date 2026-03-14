@@ -107,8 +107,8 @@ class BT16_040(CardScript):
                     if not valid_indices:
                         return
 
-                    def on_trash_selected(action_id: int):
-                        idx = action_id - _SEL_TRASH_START
+                    def on_trash_selected(idx: int):
+                        # _decode_trash_selection already subtracts SEL_TRASH_START
                         if not (0 <= idx < len(player.trash_cards)):
                             return
                         chosen_card = player.trash_cards[idx]

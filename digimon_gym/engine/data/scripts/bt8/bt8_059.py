@@ -14,13 +14,16 @@ class BT8_059(CardScript):
     def get_card_effects(self, card: 'CardSource') -> List['ICardEffect']:
         effects = []
 
-        # Timing: EffectTiming.None
-        # Effect
+        # Continuous effect: Players can't ignore digivolution requirements
+        # (DCGO: ICannotIgnoreDigivolutionConditionEffect)
+        # Checked by effect_digivolve_from_hand when ignore_requirements=True
         effect0 = ICardEffect()
         effect0.set_effect_name("BT8-059 Players can't ignore digivolution requirements")
-        effect0.set_effect_description("Effect")
+        effect0.set_effect_description(
+            "[All Turns] Players can't ignore digivolution requirements."
+        )
+        effect0._cannot_ignore_evo_requirements = True
 
-        effect = effect0  # alias for condition closure
         def condition0(context: Dict[str, Any]) -> bool:
             if card and card.permanent_of_this_card() is None:
                 return False

@@ -40,15 +40,16 @@ class BT17_093(CardScript):
                 return False
             if not (card and card.owner):
                 return False
-            # Trigger: a Digi-Egg was placed in breeding area
-            trigger_perm = context.get('permanent')
-            if trigger_perm is None:
+            # Trigger: a Digi-Egg was hatched into breeding area
+            # The hatched perm is in played_permanent (event context),
+            # not permanent (which is the iterating perm during execute_effects)
+            if not context.get('is_hatch'):
                 return False
-            # Check if it's in our breeding area and is a Digi-Egg
-            if card.owner.breeding_area is not trigger_perm:
+            hatched_perm = context.get('played_permanent')
+            if hatched_perm is None:
                 return False
-            if not (trigger_perm.top_card and
-                    getattr(trigger_perm.top_card, 'is_digi_egg', False)):
+            # Must be our breeding area
+            if card.owner.breeding_area is not hatched_perm:
                 return False
             return True
 

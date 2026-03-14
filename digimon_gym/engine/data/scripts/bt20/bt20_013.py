@@ -18,6 +18,7 @@ class BT20_013(CardScript):
         # [Main] [Once Per Turn] You may play 1 Digimon card with [Sistermon] or [Gankoomon] in its name from you hand with the play cost reduced by 2.
         effect0 = ICardEffect()
         effect0.set_timing(EffectTiming.OnDeclaration)
+        effect0._is_field_main = True
         effect0.set_effect_name("BT20-013 Play a Digimon with the cost reduced by 2")
         effect0.set_effect_description("[Main] [Once Per Turn] You may play 1 Digimon card with [Sistermon] or [Gankoomon] in its name from you hand with the play cost reduced by 2.")
         effect0.set_max_count_per_turn(1)
@@ -44,9 +45,8 @@ class BT20_013(CardScript):
                     return False
                 return True
             game.effect_play_from_zone(
-                player, 'hand', play_filter, free=True, is_optional=True)
-            # Cost reduction by 2 — handled via cost_reduction property
-            pass  # descriptive-tagged: cost_reduction
+                player, 'hand', play_filter, free=False,
+                manual_reduction=2, is_optional=True)
 
         effect0.set_on_process_callback(process0)
         effects.append(effect0)

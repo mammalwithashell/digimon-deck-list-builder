@@ -112,8 +112,8 @@ class EX10_032(CardScript):
             if not valid_trash:
                 return
 
-            def _on_trash_action(action_id):
-                idx = action_id - _SEL_TRASH_START
+            def _on_trash_action(idx):
+                # _decode_trash_selection already subtracts SEL_TRASH_START
                 on_landramon_selected(idx)
 
             game.request_selection(

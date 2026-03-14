@@ -1,7 +1,7 @@
 {
   "_comment": "Canonical archetype names with their known aliases. Applied during ingestion and scoped meta queries so data from different sources merges correctly. Matching is case-insensitive. Add new aliases as naming drift is discovered.",
 
-  "TS Jupitermon": ["TS Jupiter"],
+  "TS Jupitermon": ["TS Jupiter", "Aegiomon"],
   "TS Neptunemon": ["TS Neptune"],
   "TS Merukimon": ["TS Meruki", "TS Minerva"],
   "Digi-Police": ["Digipolice"],

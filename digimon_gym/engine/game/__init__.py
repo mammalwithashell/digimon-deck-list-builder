@@ -517,6 +517,18 @@ class Game(CombatMixin, ActionDecoderMixin, EffectHelpersMixin):
         if commit:
             for effect in activated_effects:
                 effect.record_activation()
+                # Fire BeforePayCost process callbacks (e.g., trash-to-deck returns)
+                if effect.on_process_callback:
+                    ctx = {
+                        "game": self,
+                        "player": player,
+                        "card_source": card,
+                        "played_card": card,
+                    }
+                    try:
+                        effect.on_process_callback(ctx)
+                    except Exception:
+                        pass
 
         return max(0, base_cost - reduction)
 
@@ -1270,6 +1282,14 @@ class Game(CombatMixin, ActionDecoderMixin, EffectHelpersMixin):
             and len(self.turn_player.digitama_library_cards) < before_egg_count
         )
         if hatched:
+            # Fire OnEnterFieldAnyone with hatch context (DCGO: IsDigiEggHatch)
+            hatched_perm = self.turn_player.breeding_area
+            self.execute_effects(EffectTiming.OnEnterFieldAnyone, {
+                "played_permanent": hatched_perm,
+                "played_card": hatched_perm.top_card if hatched_perm else None,
+                "event_player": self.turn_player,
+                "is_hatch": True,
+            })
             self.current_phase = GamePhase.Main
             self.phase_main()
 

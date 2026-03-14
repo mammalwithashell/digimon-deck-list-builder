@@ -769,8 +769,8 @@
       "card_name": "Gankoomon",
       "validated_date": "2026-03-14",
       "report": "2026-03-14-royal-knights-qa.md",
-      "status": "PARTIAL",
-      "notes": "Engine gap: BeforePayCost by-cost enforcement. Token play+delete works."
+      "status": "PASS",
+      "notes": "BeforePayCost -5 with trash return, token play+delete working correctly."
     },
     "BT23-058": {
       "status": "PASS",
@@ -1124,8 +1124,8 @@
       "card_name": "Tidal Stream",
       "validated_date": "2026-03-14",
       "report": "2026-03-14-ts-olympos-qa.md",
-      "status": "PARTIAL",
-      "notes": "Link implementation present but untestable in isolation."
+      "status": "PASS",
+      "notes": "Fixed: bounce to hand (not deck bottom), color bypass, security activates main."
     },
     "BT24-100": {
       "card_name": "In-Between Theater",
@@ -1317,8 +1317,8 @@
       "card_name": "Win Rate: 60%!",
       "validated_date": "2026-03-14",
       "report": "2026-03-14-hudiemon-qa.md",
-      "status": "PARTIAL",
-      "notes": "Implemented: CHANGE_DIGIVOLUTION_COST -4. Trash cost skipped (engine gap)."
+      "status": "PASS",
+      "notes": "Fixed: one-shot digi cost -4 via self-consuming condition, color bypass added."
     },
     "EX10-010": {
       "card_name": "BlackWarGreymon",
@@ -2166,8 +2166,8 @@
       "card_name": "Tai Kamiya & Kari Kamiya",
       "validated_date": "2026-03-14",
       "report": "2026-03-14-wave1-reverify.md",
-      "status": "PARTIAL",
-      "notes": "EOT effect now works (engine fix). Engine gap: no OnHatch timing for breeding entry."
+      "status": "PASS",
+      "notes": "Fixed: engine fires OnEnterFieldAnyone after hatch with is_hatch context flag."
     },
     "BT23-008": {
       "card_name": "Greymon",
@@ -2460,8 +2460,8 @@
       "card_name": "Chaperomon",
       "validated_date": "2026-03-14",
       "report": "2026-03-14-puppets-qa.md",
-      "status": "PARTIAL",
-      "notes": "Engine gap: Hand/Main special digivolve from Shoemon needs custom support."
+      "status": "PASS",
+      "notes": "Fixed: _is_hand_main compound flow (trash ShoeShoemon under Shoemon, digi cost 3), WhenPermanentWouldBeDeleted prevention."
     },
     "BT22-040": {
       "card_name": "Cendrillmon",
@@ -3118,8 +3118,8 @@
       "card_name": "BaoHuckmon",
       "validated_date": "2026-03-14",
       "report": "2026-03-14-jesmon-qa.md",
-      "status": "PARTIAL",
-      "notes": "free=True should be manual_reduction=2 but causes engine hang. Engine gap."
+      "status": "PASS",
+      "notes": "Fixed: free=False with manual_reduction=2 (correct C# pattern)."
     },
     "BT20-014": {
       "card_name": "SaviorHuckmon",
@@ -4266,8 +4266,8 @@
       "card_name": "Kokuwamon",
       "validated_date": "2026-03-14",
       "report": "2026-03-14-hudiemon-qa.md",
-      "status": "PARTIAL",
-      "notes": "Digivolution requirement restriction declarative only (engine gap)."
+      "status": "PASS",
+      "notes": "Fixed: _cannot_ignore_evo_requirements flag enforced in effect_digivolve_from_hand."
     },
     "EX1-072": {
       "card_name": "Emergency Program Shutdown!",
