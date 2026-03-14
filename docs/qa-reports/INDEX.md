@@ -1,6 +1,6 @@
 # QA Issue Resolution Index
 
-**Last updated**: 2026-03-12
+**Last updated**: 2026-03-13
 
 ## Summary
 
@@ -38,7 +38,14 @@
 | [medusamon-royal-knights](2026-03-08-medusamon-royal-knights.md) | 6 | 5 | 1 | 0 |
 | [medusa-regression](2026-03-09-medusa-regression.md) | 7 | 0 | 0 | 7 |
 | [ts-olympos-vs-imperialdramon](2026-03-11-ts-olympos-vs-imperialdramon.md) | 7 | 5 | 0 | 2 |
-| **Total** | **209** | **161** | **8** | **40** |
+| [ts-jupitermon](2026-03-13-ts-jupitermon.md) | 5 | 0 | 0 | 5 |
+| [dna-omnimon](2026-03-13-dna-omnimon.md) | 13 | 0 | 0 | 13 |
+| [exmaquinamon](2026-03-13-exmaquinamon.md) | 14 | 0 | 0 | 14 |
+| [galacticmon](2026-03-13-galacticmon.md) | 27 | 0 | 0 | 27 |
+| [puppets](2026-03-13-puppets.md) | 32 | 0 | 0 | 32 |
+| [dark-masters](2026-03-13-dark-masters.md) | 18 | 0 | 0 | 18 |
+| [jesmon](2026-03-13-jesmon.md) | 8 | 0 | 0 | 8 |
+| **Total** | **326** | **161** | **8** | **157** |
 
 ---
 
@@ -454,3 +461,36 @@ Post-fix verification of Issues 46-51. Confirmed 5 fixes, 1 known limitation (WO
 | 63 | BT24-090 Abyss Sanctuary multiple implementation errors | med | FIXED | Script: rewrote [Main] effect — free play lv4- blue/yellow TS from hand/trash, place in battle area |
 | 64 | SelectReveal action descriptions show wrong text | low | OUTSTANDING | Actions show "Trash X from hand" during reveal-and-select phases. Prompt text is correct. |
 | 65 | BT24-041 Minervamon De-Digivolve uses attack action IDs | med | OUTSTANDING | Target selection offers attack action IDs (114, 115) instead of target selection indices. |
+
+## Report 34: TS Jupitermon (2026-03-13)
+
+8 unvalidated cards tested via debug game API and direct engine testing. 4 PASS, 3 PARTIAL, 1 FAIL. 5 issues found (0 fixed, 5 outstanding).
+
+| # | Issue | Sev | Status | Notes |
+|---|-------|-----|--------|-------|
+| 66 | BT24-046 Garurumon suspend filter uses nonexistent `owner` attr on Permanent | critical | OUTSTANDING | Filter `getattr(p, 'owner', None) == player.enemy` always fails. Affects On Play, When Digivolving, and inherited When Attacking suspend effects. Fix: remove owner check, use `lambda p: p.is_digimon`. |
+| 67 | BT24-084 Inori Misono memory gain missing "4 or less" condition | high | OUTSTANDING | Script condition0 only checks `is_my_turn`, not memory level. Triggers unconditionally at Start of Main Phase. |
+| 68 | BT24-037 Silphymon force attack and SA+1/DNA bonus stubbed | med | OUTSTANDING | `pass # descriptive-tagged: force_attack` and `pass # descriptive-tagged: change_security_attack` in process callbacks. |
+| 69 | P-213 Aegiochusmon force attack after digivolve stubbed | med | OUTSTANDING | `pass # descriptive-tagged: force_attack` in When Digivolving process callback. |
+| 70 | BT24-037 Silphymon DP target auto-selects instead of player choice | low | OUTSTANDING | Uses `min(dp_targets, key=lambda p: p.dp)` instead of `effect_select_opponent_permanent`. |
+
+## Report 36: ExMaquinamon (2026-03-13)
+
+15 unvalidated cards tested via debug game API across 5 games. 3 PASS, 3 FAIL, 9 PARTIAL. 14 issues found (0 fixed, 14 outstanding). Systemic `effect_source_permanent` condition bug affects 5 scripts.
+
+| # | Issue | Sev | Status | Notes |
+|---|-------|-----|--------|-------|
+| 71 | EX11-027 Maquinamon On Play effect never triggers | critical | OUTSTANDING | condition1 checks `effect.effect_source_permanent` which is never set. Reveal selects only 1 card (should be 2). Missing link-to-Digimon step. |
+| 72 | EX11-029 Turbomon On Play uses wrong timing (OnMove) | high | OUTSTANDING | On Play effect uses `EffectTiming.OnMove` instead of `OnEnterFieldAnyone`. When Digivolving correctly uses OnEnterFieldAnyone. |
+| 73 | EX11-033 Maneuvermon plays Maquinamon standalone instead of linking | high | OUTSTANDING | Uses `effect_play_from_zone` instead of `effect_link_to_permanent`. |
+| 74 | EX11-036 Dalphomon suspends 1 instead of 2 | high | OUTSTANDING | Only calls `effect_select_opponent_permanent` once. Card says suspend 2 then 1 cannot_unsuspend. |
+| 75 | EX11-036 Dalphomon End-of-Turn condition broken | high | OUTSTANDING | Same `effect_source_permanent` bug as #71. |
+| 76 | EX11-036 Dalphomon inherited WhenLinked missing force-attack | med | OUTSTANDING | "This Digimon may attack" not implementable (engine limitation). |
+| 77 | EX11-045 Metatromon grants wrong modifier | high | OUTSTANDING | Grants `CANNOT_BE_SELECTED_BY_EFFECT` instead of cannot-digivolve restriction. |
+| 78 | EX11-045 Metatromon End-of-Turn condition broken | high | OUTSTANDING | Same `effect_source_permanent` bug as #71. |
+| 79 | EX11-006 Flickmon inherited condition broken + missing features | med | OUTSTANDING | `effect_source_permanent` bug; missing linked-with-Maquinamon check; missing -2 evo cost reduction. |
+| 80 | EX11-073 ExMaquinamon When Digivolving missing DNA check | med | OUTSTANDING | Condition does not verify DNA digivolve. Would trigger on any digivolve. |
+| 81 | EX11-070 Unchained missing 2 inherited effects | high | OUTSTANDING | Missing "can't trash stacked cards" protection and "[End of All Turns] play Unchained from digi cards". |
+| 82 | EX6-072 Mega Digimon Assembly DNA effect does not fire | med | OUTSTANDING | Engine `effect_dna_digivolve_from_hand` doesn't support 1 field + 1 hand DNA pattern. |
+| 83 | LM-048 Chrome Memory Boost duplicated on field | low | OUTSTANDING | Two copies appear on field after playing one. |
+| 84 | P-151 Digimon Liberator ignore color requirement stub | med | OUTSTANDING | Color ignore effect is `pass # descriptive-tagged`. |

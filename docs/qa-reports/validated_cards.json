@@ -1,6 +1,6 @@
 {
-  "version": 25,
-  "last_updated": "2026-03-11",
+  "version": 33,
+  "last_updated": "2026-03-13",
   "cards": {
     "BT1-087": {
       "card_name": "T.K. Takaishi",
@@ -48,13 +48,13 @@
       "status": "FAIL",
       "validated_date": "2026-03-08",
       "report": "2026-03-08-medusamon-royal-knights.md",
-      "notes": "TWO bugs: (1) calculate_play_cost() never calls record_activation() so once-per-turn never decrements \u2014 all RK plays get reduced. (2) is_optional never checked \u2014 'you may reduce' always applied without prompt."
+      "notes": "TWO bugs: (1) calculate_play_cost() never calls record_activation() so once-per-turn never decrements — all RK plays get reduced. (2) is_optional never checked — 'you may reduce' always applied without prompt."
     },
     "BT13-019": {
       "status": "PASS",
       "validated_date": "2026-03-03",
       "report": "2026-03-03-royal-knights-script-audit.md",
-      "notes": "Script fixed: zone hand\u2192trash, Gankoomon/Omnimon exclusion"
+      "notes": "Script fixed: zone hand→trash, Gankoomon/Omnimon exclusion"
     },
     "BT13-034": {
       "card_name": "Kudamon",
@@ -74,7 +74,7 @@
       "status": "PASS",
       "validated_date": "2026-03-03",
       "report": "2026-03-03-royal-knights-script-audit.md",
-      "notes": "Script fixed: reveal 2, delete-all, remaining\u2192trash"
+      "notes": "Script fixed: reveal 2, delete-all, remaining→trash"
     },
     "BT13-093": {
       "status": "PASS",
@@ -354,7 +354,7 @@
       "status": "PASS",
       "validated_date": "2026-03-03",
       "report": "2026-03-03-royal-knights-script-audit.md",
-      "notes": "Script fixed: zone hand\u2192trash, opponent-turn check"
+      "notes": "Script fixed: zone hand→trash, opponent-turn check"
     },
     "BT19-075": {
       "card_name": "Millenniummon",
@@ -434,7 +434,7 @@
       "status": "PASS",
       "validated_date": "2026-03-08",
       "report": "2026-03-08-medusamon-royal-knights.md",
-      "notes": "Live verified: Blocker keyword, On Play digivolve (security \u22641 condition), On Deletion self-placement under King Drasil. Both happy path and edge cases confirmed."
+      "notes": "Live verified: Blocker keyword, On Play digivolve (security ≤1 condition), On Deletion self-placement under King Drasil. Both happy path and edge cases confirmed."
     },
     "BT20-091": {
       "status": "PASS",
@@ -800,14 +800,14 @@
       "status": "PASS",
       "validated_date": "2026-03-03",
       "report": "2026-03-03-royal-knights-script-audit.md",
-      "notes": "Script fixed: cost filter \u22644, self-check, inherited effects"
+      "notes": "Script fixed: cost filter ≤4, self-check, inherited effects"
     },
     "BT23-081": {
       "card_name": "Chitose Imai",
       "validated_date": "2026-02-28",
       "report": "2026-02-28-medusa-vs-hudie.md",
       "status": "PASS",
-      "notes": "Free CS play verified. OnTapped trait filter fixed \u00e2\u20ac\u201d triggers only for Hudie Digimon. Suspends self as cost. Security play verified."
+      "notes": "Free CS play verified. OnTapped trait filter fixed â€” triggers only for Hudie Digimon. Suspends self as cost. Security play verified."
     },
     "BT23-084": {
       "card_name": "Erika Mishima",
@@ -991,7 +991,7 @@
       "validated_date": "2026-03-03",
       "report": "2026-03-03-ts-neptune-gameplay.md",
       "status": "PARTIAL",
-      "notes": "Play cost 5 correct. Decode keyword present. On Play fires but no tucking cost required (deferred \u2014 needs engine helper). Keywords granted unconditionally."
+      "notes": "Play cost 5 correct. Decode keyword present. On Play fires but no tucking cost required (deferred — needs engine helper). Keywords granted unconditionally."
     },
     "BT24-028": {
       "card_name": "Divermon",
@@ -1019,7 +1019,7 @@
       "validated_date": "2026-03-11",
       "report": "2026-03-11-ts-olympos-vs-imperialdramon.md",
       "status": "PARTIAL",
-      "notes": "Play cost 3 correct. On Play broken \u2014 trashes from hand instead of revealing from deck. Inherited effect logic is inverted."
+      "notes": "Play cost 3 correct. On Play broken — trashes from hand instead of revealing from deck. Inherited effect logic is inverted."
     },
     "BT24-034": {
       "card_name": "Aegiomon",
@@ -1866,6 +1866,1560 @@
       "report": "2026-03-11-ts-olympos-vs-imperialdramon.md",
       "status": "PASS",
       "notes": "On Play reveal correct, two-pass selection works, cost 3 correct"
+    },
+    "BT24-003": {
+      "card_name": "Tsunomon",
+      "validated_date": "2026-03-13",
+      "report": "2026-03-13-ts-jupitermon.md",
+      "status": "PASS",
+      "notes": "Inherited OnLoseSecurity digivolve into Shaman trait works. OPT, optional, cost_reduction=1 all correct."
+    },
+    "BT24-037": {
+      "card_name": "Silphymon",
+      "validated_date": "2026-03-13",
+      "report": "2026-03-13-ts-jupitermon.md",
+      "status": "PARTIAL",
+      "notes": "DP -5000 works. Force attack and SA+1/DNA bonus stubbed. DP target auto-selects instead of player choice."
+    },
+    "BT24-046": {
+      "card_name": "Garurumon",
+      "validated_date": "2026-03-13",
+      "report": "2026-03-13-ts-jupitermon.md",
+      "status": "FAIL",
+      "notes": "On Play/When Digivolving/Inherited suspend broken: filter uses nonexistent owner attr on Permanent. Jamming works."
+    },
+    "BT24-084": {
+      "card_name": "Inori Misono",
+      "validated_date": "2026-03-13",
+      "report": "2026-03-13-ts-jupitermon.md",
+      "status": "PARTIAL",
+      "notes": "Memory +1 missing \"4 or less memory\" condition. Aegiomon->Aegiochusmon digivolve trigger works. Security play declared."
+    },
+    "BT24-101": {
+      "card_name": "Jupitermon",
+      "validated_date": "2026-03-13",
+      "report": "2026-03-13-ts-jupitermon.md",
+      "status": "PASS",
+      "notes": "On Play/When Digivolving trash+DP+Recovery all correct. OnLoseSecurity trash opponent sec works. TS protection conditional."
+    },
+    "BT7-032": {
+      "card_name": "Pulsemon",
+      "validated_date": "2026-03-13",
+      "report": "2026-03-13-ts-jupitermon.md",
+      "status": "PASS",
+      "notes": "Inherited When Attacking +2 memory at exactly 3 security. OPT enforced. Does not trigger at 4 security."
+    },
+    "P-194": {
+      "card_name": "Aegiomon",
+      "validated_date": "2026-03-13",
+      "report": "2026-03-13-ts-jupitermon.md",
+      "status": "PASS",
+      "notes": "Blocker, Barrier keywords work. Inherited Barrier verified under P-213. Alt-digi from TS Lv3 at cost 2."
+    },
+    "P-213": {
+      "card_name": "Aegiochusmon",
+      "validated_date": "2026-03-13",
+      "report": "2026-03-13-ts-jupitermon.md",
+      "status": "PARTIAL",
+      "notes": "Raid, Decode, Rush+DP conditional all work. Force attack after digivolve stubbed. Alt-digi from Aegiomon works."
+    },
+    "BT12-059": {
+      "card_name": "Agumon",
+      "validated_date": "2026-03-13",
+      "report": "2026-03-13-dna-omnimon.md",
+      "status": "PASS",
+      "notes": "On Play reveal+search works. Inherited +1000 DP correct."
+    },
+    "BT14-001": {
+      "card_name": "Koromon",
+      "status": "FAIL",
+      "notes": "Lv2 digitama appeared playable from hand via inject. Inherited effect untested.",
+      "validated_date": "2026-03-13",
+      "report": "2026-03-13-dark-masters.md"
+    },
+    "BT17-007": {
+      "card_name": "Agumon",
+      "validated_date": "2026-03-13",
+      "report": "2026-03-13-dna-omnimon.md",
+      "status": "PASS",
+      "notes": "Start of Main Phase return from trash with Tai Kamiya. API verified."
+    },
+    "BT17-015": {
+      "card_name": "WarGreymon",
+      "validated_date": "2026-03-13",
+      "report": "2026-03-13-dna-omnimon.md",
+      "status": "PASS",
+      "notes": "Cost -3, branch choice, inherited security trash. API verified."
+    },
+    "BT17-019": {
+      "card_name": "Gabumon",
+      "validated_date": "2026-03-13",
+      "report": "2026-03-13-dna-omnimon.md",
+      "status": "PASS",
+      "notes": "Start of Main Phase draw 1 with Matt Ishida. API verified."
+    },
+    "BT17-027": {
+      "card_name": "MetalGarurumon",
+      "validated_date": "2026-03-13",
+      "report": "2026-03-13-dna-omnimon.md",
+      "status": "PASS",
+      "notes": "Cost -3, branch choice, inherited unsuspend."
+    },
+    "BT17-078": {
+      "card_name": "Omnimon",
+      "validated_date": "2026-03-13",
+      "report": "2026-03-13-dna-omnimon.md",
+      "status": "PASS",
+      "notes": "Raid, Blocker, Blast DNA. Minor: delete fires outside DNA check."
+    },
+    "BT17-081": {
+      "card_name": "Tai Kamiya & Matt Ishida",
+      "validated_date": "2026-03-13",
+      "report": "2026-03-13-dna-omnimon.md",
+      "status": "PASS",
+      "notes": "Suspend for memory. End-of-turn Omnimon attack. Security play."
+    },
+    "BT17-095": {
+      "card_name": "Miraculous Mega Knight",
+      "validated_date": "2026-03-13",
+      "report": "2026-03-13-dna-omnimon.md",
+      "status": "PASS",
+      "notes": "Play Agumon/Gabumon free. Delay DNA digivolve. Security tamer play."
+    },
+    "BT17-102": {
+      "card_name": "Greymon",
+      "validated_date": "2026-03-13",
+      "report": "2026-03-13-dna-omnimon.md",
+      "status": "PASS",
+      "notes": "When Digivolving +DP if Koromon, delete. Name change. On Deletion tamer/hatch."
+    },
+    "BT5-092": {
+      "card_name": "Nokia Shiramine",
+      "validated_date": "2026-03-13",
+      "report": "2026-03-13-dna-omnimon.md",
+      "status": "PASS",
+      "notes": "On Play Agumon/Gabumon free. Evo cost -1. API verified."
+    },
+    "BT5-093": {
+      "card_name": "Tai Kamiya & Matt Ishida",
+      "validated_date": "2026-03-13",
+      "report": "2026-03-13-dna-omnimon.md",
+      "status": "PASS",
+      "notes": "Start of turn +2 memory. Omnimon SA+1."
+    },
+    "EX4-038": {
+      "card_name": "Agumon",
+      "validated_date": "2026-03-13",
+      "report": "2026-03-13-dna-omnimon.md",
+      "status": "PASS",
+      "notes": "On Play reveal 3, dual search. Inherited memory+1. API verified."
+    },
+    "EX4-039": {
+      "card_name": "Gabumon",
+      "validated_date": "2026-03-13",
+      "report": "2026-03-13-dna-omnimon.md",
+      "status": "PASS",
+      "notes": "On Play reveal 3, dual search. Inherited memory+1. API verified."
+    },
+    "EX9-066": {
+      "card_name": "Tai Kamiya & Matt Ishida",
+      "validated_date": "2026-03-13",
+      "report": "2026-03-13-dna-omnimon.md",
+      "status": "PASS",
+      "notes": "On Play return from trash or draw. Suspend for memory. API verified."
+    },
+    "ST2-13": {
+      "card_name": "Hammer Spark",
+      "validated_date": "2026-03-13",
+      "report": "2026-03-13-dna-omnimon.md",
+      "status": "PASS",
+      "notes": "Gain 1 memory. Security gain 2."
+    },
+    "ST20-15": {
+      "card_name": "Island of Adventure",
+      "status": "FAIL",
+      "notes": "Option not playable without white card on field. Correct behavior but needs field setup.",
+      "validated_date": "2026-03-13",
+      "report": "2026-03-13-dark-masters.md"
+    },
+    "EX1-021": {
+      "card_name": "MetalGarurumon",
+      "validated_date": "2026-03-13",
+      "report": "2026-03-13-dna-omnimon.md",
+      "status": "PASS",
+      "notes": "When Digivolving memory per 4 hand cards. When Attacking return On Deletion Digimon."
+    },
+    "EX4-061": {
+      "card_name": "Matt Ishida & Tai Kamiya",
+      "validated_date": "2026-03-13",
+      "report": "2026-03-13-dna-omnimon.md",
+      "status": "PASS",
+      "notes": "Suspend for memory. Conditional Gabumon/Agumon play on digivolve."
+    },
+    "P-182": {
+      "card_name": "WarGreymon",
+      "validated_date": "2026-03-13",
+      "report": "2026-03-13-dna-omnimon.md",
+      "status": "PASS",
+      "notes": "SA+1, Blocker, delete on digivolve, DP per color."
+    },
+    "EX4-073": {
+      "card_name": "Omnimon Alter-B",
+      "validated_date": "2026-03-13",
+      "report": "2026-03-13-dna-omnimon.md",
+      "status": "PASS",
+      "notes": "De-Digivolve 3 + delete. Trash sources for DP."
+    },
+    "ST20-11": {
+      "card_name": "WarGreymon",
+      "validated_date": "2026-03-13",
+      "report": "2026-03-13-dna-omnimon.md",
+      "status": "PASS",
+      "notes": "Blast Digivolve, effect immunity, delete."
+    },
+    "EX9-021": {
+      "card_name": "Omnimon Alter-S",
+      "validated_date": "2026-03-13",
+      "report": "2026-03-13-dna-omnimon.md",
+      "status": "PASS",
+      "notes": "DNA-conditional effects structurally correct. Complex."
+    },
+    "ST20-10": {
+      "card_name": "Agumon",
+      "validated_date": "2026-03-13",
+      "report": "2026-03-13-dna-omnimon.md",
+      "status": "PASS",
+      "notes": "Conditional WarGreymon digivolve. Reboot inherited."
+    },
+    "BT22-008": {
+      "card_name": "Agumon",
+      "validated_date": "2026-03-13",
+      "report": "2026-03-13-dna-omnimon.md",
+      "status": "FAIL",
+      "notes": "On Play blindly pops trash instead of selecting. API verified."
+    },
+    "BT22-017": {
+      "card_name": "Gabumon",
+      "validated_date": "2026-03-13",
+      "report": "2026-03-13-dna-omnimon.md",
+      "status": "FAIL",
+      "notes": "On Play condition checks wrong text. Wrong reveal API. API verified broken."
+    },
+    "BT13-012": {
+      "card_name": "GeoGreymon",
+      "validated_date": "2026-03-13",
+      "report": "2026-03-13-dna-omnimon.md",
+      "status": "FAIL",
+      "notes": "When Digivolving does Recovery first instead of searching security."
+    },
+    "BT15-101": {
+      "card_name": "MetalGarurumon",
+      "validated_date": "2026-03-13",
+      "report": "2026-03-13-dna-omnimon.md",
+      "status": "FAIL",
+      "notes": "Wrong modifier type/args. Duplicate alt-digi. Unsuspend targets wrong."
+    },
+    "BT21-102": {
+      "card_name": "Tai Kamiya",
+      "validated_date": "2026-03-13",
+      "report": "2026-03-13-dna-omnimon.md",
+      "status": "FAIL",
+      "notes": "All 3 effects wrong. Start-of-turn/attack/main all have incorrect implementations."
+    },
+    "BT22-013": {
+      "card_name": "WarGreymon",
+      "validated_date": "2026-03-13",
+      "report": "2026-03-13-dna-omnimon.md",
+      "status": "FAIL",
+      "notes": "Broken conditions. Sequential not branch. Missing Omnimon check."
+    },
+    "BT22-015": {
+      "card_name": "Omnimon",
+      "validated_date": "2026-03-13",
+      "report": "2026-03-13-dna-omnimon.md",
+      "status": "FAIL",
+      "notes": "No lowest DP filter. Wrong return count. Attack unimplemented."
+    },
+    "BT22-026": {
+      "card_name": "MetalGarurumon",
+      "validated_date": "2026-03-13",
+      "report": "2026-03-13-dna-omnimon.md",
+      "status": "FAIL",
+      "notes": "Broken conditions. Sequential not branch. Unsuspend targets wrong."
+    },
+    "BT22-084": {
+      "card_name": "Nokia Shiramine",
+      "validated_date": "2026-03-13",
+      "report": "2026-03-13-dna-omnimon.md",
+      "status": "FAIL",
+      "notes": "Wrong timing. Missing Digimon count condition. DP modifier no name filter."
+    },
+    "LM-034": {
+      "card_name": "Wisteria Memory Boost!",
+      "validated_date": "2026-03-13",
+      "report": "2026-03-13-dna-omnimon.md",
+      "status": "FAIL",
+      "notes": "Color bypass non-functional. API verified unplayable."
+    },
+    "BT17-093": {
+      "card_name": "Tai Kamiya & Kari Kamiya",
+      "validated_date": "2026-03-13",
+      "report": "2026-03-13-dna-omnimon.md",
+      "status": "FAIL",
+      "notes": "Hatch trigger uses wrong timing. Effect dead."
+    },
+    "BT23-008": {
+      "card_name": "Greymon",
+      "validated_date": "2026-03-13",
+      "report": "2026-03-13-dna-omnimon.md",
+      "status": "FAIL",
+      "notes": "Main effect no stack shift cost. Plays free not -2. Raid/DP correct."
+    },
+    "BT23-018": {
+      "card_name": "Garurumon",
+      "validated_date": "2026-03-13",
+      "report": "2026-03-13-dna-omnimon.md",
+      "status": "FAIL",
+      "notes": "Main effect no stack shift cost. Plays free not -2. Jamming/DP correct."
+    },
+    "EX11-006": {
+      "card_name": "Flickmon",
+      "validated_date": "2026-03-13",
+      "report": "2026-03-13-galacticmon.md",
+      "status": "FAIL",
+      "notes": "Missing linked-with-Maquinamon check. Missing cost reduction of 2."
+    },
+    "EX11-027": {
+      "card_name": "Maquinamon",
+      "validated_date": "2026-03-13",
+      "report": "2026-03-13-galacticmon.md",
+      "status": "FAIL",
+      "notes": "On Play only adds 1 card instead of 2. Missing link step after reveal."
+    },
+    "EX11-029": {
+      "card_name": "Turbomon",
+      "validated_date": "2026-03-13",
+      "report": "2026-03-13-galacticmon.md",
+      "status": "FAIL",
+      "notes": "Missing On Play flag, missing Tamer count check for Unchained, missing Piercing inherited."
+    },
+    "EX11-033": {
+      "card_name": "Maneuvermon",
+      "validated_date": "2026-03-13",
+      "report": "2026-03-13-galacticmon.md",
+      "status": "FAIL",
+      "notes": "On Play timing flag needs verification."
+    },
+    "EX11-036": {
+      "card_name": "Dalphomon",
+      "validated_date": "2026-03-13",
+      "report": "2026-03-13-galacticmon.md",
+      "status": "PARTIAL",
+      "notes": "Vortex set. Inherited force_attack is engine gap."
+    },
+    "EX11-040": {
+      "card_name": "Mulemon",
+      "validated_date": "2026-03-13",
+      "report": "2026-03-13-galacticmon.md",
+      "status": "FAIL",
+      "notes": "Missing Tamer count check for Unchained play condition."
+    },
+    "EX11-042": {
+      "card_name": "MockingBirdmon",
+      "validated_date": "2026-03-13",
+      "report": "2026-03-13-galacticmon.md",
+      "status": "FAIL",
+      "notes": "Inherited redirect_attack is BLOCKED engine gap (no-op)."
+    },
+    "EX11-045": {
+      "card_name": "Metatromon",
+      "validated_date": "2026-03-13",
+      "report": "2026-03-13-galacticmon.md",
+      "status": "FAIL",
+      "notes": "On Play flag needs verification."
+    },
+    "EX11-062": {
+      "card_name": "Shoto Kazama",
+      "validated_date": "2026-03-13",
+      "report": "2026-03-13-galacticmon.md",
+      "status": "FAIL",
+      "notes": "Cross-permanent suspend trigger likely has engine gap."
+    },
+    "EX11-070": {
+      "card_name": "Unchained",
+      "validated_date": "2026-03-13",
+      "report": "2026-03-13-galacticmon.md",
+      "status": "PARTIAL",
+      "notes": "Security play + memory set works. Missing inherited anti-trash and Unchained replay effects."
+    },
+    "EX11-071": {
+      "card_name": "Cool Boy",
+      "validated_date": "2026-03-13",
+      "report": "2026-03-13-exmaquinamon.md",
+      "status": "PASS",
+      "notes": "On Play reveal+add works with multi-filter. Main return-to-deck structurally correct. Security play present."
+    },
+    "EX11-073": {
+      "card_name": "ExMaquinamon",
+      "validated_date": "2026-03-13",
+      "report": "2026-03-13-galacticmon.md",
+      "status": "FAIL",
+      "notes": "Critical: trashes OWN security instead of opponent's. Missing SA+1, Blocker, DNA check."
+    },
+    "EX6-072": {
+      "card_name": "Mega Digimon Assembly!",
+      "validated_date": "2026-03-13",
+      "report": "2026-03-13-galacticmon.md",
+      "status": "PARTIAL",
+      "notes": "DNA filter allows Lv6 when card requires Lv7 target. Color ignore is stub."
+    },
+    "LM-048": {
+      "card_name": "Chrome Memory Boost!",
+      "validated_date": "2026-03-13",
+      "report": "2026-03-13-galacticmon.md",
+      "status": "PASS",
+      "notes": "Reveal+add green/black Digimon, Delay gain 2 memory, Security place all correct."
+    },
+    "P-151": {
+      "card_name": "Digimon Liberator",
+      "validated_date": "2026-03-13",
+      "report": "2026-03-13-galacticmon.md",
+      "status": "FAIL",
+      "notes": "Trait-based filtering needs validation. Contains descriptive stubs."
+    },
+    "BT11-061": {
+      "card_name": "Vemmon",
+      "validated_date": "2026-03-13",
+      "report": "2026-03-13-galacticmon.md",
+      "status": "FAIL",
+      "notes": "[Main] suspend-to-reveal effect has no action mask entry - completely untriggerable. Inherited cost reduction works."
+    },
+    "BT11-065": {
+      "card_name": "Snatchmon",
+      "validated_date": "2026-03-13",
+      "report": "2026-03-13-galacticmon.md",
+      "status": "PASS",
+      "notes": "When Digivolving places Vemmon from trash + Fusionize recovery. Inherited unsuspend+Blocker on Vemmon return."
+    },
+    "BT11-105": {
+      "card_name": "Fusionize",
+      "validated_date": "2026-03-13",
+      "report": "2026-03-13-galacticmon.md",
+      "status": "FAIL",
+      "notes": "Digivolution cost never deducted from memory. Auto-selects without player choice."
+    },
+    "BT11-111": {
+      "card_name": "Galacticmon",
+      "validated_date": "2026-03-13",
+      "report": "2026-03-13-galacticmon.md",
+      "status": "PASS",
+      "notes": "When Digivolving place 4 Vemmon, 8+ delete. Leave prevention. Start of Main trash security."
+    },
+    "BT18-060": {
+      "card_name": "Vemmon",
+      "validated_date": "2026-03-13",
+      "report": "2026-03-13-galacticmon.md",
+      "status": "PASS",
+      "notes": "On Play reveal+add+place Vemmon works. Inherited digi cost -1 registered."
+    },
+    "BT18-065": {
+      "card_name": "Snatchmon",
+      "validated_date": "2026-03-13",
+      "report": "2026-03-13-galacticmon.md",
+      "status": "FAIL",
+      "notes": "DigiXros trash condition needs validation. Basic functionality works."
+    },
+    "BT18-092": {
+      "card_name": "Zenith",
+      "validated_date": "2026-03-13",
+      "report": "2026-03-13-galacticmon.md",
+      "status": "PASS",
+      "notes": "Start of Main Phase trash+draw+memory working with optional decline. Attack De-Digivolve present."
+    },
+    "BT21-006": {
+      "card_name": "Tsumemon",
+      "validated_date": "2026-03-13",
+      "report": "2026-03-13-galacticmon.md",
+      "status": "PASS",
+      "notes": "Inherited +3000 DP with 4+ Vemmon condition correct."
+    },
+    "BT21-056": {
+      "card_name": "Vemmon",
+      "validated_date": "2026-03-13",
+      "report": "2026-03-13-galacticmon.md",
+      "status": "PASS",
+      "notes": "On Play trash+return works. Systemic issue: missing optional decline for By-trashing cost."
+    },
+    "BT21-058": {
+      "card_name": "Snatchmon",
+      "validated_date": "2026-03-13",
+      "report": "2026-03-13-galacticmon.md",
+      "status": "FAIL",
+      "notes": "3 bugs: remaining cards go to deck bottom instead of trash, places 1 instead of 2 Vemmon, targets only this Digimon instead of any."
+    },
+    "BT21-060": {
+      "card_name": "Destromon",
+      "validated_date": "2026-03-13",
+      "report": "2026-03-13-galacticmon.md",
+      "status": "PASS",
+      "notes": "Alt digi, stack immunity, De-Digivolve, leave-play Vemmon, inherited end-attack all correct."
+    },
+    "BT21-062": {
+      "card_name": "Galacticmon",
+      "validated_date": "2026-03-13",
+      "report": "2026-03-13-galacticmon.md",
+      "status": "PASS",
+      "notes": "When Digivolving places 4 Vemmon-text. Start of Main delete opponent Digimon. Leave prevention."
+    },
+    "BT21-087": {
+      "card_name": "Zenith",
+      "validated_date": "2026-03-13",
+      "report": "2026-03-13-galacticmon.md",
+      "status": "PASS",
+      "notes": "Memory set to 3 works. On Play reveal+play Vemmon/add to hand works."
+    },
+    "BT21-098": {
+      "card_name": "Ragnarok Cannon",
+      "validated_date": "2026-03-13",
+      "report": "2026-03-13-galacticmon.md",
+      "status": "PARTIAL",
+      "notes": "Main delete + place in BA works. Delay condition slightly imprecise for 'didn't delete' check."
+    },
+    "BT7-105": {
+      "card_name": "Pride Memory Boost!",
+      "validated_date": "2026-03-13",
+      "report": "2026-03-13-galacticmon.md",
+      "status": "PARTIAL",
+      "notes": "Main effect works. Possible duplicate placement from Security effect firing on play."
+    },
+    "EX11-046": {
+      "card_name": "Galacticmon",
+      "validated_date": "2026-03-13",
+      "report": "2026-03-13-galacticmon.md",
+      "status": "PASS",
+      "notes": "Alt digi from Snatchmon/Galacticmon. On Play/When Digi mass delete + conditional Blocker+immunity. End of Opp Turn re-digivolve."
+    },
+    "EX11-066": {
+      "card_name": "Xeno",
+      "validated_date": "2026-03-13",
+      "report": "2026-03-13-galacticmon.md",
+      "status": "PARTIAL",
+      "notes": "On Play/Start of Main trash+draw+memory works. All Turns Digimon play/digivolve trigger is engine gap."
+    },
+    "P-094": {
+      "card_name": "Destromon",
+      "validated_date": "2026-03-13",
+      "report": "2026-03-13-galacticmon.md",
+      "status": "PARTIAL",
+      "notes": "Budget delete with Vemmon scaling works. Inherited redirect_attack is BLOCKED engine gap."
+    },
+    "ST13-08": {
+      "card_name": "Chikurimon",
+      "validated_date": "2026-03-13",
+      "report": "2026-03-13-galacticmon.md",
+      "status": "PASS",
+      "notes": "Anti-cost-reduction effect registered on field."
+    },
+    "BT13-101": {
+      "card_name": "Miki Kurosaki & Megumi Shirakawa",
+      "status": "PARTIAL",
+      "notes": "On Play PawnChessmon works. Triggered draw+memory not fully tested.",
+      "validated_date": "2026-03-13",
+      "report": "2026-03-13-puppets.md"
+    },
+    "BT16-055": {
+      "card_name": "Namakemon",
+      "status": "PASS",
+      "notes": "On Play/When Digivolving protection/Blocker+Reboot. Alt digi present.",
+      "validated_date": "2026-03-13",
+      "report": "2026-03-13-puppets.md"
+    },
+    "BT22-002": {
+      "card_name": "Kyaromon",
+      "status": "PASS",
+      "notes": "Egg. Inherited draw on Puppet/Token deletion. Hatch works.",
+      "validated_date": "2026-03-13",
+      "report": "2026-03-13-puppets.md"
+    },
+    "BT22-029": {
+      "card_name": "Shoemon",
+      "status": "PASS",
+      "notes": "On Play/On Deletion: grant Blocker. Confirmed via gameplay.",
+      "validated_date": "2026-03-13",
+      "report": "2026-03-13-puppets.md"
+    },
+    "BT22-032": {
+      "card_name": "ShoeShoemon",
+      "status": "PASS",
+      "notes": "On Deletion: play L3 Puppet free. Inherited -2000 DP.",
+      "validated_date": "2026-03-13",
+      "report": "2026-03-13-puppets.md"
+    },
+    "BT22-036": {
+      "card_name": "Chaperomon",
+      "status": "FAIL",
+      "notes": "Inherited WhenRemoveField missing process callback.",
+      "validated_date": "2026-03-13",
+      "report": "2026-03-13-puppets.md"
+    },
+    "BT22-040": {
+      "card_name": "Cendrillmon",
+      "status": "FAIL",
+      "notes": "Token play stubbed. Deletion trigger missing process.",
+      "validated_date": "2026-03-13",
+      "report": "2026-03-13-puppets.md"
+    },
+    "BT22-042": {
+      "card_name": "Nyabootmon",
+      "status": "FAIL",
+      "notes": "When Digivolving works. Deletion trigger missing process.",
+      "validated_date": "2026-03-13",
+      "report": "2026-03-13-puppets.md"
+    },
+    "BT22-088": {
+      "card_name": "Arisa Kinosaki",
+      "status": "PARTIAL",
+      "notes": "Start of Main return+replay works. Puppet play draw trigger present.",
+      "validated_date": "2026-03-13",
+      "report": "2026-03-13-puppets.md"
+    },
+    "BT22-098": {
+      "card_name": "Unique Emblem: Fable Waltz",
+      "status": "PARTIAL",
+      "notes": "Main play Shoemon/Arisa free works. Delay not fully tested.",
+      "validated_date": "2026-03-13",
+      "report": "2026-03-13-puppets.md"
+    },
+    "BT6-084": {
+      "card_name": "Sistermon Ciel",
+      "status": "PASS",
+      "notes": "DP buff correct. On Play gain 1 memory correct.",
+      "validated_date": "2026-03-13",
+      "report": "2026-03-13-puppets.md"
+    },
+    "BT9-112": {
+      "card_name": "DeathXmon",
+      "status": "PARTIAL",
+      "notes": "Playable at 10 memory with no opponent creatures (cost 20). Cost reduction check may be broken.",
+      "validated_date": "2026-03-13",
+      "report": "2026-03-13-dark-masters.md"
+    },
+    "EX11-019": {
+      "card_name": "Shoemon",
+      "status": "FAIL",
+      "notes": "On Deletion Familiar Token stubbed.",
+      "validated_date": "2026-03-13",
+      "report": "2026-03-13-puppets.md"
+    },
+    "EX11-020": {
+      "card_name": "Hanimon",
+      "status": "FAIL",
+      "notes": "Inherited end-attack missing process callback.",
+      "validated_date": "2026-03-13",
+      "report": "2026-03-13-puppets.md"
+    },
+    "EX11-021": {
+      "card_name": "Kokeshimon",
+      "status": "FAIL",
+      "notes": "Inherited end-attack missing process callback.",
+      "validated_date": "2026-03-13",
+      "report": "2026-03-13-puppets.md"
+    },
+    "EX11-022": {
+      "card_name": "Karakurumon",
+      "status": "FAIL",
+      "notes": "Effect completely wrong: deletes opponent instead of playing Puppet.",
+      "validated_date": "2026-03-13",
+      "report": "2026-03-13-puppets.md"
+    },
+    "EX11-023": {
+      "card_name": "Kaguyamon",
+      "status": "FAIL",
+      "notes": "Alliance/Scapegoat OK. Inherited WhenRemoveField untested.",
+      "validated_date": "2026-03-13",
+      "report": "2026-03-13-puppets.md"
+    },
+    "EX11-024": {
+      "card_name": "Cendrillmon",
+      "status": "FAIL",
+      "notes": "All timing effects have no process callbacks. Generic descriptions.",
+      "validated_date": "2026-03-13",
+      "report": "2026-03-13-puppets.md"
+    },
+    "EX11-060": {
+      "card_name": "Arisa Kinosaki",
+      "status": "FAIL",
+      "notes": "Deletion trigger wrong: no Puppet check, suspends opponent, no Overclock detection.",
+      "validated_date": "2026-03-13",
+      "report": "2026-03-13-puppets.md"
+    },
+    "EX11-061": {
+      "card_name": "Mirai Kinosaki",
+      "status": "FAIL",
+      "notes": "Digivolve trigger timing bug. Start of Main works.",
+      "validated_date": "2026-03-13",
+      "report": "2026-03-13-puppets.md"
+    },
+    "EX7-024": {
+      "card_name": "Shoemon",
+      "status": "PASS",
+      "notes": "Puppet evo cost -1 confirmed working.",
+      "validated_date": "2026-03-13",
+      "report": "2026-03-13-puppets.md"
+    },
+    "EX7-025": {
+      "card_name": "ShoeShoemon",
+      "status": "PASS",
+      "notes": "When Digivolving play Arisa works.",
+      "validated_date": "2026-03-13",
+      "report": "2026-03-13-puppets.md"
+    },
+    "EX7-027": {
+      "card_name": "Chaperomon",
+      "status": "PASS",
+      "notes": "Overclock OK. When Digivolving play L3 Puppet free confirmed.",
+      "validated_date": "2026-03-13",
+      "report": "2026-03-13-puppets.md"
+    },
+    "EX7-030": {
+      "card_name": "Cendrillmon",
+      "status": "PASS",
+      "notes": "Overclock, token play, -6000 DP all implemented.",
+      "validated_date": "2026-03-13",
+      "report": "2026-03-13-puppets.md"
+    },
+    "EX7-063": {
+      "card_name": "Arisa Kinosaki",
+      "status": "PARTIAL",
+      "notes": "Start of Main memory +1 works. Deletion trigger present.",
+      "validated_date": "2026-03-13",
+      "report": "2026-03-13-puppets.md"
+    },
+    "EX7-074": {
+      "card_name": "Vortex Resonance",
+      "status": "PARTIAL",
+      "notes": "Main reveal + digivolve works. Security may be incomplete.",
+      "validated_date": "2026-03-13",
+      "report": "2026-03-13-puppets.md"
+    },
+    "EX9-024": {
+      "card_name": "Hanimon",
+      "status": "PASS",
+      "notes": "On Play trash + return Puppet confirmed working.",
+      "validated_date": "2026-03-13",
+      "report": "2026-03-13-puppets.md"
+    },
+    "EX9-027": {
+      "card_name": "Kokeshimon",
+      "status": "PASS",
+      "notes": "When Digivolving/On Deletion -4000 DP. Inherited end-attack present.",
+      "validated_date": "2026-03-13",
+      "report": "2026-03-13-puppets.md"
+    },
+    "EX9-032": {
+      "card_name": "Karakurumon",
+      "status": "PASS",
+      "notes": "Alt digi + delete to super-digivolve. Inherited WhenRemoveField present.",
+      "validated_date": "2026-03-13",
+      "report": "2026-03-13-puppets.md"
+    },
+    "EX9-033": {
+      "card_name": "Kaguyamon",
+      "status": "FAIL",
+      "notes": "Blocker/Alliance grants have wrong condition (checks own permanent only).",
+      "validated_date": "2026-03-13",
+      "report": "2026-03-13-puppets.md"
+    },
+    "EX9-067": {
+      "card_name": "Mirai Kinosaki",
+      "status": "FAIL",
+      "notes": "On Play reveal works. Digivolve trigger timing bug.",
+      "validated_date": "2026-03-13",
+      "report": "2026-03-13-puppets.md"
+    },
+    "LM-029": {
+      "card_name": "Yellow Scramble",
+      "status": "PARTIAL",
+      "notes": "Main digivolve with cost -3 works. Delay + security present.",
+      "validated_date": "2026-03-13",
+      "report": "2026-03-13-puppets.md"
+    },
+    "LM-037": {
+      "card_name": "Sepia Memory Boost!",
+      "status": "PARTIAL",
+      "notes": "Color bypass OK. Main reveal + place works. Delay present.",
+      "validated_date": "2026-03-13",
+      "report": "2026-03-13-puppets.md"
+    },
+    "P-037": {
+      "card_name": "Yellow Memory Boost!",
+      "status": "PARTIAL",
+      "notes": "Main reveal top 4 works. Missing security place effect.",
+      "validated_date": "2026-03-13",
+      "report": "2026-03-13-puppets.md"
+    },
+    "P-105": {
+      "card_name": "Physical Training",
+      "status": "PARTIAL",
+      "notes": "Main reveal top 2 works. Missing security place effect.",
+      "validated_date": "2026-03-13",
+      "report": "2026-03-13-puppets.md"
+    },
+    "P-134": {
+      "card_name": "Shoemon",
+      "status": "FAIL",
+      "notes": "On Play SA-1 stubbed.",
+      "validated_date": "2026-03-13",
+      "report": "2026-03-13-puppets.md"
+    },
+    "P-136": {
+      "card_name": "Arisa Kinosaki",
+      "status": "FAIL",
+      "notes": "On Play Shoemon works. Digivolve trigger likely has timing bug.",
+      "validated_date": "2026-03-13",
+      "report": "2026-03-13-puppets.md"
+    },
+    "P-156": {
+      "card_name": "Future Potential!",
+      "status": "FAIL",
+      "notes": "Main missing Tamer color match. Security checks is_digimon not is_tamer.",
+      "validated_date": "2026-03-13",
+      "report": "2026-03-13-puppets.md"
+    },
+    "P-165": {
+      "card_name": "ShoeShoemon",
+      "status": "FAIL",
+      "notes": "Both token plays stubbed. Security play present.",
+      "validated_date": "2026-03-13",
+      "report": "2026-03-13-puppets.md"
+    },
+    "P-229": {
+      "card_name": "Unique Emblem: Narrative Ronde",
+      "status": "PARTIAL",
+      "notes": "Main reveal+add works. Delay trigger present.",
+      "validated_date": "2026-03-13",
+      "report": "2026-03-13-puppets.md"
+    },
+    "ST19-01": {
+      "card_name": "Kyaromon",
+      "status": "PASS",
+      "notes": "Egg. Inherited Draw 1 when attacking with another Digimon.",
+      "validated_date": "2026-03-13",
+      "report": "2026-03-13-puppets.md"
+    },
+    "ST19-03": {
+      "card_name": "Shoemon",
+      "status": "PASS",
+      "notes": "On Play reveal+add confirmed. Inherited security -3000 DP declarative.",
+      "validated_date": "2026-03-13",
+      "report": "2026-03-13-puppets.md"
+    },
+    "ST19-04": {
+      "card_name": "PawnChessmon",
+      "status": "PASS",
+      "notes": "On Play trash Puppet + Draw 2 confirmed. Inherited Reboot.",
+      "validated_date": "2026-03-13",
+      "report": "2026-03-13-puppets.md"
+    },
+    "ST19-05": {
+      "card_name": "PawnChessmon",
+      "status": "PASS",
+      "notes": "Blocker confirmed. On Deletion trash+Draw 2 implemented.",
+      "validated_date": "2026-03-13",
+      "report": "2026-03-13-puppets.md"
+    },
+    "ST19-08": {
+      "card_name": "ShoeShoemon",
+      "status": "FAIL",
+      "notes": "Inherited security -3000 DP is a pass stub.",
+      "validated_date": "2026-03-13",
+      "report": "2026-03-13-puppets.md"
+    },
+    "ST19-11": {
+      "card_name": "Chaperomon",
+      "status": "PASS",
+      "notes": "On Play/When Digivolving -3000/-6000 DP. Inherited WhenRemoveField present.",
+      "validated_date": "2026-03-13",
+      "report": "2026-03-13-puppets.md"
+    },
+    "ST19-12": {
+      "card_name": "Cendrillmon",
+      "status": "PASS",
+      "notes": "Overclock+Blocker. When Digivolving 2 Familiar Tokens confirmed.",
+      "validated_date": "2026-03-13",
+      "report": "2026-03-13-puppets.md"
+    },
+    "ST19-14": {
+      "card_name": "Arisa Kinosaki",
+      "status": "FAIL",
+      "notes": "Start of turn memory works. Rush grant trigger likely timing issues.",
+      "validated_date": "2026-03-13",
+      "report": "2026-03-13-puppets.md"
+    },
+    "BT15-008": {
+      "card_name": "Muchomon",
+      "status": "PASS",
+      "notes": "Played for cost 3. Draw 1 when red Digimon attacks player (trigger untested).",
+      "validated_date": "2026-03-13",
+      "report": "2026-03-13-dark-masters.md"
+    },
+    "BT15-027": {
+      "card_name": "Scorpiomon",
+      "status": "PASS",
+      "notes": "Played for cost 6. On Play reveal top 4 add 2 Lv6+ resolved. Inherited Blocker.",
+      "validated_date": "2026-03-13",
+      "report": "2026-03-13-dark-masters.md"
+    },
+    "BT15-031": {
+      "card_name": "MetalSeadramon",
+      "status": "PASS",
+      "notes": "Played for cost 11 correctly. On Play/attack/EOT effects need deeper testing.",
+      "validated_date": "2026-03-13",
+      "report": "2026-03-13-dark-masters.md"
+    },
+    "BT15-050": {
+      "card_name": "Cherrymon",
+      "status": "PASS",
+      "notes": "Played for cost 6. On Play reveal effect resolved. Inherited Piercing.",
+      "validated_date": "2026-03-13",
+      "report": "2026-03-13-dark-masters.md"
+    },
+    "BT15-062": {
+      "card_name": "Gigadramon",
+      "status": "PASS",
+      "notes": "Played for cost 6. On Play reveal top 4 add 2 Lv6+ resolved. Inherited Reboot.",
+      "validated_date": "2026-03-13",
+      "report": "2026-03-13-dark-masters.md"
+    },
+    "BT15-066": {
+      "card_name": "Machinedramon",
+      "status": "PASS",
+      "notes": "Played for cost 11 correctly. De-Digivolve and EOT chain effects need deeper testing.",
+      "validated_date": "2026-03-13",
+      "report": "2026-03-13-dark-masters.md"
+    },
+    "BT15-072": {
+      "card_name": "Vilemon",
+      "status": "PASS",
+      "notes": "Played for cost 4. Blocker keyword present. Protection effect for DM/Apocalymon needs deeper testing.",
+      "validated_date": "2026-03-13",
+      "report": "2026-03-13-dark-masters.md"
+    },
+    "BT15-077": {
+      "card_name": "LadyDevimon",
+      "status": "PASS",
+      "notes": "Played for cost 6. On Play reveal effect resolved. Inherited Retaliation.",
+      "validated_date": "2026-03-13",
+      "report": "2026-03-13-dark-masters.md"
+    },
+    "BT15-079": {
+      "card_name": "Piedmon",
+      "status": "PASS",
+      "notes": "Played for cost 11 correctly. On Play delete and EOT chain need deeper testing.",
+      "validated_date": "2026-03-13",
+      "report": "2026-03-13-dark-masters.md"
+    },
+    "BT15-102": {
+      "card_name": "Apocalymon",
+      "status": "PASS",
+      "notes": "Playable with DM trait cards in trash for cost reduction. Cost reduction mechanism works.",
+      "validated_date": "2026-03-13",
+      "report": "2026-03-13-dark-masters.md"
+    },
+    "BT16-026": {
+      "card_name": "Vikemon",
+      "status": "PASS",
+      "notes": "Played for cost 7 correctly. Ace card. De-Digivolve effect needs target testing.",
+      "validated_date": "2026-03-13",
+      "report": "2026-03-13-dark-masters.md"
+    },
+    "BT16-046": {
+      "card_name": "GranKuwagamon",
+      "status": "PASS",
+      "notes": "Played for cost 7 correctly. Ace card. Suspend+delete effect needs target testing.",
+      "validated_date": "2026-03-13",
+      "report": "2026-03-13-dark-masters.md"
+    },
+    "BT17-001": {
+      "card_name": "Gigimon",
+      "status": "FAIL",
+      "notes": "Lv2 digitama appeared playable from hand via inject. Inherited effect untested.",
+      "validated_date": "2026-03-13",
+      "report": "2026-03-13-dark-masters.md"
+    },
+    "BT17-068": {
+      "card_name": "Mephistomon",
+      "status": "PASS",
+      "notes": "Played for cost 8 correctly. Apocalymon cost reduction and On Deletion play need deeper testing.",
+      "validated_date": "2026-03-13",
+      "report": "2026-03-13-dark-masters.md"
+    },
+    "BT17-070": {
+      "card_name": "Gulfmon",
+      "status": "PARTIAL",
+      "notes": "Cost anomaly: charged 8 instead of 12. On Play DM placement effect unclear.",
+      "validated_date": "2026-03-13",
+      "report": "2026-03-13-dark-masters.md"
+    },
+    "BT19-064": {
+      "card_name": "Justimon: Blitz Arm",
+      "status": "PASS",
+      "notes": "Played for cost 6 correctly. Ace. Blocker + effect immunity.",
+      "validated_date": "2026-03-13",
+      "report": "2026-03-13-dark-masters.md"
+    },
+    "BT19-093": {
+      "card_name": "Queen Device",
+      "status": "FAIL",
+      "notes": "Option not playable. Color requirement bypass not implemented in script.",
+      "validated_date": "2026-03-13",
+      "report": "2026-03-13-dark-masters.md"
+    },
+    "BT21-051": {
+      "card_name": "Puppetmon",
+      "status": "PARTIAL",
+      "notes": "Cost anomaly: charged 3 instead of 7. Possible alt-digi cost leak.",
+      "validated_date": "2026-03-13",
+      "report": "2026-03-13-dark-masters.md"
+    },
+    "BT23-007": {
+      "card_name": "Musclemon",
+      "status": "PASS",
+      "notes": "Played for cost 3 correctly. Security play and Link effects need testing.",
+      "validated_date": "2026-03-13",
+      "report": "2026-03-13-dark-masters.md"
+    },
+    "BT4-097": {
+      "card_name": "Kari Kamiya",
+      "status": "PASS",
+      "notes": "Played for cost 3 correctly. Tamer suspend-for-memory trigger needs testing.",
+      "validated_date": "2026-03-13",
+      "report": "2026-03-13-dark-masters.md"
+    },
+    "EX10-012": {
+      "card_name": "MetalSeadramon",
+      "status": "PARTIAL",
+      "notes": "Hand/Main cost reduction not working. Pays full cost 11 instead of 6.",
+      "validated_date": "2026-03-13",
+      "report": "2026-03-13-dark-masters.md"
+    },
+    "EX10-020": {
+      "card_name": "Puppetmon",
+      "status": "PARTIAL",
+      "notes": "Hand/Main cost reduction not working. Pays full cost 11 instead of 6.",
+      "validated_date": "2026-03-13",
+      "report": "2026-03-13-dark-masters.md"
+    },
+    "EX10-035": {
+      "card_name": "Machinedramon",
+      "status": "PARTIAL",
+      "notes": "Hand/Main cost reduction not working. Pays full cost 11 instead of 6.",
+      "validated_date": "2026-03-13",
+      "report": "2026-03-13-dark-masters.md"
+    },
+    "EX10-057": {
+      "card_name": "Piedmon",
+      "status": "PARTIAL",
+      "notes": "Hand/Main cost reduction not working. Pays full cost 11 instead of 6.",
+      "validated_date": "2026-03-13",
+      "report": "2026-03-13-dark-masters.md"
+    },
+    "EX10-061": {
+      "card_name": "Apocalymon",
+      "status": "PASS",
+      "notes": "Play action available. Cost reduction from face-up DM security needs deeper testing.",
+      "validated_date": "2026-03-13",
+      "report": "2026-03-13-dark-masters.md"
+    },
+    "EX10-072": {
+      "card_name": "Spiral Mountain",
+      "status": "FAIL",
+      "notes": "Option not playable. Color req bypass missing. Main effect only draws, does not place in battle area.",
+      "validated_date": "2026-03-13",
+      "report": "2026-03-13-dark-masters.md"
+    },
+    "EX10-074": {
+      "card_name": "Beelzemon",
+      "status": "PASS",
+      "notes": "Played for cost 7 correctly. Ace. Trash+delete effect needs target testing.",
+      "validated_date": "2026-03-13",
+      "report": "2026-03-13-dark-masters.md"
+    },
+    "EX2-007": {
+      "card_name": "Mother D-Reaper",
+      "status": "PASS",
+      "notes": "Played for cost 0 correctly. Field effects need deeper testing.",
+      "validated_date": "2026-03-13",
+      "report": "2026-03-13-dark-masters.md"
+    },
+    "EX2-067": {
+      "card_name": "Fire Ball",
+      "status": "FAIL",
+      "notes": "Option not playable without red card on field. Correct behavior but needs field setup to test.",
+      "validated_date": "2026-03-13",
+      "report": "2026-03-13-dark-masters.md"
+    },
+    "EX4-051": {
+      "card_name": "BlitzGreymon",
+      "status": "PARTIAL",
+      "notes": "Cost anomaly: charged 8 instead of 12.",
+      "validated_date": "2026-03-13",
+      "report": "2026-03-13-dark-masters.md"
+    },
+    "EX5-016": {
+      "card_name": "Lunamon",
+      "status": "PASS",
+      "notes": "Played for cost 3 correctly. Start of main phase effect needs testing.",
+      "validated_date": "2026-03-13",
+      "report": "2026-03-13-dark-masters.md"
+    },
+    "EX8-026": {
+      "card_name": "MetalSeadramon",
+      "status": "PARTIAL",
+      "notes": "Cost anomaly: charged 3 instead of 7. Possible alt-digi cost leak.",
+      "validated_date": "2026-03-13",
+      "report": "2026-03-13-dark-masters.md"
+    },
+    "EX9-068": {
+      "card_name": "Analogman",
+      "status": "FAIL",
+      "notes": "Server crash (500) on play. Script calls player.set_memory() which does not exist.",
+      "validated_date": "2026-03-13",
+      "report": "2026-03-13-dark-masters.md"
+    },
+    "LM-043": {
+      "card_name": "Darkdramon",
+      "status": "PASS",
+      "notes": "Played for cost 7 correctly. Ace. Scapegoat+De-Digivolve effects need testing.",
+      "validated_date": "2026-03-13",
+      "report": "2026-03-13-dark-masters.md"
+    },
+    "P-216": {
+      "card_name": "WaruMonzaemon",
+      "status": "PASS",
+      "notes": "Played for cost 6. On Play triggers selection for free DM play. Blocker present.",
+      "validated_date": "2026-03-13",
+      "report": "2026-03-13-dark-masters.md"
+    },
+    "ST6-14": {
+      "card_name": "Matt Ishida",
+      "status": "PASS",
+      "notes": "Played for cost 2 correctly. Tamer on field. Suspend-for-memory trigger needs testing.",
+      "validated_date": "2026-03-13",
+      "report": "2026-03-13-dark-masters.md"
+    },
+    "BT10-016": {
+      "card_name": "Jesmon (X Antibody)",
+      "status": "PARTIAL",
+      "validated_date": "2026-03-13",
+      "report": "2026-03-13-jesmon.md",
+      "notes": "Script reviewed. Piercing, When Digivolving play Sistermon. High cost - not live tested."
+    },
+    "BT10-085": {
+      "card_name": "Sistermon Ciel",
+      "status": "PASS",
+      "validated_date": "2026-03-13",
+      "report": "2026-03-13-jesmon.md",
+      "notes": "On Play digi into Royal Knight fires. Huckmon digi trigger registered."
+    },
+    "BT10-095": {
+      "card_name": "Hero of the Skies!",
+      "status": "PARTIAL",
+      "validated_date": "2026-03-13",
+      "report": "2026-03-13-jesmon.md",
+      "notes": "Security Attack modifier stub. Draw 2 correct."
+    },
+    "BT10-110": {
+      "card_name": "Seiken Meppa",
+      "status": "PARTIAL",
+      "validated_date": "2026-03-13",
+      "report": "2026-03-13-jesmon.md",
+      "notes": "Color requirement ignore stub. Mandatory select own."
+    },
+    "BT10-112": {
+      "card_name": "Jesmon GX",
+      "status": "PARTIAL",
+      "validated_date": "2026-03-13",
+      "report": "2026-03-13-jesmon.md",
+      "notes": "Script reviewed. When Digivolving place RK + activate effect. High cost."
+    },
+    "BT12-001": {
+      "card_name": "Gigimon",
+      "status": "PASS",
+      "validated_date": "2026-03-13",
+      "report": "2026-03-13-jesmon.md",
+      "notes": "Hatches correctly. Inherited DP deletion boost registered."
+    },
+    "BT13-009": {
+      "card_name": "Huckmon",
+      "status": "PASS",
+      "validated_date": "2026-03-13",
+      "report": "2026-03-13-jesmon.md",
+      "notes": "Plays OK. Sistermon trigger for BaoHuckmon digi registered."
+    },
+    "BT13-013": {
+      "card_name": "BaoHuckmon",
+      "status": "PASS",
+      "validated_date": "2026-03-13",
+      "report": "2026-03-13-jesmon.md",
+      "notes": "Sistermon play -> digi chain trigger works. Cost reduction for evo."
+    },
+    "BT13-016": {
+      "card_name": "SaviorHuckmon",
+      "status": "PASS",
+      "validated_date": "2026-03-13",
+      "report": "2026-03-13-jesmon.md",
+      "notes": "When Digivolving digi into Jesmon trigger fires. Cost reduction."
+    },
+    "BT13-030": {
+      "card_name": "UlforceVeedramon",
+      "status": "PARTIAL",
+      "validated_date": "2026-03-13",
+      "report": "2026-03-13-jesmon.md",
+      "notes": "Script reviewed. Trash evo cards + play RK trigger. High cost."
+    },
+    "BT13-095": {
+      "card_name": "Marcus Damon",
+      "status": "PASS",
+      "validated_date": "2026-03-13",
+      "report": "2026-03-13-jesmon.md",
+      "notes": "Start of Turn memory set. On Play suspend + DP reduction fires."
+    },
+    "BT16-102": {
+      "card_name": "Magnamon (X Antibody)",
+      "status": "PARTIAL",
+      "validated_date": "2026-03-13",
+      "report": "2026-03-13-jesmon.md",
+      "notes": "Script reviewed. Blocker, Armor Purge, When Digivolving. High cost."
+    },
+    "BT18-009": {
+      "card_name": "Shamanmon",
+      "status": "PASS",
+      "validated_date": "2026-03-13",
+      "report": "2026-03-13-jesmon.md",
+      "notes": "Plays correctly. Passive memory lock registered."
+    },
+    "BT19-011": {
+      "card_name": "WarGrowlmon",
+      "status": "PASS",
+      "validated_date": "2026-03-13",
+      "report": "2026-03-13-jesmon.md",
+      "notes": "Blast Digivolve registered. On Play/When Digivolving DP-sum delete fires."
+    },
+    "BT20-008": {
+      "card_name": "Huckmon",
+      "status": "PASS",
+      "validated_date": "2026-03-13",
+      "report": "2026-03-13-jesmon.md",
+      "notes": "Start of Main Phase trash/draw/memory tested via gameplay."
+    },
+    "BT20-013": {
+      "card_name": "BaoHuckmon",
+      "status": "PARTIAL",
+      "validated_date": "2026-03-13",
+      "report": "2026-03-13-jesmon.md",
+      "notes": "BUG: Main play Sistermon/Gankoomon uses free=True instead of cost-2."
+    },
+    "BT20-014": {
+      "card_name": "SaviorHuckmon",
+      "status": "PASS",
+      "validated_date": "2026-03-13",
+      "report": "2026-03-13-jesmon.md",
+      "notes": "On Play/When Digivolving delete <=5000DP fires. EOT digi into Jesmon."
+    },
+    "BT20-019": {
+      "card_name": "Jesmon (X Antibody)",
+      "status": "PARTIAL",
+      "validated_date": "2026-03-13",
+      "report": "2026-03-13-jesmon.md",
+      "notes": "Alliance OK. force_attack + grant_skill (Piercing) stubs. Missing evo card check."
+    },
+    "BT20-021": {
+      "card_name": "Jesmon GX",
+      "status": "PASS",
+      "validated_date": "2026-03-13",
+      "report": "2026-03-13-jesmon.md",
+      "notes": "Blast Digivolve, On Play/When Digivolving/When Attacking place RK + delete fires."
+    },
+    "BT20-057": {
+      "card_name": "Gankoomon",
+      "status": "PARTIAL",
+      "validated_date": "2026-03-13",
+      "report": "2026-03-13-jesmon.md",
+      "notes": "Blocker/Reboot OK. Cost reduction condition missing field check. Duplicate no-timing."
+    },
+    "BT20-059": {
+      "card_name": "Gankoomon (X Antibody)",
+      "status": "PARTIAL",
+      "validated_date": "2026-03-13",
+      "report": "2026-03-13-jesmon.md",
+      "notes": "Script reviewed. When Digivolving De-Digivolve. Needs live verification."
+    },
+    "BT20-084": {
+      "card_name": "Sistermon Ciel (Awakened)",
+      "status": "PASS",
+      "validated_date": "2026-03-13",
+      "report": "2026-03-13-jesmon.md",
+      "notes": "On Play/When Digivolving suspend prevention fires. Trash digi trigger."
+    },
+    "BT22-037": {
+      "card_name": "Chirinmon",
+      "status": "PASS",
+      "validated_date": "2026-03-13",
+      "report": "2026-03-13-jesmon.md",
+      "notes": "Security trash DP reduction. When Digivolving digi option registered."
+    },
+    "BT22-041": {
+      "card_name": "Kentaurosmon",
+      "status": "PARTIAL",
+      "validated_date": "2026-03-13",
+      "report": "2026-03-13-jesmon.md",
+      "notes": "Script reviewed. Cost reduction stub. Blocker/Barrier OK. High cost."
+    },
+    "BT22-046": {
+      "card_name": "Gargomon",
+      "status": "FAIL",
+      "validated_date": "2026-03-13",
+      "report": "2026-03-13-jesmon.md",
+      "notes": "BUG: Unfiltered play_filter allows any card, not just CS Tamers."
+    },
+    "BT22-052": {
+      "card_name": "Leopardmon",
+      "status": "PASS",
+      "validated_date": "2026-03-13",
+      "report": "2026-03-13-jesmon.md",
+      "notes": "Blast Digivolve. On Play/When Digivolving play 5000 DP effect fires."
+    },
+    "BT22-063": {
+      "card_name": "Alphamon",
+      "status": "PARTIAL",
+      "validated_date": "2026-03-13",
+      "report": "2026-03-13-jesmon.md",
+      "notes": "Script reviewed. Reboot/Blocker OK. DP reduction + deletion prevention."
+    },
+    "BT22-077": {
+      "card_name": "Dianamon",
+      "status": "PARTIAL",
+      "validated_date": "2026-03-13",
+      "report": "2026-03-13-jesmon.md",
+      "notes": "Script reviewed. Iceclad/Blocker OK. When Digivolving security effects."
+    },
+    "BT22-101": {
+      "card_name": "Kyoko Kuremi",
+      "status": "PASS",
+      "validated_date": "2026-03-13",
+      "report": "2026-03-13-jesmon.md",
+      "notes": "Start of Turn memory, CS deletion return, once-per-turn."
+    },
+    "BT23-006": {
+      "card_name": "Huckmon",
+      "status": "PASS",
+      "validated_date": "2026-03-13",
+      "report": "2026-03-13-jesmon.md",
+      "notes": "On Play reveal top 3 for Huckmon/Sistermon + Royal Knight works."
+    },
+    "BT23-013": {
+      "card_name": "Jesmon",
+      "status": "FAIL",
+      "validated_date": "2026-03-13",
+      "report": "2026-03-13-jesmon.md",
+      "notes": "BUG: Unfiltered play_filter allows ANY card. Token play stub. Force attack stub."
+    },
+    "BT23-030": {
+      "card_name": "Etemon",
+      "status": "PASS",
+      "validated_date": "2026-03-13",
+      "report": "2026-03-13-jesmon.md",
+      "notes": "Alliance + Main play effect registered."
+    },
+    "BT23-044": {
+      "card_name": "Lilamon",
+      "status": "FAIL",
+      "validated_date": "2026-03-13",
+      "report": "2026-03-13-jesmon.md",
+      "notes": "BUG: Suspends opponent Digimon instead of own. Cost reduction stubs."
+    },
+    "BT23-076": {
+      "card_name": "Sistermon Blanc",
+      "status": "PASS",
+      "validated_date": "2026-03-13",
+      "report": "2026-03-13-jesmon.md",
+      "notes": "On Play add security to hand + Recovery +1 fires. Digi trigger registered."
+    },
+    "BT23-089": {
+      "card_name": "Takumi Aiba",
+      "status": "PASS",
+      "validated_date": "2026-03-13",
+      "report": "2026-03-13-jesmon.md",
+      "notes": "Start of Main memory gain, CS deletion prevention registered."
+    },
+    "BT23-099": {
+      "card_name": "The Sistermon Sisters Training Gym",
+      "status": "PARTIAL",
+      "validated_date": "2026-03-13",
+      "report": "2026-03-13-jesmon.md",
+      "notes": "Color requirement ignore stub. Draw + place in battle area."
+    },
+    "BT3-097": {
+      "card_name": "A Delicate Plan",
+      "status": "PARTIAL",
+      "validated_date": "2026-03-13",
+      "report": "2026-03-13-jesmon.md",
+      "notes": "May hang with no Digimon on field (mandatory select). Security effect OK."
+    },
+    "BT4-001": {
+      "card_name": "Sakuttomon",
+      "status": "PASS",
+      "validated_date": "2026-03-13",
+      "report": "2026-03-13-jesmon.md",
+      "notes": "Inherited When Attacking Lv7 memory gain."
+    },
+    "BT5-086": {
+      "card_name": "Omnimon",
+      "status": "PARTIAL",
+      "validated_date": "2026-03-13",
+      "report": "2026-03-13-jesmon.md",
+      "notes": "Script reviewed. Blitz + unsuspend. Deletion/bounce prevention. High cost."
+    },
+    "BT6-009": {
+      "card_name": "Huckmon",
+      "status": "PASS",
+      "validated_date": "2026-03-13",
+      "report": "2026-03-13-jesmon.md",
+      "notes": "On Play reveal top 5 for Huckmon/Jesmon/Sistermon fires correctly."
+    },
+    "BT6-011": {
+      "card_name": "BaoHuckmon",
+      "status": "PASS",
+      "validated_date": "2026-03-13",
+      "report": "2026-03-13-jesmon.md",
+      "notes": "Inherited When Attacking delete with Sistermon condition."
+    },
+    "BT6-015": {
+      "card_name": "SaviorHuckmon",
+      "status": "PASS",
+      "validated_date": "2026-03-13",
+      "report": "2026-03-13-jesmon.md",
+      "notes": "When Digivolving play Sistermon free. Script correct."
+    },
+    "BT7-082": {
+      "card_name": "Sistermon Blanc (Awakened)",
+      "status": "PASS",
+      "validated_date": "2026-03-13",
+      "report": "2026-03-13-jesmon.md",
+      "notes": "On Play place Sistermon Blanc + Recovery. On Deletion return Jesmon."
+    },
+    "BT8-001": {
+      "card_name": "Gurimon",
+      "status": "PASS",
+      "validated_date": "2026-03-13",
+      "report": "2026-03-13-jesmon.md",
+      "notes": "Inherited When Attacking 6000+ DP draw."
+    },
+    "BT9-092": {
+      "card_name": "Cool Boy",
+      "status": "PASS",
+      "validated_date": "2026-03-13",
+      "report": "2026-03-13-jesmon.md",
+      "notes": "On Play reveal for X Antibody Digimon + Option. Same-level digi trigger."
+    },
+    "BT9-109": {
+      "card_name": "X Antibody",
+      "status": "PARTIAL",
+      "validated_date": "2026-03-13",
+      "report": "2026-03-13-jesmon.md",
+      "notes": "Script reviewed. Place under Digimon as evo card. Security effect."
+    },
+    "EX10-068": {
+      "card_name": "Digimon Emperor",
+      "status": "PASS",
+      "validated_date": "2026-03-13",
+      "report": "2026-03-13-jesmon.md",
+      "notes": "On Play delete + return from trash fires. Start of Main memory."
+    },
+    "EX2-064": {
+      "card_name": "Alice McCoy",
+      "status": "PASS",
+      "validated_date": "2026-03-13",
+      "report": "2026-03-13-jesmon.md",
+      "notes": "Lv5->Lv6 evo cost reduction with Digimon sacrifice."
+    },
+    "EX8-073": {
+      "card_name": "Gallantmon (X Antibody)",
+      "status": "PARTIAL",
+      "validated_date": "2026-03-13",
+      "report": "2026-03-13-jesmon.md",
+      "notes": "Script reviewed. DP effects + security trash. High cost."
+    },
+    "LM-033": {
+      "card_name": "Garnet Memory Boost!",
+      "status": "PASS",
+      "validated_date": "2026-03-13",
+      "report": "2026-03-13-jesmon.md",
+      "notes": "Reveal top 3 add red/black. Place in battle area. Delay."
+    },
+    "P-130": {
+      "card_name": "Lui Ohwada",
+      "status": "PASS",
+      "validated_date": "2026-03-13",
+      "report": "2026-03-13-jesmon.md",
+      "notes": "On Play move from breeding. Breeding move memory gain."
+    },
+    "ST1-07": {
+      "card_name": "Greymon",
+      "status": "FAIL",
+      "validated_date": "2026-03-13",
+      "report": "2026-03-13-jesmon.md",
+      "notes": "BUG: Causes server hang when played. Inherited effect with no timing."
+    },
+    "ST12-01": {
+      "card_name": "Gurimon",
+      "status": "PASS",
+      "validated_date": "2026-03-13",
+      "report": "2026-03-13-jesmon.md",
+      "notes": "Inherited Your Turn +1000 DP with 2+ Digimon."
+    },
+    "ST12-03": {
+      "card_name": "Solarmon",
+      "status": "PASS",
+      "validated_date": "2026-03-13",
+      "report": "2026-03-13-jesmon.md",
+      "notes": "Anti-cost-reduction passive registered."
+    },
+    "ST12-10": {
+      "card_name": "Jesmon",
+      "status": "PARTIAL",
+      "validated_date": "2026-03-13",
+      "report": "2026-03-13-jesmon.md",
+      "notes": "Script reviewed. Blitz, When Attacking play Sistermon, play attack trigger."
+    },
+    "ST12-13": {
+      "card_name": "Sistermon Ciel",
+      "status": "PASS",
+      "validated_date": "2026-03-13",
+      "report": "2026-03-13-jesmon.md",
+      "notes": "On Play reveal top 3. Reboot aura for Huckmon/RK."
+    },
+    "ST12-14": {
+      "card_name": "Aus Generics",
+      "status": "PARTIAL",
+      "validated_date": "2026-03-13",
+      "report": "2026-03-13-jesmon.md",
+      "notes": "DP grant OK. Mandatory select may hang without targets."
+    },
+    "ST12-15": {
+      "card_name": "From Master to Disciple",
+      "status": "FAIL",
+      "validated_date": "2026-03-13",
+      "report": "2026-03-13-jesmon.md",
+      "notes": "BUG: Wrong trash/hand handling. Remaining to library not trash. Delay stub."
+    },
+    "ST16-14": {
+      "card_name": "Matt Ishida",
+      "status": "PASS",
+      "validated_date": "2026-03-13",
+      "report": "2026-03-13-jesmon.md",
+      "notes": "Start of Turn memory, trash hand card memory gain."
     }
   }
 }
