@@ -62,10 +62,10 @@ class BT19_091(CardScript):
             game = ctx.get('game')
             if perm:
                 perm.grant_keyword('_is_alliance')
-            # Play WarGrowlmon Token — token play not yet supported in engine
-            pass  # descriptive-tagged: play_token
-            # Force attack — target Digimon may attack (requires engine SelectAttack)
-            pass  # descriptive-tagged: force_attack
+            if player and game:
+                game.effect_play_token(player, 'wargrowlmon')
+                game.effect_play_token(player, 'taomon')
+                game.effect_play_token(player, 'rapidmon')
 
         effect1.set_on_process_callback(process1)
         effects.append(effect1)

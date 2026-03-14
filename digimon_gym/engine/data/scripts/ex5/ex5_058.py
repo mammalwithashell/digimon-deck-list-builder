@@ -34,10 +34,15 @@ class EX5_058(CardScript):
         def process0(ctx: Dict[str, Any]):
             """Action: Play Token"""
             player = ctx.get('player')
-            perm = ctx.get('permanent')
             game = ctx.get('game')
-            # Play Fujitsumon Token — token play not yet supported in engine
-            pass  # descriptive-tagged: play_token
+            if not (player and game):
+                return
+            enemy = player.enemy
+            total_digimon = len([p for p in player.battle_area if p.is_digimon])
+            if enemy:
+                total_digimon += len([p for p in enemy.battle_area if p.is_digimon])
+            on_opponent = total_digimon <= 3
+            game.effect_play_token(player, 'fujitsumon', on_opponent_field=on_opponent)
 
         effect0.set_on_process_callback(process0)
         effects.append(effect0)
@@ -62,10 +67,15 @@ class EX5_058(CardScript):
         def process1(ctx: Dict[str, Any]):
             """Action: Play Token"""
             player = ctx.get('player')
-            perm = ctx.get('permanent')
             game = ctx.get('game')
-            # Play Fujitsumon Token — token play not yet supported in engine
-            pass  # descriptive-tagged: play_token
+            if not (player and game):
+                return
+            enemy = player.enemy
+            total_digimon = len([p for p in player.battle_area if p.is_digimon])
+            if enemy:
+                total_digimon += len([p for p in enemy.battle_area if p.is_digimon])
+            on_opponent = total_digimon <= 3
+            game.effect_play_token(player, 'fujitsumon', on_opponent_field=on_opponent)
 
         effect1.set_on_process_callback(process1)
         effects.append(effect1)

@@ -47,7 +47,12 @@ class EX11_061(CardScript):
         effect1.set_effect_name("EX11-061 Suspend tamer, play lvl 3 [Puppet], delete it at end of turns.")
         effect1.set_effect_description("[Your Turn] When any of your Digimon digivolve into a [Puppet] trait Digimon, by suspending this Tamer, you may play 1 level 3 [Puppet] trait Digimon card from your hand without paying the cost. At turn end, delete the Digimon this effect played.")
         effect1.is_optional = True
-        effect1.is_on_play = True
+        effect1.is_when_digivolving = True
+        effect1._is_digivolve_observer = True
+
+        def _is_puppet_trait(c) -> bool:
+            traits = getattr(c, 'card_traits', []) or []
+            return any('Puppet' in t for t in traits)
 
         effect = effect1  # alias for condition closure
         def condition1(context: Dict[str, Any]) -> bool:
@@ -55,27 +60,39 @@ class EX11_061(CardScript):
                 return False
             if not (card and card.owner and card.owner.is_my_turn):
                 return False
-            return True
+            # Check the digivolved permanent has Puppet trait
+            trigger_perm = context.get('digivolved_permanent')
+            if not trigger_perm:
+                return False
+            if trigger_perm.owner != card.owner:
+                return False
+            if not trigger_perm.is_digimon:
+                return False
+            if trigger_perm.top_card and _is_puppet_trait(trigger_perm.top_card):
+                return True
+            return False
 
         effect1.set_can_use_condition(condition1)
 
         def process1(ctx: Dict[str, Any]):
-            """Action: Suspend, Play Card"""
+            """Action: Suspend this Tamer, play level 3 Puppet from hand free."""
             player = ctx.get('player')
-            perm = ctx.get('permanent')
             game = ctx.get('game')
             if not (player and game):
                 return
-            def target_filter(p):
-                return True
-            def on_suspend(target_perm):
-                target_perm.suspend()
-            game.effect_select_opponent_permanent(
-                player, on_suspend, filter_fn=target_filter, is_optional=True)
-            if not (player and game):
+            tamer_perm = card.permanent_of_this_card() if card else None
+            if not tamer_perm:
                 return
+            if tamer_perm.is_suspended:
+                return
+            tamer_perm.suspend()
+
             def play_filter(c):
-                return True
+                if not getattr(c, 'is_digimon', False):
+                    return False
+                if getattr(c, 'card_level', None) != 3:
+                    return False
+                return _is_puppet_trait(c)
             game.effect_play_from_zone(
                 player, 'hand', play_filter, free=True, is_optional=True)
 

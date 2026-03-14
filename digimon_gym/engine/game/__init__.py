@@ -248,7 +248,16 @@ class Game(CombatMixin, ActionDecoderMixin, EffectHelpersMixin):
         pass  # Waiting for agent actions
 
     def phase_end(self):
+        memory_before = self.memory
         self.execute_effects(EffectTiming.OnEndTurn)
+        # DCGO: if OnEndTurn effects swung memory back (turn player regained memory
+        # after it was negative), the turn continues — return to Main Phase.
+        # Only applies when memory WAS negative before OnEndTurn effects.
+        if memory_before < 0 and self.memory >= 0 and not self.game_over:
+            self.logger.log(f"[Memory Swing-Back] Memory restored to {self.memory} during end phase — returning to Main")
+            self.current_phase = GamePhase.Main
+            self.phase_main()
+            return
         if self._has_end_of_turn_keywords():
             self.current_phase = GamePhase.EndOfTurnAction
             return  # Park for agent decision
@@ -290,6 +299,8 @@ class Game(CombatMixin, ActionDecoderMixin, EffectHelpersMixin):
             if self.pending_selection is not None:
                 self._turn_end_deferred = True
                 return
+            # DCGO fires OnEndMainPhase when memory crosses, not just on voluntary pass
+            self.execute_effects(EffectTiming.OnEndMainPhase)
             self.current_phase = GamePhase.End
             self.next_phase()
 
@@ -449,6 +460,7 @@ class Game(CombatMixin, ActionDecoderMixin, EffectHelpersMixin):
 
         for perm in list(player.battle_area):
             for effect in perm.effect_list(EffectTiming.NoTiming):
+                effect.set_effect_source_permanent(perm)
                 apply_effect(
                     effect,
                     {
@@ -465,6 +477,7 @@ class Game(CombatMixin, ActionDecoderMixin, EffectHelpersMixin):
         if player.breeding_area is not None:
             breeding_perm = player.breeding_area
             for effect in breeding_perm.effect_list(EffectTiming.NoTiming):
+                effect.set_effect_source_permanent(breeding_perm)
                 if not getattr(effect, '_allow_breeding_source', False):
                     continue
                 apply_effect(
@@ -481,6 +494,7 @@ class Game(CombatMixin, ActionDecoderMixin, EffectHelpersMixin):
                 )
 
         for effect in card.effect_list(EffectTiming.NoTiming):
+            effect.set_effect_source_permanent(card.permanent_of_this_card())
             apply_effect(
                 effect,
                 {
@@ -522,6 +536,7 @@ class Game(CombatMixin, ActionDecoderMixin, EffectHelpersMixin):
         for perm in all_perms:
             effects = perm.effect_list(timing)
             for effect in effects:
+                effect.set_effect_source_permanent(perm)
                 if not effect.on_process_callback:
                     continue
                 if not effect.can_activate_this_turn():
@@ -771,7 +786,8 @@ class Game(CombatMixin, ActionDecoderMixin, EffectHelpersMixin):
 
         Loops until no more rule actions are needed (stable state).
         Checks:
-        - Digimon with DP <= 0 → destroy
+        - Permanents with DP < 0 → raw trash (no destruction event, no prevention)
+        - Digimon with DP == 0 → destroy (respects CanBeDestroyed / prevention keywords)
         - Non-Digimon in breeding area → trash
         - Linked cards that no longer meet conditions → unlink and trash
 
@@ -784,10 +800,24 @@ class Game(CombatMixin, ActionDecoderMixin, EffectHelpersMixin):
         for _ in range(max_loops):
             changed = False
 
-            # 1. Digimon with DP <= 0 → destroy (DCGO: DigimonLackDPProcess)
+            # 1a. DP < 0 → raw trash (DCGO: TrashNoDPProcess)
+            #     No destruction event, no prevention keywords. Applies to Digimon
+            #     and non-played Options.
             for player in [self.player1, self.player2]:
                 for perm in list(player.battle_area):
-                    if perm.is_digimon and perm.dp is not None and perm.dp <= 0:
+                    if perm.dp is not None and perm.dp < 0 and (perm.is_digimon or perm.is_option):
+                        self.logger.log(f"[Rule Process] {self._perm_ref(perm)} has negative DP — trashed")
+                        player.battle_area.remove(perm)
+                        self.cleanup_modifiers_for_permanent(perm)
+                        if not perm.is_token:
+                            player.trash_cards.extend(perm.card_sources)
+                        changed = True
+
+            # 1b. DP == 0 → destroy (DCGO: DigimonLackDPProcess)
+            #     Proper destruction with prevention keywords (Armor Purge, etc.)
+            for player in [self.player1, self.player2]:
+                for perm in list(player.battle_area):
+                    if perm.is_digimon and perm.dp is not None and perm.dp == 0:
                         self.logger.log(f"[Rule Process] {self._perm_ref(perm)} has 0 DP — destroyed")
                         player.delete_permanent(perm)
                         changed = True
@@ -832,6 +862,35 @@ class Game(CombatMixin, ActionDecoderMixin, EffectHelpersMixin):
         if perm in self.opponent_player.battle_area:
             return self.opponent_player
         return self.turn_player
+
+    def _fire_digivolve_observers(self, digivolved_perm):
+        """Fire effects on other permanents observing a digivolution event."""
+        owner = self._find_owner(digivolved_perm)
+        if owner is None:
+            return
+        for perm in list(owner.battle_area):
+            if perm is digivolved_perm:
+                continue
+            for source in perm.card_sources:
+                for effect in source.effect_list(EffectTiming.NoTiming):
+                    if not getattr(effect, '_is_digivolve_observer', False):
+                        continue
+                    if not effect.on_process_callback:
+                        continue
+                    if not effect.can_activate_this_turn():
+                        continue
+                    effect.set_effect_source_permanent(perm)
+                    context = {
+                        'game': self, 'player': owner, 'permanent': perm,
+                        'card': effect.effect_source_card,
+                        'digivolved_permanent': digivolved_perm,
+                        'turn_player': self.turn_player,
+                        'opponent_player': self.opponent_player,
+                    }
+                    if effect.can_use_condition and not effect.can_use_condition(context):
+                        continue
+                    effect.record_activation()
+                    effect.on_process_callback(context)
 
     def _reset_effect_turn_counts(self):
         """Reset once-per-turn counters for all effects at start of turn."""
@@ -945,6 +1004,7 @@ class Game(CombatMixin, ActionDecoderMixin, EffectHelpersMixin):
         self.turn_player.draw()
         perm.turn_digivolved = self.turn_count
         self.execute_effects(EffectTiming.WhenDigivolving, {"digivolved_permanent": perm})
+        self._fire_digivolve_observers(perm)
         self.check_turn_end()
 
     def action_digivolve_breeding(self, card_index: int):

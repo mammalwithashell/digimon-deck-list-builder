@@ -90,6 +90,8 @@ class ActionDecoderMixin:
                     self._execute_training(perm, self.turn_player)
                 elif effect_idx == 1 and self._has_delay_effect(perm):
                     self._execute_delay(perm, self.turn_player)
+                elif effect_idx == 2:
+                    self._execute_field_main_effect(perm, self.turn_player)
 
     def _decode_breeding(self, action_id: int):
         if action_id == 60:
@@ -393,6 +395,24 @@ class ActionDecoderMixin:
                     effect.on_process_callback(context)
                     self._recover_from_stale_selection()
                     return
+
+    def _execute_field_main_effect(self, perm: "Permanent", owner: "Player"):
+        """Execute a player-activated [Main] effect on a field permanent."""
+        for source in perm.card_sources:
+            for effect in source.effect_list(EffectTiming.NoTiming):
+                if getattr(effect, '_is_field_main', False):
+                    context = {
+                        'game': self, 'player': owner, 'permanent': perm,
+                        'card': effect.effect_source_card,
+                        'turn_player': self.turn_player,
+                        'opponent_player': self.opponent_player,
+                    }
+                    if effect.can_use_condition is None or effect.can_use_condition(context):
+                        self._log_effect_activation(effect, EffectTiming.NoTiming)
+                        effect.record_activation()
+                        effect.on_process_callback(context)
+                        self._recover_from_stale_selection()
+                        return
 
     def _decode_end_of_turn_action(self, action_id: int):
         """Handle end-of-turn keyword actions (Vortex, Overclock)."""

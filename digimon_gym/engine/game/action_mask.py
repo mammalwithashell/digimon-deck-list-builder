@@ -149,6 +149,21 @@ def build_action_mask(game: "Game", player_id: int) -> List[float]:
                     and perm.turn_played < game.turn_count):  # Not same turn placed
                 mask[1000 + i * EFFECTS_PER_PERM + 1] = 1.0
 
+        # Field [Main] effects (effectIdx=2): player-activatable [Main] on field permanents
+        for i in range(min(len(me.battle_area), FIELD_SLOTS)):
+            perm = me.battle_area[i]
+            for source in perm.card_sources:
+                found = False
+                for effect in source.effect_list(EffectTiming.NoTiming):
+                    if getattr(effect, '_is_field_main', False):
+                        ctx = {'game': game, 'player': me, 'permanent': perm}
+                        if effect.can_use_condition is None or effect.can_use_condition(ctx):
+                            mask[1000 + i * EFFECTS_PER_PERM + 2] = 1.0
+                            found = True
+                            break
+                if found:
+                    break
+
         # Force Attack: if any of the turn player's Digimon have
         # FORCE_ATTACK modifier, restrict the mask to attack actions
         # for those Digimon only (opponent grants "this Digimon attacks").

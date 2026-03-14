@@ -69,6 +69,71 @@ TOKENS = {
         'level': None,
         'traits': [],
     },
+    'kohagurumon': {
+        'card_id': 'TOKEN_KOHAGURUMON',
+        'card_name': 'KoHagurumon Token',
+        'card_kind': CardKind.Digimon,
+        'colors': [CardColor.Black],
+        'dp': 3000,
+        'level': None,
+        'traits': ['Machine'],
+    },
+    'fujitsumon': {
+        'card_id': 'TOKEN_FUJITSUMON',
+        'card_name': 'Fujitsumon Token',
+        'card_kind': CardKind.Digimon,
+        'colors': [CardColor.Purple],
+        'dp': 3000,
+        'level': None,
+        'traits': [],
+    },
+    'wargrowlmon': {
+        'card_id': 'TOKEN_WARGROWLMON',
+        'card_name': 'WarGrowlmon Token',
+        'card_kind': CardKind.Digimon,
+        'colors': [CardColor.Red],
+        'dp': 6000,
+        'level': None,
+        'traits': [],
+    },
+    'taomon': {
+        'card_id': 'TOKEN_TAOMON',
+        'card_name': 'Taomon Token',
+        'card_kind': CardKind.Digimon,
+        'colors': [CardColor.Yellow],
+        'dp': 6000,
+        'level': None,
+        'traits': [],
+    },
+    'rapidmon': {
+        'card_id': 'TOKEN_RAPIDMON',
+        'card_name': 'Rapidmon Token',
+        'card_kind': CardKind.Digimon,
+        'colors': [CardColor.Green],
+        'dp': 6000,
+        'level': None,
+        'traits': [],
+    },
+    'amon': {
+        'card_id': 'TOKEN_AMON',
+        'card_name': 'Amon of Crimson Flame Token',
+        'card_kind': CardKind.Digimon,
+        'colors': [CardColor.Red],
+        'dp': 6000,
+        'level': None,
+        'traits': [],
+        'keywords': ['_is_rush'],
+    },
+    'umon': {
+        'card_id': 'TOKEN_UMON',
+        'card_name': 'Umon of Blue Thunder Token',
+        'card_kind': CardKind.Digimon,
+        'colors': [CardColor.Yellow],
+        'dp': 6000,
+        'level': None,
+        'traits': [],
+        'keywords': ['_is_blocker'],
+    },
 }
 
 
@@ -172,10 +237,68 @@ def _build_familiar_effects(card_source: CardSource) -> List[ICardEffect]:
     return effects
 
 
+def _build_fujitsumon_effects(card_source: CardSource) -> List[ICardEffect]:
+    """Build effects for a Fujitsumon Token.
+
+    [All Turns] This Digimon doesn't unsuspend.
+    [On Deletion] Trash 1 card in your hand.
+    """
+    effects = []
+
+    # Doesn't unsuspend
+    effect0 = ICardEffect()
+    effect0.set_effect_name("Fujitsumon Token Cannot Unsuspend")
+    effect0.set_effect_description("[All Turns] This Digimon doesn't unsuspend.")
+    effect0._is_cannot_unsuspend = True
+
+    def condition0(context: Dict[str, Any]) -> bool:
+        return True
+    effect0.set_can_use_condition(condition0)
+    effects.append(effect0)
+
+    # On Deletion: Trash 1 card in owner's hand
+    effect1 = ICardEffect()
+    effect1.set_timing(EffectTiming.OnDestroyedAnyone)
+    effect1.set_effect_name("Fujitsumon Token On Deletion")
+    effect1.set_effect_description("[On Deletion] Trash 1 card in your hand.")
+    effect1.is_on_deletion = True
+
+    def condition1(context: Dict[str, Any]) -> bool:
+        return True
+    effect1.set_can_use_condition(condition1)
+
+    def process1(ctx: Dict[str, Any]):
+        owner = card_source.owner
+        if not owner:
+            return
+        game = ctx.get('game')
+        if not game:
+            return
+        if len(owner.hand_cards) == 0:
+            return
+
+        def on_select(selected_card):
+            if selected_card in owner.hand_cards:
+                owner.hand_cards.remove(selected_card)
+                owner.trash_cards.append(selected_card)
+
+        game.effect_select_hand_card(
+            owner, lambda c: True, on_select,
+            is_optional=False,
+            prompt="Trash 1 card from your hand (Fujitsumon).",
+        )
+
+    effect1.set_on_process_callback(process1)
+    effects.append(effect1)
+
+    return effects
+
+
 # Map token type -> effect builder
 _EFFECT_BUILDERS = {
     'petrification': _build_petrification_effects,
     'familiar': _build_familiar_effects,
+    'fujitsumon': _build_fujitsumon_effects,
 }
 
 

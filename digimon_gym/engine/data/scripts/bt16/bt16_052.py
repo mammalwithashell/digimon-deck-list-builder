@@ -49,10 +49,9 @@ class BT16_052(CardScript):
         def process1(ctx: Dict[str, Any]):
             """Action: Play Token"""
             player = ctx.get('player')
-            perm = ctx.get('permanent')
             game = ctx.get('game')
-            # Play KoHagurumon Token — token play not yet supported in engine
-            pass  # descriptive-tagged: play_token
+            if player and game:
+                game.effect_play_token(player, 'kohagurumon')
 
         effect1.set_on_process_callback(process1)
         effects.append(effect1)

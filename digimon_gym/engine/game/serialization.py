@@ -9,6 +9,7 @@ from typing import TYPE_CHECKING, Optional, List, Dict, Any
 from .constants import (
     FIELD_SLOTS, EFFECTS_PER_PERM, SECURITY_TARGET,
 )
+from ..data.enums import EffectTiming
 
 if TYPE_CHECKING:
     from . import Game
@@ -107,6 +108,24 @@ def _get_activatable_effects(game: "Game", perm: "Permanent", slot_idx: int) -> 
             "name": "Delay",
             "description": f"Trash {perm_name} to activate delayed effect",
         })
+    # Field [Main] effects (effectIdx=2)
+    for source in perm.card_sources:
+        for effect in source.effect_list(EffectTiming.NoTiming):
+            if getattr(effect, '_is_field_main', False):
+                owner = game._find_owner(perm)
+                ctx = {'game': game, 'player': owner, 'permanent': perm}
+                if effect.can_use_condition is None or effect.can_use_condition(ctx):
+                    effect_name = getattr(effect, 'effect_name', None) or "[Main]"
+                    effects.append({
+                        "effectIdx": 2,
+                        "actionId": 1000 + slot_idx * EFFECTS_PER_PERM + 2,
+                        "name": "Main",
+                        "description": effect_name,
+                    })
+                    break
+        else:
+            continue
+        break
     return effects
 
 

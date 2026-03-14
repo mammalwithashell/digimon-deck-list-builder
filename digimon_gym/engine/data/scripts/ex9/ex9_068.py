@@ -44,8 +44,8 @@ class EX9_068(CardScript):
             game = ctx.get('game')
             if not (player and game):
                 return
-            if player.memory <= 2:
-                player.set_memory(3)
+            if game.memory <= 2:
+                game.memory = 3
         effect0.set_on_process_callback(process0)
         effects.append(effect0)
 

@@ -47,10 +47,9 @@ class BT22_040(CardScript):
         def process1(ctx: Dict[str, Any]):
             """Action: Play Token"""
             player = ctx.get('player')
-            perm = ctx.get('permanent')
             game = ctx.get('game')
-            # Play Familiar Token — token play not yet supported in engine
-            pass  # descriptive-tagged: play_token
+            if player and game:
+                game.effect_play_token(player, 'familiar')
 
         effect1.set_on_process_callback(process1)
         effects.append(effect1)
@@ -76,10 +75,9 @@ class BT22_040(CardScript):
         def process2(ctx: Dict[str, Any]):
             """Action: Play Token"""
             player = ctx.get('player')
-            perm = ctx.get('permanent')
             game = ctx.get('game')
-            # Play Familiar Token — token play not yet supported in engine
-            pass  # descriptive-tagged: play_token
+            if player and game:
+                game.effect_play_token(player, 'familiar')
 
         effect2.set_on_process_callback(process2)
         effects.append(effect2)

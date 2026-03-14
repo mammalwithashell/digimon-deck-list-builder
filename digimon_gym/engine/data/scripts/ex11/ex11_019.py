@@ -33,10 +33,9 @@ class EX11_019(CardScript):
         def process0(ctx: Dict[str, Any]):
             """Action: Play Token"""
             player = ctx.get('player')
-            perm = ctx.get('permanent')
             game = ctx.get('game')
-            # Play Familiar Token — token play not yet supported in engine
-            pass  # descriptive-tagged: play_token
+            if player and game:
+                game.effect_play_token(player, 'familiar')
 
         effect0.set_on_process_callback(process0)
         effects.append(effect0)

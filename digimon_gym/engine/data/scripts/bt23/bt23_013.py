@@ -94,7 +94,6 @@ class BT23_013(CardScript):
         def process4(ctx: Dict[str, Any]):
             """Action: Play Card, Play Token"""
             player = ctx.get('player')
-            perm = ctx.get('permanent')
             game = ctx.get('game')
             if not (player and game):
                 return
@@ -102,8 +101,7 @@ class BT23_013(CardScript):
                 return True
             game.effect_play_from_zone(
                 player, 'hand_or_trash', play_filter, free=True, is_optional=True)
-            # Play AthoRenePor Token — token play not yet supported in engine
-            pass  # descriptive-tagged: play_token
+            game.effect_play_token(player, 'atho_rene_por')
 
         effect4.set_on_process_callback(process4)
         effects.append(effect4)
@@ -128,7 +126,6 @@ class BT23_013(CardScript):
         def process5(ctx: Dict[str, Any]):
             """Action: Play Card, Play Token"""
             player = ctx.get('player')
-            perm = ctx.get('permanent')
             game = ctx.get('game')
             if not (player and game):
                 return
@@ -136,8 +133,7 @@ class BT23_013(CardScript):
                 return True
             game.effect_play_from_zone(
                 player, 'hand_or_trash', play_filter, free=True, is_optional=True)
-            # Play AthoRenePor Token — token play not yet supported in engine
-            pass  # descriptive-tagged: play_token
+            game.effect_play_token(player, 'atho_rene_por')
 
         effect5.set_on_process_callback(process5)
         effects.append(effect5)

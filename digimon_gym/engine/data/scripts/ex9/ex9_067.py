@@ -89,6 +89,7 @@ class EX9_067(CardScript):
         )
         effect1.is_when_digivolving = True
         effect1.is_optional = True
+        effect1._is_digivolve_observer = True
 
         def condition1(context: Dict[str, Any]) -> bool:
             if card and card.permanent_of_this_card() is None:
@@ -96,7 +97,7 @@ class EX9_067(CardScript):
             if not (card and card.owner and card.owner.is_my_turn):
                 return False
             # The digivolving Digimon must be one of our own and must have digivolved into [Puppet]
-            trigger_perm = context.get('permanent')
+            trigger_perm = context.get('digivolved_permanent')
             if not trigger_perm:
                 return False
             if trigger_perm.owner != card.owner:

@@ -8,15 +8,22 @@ if TYPE_CHECKING:
     from ....core.card_source import CardSource
 
 class ST1_07(CardScript):
+    """ST1-07 Greymon | Inherited Effect: <Security Attack +1>"""
+
     def get_card_effects(self, card: 'CardSource') -> List['ICardEffect']:
+        effects = []
+
+        # Inherited Effect: <Security Attack +1>
         effect = ICardEffect()
-        effect.set_effect_name("ST1-07 Inherited Effect")
-        effect.is_inherited_effect = True
+        effect.set_effect_name("ST1-07 Security Attack +1")
         effect.set_effect_description("<Security Attack +1>")
+        effect.is_inherited_effect = True
+        effect._security_attack_modifier = 1
 
         def condition(context: Dict[str, Any]) -> bool:
-            return True # Usually checking "is_my_turn"
+            return True
 
         effect.set_can_use_condition(condition)
+        effects.append(effect)
 
-        return [effect]
+        return effects

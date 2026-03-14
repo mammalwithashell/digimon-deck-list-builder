@@ -56,31 +56,46 @@ class P_136(CardScript):
         effect1.is_optional = True
         effect1.set_max_count_per_turn(1)
         effect1.set_hash_string("Digivoles_P_136")
-        effect1.is_on_play = True
+        effect1.is_when_digivolving = True
+        effect1._is_digivolve_observer = True
+
+        def _is_puppet_trait(c) -> bool:
+            traits = getattr(c, 'card_traits', []) or []
+            return any('Puppet' in t for t in traits)
 
         effect = effect1  # alias for condition closure
         def condition1(context: Dict[str, Any]) -> bool:
             if card and card.permanent_of_this_card() is None:
                 return False
-            return True
+            if not (card and card.owner and card.owner.is_my_turn):
+                return False
+            # Check the digivolved permanent has Puppet trait
+            trigger_perm = context.get('digivolved_permanent')
+            if not trigger_perm:
+                return False
+            if trigger_perm.owner != card.owner:
+                return False
+            if not trigger_perm.is_digimon:
+                return False
+            if trigger_perm.top_card and _is_puppet_trait(trigger_perm.top_card):
+                return True
+            return False
 
         effect1.set_can_use_condition(condition1)
 
         def process1(ctx: Dict[str, Any]):
-            """Action: Gain 1 memory, Suspend"""
+            """Action: Suspend this Tamer, gain 1 memory."""
             player = ctx.get('player')
-            perm = ctx.get('permanent')
             game = ctx.get('game')
-            if player:
-                player.add_memory(1)
             if not (player and game):
                 return
-            def target_filter(p):
-                return True
-            def on_suspend(target_perm):
-                target_perm.suspend()
-            game.effect_select_opponent_permanent(
-                player, on_suspend, filter_fn=target_filter, is_optional=True)
+            tamer_perm = card.permanent_of_this_card() if card else None
+            if not tamer_perm:
+                return
+            if tamer_perm.is_suspended:
+                return
+            tamer_perm.suspend()
+            player.add_memory(1)
 
         effect1.set_on_process_callback(process1)
         effects.append(effect1)

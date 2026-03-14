@@ -91,6 +91,7 @@ class BT11_061(CardScript):
                 player.library_cards.append(c)
 
         effect0.set_on_process_callback(process0)
+        effect0._is_field_main = True
         effects.append(effect0)
 
         # ─── Effect 1 (Inherited): [Your Turn] When this Digimon would
