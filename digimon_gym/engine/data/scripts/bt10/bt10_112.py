@@ -48,6 +48,43 @@ class BT10_112(CardScript):
             return True
 
         effect1.set_can_use_condition(condition1)
+
+        def process1(ctx: Dict[str, Any]):
+            """Place 1 Royal Knight from hand/trash under self, activate WhenDigivolving, Blitz."""
+            player = ctx.get('player')
+            perm = ctx.get('permanent')
+            game = ctx.get('game')
+            if not (player and game and perm):
+                return
+
+            def hand_filter(c):
+                if not any('Royal Knight' in tr for tr in (getattr(c, 'card_traits', []) or [])):
+                    return False
+                play_cost = getattr(c, 'get_cost_itself', 0)
+                if callable(play_cost):
+                    play_cost = play_cost
+                else:
+                    play_cost = getattr(c, 'play_cost', 0) or 0
+                pc = getattr(c, 'play_cost', 0) or 0
+                return pc <= 13
+
+            def on_card_selected(selected_card):
+                if selected_card is None:
+                    return
+                if selected_card in player.hand_cards:
+                    player.hand_cards.remove(selected_card)
+                elif selected_card in player.trash_cards:
+                    player.trash_cards.remove(selected_card)
+                perm.add_card_source_bottom(selected_card)
+                # Grant Blitz (Rush on digivolve turn)
+                perm.grant_keyword('_is_rush')
+
+            game.effect_select_hand_card(
+                player, hand_filter, on_card_selected,
+                is_optional=True,
+                prompt="Select 1 [Royal Knight] card (cost 13 or less) from hand to place under this Digimon.")
+
+        effect1.set_on_process_callback(process1)
         effects.append(effect1)
 
         # Factory effect: blocker

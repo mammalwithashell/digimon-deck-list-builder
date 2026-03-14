@@ -44,12 +44,6 @@ class BT20_059(CardScript):
             if card and card.permanent_of_this_card() is None:
                 return False
             # Triggered when digivolving — validated by engine timing
-            permanent = effect.effect_source_permanent if hasattr(effect, 'effect_source_permanent') else None
-            if permanent:
-                if not any(src.contains_card_name('Gankoomon') for src in permanent.digivolution_cards):
-                    return False
-            else:
-                return False
             return True
 
         effect1.set_can_use_condition(condition1)
@@ -61,6 +55,7 @@ class BT20_059(CardScript):
             game = ctx.get('game')
             if not (player and game):
                 return
+            # De-Digivolve 2 on 1 opponent Digimon
             def on_de_digivolve(target_perm):
                 removed = target_perm.de_digivolve(2)
                 enemy = player.enemy if player else None
@@ -68,12 +63,15 @@ class BT20_059(CardScript):
                     enemy.trash_cards.extend(removed)
             game.effect_select_opponent_permanent(
                 player, on_de_digivolve, filter_fn=lambda p: p.is_digimon, is_optional=False)
-            # Grant effect immunity via modifier system
-            if perm and game:
-                from digimon_gym.engine.interfaces.modifiers import ModifierType
-                game.register_modifier(
-                    ModifierType.CANNOT_BE_SELECTED_BY_EFFECT, perm,
-                    value_fn=lambda: True, expiry='end_of_turn')
+            # Check condition: [Gankoomon] or [X Antibody] in digi cards
+            if perm:
+                has_gankoomon = any(src.contains_card_name('Gankoomon') for src in perm.card_sources)
+                has_x_antibody = any(src.contains_card_name('X Antibody') for src in perm.card_sources)
+                if has_gankoomon or has_x_antibody:
+                    # Grant immunity to ALL own Digimon from opponent Digimon effects
+                    for own_perm in player.battle_area:
+                        if own_perm.is_digimon:
+                            own_perm.grant_keyword('_immune_to_opponent_digimon_effects')
 
         effect1.set_on_process_callback(process1)
         effects.append(effect1)

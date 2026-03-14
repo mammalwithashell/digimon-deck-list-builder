@@ -14,28 +14,8 @@ class BT23_099(CardScript):
     def get_card_effects(self, card: 'CardSource') -> List['ICardEffect']:
         effects = []
 
-        # Timing: EffectTiming.None
-        # Ignore Color Req
-        effect0 = ICardEffect()
-        effect0.set_effect_name("BT23-099 Ignore color requirements")
-        effect0.set_effect_description("Ignore Color Req")
-
-        effect = effect0  # alias for condition closure
-        def condition0(context: Dict[str, Any]) -> bool:
-            return True
-
-        effect0.set_can_use_condition(condition0)
-
-        def process0(ctx: Dict[str, Any]):
-            """Action: Ignore Color Req"""
-            player = ctx.get('player')
-            perm = ctx.get('permanent')
-            game = ctx.get('game')
-            # Ignores color requirement for playing Options — not modeled in engine
-            pass  # descriptive-tagged
-
-        effect0.set_on_process_callback(process0)
-        effects.append(effect0)
+        # Bypass Option color requirement check in action mask
+        card._match_color_requirement = False
 
         # Timing: EffectTiming.OptionSkill
         # [Main] <Draw 1> Then, place this card in the battle area.
@@ -79,38 +59,40 @@ class BT23_099(CardScript):
         effect2.set_can_use_condition(condition2)
         effects.append(effect2)
 
-        # Timing: EffectTiming.OnEnterFieldAnyone
-        # [Your Turn] When any of your Digimon digivolve into a Digimon with [Huckmon] or [Jesmon] in its name, <Delay> \r\n・You may play 1 card with [Sistermon] in its name from your hand or trash without paying the cost.
+        # [Your Turn] When any of your Digimon digivolve into a Digimon with
+        # [Huckmon] or [Jesmon] in its name, play 1 [Sistermon] from hand/trash.
+        # Uses _is_digivolve_observer pattern (fires from _fire_digivolve_observers)
         effect3 = ICardEffect()
-        effect3.set_timing(EffectTiming.OnEnterFieldAnyone)
-        effect3.set_effect_name("BT23-099 Play 1 card with [Sistermon] in its name")
-        effect3.set_effect_description("[Your Turn] When any of your Digimon digivolve into a Digimon with [Huckmon] or [Jesmon] in its name, <Delay> \\r\\n・You may play 1 card with [Sistermon] in its name from your hand or trash without paying the cost.")
+        effect3.set_effect_name("BT23-099 Play Sistermon on Huckmon/Jesmon digivolve")
+        effect3.set_effect_description("[Your Turn] When any of your Digimon digivolve into a Digimon with [Huckmon] or [Jesmon] in its name, you may play 1 card with [Sistermon] in its name from your hand or trash without paying the cost.")
         effect3.is_optional = True
-        effect3.is_on_play = True
+        effect3._is_digivolve_observer = True
 
-        effect = effect3  # alias for condition closure
         def condition3(context: Dict[str, Any]) -> bool:
             if card and card.permanent_of_this_card() is None:
                 return False
             if not (card and card.owner and card.owner.is_my_turn):
                 return False
-            return True
+            # Check that the digivolved permanent has Huckmon or Jesmon in name
+            digi_perm = context.get('digivolved_permanent')
+            if digi_perm and digi_perm.top_card:
+                names = getattr(digi_perm.top_card, 'card_names', []) or []
+                if any('Huckmon' in n or 'Jesmon' in n for n in names):
+                    return True
+            return False
 
         effect3.set_can_use_condition(condition3)
 
         def process3(ctx: Dict[str, Any]):
-            """Action: Play Card"""
+            """Action: Play Sistermon from hand or trash"""
             player = ctx.get('player')
-            perm = ctx.get('permanent')
             game = ctx.get('game')
             if not (player and game):
                 return
             def play_filter(c):
-                if not (any('Sistermon' in _n for _n in getattr(c, 'card_names', []))):
-                    return False
-                return True
+                return any('Sistermon' in _n for _n in getattr(c, 'card_names', []))
             game.effect_play_from_zone(
-                player, 'hand', play_filter, free=True, is_optional=True)
+                player, 'hand_or_trash', play_filter, free=True, is_optional=True)
 
         effect3.set_on_process_callback(process3)
         effects.append(effect3)

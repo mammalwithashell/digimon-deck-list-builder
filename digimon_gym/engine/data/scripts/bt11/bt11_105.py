@@ -85,6 +85,9 @@ class BT11_105(CardScript):
 
         def process1(ctx: Dict[str, Any]):
             """Place 1 Vemmon/Destromon from trash as bottom digi-card, then digivolve from trash."""
+            from ....data.enums import GamePhase
+            from ....game.constants import SEL_TRASH_START
+
             player = ctx.get('player')
             game = ctx.get('game')
             if not (player and game):
@@ -92,67 +95,88 @@ class BT11_105(CardScript):
 
             # Step 1: Select and place 1 [Vemmon] or [Destromon] from trash under
             # 1 of your Digimon as bottom digi-card.
-            qualifying_trash = [c for c in player.trash_cards if _is_vemmon_or_destromon(c)]
-            if not qualifying_trash or not player.battle_area:
+            qualifying_indices = [
+                SEL_TRASH_START + i
+                for i, c in enumerate(player.trash_cards)
+                if _is_vemmon_or_destromon(c)
+            ]
+            if not qualifying_indices or not player.battle_area:
                 return
 
-            # Select a card from trash (auto-pick first qualifying)
-            chosen_card = qualifying_trash[0]
-
-            # Select a Digimon to place it under (player choice via selection)
             def perm_filter(p):
                 return p.is_digimon and not getattr(p, 'is_token', False)
 
-            def on_perm_selected(target_perm):
-                if target_perm is None:
+            def on_trash_selected(action_id: int):
+                idx = action_id - SEL_TRASH_START
+                if not (0 <= idx < len(player.trash_cards)):
                     return
-                if chosen_card in player.trash_cards:
-                    player.trash_cards.remove(chosen_card)
-                target_perm.add_card_source_bottom(chosen_card)
+                chosen_card = player.trash_cards[idx]
+                player.trash_cards.remove(chosen_card)
 
-                # Step 2: "you may" digivolve 1 of your Digimon into
-                # [Destromon] or [Galacticmon] from trash for its digivolution cost.
-                digi_candidates = [
-                    c for c in player.trash_cards
-                    if _is_destromon_or_galacticmon(c) and getattr(c, 'is_digimon', False)
-                ]
-                if not digi_candidates or not player.battle_area:
-                    return
-
-                digi_card = digi_candidates[0]
-
-                # Find digivolution cost
-                evo_costs = getattr(digi_card, 'evo_costs', []) or []
-                cost = 0
-                if evo_costs:
-                    first_evo = evo_costs[0]
-                    if hasattr(first_evo, 'memory_cost'):
-                        cost = first_evo.memory_cost
-                    elif isinstance(first_evo, dict):
-                        cost = first_evo.get('cost', first_evo.get('memory_cost', 0))
-                    elif isinstance(first_evo, int):
-                        cost = first_evo
-
-                # Select which Digimon to digivolve (player choice)
-                def on_digi_target(digi_target_perm):
-                    if digi_target_perm is None:
+                # Select a Digimon to place it under
+                def on_perm_selected(target_perm):
+                    if target_perm is None:
                         return
-                    if digi_card in player.trash_cards:
+                    target_perm.add_card_source_bottom(chosen_card)
+
+                    # Step 2: "you may" digivolve 1 of your Digimon into
+                    # [Destromon] or [Galacticmon] from trash for its digivolution cost.
+                    digi_indices = [
+                        SEL_TRASH_START + i
+                        for i, c in enumerate(player.trash_cards)
+                        if _is_destromon_or_galacticmon(c) and getattr(c, 'is_digimon', False)
+                    ]
+                    if not digi_indices or not player.battle_area:
+                        return
+
+                    def on_digi_trash_selected(action_id2: int):
+                        idx2 = action_id2 - SEL_TRASH_START
+                        if not (0 <= idx2 < len(player.trash_cards)):
+                            return
+                        digi_card = player.trash_cards[idx2]
+
+                        # Find digivolution cost
+                        evo_costs = getattr(digi_card, 'evo_costs', []) or []
+                        cost = 0
+                        if evo_costs:
+                            first_evo = evo_costs[0]
+                            if hasattr(first_evo, 'memory_cost'):
+                                cost = first_evo.memory_cost
+                            elif isinstance(first_evo, dict):
+                                cost = first_evo.get('cost', first_evo.get('memory_cost', 0))
+                            elif isinstance(first_evo, int):
+                                cost = first_evo
+
                         player.trash_cards.remove(digi_card)
-                    # Pay digivolution cost (deduct from memory)
-                    if cost > 0:
-                        player.lose_memory(cost)
-                    digi_target_perm.add_card_source(digi_card)
+
+                        # Select which Digimon to digivolve (player choice)
+                        def on_digi_target(digi_target_perm):
+                            if digi_target_perm is None:
+                                return
+                            # Pay digivolution cost (deduct from memory)
+                            if cost > 0:
+                                player.lose_memory(cost)
+                            digi_target_perm.add_card_source(digi_card)
+
+                        game.effect_select_own_permanent(
+                            player, on_digi_target, filter_fn=perm_filter,
+                            is_optional=True,
+                            prompt="Select 1 of your Digimon to digivolve into [Destromon] or [Galacticmon] from trash.")
+
+                    game.request_selection(
+                        GamePhase.SelectTrash, player, on_digi_trash_selected,
+                        digi_indices, is_optional=True,
+                        prompt="Select 1 [Destromon] or [Galacticmon] from trash to digivolve into.")
 
                 game.effect_select_own_permanent(
-                    player, on_digi_target, filter_fn=perm_filter,
+                    player, on_perm_selected, filter_fn=perm_filter,
                     is_optional=True,
-                    prompt="Select 1 of your Digimon to digivolve into [Destromon] or [Galacticmon] from trash.")
+                    prompt="Select 1 of your Digimon to place a [Vemmon]/[Destromon] from trash under as bottom digi-card.")
 
-            game.effect_select_own_permanent(
-                player, on_perm_selected, filter_fn=perm_filter,
-                is_optional=True,
-                prompt="Select 1 of your Digimon to place a [Vemmon]/[Destromon] from trash under as bottom digi-card.")
+            game.request_selection(
+                GamePhase.SelectTrash, player, on_trash_selected,
+                qualifying_indices, is_optional=False,
+                prompt="Select 1 [Vemmon] or [Destromon] from trash to place under a Digimon.")
 
         effect1.set_on_process_callback(process1)
         effects.append(effect1)

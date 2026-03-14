@@ -153,7 +153,6 @@ class EX9_033(CardScript):
         # --- Effect 3: [All Turns][Once Per Turn] When other Digimon deleted,
         #     delete 1 opponent's lowest level Digimon ---
         effect3 = ICardEffect()
-        effect3.set_timing(EffectTiming.OnDestroyedAnyone)
         effect3.set_effect_name("EX9-033 Delete opponent's lowest level Digimon")
         effect3.set_effect_description(
             "[All Turns][Once Per Turn] When other Digimon are deleted, delete 1 "
@@ -161,18 +160,20 @@ class EX9_033(CardScript):
         )
         effect3.set_max_count_per_turn(1)
         effect3.set_hash_string("EX9_033_Deletion")
+        effect3._is_deletion_observer = True
 
         def condition3(context: Dict[str, Any]) -> bool:
             if card and card.permanent_of_this_card() is None:
                 return False
             # The deleted Digimon must be a different Digimon (not this one)
-            deleted_perm = context.get('permanent')
-            if deleted_perm:
-                my_perm = card.permanent_of_this_card()
-                if deleted_perm is my_perm:
-                    return False
-                if not deleted_perm.is_digimon:
-                    return False
+            deleted_perm = context.get('deleted_permanent')
+            if not deleted_perm:
+                return False
+            my_perm = card.permanent_of_this_card()
+            if deleted_perm is my_perm:
+                return False
+            if not deleted_perm.is_digimon:
+                return False
             return True
         effect3.set_can_use_condition(condition3)
 

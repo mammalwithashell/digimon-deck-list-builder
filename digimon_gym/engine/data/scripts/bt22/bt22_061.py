@@ -54,17 +54,29 @@ class BT22_061(CardScript):
 
         effect = effect2  # alias for condition closure
         def condition2(context: Dict[str, Any]) -> bool:
-            return True
+            if context.get('card_source') is not card:
+                return False
+            perm = card.permanent_of_this_card() if card else None
+            if not perm:
+                return False
+            # Count face-down digivolution cards (all non-top card_sources)
+            fd_count = max(0, len(perm.card_sources) - 1)
+            return fd_count > 0
 
         effect2.set_can_use_condition(condition2)
 
+        # Dynamic cost_reduction based on face-down source count
+        def _get_fd_reduction(context=None):
+            perm = card.permanent_of_this_card() if card else None
+            if not perm:
+                return 0
+            return max(0, len(perm.card_sources) - 1)
+
+        effect2._cost_reduction_value_fn = _get_fd_reduction
+
         def process2(ctx: Dict[str, Any]):
-            """Action: Effect"""
-            player = ctx.get('player')
-            perm = ctx.get('permanent')
-            game = ctx.get('game')
-            # Cost reduction (variable amount) — handled via cost_reduction property
-            pass  # descriptive-tagged: cost_reduction
+            """Reduce digivolution cost by 1 for each face-down source."""
+            pass  # cost_reduction_fn handles the reduction declaratively
 
         effect2.set_on_process_callback(process2)
         effects.append(effect2)
@@ -101,34 +113,63 @@ class BT22_061(CardScript):
         effect4.set_can_use_condition(condition4)
 
         def process4(ctx: Dict[str, Any]):
-            """Action: Bounce, Trash Digivolution Cards, De Digivolve"""
+            """Action: De-Digivolve 1 opponent, then trash own bottom source to bounce cost 4-"""
             player = ctx.get('player')
             perm = ctx.get('permanent')
             game = ctx.get('game')
             if not (player and game):
                 return
-            def target_filter(p):
-                return True
-            def on_bounce(target_perm):
-                enemy = player.enemy if player else None
-                if enemy:
-                    enemy.bounce_permanent_to_hand(target_perm)
-            game.effect_select_opponent_permanent(
-                player, on_bounce, filter_fn=target_filter, is_optional=False)
-            # Trash digivolution cards from this permanent
-            if perm and not perm.has_no_digivolution_cards:
-                trashed = perm.trash_digivolution_cards(1)
-                if player:
-                    player.trash_cards.extend(trashed)
-            if not (player and game):
+            enemy = player.enemy if player else None
+            if not enemy:
                 return
+
+            # Step 1: <De-Digivolve 1> 1 of your opponent's Digimon
+            def dedigivolve_filter(p):
+                return p.is_digimon and len(p.card_sources) > 1
+
             def on_de_digivolve(target_perm):
+                if target_perm is None:
+                    return
                 removed = target_perm.de_digivolve(1)
-                enemy = player.enemy if player else None
-                if enemy:
-                    enemy.trash_cards.extend(removed)
-            game.effect_select_opponent_permanent(
-                player, on_de_digivolve, filter_fn=lambda p: p.is_digimon, is_optional=False)
+                enemy.trash_cards.extend(removed)
+
+                # Step 2: By trashing this Digimon's bottom face-down digivolution
+                # card, return 1 of your opponent's play cost 4 or lower Digimon
+                # or Tamers to the hand.
+                if not perm or len(perm.card_sources) <= 1:
+                    return
+                # Trash bottom digivolution card (index 0 is bottom)
+                bottom_card = perm.card_sources[0]
+                if bottom_card is perm.top_card:
+                    return
+                perm.card_sources.remove(bottom_card)
+                player.trash_cards.append(bottom_card)
+
+                # Bounce 1 opponent's play cost 4 or lower Digimon or Tamer
+                def bounce_filter(p):
+                    if not (p.is_digimon or p.is_tamer):
+                        return False
+                    cost = getattr(p.top_card, 'get_cost_itself', 0)
+                    if isinstance(cost, property):
+                        cost = 0
+                    return cost <= 4
+
+                def on_bounce(bounce_target):
+                    if bounce_target is None:
+                        return
+                    enemy.bounce_permanent_to_hand(bounce_target)
+
+                if any(bounce_filter(p) for p in enemy.battle_area):
+                    game.effect_select_opponent_permanent(
+                        player, on_bounce, filter_fn=bounce_filter,
+                        is_optional=False,
+                        prompt="Return 1 of your opponent's play cost 4 or lower Digimon or Tamer to hand.")
+
+            if any(dedigivolve_filter(p) for p in enemy.battle_area):
+                game.effect_select_opponent_permanent(
+                    player, on_de_digivolve, filter_fn=dedigivolve_filter,
+                    is_optional=False,
+                    prompt="Select 1 of your opponent's Digimon to <De-Digivolve 1>.")
 
         effect4.set_on_process_callback(process4)
         effects.append(effect4)
@@ -153,34 +194,61 @@ class BT22_061(CardScript):
         effect5.set_can_use_condition(condition5)
 
         def process5(ctx: Dict[str, Any]):
-            """Action: Bounce, Trash Digivolution Cards, De Digivolve"""
+            """Action: De-Digivolve 1 opponent, then trash own bottom source to bounce cost 4-"""
             player = ctx.get('player')
             perm = ctx.get('permanent')
             game = ctx.get('game')
             if not (player and game):
                 return
-            def target_filter(p):
-                return True
-            def on_bounce(target_perm):
-                enemy = player.enemy if player else None
-                if enemy:
-                    enemy.bounce_permanent_to_hand(target_perm)
-            game.effect_select_opponent_permanent(
-                player, on_bounce, filter_fn=target_filter, is_optional=False)
-            # Trash digivolution cards from this permanent
-            if perm and not perm.has_no_digivolution_cards:
-                trashed = perm.trash_digivolution_cards(1)
-                if player:
-                    player.trash_cards.extend(trashed)
-            if not (player and game):
+            enemy = player.enemy if player else None
+            if not enemy:
                 return
+
+            # Step 1: <De-Digivolve 1> 1 of your opponent's Digimon
+            def dedigivolve_filter(p):
+                return p.is_digimon and len(p.card_sources) > 1
+
             def on_de_digivolve(target_perm):
+                if target_perm is None:
+                    return
                 removed = target_perm.de_digivolve(1)
-                enemy = player.enemy if player else None
-                if enemy:
-                    enemy.trash_cards.extend(removed)
-            game.effect_select_opponent_permanent(
-                player, on_de_digivolve, filter_fn=lambda p: p.is_digimon, is_optional=False)
+                enemy.trash_cards.extend(removed)
+
+                # Step 2: By trashing this Digimon's bottom face-down digivolution
+                # card, return 1 of your opponent's play cost 4 or lower Digimon
+                # or Tamers to the hand.
+                if not perm or len(perm.card_sources) <= 1:
+                    return
+                bottom_card = perm.card_sources[0]
+                if bottom_card is perm.top_card:
+                    return
+                perm.card_sources.remove(bottom_card)
+                player.trash_cards.append(bottom_card)
+
+                def bounce_filter(p):
+                    if not (p.is_digimon or p.is_tamer):
+                        return False
+                    cost = getattr(p.top_card, 'get_cost_itself', 0)
+                    if isinstance(cost, property):
+                        cost = 0
+                    return cost <= 4
+
+                def on_bounce(bounce_target):
+                    if bounce_target is None:
+                        return
+                    enemy.bounce_permanent_to_hand(bounce_target)
+
+                if any(bounce_filter(p) for p in enemy.battle_area):
+                    game.effect_select_opponent_permanent(
+                        player, on_bounce, filter_fn=bounce_filter,
+                        is_optional=False,
+                        prompt="Return 1 of your opponent's play cost 4 or lower Digimon or Tamer to hand.")
+
+            if any(dedigivolve_filter(p) for p in enemy.battle_area):
+                game.effect_select_opponent_permanent(
+                    player, on_de_digivolve, filter_fn=dedigivolve_filter,
+                    is_optional=False,
+                    prompt="Select 1 of your opponent's Digimon to <De-Digivolve 1>.")
 
         effect5.set_on_process_callback(process5)
         effects.append(effect5)

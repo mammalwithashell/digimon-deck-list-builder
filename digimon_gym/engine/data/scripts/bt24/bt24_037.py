@@ -92,25 +92,32 @@ class BT24_037(CardScript):
                     game = ctx.get('game')
                     if not (player and game):
                         return
-                    # 2) 1 of your Digimon may attack
-                    # Force attack not yet supported in engine — skipped
-
-                    # 3) If DNA digivolving, grant SA+1 and +5000 DP to 1 of your Digimon
-                    is_dna = ctx.get('is_dna_digivolve', False)
-                    if is_dna:
-                        def own_digi_filter(p):
-                            return p.is_digimon
-                        def on_dna_target(target_perm):
-                            target_perm._temp_sa_modifier += 1
-                            target_perm.change_dp(5000)
-                            game.logger.log(
-                                f"[Effect] {game._perm_ref(target_perm)} gains "
-                                f"<Security A. +1> and +5000 DP (DNA bonus)")
-                        game.effect_select_own_permanent(
-                            player, on_dna_target, filter_fn=own_digi_filter,
-                            is_optional=False,
-                            prompt="Select 1 of your Digimon to gain <Security A. +1> "
-                                   "and +5000 DP (DNA bonus).")
+                    # 2) "Then, 1 of your Digimon may attack"
+                    def own_digi_filter(p):
+                        return p.is_digimon
+                    def on_attack_target(target_perm):
+                        from ....interfaces.modifiers import ModifierType
+                        game.register_modifier(
+                            target_perm, ModifierType.FORCE_ATTACK,
+                            value_fn=lambda: True, expiry='end_of_turn')
+                        # 3) If DNA digivolving, grant SA+1 and +5000 DP
+                        is_dna = ctx.get('is_dna_digivolve', False)
+                        if is_dna:
+                            def on_dna_target(dna_perm):
+                                dna_perm._temp_sa_modifier += 1
+                                dna_perm.change_dp(5000)
+                                game.logger.log(
+                                    f"[Effect] {game._perm_ref(dna_perm)} gains "
+                                    f"<Security A. +1> and +5000 DP (DNA bonus)")
+                            game.effect_select_own_permanent(
+                                player, on_dna_target, filter_fn=own_digi_filter,
+                                is_optional=False,
+                                prompt="Select 1 of your Digimon to gain <Security A. +1> "
+                                       "and +5000 DP (DNA bonus).")
+                    game.effect_select_own_permanent(
+                        player, on_attack_target, filter_fn=own_digi_filter,
+                        is_optional=True,
+                        prompt="Select 1 of your Digimon that may attack.")
 
                 return process_n
 

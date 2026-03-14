@@ -160,8 +160,9 @@ class BT17_100(CardScript):
 
         # --- Effect 3: Inherited [All Turns] Prevent leaving by opponent effect ---
         # by deleting 1 of your other [Diaboromon]
+        # Uses WhenPermanentWouldBeDeleted timing + _will_not_be_removed flag
         effect3 = ICardEffect()
-        effect3.set_timing(EffectTiming.WhenRemoveField)
+        effect3.set_timing(EffectTiming.WhenPermanentWouldBeDeleted)
         effect3.set_effect_name("BT17-100 Inherited: Prevent leaving by deleting Diaboromon")
         effect3.set_effect_description(
             "[All Turns] When this Digimon would leave the battle area by an "
@@ -174,10 +175,14 @@ class BT17_100(CardScript):
         def condition3(context: Dict[str, Any]) -> bool:
             if card and card.permanent_of_this_card() is None:
                 return False
+            own_perm = card.permanent_of_this_card()
+            # Only triggers for THIS permanent being deleted
+            ctx_perm = context.get('permanent')
+            if ctx_perm is not own_perm:
+                return False
             owner = card.owner if card else None
             if not owner:
                 return False
-            own_perm = card.permanent_of_this_card()
             # Must have another Diaboromon to delete
             return any(
                 p is not own_perm and p.is_digimon and p.contains_card_name('Diaboromon')
@@ -191,22 +196,20 @@ class BT17_100(CardScript):
             if not (player and game):
                 return
             own_perm = card.permanent_of_this_card() if card else None
+            if not own_perm:
+                return
 
-            def delete_filter(p):
-                return (p is not own_perm and p.is_digimon
-                        and p.contains_card_name('Diaboromon'))
-
-            def on_delete(target_perm):
-                player.delete_permanent(target_perm)
-                # Prevent this Digimon from leaving
-                # descriptive-tagged: prevent_leaving
-                # Engine-level removal prevention not fully implementable here
-
-            game.effect_select_own_permanent(
-                player, on_delete, filter_fn=delete_filter,
-                is_optional=False,
-                prompt="Select another [Diaboromon] to delete to prevent leaving."
-            )
+            # Find another Diaboromon and delete it
+            for p in list(player.battle_area):
+                if p is not own_perm and p.is_digimon and p.contains_card_name('Diaboromon'):
+                    player.delete_permanent(p)
+                    # Set flag to cancel the original deletion
+                    own_perm._will_not_be_removed = True
+                    game.logger.log(
+                        "[BT17-100] Deleted another Diaboromon to prevent "
+                        "this Digimon from leaving the battle area."
+                    )
+                    break
 
         effect3.set_on_process_callback(process3)
         effects.append(effect3)

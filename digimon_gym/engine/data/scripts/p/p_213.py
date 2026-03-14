@@ -86,8 +86,12 @@ class P_213(CardScript):
                 perm.change_dp(3000)
             if perm:
                 perm.grant_keyword('_is_rush')
-            # Force attack — target Digimon may attack (requires engine SelectAttack)
-            pass  # descriptive-tagged: force_attack
+            # "this Digimon may attack" — register FORCE_ATTACK
+            if perm and game:
+                from ....interfaces.modifiers import ModifierType
+                game.register_modifier(
+                    perm, ModifierType.FORCE_ATTACK,
+                    value_fn=lambda: True, expiry='end_of_turn')
 
         effect3.set_on_process_callback(process3)
         effects.append(effect3)

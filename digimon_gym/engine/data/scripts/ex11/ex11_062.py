@@ -53,7 +53,6 @@ class EX11_062(CardScript):
         # "If effects suspended those Digimon" = the suspending Digimon was NOT suspended by
         #   attacking (detected via is_attacking flag, which is True only when suspended by attack).
         effect_tap = ICardEffect()
-        effect_tap.set_timing(EffectTiming.OnTappedAnyone)
         effect_tap.set_effect_name(
             "EX11-062 By suspending this Tamer (if effects suspended): Draw 1, buff Avian/Bird/VW Digimon +3k DP"
         )
@@ -64,6 +63,7 @@ class EX11_062(CardScript):
             "until your opponent's turn ends."
         )
         effect_tap.is_optional = True
+        effect_tap._is_suspend_observer = True
 
         def cond_tap(context: Dict[str, Any]) -> bool:
             if card and card.permanent_of_this_card() is None:
@@ -73,7 +73,7 @@ class EX11_062(CardScript):
             if not tamer_perm or tamer_perm.is_suspended:
                 return False
             # The triggering permanent must be a Digimon
-            suspended_perm = context.get('permanent')
+            suspended_perm = context.get('suspended_permanent')
             if not suspended_perm or not suspended_perm.is_digimon:
                 return False
             # The Digimon must have been suspended by an effect (not by attacking)

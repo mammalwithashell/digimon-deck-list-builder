@@ -74,22 +74,28 @@ class BT16_102(CardScript):
             player = ctx.get('player')
             perm = ctx.get('permanent')
             game = ctx.get('game')
-            if perm:
-                perm.change_dp(3000)
-            if not (player and game):
+            if not (player and game and perm):
                 return
-            def target_filter(p):
-                return True
-            def on_unsuspend(target_perm):
-                target_perm.unsuspend()
-            game.effect_select_own_permanent(
-                player, on_unsuspend, filter_fn=target_filter, is_optional=False)
-            # Grant effect immunity via modifier system
-            if perm and game:
-                from digimon_gym.engine.interfaces.modifiers import ModifierType
-                game.register_modifier(
-                    ModifierType.CANNOT_BE_SELECTED_BY_EFFECT, perm,
-                    value_fn=lambda: True, expiry='end_of_turn')
+            # Check condition: [Magnamon (X-Antibody)] or [Armor Form] trait in digi cards
+            has_magnamon_x = False
+            has_armor_form = False
+            for src in perm.card_sources:
+                if src.contains_card_name('Magnamon') and src.contains_card_name('X Antibody'):
+                    has_magnamon_x = True
+                traits = getattr(src, 'card_traits', []) or []
+                if any('Armor Form' in t for t in traits):
+                    has_armor_form = True
+            if not (has_magnamon_x or has_armor_form):
+                return
+            # Grant +3000 DP
+            perm.change_dp(3000)
+            # Grant effect immunity until end of opponent's turn
+            from digimon_gym.engine.interfaces.modifiers import ModifierType
+            game.register_modifier(
+                ModifierType.CANNOT_BE_SELECTED_BY_EFFECT, perm,
+                value_fn=lambda: True, expiry='end_of_opponent_turn')
+            # Unsuspend this Digimon
+            perm.unsuspend()
 
         effect3.set_on_process_callback(process3)
         effects.append(effect3)

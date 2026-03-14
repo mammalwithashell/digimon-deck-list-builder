@@ -67,6 +67,9 @@ class CombatMixin:
             return_phase=return_phase,
         )
 
+        # Fire opponent-side "when attacked" observers (DCGO: SwitchDefender window)
+        self._fire_opponent_attack_observers(attacker)
+
         # <Alliance>: check if attacker has Alliance and suspendable allies exist
         if attacker.has_keyword('_is_alliance'):
             has_alliance_targets = any(
@@ -323,3 +326,52 @@ class CombatMixin:
             return
 
         self.check_turn_end()
+
+    def switch_attack_target(self, new_target: Permanent):
+        """Redirect the current attack to a different target (DCGO: SwitchDefender)."""
+        if self.pending_attack is None:
+            return
+        if self.modifiers.has_modifier(self.pending_attack.attacker,
+                                       ModifierType.CANNOT_SWITCH_ATTACK_TARGET):
+            self.logger.log("[Redirect] Attack target cannot be switched!")
+            return
+        old_ref = self._perm_ref(self.pending_attack.effective_target) if isinstance(
+            self.pending_attack.effective_target, Permanent) else "Player"
+        self.pending_attack.effective_target = new_target
+        self.logger.log(
+            f"[Redirect] Attack redirected from {old_ref} to {self._perm_ref(new_target)}")
+        self.execute_effects(EffectTiming.OnAttackTargetChanged,
+                             {"attacker": self.pending_attack.attacker, "new_target": new_target})
+
+    def _fire_opponent_attack_observers(self, attacker: Permanent):
+        """Fire effects on opponent permanents that observe attacks (redirect window).
+
+        Scans the opponent player's battle area for effects with
+        _is_when_attacked_observer=True and fires them. This is the
+        DCGO SwitchDefender / redirect window. Uses Permanent.effect_list()
+        which includes card source effects, linked effects, and granted effects.
+        """
+        from ..data.enums import EffectTiming as _ET
+        opponent = self.opponent_player
+        if opponent is None:
+            return
+        for perm in list(opponent.battle_area):
+            for effect in perm.effect_list(_ET.NoTiming):
+                if not getattr(effect, '_is_when_attacked_observer', False):
+                    continue
+                if not effect.on_process_callback:
+                    continue
+                if not effect.can_activate_this_turn():
+                    continue
+                effect.set_effect_source_permanent(perm)
+                context = {
+                    'game': self, 'player': opponent, 'permanent': perm,
+                    'card': effect.effect_source_card,
+                    'attacker': attacker,
+                    'turn_player': self.turn_player,
+                    'opponent_player': opponent,
+                }
+                if effect.can_use_condition and not effect.can_use_condition(context):
+                    continue
+                effect.record_activation()
+                effect.on_process_callback(context)

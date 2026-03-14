@@ -260,9 +260,12 @@ class EX11_036(CardScript):
                 target_perm.grant_keyword('_is_cannot_unsuspend')
             game.effect_select_opponent_permanent(
                 player, on_suspend, filter_fn=target_filter, is_optional=True)
-            # BLOCKED: force_attack — engine cannot force a Digimon to attack.
-            # The card text says "then, this Digimon may attack" but there is no
-            # engine API to initiate an attack from within an effect callback.
+            # "then, this Digimon may attack" — register FORCE_ATTACK on self
+            if perm and game:
+                from ....interfaces.modifiers import ModifierType
+                game.register_modifier(
+                    perm, ModifierType.FORCE_ATTACK,
+                    value_fn=lambda: True, expiry='end_of_turn')
 
         effect7.set_on_process_callback(process7)
         effects.append(effect7)

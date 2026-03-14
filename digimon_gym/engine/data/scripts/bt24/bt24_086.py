@@ -47,6 +47,13 @@ class BT24_086(CardScript):
         def condition1(context: Dict[str, Any]) -> bool:
             return True
         effect1.set_can_use_condition(condition1)
+
+        def process1(ctx: Dict[str, Any]):
+            """Play this card from security without paying cost."""
+            player = ctx.get('player')
+            if player and card:
+                player.play_card_from_source(card, pay_cost=False)
+        effect1.set_on_process_callback(process1)
         effects.append(effect1)
 
         # Timing: EffectTiming.OnStartMainPhase
@@ -165,18 +172,50 @@ class BT24_086(CardScript):
         effect6.set_can_use_condition(condition6)
 
         def process6(ctx: Dict[str, Any]):
-            """Action: Play Card"""
+            """Action: Play 1 [Shuu Yulin] from this Digimon's digivolution cards"""
             player = ctx.get('player')
             perm = ctx.get('permanent')
             game = ctx.get('game')
-            if not (player and game):
+            if not (player and game and perm):
                 return
-            def play_filter(c):
-                if not (any('Shuu Yulin' in _n for _n in getattr(c, 'card_names', []))):
-                    return False
-                return True
-            game.effect_play_from_zone(
-                player, 'hand', play_filter, free=True, is_optional=True)
+            # Find [Shuu Yulin] in this permanent's digivolution cards
+            candidates = [
+                cs for cs in perm.card_sources
+                if cs is not perm.top_card
+                and any('Shuu Yulin' in _n for _n in getattr(cs, 'card_names', []))
+            ]
+            if not candidates:
+                return
+            from ....data.enums import GamePhase
+            from ....game.constants import SOURCES_PER_FIELD
+            # Find field index of this permanent
+            field_idx = None
+            for fi, fp in enumerate(player.battle_area):
+                if fp is perm:
+                    field_idx = fi
+                    break
+            if field_idx is None:
+                return
+            base = 2000 + field_idx * SOURCES_PER_FIELD
+            valid = []
+            for i, cs in enumerate(perm.card_sources):
+                if cs in candidates and (base + i) < 2168:
+                    valid.append(base + i)
+            if not valid:
+                return
+
+            def on_source_selected(action_id):
+                idx = action_id - base
+                if not (0 <= idx < len(perm.card_sources)):
+                    return
+                chosen = perm.card_sources[idx]
+                perm.card_sources.remove(chosen)
+                player.play_card_from_source(chosen, pay_cost=False)
+
+            game.request_selection(
+                GamePhase.SelectSource, player, on_source_selected,
+                valid, is_optional=True,
+                prompt="Select 1 [Shuu Yulin] from this Digimon's digivolution cards to play.")
 
         effect6.set_on_process_callback(process6)
         effects.append(effect6)

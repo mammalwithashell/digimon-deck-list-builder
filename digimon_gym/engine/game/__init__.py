@@ -820,6 +820,8 @@ class Game(CombatMixin, ActionDecoderMixin, EffectHelpersMixin):
             te.effect.record_activation()
             te.effect.on_process_callback(te.context)
 
+        self._fire_deletion_observers(deleted_permanent, owner)
+
     # ─── Modifier Registry Convenience Methods ──────────────────────
 
     def register_modifier(
@@ -970,6 +972,116 @@ class Game(CombatMixin, ActionDecoderMixin, EffectHelpersMixin):
                     effect.record_activation()
                     effect.on_process_callback(context)
 
+    def _fire_play_observers(self, played_perm, player):
+        """Fire effects on other permanents observing a play event."""
+        if player is None:
+            return
+        for perm in list(player.battle_area):
+            if perm is played_perm:
+                continue
+            for source in perm.card_sources:
+                for effect in source.effect_list(EffectTiming.NoTiming):
+                    if not getattr(effect, '_is_play_observer', False):
+                        continue
+                    if not effect.on_process_callback:
+                        continue
+                    if not effect.can_activate_this_turn():
+                        continue
+                    effect.set_effect_source_permanent(perm)
+                    context = {
+                        'game': self, 'player': player, 'permanent': perm,
+                        'card': effect.effect_source_card,
+                        'played_permanent': played_perm,
+                        'turn_player': self.turn_player,
+                        'opponent_player': self.opponent_player,
+                    }
+                    if effect.can_use_condition and not effect.can_use_condition(context):
+                        continue
+                    effect.record_activation()
+                    effect.on_process_callback(context)
+
+    def _fire_deletion_observers(self, deleted_perm, owner):
+        """Fire effects on permanents observing a deletion event."""
+        if owner is None:
+            return
+        # Scan owner's battle area
+        for perm in list(owner.battle_area):
+            if perm is deleted_perm:
+                continue
+            for source in perm.card_sources:
+                for effect in source.effect_list(EffectTiming.NoTiming):
+                    if not getattr(effect, '_is_deletion_observer', False):
+                        continue
+                    if not effect.on_process_callback:
+                        continue
+                    if not effect.can_activate_this_turn():
+                        continue
+                    effect.set_effect_source_permanent(perm)
+                    context = {
+                        'game': self, 'player': owner, 'permanent': perm,
+                        'card': effect.effect_source_card,
+                        'deleted_permanent': deleted_perm,
+                        'turn_player': self.turn_player,
+                        'opponent_player': self.opponent_player,
+                    }
+                    if effect.can_use_condition and not effect.can_use_condition(context):
+                        continue
+                    effect.record_activation()
+                    effect.on_process_callback(context)
+        # Also scan opponent's battle area for cross-side watchers
+        enemy = owner.enemy if hasattr(owner, 'enemy') and owner.enemy else None
+        if enemy:
+            for perm in list(enemy.battle_area):
+                for source in perm.card_sources:
+                    for effect in source.effect_list(EffectTiming.NoTiming):
+                        if not getattr(effect, '_is_deletion_observer', False):
+                            continue
+                        if not effect.on_process_callback:
+                            continue
+                        if not effect.can_activate_this_turn():
+                            continue
+                        effect.set_effect_source_permanent(perm)
+                        context = {
+                            'game': self, 'player': enemy, 'permanent': perm,
+                            'card': effect.effect_source_card,
+                            'deleted_permanent': deleted_perm,
+                            'turn_player': self.turn_player,
+                            'opponent_player': self.opponent_player,
+                        }
+                        if effect.can_use_condition and not effect.can_use_condition(context):
+                            continue
+                        effect.record_activation()
+                        effect.on_process_callback(context)
+
+    def _fire_suspend_observers(self, suspended_perm):
+        """Fire effects on permanents observing a suspend event."""
+        owner = self._find_owner(suspended_perm)
+        if owner is None:
+            return
+        for perm in list(owner.battle_area):
+            if perm is suspended_perm:
+                continue
+            for source in perm.card_sources:
+                for effect in source.effect_list(EffectTiming.NoTiming):
+                    if not getattr(effect, '_is_suspend_observer', False):
+                        continue
+                    if not effect.on_process_callback:
+                        continue
+                    if not effect.can_activate_this_turn():
+                        continue
+                    effect.set_effect_source_permanent(perm)
+                    context = {
+                        'game': self, 'player': owner, 'permanent': perm,
+                        'card': effect.effect_source_card,
+                        'suspended_permanent': suspended_perm,
+                        'turn_player': self.turn_player,
+                        'opponent_player': self.opponent_player,
+                    }
+                    if effect.can_use_condition and not effect.can_use_condition(context):
+                        continue
+                    effect.record_activation()
+                    effect.on_process_callback(context)
+
     def _reset_effect_turn_counts(self):
         """Reset once-per-turn counters for all effects at start of turn."""
         for player in [self.player1, self.player2]:
@@ -1024,6 +1136,12 @@ class Game(CombatMixin, ActionDecoderMixin, EffectHelpersMixin):
             return
 
         card = self.turn_player.hand_cards[card_index]
+
+        # Runtime guard: CANNOT_PLAY_CARD modifier
+        if self._is_play_blocked_by_modifier(card):
+            self.logger.log(f"[Rejected] action_play_card: {self._card_ref(card)} blocked by CANNOT_PLAY_CARD modifier")
+            return
+
         cost = self.calculate_play_cost(self.turn_player, card, commit=True)
 
         self.logger.log(f"[Play] {self.turn_player.player_name} plays {self._card_ref(card)} (cost: {cost})")
@@ -1049,6 +1167,7 @@ class Game(CombatMixin, ActionDecoderMixin, EffectHelpersMixin):
             EffectTiming.OnEnterFieldAnyone,
             {"played_card": card, "played_permanent": played_perm, "event_player": self.turn_player},
         )
+        self._fire_play_observers(played_perm, self.turn_player)
         if is_option and not self._option_stays_on_field(card):
             self._trash_option_after_resolution(self.turn_player, played_perm)
         self.check_turn_end()
@@ -1066,6 +1185,11 @@ class Game(CombatMixin, ActionDecoderMixin, EffectHelpersMixin):
 
         perm = self.turn_player.battle_area[permanent_index]
         card = self.turn_player.hand_cards[card_index]
+
+        # Runtime guard: CANNOT_DIGIVOLVE modifier
+        if self.modifiers.has_modifier(perm, ModifierType.CANNOT_DIGIVOLVE):
+            self.logger.log(f"[Rejected] action_digivolve: {self._perm_ref(perm)} blocked by CANNOT_DIGIVOLVE modifier")
+            return
 
         from_card_id = self._card_id(perm.top_card) if perm.top_card else None
         cost = self.turn_player.digivolve(perm, card)

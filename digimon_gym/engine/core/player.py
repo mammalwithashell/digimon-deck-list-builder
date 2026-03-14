@@ -323,6 +323,12 @@ class Player:
         self._fire_timing(EffectTiming.WhenPermanentWouldBeDeleted,
                           {"permanent": permanent, "player": self, "is_battle": is_battle})
 
+        # DCGO: willBeRemoveField flag — effects can cancel deletion
+        if getattr(permanent, '_will_not_be_removed', False):
+            permanent._will_not_be_removed = False
+            self._log(f"{perm_name} — removal prevented by effect")
+            return False
+
         # Check modifier registry for destruction prevention
         if self.game and hasattr(self.game, 'modifiers'):
             if not self.game.modifiers.can_be_destroyed(permanent, is_battle=is_battle):
@@ -570,6 +576,19 @@ class Player:
             else:
                 a_dp = attacker.dp or 0
                 s_dp = security_card.base_dp or 0
+                # Apply security DP modifiers from attacker's inherited effects
+                for src in attacker.card_sources[:-1]:
+                    for eff in src.effect_list(EffectTiming.NoTiming):
+                        if not eff.is_inherited_effect:
+                            continue
+                        if not getattr(eff, '_applies_to_opponent_security_digimon', False):
+                            continue
+                        if eff.dp_modifier == 0:
+                            continue
+                        if eff.can_use_condition and not eff.can_use_condition({}):
+                            continue
+                        s_dp += eff.dp_modifier
+                s_dp = max(0, s_dp)
                 self._log(f"Battle: Attacker DP {a_dp} vs Security DP {s_dp}")
                 if a_dp < s_dp or a_dp == s_dp:
                     # <Jamming>: Digimon can't be deleted in battles against Security Digimon
@@ -623,7 +642,18 @@ class Player:
         return drawn
 
     def add_memory(self, amount: int):
-        """Gain memory for this player (adjusts Game.memory)."""
+        """Gain memory for this player (adjusts Game.memory).
+
+        DCGO: Player.CanAddMemory() checks ICannotAddMemoryEffect before
+        allowing positive memory gains. Negative adjustments (losing memory)
+        always go through.
+        """
+        if amount > 0 and self.game and hasattr(self.game, 'modifiers'):
+            from ..interfaces.modifiers import ModifierType
+            for entry in self.game.modifiers._modifiers.get(ModifierType.CANNOT_ADD_MEMORY, []):
+                if entry.condition is None or entry.condition(None, {'player': self}):
+                    self._log(f"{self.player_name} cannot gain memory (blocked by effect)")
+                    return
         if self.game:
             if self is self.game.turn_player:
                 self.game.memory += amount

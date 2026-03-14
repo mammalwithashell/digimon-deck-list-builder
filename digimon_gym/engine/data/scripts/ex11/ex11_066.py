@@ -127,18 +127,14 @@ class EX11_066(CardScript):
         effects.append(effect2)
 
         # ─── Effect 3: [All Turns] When your Digimon are played or digivolve
-        # NOTE: Engine gap — OnEnterFieldAnyone dispatches only to the permanent
-        # that was played/digivolved, not to other permanents like this Tamer.
-        # The logic below is correct per card text but won't trigger automatically
-        # from the engine's effect dispatch for other Digimon's play/digivolve.
-        # Using OnEnterFieldAnyone without is_on_play so it fires in the
-        # no-flag timing match path (which still requires perm.top_card == played_card,
-        # so effectively this only fires on the Tamer's own play as a side effect).
+        # Uses _is_play_observer to trigger when OTHER Digimon are played.
+        # Also set _is_digivolve_observer for digivolve triggers.
         effect3 = ICardEffect()
-        effect3.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect3.set_effect_name("EX11-066 Suspend, reveal 2, place Vemmon as bottom digi-cards")
         effect3.set_effect_description("[All Turns] When your Digimon are played or digivolve, if any of them have [Vemmon] in their texts, by suspending this Tamer, reveal the top 2 cards of your deck. Place all [Vemmon] among them as any of those Digimon's bottom digivolution cards. Trash the rest.")
         effect3.is_optional = True
+        effect3._is_play_observer = True
+        effect3._is_digivolve_observer = True
 
         def condition3(context: Dict[str, Any]) -> bool:
             if card and card.permanent_of_this_card() is None:
@@ -146,6 +142,19 @@ class EX11_066(CardScript):
             # This Tamer must not already be suspended (suspend is the cost)
             perm = card.permanent_of_this_card()
             if perm and getattr(perm, 'is_suspended', False):
+                return False
+            # The triggering Digimon must be ours and have [Vemmon] in text
+            trigger_perm = context.get('played_permanent') or context.get('digivolved_permanent')
+            if not trigger_perm:
+                return False
+            if not trigger_perm.is_digimon:
+                return False
+            owner = card.owner if card else None
+            if not owner:
+                return False
+            if trigger_perm not in owner.battle_area:
+                return False
+            if trigger_perm.top_card and not _has_vemmon_text(trigger_perm.top_card):
                 return False
             return True
 
@@ -155,9 +164,8 @@ class EX11_066(CardScript):
             """Suspend this Tamer, reveal top 2, place [Vemmon] as bottom digi-cards,
             trash the rest."""
             player = ctx.get('player')
-            perm = ctx.get('permanent')
             game = ctx.get('game')
-            if not (player and game and perm):
+            if not (player and game):
                 return
 
             # Cost: suspend this Tamer
@@ -178,19 +186,16 @@ class EX11_066(CardScript):
             vemmon_cards = [c for c in revealed if _is_vemmon_name(c)]
             non_vemmon = [c for c in revealed if not _is_vemmon_name(c)]
 
-            # Place all [Vemmon] as bottom digi-cards of the triggering Digimon.
-            # Since the engine gap means we can't identify which specific Digimon
-            # triggered this, place on own Digimon with [Vemmon] in text if available.
-            # In the context, 'permanent' is the permanent that triggered the effect.
-            target_perm = ctx.get('permanent')
-            if target_perm and target_perm.is_digimon:
+            # Place all [Vemmon] as bottom digi-cards of the triggering Digimon
+            trigger_perm = ctx.get('played_permanent') or ctx.get('digivolved_permanent')
+            if trigger_perm and trigger_perm.is_digimon:
                 for vc in vemmon_cards:
-                    target_perm.add_card_source_bottom(vc)
+                    trigger_perm.add_card_source_bottom(vc)
             else:
                 # Fallback: find a Digimon with Vemmon in text on own field
                 own_vemmon_digimon = [
                     p for p in player.battle_area
-                    if p.is_digimon and _has_vemmon_text(p.top_card) if p.top_card
+                    if p.is_digimon and p.top_card and _has_vemmon_text(p.top_card)
                 ]
                 if own_vemmon_digimon:
                     target = own_vemmon_digimon[0]

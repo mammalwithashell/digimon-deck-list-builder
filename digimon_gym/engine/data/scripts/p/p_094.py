@@ -137,30 +137,59 @@ class P_094(CardScript):
         effects.append(effect1)
 
         # ─── Effect 2 (Inherited): Redirect attack
-        # BLOCKED: redirect_attack / SwitchDefender is not implemented in the engine.
-        # The inherited effect requires switching the attack target to this Digimon
-        # after placing 2 [Vemmon] from a [Galacticmon]'s digi-cards to deck bottom.
-        # Engine gap: no redirect_attack / SwitchDefender mechanic.
+        # Uses _is_when_attacked_observer + switch_attack_target()
+        # Cost: place 2 [Vemmon] from a [Galacticmon]'s digi-cards to deck bottom
         effect2 = ICardEffect()
-        effect2.set_timing(EffectTiming.OnUseAttack)
-        effect2.set_effect_name("P-094 Redirect attack (BLOCKED — engine gap)")
+        effect2.set_effect_name("P-094 Redirect attack to this Digimon")
         effect2.set_effect_description("[Opponent's Turn] [Once Per Turn] When an opponent's Digimon attacks, by placing 2 [Vemmon] from 1 of your [Galacticmon]'s digivolution cards at the bottom of their owners' decks, switch the target of attack to this Digimon.")
         effect2.is_inherited_effect = True
         effect2.is_optional = True
         effect2.set_max_count_per_turn(1)
         effect2.set_hash_string("SwitchAttackTarget_P_094")
-        effect2.is_on_attack = True
+        effect2._is_when_attacked_observer = True
 
         def condition2(context: Dict[str, Any]) -> bool:
             if card and card.permanent_of_this_card() is None:
                 return False
-            return True
+            # Only on opponent's turn
+            owner = card.owner if card else None
+            if owner and owner.is_my_turn:
+                return False
+            if not owner:
+                return False
+            # Must have a Galacticmon with at least 2 Vemmon in digi-cards
+            for p in owner.battle_area:
+                if p.contains_card_name('Galacticmon') and _count_vemmon_in_digi_cards(p) >= 2:
+                    return True
+            return False
 
         effect2.set_can_use_condition(condition2)
 
         def process2(ctx: Dict[str, Any]):
-            """Redirect Attack — BLOCKED: redirect_attack not in engine."""
-            pass  # descriptive-tagged: redirect_attack
+            """Redirect Attack via SwitchDefender after placing 2 Vemmon to deck bottom."""
+            player = ctx.get('player')
+            perm = ctx.get('permanent')
+            game = ctx.get('game')
+            if not (player and perm and game):
+                return
+            # Find a Galacticmon with 2+ Vemmon in digi-cards
+            for galacticmon in list(player.battle_area):
+                if not galacticmon.contains_card_name('Galacticmon'):
+                    continue
+                vemmon_cards = [
+                    cs for cs in galacticmon.card_sources[:-1]
+                    if any('Vemmon' in n for n in getattr(cs, 'card_names', []))
+                ]
+                if len(vemmon_cards) >= 2:
+                    # Place 2 Vemmon at bottom of deck
+                    for vc in vemmon_cards[:2]:
+                        galacticmon.card_sources.remove(vc)
+                        player.library_cards.append(vc)
+                    game.logger.log(
+                        "[P-094] Placed 2 Vemmon from Galacticmon's digi-cards to deck bottom")
+                    # Redirect attack
+                    game.switch_attack_target(perm)
+                    break
 
         effect2.set_on_process_callback(process2)
         effects.append(effect2)

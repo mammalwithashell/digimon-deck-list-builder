@@ -86,12 +86,13 @@ class ST12_10(CardScript):
         effect2.set_can_use_condition(condition2)
 
         def process2(ctx: Dict[str, Any]):
-            """Action: DP +3000"""
+            """Action: DP +3000 and SA+1"""
             player = ctx.get('player')
             perm = ctx.get('permanent')
             game = ctx.get('game')
             if perm:
                 perm.change_dp(3000)
+                perm._temp_sa_modifier += 1
 
         effect2.set_on_process_callback(process2)
         effects.append(effect2)

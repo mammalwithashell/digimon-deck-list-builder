@@ -52,11 +52,10 @@ class EX11_060(CardScript):
 
         # --- Effect 1: [All Turns] Deletion trigger ---
         effect1 = ICardEffect()
-        effect1.set_timing(EffectTiming.OnDestroyedAnyone)
         effect1.set_effect_name("EX11-060 Draw 1 on Token/Puppet deletion, Overclock play")
         effect1.set_effect_description("[All Turns] When Token/Puppet deleted, suspend to Draw 1. If Overclock, play Puppet Lv4-.")
         effect1.is_optional = True
-        effect1.is_on_deletion = True
+        effect1._is_deletion_observer = True
 
         def condition1(context: Dict[str, Any]) -> bool:
             if card and card.permanent_of_this_card() is None:
@@ -66,23 +65,24 @@ class EX11_060(CardScript):
             if my_perm and my_perm.is_suspended:
                 return False
             # Check that the deleted permanent is one of our Tokens or Puppet Digimon
-            deleted_perm = context.get('permanent')
-            if deleted_perm:
-                player = card.owner if card else None
-                if not player:
-                    return False
-                # Must be our Digimon
+            deleted_perm = context.get('deleted_permanent')
+            if not deleted_perm:
+                return False
+            player = card.owner if card else None
+            if not player:
+                return False
+            # Must be our Digimon
+            owner_player = getattr(deleted_perm, '_owner_player', None)
+            if owner_player is not player:
                 if deleted_perm not in player.battle_area and not getattr(deleted_perm, '_was_on_owner_field', False):
-                    # The permanent was already removed, check owner
-                    if getattr(deleted_perm, '_owner_player', None) is not player:
-                        pass  # May still be ours
-                # Check Token or Puppet trait
-                is_token = getattr(deleted_perm, 'is_token', False)
-                is_puppet = False
-                if deleted_perm.top_card:
-                    is_puppet = _is_puppet_trait(deleted_perm.top_card)
-                if not (is_token or is_puppet):
                     return False
+            # Check Token or Puppet trait
+            is_token = getattr(deleted_perm, 'is_token', False)
+            is_puppet = False
+            if deleted_perm.top_card:
+                is_puppet = _is_puppet_trait(deleted_perm.top_card)
+            if not (is_token or is_puppet):
+                return False
             return True
         effect1.set_can_use_condition(condition1)
 

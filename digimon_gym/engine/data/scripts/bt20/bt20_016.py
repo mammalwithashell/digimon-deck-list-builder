@@ -34,8 +34,6 @@ class BT20_016(CardScript):
         effect1.set_effect_name("BT20-016 Piercing and Digivolve into Imperialdramon Dragon Mode")
         effect1.set_effect_description("[On Play] For the turn, 1 of your Digimon gains <Piercing> (When this Digimon attacks and deletes an opponent's Digimon and survives the battle, it performs any security checks it normally would) and gets +4000 DP. Then, this Digimon may attack.")
         effect1.is_on_play = True
-        effect1._is_piercing = True
-
         effect = effect1  # alias for condition closure
         def condition1(context: Dict[str, Any]) -> bool:
             if card and card.permanent_of_this_card() is None:
@@ -50,12 +48,22 @@ class BT20_016(CardScript):
             player = ctx.get('player')
             perm = ctx.get('permanent')
             game = ctx.get('game')
-            if perm:
-                perm.change_dp(4000)
-            if perm:
-                perm.grant_keyword('_is_piercing')
-            # Force attack — target Digimon may attack (requires engine SelectAttack)
-            pass  # descriptive-tagged: force_attack
+            if not (player and game and perm):
+                return
+            # "1 of your Digimon gains <Piercing> and gets +4000 DP"
+            def own_filter(p):
+                return p.is_digimon
+            def on_target(target_perm):
+                target_perm.change_dp(4000)
+                target_perm.grant_keyword('_is_piercing')
+                # "Then, this Digimon may attack"
+                from ....interfaces.modifiers import ModifierType
+                game.register_modifier(
+                    perm, ModifierType.FORCE_ATTACK,
+                    value_fn=lambda: True, expiry='end_of_turn')
+            game.effect_select_own_permanent(
+                player, on_target, filter_fn=own_filter, is_optional=False,
+                prompt="Select 1 of your Digimon to gain Piercing and +4000 DP.")
 
         effect1.set_on_process_callback(process1)
         effects.append(effect1)
@@ -67,8 +75,6 @@ class BT20_016(CardScript):
         effect2.set_effect_name("BT20-016 1 Digimon gains Piercing and 4000DP, then this digimon may attack")
         effect2.set_effect_description("[When Digivolving] For the turn, 1 of your Digimon gains <Piercing> (When this Digimon attacks and deletes an opponent's Digimon and survives the battle, it performs any security checks it normally would) and gets +4000 DP. Then, this Digimon may attack.")
         effect2.is_when_digivolving = True
-        effect2._is_piercing = True
-
         effect = effect2  # alias for condition closure
         def condition2(context: Dict[str, Any]) -> bool:
             if card and card.permanent_of_this_card() is None:
@@ -83,12 +89,22 @@ class BT20_016(CardScript):
             player = ctx.get('player')
             perm = ctx.get('permanent')
             game = ctx.get('game')
-            if perm:
-                perm.change_dp(4000)
-            if perm:
-                perm.grant_keyword('_is_piercing')
-            # Force attack — target Digimon may attack (requires engine SelectAttack)
-            pass  # descriptive-tagged: force_attack
+            if not (player and game and perm):
+                return
+            # "1 of your Digimon gains <Piercing> and gets +4000 DP"
+            def own_filter(p):
+                return p.is_digimon
+            def on_target(target_perm):
+                target_perm.change_dp(4000)
+                target_perm.grant_keyword('_is_piercing')
+                # "Then, this Digimon may attack"
+                from ....interfaces.modifiers import ModifierType
+                game.register_modifier(
+                    perm, ModifierType.FORCE_ATTACK,
+                    value_fn=lambda: True, expiry='end_of_turn')
+            game.effect_select_own_permanent(
+                player, on_target, filter_fn=own_filter, is_optional=False,
+                prompt="Select 1 of your Digimon to gain Piercing and +4000 DP.")
 
         effect2.set_on_process_callback(process2)
         effects.append(effect2)

@@ -533,6 +533,9 @@ class Permanent:
         if not self.is_suspended:
             self.is_suspended = True
             self._fire_timing(EffectTiming.OnTappedAnyone, {"permanent": self})
+            # Fire cross-permanent suspend observers
+            if self._owner_game and hasattr(self._owner_game, '_fire_suspend_observers'):
+                self._owner_game._fire_suspend_observers(self)
 
     def unsuspend(self):
         if self.is_suspended:

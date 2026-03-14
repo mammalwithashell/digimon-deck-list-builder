@@ -35,8 +35,15 @@ class BT10_095(CardScript):
             game = ctx.get('game')
             if player:
                 player.draw_cards(2)
-            # Grant Security Attack modifier to target permanent
-            pass  # descriptive-tagged: change_security_attack
+            # Grant SA+1 to 1 Xros Heart Digimon
+            if not (player and game):
+                return
+            def sa_filter(p):
+                return p.is_digimon and any('Xros Heart' in t for t in (getattr(p.top_card, 'card_traits', []) or []))
+            def on_sa_grant(target_perm):
+                target_perm._temp_sa_modifier += 1
+            game.effect_select_own_permanent(
+                player, on_sa_grant, filter_fn=sa_filter, is_optional=False)
 
         effect0.set_on_process_callback(process0)
         effects.append(effect0)

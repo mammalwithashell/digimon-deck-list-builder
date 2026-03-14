@@ -112,6 +112,11 @@ class BT24_040(CardScript):
                             game.register_modifier(
                                 t, ModifierType.CANNOT_SUSPEND,
                                 value_fn=lambda: True, expiry='end_of_opponent_turn')
+                            # Also disable [When Digivolving] effects
+                            game.register_modifier(
+                                t, ModifierType.DISABLE_EFFECT,
+                                condition=lambda p, c, fp=t: p is fp,
+                                expiry='end_of_opponent_turn')
                             game.logger.log(
                                 f"[Effect] {game._perm_ref(t)} can't suspend or "
                                 f"activate [When Digivolving] effects")

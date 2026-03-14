@@ -50,6 +50,9 @@ def build_action_mask(game: "Game", player_id: int) -> List[float]:
         # Play cards (0-29)
         for i in range(min(len(me.hand_cards), 30)):
             card = me.hand_cards[i]
+            # DCGO: ICanNotPlayCardEffect blocks playing from hand
+            if game._is_play_blocked_by_modifier(card):
+                continue
             play_cost = game.calculate_play_cost(me, card)
             if game.memory >= 0 and play_cost <= game.memory + 10:
                 # Option color requirement: must have a matching-color
@@ -110,6 +113,9 @@ def build_action_mask(game: "Game", player_id: int) -> List[float]:
                 continue
             for f in range(min(len(me.battle_area), FIELD_SLOTS)):
                 base_perm = me.battle_area[f]
+                # DCGO: ICanNotDigivolveEffect blocks digivolution on target
+                if game.modifiers.has_modifier(base_perm, ModifierType.CANNOT_DIGIVOLVE):
+                    continue
                 if can_digivolve(card, base_perm):
                     mask[400 + h * FIELDS_PER_HAND + f] = 1.0
             # Virtual field index BREEDING_SLOT = breeding area digivolve.

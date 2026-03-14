@@ -260,6 +260,7 @@ class EffectHelpersMixin:
                     "event_player": target_player,
                 },
             )
+            self._fire_play_observers(perm, target_player)
 
     def _is_play_blocked_by_modifier(self, card: "CardSource") -> bool:
         """Check if CANNOT_PLAY_CARD modifiers block playing this card by effect."""
@@ -329,6 +330,7 @@ class EffectHelpersMixin:
                         EffectTiming.OnEnterFieldAnyone,
                         {"played_card": card, "played_permanent": played_perm, "event_player": player},
                     )
+                    self._fire_play_observers(played_perm, player)
                     if card.is_option and not self._option_stays_on_field(card):
                         self._trash_option_after_resolution(player, played_perm)
 
@@ -383,6 +385,7 @@ class EffectHelpersMixin:
                     EffectTiming.OnEnterFieldAnyone,
                     {"played_card": card, "played_permanent": played_perm, "event_player": player},
                 )
+                self._fire_play_observers(played_perm, player)
                 if card.is_option and not self._option_stays_on_field(card):
                     self._trash_option_after_resolution(player, played_perm)
 

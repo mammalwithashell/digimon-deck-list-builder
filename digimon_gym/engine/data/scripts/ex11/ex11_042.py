@@ -127,33 +127,36 @@ class EX11_042(CardScript):
         effect3.set_on_process_callback(process3)
         effects.append(effect3)
 
-        # Timing: EffectTiming.OnUseAttack
-        # [Opponent's Turn] [Once Per Turn] When one of your opponent's Digimon attacks, you may change the attack target to this Digimon.
+        # [Opponent's Turn] [Once Per Turn] When one of your opponent's Digimon
+        # attacks, you may change the attack target to this Digimon.
+        # Uses _is_when_attacked_observer pattern + game.switch_attack_target()
         effect4 = ICardEffect()
-        effect4.set_timing(EffectTiming.OnUseAttack)
-        effect4.set_effect_name("EX11-042 You may change the attack target to this Digimon.")
+        effect4.set_effect_name("EX11-042 Redirect attack to this Digimon")
         effect4.set_effect_description("[Opponent's Turn] [Once Per Turn] When one of your opponent's Digimon attacks, you may change the attack target to this Digimon.")
         effect4.is_inherited_effect = True
         effect4.is_optional = True
         effect4.set_max_count_per_turn(1)
         effect4.set_hash_string("Redirect_EX11_042")
-        effect4.is_on_attack = True
+        effect4._is_when_attacked_observer = True
 
-        effect = effect4  # alias for condition closure
         def condition4(context: Dict[str, Any]) -> bool:
             if card and card.permanent_of_this_card() is None:
+                return False
+            # Only on opponent's turn
+            owner = card.owner if card else None
+            if owner and owner.is_my_turn:
                 return False
             return True
 
         effect4.set_can_use_condition(condition4)
 
         def process4(ctx: Dict[str, Any]):
-            """Action: Redirect Attack"""
-            player = ctx.get('player')
+            """Action: Redirect Attack via SwitchDefender"""
             perm = ctx.get('permanent')
             game = ctx.get('game')
-            # Redirect attack target (SwitchDefender) — not yet in engine
-            pass  # descriptive-tagged: redirect_attack
+            if not (perm and game):
+                return
+            game.switch_attack_target(perm)
 
         effect4.set_on_process_callback(process4)
         effects.append(effect4)

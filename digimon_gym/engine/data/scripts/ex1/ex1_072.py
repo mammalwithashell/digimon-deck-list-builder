@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....interfaces.modifiers import ModifierType, ModifierEntry
 from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
@@ -38,9 +39,20 @@ class EX1_072(CardScript):
             game = ctx.get('game')
             if not (player and game):
                 return
-            # descriptive-tagged: cannot_use_options
-            # The engine doesn't have a CANNOT_USE_OPTIONS modifier.
-            # Register as a global restriction.
+            enemy = player.enemy
+            if not enemy:
+                return
+            # Register CANNOT_PLAY_CARD for Option cards, targeting opponent
+            # Expires at end of opponent's next turn
+            game.modifiers.register(ModifierEntry(
+                modifier_type=ModifierType.CANNOT_PLAY_CARD,
+                condition=lambda t, c: (
+                    c.get('card') is not None and c['card'].is_option
+                ),
+                source_permanent=None,
+                expiry='end_of_opponent_turn',
+                granting_player=player,
+            ))
             game.logger.log(
                 "[EX1-072] Opponent can't use Option cards until end of their next turn."
             )
@@ -64,9 +76,18 @@ class EX1_072(CardScript):
 
         def process1(ctx: Dict[str, Any]):
             player = ctx.get('player')
-            if not player:
+            game = ctx.get('game')
+            if not (player and game):
                 return
-            # descriptive-tagged: cannot_use_options
+            # Register CANNOT_PLAY_CARD for Options, end_of_turn expiry
+            game.modifiers.register(ModifierEntry(
+                modifier_type=ModifierType.CANNOT_PLAY_CARD,
+                condition=lambda t, c: (
+                    c.get('card') is not None and c['card'].is_option
+                ),
+                source_permanent=None,
+                expiry='end_of_turn',
+            ))
             # Add this card to hand
             if card in player.trash_cards:
                 player.trash_cards.remove(card)

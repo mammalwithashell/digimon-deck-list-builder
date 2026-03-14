@@ -42,6 +42,10 @@ class BT3_097(CardScript):
             def digimon_filter(p):
                 return p.is_digimon and p in player.battle_area
 
+            # Guard: skip selection if no valid targets exist
+            if not any(digimon_filter(p) for p in player.battle_area):
+                return
+
             def on_selected(target_perm):
                 if target_perm is None:
                     return

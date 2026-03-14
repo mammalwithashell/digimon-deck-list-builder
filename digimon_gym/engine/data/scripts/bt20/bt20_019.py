@@ -62,18 +62,43 @@ class BT20_019(CardScript):
         effect2.set_can_use_condition(condition2)
 
         def process2(ctx: Dict[str, Any]):
-            """Action: Force Attack, Effect Immunity"""
+            """Action: Effect Immunity, Force Attack"""
             player = ctx.get('player')
             perm = ctx.get('permanent')
             game = ctx.get('game')
-            # Force attack — target Digimon may attack (requires engine SelectAttack)
-            pass  # descriptive-tagged: force_attack
-            # Grant effect immunity via modifier system
-            if perm and game:
-                from digimon_gym.engine.interfaces.modifiers import ModifierType
+            if not (player and game and perm):
+                return
+            # Check condition: Jesmon or X Antibody in digivolution cards
+            has_jesmon_or_x = False
+            for cs in perm.card_sources:
+                if cs is not perm.top_card:
+                    for n in getattr(cs, 'card_names', []):
+                        if 'Jesmon' in n or 'X Antibody' in n:
+                            has_jesmon_or_x = True
+                            break
+            if not has_jesmon_or_x:
+                return
+            # "1 of your Digimon isn't affected by your opponent's effects"
+            def own_filter(p):
+                return p.is_digimon
+            def on_immunity_target(target_perm):
+                from ....interfaces.modifiers import ModifierType
                 game.register_modifier(
-                    ModifierType.CANNOT_BE_SELECTED_BY_EFFECT, perm,
+                    target_perm, ModifierType.CANNOT_BE_SELECTED_BY_EFFECT,
                     value_fn=lambda: True, expiry='end_of_turn')
+                # "Then, 1 of your Digimon may attack"
+                def on_attack_target(atk_perm):
+                    game.register_modifier(
+                        atk_perm, ModifierType.FORCE_ATTACK,
+                        value_fn=lambda: True, expiry='end_of_turn')
+                game.effect_select_own_permanent(
+                    player, on_attack_target, filter_fn=own_filter,
+                    is_optional=True,
+                    prompt="Select 1 of your Digimon that may attack.")
+            game.effect_select_own_permanent(
+                player, on_immunity_target, filter_fn=own_filter,
+                is_optional=False,
+                prompt="Select 1 of your Digimon to be unaffected by opponent's effects.")
 
         effect2.set_on_process_callback(process2)
         effects.append(effect2)
