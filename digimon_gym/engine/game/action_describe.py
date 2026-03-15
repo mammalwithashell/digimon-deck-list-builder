@@ -9,6 +9,7 @@ from typing import TYPE_CHECKING, Optional, Dict
 from .constants import (
     FIELD_SLOTS, TARGETS_PER_ATTACKER, FIELDS_PER_HAND, EFFECTS_PER_PERM,
     SOURCES_PER_FIELD, BREEDING_SLOT, SECURITY_TARGET, ACTION_SPACE_SIZE,
+    TRASH_MAIN_START, MAX_TRASH,
 )
 from ..data.enums import GamePhase
 
@@ -144,6 +145,15 @@ def _describe_single_action(game: "Game", action_id: int, me: "Player", opp: "Pl
             p = me.breeding_area
             field_name = p.top_card.card_names[0] if p.top_card and p.top_card.card_names else "Breeding Digimon"
         return f"Digivolve {hand_name} onto {field_name}"
+
+    # [Trash][Main] activation (1150+)
+    if TRASH_MAIN_START <= action_id < TRASH_MAIN_START + MAX_TRASH:
+        trash_idx = action_id - TRASH_MAIN_START
+        card_name = "?"
+        if trash_idx < len(me.trash_cards):
+            c = me.trash_cards[trash_idx]
+            card_name = c.card_names[0] if c.card_names else "Card"
+        return f"[Trash][Main]: {card_name}"
 
     # Effect activation (1000-1999): Training=0, Delay=1
     if 1000 <= action_id <= 1999:

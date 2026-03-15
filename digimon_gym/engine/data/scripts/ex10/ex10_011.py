@@ -32,6 +32,7 @@ class EX10_011(CardScript):
         # [Trash] [Main] By deleting 2 of your level 5 or higher Digimon with [Myotismon] in their texts, play this card with the play cost reduced by 11.
         effect1 = ICardEffect()
         effect1.set_timing(EffectTiming.OnDeclaration)
+        effect1._is_trash_main = True
         effect1.set_effect_name("EX10-011 Play for reduced cost of 11")
         effect1.set_effect_description("[Trash] [Main] By deleting 2 of your level 5 or higher Digimon with [Myotismon] in their texts, play this card with the play cost reduced by 11.")
         effect1.is_optional = True

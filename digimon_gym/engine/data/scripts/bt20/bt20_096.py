@@ -23,14 +23,9 @@ class BT20_096(CardScript):
         effects = []
 
         # --- [Trash] [Main] ---
-        # BLOCKED: trash_main_action_mask
-        # The engine does not expose [Trash][Main] effects through the action
-        # mask for RL agent activation. _collect_triggered_effects explicitly
-        # skips OnDeclaration for non-field zones. The effect logic below is
-        # faithfully implemented per C# reference, but cannot be activated
-        # until the engine adds trash-zone OnDeclaration to the action mask.
         effect0 = ICardEffect()
         effect0.set_timing(EffectTiming.OnDeclaration)
+        effect0._is_trash_main = True
         effect0.set_effect_name("BT20-096 Trash trigger: delete unsuspended Digimon")
         effect0.set_effect_description(
             "[Trash] [Main] If you have 4 or fewer cards in your hand, by paying "

@@ -25,6 +25,7 @@ class BT24_076(CardScript):
         # --- Effect 0: [Trash] [Main] Play self from trash, cost -2 ---
         effect0 = ICardEffect()
         effect0.set_timing(EffectTiming.OnDeclaration)
+        effect0._is_trash_main = True
         effect0.set_effect_name("BT24-076 Play from trash cost -2")
         effect0.set_effect_description(
             "[Trash] [Main] If you have 4 or fewer cards in your hand, "

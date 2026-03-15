@@ -10,6 +10,7 @@ from .constants import (
     FIELD_SLOTS, TARGETS_PER_ATTACKER, FIELDS_PER_HAND, EFFECTS_PER_PERM,
     SOURCES_PER_FIELD, BREEDING_SLOT, SECURITY_TARGET, ACTION_SPACE_SIZE,
     SEL_MY_FIELD_START, SEL_TRASH_START, SEL_TRASH_END, HAND_MAIN_START,
+    TRASH_MAIN_START, MAX_TRASH,
 )
 from ..data.enums import GamePhase, EffectTiming
 
@@ -80,6 +81,9 @@ class ActionDecoderMixin:
                 self.action_digivolve_breeding(hand_idx)
             else:
                 self.action_digivolve(field_idx, hand_idx)
+        elif TRASH_MAIN_START <= action_id < TRASH_MAIN_START + MAX_TRASH:
+            trash_idx = action_id - TRASH_MAIN_START
+            self._execute_trash_main_effect(trash_idx, self.turn_player)
         elif 1000 <= action_id <= 1999:
             normalized = action_id - 1000
             perm_idx = normalized // EFFECTS_PER_PERM
@@ -385,6 +389,30 @@ class ActionDecoderMixin:
                     'player': player,
                     'card': card,
                     'hand_idx': hand_idx,
+                    'permanent': None,
+                    'turn_player': self.turn_player,
+                    'opponent_player': self.opponent_player,
+                }
+                if effect.can_use_condition is None or effect.can_use_condition(context):
+                    self._log_effect_activation(effect, EffectTiming.NoTiming)
+                    effect.record_activation()
+                    effect.on_process_callback(context)
+                    self._recover_from_stale_selection()
+                    return
+
+    def _execute_trash_main_effect(self, trash_idx: int, owner: "Player"):
+        """Execute a [Trash][Main] effect from a card in the trash."""
+        if trash_idx >= len(owner.trash_cards):
+            return
+        card = owner.trash_cards[trash_idx]
+        effects = card.effect_list(EffectTiming.NoTiming)
+        for effect in effects:
+            if getattr(effect, '_is_trash_main', False):
+                context = {
+                    'game': self,
+                    'player': owner,
+                    'card': card,
+                    'trash_idx': trash_idx,
                     'permanent': None,
                     'turn_player': self.turn_player,
                     'opponent_player': self.opponent_player,

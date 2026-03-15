@@ -46,6 +46,10 @@ export function decodeAction(id: number): string {
     return `Digivolve hand ${hand} onto slot ${field}`;
   }
 
+  if (id >= ACTION.TRASH_MAIN_START && id <= ACTION.TRASH_MAIN_END) {
+    return `[Trash][Main] effect on trash card ${id - ACTION.TRASH_MAIN_START}`;
+  }
+
   if (id >= ACTION.EFFECT_START && id <= ACTION.EFFECT_END) {
     const offset = id - ACTION.EFFECT_START;
     const source = Math.floor(offset / EFFECTS_PER_SOURCE);

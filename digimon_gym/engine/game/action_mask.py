@@ -10,6 +10,7 @@ from .constants import (
     FIELD_SLOTS, TARGETS_PER_ATTACKER, FIELDS_PER_HAND, EFFECTS_PER_PERM,
     SOURCES_PER_FIELD, BREEDING_SLOT, SECURITY_TARGET, ACTION_SPACE_SIZE,
     MAX_SOURCES, SEL_TRASH_START, SEL_TRASH_END, HAND_MAIN_START,
+    TRASH_MAIN_START, MAX_TRASH,
 )
 from ..data.enums import GamePhase, EffectTiming
 from ..interfaces.modifiers import ModifierType
@@ -23,13 +24,15 @@ def build_action_mask(game: "Game", player_id: int) -> List[float]:
     """Build an ACTION_SPACE_SIZE-float mask (1.0 = valid, 0.0 = invalid).
 
       0-29:      Play card from hand
-      30-59:     Trash card from hand (effect-driven)
+      30-59:     [Hand][Main] effects (30 + hand_idx)
       60:        Hatch
       61:        Move from breeding
       62:        Pass / end turn
+      63-92:     DNA Digivolve (63 + hand_idx)
       100-399:   Attack (100 + attacker*15 + target, target 14 = security)
       400-999:   Digivolve (400 + hand*15 + field, field 14 = breeding)
-      1000-1999: Activate effect (1000 + perm*10 + effectIdx)
+      1000-1149: Activate effect (1000 + perm*10 + effectIdx)
+      1150-1194: [Trash][Main] effects (1150 + trash_idx)
       2000-2167: Source selection (2000 + field*12 + sourceIdx)
     """
     mask = [0.0] * ACTION_SPACE_SIZE
@@ -169,6 +172,17 @@ def build_action_mask(game: "Game", player_id: int) -> List[float]:
                             break
                 if found:
                     break
+
+        # [Trash][Main] effects (1150+): activatable [Main] effects on cards in trash
+        for t in range(min(len(me.trash_cards), MAX_TRASH)):
+            card = me.trash_cards[t]
+            effects = card.effect_list(EffectTiming.NoTiming)
+            for effect in effects:
+                if getattr(effect, '_is_trash_main', False):
+                    ctx = {'game': game, 'player': me, 'card': card}
+                    if effect.can_use_condition is None or effect.can_use_condition(ctx):
+                        mask[TRASH_MAIN_START + t] = 1.0
+                        break
 
         # Force Attack: if any of the turn player's Digimon have
         # FORCE_ATTACK modifier, restrict the mask to attack actions

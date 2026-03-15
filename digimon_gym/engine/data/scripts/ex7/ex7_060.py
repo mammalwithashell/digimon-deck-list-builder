@@ -26,6 +26,7 @@ class EX7_060(CardScript):
         # Uses OnDeclaration timing for hand_main-style trash activation
         effect0 = ICardEffect()
         effect0.set_timing(EffectTiming.OnDeclaration)
+        effect0._is_trash_main = True
         effect0.set_effect_name("EX7-060 [Trash][Main] Play from trash cost -4")
         effect0.set_effect_description(
             "[Trash] [Main] If you have 4 or fewer cards in your hand, you may "
