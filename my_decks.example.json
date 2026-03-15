@@ -1,0 +1,28 @@
+{
+  "_comment": "Personal deck library for store_night.py. Copy to my_decks.json and fill in your lists.",
+
+  "general_pool": [
+    "_comment: Add card IDs for generic tech cards any archetype can consider",
+    "_comment: e.g. generic removal, draw, defensive options"
+  ],
+
+  "Rocks": {
+    "decklists": [
+      {
+        "name": "standard",
+        "deck": ["_comment: flat list of card IDs, e.g. BT24-001, BT24-001, ..."],
+        "notes": "Default Rocks list"
+      }
+    ]
+  },
+
+  "Millenniummon": {
+    "decklists": [
+      {
+        "name": "main",
+        "deck": [],
+        "notes": "Fill in your Millenniummon list"
+      }
+    ]
+  }
+}
