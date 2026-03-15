@@ -41,7 +41,7 @@ logger = logging.getLogger(__name__)
 # ---------------------------------------------------------------------------
 # Paths
 # ---------------------------------------------------------------------------
-ENGINE_API_DOC = REPO_ROOT / "docs" / "archetype-qa" / "engine-api-reference.md"
+ENGINE_API_DOC = REPO_ROOT / "qa" / "archetype-qa" / "engine-api-reference.md"
 ENGINE_GAME_DIR = REPO_ROOT / "digimon_gym" / "engine" / "game"
 ENGINE_CORE_DIR = REPO_ROOT / "digimon_gym" / "engine" / "core"
 ENGINE_INTERFACES_DIR = REPO_ROOT / "digimon_gym" / "engine" / "interfaces"
@@ -56,7 +56,7 @@ RULES_DOCS = [
     REPO_ROOT / "docs" / "RULES_CONTEXT.md",
     REPO_ROOT / "docs" / "ACTION_SPEC.md",
     REPO_ROOT / "docs" / "TENSOR_SPEC.md",
-    REPO_ROOT / "docs" / "archetype-qa" / "engine-gaps.md",
+    REPO_ROOT / "qa" / "archetype-qa" / "engine-gaps.md",
 ]
 
 ENGINE_SOURCE_FILES = [

@@ -271,7 +271,7 @@ Before promoting, check if any cards have been QA-validated through gameplay tes
 import json
 from pathlib import Path
 
-validated_path = Path('docs/qa-reports/validated_cards.json')
+validated_path = Path('qa/qa-reports/validated_cards.json')
 if validated_path.exists():
     validated = json.loads(validated_path.read_text())
     validated_ids = {k for k, v in validated.get('cards', {}).items() if v['status'] in ('PASS', 'PARTIAL')}
@@ -333,7 +333,7 @@ for card_id, set_id, module_name in cards:
 ### 9b. Verify frozen integrity
 
 ```bash
-python scripts/check_frozen_integrity.py
+python tools/check_frozen_integrity.py
 ```
 
 Must print `Frozen integrity check passed.` If it fails, the manifest hashes don't match the frozen files. Re-promote the failing cards.

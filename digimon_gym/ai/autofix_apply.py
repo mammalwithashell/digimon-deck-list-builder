@@ -340,7 +340,7 @@ def run_profile_checks(*, repo_root: Path, scope_profile: str, applied_files: li
         if compile_targets:
             outputs.append(_run_check_command(["python", "-m", "py_compile", *compile_targets], cwd=repo_root))
 
-    outputs.append(_run_check_command(["python", "scripts/check_frozen_integrity.py"], cwd=repo_root))
+    outputs.append(_run_check_command(["python", "tools/check_frozen_integrity.py"], cwd=repo_root))
 
     tests = derive_targeted_tests(applied_files)
     if tests:

@@ -2,6 +2,8 @@ from dataclasses import dataclass, field
 from typing import Optional, List
 from .enums import CardColor
 
+# ─── DigiXros / Assembly ─────────────────────────────────────────────
+
 
 @dataclass
 class EvoCost:
@@ -36,3 +38,27 @@ class DnaCost:
     requirement1: DnaRequirement
     requirement2: DnaRequirement
     memory_cost: int = 0
+
+
+@dataclass
+class DigiXrosElement:
+    """One material requirement in a DigiXros condition."""
+    name_contains: str = ""
+    trait_match: str = ""
+    trait_alternatives: List[str] = field(default_factory=list)
+    level_max: Optional[int] = None
+    count: int = 1
+    is_digimon_only: bool = True
+    color: Optional[CardColor] = None
+
+
+@dataclass
+class DigiXrosCost:
+    """Full DigiXros/Assembly requirement for a card."""
+    elements: List[DigiXrosElement] = field(default_factory=list)
+    reduce_cost_per_card: int = 0
+    max_materials: int = -1
+    different_card_numbers: bool = False
+    different_names: bool = False
+    has_text: str = ""
+    source_zones: List[str] = field(default_factory=lambda: ['hand', 'field'])

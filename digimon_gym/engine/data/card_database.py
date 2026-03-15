@@ -8,7 +8,7 @@ from ..core.entity_base import CEntity_Base
 from ..core.card_script import CardScript
 from ..core.card_source import CardSource
 from .enums import CardColor, CardKind, Rarity
-from .evo_cost import EvoCost, DnaCost, DnaRequirement
+from .evo_cost import EvoCost, DnaCost, DnaRequirement, DigiXrosCost, DigiXrosElement
 
 logger = logging.getLogger(__name__)
 
@@ -141,6 +141,221 @@ def _parse_dna_requirement(text: str) -> Optional[DnaRequirement]:
     )
 
 
+def parse_digixros_req(xros_req: str) -> List['DigiXrosCost']:
+    """Parse DigiXros/Assembly requirements from xros_req text.
+
+    Returns a list of DigiXrosCost (usually one).
+    """
+    if not xros_req:
+        return []
+
+    results: List[DigiXrosCost] = []
+    lines = xros_req.replace('\r\n', '\n').replace('\r', '\n').split('\n')
+    full_text = ' '.join(lines)
+
+    # Match [DigiXros -N] or [Assembly -N] blocks
+    pattern = r'\[(DigiXros|Assembly)\s*\xa0?(-\d+)\]\s*(.*?)(?=When this|$)'
+    for match in re.finditer(pattern, full_text, re.DOTALL):
+        mechanic = match.group(1)  # DigiXros or Assembly
+        reduce_per = abs(int(match.group(2)))
+        body = match.group(3).strip()
+
+        is_assembly = mechanic == 'Assembly'
+        source_zones = ['trash'] if is_assembly else ['hand', 'field']
+
+        # Parse constraints: different card numbers / different names
+        different_card_numbers = 'different card numbers' in body
+        different_names = 'different names' in body
+
+        # Parse has_text constraint (e.g., "with ＜Save＞ in text")
+        has_text = ""
+        text_match = re.search(r'with\s+[＜<]([^＞>]+)[＞>]\s+in text', body)
+        if text_match:
+            has_text = text_match.group(1)
+
+        elements = _parse_digixros_elements(body)
+
+        # Calculate max_materials from elements
+        max_materials = sum(e.count for e in elements)
+        # Infinity marker: count of 99 means unlimited
+        if any(e.count >= 99 for e in elements):
+            max_materials = -1
+
+        results.append(DigiXrosCost(
+            elements=elements,
+            reduce_cost_per_card=reduce_per,
+            max_materials=max_materials,
+            different_card_numbers=different_card_numbers,
+            different_names=different_names,
+            has_text=has_text,
+            source_zones=source_zones,
+        ))
+
+    return results
+
+
+def _parse_digixros_elements(body: str) -> List['DigiXrosElement']:
+    """Parse the element specification from a DigiXros body string."""
+    # Check multi-trait pattern BEFORE stripping constraints (it contains "different names")
+    multi_trait_match = re.match(
+        r'(\d+)\s+Digimon cards?\s+w/different names and\s+(.*?)\s+in one of their traits',
+        body)
+    if multi_trait_match:
+        count = int(multi_trait_match.group(1))
+        trait_text = multi_trait_match.group(2)
+        traits = re.findall(r'\[([^\]]+)\]', trait_text)
+        return [DigiXrosElement(
+            trait_match=traits[0] if traits else '',
+            trait_alternatives=traits[1:] if len(traits) > 1 else [],
+            count=count,
+        )]
+
+    # Strip trailing constraint clauses for simpler parsing
+    body = re.sub(r'\s*(?:w/different\s+(?:card numbers|names)|& different\s+(?:card numbers|names)).*$', '', body)
+    body = body.strip()
+
+    if not body:
+        return []
+
+    # Pattern: ∞ Digimon cards w/[Trait1] or [Trait2] trait
+    inf_match = re.match(
+        r'[∞]\s+Digimon cards?\s+w/\[([^\]]+)\](?:\s+or\s+\[([^\]]+)\])?\s*trait',
+        body)
+    if inf_match:
+        traits = [inf_match.group(1)]
+        if inf_match.group(2):
+            traits.append(inf_match.group(2))
+        return [DigiXrosElement(
+            trait_match=traits[0],
+            trait_alternatives=traits[1:],
+            count=99,  # unlimited
+        )]
+
+    # Pattern: N level L [Trait] trait Digimon cards (Assembly EX9-074)
+    level_trait_match = re.match(
+        r'(\d+)\s+level\s+(\d+)\s+\[([^\]]+)\]\s*trait\s+Digimon cards?',
+        body)
+    if level_trait_match:
+        return [DigiXrosElement(
+            trait_match=level_trait_match.group(3),
+            level_max=int(level_trait_match.group(2)),
+            count=int(level_trait_match.group(1)),
+        )]
+
+    # Pattern: N Lv.X or lower [Trait1] or [Trait2] trait Digimon cards
+    lv_trait_match = re.match(
+        r'(\d+)\s+Lv\.(\d+)\s+or\s+lower\s+\[([^\]]+)\](?:\s+or\s+\[([^\]]+)\])?\s*trait\s+Digimon cards?',
+        body)
+    if lv_trait_match:
+        traits = [lv_trait_match.group(3)]
+        if lv_trait_match.group(4):
+            traits.append(lv_trait_match.group(4))
+        return [DigiXrosElement(
+            trait_match=traits[0],
+            trait_alternatives=traits[1:],
+            level_max=int(lv_trait_match.group(2)),
+            count=int(lv_trait_match.group(1)),
+        )]
+
+    # Pattern: N Digimon card(s) w/[Trait] trait
+    trait_count_match = re.match(
+        r'(\d+)\s+Digimon cards?\s+w/\[([^\]]+)\]\s*\xa0?trait',
+        body)
+    if trait_count_match:
+        return [DigiXrosElement(
+            trait_match=trait_count_match.group(2),
+            count=int(trait_count_match.group(1)),
+        )]
+
+    # Pattern: 1 Digimon card with ＜X＞ in text
+    text_match = re.match(
+        r'(\d+)\s+Digimon cards?\s+with\s+[＜<]([^＞>]+)[＞>]\s+in text',
+        body)
+    if text_match:
+        return [DigiXrosElement(count=int(text_match.group(1)))]
+
+    # Pattern: N [Name] (e.g., "4 [Vemmon]", "4 [Negamon]")
+    count_name_match = re.match(r'(\d+)\s+\[([^\]]+)\]\s*$', body)
+    if count_name_match:
+        return [DigiXrosElement(
+            name_contains=count_name_match.group(2),
+            count=int(count_name_match.group(1)),
+            is_digimon_only=False,
+        )]
+
+    # Pattern: named elements separated by 'x', possibly with 'or' alternatives and color prefixes
+    # e.g., "[Shoutmon] x [Ballistamon] x [Dorulumon]"
+    # e.g., "Blue [Greymon] x [MailBirdramon]"
+    # e.g., "[Agumon] or [Greymon] x [Gabumon] or [Garurumon]"
+    # e.g., "[MadLeomon] x 1 Digimon card w/[Bagra Army] trait"
+    # e.g., "[Snatchmon] x 4 [Vemmon]"
+    # e.g., "[Sanzomon] or [Sagomon] or [Cho-Hakkaimon]"
+    elements = []
+    # Split by ' x ' first
+    parts = re.split(r'\s+x\s+', body)
+    for part in parts:
+        part = part.strip()
+        if not part:
+            continue
+
+        # Sub-pattern: N Digimon card(s) w/[Trait] trait
+        sub_trait = re.match(r'(\d+)\s+Digimon cards?\s+w/\[([^\]]+)\]\s*\xa0?trait', part)
+        if sub_trait:
+            elements.append(DigiXrosElement(
+                trait_match=sub_trait.group(2),
+                count=int(sub_trait.group(1)),
+            ))
+            continue
+
+        # Sub-pattern: N [Name] (count + name)
+        sub_count_name = re.match(r'(\d+)\s+\[([^\]]+)\]', part)
+        if sub_count_name:
+            elements.append(DigiXrosElement(
+                name_contains=sub_count_name.group(2),
+                count=int(sub_count_name.group(1)),
+                is_digimon_only=False,
+            ))
+            continue
+
+        # Sub-pattern: [Name1] or [Name2] or ... (OR-group treated as one element with alternatives)
+        or_names = re.findall(r'\[([^\]]+)\]', part)
+        if or_names and ' or ' in part:
+            # Check for optional color prefix
+            color = None
+            color_match = re.match(r'(Red|Blue|Yellow|Green|White|Black|Purple)\s+', part)
+            if color_match:
+                color = _COLOR_NAME_MAP.get(color_match.group(1).lower())
+            elements.append(DigiXrosElement(
+                name_contains=or_names[0],
+                trait_alternatives=[n for n in or_names[1:]],  # Store alt names in trait_alternatives for OR-name matching
+                count=1,
+                is_digimon_only=False,
+                color=color,
+            ))
+            continue
+
+        # Sub-pattern: [Color] [Name] or just [Name]
+        color = None
+        color_match = re.match(r'(Red|Blue|Yellow|Green|White|Black|Purple)\s+', part)
+        if color_match:
+            color = _COLOR_NAME_MAP.get(color_match.group(1).lower())
+            part = part[color_match.end():]
+
+        name_match = re.match(r'\[([^\]]+)\]', part)
+        if name_match:
+            elements.append(DigiXrosElement(
+                name_contains=name_match.group(1),
+                count=1,
+                is_digimon_only=False,
+                color=color,
+            ))
+            continue
+
+        logger.warning("Unparsed DigiXros element: %r", part)
+
+    return elements
+
+
 class CardDatabase:
     _instance = None
 
@@ -220,6 +435,12 @@ class CardDatabase:
             xros_req = entry.get('xros_req', '')
             if xros_req and not entity.dna_costs:
                 entity.dna_costs = parse_xros_req(xros_req)
+
+            # DigiXros/Assembly costs from xros_req text
+            if xros_req:
+                digixros = parse_digixros_req(xros_req)
+                if digixros:
+                    entity.digixros_costs = digixros
 
             # Form and attribute
             entity.form_eng = entry.get('form_eng', [])

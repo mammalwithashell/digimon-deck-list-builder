@@ -55,7 +55,7 @@ Wait for user approval before proceeding.
 ### Phase 4: Assemble Context Packs
 
 Each agent batch receives:
-1. **Engine API reference** — `docs/archetype-qa/engine-api-reference.md` (stable, pre-written)
+1. **Engine API reference** — `qa/archetype-qa/engine-api-reference.md` (stable, pre-written)
 2. **Card manifest** — for each assigned card: ID, name, kind, level, colors, traits, DP, full card text
 3. **C# scripts** — raw contents inline (for cards that have them)
 4. **Existing Python scripts** — for QA-only cards, current frozen script inline
@@ -77,7 +77,7 @@ Each agent batch receives:
 
 ### Phase 6: Compile QA Index
 
-Merge all agent verdicts into `docs/archetype-qa/{archetype_name}.md`:
+Merge all agent verdicts into `qa/archetype-qa/{archetype_name}.md`:
 
 ```
 # Archetype QA: {name}
@@ -107,7 +107,7 @@ Total cards: N
 - Patterns discovered during implementation
 ```
 
-Update `docs/archetype-qa/engine-gaps.md` with any new BLOCKED items.
+Update `qa/archetype-qa/engine-gaps.md` with any new BLOCKED items.
 
 ### Phase 7: Verification
 
@@ -136,9 +136,9 @@ Present to user:
 
 | Artifact | Location | Lifecycle |
 |----------|----------|-----------|
-| Engine API reference | `docs/archetype-qa/engine-api-reference.md` | Written once, updated as engine evolves |
-| Per-archetype QA report | `docs/archetype-qa/{name}.md` | Created per archetype run |
-| Engine gap tracker | `docs/archetype-qa/engine-gaps.md` | Accumulates across archetypes |
+| Engine API reference | `qa/archetype-qa/engine-api-reference.md` | Written once, updated as engine evolves |
+| Per-archetype QA report | `qa/archetype-qa/{name}.md` | Created per archetype run |
+| Engine gap tracker | `qa/archetype-qa/engine-gaps.md` | Accumulates across archetypes |
 | Archetype tests | `tests/test_archetype_{name}.py` | Created per archetype run |
 | Card scripts | `digimon_gym/engine/data/scripts/{set}/` | Created/modified per card |
 

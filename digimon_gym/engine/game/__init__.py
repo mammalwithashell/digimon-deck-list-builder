@@ -86,6 +86,9 @@ class Game(CombatMixin, ActionDecoderMixin, EffectHelpersMixin):
         # Structured event sequence counter
         self._event_seq: int = 0
 
+        # DigiXros pending state: tracks card index, selected materials, and cost
+        self._pending_digixros: Optional[dict] = None
+
     @property
     def current_player_id(self) -> int:
         """Return the player_id of the active player."""
@@ -1144,6 +1147,7 @@ class Game(CombatMixin, ActionDecoderMixin, EffectHelpersMixin):
         self.winner = winner
         self.pending_attack = None
         self.pending_selection = None
+        self._pending_digixros = None
         self.active_player = None
         if hasattr(self, 'revealed_cards'):
             self.revealed_cards.clear()
@@ -1165,7 +1169,18 @@ class Game(CombatMixin, ActionDecoderMixin, EffectHelpersMixin):
             self.logger.log(f"[Rejected] action_play_card: {self._card_ref(card)} blocked by CANNOT_PLAY_CARD modifier")
             return
 
-        cost = self.calculate_play_cost(self.turn_player, card, commit=True)
+        # DigiXros intercept: enter material selection before cost payment
+        if card.has_digixros:
+            self._initiate_digixros_play(card_index)
+            return
+
+        self._execute_play_card(card)
+
+    def _execute_play_card(self, card: 'CardSource', manual_reduction: int = 0,
+                            digixros_count: int = 0):
+        """Execute the play-card flow (shared by normal play and DigiXros)."""
+        cost = self.calculate_play_cost(self.turn_player, card, commit=True,
+                                         manual_reduction=manual_reduction)
 
         self.logger.log(f"[Play] {self.turn_player.player_name} plays {self._card_ref(card)} (cost: {cost})")
         is_option = card.is_option
@@ -1186,10 +1201,10 @@ class Game(CombatMixin, ActionDecoderMixin, EffectHelpersMixin):
                 EffectTiming.OnUseOption,
                 {"played_card": card, "played_permanent": played_perm, "event_player": self.turn_player},
             )
-        self.execute_effects(
-            EffectTiming.OnEnterFieldAnyone,
-            {"played_card": card, "played_permanent": played_perm, "event_player": self.turn_player},
-        )
+        ctx = {"played_card": card, "played_permanent": played_perm, "event_player": self.turn_player}
+        if digixros_count > 0:
+            ctx["digixros_count"] = digixros_count
+        self.execute_effects(EffectTiming.OnEnterFieldAnyone, ctx)
         self._fire_play_observers(played_perm, self.turn_player)
         if is_option and not self._option_stays_on_field(card):
             self._trash_option_after_resolution(self.turn_player, played_perm)

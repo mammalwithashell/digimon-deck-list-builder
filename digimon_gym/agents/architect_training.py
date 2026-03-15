@@ -21,9 +21,10 @@ import json
 import logging
 import sys
 from pathlib import Path
-from typing import List, Optional
+from typing import Dict, List, Optional
 
 from digimon_gym.agents.architect_optimizer import MetaOptimizer
+from digimon_gym.agents.architect_pool import CardConstraint
 
 logger = logging.getLogger(__name__)
 
@@ -106,6 +107,52 @@ def build_default_meta_config() -> dict:
     return {"archetypes": archetypes}
 
 
+def _parse_card_pairs(raw: str) -> Dict[str, int]:
+    """Parse 'CARD:N,CARD:N,...' into {card_id: count}."""
+    result: Dict[str, int] = {}
+    for pair in raw.split(","):
+        pair = pair.strip()
+        if not pair:
+            continue
+        if ":" not in pair:
+            raise ValueError(f"Invalid card:count pair: {pair!r}")
+        card_id, count_str = pair.rsplit(":", 1)
+        result[card_id.strip()] = int(count_str.strip())
+    return result
+
+
+def _build_constraints(args: argparse.Namespace) -> Optional[Dict[str, CardConstraint]]:
+    """Build CardConstraint dict from CLI flags."""
+    locks: Dict[str, int] = {}
+    mins: Dict[str, int] = {}
+    maxs: Dict[str, int] = {}
+
+    if args.lock_cards:
+        locks = _parse_card_pairs(args.lock_cards)
+    if args.min_counts:
+        mins = _parse_card_pairs(args.min_counts)
+    if args.max_counts:
+        maxs = _parse_card_pairs(args.max_counts)
+
+    if not locks and not mins and not maxs:
+        return None
+
+    all_cards = set(locks) | set(mins) | set(maxs)
+    constraints: Dict[str, CardConstraint] = {}
+    for cid in all_cards:
+        if cid in locks:
+            constraints[cid] = CardConstraint(
+                locked=True,
+                locked_count=locks[cid],
+            )
+        else:
+            constraints[cid] = CardConstraint(
+                min_count=mins.get(cid, 0),
+                max_count=maxs.get(cid) if cid in maxs else None,
+            )
+    return constraints
+
+
 def train(args: argparse.Namespace) -> None:
     """Run architect training with the given CLI arguments."""
     # --- Meta config ---
@@ -149,6 +196,11 @@ def train(args: argparse.Namespace) -> None:
             custom_pool = json.load(f)
         print(f"Custom pool: {len(custom_pool)} cards from {pool_path}")
 
+    # --- Card constraints ---
+    card_constraints = _build_constraints(args)
+    if card_constraints:
+        print(f"Constraints: {len(card_constraints)} cards constrained")
+
     # --- Create optimizer ---
     optimizer = MetaOptimizer(
         archetype_name=args.archetype,
@@ -158,6 +210,8 @@ def train(args: argparse.Namespace) -> None:
         output_dir=args.output_dir,
         extra_cards=extra_cards,
         custom_pool=custom_pool,
+        card_constraints=card_constraints,
+        use_restricted_list=args.use_restricted_list,
     )
 
     # --- Train ---
@@ -273,6 +327,26 @@ def main() -> None:
         type=int,
         default=None,
         help="Random seed for reproducibility",
+    )
+    parser.add_argument(
+        "--lock-cards",
+        default=None,
+        help="Lock cards at exact count (CARD:N,CARD:N,...)",
+    )
+    parser.add_argument(
+        "--min-counts",
+        default=None,
+        help="Minimum copies per card (CARD:N,CARD:N,...)",
+    )
+    parser.add_argument(
+        "--max-counts",
+        default=None,
+        help="Maximum copies per card, capped at 4 (CARD:N,CARD:N,...)",
+    )
+    parser.add_argument(
+        "--use-restricted-list",
+        action="store_true",
+        help="Enforce official ban/restricted list",
     )
     parser.add_argument(
         "--verbose",

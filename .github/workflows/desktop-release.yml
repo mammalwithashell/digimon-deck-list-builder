@@ -61,7 +61,7 @@ jobs:
 
       # Build the Python sidecar binary for this platform
       - name: Build sidecar
-        run: ./scripts/build-sidecar.sh ${{ matrix.sidecar_profile }}
+        run: ./tools/build-sidecar.sh ${{ matrix.sidecar_profile }}
 
       - name: Install frontend dependencies
         working-directory: frontend

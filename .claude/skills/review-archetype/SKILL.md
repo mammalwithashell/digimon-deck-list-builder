@@ -45,7 +45,7 @@ For each card ID:
 1. **Python script**: Read from `digimon_gym/engine/data/scripts/{set}/{set}_{nnn}.py`
 2. **Card metadata**: Query Pinecone `card-metadata` namespace in index `digimon-engine` using the card ID. Extract the full effect text, inherited text, security text, card kind, level, traits, colors, DP, play cost.
 3. **C# reference** (strongly recommended): Query Pinecone `card-scripts` namespace with filter `{card_id: "CARD_ID"}` for the C# source. The C# implementation is the **behavioral source of truth** when card text is ambiguous. It resolves name-vs-trait questions (`EqualsCardName` vs `EqualsTraits`), multi-step selection flows, and filter scope.
-4. **Existing QA report** (if any): Check `docs/archetype-qa/{archetype}.md` for prior verdicts.
+4. **Existing QA report** (if any): Check `qa/archetype-qa/{archetype}.md` for prior verdicts.
 
 Skip cards with no Python script (report as MISSING).
 
@@ -263,7 +263,7 @@ ONLY report faithfulness mismatches where the script's behavior would differ fro
 
 ## Phase 4: Compile Faithfulness Report
 
-Merge all agent results into `docs/archetype-qa/{archetype_name}-faithfulness.md`:
+Merge all agent results into `qa/archetype-qa/{archetype_name}-faithfulness.md`:
 
 ```markdown
 # Card Text Faithfulness Review: {archetype_name}
@@ -300,7 +300,7 @@ Total cards reviewed: N
  or vice versa — cards marked PASS that have discrepancies}
 ```
 
-Cross-reference against the existing QA report (if any) in `docs/archetype-qa/{archetype_name}.md` to flag contradictions.
+Cross-reference against the existing QA report (if any) in `qa/archetype-qa/{archetype_name}.md` to flag contradictions.
 
 ---
 

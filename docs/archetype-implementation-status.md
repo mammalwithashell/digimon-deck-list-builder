@@ -20,9 +20,9 @@ Archetypes that have gone through the `/implement-archetype` pipeline (card scri
 | — | CS Mastemon | 5.11% | 9 | 65 | Gameplay QA'd | 1 outstanding |
 
 **Notes:**
-- CS Hudiemon, TS Neptune, Medusa, Royal Knights, Rocks, Millennium, Diaboromon, and CS Mastemon were QA'd through the earlier gameplay QA pipeline (reports in `docs/qa-reports/`).
+- CS Hudiemon, TS Neptune, Medusa, Royal Knights, Rocks, Millennium, Diaboromon, and CS Mastemon were QA'd through the earlier gameplay QA pipeline (reports in `qa/qa-reports/`).
 - TS Olympos and BG Imperial went through the full `/implement-archetype` pipeline with per-card script review and fixes.
-- "Outstanding Issues" counts come from `docs/qa-reports/INDEX.md`.
+- "Outstanding Issues" counts come from `qa/qa-reports/INDEX.md`.
 
 ---
 

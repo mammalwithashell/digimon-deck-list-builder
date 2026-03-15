@@ -24,7 +24,7 @@ from typing import Any, Dict, List, Optional, Tuple
 import numpy as np
 
 from digimon_gym.agents.architect_agent import ArchitectDQN
-from digimon_gym.agents.architect_pool import CandidatePool
+from digimon_gym.agents.architect_pool import CandidatePool, CardConstraint
 from digimon_gym.agents.architect_simulator import DeckSimulator
 from digimon_gym.engine.data.deck_finder import load_implemented_card_ids
 
@@ -92,6 +92,8 @@ class MetaOptimizer:
         output_dir: str = "architect_runs",
         extra_cards: Optional[List[str]] = None,
         custom_pool: Optional[List[str]] = None,
+        card_constraints: Optional[Dict[str, CardConstraint]] = None,
+        use_restricted_list: bool = False,
     ):
         """
         Args:
@@ -104,6 +106,8 @@ class MetaOptimizer:
             output_dir: Directory to save training outputs.
             extra_cards: Additional card IDs for the candidate pool.
             custom_pool: Custom candidate pool (replaces archetype-derived).
+            card_constraints: Per-card constraints (locks, min/max counts).
+            use_restricted_list: If True, enforce the official ban/restricted list.
         """
         self.archetype_name = archetype_name
         self.base_deck = list(base_deck)
@@ -112,6 +116,8 @@ class MetaOptimizer:
         self.output_dir = output_dir
         self.extra_cards = extra_cards
         self.custom_pool = custom_pool
+        self.card_constraints = card_constraints
+        self.use_restricted_list = use_restricted_list
 
         # Lazily initialised during train() / optimize_deck()
         self._pool: Optional[CandidatePool] = None
@@ -235,6 +241,8 @@ class MetaOptimizer:
             self.archetype_name,
             extra_cards=self.extra_cards,
             custom_pool=self.custom_pool,
+            card_constraints=self.card_constraints,
+            use_restricted_list=self.use_restricted_list,
         )
 
         self._opponents = self.build_opponents()

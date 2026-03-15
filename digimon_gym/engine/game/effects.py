@@ -8,6 +8,7 @@ from typing import TYPE_CHECKING, Optional, List, Callable
 
 from .constants import (
     FIELD_SLOTS, EFFECTS_PER_PERM, ACTION_SPACE_SIZE,
+    MAX_HAND, MAX_TRASH,
     SEL_HAND_START, SEL_REVEALED_START, SEL_TRASH_START,
     SEL_MY_FIELD_START, SEL_OPP_FIELD_START, SEL_MY_BREEDING,
     SEL_MY_SECURITY_START, SEL_OPP_SECURITY_START,
@@ -20,6 +21,7 @@ from ..validation.digivolve_validator import (
     has_valid_dna_targets, get_valid_dna_first_targets,
     get_valid_dna_second_targets, get_dna_stacking_order,
 )
+from ..validation.digixros_validator import get_valid_digixros_materials
 
 if TYPE_CHECKING:
     from ..core.card_source import CardSource
@@ -826,4 +828,219 @@ class EffectHelpersMixin:
 
         self.execute_effects(EffectTiming.WhenDigivolving, {
             "digivolved_permanent": new_perm, "is_dna_digivolve": True})
+        self.check_turn_end()
+
+    # ─── DigiXros ────────────────────────────────────────────────────
+
+    def _initiate_digixros_play(self, card_index: int):
+        """Start DigiXros: store state and enter material selection loop."""
+        player = self.turn_player
+        card = player.hand_cards[card_index]
+        xros_cost = card.digixros_cost
+        if xros_cost is None:
+            # Fallback: play normally
+            self._execute_play_card(card)
+            return
+
+        self._pending_digixros = {
+            'card_index': card_index,
+            'card': card,
+            'player': player,
+            'materials': [],  # List of (source, zone, index) tuples
+            'xros_cost': xros_cost,
+        }
+
+        self.logger.log(
+            f"[DigiXros] {self._card_ref(card)} — entering material selection "
+            f"(reduce {xros_cost.reduce_cost_per_card} per card)")
+
+        self._digixros_select_next_material()
+
+    def _digixros_select_next_material(self):
+        """Offer optional material selection or finish."""
+        pending = self._pending_digixros
+        if pending is None:
+            return
+
+        player = pending['player']
+        card = pending['card']
+        xros_cost = pending['xros_cost']
+        already = [m[0] for m in pending['materials']]
+
+        valid_ids = get_valid_digixros_materials(card, player, already, xros_cost)
+
+        if not valid_ids:
+            # No more valid materials — finish
+            self._execute_digixros_play()
+            return
+
+        self.request_selection(
+            GamePhase.SelectMaterial,
+            player,
+            self._digixros_on_material_selected,
+            valid_indices=valid_ids,
+            is_optional=True,
+            prompt=f"Select DigiXros material ({len(already)} selected so far).",
+            on_decline=self._execute_digixros_play,
+        )
+
+    def _digixros_on_material_selected(self, action_id: int):
+        """Record selected material and loop for more."""
+        pending = self._pending_digixros
+        if pending is None:
+            return
+
+        player = pending['player']
+
+        # Decode which card was selected (using zone range constants)
+        if SEL_HAND_START <= action_id <= SEL_HAND_START + MAX_HAND - 1:
+            idx = action_id - SEL_HAND_START
+            if idx < len(player.hand_cards):
+                card = player.hand_cards[idx]
+                pending['materials'].append((card, 'hand'))
+                self.logger.log(f"[DigiXros] Selected material from hand: {self._card_ref(card)}")
+        elif SEL_MY_FIELD_START <= action_id <= SEL_MY_FIELD_START + FIELD_SLOTS - 1:
+            idx = action_id - SEL_MY_FIELD_START
+            if idx < len(player.battle_area):
+                perm = player.battle_area[idx]
+                top = perm.top_card
+                if top:
+                    pending['materials'].append((top, 'field'))
+                    self.logger.log(f"[DigiXros] Selected material from field: {self._card_ref(top)}")
+        elif SEL_TRASH_START <= action_id <= SEL_TRASH_START + MAX_TRASH - 1:
+            idx = action_id - SEL_TRASH_START
+            if idx < len(player.trash_cards):
+                card = player.trash_cards[idx]
+                pending['materials'].append((card, 'trash'))
+                self.logger.log(f"[DigiXros] Selected material from trash: {self._card_ref(card)}")
+
+        # Loop for next material
+        self._digixros_select_next_material()
+
+    def _execute_digixros_play(self):
+        """Stack materials under card, calculate reduced cost, play.
+
+        Cannot delegate to _execute_play_card because DigiXros requires:
+        1. Creating the permanent first
+        2. Stacking materials under it (including consuming field permanents)
+        3. Only then calculating and paying cost with the material reduction
+        This ordering differs from normal play where cost is paid before placement.
+        Keep in sync with _execute_play_card for effect firing (OnEnterFieldAnyone, etc).
+        """
+        pending = self._pending_digixros
+        self._pending_digixros = None
+        if pending is None:
+            return
+
+        player = pending['player']
+        card = pending['card']
+        xros_cost = pending['xros_cost']
+        materials = pending['materials']
+        digixros_count = len(materials)
+        manual_reduction = digixros_count * xros_cost.reduce_cost_per_card
+
+        self.logger.log(
+            f"[DigiXros] Executing with {digixros_count} materials, "
+            f"reduction={manual_reduction}")
+
+        # 1. Remove card from hand and create permanent
+        if card not in player.hand_cards:
+            return
+        player.hand_cards.remove(card)
+        from ..core.permanent import Permanent
+        new_perm = Permanent([card])
+        if self:
+            new_perm.turn_played = self.turn_count
+            new_perm._owner_game = self
+        player.battle_area.append(new_perm)
+
+        # 2. Stack materials under the played card
+        # Process in reverse to handle index shifts for same-zone removals
+        # Collect field permanents to remove (need special handling)
+        field_perms_to_remove = []
+        hand_cards_to_remove = []
+        trash_cards_to_remove = []
+
+        for mat_card, zone in materials:
+            if zone == 'hand':
+                hand_cards_to_remove.append(mat_card)
+            elif zone == 'field':
+                # Find the permanent containing this top card
+                for perm in player.battle_area:
+                    if perm is not new_perm and perm.top_card is mat_card:
+                        field_perms_to_remove.append(perm)
+                        break
+            elif zone == 'trash':
+                trash_cards_to_remove.append(mat_card)
+
+        # Remove hand materials and stack under
+        for mat_card in hand_cards_to_remove:
+            if mat_card in player.hand_cards:
+                player.hand_cards.remove(mat_card)
+                new_perm.add_card_source_bottom(mat_card)
+
+        # Remove field permanents: per rules 7-2-2-7 and DCGO DiscardEvoRoots(),
+        # only the TOP card is placed under the new permanent.
+        # All digivolution cards (the stack below top) are trashed first.
+        for perm in field_perms_to_remove:
+            if perm in player.battle_area:
+                top_card = perm.top_card
+                # Trash digivolution cards (all sources except top card)
+                digi_cards = [s for s in perm.card_sources if s is not top_card]
+                player.battle_area.remove(perm)
+                # Clean up modifiers for the removed permanent
+                if hasattr(self, 'cleanup_modifiers_for_permanent'):
+                    self.cleanup_modifiers_for_permanent(perm)
+                # Trash the digi cards (ACE overflow applies)
+                for src in digi_cards:
+                    player.trash_cards.append(src)
+                player._apply_ace_overflow(digi_cards)
+                # Place only top card under the new permanent
+                if top_card:
+                    new_perm.add_card_source_bottom(top_card)
+                # Fire WhenRemoveField with digixros cause
+                self.execute_effects(
+                    EffectTiming.WhenRemoveField,
+                    {"permanent": perm, "player": player,
+                     "removal_cause": "digixros"})
+
+        # Remove trash materials and stack under
+        for mat_card in trash_cards_to_remove:
+            if mat_card in player.trash_cards:
+                player.trash_cards.remove(mat_card)
+                new_perm.add_card_source_bottom(mat_card)
+
+        # 3. Calculate cost with manual reduction and pay
+        cost = self.calculate_play_cost(player, card, commit=True,
+                                         manual_reduction=manual_reduction)
+        self.logger.log(
+            f"[Play] {player.player_name} plays {self._card_ref(card)} "
+            f"via DigiXros (cost: {cost}, materials: {digixros_count})")
+        self._emit(
+            'play_card',
+            source_card_id=self._card_id(card),
+            source_slot=self._perm_slot(new_perm),
+            cost=cost,
+            card_name=self._card_name(card),
+        )
+        player.lose_memory(cost)
+        if hasattr(player, "_temp_play_cost_reduction"):
+            player._temp_play_cost_reduction = 0
+
+        # 4. Fire effects
+        is_option = card.is_option
+        if is_option:
+            self.execute_effects(
+                EffectTiming.OnUseOption,
+                {"played_card": card, "played_permanent": new_perm,
+                 "event_player": player},
+            )
+        ctx = {"played_card": card, "played_permanent": new_perm,
+               "event_player": player}
+        if digixros_count > 0:
+            ctx["digixros_count"] = digixros_count
+        self.execute_effects(EffectTiming.OnEnterFieldAnyone, ctx)
+        self._fire_play_observers(new_perm, player)
+        if is_option and not self._option_stays_on_field(card):
+            self._trash_option_after_resolution(player, new_perm)
         self.check_turn_end()

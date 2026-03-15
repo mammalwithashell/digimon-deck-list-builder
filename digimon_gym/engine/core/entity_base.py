@@ -1,7 +1,7 @@
 import re
 from typing import List, Optional
 from ..data.enums import CardColor, CardKind, Rarity
-from ..data.evo_cost import EvoCost, DnaCost
+from ..data.evo_cost import EvoCost, DnaCost, DigiXrosCost
 
 class CEntity_Base:
     def __init__(self):
@@ -10,6 +10,7 @@ class CEntity_Base:
         self.play_cost: int = 0
         self.evo_costs: List[EvoCost] = []
         self.dna_costs: List[DnaCost] = []
+        self.digixros_costs: List[DigiXrosCost] = []
         self.level: Optional[int] = None  # None for tamers/options and some Digimon (e.g. Eater Bit)
         self.card_name_jpn: str = ""
         self.card_name_eng: str = ""

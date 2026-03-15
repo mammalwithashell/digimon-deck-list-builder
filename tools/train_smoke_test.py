@@ -1,7 +1,7 @@
 """Smoke test: validate DigimonEnv works with SB3 MaskablePPO.
 
 Usage:
-    python scripts/train_smoke_test.py
+    python tools/train_smoke_test.py
 
 Requires: pip install stable-baselines3 sb3-contrib
 """

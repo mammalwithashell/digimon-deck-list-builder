@@ -15,6 +15,7 @@ from .constants import (
 from ..data.enums import GamePhase, EffectTiming
 from ..interfaces.modifiers import ModifierType
 from ..validation.digivolve_validator import can_digivolve, has_valid_dna_targets
+from ..validation.digixros_validator import has_any_digixros_material
 
 if TYPE_CHECKING:
     from . import Game
@@ -57,7 +58,18 @@ def build_action_mask(game: "Game", player_id: int) -> List[float]:
             if game._is_play_blocked_by_modifier(card):
                 continue
             play_cost = game.calculate_play_cost(me, card)
-            if game.memory >= 0 and play_cost <= game.memory + 10:
+            # DigiXros: account for potential cost reduction from materials.
+            # This is an optimistic estimate (assumes max materials available).
+            # The actual cost depends on how many materials the agent selects,
+            # but selection is optional so the agent can always decline.
+            effective_cost = play_cost
+            if card.has_digixros:
+                xros = card.digixros_cost
+                if xros and has_any_digixros_material(card, me):
+                    max_mats = xros.max_materials if xros.max_materials >= 0 else 99
+                    max_reduction = max_mats * xros.reduce_cost_per_card
+                    effective_cost = max(0, play_cost - max_reduction)
+            if game.memory >= 0 and effective_cost <= game.memory + 10:
                 # Option color requirement: must have a matching-color
                 # Digimon or Tamer on the field to play an Option card.
                 # Cards with match_color_requirement=False bypass this check.

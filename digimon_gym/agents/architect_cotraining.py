@@ -439,13 +439,13 @@ class CoTrainer:
     def _export_onnx(self, zip_path: str, onnx_path: str) -> Optional[str]:
         """Export an SB3 .zip model to ONNX format.
 
-        Uses ``scripts/export_onnx.py`` via subprocess.
+        Uses ``tools/export_onnx.py`` via subprocess.
 
         Returns:
             The *onnx_path* on success, or ``None`` on failure.
         """
         export_script = (
-            Path(__file__).resolve().parent.parent.parent / "scripts" / "export_onnx.py"
+            Path(__file__).resolve().parent.parent.parent / "tools" / "export_onnx.py"
         )
 
         if not export_script.exists():

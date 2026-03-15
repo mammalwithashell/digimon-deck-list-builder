@@ -4,8 +4,8 @@ Requires PyTorch + SB3 — run on a dev machine, NOT on end-user desktops.
 The resulting .onnx files can be loaded with onnxruntime (no PyTorch needed).
 
 Usage:
-    python scripts/export_onnx.py --type mlp --input models/mlp_agent.zip --output models/mlp_agent.onnx
-    python scripts/export_onnx.py --type lstm --input models/lstm_agent.zip --output models/lstm_agent.onnx
+    python tools/export_onnx.py --type mlp --input models/mlp_agent.zip --output models/mlp_agent.onnx
+    python tools/export_onnx.py --type lstm --input models/lstm_agent.zip --output models/lstm_agent.onnx
 """
 
 from __future__ import annotations

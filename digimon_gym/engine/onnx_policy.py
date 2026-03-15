@@ -1,7 +1,7 @@
 """Lightweight ONNX-based policies for trained agent inference.
 
 No PyTorch required — only numpy + onnxruntime.
-These wrap exported .onnx models from scripts/export_onnx.py.
+These wrap exported .onnx models from tools/export_onnx.py.
 """
 
 from __future__ import annotations

@@ -5,6 +5,13 @@
 This document is a current-state engineering guide for working in this repository.
 It focuses on stable contracts and implementation shape, not static snapshot metrics.
 
+## Project Vision
+
+This is a **Digimon TCG simulator** built for both human play and **RL agent training/deckbuilding**. The engine faithfully implements card effects so RL agents can learn optimal play strategies across the full card pool.
+
+- **DCGO** (`DCGO/`) is a git submodule containing the C# source from the Digimon Card Game Online client — the **behavioral source of truth** for card effects
+- **No-Approximations Policy**: every card effect must faithfully implement all card text; no stubs, no auto-selections; every choice must be exposed to the RL action space so agents can learn to make optimal decisions; gaps are marked BLOCKED and logged to `qa/archetype-qa/engine-gaps.md`
+
 ## System Overview
 
 The codebase is split into three deployable services sharing a common engine:
@@ -67,8 +74,8 @@ Underlying surfaces:
 - `digimon_gym/routers/lobby.py`: game lobby with join codes and public game browser
 - `digimon_gym/desktop_main.py`: lightweight desktop sidecar entry point (no DB/auth)
 - `src-tauri/`: Tauri v2 desktop app shell (Rust sidecar lifecycle management)
-- `scripts/export_onnx.py`: SB3 → ONNX model conversion (MLP + LSTM)
-- `scripts/build-sidecar.sh`: desktop sidecar build pipeline (PyInstaller + Tauri naming)
+- `tools/export_onnx.py`: SB3 → ONNX model conversion (MLP + LSTM)
+- `tools/build-sidecar.sh`: desktop sidecar build pipeline (PyInstaller + Tauri naming)
 - `docs/TENSOR_SPEC.md`, `docs/ACTION_SPEC.md`, `AGENTS.md`, `docs/TRAINING_RUNBOOK.md`: behavior contracts
 - `docs/plans/DESKTOP_DISTRIBUTION_PLAN.md`: full implementation plan for desktop distribution
 - `docs/TOOLS.md`: card registry, autoencoder, tensor layout, and new-set workflow documentation
@@ -76,7 +83,16 @@ Underlying surfaces:
 - `digimon_gym/engine/data/card_features.py`: card feature vectorizer for autoencoder
 - `digimon_gym/engine/data/card_registry.py`: card ID → integer index mapping
 - `tools/build_registry.py`: append-only card registry builder (DigimonCard.io API)
+- `tools/ingest_cards.py`: card metadata ingestion from DigimonCard.io API
 - `tools/train_card_autoencoder.py`: warm-start embedding generator
+- `tools/transpile_dcgo.py`: C#→Python card effect transpiler
+- `tools/transpiler/`: transpiler package
+- `tools/ingest_pinecone.py` / `tools/verify_pinecone.py`: Pinecone vector DB management
+- `tools/meta_loader.py`: meta deck data loader
+- `tools/check_frozen_integrity.py`: CI frozen script integrity guard
+- `qa/archetype-qa/`: archetype QA reports, engine API reference, engine gaps
+- `qa/qa-reports/`: gameplay QA test reports, validated cards index
+- `DCGO/`: git submodule — DCGO C# source (reference implementation)
 
 ## RL and Game Contracts
 
@@ -204,7 +220,7 @@ Legacy aliases are present in several routers for compatibility.
 - `GET /games/models` — lists available `.onnx` files
 - Model type auto-detected from filename: `*lstm*` → `OnnxLstmPolicy`, else `OnnxMlpPolicy`
 - Path traversal protection via `Path.name` sanitization
-- Export script: `scripts/export_onnx.py` converts SB3 .zip → .onnx (requires PyTorch)
+- Export script: `tools/export_onnx.py` converts SB3 .zip → .onnx (requires PyTorch)
 
 ### Admin AI Routes
 
@@ -340,7 +356,7 @@ The desktop app uses a **dual-server** model:
 - `src-tauri/src/main.rs`: Rust entry point, spawns/kills Python sidecar
 - `digimon_gym/desktop_main.py`: stripped-down FastAPI app (no SQLAlchemy imports)
 - `desktop.spec`: PyInstaller spec excluding heavy deps (torch, SB3, SQLAlchemy)
-- `scripts/build-sidecar.sh`: build script with `gameplay` (no models) and `full` (ONNX) profiles
+- `tools/build-sidecar.sh`: build script with `gameplay` (no models) and `full` (ONNX) profiles
 - `requirements-desktop.txt`: minimal deps for sidecar
 
 ### Build Profiles
@@ -393,12 +409,12 @@ python -m digimon_gym.agents.pilot_training --gauntlet --timesteps 500000
 python -c "from digimon_gym.digimon_gym import DigimonEnv; env=DigimonEnv(); obs,info=env.reset(); print(obs.shape, info['action_mask'].shape)"
 
 # ONNX model export (requires PyTorch)
-python scripts/export_onnx.py --type mlp --input models/mlp_agent.zip --output models/mlp_agent.onnx
-python scripts/export_onnx.py --type lstm --input models/lstm_agent.zip --output models/lstm_agent.onnx
+python tools/export_onnx.py --type mlp --input models/mlp_agent.zip --output models/mlp_agent.onnx
+python tools/export_onnx.py --type lstm --input models/lstm_agent.zip --output models/lstm_agent.onnx
 
 # Desktop sidecar build
-./scripts/build-sidecar.sh gameplay   # greedy bots only
-./scripts/build-sidecar.sh full       # auto-exports ONNX + bundles models
+./tools/build-sidecar.sh gameplay   # greedy bots only
+./tools/build-sidecar.sh full       # auto-exports ONNX + bundles models
 
 # Desktop sidecar (standalone, for testing)
 python -m digimon_gym.desktop_main --port 8321 --models-dir ./models
@@ -426,6 +442,11 @@ cd src-tauri && cargo tauri build  # production installers
 14. `state_filter.py` must redact both `handIds` and `handCards` for opponents — never leak card metadata.
 15. Game animation components (`DigivolveBanner`, `BattleEffect`) subscribe to `store.events` and track `lastSeqRef` to avoid replaying stale events.
 16. `Game.surrender()` must emit the `surrender` event before calling `declare_winner()` so event listeners see the surrender before game_over.
+
+## QA Artifacts
+
+- `qa/archetype-qa/` — per-archetype implementation QA, engine API reference, engine gaps tracker
+- `qa/qa-reports/` — dated gameplay test reports, validated cards index
 
 ## Pinecone MCP Integration
 

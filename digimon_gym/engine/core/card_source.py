@@ -100,6 +100,16 @@ class CardSource:
         return self.is_digimon or self.is_tamer or self.is_digi_egg
 
     @property
+    def has_digixros(self) -> bool:
+        return bool(self.c_entity_base and self.c_entity_base.digixros_costs)
+
+    @property
+    def digixros_cost(self):
+        if self.c_entity_base and self.c_entity_base.digixros_costs:
+            return self.c_entity_base.digixros_costs[0]
+        return None
+
+    @property
     def get_cost_itself(self) -> int:
         return self.c_entity_base.play_cost if self.c_entity_base else 0
 

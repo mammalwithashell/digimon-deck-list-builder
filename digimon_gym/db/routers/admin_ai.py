@@ -938,7 +938,7 @@ def _apply_and_commit_single_task(
                 ) from exc
 
             message = str(exc)
-            if "scripts/check_frozen_integrity.py" in message:
+            if "tools/check_frozen_integrity.py" in message:
                 raise RuntimeError(
                     "Integrity check failed after applying edits. "
                     "Reverted worktree changes so retry stays hash-safe. "

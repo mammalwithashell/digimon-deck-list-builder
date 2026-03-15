@@ -10,14 +10,14 @@ You are implementing all card effects for archetype **$ARGUMENTS** in the Digimo
 
 ## Quick Reference
 
-- **Engine API Reference**: `docs/archetype-qa/engine-api-reference.md` — the complete scripting reference (give this to every agent)
+- **Engine API Reference**: `qa/archetype-qa/engine-api-reference.md` — the complete scripting reference (give this to every agent)
 - **Design Spec**: `docs/superpowers/specs/2026-03-10-implement-archetype-design.md`
 - **Card API**: `https://digimoncard.io/index.php/api-public/search?card=<CARD_ID>`
 - **C# Scripts**: `DCGO/Assets/Scripts/CardEffect/{SET}/{COLOR}/{CARD_ID}.cs`
 - **Python Scripts**: `digimon_gym/engine/data/scripts/{set_lower}/{set_lower}_{nnn}.py`
 - **Frozen Manifest**: `digimon_gym/engine/data/scripts/_frozen_manifest.json`
 - **Deck Library**: `digimon_gym/engine/data/deck_library.json`
-- **Engine Gaps**: `docs/archetype-qa/engine-gaps.md`
+- **Engine Gaps**: `qa/archetype-qa/engine-gaps.md`
 - **Known Complex Cards**: `digimon_gym/engine/data/scripts/known_complex_cards.json`
 
 ---
@@ -188,7 +188,7 @@ Return your research as a structured context pack:
  10 (Common Patterns), 11 (Anti-Patterns), and 4 (Modifier System summary)}
 
 ## Known Engine Gaps
-{contents of docs/archetype-qa/engine-gaps.md}
+{contents of qa/archetype-qa/engine-gaps.md}
 
 ## Error Checklist (save for review phase — you will use this when resumed)
 1. BeforePayCost condition MUST start with: if context.get('card_source') is not card: return False
@@ -209,7 +209,7 @@ Return your research as a structured context pack:
 16. Use player.battle_area, NEVER player.field_cards
 ```
 
-The orchestrator reads the engine quick reference by extracting sections 1, 4, 5, 10, and 11 from `docs/archetype-qa/engine-api-reference.md` (~350 lines total).
+The orchestrator reads the engine quick reference by extracting sections 1, 4, 5, 10, and 11 from `qa/archetype-qa/engine-api-reference.md` (~350 lines total).
 
 The tech lead returns: **curated context pack** + **pre-flagged BLOCKED cards**.
 
@@ -518,7 +518,7 @@ One revision round maximum per Sonnet agent.
 
 #### BLOCKED scripts
 
-Log to `docs/archetype-qa/engine-gaps.md`. No further action.
+Log to `qa/archetype-qa/engine-gaps.md`. No further action.
 
 #### Final spot-check
 
@@ -528,7 +528,7 @@ After fixes are applied, resume the tech lead one last time for a quick spot-che
 
 ## Phase 4: Compile QA Index
 
-After Phase 3D completes, merge all verdicts into `docs/archetype-qa/{archetype_name}.md`:
+After Phase 3D completes, merge all verdicts into `qa/archetype-qa/{archetype_name}.md`:
 
 ```markdown
 # Archetype QA: {name}
@@ -572,7 +572,7 @@ Total cards: N
 {any cross-card notes from agents}
 ```
 
-**Update engine gaps tracker**: Append any new BLOCKED items to `docs/archetype-qa/engine-gaps.md`.
+**Update engine gaps tracker**: Append any new BLOCKED items to `qa/archetype-qa/engine-gaps.md`.
 
 ---
 
@@ -684,7 +684,7 @@ Present to the user:
 ### New/Modified Files
 - digimon_gym/engine/data/scripts/{set}/{files}...
 - tests/test_archetype_{name}.py
-- docs/archetype-qa/{name}.md
+- qa/archetype-qa/{name}.md
 
 ### Engine Gaps Found
 - {list any BLOCKED items requiring engine changes}

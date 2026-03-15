@@ -80,8 +80,8 @@ A headless Digimon TCG rules engine (based on DCGO) with a Gymnasium RL environm
 | `digimon_gym/db/routers/` | Auth, decks, admin routes |
 | `digimon_gym/ai/` | Admin AI task/batch pipeline |
 | `src-tauri/` | Tauri v2 desktop shell (Rust sidecar management) |
-| `scripts/export_onnx.py` | SB3 → ONNX model conversion |
-| `scripts/build-sidecar.sh` | Desktop sidecar build pipeline |
+| `tools/export_onnx.py` | SB3 → ONNX model conversion |
+| `tools/build-sidecar.sh` | Desktop sidecar build pipeline |
 | `frontend/src/` | React UI |
 | `tools/` | Meta loader, transpiler, promotion CLI |
 
@@ -148,8 +148,8 @@ python -m digimon_gym.agents.pilot_training --gauntlet --timesteps 500000
 
 ```bash
 # Export SB3 checkpoint to ONNX (requires PyTorch)
-python scripts/export_onnx.py --type mlp --input models/mlp_agent.zip --output models/mlp_agent.onnx
-python scripts/export_onnx.py --type lstm --input models/lstm_agent.zip --output models/lstm_agent.onnx
+python tools/export_onnx.py --type mlp --input models/mlp_agent.zip --output models/mlp_agent.onnx
+python tools/export_onnx.py --type lstm --input models/lstm_agent.zip --output models/lstm_agent.onnx
 ```
 
 ### Build Desktop App
@@ -159,10 +159,10 @@ python scripts/export_onnx.py --type lstm --input models/lstm_agent.zip --output
 pip install pyinstaller
 
 # Build sidecar binary (greedy bots only)
-./scripts/build-sidecar.sh gameplay
+./tools/build-sidecar.sh gameplay
 
 # Build sidecar binary (auto-exports ONNX + bundles models)
-./scripts/build-sidecar.sh full
+./tools/build-sidecar.sh full
 
 # Build Tauri desktop installer
 cd src-tauri && cargo tauri build

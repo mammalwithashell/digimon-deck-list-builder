@@ -16,6 +16,7 @@ from __future__ import annotations
 import json
 import logging
 from collections import Counter
+from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Dict, List, Optional, Tuple
 
@@ -27,6 +28,23 @@ from digimon_gym.engine.data.deck_finder import load_implemented_card_ids
 from digimon_gym.engine.data.enums import CardKind
 
 logger = logging.getLogger(__name__)
+
+
+@dataclass
+class CardConstraint:
+    """Per-card constraint for the architect candidate pool.
+
+    Attributes:
+        min_count: Floor — cannot remove below this many copies.
+        max_count: Ceiling — overrides database max_copies if set (clamped to 4).
+        locked: If True, freeze the card at exactly ``locked_count`` copies.
+        locked_count: Required when ``locked=True``.
+    """
+
+    min_count: int = 0
+    max_count: Optional[int] = None
+    locked: bool = False
+    locked_count: Optional[int] = None
 
 _DECK_LIBRARY_PATH = (
     Path(__file__).resolve().parent.parent
@@ -43,6 +61,8 @@ class CandidatePool:
         archetype_name: str,
         extra_cards: Optional[List[str]] = None,
         custom_pool: Optional[List[str]] = None,
+        card_constraints: Optional[Dict[str, CardConstraint]] = None,
+        use_restricted_list: bool = False,
     ) -> None:
         """Initialise the candidate pool.
 
@@ -51,9 +71,13 @@ class CandidatePool:
             archetype_name: Name in deck_library.json to pull related cards from.
             extra_cards: Additional card IDs to include in the pool.
             custom_pool: If provided, replaces the archetype-derived pool entirely.
+            card_constraints: Per-card constraints (locks, min/max counts).
+            use_restricted_list: If True, enforce the official ban/restricted list.
         """
         self._archetype_name = archetype_name
         self._db = CardDatabase()
+        self._card_constraints = card_constraints or {}
+        self._use_restricted_list = use_restricted_list
 
         # --- Build raw candidate set ---
         if custom_pool is not None:
@@ -67,6 +91,16 @@ class CandidatePool:
         # Always include cards already in the base deck so the agent can
         # reason about keeping them.
         raw_ids.update(base_deck)
+
+        # --- Restricted list filtering ---
+        if use_restricted_list:
+            from digimon_gym.engine.data.deck_loader import RESTRICTED_LIST
+
+            banned = {
+                cid for cid, limit in RESTRICTED_LIST.card_limits.items()
+                if limit == 0
+            }
+            raw_ids -= banned
 
         # --- Filter to implementable, non-egg cards ---
         implemented = load_implemented_card_ids()
@@ -95,6 +129,39 @@ class CandidatePool:
             self._max_copies[cid] = (
                 entity.max_count_in_deck if entity is not None else 4
             )
+
+        # --- Apply restricted list max_copies overrides ---
+        if use_restricted_list:
+            from digimon_gym.engine.data.deck_loader import RESTRICTED_LIST
+
+            for cid in self._candidates:
+                if cid in RESTRICTED_LIST.card_limits:
+                    limit = RESTRICTED_LIST.card_limits[cid]
+                    if limit > 0:  # banned already removed above
+                        self._max_copies[cid] = min(
+                            self._max_copies[cid], limit
+                        )
+
+        # --- Resolve card constraints ---
+        self._min_copies: Dict[str, int] = {}
+        for cid, constraint in self._card_constraints.items():
+            if cid not in self._candidate_to_idx:
+                continue
+
+            if constraint.locked:
+                if constraint.locked_count is None:
+                    raise ValueError(
+                        f"CardConstraint for {cid} has locked=True but "
+                        f"locked_count is not set."
+                    )
+                lc = constraint.locked_count
+                self._min_copies[cid] = lc
+                self._max_copies[cid] = min(lc, 4)
+            else:
+                if constraint.min_count > 0:
+                    self._min_copies[cid] = constraint.min_count
+                if constraint.max_count is not None:
+                    self._max_copies[cid] = min(constraint.max_count, 4)
 
     # ------------------------------------------------------------------
     # Properties
@@ -180,7 +247,8 @@ class CandidatePool:
         can_remove = np.zeros(n, dtype=np.int8)
         can_add = np.zeros(n, dtype=np.int8)
         for i, cid in enumerate(self._candidates):
-            if current_deck.get(cid, 0) > 0:
+            min_copies = self._min_copies.get(cid, 0)
+            if current_deck.get(cid, 0) > min_copies:
                 can_remove[i] = 1
             if current_deck.get(cid, 0) < self._max_copies[cid]:
                 can_add[i] = 1
@@ -277,12 +345,25 @@ class CandidatePool:
 
     def to_json(self) -> dict:
         """Serialise pool metadata for saving alongside a trained model."""
+        # Serialise card constraints as plain dicts
+        constraints_json: Dict[str, dict] = {}
+        for cid, c in self._card_constraints.items():
+            constraints_json[cid] = {
+                "min_count": c.min_count,
+                "max_count": c.max_count,
+                "locked": c.locked,
+                "locked_count": c.locked_count,
+            }
+
         return {
             "archetype_name": self._archetype_name,
             "candidates": self._candidates,
             "max_copies": self._max_copies,
             "core_cards": self._core_cards,
             "flex_cards": self._flex_cards,
+            "min_copies": self._min_copies,
+            "card_constraints": constraints_json,
+            "use_restricted_list": self._use_restricted_list,
         }
 
     @classmethod
@@ -312,6 +393,25 @@ class CandidatePool:
                 pool._max_copies[cid] = (
                     entity.max_count_in_deck if entity is not None else 4
                 )
+
+        # Restore constraint data
+        pool._min_copies = {
+            cid: int(v) for cid, v in data.get("min_copies", {}).items()
+        }
+        pool._use_restricted_list = data.get("use_restricted_list", False)
+
+        # Restore CardConstraint objects
+        raw_constraints = data.get("card_constraints", {})
+        pool._card_constraints = {
+            cid: CardConstraint(
+                min_count=c.get("min_count", 0),
+                max_count=c.get("max_count"),
+                locked=c.get("locked", False),
+                locked_count=c.get("locked_count"),
+            )
+            for cid, c in raw_constraints.items()
+        }
+
         return pool
 
     # ------------------------------------------------------------------

@@ -2,7 +2,7 @@
 
 This file accumulates engine mechanics that are missing or incomplete, discovered during archetype implementation. Each entry includes the card that exposed the gap and what engine change is needed.
 
-Last updated: 2026-03-14
+Last updated: 2026-03-15
 
 ## Resolved Gaps
 
@@ -48,10 +48,9 @@ Last updated: 2026-03-14
 
 ## Remaining Gaps
 
-### DigiXros (Deferred to Phase 7)
-- **Card(s):** BT21-021 (OmniShoutmon) + future Xros Heart cards
-- **What's missing:** Full DigiXros pipeline (multi-permanent selection, field-to-source, cost reduction).
-- **Impact:** Deferred — not in Phase 1-6 scope.
+### ~~DigiXros~~ — RESOLVED 2026-03-15
+- **Card(s):** 60 cards across BT10-BT24, EX3-EX10, P sets
+- **Resolution:** Engine natively supports DigiXros/Assembly: `DigiXrosCost` data model, `parse_digixros_req()` parser (all 60 cards), `digixros_validator.py` for material matching, play intercept → `SelectMaterial` loop → `_execute_digixros_play()`, field materials fire `WhenRemoveField` with `removal_cause='digixros'`, `digixros_count` in `OnEnterFieldAnyone` context.
 
 <!-- Entry template:
 ### {Gap Title}

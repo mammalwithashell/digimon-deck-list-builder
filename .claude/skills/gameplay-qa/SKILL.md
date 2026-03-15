@@ -22,9 +22,9 @@ for any bugs you find.
   - https://world.digimoncard.com/rule/pdf/general_rule.pdf
   - https://world.digimoncard.com/rule/pdf/manual.pdf
 - **Card API**: https://digimoncard.io/index.php/api-public/search?card=CARD_ID
-- **QA Index**: `docs/qa-reports/INDEX.md` — tracks all QA issues and their resolution status
-- **QA Reports**: `docs/qa-reports/YYYY-MM-DD-{archetype}.md`
-- **Validated Cards**: `docs/qa-reports/validated_cards.json` — cards confirmed working through QA
+- **QA Index**: `qa/qa-reports/INDEX.md` — tracks all QA issues and their resolution status
+- **QA Reports**: `qa/qa-reports/YYYY-MM-DD-{archetype}.md`
+- **Validated Cards**: `qa/qa-reports/validated_cards.json` — cards confirmed working through QA
 
 ---
 
@@ -32,15 +32,15 @@ for any bugs you find.
 
 Before starting a new QA session, check what has already been tested.
 
-1. Read `docs/qa-reports/INDEX.md` to see:
+1. Read `qa/qa-reports/INDEX.md` to see:
    - Which archetypes have been tested
    - Outstanding issues that may still affect gameplay
    - Won't-fix issues to be aware of during testing
-2. Read `docs/qa-reports/validated_cards.json` to see which individual cards are already validated:
+2. Read `qa/qa-reports/validated_cards.json` to see which individual cards are already validated:
    - `PASS` cards can be skipped unless doing regression testing
    - `PARTIAL` cards should be prioritized for deeper testing
    - `FAIL` cards need retesting after fixes
-3. Skim any relevant existing reports in `docs/qa-reports/` for the archetype you plan to test
+3. Skim any relevant existing reports in `qa/qa-reports/` for the archetype you plan to test
 4. If re-testing a previously tested archetype (regression test), note which prior issues were fixed and verify them
 
 ---
@@ -68,7 +68,7 @@ import json
 from pathlib import Path
 
 lib = json.loads(Path('digimon_gym/engine/data/deck_library.json').read_text())
-validated = json.loads(Path('docs/qa-reports/validated_cards.json').read_text()) if Path('docs/qa-reports/validated_cards.json').exists() else {'cards': {}}
+validated = json.loads(Path('qa/qa-reports/validated_cards.json').read_text()) if Path('qa/qa-reports/validated_cards.json').exists() else {'cards': {}}
 
 archetype = lib['archetypes'].get('ARCHETYPE_NAME', {})
 all_cards = set()
@@ -297,7 +297,7 @@ After key game actions, verify the web UI renders correctly.
 
 After testing, create a structured QA report.
 
-Save to: `docs/qa-reports/YYYY-MM-DD-{archetype}.md`
+Save to: `qa/qa-reports/YYYY-MM-DD-{archetype}.md`
 
 ### Report Template:
 
@@ -340,7 +340,7 @@ Save to: `docs/qa-reports/YYYY-MM-DD-{archetype}.md`
 
 ### Update the QA Index
 
-After saving the report, update `docs/qa-reports/INDEX.md`:
+After saving the report, update `qa/qa-reports/INDEX.md`:
 
 1. Add a row to the **Summary** table:
    ```markdown
@@ -366,7 +366,7 @@ After saving the report, update `docs/qa-reports/INDEX.md`:
 
 ### Update the Validated Cards Index
 
-After saving the report, update `docs/qa-reports/validated_cards.json`:
+After saving the report, update `qa/qa-reports/validated_cards.json`:
 
 1. For each card in the "Cards Tested" table:
    - **PASS** cards: add/update entry with `"status": "PASS"`
@@ -408,7 +408,7 @@ curl -s -X POST http://localhost:8000/issues \
 
 ### Update index when issues are resolved
 
-When bugs from a QA report are fixed (in the same session or later), update `docs/qa-reports/INDEX.md`:
+When bugs from a QA report are fixed (in the same session or later), update `qa/qa-reports/INDEX.md`:
 - Change the issue's status from `OUTSTANDING` to `FIXED`
 - Add a brief fix description in the Fix column
 - Update the summary table counts (Fixed/Outstanding columns)

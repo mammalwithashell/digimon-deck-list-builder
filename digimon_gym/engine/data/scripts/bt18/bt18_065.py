@@ -46,63 +46,11 @@ class BT18_065(CardScript):
                     return False
             return True
 
-        # ─── Effect 0: DigiXros -1: 4 [Vemmon] (BeforePayCost)
-        # When this card would be played, count available [Vemmon] in hand + battle area
-        # (and trash if no non-Vemmon Digimon on field). Reduce cost by min(count, 4).
-        effect0 = ICardEffect()
-        effect0.set_timing(EffectTiming.BeforePayCost)
-        effect0.set_effect_name("BT18-065 DigiXros -1: 4 [Vemmon]")
-        effect0.set_effect_description(
-            "DigiXros -1: 4 [Vemmon]. When this would be played, you may place "
-            "specified cards from your hand/battle area under it. Each reduces the "
-            "play cost. While you have no Digimon other than [Vemmon], cards from "
-            "your trash may also be placed.")
-        # Dynamic cost reduction based on available Vemmon count
-        effect0._cost_reduction_value_fn = None  # set below
-
-        def condition0(context: Dict[str, Any]) -> bool:
-            # Leak guard: only apply when THIS card is being played
-            if context.get('card_source') is not card:
-                return False
-            owner = getattr(card, 'owner', None)
-            if not owner:
-                return False
-            # Count available [Vemmon] sources
-            count = 0
-            for c in owner.hand_cards:
-                if c is not card and _is_vemmon_name(c):
-                    count += 1
-            for p in owner.battle_area:
-                if p.is_digimon and p.contains_card_name('Vemmon'):
-                    count += 1
-            # Trash sources if no non-Vemmon Digimon
-            if _only_vemmon_digimon(owner):
-                for c in owner.trash_cards:
-                    if _is_vemmon_name(c):
-                        count += 1
-            return count > 0
-
-        effect0.set_can_use_condition(condition0)
-
-        def _digi_xros_reduction(context: Dict[str, Any]) -> int:
-            owner = getattr(card, 'owner', None)
-            if not owner:
-                return 0
-            count = 0
-            for c in owner.hand_cards:
-                if c is not card and _is_vemmon_name(c):
-                    count += 1
-            for p in owner.battle_area:
-                if p.is_digimon and p.contains_card_name('Vemmon'):
-                    count += 1
-            if _only_vemmon_digimon(owner):
-                for c in owner.trash_cards:
-                    if _is_vemmon_name(c):
-                        count += 1
-            return min(count, 4)
-
-        effect0._cost_reduction_value_fn = _digi_xros_reduction
-        effects.append(effect0)
+        # DigiXros -1: 4 [Vemmon] cost reduction is now handled by the engine's
+        # DigiXrosCost system (parsed from xros_req metadata). The engine presents
+        # material selection via SelectMaterial phase and applies cost reduction
+        # automatically. The "trash zone if only Vemmon on field" extension is a
+        # TODO for a future script-level zone override hook.
 
         # ─── Effect 1: [When Digivolving] Place up to 2 [Vemmon] from trash as
         #     bottom digi-cards.
