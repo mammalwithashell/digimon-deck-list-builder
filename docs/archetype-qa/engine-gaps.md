@@ -26,76 +26,27 @@ Last updated: 2026-03-14
 
 10. ~~**Trash Main Action Mask**~~ — RESOLVED 2026-03-14. Added `TRASH_MAIN_START = 1150` action range (1150 + trash_idx). Scripts use `_is_trash_main = True` flag. 5 scripts updated: BT20-096, BT24-076, EX10-054, EX10-011, EX7-060.
 
+11. ~~**One-Shot Digivolve Cost Hook**~~ — RESOLVED 2026-03-14. `Player.digivolve()` now checks `CHANGE_DIGIVOLUTION_COST` modifiers from the registry. BT3-103 and EX1-071 use closure-based consumed flags for one-shot behavior.
+
+12. ~~**End-of-Turn DNA Digivolve**~~ — RESOLVED 2026-03-14. No new engine API needed; existing `effect_dna_digivolve_from_hand()` called from inherited `OnEndTurn` effects on BT12-022 and BT12-050.
+
+13. ~~**Grant Triggered Effect to Opponent's Permanent**~~ — RESOLVED 2026-03-14 (pre-existing). `permanent.grant_temp_effect(effect, expiry_turn)` API + `clear_expired_effects()` at turn start. BT14-044 fully implemented.
+
+14. ~~**Effect-Based Play Lock**~~ — RESOLVED 2026-03-14. Added `ModifierType.CANNOT_PLAY_BY_EFFECT`; checked in `effect_play_from_zone()` only (normal hand plays unaffected). BT9-047 updated.
+
+15. ~~**Aura-Style CANNOT_UNSUSPEND for New Entries**~~ — RESOLVED 2026-03-14 (pre-existing). BT12-057 uses aura-style modifier with condition `target is not owner_perm`; `unsuspend()` dynamically checks `has_modifier()` for all permanents including new entries.
+
+16. ~~**OnDigivolutionCardReturnToDeckBottom Not Auto-Fired**~~ — RESOLVED 2026-03-14 (matches DCGO). DCGO also uses manual trigger. Scripts call `game.execute_effects()` explicitly. Functional pattern, not a gap.
+
+17. ~~**Top/Bottom Deck Choice**~~ — RESOLVED 2026-03-14. Added `game.effect_choose_deck_placement(player, card, callback)` helper. BT23-057 updated to use it.
+
+18. ~~**WhenRemoveField Lacks Removal Cause Context**~~ — RESOLVED 2026-03-14. `Player.delete_permanent()` now accepts `removal_cause` parameter ('battle', 'effect', 'rule', 'cost', 'de_digivolve'). Passed in WhenRemoveField/OnRemovedField/WhenPermanentWouldBeDeleted context. EX7-049 updated.
+
+19. ~~**Face-Down Card Tracking**~~ — RESOLVED 2026-03-14 (matches DCGO). DCGO `IsFlipped` is Security-only. Approximation counting all non-top sources is acceptable.
+
+20. ~~**Ignore Color Requirement**~~ — RESOLVED 2026-03-14. Added `ModifierType.IGNORE_COLOR_REQUIREMENT` for aura-style bypass in `action_mask.py`. 7 Hudiemon Option scripts use `card._match_color_requirement = False` for self-bypass. BT23-094 also updated.
+
 ## Remaining Gaps
-
-### One-Shot Digivolve Cost Hook
-- **Discovered in:** BG Imperial / ExMaquinamon (2026-03-11)
-- **Card(s):** BT3-103 (Hidden Potential Discovered!), EX1-071
-- **Effect text:** "When one of your green Digimon would next digivolve, by suspending 1 of your Digimon, reduce the digivolution cost by 5."
-- **What's missing:** Player-level temporary digivolve cost reduction hook that fires once on the next qualifying digivolve, with suspend-as-cost.
-- **Suggested change:** Add `player.register_one_shot_digivolve_hook(condition_fn, cost_fn, effect_fn)`.
-- **Workaround:** None — BLOCKED. Security effects are implemented.
-- **Impact:** 2 cards BLOCKED
-
-### End-of-Turn DNA Digivolve
-- **Discovered in:** BG Imperial (2026-03-14)
-- **Card(s):** BT12-022, BT12-050
-- **What's missing:** Engine API to perform DNA digivolution from an end-of-turn trigger.
-- **Workaround:** None — BLOCKED (inherited effects).
-- **Impact:** 2 cards BLOCKED
-
-### Grant Triggered Effect to Opponent's Permanent
-- **Discovered in:** Zephaga (2026-03-11)
-- **Card(s):** BT14-044 — Palmon
-- **Effect text:** "[Start of Your Main Phase] 1 of your opponent's Digimon gains '[All Turns] When this Digimon becomes suspended, lose 2 memory.' until the end of their turn."
-- **What's missing:** Ability to grant a temporary triggered effect (OnTappedAnyone → lose memory) to an opponent's permanent with expiry.
-- **Suggested change:** `permanent.grant_temp_effect(ICardEffect, expiry)` that attaches an effect to a permanent with time-based removal.
-- **Workaround:** Descriptive-tagged stub.
-
-### Effect-Based Play Lock
-- **Discovered in:** Zephaga (2026-03-11)
-- **Card(s):** BT9-047 — Pomumon
-- **Effect text:** "[All Turns] Players can't play Digimon by effects."
-- **What's missing:** Play-lock mechanism preventing effect-based Digimon plays while allowing normal main-phase plays.
-- **Suggested change:** Add `ModifierType.CANNOT_PLAY_BY_EFFECT` that `effect_play_from_zone` checks.
-- **Workaround:** Descriptive-tagged stub.
-
-### Aura-Style CANNOT_UNSUSPEND for New Entries
-- **Discovered in:** Zephaga (2026-03-11)
-- **Card(s):** BT12-057 — Quartzmon
-- **Effect text:** "[All Turns] All other Digimon and Tamers don't unsuspend."
-- **What's missing:** Permanents entering the field AFTER Quartzmon don't receive CANNOT_UNSUSPEND. No pre-unsuspend aura hook.
-- **Suggested change:** Aura-style modifier registration that auto-applies to new permanents.
-- **Workaround:** Applied at digivolve time; new entries not affected.
-
-### OnDigivolutionCardReturnToDeckBottom Not Auto-Fired
-- **Discovered in:** Galacticmon (2026-03-13)
-- **Card(s):** BT18-065 (Snatchmon), BT18-092 (Zenith) — Vemmon-archetype
-- **What's missing:** `EffectTiming.OnDigivolutionCardReturnToDeckBottom` is defined but `permanent.py` never fires it automatically.
-- **Suggested change:** Add `_fire_timing(OnDigivolutionCardReturnToDeckBottom, ...)` in engine wherever digi-cards return to deck bottom.
-- **Workaround:** Scripts manually call `game.execute_effects()`. Functional but fragile.
-
-### Top/Bottom Deck Choice
-- **Discovered in:** Jesmon (2026-03-11)
-- **Card(s):** BT23-057 — Gankoomon
-- **What's missing:** Cost reduction returns cards to deck but player should choose top or bottom. Currently defaults to bottom.
-- **Impact:** Minor UX (doesn't affect game outcome significantly)
-
-### WhenRemoveField Lacks Removal Cause Context
-- **Discovered in:** Rocks (2026-03-14)
-- **Card(s):** EX7-049 (Metallicdramon)
-- **What's missing:** WhenRemoveField timing does not pass why the permanent is being removed (battle, effect, de-digivolve, etc.).
-- **Impact:** 1 card (ENGINE-LIMITATION)
-
-### Face-Down Card Tracking
-- **Discovered in:** Millenniummon (2026-03-14)
-- **What's missing:** Engine does not track which digivolution cards are face-down vs face-up. Approximation counts all non-top sources.
-- **Impact:** Minor (EX9-009 approximation acceptable)
-
-### Ignore Color Requirement Aura
-- **Discovered in:** Hudiemon (2026-03-14)
-- **What's missing:** `card._match_color_requirement = False` works for self but not as an aura to grant color bypass to other cards.
-- **Impact:** 8 cards (non-blocking, affects Option plays only)
 
 ### DigiXros (Deferred to Phase 7)
 - **Card(s):** BT21-021 (OmniShoutmon) + future Xros Heart cards

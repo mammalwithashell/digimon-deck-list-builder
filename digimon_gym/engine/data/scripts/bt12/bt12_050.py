@@ -89,4 +89,41 @@ class BT12_050(CardScript):
         effect0.set_can_use_condition(condition0)
         effects.append(effect0)
 
+        # [Inherited] [End of Your Turn] You may DNA digivolve this Digimon
+        # into a Digimon card in your hand.
+        effect_eot = ICardEffect()
+        effect_eot.set_timing(EffectTiming.OnEndTurn)
+        effect_eot.set_effect_name("BT12-050 End of turn DNA digivolve (inherited)")
+        effect_eot.set_effect_description(
+            "[End of Your Turn] You may DNA digivolve this Digimon into a "
+            "Digimon card in your hand."
+        )
+        effect_eot.is_inherited_effect = True
+        effect_eot.is_optional = True
+
+        def condition_eot(context: Dict[str, Any]) -> bool:
+            if not (card and card.owner and card.owner.is_my_turn):
+                return False
+            perm = card.permanent_of_this_card()
+            if not perm:
+                return False
+            return True
+
+        effect_eot.set_can_use_condition(condition_eot)
+
+        def process_eot(ctx: Dict[str, Any]):
+            player = ctx.get('player')
+            game = ctx.get('game')
+            if not (player and game):
+                return
+            game.effect_dna_digivolve_from_hand(
+                player,
+                filter_fn=lambda c: True,
+                is_optional=True,
+                prompt="Select a card from hand to DNA digivolve (end of turn).",
+            )
+
+        effect_eot.set_on_process_callback(process_eot)
+        effects.append(effect_eot)
+
         return effects

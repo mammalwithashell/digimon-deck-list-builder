@@ -77,9 +77,12 @@ class BT23_057(CardScript):
                         return
                     chosen = player.trash_cards[idx]
                     player.trash_cards.remove(chosen)
-                    player.library_cards.append(chosen)
                     remaining[0] -= 1
-                    select_next_trash_card()
+                    # Let agent choose top or bottom of deck for each card
+                    game.effect_choose_deck_placement(
+                        player, chosen,
+                        callback=select_next_trash_card,
+                    )
 
                 game.request_selection(
                     GamePhase.SelectTrash, player, on_trash_selected, valid,

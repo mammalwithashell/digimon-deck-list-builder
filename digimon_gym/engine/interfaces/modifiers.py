@@ -100,10 +100,14 @@ class ModifierType(Enum):
     # ── Play / Field Restrictions ───────────────────────────────────
     # ICanNotPlayCardEffect
     CANNOT_PLAY_CARD = auto()
+    # ICanNotPlayCardEffect (effect-based plays only — normal hand plays unaffected)
+    CANNOT_PLAY_BY_EFFECT = auto()
     # ICanNotPutFieldEffect
     CANNOT_PUT_ON_FIELD = auto()
     # ICanNotDigivolveEffect
     CANNOT_DIGIVOLVE = auto()
+    # IIgnoreColorConditionEffect — bypass Option color requirement
+    IGNORE_COLOR_REQUIREMENT = auto()
 
     # ── Attack Restrictions ─────────────────────────────────────────
     # Force a Digimon to attack at start of main phase

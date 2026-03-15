@@ -12,6 +12,7 @@ class BT23_093(CardScript):
     """BT23-093 Big Bang Punch!"""
 
     def get_card_effects(self, card: 'CardSource') -> List['ICardEffect']:
+        card._match_color_requirement = False
         effects = []
 
         # Timing: EffectTiming.None
@@ -27,12 +28,7 @@ class BT23_093(CardScript):
         effect0.set_can_use_condition(condition0)
 
         def process0(ctx: Dict[str, Any]):
-            """Action: Ignore Color Req"""
-            player = ctx.get('player')
-            perm = ctx.get('permanent')
-            game = ctx.get('game')
-            # Ignores color requirement for playing Options — not modeled in engine
-            pass  # descriptive-tagged
+            pass
 
         effect0.set_on_process_callback(process0)
         effects.append(effect0)

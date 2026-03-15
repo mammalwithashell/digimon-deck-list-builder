@@ -922,7 +922,7 @@ class Game(CombatMixin, ActionDecoderMixin, EffectHelpersMixin):
                 for perm in list(player.battle_area):
                     if perm.is_digimon and perm.dp is not None and perm.dp == 0:
                         self.logger.log(f"[Rule Process] {self._perm_ref(perm)} has 0 DP — destroyed")
-                        player.delete_permanent(perm)
+                        player.delete_permanent(perm, removal_cause='rule')
                         changed = True
 
             # 2. Non-Digimon in breeding area → trash (DCGO: TrashNonDigimonProcess)

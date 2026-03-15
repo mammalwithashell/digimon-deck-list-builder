@@ -14,9 +14,10 @@ class BT9_047(CardScript):
 
     [All Turns] Players can't play Digimon by effects.
 
-    Implemented via CANNOT_PLAY_CARD modifier registered when Pomumon enters
-    the field. The modifier condition checks if the card being played is a
-    Digimon. Auto-cleaned when Pomumon leaves field via cleanup_modifiers.
+    Implemented via CANNOT_PLAY_BY_EFFECT modifier registered when Pomumon
+    enters the field. This blocks effect-based Digimon plays (e.g., play from
+    trash) while allowing normal hand plays from the Main phase.
+    Auto-cleaned when Pomumon leaves field via cleanup_modifiers.
     """
 
     def get_card_effects(self, card: 'CardSource') -> List['ICardEffect']:
@@ -46,11 +47,11 @@ class BT9_047(CardScript):
             if not perm:
                 return
 
-            # Register CANNOT_PLAY_CARD for Digimon only
-            # Condition: block if the card being played is a Digimon
+            # Register CANNOT_PLAY_BY_EFFECT for Digimon only
+            # Blocks effect-based plays; normal hand plays are unaffected
             game.register_modifier(
                 perm,
-                ModifierType.CANNOT_PLAY_CARD,
+                ModifierType.CANNOT_PLAY_BY_EFFECT,
                 condition=lambda target, c: c.get('card') and c['card'].is_digimon,
                 source_effect=effect0,
                 expiry='permanent',

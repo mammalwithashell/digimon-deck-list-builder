@@ -480,7 +480,7 @@ class ActionDecoderMixin:
             if 0 <= idx < len(self.turn_player.battle_area):
                 sacrifice = self.turn_player.battle_area[idx]
                 self.logger.log(f"[Overclock] Sacrificed {self._perm_ref(sacrifice)}")
-                self.turn_player.delete_permanent(sacrifice)
+                self.turn_player.delete_permanent(sacrifice, removal_cause='cost')
                 self.logger.log(f"[Overclock] End-of-turn attack on player!")
                 self.resolve_attack(overclock_perm, self.opponent_player, without_suspend=True,
                                     return_phase=GamePhase.EndOfTurnAction)

@@ -263,11 +263,25 @@ class EffectHelpersMixin:
             self._fire_play_observers(perm, target_player)
 
     def _is_play_blocked_by_modifier(self, card: "CardSource") -> bool:
-        """Check if CANNOT_PLAY_CARD modifiers block playing this card by effect."""
+        """Check if CANNOT_PLAY_CARD modifiers block playing this card (hand or effect)."""
         if not hasattr(self, 'modifiers'):
             return False
         ctx = {'card': card}
         for entry in self.modifiers._modifiers.get(ModifierType.CANNOT_PLAY_CARD, []):
+            if entry.condition is None or entry.condition(None, ctx):
+                return True
+        return False
+
+    def _is_effect_play_blocked(self, card: "CardSource") -> bool:
+        """Check if CANNOT_PLAY_BY_EFFECT modifiers block playing this card via effect.
+
+        This is separate from _is_play_blocked_by_modifier which also blocks
+        normal hand plays. CANNOT_PLAY_BY_EFFECT only blocks effect-based plays.
+        """
+        if not hasattr(self, 'modifiers'):
+            return False
+        ctx = {'card': card}
+        for entry in self.modifiers._modifiers.get(ModifierType.CANNOT_PLAY_BY_EFFECT, []):
             if entry.condition is None or entry.condition(None, ctx):
                 return True
         return False
@@ -288,10 +302,10 @@ class EffectHelpersMixin:
         if zone == 'hand_or_trash':
             valid = []
             for i, card in enumerate(player.hand_cards):
-                if filter_fn(card) and (SEL_HAND_START + i) < ACTION_SPACE_SIZE and not self._is_play_blocked_by_modifier(card):
+                if filter_fn(card) and (SEL_HAND_START + i) < ACTION_SPACE_SIZE and not self._is_play_blocked_by_modifier(card) and not self._is_effect_play_blocked(card):
                     valid.append(SEL_HAND_START + i)
             for i, card in enumerate(player.trash_cards):
-                if filter_fn(card) and (SEL_TRASH_START + i) < ACTION_SPACE_SIZE and not self._is_play_blocked_by_modifier(card):
+                if filter_fn(card) and (SEL_TRASH_START + i) < ACTION_SPACE_SIZE and not self._is_play_blocked_by_modifier(card) and not self._is_effect_play_blocked(card):
                     valid.append(SEL_TRASH_START + i)
             if not valid:
                 return
@@ -353,7 +367,7 @@ class EffectHelpersMixin:
 
         valid = []
         for i, card in enumerate(source_list):
-            if filter_fn(card) and (offset + i) < ACTION_SPACE_SIZE and not self._is_play_blocked_by_modifier(card):
+            if filter_fn(card) and (offset + i) < ACTION_SPACE_SIZE and not self._is_play_blocked_by_modifier(card) and not self._is_effect_play_blocked(card):
                 valid.append(offset + i)
         if not valid:
             return
@@ -496,6 +510,33 @@ class EffectHelpersMixin:
         self.request_selection(
             GamePhase.SelectEffectChoice, player, on_select, valid,
             prompt=prompt)
+
+    def effect_choose_deck_placement(
+        self, player: "Player", card: "CardSource",
+        callback: Optional[Callable] = None,
+    ):
+        """Let agent choose to place a card on top or bottom of deck.
+
+        Branch 0 = top of deck (insert at index 0).
+        Branch 1 = bottom of deck (append).
+        """
+        def on_choice(branch: int):
+            if branch == 0:
+                player.library_cards.insert(0, card)
+                self.logger.log(f"[Effect] {player.player_name} placed "
+                                f"{self._card_ref(card)} on top of deck.")
+            else:
+                player.library_cards.append(card)
+                self.logger.log(f"[Effect] {player.player_name} placed "
+                                f"{self._card_ref(card)} on bottom of deck.")
+            if callback:
+                callback()
+
+        self.effect_choose_branch(
+            player, 2, on_choice,
+            prompt="Place on top or bottom of deck?",
+            branch_labels=["Top of deck", "Bottom of deck"],
+        )
 
     def effect_select_own_security(
         self, player: "Player",

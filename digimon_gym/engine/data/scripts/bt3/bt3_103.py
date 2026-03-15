@@ -50,23 +50,37 @@ class BT3_103(CardScript):
             if not (player and game):
                 return
 
+            # One-shot flag: consumed after first digivolve uses it
+            consumed = [False]
+
             # Select 1 Digimon to suspend as cost
             def on_suspend(target_perm):
                 target_perm.suspend()
 
-                # Register digivolution cost reduction for GREEN Digimon only
+                from ....data.enums import CardColor
+
+                def green_condition(target, context):
+                    """Only apply to green Digimon, and only once (one-shot)."""
+                    if consumed[0]:
+                        return False
+                    top = target.top_card if target else None
+                    if not top:
+                        return False
+                    return CardColor.Green in (getattr(top, 'card_colors', []) or [])
+
+                def cost_value(current, target, context):
+                    consumed[0] = True
+                    return current - 5
+
+                # Register on ALL field Digimon — condition filters to green only
                 for field_perm in player.battle_area:
                     if field_perm.is_digimon:
-                        # Check if this Digimon is green
-                        top = field_perm.top_card
-                        if top:
-                            colors = [col.name for col in getattr(top, 'card_colors', [])]
-                            if 'Green' in colors:
-                                game.register_modifier(
-                                    field_perm, ModifierType.CHANGE_DIGIVOLUTION_COST,
-                                    value_fn=lambda current, target, c: current - 5,
-                                    expiry='end_of_turn',
-                                )
+                        game.register_modifier(
+                            field_perm, ModifierType.CHANGE_DIGIVOLUTION_COST,
+                            condition=green_condition,
+                            value_fn=cost_value,
+                            expiry='end_of_turn',
+                        )
 
             game.effect_select_own_permanent(
                 player, on_suspend,

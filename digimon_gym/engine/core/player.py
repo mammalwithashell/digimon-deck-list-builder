@@ -221,6 +221,17 @@ class Player:
 
         final_cost = max(0, base_cost - reduction)
 
+        # 2b. Apply CHANGE_DIGIVOLUTION_COST modifiers from modifier registry
+        # (e.g., BT3-103 Hidden Potential Discovered!, EX1-071 Win Rate: 60%!)
+        if self.game and hasattr(self.game, 'modifiers'):
+            from ..interfaces.modifiers import ModifierType
+            final_cost = self.game.modifiers.get_int_modifier(
+                permanent, ModifierType.CHANGE_DIGIVOLUTION_COST,
+                base_value=final_cost,
+                context={'card': card_source, 'permanent': permanent, 'player': self},
+            )
+            final_cost = max(0, final_cost)
+
         # 3. Pay Cost
         # Memory can go negative.
         # self.memory -= final_cost # Game handles memory
@@ -289,7 +300,8 @@ class Player:
         return base_cost
 
     def delete_permanent(self, permanent: 'Permanent', is_battle: bool = False,
-                         is_opponent_effect: bool = False) -> bool:
+                         is_opponent_effect: bool = False,
+                         removal_cause: str = 'effect') -> bool:
         """Delete a permanent from the battle area.
 
         Checks deletion prevention keywords in order:
@@ -309,11 +321,20 @@ class Player:
             permanent: The permanent to delete.
             is_battle: True if deletion is from battle resolution (needed for Barrier).
             is_opponent_effect: True if deletion is caused by an opponent's effect.
+            removal_cause: Why the permanent is being removed. Values:
+                'battle' — deleted by battle resolution
+                'effect' — deleted by a card effect (default)
+                'de_digivolve' — removed via de-digivolve
+                'rule' — removed by game rules (DP <= 0, etc.)
+                'cost' — removed as part of a cost payment
 
         Returns:
             True if the permanent was actually deleted, False if not found or
             deletion was prevented by a keyword.
         """
+        # Auto-set removal_cause from is_battle for convenience
+        if is_battle and removal_cause == 'effect':
+            removal_cause = 'battle'
         if permanent not in self.battle_area:
             return False
 
@@ -321,7 +342,8 @@ class Player:
 
         # Fire pre-deletion timing (allows effects to react before prevention checks)
         self._fire_timing(EffectTiming.WhenPermanentWouldBeDeleted,
-                          {"permanent": permanent, "player": self, "is_battle": is_battle})
+                          {"permanent": permanent, "player": self, "is_battle": is_battle,
+                           "removal_cause": removal_cause})
 
         # DCGO: willBeRemoveField flag — effects can cancel deletion
         if getattr(permanent, '_will_not_be_removed', False):
@@ -456,8 +478,10 @@ class Player:
                 self.trash_cards.extend(permanent.card_sources)
             self._log(f"{self.player_name}'s permanent {perm_name} deleted.")
 
-        self._fire_timing(EffectTiming.WhenRemoveField, {"permanent": permanent, "player": self})
-        self._fire_timing(EffectTiming.OnRemovedField, {"permanent": permanent, "player": self})
+        self._fire_timing(EffectTiming.WhenRemoveField,
+                          {"permanent": permanent, "player": self, "removal_cause": removal_cause})
+        self._fire_timing(EffectTiming.OnRemovedField,
+                          {"permanent": permanent, "player": self, "removal_cause": removal_cause})
 
         # Execute On Deletion effects (fires for tokens too)
         if self.game and hasattr(self.game, 'execute_deletion_effects'):

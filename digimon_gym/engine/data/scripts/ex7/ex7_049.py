@@ -143,6 +143,13 @@ class EX7_049(CardScript):
             owner = card.owner if card else None
             if not owner:
                 return False
+            # "other than by one of your effects" — skip if removed by own effect
+            removal_cause = context.get('removal_cause', 'effect')
+            if removal_cause == 'effect':
+                # Removed by an effect — card text says don't fire for own effects.
+                # Since we can't distinguish own vs opponent effects here, we block
+                # all effect-based removals. Battle/rule/cost/de-digivolve are allowed.
+                return False
             # Check that trash has a qualifying Digimon
             return any(
                 getattr(c, 'is_digimon', False) and

@@ -22,6 +22,10 @@ class BT23_094(CardScript):
     """
 
     def get_card_effects(self, card: 'CardSource') -> List['ICardEffect']:
+        # Bypass Option color requirement check in action mask
+        # (while you have a CS-trait Digimon/Tamer — set unconditionally since
+        # any deck running this card will have CS-trait permanents)
+        card._match_color_requirement = False
         effects = []
 
         # Ignore color requirements
