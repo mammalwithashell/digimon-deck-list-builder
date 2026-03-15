@@ -60,7 +60,7 @@ Build a CLI tool (`tools/store_night.py`) that helps you decide **which deck to 
 ```
 python tools/store_night.py \
     --store "The Card Haven" \
-    --decks deck1.txt,deck2.txt,deck3.txt \
+    --archetypes "Rocks,Millenniummon,Dark Masters" \
     --since 2025-12-01 \
     --games 100 \
     --optimize
@@ -68,8 +68,7 @@ python tools/store_night.py \
 
 ### Input:
 - `--store NAME` — store name (looked up in DigiLab)
-- `--decks FILE,FILE,...` — your candidate deck files (TTS text format or JSON card-ID lists)
-- `--deck-names NAME,NAME,...` — optional display names for each deck
+- `--archetypes NAME,NAME,...` — your candidate archetypes (best decklist resolved from `deck_library.json` per archetype, using source preference: digilab > digimonmeta > egman)
 - `--since DATE` — only consider tournaments after this date (default: 3 months ago)
 - `--games N` — games per matchup for evaluation (default: 50)
 - `--pilot PATH` — pilot policy (default: "greedy")
@@ -80,12 +79,13 @@ python tools/store_night.py \
 
 ### Steps:
 1. **Load store meta**: Call `get_scoped_meta(store_ids=[X], since_date=Y)` to get the current local meta
-2. **Build opponent list**: From local meta, pick representative decklists from `deck_library.json` weighted by local meta share. Filter archetypes below `--min-plays`.
-3. **Evaluate each of your decks**: Use `DeckSimulator.evaluate_deck()` against the store's opponent list
-4. **Compute ETWR per deck**: Expected Tournament Win Rate weighted by local meta shares
-5. **Print recommendation**: Ranked table of your decks with ETWR, plus meta breakdown showing which matchups are good/bad
-6. **Sleeper report**: Flag archetypes with high local conversion that have sufficient sample size (above median/2 plays)
-7. **(Optional) Optimize**: If `--optimize`, run `MetaOptimizer` on the top-ranked deck to suggest card swaps for the store meta
+2. **Resolve your decks**: For each archetype you provide, pull the best decklist from `deck_library.json` (same `resolve_base_deck()` logic used by architect training — prefers digilab > digimonmeta > egman source)
+3. **Build opponent list**: From local meta, pick representative decklists from `deck_library.json` weighted by local meta share. Filter archetypes below `--min-plays`. Exclude your own candidate archetypes from the opponent pool to avoid mirror-match bias.
+4. **Evaluate each of your archetypes**: Use `DeckSimulator.evaluate_deck()` against the store's opponent list. Also compute per-opponent matchup win rates for the breakdown.
+5. **Compute ETWR per archetype**: Expected Tournament Win Rate weighted by local meta shares
+6. **Print recommendation**: Ranked table of your archetypes with ETWR, plus per-matchup breakdown showing which opponents are good/bad
+7. **Sleeper report**: Flag archetypes with high local conversion that have sufficient sample size (above median/2 plays)
+8. **(Optional) Optimize**: If `--optimize`, run `MetaOptimizer` on the top-ranked archetype's deck to suggest card swaps for the store meta
 
 ### Output format:
 ```
@@ -93,11 +93,11 @@ python tools/store_night.py \
   Meta based on 45 results since 2025-12-01
   Median archetype plays: 4
 
-  YOUR DECKS (ranked by ETWR):
-  #  Deck              ETWR    vs Top3 Matchups
+  YOUR ARCHETYPES (ranked by ETWR):
+  #  Archetype         ETWR    vs Top3 Matchups
   1. Rocks             .621    Medusamon(.72) Zephagamon(.58) Jupitermon(.55)
   2. Millenniummon     .589    Medusamon(.65) Zephagamon(.52) Jupitermon(.61)
-  3. Mastemon          .513    Medusamon(.48) Zephagamon(.55) Jupitermon(.49)
+  3. Dark Masters      .513    Medusamon(.48) Zephagamon(.55) Jupitermon(.49)
 
   RECOMMENDATION: Bring Rocks
 
@@ -133,7 +133,7 @@ python tools/store_night.py \
 ## 6. Design decisions
 
 - **No DB imports** — `store_night.py` is engine-only (safe for desktop sidecar)
-- **Deck input format** — supports both TTS text (`4 Card Name BT24-001`) and JSON card-ID lists, auto-detected
+- **Archetype-based input** — you provide archetype names, tool resolves best decklist from `deck_library.json` using source preference (digilab > digimonmeta > egman). Same `resolve_base_deck()` logic as architect training.
 - **Player data is best-effort** — if DigiLab DB lacks player columns, we log a warning and skip; Egman player names are captured when available
 - **Sleeper threshold** — configurable but defaults to `times_played >= max(3, median_plays / 2)` AND `conversion_rate > 50%`
 - **Greedy-first evaluation** — defaults to greedy pilot for speed; ONNX pilot optional for accuracy
