@@ -118,6 +118,7 @@ class IngestedDeck:
     is_top_cut: bool = False
     event_date: Optional[str] = None
     event_players: Optional[int] = None
+    player_name: Optional[str] = None
 
 
 @dataclass
@@ -376,12 +377,13 @@ class DeckIngestor:
             placement = None
             event_date = None
             event_players = None
+            player_name = None
 
             # Walk up to find the parent <tr>
             row = a_tag.find_parent("tr")
             if row:
                 cells = row.find_all("td")
-                archetype_name, placement, event_date, event_players = (
+                archetype_name, placement, event_date, event_players, player_name = (
                     self._parse_egman_row(cells)
                 )
 
@@ -396,6 +398,7 @@ class DeckIngestor:
                 is_top_cut=_is_top_cut(placement, event_players),
                 event_date=event_date,
                 event_players=event_players,
+                player_name=player_name,
             )
 
             if archetype_name:
@@ -409,7 +412,8 @@ class DeckIngestor:
 
     @staticmethod
     def _parse_egman_row(cells) -> Tuple[Optional[str], Optional[str],
-                                         Optional[str], Optional[int]]:
+                                         Optional[str], Optional[int],
+                                         Optional[str]]:
         """Extract metadata from an Egman table row's <td> cells.
 
         Known Egman column layout (8 cells):
@@ -421,14 +425,18 @@ class DeckIngestor:
           5: Event type
           6: Event name with player count in parens, e.g. "Store Name (16)"
           7: Date (M/D/YY)
+
+        Returns:
+            (archetype_name, placement, event_date, event_players, player_name)
         """
         archetype_name = None
         placement = None
         event_date = None
         event_players = None
+        player_name = None
 
         if not cells:
-            return archetype_name, placement, event_date, event_players
+            return archetype_name, placement, event_date, event_players, player_name
 
         # Positional extraction for known 8-column layout
         if len(cells) >= 8:
@@ -436,6 +444,11 @@ class DeckIngestor:
             arch_text = cells[1].get_text(strip=True)
             if arch_text:
                 archetype_name = arch_text
+
+            # Cell 2: Player name
+            player_text = cells[2].get_text(strip=True)
+            if player_text:
+                player_name = player_text
 
             # Cell 3: Placement
             place_text = cells[3].get_text(strip=True)
@@ -472,7 +485,7 @@ class DeckIngestor:
                 if re.match(r"\d{1,2}/\d{1,2}/\d{2,4}", text):
                     event_date = text
 
-        return archetype_name, placement, event_date, event_players
+        return archetype_name, placement, event_date, event_players, player_name
 
     # ── DigimonCard.io ───────────────────────────────────────────
 
@@ -586,6 +599,41 @@ class DeckIngestor:
         return psycopg2.connect(conn_str)
 
     @staticmethod
+    def _digilab_probe_player_column(cur) -> Optional[str]:
+        """Probe the results table for a player identity column.
+
+        Returns the column name if found, or None.
+        """
+        try:
+            cur.execute(
+                """
+                SELECT column_name
+                FROM information_schema.columns
+                WHERE table_schema = 'public'
+                  AND table_name = 'results'
+                  AND column_name IN ('player_name', 'user_name', 'player',
+                                      'username')
+                ORDER BY
+                    CASE column_name
+                        WHEN 'player_name' THEN 1
+                        WHEN 'player' THEN 2
+                        WHEN 'user_name' THEN 3
+                        WHEN 'username' THEN 4
+                    END
+                LIMIT 1
+                """
+            )
+            row = cur.fetchone()
+            if row:
+                logger.info("DigiLab results table has player column: %s", row[0])
+                return row[0]
+            logger.info("DigiLab results table has no player column")
+            return None
+        except Exception:
+            logger.debug("Failed to probe player column", exc_info=True)
+            return None
+
+    @staticmethod
     def _digilab_json_to_card_ids(decklist_json: Dict[str, Any]) -> Tuple[List[str], Dict[str, int]]:
         """Convert DigiLab structured decklist JSON to flat card ID list.
 
@@ -631,12 +679,18 @@ class DeckIngestor:
         conn = self._digilab_connect()
         try:
             cur = conn.cursor()
-            query = """
+
+            # Probe for player identity column
+            player_col = self._digilab_probe_player_column(cur)
+            player_select = f", r.{player_col}" if player_col else ""
+
+            query = f"""
                 SELECT r.result_id, r.decklist_json, r.placement,
                        r.wins, r.losses, r.decklist_url,
                        da.archetype_name, da.primary_color, da.secondary_color,
                        da.display_card_id,
                        t.event_date, t.player_count, t.event_type
+                       {player_select}
                 FROM results r
                 JOIN deck_archetypes da ON da.archetype_id = r.archetype_id
                 JOIN tournaments t ON t.tournament_id = r.tournament_id
@@ -658,7 +712,8 @@ class DeckIngestor:
         for row in rows:
             result_id, decklist_str, placement, wins, losses, decklist_url, \
                 raw_archetype_name, primary_color, secondary_color, display_card_id, \
-                event_date, player_count, event_type = row
+                event_date, player_count, event_type = row[:13]
+            digilab_player_name = str(row[13]).strip() if len(row) > 13 and row[13] else None
 
             archetype_name = canonicalize_archetype(raw_archetype_name)
 
@@ -688,6 +743,7 @@ class DeckIngestor:
                 is_top_cut=_is_top_cut(placement_str, player_count),
                 event_date=event_date_str,
                 event_players=player_count,
+                player_name=digilab_player_name,
             )
 
             # Ensure archetype exists with metadata from DB
@@ -1074,7 +1130,7 @@ class DeckIngestor:
                 # Store decklist as TTS format (JSON array string) for easy
                 # copy-paste from digimoncard.io's "Export Deck → TTS" feature
                 tts_decklist = json.dumps(deck.card_ids)
-                arch_data["decklists"].append({
+                entry = {
                     "deck_id": deck.deck_id,
                     "source": deck.source,
                     "source_url": deck.source_url,
@@ -1083,7 +1139,10 @@ class DeckIngestor:
                     "placement": deck.placement,
                     "is_top_cut": deck.is_top_cut,
                     "event_date": deck.event_date,
-                })
+                }
+                if deck.player_name:
+                    entry["player_name"] = deck.player_name
+                arch_data["decklists"].append(entry)
 
             data["archetypes"][name] = arch_data
 
@@ -1149,6 +1208,7 @@ class DeckIngestor:
                     placement=dl.get("placement"),
                     is_top_cut=dl.get("is_top_cut", False),
                     event_date=dl.get("event_date"),
+                    player_name=dl.get("player_name"),
                 )
                 arch.decklists.append(deck)
 
@@ -1293,7 +1353,8 @@ def _print_local_meta_report(args):
         return
 
     # Get scoped meta from DigiLab
-    scoped = get_scoped_meta(store_ids=store_ids, scene_id=scene_id)
+    scoped_result = get_scoped_meta(store_ids=store_ids, scene_id=scene_id)
+    scoped = scoped_result.archetypes
 
     # Load deck library for global comparison and decklist availability
     # Canonicalize names so aliases merge correctly

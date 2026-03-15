@@ -395,7 +395,7 @@ class TestEgmanRowParsing:
             cell.find_all.return_value = []
             cells.append(cell)
 
-        archetype, placement, event_date, event_players = (
+        archetype, placement, event_date, event_players, player_name = (
             DeckIngestor._parse_egman_row(cells)
         )
 
@@ -403,13 +403,15 @@ class TestEgmanRowParsing:
         assert placement == "1st"
         assert event_players == 174
         assert event_date == "12/7/25"
+        assert player_name == "AJ"
 
     def test_parse_egman_row_empty(self):
-        archetype, placement, event_date, event_players = (
+        archetype, placement, event_date, event_players, player_name = (
             DeckIngestor._parse_egman_row([])
         )
         assert archetype is None
         assert placement is None
+        assert player_name is None
 
 
 # ─── DigiLabStats Persistence ────────────────────────────────────────
