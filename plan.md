@@ -43,10 +43,26 @@ When the store night tool needs a deck for an archetype you provide:
 1. **Your personal library** (`--library my_decks.json`) — first decklist for the archetype
 2. Falls back to `deck_library.json` only if the archetype is missing from your library
 
-### Architect candidate pool
-When `--optimize` runs on one of your archetypes, the candidate pool is built from the **union of cards across all your personal decklists for that archetype** — not from scraped tournament decklists. This scopes the architect to cards you've actually considered.
+### General tech cards
+A top-level `"general_pool"` key in `my_decks.json` defines cards any archetype's architect can consider — generic removal, draw power, defensive options, etc:
 
-The scraped `deck_library.json` is still used exclusively for **opponent decks** (what the store's meta plays against you).
+```json
+{
+  "general_pool": ["BT24-099", "EX10-068", "ST17-016", "..."],
+  "Rocks": { ... },
+  "Millenniummon": { ... }
+}
+```
+
+### Architect candidate pool (3 layers)
+When `--optimize` runs, the candidate pool is the **union** of:
+1. **Your personal decklists** for that archetype (cards you've considered)
+2. **Scraped decklists** for that archetype from `deck_library.json` (cards other players have tried)
+3. **General tech cards** from `general_pool` (flexible cards worth considering for any archetype)
+
+All filtered to implemented (frozen-script) cards only. This gives the architect a broad but grounded search space.
+
+The scraped `deck_library.json` is also used for **opponent decks** (what the store's meta plays against you).
 
 ---
 
@@ -132,7 +148,7 @@ python tools/store_night.py \
 5. **Compute ETWR per archetype**: Expected Tournament Win Rate weighted by local meta shares
 6. **Print recommendation**: Ranked table with ETWR + per-matchup breakdown
 7. **Sleeper report**: Flag archetypes with high local conversion that have sufficient sample size (above `max(3, median/2)` plays)
-8. **(Optional) Optimize**: If `--optimize`, run `MetaOptimizer` on the top-ranked archetype using a candidate pool built from **your personal library's decklists for that archetype** (union of all cards across your lists). Suggest card swaps tuned for the store meta.
+8. **(Optional) Optimize**: If `--optimize`, run `MetaOptimizer` on the top-ranked archetype using a 3-layer candidate pool: your personal lists + scraped archetype lists + general tech cards. Suggest card swaps tuned for the store meta.
 
 ### Output format:
 ```
@@ -163,7 +179,7 @@ python tools/store_night.py \
   Chaos Control     3.1%    83.3%  100%   2  ? too few plays to trust
 
   OPTIMIZATION (Rocks from "anti-Medusamon tech"):
-  Pool: 47 cards from your 2 Rocks lists
+  Pool: 73 cards (your lists: 47, scraped: 18 new, general: 8)
   Swap: -1 BT24-055 → +1 EX10-042  (WR: .621 → .638)
   Swap: -1 BT22-019 → +1 BT24-017  (WR: .638 → .645)
 ```
@@ -187,7 +203,7 @@ python tools/store_night.py \
 
 - **No DB imports** — `store_night.py` is engine-only (safe for desktop sidecar)
 - **Two separate libraries** — your personal `my_decks.json` for your decks; scraped `deck_library.json` for opponent decks and meta data. Never mixed.
-- **Personal library scopes the architect pool** — when optimizing, candidate cards come only from your decklists for that archetype, not from scraped data. The architect swaps within cards you've considered.
+- **3-layer architect pool** — your personal lists + scraped archetype lists from `deck_library.json` + a `general_pool` of flexible tech cards. All three merged, deduped, filtered to implemented cards. Gives the architect broad reach while staying grounded in real card choices.
 - **Player data is best-effort** — if DigiLab DB lacks player columns, we log a warning and skip; Egman player names are captured when available
 - **Sleeper threshold** — `times_played >= max(3, median_plays / 2)` AND `conversion_rate > 50%`. Below threshold shown as "insufficient data" rather than hidden.
 - **Greedy-first evaluation** — defaults to greedy pilot for speed; ONNX pilot optional for accuracy
