@@ -262,6 +262,199 @@ def classify_archetypes(
 
 
 # ---------------------------------------------------------------------------
+# Player scouting (Features 1, 2, 3)
+# ---------------------------------------------------------------------------
+
+def compute_player_loyalty(
+    players: list,
+    min_events: int = 3,
+) -> List[dict]:
+    """Compute archetype loyalty for each player.
+
+    Args:
+        players: List of PlayerSummary objects.
+        min_events: Minimum events to include a player.
+
+    Returns list of dicts sorted by event count descending.
+    """
+    results = []
+    for p in players:
+        if p.total_results < min_events:
+            continue
+        top_arch = max(p.archetypes_played.items(), key=lambda x: x[1])
+        loyalty_pct = top_arch[1] / p.total_results
+        history = sorted(
+            p.archetypes_played.items(), key=lambda x: x[1], reverse=True
+        )
+        results.append({
+            "player_name": p.player_name,
+            "primary_archetype": top_arch[0],
+            "loyalty_pct": loyalty_pct,
+            "event_count": p.total_results,
+            "last_seen": p.last_seen,
+            "archetype_history": history,
+        })
+    return sorted(results, key=lambda x: x["event_count"], reverse=True)
+
+
+def compute_player_threat_profiles(
+    players: list,
+    min_events: int = 3,
+) -> List[dict]:
+    """Compute threat profiles for players at a store.
+
+    Combines win rate with attendance regularity to produce a threat score.
+    """
+    profiles = []
+    for p in players:
+        if p.total_results < min_events:
+            continue
+
+        total_wins = sum(r.wins for r in p.results)
+        total_losses = sum(r.losses for r in p.results)
+        total_games = total_wins + total_losses
+        overall_wr = total_wins / total_games if total_games > 0 else 0.0
+
+        # Most likely archetype + its win rate
+        top_arch = max(p.archetypes_played.items(), key=lambda x: x[1])[0]
+        arch_results = [r for r in p.results if r.archetype_name == top_arch]
+        arch_wins = sum(r.wins for r in arch_results)
+        arch_losses = sum(r.losses for r in arch_results)
+        arch_games = arch_wins + arch_losses
+        arch_wr = arch_wins / arch_games if arch_games > 0 else 0.0
+
+        # Threat = win_rate * sqrt(events) to reward both skill and consistency
+        import math
+        threat_score = overall_wr * math.sqrt(p.total_results)
+
+        profiles.append({
+            "player_name": p.player_name,
+            "likely_archetype": top_arch,
+            "archetype_win_rate": arch_wr,
+            "overall_win_rate": overall_wr,
+            "total_games": total_games,
+            "event_count": p.total_results,
+            "threat_score": threat_score,
+        })
+
+    return sorted(profiles, key=lambda x: x["threat_score"], reverse=True)
+
+
+def compute_attendance_profiles(
+    players: list,
+    total_events: int,
+    min_events: int = 2,
+) -> List[dict]:
+    """Detect regular attendees vs one-time visitors.
+
+    regularity_score = events_attended / total_events_in_range
+    """
+    profiles = []
+    for p in players:
+        if p.total_results < min_events:
+            continue
+        dates = [r.event_date for r in p.results if r.event_date]
+        first_seen = min(dates) if dates else None
+        last_seen = max(dates) if dates else None
+        # Use distinct tournament dates as event count
+        distinct_dates = len(set(dates))
+        reg_score = distinct_dates / total_events if total_events > 0 else 0.0
+
+        profiles.append({
+            "player_name": p.player_name,
+            "event_count": distinct_dates,
+            "first_seen": first_seen,
+            "last_seen": last_seen,
+            "regularity_score": reg_score,
+            "is_regular": reg_score >= 0.25,  # attended >= 25% of events
+        })
+
+    return sorted(profiles, key=lambda x: x["event_count"], reverse=True)
+
+
+# ---------------------------------------------------------------------------
+# Meta dynamics (Features 7, 9)
+# ---------------------------------------------------------------------------
+
+def compute_meta_velocity(
+    period_metas: list,
+) -> Dict[str, float]:
+    """Compute share delta per archetype between first and last period.
+
+    Returns dict of archetype -> delta (positive = rising).
+    """
+    if len(period_metas) < 2:
+        return {}
+
+    first = period_metas[0].archetypes
+    last = period_metas[-1].archetypes
+    all_archs = set(first) | set(last)
+
+    velocity = {}
+    for arch in all_archs:
+        first_share = first[arch].meta_share if arch in first else 0.0
+        last_share = last[arch].meta_share if arch in last else 0.0
+        velocity[arch] = last_share - first_share
+
+    return velocity
+
+
+def compute_meta_comparison(
+    store_metas: Dict[str, Any],
+) -> List[dict]:
+    """Compare meta shares across stores side-by-side.
+
+    Args:
+        store_metas: Dict of store_name -> ScopedMetaResult.
+
+    Returns list of dicts with per-archetype per-store shares + delta.
+    """
+    store_names = list(store_metas.keys())
+    if len(store_names) < 2:
+        return []
+
+    all_archs: set = set()
+    for result in store_metas.values():
+        all_archs.update(result.archetypes.keys())
+
+    rows = []
+    for arch in sorted(all_archs):
+        shares = {}
+        for sname, result in store_metas.items():
+            stats = result.archetypes.get(arch)
+            shares[sname] = stats.meta_share if stats else 0.0
+        values = list(shares.values())
+        delta = max(values) - min(values)
+        rows.append({
+            "archetype": arch,
+            "shares": shares,
+            "delta": delta,
+        })
+
+    return sorted(rows, key=lambda x: x["delta"], reverse=True)
+
+
+# ---------------------------------------------------------------------------
+# Color heatmap (Feature 11)
+# ---------------------------------------------------------------------------
+
+def format_color_heatmap(distributions: list) -> str:
+    """Format color distribution as an ASCII table."""
+    if not distributions:
+        return "  No color data available."
+
+    lines = []
+    lines.append(f"  {'Color Pair':<30} {'Count':>6} {'Share':>7}")
+    lines.append(f"  {'-' * 30} {'-' * 6} {'-' * 7}")
+    for d in distributions[:15]:
+        pair = d.primary_color
+        if d.secondary_color:
+            pair += f" / {d.secondary_color}"
+        lines.append(f"  {pair:<30} {d.count:>6} {d.share * 100:>6.1f}%")
+    return "\n".join(lines)
+
+
+# ---------------------------------------------------------------------------
 # Core evaluation
 # ---------------------------------------------------------------------------
 
@@ -386,6 +579,14 @@ def print_report(
     personal_pool_size: int = 0,
     scraped_pool_size: int = 0,
     general_pool_size: int = 0,
+    player_loyalty: Optional[List[dict]] = None,
+    player_threats: Optional[List[dict]] = None,
+    attendance_profiles: Optional[List[dict]] = None,
+    meta_velocity: Optional[Dict[str, float]] = None,
+    period_metas: Optional[list] = None,
+    color_distributions: Optional[list] = None,
+    normalized_meta: Optional[Any] = None,
+    decklist_reports: Optional[Dict[str, dict]] = None,
 ) -> None:
     """Print the full store night report."""
 
@@ -425,14 +626,25 @@ def print_report(
     # --- Local meta threats ---
     if threats:
         print(f"\n  LOCAL META THREATS:")
-        print(f"  {'Archetype':<22} {'Share':>6} {'WR':>6} {'Conv':>6} {'Plays':>6}")
-        print(f"  {'-' * 22} {'-' * 6} {'-' * 6} {'-' * 6} {'-' * 6}")
+        header = f"  {'Archetype':<22} {'Share':>6} {'WR':>6} {'Conv':>6} {'Plays':>6}"
+        if normalized_meta:
+            header += f" {'NConv':>6}"
+        print(header)
+        sep = f"  {'-' * 22} {'-' * 6} {'-' * 6} {'-' * 6} {'-' * 6}"
+        if normalized_meta:
+            sep += f" {'-' * 6}"
+        print(sep)
         for t in threats[:15]:
-            print(
+            line = (
                 f"  {t['name']:<22} {t['meta_share'] * 100:>5.1f}% "
                 f"{t['win_rate'] * 100:>5.1f}% {t['conversion_rate'] * 100:>5.1f}% "
                 f"{t['times_played']:>6}"
             )
+            if normalized_meta:
+                ns = normalized_meta.archetypes.get(t["name"])
+                nconv = ns.conversion_rate if ns else 0.0
+                line += f" {nconv * 100:>5.1f}%"
+            print(line)
 
     # --- Sleepers ---
     if sleepers:
@@ -455,6 +667,98 @@ def print_report(
                 f"{ins['win_rate'] * 100:>5.1f}% {ins['conversion_rate'] * 100:>5.1f}% "
                 f"{ins['times_played']:>6}  ? low sample"
             )
+
+    # --- Meta trends (Feature 7) ---
+    if meta_velocity and period_metas:
+        print(f"\n  META TRENDS ({len(period_metas)} periods):")
+        print(f"  {'Archetype':<22} {'Delta':>7}  Periods")
+        print(f"  {'-' * 22} {'-' * 7}  {'-' * 40}")
+        # Show top risers and fallers
+        sorted_vel = sorted(meta_velocity.items(), key=lambda x: abs(x[1]), reverse=True)
+        for arch, delta in sorted_vel[:10]:
+            arrow = "+" if delta > 0 else ""
+            period_shares = []
+            for pm in period_metas:
+                s = pm.archetypes.get(arch)
+                period_shares.append(f"{s.meta_share * 100:.0f}%" if s else "  -")
+            print(f"  {arch:<22} {arrow}{delta * 100:>5.1f}%  {'->'.join(period_shares)}")
+
+    # --- Player scouting (Features 1, 2, 3) ---
+    if player_threats:
+        print(f"\n  TOP THREATS BY PLAYER:")
+        print(f"  {'Player':<18} {'Likely Deck':<18} {'WR':>6} {'Games':>6} {'Events':>6} {'Threat':>7}")
+        print(f"  {'-' * 18} {'-' * 18} {'-' * 6} {'-' * 6} {'-' * 6} {'-' * 7}")
+        for pt in player_threats[:10]:
+            print(
+                f"  {pt['player_name']:<18} {pt['likely_archetype']:<18} "
+                f"{pt['overall_win_rate'] * 100:>5.1f}% {pt['total_games']:>6} "
+                f"{pt['event_count']:>6} {pt['threat_score']:>6.1f}"
+            )
+
+    if player_loyalty:
+        print(f"\n  PLAYER ARCHETYPE LOYALTY:")
+        print(f"  {'Player':<18} {'Primary':<18} {'Loyalty':>7} {'Events':>6}  History")
+        print(f"  {'-' * 18} {'-' * 18} {'-' * 7} {'-' * 6}  {'-' * 30}")
+        for pl in player_loyalty[:10]:
+            history_str = ", ".join(
+                f"{a}({c})" for a, c in pl["archetype_history"][:3]
+            )
+            print(
+                f"  {pl['player_name']:<18} {pl['primary_archetype']:<18} "
+                f"{pl['loyalty_pct'] * 100:>5.0f}%  {pl['event_count']:>5}  {history_str}"
+            )
+
+    if attendance_profiles:
+        regulars = [p for p in attendance_profiles if p["is_regular"]]
+        if regulars:
+            print(f"\n  REGULARS ({len(regulars)} players attending >= 25% of events):")
+            for ap in regulars[:10]:
+                print(
+                    f"  {ap['player_name']:<18} {ap['event_count']} events  "
+                    f"(first: {ap['first_seen'] or '?'}, last: {ap['last_seen'] or '?'}, "
+                    f"regularity: {ap['regularity_score'] * 100:.0f}%)"
+                )
+
+    # --- Color heatmap (Feature 11) ---
+    if color_distributions:
+        print(f"\n  COLOR DISTRIBUTION:")
+        print(format_color_heatmap(color_distributions))
+
+    # --- Decklist analysis (Features 4, 5, 6) ---
+    if decklist_reports:
+        for arch_name, report in decklist_reports.items():
+            print(f"\n  DECKLIST ANALYSIS: {arch_name} ({report.get('list_count', 0)} lists)")
+
+            staples = report.get("staples", [])
+            if staples:
+                print(f"    Card Staples (>80% inclusion):")
+                for cf in staples[:10]:
+                    print(f"      {cf.card_id:<16} {cf.inclusion_rate * 100:>5.1f}%  "
+                          f"avg {cf.avg_copies:.1f} copies")
+
+            diffs = report.get("winning_tech", [])
+            if diffs:
+                print(f"    Winning Tech (top-4 vs rest):")
+                for cd in diffs[:8]:
+                    sign = "+" if cd.differential > 0 else ""
+                    print(f"      {cd.card_id:<16} winners: {cd.winner_inclusion * 100:>5.1f}%  "
+                          f"others: {cd.other_inclusion * 100:>5.1f}%  "
+                          f"({sign}{cd.differential * 100:.1f}%)")
+
+            trends = report.get("trends", [])
+            if trends:
+                rising = [t for t in trends if t.trend_slope > 0.05][:5]
+                falling = [t for t in trends if t.trend_slope < -0.05][:5]
+                if rising:
+                    print(f"    Rising Cards:")
+                    for ct in rising:
+                        print(f"      {ct.card_id:<16} {ct.current_rate * 100:>5.1f}%  "
+                              f"(+{ct.trend_slope * 100:.1f}%/period)")
+                if falling:
+                    print(f"    Falling Cards:")
+                    for ct in falling:
+                        print(f"      {ct.card_id:<16} {ct.current_rate * 100:>5.1f}%  "
+                              f"({ct.trend_slope * 100:.1f}%/period)")
 
     # --- Skipped opponents ---
     if skipped_opponents:
@@ -489,6 +793,30 @@ def print_report(
 # CLI entrypoint
 # ---------------------------------------------------------------------------
 
+def print_meta_comparison(store_metas: Dict[str, Any]) -> None:
+    """Print side-by-side meta comparison for multiple stores."""
+    comparison = compute_meta_comparison(store_metas)
+    if not comparison:
+        print("  No comparison data.")
+        return
+
+    store_names = list(store_metas.keys())
+    header = f"  {'Archetype':<22}"
+    for sn in store_names:
+        header += f" {sn[:12]:>12}"
+    header += f" {'Delta':>7}"
+    print(header)
+    print(f"  {'-' * 22}" + f" {'-' * 12}" * len(store_names) + f" {'-' * 7}")
+
+    for row in comparison[:20]:
+        line = f"  {row['archetype']:<22}"
+        for sn in store_names:
+            share = row["shares"].get(sn, 0.0)
+            line += f" {share * 100:>11.1f}%"
+        line += f" {row['delta'] * 100:>6.1f}%"
+        print(line)
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(
         description="Store night recommender: pick and tune a deck for a store.",
@@ -503,9 +831,17 @@ Examples:
   python tools/store_night.py --store "The Card Haven" \\
       --archetypes "Rocks,Millenniummon" --library my_decks.json --optimize
 
-  # Recent meta only (last 3 months)
-  python tools/store_night.py --store "Boardwalk Games" \\
-      --archetypes "Rocks,Medusamon" --since 2025-12-01
+  # Full analysis with player scouting, trends, and decklist analysis
+  python tools/store_night.py --store "The Card Haven" \\
+      --archetypes "Rocks" --players --trends --decklists --colors
+
+  # Compare two stores
+  python tools/store_night.py --store "The Card Haven" \\
+      --archetypes "Rocks" --compare-stores "Boardwalk Games"
+
+  # Filter to locals only
+  python tools/store_night.py --store "The Card Haven" \\
+      --archetypes "Rocks" --event-type locals
         """,
     )
 
@@ -552,6 +888,34 @@ Examples:
              "threat (default: 3)",
     )
     parser.add_argument(
+        "--event-type", default=None,
+        help='Filter by event type (e.g. "locals", "regional")',
+    )
+    parser.add_argument(
+        "--players", action="store_true",
+        help="Enable player scouting (loyalty, skill, attendance)",
+    )
+    parser.add_argument(
+        "--trends", action="store_true",
+        help="Show meta velocity / trend analysis",
+    )
+    parser.add_argument(
+        "--normalize", action="store_true",
+        help="Show tournament-size-normalized conversion rates",
+    )
+    parser.add_argument(
+        "--colors", action="store_true",
+        help="Show color distribution heatmap",
+    )
+    parser.add_argument(
+        "--decklists", action="store_true",
+        help="Run decklist analysis (card frequency, winning tech, trends)",
+    )
+    parser.add_argument(
+        "--compare-stores", default=None,
+        help="Comma-separated additional store names for side-by-side comparison",
+    )
+    parser.add_argument(
         "--verbose", action="store_true",
         help="Enable debug logging",
     )
@@ -584,7 +948,11 @@ Examples:
         )
 
     # --- Resolve store ---
-    from digimon_gym.digilab_client import list_stores, get_scoped_meta
+    from digimon_gym.digilab_client import (
+        list_stores, get_scoped_meta, get_scoped_meta_normalized,
+        get_player_history, get_color_distribution, get_meta_over_time,
+        get_decklists_for_archetype,
+    )
 
     try:
         all_stores = list_stores(min_tournaments=0)
@@ -603,12 +971,17 @@ Examples:
 
     print(f"Store: {store.name} (ID: {store.store_id})")
     print(f"Since: {since_date}")
+    if args.event_type:
+        print(f"Event type filter: {args.event_type}")
+
+    scope_kwargs = {
+        "store_ids": [store.store_id],
+        "since_date": since_date,
+        "event_type": args.event_type,
+    }
 
     # --- Get scoped meta ---
-    scoped_result = get_scoped_meta(
-        store_ids=[store.store_id],
-        since_date=since_date,
-    )
+    scoped_result = get_scoped_meta(**scope_kwargs)
     scoped = scoped_result.archetypes
 
     if not scoped:
@@ -619,12 +992,33 @@ Examples:
     print(f"Meta: {scoped_result.total_results} results, "
           f"{len(scoped)} archetypes")
 
+    # --- Cross-store comparison (Feature 9) ---
+    if args.compare_stores:
+        compare_names = [n.strip() for n in args.compare_stores.split(",")]
+        store_metas: Dict[str, Any] = {store.name: scoped_result}
+        for cname in compare_names:
+            cs = store_map.get(cname.lower())
+            if cs:
+                cm = get_scoped_meta(
+                    store_ids=[cs.store_id],
+                    since_date=since_date,
+                    event_type=args.event_type,
+                )
+                store_metas[cs.name] = cm
+            else:
+                print(f"  Warning: comparison store not found: {cname}")
+
+        if len(store_metas) >= 2:
+            print(f"\n{'=' * 70}")
+            print(f"  CROSS-STORE META COMPARISON")
+            print(f"{'=' * 70}")
+            print_meta_comparison(store_metas)
+
     # --- Resolve decks for your archetypes ---
     my_decks: Dict[str, List[str]] = {}
     deck_names: Dict[str, str] = {}
 
     for arch in archetypes:
-        # Try personal library first
         deck = resolve_deck_from_personal(personal_lib, arch)
         if deck:
             my_decks[arch] = deck
@@ -632,7 +1026,6 @@ Examples:
             print(f"  {arch}: loaded from personal library "
                   f"(\"{deck_names[arch]}\")")
         else:
-            # Fall back to scraped library
             deck = resolve_deck_from_library(arch)
             if deck:
                 my_decks[arch] = deck
@@ -679,6 +1072,74 @@ Examples:
         min_plays=args.min_plays,
     )
 
+    # --- Player scouting (Features 1, 2, 3) ---
+    player_loyalty_data = None
+    player_threat_data = None
+    attendance_data = None
+
+    if args.players:
+        print("Fetching player history...")
+        players = get_player_history(**scope_kwargs)
+        if players:
+            player_loyalty_data = compute_player_loyalty(players, min_events=2)
+            player_threat_data = compute_player_threat_profiles(players, min_events=2)
+            attendance_data = compute_attendance_profiles(
+                players,
+                total_events=store.tournament_count,
+                min_events=2,
+            )
+            print(f"  {len(players)} players found")
+        else:
+            print("  No player data available (DB may lack player column)")
+
+    # --- Meta trends (Feature 7) ---
+    velocity = None
+    period_metas = None
+    if args.trends:
+        print("Computing meta trends...")
+        period_metas = get_meta_over_time(**scope_kwargs, periods=3)
+        if period_metas:
+            velocity = compute_meta_velocity(period_metas)
+
+    # --- Tournament size normalization (Feature 8) ---
+    normalized_meta = None
+    if args.normalize:
+        print("Computing size-normalized conversion rates...")
+        normalized_meta = get_scoped_meta_normalized(**scope_kwargs)
+
+    # --- Color distribution (Feature 11) ---
+    color_dist = None
+    if args.colors:
+        color_dist = get_color_distribution(**scope_kwargs)
+
+    # --- Decklist analysis (Features 4, 5, 6) ---
+    decklist_reports = None
+    if args.decklists:
+        from tools.decklist_analysis import (
+            compute_card_frequencies, compute_winning_differentials,
+            compute_card_trends,
+        )
+        decklist_reports = {}
+        # Analyze top threats
+        top_threat_names = [t["name"] for t in threats[:5]]
+        for arch_name in top_threat_names:
+            print(f"Fetching decklists for {arch_name}...")
+            records = get_decklists_for_archetype(arch_name, **scope_kwargs)
+            if not records:
+                continue
+
+            freqs = compute_card_frequencies(records)
+            staples = [f for f in freqs if f.inclusion_rate >= 0.80]
+            diffs = compute_winning_differentials(records)
+            card_trends = compute_card_trends(records)
+
+            decklist_reports[arch_name] = {
+                "list_count": len(records),
+                "staples": staples,
+                "winning_tech": diffs[:10] if diffs else [],
+                "trends": card_trends,
+            }
+
     # --- Optimization ---
     optimization = None
     optimize_archetype = None
@@ -689,7 +1150,6 @@ Examples:
         optimize_archetype = best[0]
         best_deck = my_decks[optimize_archetype]
 
-        # Count pool sizes for the report
         personal_cards = collect_personal_pool_cards(
             personal_lib, optimize_archetype
         )
@@ -697,7 +1157,6 @@ Examples:
         personal_pool_size = len(personal_cards - set(best_deck))
         general_pool_size = len(general_cards - personal_cards - set(best_deck))
 
-        # Scraped pool size estimated from archetype decklists
         if _DECK_LIBRARY_PATH.exists():
             with open(_DECK_LIBRARY_PATH, "r", encoding="utf-8") as f:
                 lib = json.load(f)
@@ -745,6 +1204,14 @@ Examples:
         personal_pool_size=personal_pool_size,
         scraped_pool_size=scraped_pool_size,
         general_pool_size=general_pool_size,
+        player_loyalty=player_loyalty_data,
+        player_threats=player_threat_data,
+        attendance_profiles=attendance_data,
+        meta_velocity=velocity,
+        period_metas=period_metas,
+        color_distributions=color_dist,
+        normalized_meta=normalized_meta,
+        decklist_reports=decklist_reports,
     )
 
 

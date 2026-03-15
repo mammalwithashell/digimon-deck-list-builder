@@ -7,11 +7,12 @@ SQLAlchemy database.  Connects to the same DigiLab DB used by meta_loader.
 from __future__ import annotations
 
 import json
+import math
 import os
 import statistics
 from collections import defaultdict
 from dataclasses import dataclass, field
-from typing import Dict, List, Optional, Tuple
+from typing import Any, Dict, List, Optional, Tuple
 
 # Reuse the same connection string as meta_loader
 DIGILAB_CONN_STR = (
@@ -82,6 +83,67 @@ class PlayerSummary:
     total_results: int = 0
     last_seen: Optional[str] = None
     results: List[PlayerResult] = field(default_factory=list)
+
+
+@dataclass
+class PlayerThreatProfile:
+    """A player's threat profile for a store: how good they are and what they play."""
+
+    player_name: str
+    likely_archetype: str
+    archetype_win_rate: float = 0.0
+    overall_win_rate: float = 0.0
+    total_games: int = 0
+    event_count: int = 0
+    threat_score: float = 0.0
+
+
+@dataclass
+class AttendanceProfile:
+    """A player's attendance regularity at a store."""
+
+    player_name: str
+    event_count: int = 0
+    first_seen: Optional[str] = None
+    last_seen: Optional[str] = None
+    regularity_score: float = 0.0
+    is_regular: bool = False
+
+
+@dataclass
+class ColorDistribution:
+    """Color pair frequency in a meta."""
+
+    primary_color: str
+    secondary_color: Optional[str] = None
+    count: int = 0
+    share: float = 0.0
+
+
+@dataclass
+class DecklistRecord:
+    """A single decklist fetched from DigiLab with context."""
+
+    result_id: int
+    archetype_name: str
+    decklist_json: Dict[str, Any]
+    placement: Optional[int] = None
+    wins: int = 0
+    losses: int = 0
+    player_name: Optional[str] = None
+    event_date: Optional[str] = None
+    player_count: Optional[int] = None
+
+
+@dataclass
+class PeriodMeta:
+    """Meta snapshot for a time period."""
+
+    period_label: str
+    period_start: str
+    period_end: str
+    archetypes: Dict[str, ScopedArchetypeStats] = field(default_factory=dict)
+    total_results: int = 0
 
 
 ARCHETYPE_ALIASES_PATH = os.path.join(
@@ -189,6 +251,7 @@ def _build_scope_clause(
     store_ids: Optional[List[int]] = None,
     scene_id: Optional[int] = None,
     since_date: Optional[str] = None,
+    event_type: Optional[str] = None,
 ) -> Tuple[str, tuple]:
     """Build WHERE clause and params for scoped queries.
 
@@ -212,6 +275,10 @@ def _build_scope_clause(
         conditions.append("t.event_date >= %s")
         params.append(since_date)
 
+    if event_type is not None:
+        conditions.append("t.event_type ILIKE %s")
+        params.append(f"%{event_type}%")
+
     where_clause = "WHERE " + " AND ".join(conditions)
     return where_clause, tuple(params)
 
@@ -220,6 +287,7 @@ def get_scoped_meta(
     store_ids: Optional[List[int]] = None,
     scene_id: Optional[int] = None,
     since_date: Optional[str] = None,
+    event_type: Optional[str] = None,
 ) -> ScopedMetaResult:
     """Query scoped archetype stats from DigiLab.
 
@@ -234,7 +302,7 @@ def get_scoped_meta(
     try:
         with conn.cursor() as cur:
             where_clause, params = _build_scope_clause(
-                store_ids, scene_id, since_date
+                store_ids, scene_id, since_date, event_type
             )
 
             cur.execute(
@@ -356,6 +424,7 @@ def get_player_history(
     store_ids: Optional[List[int]] = None,
     scene_id: Optional[int] = None,
     since_date: Optional[str] = None,
+    event_type: Optional[str] = None,
 ) -> List[PlayerSummary]:
     """Query per-player tournament history from DigiLab.
 
@@ -373,7 +442,7 @@ def get_player_history(
     try:
         with conn.cursor() as cur:
             where_clause, params = _build_scope_clause(
-                store_ids, scene_id, since_date
+                store_ids, scene_id, since_date, event_type
             )
 
             cur.execute(
@@ -449,5 +518,300 @@ def get_player_history(
                 key=lambda p: p.total_results,
                 reverse=True,
             )
+    finally:
+        conn.close()
+
+
+# ---------------------------------------------------------------------------
+# Feature 11: Color distribution
+# ---------------------------------------------------------------------------
+
+def get_color_distribution(
+    store_ids: Optional[List[int]] = None,
+    scene_id: Optional[int] = None,
+    since_date: Optional[str] = None,
+    event_type: Optional[str] = None,
+) -> List[ColorDistribution]:
+    """Query color pair frequencies from DigiLab."""
+    conn = _connect()
+    try:
+        with conn.cursor() as cur:
+            where_clause, params = _build_scope_clause(
+                store_ids, scene_id, since_date, event_type
+            )
+            cur.execute(
+                f"""
+                SELECT da.primary_color, da.secondary_color, COUNT(*) AS cnt
+                FROM results r
+                JOIN tournaments t USING (tournament_id)
+                JOIN deck_archetypes da USING (archetype_id)
+                {where_clause}
+                GROUP BY da.primary_color, da.secondary_color
+                ORDER BY cnt DESC
+                """,
+                params,
+            )
+            rows = cur.fetchall()
+            total = sum(r[2] for r in rows) or 1
+            return [
+                ColorDistribution(
+                    primary_color=row[0] or "Unknown",
+                    secondary_color=row[1],
+                    count=row[2],
+                    share=row[2] / total,
+                )
+                for row in rows
+            ]
+    finally:
+        conn.close()
+
+
+# ---------------------------------------------------------------------------
+# Feature 8: Size-normalized meta
+# ---------------------------------------------------------------------------
+
+def get_scoped_meta_normalized(
+    store_ids: Optional[List[int]] = None,
+    scene_id: Optional[int] = None,
+    since_date: Optional[str] = None,
+    event_type: Optional[str] = None,
+) -> ScopedMetaResult:
+    """Like get_scoped_meta but weights conversion rates by tournament size.
+
+    Top-4 at a 32-player event counts more than top-4 at an 8-player event.
+    Weight = sqrt(player_count) for each result.
+    """
+    conn = _connect()
+    try:
+        with conn.cursor() as cur:
+            where_clause, params = _build_scope_clause(
+                store_ids, scene_id, since_date, event_type
+            )
+            cur.execute(
+                f"""
+                SELECT da.archetype_name,
+                       r.result_id, r.placement, r.wins, r.losses,
+                       t.player_count
+                FROM results r
+                JOIN tournaments t USING (tournament_id)
+                JOIN deck_archetypes da USING (archetype_id)
+                {where_clause}
+                """,
+                params,
+            )
+            rows = cur.fetchall()
+
+            # Group by canonical archetype
+            by_arch: Dict[str, list] = defaultdict(list)
+            for row in rows:
+                canonical = canonicalize_archetype(row[0])
+                by_arch[canonical].append(row)
+
+            total_played = len(rows)
+            archetypes: Dict[str, ScopedArchetypeStats] = {}
+            play_counts: List[int] = []
+
+            for name, arch_rows in by_arch.items():
+                times_played = len(arch_rows)
+                total_wins = sum(r[3] or 0 for r in arch_rows)
+                total_losses = sum(r[4] or 0 for r in arch_rows)
+
+                # Size-weighted conversion: weight each top-4 by sqrt(player_count)
+                weighted_top4 = 0.0
+                total_weight = 0.0
+                for r in arch_rows:
+                    pc = r[5] or 8  # default to 8 if unknown
+                    w = math.sqrt(pc)
+                    total_weight += w
+                    if r[2] is not None and r[2] <= 4:
+                        weighted_top4 += w
+
+                total_games = total_wins + total_losses
+                win_rate = total_wins / total_games if total_games > 0 else 0.0
+                conversion_rate = (
+                    weighted_top4 / total_weight if total_weight > 0 else 0.0
+                )
+                meta_share = (
+                    times_played / total_played if total_played > 0 else 0.0
+                )
+
+                archetypes[name] = ScopedArchetypeStats(
+                    archetype_name=name,
+                    meta_share=meta_share,
+                    conversion_rate=conversion_rate,
+                    win_rate=win_rate,
+                    times_played=times_played,
+                )
+                play_counts.append(times_played)
+
+            median_tp = statistics.median(play_counts) if play_counts else 0.0
+            mean_tp = statistics.mean(play_counts) if play_counts else 0.0
+
+            return ScopedMetaResult(
+                archetypes=archetypes,
+                total_results=total_played,
+                median_times_played=median_tp,
+                mean_times_played=mean_tp,
+            )
+    finally:
+        conn.close()
+
+
+# ---------------------------------------------------------------------------
+# Feature 7: Meta over time
+# ---------------------------------------------------------------------------
+
+def get_meta_over_time(
+    store_ids: Optional[List[int]] = None,
+    scene_id: Optional[int] = None,
+    since_date: Optional[str] = None,
+    event_type: Optional[str] = None,
+    periods: int = 3,
+) -> List[PeriodMeta]:
+    """Query meta broken into time periods for trend analysis."""
+    conn = _connect()
+    try:
+        with conn.cursor() as cur:
+            where_clause, params = _build_scope_clause(
+                store_ids, scene_id, since_date, event_type
+            )
+            cur.execute(
+                f"""
+                SELECT da.archetype_name,
+                       r.result_id, r.placement, r.wins, r.losses,
+                       t.event_date
+                FROM results r
+                JOIN tournaments t USING (tournament_id)
+                JOIN deck_archetypes da USING (archetype_id)
+                {where_clause}
+                ORDER BY t.event_date
+                """,
+                params,
+            )
+            rows = cur.fetchall()
+            if not rows:
+                return []
+
+            # Determine date range and bucket boundaries
+            dates = [r[5] for r in rows if r[5] is not None]
+            if not dates:
+                return []
+
+            from datetime import timedelta
+            min_date = min(dates)
+            max_date = max(dates)
+            span = (max_date - min_date).days + 1
+            bucket_days = max(1, span // periods)
+
+            # Assign rows to period buckets
+            buckets: List[list] = [[] for _ in range(periods)]
+            for row in rows:
+                if row[5] is None:
+                    continue
+                idx = min((row[5] - min_date).days // bucket_days, periods - 1)
+                buckets[idx].append(row)
+
+            result: List[PeriodMeta] = []
+            for i, bucket_rows in enumerate(buckets):
+                start = min_date + timedelta(days=i * bucket_days)
+                end = min_date + timedelta(days=(i + 1) * bucket_days - 1)
+                if i == periods - 1:
+                    end = max_date
+
+                # Compute per-archetype stats for this period
+                by_arch: Dict[str, list] = defaultdict(list)
+                for r in bucket_rows:
+                    canonical = canonicalize_archetype(r[0])
+                    by_arch[canonical].append(r)
+
+                total = len(bucket_rows)
+                archetypes: Dict[str, ScopedArchetypeStats] = {}
+                for name, arch_rows in by_arch.items():
+                    tp = len(arch_rows)
+                    tw = sum(r[3] or 0 for r in arch_rows)
+                    tl = sum(r[4] or 0 for r in arch_rows)
+                    top4 = sum(1 for r in arch_rows if r[2] and r[2] <= 4)
+                    tg = tw + tl
+                    archetypes[name] = ScopedArchetypeStats(
+                        archetype_name=name,
+                        meta_share=tp / total if total else 0.0,
+                        conversion_rate=top4 / tp if tp else 0.0,
+                        win_rate=tw / tg if tg else 0.0,
+                        times_played=tp,
+                    )
+
+                result.append(PeriodMeta(
+                    period_label=f"{start.strftime('%m/%d')}-{end.strftime('%m/%d')}",
+                    period_start=start.strftime("%Y-%m-%d"),
+                    period_end=end.strftime("%Y-%m-%d"),
+                    archetypes=archetypes,
+                    total_results=total,
+                ))
+
+            return result
+    finally:
+        conn.close()
+
+
+# ---------------------------------------------------------------------------
+# Features 4-6: Decklist fetching
+# ---------------------------------------------------------------------------
+
+def get_decklists_for_archetype(
+    archetype_name: str,
+    store_ids: Optional[List[int]] = None,
+    scene_id: Optional[int] = None,
+    since_date: Optional[str] = None,
+    event_type: Optional[str] = None,
+) -> List[DecklistRecord]:
+    """Fetch full decklists for an archetype from DigiLab."""
+    conn = _connect()
+    player_col = _get_player_column()
+    try:
+        with conn.cursor() as cur:
+            where_clause, params = _build_scope_clause(
+                store_ids, scene_id, since_date, event_type
+            )
+            player_select = f", r.{player_col}" if player_col else ""
+            cur.execute(
+                f"""
+                SELECT r.result_id, da.archetype_name, r.decklist_json,
+                       r.placement, r.wins, r.losses,
+                       t.event_date, t.player_count
+                       {player_select}
+                FROM results r
+                JOIN tournaments t USING (tournament_id)
+                JOIN deck_archetypes da USING (archetype_id)
+                {where_clause}
+                  AND da.archetype_name ILIKE %s
+                  AND r.decklist_json IS NOT NULL
+                  AND r.decklist_json != ''
+                ORDER BY t.event_date DESC
+                """,
+                params + (archetype_name,),
+            )
+            records: List[DecklistRecord] = []
+            for row in cur.fetchall():
+                try:
+                    dl_json = (
+                        json.loads(row[2]) if isinstance(row[2], str) else row[2]
+                    )
+                except (json.JSONDecodeError, TypeError):
+                    continue
+                if not dl_json:
+                    continue
+                pname = str(row[8]).strip() if player_col and len(row) > 8 and row[8] else None
+                records.append(DecklistRecord(
+                    result_id=row[0],
+                    archetype_name=canonicalize_archetype(row[1]),
+                    decklist_json=dl_json,
+                    placement=row[3],
+                    wins=row[4] or 0,
+                    losses=row[5] or 0,
+                    event_date=row[6].strftime("%Y-%m-%d") if row[6] else None,
+                    player_count=row[7],
+                    player_name=pname,
+                ))
+            return records
     finally:
         conn.close()
