@@ -113,7 +113,7 @@ The following Dark Masters cards were exercised during gameplay (confirmed prese
 
 ### Known QA Failures (from rocks.md, confirmed still present)
 
-The Rocks archetype has 18 known QA failures documented in `docs/archetype-qa/rocks.md`. This QA session confirmed the following are still active:
+The Rocks archetype has 18 known QA failures documented in `qa/archetype-qa/rocks.md`. This QA session confirmed the following are still active:
 
 | Card | Issue | Severity | Still Active |
 |------|-------|----------|-------------|

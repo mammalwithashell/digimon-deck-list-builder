@@ -38,40 +38,55 @@ class BT13_100(CardScript):
         effect0.set_on_process_callback(process0)
         effects.append(effect0)
 
-        # Timing: EffectTiming.OnEnterFieldAnyone
-        # [Your Turn] When one of your Digimon digivolves into a Digimon with [Vegetation], [Plant], or [Fairy] in one of its traits, by suspending this Tamer, gain 1 memory.
+        # ---------------------------------------------------------------
+        # [Your Turn] When one of your Digimon digivolves into a Digimon
+        # with [Vegetation], [Plant], or [Fairy] trait, by suspending this
+        # Tamer, gain 1 memory.
+        # ---------------------------------------------------------------
         effect1 = ICardEffect()
         effect1.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect1.set_effect_name("BT13-100 Memory +1")
         effect1.set_effect_description("[Your Turn] When one of your Digimon digivolves into a Digimon with [Vegetation], [Plant], or [Fairy] in one of its traits, by suspending this Tamer, gain 1 memory.")
         effect1.is_optional = True
-        effect1.is_on_play = True
+        # This triggers on when digivolving, NOT on play
+        effect1.is_when_digivolving = True
 
-        effect = effect1  # alias for condition closure
         def condition1(context: Dict[str, Any]) -> bool:
             if card and card.permanent_of_this_card() is None:
                 return False
             if not (card and card.owner and card.owner.is_my_turn):
                 return False
+            # Check that the digivolving Digimon has Vegetation/Plant/Fairy trait
+            # The engine passes the played_permanent in context for OnEnterFieldAnyone
+            ctx_perm = context.get('played_permanent')
+            if ctx_perm and ctx_perm.top_card:
+                traits = getattr(ctx_perm.top_card, 'card_traits', []) or []
+                has_trait = any(
+                    t in tr for tr in traits
+                    for t in ('Vegetation', 'Plant', 'Fairy')
+                )
+                if not has_trait:
+                    return False
+            # The tamer itself must not be suspended (can activate suspend cost)
+            this_perm = card.permanent_of_this_card() if card else None
+            if this_perm and this_perm.is_suspended:
+                return False
             return True
-
         effect1.set_can_use_condition(condition1)
 
         def process1(ctx: Dict[str, Any]):
-            """Action: Gain 1 memory, Suspend"""
+            """Action: Suspend this Tamer, gain 1 memory."""
             player = ctx.get('player')
-            perm = ctx.get('permanent')
             game = ctx.get('game')
-            if player:
-                player.add_memory(1)
             if not (player and game):
                 return
-            def target_filter(p):
-                return True
-            def on_suspend(target_perm):
-                target_perm.suspend()
-            game.effect_select_opponent_permanent(
-                player, on_suspend, filter_fn=target_filter, is_optional=True)
+            # Suspend THIS Tamer (not an opponent permanent)
+            this_perm = card.permanent_of_this_card() if card else None
+            if this_perm:
+                this_perm.suspend()
+            # Gain 1 memory
+            if player:
+                player.add_memory(1)
 
         effect1.set_on_process_callback(process1)
         effects.append(effect1)

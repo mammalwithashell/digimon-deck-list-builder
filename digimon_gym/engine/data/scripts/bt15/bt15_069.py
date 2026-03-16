@@ -39,11 +39,10 @@ class BT15_069(CardScript):
             # "opponent has X memory" means the memory gauge is on opponent's side
             # In the engine, memory is from P1 perspective; positive = P1's, negative = P2's
             # We check if opponent has 1 or less memory (their memory)
-            opponent_memory = game.memory if not player.is_player_one else -game.memory
-            if not player.is_player_one:
-                opponent_memory = game.memory
-            else:
+            if player.player_id == 1:
                 opponent_memory = -game.memory
+            else:
+                opponent_memory = game.memory
             # If opponent has 1 or less memory, Draw 1
             if opponent_memory <= 1:
                 player.draw_cards(1)

@@ -84,7 +84,9 @@ class BT18_100(CardScript):
         # Delay activation: digivolve Lucemon into Lucemon from trash (cost -3),
         # then trash 1 opponent Option
         effect2 = ICardEffect()
-        effect2.set_timing(EffectTiming.DelaySkill)
+        effect2.set_timing(EffectTiming.OnDeclaration)
+        effect2._is_field_main = True
+        effect2._is_delay_effect = True
         effect2.set_effect_name("BT18-100 Delay: digivolve Lucemon, trash opponent Option")
         effect2.set_effect_description(
             "[Delay] By digivolving 1 of your Digimon with [Lucemon] in its name "
@@ -94,6 +96,8 @@ class BT18_100(CardScript):
         )
 
         def condition2(context: Dict[str, Any]) -> bool:
+            if card and card.permanent_of_this_card() is None:
+                return False
             return True
         effect2.set_can_use_condition(condition2)
 

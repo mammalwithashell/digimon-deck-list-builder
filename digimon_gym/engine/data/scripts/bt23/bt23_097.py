@@ -66,14 +66,20 @@ class BT23_097(CardScript):
         effect1.set_can_use_condition(condition1)
 
         def process1(ctx: Dict[str, Any]):
-            """Action: Delete"""
+            """Action: Delete 1 opponent Digimon with level >= number of cards in your hand."""
             player = ctx.get('player')
             perm = ctx.get('permanent')
             game = ctx.get('game')
             if not (player and game):
                 return
+            hand_count = len(player.hand_cards)
             def target_filter(p):
-                return p.is_digimon
+                if not p.is_digimon:
+                    return False
+                tc = p.top_card
+                if not tc or tc.level is None:
+                    return False
+                return tc.level >= hand_count
             def on_delete(target_perm):
                 enemy = player.enemy if player else None
                 if enemy:

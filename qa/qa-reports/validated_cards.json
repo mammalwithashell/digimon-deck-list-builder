@@ -1,6 +1,6 @@
 {
-  "version": 44,
-  "last_updated": "2026-03-14",
+  "version": 46,
+  "last_updated": "2026-03-15",
   "cards": {
     "BT1-087": {
       "card_name": "T.K. Takaishi",
@@ -223,11 +223,11 @@
       "notes": "**3 bugs**: wrong timing (OnStartMainPhase -> OnStartTurn); On Play suspended opponent's permanent instead of self; OnTapped auto-selected and gained memory unconditionally"
     },
     "BT13-101": {
-      "card_name": "Miki Kurosaki & Megumi Shirakawa",
-      "validated_date": "2026-03-14",
-      "report": "2026-03-14-puppets-qa.md",
+      "card_name": "Miki & Megumi",
       "status": "PASS",
-      "notes": "Fixed: Suspend THIS tamer, 2-color condition."
+      "validated_date": "2026-03-15",
+      "report": "2026-03-15-ts-jupitermon-royal-knights-qa.md",
+      "notes": "On Play PawnChessmon search skip verified"
     },
     "BT13-102": {
       "verdict": "IMPLEMENTED",
@@ -384,10 +384,11 @@
       "report": "2026-03-13-dark-masters.md"
     },
     "BT15-069": {
-      "verdict": "PASS",
       "card_name": "Candlemon",
-      "archetype": "Millenniummon",
-      "notes": ""
+      "status": "FIXED",
+      "validated_date": "2026-03-15",
+      "report": "2026-03-15-jesmon-dark-masters-qa.md",
+      "notes": "player.is_player_one -> player.player_id == 1. Games pass."
     },
     "BT15-072": {
       "verdict": "PASS",
@@ -545,10 +546,11 @@
       "notes": "Start of Main Phase return from trash with Tai Kamiya. API verified."
     },
     "BT17-015": {
-      "verdict": "PASS",
       "card_name": "WarGreymon",
-      "archetype": "Archetype",
-      "notes": "Branch choice correct. Inherited Omnimon name check uses `contains_card_name` correctly"
+      "status": "PASS",
+      "validated_date": "2026-03-15",
+      "report": "2026-03-15-dna-omnimon-medusamon-qa.md",
+      "notes": "Inherited name aliasing under Omnimon verified"
     },
     "BT17-018": {
       "verdict": "IMPLEMENTED",
@@ -632,10 +634,11 @@
       "notes": "Complex trash-return + memory gain logic correct"
     },
     "BT17-078": {
-      "verdict": "PASS",
       "card_name": "Omnimon",
-      "archetype": "Archetype",
-      "notes": "Blast DNA, Raid, Blocker all flagged. DNA-gated bottom-deck + unconditional delete matches C#"
+      "status": "PASS",
+      "validated_date": "2026-03-15",
+      "report": "2026-03-15-dna-omnimon-medusamon-qa.md",
+      "notes": "Digivolve + WhenDigivolving fires correctly"
     },
     "BT17-081": {
       "verdict": "PASS",
@@ -689,10 +692,11 @@
       "notes": "Hand pop/trash pop - minor, non-archetype card"
     },
     "BT18-015": {
-      "verdict": "IMPLEMENTED",
       "card_name": "Kimeramon",
-      "archetype": "Millenniummon",
-      "notes": "Added alt-digi (Lv.4 Composite cost 3); implemented DNA digivolve On Deletion via `effect_dna_digivolve_from_hand`; fixed lowest DP selection to use agent choice when tied"
+      "status": "PASS",
+      "validated_date": "2026-03-15",
+      "report": "2026-03-15-ts-neptunemon-millenniummon-qa.md",
+      "notes": "When Attacking delete-own + delete-opponent optional, DNA path correct"
     },
     "BT18-019": {
       "verdict": "PASS",
@@ -729,10 +733,11 @@
       "notes": "DigiXros, WD trash-to-digi-cards, EOT digivolve correct."
     },
     "BT18-073": {
-      "verdict": "IMPLEMENTED",
       "card_name": "Machinedramon",
-      "archetype": "Millenniummon",
-      "notes": "Added alt-digi (Lv.5 Composite cost 3); fixed BeforePayCost condition to check `card_source`; implemented DNA digivolve On Deletion; implemented attack redirect inherited via `effect_select_own_permanent` + `pending_attack.target`"
+      "status": "FIXED",
+      "validated_date": "2026-03-15",
+      "report": "2026-03-15-ts-neptunemon-millenniummon-qa.md",
+      "notes": "Added On Play mandatory Composite deletion. Cost reduction timing documented as engine limitation."
     },
     "BT18-082": {
       "card_name": "Lucemon: Chaos Mode",
@@ -763,10 +768,10 @@
     },
     "BT18-100": {
       "card_name": "Gospel of the Fallen Angel",
-      "validated_date": "2026-03-14",
-      "report": "2026-03-14-cs-mastemon-qa.md",
-      "status": "PASS",
-      "notes": "New script: Main breeding digivolve Lucemon. Delay digivolve cost -3."
+      "status": "FIXED",
+      "validated_date": "2026-03-15",
+      "report": "2026-03-15-ts-neptunemon-millenniummon-qa.md",
+      "notes": "DelaySkill -> OnStartMainPhase + delay flags. 9/9 verification games pass."
     },
     "BT18-101": {
       "card_name": "Lucemon: Satan Mode",
@@ -930,10 +935,10 @@
     },
     "BT20-013": {
       "card_name": "BaoHuckmon",
-      "validated_date": "2026-03-14",
-      "report": "2026-03-14-jesmon-qa.md",
-      "status": "PASS",
-      "notes": "Fixed: free=False with manual_reduction=2 (correct C# pattern)."
+      "status": "QA-FAIL",
+      "validated_date": "2026-03-15",
+      "report": "2026-03-15-jesmon-dark-masters-qa.md",
+      "notes": "[Main] unreachable. Systemic OnDeclaration gap."
     },
     "BT20-014": {
       "card_name": "SaviorHuckmon",
@@ -1130,10 +1135,11 @@
       "notes": "Fixed: Cost reduction 2*opponent count. Unsuspend self. Deletion observer."
     },
     "BT21-029": {
-      "verdict": "PASS",
       "card_name": "Medusamon",
-      "archetype": "Archetype",
-      "notes": "Delete lowest DP, token play, security removal trigger all correct"
+      "status": "FIXED",
+      "validated_date": "2026-03-15",
+      "report": "2026-03-15-dna-omnimon-medusamon-qa.md",
+      "notes": "Effect4: _is_deletion_observer=True. Effect5: event_player context key. Petrification tokens should fire."
     },
     "BT21-051": {
       "card_name": "Puppetmon",
@@ -1679,16 +1685,18 @@
       "notes": "Spot-checked: reveal_and_select_multi with Hudie+CS filters correct"
     },
     "BT23-050": {
-      "verdict": "PASS",
       "card_name": "Ankylomon",
-      "archetype": "Hudiemon",
-      "notes": "Spot-checked: -2000 DP + DNA digivolve correct"
+      "status": "PASS",
+      "validated_date": "2026-03-15",
+      "report": "2026-03-15-hudiemon-zephagamon-qa.md",
+      "notes": "-2000 DP + DNA digivolve offer verified"
     },
     "BT23-051": {
-      "verdict": "PASS",
       "card_name": "Golemon",
-      "archetype": "Hudiemon",
-      "notes": "Spot-checked: alliance, blocker, can't attack digimon, OPT delete correct"
+      "status": "PASS",
+      "validated_date": "2026-03-15",
+      "report": "2026-03-15-hudiemon-zephagamon-qa.md",
+      "notes": "Blocker, Alliance, Cant Attack Digimon, OnTappedAnyone delete verified"
     },
     "BT23-054": {
       "verdict": "IMPLEMENTED",
@@ -1697,16 +1705,18 @@
       "notes": "Modifier call verified, empty-target guard"
     },
     "BT23-057": {
-      "verdict": "IMPLEMENTED",
       "card_name": "Gankoomon",
-      "archetype": "Archetype",
-      "notes": "Fixed permanent sourcing and deck placement direction"
+      "status": "PARTIAL",
+      "validated_date": "2026-03-15",
+      "report": "2026-03-15-jesmon-dark-masters-qa.md",
+      "notes": "Cost reduction works, process callback never executes"
     },
     "BT23-058": {
-      "verdict": "IMPLEMENTED",
       "card_name": "Craniamon",
-      "archetype": "Archetype",
-      "notes": "WhenRemoveField ownership check, correct suspend target"
+      "status": "PASS",
+      "validated_date": "2026-03-15",
+      "report": "2026-03-15-hudiemon-zephagamon-qa.md",
+      "notes": "Attack->suspend->OnTappedAnyone delete chain verified"
     },
     "BT23-059": {
       "verdict": "PASS",
@@ -1729,10 +1739,10 @@
     },
     "BT23-076": {
       "card_name": "Sistermon Blanc",
-      "status": "PASS",
-      "validated_date": "2026-03-13",
-      "report": "2026-03-13-jesmon.md",
-      "notes": "On Play add security to hand + Recovery +1 fires. Digi trigger registered."
+      "status": "FIXED",
+      "validated_date": "2026-03-15",
+      "report": "2026-03-15-jesmon-dark-masters-qa.md",
+      "notes": "On Play rewritten: security-to-hand first, then Recovery +1. Matches C# source."
     },
     "BT23-077": {
       "verdict": "IMPLEMENTED",
@@ -1767,17 +1777,18 @@
       "notes": "Play cost 3 correct. Start of Main Phase trash CS/Undead/Dark Animal for +1 memory offered correctly."
     },
     "BT23-089": {
-      "verdict": "IMPLEMENTED",
       "card_name": "Takumi Aiba",
-      "archetype": "Hudiemon",
-      "notes": "Rewrote WhenRemoveField substitute with proper trash selection"
+      "status": "PASS",
+      "validated_date": "2026-03-15",
+      "report": "2026-03-15-hudiemon-zephagamon-qa.md",
+      "notes": "OnStartMainPhase +1 memory with condition verified"
     },
     "BT23-090": {
       "card_name": "Keisuke Amasawa",
-      "validated_date": "2026-02-28",
-      "report": "2026-02-28-retest-medusa-hudie.md",
       "status": "PASS",
-      "notes": "set_memory_3 fixed. End-of-turn targeting fixed. DP modifier and security play verified."
+      "validated_date": "2026-03-15",
+      "report": "2026-03-15-hudiemon-zephagamon-qa.md",
+      "notes": "Memory set, DP modifier, bounce+play verified"
     },
     "BT23-091": {
       "verdict": "IMPLEMENTED",
@@ -1793,10 +1804,10 @@
     },
     "BT23-094": {
       "card_name": "Nanomachine Break",
-      "validated_date": "2026-03-14",
-      "report": "2026-03-14-hudiemon-qa.md",
       "status": "PASS",
-      "notes": "Fixed: Opponent selection, SA-1, DISABLE_EFFECT modifier."
+      "validated_date": "2026-03-15",
+      "report": "2026-03-15-hudiemon-zephagamon-qa.md",
+      "notes": "Ignore color req, SA-1 + disable, Delay placement verified"
     },
     "BT23-095": {
       "verdict": "IMPLEMENTED",
@@ -1805,10 +1816,11 @@
       "notes": "Added CS trait check to Delay condition"
     },
     "BT23-096": {
-      "verdict": "IMPLEMENTED",
       "card_name": "Comet Hammer",
-      "archetype": "Hudiemon",
-      "notes": "Added CS trait check to Delay condition"
+      "status": "PASS",
+      "validated_date": "2026-03-15",
+      "report": "2026-03-15-hudiemon-zephagamon-qa.md",
+      "notes": "Ignore color req, de-digivolve, delay draw verified"
     },
     "BT23-099": {
       "card_name": "The Sistermon Sisters Training Gym",
@@ -1906,11 +1918,10 @@
     },
     "BT24-016": {
       "card_name": "Lamiamon",
-      "validated_date": "2026-03-09",
-      "report": "2026-03-09-medusa-regression.md",
-      "status": "PASS",
-      "notes": "WhenDigivolving, WhenAttacking, inherited OnLoseSecurity all verified. Opponent hand selection and security bottom placement fixed.",
-      "name": "Lamiamon"
+      "status": "FIXED",
+      "validated_date": "2026-03-15",
+      "report": "2026-03-15-dna-omnimon-medusamon-qa.md",
+      "notes": "Uppercase filename renamed to lowercase. Script now loads."
     },
     "BT24-017": {
       "card_name": "Medusamon",
@@ -1980,10 +1991,11 @@
       "notes": "3 fixes: null guards on tuck callback, missing Digimon/Tamer target filter"
     },
     "BT24-030": {
-      "verdict": "IMPLEMENTED",
       "card_name": "Neptunemon",
-      "archetype": "Archetype",
-      "notes": "4 fixes: alt-digi missing Aqua/Sea Animal, wrong digi-card count, self-suspend guard, protection effect rewritten"
+      "status": "PASS",
+      "validated_date": "2026-03-15",
+      "report": "2026-03-15-ts-neptunemon-millenniummon-qa.md",
+      "notes": "Cost reduction, On Play bottom-deck, self-unsuspend OPT all verified"
     },
     "BT24-031": {
       "verdict": "IMPLEMENTED",
@@ -1999,10 +2011,11 @@
       "notes": "Script exists and loads."
     },
     "BT24-034": {
-      "verdict": "IMPLEMENTED",
       "card_name": "Aegiomon",
-      "archetype": "Archetype",
-      "notes": "4 fixes: entirely wrong effect replaced, missing OnMove, alt-digi, inherited Barrier"
+      "status": "PASS",
+      "validated_date": "2026-03-15",
+      "report": "2026-03-15-ts-neptunemon-millenniummon-qa.md",
+      "notes": "On Play security-to-hand + free TS Tamer play verified"
     },
     "BT24-035": {
       "card_name": "Gatomon",
@@ -2032,10 +2045,11 @@
       "notes": "5 fixes: trash all evo cards not 1, wrong target, wrong modifier, protection rewritten, missing memory gain"
     },
     "BT24-041": {
-      "verdict": "IMPLEMENTED",
       "card_name": "Minervamon",
-      "archetype": "Archetype",
-      "notes": "7 fixes: de-digivolve count, alt-digi TS, BeforePayCost filter, missing deletion prevention, Blocker/Reboot turn, Reboot condition, alias cleanup"
+      "status": "PASS",
+      "validated_date": "2026-03-15",
+      "report": "2026-03-15-ts-jupitermon-royal-knights-qa.md",
+      "notes": "On Play Iliad play + De-Digivolve, Reboot/Blocker aura verified"
     },
     "BT24-043": {
       "verdict": "IMPLEMENTED",
@@ -2116,10 +2130,10 @@
     },
     "BT24-082": {
       "card_name": "Owen Dreadnought",
-      "validated_date": "2026-03-14",
-      "report": "2026-03-14-medusamon-qa.md",
-      "status": "PASS",
-      "notes": "Fixed: Digivolve observer pattern. Unsuspend for AI compatibility."
+      "status": "FIXED",
+      "validated_date": "2026-03-15",
+      "report": "2026-03-15-dna-omnimon-medusamon-qa.md",
+      "notes": "Uppercase filename renamed to lowercase. Script now loads."
     },
     "BT24-083": {
       "verdict": "IMPLEMENTED",
@@ -2129,16 +2143,17 @@
     },
     "BT24-084": {
       "card_name": "Inori Misono",
-      "validated_date": "2026-03-14",
+      "validated_date": "2026-03-15",
       "report": "2026-03-14-ts-olympos-qa.md",
-      "status": "PASS",
-      "notes": "Fixed: Memory +1 checks 4-or-less condition, free digivolve."
+      "status": "FIXED",
+      "notes": "Memory check moved to process (matches C# ActivateCoroutine pattern)."
     },
     "BT24-085": {
-      "verdict": "IMPLEMENTED",
-      "card_name": "Dan & Kanan Yuki",
-      "archetype": "Archetype",
-      "notes": "3 fixes: unconditional memory gain, wrong effect1, missing digivolve trigger"
+      "card_name": "Dan Yuki & Kanan Yuki",
+      "status": "PASS",
+      "validated_date": "2026-03-15",
+      "report": "2026-03-15-ts-jupitermon-royal-knights-qa.md",
+      "notes": "Memory gain + digi triggers + DP aura start-of-main verified"
     },
     "BT24-086": {
       "card_name": "The Crossroad Witch",
@@ -2155,16 +2170,17 @@
     },
     "BT24-089": {
       "card_name": "Unique Emblem",
-      "validated_date": "2026-02-28",
-      "report": "2026-02-28-retest-medusa-hudie.md",
-      "status": "PASS",
-      "notes": "Play Elizamon/Owen effect and Delay verified."
+      "status": "FIXED",
+      "validated_date": "2026-03-15",
+      "report": "2026-03-15-dna-omnimon-medusamon-qa.md",
+      "notes": "Uppercase filename renamed to lowercase. Script now loads."
     },
     "BT24-090": {
-      "verdict": "IMPLEMENTED",
       "card_name": "Abyss Sanctuary",
-      "archetype": "Archetype",
-      "notes": "7 fixes: wrong Blocker→DP boost, conditions, filters, stubs removed, color ignore"
+      "status": "PASS",
+      "validated_date": "2026-03-15",
+      "report": "2026-03-15-ts-jupitermon-royal-knights-qa.md",
+      "notes": "Security swap, face-up, TS filter verified"
     },
     "BT24-091": {
       "verdict": "IMPLEMENTED",
@@ -2200,10 +2216,10 @@
     },
     "BT24-097": {
       "card_name": "Soul Fear",
-      "validated_date": "2026-03-14",
-      "report": "2026-03-14-ts-olympos-qa.md",
-      "status": "PASS",
-      "notes": "Script exists and loads."
+      "status": "FIXED",
+      "validated_date": "2026-03-15",
+      "report": "2026-03-15-rocks-chaos-control-qa.md",
+      "notes": "Fabricated When Attacking effect removed."
     },
     "BT24-100": {
       "verdict": "IMPLEMENTED",
@@ -2219,10 +2235,11 @@
       "notes": "On Play/When Digivolving trash+DP+Recovery all correct. OnLoseSecurity trash opponent sec works. TS protection conditional."
     },
     "BT24-102": {
-      "verdict": "IMPLEMENTED",
       "card_name": "Homeros",
-      "archetype": "Archetype",
-      "notes": "1 fix: DP buff to all Digimon instead of TS-only"
+      "status": "PASS",
+      "validated_date": "2026-03-15",
+      "report": "2026-03-15-ts-jupitermon-royal-knights-qa.md",
+      "notes": "+1000 DP aura, Start of Main memory gain verified"
     },
     "BT3-006": {
       "verdict": "PASS",
@@ -4110,10 +4127,10 @@
     },
     "P-216": {
       "card_name": "WaruMonzaemon",
-      "status": "PASS",
-      "notes": "Played for cost 6. On Play triggers selection for free DM play. Blocker present.",
-      "validated_date": "2026-03-13",
-      "report": "2026-03-13-dark-masters.md"
+      "status": "FIXED",
+      "validated_date": "2026-03-15",
+      "report": "2026-03-15-jesmon-dark-masters-qa.md",
+      "notes": "Complete rewrite per C# source. On Play plays Dark Masters + CANNOT_DIGIVOLVE + EOT deletion."
     },
     "P-220": {
       "verdict": "PASS",
@@ -4371,6 +4388,125 @@
       "report": "2026-03-01-medusa-hudie-coverage.md",
       "status": "PASS",
       "notes": "New script. DNA WhenDigivolving return <=6000 DP to deck bottom. Once/turn unsuspend. Fully implemented."
+    },
+    "BT23-053": {
+      "card_name": "Strikedramon",
+      "status": "PASS",
+      "validated_date": "2026-03-15",
+      "report": "2026-03-15-hudiemon-zephagamon-qa.md",
+      "notes": "Option-to-field digivolve trigger observed"
+    },
+    "BT23-097": {
+      "card_name": "Seventh Penetration",
+      "status": "FIXED",
+      "validated_date": "2026-03-15",
+      "report": "2026-03-15-hudiemon-zephagamon-qa.md",
+      "notes": "Added level >= hand_count filter to target_filter. Matches C# source."
+    },
+    "BT24-056": {
+      "card_name": "Dezipmon",
+      "status": "FIXED",
+      "validated_date": "2026-03-15",
+      "report": "2026-03-15-hudiemon-zephagamon-qa.md",
+      "notes": "CANNOT_BE_RETURNED enum added + enforcement in player.py. Games pass."
+    },
+    "BT12-021": {
+      "card_name": "Veemon",
+      "status": "PASS",
+      "validated_date": "2026-03-15",
+      "report": "2026-03-15-bg-imperial-galacticmon-qa.md",
+      "notes": "Upgraded FAIL->PASS. On Play reveal-and-select works."
+    },
+    "BT12-047": {
+      "card_name": "Wormmon",
+      "status": "PASS",
+      "validated_date": "2026-03-15",
+      "report": "2026-03-15-bg-imperial-galacticmon-qa.md",
+      "notes": "Upgraded FAIL->PASS. Same pattern as BT12-021."
+    },
+    "BT14-044": {
+      "card_name": "Palmon",
+      "status": "FIXED",
+      "validated_date": "2026-03-15",
+      "report": "2026-03-15-jesmon-dark-masters-qa.md",
+      "notes": "card_name -> card_names[0] in log line. Games pass."
+    },
+    "BT24-071": {
+      "card_name": "Raidramon",
+      "status": "FIXED",
+      "validated_date": "2026-03-15",
+      "report": "2026-03-15-rocks-chaos-control-qa.md",
+      "notes": "SA+1 implemented with CHANGE_SECURITY_ATTACK modifier. On Deletion filter: Lv3 Appmon."
+    },
+    "BT24-079": {
+      "card_name": "Hadesmon",
+      "status": "FIXED",
+      "validated_date": "2026-03-15",
+      "report": "2026-03-15-rocks-chaos-control-qa.md",
+      "notes": "When Digivolving timing fixed. Play filter: Lv4- System/Life. Link mechanic not implemented (engine limitation)."
+    },
+    "EX10-054": {
+      "card_name": "VenomMyotismon",
+      "status": "FIXED",
+      "validated_date": "2026-03-15",
+      "report": "2026-03-15-rocks-chaos-control-qa.md",
+      "notes": "Now suspends 2 targets, cannot-unsuspend on targets not self, On Deletion suspended filter added."
+    },
+    "BT20-073": {
+      "card_name": "MetalPhantomon",
+      "status": "FIXED",
+      "validated_date": "2026-03-15",
+      "report": "2026-03-15-rocks-chaos-control-qa.md",
+      "notes": "Self-deletion cost added. Level <= 5 filter on opponent target."
+    },
+    "EX8-057": {
+      "card_name": "DemiDevimon",
+      "status": "FIXED",
+      "validated_date": "2026-03-15",
+      "report": "2026-03-15-rocks-chaos-control-qa.md",
+      "notes": "On Play now reveals from deck. Two-pass filter: NSo + Fallen Angel. Adds up to 2 cards."
+    },
+    "BT24-074": {
+      "card_name": "SkullSeadramon",
+      "status": "FIXED",
+      "validated_date": "2026-03-15",
+      "report": "2026-03-15-rocks-chaos-control-qa.md",
+      "notes": "On Play: trash opponent digi-cards. On Deletion: plays from trash. WA ESS: place as digi-source + unsuspend."
+    },
+    "BT13-047": {
+      "card_name": "Angoramon",
+      "status": "PASS",
+      "validated_date": "2026-03-15",
+      "report": "2026-03-15-ts-jupitermon-royal-knights-qa.md",
+      "notes": "Blocker + inherited +1000 DP verified"
+    },
+    "BT13-086": {
+      "card_name": "Gizmon: XT",
+      "status": "FIXED",
+      "validated_date": "2026-03-15",
+      "report": "2026-03-15-ts-jupitermon-royal-knights-qa.md",
+      "notes": "Removed unconditional cost_reduction. On Play filter: Akihiro Kurata. On Deletion filter: ProtoGizmon."
+    },
+    "BT24-098": {
+      "card_name": "Invasion of the Titans",
+      "status": "FIXED",
+      "validated_date": "2026-03-15",
+      "report": "2026-03-15-ts-jupitermon-royal-knights-qa.md",
+      "notes": "Trashes 2. Titan trait filter added. Security add-to-hand targets this card."
+    },
+    "BT13-100": {
+      "card_name": "Yoshino Fujieda",
+      "status": "FIXED",
+      "validated_date": "2026-03-15",
+      "report": "2026-03-15-ts-jupitermon-royal-knights-qa.md",
+      "notes": "Trigger: is_when_digivolving. Process: suspends self (this Tamer). Trait check added."
+    },
+    "BT13-036": {
+      "card_name": "Liollmon",
+      "status": "FIXED",
+      "validated_date": "2026-03-15",
+      "report": "2026-03-15-ts-jupitermon-royal-knights-qa.md",
+      "notes": "Player choice via effect_select_opponent_permanent. Security count <= 6 condition added."
     }
   }
 }

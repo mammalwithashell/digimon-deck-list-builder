@@ -124,7 +124,7 @@ Total cards: 24
 - `digimon_gym/engine/data/scripts/ex7/ex7_053.py` (new)
 - `digimon_gym/engine/data/scripts/p/p_205.py` (fixed)
 - `digimon_gym/engine/data/scripts/st10/st10_15.py` (fixed)
-- `docs/archetype-qa/chaos_control.md` (this file)
+- `qa/archetype-qa/chaos_control.md` (this file)
 
 ## Engine Gaps Found
 1. `trash_main_action_mask` - OnDeclaration effects in trash zone cannot be activated by RL agent (BT20-096 trash trigger)

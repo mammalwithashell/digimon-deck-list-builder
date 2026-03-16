@@ -1,0 +1,77 @@
+[
+  {
+    "label": "rand_h_vs_z_1",
+    "game_id": "ad2af231-55d1-4f6e-8e9c-fe8a5a297973",
+    "status": "ACTION_FAIL",
+    "steps": 52,
+    "error": "Internal Server Error"
+  },
+  {
+    "label": "rand_h_vs_z_2",
+    "game_id": "64ebb498-7ed7-4a18-9097-256e1e682823",
+    "status": "ACTION_FAIL",
+    "steps": 32,
+    "error": "Internal Server Error"
+  },
+  {
+    "label": "rand_h_vs_z_3",
+    "game_id": "7ec85e20-4cf3-4bfa-a2c4-b367bb720f97",
+    "status": "OK",
+    "winner": 2,
+    "turns": "?",
+    "steps": 59
+  },
+  {
+    "label": "rand_z_vs_h_1",
+    "game_id": "7d6fbe4f-5ab8-487c-b583-91002663e8e5",
+    "status": "ACTION_FAIL",
+    "steps": 33,
+    "error": "Internal Server Error"
+  },
+  {
+    "label": "rand_z_vs_h_2",
+    "game_id": "8a96c1e8-d19f-4f6b-9ee3-0cf62032d283",
+    "status": "ACTION_FAIL",
+    "steps": 9,
+    "error": "Internal Server Error"
+  },
+  {
+    "label": "rand_z_vs_h_3",
+    "game_id": "6db70417-f7a9-42e2-b67f-edc372a3ae2c",
+    "status": "ACTION_FAIL",
+    "steps": 3,
+    "error": "Internal Server Error"
+  },
+  {
+    "label": "greedy_h_vs_z_1",
+    "game_id": "0c1ae44f-622b-4028-910c-6f105fc56676",
+    "status": "OK",
+    "winner": 1,
+    "turns": "?",
+    "steps": 125
+  },
+  {
+    "label": "greedy_h_vs_z_2",
+    "game_id": "123af0e5-1573-4df8-818c-5bd656856c0d",
+    "status": "OK",
+    "winner": 1,
+    "turns": "?",
+    "steps": 125
+  },
+  {
+    "label": "greedy_z_vs_h_1",
+    "game_id": "ed6969fc-5950-4fe1-99e9-e5796b79986b",
+    "status": "OK",
+    "winner": 2,
+    "turns": "?",
+    "steps": 125
+  },
+  {
+    "label": "greedy_z_vs_h_2",
+    "game_id": "8bcba6ed-1a35-40bb-810b-fc4f7410d094",
+    "status": "OK",
+    "winner": 2,
+    "turns": "?",
+    "steps": 123
+  }
+]

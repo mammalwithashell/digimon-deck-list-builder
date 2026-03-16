@@ -96,6 +96,8 @@ class ModifierType(Enum):
     CANNOT_RETURN_TO_DECK = auto()
     # ICanNotMoveEffect
     CANNOT_MOVE = auto()
+    # ICanNotBeReturnedEffect — prevents return to hand AND deck
+    CANNOT_BE_RETURNED = auto()
 
     # ── Play / Field Restrictions ───────────────────────────────────
     # ICanNotPlayCardEffect

@@ -27,20 +27,19 @@ class BT24_084(CardScript):
                 return False
             if not (card and card.owner and card.owner.is_my_turn):
                 return False
-            # Only if you have 4 or less memory
-            game = context.get('game')
-            if game is not None and game.memory > 4:
-                return False
             return True
 
         effect0.set_can_use_condition(condition0)
 
         def process0(ctx: Dict[str, Any]):
-            """Action: Gain 1 memory"""
+            """Action: Gain 1 memory if you have 4 or less."""
             player = ctx.get('player')
-            perm = ctx.get('permanent')
             game = ctx.get('game')
-            if player:
+            if not player or not game:
+                return
+            # C# checks: card.Owner.CanAddMemory() && card.Owner.MemoryForPlayer <= 4
+            # game.memory represents the turn player's memory (positive = turn player's side)
+            if game.memory <= 4:
                 player.add_memory(1)
 
         effect0.set_on_process_callback(process0)

@@ -38,7 +38,13 @@ class BT18_073(CardScript):
         effect_alt.set_can_use_condition(condition_alt)
         effects.append(effect_alt)
 
-        # --- Effect 0: Cost reduction by 4 when deleting a Composite Digimon ---
+        # --- Cost Reduction: Delete a Composite Digimon for -4 play cost ---
+        # ENGINE LIMITATION: The engine's calculate_play_cost() applies the
+        # cost_reduction attribute but cannot run interactive selection during
+        # cost calculation. The deletion of the Composite Digimon is handled
+        # as a mandatory post-play effect (see _on_play_delete_composite below).
+        # The condition checks that a valid Composite target exists before
+        # granting the reduction, matching C# intent.
         effect0 = ICardEffect()
         effect0.set_timing(EffectTiming.BeforePayCost)
         effect0.set_effect_name("BT18-073 Reduce play cost by 4 (delete Composite)")
@@ -61,8 +67,7 @@ class BT18_073(CardScript):
         effect0.set_can_use_condition(condition0)
         effects.append(effect0)
 
-        # --- Effect 1: [On Play] [When Digivolving] <De-Digivolve 1> all
-        #     opponent's Digimon ---
+        # --- [On Play] [When Digivolving] <De-Digivolve 1> all opponent's Digimon ---
         def _de_digivolve_all(ctx: Dict[str, Any]):
             """De-Digivolve 1 all opponent's Digimon."""
             player = ctx.get('player')
@@ -105,7 +110,58 @@ class BT18_073(CardScript):
         effect1b.set_on_process_callback(_de_digivolve_all)
         effects.append(effect1b)
 
-        # --- Effect 2: [On Deletion] DNA digivolve Kimeramon (field) +
+        # --- Post-play: Delete a Composite Digimon (cost payment) ---
+        # This fires after On Play to handle the Composite deletion that the
+        # BeforePayCost effect cannot interactively perform during cost calc.
+        # Only fires when this card was just played (not digivolved) and there
+        # is a Composite Digimon to delete.
+        effect_delete_composite = ICardEffect()
+        effect_delete_composite.set_timing(EffectTiming.OnEnterFieldAnyone)
+        effect_delete_composite.set_effect_name("BT18-073 Delete Composite (cost payment)")
+        effect_delete_composite.set_effect_description(
+            "Delete 1 of your [Composite] trait Digimon (play cost reduction requirement)."
+        )
+        effect_delete_composite.is_on_play = True
+
+        def condition_delete_composite(context: Dict[str, Any]) -> bool:
+            # Only fire if this card was played (not digivolved)
+            if card and card.permanent_of_this_card() is None:
+                return False
+            if not (card and card.owner):
+                return False
+            # Check if there's a Composite Digimon to delete (excluding self)
+            perm_self = card.permanent_of_this_card()
+            return any(
+                p.is_digimon and p.has_trait('Composite') and p is not perm_self
+                for p in card.owner.battle_area
+            )
+
+        effect_delete_composite.set_can_use_condition(condition_delete_composite)
+
+        def process_delete_composite(ctx: Dict[str, Any]):
+            """Select and delete 1 Composite Digimon as cost for the play reduction."""
+            player = ctx.get('player')
+            game = ctx.get('game')
+            if not (player and game):
+                return
+            perm_self = card.permanent_of_this_card()
+
+            def composite_filter(p):
+                return (p.is_digimon and p.has_trait('Composite')
+                        and p is not perm_self)
+
+            def on_delete(target_perm):
+                player.delete_permanent(target_perm)
+
+            game.effect_select_own_permanent(
+                player, on_delete, filter_fn=composite_filter,
+                is_optional=False,
+                prompt="Select 1 [Composite] trait Digimon to delete (play cost requirement).")
+
+        effect_delete_composite.set_on_process_callback(process_delete_composite)
+        effects.append(effect_delete_composite)
+
+        # --- [On Deletion] DNA digivolve Kimeramon (field) +
         #     Machinedramon (trash) into Millenniummon (hand) ---
         effect2 = ICardEffect()
         effect2.set_timing(EffectTiming.OnDestroyedAnyone)
@@ -153,8 +209,7 @@ class BT18_073(CardScript):
         effect2.set_on_process_callback(process2)
         effects.append(effect2)
 
-        # --- Effect 3: Inherited [Opponent's Turn][Once Per Turn] When opponent
-        #     attacks, change target to your Composite/Wicked God Digimon ---
+        # --- Inherited: [Opponent's Turn][Once Per Turn] Redirect attack ---
         effect3 = ICardEffect()
         effect3.set_timing(EffectTiming.OnTappedAnyone)
         effect3.set_effect_name("BT18-073 Inherited: Redirect attack to Composite/Wicked God")
@@ -173,7 +228,6 @@ class BT18_073(CardScript):
                 return False
             if card.permanent_of_this_card() is None:
                 return False
-            # Must have a valid Composite or Wicked God Digimon to redirect to
             owner = card.owner
             return any(
                 p.is_digimon and (p.has_trait('Composite') or p.has_trait('Wicked God'))
@@ -192,7 +246,6 @@ class BT18_073(CardScript):
                 return p.is_digimon and (p.has_trait('Composite') or p.has_trait('Wicked God'))
 
             def on_redirect_selected(target_perm):
-                # Change the attack target to the selected permanent
                 if hasattr(game, 'pending_attack') and game.pending_attack:
                     game.pending_attack.target = target_perm
 

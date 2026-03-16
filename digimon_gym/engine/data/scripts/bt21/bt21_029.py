@@ -128,27 +128,31 @@ class BT21_029(CardScript):
         effect3.set_on_process_callback(process3)
         effects.append(effect3)
 
-        # Timing: EffectTiming.OnDestroyedAnyone
         # [All Turns] [Once Per Turn] When any of your opponent's Digimon are deleted, they play 1 [Petrification] Token
+        # Uses NoTiming + _is_deletion_observer so _fire_deletion_observers() picks it up
         effect4 = ICardEffect()
-        effect4.set_timing(EffectTiming.OnDestroyedAnyone)
         effect4.set_effect_name("BT21-029 Play 1 [Petrification Token]")
         effect4.set_effect_description("[All Turns] [Once Per Turn] When any of your opponent's Digimon are deleted, they play 1 [Petrification] Token")
-        effect4.set_hash_string("PlayToken_BT21_029")
-        effect4.is_on_deletion = True
+        effect4.set_hash_string("PlayToken_BT21_029_deletion")
+        effect4._is_deletion_observer = True
         effect4.set_max_count_per_turn(1)
 
         effect = effect4  # alias for condition closure
         def condition4(context: Dict[str, Any]) -> bool:
             if card and card.permanent_of_this_card() is None:
                 return False
-            # Only trigger when an opponent's Digimon is destroyed
-            destroyed = context.get('permanent') or context.get('destroyed_permanent')
+            # Only trigger when an opponent's Digimon is deleted
+            deleted_perm = context.get('deleted_permanent')
+            if not deleted_perm:
+                return False
+            if not getattr(deleted_perm, 'is_digimon', False):
+                return False
+            # _fire_deletion_observers(deleted_perm, deleted_owner) scans both sides.
+            # Medusamon is found in the enemy-scan branch where context['player'] = card.owner.
+            # If context['player'] is card.owner, the deleted perm belonged to the opponent.
             owner = card.owner if card else None
-            if destroyed and owner:
-                destroyed_owner = getattr(destroyed, 'owner', None) or getattr(destroyed.top_card, 'owner', None) if getattr(destroyed, 'top_card', None) else None
-                if destroyed_owner is owner:
-                    return False
+            if context.get('player') is not owner:
+                return False
             return True
 
         effect4.set_can_use_condition(condition4)
@@ -171,7 +175,7 @@ class BT21_029(CardScript):
         effect5.set_timing(EffectTiming.OnLoseSecurity)
         effect5.set_effect_name("BT21-029 Play 1 [Petrification Token]")
         effect5.set_effect_description("[All Turns] [Once Per Turn] When opponents security stack is removed from, they play 1 [Petrification] Token")
-        effect5.set_hash_string("PlayToken_BT21_029")
+        effect5.set_hash_string("PlayToken_BT21_029_security")
 
         effect5.set_max_count_per_turn(1)
 
@@ -180,9 +184,12 @@ class BT21_029(CardScript):
             if card and card.permanent_of_this_card() is None:
                 return False
             # Trigger when opponent's security is removed (All Turns)
-            ctx_player = context.get('player')
+            # context['player'] is set to the permanent owner (Medusamon's owner),
+            # context['event_player'] is the player who actually lost security.
+            # We want to trigger only when the opponent lost security.
+            event_player = context.get('event_player') or context.get('player')
             owner = card.owner if card else None
-            if ctx_player is owner:
+            if event_player is owner:
                 return False
             return True
 

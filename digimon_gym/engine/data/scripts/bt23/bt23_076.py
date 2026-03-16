@@ -32,23 +32,16 @@ class BT23_076(CardScript):
         effect0.set_can_use_condition(condition0)
 
         def process0(ctx: Dict[str, Any]):
-            """Action: Recovery +1, Add To Hand, Destroy Security"""
+            """Action: Add top security card to hand, then Recovery +1 (Deck)."""
             player = ctx.get('player')
-            perm = ctx.get('permanent')
-            game = ctx.get('game')
-            if player:
-                player.recovery(1)
-            # Add card to hand (from trash/reveal)
-            if player and player.trash_cards:
-                card_to_add = player.trash_cards.pop()
-                player.hand_cards.append(card_to_add)
-            # Trash opponent's top security card(s)
-            enemy = player.enemy if player else None
-            if enemy:
-                for _ in range(1):
-                    if enemy.security_cards:
-                        trashed = enemy.security_cards.pop(0)
-                        enemy.trash_cards.append(trashed)
+            if not player:
+                return
+            # Step 1: Add your top security card to the hand (index 0 = top)
+            if player.security_cards:
+                top_security = player.security_cards.pop(0)
+                player.hand_cards.append(top_security)
+            # Step 2: Recovery +1 (move top card of deck to security)
+            player.recovery(1)
 
         effect0.set_on_process_callback(process0)
         effects.append(effect0)

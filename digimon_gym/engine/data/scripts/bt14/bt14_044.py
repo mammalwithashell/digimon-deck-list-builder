@@ -77,7 +77,7 @@ class BT14_044(CardScript):
                         owner.lose_memory(2)
                         if game:
                             game.logger.log(
-                                f"[BT14-044] {target_perm.top_card.card_name} "
+                                f"[BT14-044] {target_perm.top_card.card_names[0] if target_perm.top_card.card_names else 'Unknown'} "
                                 f"suspended — {owner.player_name} loses 2 memory."
                             )
 

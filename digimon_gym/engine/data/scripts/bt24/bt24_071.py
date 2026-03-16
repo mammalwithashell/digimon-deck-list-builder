@@ -27,118 +27,118 @@ class BT24_071(CardScript):
         effect0.set_can_use_condition(condition0)
         effects.append(effect0)
 
-        # Timing: EffectTiming.OnEnterFieldAnyone
-        # Change Security Attack
+        # ---------------------------------------------------------------
+        # Shared On Play / When Digivolving logic:
+        # Select 1 of your Digimon with [System], [Life], or [Transmutation]
+        # trait and grant it Security Attack +1 for the turn.
+        # ---------------------------------------------------------------
+
+        def _sa_plus_1_process(ctx: Dict[str, Any]):
+            """Grant SA+1 to 1 of your Digimon with System/Life/Transmutation trait."""
+            player = ctx.get('player')
+            game = ctx.get('game')
+            if not (player and game):
+                return
+            from ....interfaces.modifiers import ModifierType
+
+            def sa_filter(p):
+                if not p.is_digimon:
+                    return False
+                traits = getattr(p.top_card, 'card_traits', []) or []
+                return any(t in tr for tr in traits for t in ('System', 'Life', 'Transmutation'))
+
+            def on_select(target_perm):
+                game.register_modifier(
+                    target_perm,
+                    ModifierType.CHANGE_SECURITY_ATTACK,
+                    value_fn=lambda: 1,
+                    expiry='end_of_turn',
+                )
+
+            game.effect_select_own_permanent(
+                player, on_select, filter_fn=sa_filter, is_optional=False,
+                prompt="Select 1 of your Digimon with System/Life/Transmutation trait to give Security A. +1.")
+
+        # On Play — SA+1
         effect1 = ICardEffect()
         effect1.set_timing(EffectTiming.OnEnterFieldAnyone)
-        effect1.set_effect_name("BT24-071 Change Security Attack")
-        effect1.set_effect_description("Change Security Attack")
+        effect1.set_effect_name("BT24-071 Give SA+1 to traited Digimon")
+        effect1.set_effect_description("[On Play] 1 of your Digimon with the [System], [Life] or [Transmutation] trait gains <Security A. +1> for the turn.")
         effect1.is_on_play = True
 
-        effect = effect1  # alias for condition closure
         def condition1(context: Dict[str, Any]) -> bool:
             if card and card.permanent_of_this_card() is None:
                 return False
-            # Triggered on play — validated by engine timing
             return True
-
         effect1.set_can_use_condition(condition1)
-
-        def process1(ctx: Dict[str, Any]):
-            """Action: Change Security Attack"""
-            player = ctx.get('player')
-            perm = ctx.get('permanent')
-            game = ctx.get('game')
-            # Grant Security Attack modifier to target permanent
-            pass  # descriptive-tagged: change_security_attack
-
-        effect1.set_on_process_callback(process1)
+        effect1.set_on_process_callback(_sa_plus_1_process)
         effects.append(effect1)
 
-        # Timing: EffectTiming.OnEnterFieldAnyone
-        # Change Security Attack
+        # When Digivolving — SA+1
         effect2 = ICardEffect()
         effect2.set_timing(EffectTiming.OnEnterFieldAnyone)
-        effect2.set_effect_name("BT24-071 Change Security Attack")
-        effect2.set_effect_description("Change Security Attack")
+        effect2.set_effect_name("BT24-071 Give SA+1 to traited Digimon")
+        effect2.set_effect_description("[When Digivolving] 1 of your Digimon with the [System], [Life] or [Transmutation] trait gains <Security A. +1> for the turn.")
         effect2.is_when_digivolving = True
 
-        effect = effect2  # alias for condition closure
         def condition2(context: Dict[str, Any]) -> bool:
             if card and card.permanent_of_this_card() is None:
                 return False
-            # Triggered when digivolving — validated by engine timing
             return True
-
         effect2.set_can_use_condition(condition2)
-
-        def process2(ctx: Dict[str, Any]):
-            """Action: Change Security Attack"""
-            player = ctx.get('player')
-            perm = ctx.get('permanent')
-            game = ctx.get('game')
-            # Grant Security Attack modifier to target permanent
-            pass  # descriptive-tagged: change_security_attack
-
-        effect2.set_on_process_callback(process2)
+        effect2.set_on_process_callback(_sa_plus_1_process)
         effects.append(effect2)
 
-        # Timing: EffectTiming.OnDestroyedAnyone
-        # Play Card
+        # ---------------------------------------------------------------
+        # Shared On Deletion / Linked On Deletion logic:
+        # Play 1 level 3 [Appmon] trait Digimon from trash without paying cost.
+        # ---------------------------------------------------------------
+
+        def _on_deletion_play_process(ctx: Dict[str, Any]):
+            """Play 1 level 3 Appmon trait Digimon from trash free."""
+            player = ctx.get('player')
+            game = ctx.get('game')
+            if not (player and game):
+                return
+
+            def play_filter(c):
+                if not getattr(c, 'is_digimon', False):
+                    return False
+                if getattr(c, 'level', None) != 3:
+                    return False
+                traits = getattr(c, 'card_traits', []) or []
+                return any('Appmon' in tr for tr in traits)
+
+            game.effect_play_from_zone(
+                player, 'trash', play_filter, free=True, is_optional=True)
+
+        # On Deletion — play Lv.3 Appmon from trash
         effect3 = ICardEffect()
         effect3.set_timing(EffectTiming.OnDestroyedAnyone)
-        effect3.set_effect_name("BT24-071 Play Card")
-        effect3.set_effect_description("Play Card")
+        effect3.set_effect_name("BT24-071 Play 1 level 3 Appmon from trash")
+        effect3.set_effect_description("[On Deletion] You may play 1 level 3 [Appmon] trait Digimon card from your trash without paying the cost.")
         effect3.is_on_deletion = True
+        effect3.is_optional = True
 
-        effect = effect3  # alias for condition closure
         def condition3(context: Dict[str, Any]) -> bool:
             return True
-
         effect3.set_can_use_condition(condition3)
-
-        def process3(ctx: Dict[str, Any]):
-            """Action: Play Card"""
-            player = ctx.get('player')
-            perm = ctx.get('permanent')
-            game = ctx.get('game')
-            if not (player and game):
-                return
-            def play_filter(c):
-                return True
-            game.effect_play_from_zone(
-                player, 'trash', play_filter, free=True, is_optional=True)
-
-        effect3.set_on_process_callback(process3)
+        effect3.set_on_process_callback(_on_deletion_play_process)
         effects.append(effect3)
 
-        # Timing: EffectTiming.OnDestroyedAnyone
-        # Play Card
+        # Linked On Deletion — play Lv.3 Appmon from trash (inherited link effect)
         effect4 = ICardEffect()
         effect4.set_timing(EffectTiming.OnDestroyedAnyone)
-        effect4.set_effect_name("BT24-071 Play Card")
-        effect4.set_effect_description("Play Card")
+        effect4.set_effect_name("BT24-071 Play 1 level 3 Appmon from trash")
+        effect4.set_effect_description("[On Deletion] You may play 1 level 3 [Appmon] trait Digimon card from your trash without paying the cost.")
         effect4.is_on_deletion = True
+        effect4.is_optional = True
+        effect4.is_linked_effect = True
 
-        effect = effect4  # alias for condition closure
         def condition4(context: Dict[str, Any]) -> bool:
             return True
-
         effect4.set_can_use_condition(condition4)
-
-        def process4(ctx: Dict[str, Any]):
-            """Action: Play Card"""
-            player = ctx.get('player')
-            perm = ctx.get('permanent')
-            game = ctx.get('game')
-            if not (player and game):
-                return
-            def play_filter(c):
-                return True
-            game.effect_play_from_zone(
-                player, 'trash', play_filter, free=True, is_optional=True)
-
-        effect4.set_on_process_callback(process4)
+        effect4.set_on_process_callback(_on_deletion_play_process)
         effects.append(effect4)
 
         return effects

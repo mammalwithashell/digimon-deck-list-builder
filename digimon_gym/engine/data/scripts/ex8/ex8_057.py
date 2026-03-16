@@ -15,11 +15,10 @@ class EX8_057(CardScript):
         effects = []
 
         # Factory effect: alt_digivolve_req
-        # Alternate digivolution requirement
+        # Alternate digivolution: Lv.2 with [NSo] trait for cost 0
         effect0 = ICardEffect()
         effect0.set_effect_name("EX8-057 Alternate digivolution requirement")
         effect0.set_effect_description("Alternate digivolution requirement")
-        # Alternate digivolution: Lv.2 with [NSo] trait for cost 0
         effect0._alt_digi_cost = 0
         effect0._alt_digi_level = 2
         effect0._alt_digi_trait = "NSo"
@@ -32,48 +31,57 @@ class EX8_057(CardScript):
         effect0.set_can_use_condition(condition0)
         effects.append(effect0)
 
-        # Timing: EffectTiming.OnEnterFieldAnyone
-        # [On Play] Reveal the top 3 cards of your deck. Add 1 card with the [NSo] trait and 1 card with the [Fallen Angel] trait among them to the hand. Return the rest to the bottom of the deck.
+        # ---------------------------------------------------------------
+        # On Play: Reveal top 3 cards of deck.
+        # Add 1 [NSo] trait card and 1 [Fallen Angel] trait card to hand.
+        # Return the rest to the bottom of the deck.
+        # ---------------------------------------------------------------
         effect1 = ICardEffect()
         effect1.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect1.set_effect_name("EX8-057 Reveal the top 3 cards of deck")
         effect1.set_effect_description("[On Play] Reveal the top 3 cards of your deck. Add 1 card with the [NSo] trait and 1 card with the [Fallen Angel] trait among them to the hand. Return the rest to the bottom of the deck.")
         effect1.is_on_play = True
 
-        effect = effect1  # alias for condition closure
         def condition1(context: Dict[str, Any]) -> bool:
             if card and card.permanent_of_this_card() is None:
                 return False
-            # Triggered on play — validated by engine timing
             return True
-
         effect1.set_can_use_condition(condition1)
 
         def process1(ctx: Dict[str, Any]):
-            """Action: Add To Hand, Reveal And Select"""
+            """Action: Reveal top 3, select 1 NSo + 1 Fallen Angel to hand, rest to deck bottom."""
             player = ctx.get('player')
-            perm = ctx.get('permanent')
             game = ctx.get('game')
-            # Add card to hand (from trash/reveal)
-            if player and player.trash_cards:
-                card_to_add = player.trash_cards.pop()
-                player.hand_cards.append(card_to_add)
             if not (player and game):
                 return
-            def reveal_filter(c):
-                return True
-            def on_revealed(selected, remaining):
-                player.hand_cards.append(selected)
-                for c in remaining:
-                    player.library_cards.append(c)
-            game.effect_reveal_and_select(
-                player, 3, reveal_filter, on_revealed, is_optional=True)
+            if not player.library_cards:
+                return
+
+            def nso_filter(c):
+                traits = getattr(c, 'card_traits', []) or []
+                return any('NSo' in tr for tr in traits)
+
+            def fallen_angel_filter(c):
+                traits = getattr(c, 'card_traits', []) or []
+                return any('Fallen Angel' in tr for tr in traits)
+
+            # Use multi-pass reveal: pass 1 = NSo to hand, pass 2 = Fallen Angel to hand
+            game.effect_reveal_and_select_multi(
+                player, count=3,
+                passes=[
+                    (nso_filter, 'hand'),
+                    (fallen_angel_filter, 'hand'),
+                ],
+                remaining_placement='deck_bottom',
+                is_optional=True,
+            )
 
         effect1.set_on_process_callback(process1)
         effects.append(effect1)
 
-        # Timing: EffectTiming.OnUseAttack
-        # [When Attacking] [Once Per Turn] <Draw 1> and trash 1 card in your hand.
+        # ---------------------------------------------------------------
+        # ESS When Attacking: [Once Per Turn] Draw 1 and trash 1 from hand
+        # ---------------------------------------------------------------
         effect2 = ICardEffect()
         effect2.set_timing(EffectTiming.OnUseAttack)
         effect2.set_effect_name("EX8-057 Draw 1 and trash 1 card from hand")
@@ -83,30 +91,29 @@ class EX8_057(CardScript):
         effect2.set_hash_string("Draw_EX8_057")
         effect2.is_on_attack = True
 
-        effect = effect2  # alias for condition closure
         def condition2(context: Dict[str, Any]) -> bool:
             if card and card.permanent_of_this_card() is None:
                 return False
-            # Triggered on attack — validated by engine timing
             return True
-
         effect2.set_can_use_condition(condition2)
 
         def process2(ctx: Dict[str, Any]):
-            """Action: Draw 1, Trash From Hand"""
+            """Action: Draw 1, Trash 1 from hand"""
             player = ctx.get('player')
-            perm = ctx.get('permanent')
             game = ctx.get('game')
             if player:
                 player.draw_cards(1)
             if not (player and game):
                 return
+
             def hand_filter(c):
                 return True
+
             def on_trashed(selected):
                 if selected in player.hand_cards:
                     player.hand_cards.remove(selected)
                     player.trash_cards.append(selected)
+
             game.effect_select_hand_card(
                 player, hand_filter, on_trashed, is_optional=False)
 

@@ -19,8 +19,9 @@ class BT20_073(CardScript):
         effect0 = ICardEffect()
         effect0.set_effect_name("BT20-073 Alternate digivolution requirement")
         effect0.set_effect_description("Alternate digivolution requirement")
-        # Alternate digivolution: alternate source for cost 1
+        # Alternate digivolution: [Phantomon] for cost 1
         effect0._alt_digi_cost = 1
+        effect0._alt_digi_name = "Phantomon"
 
         def condition0(context: Dict[str, Any]) -> bool:
             return True
@@ -28,7 +29,6 @@ class BT20_073(CardScript):
         effects.append(effect0)
 
         # Factory effect: blocker
-        # Blocker
         effect1 = ICardEffect()
         effect1.set_effect_name("BT20-073 Blocker")
         effect1.set_effect_description("Blocker")
@@ -39,8 +39,49 @@ class BT20_073(CardScript):
         effect1.set_can_use_condition(condition1)
         effects.append(effect1)
 
-        # Timing: EffectTiming.OnEnterFieldAnyone
-        # [On Play] By deleting 1 of your Digimon, delete 1 of your opponent's level 5 or lower Digimon.
+        # ---------------------------------------------------------------
+        # Shared On Play / When Digivolving:
+        # By deleting 1 of your Digimon, delete 1 of your opponent's
+        # level 5 or lower Digimon.
+        # ---------------------------------------------------------------
+
+        def _delete_own_then_opp_process(ctx: Dict[str, Any]):
+            """Delete own Digimon as cost, then delete opponent's Lv.5- Digimon."""
+            player = ctx.get('player')
+            game = ctx.get('game')
+            if not (player and game):
+                return
+
+            def own_digi_filter(p):
+                return p.is_digimon
+
+            def on_own_selected(own_perm):
+                # Delete own Digimon as cost
+                player.delete_permanent(own_perm)
+
+                # Then, delete 1 opponent's Lv.5 or lower Digimon
+                def opp_filter(p):
+                    if not p.is_digimon:
+                        return False
+                    if getattr(p, 'level', None) is None:
+                        return False
+                    return p.level <= 5
+
+                def on_opp_delete(target_perm):
+                    enemy = player.enemy if player else None
+                    if enemy:
+                        enemy.delete_permanent(target_perm)
+
+                game.effect_select_opponent_permanent(
+                    player, on_opp_delete, filter_fn=opp_filter, is_optional=False,
+                    prompt="Select 1 of your opponent's level 5 or lower Digimon to delete.")
+
+            # Select 1 of your own Digimon to delete (optional — "By deleting" = can choose not to)
+            game.effect_select_own_permanent(
+                player, on_own_selected, filter_fn=own_digi_filter, is_optional=True,
+                prompt="Select 1 of your Digimon to delete.")
+
+        # On Play
         effect2 = ICardEffect()
         effect2.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect2.set_effect_name("BT20-073 Delete 1 of your Digimon to delete your opponent's Digimon")
@@ -48,34 +89,13 @@ class BT20_073(CardScript):
         effect2.is_optional = True
         effect2.is_on_play = True
 
-        effect = effect2  # alias for condition closure
         def condition2(context: Dict[str, Any]) -> bool:
-            # Triggered on play — validated by engine timing
             return True
-
         effect2.set_can_use_condition(condition2)
-
-        def process2(ctx: Dict[str, Any]):
-            """Action: Delete"""
-            player = ctx.get('player')
-            perm = ctx.get('permanent')
-            game = ctx.get('game')
-            if not (player and game):
-                return
-            def target_filter(p):
-                return p.is_digimon
-            def on_delete(target_perm):
-                enemy = player.enemy if player else None
-                if enemy:
-                    enemy.delete_permanent(target_perm)
-            game.effect_select_opponent_permanent(
-                player, on_delete, filter_fn=target_filter, is_optional=True)
-
-        effect2.set_on_process_callback(process2)
+        effect2.set_on_process_callback(_delete_own_then_opp_process)
         effects.append(effect2)
 
-        # Timing: EffectTiming.OnEnterFieldAnyone
-        # [When Digivolving] By deleting 1 of your Digimon, delete 1 of your opponent's level 5 or lower Digimon.
+        # When Digivolving
         effect3 = ICardEffect()
         effect3.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect3.set_effect_name("BT20-073 Delete 1 of your Digimon to delete your opponent's Digimon")
@@ -83,34 +103,15 @@ class BT20_073(CardScript):
         effect3.is_optional = True
         effect3.is_when_digivolving = True
 
-        effect = effect3  # alias for condition closure
         def condition3(context: Dict[str, Any]) -> bool:
-            # Triggered when digivolving — validated by engine timing
             return True
-
         effect3.set_can_use_condition(condition3)
-
-        def process3(ctx: Dict[str, Any]):
-            """Action: Delete"""
-            player = ctx.get('player')
-            perm = ctx.get('permanent')
-            game = ctx.get('game')
-            if not (player and game):
-                return
-            def target_filter(p):
-                return p.is_digimon
-            def on_delete(target_perm):
-                enemy = player.enemy if player else None
-                if enemy:
-                    enemy.delete_permanent(target_perm)
-            game.effect_select_opponent_permanent(
-                player, on_delete, filter_fn=target_filter, is_optional=True)
-
-        effect3.set_on_process_callback(process3)
+        effect3.set_on_process_callback(_delete_own_then_opp_process)
         effects.append(effect3)
 
-        # Timing: EffectTiming.OnDestroyedAnyone
-        # [On Deletion] [De-Digivolve] 1 of your opponent's Digimon (Trash up to 1 card from the top of one of your opponent's Digimon. If it has no digivolution cards, or becomes a level 3 Digimon, you can't trash any more cards).
+        # ---------------------------------------------------------------
+        # On Deletion ESS: De-Digivolve 1 opponent's Digimon
+        # ---------------------------------------------------------------
         effect4 = ICardEffect()
         effect4.set_timing(EffectTiming.OnDestroyedAnyone)
         effect4.set_effect_name("BT20-073 De-Digivolve 1 on 1 Digimon")
@@ -118,27 +119,26 @@ class BT20_073(CardScript):
         effect4.is_inherited_effect = True
         effect4.is_on_deletion = True
 
-        effect = effect4  # alias for condition closure
         def condition4(context: Dict[str, Any]) -> bool:
-            # Triggered on deletion — validated by engine timing
             return True
-
         effect4.set_can_use_condition(condition4)
 
         def process4(ctx: Dict[str, Any]):
-            """Action: De Digivolve"""
+            """Action: De-Digivolve 1 opponent's Digimon"""
             player = ctx.get('player')
-            perm = ctx.get('permanent')
             game = ctx.get('game')
             if not (player and game):
                 return
+
             def on_de_digivolve(target_perm):
                 removed = target_perm.de_digivolve(1)
                 enemy = player.enemy if player else None
                 if enemy:
                     enemy.trash_cards.extend(removed)
+
             game.effect_select_opponent_permanent(
-                player, on_de_digivolve, filter_fn=lambda p: p.is_digimon, is_optional=False)
+                player, on_de_digivolve, filter_fn=lambda p: p.is_digimon, is_optional=False,
+                prompt="Select 1 of your opponent's Digimon to De-Digivolve.")
 
         effect4.set_on_process_callback(process4)
         effects.append(effect4)

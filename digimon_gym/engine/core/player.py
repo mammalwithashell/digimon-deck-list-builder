@@ -706,6 +706,12 @@ class Player:
             perm_name = permanent.top_card.card_names[0] if permanent.top_card and permanent.top_card.card_names else 'Permanent'
             self._log(f"{perm_name} cannot be returned to hand!")
             return
+        # Modifier-based return prevention (CANNOT_BE_RETURNED covers both hand and deck)
+        from ..interfaces.modifiers import ModifierType
+        if self.game and hasattr(self.game, 'modifiers') and self.game.modifiers.has_modifier(permanent, ModifierType.CANNOT_BE_RETURNED):
+            perm_name = permanent.top_card.card_names[0] if permanent.top_card and permanent.top_card.card_names else 'Permanent'
+            self._log(f"{perm_name} cannot be returned!")
+            return
         owner = self._find_permanent_owner(permanent)
         if owner and permanent in owner.battle_area:
             owner.battle_area.remove(permanent)
@@ -838,6 +844,12 @@ class Player:
         if permanent.has_keyword('_is_cannot_return_to_deck'):
             perm_name = permanent.top_card.card_names[0] if permanent.top_card and permanent.top_card.card_names else 'Permanent'
             self._log(f"{perm_name} cannot be returned to deck!")
+            return
+        # Modifier-based return prevention (CANNOT_BE_RETURNED covers both hand and deck)
+        from ..interfaces.modifiers import ModifierType
+        if self.game and hasattr(self.game, 'modifiers') and self.game.modifiers.has_modifier(permanent, ModifierType.CANNOT_BE_RETURNED):
+            perm_name = permanent.top_card.card_names[0] if permanent.top_card and permanent.top_card.card_names else 'Permanent'
+            self._log(f"{perm_name} cannot be returned!")
             return
         owner = self._find_permanent_owner(permanent)
         if owner and permanent in owner.battle_area:

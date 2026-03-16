@@ -1,6 +1,6 @@
 # QA Issue Resolution Index
 
-**Last updated**: 2026-03-13
+**Last updated**: 2026-03-15
 
 ## Summary
 
@@ -45,7 +45,16 @@
 | [puppets](2026-03-13-puppets.md) | 32 | 0 | 0 | 32 |
 | [dark-masters](2026-03-13-dark-masters.md) | 18 | 0 | 0 | 18 |
 | [jesmon](2026-03-13-jesmon.md) | 8 | 0 | 0 | 8 |
-| **Total** | **326** | **161** | **8** | **157** |
+| [ts-neptunemon-millenniummon](2026-03-15-ts-neptunemon-millenniummon-qa.md) | 2 | 0 | 0 | 2 |
+| [hudiemon-zephagamon](2026-03-15-hudiemon-zephagamon-qa.md) | 2 | 0 | 0 | 2 |
+| [puppets-ts-olympos](2026-03-15-puppets-ts-olympos-qa.md) | 0 | 0 | 0 | 0 |
+| [bg-imperial-galacticmon](2026-03-15-bg-imperial-galacticmon-qa.md) | 1 | 0 | 0 | 1 |
+| [jesmon-dark-masters](2026-03-15-jesmon-dark-masters-qa.md) | 6 | 0 | 0 | 6 |
+| [rocks-chaos-control](2026-03-15-rocks-chaos-control-qa.md) | 7 | 0 | 0 | 7 |
+| [dna-omnimon-medusamon](2026-03-15-dna-omnimon-medusamon-qa.md) | 5 | 0 | 0 | 5 |
+| [ts-jupitermon-royal-knights](2026-03-15-ts-jupitermon-royal-knights-qa.md) | 11 | 0 | 0 | 11 |
+| [campaign-summary](2026-03-15-campaign-summary.md) | — | — | — | — |
+| **Total** | **360** | **161** | **8** | **191** |
 
 ---
 

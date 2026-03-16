@@ -3,6 +3,7 @@ from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
 from ....data.enums import EffectTiming
+from ....interfaces.modifiers import ModifierType
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -24,136 +25,133 @@ class EX10_054(CardScript):
         effect0.is_optional = True
         effect0.cost_reduction = 7
 
-        effect = effect0  # alias for condition closure
         def condition0(context: Dict[str, Any]) -> bool:
-            permanent = effect.effect_source_permanent if hasattr(effect, 'effect_source_permanent') else None
+            permanent = effect0.effect_source_permanent if hasattr(effect0, 'effect_source_permanent') else None
             if permanent and permanent.top_card:
                 text = permanent.top_card.card_text
-                if not ('Myotismon' in text):
+                if 'Myotismon' not in text:
                     return False
             else:
                 return False
             return True
-
         effect0.set_can_use_condition(condition0)
 
         def process0(ctx: Dict[str, Any]):
             """Action: Cost -7, Play Card"""
             player = ctx.get('player')
-            perm = ctx.get('permanent')
             game = ctx.get('game')
             if not (player and game):
                 return
+
             def play_filter(c):
                 return True
+
             game.effect_play_from_zone(
                 player, 'hand', play_filter, free=True, is_optional=True)
-            # Cost reduction by 7 — handled via cost_reduction property
-            pass  # descriptive-tagged: cost_reduction
-
         effect0.set_on_process_callback(process0)
         effects.append(effect0)
 
-        # Timing: EffectTiming.OnEnterFieldAnyone
-        # Suspend, Gain Keyword Cannot Unsuspend
+        # ---------------------------------------------------------------
+        # Shared On Play / When Digivolving:
+        # Suspend up to 2 opponent Digimon or Tamers.
+        # Then, up to 2 opponent Digimon or Tamers gain cannot-unsuspend
+        # until their turn ends.
+        # ---------------------------------------------------------------
+
+        def _suspend_and_lock_process(ctx: Dict[str, Any]):
+            """Suspend up to 2 opp Digimon/Tamers, then 2 cannot-unsuspend."""
+            player = ctx.get('player')
+            game = ctx.get('game')
+            if not (player and game):
+                return
+            enemy = player.enemy if player else None
+            if not enemy:
+                return
+
+            def opp_digi_or_tamer(p):
+                return p.is_digimon or p.is_tamer
+
+            # Suspend up to 2
+            opp_targets = [p for p in enemy.battle_area if opp_digi_or_tamer(p)]
+            for _ in range(min(2, len(opp_targets))):
+                def on_suspend(target_perm):
+                    target_perm.suspend()
+                game.effect_select_opponent_permanent(
+                    player, on_suspend, filter_fn=opp_digi_or_tamer,
+                    is_optional=True,
+                    prompt="Select an opponent's Digimon or Tamer to suspend.")
+
+            # Then, 2 of their Digimon or Tamers cannot unsuspend until their turn ends
+            for _ in range(min(2, len(opp_targets))):
+                def on_lock(target_perm):
+                    game.register_modifier(target_perm, ModifierType.CANNOT_UNSUSPEND, {
+                        'condition': lambda p, ctx: True,
+                        'source_effect': effect1,
+                        'expiry': 'end_of_opponent_turn',
+                        'granting_player': player,
+                    })
+                game.effect_select_opponent_permanent(
+                    player, on_lock, filter_fn=opp_digi_or_tamer,
+                    is_optional=False,
+                    prompt="Select an opponent's Digimon or Tamer that cannot unsuspend.")
+
+        # On Play
         effect1 = ICardEffect()
         effect1.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect1.set_effect_name("EX10-054 Suspend 2 opponent Digimon or Tamers")
-        effect1.set_effect_description("Suspend, Gain Keyword Cannot Unsuspend")
+        effect1.set_effect_description("[On Play] You may suspend 2 of your opponent's Digimon or Tamers. Then, 2 of their Digimon or Tamers can't unsuspend until their turn ends.")
         effect1.is_on_play = True
-        effect1._is_cannot_unsuspend = True
 
-        effect = effect1  # alias for condition closure
         def condition1(context: Dict[str, Any]) -> bool:
-            # Triggered on play — validated by engine timing
             return True
-
         effect1.set_can_use_condition(condition1)
-
-        def process1(ctx: Dict[str, Any]):
-            """Action: Suspend, Gain Keyword Cannot Unsuspend"""
-            player = ctx.get('player')
-            perm = ctx.get('permanent')
-            game = ctx.get('game')
-            if not (player and game):
-                return
-            def target_filter(p):
-                return True
-            def on_suspend(target_perm):
-                target_perm.suspend()
-            game.effect_select_opponent_permanent(
-                player, on_suspend, filter_fn=target_filter, is_optional=False)
-            if perm:
-                perm.grant_keyword('_is_cannot_unsuspend')
-
-        effect1.set_on_process_callback(process1)
+        effect1.set_on_process_callback(_suspend_and_lock_process)
         effects.append(effect1)
 
-        # Timing: EffectTiming.OnEnterFieldAnyone
-        # Suspend, Gain Keyword Cannot Unsuspend
+        # When Digivolving
         effect2 = ICardEffect()
         effect2.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect2.set_effect_name("EX10-054 Suspend 2 opponent Digimon or Tamers")
-        effect2.set_effect_description("Suspend, Gain Keyword Cannot Unsuspend")
+        effect2.set_effect_description("[When Digivolving] You may suspend 2 of your opponent's Digimon or Tamers. Then, 2 of their Digimon or Tamers can't unsuspend until their turn ends.")
         effect2.is_when_digivolving = True
-        effect2._is_cannot_unsuspend = True
 
-        effect = effect2  # alias for condition closure
         def condition2(context: Dict[str, Any]) -> bool:
-            # Triggered when digivolving — validated by engine timing
             return True
-
         effect2.set_can_use_condition(condition2)
-
-        def process2(ctx: Dict[str, Any]):
-            """Action: Suspend, Gain Keyword Cannot Unsuspend"""
-            player = ctx.get('player')
-            perm = ctx.get('permanent')
-            game = ctx.get('game')
-            if not (player and game):
-                return
-            def target_filter(p):
-                return True
-            def on_suspend(target_perm):
-                target_perm.suspend()
-            game.effect_select_opponent_permanent(
-                player, on_suspend, filter_fn=target_filter, is_optional=False)
-            if perm:
-                perm.grant_keyword('_is_cannot_unsuspend')
-
-        effect2.set_on_process_callback(process2)
+        effect2.set_on_process_callback(_suspend_and_lock_process)
         effects.append(effect2)
 
-        # Timing: EffectTiming.OnDestroyedAnyone
-        # [On Deletion] Delete 1 of your opponent's suspended Digimon.
+        # ---------------------------------------------------------------
+        # On Deletion: Delete 1 opponent's SUSPENDED Digimon
+        # ---------------------------------------------------------------
         effect3 = ICardEffect()
         effect3.set_timing(EffectTiming.OnDestroyedAnyone)
         effect3.set_effect_name("EX10-054 Delete 1 suspended Digimon")
         effect3.set_effect_description("[On Deletion] Delete 1 of your opponent's suspended Digimon.")
         effect3.is_on_deletion = True
 
-        effect = effect3  # alias for condition closure
         def condition3(context: Dict[str, Any]) -> bool:
-            # Triggered on deletion — validated by engine timing
             return True
-
         effect3.set_can_use_condition(condition3)
 
         def process3(ctx: Dict[str, Any]):
-            """Action: Delete"""
+            """Action: Delete 1 opponent suspended Digimon"""
             player = ctx.get('player')
-            perm = ctx.get('permanent')
             game = ctx.get('game')
             if not (player and game):
                 return
+
             def target_filter(p):
-                return p.is_digimon
+                return p.is_digimon and p.is_suspended
+
             def on_delete(target_perm):
                 enemy = player.enemy if player else None
                 if enemy:
                     enemy.delete_permanent(target_perm)
+
             game.effect_select_opponent_permanent(
-                player, on_delete, filter_fn=target_filter, is_optional=False)
+                player, on_delete, filter_fn=target_filter, is_optional=False,
+                prompt="Select 1 of your opponent's suspended Digimon to delete.")
 
         effect3.set_on_process_callback(process3)
         effects.append(effect3)
