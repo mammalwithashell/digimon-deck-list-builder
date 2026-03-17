@@ -46,7 +46,67 @@ Last updated: 2026-03-15
 
 20. ~~**Ignore Color Requirement**~~ — RESOLVED 2026-03-14. Added `ModifierType.IGNORE_COLOR_REQUIREMENT` for aura-style bypass in `action_mask.py`. 7 Hudiemon Option scripts use `card._match_color_requirement = False` for self-bypass. BT23-094 also updated.
 
+21. ~~**Security Play API**~~ — RESOLVED 2026-03-17. Added `game.effect_play_from_security(player, card)` helper. `security_attack()` now checks `card._security_played` flag before trashing. EX1-066 updated.
+
+22. ~~**Dynamic Alt-Digi Cost**~~ — RESOLVED 2026-03-17. `digivolve_validator.py` now checks `_alt_digi_cost_fn` callable for dynamic cost calculation. BT24-101 Jupitermon uses security card count.
+
 ## Remaining Gaps
+
+### Digivolve from Hand or Trash
+- **Discovered in:** Jesmon, Medusamon, TS Neptunemon (2026-03-17)
+- **Card(s):** BT23-076, BT10-112, BT13-016, BT23-099, BT23-040
+- **Effect text:** "digivolve into ... in the hand or trash"
+- **What's missing:** `effect_digivolve_from_hand()` only searches hand. No `effect_digivolve_from_hand_or_trash()` variant exists.
+- **Suggested change:** Add `include_trash=False` parameter to `effect_digivolve_from_hand()`, or add a new method that combines both zones.
+- **Workaround:** Scripts manually build trash selection with `SEL_TRASH_START` indices (functional but inconsistent).
+
+### Activate Another Card's When Digivolving Effect
+- **Discovered in:** Jesmon (2026-03-17)
+- **Card(s):** BT10-112 Jesmon GX, BT10-110 Seiken Meppa
+- **Effect text:** "Activate 1 of that card's [When Digivolving] effects as an effect of this Digimon."
+- **What's missing:** No engine API to enumerate a card's WD effects and execute a player-selected one.
+- **Suggested change:** Add `game.effect_activate_card_effect(player, card_source, timing_filter, on_done)` that collects matching effects, presents selection, and executes.
+- **Workaround:** None clean — scripts can iterate `card.effect_list(EffectTiming.WhenDigivolving)` manually but the selection UX is non-standard.
+
+### Dynamic Security Attack Modifier
+- **Discovered in:** Jesmon (2026-03-17)
+- **Card(s):** BT10-112 Jesmon GX
+- **Effect text:** "gains Security A. +1 for each card with the [Royal Knight] trait in this Digimon's digivolution cards"
+- **What's missing:** `_security_attack_modifier` is a static int. No support for dynamic/computed SA modifiers.
+- **Suggested change:** Support `_security_attack_modifier_fn` callable on ICardEffect, checked in `permanent.security_attack_modifier()`.
+- **Workaround:** Use `register_modifier(ModifierType.CHANGE_SECURITY_ATTACK, ...)` with dynamic value_fn (if supported).
+
+### Optional Attack ("may attack")
+- **Discovered in:** TS Jupitermon, Jesmon, Medusamon (2026-03-17)
+- **Card(s):** BT24-085, BT24-037, BT24-082, BT24-051
+- **Effect text:** "1 of your Digimon may attack" / "it may attack"
+- **What's missing:** `FORCE_ATTACK` modifier is mandatory. No "optional attack" that lets the player choose whether to attack.
+- **Suggested change:** Add `ModifierType.MAY_ATTACK` that enables but doesn't force an attack action.
+- **Workaround:** Scripts use `effect_select_own_permanent` + `FORCE_ATTACK` — the selection's `is_optional=True` serves as the "may" gate, but FORCE_ATTACK is then mandatory for the selected Digimon.
+
+### Digimon-Only Attack Target Restriction
+- **Discovered in:** TS Jupitermon (2026-03-17)
+- **Card(s):** BT24-051 Merukimon
+- **Effect text:** "attack your opponent's Digimon"
+- **What's missing:** No modifier to restrict attack targets to Digimon only (exclude player).
+- **Suggested change:** Add `ModifierType.CANNOT_ATTACK_PLAYER` checked in action mask.
+- **Workaround:** None — RL agent can learn not to target player, but the action is still available.
+
+### is_own_effect in WhenRemoveField Context
+- **Discovered in:** TS Jupitermon, Jesmon (2026-03-17)
+- **Card(s):** BT24-037 Silphymon, BT20-059 Gankoomon (X Antibody)
+- **Effect text:** "other than by your effects"
+- **What's missing:** WhenRemoveField context doesn't include `is_own_effect` flag. `removal_cause` exists but doesn't distinguish own vs opponent effects.
+- **Suggested change:** Add `is_own_effect` bool to removal context.
+- **Workaround:** Best-effort: check `removal_cause != 'cost'` (costs are always own). 'effect' cause is ambiguous.
+
+### Conditional Color Requirement Bypass
+- **Discovered in:** TS Neptunemon, Hudiemon (2026-03-17)
+- **Card(s):** BT24-091 Tidal Stream, BT22-099 Kuremi Detective Agency
+- **Effect text:** "While you have [TS] trait Digimon... ignore color requirements"
+- **What's missing:** `card._match_color_requirement` is a static bool. No dynamic/conditional bypass.
+- **Suggested change:** Support `_match_color_requirement_fn` callable checked in action_mask.
+- **Workaround:** Set `_match_color_requirement = False` unconditionally (over-permissive).
 
 ### ~~DigiXros~~ — RESOLVED 2026-03-15
 - **Card(s):** 60 cards across BT10-BT24, EX3-EX10, P sets

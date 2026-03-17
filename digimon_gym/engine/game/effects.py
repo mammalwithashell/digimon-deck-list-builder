@@ -451,8 +451,13 @@ class EffectHelpersMixin:
         ignore_requirements: bool = False,
         is_optional: bool = True,
         prompt: str = "",
+        include_trash: bool = False,
     ):
-        """Let agent pick a hand card to digivolve a permanent into via effect."""
+        """Let agent pick a hand (or trash) card to digivolve a permanent into via effect.
+
+        Args:
+            include_trash: If True, also offer qualifying cards from trash as digivolve sources.
+        """
         # DCGO: ICannotIgnoreDigivolutionConditionEffect — check all field perms
         if ignore_requirements:
             for p_check in [self.player1, self.player2]:
@@ -472,34 +477,48 @@ class EffectHelpersMixin:
                     break
         if not prompt:
             perm_name = self._perm_ref(permanent)
-            prompt = f"Select a card from hand to digivolve {perm_name}."
+            zone_text = "hand or trash" if include_trash else "hand"
+            prompt = f"Select a card from {zone_text} to digivolve {perm_name}."
         valid = []
         for i, card in enumerate(player.hand_cards):
             if filter_fn(card):
                 valid.append(SEL_HAND_START + i)
+        if include_trash:
+            for i, card in enumerate(player.trash_cards):
+                if filter_fn(card):
+                    valid.append(SEL_TRASH_START + i)
         if not valid:
             return
 
         def on_select(action_id: int):
-            idx = action_id - SEL_HAND_START
-            if 0 <= idx < len(player.hand_cards):
-                card = player.hand_cards[idx]
-                if cost_override is not None:
-                    cost = cost_override
-                else:
-                    base = card.get_cost_itself
-                    cost = max(0, base - cost_reduction)
-                player.hand_cards.remove(card)
-                permanent.add_card_source(card)
-                permanent.turn_digivolved = self.turn_count
-                player.lose_memory(cost)
-                self.logger.log(
-                    f"[Effect Digivolve] {self._card_ref(card)} onto "
-                    f"{self._perm_ref(permanent)} "
-                    f"(cost: {cost})")
-                player.draw()
-                self.execute_effects(EffectTiming.WhenDigivolving,
-                                     {"digivolved_permanent": permanent})
+            chosen_card = None
+            if action_id >= SEL_TRASH_START:
+                idx = action_id - SEL_TRASH_START
+                if 0 <= idx < len(player.trash_cards):
+                    chosen_card = player.trash_cards[idx]
+                    player.trash_cards.remove(chosen_card)
+            else:
+                idx = action_id - SEL_HAND_START
+                if 0 <= idx < len(player.hand_cards):
+                    chosen_card = player.hand_cards[idx]
+                    player.hand_cards.remove(chosen_card)
+            if chosen_card is None:
+                return
+            if cost_override is not None:
+                cost = cost_override
+            else:
+                base = chosen_card.get_cost_itself
+                cost = max(0, base - cost_reduction)
+            permanent.add_card_source(chosen_card)
+            permanent.turn_digivolved = self.turn_count
+            player.lose_memory(cost)
+            self.logger.log(
+                f"[Effect Digivolve] {self._card_ref(chosen_card)} onto "
+                f"{self._perm_ref(permanent)} "
+                f"(cost: {cost})")
+            player.draw()
+            self.execute_effects(EffectTiming.WhenDigivolving,
+                                 {"digivolved_permanent": permanent})
 
         self.request_selection(
             GamePhase.SelectTarget, player, on_select, valid, is_optional,
