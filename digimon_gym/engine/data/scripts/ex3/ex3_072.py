@@ -44,6 +44,20 @@ class EX3_072(CardScript):
             if not enemy:
                 return
 
+            def _delete_opp_by_level(max_level: int):
+                def target_filter(p):
+                    return (p.is_digimon and
+                            p.level is not None and p.level <= max_level)
+
+                def on_delete(target_perm):
+                    enemy.delete_permanent(target_perm)
+
+                if any(target_filter(p) for p in enemy.battle_area):
+                    game.effect_select_opponent_permanent(
+                        player, on_delete, filter_fn=target_filter,
+                        is_optional=False,
+                        prompt=f"Delete 1 of your opponent's level {max_level} or lower Digimon.")
+
             # Check if player has own Digimon to delete for the upgrade
             own_digimon = [p for p in player.battle_area if p.is_digimon]
 
@@ -76,20 +90,6 @@ class EX3_072(CardScript):
             else:
                 # No own Digimon to delete, just use base
                 _delete_opp_by_level(4)
-
-            def _delete_opp_by_level(max_level: int):
-                def target_filter(p):
-                    return (p.is_digimon and
-                            p.level is not None and p.level <= max_level)
-
-                def on_delete(target_perm):
-                    enemy.delete_permanent(target_perm)
-
-                if any(target_filter(p) for p in enemy.battle_area):
-                    game.effect_select_opponent_permanent(
-                        player, on_delete, filter_fn=target_filter,
-                        is_optional=False,
-                        prompt=f"Delete 1 of your opponent's level {max_level} or lower Digimon.")
 
         effect0.set_on_process_callback(process0)
         effects.append(effect0)

@@ -139,10 +139,11 @@ class BT24_059(CardScript):
                 return any('TS' in t for t in traits)
 
             def on_revealed(selected, remaining):
-                # Play selected card suspended (isTapped: true per C#)
+                # Play selected card, then suspend it (isTapped: true per C#)
                 if selected is not None:
-                    played = player.play_card_from_source(selected, pay_cost=False, is_suspended=True)
+                    played = player.play_card_from_source(selected, pay_cost=False)
                     if played:
+                        played.suspend()
                         game.execute_effects(
                             EffectTiming.OnEnterFieldAnyone,
                             {"played_card": selected, "played_permanent": played,
