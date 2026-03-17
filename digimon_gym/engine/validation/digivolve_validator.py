@@ -126,6 +126,13 @@ def get_alt_digi_cost(evo_card: 'CardSource', base_perm: 'Permanent') -> int:
         if req_name is not None:
             if not base_perm.contains_card_name(req_name):
                 continue
+        # Support dynamic cost via _alt_digi_cost_fn (overrides static _alt_digi_cost)
+        cost_fn = getattr(effect, '_alt_digi_cost_fn', None)
+        if cost_fn is not None:
+            try:
+                return max(0, cost_fn())
+            except Exception:
+                pass
         return cost
     return 0
 
