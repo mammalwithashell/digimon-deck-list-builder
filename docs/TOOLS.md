@@ -378,6 +378,145 @@ python tools/resolve_deck.py --list-archetypes --min-share 0.01  # Filter by met
 
 ---
 
+### 6.4 Store Night Recommender
+
+**Script:** `tools/store_night.py`
+
+Evaluates which deck to bring to a specific store's weekly event. Queries the store's local meta from DigiLab, resolves decklists (personal library first, then scraped), simulates matchups, and prints a ranked recommendation with detailed analysis.
+
+```bash
+# Basic recommendation
+python tools/store_night.py --store "The Card Haven" \
+    --archetypes "Rocks,Millenniummon,Dark Masters" --library my_decks.json
+
+# Full analysis with all optional features
+python tools/store_night.py --store "The Card Haven" \
+    --archetypes "Rocks,Medusamon" \
+    --players --trends --decklists --colors --normalize
+
+# Filter to locals and compare two stores
+python tools/store_night.py --store "The Card Haven" \
+    --archetypes "Rocks" --event-type locals \
+    --compare-stores "Boardwalk Games"
+
+# With deck optimization
+python tools/store_night.py --store "The Card Haven" \
+    --archetypes "Rocks" --library my_decks.json --optimize
+```
+
+| Argument | Default | Description |
+|---|---|---|
+| `--store` | *(required)* | Store name (looked up in DigiLab) |
+| `--archetypes` | *(required)* | Comma-separated archetype names to evaluate |
+| `--library` | `my_decks.json` | Path to personal deck library JSON |
+| `--since` | 3 months ago | Only consider tournaments after this date (ISO) |
+| `--games` | 50 | Games per matchup for simulation |
+| `--pilot` | `greedy` | Pilot policy path or `"greedy"` |
+| `--min-plays` | 3 | Minimum plays for an archetype to count as a threat |
+| `--workers` | 1 | Parallel simulation workers |
+| `--optimize` | off | Run deck optimization on the top-ranked archetype |
+| `--optimize-episodes` | 100 | Architect training episodes when optimizing |
+
+**Optional analysis flags:**
+
+| Flag | Feature | Description |
+|---|---|---|
+| `--event-type` | Event type filter | Filter tournaments by type (e.g. `"locals"`, `"regional"`) |
+| `--players` | Player scouting | Archetype loyalty, skill-weighted threat profiles, attendance detection |
+| `--trends` | Meta velocity | Track archetypes rising/falling across time periods |
+| `--normalize` | Size normalization | Weight conversion rates by `sqrt(player_count)` |
+| `--colors` | Color heatmap | Show primary/secondary color pair distribution |
+| `--decklists` | Decklist analysis | Card staples, winning tech differentials, card trends |
+| `--compare-stores` | Cross-store comparison | Side-by-side meta shares with another store (comma-separated names) |
+
+**Report sections (when enabled):**
+
+1. **Your Archetypes** — ranked by Expected Tournament Win Rate (ETWR) with per-opponent matchup breakdown
+2. **Local Meta Threats** — archetypes sorted by meta share with win rate, conversion rate, and plays (optional: size-normalized conversion column with `--normalize`)
+3. **Sleepers** — high-conversion archetypes with sufficient sample size
+4. **Meta Trends** (`--trends`) — per-archetype share delta across time periods with sparklines
+5. **Top Threats by Player** (`--players`) — players ranked by threat score (win rate × √events)
+6. **Player Archetype Loyalty** (`--players`) — primary deck, loyalty percentage, archetype history
+7. **Regulars** (`--players`) — players attending ≥25% of events
+8. **Color Distribution** (`--colors`) — primary/secondary color pair frequency table
+9. **Decklist Analysis** (`--decklists`) — per-threat-archetype card staples (>80%), winning tech (top-4 vs rest differential), rising/falling cards
+10. **Cross-Store Comparison** (`--compare-stores`) — side-by-side meta share table with deltas
+11. **Optimization** (`--optimize`) — candidate pool breakdown and before/after win rates
+
+**Dependencies:** `digimon_gym.digilab_client` (DigiLab queries), `digimon_gym.agents.architect_simulator` (simulation, only when evaluating), `tools.decklist_analysis` (card-level analysis, only with `--decklists`).
+
+---
+
+### 6.5 Decklist Analysis
+
+**Module:** `tools/decklist_analysis.py`
+
+Pure analysis functions for card-level statistics across decklists. No DB access — operates on `DecklistRecord` objects from `digilab_client`. Used by `store_night.py --decklists` but can also be imported standalone.
+
+```python
+from digimon_gym.digilab_client import get_decklists_for_archetype
+from tools.decklist_analysis import (
+    compute_card_frequencies,
+    compute_winning_differentials,
+    compute_card_trends,
+)
+
+records = get_decklists_for_archetype("Rocks", store_ids=[3], since_date="2025-12-01")
+
+# Card staples: which cards appear in most lists?
+freqs = compute_card_frequencies(records)
+staples = [f for f in freqs if f.inclusion_rate >= 0.80]
+
+# Winning tech: what do top-4 finishers play that others don't?
+diffs = compute_winning_differentials(records, top_n=4)
+
+# Trends: which cards are rising or falling over time?
+trends = compute_card_trends(records, periods=3)
+```
+
+| Function | Returns | Description |
+|---|---|---|
+| `digilab_json_to_card_counts(json)` | `Dict[str, int]` | Parse DigiLab decklist JSON to card ID → copy count |
+| `compute_card_frequencies(decklists)` | `List[CardFrequency]` | Per-card inclusion rate and average copies, sorted by inclusion |
+| `compute_winning_differentials(decklists, top_n)` | `List[CardDifferential]` | Card usage difference between top-N finishers and the rest |
+| `compute_card_trends(decklists, periods)` | `List[CardTrend]` | Per-card inclusion rate slope across time buckets |
+
+| Dataclass | Fields |
+|---|---|
+| `CardFrequency` | `card_id`, `inclusion_rate`, `avg_copies`, `total_lists` |
+| `CardDifferential` | `card_id`, `winner_inclusion`, `other_inclusion`, `differential`, `winner_avg_copies`, `other_avg_copies` |
+| `CardTrend` | `card_id`, `period_rates`, `trend_slope`, `current_rate` |
+
+---
+
+### 6.6 DigiLab Client
+
+**Module:** `digimon_gym/digilab_client.py`
+
+Pure psycopg2 queries against the DigiLab PostgreSQL database. Standalone — no SQLAlchemy, no app dependencies. All query functions accept the same scope parameters:
+
+| Parameter | Type | Description |
+|---|---|---|
+| `store_ids` | `List[int]` | Filter to specific store IDs |
+| `scene_id` | `int` | Filter to all stores in a scene |
+| `since_date` | `str` | ISO date string — only include tournaments on or after |
+| `event_type` | `str` | ILIKE filter on `tournaments.event_type` (e.g. `"locals"`) |
+
+**Query functions:**
+
+| Function | Returns | Description |
+|---|---|---|
+| `list_stores(min_tournaments)` | `List[StoreInfo]` | All stores with tournament counts |
+| `list_scenes(min_tournaments)` | `List[SceneInfo]` | All scenes with tournament counts |
+| `get_scoped_meta(...)` | `ScopedMetaResult` | Per-archetype meta share, win rate, conversion rate |
+| `get_scoped_meta_normalized(...)` | `ScopedMetaResult` | Same but conversion weighted by `sqrt(player_count)` |
+| `get_player_history(...)` | `List[PlayerSummary]` | Per-player tournament results and archetype history |
+| `get_color_distribution(...)` | `List[ColorDistribution]` | Primary/secondary color pair frequencies |
+| `get_meta_over_time(..., periods)` | `List[PeriodMeta]` | Meta snapshots split into time buckets |
+| `get_decklists_for_archetype(name, ...)` | `List[DecklistRecord]` | Full decklist JSON for an archetype |
+
+---
+
 ## 7. Model Export & Build
 
 ### 7.1 ONNX Export
