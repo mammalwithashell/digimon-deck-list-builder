@@ -241,11 +241,11 @@ class BT23_059(CardScript):
             self_perm = card.permanent_of_this_card() if card else None
             if self_perm:
                 self_perm.unsuspend()
-            # Grant effect immunity from opponent's Digimon effects
+            # Grant immunity from opponent's Digimon effects
             if self_perm and game:
                 from digimon_gym.engine.interfaces.modifiers import ModifierType
                 game.register_modifier(
-                    self_perm, ModifierType.CANNOT_BE_SELECTED_BY_EFFECT,
+                    self_perm, ModifierType.CANNOT_BE_AFFECTED,
                     expiry='end_of_turn')
 
         effect6.set_on_process_callback(process6)

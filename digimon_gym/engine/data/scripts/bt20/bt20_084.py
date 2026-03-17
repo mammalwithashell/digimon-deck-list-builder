@@ -81,16 +81,23 @@ class BT20_084(CardScript):
         effect2.set_can_use_condition(condition2)
 
         def process2(ctx: Dict[str, Any]):
-            """Action: Effect Immunity"""
+            """Action: 1 opponent Digimon/Tamer can't suspend until end of their turn."""
             player = ctx.get('player')
             perm = ctx.get('permanent')
             game = ctx.get('game')
-            # Grant effect immunity via modifier system
-            if perm and game:
+            if not (player and game):
+                return
+            # Select 1 opponent Digimon or Tamer, register CANNOT_SUSPEND
+            def target_filter(p):
+                return p.is_digimon or p.is_tamer
+            def on_target(target_perm):
                 from digimon_gym.engine.interfaces.modifiers import ModifierType
                 game.register_modifier(
-                    ModifierType.CANNOT_BE_SELECTED_BY_EFFECT, perm,
-                    value_fn=lambda: True, expiry='end_of_turn')
+                    target_perm, ModifierType.CANNOT_SUSPEND,
+                    expiry='end_of_opponent_turn')
+            game.effect_select_opponent_permanent(
+                player, on_target, filter_fn=target_filter, is_optional=False,
+                prompt="Select 1 opponent Digimon/Tamer that can't suspend.")
 
         effect2.set_on_process_callback(process2)
         effects.append(effect2)
@@ -113,16 +120,23 @@ class BT20_084(CardScript):
         effect3.set_can_use_condition(condition3)
 
         def process3(ctx: Dict[str, Any]):
-            """Action: Effect Immunity"""
+            """Action: 1 opponent Digimon/Tamer can't suspend until end of their turn."""
             player = ctx.get('player')
             perm = ctx.get('permanent')
             game = ctx.get('game')
-            # Grant effect immunity via modifier system
-            if perm and game:
+            if not (player and game):
+                return
+            # Select 1 opponent Digimon or Tamer, register CANNOT_SUSPEND
+            def target_filter(p):
+                return p.is_digimon or p.is_tamer
+            def on_target(target_perm):
                 from digimon_gym.engine.interfaces.modifiers import ModifierType
                 game.register_modifier(
-                    ModifierType.CANNOT_BE_SELECTED_BY_EFFECT, perm,
-                    value_fn=lambda: True, expiry='end_of_turn')
+                    target_perm, ModifierType.CANNOT_SUSPEND,
+                    expiry='end_of_opponent_turn')
+            game.effect_select_opponent_permanent(
+                player, on_target, filter_fn=target_filter, is_optional=False,
+                prompt="Select 1 opponent Digimon/Tamer that can't suspend.")
 
         effect3.set_on_process_callback(process3)
         effects.append(effect3)
@@ -138,21 +152,28 @@ class BT20_084(CardScript):
         def condition4(context: Dict[str, Any]) -> bool:
             if card and card.permanent_of_this_card() is None:
                 return False
-            permanent = effect.effect_source_permanent if hasattr(effect, 'effect_source_permanent') else None
-            if not (permanent and len(permanent.digivolution_cards) >= 0):
+            permanent = card.permanent_of_this_card()
+            # Must have at least 1 digivolution card (below top card)
+            if not (permanent and len(permanent.card_sources) >= 2):
                 return False
             return True
 
         effect4.set_can_use_condition(condition4)
 
         def process4(ctx: Dict[str, Any]):
-            """Action: Add To Security"""
+            """Action: Place this Digimon's top stacked card as the top security card."""
             player = ctx.get('player')
             perm = ctx.get('permanent')
             game = ctx.get('game')
-            # Add top card of deck to security
-            if player:
-                player.recovery(1)
+            if not (player and perm):
+                return
+            # "Top stacked card" = the card just below the top card (index -2)
+            # card_sources: [bottom, ..., top_card(-1)]
+            if len(perm.card_sources) >= 2:
+                stacked_card = perm.card_sources[-2]
+                perm.card_sources.remove(stacked_card)
+                # Insert at position 0 = top of security
+                player.security_cards.insert(0, stacked_card)
 
         effect4.set_on_process_callback(process4)
         effects.append(effect4)

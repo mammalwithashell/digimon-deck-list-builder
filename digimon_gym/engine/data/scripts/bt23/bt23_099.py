@@ -114,7 +114,7 @@ class BT23_099(CardScript):
         effect4.set_can_use_condition(condition4)
 
         def process4(ctx: Dict[str, Any]):
-            """Action: Play Card"""
+            """Action: Play Sistermon from hand or trash"""
             player = ctx.get('player')
             perm = ctx.get('permanent')
             game = ctx.get('game')
@@ -124,8 +124,9 @@ class BT23_099(CardScript):
                 if not (any('Sistermon' in _n for _n in getattr(c, 'card_names', []))):
                     return False
                 return True
+            # Fix: play from hand or trash
             game.effect_play_from_zone(
-                player, 'hand', play_filter, free=True, is_optional=True)
+                player, 'hand_or_trash', play_filter, free=True, is_optional=True)
 
         effect4.set_on_process_callback(process4)
         effects.append(effect4)

@@ -56,8 +56,9 @@ class BT10_016(CardScript):
                 if not getattr(c, 'is_digimon', False):
                     return False
                 return any('Sistermon' in _n for _n in getattr(c, 'card_names', []))
+            # Fix: play from hand OR trash
             game.effect_play_from_zone(
-                player, 'hand', play_filter, free=True, is_optional=True)
+                player, 'hand_or_trash', play_filter, free=True, is_optional=True)
 
             if not perm:
                 return
@@ -74,11 +75,30 @@ class BT10_016(CardScript):
                 from digimon_gym.engine.interfaces.modifiers import ModifierType
                 for p in player.battle_area:
                     if p.is_digimon:
+                        # CAN_ATTACK_UNSUSPENDED
                         game.register_modifier(
                             p, ModifierType.CAN_ATTACK_UNSUSPENDED,
                             value_fn=lambda: True, expiry='end_of_opponent_turn')
+                        # +2000 DP
+                        game.register_modifier(
+                            p, ModifierType.CHANGE_DP,
+                            value_fn=lambda dp, t, c: dp + 2000,
+                            expiry='end_of_opponent_turn')
 
         effect1.set_on_process_callback(process1)
         effects.append(effect1)
+
+        # <Piercing> keyword
+        effect2 = ICardEffect()
+        effect2.set_effect_name("BT10-016 Piercing")
+        effect2.set_effect_description("Piercing")
+        effect2._is_piercing = True
+
+        def condition2(context: Dict[str, Any]) -> bool:
+            if card and card.permanent_of_this_card() is None:
+                return False
+            return True
+        effect2.set_can_use_condition(condition2)
+        effects.append(effect2)
 
         return effects

@@ -119,17 +119,25 @@ def build_action_mask(game: "Game", player_id: int) -> List[float]:
             if attacker.has_keyword('_is_cannot_attack_digimon'):
                 continue
             has_raid = attacker.has_keyword('_is_raid')
+            # CAN_ATTACK_UNSUSPENDED: modifier or keyword check
+            can_atk_unsuspended = attacker.has_keyword('_is_can_attack_unsuspended')
+            if not can_atk_unsuspended and hasattr(game, 'modifiers'):
+                can_atk_unsuspended = game.modifiers.has_modifier(
+                    attacker, ModifierType.CAN_ATTACK_UNSUSPENDED)
             for j in range(min(len(opp.battle_area), FIELD_SLOTS)):
                 target = opp.battle_area[j]
                 if target.is_suspended and target.is_digimon:
                     mask[100 + i * TARGETS_PER_ATTACKER + j] = 1.0
-                elif has_raid and not target.is_suspended and target.is_digimon:
-                    unsuspended_dps = [
-                        (p.dp or 0) for p in opp.battle_area
-                        if not p.is_suspended and p.is_digimon
-                    ]
-                    if unsuspended_dps and (target.dp or 0) == max(unsuspended_dps):
+                elif not target.is_suspended and target.is_digimon:
+                    if can_atk_unsuspended:
                         mask[100 + i * TARGETS_PER_ATTACKER + j] = 1.0
+                    elif has_raid:
+                        unsuspended_dps = [
+                            (p.dp or 0) for p in opp.battle_area
+                            if not p.is_suspended and p.is_digimon
+                        ]
+                        if unsuspended_dps and (target.dp or 0) == max(unsuspended_dps):
+                            mask[100 + i * TARGETS_PER_ATTACKER + j] = 1.0
 
         # Digivolve (400-999): 400 + hand*FIELDS_PER_HAND + field
         for h in range(min(len(me.hand_cards), 30)):
@@ -230,19 +238,27 @@ def build_action_mask(game: "Game", player_id: int) -> List[float]:
                     has_any_attack = True
                 # Digimon attacks
                 has_raid = attacker.has_keyword('_is_raid')
+                can_atk_unsuspended_f = attacker.has_keyword('_is_can_attack_unsuspended')
+                if not can_atk_unsuspended_f:
+                    can_atk_unsuspended_f = game.modifiers.has_modifier(
+                        attacker, ModifierType.CAN_ATTACK_UNSUSPENDED)
                 for j in range(min(len(opp.battle_area), FIELD_SLOTS)):
                     target = opp.battle_area[j]
                     if target.is_suspended and target.is_digimon:
                         forced_mask[100 + i * TARGETS_PER_ATTACKER + j] = 1.0
                         has_any_attack = True
-                    elif has_raid and not target.is_suspended and target.is_digimon:
-                        unsuspended_dps = [
-                            (p.dp or 0) for p in opp.battle_area
-                            if not p.is_suspended and p.is_digimon
-                        ]
-                        if unsuspended_dps and (target.dp or 0) == max(unsuspended_dps):
+                    elif not target.is_suspended and target.is_digimon:
+                        if can_atk_unsuspended_f:
                             forced_mask[100 + i * TARGETS_PER_ATTACKER + j] = 1.0
                             has_any_attack = True
+                        elif has_raid:
+                            unsuspended_dps = [
+                                (p.dp or 0) for p in opp.battle_area
+                                if not p.is_suspended and p.is_digimon
+                            ]
+                            if unsuspended_dps and (target.dp or 0) == max(unsuspended_dps):
+                                forced_mask[100 + i * TARGETS_PER_ATTACKER + j] = 1.0
+                                has_any_attack = True
             if has_any_attack:
                 return forced_mask
             # If forced Digimon can't attack (suspended etc), skip force

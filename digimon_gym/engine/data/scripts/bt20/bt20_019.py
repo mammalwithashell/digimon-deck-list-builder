@@ -103,13 +103,26 @@ class BT20_019(CardScript):
         effect2.set_on_process_callback(process2)
         effects.append(effect2)
 
-        # Timing: EffectTiming.None
-        # Grant Skill
+        # [Your Turn] Your Digimon with [Sistermon] in their names or the
+        # [Royal Knight] trait gain <Piercing>.
+        # Aura pattern: _applies_to_all_own_digimon + _keyword_permanent_condition
         effect3 = ICardEffect()
-        effect3.set_effect_name("BT20-019 Your Digimon with [Sistermon] in their names or the [Royal Knight] trait gain Pierce")
-        effect3.set_effect_description("Grant Skill")
+        effect3.set_effect_name("BT20-019 Sistermon/Royal Knight gain Piercing")
+        effect3.set_effect_description("[Your Turn] Your Digimon with [Sistermon] or [Royal Knight] gain <Piercing>.")
+        effect3._is_piercing = True
+        effect3._applies_to_all_own_digimon = True
+        def _piercing_perm_filter(target_perm):
+            """Check if target has Sistermon name or Royal Knight trait."""
+            if target_perm.top_card:
+                names = getattr(target_perm.top_card, 'card_names', []) or []
+                if any('Sistermon' in n for n in names):
+                    return True
+                traits = getattr(target_perm.top_card, 'card_traits', []) or []
+                if any('Royal Knight' in tr for tr in traits):
+                    return True
+            return False
+        effect3._keyword_permanent_condition = _piercing_perm_filter
 
-        effect = effect3  # alias for condition closure
         def condition3(context: Dict[str, Any]) -> bool:
             if card and card.permanent_of_this_card() is None:
                 return False
@@ -118,25 +131,17 @@ class BT20_019(CardScript):
             return True
 
         effect3.set_can_use_condition(condition3)
-
-        def process3(ctx: Dict[str, Any]):
-            """Action: Grant Skill"""
-            player = ctx.get('player')
-            perm = ctx.get('permanent')
-            game = ctx.get('game')
-            # Grant keyword to other permanents (AddSkillClass) — not yet in engine
-            pass  # descriptive-tagged: grant_skill
-
-        effect3.set_on_process_callback(process3)
         effects.append(effect3)
 
-        # Timing: EffectTiming.None
-        # Attack Unsuspended
+        # [Your Turn] Your Digimon with [Sistermon] or [Royal Knight] trait
+        # can also attack your opponent's unsuspended Digimon.
         effect4 = ICardEffect()
-        effect4.set_effect_name("BT20-019 Attack Unsuspended")
-        effect4.set_effect_description("Attack Unsuspended")
+        effect4.set_effect_name("BT20-019 Sistermon/Royal Knight attack unsuspended")
+        effect4.set_effect_description("[Your Turn] Sistermon/RK Digimon can attack unsuspended.")
+        effect4._is_can_attack_unsuspended = True
+        effect4._applies_to_all_own_digimon = True
+        effect4._keyword_permanent_condition = _piercing_perm_filter
 
-        effect = effect4  # alias for condition closure
         def condition4(context: Dict[str, Any]) -> bool:
             if card and card.permanent_of_this_card() is None:
                 return False
@@ -145,57 +150,50 @@ class BT20_019(CardScript):
             return True
 
         effect4.set_can_use_condition(condition4)
-
-        def process4(ctx: Dict[str, Any]):
-            """Action: Attack Unsuspended"""
-            player = ctx.get('player')
-            perm = ctx.get('permanent')
-            game = ctx.get('game')
-            # Can attack unsuspended Digimon via modifier system
-            if perm and game:
-                from digimon_gym.engine.interfaces.modifiers import ModifierType
-                game.register_modifier(
-                    ModifierType.CAN_ATTACK_UNSUSPENDED, perm,
-                    value_fn=lambda: True, expiry='persistent')
-
-        effect4.set_on_process_callback(process4)
         effects.append(effect4)
 
-        # Timing: EffectTiming.None
-        # Grant Skill, Attack Unsuspended
+        # [Inherited] [Your Turn] While this Digimon is [Jesmon GX], all of your
+        # Digimon gain <Piercing> and can also attack opponent's unsuspended Digimon.
+        # Piercing aura
         effect5 = ICardEffect()
-        effect5.set_effect_name("BT20-019 [Your Turn] While this Digimon is [Jesmon GX], all of your Digimon gain <Piercing> and can also attack your opponent's unsuspended Digimon.")
-        effect5.set_effect_description("Grant Skill, Attack Unsuspended")
+        effect5.set_effect_name("BT20-019 [Inherited] Jesmon GX: all Digimon gain Piercing")
+        effect5.set_effect_description("[Your Turn] While Jesmon GX, all Digimon gain Piercing.")
         effect5.is_inherited_effect = True
+        effect5._is_piercing = True
+        effect5._applies_to_all_own_digimon = True
 
-        effect = effect5  # alias for condition closure
         def condition5(context: Dict[str, Any]) -> bool:
             if card and card.permanent_of_this_card() is None:
                 return False
             if not (card and card.owner and card.owner.is_my_turn):
                 return False
-            permanent = effect.effect_source_permanent if hasattr(effect, 'effect_source_permanent') else None
+            permanent = card.permanent_of_this_card()
             if not (permanent and (permanent.contains_card_name('Jesmon GX'))):
                 return False
             return True
 
         effect5.set_can_use_condition(condition5)
-
-        def process5(ctx: Dict[str, Any]):
-            """Action: Grant Skill, Attack Unsuspended"""
-            player = ctx.get('player')
-            perm = ctx.get('permanent')
-            game = ctx.get('game')
-            # Grant keyword to other permanents (AddSkillClass) — not yet in engine
-            pass  # descriptive-tagged: grant_skill
-            # Can attack unsuspended Digimon via modifier system
-            if perm and game:
-                from digimon_gym.engine.interfaces.modifiers import ModifierType
-                game.register_modifier(
-                    ModifierType.CAN_ATTACK_UNSUSPENDED, perm,
-                    value_fn=lambda: True, expiry='persistent')
-
-        effect5.set_on_process_callback(process5)
         effects.append(effect5)
+
+        # Attack Unsuspended aura (inherited)
+        effect6 = ICardEffect()
+        effect6.set_effect_name("BT20-019 [Inherited] Jesmon GX: all Digimon attack unsuspended")
+        effect6.set_effect_description("[Your Turn] While Jesmon GX, all Digimon can attack unsuspended.")
+        effect6.is_inherited_effect = True
+        effect6._is_can_attack_unsuspended = True
+        effect6._applies_to_all_own_digimon = True
+
+        def condition6(context: Dict[str, Any]) -> bool:
+            if card and card.permanent_of_this_card() is None:
+                return False
+            if not (card and card.owner and card.owner.is_my_turn):
+                return False
+            permanent = card.permanent_of_this_card()
+            if not (permanent and (permanent.contains_card_name('Jesmon GX'))):
+                return False
+            return True
+
+        effect6.set_can_use_condition(condition6)
+        effects.append(effect6)
 
         return effects

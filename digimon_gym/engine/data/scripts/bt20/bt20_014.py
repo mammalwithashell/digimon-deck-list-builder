@@ -109,28 +109,27 @@ class BT20_014(CardScript):
         effect2.set_can_use_condition(condition2)
 
         def process2(ctx: Dict[str, Any]):
-            """Action: Digivolve, Suspend"""
+            """Action: By suspending 1 of your other Digimon, digivolve into [Jesmon] from hand free."""
             player = ctx.get('player')
             perm = ctx.get('permanent')
             game = ctx.get('game')
             if not (player and perm and game):
                 return
-            def digi_filter(c):
-                if not (any('Jesmon' in _n for _n in getattr(c, 'card_names', []))):
-                    return False
-                return True
-            game.effect_digivolve_from_hand(
-                player, perm, digi_filter, is_optional=True)
-            if not (player and game):
-                return
-            def target_filter(p):
-                if not (p.contains_card_name('Jesmon')):
-                    return False
-                return True
+            # "By suspending 1 of your other Digimon" = COST (happens first)
+            def suspend_filter(p):
+                return p is not perm and p.is_digimon and not p.is_suspended
             def on_suspend(target_perm):
                 target_perm.suspend()
-            game.effect_select_opponent_permanent(
-                player, on_suspend, filter_fn=target_filter, is_optional=True)
+                # THEN digivolve this Digimon into [Jesmon] from hand without paying cost
+                def digi_filter(c):
+                    if not getattr(c, 'is_digimon', False):
+                        return False
+                    return any('Jesmon' in _n for _n in getattr(c, 'card_names', []))
+                game.effect_digivolve_from_hand(
+                    player, perm, digi_filter, cost_override=0, is_optional=True)
+            game.effect_select_own_permanent(
+                player, on_suspend, filter_fn=suspend_filter, is_optional=True,
+                prompt="Suspend 1 of your other Digimon to digivolve into [Jesmon].")
 
         effect2.set_on_process_callback(process2)
         effects.append(effect2)

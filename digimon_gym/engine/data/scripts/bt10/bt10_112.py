@@ -8,6 +8,33 @@ if TYPE_CHECKING:
     from ....core.card_source import CardSource
 
 
+class _DynamicSAEffect(ICardEffect):
+    """ICardEffect subclass with dynamic _security_attack_modifier based on RK count in digi-stack."""
+    def __init__(self, card_ref):
+        super().__init__()
+        self._card_ref = card_ref
+
+    @property
+    def _security_attack_modifier(self):
+        _card = self._card_ref
+        perm = _card.permanent_of_this_card() if _card else None
+        if perm is None:
+            return 0
+        count = 0
+        for cs in perm.card_sources:
+            if cs is perm.top_card:
+                continue
+            traits = getattr(cs, 'card_traits', []) or []
+            if any('Royal Knight' in tr for tr in traits):
+                count += 1
+        return count
+
+    @_security_attack_modifier.setter
+    def _security_attack_modifier(self, value):
+        # Allow setting without error (used during initialization patterns)
+        pass
+
+
 class BT10_112(CardScript):
     """BT10-112 Jesmon GX | Lv.7"""
 
@@ -57,32 +84,76 @@ class BT10_112(CardScript):
             if not (player and game and perm):
                 return
 
-            def hand_filter(c):
+            from ....data.enums import EffectTiming as _ET
+
+            def rk_filter(c):
                 if not any('Royal Knight' in tr for tr in (getattr(c, 'card_traits', []) or [])):
                     return False
-                play_cost = getattr(c, 'get_cost_itself', 0)
-                if callable(play_cost):
-                    play_cost = play_cost
-                else:
-                    play_cost = getattr(c, 'play_cost', 0) or 0
                 pc = getattr(c, 'play_cost', 0) or 0
                 return pc <= 13
 
-            def on_card_selected(selected_card):
+            # Build valid action IDs from hand + trash
+            from ....game.action_decoder import (
+                SEL_HAND_START, SEL_TRASH_START, ACTION_SPACE_SIZE, GamePhase)
+            valid = []
+            for i, c in enumerate(player.hand_cards):
+                if rk_filter(c) and (SEL_HAND_START + i) < ACTION_SPACE_SIZE:
+                    valid.append(SEL_HAND_START + i)
+            for i, c in enumerate(player.trash_cards):
+                if rk_filter(c) and (SEL_TRASH_START + i) < ACTION_SPACE_SIZE:
+                    valid.append(SEL_TRASH_START + i)
+            if not valid:
+                # No valid targets — still grant Blitz
+                perm.grant_keyword('_is_rush')
+                return
+
+            def on_select(action_id):
+                selected_card = None
+                if action_id >= SEL_TRASH_START:
+                    idx = action_id - SEL_TRASH_START
+                    if 0 <= idx < len(player.trash_cards):
+                        selected_card = player.trash_cards[idx]
+                        player.trash_cards.remove(selected_card)
+                else:
+                    idx = action_id - SEL_HAND_START
+                    if 0 <= idx < len(player.hand_cards):
+                        selected_card = player.hand_cards[idx]
+                        player.hand_cards.remove(selected_card)
                 if selected_card is None:
+                    perm.grant_keyword('_is_rush')
                     return
-                if selected_card in player.hand_cards:
-                    player.hand_cards.remove(selected_card)
-                elif selected_card in player.trash_cards:
-                    player.trash_cards.remove(selected_card)
                 perm.add_card_source_bottom(selected_card)
-                # Grant Blitz (Rush on digivolve turn)
+                # Activate 1 of that card's [When Digivolving] effects
+                wd_effects = []
+                for eff in selected_card.effect_list(_ET.NoTiming):
+                    if getattr(eff, '_is_when_digivolving', False):
+                        wd_effects.append(eff)
+                if wd_effects:
+                    if len(wd_effects) == 1:
+                        # Only one WD effect — activate it directly
+                        wd_eff = wd_effects[0]
+                        if wd_eff.on_process_callback:
+                            wd_eff.on_process_callback({
+                                'player': player, 'permanent': perm, 'game': game})
+                    else:
+                        # Multiple WD effects — let player choose
+                        labels = [e.effect_name or e.effect_description for e in wd_effects]
+                        def on_branch(branch_idx, _effs=wd_effects):
+                            chosen = _effs[branch_idx]
+                            if chosen.on_process_callback:
+                                chosen.on_process_callback({
+                                    'player': player, 'permanent': perm, 'game': game})
+                        game.effect_choose_branch(
+                            player, len(wd_effects), on_branch,
+                            prompt="Activate 1 [When Digivolving] effect.",
+                            branch_labels=labels)
+                # Then, <Blitz>
                 perm.grant_keyword('_is_rush')
 
-            game.effect_select_hand_card(
-                player, hand_filter, on_card_selected,
+            game.request_selection(
+                GamePhase.SelectTarget, player, on_select, valid,
                 is_optional=True,
-                prompt="Select 1 [Royal Knight] card (cost 13 or less) from hand to place under this Digimon.")
+                prompt="Select 1 [Royal Knight] card (cost 13 or less) from hand/trash.")
 
         effect1.set_on_process_callback(process1)
         effects.append(effect1)
@@ -104,12 +175,11 @@ class BT10_112(CardScript):
         effect2.set_can_use_condition(condition2)
         effects.append(effect2)
 
-        # Factory effect: security_attack_plus
-        # Security Attack +1
-        effect3 = ICardEffect()
-        effect3.set_effect_name("BT10-112 Security Attack +1")
-        effect3.set_effect_description("Security Attack +1")
-        effect3._security_attack_modifier = 1
+        # Factory effect: security_attack_plus (dynamic)
+        # Security Attack +1 for each [Royal Knight] trait in digivolution cards
+        effect3 = _DynamicSAEffect(card)
+        effect3.set_effect_name("BT10-112 Security Attack +N (Royal Knight count)")
+        effect3.set_effect_description("This Digimon gains <Security Attack +1> for each card with the [Royal Knight] trait in this Digimon's digivolution cards.")
 
         def condition3(context: Dict[str, Any]) -> bool:
             if card and card.permanent_of_this_card() is None:

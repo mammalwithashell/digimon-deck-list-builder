@@ -50,8 +50,6 @@ class BT23_030(CardScript):
         effect2.set_effect_description("[Main] [Once Per Turn] By paying 1 cost, you may play 1 play cost 3 or lower card with [Chuumon] or [Sukamon] in its name or the [CS] trait from your hand without paying the cost. Then, 1 of your level 3 or higher Digimon gains <Reboot> and <Blocker> until your opponent's turn ends.")
         effect2.set_max_count_per_turn(1)
         effect2.set_hash_string("BT23_030_Main")
-        effect2._is_reboot = True
-        effect2._is_blocker = True
 
         effect = effect2  # alias for condition closure
         def condition2(context: Dict[str, Any]) -> bool:
@@ -64,23 +62,38 @@ class BT23_030(CardScript):
         effect2.set_can_use_condition(condition2)
 
         def process2(ctx: Dict[str, Any]):
-            """Action: Play Card, Gain Keyword Reboot, Gain Keyword Blocker"""
+            """Action: By paying 1 cost, play 1 card (cost 3 or less, Chuumon/Sukamon name or CS trait) from hand free. Then 1 Lv.3+ Digimon gains Reboot+Blocker until opponent's turn ends."""
             player = ctx.get('player')
             perm = ctx.get('permanent')
             game = ctx.get('game')
             if not (player and game):
                 return
+            # "By paying 1 cost" = cost that happens BEFORE the effect
+            player.lose_memory(1)
             def play_filter(c):
-                if not (any('Chuumon' in _n or 'Sukamon' in _n for _n in getattr(c, 'card_names', []))):
+                pc = getattr(c, 'play_cost', 0) or 0
+                if pc > 3:
                     return False
-                if getattr(c, 'level', None) is None or c.level < 3:
-                    return False
-                return True
+                names = getattr(c, 'card_names', []) or []
+                has_name = any('Chuumon' in _n or 'Sukamon' in _n for _n in names)
+                traits = getattr(c, 'card_traits', []) or []
+                has_cs = any('CS' in _t for _t in traits)
+                return has_name or has_cs
+            def after_play():
+                # "Then, 1 of your level 3 or higher Digimon gains <Reboot> and <Blocker> until your opponent's turn ends."
+                def lv3_filter(p):
+                    return p.is_digimon and (getattr(p, 'level', 0) or 0) >= 3
+                def on_grant(target_perm):
+                    # Lasts through current turn + opponent's next turn
+                    expiry_turn = game.turn_count + 1 if game else -1
+                    target_perm.grant_keyword('_is_reboot', expiry_turn)
+                    target_perm.grant_keyword('_is_blocker', expiry_turn)
+                game.effect_select_own_permanent(
+                    player, on_grant, filter_fn=lv3_filter, is_optional=False,
+                    prompt="Select 1 of your Lv.3+ Digimon to gain Reboot and Blocker.")
             game.effect_play_from_zone(
                 player, 'hand', play_filter, free=True, is_optional=True)
-            if perm:
-                perm.grant_keyword('_is_reboot')
-                perm.grant_keyword('_is_blocker')
+            after_play()
 
         effect2.set_on_process_callback(process2)
         effects.append(effect2)

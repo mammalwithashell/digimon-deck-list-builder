@@ -65,122 +65,115 @@ class BT20_059(CardScript):
                 player, on_de_digivolve, filter_fn=lambda p: p.is_digimon, is_optional=False)
             # Check condition: [Gankoomon] or [X Antibody] in digi cards
             if perm:
-                has_gankoomon = any(src.contains_card_name('Gankoomon') for src in perm.card_sources)
-                has_x_antibody = any(src.contains_card_name('X Antibody') for src in perm.card_sources)
-                if has_gankoomon or has_x_antibody:
-                    # Grant immunity to ALL own Digimon from opponent Digimon effects
+                has_gankoomon_or_x = False
+                for cs in perm.card_sources:
+                    names = getattr(cs, 'card_names', []) or []
+                    if any('Gankoomon' in n or 'X Antibody' in n for n in names):
+                        has_gankoomon_or_x = True
+                        break
+                if has_gankoomon_or_x:
+                    # Grant CANNOT_BE_AFFECTED to ALL own Digimon until end of opponent's turn
+                    from ....interfaces.modifiers import ModifierType
                     for own_perm in player.battle_area:
                         if own_perm.is_digimon:
-                            own_perm.grant_keyword('_immune_to_opponent_digimon_effects')
+                            game.register_modifier(
+                                own_perm, ModifierType.CANNOT_BE_AFFECTED,
+                                expiry='end_of_opponent_turn')
 
         effect1.set_on_process_callback(process1)
         effects.append(effect1)
 
-        # Factory effect: blocker
-        # Blocker
+        # [Opponent's Turn] Your Digimon with [Sistermon] or [Huckmon] in name,
+        # or [Royal Knight] trait gain <Blocker> and <Reboot>.
+        # Implemented as aura: _applies_to_all_own_digimon + _keyword_permanent_condition
+        def _gankoomon_aura_filter(target_perm):
+            """Check if target has Sistermon/Huckmon name or Royal Knight trait."""
+            if target_perm.top_card:
+                names = getattr(target_perm.top_card, 'card_names', []) or []
+                if any('Sistermon' in n or 'Huckmon' in n for n in names):
+                    return True
+                traits = getattr(target_perm.top_card, 'card_traits', []) or []
+                if any('Royal Knight' in tr for tr in traits):
+                    return True
+            return False
+
+        # Blocker aura (opponent's turn)
         effect2 = ICardEffect()
-        effect2.set_effect_name("BT20-059 Blocker")
-        effect2.set_effect_description("Blocker")
+        effect2.set_effect_name("BT20-059 Blocker aura (Sistermon/Huckmon/RK)")
+        effect2.set_effect_description("[Opponent's Turn] Sistermon/Huckmon/RK Digimon gain Blocker.")
         effect2._is_blocker = True
+        effect2._applies_to_all_own_digimon = True
+        effect2._keyword_permanent_condition = _gankoomon_aura_filter
 
         def condition2(context: Dict[str, Any]) -> bool:
             if card and card.permanent_of_this_card() is None:
                 return False
-            permanent = card.permanent_of_this_card() if card else None
-            if not (permanent and permanent.top_card and (any('Royal Knight' in tr for tr in (getattr(permanent.top_card, 'card_traits', []) or [])))):
+            # Active during opponent's turn
+            if card and card.owner and card.owner.is_my_turn:
                 return False
             return True
         effect2.set_can_use_condition(condition2)
         effects.append(effect2)
 
-        # Factory effect: reboot
-        # Reboot
+        # Reboot aura (opponent's turn) — self
         effect3 = ICardEffect()
-        effect3.set_effect_name("BT20-059 Reboot")
-        effect3.set_effect_description("Reboot")
+        effect3.set_effect_name("BT20-059 Reboot aura (Sistermon/Huckmon/RK)")
+        effect3.set_effect_description("[Opponent's Turn] Sistermon/Huckmon/RK Digimon gain Reboot.")
         effect3._is_reboot = True
+        effect3._applies_to_all_own_digimon = True
+        effect3._keyword_permanent_condition = _gankoomon_aura_filter
 
         def condition3(context: Dict[str, Any]) -> bool:
             if card and card.permanent_of_this_card() is None:
                 return False
-            permanent = card.permanent_of_this_card() if card else None
-            if not (permanent and permanent.top_card and (any('Royal Knight' in tr for tr in (getattr(permanent.top_card, 'card_traits', []) or [])))):
+            if card and card.owner and card.owner.is_my_turn:
                 return False
             return True
         effect3.set_can_use_condition(condition3)
         effects.append(effect3)
 
-        # Factory effect: reboot_non_self
-        # Reboot (grant to others)
-        effect4 = ICardEffect()
-        effect4.set_effect_name("BT20-059 Reboot (grant to others)")
-        effect4.set_effect_description("Reboot (grant to others)")
-        effect4._is_reboot = True
-        effect4._applies_to_all_own_digimon = True
-
-        def condition4(context: Dict[str, Any]) -> bool:
-            if card and card.permanent_of_this_card() is None:
-                return False
-            permanent = card.permanent_of_this_card() if card else None
-            if not (permanent and permanent.top_card and (any('Royal Knight' in tr for tr in (getattr(permanent.top_card, 'card_traits', []) or [])))):
-                return False
-            return True
-        effect4.set_can_use_condition(condition4)
-        effects.append(effect4)
-
-        # Factory effect: blocker
-        # Blocker
+        # [Inherited] [Opponent's Turn] While this Digimon is [Jesmon GX],
+        # Sistermon/Huckmon/RK Digimon gain Blocker and Reboot.
+        # Blocker aura (inherited, Jesmon GX host)
         effect5 = ICardEffect()
-        effect5.set_effect_name("BT20-059 Blocker")
-        effect5.set_effect_description("Blocker")
+        effect5.set_effect_name("BT20-059 [Inherited] Blocker aura (Jesmon GX)")
+        effect5.set_effect_description("[Inherited] While Jesmon GX, Sistermon/Huckmon/RK gain Blocker.")
         effect5.is_inherited_effect = True
         effect5._is_blocker = True
+        effect5._applies_to_all_own_digimon = True
+        effect5._keyword_permanent_condition = _gankoomon_aura_filter
 
         def condition5(context: Dict[str, Any]) -> bool:
             if card and card.permanent_of_this_card() is None:
                 return False
-            permanent = card.permanent_of_this_card() if card else None
+            permanent = card.permanent_of_this_card()
             if not (permanent and (permanent.contains_card_name('Jesmon GX'))):
+                return False
+            if card and card.owner and card.owner.is_my_turn:
                 return False
             return True
         effect5.set_can_use_condition(condition5)
         effects.append(effect5)
 
-        # Factory effect: reboot
-        # Reboot
+        # Reboot aura (inherited, Jesmon GX host)
         effect6 = ICardEffect()
-        effect6.set_effect_name("BT20-059 Reboot")
-        effect6.set_effect_description("Reboot")
+        effect6.set_effect_name("BT20-059 [Inherited] Reboot aura (Jesmon GX)")
+        effect6.set_effect_description("[Inherited] While Jesmon GX, Sistermon/Huckmon/RK gain Reboot.")
         effect6.is_inherited_effect = True
         effect6._is_reboot = True
+        effect6._applies_to_all_own_digimon = True
+        effect6._keyword_permanent_condition = _gankoomon_aura_filter
 
         def condition6(context: Dict[str, Any]) -> bool:
             if card and card.permanent_of_this_card() is None:
                 return False
-            permanent = card.permanent_of_this_card() if card else None
+            permanent = card.permanent_of_this_card()
             if not (permanent and (permanent.contains_card_name('Jesmon GX'))):
+                return False
+            if card and card.owner and card.owner.is_my_turn:
                 return False
             return True
         effect6.set_can_use_condition(condition6)
         effects.append(effect6)
-
-        # Factory effect: reboot_non_self
-        # Reboot (grant to others)
-        effect7 = ICardEffect()
-        effect7.set_effect_name("BT20-059 Reboot (grant to others)")
-        effect7.set_effect_description("Reboot (grant to others)")
-        effect7.is_inherited_effect = True
-        effect7._is_reboot = True
-        effect7._applies_to_all_own_digimon = True
-
-        def condition7(context: Dict[str, Any]) -> bool:
-            if card and card.permanent_of_this_card() is None:
-                return False
-            permanent = card.permanent_of_this_card() if card else None
-            if not (permanent and (permanent.contains_card_name('Jesmon GX'))):
-                return False
-            return True
-        effect7.set_can_use_condition(condition7)
-        effects.append(effect7)
 
         return effects

@@ -68,13 +68,18 @@ class BT13_016(CardScript):
         def condition1(context: Dict[str, Any]) -> bool:
             if card and card.permanent_of_this_card() is None:
                 return False
-            # Triggered on attack — validated by engine timing
+            # "If this Digimon has the [Royal Knight] trait"
+            permanent = card.permanent_of_this_card()
+            if permanent and permanent.top_card:
+                traits = getattr(permanent.top_card, 'card_traits', []) or []
+                if not any('Royal Knight' in tr for tr in traits):
+                    return False
             return True
 
         effect1.set_can_use_condition(condition1)
 
         def process1(ctx: Dict[str, Any]):
-            """Action: Play Card"""
+            """Action: Play Sistermon from hand or trash"""
             player = ctx.get('player')
             perm = ctx.get('permanent')
             game = ctx.get('game')
@@ -86,8 +91,9 @@ class BT13_016(CardScript):
                 if not (any('Sistermon' in _n for _n in getattr(c, 'card_names', []))):
                     return False
                 return True
+            # Fix: play from hand or trash
             game.effect_play_from_zone(
-                player, 'hand', play_filter, free=True, is_optional=True)
+                player, 'hand_or_trash', play_filter, free=True, is_optional=True)
 
         effect1.set_on_process_callback(process1)
         effects.append(effect1)

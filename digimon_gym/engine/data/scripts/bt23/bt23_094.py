@@ -48,8 +48,11 @@ class BT23_094(CardScript):
                 return
 
             def on_target(target_perm):
-                # SA-1
-                target_perm._temp_sa_modifier -= 1
+                # SA-1 until opponent's turn ends
+                game.register_modifier(
+                    target_perm, ModifierType.CHANGE_SECURITY_ATTACK,
+                    value_fn=lambda: -1,
+                    expiry='end_of_opponent_turn')
                 # Can't activate [When Digivolving] or [When Attacking]
                 game.register_modifier(
                     target_perm, ModifierType.DISABLE_EFFECT,
