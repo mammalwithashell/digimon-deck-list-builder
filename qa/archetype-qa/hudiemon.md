@@ -1,56 +1,75 @@
-# Hudiemon Archetype QA
+# Archetype QA: Hudiemon
+Date: 2026-03-17 (faithfulness campaign)
+Total cards: 73
 
-## Deck Library Key: Hudiemon
-- **Unique Cards:** 73
-- **Decklists:** 138
-- **Status:** All stubs resolved. 9 descriptive-tagged stubs remain (engine limitations: ignore color req, also_treated_as).
+## Summary
+- FAITHFUL: 39 (approx)
+- FIXED: 12 (this campaign)
+- DEFERRED: 3 (ignore color req engine limitation)
+- ENGINE GAP: 0
+- Not audited: ~20 (generic tech cards shared with other archetypes)
 
-## QA Results
+## Card-by-Card Verdicts
+| Card ID | Name | Verdict | Notes |
+|---------|------|---------|-------|
+| BT10-042 | Venusmon | FAITHFUL | Declarative static effect replacement |
+| BT16-077 | Dinobeemon | FAITHFUL | DNA check, FORCE_ATTACK modifier |
+| BT22-063 | Alphamon | FAITHFUL | -5000 DP callbacks, unsuspend effect |
+| BT22-099 | Kuremi Detective Agency | FAITHFUL | Main, Delay +2 memory, Security |
+| BT22-100 | Cyberspace EDEN | FAITHFUL | Main/Security, DP modifier |
+| BT23-040 | Wormmon | FIXED | Include trash: alt digi, Erika placement, Hudie DP modifier |
+| BT23-041 | Kabuterimon | FAITHFUL | Alliance, OPT suspend trigger, piercing+DP |
+| BT23-048 | Gotsumon | FIXED | Fabricated effect: reveal_and_select_multi with Hudie+CS filters corrected |
+| BT23-050 | Ankylomon | FAITHFUL | -2000 DP + DNA digivolve |
+| BT23-051 | Golemon | FAITHFUL | Alliance, blocker, can't attack, OPT delete |
+| BT23-058 | Craniamon | FAITHFUL | WhenRemoveField _will_not_be_removed |
+| BT23-059 | Justimon: Blitz Arm | FAITHFUL | Trash option + delete, unsuspend+immunity |
+| BT23-081 | Hudiemon | FIXED | Missing effect: added missing On Play/WD effect |
+| BT23-084 | Erika Mishima | FAITHFUL | Memory gain, bounce+play, inherited alliance |
+| BT23-085 | Ryuji Mishima | FAITHFUL | Memory gain, DP immunity+reboot+blocker |
+| BT23-089 | Takumi Aiba | FAITHFUL | WhenRemoveField substitute with trash selection |
+| BT23-090 | Nokia Shiramine | FIXED | Filter+bounce: corrected filter conditions and bounce targeting |
+| BT23-091 | Wolkenapalm | FAITHFUL | min() crash fixed |
+| BT23-092 | Ice Archery | FAITHFUL | CANNOT_SUSPEND modifier |
+| BT23-095 | Crescent Leaf | FIXED | Delay copy-paste: CS trait check added to Delay condition |
+| BT23-096 | Comet Hammer | FIXED | Delay copy-paste: CS trait check added to Delay condition |
+| BT23-100 | Hudie Net Cafe | FAITHFUL | Delay and Security correct |
+| BT23-101 | Cyberspace EDEN | FIXED | Missing callback: added missing process callback |
+| BT22-054 | Stingmon | FIXED | Missing callback: added missing process callback |
+| BT22-089 | Mirei Mikagura | FIXED | Costs: corrected cost handling |
+| BT22-093 | Arata Sanada | FIXED | Wrong tamers: corrected tamer targeting |
+| BT22-101 | Digital Gate | FIXED | Wrong tamers: corrected tamer targeting |
+| BT23-032 | Wormmon | FIXED | Wrong zone: corrected zone reference |
+| EX10-068 | Digimon Emperor | FAITHFUL | Memory gain, delete filter, execution order |
+| P-225 | DigiLab | FAITHFUL | Delay effect verified |
 
-| Card ID | Card Name | Verdict | Notes |
-|---------|-----------|---------|-------|
-| BT10-042 | Venusmon | IMPLEMENTED | Fixed effect1: replaced broken disable_effect stub with declarative static effect |
-| BT16-077 | Dinobeemon | IMPLEMENTED | Fixed When Digivolving: added DNA check, is_digimon filter, FORCE_ATTACK modifier |
-| BT22-063 | Alphamon | IMPLEMENTED | Added missing -5000 DP process callbacks, fixed unsuspend effect condition+logic |
-| BT22-099 | Kuremi Detective Agency | IMPLEMENTED | Rewrote Main effect, added Delay (gain 2 memory), added Security effect |
-| BT22-100 | Cyberspace EDEN | IMPLEMENTED | Full rewrite: correct Main/Security effects, DP modifier in-security condition |
-| BT23-040 | Wormmon | PASS | Spot-checked: alt digi, Erika placement, Hudie DP modifier correct |
-| BT23-041 | Kabuterimon | PASS | Spot-checked: alliance, OPT suspend trigger, piercing+DP correct |
-| BT23-048 | Gotsumon | PASS | Spot-checked: reveal_and_select_multi with Hudie+CS filters correct |
-| BT23-050 | Ankylomon | PASS | Spot-checked: -2000 DP + DNA digivolve correct |
-| BT23-051 | Golemon | PASS | Spot-checked: alliance, blocker, can't attack digimon, OPT delete correct |
-| BT23-058 | Craniamon | IMPLEMENTED | Fixed WhenRemoveField: added _will_not_be_removed to prevent removal |
-| BT23-059 | Justimon: Blitz Arm | PASS | Spot-checked: trash option + delete, unsuspend+immunity correct |
-| BT23-084 | Erika Mishima | PASS | Spot-checked: memory gain, bounce+play, inherited alliance correct |
-| BT23-085 | Ryuji Mishima | PASS | Spot-checked: memory gain, DP immunity+reboot+blocker, play CS option correct |
-| BT23-089 | Takumi Aiba | IMPLEMENTED | Rewrote WhenRemoveField substitute with proper trash selection |
-| BT23-091 | Wolkenapalm | IMPLEMENTED | Fixed min() crash on empty list |
-| BT23-092 | Ice Archery | IMPLEMENTED | Replaced grant_keyword with CANNOT_SUSPEND modifier |
-| BT23-095 | Crescent Leaf | IMPLEMENTED | Added CS trait check to Delay condition |
-| BT23-096 | Comet Hammer | IMPLEMENTED | Added CS trait check to Delay condition |
-| BT23-100 | Hudie Net Cafe | PASS | Delay and Security effects verified correct |
-| EX10-068 | Digimon Emperor | IMPLEMENTED | Fixed memory gain, delete filter (play cost not level), execution order |
-| P-225 | DigiLab | PASS | Delay effect verified against C# reference |
+## Fixes Applied (2026-03-17 Campaign)
+### BT23-095 Crescent Leaf / BT23-096 Comet Hammer
+- Both had Delay conditions copy-pasted without CS trait check; added CS trait verification
 
-## Summary of Fixes
+### BT23-101 Cyberspace EDEN
+- Added missing callback for effect activation
 
-### Stub Fixes (12 scripts)
-1. **BT10-042** - Replaced broken disable_effect/effect_immunity stub with declarative static effect
-2. **BT16-077** - Fixed force_attack stub with FORCE_ATTACK modifier, added DNA check
-3. **BT22-063** - Added missing DP reduction process callbacks, fixed unsuspend effect
-4. **BT22-099** - Rewrote Main effect (was doing bogus trash pop), added Delay+Security effects
-5. **BT22-100** - Full rewrite: correct Main effect, Security effect, DP modifier condition
-6. **BT23-058** - Added _will_not_be_removed to WhenRemoveField substitute
-7. **BT23-089** - Full rewrite of WhenRemoveField substitute with proper trash selection
-8. **BT23-091** - Fixed min() crash on empty list
-9. **BT23-092** - Replaced grant_keyword with CANNOT_SUSPEND modifier
-10. **BT23-095** - Added CS trait check to Delay condition
-11. **BT23-096** - Added CS trait check to Delay condition
-12. **EX10-068** - Fixed memory gain, delete filter, execution order
+### BT23-081 Hudiemon
+- Added missing On Play/When Digivolving effect
 
-### Remaining Descriptive-Tagged Stubs (Engine Limitations)
-- 8x "Ignore Color Req" - color requirement bypass not modeled in engine
-- 1x "Also Treated As" - handled via also_treated_as_names attribute
+### BT22-054 Stingmon
+- Added missing process callback
 
-## Outstanding Issues
-- None critical. All functional stubs resolved.
+### BT22-089 Mirei Mikagura
+- Corrected cost handling for start-of-main return and play effects
+
+### BT22-093 Arata Sanada / BT22-101 Digital Gate
+- Corrected wrong tamer targeting in both scripts
+
+### BT23-048 Gotsumon
+- Removed fabricated effect; corrected reveal_and_select_multi with proper Hudie+CS filters
+
+### BT23-090 Nokia Shiramine
+- Corrected filter conditions and bounce targeting
+
+### BT23-040 Wormmon
+- Corrected to include trash as valid source zone
+
+### BT23-032 Wormmon
+- Corrected wrong zone reference

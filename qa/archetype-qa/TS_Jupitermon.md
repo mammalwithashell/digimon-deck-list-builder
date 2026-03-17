@@ -1,78 +1,77 @@
 # Archetype QA: TS Jupitermon
-Date: 2026-03-14 (updated)
+Date: 2026-03-17 (faithfulness campaign)
 Total cards: 30
 
 ## Summary
-- PASS: 7 (BT24-030, BT24-040, BT24-046, BT24-100, BT24-102, P-194, BT24-003)
-- IMPLEMENTED: 1 (BT7-032 — CLEAN)
-- QA-REVIEWED + FIXED: 1 (EX4-074)
-- QA-FAIL -> FIXED: 20
-- BLOCKED: 1 (BT10-042 effect1: disable_effect)
+- FAITHFUL: 20
+- FIXED: 10 (this campaign)
+- DEFERRED: 0
+- ENGINE GAP: 0
 
-## Implemented Cards
-### BT7-032 Pulsemon
-- Inherited [When Attacking] [OPT] if 3 security, gain 2 memory
+## Card-by-Card Verdicts
+| Card ID | Name | Verdict | Notes |
+|---------|------|---------|-------|
+| BT4-104 | Heavenly Chant | FAITHFUL | security_cards.pop(0) correct |
+| BT10-042 | Venusmon | FAITHFUL | Declarative static effect replacement |
+| BT14-033 | Renamon | FAITHFUL | Security search with shuffle |
+| BT15-003 | Nyaromon | FAITHFUL | Trash top/bottom security branch choice |
+| BT24-003 | Puttimon | FAITHFUL | Shaman trait digi_filter with cost_reduction=1 |
+| BT24-014 | Aegiochusmon | FAITHFUL | Delete gated on security count <= 3 |
+| BT24-030 | Neptunemon | FAITHFUL | Cost reduction, bottom-deck, self-unsuspend, protect TS |
+| BT24-031 | Elecmon | FAITHFUL | On Play reveal 3 multi-select |
+| BT24-034 | Aegiomon | FAITHFUL | Barrier, security-to-hand to play TS Tamer |
+| BT24-037 | Jupitermon | FIXED | Auto-select removed; AND->OR logic (Yellow/Red/TS); source zone hand->digi-stack |
+| BT24-040 | Venusmon | FAITHFUL | Trash all digi cards + stun 2, protect TS |
+| BT24-041 | Minervamon | FIXED | Fabricated effects removed; process callback for security trash deletion prevention |
+| BT24-043 | Tapirmon | FAITHFUL | Suspend target filter corrected to is_digimon |
+| BT24-046 | Garurumon | FAITHFUL | Alt-digi with Gabumon name |
+| BT24-051 | Merukimon | FIXED | Fabricated effects removed; duplicate cost removed; player-selected suspend |
+| BT24-083 | Hiroko Sagisaka | FAITHFUL | Start-of-turn return-to-deck to play |
+| BT24-084 | Megumi Hinata | FAITHFUL | Condition uses card.permanent_of_this_card() |
+| BT24-085 | Dan Yuki & Kanan Yuki | FIXED | Memory threshold: opponent's memory, not Digimon count |
+| BT24-088 | Asuna Shiroki | FAITHFUL | Start-of-turn return-to-deck to play from trash |
+| BT24-090 | Abyss Sanctuary | FIXED | Color bypass: Blocker (not +2000 DP) + Alliance aura effects |
+| BT24-094 | Central Town | FAITHFUL | Alliance aura effect correct |
+| BT24-095 | Sonic Shot | FAITHFUL | Link timing, keyword target |
+| BT24-100 | In-Between Theater | FAITHFUL | Delay timing corrected to field_main |
+| BT24-101 | Homeros | FIXED | Dynamic cost: alt-digi cost 5 (not 3); target selection for -13000 DP |
+| BT24-102 | Homeros | FAITHFUL | Start-of-Main memory gain, TS DP aura, EOT reactivate |
+| P-194 | Jupitermon (promo) | FAITHFUL | |
+| P-196 | Gomamon | FAITHFUL | Start-of-Main digivolve into Sea Beast/TS |
+| P-197 | Patamon | FIXED | alt_digi_level corrected; Angel trait + memory <= 4 gate + cost_override=0 |
+| P-198 | DemiDevimon | FIXED | alt_digi_level corrected; Fallen Angel trait + memory <= 4 gate + process2 callback |
+| P-213 | Jupitermon (promo) | FAITHFUL | Security <= 3 check |
 
-## Fixed Cards
+## Fixes Applied (2026-03-17 Campaign)
+### BT24-041 Minervamon
+- Removed fabricated effects not present in card text
+- Added proper process callback for security trash deletion prevention
 
-### Batch 1
-| Card | Fixes |
-|------|-------|
-| BT24-003 | digi_filter now checks [Shaman] trait; added cost_reduction=1 |
-| BT24-014 | Delete gated on security count <= 3 |
-| P-196 | Memory check: player.memory → game.memory |
-| P-197 | digi_filter: added [Angel] trait; added memory <= 4 gate; added cost_override=0 |
-| P-198 | digi_filter: added [Fallen Angel] trait; added memory <= 4 gate; added process2 callback |
-| P-213 | condition3: added security <= 3 check |
-| BT15-003 | Added security trash cost via effect_choose_branch (top/bottom) |
+### BT24-051 Merukimon
+- Removed fabricated effects not present in card text
+- Removed duplicate cost; corrected suspend targets to use player selection
 
-### Batch 2
-| Card | Fixes |
-|------|-------|
-| BT24-037 | play_filter: AND→OR logic (Yellow/Red/TS); source zone: hand→digi-stack |
-| BT24-051 | effect5: added process callback (suspend to prevent deletion) |
-| BT24-041 | effect6: added process callback (trash security to prevent deletion) |
-| BT24-084 | condition1: card.permanent_of_this_card() replaces non-existent effect_source_permanent; process1: digivolves own Aegiomon (was suspending opponent's) |
-| BT24-031 | Recovery check moved inside async callback chain |
-| BT24-034 | "By" cost gated via effect_choose_branch opt-in |
+### BT24-085 Dan Yuki & Kanan Yuki
+- Changed condition from "opponent's Digimon count" to "opponent's memory" (memory threshold)
 
-### Batch 3
-| Card | Fixes |
-|------|-------|
-| BT10-042 | SA modifier: _temp_sa_modifier → register_modifier(CHANGE_SECURITY_ATTACK). **BLOCKED: effect1 disable_effect** |
-| BT14-033 | Added random.shuffle(player.security_cards) after security search |
-| BT24-083 | No fix needed — manual list ops are correct pattern |
-| BT24-090 | DP modifier: added _dp_permanent_condition filter; security: raw Permanent → play_card_from_source |
-| BT24-101 | effect2/3: added OnEnterFieldAnyone timing; effect4: added OnLoseSecurity timing |
+### BT24-101 Homeros
+- Fixed alt-digi cost from 3 to 5 per C# reference
+- Second alt-digi now targets Aegiochusmon by name
+- Replaced auto-select for -13000 DP with effect_select_opponent_permanent for RL agent choice
 
-### Direct Fixes
-| Card | Fix |
-|------|-----|
-| BT4-104 | security_cards.pop() → pop(0) (top not bottom) |
-| BT24-043 | Suspend target_filter: True → p.is_digimon |
-| BT24-088 | Three Musketeers: card_text → card_traits |
-| EX4-074 | DP: dp_modifier → register_modifier; deletion: hardcoded → selection; hatch: manual → player.hatch() |
+### BT24-037 Jupitermon
+- Removed auto-selection; changed AND->OR logic for Yellow/Red/TS conditions
+- Changed source zone from hand to digi-stack
 
-## Blocked Cards (Engine Gaps)
-| Card | Gap |
-|------|-----|
-| BT10-042 effect1 | disable_effect — no engine API to selectively disable effects on a permanent |
+### BT24-090 Abyss Sanctuary
+- Card text says Blocker, not +2000 DP; replaced dp_modifier with _is_blocker aura
+- Alliance stub replaced with _is_alliance aura effect
 
-### 2026-03-14 Grant Skill + QA Fixes
-| Card | Fix |
-|------|-----|
-| BT24-051 | **Rush/Piercing stubs resolved**: Replaced pass-stub with `_applies_to_all_own_digimon` aura effects for both `_is_rush` and `_is_piercing` targeting [Iliad] Digimon. On Play/WD: fixed auto-suspend to use `effect_select_opponent_permanent` for player selection (up to 2). Removed incorrect Rush/Piercing mention from On Play/WD description; C# confirms +5000 DP and attack opponent's Digimon only. |
-| BT24-090 | **CRITICAL**: Card text says Blocker, not +2000 DP. Replaced `dp_modifier = 2000` with `_is_blocker = True` aura effect. Alliance stub replaced with proper `_is_alliance` aura effect. Both use `_applies_to_all_own_digimon` + `_keyword_permanent_condition`. |
-| BT24-094 | **Alliance stub resolved**: Replaced `pass` stub with proper `_is_alliance` aura effect using `_applies_to_all_own_digimon` + `_keyword_permanent_condition` for green/yellow [TS] Digimon. DP modifier retained (correct per card text). |
-| BT24-085 | Fixed description: "number of Digimon" -> "memory" (matches C# and card text). Added `CanActivateCondition`: only fires when player memory <= 0 (memory on opponent's side). |
-| BT24-101 | **Alt-digi cost fixed**: Both effects had cost 3, should be 5 per C#. Second alt-digi now targets [Aegiochusmon] by name. **-13000 DP target selection**: replaced auto-select (min DP) with `effect_select_opponent_permanent` for RL agent choice. |
+### P-197 Patamon
+- Corrected alt_digi_level; added Angel trait filter; added memory <= 4 gate; added cost_override=0
 
-### Engine Enhancement: Aura Keyword System
-Added aura keyword scanning to `permanent.py:has_keyword()` and `permanent.py:_get_aura_dp_modifier()`:
-- Effects with `_applies_to_all_own_digimon = True` and a keyword attribute (e.g. `_is_rush`, `_is_blocker`) now grant that keyword to other friendly Digimon via aura scanning
-- Supports `_keyword_permanent_condition` callback for trait-based filtering
-- Also scans security cards for aura effects (option cards placed face-up in security)
+### P-198 DemiDevimon
+- Corrected alt_digi_level; added Fallen Angel trait filter; added memory <= 4 gate; added process2 callback
 
-## Smoke Test
-- 50/50 mirror games completed
-- 25/25 cross-archetype games completed
+### BT24-041/BT24-051/BT24-085
+- Fabricated effects removed (effects not present in card text were generating incorrect behavior)

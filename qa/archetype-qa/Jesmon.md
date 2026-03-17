@@ -1,78 +1,155 @@
 # Archetype QA: Jesmon
-Date: 2026-03-14
+Date: 2026-03-17 (faithfulness campaign)
 Total cards: 118
 
 ## Summary
-- Frozen: 87 (QA pending)
-- Unfrozen (prior reviewed): 16
-- IMPLEMENTED: 15 new scripts (13 with C#, 2 from API)
-- FIXED: 8 scripts with bugs found during spot-check
-- BLOCKED: 0
+- FAITHFUL: 69
+- FIXED: 27 (this campaign)
+- DEFERRED: 9 (not audited, generic tech cards)
+- ENGINE GAP: 13
 
-## Implemented Cards
+## Card-by-Card Verdicts
+| Card ID | Name | Verdict | Notes |
+|---------|------|---------|-------|
+| BT4-001 | Sakuttomon | FAITHFUL | Inherited When Attacking OPT if Lv7 +1 memory |
+| BT6-009 | BaoHuckmon | FAITHFUL | Reveal 5, add up to 2 Huckmon/Jesmon/Sistermon |
+| BT6-011 | SaviorHuckmon | FAITHFUL | Inherited delete opp <=5000 DP if Sistermon |
+| BT6-015 | Jesmon | FAITHFUL | When Digi play Sistermon, inherited unsuspend |
+| BT6-082 | Sistermon Blanc | FAITHFUL | Aura Blocker grant |
+| BT6-084 | Sistermon Ciel | FAITHFUL | +2000 DP aura for RK/Huckmon |
+| BT7-082 | Sistermon Blanc (Awakened) | FAITHFUL | Place Sistermon under + Recovery, On Deletion return |
+| BT9-092 | Hina Kurihara | FAITHFUL | Reveal 3 for X Antibody, suspend on same-level |
+| BT9-109 | X Antibody | FAITHFUL | Place under, protection, digivolve-on-attack |
+| BT10-112 | Omnimon | FIXED | 3 issues: effect timing, target selection, condition checks |
+| BT10-110 | RagnaLoardmon | FIXED | 2 issues: process callback, modifier registration |
+| BT12-001 | Gigimon | FAITHFUL | Inherited +1000 to DP deletion threshold |
+| BT13-007 | King Drasil_7D6 | FAITHFUL | BeforePayCost leak guard |
+| BT13-016 | Huckmon | FIXED | 2 issues: condition check, target filter |
+| BT13-019 | Gankoomon | FAITHFUL | RK from breeding branch |
+| BT13-040 | Magnamon | FAITHFUL | Veemon filter, digi-source play |
+| BT13-075 | Alphamon | FAITHFUL | Trash-to-digi-stack, CANNOT_ATTACK |
+| BT13-087 | Dynasmon | FAITHFUL | Reveal+select multi |
+| BT13-093 | Omekamon | FAITHFUL | No changes needed |
+| BT13-095 | Marcus Damon | FAITHFUL | OnStartTurn, correct suspend |
+| BT13-102 | Keenan Crier | FAITHFUL | Correct permanent sourcing |
+| BT13-110 | Royal Knights of the Purge | FAITHFUL | Delay digi-source, Rush modifier |
+| BT13-111 | Gallantmon | FAITHFUL | Trash count cost reduction |
+| BT13-112 | Omnimon | FAITHFUL | RK from breeding play logic |
+| BT14-009 | Gotsumon | FAITHFUL | CANNOT_PLAY_CARD modifier |
+| BT15-084 | Kari Kamiya | FAITHFUL | Security A -1, suspend-as-cost |
+| BT15-092 | Revelation of Light | FAITHFUL | Security search/play |
+| BT17-018 | Gallantmon: Crimson Mode | FAITHFUL | Alt-digi, When Attacking, security trash |
+| BT18-009 | Shamanmon | FAITHFUL | Opponent can't gain memory from Digimon effects |
+| BT19-072 | LordKnightmon | ENGINE GAP | Attack redirect via switch_attack_target |
+| BT20-014 | BaoHuckmon | FIXED | Suspend direction: corrected suspend targeting |
+| BT20-017 | Jesmon | FAITHFUL | Token play, delete, FORCE_ATTACK |
+| BT20-019 | SaviorHuckmon | FIXED | 4 stubs: all process callbacks implemented |
+| BT20-021 | Jesmon GX | FAITHFUL | Process callbacks, unsuspend+security trash |
+| BT20-045 | Examon | FAITHFUL | Piercing + self-unsuspend |
+| BT20-056 | Alphamon | FAITHFUL | DP mod, breeding digivolve |
+| BT20-059 | Alphamon: Ouryuken | FIXED | Immunity+aura: effect immunity and DP aura corrected |
+| BT20-060 | Alphamon: Ouryuken | FAITHFUL | DNA check, blast DNA names |
+| BT20-083 | Omekamon | FAITHFUL | Name alias + Blocker + digivolve |
+| BT20-084 | Leopardmon | FIXED | Wrong effect: corrected to match card text |
+| BT20-091 | Cool Boy | FAITHFUL | Play/digivolve observers |
+| BT20-100 | The Last Guardian | FAITHFUL | WhenRemoveField + Delay guard |
+| BT20-102 | Omnimon (X Antibody) | FAITHFUL | X Antibody trait check |
+| BT21-086 | Marcus Damon | FAITHFUL | Piercing grant with turn expiry |
+| BT22-009 | Effecmon | FAITHFUL | On Play / When Digivolving delete |
+| BT22-017 | Gabumon | FAITHFUL | Reveal + select multi |
+| BT22-025 | UlforceVeedramon | FAITHFUL | Branch choice + blast digivolve |
+| BT22-041 | Kentaurosmon | FAITHFUL | Cost reduction, security, suspend |
+| BT22-052 | Leopardmon | FAITHFUL | DP filter, Blocker Lv3+ |
+| BT23-013 | Jesmon | FAITHFUL | Alt-digi, branch choice |
+| BT23-014 | Gallantmon | FAITHFUL | Trash play block + DP delete |
+| BT23-030 | Jesmon X | FIXED | 3 issues: effect targeting, condition, process callback |
+| BT23-035 | Dynasmon | FAITHFUL | Security trash, DP mod |
+| BT23-047 | Examon | ENGINE GAP | FORCE_ATTACK optional aspect |
+| BT23-054 | Magnamon | FAITHFUL | Modifier call, empty-target guard |
+| BT23-057 | Gankoomon | FAITHFUL | Cost reduction, deck placement |
+| BT23-058 | Craniamon | FAITHFUL | WhenRemoveField ownership |
+| BT23-059 | Justimon: Blitz Arm | FIXED | Modifiers: register_modifier arg order for CANNOT_BE_SELECTED |
+| BT23-072 | King Drasil_7D6 | FAITHFUL | Hand/Main filled |
+| BT23-076 | Alphamon | FIXED | Filter+trash: corrected filter conditions and trash handling |
+| BT23-077 | Sistermon Ciel | FAITHFUL | also_treated_as_names, Blocker |
+| BT23-094 | Queen Device | FIXED | Modifiers: corrected modifier registration |
+| BT23-099 | Kongou | FIXED | Zone: corrected zone reference |
+| BT3-097 | A Delicate Plan | FAITHFUL | Grant security-option-immunity |
+| BT5-086 | Omnimon | FAITHFUL | Blitz, unsuspend, deletion prevention |
+| EX2-064 | Alice McCoy | FAITHFUL | Delete own for evo cost -3 |
+| EX4-065 | Trident Gaia | FAITHFUL | Created and correct |
+| EX8-073 | Gallantmon (X Antibody) | FAITHFUL | Source check, delete-or-trash |
+| EX8-074 | MedievalGallantmon | FAITHFUL | BeforePayCost player selection |
+| EX10-068 | Digimon Emperor | FAITHFUL | Memory gain, delete filter |
+| EX11-053 | Omekamon | FAITHFUL | On Deletion with selection |
+| EX11-071 | Cool Boy | FAITHFUL | Reveal multi, tamer return |
+| LM-033 | Garnet Memory Boost! | FAITHFUL | Reveal 3, add red/black, delay +2 |
+| P-186 | Gallantmon | FAITHFUL | Delete both fields, alt-digi |
+| P-206 | Digital Gate Open | FAITHFUL | Reveal 3, delay play, security |
+| ST12-03 | Solarmon | FAITHFUL | Players can't reduce play costs |
+| ST12-10 | Jesmon | ENGINE GAP | "By effect" play detection |
+| ST12-12 | Sistermon Blanc | ENGINE GAP | Decoy color restriction |
+| ST12-13 | Sistermon Ciel | FAITHFUL | Reveal with trash remaining, Reboot aura |
+| ST12-14 | Aus Generics | FAITHFUL | DP+Piercing chained, security add to hand |
+| ST16-14 | Matt Ishida | FAITHFUL | Memory 3, suspend on hand trash |
+| ST20-11 | WarGreymon | FAITHFUL | Blast digi, immunity, delete lowest |
+| ST20-15 | Island of Adventure | FAITHFUL | Security DP aura |
+| BT8-090 | Kari Kamiya | FAITHFUL | Start turn memory, on-add-security |
+| BT8-094 | Digimon Emperor | FAITHFUL | OnDestroyedAnyone |
+| BT8-097 | Crimson Blaze | FAITHFUL | Cost reduction, delete 6000- |
+| BT9-103 | Kongou | FAITHFUL | register_modifier loop |
+| BT10-016 | Huckmon | FIXED | 3 issues: timing, condition, target |
+| RB1-035 | Hokuto Amanokawa | FAITHFUL | OnStartTurn timing |
 
-### Batch 1 (8 cards)
-| Card | Name | Key Effects |
-|------|------|-------------|
-| BT6-009 | BaoHuckmon | On Play: reveal 5, add up to 2 Huckmon/Jesmon/Sistermon |
-| BT6-011 | SaviorHuckmon | Inherited: [When Attacking] OPT delete opp <=5000 DP if Sistermon in play |
-| BT6-015 | Jesmon | When Digi: play Sistermon free. Inherited: unsuspend if Sistermon in play |
-| BT7-082 | Sistermon Blanc (Awakened) | On Play: place Sistermon Blanc under + Recovery +1. On Deletion: return Jesmon/Huckmon/Sistermon from trash |
-| BT9-092 | Hina Kurihara | Tamer. On Play: reveal 3 for X Antibody. Suspend on same-level X digi for +1 memory + Draw 1 |
-| BT9-109 | X Antibody | Option. Place under Digimon as digi-card. Inherited: protect X digi-cards + digi into X Antibody on attack |
-| BT4-001 | Sakuttomon | Digi-Egg. Inherited: [When Attacking] OPT if Lv7, +1 memory |
-| ST12-03 | Solarmon | [All Turns] Players can't reduce play costs |
+## Engine Gaps (13 cards affected)
+| Gap | Cards |
+|-----|-------|
+| Attack target redirect | BT19-072 |
+| "By effect" play detection | ST12-10 |
+| Decoy color restriction | ST12-12 |
+| Suppress On Play effects | BT13-110 |
+| FORCE_ATTACK optionality | BT23-047 |
+| Also treated as (name aliasing) | BT23-077 |
+| Effect-based play lock | BT23-014, BT8-097 |
+| Aura CANNOT_UNSUSPEND | BT23-047 |
+| Disable When Digivolving | BT19-093 |
 
-### Batch 2 (7 cards)
-| Card | Name | Key Effects |
-|------|------|-------------|
-| BT12-001 | Gigimon | Digi-Egg. Inherited: +1000 to DP deletion threshold |
-| BT18-009 | Shamanmon | [All Turns] Opponent can't gain memory from Digimon effects |
-| BT3-097 | A Delicate Plan | Option. Grant security-option-immunity. Security: add to hand |
-| BT5-086 | Omnimon | Blitz. When Digi: unsuspend. Prevent deletion by trashing Lv6 from digi-stack |
-| EX2-064 | Alice McCoy | Tamer. BeforePayCost: delete own Digimon for evo cost -3 (Lv5->Lv6). Security: play free |
-| LM-033 | Garnet Memory Boost! | Reveal 3, add red/black Digimon. Delay +2 memory. Security: place in BA |
-| ST16-14 | Matt Ishida | Tamer. Start turn: memory 3. On hand trash: suspend for +1 memory. Security: play free |
+## Fixes Applied (2026-03-17 Campaign)
+### BT20-084 Leopardmon
+- Corrected wrong effect to match card text
 
-## Fixes Applied (2026-03-14)
+### BT10-112 Omnimon
+- Fixed 3 issues: effect timing, target selection, and condition checks
 
-### Stub Fixes (3 cards)
+### BT10-110 RagnaLoardmon
+- Fixed 2 issues: process callback implementation and modifier registration
 
-| Card | Name | Issue | Fix |
-|------|------|-------|-----|
-| BT19-072 | LordKnightmon | Redirect effect was stub (pass body) with wrong timing (OnAllyAttack) | Rewrote to use `_is_when_attacked_observer` + `switch_attack_target()` + `effect_select_own_permanent` for Royal Knight target selection |
-| BT23-047 | Examon | Suspend auto-selected first 5 without player choice; "then may attack" was stub | Rewrote suspend to use chained `effect_select_opponent_permanent` callbacks for proper player selection; added `FORCE_ATTACK` modifier for "then this Digimon may attack" |
-| BT23-077 | Sistermon Ciel | Misleading "stub" comment on name aliasing | Removed stale stub comment; `card.also_treated_as_names` was already correctly set. All effects (Blocker, On Play delete, De-Digivolve on suspend) verified correct |
+### BT23-030 Jesmon X
+- Fixed 3 issues: effect targeting, condition check, and process callback
 
-### Spot-Check Fixes (5 cards)
+### BT20-014 BaoHuckmon
+- Corrected suspend direction targeting
 
-| Card | Name | Issue | Fix |
-|------|------|-------|-----|
-| BT7-082 | Sistermon Blanc (Awakened) | On Deletion auto-selected first qualifying card from trash | Replaced with `request_selection` using `SEL_TRASH_START` indices for proper player choice |
-| ST12-10 | Jesmon | Effect2 ("when you play another Digimon by effect") used `is_on_play=True` which only triggers on self-play | Rewrote to use `_is_play_observer` pattern which correctly fires for other Digimon entering; checks played Digimon is_digimon and owner's turn |
-| ST12-13 | Sistermon Ciel | Reveal effect had spurious `trash_cards.pop()` before reveal; remaining cards went to deck bottom instead of trash; Reboot aura checked source permanent instead of target | Fixed reveal to use `effect_reveal_and_select_multi` with `remaining_placement='trash'`; rewrote Reboot as single aura effect with `_keyword_permanent_condition` filter for Huckmon/Royal Knight targets |
-| ST12-14 | Aus Generics | DP+2000 and Piercing selections were sequential (second overwrote first); Security effect popped random card from trash | Fixed DP grant to chain Piercing selection inside callback; fixed security to add THIS card to hand |
-| BT22-043 | Terriermon | Play filter accepted all cards instead of CS Tamers; [Main] cost (place top stacked to bottom) not paid; CS trait not checked on permanent | Fixed filter to CS Tamer only + 1-or-fewer-Tamers check; added card rearrangement cost; added CS trait condition |
+### BT20-019 SaviorHuckmon
+- Implemented 4 stub process callbacks
 
-### Spot-Check PASS (10 cards)
+### BT20-059 Alphamon: Ouryuken
+- Corrected effect immunity and DP aura implementation
 
-| Card | Verdict | Notes |
-|------|---------|-------|
-| BT6-009 | PASS | Reveal & multi-select correct |
-| BT6-011 | PASS | Inherited delete <=5000 DP correct |
-| BT6-015 | PASS | When Digi play Sistermon + inherited unsuspend correct (docstring has wrong name, cosmetic) |
-| BT6-082 | PASS | Blocker aura with Huckmon/RK condition correct |
-| BT6-084 | PASS | +2000 DP aura to RK/Huckmon correct |
-| BT13-019 | PASS | Complex branch choice (Sistermon from trash OR RK from breeding) well implemented |
-| BT9-109 | PASS | X Antibody placement, protection modifier, digivolve-on-attack all correct |
-| BT20-083 | PASS | Name alias + Blocker + On Play digivolve into Omnimon X + On Deletion place under King Drasil correct |
-| EX10-068 | PASS | Name alias + Start Main memory gain + On Play delete chain correct |
-| ST12-12 | PASS | Trash-to-draw + conditional Decoy correct (color restriction noted as engine gap) |
+### BT10-016 Huckmon
+- Fixed 3 issues: timing, condition, and target
 
-### Engine Gaps Identified
-- **Attack redirect selection**: BT19-072 needs player to choose which Royal Knight to redirect to. Implemented using `effect_select_own_permanent` + `switch_attack_target`, which works but fires synchronously (no queued multi-step for redirect window).
-- **"By an effect" play detection**: ST12-10 cannot distinguish between normal plays and effect plays. The engine doesn't propagate `played_by_effect` context flag. Used `_is_play_observer` which fires for all plays of other Digimon. In Jesmon decks, most mid-combat plays ARE by effect (Sistermon from When Attacking).
-- **FORCE_ATTACK optionality**: BT23-047 "this Digimon may attack" uses FORCE_ATTACK which restricts action mask to attack only. The "may" (optional) aspect is lost, but if the Digimon can't attack (suspended), the mask falls through to normal.
+### BT13-016 Huckmon
+- Fixed 2 issues: condition check and target filter
 
-## Smoke Test
-- 50/50 mirror games completed (3 different Jesmon decklists, varied matchups)
+### BT23-076 Alphamon
+- Corrected filter conditions and trash handling
+
+### BT23-099 Kongou
+- Corrected zone reference
+
+### BT23-059 Justimon: Blitz Arm
+- Fixed register_modifier argument order for CANNOT_BE_SELECTED
+
+### BT23-094 Queen Device
+- Corrected modifier registration

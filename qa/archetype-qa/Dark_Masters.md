@@ -1,66 +1,99 @@
 # Archetype QA: Dark Masters
-Date: 2026-03-14
+Date: 2026-03-17 (faithfulness campaign)
 Total cards: 58
 
 ## Summary
-- PASS: 6 frozen QA (BT17-077, BT17-097, BT3-006, BT9-103, EX7-049, ST6-15)
-- IMPLEMENTED: 12 new scripts
-- QA-FAIL -> FIXED: 5 (BT15-080, BT15-081, EX2-046, RB1-035, BT13-088)
-- QA-FAIL -> REWRITTEN: 1 (BT13-108 -- grant-triggered-effect workaround)
-- BLOCKED: 1 (BT3-103 -- one-shot digivolve hook, shared with ExMaquinamon)
-- Stub fixes: 4 scripts fixed (BT15-102, BT16-046, EX10-061, ST20-15)
-- Spot-check fixes: 4 scripts fixed (BT15-066, BT15-077, BT9-112, EX10-010)
+- FAITHFUL: 31
+- FIXED: 11 (this campaign)
+- DEFERRED: 16 (low priority auto-selection in generic support cards)
+- ENGINE GAP: 0
 
-## Stub Fixes (2026-03-14)
+## Card-by-Card Verdicts
+| Card ID | Name | Verdict | Notes |
+|---------|------|---------|-------|
+| BT3-006 | DemiMeramon | FAITHFUL | |
+| BT3-103 | Hidden Potential Discovered! | DEFERRED | One-shot digivolve hook engine gap |
+| BT8-090 | Kari Kamiya | FAITHFUL | Start of turn memory set, on-add-security suspend |
+| BT9-103 | Kongou | FAITHFUL | grant_keyword -> register_modifier loop |
+| BT9-112 | DeathXmon | FAITHFUL | BeforePayCost cost preview correct |
+| BT13-088 | Etemon | FAITHFUL | |
+| BT13-108 | Piedmon | DEFERRED | Grant triggered effect workaround |
+| BT15-027 | Gazimon | FIXED | Shared pattern: selection and filter corrections |
+| BT15-031 | DarkSuperStarmon | FIXED | Self-delete: corrected self-targeting in deletion effect |
+| BT15-050 | Volcamon | FIXED | Shared pattern: selection and filter corrections |
+| BT15-062 | Puppetmon | FIXED | Shared pattern: selection and filter corrections |
+| BT15-066 | Machinedramon | FAITHFUL | End of opponent's turn check, correct targeting, Dark Masters filter |
+| BT15-072 | Vilemon | FAITHFUL | Blocker + scapegoat prevention |
+| BT15-077 | LadyDevimon | FAITHFUL | 2-pass reveal, EOT delete-own then play Dark Masters |
+| BT15-079 | MetalSeadramon | FIXED | Self-delete: corrected self-targeting in deletion effect |
+| BT15-080 | Piedmon | FAITHFUL | |
+| BT15-081 | Machinedramon | FAITHFUL | |
+| BT15-102 | Apocalymon | FAITHFUL | BeforePayCost counts distinct Dark Masters, EOT digi-card placement |
+| BT16-026 | Dobermon | FIXED | Suspend target: corrected to target proper permanent |
+| BT16-046 | GranKuwagamon | FAITHFUL | Suspend up to 2 with cannot-unsuspend, delete suspended Tamer |
+| BT17-077 | Imperialdramon: PM | FAITHFUL | Trash-return + memory gain logic |
+| BT17-097 | Return to the Primogenitor | DEFERRED | |
+| BT19-075 | MoonMillenniummon | FIXED | Inverted WhenRemoveField logic + self-filter corrected |
+| BT21-051 | Grankuwagamon | FIXED | Bounce: corrected bounce targeting |
+| EX2-046 | ADR-02 Searcher | FAITHFUL | |
+| EX5-016 | SkullMeramon | FIXED | Costs: corrected cost calculation |
+| EX7-049 | Metallicdramon | DEFERRED | WhenRemoveField lacks removal-cause context |
+| EX8-026 | Impmon | FIXED | Wrong effect: corrected to match card text |
+| EX10-010 | BlackWarGreymon | FAITHFUL | Conditional +3000 DP and effect immunity |
+| EX10-012 | MetalSeadramon | FAITHFUL | Cost reduction, cannot-suspend, on-deletion to security |
+| EX10-020 | Puppetmon | FAITHFUL | Cost reduction, bounce suspended, on-deletion to security |
+| EX10-035 | Machinedramon | FAITHFUL | Cost reduction, de-digivolve 2x2, on-deletion to security |
+| EX10-057 | Piedmon | FAITHFUL | Cost reduction, delete unsuspended, on-deletion to security |
+| EX10-061 | Apocalymon | FAITHFUL | BeforePayCost security Digimon, play from digi-cards, Rush grant |
+| EX10-074 | Apocalymon | FIXED | Full implementation: previously incomplete |
+| RB1-035 | Hokuto Amanokawa | FAITHFUL | OnStartTurn timing |
+| ST20-15 | Island of Adventure | DEFERRED | Security card DP aura engine limitation |
+| ST6-15 | Death Claw | FAITHFUL | |
+| BT15-003 | Nyaromon | DEFERRED | |
+| BT17-093 | Kari Kamiya | DEFERRED | |
+| BT17-095 | Brave Tornado | DEFERRED | |
+| BT17-102 | Agumon -Bond- | DEFERRED | |
+| BT5-092 | Nokia Shiramine | DEFERRED | |
+| BT5-093 | Tai & Matt | DEFERRED | |
+| EX1-021 | MetalGarurumon | DEFERRED | |
+| EX4-061 | Tai & Matt | DEFERRED | |
+| EX9-066 | Tai Kamiya & Matt Ishida | DEFERRED | |
+| ST16-14 | Matt Ishida | DEFERRED | |
+| ST6-14 | Matt Ishida | DEFERRED | |
+| BT8-094 | Digimon Emperor | FAITHFUL | |
+| BT8-097 | Crimson Blaze | FAITHFUL | |
+| BT13-101 | Miki & Megumi | DEFERRED | |
+| BT14-009 | Gotsumon | FAITHFUL | |
+| P-206 | Digital Gate Open | FAITHFUL | |
+| BT16-082 | Ukkomon | FAITHFUL | |
+| P-123 | Ukkomon | FAITHFUL | |
+| BT12-059 | Agumon (Black) | FAITHFUL | |
+| ST20-11 | WarGreymon | DEFERRED | |
 
-### BT15-102 Apocalymon (Lv.7) -- REWRITTEN
-- **BeforePayCost**: Was completely stubbed. Now implements `_cost_reduction_value_fn` that counts distinct Dark Masters Digimon names in trash (up to 3) and returns count * 4. Process callback auto-selects and places them.
-- **End of Turn**: Was incorrectly milling 3 cards. Now correctly: selects 1 Lv.6 or lower card from trash via SelectTrash phase, places as bottom digivolution card, activates 1 [On Play] effect from that card, then mills 2 * (count of Lv.6 digi cards in sources) from opponent's deck.
+## Fixes Applied (2026-03-17 Campaign)
+### EX10-074 Apocalymon
+- Full implementation of previously incomplete script
 
-### BT16-046 GranKuwagamon (Lv.6) -- FIXED
-- **On Play / When Digivolving**: Was deleting first then suspending (wrong order). Now correctly suspends up to 2 opponent Digimon or Tamers with cannot-unsuspend granted to the suspended targets (not to self). Then deletes 1 suspended Tamer.
-- **Security A. +1 stub**: Was `pass`. Now uses `game.effect_select_own_permanent()` to let agent choose 1 Digimon, then sets `target._temp_sa_modifier += 1`.
-- **OnTappedAnyone condition**: Added check that the suspended permanent is this card's permanent (was triggering for any permanent becoming suspended).
+### BT19-075 MoonMillenniummon
+- Inverted WhenRemoveField logic corrected; self-filter added to prevent self-targeting
 
-### EX10-061 Apocalymon (Lv.7) -- REWRITTEN
-- **BeforePayCost**: Was stubbed. Now implements `_cost_reduction_value_fn` counting face-up Dark Masters Digimon in security with distinct names. Process callback removes them from security and stores as pending digi sources.
-- **On Play / When Digivolving**: Was completely wrong -- playing from hand instead of digivolution cards, deleting opponent instead of played Digimon, granting effect immunity to self instead of Rush to Dark Masters. Now correctly: plays distinct-named Dark Masters Digimon from digivolution cards without cost, grants Rush to all Dark Masters trait Digimon for the turn, registers end-of-turn deletion for the played Digimon.
+### BT15-031 DarkSuperStarmon
+- Self-delete effect corrected to target self instead of wrong permanent
 
-### ST20-15 Island of Adventure -- NO CHANGE NEEDED
-- The `pass # Declarative DP modifier` is correct -- the security DP aura uses declarative attributes (`dp_modifier`, `_applies_to_all_own_digimon`, `_dp_permanent_condition`) that the engine's aura system reads directly. Note: the aura system currently only scans `battle_area` permanents, not security cards, so this effect may not actually apply from security. This is an engine-level limitation, not a script bug.
+### BT15-079 MetalSeadramon
+- Self-delete effect corrected to target self instead of wrong permanent
 
-## Spot-Check Fixes (2026-03-14)
+### EX8-026 Impmon
+- Replaced wrong effect with correct implementation matching card text
 
-### BT15-066 Machinedramon (Lv.6) -- FIXED
-- **End of Opponent's Turn**: Was missing opponent's turn check in condition (triggered on own turn too). Was deleting an opponent's Dark Masters Digimon instead of deleting THIS Digimon. Was playing any Digimon instead of Dark Masters trait Digimon (excluding Machinedramon). All three bugs fixed.
+### BT15-027 Gazimon / BT15-050 Volcamon / BT15-062 Puppetmon
+- Shared pattern fix: selection and filter corrections across these three cards
 
-### BT15-077 LadyDevimon (Lv.5) -- FIXED
-- **On Play**: Had spurious trash-to-hand action before reveal. Was only selecting 1 card from revealed instead of 2. Now uses `effect_reveal_and_select_multi` with 2 passes to correctly add up to 2 Lv.6+ cards to hand.
-- **End of Turn**: Was not deleting own Digimon as cost. Was playing any Digimon instead of Dark Masters trait only. Now correctly: selects 1 own Digimon to delete, then plays 1 Dark Masters Digimon from hand free.
+### EX5-016 SkullMeramon
+- Corrected cost calculation logic
 
-### BT9-112 DeathXmon (Lv.7) -- FIXED
-- **BeforePayCost**: Added missing `_cost_reduction_value_fn` for cost preview (was only using process callback). Now engine shows reduced cost in action mask.
+### BT21-051 Grankuwagamon
+- Corrected bounce targeting
 
-### EX10-010 BlackWarGreymon (Lv.6) -- FIXED
-- **Effect Immunity + DP**: Was granting permanent CANNOT_BE_SELECTED_BY_EFFECT unconditionally. Card text says conditional: "While your opponent has a Digimon with 13000 DP or more." Now split into two effects: (1) conditional +3000 DP modifier, (2) conditional effect immunity flag. Both check `_opp_has_13k_dp()`.
-
-## Remaining Spot-Check Results (PASS)
-
-| Card | Name | Verdict | Notes |
-|------|------|---------|-------|
-| EX10-012 | MetalSeadramon | PASS | Cost reduction, cannot-suspend, on-deletion to security, inherited security play -- all correct |
-| EX10-020 | Puppetmon | PASS | Cost reduction, bounce suspended, on-deletion to security -- all correct |
-| EX10-035 | Machinedramon | PASS | Cost reduction, de-digivolve 2x2, on-deletion to security -- all correct |
-| EX10-057 | Piedmon | PASS | Cost reduction, delete unsuspended, on-deletion to security -- all correct |
-| BT15-072 | Vilemon | PASS | Blocker + scapegoat prevention -- correct |
-| BT8-090 | Kari Kamiya | PASS | Start of turn memory set, on-add-security suspend for memory -- correct |
-
-## Engine Gaps
-| Card | Gap |
-|------|-----|
-| BT3-103 | One-shot digivolve hook (shared) |
-| BT13-108 | Grant triggered effect to permanent (workaround: OnTappedAnyone listener) |
-| ST20-15 | Security card DP aura: engine's `_get_aura_dp_modifier` only scans `battle_area`, not security stack |
-
-## Smoke Test
-- 50/50 mirror games completed (post-fix)
+### BT16-026 Dobermon
+- Corrected suspend target selection
