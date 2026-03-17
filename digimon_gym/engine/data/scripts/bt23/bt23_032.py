@@ -99,81 +99,89 @@ class BT23_032(CardScript):
         effect2.set_on_process_callback(process2)
         effects.append(effect2)
 
-        # Timing: EffectTiming.WhenRemoveField
-        # Play Card
-        effect4 = ICardEffect()
-        effect4.set_timing(EffectTiming.WhenRemoveField)
-        effect4.set_effect_name("BT23-032 Play Card")
-        effect4.set_effect_description("Play Card")
-        effect4.set_hash_string("BT23_032_AT")
+        # [On Leaving] Play 1 Lv4- Yellow/Black [CS] trait Digimon from its digivolution cards free
+        def _make_leave_effect(is_inherited):
+            from ....data.enums import CardColor
+            eff = ICardEffect()
+            eff.set_timing(EffectTiming.WhenRemoveField)
+            eff.set_effect_name("BT23-032 Play Lv4- CS Digimon from digi cards")
+            eff.set_effect_description(
+                "[On Leaving] You may play 1 level 4 or lower yellow or black Digimon card "
+                "with the [CS] trait from its digivolution cards without paying the cost."
+            )
+            if is_inherited:
+                eff.is_inherited_effect = True
+            eff.is_optional = True
+            eff.set_hash_string("BT23_032_AT" + ("_ESS" if is_inherited else ""))
 
-        effect = effect4  # alias for condition closure
-        def condition4(context: Dict[str, Any]) -> bool:
-            if card and card.permanent_of_this_card() is None:
-                return False
-            return True
-
-        effect4.set_can_use_condition(condition4)
-
-        def process4(ctx: Dict[str, Any]):
-            """Action: Play Card"""
-            player = ctx.get('player')
-            perm = ctx.get('permanent')
-            game = ctx.get('game')
-            if not (player and game):
-                return
-            def play_filter(c):
-                if not getattr(c, 'is_digimon', False):
-                    return False
-                if getattr(c, 'level', None) is None or c.level > 4:
-                    return False
-                if not ('Yellow' in [col.name for col in getattr(c, 'card_colors', [])] or 'Black' in [col.name for col in getattr(c, 'card_colors', [])]):
-                    return False
-                if not (any('CS' in _t for _t in (getattr(c, 'card_traits', []) or []))):
+            def cond(context: Dict[str, Any]) -> bool:
+                if card and card.permanent_of_this_card() is None:
                     return False
                 return True
-            game.effect_play_from_zone(
-                player, 'hand', play_filter, free=True, is_optional=True)
+            eff.set_can_use_condition(cond)
 
-        effect4.set_on_process_callback(process4)
-        effects.append(effect4)
+            def proc(ctx: Dict[str, Any]):
+                player = ctx.get('player')
+                perm = ctx.get('permanent')
+                game = ctx.get('game')
+                if not (player and perm and game):
+                    return
 
-        # Timing: EffectTiming.WhenRemoveField
-        # Play Card
-        effect5 = ICardEffect()
-        effect5.set_timing(EffectTiming.WhenRemoveField)
-        effect5.set_effect_name("BT23-032 Play Card")
-        effect5.set_effect_description("Play Card")
-        effect5.is_inherited_effect = True
-        effect5.set_hash_string("BT23_032_AT_ESS")
+                def play_filter(c):
+                    if not getattr(c, 'is_digimon', False):
+                        return False
+                    if (c.level or 99) > 4:
+                        return False
+                    colors = c.card_colors or []
+                    if not (CardColor.Yellow in colors or CardColor.Black in colors):
+                        return False
+                    traits = c.card_traits or []
+                    if not any('CS' in t for t in traits):
+                        return False
+                    return True
 
-        effect = effect5  # alias for condition closure
-        def condition5(context: Dict[str, Any]) -> bool:
-            return True
+                top = perm.top_card
+                candidates = [cs for cs in perm.card_sources
+                              if cs is not top and play_filter(cs)]
+                if not candidates:
+                    return
 
-        effect5.set_can_use_condition(condition5)
+                if len(candidates) == 1:
+                    chosen = candidates[0]
+                    perm.card_sources.remove(chosen)
+                    played = player.play_card_from_source(chosen, pay_cost=False)
+                    if played:
+                        game.execute_effects(
+                            EffectTiming.OnEnterFieldAnyone,
+                            {'played_card': chosen, 'played_permanent': played,
+                             'event_player': player},
+                        )
+                else:
+                    labels = [
+                        f"{getattr(c, 'card_names', ['?'])[0]} (Lv.{c.level})"
+                        for c in candidates
+                    ]
 
-        def process5(ctx: Dict[str, Any]):
-            """Action: Play Card"""
-            player = ctx.get('player')
-            perm = ctx.get('permanent')
-            game = ctx.get('game')
-            if not (player and game):
-                return
-            def play_filter(c):
-                if not getattr(c, 'is_digimon', False):
-                    return False
-                if getattr(c, 'level', None) is None or c.level > 4:
-                    return False
-                if not ('Yellow' in [col.name for col in getattr(c, 'card_colors', [])] or 'Black' in [col.name for col in getattr(c, 'card_colors', [])]):
-                    return False
-                if not (any('CS' in _t for _t in (getattr(c, 'card_traits', []) or []))):
-                    return False
-                return True
-            game.effect_play_from_zone(
-                player, 'hand', play_filter, free=True, is_optional=True)
+                    def on_branch(branch_idx):
+                        chosen = candidates[branch_idx]
+                        perm.card_sources.remove(chosen)
+                        played = player.play_card_from_source(chosen, pay_cost=False)
+                        if played:
+                            game.execute_effects(
+                                EffectTiming.OnEnterFieldAnyone,
+                                {'played_card': chosen, 'played_permanent': played,
+                                 'event_player': player},
+                            )
 
-        effect5.set_on_process_callback(process5)
-        effects.append(effect5)
+                    game.effect_choose_branch(
+                        player, len(candidates), on_branch,
+                        prompt="Select 1 Digimon card from digivolution cards to play.",
+                        branch_labels=labels)
+
+            eff.set_on_process_callback(proc)
+            return eff
+
+        effects.append(_make_leave_effect(is_inherited=False))
+        effects.append(_make_leave_effect(is_inherited=True))
 
         return effects

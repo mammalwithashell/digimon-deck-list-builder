@@ -33,12 +33,16 @@ class BT22_089(CardScript):
         effect0.set_can_use_condition(condition0)
 
         def process0(ctx: Dict[str, Any]):
-            """Action: Play Card"""
+            """Action: Return this Tamer to deck bottom, then play 1 qualifying tamer from hand free"""
             player = ctx.get('player')
             perm = ctx.get('permanent')
             game = ctx.get('game')
-            if not (player and game):
+            if not (player and perm and game):
                 return
+            # Cost: return this Tamer to the bottom of the deck
+            if perm in player.battle_area:
+                player.return_permanent_to_deck_bottom(perm)
+            # Then play 1 play cost 4+ [Mirei Mikagura] or [CS] trait tamer from hand free
             def play_filter(c):
                 if not getattr(c, 'is_tamer', False):
                     return False
@@ -68,18 +72,38 @@ class BT22_089(CardScript):
         def condition1(context: Dict[str, Any]) -> bool:
             if card and card.permanent_of_this_card() is None:
                 return False
-            # Triggered on play — validated by engine timing
-            return True
+            # Must have at least 1 qualifying card in hand to pay the cost
+            player = card.owner if card else None
+            if not player:
+                return False
+            qualifying_traits = ['Holy Beast', 'Angel', 'Archangel', 'Fallen Angel', 'CS']
+            has_qualifying = any(
+                any(any(qt in t for qt in qualifying_traits) for t in (getattr(c, 'card_traits', []) or []))
+                for c in player.hand_cards
+            )
+            return has_qualifying
 
         effect1.set_can_use_condition(condition1)
 
         def process1(ctx: Dict[str, Any]):
-            """Action: Draw 2"""
+            """Action: Trash 1 qualifying card from hand, then Draw 2"""
             player = ctx.get('player')
             perm = ctx.get('permanent')
             game = ctx.get('game')
-            if player:
+            if not (player and game):
+                return
+            qualifying_traits = ['Holy Beast', 'Angel', 'Archangel', 'Fallen Angel', 'CS']
+            def hand_filter(c):
+                traits = getattr(c, 'card_traits', []) or []
+                return any(any(qt in t for qt in qualifying_traits) for t in traits)
+            def on_trashed(selected):
+                if selected in player.hand_cards:
+                    player.hand_cards.remove(selected)
+                    player.trash_cards.append(selected)
                 player.draw_cards(2)
+            game.effect_select_hand_card(
+                player, hand_filter, on_trashed, is_optional=False,
+                prompt="Select 1 card with [Holy Beast]/[Angel]/[Archangel]/[Fallen Angel]/[CS] trait to trash.")
 
         effect1.set_on_process_callback(process1)
         effects.append(effect1)

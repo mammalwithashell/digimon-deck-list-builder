@@ -89,8 +89,6 @@ class BT15_084(CardScript):
         effect2.set_effect_name("BT15-084 Suspend for opponent Digimon Security A. -1")
         effect2.set_effect_description("[All Turns] When an effect removes cards from your security stack, by suspending this Tamer, 1 of your opponent's Digimon gains Security A. -1 until the end of their turn.")
         effect2.is_optional = True
-        effect2.set_max_count_per_turn(1)
-        effect2.set_hash_string("AllTurns_BT15_084")
 
         def condition2(context: Dict[str, Any]) -> bool:
             if card and card.permanent_of_this_card() is None:

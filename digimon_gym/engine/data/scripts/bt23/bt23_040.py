@@ -71,12 +71,43 @@ class BT23_040(CardScript):
                     player.battle_area.remove(erika_perm)
                     for cs in erika_perm.card_sources:
                         perm.card_sources.insert(0, cs)
-                # Then digivolve into Hudiemon from hand with cost -2
+                # Then digivolve into Hudiemon from hand OR trash with cost -2
                 def digi_filter(c):
                     names = getattr(c, 'card_names', []) or []
                     return any('hudiemon' in n.lower() for n in names)
-                game.effect_digivolve_from_hand(
-                    player, perm, digi_filter, cost_reduction=2, is_optional=True)
+                from ....data.enums import GamePhase
+                from ....game.effects import SEL_HAND_START, SEL_TRASH_START
+                valid = []
+                for i, c in enumerate(player.hand_cards):
+                    if digi_filter(c):
+                        valid.append(SEL_HAND_START + i)
+                for i, c in enumerate(player.trash_cards):
+                    if digi_filter(c):
+                        valid.append(SEL_TRASH_START + i)
+                if not valid:
+                    return
+                def on_digi_select(action_id):
+                    if SEL_TRASH_START <= action_id:
+                        idx = action_id - SEL_TRASH_START
+                        source_list = player.trash_cards
+                    else:
+                        idx = action_id - SEL_HAND_START
+                        source_list = player.hand_cards
+                    if 0 <= idx < len(source_list):
+                        chosen = source_list[idx]
+                        base_cost = getattr(chosen, 'get_cost_itself', 0)
+                        cost = max(0, base_cost - 2)
+                        source_list.remove(chosen)
+                        perm.add_card_source(chosen)
+                        perm.turn_digivolved = game.turn_count
+                        player.lose_memory(cost)
+                        player.draw()
+                        game.execute_effects(EffectTiming.WhenDigivolving,
+                                             {"digivolved_permanent": perm})
+                game.request_selection(
+                    GamePhase.SelectTarget, player, on_digi_select, valid,
+                    is_optional=True,
+                    prompt="Select [Hudiemon] from hand or trash to digivolve into (cost -2).")
             game.effect_select_own_permanent(
                 player, on_erika_selected, filter_fn=erika_filter, is_optional=False)
 

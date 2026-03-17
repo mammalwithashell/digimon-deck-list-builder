@@ -87,8 +87,8 @@ class BT23_095(CardScript):
         # [Your Turn] When one of your [CS] trait Digimon attacks <Delay>, draw 2.
         effect3 = ICardEffect()
         effect3.set_timing(EffectTiming.OnUseAttack)
-        effect3.set_effect_name("BT23-095 Delay draw 2")
-        effect3.set_effect_description("[Your Turn] When one of your [CS] trait Digimon attacks <Delay>, draw 2.")
+        effect3.set_effect_name("BT23-095 Delay: Return 1 suspended opponent Digimon to deck bottom")
+        effect3.set_effect_description("[Your Turn] When one of your [CS] trait Digimon attacks <Delay>, return 1 of your opponent's suspended Digimon to the bottom of the deck.")
         effect3.is_optional = True
         effect3.is_on_attack = True
 
@@ -109,10 +109,19 @@ class BT23_095(CardScript):
         effect3.set_can_use_condition(condition3)
 
         def process3(ctx: Dict[str, Any]):
-            """Action: Draw 2"""
+            """Action: Return 1 opponent's suspended Digimon to deck bottom (same as Main effect)"""
             player = ctx.get('player')
-            if player:
-                player.draw_cards(2)
+            game = ctx.get('game')
+            if not (player and game):
+                return
+            def target_filter(p):
+                return p.is_digimon and p.is_suspended
+            def on_bounce(target_perm):
+                enemy = player.enemy if player else None
+                if enemy:
+                    enemy.return_permanent_to_deck_bottom(target_perm)
+            game.effect_select_opponent_permanent(
+                player, on_bounce, filter_fn=target_filter, is_optional=False)
 
         effect3.set_on_process_callback(process3)
         effects.append(effect3)

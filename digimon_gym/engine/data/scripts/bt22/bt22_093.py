@@ -43,46 +43,72 @@ class BT22_093(CardScript):
         effect0.set_on_process_callback(process0)
         effects.append(effect0)
 
-        # Timing: EffectTiming.OnEnterFieldAnyone
-        # [Your Turn] When any of your Digimon digivolve into a Digimon with the [CS] trait, if it has a digivolution card with the same level as the digivolved Digimon, by suspending this Tamer, that Digimon may digivolve into a Digimon card with the [CS] trait in the hand without paying the cost.
+        # [Your Turn] When any of your Digimon digivolve into a Digimon with the [CS] trait,
+        # if it has a digivolution card with the same level as the digivolved Digimon,
+        # by suspending this Tamer, that Digimon may digivolve into a Digimon card with
+        # the [CS] trait in the hand without paying the cost.
+        # Uses _is_digivolve_observer pattern (fires from _fire_digivolve_observers)
         effect1 = ICardEffect()
-        effect1.set_timing(EffectTiming.OnEnterFieldAnyone)
-        effect1.set_effect_name("BT22-093 Digivolve into a [CS] Digimon")
+        effect1.set_effect_name("BT22-093 Suspend tamer, digivolve CS Digimon free")
         effect1.set_effect_description("[Your Turn] When any of your Digimon digivolve into a Digimon with the [CS] trait, if it has a digivolution card with the same level as the digivolved Digimon, by suspending this Tamer, that Digimon may digivolve into a Digimon card with the [CS] trait in the hand without paying the cost.")
         effect1.is_optional = True
-        effect1.is_on_play = True
+        effect1._is_digivolve_observer = True
 
         effect = effect1  # alias for condition closure
         def condition1(context: Dict[str, Any]) -> bool:
+            tamer_perm = card.permanent_of_this_card() if card else None
+            if not tamer_perm:
+                return False
             if not (card and card.owner and card.owner.is_my_turn):
                 return False
+            # Tamer must be unsuspended (suspending is the cost)
+            if tamer_perm.is_suspended:
+                return False
+            # The digivolved permanent must have [CS] trait
+            digi_perm = context.get('digivolved_permanent')
+            if not digi_perm or not digi_perm.top_card:
+                return False
+            traits = getattr(digi_perm.top_card, 'card_traits', []) or []
+            if not any('CS' in t for t in traits):
+                return False
+            # Must belong to us
+            player = card.owner if card else None
+            if player and digi_perm not in player.battle_area:
+                return False
+            # Check: has a digivolution card with the same level as the digivolved Digimon
+            digi_level = digi_perm.top_card.level if digi_perm.top_card else None
+            if digi_level is not None:
+                has_same_level = any(
+                    getattr(cs, 'level', None) == digi_level
+                    for cs in digi_perm.digivolution_cards
+                )
+                if not has_same_level:
+                    return False
             return True
 
         effect1.set_can_use_condition(condition1)
 
         def process1(ctx: Dict[str, Any]):
-            """Action: Suspend, Digivolve"""
+            """Action: Suspend this Tamer, then digivolve the triggering Digimon into a CS Digimon from hand free."""
             player = ctx.get('player')
-            perm = ctx.get('permanent')
             game = ctx.get('game')
             if not (player and game):
                 return
-            def target_filter(p):
-                return True
-            def on_suspend(target_perm):
-                target_perm.suspend()
-            game.effect_select_opponent_permanent(
-                player, on_suspend, filter_fn=target_filter, is_optional=True)
-            if not (player and perm and game):
+            # Cost: suspend this Tamer
+            tamer_perm = card.permanent_of_this_card() if card else None
+            if tamer_perm and not tamer_perm.is_suspended:
+                tamer_perm.suspend()
+            # Digivolve the triggering permanent into a CS Digimon from hand free
+            digi_perm = ctx.get('digivolved_permanent')
+            if not digi_perm:
                 return
             def digi_filter(c):
                 if not getattr(c, 'is_digimon', False):
                     return False
-                if not (any('CS' in _t for _t in (getattr(c, 'card_traits', []) or []))):
-                    return False
-                return True
+                traits = getattr(c, 'card_traits', []) or []
+                return any('CS' in t for t in traits)
             game.effect_digivolve_from_hand(
-                player, perm, digi_filter, is_optional=True)
+                player, digi_perm, digi_filter, cost_override=0, is_optional=True)
 
         effect1.set_on_process_callback(process1)
         effects.append(effect1)

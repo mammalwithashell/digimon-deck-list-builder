@@ -22,7 +22,7 @@ class BT5_093(CardScript):
 
         # --- Effect 0: [Start of Your Turn] Gain 2 memory ---
         effect0 = ICardEffect()
-        effect0.set_timing(EffectTiming.OnStartMainPhase)
+        effect0.set_timing(EffectTiming.OnStartTurn)
         effect0.set_effect_name("BT5-093 Start of Turn: Gain 2 memory")
         effect0.set_effect_description(
             "[Start of Your Turn] If your opponent has a level 6 or higher "

@@ -76,21 +76,31 @@ class EX9_066(CardScript):
                     player.draw()
                     return
 
+                card_added = [False]
+
                 def on_select(action_id: int):
                     idx = action_id - SEL_TRASH_START
                     if not (0 <= idx < len(player.trash_cards)):
+                        # Player declined: fallback Draw 1
+                        player.draw()
                         return
                     chosen = player.trash_cards[idx]
                     player.trash_cards.remove(chosen)
                     player.hand_cards.append(chosen)
+                    card_added[0] = True
+
+                def on_decline():
+                    """Called when player declines optional selection — Draw 1 fallback."""
+                    player.draw()
 
                 game.request_selection(
                     GamePhase.SelectTrash, player, on_select, valid,
                     is_optional=True,
-                    prompt="Select 1 Digimon with [Greymon], [Garurumon], or [Omnimon] from trash to return to hand."
+                    prompt="Select 1 Digimon with [Greymon], [Garurumon], or [Omnimon] from trash to return to hand.",
+                    on_decline=on_decline,
                 )
             else:
-                # Didn't return, so Draw 1
+                # No qualifying targets: Draw 1
                 player.draw()
 
         effect0.set_on_process_callback(process0)

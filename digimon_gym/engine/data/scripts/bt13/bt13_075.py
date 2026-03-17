@@ -148,10 +148,10 @@ class BT13_075(CardScript):
             player = ctx.get('player')
             perm = ctx.get('permanent')
             game = ctx.get('game')
-            if not (player and perm):
+            if not (player and perm and game):
                 return
 
-            # Find a qualifying card in the digi-stack
+            # Find qualifying cards in the digi-stack
             def stack_filter(c):
                 traits = getattr(c, 'card_traits', []) or []
                 return (any('X Antibody' in t for t in traits) or
@@ -161,11 +161,35 @@ class BT13_075(CardScript):
             if not qualifying:
                 return
 
-            # Return one qualifying card to deck bottom (greedy: first qualifying)
-            chosen = qualifying[0]
-            if chosen in perm.card_sources:
-                perm.card_sources.remove(chosen)
-            player.library_cards.append(chosen)
+            if len(qualifying) == 1:
+                # Only one candidate, no selection needed
+                chosen = qualifying[0]
+                if chosen in perm.card_sources:
+                    perm.card_sources.remove(chosen)
+                player.library_cards.append(chosen)
+            else:
+                # Multiple candidates: offer selection
+                from ....game.constants import SEL_HAND_START
+                valid = []
+                for i, cs in enumerate(perm.card_sources):
+                    if stack_filter(cs):
+                        valid.append(SEL_HAND_START + i)
+                if not valid:
+                    return
+
+                def on_select(action_id: int):
+                    idx = action_id - SEL_HAND_START
+                    if not (0 <= idx < len(perm.card_sources)):
+                        return
+                    chosen = perm.card_sources[idx]
+                    perm.card_sources.remove(chosen)
+                    player.library_cards.append(chosen)
+
+                game.request_selection(
+                    GamePhase.SelectSource, player, on_select, valid,
+                    is_optional=False,
+                    prompt="Select 1 [X Antibody] or [Royal Knight] Digimon card from digivolution cards to return to deck bottom."
+                )
 
             # Prevention of removal is signaled to engine by not doing anything else;
             # engine checks effect2.is_optional and the WhenRemoveField hook to cancel removal.

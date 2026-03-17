@@ -15,19 +15,44 @@ class BT24_028(CardScript):
         effects = []
 
         # Factory effect: alt_digivolve_req
-        # Alternate digivolution: Lv.4 with [Aqua] or [TS] trait for cost 3
-        effect0 = ICardEffect()
-        effect0.set_effect_name("BT24-028 Alternate digivolution requirement")
-        effect0.set_effect_description("Alternate digivolution requirement")
-        effect0._alt_digi_cost = 3
-        effect0._alt_digi_level = 4
-        # C# checks HasAquaTraits OR HasTSTraits — use multi-trait alt digi
-        effect0._alt_digi_trait = "Aqua|TS"
+        # C# checks: IsLevel4 && (HasAquaTraits || HasTSTraits)
+        # HasAquaTraits = ContainsTraits("Aqua") || ContainsTraits("Sea Animal")
+        # Pipe format not supported by validator — use separate effects
+        effect0a = ICardEffect()
+        effect0a.set_effect_name("BT24-028 Alternate digivolution requirement (Aqua)")
+        effect0a.set_effect_description("Alternate digivolution requirement: Lv.4 with [Aqua] trait: Cost 3")
+        effect0a._alt_digi_cost = 3
+        effect0a._alt_digi_level = 4
+        effect0a._alt_digi_trait = "Aqua"
 
-        def condition0(context: Dict[str, Any]) -> bool:
+        def condition0a(context: Dict[str, Any]) -> bool:
             return True
-        effect0.set_can_use_condition(condition0)
-        effects.append(effect0)
+        effect0a.set_can_use_condition(condition0a)
+        effects.append(effect0a)
+
+        effect0b = ICardEffect()
+        effect0b.set_effect_name("BT24-028 Alternate digivolution requirement (Sea Animal)")
+        effect0b.set_effect_description("Alternate digivolution requirement: Lv.4 with [Sea Animal] trait: Cost 3")
+        effect0b._alt_digi_cost = 3
+        effect0b._alt_digi_level = 4
+        effect0b._alt_digi_trait = "Sea Animal"
+
+        def condition0b(context: Dict[str, Any]) -> bool:
+            return True
+        effect0b.set_can_use_condition(condition0b)
+        effects.append(effect0b)
+
+        effect0c = ICardEffect()
+        effect0c.set_effect_name("BT24-028 Alternate digivolution requirement (TS)")
+        effect0c.set_effect_description("Alternate digivolution requirement: Lv.4 with [TS] trait: Cost 3")
+        effect0c._alt_digi_cost = 3
+        effect0c._alt_digi_level = 4
+        effect0c._alt_digi_trait = "TS"
+
+        def condition0c(context: Dict[str, Any]) -> bool:
+            return True
+        effect0c.set_can_use_condition(condition0c)
+        effects.append(effect0c)
 
         # Shared helper: tuck filter for On Play / When Digivolving
         # C# CardCondition: IsDigimon && Level <= 5 && Blue && HasTSTraits

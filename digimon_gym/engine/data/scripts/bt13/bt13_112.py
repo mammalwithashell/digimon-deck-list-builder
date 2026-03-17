@@ -72,58 +72,92 @@ class BT13_112(CardScript):
                             prompt="Delete 1 of your opponent's Digimon.")
 
                     elif branch_index == 1:
-                        # Branch 1: Play 1 of each Royal Knight with a different
-                        # name from the breeding area's digivolution card sources,
-                        # then trash breeding area Digimon and grant Rush.
+                        # Branch 1: Player selects which Royal Knight(s) with different names
+                        # to play from the breeding area's digivolution card sources.
+                        # C# ref: SelectCardEffect with unique name constraint (canNoSelect=true).
                         breeding = player.breeding_area
                         if not breeding:
                             return
 
-                        # Collect all under-cards (digivolution sources — skip top_card)
                         top = breeding.top_card
-                        played_names: set = set()
-                        any_played = False
 
-                        for cs in list(breeding.card_sources):
+                        def rk_filter(cs):
                             if cs is top:
-                                continue
+                                return False
                             if not getattr(cs, 'is_digimon', False):
-                                continue
-                            if not any('Royal Knight' in t
-                                       for t in getattr(cs, 'card_traits', [])):
-                                continue
-                            # Unique name check
-                            cs_names = getattr(cs, 'card_names', [])
-                            if not cs_names:
-                                continue
-                            primary_name = cs_names[0]
-                            if primary_name in played_names:
-                                continue
-                            played_names.add(primary_name)
+                                return False
+                            if not any('Royal Knight' in t for t in getattr(cs, 'card_traits', [])):
+                                return False
+                            return True
 
-                            # Remove from breeding stack and play free
-                            breeding.card_sources.remove(cs)
-                            played = player.play_card_from_source(cs, pay_cost=False)
-                            if played:
-                                game.execute_effects(
-                                    EffectTiming.OnEnterFieldAnyone,
-                                    {"played_card": cs, "played_permanent": played,
-                                     "event_player": player},
-                                )
-                                any_played = True
+                        rk_candidates = [cs for cs in breeding.card_sources if rk_filter(cs)]
+                        if not rk_candidates:
+                            return
 
-                        if any_played:
-                            # Trash 1 of your Digimon in the breeding area
-                            if player.breeding_area is not None:
-                                breeding_perm = player.breeding_area
-                                for cs in list(breeding_perm.card_sources):
-                                    player.trash_cards.append(cs)
-                                player.breeding_area = None
+                        # Use recursive selection to let player pick one-at-a-time
+                        # enforcing unique names (per C# CanTargetCondition_ByPreSelecetedList)
+                        played_names: set = set()
+                        any_played = [False]
 
-                            # All of your Digimon gain Rush for the turn
-                            for p in list(player.battle_area):
-                                if p.is_digimon:
-                                    p.grant_keyword('_is_rush')
+                        def _select_next_rk():
+                            # Filter to RK candidates not yet played by name
+                            remaining = [cs for cs in breeding.card_sources if rk_filter(cs)
+                                         and getattr(cs, 'card_names', [''])[0] not in played_names]
+                            if not remaining:
+                                _finalize_rk_play()
+                                return
+
+                            from ....game.constants import SEL_HAND_START
+                            valid = []
+                            for i, cs in enumerate(breeding.card_sources):
+                                if rk_filter(cs) and getattr(cs, 'card_names', [''])[0] not in played_names:
+                                    valid.append(SEL_HAND_START + i)
+                            if not valid:
+                                _finalize_rk_play()
+                                return
+
+                            def on_rk_select(action_id: int):
+                                idx = action_id - SEL_HAND_START
+                                if not (0 <= idx < len(breeding.card_sources)):
+                                    _finalize_rk_play()
+                                    return
+                                chosen = breeding.card_sources[idx]
+                                cs_names = getattr(chosen, 'card_names', [])
+                                primary_name = cs_names[0] if cs_names else ''
+                                played_names.add(primary_name)
+                                breeding.card_sources.remove(chosen)
+                                played = player.play_card_from_source(chosen, pay_cost=False)
+                                if played:
+                                    game.execute_effects(
+                                        EffectTiming.OnEnterFieldAnyone,
+                                        {"played_card": chosen, "played_permanent": played,
+                                         "event_player": player},
+                                    )
+                                    any_played[0] = True
+                                # Continue selecting more
+                                _select_next_rk()
+
+                            from ....data.enums import GamePhase
+                            game.request_selection(
+                                GamePhase.SelectSource, player, on_rk_select, valid,
+                                is_optional=True,
+                                prompt="Select a [Royal Knight] Digimon from breeding digivolution cards to play (unique names only)."
+                            )
+
+                        def _finalize_rk_play():
+                            if any_played[0]:
+                                # Trash breeding area Digimon
+                                if player.breeding_area is not None:
+                                    breeding_perm = player.breeding_area
+                                    for cs in list(breeding_perm.card_sources):
+                                        player.trash_cards.append(cs)
+                                    player.breeding_area = None
+                                # All of your Digimon gain Rush for the turn
+                                for p in list(player.battle_area):
+                                    if p.is_digimon:
+                                        p.grant_keyword('_is_rush')
+
+                        _select_next_rk()
 
                 game.effect_choose_branch(
                     player, 2, on_branch,

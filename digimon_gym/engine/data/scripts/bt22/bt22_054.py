@@ -47,6 +47,22 @@ class BT22_054(CardScript):
             return True
 
         effect1.set_can_use_condition(condition1)
+
+        def process1(ctx: Dict[str, Any]):
+            """Action: 1 opponent Digimon gets -3000 DP for the turn."""
+            player = ctx.get('player')
+            game = ctx.get('game')
+            if not (player and game):
+                return
+            def dp_filter(p):
+                return p.is_digimon and p.dp is not None
+            def on_dp_reduce(target_perm):
+                target_perm.change_dp(-3000)
+            game.effect_select_opponent_permanent(
+                player, on_dp_reduce, filter_fn=dp_filter, is_optional=False,
+                prompt="Select 1 opponent Digimon to give -3000 DP.")
+
+        effect1.set_on_process_callback(process1)
         effects.append(effect1)
 
         # Timing: EffectTiming.OnDeclaration

@@ -14,21 +14,37 @@ class BT22_099(CardScript):
     def get_card_effects(self, card: 'CardSource') -> List['ICardEffect']:
         effects = []
 
-        # Timing: EffectTiming.None
-        # Ignore Color Req — while you have a [CS] trait Digimon or Tamer
+        # Color ignore: conditionally set when you have a [CS] trait Digimon or Tamer
+        # Per C# IgnoreColorConditionClass: only this card, only when CS-trait perm exists
+        def _has_cs_on_field():
+            owner = card.owner if card else None
+            if not owner:
+                return False
+            for p in owner.battle_area:
+                if (p.is_tamer or p.is_digimon) and p.top_card:
+                    traits = getattr(p.top_card, 'card_traits', []) or []
+                    if any('CS' in t for t in traits):
+                        return True
+            return False
+
+        if _has_cs_on_field():
+            card._match_color_requirement = False
+
         effect0 = ICardEffect()
         effect0.set_effect_name("BT22-099 Ignore color requirements")
         effect0.set_effect_description("While you have a [CS] trait Digimon or Tamer on the field, you can ignore this card's color requirements.")
 
         def condition0(context: Dict[str, Any]) -> bool:
-            return True
+            return _has_cs_on_field()
 
         effect0.set_can_use_condition(condition0)
 
         def process0(ctx: Dict[str, Any]):
-            """Action: Ignore Color Req"""
-            # Ignores color requirement for playing Options — not modeled in engine
-            pass  # descriptive-tagged
+            """Action: Ignore Color Req — set dynamically based on CS presence"""
+            if _has_cs_on_field():
+                card._match_color_requirement = False
+            else:
+                card._match_color_requirement = True
 
         effect0.set_on_process_callback(process0)
         effects.append(effect0)
@@ -100,10 +116,19 @@ class BT22_099(CardScript):
         effect3.set_can_use_condition(condition3)
 
         def process3(ctx: Dict[str, Any]):
-            """Action: Gain 2 memory"""
+            """Action: Trash this card from battle area (Delay cost), then gain 2 memory"""
             player = ctx.get('player')
-            if player:
-                player.add_memory(2)
+            game = ctx.get('game')
+            if not player:
+                return
+            # Delay cost: trash this Option card from the battle area
+            perm = card.permanent_of_this_card() if card else None
+            if perm and perm in player.battle_area:
+                player.battle_area.remove(perm)
+                for cs in perm.card_sources:
+                    player.trash_cards.append(cs)
+            # Effect: gain 2 memory
+            player.add_memory(2)
 
         effect3.set_on_process_callback(process3)
         effects.append(effect3)

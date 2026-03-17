@@ -2,7 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
-from ....data.enums import EffectTiming
+from ....data.enums import EffectTiming, GamePhase
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -12,10 +12,10 @@ class EX9_074(CardScript):
     """EX9-074 Kimeramon | Lv.5 | Composite/DM/Ver.3
     <Rush>
     <Security A. +1>
-    [On Play][When Digivolving] Place 1 Lv.4 or lower [DM] Digimon from trash
-    as top digi card. Then, delete 1 opponent Digimon with same color as any
-    digi card. If 6+ colors in digi cards, delete 1 of each opponent's Digimon
-    with different colors.
+    [On Play][When Digivolving] You may place 1 Lv.4 or lower [DM] Digimon from trash
+    as this Digimon's top digivolution card. Then, delete 1 opponent Digimon with same
+    color as any digivolution card. If 6+ colors in digi cards, instead delete 1 of each
+    opponent's Digimon with different colors.
     [All Turns] +1000 DP per color in digi cards.
     """
 
@@ -45,17 +45,24 @@ class EX9_074(CardScript):
         effects.append(effect_sa)
 
         def _get_digi_colors(perm):
-            """Get all colors from digivolution cards."""
+            """Get all colors from digivolution cards (NOT top card).
+            C#: DigivolutionCards.Filter(x => !x.IsFlipped).SelectMany(e => e.CardColors).Distinct()"""
             colors = set()
-            for src in perm.digivolution_cards:
+            for src in perm.card_sources[:-1]:  # Exclude top card
                 card_colors = getattr(src, 'card_colors', []) or []
                 for col in card_colors:
                     colors.add(col)
-            # Also include top card colors
-            if perm.top_card:
-                for col in (getattr(perm.top_card, 'card_colors', []) or []):
-                    colors.add(col)
             return colors
+
+        def _dm_trash_filter(c):
+            """Lv.4 or lower [DM] Digimon from trash."""
+            if not getattr(c, 'is_digimon', False):
+                return False
+            level = getattr(c, 'level', None)
+            if level is None or level > 4:
+                return False
+            traits = getattr(c, 'card_traits', []) or []
+            return any('DM' in t for t in traits)
 
         def _place_and_delete(ctx: Dict[str, Any]):
             player = ctx.get('player')
@@ -67,44 +74,92 @@ class EX9_074(CardScript):
             if not enemy:
                 return
 
-            # Place 1 Lv.4 or lower DM Digimon from trash as top digi card
-            for c in list(player.trash_cards):
-                if getattr(c, 'is_digimon', False):
-                    level = getattr(c, 'level', None)
-                    if level is not None and level <= 4:
-                        traits = getattr(c, 'card_traits', []) or []
-                        if any('DM' in t for t in traits):
-                            player.trash_cards.remove(c)
-                            perm.add_card_source(c)
-                            break
+            # Step 1: Optionally place 1 Lv.4 or lower DM Digimon from trash as top digi card
+            # C#: canNoSelect: () => true — optional selection via SelectTrash
+            from ....game.constants import SEL_TRASH_START
+            valid_trash = []
+            for i, c in enumerate(player.trash_cards):
+                if _dm_trash_filter(c):
+                    valid_trash.append(SEL_TRASH_START + i)
 
-            # Get all colors in digi cards
-            colors = _get_digi_colors(perm)
+            def _after_place():
+                """After optional placement, proceed to deletion step."""
+                colors = _get_digi_colors(perm)
 
-            if len(colors) >= 6:
-                # Delete 1 of each opponent's Digimon with different colors
-                deleted_colors = set()
-                for opp_perm in list(enemy.battle_area):
-                    if opp_perm.is_digimon:
-                        opp_colors = getattr(opp_perm.top_card, 'card_colors', []) or [] if opp_perm.top_card else []
-                        for col in opp_colors:
-                            if col not in deleted_colors:
-                                enemy.delete_permanent(opp_perm)
-                                deleted_colors.add(col)
-                                break
+                if len(colors) >= 6:
+                    # C#: iterate each color, select 1 opponent Digimon per color (each unique)
+                    deleted_perms = []
+
+                    def _delete_by_colors(color_list, idx=0):
+                        if idx >= len(color_list):
+                            # Batch delete collected permanents
+                            for dp in deleted_perms:
+                                if dp in enemy.battle_area:
+                                    enemy.delete_permanent(dp)
+                            return
+                        col = color_list[idx]
+
+                        def col_filter(p):
+                            if not p.is_digimon:
+                                return False
+                            if p in deleted_perms:
+                                return False
+                            opp_colors = getattr(p.top_card, 'card_colors', []) or [] if p.top_card else []
+                            return col in opp_colors
+
+                        has_target = any(col_filter(p) for p in enemy.battle_area)
+                        if not has_target:
+                            _delete_by_colors(color_list, idx + 1)
+                            return
+
+                        def on_select(target_perm):
+                            if target_perm:
+                                deleted_perms.append(target_perm)
+                            _delete_by_colors(color_list, idx + 1)
+
+                        game.effect_select_opponent_permanent(
+                            player, on_select, filter_fn=col_filter, is_optional=False)
+
+                    # Determine which colors have deletable opponent Digimon
+                    color_names = set()
+                    for opp in enemy.battle_area:
+                        if opp.is_digimon and opp.top_card:
+                            for col in (getattr(opp.top_card, 'card_colors', []) or []):
+                                color_names.add(col)
+                    deletable_colors = sorted(color_names, key=lambda c: str(c))
+                    _delete_by_colors(deletable_colors)
+                else:
+                    # Delete 1 opponent Digimon with same color as any digi card
+                    def color_filter(p):
+                        if not p.is_digimon:
+                            return False
+                        opp_colors = getattr(p.top_card, 'card_colors', []) or [] if p.top_card else []
+                        return any(col in colors for col in opp_colors)
+
+                    has_target = any(color_filter(p) for p in enemy.battle_area)
+                    if has_target:
+                        def on_delete(target_perm):
+                            enemy.delete_permanent(target_perm)
+
+                        game.effect_select_opponent_permanent(
+                            player, on_delete, filter_fn=color_filter, is_optional=False)
+
+            if valid_trash:
+                def on_trash_selected(action_id):
+                    idx = action_id - SEL_TRASH_START
+                    if idx < len(player.trash_cards):
+                        selected = player.trash_cards[idx]
+                        player.trash_cards.remove(selected)
+                        # C#: AddDigivolutionCardsTop — place as top digi card (just under top)
+                        perm.card_sources.insert(len(perm.card_sources) - 1, selected)
+                    _after_place()
+
+                game.request_selection(
+                    GamePhase.SelectTrash, player, on_trash_selected,
+                    valid_trash, is_optional=True,
+                    prompt="Select 1 Lv.4 or lower [DM] Digimon from trash to place as top digivolution card.")
             else:
-                # Delete 1 opponent Digimon with same color as any digi card
-                def color_filter(p):
-                    if not p.is_digimon:
-                        return False
-                    opp_colors = getattr(p.top_card, 'card_colors', []) or [] if p.top_card else []
-                    return any(col in colors for col in opp_colors)
-
-                def on_delete(target_perm):
-                    enemy.delete_permanent(target_perm)
-
-                game.effect_select_opponent_permanent(
-                    player, on_delete, filter_fn=color_filter, is_optional=False)
+                _after_place()
 
         # [On Play]
         effect2 = ICardEffect()
@@ -137,17 +192,31 @@ class EX9_074(CardScript):
         effects.append(effect3)
 
         # [All Turns] +1000 DP per color in digi cards
+        # C#: ChangeSelfDPStaticEffect with dynamic value = 1000 * DigivolutionCardsColors.Count
         effect4 = ICardEffect()
         effect4.set_timing(EffectTiming.NoTiming)
         effect4.set_effect_name("EX9-074 All Turns: +1000 DP per color")
         effect4.set_effect_description("[All Turns] +1000 DP per color in digi cards.")
 
         def condition4(context: Dict[str, Any]) -> bool:
-            if card and card.permanent_of_this_card() is None:
+            perm = card.permanent_of_this_card() if card else None
+            if not perm:
                 return False
-            return True
+            return len(_get_digi_colors(perm)) >= 1
         effect4.set_can_use_condition(condition4)
-        # DP modifier is dynamic based on colors, handled by _dp_modifier attribute
+
+        def process4(ctx: Dict[str, Any]):
+            """Register dynamic DP modifier based on digi card colors."""
+            perm = ctx.get('permanent')
+            game = ctx.get('game')
+            if perm and game:
+                from digimon_gym.engine.interfaces.modifiers import ModifierType
+                game.register_modifier(
+                    perm, ModifierType.CHANGE_DP,
+                    value_fn=lambda: 1000 * len(_get_digi_colors(perm)),
+                    expiry='permanent')
+
+        effect4.set_on_process_callback(process4)
         effects.append(effect4)
 
         return effects

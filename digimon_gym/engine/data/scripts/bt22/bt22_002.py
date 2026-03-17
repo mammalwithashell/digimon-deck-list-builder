@@ -31,7 +31,19 @@ class BT22_002(CardScript):
                 return False
             if not (card and card.owner and card.owner.is_my_turn):
                 return False
-            return True
+            # Deleted permanent must be a Token or [Puppet] trait Digimon (and not self)
+            my_perm = card.permanent_of_this_card()
+            deleted_perm = context.get('permanent')
+            if not deleted_perm or deleted_perm is my_perm:
+                return False
+            if getattr(deleted_perm, 'is_token', False):
+                return True
+            top = deleted_perm.top_card
+            if top:
+                traits = getattr(top, 'card_traits', []) or []
+                if any('Puppet' in t for t in traits):
+                    return True
+            return False
 
         effect0.set_can_use_condition(condition0)
 

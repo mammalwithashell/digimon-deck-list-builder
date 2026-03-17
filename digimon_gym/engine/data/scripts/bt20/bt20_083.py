@@ -145,7 +145,7 @@ class BT20_083(CardScript):
             if not player or player.is_my_turn:
                 return False
             # Must not already be suspended (cost is "by suspending this Digimon")
-            permanent = effect.effect_source_permanent if hasattr(effect, 'effect_source_permanent') else None
+            permanent = card.permanent_of_this_card() if card else None
             if not permanent or permanent.is_suspended:
                 return False
             # Must have an Omekamon in digivolution cards

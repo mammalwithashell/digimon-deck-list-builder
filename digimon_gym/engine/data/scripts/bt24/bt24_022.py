@@ -59,11 +59,10 @@ class BT24_022(CardScript):
                             p.owner == player.enemy)
 
                 def on_strip_selected(target_perm):
-                    if target_perm and hasattr(target_perm, 'digivolution_cards'):
-                        trashed = []
-                        for _ in range(2):
-                            if target_perm.digivolution_cards:
-                                trashed.append(target_perm.digivolution_cards.pop(0))
+                    if target_perm:
+                        # C#: TrashDigivolutionCardsFromTopOrBottom(isFromTop: true)
+                        # Trash top 2 digivolution cards (just under the top card)
+                        trashed = target_perm.trash_digivolution_cards(2, from_top=True)
                         if trashed:
                             player.enemy.trash_cards.extend(trashed)
 

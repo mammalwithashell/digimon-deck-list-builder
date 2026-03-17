@@ -79,13 +79,10 @@ class BT22_094(CardScript):
             """Action: Return this Tamer to deck bottom, reduce play cost by 2"""
             player = ctx.get('player')
             game = ctx.get('game')
-            # Return this Tamer to bottom of deck as cost
+            # Return this Tamer to bottom of deck as cost (use proper engine API)
             tamer_perm = card.permanent_of_this_card() if card else None
             if tamer_perm and player:
-                if tamer_perm in player.battle_area:
-                    player.battle_area.remove(tamer_perm)
-                    for cs in tamer_perm.card_sources:
-                        player.library_cards.append(cs)
+                player.return_permanent_to_deck_bottom(tamer_perm)
 
         effect1.set_on_process_callback(process1)
         effects.append(effect1)

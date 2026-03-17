@@ -38,17 +38,22 @@ class BT23_090(CardScript):
         effect0.set_on_process_callback(process0)
         effects.append(effect0)
 
-        # Factory effect: dp_modifier_all
-        # All your Digimon DP modifier
+        # [All Turns] All of your Digimon with the [Hudie] trait get +1000 DP.
         effect1 = ICardEffect()
-        effect1.set_effect_name("BT23-090 All your Digimon DP modifier")
-        effect1.set_effect_description("All your Digimon DP modifier")
+        effect1.set_effect_name("BT23-090 [Hudie] trait Digimon DP modifier")
+        effect1.set_effect_description("[All Turns] All of your Digimon with the [Hudie] trait get +1000 DP.")
         effect1.dp_modifier = 1000
         effect1._applies_to_all_own_digimon = True
 
         def condition1(context: Dict[str, Any]) -> bool:
             if card and card.permanent_of_this_card() is None:
                 return False
+            # Only apply to [Hudie] trait Digimon
+            perm = context.get('permanent')
+            if perm:
+                traits = getattr(perm.top_card, 'card_traits', []) or []
+                if not any('Hudie' in t for t in traits):
+                    return False
             return True
         effect1.set_can_use_condition(condition1)
         effects.append(effect1)
@@ -90,14 +95,8 @@ class BT23_090(CardScript):
                 return any('Hudie' in t for t in traits)
 
             def on_bounce(target_perm):
-                # Return the Digimon to hand (top card only, sources go to trash)
-                if target_perm in player.battle_area:
-                    player.battle_area.remove(target_perm)
-                    if target_perm.top_card:
-                        player.hand_cards.append(target_perm.top_card)
-                    # Sources below top go to trash
-                    for src in target_perm.card_sources[:-1]:
-                        player.trash_cards.append(src)
+                # Return the Digimon to hand via engine API (top card to hand, sources to trash)
+                player.bounce_permanent_to_hand(target_perm)
                 # Then play 1 CS Tamer from hand free
                 def play_filter(c):
                     if not getattr(c, 'is_tamer', False):

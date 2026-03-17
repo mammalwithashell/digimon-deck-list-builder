@@ -49,12 +49,12 @@ class BT24_085(CardScript):
         effect1 = ICardEffect()
         effect1.set_timing(EffectTiming.OnEndTurn)
         effect1.set_effect_name(
-            "BT24-085 Suspend to use a [TS] Option costing <= opp Digimon count; "
+            "BT24-085 Suspend to use a [TS] Option costing <= opp memory; "
             "then 1 [TS] Digimon may attack"
         )
         effect1.set_effect_description(
             "[End of Your Turn] By suspending this Tamer, you may use 1 [TS] trait Option card "
-            "with as high or lower a use cost as your opponent's number of Digimon from your hand "
+            "with as high or lower a use cost as your opponent's memory from your hand "
             "without paying the cost. Then, 1 of your Digimon with the [TS] trait may attack."
         )
         effect1.is_optional = True
@@ -86,20 +86,25 @@ class BT24_085(CardScript):
             if not tamer_perm.is_suspended:
                 return  # Suspension failed
 
-            # Card text: "use cost as high or lower as your opponent's number of Digimon"
+            # C#: cardSource.GetCostItself <= card.Owner.Enemy.MemoryForPlayer
+            # The Option cost must be <= opponent's memory (from opponent's perspective)
+            # Since this fires at end of YOUR turn, player IS turn player.
+            # game.memory is from turn player's POV. Opponent's memory = -game.memory.
             enemy = player.enemy
             if not enemy:
                 return
-            opp_digi_count = len([p for p in enemy.battle_area if p.is_digimon])
+            opp_memory = -game.memory if player.is_my_turn else game.memory
+            if opp_memory < 0:
+                opp_memory = 0
 
-            # Select and use 1 [TS] Option from hand with use cost <= opponent's Digimon count
+            # Select and use 1 [TS] Option from hand with use cost <= opponent's memory
             def option_filter(c):
                 if not getattr(c, 'is_option', False):
                     return False
                 if not any('TS' in _t for _t in (getattr(c, 'card_traits', []) or [])):
                     return False
                 cost = c.get_cost_itself if hasattr(c, 'get_cost_itself') else getattr(c, 'play_cost', 0)
-                return cost <= opp_digi_count
+                return cost <= opp_memory
 
             game.effect_play_from_zone(
                 player, 'hand', option_filter, free=True, is_optional=True,

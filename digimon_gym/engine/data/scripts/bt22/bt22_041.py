@@ -51,9 +51,8 @@ class BT22_041(CardScript):
         effect1.cost_reduction = 6
 
         def condition1(context: Dict[str, Any]) -> bool:
-            # Only applies when THIS card is being played
-            target_card = context.get('card_source') or context.get('card_to_play')
-            if target_card is not None and target_card is not card:
+            # Only applies when THIS card is being played (standard guard)
+            if context.get('card_source') is not card:
                 return False
             owner = getattr(card, 'owner', None)
             if not owner or not owner.enemy:

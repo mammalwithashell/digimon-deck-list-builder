@@ -91,8 +91,8 @@ class ST20_11(CardScript):
             return _tamer_two_color_count() > 0
         effect2.set_can_use_condition(condition2)
 
-        def process2(ctx: Dict[str, Any]):
-            """Grant immunity to N own Digimon from opponent Digimon effects."""
+        def _grant_immunity_via_selection(ctx: Dict[str, Any]):
+            """Grant immunity to N own Digimon via selection."""
             player = ctx.get('player')
             game = ctx.get('game')
             if not (player and game):
@@ -101,10 +101,36 @@ class ST20_11(CardScript):
             if count <= 0:
                 return
             own_digimon = [p for p in player.battle_area if p.is_digimon]
-            for perm in own_digimon[:count]:
-                perm.grant_keyword('_immune_to_opponent_digimon_effects',
-                                   expiry='end_of_opponent_turn')
-        effect2.set_on_process_callback(process2)
+            if not own_digimon:
+                return
+            remaining = [count]
+            granted = set()
+
+            def _select_next():
+                if remaining[0] <= 0:
+                    return
+                candidates = [p for p in player.battle_area
+                              if p.is_digimon and id(p) not in granted]
+                if not candidates:
+                    return
+
+                def on_immunity_target(target_perm):
+                    target_perm.grant_keyword('_immune_to_opponent_digimon_effects',
+                                              expiry='end_of_opponent_turn')
+                    granted.add(id(target_perm))
+                    remaining[0] -= 1
+                    _select_next()
+
+                game.effect_select_own_permanent(
+                    player, on_immunity_target,
+                    filter_fn=lambda p: p.is_digimon and id(p) not in granted,
+                    is_optional=False,
+                    prompt=f"Select 1 of your Digimon to grant immunity ({remaining[0]} remaining)."
+                )
+
+            _select_next()
+
+        effect2.set_on_process_callback(_grant_immunity_via_selection)
         effects.append(effect2)
 
         # --- Effect 3: [When Digivolving] Same immunity ---
@@ -123,21 +149,7 @@ class ST20_11(CardScript):
                 return False
             return _tamer_two_color_count() > 0
         effect3.set_can_use_condition(condition3)
-
-        def process3(ctx: Dict[str, Any]):
-            """Grant immunity to N own Digimon from opponent Digimon effects."""
-            player = ctx.get('player')
-            game = ctx.get('game')
-            if not (player and game):
-                return
-            count = _tamer_two_color_count()
-            if count <= 0:
-                return
-            own_digimon = [p for p in player.battle_area if p.is_digimon]
-            for perm in own_digimon[:count]:
-                perm.grant_keyword('_immune_to_opponent_digimon_effects',
-                                   expiry='end_of_opponent_turn')
-        effect3.set_on_process_callback(process3)
+        effect3.set_on_process_callback(_grant_immunity_via_selection)
         effects.append(effect3)
 
         # --- Effect 4: [When Digivolving] Delete opponent's lowest DP Digimon ---

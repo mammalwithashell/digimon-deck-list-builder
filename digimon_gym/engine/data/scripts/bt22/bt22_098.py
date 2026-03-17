@@ -57,9 +57,6 @@ class BT22_098(CardScript):
                 return False
             if card and card.permanent_of_this_card() is None:
                 return False
-            permanent = card.permanent_of_this_card() if card else None
-            if not (permanent and (permanent.contains_card_name('Arisa Kinosaki'))):
-                return False
             return True
         effect1.set_can_use_condition(condition1)
         effects.append(effect1)
@@ -78,8 +75,14 @@ class BT22_098(CardScript):
                 return False
             if not (card and card.owner and card.owner.is_my_turn):
                 return False
-            permanent = effect.effect_source_permanent if hasattr(effect, 'effect_source_permanent') else None
-            if not (permanent and (permanent.contains_card_name('Arisa Kinosaki'))):
+            # The suspended permanent must be one of your [Arisa Kinosaki]
+            tapped_perm = context.get('permanent')
+            if not tapped_perm:
+                return False
+            player = card.owner if card else None
+            if player and tapped_perm not in player.battle_area:
+                return False
+            if not tapped_perm.contains_card_name('Arisa Kinosaki'):
                 return False
             return True
 

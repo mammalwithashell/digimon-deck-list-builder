@@ -200,17 +200,43 @@ class EX11_053(CardScript):
                     player, hand_filter, on_hand_select, is_optional=True,
                     prompt="Select [Omnimon (X Antibody)] from your hand to play.")
             elif candidates_drasil:
-                # Play from under King Drasil_7D6
-                source_perm, source_card = candidates_drasil[0]
-                source_perm.card_sources.remove(source_card)
-                played_perm = player.play_card_from_source(source_card, pay_cost=False)
-                if played_perm:
-                    game.execute_effects(
-                        EffectTiming.OnEnterFieldAnyone,
-                        {"played_card": source_card, "played_permanent": played_perm,
-                         "event_player": player},
+                # Play from under King Drasil_7D6 — offer selection when multiple
+                if len(candidates_drasil) == 1:
+                    source_perm, source_card = candidates_drasil[0]
+                    source_perm.card_sources.remove(source_card)
+                    played_perm = player.play_card_from_source(source_card, pay_cost=False)
+                    if played_perm:
+                        game.execute_effects(
+                            EffectTiming.OnEnterFieldAnyone,
+                            {"played_card": source_card, "played_permanent": played_perm,
+                             "event_player": player},
+                        )
+                        on_played(played_perm)
+                else:
+                    from ....game.constants import SEL_HAND_START
+                    from ....data.enums import GamePhase
+                    valid = list(range(SEL_HAND_START, SEL_HAND_START + len(candidates_drasil)))
+
+                    def on_drasil_select(action_id: int):
+                        idx = action_id - SEL_HAND_START
+                        if not (0 <= idx < len(candidates_drasil)):
+                            return
+                        source_perm, source_card = candidates_drasil[idx]
+                        source_perm.card_sources.remove(source_card)
+                        played_perm = player.play_card_from_source(source_card, pay_cost=False)
+                        if played_perm:
+                            game.execute_effects(
+                                EffectTiming.OnEnterFieldAnyone,
+                                {"played_card": source_card, "played_permanent": played_perm,
+                                 "event_player": player},
+                            )
+                            on_played(played_perm)
+
+                    game.request_selection(
+                        GamePhase.SelectSource, player, on_drasil_select, valid,
+                        is_optional=True,
+                        prompt="Select [Omnimon (X Antibody)] from under King Drasil to play."
                     )
-                    on_played(played_perm)
 
         effect2.set_on_process_callback(process2)
         effects.append(effect2)

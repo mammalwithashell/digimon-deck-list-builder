@@ -2,7 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
-from ....data.enums import EffectTiming
+from ....data.enums import EffectTiming, GamePhase
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -43,6 +43,51 @@ class BT19_101(CardScript):
         effect1.set_can_use_condition(condition1)
         effects.append(effect1)
 
+        # --- Shared process for On Play / When Digivolving / When Attacking ---
+        # C#: Select 1 Digimon card from opponent's trash -> place on top of opponent's deck ->
+        #     then select 1 opponent's Digimon -> return to bottom of deck
+        def _trash_to_deck_top_then_bounce(ctx: Dict[str, Any]):
+            """By returning 1 Digimon card from opponent's trash to deck top,
+            return 1 of their Digimon to the bottom of the deck."""
+            player = ctx.get('player')
+            game = ctx.get('game')
+            if not (player and game):
+                return
+            enemy = player.enemy if player else None
+            if not enemy:
+                return
+
+            # Step 1: Select 1 Digimon card from opponent's trash to return to deck top
+            from ....game.constants import SEL_TRASH_START
+            valid_trash = []
+            for i, c in enumerate(enemy.trash_cards):
+                if getattr(c, 'is_digimon', False):
+                    valid_trash.append(SEL_TRASH_START + i)
+            if not valid_trash:
+                return
+
+            def on_trash_selected(action_id):
+                idx = action_id - SEL_TRASH_START
+                if idx < len(enemy.trash_cards):
+                    selected = enemy.trash_cards[idx]
+                    enemy.trash_cards.remove(selected)
+                    # Place on top of opponent's deck
+                    enemy.library_cards.insert(0, selected)
+
+                    # Step 2: Select 1 opponent's Digimon to return to deck bottom
+                    def target_filter(p):
+                        return p.is_digimon
+                    def on_bounce(target_perm):
+                        if target_perm:
+                            enemy.return_permanent_to_deck_bottom(target_perm)
+                    game.effect_select_opponent_permanent(
+                        player, on_bounce, filter_fn=target_filter, is_optional=False)
+
+            game.request_selection(
+                GamePhase.SelectTrash, player, on_trash_selected,
+                valid_trash, is_optional=True,
+                prompt="Select 1 Digimon card from opponent's trash to return to deck top.")
+
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [On Play] By returning 1 Digimon card from your opponent's trash to the top of the deck, return 1 of their Digimon to the bottom of the deck.
         effect2 = ICardEffect()
@@ -52,32 +97,13 @@ class BT19_101(CardScript):
         effect2.is_optional = True
         effect2.is_on_play = True
 
-        effect = effect2  # alias for condition closure
         def condition2(context: Dict[str, Any]) -> bool:
             if card and card.permanent_of_this_card() is None:
                 return False
-            # Triggered on play — validated by engine timing
             return True
 
         effect2.set_can_use_condition(condition2)
-
-        def process2(ctx: Dict[str, Any]):
-            """Action: Bounce"""
-            player = ctx.get('player')
-            perm = ctx.get('permanent')
-            game = ctx.get('game')
-            if not (player and game):
-                return
-            def target_filter(p):
-                return p.is_digimon
-            def on_bounce(target_perm):
-                enemy = player.enemy if player else None
-                if enemy:
-                    enemy.return_permanent_to_deck_bottom(target_perm)
-            game.effect_select_opponent_permanent(
-                player, on_bounce, filter_fn=target_filter, is_optional=True)
-
-        effect2.set_on_process_callback(process2)
+        effect2.set_on_process_callback(_trash_to_deck_top_then_bounce)
         effects.append(effect2)
 
         # Timing: EffectTiming.OnEnterFieldAnyone
@@ -89,32 +115,13 @@ class BT19_101(CardScript):
         effect3.is_optional = True
         effect3.is_when_digivolving = True
 
-        effect = effect3  # alias for condition closure
         def condition3(context: Dict[str, Any]) -> bool:
             if card and card.permanent_of_this_card() is None:
                 return False
-            # Triggered when digivolving — validated by engine timing
             return True
 
         effect3.set_can_use_condition(condition3)
-
-        def process3(ctx: Dict[str, Any]):
-            """Action: Bounce"""
-            player = ctx.get('player')
-            perm = ctx.get('permanent')
-            game = ctx.get('game')
-            if not (player and game):
-                return
-            def target_filter(p):
-                return p.is_digimon
-            def on_bounce(target_perm):
-                enemy = player.enemy if player else None
-                if enemy:
-                    enemy.return_permanent_to_deck_bottom(target_perm)
-            game.effect_select_opponent_permanent(
-                player, on_bounce, filter_fn=target_filter, is_optional=True)
-
-        effect3.set_on_process_callback(process3)
+        effect3.set_on_process_callback(_trash_to_deck_top_then_bounce)
         effects.append(effect3)
 
         # Timing: EffectTiming.OnUseAttack
@@ -126,76 +133,77 @@ class BT19_101(CardScript):
         effect4.is_optional = True
         effect4.is_on_attack = True
 
-        effect = effect4  # alias for condition closure
         def condition4(context: Dict[str, Any]) -> bool:
             if card and card.permanent_of_this_card() is None:
                 return False
-            # Triggered on attack — validated by engine timing
             return True
 
         effect4.set_can_use_condition(condition4)
-
-        def process4(ctx: Dict[str, Any]):
-            """Action: Bounce"""
-            player = ctx.get('player')
-            perm = ctx.get('permanent')
-            game = ctx.get('game')
-            if not (player and game):
-                return
-            def target_filter(p):
-                return p.is_digimon
-            def on_bounce(target_perm):
-                enemy = player.enemy if player else None
-                if enemy:
-                    enemy.return_permanent_to_deck_bottom(target_perm)
-            game.effect_select_opponent_permanent(
-                player, on_bounce, filter_fn=target_filter, is_optional=True)
-
-        effect4.set_on_process_callback(process4)
+        effect4.set_on_process_callback(_trash_to_deck_top_then_bounce)
         effects.append(effect4)
 
-        # Timing: EffectTiming.None
-        # Effect Immunity
+        # Timing: EffectTiming.NoTiming
+        # [All Turns] This Digimon with no digivolution cards isn't affected by opponent's effects.
+        # C#: CanNotAffectedClass with ImmunityAndNoSuspendCondition checking DigivolutionCards.Count == 0
         effect5 = ICardEffect()
+        effect5.set_timing(EffectTiming.NoTiming)
         effect5.set_effect_name("BT19-101 Isn't affected by opponent's effects")
-        effect5.set_effect_description("Effect Immunity")
+        effect5.set_effect_description("[All Turns] This Digimon with no digivolution cards isn't affected by opponent's effects.")
 
-        effect = effect5  # alias for condition closure
         def condition5(context: Dict[str, Any]) -> bool:
-            if card and card.permanent_of_this_card() is None:
+            perm = card.permanent_of_this_card() if card else None
+            if not perm:
+                return False
+            # C#: DigivolutionCards.Count == 0 means no digi cards (top card only)
+            if len(perm.card_sources) > 1:
                 return False
             return True
 
         effect5.set_can_use_condition(condition5)
 
         def process5(ctx: Dict[str, Any]):
-            """Action: Effect Immunity"""
-            player = ctx.get('player')
+            """Register CANNOT_BE_AFFECTED modifier for opponent's effects."""
             perm = ctx.get('permanent')
             game = ctx.get('game')
-            # Grant effect immunity via modifier system
             if perm and game:
                 from digimon_gym.engine.interfaces.modifiers import ModifierType
                 game.register_modifier(
-                    ModifierType.CANNOT_BE_SELECTED_BY_EFFECT, perm,
-                    value_fn=lambda: True, expiry='end_of_turn')
+                    perm, ModifierType.CANNOT_BE_AFFECTED,
+                    value_fn=lambda: True, expiry='permanent')
 
         effect5.set_on_process_callback(process5)
         effects.append(effect5)
 
-        # Timing: EffectTiming.None
-        # Effect
+        # Timing: EffectTiming.NoTiming
+        # [All Turns] This Digimon with no digivolution cards can't be suspended.
+        # C#: CanNotSuspendClass with ImmunityAndNoSuspendCondition
         effect6 = ICardEffect()
+        effect6.set_timing(EffectTiming.NoTiming)
         effect6.set_effect_name("BT19-101 Can't be suspended")
-        effect6.set_effect_description("Effect")
+        effect6.set_effect_description("[All Turns] This Digimon with no digivolution cards can't be suspended.")
 
-        effect = effect6  # alias for condition closure
         def condition6(context: Dict[str, Any]) -> bool:
-            if card and card.permanent_of_this_card() is None:
+            perm = card.permanent_of_this_card() if card else None
+            if not perm:
+                return False
+            # C#: DigivolutionCards.Count == 0 means no digi cards (top card only)
+            if len(perm.card_sources) > 1:
                 return False
             return True
 
         effect6.set_can_use_condition(condition6)
+
+        def process6(ctx: Dict[str, Any]):
+            """Register CANNOT_SUSPEND modifier."""
+            perm = ctx.get('permanent')
+            game = ctx.get('game')
+            if perm and game:
+                from digimon_gym.engine.interfaces.modifiers import ModifierType
+                game.register_modifier(
+                    perm, ModifierType.CANNOT_SUSPEND,
+                    value_fn=lambda: True, expiry='permanent')
+
+        effect6.set_on_process_callback(process6)
         effects.append(effect6)
 
         return effects

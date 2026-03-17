@@ -109,16 +109,47 @@ class BT23_081(CardScript):
         effect1.set_on_process_callback(process1)
         effects.append(effect1)
 
-        # Factory effect: security_play
-        # Security: Play this card
+        # Timing: EffectTiming.OnStartMainPhase
+        # [Start of Your Main Phase] If you have a Digimon with the [CS] trait, gain 1 memory.
         effect2 = ICardEffect()
-        effect2.set_effect_name("BT23-081 Security: Play this card")
-        effect2.set_effect_description("Security: Play this card")
-        effect2.is_security_effect = True
+        effect2.set_timing(EffectTiming.OnStartMainPhase)
+        effect2.set_effect_name("BT23-081 Memory +1 if CS Digimon")
+        effect2.set_effect_description("[Start of Your Main Phase] If you have a Digimon with the [CS] trait, gain 1 memory.")
 
         def condition2(context: Dict[str, Any]) -> bool:
-            return True
+            if card and card.permanent_of_this_card() is None:
+                return False
+            if not (card and card.owner and card.owner.is_my_turn):
+                return False
+            player = card.owner if card else None
+            if not player:
+                return False
+            return any(
+                p.is_digimon and any('CS' in t for t in (getattr(p.top_card, 'card_traits', []) or []))
+                for p in player.battle_area
+            )
+
         effect2.set_can_use_condition(condition2)
+
+        def process2(ctx: Dict[str, Any]):
+            """Action: Gain 1 memory"""
+            player = ctx.get('player')
+            if player:
+                player.add_memory(1)
+
+        effect2.set_on_process_callback(process2)
         effects.append(effect2)
+
+        # Factory effect: security_play
+        # Security: Play this card
+        effect3 = ICardEffect()
+        effect3.set_effect_name("BT23-081 Security: Play this card")
+        effect3.set_effect_description("Security: Play this card")
+        effect3.is_security_effect = True
+
+        def condition3(context: Dict[str, Any]) -> bool:
+            return True
+        effect3.set_can_use_condition(condition3)
+        effects.append(effect3)
 
         return effects

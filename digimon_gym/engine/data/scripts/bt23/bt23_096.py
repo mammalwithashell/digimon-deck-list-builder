@@ -86,8 +86,8 @@ class BT23_096(CardScript):
         # [Your Turn] When one of your [CS] trait Digimon attacks <Delay>, draw 2.
         effect3 = ICardEffect()
         effect3.set_timing(EffectTiming.OnUseAttack)
-        effect3.set_effect_name("BT23-096 Delay draw 2")
-        effect3.set_effect_description("[Your Turn] When one of your [CS] trait Digimon attacks <Delay>, draw 2.")
+        effect3.set_effect_name("BT23-096 Delay: De-Digivolve 4")
+        effect3.set_effect_description("[Your Turn] When one of your [CS] trait Digimon attacks <Delay>, <De-Digivolve 4> 1 of your opponent's Digimon.")
         effect3.is_optional = True
         effect3.is_on_attack = True
 
@@ -108,10 +108,18 @@ class BT23_096(CardScript):
         effect3.set_can_use_condition(condition3)
 
         def process3(ctx: Dict[str, Any]):
-            """Action: Draw 2"""
+            """Action: De-Digivolve 4 (same as Main effect)"""
             player = ctx.get('player')
-            if player:
-                player.draw_cards(2)
+            game = ctx.get('game')
+            if not (player and game):
+                return
+            def on_de_digivolve(target_perm):
+                removed = target_perm.de_digivolve(4)
+                enemy = player.enemy if player else None
+                if enemy:
+                    enemy.trash_cards.extend(removed)
+            game.effect_select_opponent_permanent(
+                player, on_de_digivolve, filter_fn=lambda p: p.is_digimon, is_optional=False)
 
         effect3.set_on_process_callback(process3)
         effects.append(effect3)

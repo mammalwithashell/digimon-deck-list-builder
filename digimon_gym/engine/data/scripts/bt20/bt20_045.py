@@ -145,14 +145,9 @@ class BT20_045(CardScript):
         def condition6(context: Dict[str, Any]) -> bool:
             if card and card.permanent_of_this_card() is None:
                 return False
-            # The suspended permanent must be a Digimon (any player's)
+            # The suspended permanent must be a Digimon (any player's, including self)
             ctx_perm = context.get('permanent')
             if not ctx_perm or not ctx_perm.is_digimon:
-                return False
-            # Must not be THIS Digimon (it says "when any Digimon suspend" but
-            # the unsuspend only makes sense if it's another Digimon)
-            my_perm = card.permanent_of_this_card()
-            if my_perm and ctx_perm is my_perm:
                 return False
             return True
 

@@ -187,6 +187,32 @@ class BT23_101(CardScript):
             return True
 
         effect5.set_can_use_condition(condition5)
+
+        def process5(ctx: Dict[str, Any]):
+            """Action: Return 1 CS tamer to hand, then activate 1 On Play effect."""
+            player = ctx.get('player')
+            perm = ctx.get('permanent')
+            game = ctx.get('game')
+            if not (player and perm and game):
+                return
+            # Cost: return 1 CS tamer to hand
+            def tamer_filter(p):
+                if not p.is_tamer:
+                    return False
+                top = p.top_card
+                if top:
+                    traits = getattr(top, 'card_traits', []) or []
+                    return any('CS' in t for t in traits)
+                return False
+            def on_tamer_bounced(tamer_perm):
+                player.bounce_permanent_to_hand(tamer_perm)
+                # Re-activate the On Play effect (process3)
+                process3({'player': player, 'permanent': perm, 'game': game})
+            game.effect_select_own_permanent(
+                player, on_tamer_bounced, filter_fn=tamer_filter, is_optional=False,
+                prompt="Select 1 of your [CS] trait Tamers to return to hand.")
+
+        effect5.set_on_process_callback(process5)
         effects.append(effect5)
 
         return effects

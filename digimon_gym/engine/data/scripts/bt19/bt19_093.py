@@ -139,15 +139,34 @@ class BT19_093(CardScript):
             if not enemy:
                 return
 
-            # Apply SA-2 to up to 2 opponent Digimon
+            # Apply SA-2 to up to 2 opponent Digimon via selection
             digimon_targets = [p for p in enemy.battle_area if p.is_digimon]
-            count = min(2, len(digimon_targets))
-            if count > 0:
-                # Use the first `count` Digimon (engine doesn't have multi-select
-                # for opponent permanents, so auto-select lowest-DP targets)
-                targets = sorted(digimon_targets, key=lambda p: p.dp or 0)[:count]
-                for t in targets:
-                    t._temp_sa_modifier -= 2
+            remaining_count = min(2, len(digimon_targets))
+            if remaining_count > 0:
+                selected_set = set()
+
+                def _select_next():
+                    nonlocal remaining_count
+                    if remaining_count <= 0:
+                        return
+                    def sa_filter(p):
+                        return p.is_digimon and id(p) not in selected_set
+                    if not any(sa_filter(p) for p in enemy.battle_area):
+                        return
+
+                    def on_sa_select(target_perm):
+                        nonlocal remaining_count
+                        target_perm._temp_sa_modifier -= 2
+                        selected_set.add(id(target_perm))
+                        remaining_count -= 1
+                        _select_next()
+
+                    game.effect_select_opponent_permanent(
+                        player, on_sa_select, filter_fn=sa_filter,
+                        is_optional=False,
+                        prompt=f"Select opponent Digimon to give Security A. -2 ({remaining_count} remaining).")
+
+                _select_next()
 
             # Add this card to hand
             if card in player.trash_cards:

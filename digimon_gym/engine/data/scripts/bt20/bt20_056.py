@@ -2,7 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
-from ....data.enums import EffectTiming
+from ....data.enums import EffectTiming, GamePhase
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -90,22 +90,62 @@ class BT20_056(CardScript):
                     traits = getattr(c, 'card_traits', []) or []
                     return any('Chronicle' in t for t in traits)
 
-                # Try hand first, then trash
+                # Check both hand and trash for Chronicle candidates
                 hand_candidates = [c for c in player.hand_cards if chronicle_filter(c)]
                 trash_candidates = [c for c in player.trash_cards if chronicle_filter(c)]
 
-                if hand_candidates:
+                can_hand = len(hand_candidates) > 0
+                can_trash = len(trash_candidates) > 0
+
+                if not (can_hand or can_trash):
+                    return
+
+                def _digi_from_hand():
                     game.effect_digivolve_from_hand(
                         player, breeding, chronicle_filter,
                         cost_override=0, is_optional=True,
                         prompt="Select a Chronicle Digimon (Lv6 or lower) from hand to digivolve breeding Digimon."
                     )
-                elif trash_candidates:
-                    # Digivolve from trash: pick first qualifying card
-                    chosen = trash_candidates[0]
-                    player.trash_cards.remove(chosen)
-                    breeding.add_card_source(chosen)
-                    breeding.turn_digivolved = game.turn_count
+
+                def _digi_from_trash():
+                    from ....game.constants import SEL_TRASH_START
+                    valid = [SEL_TRASH_START + i for i, c in enumerate(player.trash_cards)
+                             if chronicle_filter(c)]
+                    if not valid:
+                        return
+
+                    def on_trash_select(action_id: int):
+                        idx = action_id - SEL_TRASH_START
+                        if not (0 <= idx < len(player.trash_cards)):
+                            return
+                        chosen = player.trash_cards[idx]
+                        player.trash_cards.remove(chosen)
+                        breeding.add_card_source(chosen)
+                        breeding.turn_digivolved = game.turn_count
+
+                    game.request_selection(
+                        GamePhase.SelectTrash, player, on_trash_select, valid,
+                        is_optional=True,
+                        prompt="Select a Chronicle Digimon (Lv6 or lower) from trash to digivolve breeding Digimon."
+                    )
+
+                if can_hand and can_trash:
+                    def on_branch(branch_index: int):
+                        if branch_index == 0:
+                            _digi_from_hand()
+                        elif branch_index == 1:
+                            _digi_from_trash()
+
+                    game.effect_choose_branch(
+                        player, 2, on_branch,
+                        prompt="Digivolve breeding Digimon into Chronicle from which zone?",
+                        branch_labels=["From hand", "From trash"],
+                        is_optional=True,
+                    )
+                elif can_hand:
+                    _digi_from_hand()
+                elif can_trash:
+                    _digi_from_trash()
 
             effect.set_on_process_callback(process)
             return effect

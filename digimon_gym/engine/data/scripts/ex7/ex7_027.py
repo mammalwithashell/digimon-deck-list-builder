@@ -75,8 +75,9 @@ class EX7_027(CardScript):
 
         # --- Effect 2: [Inherited][All Turns][Once Per Turn] Prevent leaving by
         #     deleting 1 Token or other [Puppet] Digimon ---
+        # Uses WhenPermanentWouldBeDeleted timing + _will_not_be_removed flag
         effect2 = ICardEffect()
-        effect2.set_timing(EffectTiming.WhenRemoveField)
+        effect2.set_timing(EffectTiming.WhenPermanentWouldBeDeleted)
         effect2.set_effect_name("EX7-027 Inherited: Prevent leaving by deleting Puppet/Token")
         effect2.set_effect_description(
             "[Inherited][All Turns][Once Per Turn] When this Digimon would leave "
@@ -92,6 +93,10 @@ class EX7_027(CardScript):
             if card and card.permanent_of_this_card() is None:
                 return False
             my_perm = card.permanent_of_this_card()
+            # Only triggers for THIS permanent being removed
+            ctx_perm = context.get('permanent')
+            if ctx_perm is not my_perm:
+                return False
             owner = card.owner if card else None
             if not owner:
                 return False
@@ -136,11 +141,16 @@ class EX7_027(CardScript):
 
             def on_delete_substitute(target_perm):
                 player.delete_permanent(target_perm)
+                # Set flag to prevent the original permanent from leaving
+                my_perm._will_not_be_removed = True
+                game.logger.log(
+                    "[EX7-027] Deleted a Token/Puppet to prevent "
+                    "this Digimon from leaving the battle area.")
 
             game.effect_select_own_permanent(
                 player, on_delete_substitute,
                 filter_fn=substitute_filter,
-                is_optional=True,
+                is_optional=False,
                 prompt="Select 1 Token or [Puppet] Digimon to delete to prevent leaving.",
             )
 

@@ -15,19 +15,44 @@ class BT24_059(CardScript):
         effects = []
 
         # Factory effect: alt_digivolve_req
-        # Alternate digivolution: Lv.4 with [TS] or [Aqua] trait for cost 3
-        # C# PermanentCondition: HasTSTraits || HasAquaTraits
-        effect0 = ICardEffect()
-        effect0.set_effect_name("BT24-059 Alternate digivolution requirement")
-        effect0.set_effect_description("Alternate digivolution requirement")
-        effect0._alt_digi_cost = 3
-        effect0._alt_digi_level = 4
-        effect0._alt_digi_trait = "TS|Aqua"
+        # C# PermanentCondition: IsLevel4 && (HasTSTraits || HasAquaTraits)
+        # HasAquaTraits = ContainsTraits("Aqua") || ContainsTraits("Sea Animal")
+        # Pipe format not supported by validator — use separate effects
+        effect0a = ICardEffect()
+        effect0a.set_effect_name("BT24-059 Alternate digivolution requirement (TS)")
+        effect0a.set_effect_description("Alternate digivolution requirement: Lv.4 with [TS] trait: Cost 3")
+        effect0a._alt_digi_cost = 3
+        effect0a._alt_digi_level = 4
+        effect0a._alt_digi_trait = "TS"
 
-        def condition0(context: Dict[str, Any]) -> bool:
+        def condition0a(context: Dict[str, Any]) -> bool:
             return True
-        effect0.set_can_use_condition(condition0)
-        effects.append(effect0)
+        effect0a.set_can_use_condition(condition0a)
+        effects.append(effect0a)
+
+        effect0b = ICardEffect()
+        effect0b.set_effect_name("BT24-059 Alternate digivolution requirement (Aqua)")
+        effect0b.set_effect_description("Alternate digivolution requirement: Lv.4 with [Aqua] trait: Cost 3")
+        effect0b._alt_digi_cost = 3
+        effect0b._alt_digi_level = 4
+        effect0b._alt_digi_trait = "Aqua"
+
+        def condition0b(context: Dict[str, Any]) -> bool:
+            return True
+        effect0b.set_can_use_condition(condition0b)
+        effects.append(effect0b)
+
+        effect0c = ICardEffect()
+        effect0c.set_effect_name("BT24-059 Alternate digivolution requirement (Sea Animal)")
+        effect0c.set_effect_description("Alternate digivolution requirement: Lv.4 with [Sea Animal] trait: Cost 3")
+        effect0c._alt_digi_cost = 3
+        effect0c._alt_digi_level = 4
+        effect0c._alt_digi_trait = "Sea Animal"
+
+        def condition0c(context: Dict[str, Any]) -> bool:
+            return True
+        effect0c.set_can_use_condition(condition0c)
+        effects.append(effect0c)
 
         # Shared On Play / When Digivolving: <De-Digivolve 1> an opponent's Digimon
         def _shared_de_digi_process(ctx: Dict[str, Any]):
@@ -163,7 +188,8 @@ class BT24_059(CardScript):
         effect4.set_can_use_condition(condition4)
 
         def process4(ctx: Dict[str, Any]):
-            """Select another own Digimon, place it as bottom digi-source, unsuspend self."""
+            """Select another own Digimon, place ALL its cards as bottom digi-sources, unsuspend self.
+            C#: IPlacePermanentToDigivolutionCards places the entire permanent into digivolution cards."""
             player = ctx.get('player')
             perm = ctx.get('permanent')
             game = ctx.get('game')
@@ -176,15 +202,19 @@ class BT24_059(CardScript):
             def on_selected(target_perm):
                 if target_perm is None:
                     return
-                # Absorb the other Digimon's top card as bottom source of self
-                placed_card = target_perm.top_card
-                if placed_card is None:
+                # C#: IPlacePermanentToDigivolutionCards — place ALL card_sources
+                # of the sacrificed permanent as bottom digi-sources of self
+                all_cards = list(target_perm.card_sources)
+                if not all_cards:
                     return
-                # Remove the other permanent from field and place its card as bottom digi-source
+                # Remove the other permanent from field
                 player.remove_permanent(target_perm)
-                perm.card_sources.insert(0, placed_card)
-                # Unsuspend self if the card was placed
-                if placed_card in perm.card_sources:
+                # Insert all cards at bottom of self's card_sources
+                for i, cs in enumerate(all_cards):
+                    perm.card_sources.insert(i, cs)
+                # Unsuspend self if any card was placed
+                # C#: checks if placedCard (top card) is in DigivolutionCards
+                if all_cards[-1] in perm.card_sources:
                     perm.unsuspend()
 
             game.effect_select_own_permanent(

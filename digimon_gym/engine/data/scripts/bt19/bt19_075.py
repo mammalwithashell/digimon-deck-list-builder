@@ -131,6 +131,7 @@ class BT19_075(CardScript):
 
         # [All Turns] When this Digimon would leave the battle area, by deleting 1 of your
         # Digimon with the [Composite] trait, it doesn't leave.
+        # C#: HasCompositeTrait checks IsPermanentExistsOnOwnerBattleAreaDigimon + EqualsTraits("Composite")
         effect3 = ICardEffect()
         effect3.set_timing(EffectTiming.WhenRemoveField)
         effect3.set_effect_name("BT19-075 Delete [Composite] trait digimon to prevent removal")
@@ -138,10 +139,59 @@ class BT19_075(CardScript):
         effect3.is_optional = True
 
         def condition3(context: Dict[str, Any]) -> bool:
-            if card and card.permanent_of_this_card() is None:
+            my_perm = card.permanent_of_this_card() if card else None
+            if not my_perm:
                 return False
-            return True
+            player = card.owner if card else None
+            if not player:
+                return False
+            # Must have at least 1 own Digimon with [Composite] trait (not self)
+            def _has_composite(p):
+                if p is my_perm:
+                    return False
+                if not p.is_digimon:
+                    return False
+                top = getattr(p, 'top_card', None)
+                if not top:
+                    return False
+                traits = getattr(top, 'card_traits', []) or []
+                return any('Composite' in t for t in traits)
+            return any(_has_composite(p) for p in player.battle_area)
         effect3.set_can_use_condition(condition3)
+
+        def process3(ctx: Dict[str, Any]):
+            """Delete 1 own [Composite] Digimon to prevent this Digimon from leaving."""
+            player = ctx.get('player')
+            perm = ctx.get('permanent')
+            game = ctx.get('game')
+            if not (player and perm and game):
+                return
+
+            def composite_filter(p):
+                if p is perm:
+                    return False
+                if not p.is_digimon:
+                    return False
+                top = getattr(p, 'top_card', None)
+                if not top:
+                    return False
+                traits = getattr(top, 'card_traits', []) or []
+                return any('Composite' in t for t in traits)
+
+            def on_sacrifice(target_perm):
+                if target_perm is None:
+                    return
+                player.delete_permanent(target_perm)
+                # Prevent this Digimon from leaving (DCGO: willBeRemoveField = false)
+                perm._will_not_be_removed = True
+
+            game.effect_select_own_permanent(
+                player, on_sacrifice,
+                filter_fn=composite_filter,
+                is_optional=True,
+                prompt="Select 1 [Composite] Digimon to delete to prevent leaving.")
+
+        effect3.set_on_process_callback(process3)
         effects.append(effect3)
 
         # [All Turns] [Once Per Turn] When other Digimon or Tamers are deleted,
@@ -155,7 +205,12 @@ class BT19_075(CardScript):
         effect4.is_on_deletion = True
 
         def condition4(context: Dict[str, Any]) -> bool:
-            if card and card.permanent_of_this_card() is None:
+            my_perm = card.permanent_of_this_card() if card else None
+            if not my_perm:
+                return False
+            # C#: OtherPermanentDeleted checks (IsDigimon || IsTamer) && permanent != self
+            deleted_perm = context.get('deleted_permanent') or context.get('permanent')
+            if deleted_perm is my_perm:
                 return False
             return True
         effect4.set_can_use_condition(condition4)

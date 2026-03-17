@@ -49,31 +49,72 @@ class BT22_101(CardScript):
 
         effect = effect1  # alias for condition closure
         def condition1(context: Dict[str, Any]) -> bool:
-            if card and card.permanent_of_this_card() is None:
+            tamer_perm = card.permanent_of_this_card() if card else None
+            if not tamer_perm:
+                return False
+            # Tamer must be unsuspended (suspending is the cost)
+            if tamer_perm.is_suspended:
+                return False
+            # The deleted permanent must be our own Lv4+ CS trait Digimon
+            deleted_perm = context.get('permanent')
+            if not deleted_perm:
+                return False
+            player = card.owner if card else None
+            if not player:
+                return False
+            # Must be our Digimon (check via context event_player or owner)
+            event_player = context.get('event_player')
+            if event_player and event_player is not player:
+                return False
+            if not deleted_perm.is_digimon:
+                return False
+            level = deleted_perm.level
+            if level is None or level < 4:
+                return False
+            top = deleted_perm.top_card
+            if top:
+                traits = getattr(top, 'card_traits', []) or []
+                if not any('CS' in t for t in traits):
+                    return False
+            else:
                 return False
             return True
 
         effect1.set_can_use_condition(condition1)
 
         def process1(ctx: Dict[str, Any]):
-            """Action: Suspend, Add To Hand"""
+            """Action: Suspend this Tamer, return 1 CS Digimon from trash to hand."""
             player = ctx.get('player')
-            perm = ctx.get('permanent')
             game = ctx.get('game')
             if not (player and game):
                 return
-            def target_filter(p):
-                if p.level is None or p.level < 4:
-                    return False
-                return True
-            def on_suspend(target_perm):
-                target_perm.suspend()
-            game.effect_select_opponent_permanent(
-                player, on_suspend, filter_fn=target_filter, is_optional=True)
-            # Add card to hand (from trash/reveal)
-            if player and player.trash_cards:
-                card_to_add = player.trash_cards.pop()
-                player.hand_cards.append(card_to_add)
+            # Cost: suspend this Tamer
+            tamer_perm = card.permanent_of_this_card() if card else None
+            if tamer_perm and not tamer_perm.is_suspended:
+                tamer_perm.suspend()
+            # Select 1 CS trait Digimon from trash to return to hand
+            from ....data.enums import GamePhase
+            valid = []
+            for i, tc in enumerate(player.trash_cards):
+                if getattr(tc, 'is_digimon', False):
+                    traits = getattr(tc, 'card_traits', []) or []
+                    if any('CS' in t for t in traits):
+                        from ....game.effects import SEL_TRASH_START
+                        idx = SEL_TRASH_START + i
+                        valid.append(idx)
+            if not valid:
+                return
+
+            def on_select(action_id):
+                from ....game.effects import SEL_TRASH_START
+                idx = action_id - SEL_TRASH_START
+                if 0 <= idx < len(player.trash_cards):
+                    selected = player.trash_cards.pop(idx)
+                    player.hand_cards.append(selected)
+
+            game.request_selection(
+                GamePhase.SelectTrash, player, on_select, valid, is_optional=False,
+                prompt="Select 1 [CS] trait Digimon card from trash to return to hand.")
 
         effect1.set_on_process_callback(process1)
         effects.append(effect1)

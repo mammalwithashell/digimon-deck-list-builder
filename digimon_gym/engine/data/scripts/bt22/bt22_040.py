@@ -97,9 +97,23 @@ class BT22_040(CardScript):
         def condition3(context: Dict[str, Any]) -> bool:
             if card and card.permanent_of_this_card() is None:
                 return False
+            # Must be a different Digimon that was deleted (not self)
+            my_perm = card.permanent_of_this_card()
+            deleted_perm = context.get('permanent')
+            if deleted_perm is my_perm:
+                return False
             return True
 
         effect3.set_can_use_condition(condition3)
+
+        def process3(ctx: Dict[str, Any]):
+            """Action: Re-activate [When Digivolving] effect (play 1 Familiar Token)."""
+            player = ctx.get('player')
+            game = ctx.get('game')
+            if player and game:
+                game.effect_play_token(player, 'familiar')
+
+        effect3.set_on_process_callback(process3)
         effects.append(effect3)
 
         return effects
