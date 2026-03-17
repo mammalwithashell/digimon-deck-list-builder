@@ -24,9 +24,10 @@ class BT21_072(CardScript):
         effect0._alt_digi_trait = "Hero"
 
         def condition0(context: Dict[str, Any]) -> bool:
-            permanent = card.permanent_of_this_card() if card else None
-            if not (permanent and permanent.top_card and (any('Hero' in tr for tr in (getattr(permanent.top_card, 'card_traits', []) or [])))):
-                return False
+            # _alt_digi_trait = "Hero" already encodes the base trait requirement;
+            # the engine validator checks the base permanent's traits.
+            # Condition should not check card.permanent_of_this_card() since this
+            # card is in hand when alt-digi is evaluated.
             return True
         effect0.set_can_use_condition(condition0)
         effects.append(effect0)

@@ -14,85 +14,89 @@ class BT15_062(CardScript):
     def get_card_effects(self, card: 'CardSource') -> List['ICardEffect']:
         effects = []
 
-        # Timing: EffectTiming.OnEnterFieldAnyone
-        # [On Play] Reveal the top 4 cards of your deck. Add 2 level 6 or higher Digimon cards among them to the hand. Place the rest at the bottom of the deck.
+        # [On Play] Reveal top 4 cards. Add up to 2 level 6+ cards to hand. Rest to deck bottom.
         effect0 = ICardEffect()
         effect0.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect0.set_effect_name("BT15-062 Reveal the top 4 cards of deck")
         effect0.set_effect_description("[On Play] Reveal the top 4 cards of your deck. Add 2 level 6 or higher Digimon cards among them to the hand. Place the rest at the bottom of the deck.")
         effect0.is_on_play = True
 
-        effect = effect0  # alias for condition closure
         def condition0(context: Dict[str, Any]) -> bool:
             if card and card.permanent_of_this_card() is None:
                 return False
-            # Triggered on play — validated by engine timing
             return True
-
         effect0.set_can_use_condition(condition0)
 
         def process0(ctx: Dict[str, Any]):
-            """Action: Add To Hand, Reveal And Select"""
+            """Reveal top 4, select up to 2 level 6+ to hand, rest to deck bottom."""
             player = ctx.get('player')
-            perm = ctx.get('permanent')
             game = ctx.get('game')
-            # Add card to hand (from trash/reveal)
-            if player and player.trash_cards:
-                card_to_add = player.trash_cards.pop()
-                player.hand_cards.append(card_to_add)
             if not (player and game):
                 return
+
             def reveal_filter(c):
-                if getattr(c, 'level', None) is None or c.level < 6:
-                    return False
-                return True
-            def on_revealed(selected, remaining):
-                player.hand_cards.append(selected)
-                for c in remaining:
-                    player.library_cards.append(c)
-            game.effect_reveal_and_select(
-                player, 4, reveal_filter, on_revealed, is_optional=True)
+                return getattr(c, 'level', None) is not None and c.level >= 6
+
+            game.effect_reveal_and_select_multi(
+                player, 4,
+                [
+                    (reveal_filter, 'hand'),
+                    (reveal_filter, 'hand'),
+                ],
+                remaining_placement='deck_bottom',
+                is_optional=True)
 
         effect0.set_on_process_callback(process0)
         effects.append(effect0)
 
-        # Timing: EffectTiming.OnEndTurn
-        # [End of Your Turn] By deleting 1 of your Digimon, you may play 1 Digimon card with the [Dark Masters] trait from you hand to and empty space in your breeding area without paying the cost.
+        # [End of Your Turn] By deleting 1 of your Digimon, you may play 1 Digimon card
+        # with [Dark Masters] trait from hand to breeding area without paying cost.
         effect1 = ICardEffect()
         effect1.set_timing(EffectTiming.OnEndTurn)
         effect1.set_effect_name("BT15-062 Delete your 1 Digimon to play 1 Digimon from hand")
         effect1.set_effect_description("[End of Your Turn] By deleting 1 of your Digimon, you may play 1 Digimon card with the [Dark Masters] trait from you hand to and empty space in your breeding area without paying the cost.")
         effect1.is_optional = True
 
-        effect = effect1  # alias for condition closure
         def condition1(context: Dict[str, Any]) -> bool:
             if card and card.permanent_of_this_card() is None:
                 return False
             if not (card and card.owner and card.owner.is_my_turn):
                 return False
             return True
-
         effect1.set_can_use_condition(condition1)
 
         def process1(ctx: Dict[str, Any]):
-            """Action: Play Card"""
+            """By deleting 1 of your Digimon (cost), play 1 Dark Masters Digimon from hand free to breeding area."""
             player = ctx.get('player')
-            perm = ctx.get('permanent')
             game = ctx.get('game')
             if not (player and game):
                 return
-            def play_filter(c):
-                if not getattr(c, 'is_digimon', False):
-                    return False
-                return True
-            game.effect_play_from_zone(
-                player, 'hand', play_filter, free=True, is_optional=True)
+
+            def own_digimon_filter(p):
+                return p.is_digimon
+
+            has_own = any(own_digimon_filter(p) for p in player.battle_area)
+            if not has_own:
+                return
+
+            def on_delete_cost(target_perm):
+                player.delete_permanent(target_perm)
+                def play_filter(c):
+                    if not getattr(c, 'is_digimon', False):
+                        return False
+                    traits = getattr(c, 'card_traits', []) or []
+                    return any('Dark Masters' in t or 'DarkMasters' in t for t in traits)
+
+                game.effect_play_from_zone(
+                    player, 'hand', play_filter, free=True, is_optional=True)
+
+            game.effect_select_own_permanent(
+                player, on_delete_cost, filter_fn=own_digimon_filter, is_optional=True)
 
         effect1.set_on_process_callback(process1)
         effects.append(effect1)
 
-        # Factory effect: reboot
-        # Reboot
+        # Inherited: Reboot
         effect2 = ICardEffect()
         effect2.set_effect_name("BT15-062 Reboot")
         effect2.set_effect_description("Reboot")

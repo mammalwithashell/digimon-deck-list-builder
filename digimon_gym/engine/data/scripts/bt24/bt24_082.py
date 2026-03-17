@@ -95,7 +95,7 @@ class BT24_082(CardScript):
         effect1.set_can_use_condition(condition1)
 
         def process1(ctx: Dict[str, Any]):
-            """Action: Suspend this Tamer, DP +3000 to digivolved Digimon"""
+            """Action: Suspend this Tamer, DP +3000 to digivolved Digimon, then it may attack."""
             player = ctx.get('player')
             game = ctx.get('game')
             if not (player and game):
@@ -108,11 +108,16 @@ class BT24_082(CardScript):
             digivolved = ctx.get('digivolved_permanent')
             if digivolved:
                 digivolved.change_dp(3000)
-                # "Then, it may attack" — grant FORCE_ATTACK so it can attack
-                from ....interfaces.modifiers import ModifierType
-                game.register_modifier(
-                    digivolved, ModifierType.FORCE_ATTACK,
-                    value_fn=lambda: True, expiry='end_of_turn')
+                # "Then, it may attack" — optional: ask player, if yes unsuspend so it can attack
+                def on_branch(choice):
+                    if choice == 0 and digivolved:
+                        # Unsuspend to allow the attack
+                        if digivolved.is_suspended:
+                            digivolved.unsuspend()
+                game.effect_choose_branch(
+                    player, 2, on_branch,
+                    prompt="This Digimon may attack. Attack?",
+                    branch_labels=["Yes, attack", "No, decline"])
 
         effect1.set_on_process_callback(process1)
         effects.append(effect1)

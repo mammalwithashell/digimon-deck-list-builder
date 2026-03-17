@@ -31,6 +31,12 @@ class BT22_005(CardScript):
                 return False
             if not (card and card.owner and card.owner.is_my_turn):
                 return False
+            # Card text: "When any of your Digimon with the [Unidentified] or [CS] trait are played"
+            played_perm = context.get('played_permanent')
+            if played_perm:
+                traits = getattr(played_perm.top_card, 'card_traits', []) or []
+                if not any('Unidentified' in t or t == 'CS' for t in traits):
+                    return False
             return True
 
         effect0.set_can_use_condition(condition0)

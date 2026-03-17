@@ -32,29 +32,30 @@ class BT21_008(CardScript):
         effect0.set_can_use_condition(condition0)
 
         def process0(ctx: Dict[str, Any]):
-            """Action: Reveal top 3, add 1 Reptile/Dragonkin and 1 LIBERATOR to hand"""
+            """Action: Reveal top 3, player selects 1 Reptile/Dragonkin and 1 LIBERATOR to hand."""
             player = ctx.get('player')
             perm = ctx.get('permanent')
             game = ctx.get('game')
             if not (player and game):
                 return
-            revealed = player.library_cards[:3]
-            player.library_cards = player.library_cards[3:]
-            # First pick: Reptile/Dragonkin
-            reptile_cards = [c for c in revealed if any('Reptile' in t or 'Dragonkin' in t for t in (getattr(c, 'card_traits', []) or []))]
-            if reptile_cards:
-                picked = reptile_cards[0]
-                revealed.remove(picked)
-                player.hand_cards.append(picked)
-            # Second pick: LIBERATOR
-            lib_cards = [c for c in revealed if any('LIBERATOR' in t for t in (getattr(c, 'card_traits', []) or []))]
-            if lib_cards:
-                picked = lib_cards[0]
-                revealed.remove(picked)
-                player.hand_cards.append(picked)
-            # Return rest to bottom
-            for c in revealed:
-                player.library_cards.append(c)
+            # Use effect_reveal_and_select_multi for two sequential player selections
+            def reptile_filter(c):
+                traits = getattr(c, 'card_traits', []) or []
+                return any('Reptile' in t or 'Dragonkin' in t for t in traits)
+
+            def liberator_filter(c):
+                traits = getattr(c, 'card_traits', []) or []
+                return any('LIBERATOR' in t for t in traits)
+
+            game.effect_reveal_and_select_multi(
+                player, 3,
+                passes=[
+                    (reptile_filter, 'hand'),      # Pick 1 Reptile/Dragonkin to hand
+                    (liberator_filter, 'hand'),     # Pick 1 LIBERATOR to hand
+                ],
+                remaining_placement='deck_bottom',
+                is_optional=True,
+            )
 
         effect0.set_on_process_callback(process0)
         effects.append(effect0)

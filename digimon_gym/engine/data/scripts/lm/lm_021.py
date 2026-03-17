@@ -34,9 +34,9 @@ class LM_021(CardScript):
         effect_blast.set_can_use_condition(condition_blast)
         effects.append(effect_blast)
 
-        # Shared process: Delete opponent's Digimon whose total DP <= this Digimon's DP
+        # Shared process: Delete any number of opponent's Digimon whose total DP <= this Digimon's DP
         def _shared_delete_process(ctx: Dict[str, Any]):
-            """Delete opponent's Digimon up to this Digimon's DP total."""
+            """Delete opponent's Digimon up to this Digimon's DP total (iterative player selection)."""
             player = ctx.get('player')
             game = ctx.get('game')
             perm = ctx.get('permanent')
@@ -50,22 +50,62 @@ class LM_021(CardScript):
             if my_dp <= 0:
                 return
 
-            # Greedy approach: delete opponent Digimon from lowest DP up
-            opp_digimon = sorted(
-                [p for p in enemy.battle_area if p.is_digimon],
-                key=lambda p: p.dp or 0
-            )
-            total_dp = 0
-            to_delete = []
-            for opp in opp_digimon:
-                opp_dp = opp.dp or 0
-                if total_dp + opp_dp <= my_dp:
-                    total_dp += opp_dp
-                    to_delete.append(opp)
+            from ....game.constants import SEL_OPP_FIELD_START
+            from ....data.enums import GamePhase
 
-            for target in to_delete:
-                if target in enemy.battle_area:
-                    enemy.delete_permanent(target)
+            # Track running total and which permanents have been selected for deletion
+            state = {'total_dp': 0, 'to_delete': []}
+
+            def _select_next():
+                """Let player iteratively select opponent Digimon to delete."""
+                remaining_budget = my_dp - state['total_dp']
+                if remaining_budget <= 0:
+                    _execute_deletions()
+                    return
+
+                opp = player.enemy if player else None
+                if not opp:
+                    _execute_deletions()
+                    return
+
+                # Build valid indices for opponent Digimon within budget
+                valid = []
+                for i, p in enumerate(opp.battle_area):
+                    if not p.is_digimon:
+                        continue
+                    if p in state['to_delete']:
+                        continue
+                    if (p.dp or 0) <= remaining_budget:
+                        if not game.modifiers.can_be_selected_by_effect(p):
+                            continue
+                        valid.append(SEL_OPP_FIELD_START + i)
+
+                if not valid:
+                    _execute_deletions()
+                    return
+
+                def on_selected(action_id):
+                    idx = action_id - SEL_OPP_FIELD_START
+                    opp2 = player.enemy if player else None
+                    if opp2 and 0 <= idx < len(opp2.battle_area):
+                        target = opp2.battle_area[idx]
+                        state['total_dp'] += (target.dp or 0)
+                        state['to_delete'].append(target)
+                    _select_next()
+
+                game.request_selection(
+                    GamePhase.SelectTarget, player, on_selected,
+                    valid, is_optional=True,
+                    prompt=f"Select an opponent's Digimon to delete (budget: {remaining_budget} DP remaining).",
+                    on_decline=_execute_deletions)
+
+            def _execute_deletions():
+                """Delete all selected Digimon."""
+                for target in state['to_delete']:
+                    if target in enemy.battle_area:
+                        enemy.delete_permanent(target)
+
+            _select_next()
 
         # [On Play]
         effect_op = ICardEffect()

@@ -25,23 +25,48 @@ class EX11_050(CardScript):
     def get_card_effects(self, card: 'CardSource') -> List['ICardEffect']:
         effects = []
 
-        # --- Effect 0: Alt digivolve from Lv.4 [Dark Dragon] or [Evil Dragon] for cost 3 ---
-        effect0 = ICardEffect()
-        effect0.set_effect_name("EX11-050 Alternate digivolution requirement")
-        effect0.set_effect_description("Alternate digivolution requirement")
-        effect0._alt_digi_cost = 3
-        effect0._alt_digi_level = 4
-        effect0._alt_digi_trait = "Dark Dragon"
+        # --- Helper: check if a permanent has Dark Dragon or Evil Dragon trait ---
+        def _has_dragon_trait(perm):
+            if not perm.top_card:
+                return False
+            traits = getattr(perm.top_card, 'card_traits', []) or []
+            return any('Dark Dragon' in t or 'Evil Dragon' in t for t in traits)
 
-        def condition0(context: Dict[str, Any]) -> bool:
+        # --- Effect 0a: Alt digivolve from Lv.4 [Dark Dragon] for cost 3 ---
+        # Engine's _check_alt_digivolve only supports a single _alt_digi_trait,
+        # so we need two separate alt-digi effects for Dark Dragon and Evil Dragon.
+        effect0a = ICardEffect()
+        effect0a.set_effect_name("EX11-050 Alt digi from Dark Dragon Lv.4")
+        effect0a.set_effect_description("Alternate digivolution: Lv.4 Dark Dragon for 3")
+        effect0a._alt_digi_cost = 3
+        effect0a._alt_digi_level = 4
+        effect0a._alt_digi_trait = "Dark Dragon"
+
+        def condition0a(context: Dict[str, Any]) -> bool:
             permanent = card.permanent_of_this_card() if card else None
             if not permanent or not permanent.top_card:
                 return False
             traits = getattr(permanent.top_card, 'card_traits', []) or []
-            return (any('Dark Dragon' in tr for tr in traits) or
-                    any('Evil Dragon' in tr for tr in traits))
-        effect0.set_can_use_condition(condition0)
-        effects.append(effect0)
+            return any('Dark Dragon' in tr for tr in traits)
+        effect0a.set_can_use_condition(condition0a)
+        effects.append(effect0a)
+
+        # --- Effect 0b: Alt digivolve from Lv.4 [Evil Dragon] for cost 3 ---
+        effect0b = ICardEffect()
+        effect0b.set_effect_name("EX11-050 Alt digi from Evil Dragon Lv.4")
+        effect0b.set_effect_description("Alternate digivolution: Lv.4 Evil Dragon for 3")
+        effect0b._alt_digi_cost = 3
+        effect0b._alt_digi_level = 4
+        effect0b._alt_digi_trait = "Evil Dragon"
+
+        def condition0b(context: Dict[str, Any]) -> bool:
+            permanent = card.permanent_of_this_card() if card else None
+            if not permanent or not permanent.top_card:
+                return False
+            traits = getattr(permanent.top_card, 'card_traits', []) or []
+            return any('Evil Dragon' in tr for tr in traits)
+        effect0b.set_can_use_condition(condition0b)
+        effects.append(effect0b)
 
         # --- Shared On Play / When Digivolving logic ---
         def _shared_process(ctx: Dict[str, Any]):
@@ -80,14 +105,8 @@ class EX11_050(CardScript):
                 if not enemy:
                     return
 
-                def _has_trait(p):
-                    if not p.is_digimon or not p.top_card:
-                        return False
-                    traits = getattr(p.top_card, 'card_traits', []) or []
-                    return any('Dark Dragon' in t or 'Evil Dragon' in t for t in traits)
-
                 # Find own qualifying Digimon
-                own_qualifying = [p for p in player.battle_area if _has_trait(p)]
+                own_qualifying = [p for p in player.battle_area if _has_dragon_trait(p)]
                 if not own_qualifying:
                     return
 
@@ -125,7 +144,7 @@ class EX11_050(CardScript):
 
                 game.effect_select_own_permanent(
                     player, on_own_selected,
-                    filter_fn=_has_trait,
+                    filter_fn=_has_dragon_trait,
                     is_optional=False,
                     prompt="Select 1 of your [Dark Dragon]/[Evil Dragon] Digimon as reference.")
 
@@ -167,41 +186,53 @@ class EX11_050(CardScript):
         effect2.set_on_process_callback(_shared_process)
         effects.append(effect2)
 
-        # --- Effect 3: [All Turns] While hand <= 4, [Dark Dragon]/[Evil Dragon]
+        # --- Effect 3: [All Turns] While hand <= 4, all [Dark Dragon]/[Evil Dragon]
         #     Digimon gain Scapegoat ---
+        # Uses _applies_to_all_own_digimon aura pattern so the keyword applies to
+        # ALL qualifying Digimon on the field, not just this one.
         effect3 = ICardEffect()
         effect3.set_effect_name("EX11-050 Grant Scapegoat to Dark/Evil Dragon")
         effect3.set_effect_description(
             "[All Turns] While you have 4 or fewer cards in your hand, all of "
             "your [Dark Dragon] or [Evil Dragon] trait Digimon gain <Scapegoat>.")
         effect3._is_scapegoat = True
+        effect3._applies_to_all_own_digimon = True
+
+        def _dragon_trait_perm_condition(target_perm):
+            """Filter: target permanent must have Dark Dragon or Evil Dragon trait."""
+            if not target_perm.is_digimon or not target_perm.top_card:
+                return False
+            traits = getattr(target_perm.top_card, 'card_traits', []) or []
+            return any('Dark Dragon' in t or 'Evil Dragon' in t for t in traits)
+        effect3._keyword_permanent_condition = _dragon_trait_perm_condition
 
         def condition3(context: Dict[str, Any]) -> bool:
             if card and card.permanent_of_this_card() is None:
-                return False
-            permanent = card.permanent_of_this_card()
-            if not permanent or not permanent.top_card:
                 return False
             owner = card.owner if card else None
             if not owner:
                 return False
             if len(owner.hand_cards) > 4:
                 return False
-            traits = getattr(permanent.top_card, 'card_traits', []) or []
-            return (any('Dark Dragon' in tr for tr in traits) or
-                    any('Evil Dragon' in tr for tr in traits))
+            return True
         effect3.set_can_use_condition(condition3)
         effects.append(effect3)
 
-        # --- Effect 4: Inherited [Your Turn] While hand <= 4, [Dark Dragon]/
+        # --- Effect 4: Inherited [Your Turn] While hand <= 4, all [Dark Dragon]/
         #     [Evil Dragon] Digimon gain SA+1 ---
+        # Uses _applies_to_all_own_digimon aura pattern for field-wide SA+1.
+        # ENGINE LIMITATION: security_attack_modifier property does not scan
+        # aura effects from other permanents (unlike has_keyword which does).
+        # This means the SA+1 only applies to the Digimon this card is under,
+        # not all qualifying Digimon. A future engine fix to security_attack_modifier
+        # should add aura scanning similar to has_keyword's aura logic.
         effect4 = ICardEffect()
         effect4.set_effect_name("EX11-050 Grant SA+1 to Dark/Evil Dragon")
         effect4.set_effect_description(
             "[Your Turn] While you have 4 or fewer cards in your hand, all of "
             "your [Dark Dragon] or [Evil Dragon] trait Digimon gain <Security A. +1>.")
         effect4.is_inherited_effect = True
-        effect4.sa_modifier = 1
+        effect4._security_attack_modifier = 1
 
         def condition4(context: Dict[str, Any]) -> bool:
             if not (card and card.owner and card.owner.is_my_turn):

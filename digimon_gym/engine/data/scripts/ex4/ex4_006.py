@@ -10,12 +10,28 @@ if TYPE_CHECKING:
 
 class EX4_006(CardScript):
     """EX4-006 Guilmon | Lv.3
+    Alt digivolve: from [Gigimon] for cost 0
     [On Play] If the total trashes of both players add up to 20 or more cards,
     this Digimon gains <Rush> for the turn.
     """
 
     def get_card_effects(self, card: 'CardSource') -> List['ICardEffect']:
         effects = []
+
+        # --- Alt digivolve from Gigimon for cost 0 ---
+        # DCGO: AddSelfDigivolutionRequirementStaticEffect with
+        # PermanentCondition checking TopCard.CardNames.Contains("Gigimon"),
+        # digivolutionCost: 0
+        effect_alt = ICardEffect()
+        effect_alt.set_effect_name("EX4-006 Alt digi from Gigimon")
+        effect_alt.set_effect_description("Alternate digivolution: from Gigimon for 0")
+        effect_alt._alt_digi_cost = 0
+        effect_alt._alt_digi_name = "Gigimon"
+
+        def condition_alt(context: Dict[str, Any]) -> bool:
+            return True
+        effect_alt.set_can_use_condition(condition_alt)
+        effects.append(effect_alt)
 
         # [On Play] Conditional Rush
         effect0 = ICardEffect()

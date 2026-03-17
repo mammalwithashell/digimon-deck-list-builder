@@ -31,10 +31,10 @@ class BT21_100(CardScript):
         effect0.set_effect_description("Ignore Color Req while Takato Matsuki")
 
         def condition0(context: Dict[str, Any]) -> bool:
-            permanent = getattr(card, '_effect_source_permanent', None)
-            if not permanent:
+            owner = card.owner if card else None
+            if not owner:
                 return False
-            return permanent.contains_card_name('Takato Matsuki')
+            return any(p.contains_card_name('Takato Matsuki') for p in owner.battle_area)
         effect0.set_can_use_condition(condition0)
 
         def process0(ctx: Dict[str, Any]):

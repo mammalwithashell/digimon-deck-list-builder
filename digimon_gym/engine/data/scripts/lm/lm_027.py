@@ -110,36 +110,52 @@ class LM_027(CardScript):
         effect2.set_can_use_condition(condition2)
 
         def process2(ctx: Dict[str, Any]):
-            """Action: Return to deck top, Play Card"""
+            """Action: Return 1 red Digimon from trash to deck top, then play from trash."""
             player = ctx.get('player')
             perm = ctx.get('permanent')
             game = ctx.get('game')
             if not (player and game):
                 return
-            # Return 1 red Digimon from trash to top of deck
-            for i, c in enumerate(player.trash_cards):
-                if getattr(c, 'is_digimon', False):
-                    colors = getattr(c, 'card_colors', [])
-                    if any(col.name == 'Red' for col in colors):
-                        returned = player.trash_cards.pop(i)
-                        player.library_cards.insert(0, returned)
-                        break
-            # Then, if you don't have a Digimon, play 1 red Digimon
-            # with 2000 DP or less from trash without paying cost
-            has_digimon = any(
-                p.is_digimon for p in (player.battle_area or [])
-            )
-            if not has_digimon:
-                def play_filter(c):
-                    if not getattr(c, 'is_digimon', False):
-                        return False
-                    if not (any(col.name == 'Red' for col in getattr(c, 'card_colors', []))):
-                        return False
-                    if getattr(c, 'dp', None) is not None and c.dp > 2000:
-                        return False
-                    return True
-                game.effect_play_from_zone(
-                    player, 'trash', play_filter, free=True, is_optional=True)
+            # Return 1 red Digimon card from your trash to the top of the deck (player selects)
+            from ....game.constants import SEL_TRASH_START as _SEL_TRASH
+            from ....data.enums import GamePhase
+
+            def red_digi_filter(c):
+                if not getattr(c, 'is_digimon', False):
+                    return False
+                colors = getattr(c, 'card_colors', [])
+                return any(col.name == 'Red' for col in colors)
+
+            valid_trash = [_SEL_TRASH + i for i, c in enumerate(player.trash_cards) if red_digi_filter(c)]
+            if not valid_trash:
+                return
+
+            def on_trash_selected(action_id):
+                idx = action_id - _SEL_TRASH
+                if 0 <= idx < len(player.trash_cards):
+                    returned = player.trash_cards.pop(idx)
+                    player.library_cards.insert(0, returned)
+                # Then, if you don't have a Digimon, play 1 red Digimon
+                # with 2000 DP or less from trash without paying cost
+                has_digimon = any(
+                    p.is_digimon for p in (player.battle_area or [])
+                )
+                if not has_digimon:
+                    def play_filter(c):
+                        if not getattr(c, 'is_digimon', False):
+                            return False
+                        if not (any(col.name == 'Red' for col in getattr(c, 'card_colors', []))):
+                            return False
+                        if getattr(c, 'dp', None) is not None and c.dp > 2000:
+                            return False
+                        return True
+                    game.effect_play_from_zone(
+                        player, 'trash', play_filter, free=True, is_optional=True)
+
+            game.request_selection(
+                GamePhase.SelectTarget, player, on_trash_selected,
+                valid_trash, is_optional=False,
+                prompt="Select 1 red Digimon card from your trash to return to deck top.")
 
         effect2.set_on_process_callback(process2)
         effects.append(effect2)

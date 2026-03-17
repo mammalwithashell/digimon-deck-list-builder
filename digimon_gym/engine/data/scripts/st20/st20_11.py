@@ -191,7 +191,7 @@ class ST20_11(CardScript):
 
         # --- Effect 5: [When Attacking] Delete opponent's lowest DP Digimon ---
         effect5 = ICardEffect()
-        effect5.set_timing(EffectTiming.OnTappedAnyone)
+        effect5.set_timing(EffectTiming.OnUseAttack)
         effect5.set_effect_name("ST20-11 When Attacking: Delete lowest DP")
         effect5.set_effect_description(
             "[When Attacking] Delete 1 of your opponent's lowest DP Digimon."

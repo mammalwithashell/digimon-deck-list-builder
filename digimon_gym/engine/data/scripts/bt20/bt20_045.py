@@ -40,6 +40,17 @@ class BT20_045(CardScript):
         effect1.set_can_use_condition(condition1)
         effects.append(effect1)
 
+        # Factory effect: piercing
+        effect_piercing = ICardEffect()
+        effect_piercing.set_effect_name("BT20-045 Piercing")
+        effect_piercing.set_effect_description("Piercing")
+        effect_piercing._is_piercing = True
+
+        def condition_piercing(context: Dict[str, Any]) -> bool:
+            return True
+        effect_piercing.set_can_use_condition(condition_piercing)
+        effects.append(effect_piercing)
+
         # Factory effect: raid
         # Raid
         effect2 = ICardEffect()

@@ -62,28 +62,49 @@ class EX11_012(CardScript):
             game = ctx.get('game')
             if not (player and game):
                 return
+            enemy = player.enemy if player else None
+            if not enemy:
+                return
             def target_filter(p):
                 own_perm = card.permanent_of_this_card()
                 own_dp = own_perm.dp if own_perm else 0
                 return p.is_digimon and (p.dp or 0) <= (own_dp or 0)
             def on_delete(target_perm):
-                enemy = player.enemy if player else None
                 if enemy:
                     enemy.delete_permanent(target_perm)
             game.effect_select_opponent_permanent(
                 player, on_delete, filter_fn=target_filter, is_optional=False)
-            if not (player and game):
-                return
+            # Return 1 opponent permanent to deck bottom (player selects)
             def target_filter_return(p):
                 return True
             def on_return(target_perm):
-                enemy = player.enemy if player else None
                 if enemy:
                     enemy.return_permanent_to_deck_bottom(target_perm)
             game.effect_select_opponent_permanent(
                 player, on_return, filter_fn=target_filter_return, is_optional=False)
-            # Play 1 Petrification Token on opponent's field
-            game.effect_play_token(player, 'petrification', on_opponent_field=True, count=1)
+            # "Then, by returning 1 card from your opponent's trash to the bottom
+            #  of the deck, they play 1 [Petrification] Token."
+            # "By returning" = cost. If opponent's trash is empty, skip token.
+            from ....game.constants import SEL_TRASH_START as _SEL_TRASH
+            from ....data.enums import GamePhase
+
+            valid_trash = [_SEL_TRASH + i for i in range(len(enemy.trash_cards))]
+            if not valid_trash:
+                return
+
+            def on_trash_selected(action_id):
+                idx = action_id - _SEL_TRASH
+                if 0 <= idx < len(enemy.trash_cards):
+                    chosen = enemy.trash_cards[idx]
+                    enemy.trash_cards.remove(chosen)
+                    enemy.library_cards.append(chosen)
+                    # Cost paid — play 1 Petrification Token on opponent's field
+                    game.effect_play_token(player, 'petrification', on_opponent_field=True, count=1)
+
+            game.request_selection(
+                GamePhase.SelectTarget, player, on_trash_selected,
+                valid_trash, is_optional=False,
+                prompt="Select 1 card from opponent's trash to return to deck bottom (cost for Petrification Token).")
 
         effect2.set_on_process_callback(process2)
         effects.append(effect2)
@@ -111,28 +132,47 @@ class EX11_012(CardScript):
             game = ctx.get('game')
             if not (player and game):
                 return
+            enemy = player.enemy if player else None
+            if not enemy:
+                return
             def target_filter(p):
                 own_perm = card.permanent_of_this_card()
                 own_dp = own_perm.dp if own_perm else 0
                 return p.is_digimon and (p.dp or 0) <= (own_dp or 0)
             def on_delete(target_perm):
-                enemy = player.enemy if player else None
                 if enemy:
                     enemy.delete_permanent(target_perm)
             game.effect_select_opponent_permanent(
                 player, on_delete, filter_fn=target_filter, is_optional=False)
-            if not (player and game):
-                return
+            # Return 1 opponent permanent to deck bottom (player selects)
             def target_filter_return(p):
                 return True
             def on_return(target_perm):
-                enemy = player.enemy if player else None
                 if enemy:
                     enemy.return_permanent_to_deck_bottom(target_perm)
             game.effect_select_opponent_permanent(
                 player, on_return, filter_fn=target_filter_return, is_optional=False)
-            # Play 1 Petrification Token on opponent's field
-            game.effect_play_token(player, 'petrification', on_opponent_field=True, count=1)
+            # "Then, by returning 1 card from your opponent's trash to the bottom
+            #  of the deck, they play 1 [Petrification] Token."
+            from ....game.constants import SEL_TRASH_START as _SEL_TRASH
+            from ....data.enums import GamePhase
+
+            valid_trash = [_SEL_TRASH + i for i in range(len(enemy.trash_cards))]
+            if not valid_trash:
+                return
+
+            def on_trash_selected(action_id):
+                idx = action_id - _SEL_TRASH
+                if 0 <= idx < len(enemy.trash_cards):
+                    chosen = enemy.trash_cards[idx]
+                    enemy.trash_cards.remove(chosen)
+                    enemy.library_cards.append(chosen)
+                    game.effect_play_token(player, 'petrification', on_opponent_field=True, count=1)
+
+            game.request_selection(
+                GamePhase.SelectTarget, player, on_trash_selected,
+                valid_trash, is_optional=False,
+                prompt="Select 1 card from opponent's trash to return to deck bottom (cost for Petrification Token).")
 
         effect3.set_on_process_callback(process3)
         effects.append(effect3)

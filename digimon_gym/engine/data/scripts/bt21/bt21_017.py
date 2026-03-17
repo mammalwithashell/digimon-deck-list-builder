@@ -27,7 +27,10 @@ class BT21_017(CardScript):
         def condition0(context: Dict[str, Any]) -> bool:
             if card and card.permanent_of_this_card() is None:
                 return False
-            # Triggered when digivolving — validated by engine timing
+            # Card text: "If you have 1 or fewer Tamers"
+            owner = card.owner if card else None
+            if owner and sum(1 for p in owner.battle_area if p.is_tamer) > 1:
+                return False
             return True
 
         effect0.set_can_use_condition(condition0)

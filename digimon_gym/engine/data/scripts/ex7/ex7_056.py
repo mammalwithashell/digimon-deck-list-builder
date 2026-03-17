@@ -63,14 +63,14 @@ class EX7_056(CardScript):
                     return
 
                 def lv3_filter(p):
-                    return p.is_digimon and getattr(p.top_card, 'level', None) == 3
+                    return p.is_digimon and getattr(p, 'level', None) == 3
 
                 def on_delete_lv3(target_perm):
                     enemy.delete_permanent(target_perm)
 
                     # Step 3: Delete 1 opponent's level 4 Digimon
                     def lv4_filter(p):
-                        return p.is_digimon and getattr(p.top_card, 'level', None) == 4
+                        return p.is_digimon and getattr(p, 'level', None) == 4
 
                     def on_delete_lv4(target_perm2):
                         enemy.delete_permanent(target_perm2)
@@ -93,7 +93,7 @@ class EX7_056(CardScript):
                 else:
                     # No lv3 targets, still try lv4
                     def lv4_filter(p):
-                        return p.is_digimon and getattr(p.top_card, 'level', None) == 4
+                        return p.is_digimon and getattr(p, 'level', None) == 4
 
                     def on_delete_lv4(target_perm2):
                         enemy.delete_permanent(target_perm2)

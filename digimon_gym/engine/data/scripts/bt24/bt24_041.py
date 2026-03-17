@@ -195,60 +195,6 @@ class BT24_041(CardScript):
         effect5.set_on_process_callback(_shared_process)
         effects.append(effect5)
 
-        # Timing: WhenPermanentWouldBeDeleted — [All Turns][Once Per Turn]
-        # When this Digimon or any of your other [Iliad] trait Digimon would be deleted,
-        # you may trash 1 card from the top of your security stack to prevent deletion.
-        # NOTE: Engine gap — the deletion prevention for OTHER Digimon (not self) cannot be
-        # fully implemented with current keyword system. Self-protection via _is_barrier is
-        # battle-only; this effect fires any time.
-        # We implement a best-effort WhenRemoveField guard for self only, and tag the
-        # protection-of-others as a gap.
-        effect6 = ICardEffect()
-        effect6.set_timing(EffectTiming.WhenRemoveField)
-        effect6.set_effect_name(
-            "BT24-041 [All Turns][OPT] Trash security to prevent deletion (self + Iliad)")
-        effect6.set_effect_description(
-            "[All Turns][Once Per Turn] When this Digimon or any of your other [Iliad] trait "
-            "Digimon would be deleted, you may trash 1 card from the top of your security stack "
-            "to prevent deletion.")
-        effect6.is_optional = True
-        effect6.set_max_count_per_turn(1)
-        effect6.set_hash_string("TrashSecurityToStay_BT24_041")
-
-        def condition6(context: Dict[str, Any]) -> bool:
-            if card and card.permanent_of_this_card() is None:
-                return False
-            owner = getattr(card, 'owner', None)
-            if not owner or len(owner.security_cards) == 0:
-                return False
-            ctx_perm = context.get('permanent')
-            owner_perm = card.permanent_of_this_card()
-            if ctx_perm is owner_perm:
-                return True  # This Digimon being deleted
-            # Other Iliad Digimon being deleted
-            if ctx_perm and ctx_perm.top_card:
-                traits = getattr(ctx_perm.top_card, 'card_traits', []) or []
-                if any('Iliad' in t for t in traits):
-                    return True
-            return False
-            # NOTE: protecting-others engine gap — process callback not reachable
-            # for other permanents; full multi-Digimon protection requires engine support
-
-        effect6.set_can_use_condition(condition6)
-
-        def process6(ctx: Dict[str, Any]):
-            """Trash 1 card from top of security stack to prevent deletion."""
-            player = ctx.get('player')
-            game = ctx.get('game')
-            if not (player and game):
-                return
-            if player.security_cards:
-                top_sec = player.security_cards.pop(0)
-                player.trash_cards.append(top_sec)
-
-        effect6.set_on_process_callback(process6)
-        effects.append(effect6)
-
         # [Opponent's Turn] All of your [Iliad] trait Digimon gain <Reboot> and <Blocker>.
         # Use _applies_to_all_own_digimon with condition checking Iliad trait
         def _iliad_opp_turn_condition(context: Dict[str, Any]) -> bool:

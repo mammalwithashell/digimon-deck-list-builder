@@ -36,18 +36,26 @@ class BT21_001(CardScript):
         effect0.set_can_use_condition(condition0)
 
         def process0(ctx: Dict[str, Any]):
-            """Action: Digivolve"""
+            """Action: 1 of your Digimon may digivolve into a Reptile/Dragonkin from hand with cost -1."""
             player = ctx.get('player')
             perm = ctx.get('permanent')
             game = ctx.get('game')
-            if not (player and perm and game):
+            if not (player and game):
                 return
             def digi_filter(c):
                 if not (any('Reptile' in _t or 'Dragonkin' in _t for _t in (getattr(c, 'card_traits', []) or []))):
                     return False
                 return True
-            game.effect_digivolve_from_hand(
-                player, perm, digi_filter, cost_reduction=1, is_optional=True)
+            # "1 of your Digimon" — player selects which Digimon to digivolve (not just self)
+            def own_filter(p):
+                return p.is_digimon
+            def on_selected(target_perm):
+                game.effect_digivolve_from_hand(
+                    player, target_perm, digi_filter, cost_reduction=1, is_optional=True,
+                    prompt="Select a [Reptile] or [Dragonkin] Digimon from hand to digivolve into (cost -1).")
+            game.effect_select_own_permanent(
+                player, on_selected, filter_fn=own_filter, is_optional=True,
+                prompt="Select 1 of your Digimon to digivolve.")
 
         effect0.set_on_process_callback(process0)
         effects.append(effect0)

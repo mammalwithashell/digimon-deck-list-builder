@@ -83,10 +83,10 @@ class BT21_093(CardScript):
         effect3._is_delay = True
 
         def condition3(context: Dict[str, Any]) -> bool:
+            # Delay effect — the option card must be on field (placed via Delay).
+            # The Reptile/Dragonkin trait check is on the digivolve targets,
+            # not on this option card.
             if card and card.permanent_of_this_card() is None:
-                return False
-            permanent = card.permanent_of_this_card() if card else None
-            if not (permanent and permanent.top_card and (any('Reptile' in tr for tr in (getattr(permanent.top_card, 'card_traits', []) or [])) or any('Dragonkin' in tr for tr in (getattr(permanent.top_card, 'card_traits', []) or [])))):
                 return False
             return True
         effect3.set_can_use_condition(condition3)

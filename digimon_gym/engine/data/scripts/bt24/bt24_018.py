@@ -103,19 +103,39 @@ class BT24_018(CardScript):
         effect4.set_can_use_condition(condition4)
 
         def process4(ctx: Dict[str, Any]):
-            """Action: Optionally trash opponent's top security, then optionally unsuspend self"""
+            """Action: You may trash 1 opponent's security. Then, this Digimon may unsuspend."""
             player = ctx.get('player')
             perm = ctx.get('permanent')
             game = ctx.get('game')
-            # Optionally trash opponent's top security card
-            enemy = player.enemy if player else None
-            if enemy and enemy.security_cards:
-                trashed = enemy.security_cards.pop(0)
-                enemy.trash_cards.append(trashed)
             if not (player and game and perm):
                 return
-            # Optionally unsuspend THIS Digimon (self only)
-            perm.unsuspend()
+            enemy = player.enemy if player else None
+
+            def _maybe_unsuspend():
+                """Second optional step: this Digimon may unsuspend."""
+                if perm and perm.is_suspended:
+                    def on_unsuspend_choice(choice):
+                        if choice == 0 and perm:
+                            perm.unsuspend()
+                    game.effect_choose_branch(
+                        player, 2, on_unsuspend_choice,
+                        prompt="This Digimon may unsuspend.",
+                        branch_labels=["Yes, unsuspend", "No, decline"])
+                # If not suspended, nothing to do
+
+            # First optional step: you may trash 1 opponent's security card
+            if enemy and enemy.security_cards:
+                def on_trash_choice(choice):
+                    if choice == 0 and enemy and enemy.security_cards:
+                        trashed = enemy.security_cards.pop(0)
+                        enemy.trash_cards.append(trashed)
+                    _maybe_unsuspend()
+                game.effect_choose_branch(
+                    player, 2, on_trash_choice,
+                    prompt="You may trash 1 of your opponent's security cards.",
+                    branch_labels=["Yes, trash security", "No, decline"])
+            else:
+                _maybe_unsuspend()
 
         effect4.set_on_process_callback(process4)
         effects.append(effect4)
@@ -190,26 +210,29 @@ class BT24_018(CardScript):
         effect6.set_can_use_condition(condition6)
 
         def process6(ctx: Dict[str, Any]):
-            """Action: Delete opponent's lowest-DP Digimon, then prevent leaving_perm from leaving"""
+            """Action: By deleting 1 opponent's Digimon, prevent leaving_perm from leaving."""
             player = ctx.get('player')
             game = ctx.get('game')
             leaving_perm = ctx.get('permanent')
             if not (player and game):
                 return
             enemy = player.enemy if player else None
-            # Delete opponent's lowest-DP Digimon
-            if enemy:
-                opp_digimon = [p for p in enemy.battle_area if p.is_digimon]
-                if opp_digimon:
-                    lowest = min(opp_digimon, key=lambda p: getattr(p, 'dp', 0))
-                    enemy.delete_permanent(lowest)
-            # Prevent the leaving permanent from leaving via CANNOT_BE_REMOVED
-            if leaving_perm:
-                from digimon_gym.engine.interfaces.modifiers import ModifierType
-                game.register_modifier(
-                    leaving_perm, ModifierType.CANNOT_BE_REMOVED,
-                    value_fn=lambda: True, expiry='end_of_turn'
-                )
+            # "By deleting 1 of your opponent's Digimon" — player selects which to delete
+            def on_delete(target_perm):
+                if enemy:
+                    enemy.delete_permanent(target_perm)
+                # Cost paid — prevent the leaving permanent from leaving
+                if leaving_perm:
+                    from digimon_gym.engine.interfaces.modifiers import ModifierType
+                    game.register_modifier(
+                        leaving_perm, ModifierType.CANNOT_BE_REMOVED,
+                        value_fn=lambda: True, expiry='end_of_turn'
+                    )
+            def target_filter(p):
+                return p.is_digimon
+            game.effect_select_opponent_permanent(
+                player, on_delete, filter_fn=target_filter, is_optional=False,
+                prompt="Select 1 of your opponent's Digimon to delete (cost to prevent leaving).")
 
         effect6.set_on_process_callback(process6)
         effects.append(effect6)

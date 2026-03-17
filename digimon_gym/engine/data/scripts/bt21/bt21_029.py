@@ -133,7 +133,7 @@ class BT21_029(CardScript):
         effect4 = ICardEffect()
         effect4.set_effect_name("BT21-029 Play 1 [Petrification Token]")
         effect4.set_effect_description("[All Turns] [Once Per Turn] When any of your opponent's Digimon are deleted, they play 1 [Petrification] Token")
-        effect4.set_hash_string("PlayToken_BT21_029_deletion")
+        effect4.set_hash_string("PlayToken_BT21_029")
         effect4._is_deletion_observer = True
         effect4.set_max_count_per_turn(1)
 
@@ -175,7 +175,7 @@ class BT21_029(CardScript):
         effect5.set_timing(EffectTiming.OnLoseSecurity)
         effect5.set_effect_name("BT21-029 Play 1 [Petrification Token]")
         effect5.set_effect_description("[All Turns] [Once Per Turn] When opponents security stack is removed from, they play 1 [Petrification] Token")
-        effect5.set_hash_string("PlayToken_BT21_029_security")
+        effect5.set_hash_string("PlayToken_BT21_029")
 
         effect5.set_max_count_per_turn(1)
 

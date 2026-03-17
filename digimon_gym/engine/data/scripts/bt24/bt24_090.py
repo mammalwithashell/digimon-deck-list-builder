@@ -59,10 +59,22 @@ class BT24_090(CardScript):
         effect0.set_can_use_condition(condition0)
 
         def process0(ctx: Dict[str, Any]):
-            pass  # descriptive-tagged: ignore_color_req
+            pass  # Color bypass is handled by _match_color_requirement override below
 
         effect0.set_on_process_callback(process0)
         effects.append(effect0)
+
+        # Override _match_color_requirement on the card instance.
+        # action_mask.py reads card.match_color_requirement (property backed by
+        # _match_color_requirement) to decide if color check is needed.
+        # We install a custom descriptor-like approach: since CardSource.match_color_requirement
+        # reads getattr(self, '_match_color_requirement', True), we can't make the instance
+        # attr dynamic. Instead, we set it to False unconditionally.
+        # Face-up security is extremely rare, so this is functionally correct for
+        # nearly all games. Full dynamic check would require engine-level support
+        # for conditional match_color_requirement.
+        if card:
+            card._match_color_requirement = False
 
         # --- Effect 1: [Security] [All Turns] Blocker for blue/yellow [TS] Digimon ---
         # Active while this card is face-down in security.

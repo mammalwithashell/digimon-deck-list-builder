@@ -153,9 +153,14 @@ class EX11_069(CardScript):
                 if not (0 <= idx < len(player.trash_cards)):
                     return
                 chosen = player.trash_cards[idx]
-                base_cost = getattr(chosen, 'get_cost_itself', 0)
-                if callable(base_cost):
-                    base_cost = base_cost
+                # Use the card's evo_costs (digivolution costs) rather than play cost
+                base_cost = None
+                if chosen.c_entity_base and chosen.c_entity_base.evo_costs:
+                    # Use the minimum digivolution memory cost from all evo routes
+                    base_cost = min(ec.memory_cost for ec in chosen.c_entity_base.evo_costs)
+                if base_cost is None:
+                    # Fallback to play cost if no evo_costs defined
+                    base_cost = chosen.get_cost_itself if chosen.get_cost_itself is not None else 0
                 cost = max(0, base_cost - 1)
                 player.trash_cards.remove(chosen)
                 perm.add_card_source(chosen)

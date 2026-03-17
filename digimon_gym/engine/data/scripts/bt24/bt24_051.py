@@ -179,57 +179,6 @@ class BT24_051(CardScript):
         effect4.set_on_process_callback(_shared_suspend_process)
         effects.append(effect4)
 
-        # Timing: EffectTiming.WhenRemoveField — [All Turns][Once Per Turn]
-        # When this Digimon or any of your other Digimon with [TS] or
-        # [Beast]/[Animal]/[Sovereign] would leave the battle area by your
-        # opponent's effects, by suspending this Digimon, they don't leave.
-        effect5 = ICardEffect()
-        effect5.set_timing(EffectTiming.WhenRemoveField)
-        effect5.set_effect_name(
-            "BT24-051 [All Turns][OPT] Suspend self to prevent TS/Beast/Animal/Sovereign leaving")
-        effect5.set_effect_description(
-            "[All Turns][Once Per Turn] When this Digimon or any of your other "
-            "Digimon with the [TS] trait or with [Beast], [Animal], or [Sovereign] "
-            "in any of their traits would leave the battle area by your opponent's "
-            "effects, by suspending this Digimon, they don't leave.")
-        effect5.is_optional = True
-        effect5.set_max_count_per_turn(1)
-        effect5.set_hash_string("SuspendToStay_BT24_051")
-
-        def condition5(context: Dict[str, Any]) -> bool:
-            if card and card.permanent_of_this_card() is None:
-                return False
-            owner = getattr(card, 'owner', None)
-            if not owner:
-                return False
-            my_perm = card.permanent_of_this_card()
-            # Must not already be suspended (need to suspend as cost)
-            if my_perm and my_perm.is_suspended:
-                return False
-            ctx_perm = context.get('permanent')
-            if ctx_perm is my_perm:
-                return True  # Protecting self
-            # Other qualifying Digimon
-            if ctx_perm and ctx_perm.top_card:
-                traits = getattr(ctx_perm.top_card, 'card_traits', []) or []
-                if (any('TS' in t for t in traits)
-                        or any('Beast' in t for t in traits)
-                        or any('Animal' in t for t in traits)
-                        or any('Sovereign' in t for t in traits)):
-                    return True
-            return False
-
-        effect5.set_can_use_condition(condition5)
-
-        def process5(ctx: Dict[str, Any]):
-            """Suspend this Digimon to prevent it or a qualifying ally from leaving."""
-            my_perm = card.permanent_of_this_card()
-            if my_perm and not my_perm.is_suspended:
-                my_perm.suspend()
-
-        effect5.set_on_process_callback(process5)
-        effects.append(effect5)
-
         # Timing: EffectTiming.OnEnterFieldAnyone — [When Digivolving][Once Per Turn]
         # 1 of your Digimon may unsuspend.
         effect6 = ICardEffect()
@@ -265,15 +214,16 @@ class BT24_051(CardScript):
         effect6.set_on_process_callback(process6)
         effects.append(effect6)
 
-        # Timing: EffectTiming.OnUseAttack — [When Attacking][Once Per Turn]
+        # Timing: EffectTiming.OnAllyAttack — [When Attacking][Once Per Turn]
         # When one of your Digimon attacks, 1 of your Digimon may unsuspend.
+        # Uses OnAllyAttack because this fires when ANY of your Digimon attacks,
+        # not just self (card text: "When one of your Digimon attacks").
         effect7 = ICardEffect()
-        effect7.set_timing(EffectTiming.OnUseAttack)
+        effect7.set_timing(EffectTiming.OnAllyAttack)
         effect7.set_effect_name("BT24-051 [When Attacking][OPT] Unsuspend 1 Digimon")
         effect7.set_effect_description(
             "[When Attacking] [Once Per Turn] When one of your Digimon attacks, "
             "1 of your Digimon may unsuspend.")
-        effect7.is_on_attack = True
         effect7.set_max_count_per_turn(1)
         effect7.set_hash_string("BT24_051_WD_WA")
 

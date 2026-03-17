@@ -31,13 +31,16 @@ class BT24_101(CardScript):
 
         # Factory effect: alt_digivolve_req
         # Alternate digivolution: Lv.5 named [Aegiochusmon], cost = your security count
+        # C# uses CostEquation based on card.Owner.SecurityCards.Count
         effect1 = ICardEffect()
         effect1.set_effect_name("BT24-101 Alternate digivolution requirement (Aegiochusmon)")
         effect1.set_effect_description(
             "Alternate digivolution: Lv.5 named [Aegiochusmon], cost = security count")
-        effect1._alt_digi_cost = 5  # default, overridden by _alt_digi_cost_fn
+        effect1._alt_digi_cost = 5  # fallback static cost
         effect1._alt_digi_level = 5
         effect1._alt_digi_name = "Aegiochusmon"
+        # Dynamic cost: 1 for each of your security cards
+        effect1._alt_digi_cost_fn = lambda: len(card.owner.security_cards) if card and card.owner else 5
 
         def condition1(context: Dict[str, Any]) -> bool:
             permanent = card.permanent_of_this_card() if card else None
@@ -68,7 +71,7 @@ class BT24_101(CardScript):
         effect2.set_can_use_condition(condition2)
 
         def process2_fixed(ctx: Dict[str, Any]):
-            """[On Play] Trash own security, -13000 DP opponent, conditional Recovery +2."""
+            """[On Play] Trash own security, -13000 DP opponent (until their turn ends), conditional Recovery +2."""
             player = ctx.get('player')
             game = ctx.get('game')
             if not (player and game):
@@ -78,8 +81,13 @@ class BT24_101(CardScript):
                 top_sec = player.security_cards[0]
                 player.trash_security_card(top_sec)
             # Step 2: Player selects 1 of opponent's Digimon to get -13000 DP
+            # Card text: "until their turn ends" = end_of_opponent_turn
             def on_dp_target(target_perm):
-                target_perm.change_dp(-13000)
+                from ....interfaces.modifiers import ModifierType
+                game.register_modifier(
+                    target_perm, ModifierType.CHANGE_DP,
+                    value_fn=lambda cur, t, c: cur - 13000,
+                    expiry='end_of_opponent_turn')
                 # Step 3: If you have 1 or fewer security cards, Recovery +2
                 if len(player.security_cards) <= 1:
                     player.recovery(2)
@@ -110,7 +118,7 @@ class BT24_101(CardScript):
         effect3.set_can_use_condition(condition3)
 
         def process3(ctx: Dict[str, Any]):
-            """[When Digivolving] Trash own security, -13000 DP opponent, conditional Recovery +2."""
+            """[When Digivolving] Trash own security, -13000 DP opponent (until their turn ends), conditional Recovery +2."""
             player = ctx.get('player')
             game = ctx.get('game')
             if not (player and game):
@@ -120,8 +128,13 @@ class BT24_101(CardScript):
                 top_sec = player.security_cards[0]
                 player.trash_security_card(top_sec)
             # Step 2: Player selects 1 of opponent's Digimon to get -13000 DP
+            # Card text: "until their turn ends" = end_of_opponent_turn
             def on_dp_target(target_perm):
-                target_perm.change_dp(-13000)
+                from ....interfaces.modifiers import ModifierType
+                game.register_modifier(
+                    target_perm, ModifierType.CHANGE_DP,
+                    value_fn=lambda cur, t, c: cur - 13000,
+                    expiry='end_of_opponent_turn')
                 # Step 3: If you have 1 or fewer security cards, Recovery +2
                 if len(player.security_cards) <= 1:
                     player.recovery(2)
@@ -182,6 +195,7 @@ class BT24_101(CardScript):
         # security card, they don't leave.
         # ----------------------------------------------------------------
         effect5 = ICardEffect()
+        effect5.set_timing(EffectTiming.WhenRemoveField)
         effect5.set_effect_name("BT24-101 By trashing top security, [TS] card doesn't leave")
         effect5.set_effect_description("[All Turns] [Once Per Turn] When any of your [TS] trait Digimon or Tamers would leave the battle area, by trashing your top security card, they don't leave.")
         effect5.is_optional = True
@@ -191,13 +205,11 @@ class BT24_101(CardScript):
         def condition5(context: Dict[str, Any]) -> bool:
             if card and card.permanent_of_this_card() is None:
                 return False
-            # Only fire during WhenPermanentWouldBeDeleted
-            # (this timing provides 'is_battle' in context; WhenRemoveField does not)
-            if 'is_battle' not in context:
-                return False
-            # The permanent being deleted must have [TS] trait
+            # The permanent being removed must have [TS] trait
             target_perm = context.get('permanent')
             if target_perm is None:
+                return False
+            if not (target_perm.is_digimon or target_perm.is_tamer):
                 return False
             if not target_perm.has_trait('TS'):
                 return False

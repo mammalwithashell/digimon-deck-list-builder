@@ -101,6 +101,10 @@ class BT21_025(CardScript):
                     return False
                 if not (any('Reptile' in _t or 'Dragonkin' in _t for _t in (getattr(c, 'card_traits', []) or []))):
                     return False
+                # Card text: "5000 DP or less"
+                dp = getattr(c, 'dp', None)
+                if dp is not None and dp > 5000:
+                    return False
                 return True
             game.effect_play_from_zone(
                 player, 'hand', play_filter, free=True, is_optional=True)

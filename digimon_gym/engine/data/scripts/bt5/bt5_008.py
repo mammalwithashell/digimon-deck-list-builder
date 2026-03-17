@@ -24,7 +24,10 @@ class BT5_008(CardScript):
         effect0._applies_to_all_own_digimon = True
 
         def _gaossmon_filter(target_perm) -> bool:
-            """Only apply to other Gaossmon permanents."""
+            """Only apply to OTHER Gaossmon permanents (exclude self)."""
+            own_perm = card.permanent_of_this_card() if card else None
+            if target_perm is own_perm:
+                return False
             top = getattr(target_perm, 'top_card', None)
             if not top:
                 return False

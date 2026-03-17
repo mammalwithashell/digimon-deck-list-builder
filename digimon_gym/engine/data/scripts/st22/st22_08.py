@@ -47,7 +47,7 @@ class ST22_08(CardScript):
         effect_sec.set_can_use_condition(condition_sec)
 
         def process_sec(ctx: Dict[str, Any]):
-            """Delete lowest DP opponent Digimon, then add this card to hand."""
+            """Delete lowest DP opponent Digimon (player selects on ties), then add this card to hand."""
             player = ctx.get('player')
             game = ctx.get('game')
             if not (player and game):
@@ -59,14 +59,20 @@ class ST22_08(CardScript):
             opp_digimon = [p for p in enemy.battle_area if p.is_digimon and p.dp is not None]
             if opp_digimon:
                 min_dp = min(p.dp for p in opp_digimon)
-                lowest = [p for p in opp_digimon if p.dp == min_dp]
-                if lowest:
-                    target = lowest[0]
-                    enemy.delete_permanent(target)
-
-            # Add this card to hand
-            if card:
-                if card in player.trash_cards:
+                def lowest_filter(p):
+                    return p.is_digimon and p.dp is not None and p.dp == min_dp
+                def on_delete(target_perm):
+                    enemy.delete_permanent(target_perm)
+                    # Add this card to hand after deletion
+                    if card and card in player.trash_cards:
+                        player.trash_cards.remove(card)
+                        player.hand_cards.append(card)
+                game.effect_select_opponent_permanent(
+                    player, on_delete, filter_fn=lowest_filter, is_optional=False,
+                    prompt="Delete 1 of your opponent's Digimon with the lowest DP.")
+            else:
+                # No opponent Digimon to delete, still add card to hand
+                if card and card in player.trash_cards:
                     player.trash_cards.remove(card)
                     player.hand_cards.append(card)
 

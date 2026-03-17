@@ -90,7 +90,7 @@ class EX11_061(CardScript):
             def play_filter(c):
                 if not getattr(c, 'is_digimon', False):
                     return False
-                if getattr(c, 'card_level', None) != 3:
+                if getattr(c, 'level', None) != 3:
                     return False
                 return _is_puppet_trait(c)
             game.effect_play_from_zone(

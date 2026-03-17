@@ -54,7 +54,7 @@ class BT24_085(CardScript):
         )
         effect1.set_effect_description(
             "[End of Your Turn] By suspending this Tamer, you may use 1 [TS] trait Option card "
-            "with as high or lower a use cost as your opponent's memory from your hand "
+            "with as high or lower a use cost as your opponent's number of Digimon from your hand "
             "without paying the cost. Then, 1 of your Digimon with the [TS] trait may attack."
         )
         effect1.is_optional = True
@@ -67,10 +67,6 @@ class BT24_085(CardScript):
             # Cannot pay cost if already suspended
             tamer_perm = card.permanent_of_this_card() if card else None
             if tamer_perm and tamer_perm.is_suspended:
-                return False
-            # Only activatable when memory is on opponent's side (player memory <= 0)
-            game = context.get('game')
-            if game is not None and game.memory > 0:
                 return False
             return True
 
@@ -90,92 +86,56 @@ class BT24_085(CardScript):
             if not tamer_perm.is_suspended:
                 return  # Suspension failed
 
-            # Card text: "with as high or lower a use cost as your opponent's memory"
-            # Opponent's memory = how much memory is on the opponent's side
-            # In the engine, memory gauge is from player's perspective;
-            # opponent's memory = abs(min(0, game.memory)) when it's our turn
-            # (i.e. if memory is negative, opponent has that much)
-            # But at end of turn the memory may have shifted. We use the absolute
-            # value of negative memory or 0.
+            # Card text: "use cost as high or lower as your opponent's number of Digimon"
             enemy = player.enemy
             if not enemy:
                 return
-            # Memory from opponent's perspective: if game.memory <= 0, opponent has abs(game.memory)
-            # If game.memory > 0, opponent has 0
-            opp_memory = abs(min(0, game.memory)) if game else 0
+            opp_digi_count = len([p for p in enemy.battle_area if p.is_digimon])
 
-            # Select and use 1 [TS] Option from hand with use cost <= opponent's memory
+            # Select and use 1 [TS] Option from hand with use cost <= opponent's Digimon count
             def option_filter(c):
                 if not getattr(c, 'is_option', False):
                     return False
                 if not any('TS' in _t for _t in (getattr(c, 'card_traits', []) or [])):
                     return False
                 cost = c.get_cost_itself if hasattr(c, 'get_cost_itself') else getattr(c, 'play_cost', 0)
-                return cost <= opp_memory
+                return cost <= opp_digi_count
 
             game.effect_play_from_zone(
                 player, 'hand', option_filter, free=True, is_optional=True,
                 prompt="Select a [TS] Option to use for free.")
 
-            # Then 1 [TS] Digimon may attack (force_attack — engine SelectAttack phase)
-            pass  # descriptive-tagged: force_attack_ts_digimon
+            # Then 1 [TS] Digimon may attack.
+            # Engine limitation: no clean "optional end-of-turn attack" API.
+            # Use FORCE_ATTACK modifier — if memory swings back to positive after
+            # OnEndTurn effects, the game returns to Main Phase where the forced
+            # attack will execute. If memory stays negative, turn ends (attack lost).
+            # FORCE_ATTACK is mandatory not optional — engine gap for "may attack".
+            from ....interfaces.modifiers import ModifierType
+            def _ts_digi_filter(p):
+                if not p.is_digimon:
+                    return False
+                top = getattr(p, 'top_card', None)
+                if not top:
+                    return False
+                traits = getattr(top, 'card_traits', []) or []
+                return any('TS' in t for t in traits)
+
+            def on_attacker_selected(target_perm):
+                if target_perm.is_suspended:
+                    target_perm.unsuspend()
+                game.register_modifier(
+                    target_perm, ModifierType.FORCE_ATTACK,
+                    value_fn=lambda: True, expiry='end_of_turn')
+
+            game.effect_select_own_permanent(
+                player, on_attacker_selected,
+                filter_fn=_ts_digi_filter,
+                is_optional=True,
+                prompt="Select 1 of your [TS] Digimon that may attack.")
 
         effect1.set_on_process_callback(process1)
         effects.append(effect1)
-
-        # [All Turns][Once Per Turn] When any of your Digimon with the [TS] trait digivolves,
-        # by suspending this Tamer, gain 2 memory.
-        effect2 = ICardEffect()
-        effect2.set_timing(EffectTiming.OnEnterFieldAnyone)
-        effect2.set_effect_name("BT24-085 OPT: When [TS] digimon digivolves, suspend to gain 2 memory")
-        effect2.set_effect_description(
-            "[All Turns] [Once Per Turn] When any of your Digimon with the [TS] trait digivolves, "
-            "by suspending this Tamer, gain 2 memory."
-        )
-        effect2.is_optional = True
-        effect2.is_when_digivolving = True
-        effect2.set_max_count_per_turn(1)
-        effect2.set_hash_string("BT24_085_digi_suspend_memory")
-
-        def condition2(context: Dict[str, Any]) -> bool:
-            if card and card.permanent_of_this_card() is None:
-                return False
-            # Check the digivolving permanent is owned by us and has [TS] trait
-            event_perm = context.get('digivolved_permanent') or context.get('permanent')
-            if not event_perm:
-                return False
-            if not event_perm.is_digimon:
-                return False
-            if not any('TS' in _t for _t in (getattr(event_perm.top_card, 'card_traits', []) or [])):
-                return False
-            # Must be our Digimon (all turns = both turns)
-            owner_player = card.owner if card else None
-            perm_owner = getattr(event_perm, 'owner', None)
-            if owner_player and perm_owner and perm_owner is not owner_player:
-                return False
-            # Cannot use if tamer is already suspended
-            tamer_perm = card.permanent_of_this_card() if card else None
-            if tamer_perm and tamer_perm.is_suspended:
-                return False
-            return True
-
-        effect2.set_can_use_condition(condition2)
-
-        def process2(ctx: Dict[str, Any]):
-            player = ctx.get('player')
-            game = ctx.get('game')
-            if not (player and game):
-                return
-            # Cost: suspend this tamer
-            tamer_perm = card.permanent_of_this_card() if card else None
-            if not tamer_perm:
-                return
-            tamer_perm.suspend()
-            if tamer_perm.is_suspended:
-                player.add_memory(2)
-
-        effect2.set_on_process_callback(process2)
-        effects.append(effect2)
 
         # [Security] Play this card without paying the cost.
         effect3 = ICardEffect()

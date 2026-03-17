@@ -26,17 +26,29 @@ class P_205(CardScript):
         effects = []
 
         # --- Effect 0: Ignore color requirements if [DM] trait on field ---
+        # DCGO: IgnoreColorConditionClass with HasMatchConditionPermanent
+        # checking for (IsTamer || IsDigimon) && HasDMTraits
         effect0 = ICardEffect()
         effect0.set_effect_name("P-205 Ignore color requirements")
         effect0.set_effect_description("Ignore Color Req")
+        effect0.is_declarative = True
+        effect0._ignore_color_requirement = True
 
         def condition0(context: Dict[str, Any]) -> bool:
-            return True
+            owner = card.owner if card else None
+            if not owner:
+                return False
+            # Check if owner has a Digimon or Tamer with [DM] trait on the field
+            for p in owner.battle_area:
+                if not (p.is_digimon or p.is_tamer):
+                    continue
+                if not p.top_card:
+                    continue
+                traits = getattr(p.top_card, 'card_traits', []) or []
+                if any('DM' in tr for tr in traits):
+                    return True
+            return False
         effect0.set_can_use_condition(condition0)
-
-        def process0(ctx: Dict[str, Any]):
-            pass  # descriptive-tagged: engine handles color requirement ignoring
-        effect0.set_on_process_callback(process0)
         effects.append(effect0)
 
         # --- Shared Main/Security draw+trash logic ---
@@ -99,6 +111,9 @@ class P_205(CardScript):
 
         # --- Effect 3: [Main] <Delay> Delete own Digimon (cost 7 or less),
         #     play [Kimeramon]/[Millenniummon] from trash with cost -3 ---
+        # DCGO: First deletes the delay option card itself, then on success
+        # selects 1 of your Digimon with play cost <= 7 to delete, then on
+        # success plays from trash with fixedCost = BasePlayCost - 3.
         effect3 = ICardEffect()
         effect3.set_timing(EffectTiming.OnDeclaration)
         effect3._is_field_main = True
@@ -120,6 +135,8 @@ class P_205(CardScript):
                 return
 
             # Step 1: Select 1 of your Digimon with play cost 7 or lower to delete
+            # DCGO: CanSelectPermanentCondition checks IsPermanentExistsOnOwnerBattleAreaDigimon
+            # and BasePlayCostFromEntity <= 7
             def own_digi_filter(p):
                 if not p.is_digimon or not p.top_card:
                     return False
@@ -136,12 +153,15 @@ class P_205(CardScript):
                 player.delete_permanent(own_perm)
 
                 # Step 2: Play 1 [Kimeramon]/[Millenniummon] from trash with cost -3
+                # DCGO: CanSelectCardCondition checks IsDigimon &&
+                # (ContainsCardName("Kimeramon") || ContainsCardName("Millenniummon"))
                 def kim_filter(c):
                     if not getattr(c, 'is_digimon', False):
                         return False
                     names = getattr(c, 'card_names', []) or []
                     return any('Kimeramon' in n or 'Millenniummon' in n for n in names)
 
+                # DCGO: payCost=true, root=Trash, fixedCost=BasePlayCost-3
                 game.effect_play_from_zone(
                     player, 'trash', kim_filter,
                     free=False, manual_reduction=3, is_optional=True,

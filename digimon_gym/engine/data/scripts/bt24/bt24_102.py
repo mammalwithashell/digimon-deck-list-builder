@@ -134,21 +134,73 @@ class BT24_102(CardScript):
                 return False
 
             def on_selected(target):
-                # Re-trigger On Play effects
-                game.execute_effects(
-                    EffectTiming.OnEnterFieldAnyone,
-                    {
+                # Collect all [On Play] and [When Digivolving] effects from this permanent
+                on_play_effects = []
+                when_digi_effects = []
+                for cs in [target.top_card] if target.top_card else []:
+                    for eff in cs.effect_list(EffectTiming.OnEnterFieldAnyone):
+                        if eff.is_inherited_effect:
+                            continue
+                        if eff.is_on_play:
+                            on_play_effects.append(eff)
+                        elif eff.is_when_digivolving:
+                            when_digi_effects.append(eff)
+                # Also check inherited effects from digivolution cards
+                for cs in target.card_sources[:-1] if target.card_sources else []:
+                    for eff in cs.effect_list(EffectTiming.OnEnterFieldAnyone):
+                        if not eff.is_inherited_effect:
+                            continue
+                        if eff.is_on_play:
+                            on_play_effects.append(eff)
+                        elif eff.is_when_digivolving:
+                            when_digi_effects.append(eff)
+
+                all_effects = on_play_effects + when_digi_effects
+                if not all_effects:
+                    return
+
+                if len(all_effects) == 1:
+                    # Only one eligible effect — activate it directly
+                    chosen = all_effects[0]
+                    ctx_inner = {
                         "played_card": target.top_card,
                         "played_permanent": target,
                         "event_player": player,
                         "permanent": target,
-                    },
-                )
+                        "player": player,
+                        "game": game,
+                    }
+                    if chosen.on_process_callback:
+                        chosen.on_process_callback(ctx_inner)
+                else:
+                    # Multiple eligible effects — player chooses ONE
+                    labels = []
+                    for eff in all_effects:
+                        tag = "[On Play]" if eff.is_on_play else "[When Digivolving]"
+                        labels.append(f"{tag} {eff.effect_name}")
+
+                    def on_branch(branch_idx):
+                        chosen = all_effects[branch_idx]
+                        ctx_inner = {
+                            "played_card": target.top_card,
+                            "played_permanent": target,
+                            "event_player": player,
+                            "permanent": target,
+                            "player": player,
+                            "game": game,
+                        }
+                        if chosen.on_process_callback:
+                            chosen.on_process_callback(ctx_inner)
+
+                    game.effect_choose_branch(
+                        player, len(all_effects), on_branch,
+                        prompt="Choose 1 [On Play] or [When Digivolving] effect to activate.",
+                        branch_labels=labels)
 
             game.effect_select_own_permanent(
                 player, on_selected, filter_fn=olympos_filter,
                 is_optional=True,
-                prompt="Select an Olympos XII Digimon to reactivate its [On Play] effect.")
+                prompt="Select an Olympos XII Digimon to reactivate 1 of its effects.")
 
         effect2.set_on_process_callback(process2)
         effects.append(effect2)

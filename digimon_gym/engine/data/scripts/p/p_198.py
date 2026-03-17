@@ -22,6 +22,7 @@ class P_198(CardScript):
         # Alternate digivolution: with [TS] trait for cost 0
         effect0._alt_digi_cost = 0
         effect0._alt_digi_trait = "TS"
+        effect0._alt_digi_level = 2
 
         def condition0(context: Dict[str, Any]) -> bool:
             return True

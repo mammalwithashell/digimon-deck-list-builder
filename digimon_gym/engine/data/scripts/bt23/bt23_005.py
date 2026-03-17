@@ -24,6 +24,9 @@ class BT23_005(CardScript):
 
         effect = effect0  # alias for condition closure
         def condition0(context: Dict[str, Any]) -> bool:
+            # BeforePayCost leak guard: only apply when THIS card is being played
+            if context.get('card_source') is not card:
+                return False
             if card and card.permanent_of_this_card() is None:
                 return False
             if not (card and card.owner and card.owner.is_my_turn):

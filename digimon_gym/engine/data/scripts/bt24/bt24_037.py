@@ -145,6 +145,13 @@ class BT24_037(CardScript):
             def cond(context: Dict[str, Any]) -> bool:
                 if card and card.permanent_of_this_card() is None:
                     return False
+                # "other than by your effects" — engine gap: WhenRemoveField context
+                # does not carry is_own_effect. Best-effort: allow for 'battle',
+                # 'rule', 'de_digivolve' causes; block 'cost' (always own);
+                # 'effect' is ambiguous (could be own or opponent).
+                cause = context.get('removal_cause', 'effect')
+                if cause == 'cost':
+                    return False
                 return True
             eff.set_can_use_condition(cond)
 
@@ -171,15 +178,40 @@ class BT24_037(CardScript):
                               if cs is not top and play_filter(cs)]
                 if not candidates:
                     return
-                chosen = candidates[0]
-                perm.card_sources.remove(chosen)
-                played = player.play_card_from_source(chosen, pay_cost=False)
-                if played:
-                    game.execute_effects(
-                        EffectTiming.OnEnterFieldAnyone,
-                        {'played_card': chosen, 'played_permanent': played,
-                         'event_player': player},
-                    )
+
+                # Player selects which card to play (instead of auto-selecting)
+                if len(candidates) == 1:
+                    chosen = candidates[0]
+                    perm.card_sources.remove(chosen)
+                    played = player.play_card_from_source(chosen, pay_cost=False)
+                    if played:
+                        game.execute_effects(
+                            EffectTiming.OnEnterFieldAnyone,
+                            {'played_card': chosen, 'played_permanent': played,
+                             'event_player': player},
+                        )
+                else:
+                    # Multiple candidates — let player choose via branch selection
+                    labels = [
+                        f"{getattr(c, 'card_names', ['?'])[0]} (Lv.{c.level})"
+                        for c in candidates
+                    ]
+
+                    def on_branch(branch_idx):
+                        chosen = candidates[branch_idx]
+                        perm.card_sources.remove(chosen)
+                        played = player.play_card_from_source(chosen, pay_cost=False)
+                        if played:
+                            game.execute_effects(
+                                EffectTiming.OnEnterFieldAnyone,
+                                {'played_card': chosen, 'played_permanent': played,
+                                 'event_player': player},
+                            )
+
+                    game.effect_choose_branch(
+                        player, len(candidates), on_branch,
+                        prompt="Select 1 Digimon card from digivolution cards to play.",
+                        branch_labels=labels)
 
             eff.set_on_process_callback(proc)
             return eff

@@ -38,7 +38,8 @@ class BT21_013(CardScript):
         effect2.set_can_use_condition(condition2)
 
         def process2(ctx: Dict[str, Any]):
-            """Place 1 Hybrid/Hero Digimon from hand or trash under this Digimon."""
+            """Place 1 Hybrid/Hero Digimon from hand or trash as bottom digi card
+            under this Digimon or under a red Tamer with inherited effects."""
             player = ctx.get('player')
             perm = ctx.get('permanent')
             game = ctx.get('game')
@@ -51,19 +52,66 @@ class BT21_013(CardScript):
                 traits = getattr(c, 'card_traits', []) or []
                 return any('Hybrid' in t or 'Hero' in t for t in traits)
 
-            # Check hand and trash for qualifying cards
-            candidates = [c for c in player.hand_cards if hybrid_hero_filter(c)]
-            candidates += [c for c in player.trash_cards if hybrid_hero_filter(c)]
-            if not candidates:
+            # Step 1: Player selects a Hybrid/Hero Digimon card from hand or trash
+            from ....game.constants import SEL_HAND_START, SEL_TRASH_START
+            from ....data.enums import GamePhase
+
+            valid = []
+            for i, c in enumerate(player.hand_cards):
+                if hybrid_hero_filter(c):
+                    valid.append(SEL_HAND_START + i)
+            for i, c in enumerate(player.trash_cards):
+                if hybrid_hero_filter(c):
+                    valid.append(SEL_TRASH_START + i)
+            if not valid:
                 return
 
-            # Auto-select first qualifying card
-            chosen = candidates[0]
-            if chosen in player.hand_cards:
-                player.hand_cards.remove(chosen)
-            elif chosen in player.trash_cards:
-                player.trash_cards.remove(chosen)
-            perm.card_sources.insert(0, chosen)  # bottom digi card
+            def on_card_selected(action_id):
+                chosen = None
+                if action_id >= SEL_TRASH_START:
+                    idx = action_id - SEL_TRASH_START
+                    if 0 <= idx < len(player.trash_cards):
+                        chosen = player.trash_cards[idx]
+                else:
+                    idx = action_id - SEL_HAND_START
+                    if 0 <= idx < len(player.hand_cards):
+                        chosen = player.hand_cards[idx]
+                if not chosen:
+                    return
+
+                # Step 2: Player selects destination — this Digimon OR a red Tamer
+                from ....data.enums import CardColor
+
+                def dest_filter(p):
+                    # This Digimon itself
+                    if p is perm:
+                        return True
+                    # A red Tamer with inherited effects
+                    if getattr(p, 'is_tamer', False):
+                        top = p.top_card
+                        if top:
+                            colors = getattr(top, 'card_colors', []) or []
+                            if CardColor.Red in colors:
+                                return True
+                    return False
+
+                def on_dest_selected(dest_perm):
+                    # Remove from source zone
+                    if chosen in player.hand_cards:
+                        player.hand_cards.remove(chosen)
+                    elif chosen in player.trash_cards:
+                        player.trash_cards.remove(chosen)
+                    # Place as bottom digivolution card
+                    dest_perm.card_sources.insert(0, chosen)
+
+                game.effect_select_own_permanent(
+                    player, on_dest_selected, filter_fn=dest_filter, is_optional=False,
+                    prompt="Select destination: this Digimon or a red Tamer.")
+
+            game.request_selection(
+                GamePhase.SelectTarget, player, on_card_selected,
+                valid, is_optional=True,
+                prompt="Select 1 [Hybrid] or [Hero] trait Digimon from hand or trash to place.")
 
         effect2.set_on_process_callback(process2)
         effects.append(effect2)

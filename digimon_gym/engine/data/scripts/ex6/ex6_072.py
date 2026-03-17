@@ -116,6 +116,11 @@ class EX6_072(CardScript):
                 if trash_filter(c):
                     valid_trash.append(SEL_TRASH_START + i)
 
+            def _add_self_to_hand():
+                if card and card in player.trash_cards:
+                    player.trash_cards.remove(card)
+                    player.hand_cards.append(card)
+
             if valid_trash:
                 def on_trash_selected(action_id: int):
                     idx = action_id - SEL_TRASH_START
@@ -132,11 +137,6 @@ class EX6_072(CardScript):
                     prompt="Select a Lv.6+ Digimon from your trash to return to hand.")
             else:
                 _add_self_to_hand()
-
-            def _add_self_to_hand():
-                if card and card in player.trash_cards:
-                    player.trash_cards.remove(card)
-                    player.hand_cards.append(card)
 
         effect3.set_on_process_callback(process3)
         effects.append(effect3)

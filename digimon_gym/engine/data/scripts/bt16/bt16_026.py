@@ -15,11 +15,10 @@ class BT16_026(CardScript):
         effects = []
 
         # Factory effect: alt_digivolve_req
-        # Alternate digivolution requirement
+        # Alternate digivolution: from [Shakkoumon] or [Zudomon] for cost 3
         effect0 = ICardEffect()
         effect0.set_effect_name("BT16-026 Alternate digivolution requirement")
         effect0.set_effect_description("Alternate digivolution requirement")
-        # Alternate digivolution: alternate source for cost 3
         effect0._alt_digi_cost = 3
         effect0._alt_digi_name = "Shakkoumon"
 
@@ -29,7 +28,6 @@ class BT16_026(CardScript):
         effects.append(effect0)
 
         # Factory effect: blast_digivolve
-        # Blast Digivolve
         effect1 = ICardEffect()
         effect1.set_effect_name("BT16-026 Blast Digivolve")
         effect1.set_effect_description("Blast Digivolve")
@@ -41,116 +39,121 @@ class BT16_026(CardScript):
         effect1.set_can_use_condition(condition1)
         effects.append(effect1)
 
-        # Timing: EffectTiming.OnEnterFieldAnyone
-        # [On Play] <De-Digivolve 2> 1 of your opponent's Digimon. Then, none of your opponent's Digimon with 1 or fewer digivolution cards can suspend until the end of their turn.
+        # --- Shared process for On Play / When Digivolving ---
+        def _dedigivolve_and_cant_suspend(ctx: Dict[str, Any]):
+            """De-Digivolve 2 opponent Digimon, then apply CANNOT_SUSPEND to opponent Digimon with <= 1 digi-cards."""
+            player = ctx.get('player')
+            game = ctx.get('game')
+            if not (player and game):
+                return
+            enemy = player.enemy
+            if not enemy:
+                return
+
+            # Step 1: De-Digivolve 2 one of opponent's Digimon
+            has_digimon = any(p.is_digimon for p in enemy.battle_area)
+            if has_digimon:
+                def on_de_digivolve(target_perm):
+                    removed = target_perm.de_digivolve(2)
+                    enemy.trash_cards.extend(removed)
+                    _apply_cant_suspend()
+
+                game.effect_select_opponent_permanent(
+                    player, on_de_digivolve,
+                    filter_fn=lambda p: p.is_digimon,
+                    is_optional=False)
+            else:
+                _apply_cant_suspend()
+
+            def _apply_cant_suspend():
+                # Step 2: All opponent's Digimon with 1 or fewer digivolution cards
+                # cannot suspend until end of their turn
+                from digimon_gym.engine.interfaces.modifiers import ModifierType
+                for p in enemy.battle_area:
+                    if p.is_digimon and len(p.digivolution_cards) <= 1:
+                        game.register_modifier(
+                            ModifierType.CANNOT_SUSPEND, p,
+                            value_fn=lambda: True,
+                            expiry='end_of_opponent_turn')
+
+        # [On Play] De-Digivolve 2, then can't suspend opponent's Digimon with <= 1 digi-cards
         effect2 = ICardEffect()
         effect2.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect2.set_effect_name("BT16-026 <De-Digivolve 2> 1 of your opponent's Digimon.")
         effect2.set_effect_description("[On Play] <De-Digivolve 2> 1 of your opponent's Digimon. Then, none of your opponent's Digimon with 1 or fewer digivolution cards can suspend until the end of their turn.")
         effect2.is_on_play = True
-        effect2._is_cannot_suspend_player = True
 
-        effect = effect2  # alias for condition closure
         def condition2(context: Dict[str, Any]) -> bool:
             if card and card.permanent_of_this_card() is None:
                 return False
-            # Triggered on play — validated by engine timing
             return True
-
         effect2.set_can_use_condition(condition2)
-
-        def process2(ctx: Dict[str, Any]):
-            """Action: De Digivolve, Gain Keyword Cannot Suspend Player"""
-            player = ctx.get('player')
-            perm = ctx.get('permanent')
-            game = ctx.get('game')
-            if not (player and game):
-                return
-            def on_de_digivolve(target_perm):
-                removed = target_perm.de_digivolve(2)
-                enemy = player.enemy if player else None
-                if enemy:
-                    enemy.trash_cards.extend(removed)
-            game.effect_select_opponent_permanent(
-                player, on_de_digivolve, filter_fn=lambda p: p.is_digimon, is_optional=False)
-            if perm:
-                perm.grant_keyword('_is_cannot_suspend_player')
-
-        effect2.set_on_process_callback(process2)
+        effect2.set_on_process_callback(_dedigivolve_and_cant_suspend)
         effects.append(effect2)
 
-        # Timing: EffectTiming.OnEnterFieldAnyone
-        # [When Digivolving] <De-Digivolve 2> 1 of your opponent's Digimon. Then, none of your opponent's Digimon with 1 or fewer digivolution cards can suspend until the end of their turn.
+        # [When Digivolving] same effect
         effect3 = ICardEffect()
         effect3.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect3.set_effect_name("BT16-026 <De-Digivolve 2> 1 of your opponent's Digimon.")
         effect3.set_effect_description("[When Digivolving] <De-Digivolve 2> 1 of your opponent's Digimon. Then, none of your opponent's Digimon with 1 or fewer digivolution cards can suspend until the end of their turn.")
         effect3.is_when_digivolving = True
-        effect3._is_cannot_suspend_player = True
 
-        effect = effect3  # alias for condition closure
         def condition3(context: Dict[str, Any]) -> bool:
             if card and card.permanent_of_this_card() is None:
                 return False
-            # Triggered when digivolving — validated by engine timing
             return True
-
         effect3.set_can_use_condition(condition3)
-
-        def process3(ctx: Dict[str, Any]):
-            """Action: De Digivolve, Gain Keyword Cannot Suspend Player"""
-            player = ctx.get('player')
-            perm = ctx.get('permanent')
-            game = ctx.get('game')
-            if not (player and game):
-                return
-            def on_de_digivolve(target_perm):
-                removed = target_perm.de_digivolve(2)
-                enemy = player.enemy if player else None
-                if enemy:
-                    enemy.trash_cards.extend(removed)
-            game.effect_select_opponent_permanent(
-                player, on_de_digivolve, filter_fn=lambda p: p.is_digimon, is_optional=False)
-            if perm:
-                perm.grant_keyword('_is_cannot_suspend_player')
-
-        effect3.set_on_process_callback(process3)
+        effect3.set_on_process_callback(_dedigivolve_and_cant_suspend)
         effects.append(effect3)
 
-        # Timing: EffectTiming.OnUseAttack
-        # [When Attacking] Delete 1 of your opponent's Digimon with 1 or fewer digivolution cards.
+        # [When Attacking] Delete 1 of opponent's Digimon with 1 or fewer digivolution cards.
         effect4 = ICardEffect()
         effect4.set_timing(EffectTiming.OnUseAttack)
         effect4.set_effect_name("BT16-026 Delete 1 of your opponent's Digimon")
         effect4.set_effect_description("[When Attacking] Delete 1 of your opponent's Digimon with 1 or fewer digivolution cards.")
         effect4.is_on_attack = True
 
-        effect = effect4  # alias for condition closure
         def condition4(context: Dict[str, Any]) -> bool:
             if card and card.permanent_of_this_card() is None:
                 return False
-            # Triggered on attack — validated by engine timing
             return True
-
         effect4.set_can_use_condition(condition4)
 
         def process4(ctx: Dict[str, Any]):
-            """Action: Delete"""
+            """Delete 1 opponent Digimon with <= 1 digivolution cards."""
             player = ctx.get('player')
-            perm = ctx.get('permanent')
             game = ctx.get('game')
             if not (player and game):
                 return
+            enemy = player.enemy
+            if not enemy:
+                return
+
             def target_filter(p):
-                return p.is_digimon
+                return p.is_digimon and len(p.digivolution_cards) <= 1
+
+            has_target = any(target_filter(p) for p in enemy.battle_area)
+            if not has_target:
+                return
+
             def on_delete(target_perm):
-                enemy = player.enemy if player else None
-                if enemy:
-                    enemy.delete_permanent(target_perm)
+                enemy.delete_permanent(target_perm)
+
             game.effect_select_opponent_permanent(
                 player, on_delete, filter_fn=target_filter, is_optional=False)
 
         effect4.set_on_process_callback(process4)
         effects.append(effect4)
+
+        # Ace Overflow <-4> — engine handles via card data, descriptive effect
+        effect_ace = ICardEffect()
+        effect_ace.set_effect_name("BT16-026 Ace Overflow <-4>")
+        effect_ace.set_effect_description("Ace Overflow <-4>")
+        effect_ace.is_inherited_effect = True
+
+        def condition_ace(context: Dict[str, Any]) -> bool:
+            return True
+        effect_ace.set_can_use_condition(condition_ace)
+        effects.append(effect_ace)
 
         return effects
