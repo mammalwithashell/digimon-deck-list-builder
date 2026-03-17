@@ -275,7 +275,7 @@ class EX11_073(CardScript):
             # Trash opponent's top security cards (1 per link card)
             for _ in range(link_count):
                 if enemy.security_cards:
-                    trashed = enemy.security_cards.pop()
+                    trashed = enemy.security_cards.pop(0)
                     enemy.trash_cards.append(trashed)
 
             # Bottom-deck opponent Digimon (1 per link card)

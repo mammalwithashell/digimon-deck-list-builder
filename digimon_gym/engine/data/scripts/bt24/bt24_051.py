@@ -68,26 +68,6 @@ class BT24_051(CardScript):
         effect1.set_can_use_condition(condition1)
         effects.append(effect1)
 
-        # Not-shown cost reduction (EffectTiming.NoTiming equivalent)
-        effect2 = ICardEffect()
-        effect2.set_effect_name("BT24-051 Play Cost -5 (not shown)")
-        effect2.set_effect_description("Cost -5 (not shown)")
-        effect2.cost_reduction = 5
-
-        def condition2(context: Dict[str, Any]) -> bool:
-            if context.get('card_source') is not card:
-                return False
-            owner = getattr(card, 'owner', None)
-            if not owner:
-                return False
-            own_digi = len([p for p in owner.battle_area if p.is_digimon])
-            enemy = owner.enemy if owner else None
-            opp_digi = len([p for p in enemy.battle_area if p.is_digimon]) if enemy else 0
-            return (own_digi + opp_digi) >= 3
-
-        effect2.set_can_use_condition(condition2)
-        effects.append(effect2)
-
         # Shared process for On Play / When Digivolving:
         # Suspend up to 2 opponent's Digimon or Tamers.
         # Then, 1 of your Digimon may get +5000 DP for the turn and attack your

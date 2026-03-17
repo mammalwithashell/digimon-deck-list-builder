@@ -640,8 +640,10 @@ class Player:
                     jamming=jamming_saved,
                 )
 
-        # Trash the security card
-        self.trash_cards.append(security_card)
+        # Trash the security card — UNLESS it was played by its security effect
+        # Scripts set card._security_played = True when they play a card from security
+        if not getattr(security_card, '_security_played', False):
+            self.trash_cards.append(security_card)
         self._fire_timing(EffectTiming.OnLoseSecurity, {"lost_card": security_card, "player": self})
         return result
 

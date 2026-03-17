@@ -264,6 +264,40 @@ class EffectHelpersMixin:
             )
             self._fire_play_observers(perm, target_player)
 
+    def effect_play_from_security(self, player: "Player", card: "CardSource"):
+        """Play a card from security without paying the cost.
+
+        Used by [Security] effects like "Play this card without paying the cost."
+        Creates a Permanent, adds to battle_area, marks the card so
+        security_attack() won't trash it, and fires OnEnterFieldAnyone.
+        """
+        from ..core.permanent import Permanent
+
+        if len(player.battle_area) >= FIELD_SLOTS:
+            self.logger.log(f"[Security] Field full — cannot play {self._card_ref(card)}")
+            return
+
+        card._security_played = True
+        perm = Permanent([card])
+        perm.turn_played = self.turn_count
+        perm._owner_game = self
+        player.battle_area.append(perm)
+
+        self.logger.log(
+            f"[Security] {player.player_name} played "
+            f"{self._card_ref(card)} from security without paying the cost.")
+
+        self.execute_effects(
+            EffectTiming.OnEnterFieldAnyone,
+            {
+                "played_card": card,
+                "played_permanent": perm,
+                "event_permanent": perm,
+                "event_player": player,
+            },
+        )
+        self._fire_play_observers(perm, player)
+
     def _is_play_blocked_by_modifier(self, card: "CardSource") -> bool:
         """Check if CANNOT_PLAY_CARD modifiers block playing this card (hand or effect)."""
         if not hasattr(self, 'modifiers'):

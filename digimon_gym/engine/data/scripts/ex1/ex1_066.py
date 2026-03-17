@@ -148,26 +148,7 @@ class EX1_066(CardScript):
             security_card = ctx.get('card')
             if not (player and game and security_card):
                 return
-            # Play this tamer card from security without paying the cost.
-            # ENGINE LIMITATION: security_attack() unconditionally appends the
-            # security card to trash after effects resolve. We place the card
-            # on field here; the engine will also add it to trash_cards creating
-            # a dangling reference. The card functions correctly on field via its
-            # Permanent. A future engine fix should check if the card was played
-            # before trashing.
-            from ....core.permanent import Permanent
-            new_perm = Permanent([security_card])
-            if game:
-                new_perm.turn_played = game.turn_count
-                new_perm._owner_game = game
-            player.battle_area.append(new_perm)
-            game.logger.log(
-                f"[Security] {player.player_name} played "
-                f"{game._card_ref(security_card)} from security without paying the cost.")
-            game.execute_effects(
-                EffectTiming.OnEnterFieldAnyone,
-                {"played_card": security_card, "played_permanent": new_perm,
-                 "event_player": player})
+            game.effect_play_from_security(player, security_card)
 
         effect2.set_on_process_callback(process2)
         effects.append(effect2)
