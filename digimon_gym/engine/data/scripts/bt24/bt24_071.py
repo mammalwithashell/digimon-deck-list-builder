@@ -51,7 +51,7 @@ class BT24_071(CardScript):
                 game.register_modifier(
                     target_perm,
                     ModifierType.CHANGE_SECURITY_ATTACK,
-                    value_fn=lambda: 1,
+                    value_fn=lambda cur, t, c: cur + 1,
                     expiry='end_of_turn',
                 )
 

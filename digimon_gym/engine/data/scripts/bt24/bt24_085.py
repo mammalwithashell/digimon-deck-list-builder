@@ -110,12 +110,7 @@ class BT24_085(CardScript):
                 player, 'hand', option_filter, free=True, is_optional=True,
                 prompt="Select a [TS] Option to use for free.")
 
-            # Then 1 [TS] Digimon may attack.
-            # Engine limitation: no clean "optional end-of-turn attack" API.
-            # Use FORCE_ATTACK modifier — if memory swings back to positive after
-            # OnEndTurn effects, the game returns to Main Phase where the forced
-            # attack will execute. If memory stays negative, turn ends (attack lost).
-            # FORCE_ATTACK is mandatory not optional — engine gap for "may attack".
+            # Then 1 [TS] Digimon may attack (optional, not forced).
             from ....interfaces.modifiers import ModifierType
             def _ts_digi_filter(p):
                 if not p.is_digimon:
@@ -129,9 +124,10 @@ class BT24_085(CardScript):
             def on_attacker_selected(target_perm):
                 if target_perm.is_suspended:
                     target_perm.unsuspend()
+                target_perm.grant_keyword('_is_rush')
                 game.register_modifier(
-                    target_perm, ModifierType.FORCE_ATTACK,
-                    value_fn=lambda: True, expiry='end_of_turn')
+                    target_perm, ModifierType.MAY_ATTACK,
+                    expiry='end_of_turn')
 
             game.effect_select_own_permanent(
                 player, on_attacker_selected,

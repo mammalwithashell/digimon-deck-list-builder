@@ -108,16 +108,14 @@ class BT24_082(CardScript):
             digivolved = ctx.get('digivolved_permanent')
             if digivolved:
                 digivolved.change_dp(3000)
-                # "Then, it may attack" — optional: ask player, if yes unsuspend so it can attack
-                def on_branch(choice):
-                    if choice == 0 and digivolved:
-                        # Unsuspend to allow the attack
-                        if digivolved.is_suspended:
-                            digivolved.unsuspend()
-                game.effect_choose_branch(
-                    player, 2, on_branch,
-                    prompt="This Digimon may attack. Attack?",
-                    branch_labels=["Yes, attack", "No, decline"])
+                # "Then, it may attack" — optional attack via MAY_ATTACK
+                from ....interfaces.modifiers import ModifierType
+                if digivolved.is_suspended:
+                    digivolved.unsuspend()
+                digivolved.grant_keyword('_is_rush')
+                game.register_modifier(
+                    digivolved, ModifierType.MAY_ATTACK,
+                    expiry='end_of_turn')
 
         effect1.set_on_process_callback(process1)
         effects.append(effect1)

@@ -77,8 +77,10 @@ export function PromptBar({
 
   if (!hasPrompt && !isSelectionPhase) return null;
 
-  const promptText =
-    hasPrompt || PHASE_PROMPTS[currentPhase] || `${PHASE_NAMES[currentPhase] ?? 'Unknown phase'}`;
+  // Build contextual prompt: prefer server prompt, fall back to phase-based
+  const promptText = hasPrompt
+    || PHASE_PROMPTS[currentPhase]
+    || `${PHASE_NAMES[currentPhase] ?? 'Unknown phase'}`;
 
   // Color coding by phase category
   let barClass = 'bg-blue-900/40 border-blue-700/50 text-blue-200';

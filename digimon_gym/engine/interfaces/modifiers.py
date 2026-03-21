@@ -126,6 +126,10 @@ class ModifierType(Enum):
     CANNOT_SWITCH_ATTACK_TARGET = auto()
     # ICannotBlockEffect
     CANNOT_BLOCK = auto()
+    # ICanNotAttackPlayerEffect — restricts to Digimon-only targets
+    CANNOT_ATTACK_PLAYER = auto()
+    # Optional attack ("may attack") — enables attack without forcing it
+    MAY_ATTACK = auto()
 
     # ── Attribute Overrides ─────────────────────────────────────────
     # IChangeCardNamesEffect

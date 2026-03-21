@@ -1,4 +1,4 @@
-import { ACTION, PHASE_NAMES } from '@/utils/constants';
+import { ACTION, PHASE_NAMES, EFFECTS_PER_SOURCE } from '@/utils/constants';
 import { GamePhase } from '@/types/game';
 
 interface ActionBarProps {
@@ -7,9 +7,11 @@ interface ActionBarProps {
   onAction: (actionId: number) => void;
   onSurrender?: () => void;
   isGameOver: boolean;
+  /** Map<sourceSlot, Set<effectIdx>> from useActionMask */
+  canActivateEffect?: Map<number, Set<number>>;
 }
 
-export function ActionBar({ phase, actionMask, onAction, onSurrender, isGameOver }: ActionBarProps) {
+export function ActionBar({ phase, actionMask, onAction, onSurrender, isGameOver, canActivateEffect }: ActionBarProps) {
   if (isGameOver) return null;
 
   const canPass = actionMask[ACTION.PASS] === 1;
@@ -78,6 +80,25 @@ export function ActionBar({ phase, actionMask, onAction, onSurrender, isGameOver
         >
           {phase === 2 ? 'Skip Breeding' : phase >= 5 ? 'Decline' : 'Pass'}
         </button>
+      )}
+
+      {/* Effect activations */}
+      {canActivateEffect && canActivateEffect.size > 0 && (
+        <>
+          <span className="w-px h-5 bg-gray-600" />
+          {[...canActivateEffect.entries()].map(([source, effects]) =>
+            [...effects].map((effectIdx) => (
+              <button
+                key={`eff-${source}-${effectIdx}`}
+                data-testid={`action-effect-${source}-${effectIdx}`}
+                onClick={() => onAction(ACTION.EFFECT_START + source * EFFECTS_PER_SOURCE + effectIdx)}
+                className="px-3 py-1 bg-cyan-700 hover:bg-cyan-600 text-white text-sm rounded"
+              >
+                Effect {source}:{effectIdx}
+              </button>
+            ))
+          )}
+        </>
       )}
 
       {/* Spacer + Surrender */}

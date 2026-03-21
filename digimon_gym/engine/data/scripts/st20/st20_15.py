@@ -12,14 +12,19 @@ class ST20_15(CardScript):
     """ST20-15 Island of Adventure | Option White Cost 2"""
 
     def get_card_effects(self, card: 'CardSource') -> List['ICardEffect']:
-        # While you have no face-up [Island of Adventure] security cards, you can
-        # ignore this card's color requirements. Since the engine's action mask does
-        # a static color check, we bypass it entirely. The condition (no face-up IoA)
-        # is almost always true when playing from hand, and the card places itself
-        # face-up in security as part of its effect, so subsequent copies would need
-        # a White card — but the engine doesn't support conditional color checks, so
-        # we bypass unconditionally.
-        card._match_color_requirement = False
+        # Dynamic color bypass: ignore color requirements while no face-up IoA in security
+        def _check_ioa_color_req():
+            owner = card.owner if card else None
+            if not owner:
+                return True
+            # Can ignore color if no face-up Island of Adventure in security
+            for sec_card in owner.security_cards:
+                if owner.is_security_face_up(sec_card):
+                    names = getattr(sec_card, 'card_names', []) or []
+                    if any('Island of Adventure' in n for n in names):
+                        return True  # enforce color requirement (already have one face-up)
+            return False  # bypass color requirement
+        card._match_color_requirement_fn = _check_ioa_color_req
         effects = []
 
         # --- Effect 1: [Security] [All Turns] All of your level 3 or higher

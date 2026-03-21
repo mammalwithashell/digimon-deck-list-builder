@@ -14,8 +14,7 @@ class BT22_099(CardScript):
     def get_card_effects(self, card: 'CardSource') -> List['ICardEffect']:
         effects = []
 
-        # Color ignore: conditionally set when you have a [CS] trait Digimon or Tamer
-        # Per C# IgnoreColorConditionClass: only this card, only when CS-trait perm exists
+        # Dynamic color bypass: ignore color requirements while a CS trait Digimon/Tamer is on field
         def _has_cs_on_field():
             owner = card.owner if card else None
             if not owner:
@@ -27,27 +26,9 @@ class BT22_099(CardScript):
                         return True
             return False
 
-        if _has_cs_on_field():
-            card._match_color_requirement = False
-
-        effect0 = ICardEffect()
-        effect0.set_effect_name("BT22-099 Ignore color requirements")
-        effect0.set_effect_description("While you have a [CS] trait Digimon or Tamer on the field, you can ignore this card's color requirements.")
-
-        def condition0(context: Dict[str, Any]) -> bool:
-            return _has_cs_on_field()
-
-        effect0.set_can_use_condition(condition0)
-
-        def process0(ctx: Dict[str, Any]):
-            """Action: Ignore Color Req — set dynamically based on CS presence"""
-            if _has_cs_on_field():
-                card._match_color_requirement = False
-            else:
-                card._match_color_requirement = True
-
-        effect0.set_on_process_callback(process0)
-        effects.append(effect0)
+        def _check_cs_color_req():
+            return not _has_cs_on_field()  # False = bypass, True = enforce
+        card._match_color_requirement_fn = _check_cs_color_req
 
         # Timing: EffectTiming.OptionSkill
         # [Main] Reveal the top 3 cards of your deck. Add 1 [CS] trait card

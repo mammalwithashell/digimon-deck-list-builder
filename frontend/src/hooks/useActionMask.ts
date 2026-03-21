@@ -3,6 +3,7 @@ import {
   ACTION,
   ATTACK_TARGETS_PER_SLOT,
   ATTACK_TARGET_SECURITY,
+  BREEDING_SLOT,
   DIGIVOLVE_FIELDS_PER_HAND,
   SELECTION,
   MAX_BATTLE_AREA_SLOTS,
@@ -19,7 +20,7 @@ export interface ParsedMask {
   canAttack: Map<number, Set<number>>;
   /** Map<handIndex, Set<fieldSlot>> */
   canDigivolve: Map<number, Set<number>>;
-  /** Hand indices that can digivolve onto breeding area (virtual slot 12). */
+  /** Hand indices that can digivolve onto breeding area (virtual slot 14). */
   canDigivolveBreeding: Set<number>;
   /** Map<sourceSlot, Set<effectIdx>> */
   canActivateEffect: Map<number, Set<number>>;
@@ -92,7 +93,7 @@ export function useActionMask(mask: number[]): ParsedMask {
       const offset = i - ACTION.DIGIVOLVE_START;
       const hand = Math.floor(offset / DIGIVOLVE_FIELDS_PER_HAND);
       const field = offset % DIGIVOLVE_FIELDS_PER_HAND;
-      if (field === 12) {
+      if (field === BREEDING_SLOT) {
         canDigivolveBreeding.add(hand);
         continue;
       }

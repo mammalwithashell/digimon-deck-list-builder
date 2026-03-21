@@ -92,14 +92,17 @@ class BT24_037(CardScript):
                     game = ctx.get('game')
                     if not (player and game):
                         return
-                    # 2) "Then, 1 of your Digimon may attack"
+                    # 2) "Then, 1 of your Digimon may attack" (optional, not forced)
                     def own_digi_filter(p):
                         return p.is_digimon
                     def on_attack_target(target_perm):
                         from ....interfaces.modifiers import ModifierType
+                        if target_perm.is_suspended:
+                            target_perm.unsuspend()
+                        target_perm.grant_keyword('_is_rush')
                         game.register_modifier(
-                            target_perm, ModifierType.FORCE_ATTACK,
-                            value_fn=lambda: True, expiry='end_of_turn')
+                            target_perm, ModifierType.MAY_ATTACK,
+                            expiry='end_of_turn')
                         # 3) If DNA digivolving, grant SA+1 and +5000 DP
                         is_dna = ctx.get('is_dna_digivolve', False)
                         if is_dna:
@@ -145,12 +148,8 @@ class BT24_037(CardScript):
             def cond(context: Dict[str, Any]) -> bool:
                 if card and card.permanent_of_this_card() is None:
                     return False
-                # "other than by your effects" — engine gap: WhenRemoveField context
-                # does not carry is_own_effect. Best-effort: allow for 'battle',
-                # 'rule', 'de_digivolve' causes; block 'cost' (always own);
-                # 'effect' is ambiguous (could be own or opponent).
-                cause = context.get('removal_cause', 'effect')
-                if cause == 'cost':
+                # "other than by your effects" — trigger only when NOT removed by own effect
+                if context.get('is_own_effect', False):
                     return False
                 return True
             eff.set_can_use_condition(cond)

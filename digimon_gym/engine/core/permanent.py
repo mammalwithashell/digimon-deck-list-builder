@@ -349,6 +349,11 @@ class Permanent:
                     total += getattr(effect, '_security_attack_modifier', 0)
         # Temporary modifier (e.g. from Alliance)
         total += self._temp_sa_modifier
+        # Query modifier registry for CHANGE_SECURITY_ATTACK modifiers
+        if self._owner_game and hasattr(self._owner_game, 'modifiers'):
+            from ..interfaces.modifiers import ModifierType
+            total = self._owner_game.modifiers.get_int_modifier(
+                self, ModifierType.CHANGE_SECURITY_ATTACK, total)
         return total
 
     def can_attack(self, card_effect: Optional['ICardEffect'] = None, without_tap: bool = False, is_vortex: bool = False) -> bool:
@@ -373,9 +378,13 @@ class Permanent:
 
     def can_attack_player(self) -> bool:
         """Check if this permanent can attack the player directly.
-        Returns False if restricted by <cannot attack player>."""
+        Returns False if restricted by <cannot attack player> or CANNOT_ATTACK_PLAYER modifier."""
         if self.has_keyword('_is_cannot_attack_player'):
             return False
+        if self._owner_game and hasattr(self._owner_game, 'modifiers'):
+            from ..interfaces.modifiers import ModifierType
+            if self._owner_game.modifiers.has_modifier(self, ModifierType.CANNOT_ATTACK_PLAYER):
+                return False
         return True
 
     def can_block(self, attacking_permanent: 'Permanent') -> bool:

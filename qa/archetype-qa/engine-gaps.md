@@ -2,7 +2,7 @@
 
 This file accumulates engine mechanics that are missing or incomplete, discovered during archetype implementation. Each entry includes the card that exposed the gap and what engine change is needed.
 
-Last updated: 2026-03-15
+Last updated: 2026-03-17
 
 ## Resolved Gaps
 
@@ -50,63 +50,46 @@ Last updated: 2026-03-15
 
 22. ~~**Dynamic Alt-Digi Cost**~~ — RESOLVED 2026-03-17. `digivolve_validator.py` now checks `_alt_digi_cost_fn` callable for dynamic cost calculation. BT24-101 Jupitermon uses security card count.
 
+23. ~~**Digivolve from Hand or Trash**~~ — RESOLVED 2026-03-17 (pre-existing). `include_trash` param already exists on `effect_digivolve_from_hand()`.
+
+24. ~~**Dynamic Security Attack Modifier**~~ — RESOLVED 2026-03-17. Wired `CHANGE_SECURITY_ATTACK` modifier registry into `permanent.security_attack_modifier()`. Fixed 6 scripts with wrong `value_fn` arity.
+
+25. ~~**Optional Attack ("may attack")**~~ — RESOLVED 2026-03-17. Added `ModifierType.MAY_ATTACK` — enables but doesn't force attack (pass remains available). 4 scripts updated.
+
+26. ~~**Digimon-Only Attack Target Restriction**~~ — RESOLVED 2026-03-17. Added `ModifierType.CANNOT_ATTACK_PLAYER` checked in `can_attack_player()`.
+
+27. ~~**is_own_effect in WhenRemoveField Context**~~ — RESOLVED 2026-03-17. Added `is_own_effect`/`is_opponent_effect` to WhenRemoveField, OnRemovedField, WhenPermanentWouldBeDeleted contexts.
+
+28. ~~**Conditional Color Requirement Bypass**~~ — RESOLVED 2026-03-17. Added `_match_color_requirement_fn` callable support to `CardSource.match_color_requirement` property. 4 scripts updated.
+
+29. ~~**Deletion Observer Recursion Guard**~~ — RESOLVED 2026-03-17. Added depth limit (8) to `execute_deletion_effects()` to prevent RecursionError from token chain loops (Puppets vs TS Olympos).
+
 ## Remaining Gaps
 
-### Digivolve from Hand or Trash
-- **Discovered in:** Jesmon, Medusamon, TS Neptunemon (2026-03-17)
-- **Card(s):** BT23-076, BT10-112, BT13-016, BT23-099, BT23-040
-- **Effect text:** "digivolve into ... in the hand or trash"
-- **What's missing:** `effect_digivolve_from_hand()` only searches hand. No `effect_digivolve_from_hand_or_trash()` variant exists.
-- **Suggested change:** Add `include_trash=False` parameter to `effect_digivolve_from_hand()`, or add a new method that combines both zones.
-- **Workaround:** Scripts manually build trash selection with `SEL_TRASH_START` indices (functional but inconsistent).
+### Digivolve from Hand or Trash — RESOLVED 2026-03-17 (pre-existing)
+- **Resolution:** `effect_digivolve_from_hand()` already has `include_trash` parameter (effects.py:454). No engine change needed.
 
 ### Activate Another Card's When Digivolving Effect
 - **Discovered in:** Jesmon (2026-03-17)
 - **Card(s):** BT10-112 Jesmon GX, BT10-110 Seiken Meppa
 - **Effect text:** "Activate 1 of that card's [When Digivolving] effects as an effect of this Digimon."
-- **What's missing:** No engine API to enumerate a card's WD effects and execute a player-selected one.
-- **Suggested change:** Add `game.effect_activate_card_effect(player, card_source, timing_filter, on_done)` that collects matching effects, presents selection, and executes.
-- **Workaround:** None clean — scripts can iterate `card.effect_list(EffectTiming.WhenDigivolving)` manually but the selection UX is non-standard.
+- **What's missing:** No engine helper to enumerate a card's WD effects and execute a player-selected one.
+- **Workaround:** Both BT10-112 and BT10-110 manually iterate `card.effect_list()` and present branch selection. Functional but could benefit from a `game.effect_activate_card_effect()` helper.
 
-### Dynamic Security Attack Modifier
-- **Discovered in:** Jesmon (2026-03-17)
-- **Card(s):** BT10-112 Jesmon GX
-- **Effect text:** "gains Security A. +1 for each card with the [Royal Knight] trait in this Digimon's digivolution cards"
-- **What's missing:** `_security_attack_modifier` is a static int. No support for dynamic/computed SA modifiers.
-- **Suggested change:** Support `_security_attack_modifier_fn` callable on ICardEffect, checked in `permanent.security_attack_modifier()`.
-- **Workaround:** Use `register_modifier(ModifierType.CHANGE_SECURITY_ATTACK, ...)` with dynamic value_fn (if supported).
+### ~~Dynamic Security Attack Modifier~~ — RESOLVED 2026-03-17
+- **Resolution:** Wired `ModifierType.CHANGE_SECURITY_ATTACK` into `permanent.security_attack_modifier()` via registry query. BT10-112 uses `_DynamicSAEffect` subclass with `@property` for computed count. Fixed 6 scripts with wrong `value_fn` arity (`lambda: -1` → `lambda cur, t, c: cur - 1`): BT10-042, BT15-084, BT23-094, BT24-071, EX6-022.
 
-### Optional Attack ("may attack")
-- **Discovered in:** TS Jupitermon, Jesmon, Medusamon (2026-03-17)
-- **Card(s):** BT24-085, BT24-037, BT24-082, BT24-051
-- **Effect text:** "1 of your Digimon may attack" / "it may attack"
-- **What's missing:** `FORCE_ATTACK` modifier is mandatory. No "optional attack" that lets the player choose whether to attack.
-- **Suggested change:** Add `ModifierType.MAY_ATTACK` that enables but doesn't force an attack action.
-- **Workaround:** Scripts use `effect_select_own_permanent` + `FORCE_ATTACK` — the selection's `is_optional=True` serves as the "may" gate, but FORCE_ATTACK is then mandatory for the selected Digimon.
+### ~~Optional Attack ("may attack")~~ — RESOLVED 2026-03-17
+- **Resolution:** Added `ModifierType.MAY_ATTACK` semantic marker. Unlike `FORCE_ATTACK`, `MAY_ATTACK` does NOT trigger the forced attackers block in `action_mask.py` — pass (action 62) remains available. Scripts grant Rush + unsuspend alongside `MAY_ATTACK`. Updated 4 scripts: BT24-085, BT24-037, BT24-082, BT24-051.
 
-### Digimon-Only Attack Target Restriction
-- **Discovered in:** TS Jupitermon (2026-03-17)
-- **Card(s):** BT24-051 Merukimon
-- **Effect text:** "attack your opponent's Digimon"
-- **What's missing:** No modifier to restrict attack targets to Digimon only (exclude player).
-- **Suggested change:** Add `ModifierType.CANNOT_ATTACK_PLAYER` checked in action mask.
-- **Workaround:** None — RL agent can learn not to target player, but the action is still available.
+### ~~Digimon-Only Attack Target Restriction~~ — RESOLVED 2026-03-17
+- **Resolution:** Added `ModifierType.CANNOT_ATTACK_PLAYER` checked in `permanent.can_attack_player()` via modifier registry. BT24-051 Merukimon registers it in the "attack your opponent's Digimon" callback.
 
-### is_own_effect in WhenRemoveField Context
-- **Discovered in:** TS Jupitermon, Jesmon (2026-03-17)
-- **Card(s):** BT24-037 Silphymon, BT20-059 Gankoomon (X Antibody)
-- **Effect text:** "other than by your effects"
-- **What's missing:** WhenRemoveField context doesn't include `is_own_effect` flag. `removal_cause` exists but doesn't distinguish own vs opponent effects.
-- **Suggested change:** Add `is_own_effect` bool to removal context.
-- **Workaround:** Best-effort: check `removal_cause != 'cost'` (costs are always own). 'effect' cause is ambiguous.
+### ~~is_own_effect in WhenRemoveField Context~~ — RESOLVED 2026-03-17
+- **Resolution:** Added `is_own_effect` and `is_opponent_effect` booleans to `WhenPermanentWouldBeDeleted`, `WhenRemoveField`, and `OnRemovedField` timing contexts in `player.py`. Derived from existing `is_opponent_effect` parameter on `delete_permanent()`. BT24-037 Silphymon updated to use clean `is_own_effect` check instead of `removal_cause` heuristic. BT20-059 Gankoomon was already properly implemented (not affected).
 
-### Conditional Color Requirement Bypass
-- **Discovered in:** TS Neptunemon, Hudiemon (2026-03-17)
-- **Card(s):** BT24-091 Tidal Stream, BT22-099 Kuremi Detective Agency
-- **Effect text:** "While you have [TS] trait Digimon... ignore color requirements"
-- **What's missing:** `card._match_color_requirement` is a static bool. No dynamic/conditional bypass.
-- **Suggested change:** Support `_match_color_requirement_fn` callable checked in action_mask.
-- **Workaround:** Set `_match_color_requirement = False` unconditionally (over-permissive).
+### ~~Conditional Color Requirement Bypass~~ — RESOLVED 2026-03-17
+- **Resolution:** Added `_match_color_requirement_fn` callable support to `CardSource.match_color_requirement` property. Dynamic fn is checked first, falls through to static `_match_color_requirement`. Updated 4 scripts: BT24-091 (TS trait check), BT22-099 (CS trait check), ST20-15 (face-up IoA check), BT10-110 (Royal Knight check).
 
 ### ~~DigiXros~~ — RESOLVED 2026-03-15
 - **Card(s):** 60 cards across BT10-BT24, EX3-EX10, P sets

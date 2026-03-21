@@ -33,6 +33,12 @@ class CardSource:
 
     @property
     def match_color_requirement(self) -> bool:
+        fn = getattr(self, '_match_color_requirement_fn', None)
+        if fn is not None:
+            try:
+                return fn()
+            except Exception:
+                pass
         return getattr(self, '_match_color_requirement', True)
 
     @property

@@ -38,7 +38,10 @@ import * as deckApiMod from '@/api/deckApi';
 import {
   ACTION,
   ATTACK_TARGETS_PER_SLOT,
+  ATTACK_TARGET_SECURITY,
+  BREEDING_SLOT,
   DIGIVOLVE_FIELDS_PER_HAND,
+  FIELD_SLOTS,
   SELECTION,
 } from '@/utils/constants';
 import { GamePhase, type PermanentInfo } from '@/types/game';
@@ -238,7 +241,7 @@ export function GamePage() {
       if (canDigi) {
         // Only digivolve available — resolve target
         const allTargets = new Set(fieldTargets ?? []);
-        if (canBreeding) allTargets.add(12);
+        if (canBreeding) allTargets.add(BREEDING_SLOT);
         if (allTargets.size === 1) {
           const target = allTargets.values().next().value!;
           handleAction(ACTION.DIGIVOLVE_START + handIndex * DIGIVOLVE_FIELDS_PER_HAND + target);
@@ -262,7 +265,7 @@ export function GamePage() {
     if (!actionChoice) return;
     const { handIndex, digivolveTargets, canDigivolveBreeding: canBreeding } = actionChoice;
     const allTargets = new Set(digivolveTargets);
-    if (canBreeding) allTargets.add(12);
+    if (canBreeding) allTargets.add(BREEDING_SLOT);
     setActionChoice(null);
     if (allTargets.size === 1) {
       const target = allTargets.values().next().value!;
@@ -304,7 +307,7 @@ export function GamePage() {
 
       // During BlockTiming, slots 100-111 select a blocker
       if (phase === GamePhase.BlockTiming && !isOpponent) {
-        const blockAction = 100 + slotIndex;
+        const blockAction = SELECTION.OWN_FIELD_START + slotIndex;
         if (store.actionMask[blockAction] === 1) {
           handleAction(blockAction);
           return;
@@ -356,7 +359,7 @@ export function GamePage() {
   const handleAttackSecurity = useCallback(() => {
     if (store.selectedAttacker === null) return;
     const actionId =
-      ACTION.ATTACK_START + store.selectedAttacker * ATTACK_TARGETS_PER_SLOT + 12;
+      ACTION.ATTACK_START + store.selectedAttacker * ATTACK_TARGETS_PER_SLOT + ATTACK_TARGET_SECURITY;
     if (store.actionMask[actionId] === 1) {
       handleAction(actionId);
     }
@@ -511,7 +514,7 @@ export function GamePage() {
     const targets = parsedMask.canAttack.get(store.selectedAttacker);
     if (targets) {
       for (const t of targets) {
-        if (t < 12) targetedSlots.add(t);
+        if (t < FIELD_SLOTS) targetedSlots.add(t);
       }
     }
   }
@@ -630,7 +633,7 @@ export function GamePage() {
               onBreedingClick={
                 digivolvingHandIndex !== null && parsedMask.canDigivolveBreeding.has(digivolvingHandIndex)
                   ? () => {
-                      handleAction(ACTION.DIGIVOLVE_START + digivolvingHandIndex * DIGIVOLVE_FIELDS_PER_HAND + 12);
+                      handleAction(ACTION.DIGIVOLVE_START + digivolvingHandIndex * DIGIVOLVE_FIELDS_PER_HAND + BREEDING_SLOT);
                       setDigivolvingHandIndex(null);
                     }
                   : parsedMask.canMove
@@ -706,6 +709,7 @@ export function GamePage() {
           onAction={handleAction}
           onSurrender={handleSurrender}
           isGameOver={store.isGameOver}
+          canActivateEffect={parsedMask.canActivateEffect}
         />
       </div>
 

@@ -24,9 +24,18 @@ class BT24_091(CardScript):
     """
 
     def get_card_effects(self, card: 'CardSource') -> List['ICardEffect']:
-        # Bypass color requirement (TS trait condition is dynamic but
-        # any deck running this card will have TS trait permanents)
-        card._match_color_requirement = False
+        # Dynamic color bypass: ignore color requirements while a TS trait Digimon/Tamer is on field
+        def _check_ts_color_req():
+            owner = card.owner if card else None
+            if not owner:
+                return True
+            for p in owner.battle_area:
+                if (p.is_digimon or p.is_tamer) and p.top_card:
+                    traits = getattr(p.top_card, 'card_traits', []) or []
+                    if any('TS' in t for t in traits):
+                        return False  # bypass color requirement
+            return True  # enforce color requirement
+        card._match_color_requirement_fn = _check_ts_color_req
         effects = []
 
         def _main_effect_process(ctx: Dict[str, Any]):

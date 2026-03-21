@@ -65,7 +65,7 @@ class EX6_022(CardScript):
                     def on_target(target_perm):
                         game.register_modifier(
                             target_perm, ModifierType.CHANGE_SECURITY_ATTACK,
-                            value_fn=lambda: -2,
+                            value_fn=lambda cur, t, c: cur - 2,
                             expiry='end_of_opponent_turn',
                         )
 

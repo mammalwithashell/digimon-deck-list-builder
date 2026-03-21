@@ -51,7 +51,7 @@ class BT23_094(CardScript):
                 # SA-1 until opponent's turn ends
                 game.register_modifier(
                     target_perm, ModifierType.CHANGE_SECURITY_ATTACK,
-                    value_fn=lambda: -1,
+                    value_fn=lambda cur, t, c: cur - 1,
                     expiry='end_of_opponent_turn')
                 # Can't activate [When Digivolving] or [When Attacking]
                 game.register_modifier(

@@ -89,6 +89,9 @@ class Game(CombatMixin, ActionDecoderMixin, EffectHelpersMixin):
         # DigiXros pending state: tracks card index, selected materials, and cost
         self._pending_digixros: Optional[dict] = None
 
+        # Deletion observer recursion depth guard (prevents token chain infinite loops)
+        self._deletion_depth: int = 0
+
     @property
     def current_player_id(self) -> int:
         """Return the player_id of the active player."""
@@ -810,6 +813,20 @@ class Game(CombatMixin, ActionDecoderMixin, EffectHelpersMixin):
 
     def execute_deletion_effects(self, deleted_permanent: Permanent, owner: Player):
         """Execute OnDeletion effects for a permanent that was just deleted."""
+        _MAX_DELETION_DEPTH = 8
+        if self._deletion_depth >= _MAX_DELETION_DEPTH:
+            self.logger.log(
+                f"[WARNING] Deletion observer depth limit ({_MAX_DELETION_DEPTH}) reached, "
+                f"skipping effects for {deleted_permanent}")
+            return
+        self._deletion_depth += 1
+        try:
+            self._execute_deletion_effects_inner(deleted_permanent, owner)
+        finally:
+            self._deletion_depth -= 1
+
+    def _execute_deletion_effects_inner(self, deleted_permanent: Permanent, owner: Player):
+        """Inner implementation of execute_deletion_effects."""
         stack: List[TriggeredEffect] = []
         is_tp = (owner is self.turn_player)
 

@@ -14,12 +14,18 @@ class BT10_110(CardScript):
     def get_card_effects(self, card: 'CardSource') -> List['ICardEffect']:
         effects = []
 
-        # "While you have a [Royal Knight] trait Digimon, you may ignore color requirements."
-        # Keep match_color_requirement True; the action mask checks IGNORE_COLOR_REQUIREMENT
-        # modifiers. We register a BeforePayCost effect that handles this at play time.
-        # For practical purposes, bypass unconditionally since the condition check
-        # is enforced in the main effect's condition (below).
-        card._match_color_requirement = False
+        # Dynamic color bypass: ignore color requirements while a Royal Knight trait Digimon is on field
+        def _check_rk_color_req():
+            owner = card.owner if card else None
+            if not owner:
+                return True
+            for p in owner.battle_area:
+                if p.is_digimon and p.top_card:
+                    traits = getattr(p.top_card, 'card_traits', []) or []
+                    if any('Royal Knight' in t for t in traits):
+                        return False  # bypass color requirement
+            return True  # enforce color requirement
+        card._match_color_requirement_fn = _check_rk_color_req
 
         # Timing: EffectTiming.OptionSkill
         # [Main] Unsuspend 1 of your Digimon. Then, if that Digimon is [Jesmon GX], activate 1 of its [When Digivolving] effects.
@@ -86,7 +92,6 @@ class BT10_110(CardScript):
         effect2.set_effect_name("BT10-110 Add To Hand")
         effect2.set_effect_description("[Security] Add this card to its owner's hand.")
         effect2.is_security_effect = True
-        effect2.is_security_effect = True
 
         effect = effect2  # alias for condition closure
         def condition2(context: Dict[str, Any]) -> bool:
@@ -96,14 +101,14 @@ class BT10_110(CardScript):
         effect2.set_can_use_condition(condition2)
 
         def process2(ctx: Dict[str, Any]):
-            """Action: Add To Hand"""
+            """Action: Add this card to owner's hand"""
             player = ctx.get('player')
-            perm = ctx.get('permanent')
-            game = ctx.get('game')
-            # Add card to hand (from trash/reveal)
-            if player and player.trash_cards:
-                card_to_add = player.trash_cards.pop()
-                player.hand_cards.append(card_to_add)
+            if not player:
+                return
+            # Add this card to owner's hand (security cards go to trash after reveal)
+            if card in player.trash_cards:
+                player.trash_cards.remove(card)
+                player.hand_cards.append(card)
 
         effect2.set_on_process_callback(process2)
         effects.append(effect2)

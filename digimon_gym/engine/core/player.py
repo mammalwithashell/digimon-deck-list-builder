@@ -343,7 +343,9 @@ class Player:
         # Fire pre-deletion timing (allows effects to react before prevention checks)
         self._fire_timing(EffectTiming.WhenPermanentWouldBeDeleted,
                           {"permanent": permanent, "player": self, "is_battle": is_battle,
-                           "removal_cause": removal_cause})
+                           "removal_cause": removal_cause,
+                           "is_opponent_effect": is_opponent_effect,
+                           "is_own_effect": not is_opponent_effect})
 
         # DCGO: willBeRemoveField flag — effects can cancel deletion
         if getattr(permanent, '_will_not_be_removed', False):
@@ -479,9 +481,13 @@ class Player:
             self._log(f"{self.player_name}'s permanent {perm_name} deleted.")
 
         self._fire_timing(EffectTiming.WhenRemoveField,
-                          {"permanent": permanent, "player": self, "removal_cause": removal_cause})
+                          {"permanent": permanent, "player": self, "removal_cause": removal_cause,
+                           "is_opponent_effect": is_opponent_effect,
+                           "is_own_effect": not is_opponent_effect})
         self._fire_timing(EffectTiming.OnRemovedField,
-                          {"permanent": permanent, "player": self, "removal_cause": removal_cause})
+                          {"permanent": permanent, "player": self, "removal_cause": removal_cause,
+                           "is_opponent_effect": is_opponent_effect,
+                           "is_own_effect": not is_opponent_effect})
 
         # Execute On Deletion effects (fires for tokens too)
         if self.game and hasattr(self.game, 'execute_deletion_effects'):

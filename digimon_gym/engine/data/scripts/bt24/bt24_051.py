@@ -114,12 +114,21 @@ class BT24_051(CardScript):
                 # Unsuspend so it's ready to attack
                 if target_perm.is_suspended:
                     target_perm.unsuspend()
+                # "attack your opponent's Digimon" — restrict to Digimon targets only
+                from ....interfaces.modifiers import ModifierType
+                game.register_modifier(
+                    target_perm, ModifierType.CANNOT_ATTACK_PLAYER,
+                    expiry='end_of_turn')
+                # MAY_ATTACK — optional attack, not forced
+                game.register_modifier(
+                    target_perm, ModifierType.MAY_ATTACK,
+                    expiry='end_of_turn')
 
             game.effect_select_own_permanent(
                 player, on_select_attacker,
                 filter_fn=lambda p: p.is_digimon,
                 is_optional=True,
-                prompt="Select 1 of your Digimon to get +5000 DP and attack.")
+                prompt="Select 1 of your Digimon to get +5000 DP and attack opponent's Digimon.")
 
         # Timing: EffectTiming.OnEnterFieldAnyone — [On Play]
         effect3 = ICardEffect()
