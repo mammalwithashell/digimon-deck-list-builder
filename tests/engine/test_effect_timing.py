@@ -215,14 +215,19 @@ class TestFlaggedEffects:
         assert result is False
 
     def test_flagged_on_attack_works(self):
-        """is_on_attack=True -> True at OnAllyAttack."""
+        """is_on_attack=True -> True at OnAllyAttack when perm is not the attacker."""
         card = make_card(card_id="ATK-001", name="AttackMon")
         perm = make_perm_with_card(card)
         effect = make_effect(is_on_attack=True)
 
+        # OnAllyAttack requires extra_context with an attacker that is NOT this perm
+        attacker_card = make_card(card_id="ATK-002", name="ActualAttacker")
+        attacker_perm = make_perm_with_card(attacker_card)
+
         result = Game._effect_matches_timing(
             effect, EffectTiming.OnAllyAttack, perm,
             played_card=None, digivolved_perm=None,
+            extra_context={"attacker": attacker_perm},
         )
         assert result is True
 

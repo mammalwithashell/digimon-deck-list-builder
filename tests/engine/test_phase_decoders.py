@@ -628,7 +628,7 @@ class TestSelectionFramework:
 
 class TestIntegration:
     def test_full_attack_block_counter_resolve_flow(self):
-        """Full flow: attack → block → counter → resolve."""
+        """Full flow: attack → counter → block → resolve (DCGO order: counter before block)."""
         game, attacker = setup_attack_game()
 
         # Put a blocker on opponent's field
@@ -650,15 +650,15 @@ class TestIntegration:
         )
         game.player2.hand_cards.append(blast_card)
 
-        # Start attack → should enter BlockTiming
+        # Start attack → should enter CounterTiming first (DCGO: counter before block)
         game.resolve_attack(attacker, game.player2)
-        assert game.current_phase == GamePhase.BlockTiming
-
-        # Decline block → should enter CounterTiming
-        game.decode_action(62, game.player2.player_id)
         assert game.current_phase == GamePhase.CounterTiming
 
-        # Decline counter → resolve battle
+        # Decline counter → should enter BlockTiming
+        game.decode_action(62, game.player2.player_id)
+        assert game.current_phase == GamePhase.BlockTiming
+
+        # Decline block → resolve battle
         game.decode_action(62, game.player2.player_id)
         assert game.pending_attack is None
         assert game.active_player is None

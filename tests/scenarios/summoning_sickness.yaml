@@ -1,0 +1,26 @@
+name: "Summoning Sickness: newly played Digimon cannot attack"
+description: |
+  Place Namakemon (BT16-055) on the field with turn_played equal to 1
+  (current turn). With summoning sickness it should not have any attack
+  actions available. Pass the turn and verify the game continues normally
+  and the Digimon remains unsuspended (was never able to attack).
+
+setup:
+  deck1_archetype: "Puppets"
+  deck2_archetype: "Puppets"
+  memory: 3
+  first_player: 1
+  player1:
+    field:
+      - card_ids: ["BT16-055"]
+        is_suspended: false
+        turn_played: 1
+
+actions:
+  - find: "Pass turn"
+
+assertions:
+  - not_game_over: true
+  - not_suspended:
+      player: 1
+      card: "BT16-055"

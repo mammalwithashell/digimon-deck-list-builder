@@ -127,12 +127,13 @@ class TestHeadlessRecording:
         deck = make_test_deck()
         game = HeadlessGame(deck, deck, record_actions=True)
         initial = game.recorder.initial_state
-        # Each player should have cards distributed across zones after setup
+        # Initial state is captured at Mulligan time (before security setup).
+        # Security stacks are set up later during _finalize_opening_setup().
         p1 = initial.player1
         assert len(p1.initial_hand) == 5  # Draw 5
-        assert len(p1.security_order) == 5  # Top 5 → security
+        assert len(p1.security_order) == 0  # Not yet set at capture time
         assert len(p1.digitama_library_order) >= 0  # Egg deck (ST1-01 are eggs)
-        # Library = remaining cards after security + hand
+        # Library = remaining cards after hand (security not yet drawn)
         total_zones = (len(p1.library_order) + len(p1.digitama_library_order)
                        + len(p1.security_order) + len(p1.initial_hand))
         assert total_zones == len(deck)
@@ -249,7 +250,8 @@ class TestInteractiveRecording:
         assert "security_order" in p1
         assert "initial_hand" in p1
         assert len(p1["initial_hand"]) == 5
-        assert len(p1["security_order"]) == 5
+        # Security stacks are set after mulligans resolve, not at capture time
+        assert len(p1["security_order"]) == 0
 
     def test_interactive_step_still_works(self):
         """InteractiveGame step() must still work without recording actions."""
