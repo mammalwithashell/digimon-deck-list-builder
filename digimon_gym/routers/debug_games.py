@@ -15,6 +15,18 @@ from digimon_gym.routers.schemas import (
     CreateDebugGameRequest,
     SetMemoryRequest,
     InjectCardRequest,
+    PlaceOnFieldRequest,
+    PlaceInBreedingRequest,
+    BulkSetupRequest,
+    ClearZoneRequest,
+    SetPhaseRequest,
+)
+from digimon_gym.engine.debug.state_injection import (
+    place_on_field as _place_on_field,
+    place_in_breeding as _place_in_breeding,
+    clear_zone as _clear_zone,
+    bulk_setup as _bulk_setup,
+    BulkSetupConfig,
 )
 from digimon_gym.routers.state import active_games
 
@@ -127,11 +139,11 @@ def debug_internal_state(game_id: str):
     def _card_id(card_source):
         return card_source.c_entity_base.card_id if card_source.c_entity_base else "unknown"
 
-    def _field_effects(player):
+    def _field_details(player):
         results = []
         for i, perm in enumerate(player.battle_area):
             effect_names = []
-            top = perm.card_sources[0] if perm.card_sources else None
+            top = perm.top_card
             if top:
                 script = CardDatabase().get_script(_card_id(top))
                 if script:
@@ -140,14 +152,51 @@ def debug_internal_state(game_id: str):
                         effect_names = [e.effect_name for e in effects if hasattr(e, 'effect_name')]
                     except Exception:
                         pass
+            # Detect keywords
+            keywords = []
+            for kw in ["blocker", "rush", "piercing", "reboot", "security_attack_plus",
+                        "jamming", "barrier", "armor_purge", "alliance", "vortex",
+                        "overclock", "blast_digivolve", "material_save", "decoy",
+                        "evade", "fortitude", "mind_link"]:
+                if perm.has_keyword(f"_is_{kw}"):
+                    keywords.append(kw)
             results.append({
                 "slot": i,
-                "card_id": _card_id(perm.card_sources[0]) if perm.card_sources else None,
-                "card_name": perm.card_sources[0].card_names[0] if perm.card_sources else None,
-                "source_count": len(perm.card_sources),
+                "card_id": _card_id(top) if top else None,
+                "card_name": top.c_entity_base.card_name_eng if top and top.c_entity_base else None,
+                "level": perm.level,
+                "dp": perm.dp,
+                "is_suspended": perm.is_suspended,
+                "is_digimon": perm.is_digimon,
+                "is_tamer": perm.is_tamer,
+                "turn_played": perm.turn_played,
+                "stack": [_card_id(cs) for cs in perm.card_sources],
+                "keywords": keywords,
                 "effect_names": effect_names,
             })
         return results
+
+    def _breeding_info(player):
+        if player.breeding_area is None:
+            return None
+        perm = player.breeding_area
+        top = perm.top_card
+        return {
+            "card_id": _card_id(top) if top else None,
+            "card_name": top.c_entity_base.card_name_eng if top and top.c_entity_base else None,
+            "level": perm.level,
+            "stack": [_card_id(cs) for cs in perm.card_sources],
+        }
+
+    # Pending selection info
+    pending = None
+    if game.pending_selection:
+        ps = game.pending_selection
+        pending = {
+            "prompt": getattr(ps, 'prompt', None),
+            "valid_count": len(getattr(ps, 'valid_indices', [])),
+            "is_optional": getattr(ps, 'is_optional', False),
+        }
 
     return {
         "library_top_5_p1": [_card_id(c) for c in p1.library_cards[:5]],
@@ -166,8 +215,11 @@ def debug_internal_state(game_id: str):
         "turn_player_id": game.turn_player.player_id,
         "active_player_id": game.active_player.player_id if game.active_player else game.turn_player.player_id,
         "is_game_over": game.game_over,
-        "effects_on_field_p1": _field_effects(p1),
-        "effects_on_field_p2": _field_effects(p2),
+        "field_details_p1": _field_details(p1),
+        "field_details_p2": _field_details(p2),
+        "breeding_p1": _breeding_info(p1),
+        "breeding_p2": _breeding_info(p2),
+        "pending_selection": pending,
     }
 
 
@@ -204,3 +256,81 @@ def debug_inject_card(game_id: str, request: InjectCardRequest):
         raise HTTPException(status_code=400, detail=f"Invalid zone: {request.zone}")
 
     return {"status": "injected", "card_id": request.card_id, "zone": request.zone}
+
+
+@router.post("/games/{game_id}/place-on-field")
+def debug_place_on_field(game_id: str, request: PlaceOnFieldRequest):
+    runner = active_games.get(game_id)
+    if not runner:
+        raise HTTPException(status_code=404, detail="Game not found")
+    try:
+        perm = _place_on_field(
+            runner.game, request.player_id, request.card_ids,
+            request.is_suspended, request.turn_played,
+        )
+        top = perm.top_card
+        return {
+            "status": "placed",
+            "card_id": top.c_entity_base.card_id if top and top.c_entity_base else None,
+            "card_name": top.c_entity_base.card_name_eng if top and top.c_entity_base else None,
+            "stack_size": len(perm.card_sources),
+            "slot": len(runner.game.player1.battle_area if request.player_id == 1
+                        else runner.game.player2.battle_area) - 1,
+        }
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+
+@router.post("/games/{game_id}/place-in-breeding")
+def debug_place_in_breeding(game_id: str, request: PlaceInBreedingRequest):
+    runner = active_games.get(game_id)
+    if not runner:
+        raise HTTPException(status_code=404, detail="Game not found")
+    try:
+        perm = _place_in_breeding(runner.game, request.player_id, request.card_ids)
+        top = perm.top_card
+        return {
+            "status": "placed",
+            "card_id": top.c_entity_base.card_id if top and top.c_entity_base else None,
+            "stack_size": len(perm.card_sources),
+        }
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+
+@router.post("/games/{game_id}/bulk-setup")
+def debug_bulk_setup(game_id: str, request: BulkSetupRequest):
+    runner = active_games.get(game_id)
+    if not runner:
+        raise HTTPException(status_code=404, detail="Game not found")
+    try:
+        config = BulkSetupConfig.from_dict(request.model_dump())
+        summary = _bulk_setup(runner.game, config)
+        return {"status": "ok", "summary": summary}
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+
+@router.post("/games/{game_id}/clear-zone")
+def debug_clear_zone(game_id: str, request: ClearZoneRequest):
+    runner = active_games.get(game_id)
+    if not runner:
+        raise HTTPException(status_code=404, detail="Game not found")
+    try:
+        count = _clear_zone(runner.game, request.player_id, request.zone)
+        return {"status": "cleared", "zone": request.zone, "items_removed": count}
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+
+@router.post("/games/{game_id}/set-phase")
+def debug_set_phase(game_id: str, request: SetPhaseRequest):
+    runner = active_games.get(game_id)
+    if not runner:
+        raise HTTPException(status_code=404, detail="Game not found")
+    try:
+        runner.game.current_phase = GamePhase[request.phase]
+        return {"phase": runner.game.current_phase.name}
+    except KeyError:
+        valid = [p.name for p in GamePhase]
+        raise HTTPException(status_code=400, detail=f"Invalid phase. Valid: {valid}")

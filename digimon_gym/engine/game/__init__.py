@@ -298,7 +298,7 @@ class Game(CombatMixin, ActionDecoderMixin, EffectHelpersMixin):
             self.memory = -3
         self.execute_effects(EffectTiming.OnEndMainPhase)
         self.current_phase = GamePhase.End
-        self.next_phase()
+        self.phase_end()
 
     def check_turn_end(self):
         if self.memory < 0:
@@ -308,7 +308,7 @@ class Game(CombatMixin, ActionDecoderMixin, EffectHelpersMixin):
             # DCGO fires OnEndMainPhase when memory crosses, not just on voluntary pass
             self.execute_effects(EffectTiming.OnEndMainPhase)
             self.current_phase = GamePhase.End
-            self.next_phase()
+            self.phase_end()
 
     def _check_deferred_turn_end(self):
         """End the turn if it was deferred while waiting for a selection."""

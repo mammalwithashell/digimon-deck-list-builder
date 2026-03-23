@@ -57,7 +57,10 @@ class Permanent:
 
     @property
     def is_digimon(self) -> bool:
-        return self.top_card.is_digimon if self.top_card else False
+        # DCGO Permanent.cs:3309 — DigiEggs are treated as Digimon at the
+        # permanent level (hatched eggs ARE baby Digimon on the field/breeding).
+        # CardSource.is_digimon remains strict (CardKind.Digimon only).
+        return (self.top_card.is_digimon or self.top_card.is_digi_egg) if self.top_card else False
 
     @property
     def is_tamer(self) -> bool:

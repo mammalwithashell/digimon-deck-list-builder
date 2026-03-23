@@ -1,6 +1,6 @@
 {
-  "version": 46,
-  "last_updated": "2026-03-15",
+  "version": 51,
+  "last_updated": "2026-03-22",
   "cards": {
     "BT1-087": {
       "card_name": "T.K. Takaishi",
@@ -128,10 +128,11 @@
       "notes": "On Play reveal+search works. Inherited +1000 DP correct."
     },
     "BT13-007": {
-      "verdict": "IMPLEMENTED",
       "card_name": "King Drasil_7D6",
-      "archetype": "Archetype",
-      "notes": "Added BeforePayCost leak guard"
+      "status": "PASS",
+      "validated_date": "2026-03-22",
+      "report": "2026-03-22-medusamon-royal-knights-regression.md",
+      "notes": "FIXED: Stays in breeding after Permanent.is_digimon fix. All effects verified: cost reduction, memory gain, absorption, tuck/pull."
     },
     "BT13-009": {
       "card_name": "Huckmon",
@@ -211,10 +212,11 @@
       "notes": "Self-trigger bug fixed"
     },
     "BT13-093": {
-      "verdict": "PASS",
       "card_name": "Omekamon",
-      "archetype": "Archetype",
-      "notes": "No changes needed"
+      "status": "PASS",
+      "validated_date": "2026-03-22",
+      "report": "2026-03-22-royal-knights-vs-medusamon.md",
+      "notes": "On Play Draw 1 correct. Play cost correct."
     },
     "BT13-095": {
       "verdict": "IMPLEMENTED",
@@ -243,10 +245,11 @@
       "notes": "Script exists and loads."
     },
     "BT13-110": {
-      "verdict": "IMPLEMENTED",
       "card_name": "Royal Knights of the Purge",
-      "archetype": "Archetype",
-      "notes": "Delay digi-source iteration fixed, Rush via modifier"
+      "status": "PASS",
+      "validated_date": "2026-03-22",
+      "report": "2026-03-22-royal-knights-vs-medusamon.md",
+      "notes": "Draw 1 correct. Delay placed in battle area. Tuck-under-KD7D6 has no target (cascading from breeding bug)."
     },
     "BT13-111": {
       "verdict": "IMPLEMENTED",
@@ -519,10 +522,11 @@
       "notes": "Fixed When Digivolving: added DNA check, is_digimon filter, FORCE_ATTACK modifier"
     },
     "BT16-082": {
-      "verdict": "PASS",
       "card_name": "Ukkomon",
-      "archetype": "Millenniummon",
-      "notes": ""
+      "status": "PASS",
+      "validated_date": "2026-03-22",
+      "report": "2026-03-22-medusamon-royal-knights-regression.md",
+      "notes": "Play cost 3 correct. Reveal triggers on move from breeding, not on play."
     },
     "BT16-102": {
       "card_name": "Magnamon (X Antibody)",
@@ -553,10 +557,11 @@
       "notes": "Inherited name aliasing under Omnimon verified"
     },
     "BT17-018": {
-      "verdict": "IMPLEMENTED",
       "card_name": "Gallantmon: Crimson Mode",
-      "archetype": "Archetype",
-      "notes": "Alt-digi added, When Attacking timing fixed, security trash fixed"
+      "status": "PASS",
+      "validated_date": "2026-03-22",
+      "report": "2026-03-22-medusamon-royal-knights-regression.md",
+      "notes": "Play cost 8 correct. On Play multi-select delete up to 15000 DP with decline option."
     },
     "BT17-019": {
       "card_name": "Gabumon",
@@ -754,10 +759,11 @@
       "notes": "New script: Security play Lucemon from trash. Breeding prevent leaving."
     },
     "BT18-087": {
-      "verdict": "IMPLEMENTED",
       "card_name": "Owen Dreadnought",
-      "archetype": "Archetype",
-      "notes": "Wrong timing (OnStartMainPhase -> OnStartTurn); security loss condition checked wrong player"
+      "status": "PASS",
+      "validated_date": "2026-03-22",
+      "report": "2026-03-22-royal-knights-vs-medusamon.md",
+      "notes": "Start of Turn memory-to-3 works. Security removal trigger fires correctly."
     },
     "BT18-092": {
       "card_name": "Zenith",
@@ -852,10 +858,11 @@
       "notes": ""
     },
     "BT19-072": {
-      "verdict": "PARTIAL",
       "card_name": "LordKnightmon",
-      "archetype": "Archetype",
-      "notes": "Timing fixed; attack redirect remains stubbed (engine gap)"
+      "status": "PASS",
+      "validated_date": "2026-03-22",
+      "report": "2026-03-22-royal-knights-vs-medusamon.md",
+      "notes": "Played at reduced cost via Cool Boy. On Play play-Lv4-from-trash auto-skips with no targets."
     },
     "BT19-075": {
       "verdict": "PASS",
@@ -955,10 +962,11 @@
       "notes": "FORCE_ATTACK implemented via register_modifier"
     },
     "BT20-017": {
-      "verdict": "IMPLEMENTED",
       "card_name": "Jesmon",
-      "archetype": "Archetype",
-      "notes": "Force attack stub filled with FORCE_ATTACK modifier"
+      "status": "PASS",
+      "validated_date": "2026-03-22",
+      "report": "2026-03-22-royal-knights-vs-medusamon.md",
+      "notes": "On Play creates Atho/Rene/Por Token correctly. Your Turn trigger auto-skips with no valid targets."
     },
     "BT20-019": {
       "card_name": "Jesmon (X Antibody)",
@@ -1020,10 +1028,11 @@
       "notes": "DNA check implemented, blast DNA names added"
     },
     "BT20-083": {
-      "verdict": "IMPLEMENTED",
       "card_name": "Omekamon",
-      "archetype": "Archetype",
-      "notes": "**Name collision fix**: `'Omnimon'` -> `'Omnimon (X Antibody)'`"
+      "status": "PASS",
+      "validated_date": "2026-03-22",
+      "report": "2026-03-22-medusamon-royal-knights-regression.md",
+      "notes": "On Play may-digivolve into Omnimon X Antibody at 1 or fewer security: condition checked, optional choice presented, digivolve free ignoring requirements. Blocker keyword present. On Deletion tuck under KD7D6 works."
     },
     "BT20-084": {
       "card_name": "Sistermon Ciel (Awakened)",
@@ -1033,10 +1042,11 @@
       "notes": "On Play/When Digivolving suspend prevention fires. Trash digi trigger."
     },
     "BT20-091": {
-      "verdict": "IMPLEMENTED",
       "card_name": "Cool Boy",
-      "archetype": "Archetype",
-      "notes": "Fixed digivolve trigger timing"
+      "status": "PARTIAL",
+      "validated_date": "2026-03-22",
+      "report": "2026-03-22-royal-knights-vs-medusamon.md",
+      "notes": "Trigger on Royal Knight play works. But by-suspending cost auto-fires without choice."
     },
     "BT20-096": {
       "card_name": "Black Sabbath",
@@ -1046,16 +1056,18 @@
       "notes": "Full rewrite: Main trashes hand then deletes Lv4-. Security deletes Lv6-."
     },
     "BT20-100": {
-      "verdict": "IMPLEMENTED",
       "card_name": "The Last Guardian",
-      "archetype": "Archetype",
-      "notes": "WhenRemoveField prevention + Delay guard implemented"
+      "status": "PASS",
+      "validated_date": "2026-03-22",
+      "report": "2026-03-22-medusamon-royal-knights-regression.md",
+      "notes": "Reveal top 3 works. Placed as Delay. Playable with White color from KD7D6 in breeding."
     },
     "BT20-102": {
-      "verdict": "IMPLEMENTED",
       "card_name": "Omnimon (X Antibody)",
-      "archetype": "Archetype",
-      "notes": "X Antibody trait check fixed (was checking names, not traits)"
+      "status": "PARTIAL",
+      "validated_date": "2026-03-22",
+      "report": "2026-03-22-medusamon-royal-knights-regression.md",
+      "notes": "When Digivolving board wipe + bottom-deck works (evo card condition checked, two-step selection). On Play auto-skips without evo cards (correct). END OF TURN Rush grant NEVER FIRES — engine bug: pass_turn() and check_turn_end() both skip phase_end(), so OnEndTurn effects never execute."
     },
     "BT21-001": {
       "card_name": "Gigimon",
@@ -1080,10 +1092,10 @@
     },
     "BT21-008": {
       "card_name": "Elizamon",
-      "validated_date": "2026-03-01",
-      "report": "2026-03-01-medusa-v2.md",
       "status": "PASS",
-      "notes": "Fixed: OnLoseSecurity inherited was adding memory to wrong player (ctx overwrite). Now uses card.owner. On Play reveal still verified."
+      "validated_date": "2026-03-22",
+      "report": "2026-03-22-royal-knights-vs-medusamon.md",
+      "notes": "Digivolves onto Lv2 correctly. Evo cost 0 correct."
     },
     "BT21-013": {
       "card_name": "Agunimon",
@@ -1136,10 +1148,10 @@
     },
     "BT21-029": {
       "card_name": "Medusamon",
-      "status": "FIXED",
-      "validated_date": "2026-03-15",
-      "report": "2026-03-15-dna-omnimon-medusamon-qa.md",
-      "notes": "Effect4: _is_deletion_observer=True. Effect5: event_player context key. Petrification tokens should fire."
+      "status": "PASS",
+      "validated_date": "2026-03-22",
+      "report": "2026-03-22-royal-knights-vs-medusamon.md",
+      "notes": "WhenDigivolving delete lowest DP works. Petrification Token placement works. Progress blocks security effects correctly."
     },
     "BT21-051": {
       "card_name": "Puppetmon",
@@ -1223,10 +1235,11 @@
       "notes": "Memory set to 3 works. On Play reveal+play Vemmon/add to hand works."
     },
     "BT21-093": {
-      "verdict": "PASS",
       "card_name": "Raging Serpentine",
-      "archetype": "Archetype",
-      "notes": "Cost reduction, delay digivolve, security all correct"
+      "status": "PASS",
+      "validated_date": "2026-03-22",
+      "report": "2026-03-22-medusamon-royal-knights-regression.md",
+      "notes": "Cost 8 correct. Deletes opponent highest DP. Placed as Delay."
     },
     "BT21-098": {
       "card_name": "Ragnarok Cannon",
@@ -1586,10 +1599,11 @@
       "notes": "**3 bugs**: alt-digi from Huckmon missing opp 10000+ DP condition; alt-digi missing CS trait acceptance; [Your Turn] OPT used wrong timing (OnEnterFieldAnyone+is_on_play instead of _is_play_observer); added branch choice for token vs Sistermon"
     },
     "BT23-014": {
-      "verdict": "IMPLEMENTED",
       "card_name": "Gallantmon",
-      "archetype": "Archetype",
-      "notes": "Play-from-trash restriction via CANNOT_PLAY_CARD modifier; DP calc fixed"
+      "status": "PASS",
+      "validated_date": "2026-03-22",
+      "report": "2026-03-22-medusamon-royal-knights-regression.md",
+      "notes": "Play cost 11 correct. On Play trash-play restriction + DP-scaled delete. Auto-skips with no targets."
     },
     "BT23-017": {
       "card_name": "Betamon",
@@ -1641,10 +1655,11 @@
       "notes": "DNA digivolve requires 2 Digimon (verified). WhenDigivolving fires only on digivolve. Force attack grants modifier with expiry, restricts actions. De-digivolve on DNA verified."
     },
     "BT23-035": {
-      "verdict": "IMPLEMENTED",
       "card_name": "Dynasmon",
-      "archetype": "Archetype",
-      "notes": "Security trash, DP mod, trigger conditions fixed"
+      "status": "FAIL",
+      "validated_date": "2026-03-22",
+      "report": "2026-03-22-royal-knights-vs-medusamon.md",
+      "notes": "CRITICAL: On Play by-trashing-security cost auto-accepted without choice. Systemic by-cost issue."
     },
     "BT23-037": {
       "card_name": "Tentomon",
@@ -1699,10 +1714,11 @@
       "notes": "Blocker, Alliance, Cant Attack Digimon, OnTappedAnyone delete verified"
     },
     "BT23-054": {
-      "verdict": "IMPLEMENTED",
       "card_name": "Magnamon",
-      "archetype": "Archetype",
-      "notes": "Modifier call verified, empty-target guard"
+      "status": "PASS",
+      "validated_date": "2026-03-22",
+      "report": "2026-03-22-royal-knights-vs-medusamon.md",
+      "notes": "On Play Draw + Royal Knight/CS protection works. Blocker/Armor Purge keywords present."
     },
     "BT23-057": {
       "card_name": "Gankoomon",
@@ -1714,9 +1730,9 @@
     "BT23-058": {
       "card_name": "Craniamon",
       "status": "PASS",
-      "validated_date": "2026-03-15",
-      "report": "2026-03-15-hudiemon-zephagamon-qa.md",
-      "notes": "Attack->suspend->OnTappedAnyone delete chain verified"
+      "validated_date": "2026-03-22",
+      "report": "2026-03-22-royal-knights-vs-medusamon.md",
+      "notes": "Play cost correct. Reboot/Blocker passive keywords present. No On Play (correct)."
     },
     "BT23-059": {
       "verdict": "PASS",
@@ -1876,11 +1892,11 @@
       "notes": "1 fix: missing owner/Iliad trait filter on condition"
     },
     "BT24-008": {
-      "card_name": "Elizamon",
-      "validated_date": "2026-03-08",
-      "report": "2026-03-08-medusamon-royal-knights.md",
+      "card_name": "Dimetromon",
       "status": "PASS",
-      "notes": "Re-verified: On Play trash filter correctly accepts Reptile/Dragonkin/LIBERATOR and rejects Puppet/X Antibody. Draw 2 reward fires. Trait filter logic confirmed correct."
+      "validated_date": "2026-03-22",
+      "report": "2026-03-22-royal-knights-vs-medusamon.md",
+      "notes": "On Play by-trashing for Draw 2 correctly presents decline option."
     },
     "BT24-010": {
       "card_name": "Greymon",
@@ -1918,10 +1934,10 @@
     },
     "BT24-016": {
       "card_name": "Lamiamon",
-      "status": "FIXED",
-      "validated_date": "2026-03-15",
-      "report": "2026-03-15-dna-omnimon-medusamon-qa.md",
-      "notes": "Uppercase filename renamed to lowercase. Script now loads."
+      "status": "PASS",
+      "validated_date": "2026-03-22",
+      "report": "2026-03-22-royal-knights-vs-medusamon.md",
+      "notes": "Play cost 7 correct. No On Play effects (correct)."
     },
     "BT24-017": {
       "card_name": "Medusamon",
@@ -1931,10 +1947,11 @@
       "notes": "Fixed: WD timing, lowest DP filter, removed spurious WA effect."
     },
     "BT24-018": {
-      "verdict": "PASS",
       "card_name": "Styracomon",
-      "archetype": "Archetype",
-      "notes": "Keywords, effects, deletion prevention correct"
+      "status": "FAIL",
+      "validated_date": "2026-03-22",
+      "report": "2026-03-22-royal-knights-vs-medusamon.md",
+      "notes": "Digivolve validator allows Lv7 onto Lv5 Lamiamon. Should require Lv6 base."
     },
     "BT24-019": {
       "verdict": "IMPLEMENTED",
@@ -2130,10 +2147,10 @@
     },
     "BT24-082": {
       "card_name": "Owen Dreadnought",
-      "status": "FIXED",
-      "validated_date": "2026-03-15",
-      "report": "2026-03-15-dna-omnimon-medusamon-qa.md",
-      "notes": "Uppercase filename renamed to lowercase. Script now loads."
+      "status": "PASS",
+      "validated_date": "2026-03-22",
+      "report": "2026-03-22-royal-knights-vs-medusamon.md",
+      "notes": "Play cost 3 correct. Start of Main auto-skips when no Owen in hand."
     },
     "BT24-083": {
       "verdict": "IMPLEMENTED",
@@ -2169,11 +2186,11 @@
       "notes": "4 fixes: missing memory check, missing deck-return cost, wrong filter, security blocked"
     },
     "BT24-089": {
-      "card_name": "Unique Emblem",
-      "status": "FIXED",
-      "validated_date": "2026-03-15",
-      "report": "2026-03-15-dna-omnimon-medusamon-qa.md",
-      "notes": "Uppercase filename renamed to lowercase. Script now loads."
+      "card_name": "Unique Emblem: Blazing Conductor",
+      "status": "PASS",
+      "validated_date": "2026-03-22",
+      "report": "2026-03-22-royal-knights-vs-medusamon.md",
+      "notes": "Main effect plays Elizamon/Owen free. Delay placed in battle area."
     },
     "BT24-090": {
       "card_name": "Abyss Sanctuary",
@@ -2578,10 +2595,11 @@
       "notes": "OnRemovedField -> OnDestroyedAnyone"
     },
     "BT8-097": {
-      "verdict": "IMPLEMENTED",
       "card_name": "Crimson Blaze",
-      "archetype": "Archetype",
-      "notes": "Modifier arg order fixed, leak guard added"
+      "status": "PASS",
+      "validated_date": "2026-03-22",
+      "report": "2026-03-22-medusamon-royal-knights-regression.md",
+      "notes": "Cost reduced by 1 per opponent Digimon (6->5). Deletes all 6000 DP or less. Option trashed."
     },
     "BT8-107": {
       "verdict": "PASS",
@@ -3021,10 +3039,11 @@
       "notes": "Alt digi from Snatchmon/Galacticmon. On Play/When Digi mass delete + conditional Blocker+immunity. End of Opp Turn re-digivolve."
     },
     "EX11-053": {
-      "verdict": "IMPLEMENTED",
       "card_name": "Omekamon",
-      "archetype": "Archetype",
-      "notes": "On Deletion rewritten: hand+King Drasil search, place-under callback"
+      "status": "PASS",
+      "validated_date": "2026-03-22",
+      "report": "2026-03-22-medusamon-royal-knights-regression.md",
+      "notes": "On Play tuck under KD7D6 works with decline option. On Deletion (1 or fewer security) correctly plays Omnimon X Antibody from hand free with may optionality. Played Omnimon then absorbed by KD7D6 start-of-main (Royal Knight trait). Both effects fully verified."
     },
     "EX11-054": {
       "card_name": "Owen Dreadnought",
@@ -3089,10 +3108,11 @@
       "notes": "Security play, memory set, EOT DNA digivolve, DP floor, stack immunity correct."
     },
     "EX11-071": {
-      "verdict": "IMPLEMENTED",
       "card_name": "Cool Boy",
-      "archetype": "Archetype",
-      "notes": "3 bugs: spurious trash pop, free->manual_reduction=2, missing tamer bounce"
+      "status": "PASS",
+      "validated_date": "2026-03-22",
+      "report": "2026-03-22-royal-knights-vs-medusamon.md",
+      "notes": "On Play reveal top 3 works. Active effect return-to-deck + play at -2 cost works."
     },
     "EX11-073": {
       "card_name": "ExMaquinamon",
@@ -3141,10 +3161,11 @@
       "notes": "New script: delete lv4 or lower OR delete own Digimon to upgrade to lv6 or lower; security plays Guilmon from trash"
     },
     "EX4-006": {
-      "verdict": "PASS",
       "card_name": "Guilmon",
-      "archetype": "Archetype",
-      "notes": "Correct: conditional Rush on play"
+      "status": "PASS",
+      "validated_date": "2026-03-22",
+      "report": "2026-03-22-medusamon-royal-knights-regression.md",
+      "notes": "Digivolves onto Lv2 correctly. Rush condition requires 20+ trash cards."
     },
     "EX4-011": {
       "verdict": "PASS",
@@ -3512,10 +3533,11 @@
       "notes": "3 critical: source check, delete-or-trash conditional, immunity as continuous"
     },
     "EX8-074": {
-      "verdict": "IMPLEMENTED",
       "card_name": "MedievalGallantmon",
-      "archetype": "Archetype",
-      "notes": "BeforePayCost process uses player selection"
+      "status": "PARTIAL",
+      "validated_date": "2026-03-22",
+      "report": "2026-03-22-medusamon-royal-knights-regression.md",
+      "notes": "Functions but suspend-2-to-reduce-cost auto-fires without player choice (systemic by-cost issue)."
     },
     "EX9-002": {
       "verdict": "IMPLEMENTED",
@@ -3530,10 +3552,11 @@
       "notes": ""
     },
     "EX9-008": {
-      "verdict": "PASS",
       "card_name": "Biyomon",
-      "archetype": "Millenniummon",
-      "notes": ""
+      "status": "PASS",
+      "validated_date": "2026-03-22",
+      "report": "2026-03-22-medusamon-royal-knights-regression.md",
+      "notes": "Play cost 3 correct. Training/Raid are inherited effects."
     },
     "EX9-009": {
       "verdict": "PASS",
@@ -4093,10 +4116,11 @@
       "notes": ""
     },
     "P-206": {
-      "verdict": "IMPLEMENTED",
       "card_name": "Digital Gate Open",
-      "archetype": "Millenniummon",
-      "notes": "Replaced stub `pass` color bypass with `card._match_color_requirement = False` (linter fixed)"
+      "status": "PASS",
+      "validated_date": "2026-03-22",
+      "report": "2026-03-22-medusamon-royal-knights-regression.md",
+      "notes": "Cost 4 correct. Reveal top 3, add 1 Digimon + 1 Tamer. Placed as Delay."
     },
     "P-207": {
       "card_name": "Minervamon",
