@@ -639,25 +639,40 @@ If crashes occur, identify the failing script from the stack trace and fix it. R
 
 ### 6b. Targeted effect tests
 
-For Complex cards and fixed QA-FAIL cards, write pytest cases in `tests/test_archetype_{name}.py`.
+For Complex cards and fixed QA-FAIL cards, write pytest cases in `tests/behavioral/test_{archetype_name}.py`.
 
-Each test should:
-1. Set up a specific board state using HeadlessGame
+Each test should use `DebugRunner` (via the `debug_runner` fixture from `tests/conftest.py`):
+1. Set up a specific board state with real cards
 2. Trigger the effect
-3. Assert the outcome
+3. Assert the outcome via snapshots
 
 ```python
-def test_bt23_057_cost_reduction():
-    """Gankoomon cost should be reduced by 5 when 3+ qualifying cards in trash."""
-    # Setup: create game, put qualifying cards in trash, verify cost reduction
-    ...
+import pytest
 
-def test_bt23_077_blocker_keyword():
-    """Sistermon Ciel should have Blocker keyword on field."""
-    ...
+@pytest.mark.behavioral
+class TestGankoomonEffects:
+    def test_bt23_057_cost_reduction(self, debug_runner):
+        """Gankoomon cost should be reduced by 5 when 3+ qualifying cards in trash."""
+        runner = debug_runner(archetype1="Jesmon GX (Gankoomon)", initial_memory=10)
+        runner.inject_card(1, "BT23-057", "hand")
+        # Put qualifying cards in trash
+        for cid in ["BT23-060", "BT23-061", "BT23-062"]:
+            runner.inject_card(1, cid, "trash")
+        action = runner.find_action("Play Gankoomon")
+        result = runner.execute(action)
+        runner.auto_resolve()
+        # Verify reduced cost was applied
+        assert result.after.memory > result.before.memory - 7  # Cost reduced from 12
+
+    def test_bt23_077_blocker_keyword(self, debug_runner):
+        """Sistermon Ciel should have Blocker keyword on field."""
+        runner = debug_runner(archetype1="Jesmon GX (Gankoomon)", initial_memory=10)
+        runner.place_on_field(1, ["BT23-077"])
+        snap = runner.snapshot()
+        assert "blocker" in snap.p1_field[0].keywords
 ```
 
-Run: `python -m pytest tests/test_archetype_{name}.py -v`
+Run: `python -m pytest tests/behavioral -v`
 
 ---
 

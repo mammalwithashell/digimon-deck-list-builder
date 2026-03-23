@@ -404,46 +404,37 @@ Also update `qa/archetype-qa/INDEX.md` with revised status for this archetype.
 
 For each FIXED card (and any DISCREPANCY cards that were complex), run a targeted debug game that exercises the specific effect. Debug games are superior to smoke tests because they verify the exact behavior, not just crash-freedom.
 
-**Method:** Use the debug game API to set up controlled board states that trigger each fixed card's effects.
+**Method (preferred):** Use `DebugRunner` in-process for fast, deterministic verification. No server required.
 
-```bash
-# Start server (if not running)
-python -m uvicorn digimon_gym.api:app --host 0.0.0.0 --port 8000
+```python
+from digimon_gym.engine.runners.debug_runner import DebugRunner
 
-# Create debug game with controlled deck order
-curl -X POST http://localhost:8000/debug/games -H 'Content-Type: application/json' -d '{
-  "deck1": [...],
-  "deck2": [...],
-  "skip_shuffle": true,
-  "starting_hand1": ["CARD_ID_TO_TEST", ...],
-  "initial_memory": 10
-}'
+runner = DebugRunner(deck1, deck2, initial_memory=10, starting_hand1=["CARD_ID_TO_TEST"])
+runner.place_on_field(2, ["ST1-03"], is_suspended=True)  # target
+action = runner.find_action("Play CARD_NAME")
+result = runner.execute(action)
+runner.auto_resolve()
+
+# Verify state changes
+snap = runner.snapshot()
+assert "ST1-03" in snap.p2_trash  # target was deleted
+assert "CARD_ID" in [s.card_id for s in snap.p1_field]  # card on field
 ```
 
 **For each fixed card, the debug game should:**
-1. Place the card in the starting hand (via `starting_hand1`)
+1. Place the card in the starting hand (via `starting_hand1` or `inject_card`)
 2. Set memory high enough to play it (via `initial_memory`)
-3. Arrange opponents/targets in the deck order so they appear on the board
+3. Place targets/opponents on field via `place_on_field()` or `inject_card()`
 4. Play the card and verify:
-   - Selection phases enter correctly (check action mask for expected options)
+   - Selection phases enter correctly (check `actions()` for expected options)
    - Targets/filters match card text (correct candidates offered)
    - State changes happen (DP changes, cards move to correct zones, memory changes)
    - Costs are paid (cards trashed, Digimon deleted, etc.)
    - Duration is correct (effects expire at the right time)
 
-**Inject cards as needed:**
+**After all fixes, run behavioral tests:**
 ```bash
-# Inject a card to a specific zone during gameplay
-curl -X POST http://localhost:8000/debug/games/{id}/inject-card -d '{"card_id": "CARD_ID", "zone": "hand"}'
-
-# Set memory
-curl -X POST http://localhost:8000/debug/games/{id}/set-memory -d '{"memory": 10}'
-
-# Check internal state
-curl http://localhost:8000/debug/games/{id}/internal-state
-
-# Check action mask
-curl http://localhost:8000/games/{id}/action-mask
+python -m pytest tests/behavioral -v
 ```
 
 **Report format per card:**

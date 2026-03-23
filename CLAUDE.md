@@ -86,6 +86,15 @@ Underlying surfaces:
 │   ├── archetype-qa/              # Per-archetype QA, engine API ref, engine gaps
 │   └── qa-reports/                # Gameplay QA reports, validated cards index
 └── tests/
+    ├── conftest.py                # Shared fixtures (reset_registry, debug_runner)
+    ├── helpers/                   # Test utilities (make_card, GameBuilder)
+    ├── engine/                    # Engine unit tests (tensor, actions, keywords, timing)
+    ├── runners/                   # Game runner tests (headless, interactive, replay)
+    ├── behavioral/                # DebugRunner behavioral tests (real card effects)
+    ├── rl/                        # RL training tests (gauntlet, LSTM, workers)
+    ├── api/                       # Hosted API tests (DB, auth)
+    ├── ai_pipeline/               # AI pipeline tests (excluded from default runs)
+    └── scenarios/                 # YAML scenario files (auto-discovered by pytest)
 ```
 
 ## Service Boundaries
@@ -127,13 +136,19 @@ cd frontend
 npm install
 npm run dev
 
-# Tests
+# Tests (default run excludes AI pipeline tests)
 python -m pytest tests -v
 
-# Targeted tests
-python -m pytest tests/test_tensor_and_actions.py -v
-python -m pytest tests/test_phase_decoders.py -v
-python -m pytest tests/test_maskable_recurrent.py -v
+# By subdirectory
+python -m pytest tests/engine -v                       # Engine unit tests
+python -m pytest tests/behavioral -v                   # DebugRunner behavioral tests
+python -m pytest tests/runners -v                      # Game runner tests
+python -m pytest tests/rl -v                           # RL training tests
+
+# By marker
+python -m pytest tests -m scenario -v                  # YAML scenario tests only
+python -m pytest tests/ai_pipeline -v                   # AI pipeline tests (opt-in)
+python -m pytest tests -m "not slow" -v                # Skip slow smoke tests
 
 # RL training
 python -m digimon_gym.agents.pilot_training --timesteps 500000
