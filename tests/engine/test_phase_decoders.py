@@ -595,8 +595,9 @@ class TestSelectionFramework:
         )
 
         # Valid index: SEL_TRASH_START + 1 selects trash card at index 1
+        # Callback receives the full action_id (consistent with other selection decoders)
         game.decode_action(SEL_TRASH_START + 1, game.player1.player_id)
-        assert callback_called == [1]
+        assert callback_called == [SEL_TRASH_START + 1]
 
     def test_source_selection_decodes_correctly(self):
         """Source selection decoder correctly extracts field_idx and source_idx."""

@@ -279,7 +279,7 @@ class ActionDecoderMixin:
                 self.pending_selection = None
                 self.current_phase = prev_phase
                 self.active_player = None
-                callback(idx)
+                callback(action_id)
                 self._recover_from_stale_selection()
                 self._check_deferred_turn_end()
 

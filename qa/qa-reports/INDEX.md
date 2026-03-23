@@ -41,7 +41,7 @@
 | [ts-jupitermon](2026-03-13-ts-jupitermon.md) | 5 | 0 | 0 | 5 |
 | [dna-omnimon](2026-03-13-dna-omnimon.md) | 13 | 0 | 0 | 13 |
 | [exmaquinamon](2026-03-13-exmaquinamon.md) | 14 | 0 | 0 | 14 |
-| [galacticmon](2026-03-13-galacticmon.md) | 27 | 0 | 0 | 27 |
+| [galacticmon](2026-03-13-galacticmon.md) | 27 | 22 | 0 | 5 |
 | [puppets](2026-03-13-puppets.md) | 32 | 0 | 0 | 32 |
 | [dark-masters](2026-03-13-dark-masters.md) | 18 | 0 | 0 | 18 |
 | [jesmon](2026-03-13-jesmon.md) | 8 | 0 | 0 | 8 |
@@ -56,7 +56,8 @@
 | [campaign-summary](2026-03-15-campaign-summary.md) | — | — | — | — |
 | [royal-knights-vs-medusamon](2026-03-22-royal-knights-vs-medusamon.md) | 5 | 1 | 0 | 4 |
 | [medusamon-royal-knights-regression](2026-03-22-medusamon-royal-knights-regression.md) | 2 | 0 | 0 | 2 |
-| **Total** | **367** | **162** | **8** | **197** |
+| [galacticmon-retest](2026-03-22-galacticmon-retest.md) | 27 | 22 | 0 | 5 |
+| **Total** | **367** | **184** | **8** | **175** |
 
 ---
 
