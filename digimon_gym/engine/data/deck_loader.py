@@ -258,6 +258,7 @@ class DeckValidationResult:
 def validate_deck(
     card_ids: List[str],
     restricted_list: Optional[CardRestriction] = None,
+    rules: Optional[object] = None,
 ) -> DeckValidationResult:
     """Validate a deck list against game rules and the restricted list.
 
@@ -270,11 +271,22 @@ def validate_deck(
     Args:
         card_ids: Flat list of card ID strings (one per copy).
         restricted_list: Override the default RESTRICTED_LIST for testing.
+            Deprecated — prefer passing a Rules object instead.
+        rules: Optional Rules object. When provided, uses rules.card_restrictions
+            for banlist enforcement and rules.deck_size / rules.egg_deck_max for
+            size checks. Takes precedence over restricted_list.
 
     Returns:
         DeckValidationResult with is_valid, errors, and warnings.
     """
-    if restricted_list is None:
+    # Resolve deck size constraints and banlist from Rules if provided
+    deck_size = 50
+    egg_deck_max = 5
+    if rules is not None:
+        restricted_list = getattr(rules, 'card_restrictions', None)
+        deck_size = getattr(rules, 'deck_size', 50)
+        egg_deck_max = getattr(rules, 'egg_deck_max', 5)
+    elif restricted_list is None:
         restricted_list = RESTRICTED_LIST
 
     errors: List[str] = []
@@ -306,10 +318,10 @@ def validate_deck(
         warnings.append(f"Unknown card ID: {uid} (not in card database)")
 
     # 2. Deck size checks
-    if main_count != 50:
-        errors.append(f"Main deck must be exactly 50 cards (got {main_count})")
-    if egg_count > 5:
-        errors.append(f"Digi-Egg deck must be 0-5 cards (got {egg_count})")
+    if main_count != deck_size:
+        errors.append(f"Main deck must be exactly {deck_size} cards (got {main_count})")
+    if egg_count > egg_deck_max:
+        errors.append(f"Digi-Egg deck must be 0-{egg_deck_max} cards (got {egg_count})")
 
     # 3. Per-card copy limits
     for card_id, count in counts.items():
@@ -324,6 +336,13 @@ def validate_deck(
             )
 
     # 4. Restricted list checks
+    if restricted_list is None:
+        return DeckValidationResult(
+            is_valid=len(errors) == 0,
+            errors=errors,
+            warnings=warnings,
+        )
+
     for card_id, count in counts.items():
         if card_id in restricted_list.card_limits:
             limit = restricted_list.card_limits[card_id]

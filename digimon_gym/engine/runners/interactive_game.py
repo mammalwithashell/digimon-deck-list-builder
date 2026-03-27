@@ -6,6 +6,7 @@ import time
 import numpy as np
 
 from digimon_gym.engine.runners.base_runner import BaseGameRunner
+from digimon_gym.engine.game.rules import Rules
 from digimon_gym.engine.loggers import EventLogger
 from digimon_gym.engine.data.enums import PlayerType
 from digimon_gym.engine.recording import GameRecorder
@@ -31,11 +32,12 @@ class InteractiveGame(BaseGameRunner):
                  player2_policy: str = "greedy",
                  agent_action_delay_ms: int = 350,
                  player1_model_path: Optional[str] = None,
-                 player2_model_path: Optional[str] = None):
+                 player2_model_path: Optional[str] = None,
+                 rules: Optional[Rules] = None):
         self._verbose_logger = EventLogger()
         # Create a lightweight recorder just for initial state capture
         recorder = GameRecorder(record_tensors=False)
-        super().__init__(deck1_ids, deck2_ids, self._verbose_logger, recorder=recorder)
+        super().__init__(deck1_ids, deck2_ids, self._verbose_logger, recorder=recorder, rules=rules)
         self.player1_type = player1_type
         self.player2_type = player2_type
         self.player1_policy = player1_policy.lower()

@@ -6,17 +6,15 @@ Safe to mount in the desktop sidecar alongside the hosted API.
 
 from __future__ import annotations
 
-from uuid import uuid4
-
 from fastapi import APIRouter, HTTPException
 
 from digimon_gym.engine.data.enums import PlayerType
 from digimon_gym.engine.data.deck_loader import parse_deck
-from digimon_gym.engine.model_utils import get_models_dir, list_onnx_models, resolve_model_path
+from digimon_gym.engine.model_utils import list_onnx_models, resolve_model_path
 from digimon_gym.engine.runners.headless_game import HeadlessGame
 from digimon_gym.engine.runners.interactive_game import InteractiveGame
 from digimon_gym.routers.schemas import CreateGameRequest, GameActionRequest, SurrenderRequest
-from digimon_gym.routers.state import active_games
+from digimon_gym.routers.state import game_service
 
 router = APIRouter(tags=["games"])
 
@@ -30,7 +28,7 @@ def _resolve_model_path(model_name: str | None) -> str | None:
 
 
 def _require_game(game_id: str):
-    runner = active_games.get(game_id)
+    runner = game_service.get(game_id)
     if not runner:
         raise HTTPException(status_code=404, detail="Game not found")
     return runner
@@ -49,7 +47,6 @@ def create_game(request: CreateGameRequest):
     if not deck1 or not deck2:
         raise HTTPException(status_code=400, detail="Both decks must be provided")
 
-    game_id = str(uuid4())
     p1_type = PlayerType.Human if request.player1_type.lower() == "human" else PlayerType.Agent
     p2_type = PlayerType.Human if request.player2_type.lower() == "human" else PlayerType.Agent
     p1_policy = request.player1_policy.lower()
@@ -60,30 +57,21 @@ def create_game(request: CreateGameRequest):
     p2_model_path = _resolve_model_path(request.player2_model) if p2_policy == "trained" else None
 
     if p1_type == PlayerType.Agent and p2_type == PlayerType.Agent:
-        runner = HeadlessGame(
-            deck1,
-            deck2,
+        game_id, runner = game_service.create_headless_game(
+            deck1, deck2,
             verbose=True,
             record_actions=request.record_actions,
             record_tensors=request.record_tensors,
         )
     else:
-        runner = InteractiveGame(
-            deck1,
-            deck2,
-            p1_type,
-            p2_type,
-            player1_policy=p1_policy,
-            player2_policy=p2_policy,
+        game_id, runner = game_service.create_interactive_game(
+            deck1, deck2, p1_type, p2_type,
+            p1_policy=p1_policy,
+            p2_policy=p2_policy,
             agent_action_delay_ms=request.agent_action_delay_ms,
-            player1_model_path=p1_model_path,
-            player2_model_path=p2_model_path,
+            p1_model_path=p1_model_path,
+            p2_model_path=p2_model_path,
         )
-
-    active_games[game_id] = runner
-
-    if isinstance(runner, InteractiveGame):
-        runner.clear_log()
 
     state = runner.game.to_ui_json()
     mask = runner.get_action_mask().tolist()
@@ -239,8 +227,7 @@ def surrender_game(game_id: str, request: SurrenderRequest):
 @router.delete("/game/{game_id}", include_in_schema=False)
 def delete_game(game_id: str):
     """Delete an active game session."""
-    if game_id in active_games:
-        del active_games[game_id]
+    game_service.delete(game_id)
     return {"status": "deleted"}
 
 
