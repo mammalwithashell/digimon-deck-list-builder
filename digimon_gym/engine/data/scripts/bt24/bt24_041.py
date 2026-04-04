@@ -16,23 +16,15 @@ class BT24_041(CardScript):
 
         # Factory effect: alt_digivolve_req
         # Alternate digivolution: Lv.5 with [Beastkin] or [Dark Dragon] or [TS] for cost 3
-        effect0 = ICardEffect()
-        effect0.set_effect_name("BT24-041 Alternate digivolution requirement")
-        effect0.set_effect_description("Alternate digivolution requirement")
-        effect0._alt_digi_cost = 3
-        effect0._alt_digi_level = 5
-        effect0._alt_digi_trait = "Beastkin"
-
-        def condition0(context: Dict[str, Any]) -> bool:
-            permanent = card.permanent_of_this_card() if card else None
-            if not (permanent and permanent.top_card):
-                return False
-            traits = getattr(permanent.top_card, 'card_traits', []) or []
-            return (any('Beastkin' in tr for tr in traits)
-                    or any('Dark Dragon' in tr for tr in traits)
-                    or any('TS' in tr for tr in traits))
-        effect0.set_can_use_condition(condition0)
-        effects.append(effect0)
+        # Validator ignores can_use_condition — need separate effects per trait
+        for trait_name in ("Beastkin", "Dark Dragon", "TS"):
+            eff_alt = ICardEffect()
+            eff_alt.set_effect_name(f"BT24-041 Alt digi ({trait_name})")
+            eff_alt.set_effect_description(f"Lv.5 with [{trait_name}]: Cost 3")
+            eff_alt._alt_digi_cost = 3
+            eff_alt._alt_digi_level = 5
+            eff_alt._alt_digi_trait = trait_name
+            effects.append(eff_alt)
 
         # Timing: EffectTiming.BeforePayCost
         # When this card would be played, if you have an [Iliad] trait Digimon or Tamer,
@@ -102,7 +94,10 @@ class BT24_041(CardScript):
             from ....data.enums import GamePhase
             valid = []
             for i, c in enumerate(player.hand_cards):
-                if _iliad_play_filter(c) and (SEL_HAND_START + i) < ACTION_SPACE_SIZE:
+                if (_iliad_play_filter(c)
+                        and (SEL_HAND_START + i) < ACTION_SPACE_SIZE
+                        and not game._is_play_blocked_by_modifier(c)
+                        and not game._is_effect_play_blocked(c)):
                     valid.append(SEL_HAND_START + i)
 
             if not valid:
@@ -122,6 +117,7 @@ class BT24_041(CardScript):
                         {"played_card": sel_card, "played_permanent": played_perm,
                          "event_player": player},
                     )
+                    game._fire_play_observers(played_perm, player)
                 _do_de_digivolve(player, game)
 
             def on_decline():

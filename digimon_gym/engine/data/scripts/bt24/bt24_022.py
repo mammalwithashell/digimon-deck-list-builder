@@ -144,7 +144,8 @@ class BT24_022(CardScript):
             if not (card and card.owner and card.owner.is_my_turn):
                 return False
             # Must be triggered by THIS Digimon unsuspending
-            triggering_perm = context.get('permanent') if context else None
+            # event_permanent = the perm that actually unsuspended
+            triggering_perm = context.get('event_permanent', context.get('permanent')) if context else None
             my_perm = card.permanent_of_this_card() if card else None
             if triggering_perm is not None and my_perm is not None:
                 if triggering_perm != my_perm:

@@ -30,10 +30,8 @@ class BT24_091(CardScript):
             if not owner:
                 return True
             for p in owner.battle_area:
-                if (p.is_digimon or p.is_tamer) and p.top_card:
-                    traits = getattr(p.top_card, 'card_traits', []) or []
-                    if any('TS' in t for t in traits):
-                        return False  # bypass color requirement
+                if (p.is_digimon or p.is_tamer) and p.has_trait('TS'):
+                    return False  # bypass color requirement
             return True  # enforce color requirement
         card._match_color_requirement_fn = _check_ts_color_req
         effects = []
@@ -60,21 +58,27 @@ class BT24_091(CardScript):
                         bounced_count += 1
 
             # If at least 1 was returned, unsuspend 1 of your [TS] Digimon
+            # then optionally link. Chain via callback to avoid overwriting selection.
+            def _do_link():
+                game.effect_link_to_permanent(player, card, is_optional=True)
+
             if bounced_count > 0:
                 def ts_filter(p):
                     if not p.is_digimon:
                         return False
-                    return any('TS' in t for t in (getattr(p.top_card, 'card_traits', []) or []))
+                    return p.has_trait('TS')
 
                 def on_unsuspend(target_perm):
                     target_perm.unsuspend()
+                    # Chain: link after unsuspend resolves
+                    _do_link()
 
                 game.effect_select_own_permanent(
                     player, on_unsuspend, filter_fn=ts_filter, is_optional=False
                 )
-
-            # Then optionally link this card to 1 of your Digimon
-            game.effect_link_to_permanent(player, card, is_optional=True)
+            else:
+                # No bounce — skip unsuspend, still offer link
+                _do_link()
 
         # --- Effect 0: [Main] Return lowest level, unsuspend TS, link ---
         effect0 = ICardEffect()

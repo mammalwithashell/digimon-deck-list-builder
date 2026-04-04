@@ -1,6 +1,6 @@
 {
-  "version": 51,
-  "last_updated": "2026-03-22",
+  "version": 75,
+  "last_updated": "2026-04-04",
   "cards": {
     "BT1-087": {
       "card_name": "T.K. Takaishi",
@@ -1873,10 +1873,11 @@
       "notes": "Removed is_my_turn guard from OnLoseSecurity condition."
     },
     "BT24-002": {
-      "verdict": "IMPLEMENTED",
       "card_name": "Bukamon",
-      "archetype": "Archetype",
-      "notes": "3 fixes: missing memory cost, missing Blue+TS check, wrong target selection"
+      "validated_date": "2026-04-04",
+      "report": "fix-card",
+      "status": "PASS",
+      "notes": "Fixed fragile color/trait checks: string-in-string enum comparison → CardColor.Blue enum check + perm.has_trait('TS')"
     },
     "BT24-003": {
       "card_name": "Tsunomon",
@@ -1886,10 +1887,11 @@
       "notes": "Inherited OnLoseSecurity digivolve into Shaman trait works. OPT, optional, cost_reduction=1 all correct."
     },
     "BT24-004": {
-      "verdict": "IMPLEMENTED",
       "card_name": "Wanyamon",
-      "archetype": "Archetype",
-      "notes": "1 fix: missing owner/Iliad trait filter on condition"
+      "validated_date": "2026-04-03",
+      "report": "fix-card",
+      "status": "PASS",
+      "notes": "Fixed: removed is_on_play flag (was restricting to self-play only instead of any Iliad), fixed context key to played_permanent"
     },
     "BT24-008": {
       "card_name": "Dimetromon",
@@ -1960,16 +1962,17 @@
       "notes": "1 fix: cost reduction applied to any card instead of Blue+TS only"
     },
     "BT24-020": {
-      "verdict": "IMPLEMENTED",
       "card_name": "Gomamon",
-      "archetype": "Archetype",
-      "notes": "3 fixes: bogus trash stub, wrong unsuspend condition, missing hand size gate"
+      "validated_date": "2026-04-02",
+      "report": "fix-card",
+      "status": "PASS",
+      "notes": "1 fix: inherited unsuspend used context['permanent'] (scanned perm) instead of context['event_permanent'] (actual unsuspended perm). 5 behavioral tests passing."
     },
     "BT24-022": {
       "verdict": "IMPLEMENTED",
       "card_name": "Ikkakumon",
       "archetype": "Archetype",
-      "notes": "2 fixes: entirely wrong On Play effect, inherited draw condition"
+      "notes": "2 fixes: entirely wrong On Play effect, inherited draw condition. Batch fix: OnUnTappedAnyone used context['permanent'] instead of event_permanent"
     },
     "BT24-023": {
       "verdict": "IMPLEMENTED",
@@ -1978,16 +1981,20 @@
       "notes": "Was STUB: On Play/When Digivolving had empty process callbacks. Fully implemented: bottom-deck 1 opponent Lv.4- Digimon, then if played by effects, stun 1 Digimon/Tamer"
     },
     "BT24-024": {
-      "verdict": "IMPLEMENTED",
       "card_name": "Submarimon",
-      "archetype": "Archetype",
-      "notes": "5 fixes: wrong On Play removed, timing/filter/cost corrections, alt-digi"
+      "validated_date": "2026-04-02",
+      "report": "fix-card",
+      "status": "PASS",
+      "notes": "Script faithful. Engine fix: declare_attack now parks for WA selection (systemic). 4 behavioral tests passing."
     },
     "BT24-025": {
-      "verdict": "IMPLEMENTED",
+      "verdict": "PASS",
       "card_name": "Shellmon",
       "archetype": "Archetype",
-      "notes": "3 fixes: unsuspend trigger condition, target filter, ignore_requirements"
+      "validated_date": "2026-04-02",
+      "report": "fix-card",
+      "status": "PASS",
+      "notes": "Fixed critical bug: unsuspend trigger digivolved wrong permanent (triggering perm instead of Shellmon itself). Fixed effect description (removed erroneous 'blue' from end-of-turn text). Batch fix: OnUnTappedAnyone used context['permanent'] instead of event_permanent"
     },
     "BT24-027": {
       "verdict": "PASS",
@@ -1999,7 +2006,7 @@
       "verdict": "IMPLEMENTED",
       "card_name": "Divermon",
       "archetype": "Archetype",
-      "notes": "3 fixes: alt-digi missing Aqua, On Play/WD rewritten with tuck mechanic, unsuspend condition"
+      "notes": "3 fixes: alt-digi missing Aqua, On Play/WD rewritten with tuck mechanic, unsuspend condition. Batch fix: OnUnTappedAnyone used context['permanent'] instead of event_permanent"
     },
     "BT24-029": {
       "verdict": "IMPLEMENTED",
@@ -2010,15 +2017,16 @@
     "BT24-030": {
       "card_name": "Neptunemon",
       "status": "PASS",
-      "validated_date": "2026-03-15",
-      "report": "2026-03-15-ts-neptunemon-millenniummon-qa.md",
-      "notes": "Cost reduction, On Play bottom-deck, self-unsuspend OPT all verified"
+      "validated_date": "2026-04-04",
+      "report": "fix-card",
+      "notes": "Fixed critical protection effect: WhenRemoveField->WhenPermanentWouldBeDeleted, CANNOT_BE_REMOVED->_will_not_be_removed flag, event_permanent context key. 9 tests passing."
     },
     "BT24-031": {
-      "verdict": "IMPLEMENTED",
       "card_name": "Elecmon",
-      "archetype": "Archetype",
-      "notes": "4 fixes: wrong timing, incorrect security gate, missing optional choice, simplified alt-digi"
+      "validated_date": "2026-04-02",
+      "report": "fix-card",
+      "status": "PASS",
+      "notes": "Fixed: removed double opt-in (is_optional on inherited effect), exact trait matching in On Play reveal filters"
     },
     "BT24-033": {
       "card_name": "Salamon",
@@ -2030,9 +2038,9 @@
     "BT24-034": {
       "card_name": "Aegiomon",
       "status": "PASS",
-      "validated_date": "2026-03-15",
-      "report": "2026-03-15-ts-neptunemon-millenniummon-qa.md",
-      "notes": "On Play security-to-hand + free TS Tamer play verified"
+      "validated_date": "2026-04-03",
+      "report": "fix-card",
+      "notes": "Fixed: security-to-hand is now mandatory cost before optional tamer play (matching C#); removed pre-check that blocked activation when no tamers in hand"
     },
     "BT24-035": {
       "card_name": "Gatomon",
@@ -2056,29 +2064,32 @@
       "notes": "Fixed: register_modifier arg order."
     },
     "BT24-040": {
-      "verdict": "IMPLEMENTED",
       "card_name": "Venusmon",
-      "archetype": "Archetype",
-      "notes": "5 fixes: trash all evo cards not 1, wrong target, wrong modifier, protection rewritten, missing memory gain"
+      "validated_date": "2026-04-02",
+      "report": "fix-card",
+      "status": "PASS",
+      "notes": "3 fixes: CANNOT_SUSPEND scoped to target, DISABLE_EFFECT filters WhenDigivolving only, freeze selection excludes already-frozen"
     },
     "BT24-041": {
       "card_name": "Minervamon",
       "status": "PASS",
-      "validated_date": "2026-03-15",
-      "report": "2026-03-15-ts-jupitermon-royal-knights-qa.md",
-      "notes": "On Play Iliad play + De-Digivolve, Reboot/Blocker aura verified"
+      "validated_date": "2026-04-04",
+      "report": "fix-card",
+      "notes": "Fixed: alt-digi now encodes all 3 traits (Beastkin/Dark Dragon/TS), added _fire_play_observers + play-block checks"
     },
     "BT24-043": {
-      "verdict": "IMPLEMENTED",
       "card_name": "Tapirmon",
-      "archetype": "Archetype",
-      "notes": "4 fixes: missing Animal/Sovereign traits, Sea Animal exclusion, bogus stub, wrong timing"
+      "validated_date": "2026-04-03",
+      "report": "fix-card",
+      "status": "PASS",
+      "notes": "Fixed is_optional=True on reveal selection (should be mandatory). 4 tests passing."
     },
     "BT24-046": {
-      "verdict": "IMPLEMENTED",
       "card_name": "Garurumon",
-      "archetype": "Archetype",
-      "notes": "4 fixes: alt-digi missing Gabumon name, target filter, inherited timing"
+      "validated_date": "2026-04-03",
+      "report": "fix-card",
+      "status": "PASS",
+      "notes": "All 5 clauses faithful (Jamming, alt-digi, On Play/WD suspend, inherited WA suspend). 5 tests passing."
     },
     "BT24-050": {
       "card_name": "WereGarurumon",
@@ -2088,10 +2099,11 @@
       "notes": "Fixed: register_modifier arg order."
     },
     "BT24-051": {
-      "verdict": "IMPLEMENTED",
       "card_name": "Merukimon",
-      "archetype": "Archetype",
-      "notes": "6 fixes: On Play/WD rewritten, attack timing, missing leave-protection, Rush scope, Piercing gap, unsuspend timing"
+      "validated_date": "2026-04-03",
+      "report": "fix-card",
+      "status": "PASS",
+      "notes": "4 fixes: alt-digi TS trait, suspend chaining, DP turn-scoped, WA timing OnUseAttack"
     },
     "BT24-052": {
       "card_name": "Keramon (X Antibody)",
@@ -2153,10 +2165,11 @@
       "notes": "Play cost 3 correct. Start of Main auto-skips when no Owen in hand."
     },
     "BT24-083": {
-      "verdict": "IMPLEMENTED",
       "card_name": "Hiroko Sagisaka",
-      "archetype": "Archetype",
-      "notes": "4 fixes: missing memory check, missing deck-return cost, missing DP filter, wrong reveal"
+      "validated_date": "2026-04-04",
+      "report": "fix-card",
+      "status": "PASS",
+      "notes": "Fixed: security effect missing process callback (tamer was trashed instead of played). Added SecuritySkill timing. 4/4 tests passing."
     },
     "BT24-084": {
       "card_name": "Inori Misono",
@@ -2167,10 +2180,10 @@
     },
     "BT24-085": {
       "card_name": "Dan Yuki & Kanan Yuki",
-      "status": "PASS",
-      "validated_date": "2026-03-15",
-      "report": "2026-03-15-ts-jupitermon-royal-knights-qa.md",
-      "notes": "Memory gain + digi triggers + DP aura start-of-main verified"
+      "status": "FIXED",
+      "validated_date": "2026-04-04",
+      "report": "fix-card",
+      "notes": "3 critical fixes: chained option-then-attack selections (overwrite bug), engine EOT MAY_ATTACK support, memory<=0 gate. 8 tests passing."
     },
     "BT24-086": {
       "card_name": "The Crossroad Witch",
@@ -2180,10 +2193,11 @@
       "notes": "Security process callback and digi-source play added"
     },
     "BT24-088": {
-      "verdict": "IMPLEMENTED",
       "card_name": "Asuna Shiroki",
-      "archetype": "Archetype",
-      "notes": "4 fixes: missing memory check, missing deck-return cost, wrong filter, security blocked"
+      "validated_date": "2026-04-03",
+      "report": "fix-card",
+      "status": "PASS",
+      "notes": "Fixed: Three Musketeers filter checked traits instead of card_text (HasText). Added SecuritySkill timing."
     },
     "BT24-089": {
       "card_name": "Unique Emblem: Blazing Conductor",
@@ -2195,15 +2209,16 @@
     "BT24-090": {
       "card_name": "Abyss Sanctuary",
       "status": "PASS",
-      "validated_date": "2026-03-15",
-      "report": "2026-03-15-ts-jupitermon-royal-knights-qa.md",
-      "notes": "Security swap, face-up, TS filter verified"
+      "validated_date": "2026-04-03",
+      "report": "fix-card",
+      "notes": "Fixed: dynamic color bypass via _match_color_requirement_fn, face-down security check for Blocker/Alliance aura, proper security API usage"
     },
     "BT24-091": {
-      "verdict": "IMPLEMENTED",
       "card_name": "Tidal Stream",
-      "archetype": "Archetype",
-      "notes": "5 fixes: bounce hand→deck, mandatory unsuspend, Link timing, security, color ignore"
+      "validated_date": "2026-04-03",
+      "report": "fix-card",
+      "status": "PASS",
+      "notes": "Fixed: selection chain bug (unsuspend overwritten by link), trait substring->has_trait"
     },
     "BT24-092": {
       "card_name": "Shock Plasma",
@@ -2220,16 +2235,18 @@
       "notes": "Script exists and loads."
     },
     "BT24-094": {
-      "verdict": "IMPLEMENTED",
-      "card_name": "Central Town",
-      "archetype": "Archetype",
-      "notes": "5 fixes: Alliance condition, cost reduction, security filter, color ignore, DP condition"
+      "card_name": "Central Town: Throne Room",
+      "validated_date": "2026-04-02",
+      "report": "fix-card",
+      "status": "PASS",
+      "notes": "Fixed: color bypass (now uses _match_color_requirement_fn), DP/Alliance aura face-down-only condition, Main effect security placement (bottom + face_up tracking)"
     },
     "BT24-095": {
-      "verdict": "IMPLEMENTED",
       "card_name": "Sonic Shot",
-      "archetype": "Archetype",
-      "notes": "6 fixes: Link timing, target filter, keyword target, factory keyword, color ignore, Link attach"
+      "validated_date": "2026-04-04",
+      "report": "fix-card",
+      "status": "PASS",
+      "notes": "Fixed: _match_color_requirement_fn for TS bypass, TS trait filter on link target, is_on_attack flag on linked WA, chained selection phases"
     },
     "BT24-097": {
       "card_name": "Soul Fear",
@@ -2239,10 +2256,11 @@
       "notes": "Fabricated When Attacking effect removed."
     },
     "BT24-100": {
-      "verdict": "IMPLEMENTED",
       "card_name": "In-Between Theater",
-      "archetype": "Archetype",
-      "notes": "6 fixes: trash pop removed, Delay added, security added, battle area placement, color ignore"
+      "validated_date": "2026-04-03",
+      "report": "fix-card",
+      "status": "PASS",
+      "notes": "Fixed: color ignore via _match_color_requirement_fn, _is_delay factory effect, removed manual placement, mandatory reveal selection"
     },
     "BT24-101": {
       "card_name": "Jupitermon",
@@ -2254,9 +2272,9 @@
     "BT24-102": {
       "card_name": "Homeros",
       "status": "PASS",
-      "validated_date": "2026-03-15",
-      "report": "2026-03-15-ts-jupitermon-royal-knights-qa.md",
-      "notes": "+1000 DP aura, Start of Main memory gain verified"
+      "validated_date": "2026-04-02",
+      "report": "fix-card",
+      "notes": "Fixed: Olympos XII trait check now top-card-only (was all card_sources). Added eligibility+condition filter for effect reactivation. 7 behavioral tests."
     },
     "BT3-006": {
       "verdict": "PASS",
@@ -3779,10 +3797,11 @@
       "notes": "Digivolve with cost -3 and Delay verified."
     },
     "LM-028": {
-      "verdict": "IMPLEMENTED",
       "card_name": "Blue Scramble",
-      "archetype": "Archetype",
-      "notes": "6 fixes: wrong timing, non-API cost reduction, Delay timing, wrong effect, security, DP check"
+      "validated_date": "2026-04-04",
+      "report": "fix-card",
+      "status": "PASS",
+      "notes": "Fixed: wrong docstring/descriptions, missing else branch in delay, condition2 permanent check after engine trash, removed redundant delete_permanent"
     },
     "LM-029": {
       "card_name": "Yellow Scramble",
@@ -4085,10 +4104,11 @@
       "notes": "Script exists and loads."
     },
     "P-196": {
-      "verdict": "IMPLEMENTED",
       "card_name": "Gomamon",
-      "archetype": "Archetype",
-      "notes": "5 fixes: missing alt-digi level, memory check, cost override, timing, hand size gate"
+      "validated_date": "2026-04-04",
+      "report": "fix-card",
+      "status": "PASS",
+      "notes": "Added can_digivolve level check to digi_filter; 5 behavioral tests passing"
     },
     "P-197": {
       "verdict": "IMPLEMENTED",

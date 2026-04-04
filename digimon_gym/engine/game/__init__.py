@@ -77,6 +77,9 @@ class Game(CombatMixin, ActionDecoderMixin, EffectHelpersMixin):
 
         # Deferred turn-end: set when memory crosses 0 during a pending selection.
         self._turn_end_deferred: bool = False
+        # Deferred end-phase: set when OnEndTurn effects create pending selections.
+        self._end_phase_deferred: bool = False
+        self._end_phase_memory_before: int = 0
 
         # Opening mulligan state (set during start_game()).
         self._mulligan_order: List[Player] = []
@@ -256,6 +259,15 @@ class Game(CombatMixin, ActionDecoderMixin, EffectHelpersMixin):
     def phase_end(self):
         memory_before = self.memory
         self.execute_effects(EffectTiming.OnEndTurn)
+        # If OnEndTurn effects created pending selections, defer phase completion
+        if self.pending_selection is not None:
+            self._end_phase_deferred = True
+            self._end_phase_memory_before = memory_before
+            return
+        self._complete_end_phase(memory_before)
+
+    def _complete_end_phase(self, memory_before: int):
+        """Finish the end phase after all OnEndTurn selections have resolved."""
         # DCGO: if OnEndTurn effects swung memory back (turn player regained memory
         # after it was negative), the turn continues — return to Main Phase.
         # Only applies when memory WAS negative before OnEndTurn effects.
@@ -269,8 +281,16 @@ class Game(CombatMixin, ActionDecoderMixin, EffectHelpersMixin):
             return  # Park for agent decision
         self.next_phase()
 
+    def _maybe_complete_end_phase(self):
+        """Complete the end phase if it was deferred while waiting for selections."""
+        if self._end_phase_deferred and self.pending_selection is None:
+            mb = self._end_phase_memory_before
+            self._end_phase_deferred = False
+            self._complete_end_phase(mb)
+
     def _has_end_of_turn_keywords(self) -> bool:
-        """Check if the turn player has any Digimon with Vortex or Overclock."""
+        """Check if the turn player has any Digimon with Vortex, Overclock, or MAY_ATTACK."""
+        from ..interfaces.modifiers import ModifierType
         for perm in self.turn_player.battle_area:
             if not perm.is_digimon:
                 continue
@@ -283,6 +303,8 @@ class Game(CombatMixin, ActionDecoderMixin, EffectHelpersMixin):
                 )
                 if has_sacrifice:
                     return True
+            if self.modifiers.has_modifier(perm, ModifierType.MAY_ATTACK) and perm.can_attack():
+                return True
         return False
 
     def switch_turn(self):
@@ -292,6 +314,7 @@ class Game(CombatMixin, ActionDecoderMixin, EffectHelpersMixin):
         self.turn_player.is_my_turn = True
         self.opponent_player.is_my_turn = False
         self._turn_end_deferred = False
+        self._end_phase_deferred = False
 
     def pass_turn(self):
         if self.memory >= 0:

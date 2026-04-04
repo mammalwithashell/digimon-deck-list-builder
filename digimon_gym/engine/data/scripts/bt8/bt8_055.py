@@ -64,6 +64,11 @@ class BT8_055(CardScript):
                 return False
             if not (card and card.owner and card.owner.is_my_turn):
                 return False
+            # Must be self-unsuspend trigger
+            unsuspended_perm = context.get('event_permanent', context.get('permanent'))
+            host_perm = card.permanent_of_this_card() if card else None
+            if unsuspended_perm is not host_perm:
+                return False
             return True
 
         effect1.set_can_use_condition(condition1)

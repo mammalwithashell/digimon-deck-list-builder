@@ -66,7 +66,7 @@ class BT24_088(CardScript):
                     if lv is not None and lv <= 4:
                         if any('TS' in _t for _t in (getattr(c, 'card_traits', []) or [])):
                             return True
-                        if any('Three Musketeers' in _t for _t in (getattr(c, 'card_traits', []) or [])):
+                        if 'Three Musketeers' in getattr(c, 'card_text', ''):
                             return True
                 return False
 
@@ -107,7 +107,7 @@ class BT24_088(CardScript):
                 traits = getattr(c, 'card_traits', []) or []
                 if any('TS' in t for t in traits):
                     return True
-                if any('Three Musketeers' in t for t in (getattr(c, 'card_traits', []) or [])):
+                if 'Three Musketeers' in getattr(c, 'card_text', ''):
                     return True
                 return False
 
@@ -125,6 +125,7 @@ class BT24_088(CardScript):
 
         # [Security] Play this card without paying the cost.
         effect2 = ICardEffect()
+        effect2.set_timing(EffectTiming.SecuritySkill)
         effect2.set_effect_name("BT24-088 Security: Play this card")
         effect2.set_effect_description("[Security] Play this card without paying the cost.")
         effect2.is_security_effect = True

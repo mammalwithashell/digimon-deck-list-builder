@@ -41,6 +41,7 @@ class BT24_102(CardScript):
                 return
             player.add_memory(1)
             if game.memory >= 5 and perm:
+                
                 perm.suspend()
                 player.draw_cards(1)
 
@@ -98,15 +99,13 @@ class BT24_102(CardScript):
             tamer_perm = card.permanent_of_this_card() if card else None
             if not tamer_perm or tamer_perm.is_suspended:
                 return False
-            # Check for Olympos XII Digimon on field
+            # Check for Olympos XII Digimon on field (top card trait only, per TCG rules)
             player = card.owner
             for p in player.battle_area:
                 if not p.is_digimon:
                     continue
-                for cs in p.card_sources:
-                    traits = getattr(cs, 'card_traits', []) or []
-                    if any('Olympos XII' in t for t in traits):
-                        return True
+                if p.has_trait('Olympos XII'):
+                    return True
             return False
 
         effect2.set_can_use_condition(condition2)
@@ -123,39 +122,54 @@ class BT24_102(CardScript):
                 return
             tamer_perm.suspend()
 
+            def _collect_eligible_effects(target):
+                """Collect [On Play]/[When Digivolving] effects that pass their conditions."""
+                eligible = []
+                ctx_check = {
+                    'played_card': target.top_card,
+                    'played_permanent': target,
+                    'event_player': player,
+                    'permanent': target,
+                    'player': player,
+                    'game': game,
+                }
+                # Non-inherited effects from top card
+                for cs in [target.top_card] if target.top_card else []:
+                    for eff in cs.effect_list(EffectTiming.OnEnterFieldAnyone):
+                        if eff.is_inherited_effect or eff.is_security_effect:
+                            continue
+                        if not (eff.is_on_play or eff.is_when_digivolving):
+                            continue
+                        if eff.on_process_callback is None:
+                            continue
+                        if eff.can_use_condition and not eff.can_use_condition(ctx_check):
+                            continue
+                        eligible.append(eff)
+                # Inherited effects from digivolution cards
+                for cs in target.card_sources[:-1] if target.card_sources else []:
+                    for eff in cs.effect_list(EffectTiming.OnEnterFieldAnyone):
+                        if not eff.is_inherited_effect or eff.is_security_effect:
+                            continue
+                        if not (eff.is_on_play or eff.is_when_digivolving):
+                            continue
+                        if eff.on_process_callback is None:
+                            continue
+                        if eff.can_use_condition and not eff.can_use_condition(ctx_check):
+                            continue
+                        eligible.append(eff)
+                return eligible
+
             # Select Olympos XII Digimon to reactivate
             def olympos_filter(p):
                 if not p.is_digimon:
                     return False
-                for cs in p.card_sources:
-                    traits = getattr(cs, 'card_traits', []) or []
-                    if any('Olympos XII' in t for t in traits):
-                        return True
-                return False
+                if not p.has_trait('Olympos XII'):
+                    return False
+                # Must have at least one eligible effect (matches C# CanBeEffectCandidate)
+                return len(_collect_eligible_effects(p)) > 0
 
             def on_selected(target):
-                # Collect all [On Play] and [When Digivolving] effects from this permanent
-                on_play_effects = []
-                when_digi_effects = []
-                for cs in [target.top_card] if target.top_card else []:
-                    for eff in cs.effect_list(EffectTiming.OnEnterFieldAnyone):
-                        if eff.is_inherited_effect:
-                            continue
-                        if eff.is_on_play:
-                            on_play_effects.append(eff)
-                        elif eff.is_when_digivolving:
-                            when_digi_effects.append(eff)
-                # Also check inherited effects from digivolution cards
-                for cs in target.card_sources[:-1] if target.card_sources else []:
-                    for eff in cs.effect_list(EffectTiming.OnEnterFieldAnyone):
-                        if not eff.is_inherited_effect:
-                            continue
-                        if eff.is_on_play:
-                            on_play_effects.append(eff)
-                        elif eff.is_when_digivolving:
-                            when_digi_effects.append(eff)
-
-                all_effects = on_play_effects + when_digi_effects
+                all_effects = _collect_eligible_effects(target)
                 if not all_effects:
                     return
 

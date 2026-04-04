@@ -839,15 +839,22 @@ def condition(context):
 
 ### Pattern 5: "This Digimon" Trigger Filtering
 
-For "When THIS Digimon suspends/attacks/etc." — check that the event permanent matches:
+For "When THIS Digimon suspends/unsuspends/etc." — use `event_permanent` (the perm that
+actually triggered the event), NOT `permanent` (which is the scanned perm and always equals
+the host for inherited effects).
+
+**CRITICAL**: `context['permanent']` = the permanent being scanned for effects (always the host).
+`context['event_permanent']` = the permanent that actually triggered the event. For inherited
+effects these are always the same, which means using `context['permanent']` silently passes
+the self-check — the effect fires on ANY trigger, not just the host's trigger.
 
 ```python
 def condition(context):
     if card and card.permanent_of_this_card() is None:
         return False
-    ctx_perm = context.get('permanent')
+    event_perm = context.get('event_permanent', context.get('permanent'))
     owner_perm = card.permanent_of_this_card()
-    if owner_perm and ctx_perm and ctx_perm is not owner_perm:
+    if owner_perm and event_perm and event_perm is not owner_perm:
         return False  # not THIS digimon
     return True
 ```

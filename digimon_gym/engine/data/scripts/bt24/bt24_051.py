@@ -26,22 +26,22 @@ class BT24_051(CardScript):
 
         # Factory effect: alt_digivolve_req
         # Alternate digivolution: Lv.5 with [Beastkin] or [TS] for cost 3
-        effect0 = ICardEffect()
-        effect0.set_effect_name("BT24-051 Alternate digivolution requirement")
-        effect0.set_effect_description("Alternate digivolution requirement")
-        effect0._alt_digi_cost = 3
-        effect0._alt_digi_level = 5
-        effect0._alt_digi_trait = "Beastkin"
+        # Two separate effects because validator checks _alt_digi_trait per-effect
+        effect0a = ICardEffect()
+        effect0a.set_effect_name("BT24-051 Alt digi (Beastkin)")
+        effect0a.set_effect_description("Alternate digivolution requirement (Beastkin)")
+        effect0a._alt_digi_cost = 3
+        effect0a._alt_digi_level = 5
+        effect0a._alt_digi_trait = "Beastkin"
+        effects.append(effect0a)
 
-        def condition0(context: Dict[str, Any]) -> bool:
-            permanent = card.permanent_of_this_card() if card else None
-            if not (permanent and permanent.top_card):
-                return False
-            traits = getattr(permanent.top_card, 'card_traits', []) or []
-            return (any('Beastkin' in tr for tr in traits)
-                    or any('TS' in tr for tr in traits))
-        effect0.set_can_use_condition(condition0)
-        effects.append(effect0)
+        effect0b = ICardEffect()
+        effect0b.set_effect_name("BT24-051 Alt digi (TS)")
+        effect0b.set_effect_description("Alternate digivolution requirement (TS)")
+        effect0b._alt_digi_cost = 3
+        effect0b._alt_digi_level = 5
+        effect0b._alt_digi_trait = "TS"
+        effects.append(effect0b)
 
         # Timing: EffectTiming.BeforePayCost
         # When this card would be played, if there are 3 or more Digimon, reduce
@@ -81,7 +81,36 @@ class BT24_051(CardScript):
             if not enemy:
                 return
 
-            # Suspend up to 2 opponent's Digimon or Tamers (player selects)
+            # "Then" clause — chained after all suspends resolve
+            def _then_dp_attack():
+                def on_select_attacker(target_perm):
+                    from ....interfaces.modifiers import ModifierType
+                    # +5000 DP for the turn
+                    game.register_modifier(
+                        target_perm, ModifierType.CHANGE_DP,
+                        value_fn=lambda: 5000,
+                        expiry='end_of_turn')
+                    # Grant Rush so it can attack this turn even with sickness
+                    target_perm.grant_keyword('_is_rush')
+                    # Unsuspend so it's ready to attack
+                    if target_perm.is_suspended:
+                        target_perm.unsuspend()
+                    # "attack your opponent's Digimon" — restrict to Digimon targets
+                    game.register_modifier(
+                        target_perm, ModifierType.CANNOT_ATTACK_PLAYER,
+                        expiry='end_of_turn')
+                    # MAY_ATTACK — optional attack, not forced
+                    game.register_modifier(
+                        target_perm, ModifierType.MAY_ATTACK,
+                        expiry='end_of_turn')
+
+                game.effect_select_own_permanent(
+                    player, on_select_attacker,
+                    filter_fn=lambda p: p.is_digimon,
+                    is_optional=True,
+                    prompt="Select 1 of your Digimon to get +5000 DP and attack opponent's Digimon.")
+
+            # Suspend 2 of opponent's Digimon or Tamers (mandatory when targets exist)
             suspended_targets = []
 
             def target_filter(p):
@@ -91,44 +120,30 @@ class BT24_051(CardScript):
                 target_perm.suspend()
                 suspended_targets.append(target_perm)
 
-                # Second suspend
-                def on_suspend_2(target_perm2):
-                    target_perm2.suspend()
+                # Second suspend — also mandatory per card text ("Suspend 2")
+                remaining = [p for p in enemy.battle_area if target_filter(p)]
+                if remaining:
+                    def on_suspend_2(target_perm2):
+                        target_perm2.suspend()
+                        _then_dp_attack()
 
+                    game.effect_select_opponent_permanent(
+                        player, on_suspend_2, filter_fn=target_filter,
+                        is_optional=False,
+                        prompt="Suspend a second opponent's Digimon or Tamer.")
+                else:
+                    # Only 1 target existed; proceed to Then clause
+                    _then_dp_attack()
+
+            targets = [p for p in enemy.battle_area if target_filter(p)]
+            if not targets:
+                # No valid targets; still proceed to Then clause
+                _then_dp_attack()
+            else:
                 game.effect_select_opponent_permanent(
-                    player, on_suspend_2, filter_fn=target_filter,
-                    is_optional=True,
-                    prompt="Suspend a second opponent's Digimon or Tamer (optional).")
-
-            game.effect_select_opponent_permanent(
-                player, on_suspend_1, filter_fn=target_filter,
-                is_optional=False,
-                prompt="Suspend 1 of your opponent's Digimon or Tamers.")
-
-            # Then, 1 of your Digimon may get +5000 DP for the turn and attack
-            # your opponent's Digimon.
-            def on_select_attacker(target_perm):
-                target_perm.change_dp(5000)
-                # Grant Rush so it can attack this turn even with sickness
-                target_perm.grant_keyword('_is_rush')
-                # Unsuspend so it's ready to attack
-                if target_perm.is_suspended:
-                    target_perm.unsuspend()
-                # "attack your opponent's Digimon" — restrict to Digimon targets only
-                from ....interfaces.modifiers import ModifierType
-                game.register_modifier(
-                    target_perm, ModifierType.CANNOT_ATTACK_PLAYER,
-                    expiry='end_of_turn')
-                # MAY_ATTACK — optional attack, not forced
-                game.register_modifier(
-                    target_perm, ModifierType.MAY_ATTACK,
-                    expiry='end_of_turn')
-
-            game.effect_select_own_permanent(
-                player, on_select_attacker,
-                filter_fn=lambda p: p.is_digimon,
-                is_optional=True,
-                prompt="Select 1 of your Digimon to get +5000 DP and attack opponent's Digimon.")
+                    player, on_suspend_1, filter_fn=target_filter,
+                    is_optional=False,
+                    prompt="Suspend 1 of your opponent's Digimon or Tamers.")
 
         # Timing: EffectTiming.OnEnterFieldAnyone — [On Play]
         effect3 = ICardEffect()
@@ -203,24 +218,20 @@ class BT24_051(CardScript):
         effect6.set_on_process_callback(process6)
         effects.append(effect6)
 
-        # Timing: EffectTiming.OnAllyAttack — [When Attacking][Once Per Turn]
-        # When one of your Digimon attacks, 1 of your Digimon may unsuspend.
-        # Uses OnAllyAttack because this fires when ANY of your Digimon attacks,
-        # not just self (card text: "When one of your Digimon attacks").
+        # Timing: EffectTiming.OnUseAttack — [When Attacking][Once Per Turn]
+        # [When Attacking] = when THIS Digimon attacks (OnUseAttack, not OnAllyAttack).
+        # C# confirms: CanTriggerOnAttack filters to card's own permanent.
         effect7 = ICardEffect()
-        effect7.set_timing(EffectTiming.OnAllyAttack)
+        effect7.set_timing(EffectTiming.OnUseAttack)
         effect7.set_effect_name("BT24-051 [When Attacking][OPT] Unsuspend 1 Digimon")
         effect7.set_effect_description(
-            "[When Attacking] [Once Per Turn] When one of your Digimon attacks, "
-            "1 of your Digimon may unsuspend.")
+            "[When Attacking] [Once Per Turn] 1 of your Digimon may unsuspend.")
+        effect7.is_on_attack = True
         effect7.set_max_count_per_turn(1)
         effect7.set_hash_string("BT24_051_WD_WA")
 
         def condition7(context: Dict[str, Any]) -> bool:
             if card and card.permanent_of_this_card() is None:
-                return False
-            owner = getattr(card, 'owner', None)
-            if not (owner and owner.is_my_turn):
                 return False
             return True
 

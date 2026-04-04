@@ -112,6 +112,18 @@ class ActionDecoderMixin:
                 if perm.has_keyword('_is_training'):
                     self._execute_training(perm, self.turn_player)
 
+    def _maybe_resume_combat_after_wa_selection(self):
+        """Resume attack flow if parked for a When Attacking selection.
+
+        Called after a selection resolves. If all nested selections are done
+        (pending_selection is None) and we have a pending attack that was
+        waiting for WA selection, continue the attack to counter/block/security.
+        """
+        if (getattr(self, '_post_wa_selection_continuation', False)
+                and self.pending_selection is None):
+            self._post_wa_selection_continuation = False
+            self._continue_attack_post_wa()
+
     def _recover_from_stale_selection(self):
         """Guard against stale selection state after a callback."""
         if (self._is_selection_phase(self.current_phase)
@@ -154,6 +166,8 @@ class ActionDecoderMixin:
                 on_decline()
             self._recover_from_stale_selection()
             self._check_deferred_turn_end()
+            self._maybe_complete_end_phase()
+            self._maybe_resume_combat_after_wa_selection()
             return
 
         if ps.valid_indices and action_id not in ps.valid_indices:
@@ -167,6 +181,8 @@ class ActionDecoderMixin:
         callback(action_id)
         self._recover_from_stale_selection()
         self._check_deferred_turn_end()
+        self._maybe_complete_end_phase()
+        self._maybe_resume_combat_after_wa_selection()
 
     def _decode_block(self, action_id: int):
         """Handle the defender's blocking decision during an attack."""
@@ -452,12 +468,18 @@ class ActionDecoderMixin:
             normalized = action_id - 100
             attacker_idx = normalized // TARGETS_PER_ATTACKER
             target_idx = normalized % TARGETS_PER_ATTACKER
-            if attacker_idx < len(self.turn_player.battle_area) and target_idx < len(self.opponent_player.battle_area):
+            if attacker_idx < len(self.turn_player.battle_area):
                 attacker = self.turn_player.battle_area[attacker_idx]
-                target = self.opponent_player.battle_area[target_idx]
-                self.logger.log(f"[Vortex] End-of-turn attack!")
-                self.resolve_attack(attacker, target, is_vortex=True,
-                                    return_phase=GamePhase.EndOfTurnAction)
+                if target_idx == SECURITY_TARGET:
+                    self.logger.log(f"[EndOfTurn] End-of-turn attack on player!")
+                    self.resolve_attack(attacker, self.opponent_player,
+                                        return_phase=GamePhase.EndOfTurnAction)
+                elif target_idx < len(self.opponent_player.battle_area):
+                    target = self.opponent_player.battle_area[target_idx]
+                    is_vortex = attacker.has_keyword('_is_vortex')
+                    self.logger.log(f"[EndOfTurn] End-of-turn attack!")
+                    self.resolve_attack(attacker, target, is_vortex=is_vortex,
+                                        return_phase=GamePhase.EndOfTurnAction)
 
         elif 1000 <= action_id <= 1999:
             normalized = action_id - 1000

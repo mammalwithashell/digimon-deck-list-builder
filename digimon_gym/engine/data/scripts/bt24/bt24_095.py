@@ -23,35 +23,18 @@ class BT24_095(CardScript):
     """
 
     def get_card_effects(self, card: 'CardSource') -> List['ICardEffect']:
-        effects = []
-
-        # --- Effect 0: Ignore color requirements ---
-        # Condition: you have a [TS] Digimon or Tamer on the field
-        effect0 = ICardEffect()
-        effect0.set_effect_name("BT24-095 Ignore color requirements")
-        effect0.set_effect_description(
-            "While you have an [TS] trait Digimon or Tamer on the field, "
-            "you can ignore this card's color requirements."
-        )
-
-        def condition0(context: Dict[str, Any]) -> bool:
+        # --- Color requirement bypass via _match_color_requirement_fn ---
+        def _check_color_req():
             owner = card.owner if card else None
             if not owner:
-                return False
-            return any(
-                (p.is_digimon or p.is_tamer)
-                and any('TS' in t for t in (getattr(p.top_card, 'card_traits', []) or []))
-                for p in owner.battle_area
-                if p.top_card
-            )
+                return True  # enforce if no owner
+            for p in owner.battle_area:
+                if (p.is_digimon or p.is_tamer) and p.has_trait('TS'):
+                    return False  # bypass color requirement
+            return True  # enforce color requirement
+        card._match_color_requirement_fn = _check_color_req
 
-        effect0.set_can_use_condition(condition0)
-
-        def process0(ctx: Dict[str, Any]):
-            pass  # Color requirement bypass — not modeled in engine
-
-        effect0.set_on_process_callback(process0)
-        effects.append(effect0)
+        effects = []
 
         # --- Effect 1: Security — activate [Main] effects ---
         effect1 = ICardEffect()
@@ -98,6 +81,9 @@ class BT24_095(CardScript):
             def target_filter(p):
                 return p.is_digimon or p.is_tamer
 
+            def link_filter(perm):
+                return perm.has_trait('TS')
+
             def on_suspend(target_perm):
                 target_perm.suspend()
                 # Grant cannot-unsuspend in next unsuspend phase via modifier
@@ -106,13 +92,12 @@ class BT24_095(CardScript):
                     target_perm, ModifierType.CANNOT_UNSUSPEND,
                     value_fn=lambda: True, expiry='end_of_opponent_turn'
                 )
+                # Then optionally link this card to 1 of your [TS] trait Digimon
+                game.effect_link_to_permanent(player, card, filter_fn=link_filter, is_optional=True)
 
             game.effect_select_opponent_permanent(
                 player, on_suspend, filter_fn=target_filter, is_optional=False
             )
-
-            # Then optionally link this card to 1 of your Digimon
-            game.effect_link_to_permanent(player, card, is_optional=True)
 
         effect2.set_on_process_callback(process2)
         effects.append(effect2)
@@ -129,6 +114,7 @@ class BT24_095(CardScript):
         effect3.set_max_count_per_turn(1)
         effect3.set_hash_string("WA_BT24-095")
         effect3.is_linked_effect = True
+        effect3.is_on_attack = True
 
         def condition3(context: Dict[str, Any]) -> bool:
             if card and card.permanent_of_this_card() is None:

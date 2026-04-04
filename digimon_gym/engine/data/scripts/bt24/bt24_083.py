@@ -113,6 +113,7 @@ class BT24_083(CardScript):
 
         # [Security] Play this card without paying the cost.
         effect2 = ICardEffect()
+        effect2.set_timing(EffectTiming.SecuritySkill)
         effect2.set_effect_name("BT24-083 Security: Play this card")
         effect2.set_effect_description("[Security] Play this card without paying the cost.")
         effect2.is_security_effect = True
@@ -120,6 +121,14 @@ class BT24_083(CardScript):
         def condition2(context: Dict[str, Any]) -> bool:
             return True
         effect2.set_can_use_condition(condition2)
+
+        def process2(ctx: Dict[str, Any]):
+            """Play this tamer from security without paying cost."""
+            player = ctx.get('player')
+            game = ctx.get('game')
+            if player and game and card:
+                game.effect_play_from_security(player, card)
+        effect2.set_on_process_callback(process2)
         effects.append(effect2)
 
         return effects

@@ -67,13 +67,29 @@ class CombatMixin:
             return_phase=return_phase,
         )
 
+        # Park if a When Attacking effect created a pending selection
+        # (e.g. effect_play_from_zone). The selection must resolve before
+        # combat continues to counter/block/security.  Resume via
+        # _continue_attack_after_wa_selection, called from _decode_selection.
+        if self.pending_selection is not None:
+            self._post_wa_selection_continuation = True
+            return
+
+        self._continue_attack_post_wa()
+
+    def _continue_attack_post_wa(self):
+        """Continue the attack flow after When Attacking effects have resolved."""
+        pa = self.pending_attack
+        if pa is None:
+            return
+
         # Fire opponent-side "when attacked" observers (DCGO: SwitchDefender window)
-        self._fire_opponent_attack_observers(attacker)
+        self._fire_opponent_attack_observers(pa.attacker)
 
         # <Alliance>: check if attacker has Alliance and suspendable allies exist
-        if attacker.has_keyword('_is_alliance'):
+        if pa.attacker.has_keyword('_is_alliance'):
             has_alliance_targets = any(
-                perm is not attacker and perm.is_digimon and not perm.is_suspended
+                perm is not pa.attacker and perm.is_digimon and not perm.is_suspended
                 for perm in self.turn_player.battle_area
             )
             if has_alliance_targets:

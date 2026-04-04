@@ -24,6 +24,20 @@ class BT24_094(CardScript):
     """
 
     def get_card_effects(self, card: 'CardSource') -> List['ICardEffect']:
+        # --- Ignore color requirements: bypass when no face-down security ---
+        # Per C#: SecurityCards.Count(cs => !cs.IsFlipped) == 0
+        # = no face-down security (empty or all face-up)
+        def _check_color_req():
+            owner = card.owner if card else None
+            if not owner:
+                return True  # enforce
+            face_down_count = sum(
+                1 for c in owner.security_cards
+                if not owner.is_security_face_up(c)
+            )
+            return face_down_count > 0  # True = enforce, False = bypass
+        card._match_color_requirement_fn = _check_color_req
+
         effects = []
 
         # Helper: check if permanent is a green or yellow Digimon with [TS] trait
@@ -39,30 +53,14 @@ class BT24_094(CardScript):
             traits = getattr(top, 'card_traits', []) or []
             return any('TS' in t for t in traits)
 
-        # --- Effect 0: Ignore color requirements (while no face-up security cards) ---
-        effect0 = ICardEffect()
-        effect0.set_effect_name("BT24-094 Ignore color requirements")
-        effect0.set_effect_description(
-            "While you have no face-up security cards, you can ignore this card's "
-            "color requirements.")
-
-        def condition0(context: Dict[str, Any]) -> bool:
+        def _is_face_up_in_security():
+            """Check if this card is face-up in security (aura active after Main effect places it)."""
             owner = card.owner if card else None
             if not owner:
                 return False
-            face_up_count = sum(
-                1 for c in owner.security_cards
-                if getattr(c, 'is_flipped', False)
-            )
-            return face_up_count == 0
-
-        effect0.set_can_use_condition(condition0)
-
-        def process0(ctx: Dict[str, Any]):
-            pass  # descriptive-tagged: ignore_color_req
-
-        effect0.set_on_process_callback(process0)
-        effects.append(effect0)
+            if card not in owner.security_cards:
+                return False
+            return owner.is_security_face_up(card)
 
         # --- Effect 1: [Security] [All Turns] +2000 DP for green/yellow [TS] Digimon ---
         # Active while this card is face-down in security.
@@ -79,11 +77,7 @@ class BT24_094(CardScript):
         effect1._dp_permanent_condition = dp_permanent_condition
 
         def condition1(context: Dict[str, Any]) -> bool:
-            owner = card.owner if card else None
-            if not owner:
-                return False
-            # Active while card is in security (face-down)
-            return card in owner.security_cards
+            return _is_face_up_in_security()
 
         effect1.set_can_use_condition(condition1)
 
@@ -94,8 +88,7 @@ class BT24_094(CardScript):
         effects.append(effect1)
 
         # --- Effect 2: Alliance for green/yellow [TS] Digimon ---
-        # Requires Merukimon or Minervamon on field.
-        # Uses _applies_to_all_own_digimon aura pattern.
+        # Requires Merukimon or Minervamon on field. Active while face-down in security.
         effect2 = ICardEffect()
         effect2.set_effect_name("BT24-094 Grant Alliance to green or yellow [TS] Digimon")
         effect2.set_effect_description(
@@ -106,11 +99,10 @@ class BT24_094(CardScript):
         effect2._keyword_permanent_condition = _is_green_yellow_ts
 
         def condition2(context: Dict[str, Any]) -> bool:
+            if not _is_face_up_in_security():
+                return False
             owner = card.owner if card else None
             if not owner:
-                return False
-            # Only active while card is in security (face-down)
-            if card not in owner.security_cards:
                 return False
             # Requires Merukimon or Minervamon
             if not any(
@@ -151,12 +143,14 @@ class BT24_094(CardScript):
 
             # Step 1: Add bottom security card to hand
             if player.security_cards:
-                bottom_sec = player.security_cards.pop(-1)
+                bottom_sec = player.security_cards[0]  # index 0 = bottom
+                player.security_cards.remove(bottom_sec)
+                player.face_up_security.discard(bottom_sec)
                 player.hand_cards.append(bottom_sec)
 
             # Step 2: Place this option card face-up as bottom security card
             if card:
-                player.security_cards.insert(0, card)
+                player.add_to_security_face_up(card, to_top=False)
 
             # Step 3: Optionally play 1 green/yellow [TS] Digimon from hand with cost -3
             def play_filter(c):

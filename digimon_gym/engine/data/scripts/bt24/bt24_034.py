@@ -52,16 +52,22 @@ class BT24_034(CardScript):
         # Shared process for When Moving / On Play / When Digivolving:
         # "By adding your top security card to the hand, you may play 1 [TS] Tamer
         # from your hand without paying the cost."
-        # "By" = cost that should only be paid if the player opts in AND valid targets exist.
+        # C# flow: activation requires security > 0 (checked in condition).
+        # On activation: security → hand (mandatory cost), then optionally play tamer.
         def make_shared_process():
             def process(ctx: Dict[str, Any]):
                 player = ctx.get('player')
-                perm = ctx.get('permanent')
                 game = ctx.get('game')
                 if not (player and game):
                     return
 
-                # Build the tamer filter first to check if any valid targets exist
+                # Pay cost: move top security to hand (mandatory upon activation)
+                if not player.security_cards:
+                    return
+                top_sec = player.security_cards.pop(0)
+                player.hand_cards.append(top_sec)
+
+                # Build tamer filter (checked AFTER security moved to hand)
                 field_perms = player.battle_area if hasattr(player, 'battle_area') else []
                 field_tamer_names = set()
                 for fp in field_perms:
@@ -83,41 +89,14 @@ class BT24_034(CardScript):
                             return False
                     return True
 
-                # Check if there are valid targets AND security to pay as cost
-                has_security = bool(player.security_cards)
-                has_valid_targets = has_security and any(
-                    tamer_filter(c) for c in player.hand_cards
-                )
-
-                if not has_valid_targets:
-                    # No valid targets or no security — skip entire "by" effect
-                    return
-
-                # "By" = cost that is only paid if the player opts in.
-                # Use effect_choose_branch so the player can decline before paying.
-                def on_choice(choice: int):
-                    if choice == 0:  # Player opts in
-                        # Pay cost: move top security to hand
-                        if not player.security_cards:
-                            return
-                        top_sec = player.security_cards.pop(0)
-                        player.hand_cards.append(top_sec)
-                        # Then play the Tamer (re-check filter since hand changed)
-                        game.effect_play_from_zone(
-                            player, 'hand',
-                            filter_fn=tamer_filter,
-                            free=True,
-                            is_optional=False
-                        )
-                    # choice == 1: player declines, no cost paid
-
-                game.effect_choose_branch(
-                    player, 2, on_choice,
-                    branch_labels=[
-                        "Add top security to hand and play a [TS] Tamer",
-                        "Don't use this effect"
-                    ]
-                )
+                # "you may play 1 [TS] Tamer" — optional (C# canNoSelect: true)
+                if any(tamer_filter(c) for c in player.hand_cards):
+                    game.effect_play_from_zone(
+                        player, 'hand',
+                        filter_fn=tamer_filter,
+                        free=True,
+                        is_optional=True
+                    )
 
             return process
 
