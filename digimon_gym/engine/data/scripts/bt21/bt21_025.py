@@ -42,12 +42,19 @@ class BT21_025(CardScript):
             if not (card and card.owner and card.owner.is_my_turn):
                 return False
             # Only trigger if the attacking Digimon has Reptile or Dragonkin trait
-            attacker = context.get('permanent') or context.get('attacking_permanent')
-            if attacker:
-                top = getattr(attacker, 'top_card', None)
-                traits = getattr(top, 'card_traits', []) or []
-                if not any('Reptile' in t or 'Dragonkin' in t for t in traits):
+            # context['attacker'] is the attacking permanent from OnAttackTargetChanged
+            attacker = context.get('attacker')
+            if not attacker:
+                return False
+            # Must be YOUR Digimon (belongs to card owner)
+            owner = card.owner if card else None
+            if owner:
+                if attacker not in owner.battle_area:
                     return False
+            top = getattr(attacker, 'top_card', None)
+            traits = getattr(top, 'card_traits', []) or []
+            if not any('Reptile' in t or 'Dragonkin' in t for t in traits):
+                return False
             return True
 
         effect1.set_can_use_condition(condition1)
@@ -57,13 +64,11 @@ class BT21_025(CardScript):
             player = ctx.get('player')
             perm = ctx.get('permanent')
             game = ctx.get('game')
-            # Trash opponent's top security card(s)
+            # Trash opponent's top security card
             enemy = player.enemy if player else None
-            if enemy:
-                for _ in range(1):
-                    if enemy.security_cards:
-                        trashed = enemy.security_cards.pop(0)
-                        enemy.trash_cards.append(trashed)
+            if enemy and enemy.security_cards:
+                top_sec = enemy.security_cards[-1]  # top = last
+                enemy.trash_security_card(top_sec)
 
         effect1.set_on_process_callback(process1)
         effects.append(effect1)
@@ -83,8 +88,12 @@ class BT21_025(CardScript):
         def condition2(context: Dict[str, Any]) -> bool:
             if card and card.permanent_of_this_card() is None:
                 return False
-            if not (card and card.owner and card.owner.is_my_turn):
-                return False
+            # [All Turns] — no is_my_turn check
+            # Must only trigger when OPPONENT's security is removed
+            event_player = context.get('event_player') or context.get('player')
+            owner = card.owner if card else None
+            if event_player is owner:
+                return False  # Own security loss — do not trigger
             return True
 
         effect2.set_can_use_condition(condition2)
@@ -102,7 +111,7 @@ class BT21_025(CardScript):
                 if not (any('Reptile' in _t or 'Dragonkin' in _t for _t in (getattr(c, 'card_traits', []) or []))):
                     return False
                 # Card text: "5000 DP or less"
-                dp = getattr(c, 'dp', None)
+                dp = getattr(c, 'base_dp', None)
                 if dp is not None and dp > 5000:
                     return False
                 return True

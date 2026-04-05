@@ -26,10 +26,11 @@ class BT24_012(CardScript):
         effect0.set_can_use_condition(condition0)
         effects.append(effect0)
 
-        # Timing: EffectTiming.WhenRemoveField
+        # Timing: EffectTiming.WhenPermanentWouldBeDeleted
         # [All Turns] When any of your other Digimon with the [Reptile] or [Dragonkin] trait would leave the battle area by your opponent's effects, by returning this Digimon to the hand, they don't leave.
+        # Pattern: WhenPermanentWouldBeDeleted + _will_not_be_removed flag (matches BT24-030 Neptunemon)
         effect1 = ICardEffect()
-        effect1.set_timing(EffectTiming.WhenRemoveField)
+        effect1.set_timing(EffectTiming.WhenPermanentWouldBeDeleted)
         effect1.set_effect_name("BT24-012 By bouncing to hand, others don't leave")
         effect1.set_effect_description("[All Turns] When any of your other Digimon with the [Reptile] or [Dragonkin] trait would leave the battle area by your opponent's effects, by returning this Digimon to the hand, they don't leave.")
         effect1.is_optional = True
@@ -41,12 +42,17 @@ class BT24_012(CardScript):
             # Must be triggered by opponent's effect
             if not context.get('is_opponent_effect', False):
                 return False
-            # The leaving permanent must have Reptile or Dragonkin trait
-            leaving_perm = context.get('permanent')
+            # The leaving permanent (mapped to event_permanent by execute_effects)
+            leaving_perm = context.get('event_permanent')
             if leaving_perm is None:
                 return False
-            traits = getattr(leaving_perm.top_card, 'card_traits', []) or [] if leaving_perm.top_card else []
-            if not any('Reptile' in t or 'Dragonkin' in t for t in traits):
+            # The leaving permanent must belong to this card's owner
+            owner = getattr(card, 'owner', None)
+            event_player = context.get('event_player')
+            if not owner or not event_player or event_player is not owner:
+                return False
+            # The leaving permanent must have Reptile or Dragonkin trait
+            if not (leaving_perm.has_trait('Reptile') or leaving_perm.has_trait('Dragonkin')):
                 return False
             # The leaving permanent must NOT be this Dimetromon (must be an "other" Digimon)
             dimetromon_perm = card.permanent_of_this_card()
@@ -60,22 +66,16 @@ class BT24_012(CardScript):
             """Action: Return Dimetromon to hand to prevent ally from leaving"""
             player = ctx.get('player')
             game = ctx.get('game')
-            leaving_perm = ctx.get('permanent')
             if not (player and game):
                 return
-            # Return THIS Dimetromon to hand
+            # Return THIS Dimetromon to hand via engine API
             dimetromon_perm = card.permanent_of_this_card() if card else None
-            if dimetromon_perm and dimetromon_perm in player.battle_area:
-                for card_source in list(dimetromon_perm.card_sources):
-                    player.hand_cards.append(card_source)
-                player.battle_area.remove(dimetromon_perm)
-            # Prevent the target (leaving_perm) from leaving via CANNOT_BE_REMOVED
+            if dimetromon_perm:
+                player.bounce_permanent_to_hand(dimetromon_perm)
+            # Prevent the target (leaving_perm) from leaving (DCGO: willBeRemoveField = false)
+            leaving_perm = ctx.get('event_permanent')
             if leaving_perm:
-                from digimon_gym.engine.interfaces.modifiers import ModifierType
-                game.register_modifier(
-                    leaving_perm, ModifierType.CANNOT_BE_REMOVED,
-                    value_fn=lambda: True, expiry='end_of_turn'
-                )
+                leaving_perm._will_not_be_removed = True
 
         effect1.set_on_process_callback(process1)
         effects.append(effect1)
@@ -95,6 +95,11 @@ class BT24_012(CardScript):
             if card and card.permanent_of_this_card() is None:
                 return False
             if not (card and card.owner and card.owner.is_my_turn):
+                return False
+            # "When your opponent's security stack is removed from" —
+            # event_player is the player who lost security; must be the opponent
+            event_player = context.get('event_player')
+            if event_player is None or event_player is card.owner:
                 return False
             return True
 

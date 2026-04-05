@@ -80,24 +80,11 @@ class BT24_017(CardScript):
             if not enemy:
                 return
 
-            # 1. Delete 1 of opponent's lowest DP Digimon
-            opp_digimon = [p for p in enemy.battle_area if p.is_digimon and p.top_card]
-            if opp_digimon:
-                min_dp = min((p.dp or 0) for p in opp_digimon)
-                def lowest_filter(p):
-                    return p.is_digimon and (p.dp or 0) == min_dp
-                def on_delete(target_perm):
-                    enemy.delete_permanent(target_perm)
-                game.effect_select_opponent_permanent(
-                    player, on_delete, filter_fn=lowest_filter, is_optional=False)
-
-            # 2. "By returning 2 cards from their trash to the bottom of the deck,
-            #    they play 2 [Petrification] Tokens."
-            # "By returning" = cost. Player chooses which 2 cards from opponent's trash.
-            # Per C# canNoSelect: () => true, the player CAN decline.
-            # If declined or not enough cards, tokens + DP boost are SKIPPED.
             from ....game.constants import SEL_TRASH_START as _SEL_TRASH
             from ....data.enums import GamePhase
+
+            # --- Step 2+3: trash return -> tokens -> DP boost ---
+            # Runs AFTER delete step completes (chained via callback).
 
             returned_count = [0]
 
@@ -108,27 +95,20 @@ class BT24_017(CardScript):
                 # Play 2 Petrification Tokens on opponent's field
                 game.effect_play_token(player, 'petrification', on_opponent_field=True, count=2)
                 # DP boost: +2000 per opponent Digimon until their turn ends
-                this_perm = card.permanent_of_this_card() if card else None
-                if this_perm:
-                    from ....interfaces.modifiers import ModifierType
-                    def dp_value_fn():
-                        e = player.enemy if player else None
-                        if not e:
-                            return 0
-                        opp_count = len([p for p in e.battle_area if p.is_digimon])
-                        return 2000 * opp_count
-                    game.register_modifier(
-                        this_perm, ModifierType.CHANGE_DP,
-                        value_fn=dp_value_fn, expiry='end_of_opponent_turn')
+                # C# computes count ONCE as a snapshot after tokens are placed
+                if perm:
+                    opp_count = len([p for p in enemy.battle_area if p.is_digimon])
+                    dp_boost = 2000 * opp_count
+                    if dp_boost > 0:
+                        perm.change_dp(dp_boost)
 
-            def _select_trash_card(remaining):
+            def _select_trash_card(remaining, is_first=False):
                 """Select next card from opponent's trash to return to deck bottom."""
                 if remaining <= 0:
                     _after_trash_return()
                     return
                 valid_trash = [_SEL_TRASH + i for i in range(len(enemy.trash_cards))]
                 if not valid_trash:
-                    # Not enough cards in trash -- cost can't be paid fully
                     _after_trash_return()
                     return
 
@@ -142,20 +122,38 @@ class BT24_017(CardScript):
                     _select_trash_card(remaining - 1)
 
                 def on_decline():
-                    # Player declined -- cost not paid, skip tokens + DP
                     _after_trash_return()
 
+                # First selection is optional (can decline entire thing).
+                # Second selection is mandatory (canEndNotMax: false in C#).
                 game.request_selection(
                     GamePhase.SelectTarget, player, on_selected,
-                    valid_trash, is_optional=True,
+                    valid_trash, is_optional=is_first,
                     prompt=f"Select a card from opponent's trash to return to deck bottom ({remaining} remaining).",
-                    on_decline=on_decline)
+                    on_decline=on_decline if is_first else None)
 
-            if len(enemy.trash_cards) >= 2:
-                _select_trash_card(2)
+            def _do_trash_step():
+                """Step 2: attempt trash return, then tokens + DP boost."""
+                # Per C#: only if opponent has >= 2 trash cards
+                if len(enemy.trash_cards) >= 2:
+                    _select_trash_card(2, is_first=True)
+                # else: not enough trash — skip tokens + DP boost
+
+            # --- Step 1: Delete 1 of opponent's lowest DP Digimon ---
+            opp_digimon = [p for p in enemy.battle_area if p.is_digimon and p.top_card]
+            if opp_digimon:
+                min_dp = min((p.dp or 0) for p in opp_digimon)
+                def lowest_filter(p):
+                    return p.is_digimon and (p.dp or 0) == min_dp
+                def on_delete(target_perm):
+                    enemy.delete_permanent(target_perm)
+                    # Chain: after delete resolves, proceed to trash step
+                    _do_trash_step()
+                game.effect_select_opponent_permanent(
+                    player, on_delete, filter_fn=lowest_filter, is_optional=False)
             else:
-                # Not enough trash cards -- cost can't be paid, skip tokens + DP boost
-                pass
+                # No opponent Digimon to delete — proceed directly to trash step
+                _do_trash_step()
 
         effect2.set_on_process_callback(process2)
         effects.append(effect2)

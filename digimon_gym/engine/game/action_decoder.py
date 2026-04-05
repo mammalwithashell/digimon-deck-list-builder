@@ -167,6 +167,7 @@ class ActionDecoderMixin:
             self._recover_from_stale_selection()
             self._check_deferred_turn_end()
             self._maybe_complete_end_phase()
+            self._maybe_complete_move_main()
             self._maybe_resume_combat_after_wa_selection()
             return
 
@@ -182,6 +183,7 @@ class ActionDecoderMixin:
         self._recover_from_stale_selection()
         self._check_deferred_turn_end()
         self._maybe_complete_end_phase()
+        self._maybe_complete_move_main()
         self._maybe_resume_combat_after_wa_selection()
 
     def _decode_block(self, action_id: int):

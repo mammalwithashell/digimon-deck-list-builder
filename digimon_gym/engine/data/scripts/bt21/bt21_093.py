@@ -104,9 +104,16 @@ class BT21_093(CardScript):
         def condition4(context: Dict[str, Any]) -> bool:
             if card and card.permanent_of_this_card() is None:
                 return False
-            # Must be opponent's security, not own
-            ctx_player = context.get('player')
-            if ctx_player and card and card.owner and ctx_player is card.owner:
+            # Must be opponent's security, not own — use event_player (who lost security)
+            event_player = context.get('event_player') or context.get('player')
+            if event_player and card and card.owner:
+                # The player who lost security must be the opponent, not the card owner
+                if event_player is card.owner:
+                    return False
+            # Delay turn check: cannot activate on the placing turn
+            perm = card.permanent_of_this_card()
+            game = context.get('game')
+            if perm and game and perm.turn_played >= game.turn_count:
                 return False
             return True
 
@@ -114,10 +121,18 @@ class BT21_093(CardScript):
 
         def process4(ctx: Dict[str, Any]):
             """Action: Select own Reptile/Dragonkin Digimon, digivolve from hand free"""
-            player = ctx.get('player')
+            # Use card.owner (not ctx player) — ctx player is set by engine to perm owner,
+            # but for reactive triggers the digivolve targets the card OWNER's Digimon
+            player = card.owner if card else ctx.get('player')
             game = ctx.get('game')
             if not (player and game):
                 return
+            # Trash the option card from battle area (delay cost)
+            perm = card.permanent_of_this_card() if card else None
+            if perm and perm in player.battle_area:
+                player.battle_area.remove(perm)
+                for source in perm.card_sources:
+                    player.trash_cards.append(source)
             # Select own Reptile/Dragonkin Digimon to digivolve
             def own_filter(p):
                 if not p.is_digimon:

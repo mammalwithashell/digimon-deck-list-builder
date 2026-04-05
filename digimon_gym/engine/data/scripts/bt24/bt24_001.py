@@ -31,6 +31,11 @@ class BT24_001(CardScript):
                 return False
             if not (card and card.owner and card.owner.is_my_turn):
                 return False
+            # "your opponent's security stack is removed from" —
+            # event_player is the player who lost security; must be opponent
+            event_player = context.get('event_player')
+            if event_player is None or event_player is card.owner:
+                return False
             return True
 
         effect0.set_can_use_condition(condition0)

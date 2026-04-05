@@ -80,6 +80,8 @@ class Game(CombatMixin, ActionDecoderMixin, EffectHelpersMixin):
         # Deferred end-phase: set when OnEndTurn effects create pending selections.
         self._end_phase_deferred: bool = False
         self._end_phase_memory_before: int = 0
+        # Deferred move-to-main: set when OnMove effects create pending selections.
+        self._move_main_deferred: bool = False
 
         # Opening mulligan state (set during start_game()).
         self._mulligan_order: List[Player] = []
@@ -288,8 +290,15 @@ class Game(CombatMixin, ActionDecoderMixin, EffectHelpersMixin):
             self._end_phase_deferred = False
             self._complete_end_phase(mb)
 
+    def _maybe_complete_move_main(self):
+        """Transition to Main phase if it was deferred while waiting for OnMove selections."""
+        if self._move_main_deferred and self.pending_selection is None:
+            self._move_main_deferred = False
+            self.current_phase = GamePhase.Main
+            self.phase_main()
+
     def _has_end_of_turn_keywords(self) -> bool:
-        """Check if the turn player has any Digimon with Vortex, Overclock, or MAY_ATTACK."""
+        """Check if the turn player has any Digimon with Vortex, Overclock, MAY_ATTACK, or FORCE_ATTACK."""
         from ..interfaces.modifiers import ModifierType
         for perm in self.turn_player.battle_area:
             if not perm.is_digimon:
@@ -305,6 +314,8 @@ class Game(CombatMixin, ActionDecoderMixin, EffectHelpersMixin):
                     return True
             if self.modifiers.has_modifier(perm, ModifierType.MAY_ATTACK) and perm.can_attack():
                 return True
+            if self.modifiers.has_modifier(perm, ModifierType.FORCE_ATTACK) and perm.can_attack():
+                return True
         return False
 
     def switch_turn(self):
@@ -315,6 +326,7 @@ class Game(CombatMixin, ActionDecoderMixin, EffectHelpersMixin):
         self.opponent_player.is_my_turn = False
         self._turn_end_deferred = False
         self._end_phase_deferred = False
+        self._move_main_deferred = False
 
     def pass_turn(self):
         if self.memory >= 0:
@@ -1375,6 +1387,10 @@ class Game(CombatMixin, ActionDecoderMixin, EffectHelpersMixin):
         )
         if moved:
             self.execute_effects(EffectTiming.OnMove, {"moved_permanent": self.turn_player.battle_area[-1]})
+            # If OnMove effects created pending selections, defer Main phase
+            if self.pending_selection is not None:
+                self._move_main_deferred = True
+                return
             self.current_phase = GamePhase.Main
             self.phase_main()
 

@@ -31,6 +31,13 @@ class BT21_001(CardScript):
                 return False
             if not (card and card.owner and card.owner.is_my_turn):
                 return False
+            # "When your opponent's security stack is removed from" —
+            # OnLoseSecurity fires with event_player = the player who lost security.
+            # Must verify it's the opponent, not the card owner.
+            event_player = context.get('event_player')
+            owner = context.get('player')
+            if event_player and owner and event_player is not owner.enemy:
+                return False
             return True
 
         effect0.set_can_use_condition(condition0)

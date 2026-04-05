@@ -22,7 +22,6 @@ class P_189(CardScript):
         effect0.set_effect_description("[Security] You may play 1 card with the [LIBERATOR] trait and a play cost of 4 or less from your hand or trash without paying the cost.")
         effect0.is_optional = True
         effect0.is_security_effect = True
-        effect0.is_security_effect = True
 
         effect = effect0  # alias for condition closure
         def condition0(context: Dict[str, Any]) -> bool:
@@ -81,6 +80,11 @@ class P_189(CardScript):
             if card and card.permanent_of_this_card() is None:
                 return False
             if not (card and card.owner and card.owner.is_my_turn):
+                return False
+            # "your opponent's security stack" — event_player is the player who lost
+            # security; must be the opponent (not the card owner)
+            event_player = context.get('event_player')
+            if event_player is not None and event_player is card.owner:
                 return False
             return True
 
