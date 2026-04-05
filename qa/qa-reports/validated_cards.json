@@ -1,5 +1,5 @@
 {
-  "version": 109,
+  "version": 113,
   "last_updated": "2026-04-05",
   "cards": {
     "BT1-087": {
@@ -226,11 +226,11 @@
       "notes": "**3 bugs**: wrong timing (OnStartMainPhase -> OnStartTurn); On Play suspended opponent's permanent instead of self; OnTapped auto-selected and gained memory unconditionally"
     },
     "BT13-101": {
-      "card_name": "Miki & Megumi",
+      "card_name": "Miki Kurosaki & Megumi Shirakawa",
       "status": "PASS",
-      "validated_date": "2026-03-15",
-      "report": "2026-03-15-ts-jupitermon-royal-knights-qa.md",
-      "notes": "On Play PawnChessmon search skip verified"
+      "notes": "On Play PawnChessmon, 2-color observer, security. Faithful.",
+      "validated_date": "2026-04-05",
+      "report": "batch-fix-cards"
     },
     "BT13-102": {
       "verdict": "IMPLEMENTED",
@@ -321,10 +321,10 @@
     },
     "BT15-003": {
       "card_name": "Nyaromon",
-      "validated_date": "2026-03-14",
-      "report": "2026-03-14-cs-mastemon-qa.md",
       "status": "PASS",
-      "notes": "Implementation correct with choose_branch for security-for-memory."
+      "notes": "Inherited WA OPT trash security + memory. Faithful.",
+      "validated_date": "2026-04-05",
+      "report": "batch-fix-cards"
     },
     "BT15-006": {
       "verdict": "PASS",
@@ -491,10 +491,10 @@
     },
     "BT16-055": {
       "card_name": "Namakemon",
-      "status": "PASS",
-      "notes": "On Play/When Digivolving protection/Blocker+Reboot. Alt digi present.",
-      "validated_date": "2026-03-13",
-      "report": "2026-03-13-puppets.md"
+      "status": "FIXED",
+      "notes": "Fixed conditional branching (3+ security vs <3 security keyword grants).",
+      "validated_date": "2026-04-05",
+      "report": "batch-fix-cards"
     },
     "BT16-063": {
       "card_name": "Shakkoumon",
@@ -1776,10 +1776,10 @@
     },
     "BT23-077": {
       "card_name": "Sistermon Ciel",
-      "validated_date": "2026-04-04",
-      "report": "batch-fix-cards",
-      "status": "FIXED",
-      "notes": "Added all inherited effects; event_permanent for suspend; optional de-digivolve"
+      "status": "PASS",
+      "notes": "Blocker, On Play delete cost<=4, conditional Blocker+Raid. Faithful.",
+      "validated_date": "2026-04-05",
+      "report": "batch-fix-cards"
     },
     "BT23-081": {
       "card_name": "Chitose Imai",
@@ -2387,10 +2387,10 @@
     },
     "BT5-033": {
       "card_name": "Cutemon",
-      "validated_date": "2026-03-14",
-      "report": "2026-03-14-cs-mastemon-qa.md",
-      "status": "PASS",
-      "notes": "Descriptive-only continuous restriction. Engine lacks cost-lock."
+      "status": "FIXED",
+      "notes": "Was stub — implemented CANNOT_REDUCE_COST modifier (engine gap: not yet consumed in digivolve).",
+      "validated_date": "2026-04-05",
+      "report": "batch-fix-cards"
     },
     "BT5-059": {
       "card_name": "Keramon",
@@ -2462,10 +2462,11 @@
       "notes": "New script: De-Digivolve 2 + conditional token play."
     },
     "BT5-106": {
-      "verdict": "PASS",
       "card_name": "Demonic Disaster",
-      "archetype": "Millenniummon",
-      "notes": ""
+      "status": "PASS",
+      "notes": "Delete own + unsuspend purple. Faithful.",
+      "validated_date": "2026-04-05",
+      "report": "batch-fix-cards"
     },
     "BT5-107": {
       "verdict": "PASS",
@@ -2518,9 +2519,9 @@
     "BT6-084": {
       "card_name": "Sistermon Ciel",
       "status": "PASS",
-      "notes": "DP buff correct. On Play gain 1 memory correct.",
-      "validated_date": "2026-03-13",
-      "report": "2026-03-13-puppets.md"
+      "notes": "DP aura for Huckmon/Royal Knight + On Play memory. Faithful.",
+      "validated_date": "2026-04-05",
+      "report": "batch-fix-cards"
     },
     "BT6-104": {
       "card_name": "Parabolic Junk",
@@ -2656,10 +2657,10 @@
     },
     "BT9-033": {
       "card_name": "Pillomon",
-      "validated_date": "2026-03-14",
-      "report": "2026-03-14-cs-mastemon-qa.md",
-      "status": "PASS",
-      "notes": "Descriptive-only continuous restriction. Engine lacks play-by-effect lock."
+      "status": "FIXED",
+      "notes": "Was stub — implemented CANNOT_PLAY_BY_EFFECT modifier.",
+      "validated_date": "2026-04-05",
+      "report": "batch-fix-cards"
     },
     "BT9-069": {
       "card_name": "Baihumon",
@@ -2709,10 +2710,10 @@
     },
     "BT9-112": {
       "card_name": "DeathXmon",
-      "validated_date": "2026-04-04",
-      "report": "batch-fix-cards",
       "status": "PASS",
-      "notes": "FAITHFUL. Cost reduction, de-digivolve all, delete no-digi-cards, play observer all correct."
+      "notes": "Cost reduction, De-Digivolve, EOT self-delete. Faithful.",
+      "validated_date": "2026-04-05",
+      "report": "batch-fix-cards"
     },
     "EX1-021": {
       "card_name": "MetalGarurumon",
@@ -3252,10 +3253,10 @@
     },
     "EX4-074": {
       "card_name": "ShineGreymon: Ruin Mode",
-      "validated_date": "2026-03-14",
-      "report": "2026-03-14-cs-mastemon-qa.md",
-      "status": "PASS",
-      "notes": "DP -5000 with register_modifier and end_of_opponent_turn expiry."
+      "status": "FIXED",
+      "notes": "Fixed DP -5000 to use change_dp() instead of broken register_modifier. End of Attack self-delete.",
+      "validated_date": "2026-04-05",
+      "report": "batch-fix-cards"
     },
     "EX5-016": {
       "card_name": "Lunamon",
@@ -3498,10 +3499,10 @@
     },
     "EX8-030": {
       "card_name": "Tapirmon",
-      "validated_date": "2026-03-02",
-      "report": "2026-03-02-cs-mastemon-retest.md",
-      "status": "PASS",
-      "notes": "Play cost 3 correct. Lock effect: opponent cant gain memory except from Tamers (descriptive, enforcement pending)."
+      "status": "FIXED",
+      "notes": "Was stub — implemented CANNOT_ADD_MEMORY modifier.",
+      "validated_date": "2026-04-05",
+      "report": "batch-fix-cards"
     },
     "EX8-046": {
       "card_name": "Gotsumon",
@@ -3823,10 +3824,10 @@
     },
     "LM-029": {
       "card_name": "Yellow Scramble",
-      "validated_date": "2026-03-14",
-      "report": "2026-03-14-puppets-qa.md",
-      "status": "PASS",
-      "notes": "Digivolve with cost_reduction=3 correct. Delay+security work."
+      "status": "FIXED",
+      "notes": "Fixed duplicate field placement, delay condition/process.",
+      "validated_date": "2026-04-05",
+      "report": "batch-fix-cards"
     },
     "LM-030": {
       "card_name": "Green Scramble",
@@ -3864,17 +3865,17 @@
     },
     "LM-035": {
       "card_name": "Amber Memory Boost!",
-      "validated_date": "2026-03-01",
-      "report": "2026-03-01-cs-mastemon.md",
-      "status": "PASS",
-      "notes": "Reveal top 3, add yellow/purple Digimon. Delay marker + gain 2 memory. Security place. All functional."
+      "status": "FIXED",
+      "notes": "Rewrote to canonical Memory Boost pattern (OptionSkill, reveal_and_select, SecuritySkill).",
+      "validated_date": "2026-04-05",
+      "report": "batch-fix-cards"
     },
     "LM-037": {
       "card_name": "Sepia Memory Boost!",
-      "validated_date": "2026-03-14",
-      "report": "2026-03-14-puppets-qa.md",
       "status": "PASS",
-      "notes": "Color bypass OK. Main reveal + Delay gain 2 memory correct."
+      "notes": "Already correct, follows canonical Memory Boost pattern.",
+      "validated_date": "2026-04-05",
+      "report": "batch-fix-cards"
     },
     "LM-043": {
       "card_name": "Darkdramon",
@@ -3926,10 +3927,10 @@
     },
     "P-037": {
       "card_name": "Yellow Memory Boost!",
-      "validated_date": "2026-03-14",
-      "report": "2026-03-14-puppets-qa.md",
-      "status": "PASS",
-      "notes": "Fixed: Removed spurious trash-to-hand. Fixed delay timing. Added security."
+      "status": "FIXED",
+      "notes": "Fixed delay condition (return True after engine trashes card).",
+      "validated_date": "2026-04-05",
+      "report": "batch-fix-cards"
     },
     "P-039": {
       "card_name": "Black Memory Boost!",
@@ -3974,10 +3975,10 @@
     },
     "P-105": {
       "card_name": "Physical Training",
-      "validated_date": "2026-03-14",
-      "report": "2026-03-14-puppets-qa.md",
-      "status": "PASS",
-      "notes": "Fixed: Reveal filter, delay timing, digivolve cost-2. Added security."
+      "status": "FIXED",
+      "notes": "Fixed delay condition (same pattern as P-037).",
+      "validated_date": "2026-04-05",
+      "report": "batch-fix-cards"
     },
     "P-107": {
       "card_name": "Defense Training",
@@ -4015,17 +4016,17 @@
     },
     "P-134": {
       "card_name": "Shoemon",
-      "validated_date": "2026-03-14",
-      "report": "2026-03-14-wave1-reverify.md",
-      "status": "PASS",
-      "notes": "Fixed _card_effects->_cached_effects. SA-1 grant and inherited DP reduction correct."
+      "status": "FIXED",
+      "notes": "Fixed SA-1 to use register_modifier with CHANGE_SECURITY_ATTACK. Inherited WA -2000 confirmed.",
+      "validated_date": "2026-04-05",
+      "report": "batch-fix-cards"
     },
     "P-136": {
       "card_name": "Arisa Kinosaki",
-      "validated_date": "2026-03-14",
-      "report": "2026-03-14-wave1-reverify.md",
-      "status": "PASS",
-      "notes": "Fixed play_filter to Shoemon only. Digivolve observer correct."
+      "status": "FIXED",
+      "notes": "Fixed Shoemon exact name, digivolve observer pattern, SecuritySkill timing.",
+      "validated_date": "2026-04-05",
+      "report": "batch-fix-cards"
     },
     "P-137": {
       "card_name": "Flamedramon",
@@ -4043,17 +4044,17 @@
     },
     "P-156": {
       "card_name": "Future Potential!",
-      "validated_date": "2026-03-14",
-      "report": "2026-03-14-wave1-reverify.md",
-      "status": "PASS",
-      "notes": "Fixed color requirement bypass. Main/Security effects correct."
+      "status": "FIXED",
+      "notes": "Fixed color bypass to be dynamic (check tamer presence).",
+      "validated_date": "2026-04-05",
+      "report": "batch-fix-cards"
     },
     "P-165": {
       "card_name": "ShoeShoemon",
-      "validated_date": "2026-03-14",
-      "report": "2026-03-14-wave1-reverify.md",
-      "status": "PASS",
-      "notes": "Token plays via effect_play_token correct."
+      "status": "FIXED",
+      "notes": "Fixed security play after battle, token EOT deletion _cached_effects, SecuritySkill timing.",
+      "validated_date": "2026-04-05",
+      "report": "batch-fix-cards"
     },
     "P-167": {
       "card_name": "Landramon",
@@ -4157,10 +4158,10 @@
     },
     "P-206": {
       "card_name": "Digital Gate Open",
-      "validated_date": "2026-04-04",
-      "report": "batch-fix-cards",
-      "status": "PASS",
-      "notes": "FAITHFUL."
+      "status": "FIXED",
+      "notes": "Fixed security _security_played flag to prevent double-zone.",
+      "validated_date": "2026-04-05",
+      "report": "batch-fix-cards"
     },
     "P-207": {
       "card_name": "Minervamon",

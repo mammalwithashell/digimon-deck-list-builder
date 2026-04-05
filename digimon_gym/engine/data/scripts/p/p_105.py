@@ -69,26 +69,21 @@ class P_105(CardScript):
         )
         effect2._is_delay_effect = True
 
+        # NOTE: This is the delay callback — invoked by _execute_delay AFTER
+        # the engine has already trashed the card from BA.  Do NOT re-check
+        # permanent_of_this_card() (it will be None) or delete_permanent().
         def condition2(context: Dict[str, Any]) -> bool:
-            if not (card and card.owner and card.owner.is_my_turn):
-                return False
-            if card and card.permanent_of_this_card() is None:
-                return False
             return True
 
         effect2.set_can_use_condition(condition2)
 
         def process2(ctx: Dict[str, Any]):
-            """Trash delay card, then 1 of your Digimon may digivolve into yellow Digimon with cost -2."""
+            """1 of your Digimon may digivolve into yellow Digimon with cost -2
+            (card already trashed by engine delay handler)."""
             player = ctx.get('player')
             game = ctx.get('game')
             if not (player and game):
                 return
-
-            # Trash this delay card
-            perm = card.permanent_of_this_card() if card else None
-            if perm:
-                player.delete_permanent(perm)
 
             def yellow_digi_filter(c):
                 if not getattr(c, 'is_digimon', False):

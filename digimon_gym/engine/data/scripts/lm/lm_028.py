@@ -86,9 +86,9 @@ class LM_028(CardScript):
                 is_optional=True
             )
 
-            # Then place this card in the battle area (Delay placement)
-            if card and player:
-                player.play_card_from_source(card, pay_cost=False)
+            # "Then, place this card in the battle area" — handled by the engine:
+            # _option_stays_on_field returns True because _is_delay is set,
+            # so the engine keeps this option card on the field after resolution.
 
         effect0.set_on_process_callback(process0)
         effects.append(effect0)

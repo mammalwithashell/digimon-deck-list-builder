@@ -47,7 +47,7 @@ class BT16_055(CardScript):
         effect1.set_can_use_condition(condition1)
 
         def process1(ctx: Dict[str, Any]):
-            """Action: Gain Keyword Immune Dp Minus, Gain Keyword Reboot, Gain Keyword Blocker"""
+            """Action: Conditional grant based on security count."""
             player = ctx.get('player')
             perm = ctx.get('permanent')
             game = ctx.get('game')
@@ -55,10 +55,15 @@ class BT16_055(CardScript):
                 return
             def target_filter(p):
                 return p.is_digimon
-            def on_grant(target_perm):
-                target_perm.grant_keyword('_is_immune_dp_minus')
-                target_perm.grant_keyword('_is_reboot')
-                target_perm.grant_keyword('_is_blocker')
+            security_count = len(player.security_cards)
+            if security_count >= 3:
+                def on_grant(target_perm):
+                    target_perm.grant_keyword('_is_immune_dp_minus')
+                    target_perm.grant_keyword('_is_immune_de_digivolve')
+            else:
+                def on_grant(target_perm):
+                    target_perm.grant_keyword('_is_blocker')
+                    target_perm.grant_keyword('_is_reboot')
             game.effect_select_own_permanent(
                 player, on_grant, filter_fn=target_filter, is_optional=False)
 
@@ -84,7 +89,7 @@ class BT16_055(CardScript):
         effect2.set_can_use_condition(condition2)
 
         def process2(ctx: Dict[str, Any]):
-            """Action: Gain Keyword Immune Dp Minus, Gain Keyword Reboot, Gain Keyword Blocker"""
+            """Action: Conditional grant based on security count."""
             player = ctx.get('player')
             perm = ctx.get('permanent')
             game = ctx.get('game')
@@ -92,10 +97,15 @@ class BT16_055(CardScript):
                 return
             def target_filter(p):
                 return p.is_digimon
-            def on_grant(target_perm):
-                target_perm.grant_keyword('_is_immune_dp_minus')
-                target_perm.grant_keyword('_is_reboot')
-                target_perm.grant_keyword('_is_blocker')
+            security_count = len(player.security_cards)
+            if security_count >= 3:
+                def on_grant(target_perm):
+                    target_perm.grant_keyword('_is_immune_dp_minus')
+                    target_perm.grant_keyword('_is_immune_de_digivolve')
+            else:
+                def on_grant(target_perm):
+                    target_perm.grant_keyword('_is_blocker')
+                    target_perm.grant_keyword('_is_reboot')
             game.effect_select_own_permanent(
                 player, on_grant, filter_fn=target_filter, is_optional=False)
 

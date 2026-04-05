@@ -22,8 +22,6 @@ class EX4_074(CardScript):
     """
 
     def get_card_effects(self, card: 'CardSource') -> List['ICardEffect']:
-        from ....interfaces.modifiers import ModifierType
-
         effects = []
 
         # --- Effect 0: Alt digivolve from [ShineGreymon] for cost 4 ---
@@ -53,11 +51,7 @@ class EX4_074(CardScript):
                 return
             for perm in list(enemy.battle_area):
                 if perm.is_digimon:
-                    game.register_modifier(
-                        perm, ModifierType.CHANGE_DP,
-                        value_fn=lambda: -5000,
-                        expiry='end_of_opponent_turn'
-                    )
+                    perm.change_dp(-5000)
 
         # --- Effect 1: [When Digivolving] opponent Digimon get -5000 DP ---
         effect1 = ICardEffect()

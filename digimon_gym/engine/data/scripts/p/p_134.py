@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....interfaces.modifiers import ModifierType
 from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
@@ -43,32 +44,21 @@ class P_134(CardScript):
             enemy = player.enemy if player else None
             if not enemy:
                 return
-            opp_digimon = [p for p in enemy.battle_area if p.is_digimon]
-            if not opp_digimon:
-                return
-
-            def target_filter(p):
-                return p.is_digimon
 
             def on_select(target_perm):
-                # Grant SA -1 via a temporary effect on the target
-                sa_effect = ICardEffect()
-                sa_effect.set_timing(EffectTiming.NoTiming)
-                sa_effect.set_effect_name("P-134 SA -1 (granted)")
-                sa_effect._security_attack_modifier = -1
-                sa_effect.is_inherited_effect = False
-
-                def sa_condition(context: Dict[str, Any]) -> bool:
-                    return True
-                sa_effect.set_can_use_condition(sa_condition)
-
-                if target_perm.top_card:
-                    target_perm.top_card._cached_effects = target_perm.top_card._cached_effects or []
-                    target_perm.top_card._cached_effects.append(sa_effect)
+                # SA -1 until end of opponent's turn via modifier registry
+                game.register_modifier(
+                    target_perm, ModifierType.CHANGE_SECURITY_ATTACK,
+                    value_fn=lambda cur, t, c: cur - 1,
+                    source_effect=effect0,
+                    expiry='end_of_opponent_turn',
+                )
 
             game.effect_select_opponent_permanent(
-                player, on_select, filter_fn=target_filter, is_optional=False,
-                prompt="Select 1 opponent's Digimon to give <Security A. -1>."
+                player, on_select,
+                filter_fn=lambda p: p.is_digimon,
+                is_optional=False,
+                prompt="Select 1 opponent's Digimon to give <Security A. -1>.",
             )
 
         effect0.set_on_process_callback(process0)
@@ -102,15 +92,14 @@ class P_134(CardScript):
             if not opp_digimon:
                 return
 
-            def target_filter(p):
-                return p.is_digimon
-
             def on_select(target_perm):
                 target_perm.change_dp(-2000)
 
             game.effect_select_opponent_permanent(
-                player, on_select, filter_fn=target_filter, is_optional=False,
-                prompt="Select 1 opponent's Digimon to give -2000 DP."
+                player, on_select,
+                filter_fn=lambda p: p.is_digimon,
+                is_optional=False,
+                prompt="Select 1 opponent's Digimon to give -2000 DP.",
             )
 
         effect1.set_on_process_callback(process1)

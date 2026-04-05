@@ -9,10 +9,10 @@ if TYPE_CHECKING:
 
 
 class BT6_084(CardScript):
-    """BT6-084 Sistermon Ciel | Tamer | White | Cost 4
+    """BT6-084 Sistermon Ciel | Lv.4 Yellow Digimon | DP 5000 | Cost 4
 
-    [All Turns] All of your Digimon with [Royal Knight] in their traits or
-        [Huckmon] in their name get +2000 DP.
+    [All Turns] All of your Digimon with [Huckmon] in their name or
+        [Royal Knight] trait get +2000 DP.
 
     [On Play] Gain 1 memory.
     """

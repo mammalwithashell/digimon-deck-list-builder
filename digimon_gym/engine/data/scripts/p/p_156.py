@@ -26,8 +26,16 @@ class P_156(CardScript):
 
         # --- Ignore Color Requirements ---
         # "While you have a Tamer, you can ignore this card's color requirements."
-        # Set unconditionally; the Main effect itself guards on having a Tamer.
-        card._match_color_requirement = False
+        # Dynamic check: only bypass color requirement when player has a Tamer.
+        def _check_color_req():
+            owner = card.owner if card else None
+            if not owner:
+                return True  # enforce
+            has_tamer = any(getattr(p, 'is_tamer', False) for p in owner.battle_area)
+            if has_tamer:
+                return False  # bypass color requirement
+            return True  # enforce color requirement
+        card._match_color_requirement_fn = _check_color_req
 
         # --- Effect 1: [Main] Choose Tamer, play matching-color Digimon cost<=3 ---
         effect1 = ICardEffect()

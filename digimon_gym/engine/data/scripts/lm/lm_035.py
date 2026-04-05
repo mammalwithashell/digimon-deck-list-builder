@@ -24,73 +24,66 @@ class LM_035(CardScript):
     def get_card_effects(self, card: 'CardSource') -> List['ICardEffect']:
         effects = []
 
-        # --- Effect 0: [Main] Reveal top 3, add 1 yellow/purple Digimon ---
+        # --- Effect 0: Ignore color requirements (Purple also meets) ---
         effect0 = ICardEffect()
-        effect0.set_timing(EffectTiming.OnEnterFieldAnyone)
-        effect0.set_effect_name("LM-035 Reveal top 3 add yellow/purple Digimon")
+        effect0.set_effect_name("LM-035 Ignore color requirements")
         effect0.set_effect_description(
-            "[Main] Reveal the top 3 cards of your deck. Add 1 yellow or "
-            "purple Digimon card among them to the hand. Return the rest "
-            "to the bottom of deck. Then, place this card in the battle area."
+            "Purple also meets this card's color requirements."
         )
-        effect0.is_on_play = True
 
         def condition0(context: Dict[str, Any]) -> bool:
             return True
         effect0.set_can_use_condition(condition0)
+        effects.append(effect0)
 
-        def process0(ctx: Dict[str, Any]):
-            """Reveal top 3, add 1 yellow or purple Digimon to hand."""
+        # --- Effect 1: [Main] Reveal top 3, add 1 yellow/purple Digimon, place in battle area ---
+        effect1 = ICardEffect()
+        effect1.set_timing(EffectTiming.OptionSkill)
+        effect1.set_effect_name("LM-035 Reveal top 3, add yellow/purple Digimon")
+        effect1.set_effect_description(
+            "[Main] Reveal the top 3 cards of your deck. Add 1 yellow or "
+            "purple Digimon card among them to the hand. Return the rest "
+            "to the bottom of deck. Then, place this card in the battle area."
+        )
+
+        def condition1(context: Dict[str, Any]) -> bool:
+            return True
+        effect1.set_can_use_condition(condition1)
+
+        def process1(ctx: Dict[str, Any]):
             player = ctx.get('player')
             game = ctx.get('game')
             if not (player and game):
                 return
-            # Reveal top 3
-            revealed = []
-            for _ in range(min(3, len(player.library_cards))):
-                revealed.append(player.library_cards.pop(0))
 
-            added = False
-            to_bottom = []
-            for c in revealed:
+            def yellow_or_purple_digimon_filter(c):
+                if not getattr(c, 'is_digimon', False):
+                    return False
                 colors = getattr(c, 'card_colors', []) or []
                 color_names = [col.name for col in colors]
-                is_digimon = getattr(c, 'is_digimon', False)
-                if (is_digimon and not added
-                        and ('Yellow' in color_names or 'Purple' in color_names)):
-                    player.hand_cards.append(c)
-                    added = True
-                else:
-                    to_bottom.append(c)
+                return 'Yellow' in color_names or 'Purple' in color_names
 
-            for c in to_bottom:
-                player.library_cards.append(c)
-        effect0.set_on_process_callback(process0)
-        effects.append(effect0)
+            def on_selected(selected, remaining):
+                player.hand_cards.append(selected)
+                for c in remaining:
+                    player.library_cards.append(c)
 
-        # --- Effect 1: Delay marker ---
-        effect1 = ICardEffect()
-        effect1.set_effect_name("LM-035 Delay")
-        effect1.set_effect_description("Delay")
-        effect1._is_delay = True
+            game.effect_reveal_and_select(
+                player, 3,
+                filter_fn=yellow_or_purple_digimon_filter,
+                on_selected=on_selected,
+                is_optional=False,
+                prompt="Select 1 yellow or purple Digimon card to add to hand."
+            )
 
-        def condition1(context: Dict[str, Any]) -> bool:
-            if not (card and card.owner and card.owner.is_my_turn):
-                return False
-            if card and card.permanent_of_this_card() is None:
-                return False
-            return True
-        effect1.set_can_use_condition(condition1)
+        effect1.set_on_process_callback(process1)
         effects.append(effect1)
 
-        # --- Effect 2: Delay effect — Gain 2 memory ---
+        # --- Effect 2: Delay marker ---
         effect2 = ICardEffect()
-        effect2.set_timing(EffectTiming.OnStartMainPhase)
-        effect2.set_effect_name("LM-035 Delay: Gain 2 memory")
-        effect2.set_effect_description(
-            "<Delay> Gain 2 memory."
-        )
-        effect2._is_delay_effect = True
+        effect2.set_effect_name("LM-035 Delay")
+        effect2.set_effect_description("Delay")
+        effect2._is_delay = True
 
         def condition2(context: Dict[str, Any]) -> bool:
             if not (card and card.owner and card.owner.is_my_turn):
@@ -99,35 +92,55 @@ class LM_035(CardScript):
                 return False
             return True
         effect2.set_can_use_condition(condition2)
-
-        def process2(ctx: Dict[str, Any]):
-            """Gain 2 memory."""
-            player = ctx.get('player')
-            game = ctx.get('game')
-            if player and game:
-                player.add_memory(2)
-        effect2.set_on_process_callback(process2)
         effects.append(effect2)
 
-        # --- Effect 3: [Security] Place this card in the battle area ---
+        # --- Effect 3: [Main] <Delay> Gain 2 memory ---
         effect3 = ICardEffect()
-        effect3.set_effect_name("LM-035 Security: Place in battle area")
-        effect3.set_effect_description("[Security] Place this card in the battle area.")
-        effect3.is_security_effect = True
+        effect3.set_timing(EffectTiming.OnStartMainPhase)
+        effect3.set_effect_name("LM-035 Delay: Gain 2 memory")
+        effect3.set_effect_description("<Delay> Gain 2 memory.")
+        effect3._is_delay_effect = True
 
         def condition3(context: Dict[str, Any]) -> bool:
+            if not (card and card.owner and card.owner.is_my_turn):
+                return False
+            if card and card.permanent_of_this_card() is None:
+                return False
             return True
         effect3.set_can_use_condition(condition3)
 
         def process3(ctx: Dict[str, Any]):
-            """Place this card in the battle area from security."""
+            player = ctx.get('player')
+            game = ctx.get('game')
+            if player and game:
+                # Trash this card from battle area (Delay consumption)
+                perm = card.permanent_of_this_card() if card else None
+                if perm:
+                    player.delete_permanent(perm)
+                player.add_memory(2)
+        effect3.set_on_process_callback(process3)
+        effects.append(effect3)
+
+        # --- Effect 4: [Security] Place this card in the battle area ---
+        effect4 = ICardEffect()
+        effect4.set_timing(EffectTiming.SecuritySkill)
+        effect4.set_effect_name("LM-035 Security: Place in battle area")
+        effect4.set_effect_description(
+            "[Security] Place this card in the battle area."
+        )
+        effect4.is_security_effect = True
+
+        def condition4(context: Dict[str, Any]) -> bool:
+            return True
+        effect4.set_can_use_condition(condition4)
+
+        def process4(ctx: Dict[str, Any]):
             player = ctx.get('player')
             game = ctx.get('game')
             if not (player and game and card):
                 return
-            # Play this card to battle area (as a delayed option)
             player.play_card_from_source(card, pay_cost=False)
-        effect3.set_on_process_callback(process3)
-        effects.append(effect3)
+        effect4.set_on_process_callback(process4)
+        effects.append(effect4)
 
         return effects
