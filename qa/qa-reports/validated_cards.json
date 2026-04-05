@@ -1,6 +1,6 @@
 {
-  "version": 103,
-  "last_updated": "2026-04-04",
+  "version": 109,
+  "last_updated": "2026-04-05",
   "cards": {
     "BT1-087": {
       "card_name": "T.K. Takaishi",
@@ -1381,10 +1381,10 @@
     },
     "BT22-040": {
       "card_name": "Cendrillmon",
-      "validated_date": "2026-03-14",
-      "report": "2026-03-14-wave1-reverify.md",
-      "status": "PASS",
-      "notes": "Token plays via effect_play_token correct. Deletion trigger and Overclock correct."
+      "status": "FIXED",
+      "notes": "Fixed deletion observer: _is_deletion_observer, deleted_permanent context, owner+Digimon check.",
+      "validated_date": "2026-04-05",
+      "report": "batch-fix-cards"
     },
     "BT22-041": {
       "verdict": "IMPLEMENTED",
@@ -1394,10 +1394,10 @@
     },
     "BT22-042": {
       "card_name": "Nyabootmon",
-      "validated_date": "2026-03-14",
-      "report": "2026-03-14-wave1-reverify.md",
-      "status": "PASS",
-      "notes": "Overclock, WD play Puppet + DP reduction, deletion re-trigger correct."
+      "status": "FIXED",
+      "notes": "Fixed deletion observer pattern, WD chained selections for play+DP, DP count after play.",
+      "validated_date": "2026-04-05",
+      "report": "batch-fix-cards"
     },
     "BT22-043": {
       "card_name": "Terriermon",
@@ -1509,10 +1509,10 @@
     },
     "BT22-088": {
       "card_name": "Arisa Kinosaki",
-      "validated_date": "2026-03-14",
-      "report": "2026-03-14-puppets-qa.md",
-      "status": "PASS",
-      "notes": "Fixed: Return self to deck, play Arisa, conditionally play Shoemon."
+      "status": "FIXED",
+      "notes": "Fixed deck-bottom return API, exact name filters, removed is_on_play from observer, SecuritySkill timing.",
+      "validated_date": "2026-04-05",
+      "report": "batch-fix-cards"
     },
     "BT22-089": {
       "card_name": "Mirei Mikagura",
@@ -1544,10 +1544,10 @@
     },
     "BT22-098": {
       "card_name": "Unique Emblem: Fable Waltz",
-      "validated_date": "2026-03-14",
-      "report": "2026-03-14-puppets-qa.md",
-      "status": "PASS",
-      "notes": "Fixed: Delay digivolve Puppet+LIBERATOR with cost_reduction=3."
+      "status": "FIXED",
+      "notes": "Fixed play filter exact names, delay event_permanent context, SecuritySkill timing+process.",
+      "validated_date": "2026-04-05",
+      "report": "batch-fix-cards"
     },
     "BT22-099": {
       "card_name": "Kuremi Detective Agency",
@@ -2967,45 +2967,45 @@
     },
     "EX11-019": {
       "card_name": "Shoemon",
-      "validated_date": "2026-03-14",
-      "report": "2026-03-14-wave1-reverify.md",
       "status": "PASS",
-      "notes": "On Deletion token play correct. Barrier inherited correct."
+      "notes": "On Deletion Familiar token + inherited Barrier. Faithful.",
+      "validated_date": "2026-04-05",
+      "report": "batch-fix-cards"
     },
     "EX11-020": {
       "card_name": "Hanimon",
-      "validated_date": "2026-03-14",
-      "report": "2026-03-14-wave1-reverify.md",
-      "status": "PASS",
-      "notes": "Alt-digi, On Deletion plays Shoemon, inherited end-attack correct."
+      "status": "FIXED",
+      "notes": "Fixed inherited OnAllyAttack, On Deletion is_battle check, exact Shoemon name. Engine: added is_battle to deletion context.",
+      "validated_date": "2026-04-05",
+      "report": "batch-fix-cards"
     },
     "EX11-021": {
       "card_name": "Kokeshimon",
-      "validated_date": "2026-03-14",
-      "report": "2026-03-14-wave1-reverify.md",
-      "status": "PASS",
-      "notes": "Alt-digi, WD plays Mirai Kinosaki, inherited end-attack correct."
+      "status": "FIXED",
+      "notes": "Fixed inherited OnAllyAttack timing, unique hash string.",
+      "validated_date": "2026-04-05",
+      "report": "batch-fix-cards"
     },
     "EX11-022": {
       "card_name": "Karakurumon",
-      "validated_date": "2026-03-14",
-      "report": "2026-03-14-wave1-reverify.md",
-      "status": "PASS",
-      "notes": "Fixed _card_effects->_cached_effects. Scapegoat, play Puppet, inherited WhenRemoveField correct."
+      "status": "FIXED",
+      "notes": "Rewrote: async play+EOT-delete, inherited prevent-leaving with correct timing/flags/is_own_effect, alt-digi color check.",
+      "validated_date": "2026-04-05",
+      "report": "batch-fix-cards"
     },
     "EX11-023": {
       "card_name": "Kaguyamon",
-      "validated_date": "2026-03-14",
-      "report": "2026-03-14-wave1-reverify.md",
-      "status": "PASS",
-      "notes": "Fixed duplicate hash_string. Alliance, Scapegoat, delete lowest level correct."
+      "status": "FIXED",
+      "notes": "Fixed shared OPT hash, deletion observer pattern (_is_deletion_observer + deleted_permanent context).",
+      "validated_date": "2026-04-05",
+      "report": "batch-fix-cards"
     },
     "EX11-024": {
       "card_name": "Cendrillmon",
-      "validated_date": "2026-03-14",
-      "report": "2026-03-14-wave1-reverify.md",
-      "status": "PASS",
-      "notes": "Alliance, Overclock, On Play/WD play Puppet + Tokens, WD/WA DP reduction correct."
+      "status": "FIXED",
+      "notes": "Rewrote WD selection chaining (puppet+tokens+DP), fixed async selection ordering.",
+      "validated_date": "2026-04-05",
+      "report": "batch-fix-cards"
     },
     "EX11-027": {
       "card_name": "Maquinamon",
@@ -3096,17 +3096,17 @@
     },
     "EX11-060": {
       "card_name": "Arisa Kinosaki",
-      "validated_date": "2026-03-14",
-      "report": "2026-03-14-wave1-reverify.md",
-      "status": "PASS",
-      "notes": "Deletion observer pattern implemented"
+      "status": "FIXED",
+      "notes": "Fixed OnStartTurn timing, deletion observer ownership, Overclock detection. Engine: removal_cause threading + overclock removal_cause.",
+      "validated_date": "2026-04-05",
+      "report": "batch-fix-cards"
     },
     "EX11-061": {
       "card_name": "Mirai Kinosaki",
-      "validated_date": "2026-03-14",
-      "report": "2026-03-14-wave1-reverify.md",
-      "status": "PASS",
-      "notes": "Removed spurious delete/immunity effect. Start of Main and digivolve observer correct."
+      "status": "FIXED",
+      "notes": "Fixed digivolve observer (removed is_when_digivolving), added suspend check, added EOT deletion scheduling.",
+      "validated_date": "2026-04-05",
+      "report": "batch-fix-cards"
     },
     "EX11-062": {
       "card_name": "Shoto Kazama",
@@ -3399,31 +3399,31 @@
     },
     "EX7-024": {
       "card_name": "Shoemon",
-      "status": "PASS",
-      "notes": "Puppet evo cost -1 confirmed working.",
-      "validated_date": "2026-03-13",
-      "report": "2026-03-13-puppets.md"
+      "status": "FIXED",
+      "notes": "Fixed digi cost timing/context, inherited security DP attribute.",
+      "validated_date": "2026-04-05",
+      "report": "batch-fix-cards"
     },
     "EX7-025": {
       "card_name": "ShoeShoemon",
-      "status": "PASS",
-      "notes": "When Digivolving play Arisa works.",
-      "validated_date": "2026-03-13",
-      "report": "2026-03-13-puppets.md"
+      "status": "FIXED",
+      "notes": "Fixed inherited security DP attribute, exact Arisa name filter.",
+      "validated_date": "2026-04-05",
+      "report": "batch-fix-cards"
     },
     "EX7-027": {
       "card_name": "Chaperomon",
-      "status": "PASS",
-      "notes": "Overclock OK. When Digivolving play L3 Puppet free confirmed.",
-      "validated_date": "2026-03-13",
-      "report": "2026-03-13-puppets.md"
+      "status": "FIXED",
+      "notes": "Fixed prevent-leaving: is_own_effect check, optimistic _will_not_be_removed, selection optionality.",
+      "validated_date": "2026-04-05",
+      "report": "batch-fix-cards"
     },
     "EX7-030": {
       "card_name": "Cendrillmon",
       "status": "PASS",
-      "notes": "Overclock, token play, -6000 DP all implemented.",
-      "validated_date": "2026-03-13",
-      "report": "2026-03-13-puppets.md"
+      "notes": "Overclock, Start Main+WD token, WA -6000 DP. Faithful.",
+      "validated_date": "2026-04-05",
+      "report": "batch-fix-cards"
     },
     "EX7-049": {
       "card_name": "Metallicdramon",
@@ -3452,10 +3452,10 @@
     },
     "EX7-063": {
       "card_name": "Arisa Kinosaki",
-      "validated_date": "2026-03-14",
-      "report": "2026-03-14-puppets-qa.md",
-      "status": "PASS",
-      "notes": "Script correct. Memory gain + deletion trigger work."
+      "status": "FIXED",
+      "notes": "Fixed deletion observer pattern, added deleted perm ownership+trait check, SecuritySkill timing.",
+      "validated_date": "2026-04-05",
+      "report": "batch-fix-cards"
     },
     "EX7-068": {
       "card_name": "Wonder Stomp",
@@ -3466,10 +3466,10 @@
     },
     "EX7-074": {
       "card_name": "Vortex Resonance",
-      "validated_date": "2026-04-04",
-      "report": "batch-fix-cards",
       "status": "FIXED",
-      "notes": "Fixed color requirement bypass using _match_color_requirement_fn."
+      "notes": "Fixed color bypass fn, chained reveal+digivolve, SecuritySkill timing.",
+      "validated_date": "2026-04-05",
+      "report": "batch-fix-cards"
     },
     "EX8-005": {
       "verdict": "PASS",
@@ -3652,10 +3652,10 @@
     },
     "EX9-024": {
       "card_name": "Hanimon",
-      "status": "PASS",
-      "notes": "On Play trash + return Puppet confirmed working.",
-      "validated_date": "2026-03-13",
-      "report": "2026-03-13-puppets.md"
+      "status": "FIXED",
+      "notes": "Fixed inherited OnAllyAttack timing for opponent attack observer.",
+      "validated_date": "2026-04-05",
+      "report": "batch-fix-cards"
     },
     "EX9-025": {
       "verdict": "PASS",
@@ -3671,10 +3671,10 @@
     },
     "EX9-027": {
       "card_name": "Kokeshimon",
-      "status": "PASS",
-      "notes": "When Digivolving/On Deletion -4000 DP. Inherited end-attack present.",
-      "validated_date": "2026-03-13",
-      "report": "2026-03-13-puppets.md"
+      "status": "FIXED",
+      "notes": "Fixed inherited OnAllyAttack timing for opponent attack observer.",
+      "validated_date": "2026-04-05",
+      "report": "batch-fix-cards"
     },
     "EX9-029": {
       "verdict": "IMPLEMENTED",
@@ -3684,17 +3684,17 @@
     },
     "EX9-032": {
       "card_name": "Karakurumon",
-      "status": "PASS",
-      "notes": "Alt digi + delete to super-digivolve. Inherited WhenRemoveField present.",
-      "validated_date": "2026-03-13",
-      "report": "2026-03-13-puppets.md"
+      "status": "FIXED",
+      "notes": "Fixed inherited prevent-leaving: WhenPermanentWouldBeDeleted timing, is_own_effect check, optimistic prevention.",
+      "validated_date": "2026-04-05",
+      "report": "batch-fix-cards"
     },
     "EX9-033": {
       "card_name": "Kaguyamon",
-      "validated_date": "2026-03-14",
-      "report": "2026-03-14-wave1-reverify.md",
-      "status": "PASS",
-      "notes": "Deletion observer pattern implemented"
+      "status": "FIXED",
+      "notes": "Fixed Alliance+Blocker aura to use keyword_permanent_condition pattern, deletion observer uses _is_deletion_observer.",
+      "validated_date": "2026-04-05",
+      "report": "batch-fix-cards"
     },
     "EX9-037": {
       "verdict": "IMPLEMENTED",
@@ -3765,10 +3765,10 @@
     },
     "EX9-067": {
       "card_name": "Mirai Kinosaki",
-      "validated_date": "2026-03-14",
-      "report": "2026-03-14-wave1-reverify.md",
-      "status": "PASS",
-      "notes": "Fixed: effect_play_from_zone + return_permanent_to_deck_bottom. Digivolve observer correct."
+      "status": "FIXED",
+      "notes": "Removed incorrect is_when_digivolving from digivolve observer.",
+      "validated_date": "2026-04-05",
+      "report": "batch-fix-cards"
     },
     "EX9-068": {
       "verdict": "PASS",
@@ -4210,10 +4210,10 @@
     },
     "P-229": {
       "card_name": "Unique Emblem: Narrative Ronde",
-      "validated_date": "2026-03-14",
-      "report": "2026-03-14-puppets-qa.md",
-      "status": "PASS",
-      "notes": "Fixed: Removed spurious trash-to-hand. Fixed delay digivolve LIBERATOR."
+      "status": "FIXED",
+      "notes": "Fixed reveal filter (is_digimon), delay observer (removed is_on_play, fixed condition), SecuritySkill.",
+      "validated_date": "2026-04-05",
+      "report": "batch-fix-cards"
     },
     "RB1-035": {
       "verdict": "IMPLEMENTED",

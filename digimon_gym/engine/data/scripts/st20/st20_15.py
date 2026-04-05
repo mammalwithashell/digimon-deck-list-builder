@@ -86,6 +86,7 @@ class ST20_15(CardScript):
         def process2(ctx: Dict[str, Any]):
             """Add top security to hand, then place this card face-up as top security."""
             player = ctx.get('player')
+            game = ctx.get('game')
             if not player:
                 return
             # Add top security card to hand (top = last in list)
@@ -95,8 +96,15 @@ class ST20_15(CardScript):
                 player.face_up_security.discard(top_sec)
                 player.hand_cards.append(top_sec)
 
-            # Place this card face-up as the top security card
+            # Remove the option permanent from battle area before placing
+            # into security, preventing the engine's auto-trash for options.
             if card:
+                perm = card.permanent_of_this_card()
+                if perm and perm in player.battle_area:
+                    player.battle_area.remove(perm)
+                    if game:
+                        game.cleanup_modifiers_for_permanent(perm)
+                # Place this card face-up as the top security card
                 player.add_to_security_face_up(card, to_top=True)
 
         effect2.set_on_process_callback(process2)

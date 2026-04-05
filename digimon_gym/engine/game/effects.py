@@ -562,9 +562,16 @@ class EffectHelpersMixin:
             if 0 <= branch < num_choices:
                 callback(branch)
 
+        effect_choices = None
+        if branch_labels:
+            effect_choices = [
+                {"index": SEL_EFFECT_CHOICE_START + i, "label": label}
+                for i, label in enumerate(branch_labels)
+            ]
+
         self.request_selection(
             GamePhase.SelectEffectChoice, player, on_select, valid,
-            prompt=prompt)
+            prompt=prompt, effect_choices=effect_choices)
 
     def effect_choose_deck_placement(
         self, player: "Player", card: "CardSource",

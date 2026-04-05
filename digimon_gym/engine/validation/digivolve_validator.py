@@ -91,6 +91,17 @@ def _check_alt_digivolve(evo_card: 'CardSource', base_perm: 'Permanent') -> bool
         if req_name is not None:
             if not base_perm.contains_card_name(req_name):
                 continue
+        # Text check (HasText — searches combined effect/inherited/security text)
+        req_has_text = getattr(effect, '_alt_digi_has_text', None)
+        if req_has_text is not None:
+            card_text = getattr(base_perm.top_card, 'card_text', '')
+            if req_has_text.lower() not in card_text.lower():
+                continue
+        # Custom condition function (takes base_perm, returns bool)
+        condition_fn = getattr(effect, '_alt_digi_condition_fn', None)
+        if condition_fn is not None:
+            if not condition_fn(base_perm):
+                continue
         # Note: can_use_condition is NOT checked here because alt-digi
         # validation runs while the card is in hand (not on field).
         # Most transpiled conditions check permanent_of_this_card() which
@@ -125,6 +136,17 @@ def get_alt_digi_cost(evo_card: 'CardSource', base_perm: 'Permanent') -> int:
         req_name = getattr(effect, '_alt_digi_name', None)
         if req_name is not None:
             if not base_perm.contains_card_name(req_name):
+                continue
+        # Text check (HasText — searches combined effect/inherited/security text)
+        req_has_text = getattr(effect, '_alt_digi_has_text', None)
+        if req_has_text is not None:
+            card_text = getattr(base_perm.top_card, 'card_text', '')
+            if req_has_text.lower() not in card_text.lower():
+                continue
+        # Custom condition function (takes base_perm, returns bool)
+        condition_fn = getattr(effect, '_alt_digi_condition_fn', None)
+        if condition_fn is not None:
+            if not condition_fn(base_perm):
                 continue
         # Support dynamic cost via _alt_digi_cost_fn (overrides static _alt_digi_cost)
         cost_fn = getattr(effect, '_alt_digi_cost_fn', None)

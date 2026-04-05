@@ -109,15 +109,13 @@ class EX11_023(CardScript):
         effect3.set_effect_description("[When Digivolving][Once Per Turn] Delete 1 opponent's lowest level Digimon.")
         effect3.is_when_digivolving = True
         effect3.set_max_count_per_turn(1)
-        effect3.set_hash_string("EX11_023_WD")
+        effect3.set_hash_string("EX11_023_WD_EoOT")
 
         def condition3(context: Dict[str, Any]) -> bool:
             if card and card.permanent_of_this_card() is None:
                 return False
             return True
         effect3.set_can_use_condition(condition3)
-        effect3.set_on_process_callback(_delete_lowest_level)
-        effects.append(effect3)
 
         # --- Effect 4: [End of Opponent's Turn][Once Per Turn] Delete lowest level ---
         effect4 = ICardEffect()
@@ -135,30 +133,42 @@ class EX11_023(CardScript):
                 return False
             return True
         effect4.set_can_use_condition(condition4)
-        effect4.set_on_process_callback(_delete_lowest_level)
+
+        # Shared OPT: when one effect fires, mark the sibling as activated too
+        def _make_shared_process(sibling_effect):
+            def _shared_delete_lowest(ctx):
+                _delete_lowest_level(ctx)
+                sibling_effect.record_activation()
+            return _shared_delete_lowest
+
+        effect3.set_on_process_callback(_make_shared_process(effect4))
+        effect4.set_on_process_callback(_make_shared_process(effect3))
+
+        effects.append(effect3)
         effects.append(effect4)
 
         # --- Effect 5: [All Turns][Once Per Turn] On other deletion, play Puppet Lv4- from trash ---
+        # Uses _is_deletion_observer so _fire_deletion_observers() picks it up
         effect5 = ICardEffect()
-        effect5.set_timing(EffectTiming.OnDestroyedAnyone)
         effect5.set_effect_name("EX11-023 Play level 4 or lower [Puppet] from trash")
         effect5.set_effect_description("[All Turns][Once Per Turn] When other Digimon are deleted, you may play 1 level 4 or lower [Puppet] trait Digimon card from your trash without paying the cost.")
         effect5.is_optional = True
         effect5.set_max_count_per_turn(1)
         effect5.set_hash_string("EX11_023_AT")
-        effect5.is_on_deletion = True
+        effect5._is_deletion_observer = True
 
         def condition5(context: Dict[str, Any]) -> bool:
             if card and card.permanent_of_this_card() is None:
                 return False
             # The deleted Digimon must be different from this one
-            deleted_perm = context.get('permanent')
-            if deleted_perm:
-                my_perm = card.permanent_of_this_card()
-                if deleted_perm is my_perm:
-                    return False
-                if not deleted_perm.is_digimon:
-                    return False
+            deleted_perm = context.get('deleted_permanent')
+            if not deleted_perm:
+                return False
+            if not getattr(deleted_perm, 'is_digimon', False):
+                return False
+            my_perm = card.permanent_of_this_card()
+            if deleted_perm is my_perm:
+                return False
             return True
         effect5.set_can_use_condition(condition5)
 

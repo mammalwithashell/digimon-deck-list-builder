@@ -2,7 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
-from ....data.enums import EffectTiming
+from ....data.enums import EffectTiming, GamePhase
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -138,8 +138,10 @@ class EX9_032(CardScript):
         effects.append(effect2)
 
         # --- Effect 3 (Inherited): [All Turns][Once Per Turn] Prevent leaving by deleting token/Puppet ---
+        # Uses WhenPermanentWouldBeDeleted timing so _will_not_be_removed can prevent deletion
+        # C# reference: EffectTiming.WhenRemoveField with willBeRemoveField = false
         effect3 = ICardEffect()
-        effect3.set_timing(EffectTiming.WhenRemoveField)
+        effect3.set_timing(EffectTiming.WhenPermanentWouldBeDeleted)
         effect3.set_effect_name("EX9-032 Prevent leaving by deleting token/Puppet")
         effect3.set_effect_description(
             "[All Turns][Once Per Turn] When this Digimon would leave the battle area "
@@ -154,10 +156,17 @@ class EX9_032(CardScript):
         def condition3(context: Dict[str, Any]) -> bool:
             if card and card.permanent_of_this_card() is None:
                 return False
+            my_perm = card.permanent_of_this_card()
+            # Only triggers for THIS permanent being removed
+            ctx_perm = context.get('permanent')
+            if ctx_perm is not my_perm:
+                return False
+            # "other than by your effects" — do NOT trigger on own-effect removals
+            if context.get('is_own_effect', False):
+                return False
             player = card.owner if card else None
             if not player:
                 return False
-            my_perm = card.permanent_of_this_card()
 
             def sub_filter(p):
                 if not p.is_digimon:
@@ -174,6 +183,7 @@ class EX9_032(CardScript):
         effect3.set_can_use_condition(condition3)
 
         def process3(ctx: Dict[str, Any]):
+            from ....game.constants import SEL_MY_FIELD_START
             player = ctx.get('player')
             game = ctx.get('game')
             if not (player and game):
@@ -181,6 +191,10 @@ class EX9_032(CardScript):
             my_perm = card.permanent_of_this_card() if card else None
             if not my_perm:
                 return
+
+            # Optimistic: set prevention flag BEFORE selection so delete_permanent
+            # sees it even if the selection callback hasn't fired yet
+            my_perm._will_not_be_removed = True
 
             def sub_filter(p):
                 if not p.is_digimon:
@@ -193,18 +207,35 @@ class EX9_032(CardScript):
                     return True
                 return False
 
-            def on_delete_substitute(target_perm):
-                player.delete_permanent(target_perm)
-                # Prevent this Digimon from leaving the battle area
-                if my_perm and hasattr(my_perm, 'willBeRemoveField'):
-                    my_perm.willBeRemoveField = False
-                if my_perm and hasattr(my_perm, 'will_be_removed'):
-                    my_perm.will_be_removed = False
+            # Build valid indices for selection
+            valid = []
+            for i, p in enumerate(player.battle_area):
+                if sub_filter(p):
+                    valid.append(SEL_MY_FIELD_START + i)
+            if not valid:
+                my_perm._will_not_be_removed = False
+                return
 
-            game.effect_select_own_permanent(
-                player, on_delete_substitute, filter_fn=sub_filter,
+            def on_select(action_id: int):
+                idx = action_id - SEL_MY_FIELD_START
+                if 0 <= idx < len(player.battle_area):
+                    target_perm = player.battle_area[idx]
+                    player.delete_permanent(target_perm)
+                    game.logger.log(
+                        "[EX9-032] Deleted a Token/Puppet to prevent "
+                        "this Digimon from leaving the battle area.")
+
+            def on_decline():
+                # Player declined — undo the optimistic prevention flag
+                my_perm._will_not_be_removed = False
+
+            # Use request_selection directly to support on_decline callback
+            # C# uses canNoSelect: true — player can choose not to sacrifice
+            game.request_selection(
+                GamePhase.SelectTarget, player, on_select, valid,
                 is_optional=True,
-                prompt="Select 1 of your Tokens or other [Puppet] Digimon to delete to prevent leaving."
+                prompt="Select 1 of your Tokens or other [Puppet] Digimon to delete to prevent leaving.",
+                on_decline=on_decline,
             )
 
         effect3.set_on_process_callback(process3)

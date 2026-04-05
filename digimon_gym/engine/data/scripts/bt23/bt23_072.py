@@ -3,7 +3,8 @@ from typing import TYPE_CHECKING, List, Dict, Any
 
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
-from ....data.enums import EffectTiming
+from ....data.enums import EffectTiming, GamePhase
+from ....game.constants import SEL_EFFECT_CHOICE_START
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -22,7 +23,7 @@ class BT23_072(CardScript):
         # ---------------------------------------------------------------
         effect0 = ICardEffect()
         effect0.set_timing(EffectTiming.OnDeclaration)
-        effect0._is_field_main = True
+        effect0._is_hand_main = True
         effect0.set_effect_name("BT23-072 draw 1")
         effect0.set_effect_description(
             "[Hand][Main] By paying 3 cost and placing this card as the bottom "
@@ -168,23 +169,54 @@ class BT23_072(CardScript):
             game = ctx.get("game")
             if not (player and perm and game):
                 return
-            # Find a King Drasil Digimon card in digivolution cards and play it
-            for index, source in enumerate(list(perm.card_sources[:-1])):
+            # Collect eligible King Drasil Digimon cards from digivolution cards
+            candidates = []
+            for index, source in enumerate(perm.card_sources[:-1]):
                 if not getattr(source, 'is_digimon', False):
                     continue
                 if any("King Drasil" in name for name in getattr(source, "card_names", [])):
-                    # Remove from digivolution cards
-                    perm.card_sources.remove(source)
-                    # Play without paying cost
-                    played_perm = player.play_card_from_source(source, pay_cost=False)
-                    # Fire on-play effects
-                    if played_perm:
-                        game.execute_effects(
-                            EffectTiming.OnEnterFieldAnyone,
-                            {"played_card": source, "played_permanent": played_perm,
-                             "event_player": player},
-                        )
-                    break
+                    candidates.append((index, source))
+
+            if not candidates:
+                return
+
+            # If only one candidate, play it directly
+            if len(candidates) == 1:
+                _, source = candidates[0]
+                perm.card_sources.remove(source)
+                played_perm = player.play_card_from_source(source, pay_cost=False)
+                if played_perm:
+                    game.execute_effects(
+                        EffectTiming.OnEnterFieldAnyone,
+                        {"played_card": source, "played_permanent": played_perm,
+                         "event_player": player},
+                    )
+                return
+
+            # Multiple candidates — offer selection (C# uses SelectCardEffect
+            # with canNoSelect=true)
+            valid = [SEL_EFFECT_CHOICE_START + i for i, _ in enumerate(candidates)]
+
+            def on_select(action_id: int):
+                idx = action_id - SEL_EFFECT_CHOICE_START
+                if idx < 0 or idx >= len(candidates):
+                    return
+                _, chosen = candidates[idx]
+                if chosen in perm.card_sources:
+                    perm.card_sources.remove(chosen)
+                played_perm = player.play_card_from_source(chosen, pay_cost=False)
+                if played_perm:
+                    game.execute_effects(
+                        EffectTiming.OnEnterFieldAnyone,
+                        {"played_card": chosen, "played_permanent": played_perm,
+                         "event_player": player},
+                    )
+
+            game.request_selection(
+                GamePhase.SelectEffectChoice, player, on_select, valid,
+                is_optional=True,
+                prompt="Select a Digimon card with [King Drasil] in its name to play."
+            )
 
         effect2.set_on_process_callback(process2)
         effects.append(effect2)

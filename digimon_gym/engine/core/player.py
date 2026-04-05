@@ -491,7 +491,7 @@ class Player:
 
         # Execute On Deletion effects (fires for tokens too)
         if self.game and hasattr(self.game, 'execute_deletion_effects'):
-            self.game.execute_deletion_effects(permanent, self)
+            self.game.execute_deletion_effects(permanent, self, removal_cause=removal_cause)
 
         if not permanent.is_token:
             # <Fortitude>: mandatory — replay from trash if had digi cards

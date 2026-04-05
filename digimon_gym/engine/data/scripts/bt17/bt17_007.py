@@ -60,10 +60,8 @@ class BT17_007(CardScript):
             )
             if not has_tai:
                 return False
-            # Must have matching card in trash
+            # Must have matching card in trash (C# has no IsDigimon check)
             def _match(c):
-                if not getattr(c, 'is_digimon', False):
-                    return False
                 return (c.contains_card_name('Garurumon') or
                         c.contains_card_name('Greymon') or
                         c.contains_card_name('Omnimon'))
@@ -78,8 +76,6 @@ class BT17_007(CardScript):
                 return
 
             def trash_filter(c):
-                if not getattr(c, 'is_digimon', False):
-                    return False
                 return (c.contains_card_name('Garurumon') or
                         c.contains_card_name('Greymon') or
                         c.contains_card_name('Omnimon'))

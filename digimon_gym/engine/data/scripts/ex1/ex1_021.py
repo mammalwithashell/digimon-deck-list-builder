@@ -9,13 +9,12 @@ if TYPE_CHECKING:
 
 
 class EX1_021(CardScript):
-    """EX1-021 Plesiomon | Lv.6 Blue Digimon | Deep Savers
+    """EX1-021 MetalGarurumon | Lv.6 Blue Digimon | Deep Savers
 
     [When Digivolving] Gain 1 memory for every 4 cards in your hand.
     [When Attacking] If you have 8 or more cards in your hand and a Tamer
-        in play, return 1 of your opponent's Digimon with an [On Deletion]
-        effect to the bottom of its owner's deck. Trash all of the
-        digivolution cards of that Digimon.
+        in play, return 1 of your opponent's Digimon that has an [On Deletion]
+        effect to the bottom of its owner's deck.
     """
 
     def get_card_effects(self, card: 'CardSource') -> List['ICardEffect']:
@@ -47,19 +46,18 @@ class EX1_021(CardScript):
                 return
             count = len(player.hand_cards) // 4
             if count > 0:
-                game.memory += count
+                player.add_memory(count)
         effect0.set_on_process_callback(process0)
         effects.append(effect0)
 
-        # --- Effect 1: [When Attacking] Return opponent Digimon with On Deletion to deck bottom ---
+        # --- Effect 1: [When Attacking] Return opponent Digimon with On Deletion ---
         effect1 = ICardEffect()
         effect1.set_timing(EffectTiming.OnTappedAnyone)
         effect1.set_effect_name("EX1-021 When Attacking: Return On Deletion Digimon to deck bottom")
         effect1.set_effect_description(
             "[When Attacking] If you have 8 or more cards in your hand and "
-            "a Tamer in play, return 1 of your opponent's Digimon with an "
-            "[On Deletion] effect to the bottom of its owner's deck. Trash "
-            "all of the digivolution cards of that Digimon."
+            "a Tamer in play, return 1 of your opponent's Digimon that has an "
+            "[On Deletion] effect to the bottom of its owner's deck."
         )
 
         def condition1(context: Dict[str, Any]) -> bool:
@@ -89,7 +87,7 @@ class EX1_021(CardScript):
         effect1.set_can_use_condition(condition1)
 
         def process1(ctx: Dict[str, Any]):
-            """Return opponent Digimon with [On Deletion] to deck bottom, trash its sources."""
+            """Return opponent Digimon with [On Deletion] to deck bottom."""
             player = ctx.get('player')
             game = ctx.get('game')
             if not (player and game):
@@ -103,12 +101,7 @@ class EX1_021(CardScript):
                         and getattr(p, 'has_on_deletion_effect', False))
 
             def on_select(target_perm):
-                # Trash all digivolution cards (not the top card)
-                for src in list(target_perm.card_sources):
-                    if src is not target_perm.top_card:
-                        target_perm.card_sources.remove(src)
-                        enemy.trash_cards.append(src)
-                # Return to bottom of owner's deck
+                # Return to bottom of owner's deck (no trashing digi cards)
                 enemy.return_permanent_to_deck_bottom(target_perm)
 
             game.effect_select_opponent_permanent(

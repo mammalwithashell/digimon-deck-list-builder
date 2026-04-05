@@ -12,11 +12,26 @@ class BT23_096(CardScript):
     """BT23-096 Comet Hammer"""
 
     def get_card_effects(self, card: 'CardSource') -> List['ICardEffect']:
-        card._match_color_requirement = False
+        # Conditional color bypass: ignore color requirements when a CS Digimon/Tamer is on field
+        def _has_cs_on_field():
+            owner = card.owner if card else None
+            if not owner:
+                return False
+            for p in owner.battle_area:
+                if (p.is_tamer or p.is_digimon) and p.top_card:
+                    traits = getattr(p.top_card, 'card_traits', []) or []
+                    if any('CS' in t for t in traits):
+                        return True
+            return False
+
+        def _check_cs_color_req():
+            return not _has_cs_on_field()  # False = bypass, True = enforce
+        card._match_color_requirement_fn = _check_cs_color_req
+
         effects = []
 
         # Timing: EffectTiming.None
-        # Ignore Color Req
+        # Ignore Color Req (handled above via _match_color_requirement_fn)
         effect0 = ICardEffect()
         effect0.set_effect_name("BT23-096 Ignore color requirements")
         effect0.set_effect_description("Ignore Color Req")
@@ -82,10 +97,10 @@ class BT23_096(CardScript):
         effect2.set_can_use_condition(condition2)
         effects.append(effect2)
 
-        # Timing: EffectTiming.OnUseAttack
-        # [Your Turn] When one of your [CS] trait Digimon attacks <Delay>, draw 2.
+        # Timing: EffectTiming.OnAllyAttack
+        # [Your Turn] When one of your [CS] trait Digimon attacks <Delay>, De-Digivolve 4.
         effect3 = ICardEffect()
-        effect3.set_timing(EffectTiming.OnUseAttack)
+        effect3.set_timing(EffectTiming.OnAllyAttack)
         effect3.set_effect_name("BT23-096 Delay: De-Digivolve 4")
         effect3.set_effect_description("[Your Turn] When one of your [CS] trait Digimon attacks <Delay>, <De-Digivolve 4> 1 of your opponent's Digimon.")
         effect3.is_optional = True

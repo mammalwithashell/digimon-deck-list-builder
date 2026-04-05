@@ -9,7 +9,7 @@ if TYPE_CHECKING:
 
 
 class ST2_13(CardScript):
-    """ST2-13 Matt Ishida | Option | Blue | Cost 2
+    """ST2-13 Hammer Spark | Option | Blue
 
     [Main] Gain 1 memory.
     [Security] Gain 2 memory.
@@ -30,9 +30,9 @@ class ST2_13(CardScript):
 
         def process0(ctx: Dict[str, Any]):
             """Gain 1 memory."""
-            game = ctx.get('game')
-            if game:
-                game.memory += 1
+            player = ctx.get('player')
+            if player:
+                player.add_memory(1)
         effect0.set_on_process_callback(process0)
         effects.append(effect0)
 
@@ -49,9 +49,9 @@ class ST2_13(CardScript):
 
         def process1(ctx: Dict[str, Any]):
             """Gain 2 memory."""
-            game = ctx.get('game')
-            if game:
-                game.memory += 2
+            player = ctx.get('player')
+            if player:
+                player.add_memory(2)
         effect1.set_on_process_callback(process1)
         effects.append(effect1)
 

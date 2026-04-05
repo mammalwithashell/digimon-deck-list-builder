@@ -9,13 +9,13 @@ if TYPE_CHECKING:
 
 
 class BT5_092(CardScript):
-    """BT5-092 Matt Ishida | Tamer | Blue | Cost 4
+    """BT5-092 Nokia Shiramine | Tamer | White | Cost 3
 
     [On Play] You may play 1 [Agumon] or [Gabumon] from your hand without
-        paying its memory cost.
-    [Main] When digivolving one of your Digimon into a Digimon card in your
-        hand with [Garurumon], [Omnimon], or [Greymon] in its name, you may
-        suspend this Tamer to reduce the memory cost of the digivolution by 1.
+        paying the cost.
+    [Your Turn] When one of your Digimon would digivolve into a Digimon card
+        with [Greymon], [Garurumon] or [Omnimon] in its name, by suspending
+        this Tamer, reduce the digivolution cost by 1.
     Security Effect: [Security] Play this card without paying the cost.
     """
 

@@ -153,4 +153,17 @@ class BT17_078(CardScript):
         effect4.set_on_process_callback(_process_on_play_digivolve)
         effects.append(effect4)
 
+        # --- Inherited: Ace Overflow <-5> ---
+        # Engine handles ACE Overflow automatically via is_ace / ace_overflow_cost on the
+        # card entity base. This inherited effect is descriptive — no process callback needed.
+        effect_ace = ICardEffect()
+        effect_ace.set_effect_name("BT17-078 Ace Overflow <-5>")
+        effect_ace.set_effect_description("Ace Overflow <-5>")
+        effect_ace.is_inherited_effect = True
+
+        def condition_ace(context: Dict[str, Any]) -> bool:
+            return True
+        effect_ace.set_can_use_condition(condition_ace)
+        effects.append(effect_ace)
+
         return effects

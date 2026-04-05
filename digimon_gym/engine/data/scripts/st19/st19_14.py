@@ -26,7 +26,7 @@ class ST19_14(CardScript):
 
         # --- Effect 0: [Start of Your Turn] Set memory to 3 if <= 2 ---
         effect0 = ICardEffect()
-        effect0.set_timing(EffectTiming.OnStartMainPhase)
+        effect0.set_timing(EffectTiming.OnStartTurn)
         effect0.set_effect_name("ST19-14 Set memory to 3")
         effect0.set_effect_description(
             "[Start of Your Turn] If you have 2 or less memory, set it to 3."
@@ -103,13 +103,15 @@ class ST19_14(CardScript):
             # Grant Rush to the played permanent
             played_perm = ctx.get('played_permanent') or ctx.get('event_permanent')
             if played_perm:
-                played_perm.grant_keyword('_is_rush')
+                # "for the turn" = expires at end of current turn
+                played_perm.grant_keyword('_is_rush', duration=game.turn_count)
 
         effect1.set_on_process_callback(process1)
         effects.append(effect1)
 
         # --- Effect 2: [Security] Play this card without paying the cost ---
         effect2 = ICardEffect()
+        effect2.set_timing(EffectTiming.SecuritySkill)
         effect2.set_effect_name("ST19-14 Security: Play free")
         effect2.set_effect_description(
             "[Security] Play this card without paying the cost."

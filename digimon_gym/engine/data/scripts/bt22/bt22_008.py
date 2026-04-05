@@ -21,21 +21,32 @@ class BT22_008(CardScript):
     def get_card_effects(self, card: 'CardSource') -> List['ICardEffect']:
         effects = []
 
-        # --- Effect 0: Alt digivolve from [Koromon] for cost 0 ---
-        effect0 = ICardEffect()
-        effect0.set_effect_name("BT22-008 Alternate digivolution requirement")
-        effect0.set_effect_description("Alternate digivolution requirement")
-        effect0._alt_digi_cost = 0
-        effect0._alt_digi_level = 2
-        effect0._alt_digi_name = "Koromon"
+        # --- Effect 0a: Alt digivolve from [Koromon] for cost 0 ---
+        # C#: EqualsCardName("Koromon") || (IsLevel2 && HasCSTraits)
+        # Two separate alt-digi effects for the OR condition.
+        effect0a = ICardEffect()
+        effect0a.set_effect_name("BT22-008 Alt digi from Koromon")
+        effect0a.set_effect_description("Alternate digivolution: from [Koromon] for cost 0")
+        effect0a._alt_digi_cost = 0
+        effect0a._alt_digi_name = "Koromon"
 
-        def condition0(context: Dict[str, Any]) -> bool:
-            permanent = card.permanent_of_this_card() if card else None
-            if not (permanent and (permanent.contains_card_name('Koromon'))):
-                return False
+        def condition0a(context: Dict[str, Any]) -> bool:
             return True
-        effect0.set_can_use_condition(condition0)
-        effects.append(effect0)
+        effect0a.set_can_use_condition(condition0a)
+        effects.append(effect0a)
+
+        # --- Effect 0b: Alt digivolve from Lv.2 w/ [CS] trait for cost 0 ---
+        effect0b = ICardEffect()
+        effect0b.set_effect_name("BT22-008 Alt digi from Lv.2 CS")
+        effect0b.set_effect_description("Alternate digivolution: from Lv.2 w/ [CS] trait for cost 0")
+        effect0b._alt_digi_cost = 0
+        effect0b._alt_digi_level = 2
+        effect0b._alt_digi_trait = "CS"
+
+        def condition0b(context: Dict[str, Any]) -> bool:
+            return True
+        effect0b.set_can_use_condition(condition0b)
+        effects.append(effect0b)
 
         # --- Effect 1: [On Play] Return 1 Digimon with Greymon/Garurumon/Omnimon from trash to hand ---
         effect1 = ICardEffect()

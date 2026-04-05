@@ -23,17 +23,20 @@ class EX7_074(CardScript):
     """
 
     def get_card_effects(self, card: 'CardSource') -> List['ICardEffect']:
-        # --- Color requirement bypass: while you have LIBERATOR trait Digimon or Tamer ---
+        # --- Color requirement bypass ---
+        # While you have [LIBERATOR] trait Digimon or Tamer, bypass color requirements.
+        # Returns True = enforce, False = bypass.
         def _check_color_req():
             owner = card.owner if card else None
             if not owner:
                 return True  # enforce
-            for p in owner.battle_area:
-                if (p.is_digimon or p.is_tamer) and p.top_card:
-                    traits = getattr(p.top_card, 'card_traits', []) or []
-                    if any('LIBERATOR' in t or 'Liberator' in t for t in traits):
-                        return False  # bypass color requirement
-            return True  # enforce color requirement
+            has_liberator = any(
+                (p.is_digimon or p.is_tamer) and p.top_card and
+                any('LIBERATOR' in t for t in (getattr(p.top_card, 'card_traits', []) or []))
+                for p in owner.battle_area
+            )
+            return not has_liberator  # True = enforce, False = bypass
+
         card._match_color_requirement_fn = _check_color_req
 
         effects = []
@@ -64,43 +67,59 @@ class EX7_074(CardScript):
 
             def liberator_filter(c):
                 traits = getattr(c, 'card_traits', []) or []
-                return any('LIBERATOR' in t or 'Liberator' in t for t in traits)
+                return any('LIBERATOR' in t for t in traits)
 
-            def on_revealed(selected, remaining):
-                player.hand_cards.append(selected)
-                for c in remaining:
-                    player.library_cards.append(c)  # bottom of deck
+            def _chain_digivolve():
+                """Chain the digivolve step after reveal resolves."""
+                def digimon_hand_filter(c):
+                    return getattr(c, 'is_digimon', False)
 
-            game.effect_reveal_and_select(
-                player, 3, liberator_filter, on_revealed, is_optional=False)
+                def own_digimon_filter(p):
+                    if not p.is_digimon:
+                        return False
+                    return any(digimon_hand_filter(c) for c in player.hand_cards)
 
-            # Then, 1 of your Digimon may digivolve from hand with cost -4
-            def digimon_hand_filter(c):
-                return getattr(c, 'is_digimon', False)
+                if any(own_digimon_filter(p) for p in player.battle_area):
+                    def on_select_digimon(target_perm):
+                        game.effect_digivolve_from_hand(
+                            player, target_perm,
+                            filter_fn=digimon_hand_filter,
+                            cost_reduction=4,
+                            is_optional=True,
+                            prompt="Select a Digimon card from hand to digivolve into (cost -4).",
+                        )
 
-            def own_digimon_filter(p):
-                if not p.is_digimon:
-                    return False
-                # Must have at least one Digimon in hand that can digivolve onto it
-                return any(digimon_hand_filter(c) for c in player.hand_cards)
-
-            own_digimon = [p for p in player.battle_area if own_digimon_filter(p)]
-            if own_digimon:
-                def on_select_digimon(target_perm):
-                    game.effect_digivolve_from_hand(
-                        player, target_perm,
-                        filter_fn=digimon_hand_filter,
-                        cost_reduction=4,
+                    game.effect_select_own_permanent(
+                        player, on_select_digimon,
+                        filter_fn=own_digimon_filter,
                         is_optional=True,
-                        prompt="Select a Digimon card from hand to digivolve into (cost -4).",
+                        prompt="Select 1 of your Digimon to digivolve.",
                     )
 
-                game.effect_select_own_permanent(
-                    player, on_select_digimon,
-                    filter_fn=own_digimon_filter,
-                    is_optional=True,
-                    prompt="Select 1 of your Digimon to digivolve.",
-                )
+            # Reveal top 3, select 1 LIBERATOR to hand, rest to deck bottom.
+            # Chain the digivolve step inside the on_selected callback so it
+            # runs AFTER the reveal selection resolves (not concurrently).
+            def on_selected(selected, remaining):
+                player.hand_cards.append(selected)
+                for c in remaining:
+                    player.library_cards.append(c)
+                _chain_digivolve()
+
+            # Check if any LIBERATOR exists in top 3 before revealing.
+            # If not, effect_reveal_and_select returns early without calling
+            # on_selected, so we chain digivolve manually afterwards.
+            top3 = player.library_cards[:3]
+            has_valid = any(liberator_filter(c) for c in top3)
+
+            game.effect_reveal_and_select(
+                player, 3, liberator_filter, on_selected,
+                is_optional=False,
+            )
+
+            if not has_valid:
+                # No LIBERATOR in top 3 — reveal returned early (cards moved
+                # to bottom by the engine). Still chain digivolve.
+                _chain_digivolve()
 
         effect1.set_on_process_callback(process1)
         effects.append(effect1)
@@ -108,6 +127,7 @@ class EX7_074(CardScript):
         # --- Effect 2: [Security] Play 1 LIBERATOR (cost 4 or less) from hand/trash free.
         #     Then add this card to hand. ---
         effect2 = ICardEffect()
+        effect2.set_timing(EffectTiming.SecuritySkill)
         effect2.set_effect_name("EX7-074 Security: Play LIBERATOR then add to hand")
         effect2.set_effect_description(
             "[Security] You may play 1 card with the [LIBERATOR] trait with a "
@@ -130,7 +150,7 @@ class EX7_074(CardScript):
 
             def play_filter(c):
                 traits = getattr(c, 'card_traits', []) or []
-                has_liberator = any('LIBERATOR' in t or 'Liberator' in t for t in traits)
+                has_liberator = any('LIBERATOR' in t for t in traits)
                 if not has_liberator:
                     return False
                 try:

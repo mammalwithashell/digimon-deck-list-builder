@@ -9,12 +9,12 @@ if TYPE_CHECKING:
 
 
 class EX9_033(CardScript):
-    """EX9-033 Kaguyamon | Lv.6 Yellow | Puppet
+    """EX9-033 Kaguyamon | Lv.6 Yellow/Purple | Puppet, LIBERATOR
 
     Alt digivolve: from Lv.5 [Puppet] for cost 3.
 
-    [All Turns] All of your Tokens and [Puppet] trait Digimon gain <Blocker>
-        and <Alliance>.
+    [All Turns] All of your Tokens and [Puppet] trait Digimon gain <Alliance>
+        and <Blocker>.
 
     [All Turns][Once Per Turn] When other Digimon are deleted, delete 1 of
         your opponent's lowest level Digimon.
@@ -31,13 +31,8 @@ class EX9_033(CardScript):
             return any('Puppet' in t for t in traits)
 
         def _is_own_puppet_or_token(perm) -> bool:
-            """Check if a permanent is one of our Tokens or [Puppet] Digimon."""
+            """Check if a permanent is a Token or has [Puppet] trait (top card)."""
             if not perm.is_digimon:
-                return False
-            player = card.owner if card else None
-            if not player:
-                return False
-            if perm not in player.battle_area:
                 return False
             if getattr(perm, 'is_token', False):
                 return True
@@ -59,8 +54,8 @@ class EX9_033(CardScript):
         effects.append(effect0)
 
         # --- Effect 1: [All Turns] Grant Blocker to ALL own Tokens and [Puppet] Digimon ---
-        # This is a declarative/continuous effect. The condition checks whether the
-        # permanent being queried (via context) is one of our Puppets/Tokens.
+        # Uses the engine's aura keyword pattern: _applies_to_all_own_digimon +
+        # _keyword_permanent_condition so has_keyword scans this effect on other permanents.
         effect1 = ICardEffect()
         effect1.set_timing(EffectTiming.NoTiming)
         effect1.set_effect_name("EX9-033 Grant Blocker to Puppets/Tokens")
@@ -68,50 +63,19 @@ class EX9_033(CardScript):
             "[All Turns] All of your Tokens and [Puppet] trait Digimon gain <Blocker>."
         )
         effect1._is_blocker = True
-        effect1.is_declarative = True
+        effect1._applies_to_all_own_digimon = True
+        effect1._keyword_permanent_condition = _is_own_puppet_or_token
 
         def condition1(context: Dict[str, Any]) -> bool:
-            # This effect must be active when EX9-033 is on the field
+            # Active when EX9-033 is on the field
             if card and card.permanent_of_this_card() is None:
                 return False
-            # The blocker keyword is checked per-permanent via has_keyword.
-            # For the condition on this card's own effect, it should return True
-            # when EX9-033 is on field — the blocker applies to ALL matching permanents.
-            # The engine checks _is_blocker on the effect to determine if the
-            # permanent has blocker via has_keyword scanning.
-            # Since this effect lives on EX9-033's card_source, it only directly
-            # gives blocker to EX9-033 itself. For granting to OTHER permanents,
-            # we need the process callback approach.
             return True
         effect1.set_can_use_condition(condition1)
         effects.append(effect1)
 
-        # --- Effect 1b: Grant Blocker to other Puppets/Tokens via OnEnterFieldAnyone ---
-        # We grant blocker keyword to all matching permanents whenever anything enters
-        # the field, and also at start of game / turn transitions.
-        effect1b = ICardEffect()
-        effect1b.set_timing(EffectTiming.OnEnterFieldAnyone)
-        effect1b.set_effect_name("EX9-033 Refresh Blocker grants")
-        effect1b.set_effect_description("Grant Blocker to all Puppets/Tokens on field change.")
-
-        def condition1b(context: Dict[str, Any]) -> bool:
-            if card and card.permanent_of_this_card() is None:
-                return False
-            return True
-        effect1b.set_can_use_condition(condition1b)
-
-        def process1b(ctx: Dict[str, Any]):
-            player = ctx.get('player')
-            game = ctx.get('game')
-            if not (player and game):
-                return
-            for p in list(player.battle_area):
-                if _is_own_puppet_or_token(p):
-                    p.grant_keyword('_is_blocker')
-        effect1b.set_on_process_callback(process1b)
-        effects.append(effect1b)
-
-        # --- Effect 2: [All Turns] Grant Alliance to own Tokens and [Puppet] Digimon ---
+        # --- Effect 2: [All Turns] Grant Alliance to ALL own Tokens and [Puppet] Digimon ---
+        # Same aura pattern as Blocker.
         effect2 = ICardEffect()
         effect2.set_timing(EffectTiming.NoTiming)
         effect2.set_effect_name("EX9-033 Grant Alliance to Puppets/Tokens")
@@ -119,6 +83,8 @@ class EX9_033(CardScript):
             "[All Turns] All of your Tokens and [Puppet] trait Digimon gain <Alliance>."
         )
         effect2._is_alliance = True
+        effect2._applies_to_all_own_digimon = True
+        effect2._keyword_permanent_condition = _is_own_puppet_or_token
 
         def condition2(context: Dict[str, Any]) -> bool:
             if card and card.permanent_of_this_card() is None:
@@ -126,29 +92,6 @@ class EX9_033(CardScript):
             return True
         effect2.set_can_use_condition(condition2)
         effects.append(effect2)
-
-        # --- Effect 2b: Grant Alliance to other Puppets/Tokens ---
-        effect2b = ICardEffect()
-        effect2b.set_timing(EffectTiming.OnEnterFieldAnyone)
-        effect2b.set_effect_name("EX9-033 Refresh Alliance grants")
-        effect2b.set_effect_description("Grant Alliance to all Puppets/Tokens on field change.")
-
-        def condition2b(context: Dict[str, Any]) -> bool:
-            if card and card.permanent_of_this_card() is None:
-                return False
-            return True
-        effect2b.set_can_use_condition(condition2b)
-
-        def process2b(ctx: Dict[str, Any]):
-            player = ctx.get('player')
-            game = ctx.get('game')
-            if not (player and game):
-                return
-            for p in list(player.battle_area):
-                if _is_own_puppet_or_token(p):
-                    p.grant_keyword('_is_alliance')
-        effect2b.set_on_process_callback(process2b)
-        effects.append(effect2b)
 
         # --- Effect 3: [All Turns][Once Per Turn] When other Digimon deleted,
         #     delete 1 opponent's lowest level Digimon ---

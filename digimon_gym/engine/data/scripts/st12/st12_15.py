@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....interfaces.modifiers import ModifierType
 from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
@@ -40,8 +41,7 @@ class ST12_15(CardScript):
                 if c.contains_card_name('Huckmon') or c.contains_card_name('Sistermon'):
                     return True
                 # Or [Royal Knight] in traits
-                traits = c.type_eng if hasattr(c, 'type_eng') else []
-                if any('Royal Knight' in t for t in (traits or [])):
+                if any('Royal Knight' in t for t in c.card_traits):
                     return True
                 return False
             def on_revealed(selected, remaining):
@@ -90,25 +90,28 @@ class ST12_15(CardScript):
             game = ctx.get('game')
             if not (player and game):
                 return
-            # Grant a one-shot evo cost reduction of 1 to all own permanents
-            # by adding a temporary WhenWouldDigivolve effect with cost_reduction=1
-            # The effect is consumed after the first digivolution
-            temp_effect = ICardEffect()
-            temp_effect.set_timing(EffectTiming.WhenWouldDigivolve)
-            temp_effect.set_effect_name("ST12-15 Evo Cost -1 (one-shot)")
-            temp_effect.is_inherited_effect = True  # So it's picked up from sources
-            temp_effect.cost_reduction = 1
+            # Register a one-shot CHANGE_DIGIVOLUTION_COST modifier on all own Digimon.
+            # "The next time one of your Digimon would digivolve this turn" = one-shot
+            # across all Digimon, shared consumed flag.
             consumed = [False]
-            def temp_condition(context: Dict[str, Any]) -> bool:
+            def cost_condition(target, context):
                 if consumed[0]:
                     return False
-                consumed[0] = True
+                # Only apply to this player's Digimon
+                if target.owner != player:
+                    return False
                 return True
-            temp_effect.set_can_use_condition(temp_condition)
-            # Grant this temp effect to all own Digimon on field
+            def cost_value(current, target, context):
+                consumed[0] = True
+                return current - 1
             for perm in player.battle_area:
                 if perm.is_digimon:
-                    perm.grant_temp_effect(temp_effect, expiry_turn=game.turn_count)
+                    game.register_modifier(
+                        perm, ModifierType.CHANGE_DIGIVOLUTION_COST,
+                        condition=cost_condition,
+                        value_fn=cost_value,
+                        expiry='end_of_turn',
+                    )
 
         effect2.set_on_process_callback(process2)
         effects.append(effect2)
@@ -140,8 +143,7 @@ class ST12_15(CardScript):
                 if c.contains_card_name('Huckmon') or c.contains_card_name('Sistermon'):
                     return True
                 # Or [Royal Knight] in traits
-                traits = c.type_eng if hasattr(c, 'type_eng') else []
-                if any('Royal Knight' in t for t in (traits or [])):
+                if any('Royal Knight' in t for t in c.card_traits):
                     return True
                 return False
             def on_revealed(selected, remaining):

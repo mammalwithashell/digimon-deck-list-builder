@@ -9,12 +9,12 @@ if TYPE_CHECKING:
 
 
 class EX4_039(CardScript):
-    """EX4-039 Garurumon (X Antibody) | Lv.4 Black Digimon
+    """EX4-039 Gabumon | Lv.3 Purple Digimon
 
     [On Play] Reveal the top 3 cards of your deck. Add 1 Digimon card with
         [Garurumon] in its name and 1 Digimon card with [Agumon], [Greymon],
-        or [Omnimon] in its name among them to your hand. Place the rest on
-        top of your deck in any order.
+        or [Omnimon] in its name among them to your hand. Place the remaining
+        cards at the bottom of your deck in any order.
 
     --- Inherited ---
     [Your Turn][Once Per Turn] When one of your other Digimon digivolves,
@@ -48,7 +48,7 @@ class EX4_039(CardScript):
             "[On Play] Reveal the top 3 cards of your deck. Add 1 Digimon card "
             "with [Garurumon] in its name and 1 Digimon card with [Agumon], "
             "[Greymon], or [Omnimon] in its name among them to your hand. "
-            "Place the rest on top of your deck in any order."
+            "Place the remaining cards at the bottom of your deck in any order."
         )
         effect0.is_on_play = True
 
@@ -88,25 +88,27 @@ class EX4_039(CardScript):
                     player.hand_cards.append(c)
                     break
 
-            # Place the rest on top of deck
+            # Place the rest at the bottom of deck
             remaining = [c for c in revealed if c not in added]
-            for c in reversed(remaining):
-                player.library_cards.insert(0, c)
+            for c in remaining:
+                player.library_cards.append(c)
 
         effect0.set_on_process_callback(process0)
         effects.append(effect0)
 
         # --- Effect 1 (Inherited): [Your Turn][Once Per Turn] When one of your
         #     other Digimon digivolves, gain 1 memory. ---
+        # Uses _is_digivolve_observer pattern: engine fires this via
+        # _fire_digivolve_observers, which already skips the digivolving
+        # permanent itself (only fires on OTHER permanents).
         effect1 = ICardEffect()
-        effect1.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect1.set_effect_name("EX4-039 Inherited: Memory +1 on other Digimon digivolve")
         effect1.set_effect_description(
             "[Your Turn][Once Per Turn] When one of your other Digimon digivolves, "
             "gain 1 memory."
         )
         effect1.is_inherited_effect = True
-        effect1.is_when_digivolving = True
+        effect1._is_digivolve_observer = True
         effect1.set_max_count_per_turn(1)
         effect1.set_hash_string("Memory+1_EX4_039")
 
@@ -117,14 +119,6 @@ class EX4_039(CardScript):
             if not player:
                 return False
             if not player.is_my_turn:
-                return False
-            trigger_perm = context.get('permanent')
-            if not trigger_perm:
-                return False
-            my_perm = card.permanent_of_this_card()
-            if trigger_perm is my_perm:
-                return False
-            if trigger_perm.owner != player:
                 return False
             return True
         effect1.set_can_use_condition(condition1)

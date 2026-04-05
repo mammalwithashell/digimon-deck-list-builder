@@ -108,8 +108,9 @@ class EX9_066(CardScript):
 
         # --- Effect 1: [All Turns] When any of your Digimon are played or
         #     digivolve, suspend this Tamer to gain memory based on field ---
+        # Uses _is_play_observer and _is_digivolve_observer to fire when
+        # OTHER permanents are played or digivolve (observer pattern).
         effect1 = ICardEffect()
-        effect1.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect1.set_effect_name("EX9-066 Suspend for memory on play/digivolve")
         effect1.set_effect_description(
             "[All Turns] When any of your Digimon are played or digivolve, "
@@ -118,6 +119,8 @@ class EX9_066(CardScript):
             "Digimon with [Garurumon] in its name."
         )
         effect1.is_optional = True
+        effect1._is_play_observer = True
+        effect1._is_digivolve_observer = True
 
         def condition1(context: Dict[str, Any]) -> bool:
             if card and card.permanent_of_this_card() is None:
@@ -129,10 +132,8 @@ class EX9_066(CardScript):
             if not player:
                 return False
             # Trigger: one of our Digimon was played or digivolved
-            trigger_perm = context.get('permanent')
+            trigger_perm = context.get('played_permanent') or context.get('digivolved_permanent')
             if not trigger_perm:
-                return False
-            if trigger_perm.owner != player:
                 return False
             if not trigger_perm.is_digimon:
                 return False

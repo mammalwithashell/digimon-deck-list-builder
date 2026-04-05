@@ -9,46 +9,50 @@ if TYPE_CHECKING:
 
 
 class ST20_11(CardScript):
-    """ST20-11 WarGreymon | Lv.6 Black Digimon | Adventure/Hero | 12000 DP
+    """ST20-11 WarGreymon | Lv.6 Black/Red Digimon | Dragonkin/ADVENTURE/Hero | 12000 DP
 
-    Alt Digivolution: [Adventure] or [Hero] trait Lv.5 for cost 3.
+    Alt Digivolution: [ADVENTURE] or [Hero] trait Lv.5 for cost 3.
     Ace: <Blast Digivolve>
     [On Play] [When Digivolving] Until your opponent's turn ends, for every
         2 colors your Tamers have, their Digimon's effects don't affect 1 of
         your Digimon.
     [When Digivolving] [When Attacking] Delete 1 of your opponent's lowest
         DP Digimon.
+    Inherited: Ace Overflow <-4>
     """
 
     def get_card_effects(self, card: 'CardSource') -> List['ICardEffect']:
         effects = []
 
-        # --- Effect 0: Alt Digivolution from [Adventure]/[Hero] trait Lv.5 for cost 3 ---
-        effect0 = ICardEffect()
-        effect0.set_effect_name("ST20-11 Alt digi: Adventure/Hero Lv.5 cost 3")
-        effect0.set_effect_description(
-            "Digivolve: Lv.5 w/[Adventure] or [Hero] trait for cost 3."
+        # --- Effect 0a: Alt Digivolution from [ADVENTURE] trait Lv.5 for cost 3 ---
+        effect0a = ICardEffect()
+        effect0a.set_effect_name("ST20-11 Alt digi: ADVENTURE Lv.5 cost 3")
+        effect0a.set_effect_description(
+            "Digivolve: Lv.5 w/[ADVENTURE] trait for cost 3."
         )
+        effect0a._alt_digi_cost = 3
+        effect0a._alt_digi_level = 5
+        effect0a._alt_digi_trait = 'ADVENTURE'
 
-        def alt_digi_permanent_condition(permanent) -> bool:
-            if not permanent.top_card:
-                return False
-            tc = permanent.top_card
-            traits = getattr(tc, 'card_traits', []) or []
-            has_adventure = any('Adventure' in t for t in traits)
-            has_hero = any('Hero' in t for t in traits)
-            if not (has_adventure or has_hero):
-                return False
-            return permanent.level == 5
-
-        effect0._alt_digi_permanent_condition = alt_digi_permanent_condition
-        effect0._alt_digi_cost = 3
-        effect0._alt_digi_ignore_requirements = False
-
-        def condition0(context: Dict[str, Any]) -> bool:
+        def condition0a(context: Dict[str, Any]) -> bool:
             return True
-        effect0.set_can_use_condition(condition0)
-        effects.append(effect0)
+        effect0a.set_can_use_condition(condition0a)
+        effects.append(effect0a)
+
+        # --- Effect 0b: Alt Digivolution from [Hero] trait Lv.5 for cost 3 ---
+        effect0b = ICardEffect()
+        effect0b.set_effect_name("ST20-11 Alt digi: Hero Lv.5 cost 3")
+        effect0b.set_effect_description(
+            "Digivolve: Lv.5 w/[Hero] trait for cost 3."
+        )
+        effect0b._alt_digi_cost = 3
+        effect0b._alt_digi_level = 5
+        effect0b._alt_digi_trait = 'Hero'
+
+        def condition0b(context: Dict[str, Any]) -> bool:
+            return True
+        effect0b.set_can_use_condition(condition0b)
+        effects.append(effect0b)
 
         # --- Effect 1: Ace <Blast Digivolve> ---
         effect1 = ICardEffect()
@@ -92,7 +96,7 @@ class ST20_11(CardScript):
         effect2.set_can_use_condition(condition2)
 
         def _grant_immunity_via_selection(ctx: Dict[str, Any]):
-            """Grant immunity to N own Digimon via selection."""
+            """Grant immunity to N own Digimon via selection using modifier registry."""
             player = ctx.get('player')
             game = ctx.get('game')
             if not (player and game):
@@ -106,6 +110,8 @@ class ST20_11(CardScript):
             remaining = [count]
             granted = set()
 
+            from ....interfaces.modifiers import ModifierType
+
             def _select_next():
                 if remaining[0] <= 0:
                     return
@@ -115,8 +121,12 @@ class ST20_11(CardScript):
                     return
 
                 def on_immunity_target(target_perm):
-                    target_perm.grant_keyword('_immune_to_opponent_digimon_effects',
-                                              expiry='end_of_opponent_turn')
+                    game.register_modifier(
+                        target_perm, ModifierType.CANNOT_BE_AFFECTED,
+                        condition=lambda perm, ctx, tp=target_perm: perm is tp,
+                        value_fn=lambda: True,
+                        expiry='end_of_opponent_turn',
+                    )
                     granted.add(id(target_perm))
                     remaining[0] -= 1
                     _select_next()
@@ -252,5 +262,20 @@ class ST20_11(CardScript):
                 is_optional=False)
         effect5.set_on_process_callback(process5)
         effects.append(effect5)
+
+        # --- Effect 6: Inherited Ace Overflow <-4> ---
+        # Engine handles ACE Overflow automatically via entity_base.is_ace
+        # and entity_base.ace_overflow_cost when the card leaves the field.
+        # This effect is declarative only for display purposes.
+        effect6 = ICardEffect()
+        effect6.set_effect_name("ST20-11 Inherited: Ace Overflow <-4>")
+        effect6.set_effect_description("Ace Overflow <-4>")
+        effect6.is_inherited_effect = True
+        effect6._is_ace_overflow = True
+
+        def condition6(context: Dict[str, Any]) -> bool:
+            return True
+        effect6.set_can_use_condition(condition6)
+        effects.append(effect6)
 
         return effects

@@ -167,7 +167,6 @@ class ActionDecoderMixin:
             self._recover_from_stale_selection()
             self._check_deferred_turn_end()
             self._maybe_complete_end_phase()
-            self._maybe_complete_move_main()
             self._maybe_resume_combat_after_wa_selection()
             return
 
@@ -183,7 +182,6 @@ class ActionDecoderMixin:
         self._recover_from_stale_selection()
         self._check_deferred_turn_end()
         self._maybe_complete_end_phase()
-        self._maybe_complete_move_main()
         self._maybe_resume_combat_after_wa_selection()
 
     def _decode_block(self, action_id: int):
@@ -504,7 +502,7 @@ class ActionDecoderMixin:
             if 0 <= idx < len(self.turn_player.battle_area):
                 sacrifice = self.turn_player.battle_area[idx]
                 self.logger.log(f"[Overclock] Sacrificed {self._perm_ref(sacrifice)}")
-                self.turn_player.delete_permanent(sacrifice, removal_cause='cost')
+                self.turn_player.delete_permanent(sacrifice, removal_cause='overclock')
                 self.logger.log(f"[Overclock] End-of-turn attack on player!")
                 self.resolve_attack(overclock_perm, self.opponent_player, without_suspend=True,
                                     return_phase=GamePhase.EndOfTurnAction)

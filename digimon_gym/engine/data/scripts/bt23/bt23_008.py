@@ -22,17 +22,31 @@ class BT23_008(CardScript):
     def get_card_effects(self, card: 'CardSource') -> List['ICardEffect']:
         effects = []
 
-        # --- Effect 0: Alt digivolve from Lv.3 w/ Agumon or CS trait for 2 ---
-        effect0 = ICardEffect()
-        effect0.set_effect_name("BT23-008 Alternate digivolution requirement")
-        effect0.set_effect_description("Alternate digivolution requirement")
-        effect0._alt_digi_cost = 2
-        effect0._alt_digi_level = 3
+        # --- Effect 0a: Alt digivolve from Lv.3 w/ [Agumon] name for 2 ---
+        effect0a = ICardEffect()
+        effect0a.set_effect_name("BT23-008 Alt digi from Agumon")
+        effect0a.set_effect_description("Alternate digivolution requirement (Agumon name)")
+        effect0a._alt_digi_cost = 2
+        effect0a._alt_digi_level = 3
+        effect0a._alt_digi_name = "Agumon"
 
-        def condition0(context: Dict[str, Any]) -> bool:
+        def condition0a(context: Dict[str, Any]) -> bool:
             return True
-        effect0.set_can_use_condition(condition0)
-        effects.append(effect0)
+        effect0a.set_can_use_condition(condition0a)
+        effects.append(effect0a)
+
+        # --- Effect 0b: Alt digivolve from Lv.3 w/ [CS] trait for 2 ---
+        effect0b = ICardEffect()
+        effect0b.set_effect_name("BT23-008 Alt digi from CS trait")
+        effect0b.set_effect_description("Alternate digivolution requirement (CS trait)")
+        effect0b._alt_digi_cost = 2
+        effect0b._alt_digi_level = 3
+        effect0b._alt_digi_trait = "CS"
+
+        def condition0b(context: Dict[str, Any]) -> bool:
+            return True
+        effect0b.set_can_use_condition(condition0b)
+        effects.append(effect0b)
 
         # --- Effect 1: Raid ---
         effect1 = ICardEffect()

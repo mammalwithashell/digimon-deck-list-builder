@@ -80,8 +80,6 @@ class Game(CombatMixin, ActionDecoderMixin, EffectHelpersMixin):
         # Deferred end-phase: set when OnEndTurn effects create pending selections.
         self._end_phase_deferred: bool = False
         self._end_phase_memory_before: int = 0
-        # Deferred move-to-main: set when OnMove effects create pending selections.
-        self._move_main_deferred: bool = False
 
         # Opening mulligan state (set during start_game()).
         self._mulligan_order: List[Player] = []
@@ -290,15 +288,8 @@ class Game(CombatMixin, ActionDecoderMixin, EffectHelpersMixin):
             self._end_phase_deferred = False
             self._complete_end_phase(mb)
 
-    def _maybe_complete_move_main(self):
-        """Transition to Main phase if it was deferred while waiting for OnMove selections."""
-        if self._move_main_deferred and self.pending_selection is None:
-            self._move_main_deferred = False
-            self.current_phase = GamePhase.Main
-            self.phase_main()
-
     def _has_end_of_turn_keywords(self) -> bool:
-        """Check if the turn player has any Digimon with Vortex, Overclock, MAY_ATTACK, or FORCE_ATTACK."""
+        """Check if the turn player has any Digimon with Vortex, Overclock, or MAY_ATTACK."""
         from ..interfaces.modifiers import ModifierType
         for perm in self.turn_player.battle_area:
             if not perm.is_digimon:
@@ -314,8 +305,6 @@ class Game(CombatMixin, ActionDecoderMixin, EffectHelpersMixin):
                     return True
             if self.modifiers.has_modifier(perm, ModifierType.MAY_ATTACK) and perm.can_attack():
                 return True
-            if self.modifiers.has_modifier(perm, ModifierType.FORCE_ATTACK) and perm.can_attack():
-                return True
         return False
 
     def switch_turn(self):
@@ -326,7 +315,6 @@ class Game(CombatMixin, ActionDecoderMixin, EffectHelpersMixin):
         self.opponent_player.is_my_turn = False
         self._turn_end_deferred = False
         self._end_phase_deferred = False
-        self._move_main_deferred = False
 
     def pass_turn(self):
         if self.memory >= 0:
@@ -846,7 +834,8 @@ class Game(CombatMixin, ActionDecoderMixin, EffectHelpersMixin):
 
         return False
 
-    def execute_deletion_effects(self, deleted_permanent: Permanent, owner: Player):
+    def execute_deletion_effects(self, deleted_permanent: Permanent, owner: Player,
+                                  removal_cause: str = 'effect'):
         """Execute OnDeletion effects for a permanent that was just deleted."""
         _MAX_DELETION_DEPTH = 8
         if self._deletion_depth >= _MAX_DELETION_DEPTH:
@@ -856,11 +845,12 @@ class Game(CombatMixin, ActionDecoderMixin, EffectHelpersMixin):
             return
         self._deletion_depth += 1
         try:
-            self._execute_deletion_effects_inner(deleted_permanent, owner)
+            self._execute_deletion_effects_inner(deleted_permanent, owner, removal_cause=removal_cause)
         finally:
             self._deletion_depth -= 1
 
-    def _execute_deletion_effects_inner(self, deleted_permanent: Permanent, owner: Player):
+    def _execute_deletion_effects_inner(self, deleted_permanent: Permanent, owner: Player,
+                                         removal_cause: str = 'effect'):
         """Inner implementation of execute_deletion_effects."""
         stack: List[TriggeredEffect] = []
         is_tp = (owner is self.turn_player)
@@ -880,6 +870,7 @@ class Game(CombatMixin, ActionDecoderMixin, EffectHelpersMixin):
                     "turn_player": self.turn_player,
                     "opponent_player": self.opponent_player,
                     "deleted_permanent": deleted_permanent,
+                    "removal_cause": removal_cause,
                 }
                 stack.append(TriggeredEffect(
                     effect=effect,
@@ -898,7 +889,7 @@ class Game(CombatMixin, ActionDecoderMixin, EffectHelpersMixin):
             te.effect.record_activation()
             te.effect.on_process_callback(te.context)
 
-        self._fire_deletion_observers(deleted_permanent, owner)
+        self._fire_deletion_observers(deleted_permanent, owner, removal_cause=removal_cause)
 
     # ─── Modifier Registry Convenience Methods ──────────────────────
 
@@ -1078,7 +1069,7 @@ class Game(CombatMixin, ActionDecoderMixin, EffectHelpersMixin):
                     effect.record_activation()
                     effect.on_process_callback(context)
 
-    def _fire_deletion_observers(self, deleted_perm, owner):
+    def _fire_deletion_observers(self, deleted_perm, owner, removal_cause: str = 'effect'):
         """Fire effects on permanents observing a deletion event."""
         if owner is None:
             return
@@ -1099,6 +1090,7 @@ class Game(CombatMixin, ActionDecoderMixin, EffectHelpersMixin):
                         'game': self, 'player': owner, 'permanent': perm,
                         'card': effect.effect_source_card,
                         'deleted_permanent': deleted_perm,
+                        'removal_cause': removal_cause,
                         'turn_player': self.turn_player,
                         'opponent_player': self.opponent_player,
                     }
@@ -1123,6 +1115,7 @@ class Game(CombatMixin, ActionDecoderMixin, EffectHelpersMixin):
                             'game': self, 'player': enemy, 'permanent': perm,
                             'card': effect.effect_source_card,
                             'deleted_permanent': deleted_perm,
+                            'removal_cause': removal_cause,
                             'turn_player': self.turn_player,
                             'opponent_player': self.opponent_player,
                         }
@@ -1387,10 +1380,6 @@ class Game(CombatMixin, ActionDecoderMixin, EffectHelpersMixin):
         )
         if moved:
             self.execute_effects(EffectTiming.OnMove, {"moved_permanent": self.turn_player.battle_area[-1]})
-            # If OnMove effects created pending selections, defer Main phase
-            if self.pending_selection is not None:
-                self._move_main_deferred = True
-                return
             self.current_phase = GamePhase.Main
             self.phase_main()
 

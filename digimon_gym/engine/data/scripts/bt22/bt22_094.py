@@ -66,11 +66,15 @@ class BT22_094(CardScript):
             if card and card.permanent_of_this_card() is None:
                 return False
             # Only applies when playing a CS-trait Digimon or Tamer
-            target_card = context.get('card_to_play')
-            if target_card:
-                traits = getattr(target_card, 'card_traits', []) or []
-                if not any('CS' in t for t in traits):
-                    return False
+            target_card = context.get('card_source') or context.get('played_card')
+            if not target_card:
+                return False
+            # Must be a Digimon or Tamer
+            if not (getattr(target_card, 'is_digimon', False) or getattr(target_card, 'is_tamer', False)):
+                return False
+            traits = getattr(target_card, 'card_traits', []) or []
+            if not any('CS' in t for t in traits):
+                return False
             return True
 
         effect1.set_can_use_condition(condition1)

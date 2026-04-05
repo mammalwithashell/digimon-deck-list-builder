@@ -146,9 +146,9 @@ class BT22_036(CardScript):
             if not valid_trash:
                 return
 
-            def _on_trash_action(idx):
-                # _decode_trash_selection already subtracts SEL_TRASH_START
-                on_shoeshoemon_selected(idx)
+            def _on_trash_action(raw_action_id):
+                # _decode_trash_selection passes raw action_id; subtract SEL_TRASH_START
+                on_shoeshoemon_selected(raw_action_id - _SEL_TRASH_START)
 
             game.request_selection(
                 GamePhase.SelectTrash, player, _on_trash_action,
@@ -176,9 +176,15 @@ class BT22_036(CardScript):
             if card and card.permanent_of_this_card() is None:
                 return False
             own_perm = card.permanent_of_this_card()
-            # Only triggers for THIS permanent being deleted
-            ctx_perm = context.get('permanent')
-            if ctx_perm is not own_perm:
+            # Only triggers for THIS permanent being removed
+            # context['permanent'] is the effect holder; 'event_permanent' is
+            # the permanent actually being removed (from extra_context)
+            event_perm = context.get('event_permanent', context.get('permanent'))
+            if event_perm is not own_perm:
+                return False
+            # "other than by your effects" — skip if removal is by own effect
+            # C#: !IsByEffect(hashtable, cardEffect => IsOwnerEffect(cardEffect, card))
+            if context.get('is_own_effect', False):
                 return False
             player = card.owner if card else None
             if not player:
@@ -216,18 +222,30 @@ class BT22_036(CardScript):
                     return True
                 return False
 
+            # Set flag optimistically BEFORE selection — engine checks
+            # _will_not_be_removed synchronously after WhenPermanentWouldBeDeleted
+            # fires, so the flag must be set before process returns.
+            # C# uses coroutines (yield return) to wait; Python engine is sync.
+            own_perm._will_not_be_removed = True
+
             def on_substitute_selected(target_perm):
                 player.delete_permanent(target_perm)
-                own_perm._will_not_be_removed = True
                 game.logger.log(
                     "[BT22-036] Deleted a Token/Puppet to prevent "
                     "this Digimon from leaving the battle area.")
 
+            def on_decline():
+                # Player declined — undo the optimistic flag
+                own_perm._will_not_be_removed = False
+
             game.effect_select_own_permanent(
                 player, on_substitute_selected, filter_fn=sub_filter,
-                is_optional=False,
+                is_optional=True,
                 prompt="Select 1 of your Tokens or [Puppet] trait Digimon to delete (prevents this Digimon from leaving)."
             )
+            # Attach decline handler to the pending selection
+            if game.pending_selection:
+                game.pending_selection.on_decline = on_decline
 
         effect2.set_on_process_callback(process2)
         effects.append(effect2)

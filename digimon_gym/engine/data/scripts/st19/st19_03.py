@@ -69,9 +69,11 @@ class ST19_03(CardScript):
         effects.append(effect0)
 
         # --- Effect 1 (Inherited): [Your Turn] Opponent's security Digimon get -3000 DP ---
-        # This is a continuous inherited effect that reduces DP of opponent's
-        # security Digimon during security battles on your turn.
+        # Continuous/static inherited effect (EffectTiming.NoTiming per C#).
+        # Engine applies dp_modifier from active inherited effects during
+        # security battle DP calculation.
         effect1 = ICardEffect()
+        effect1.set_timing(EffectTiming.NoTiming)
         effect1.set_effect_name("ST19-03 Opponent's Security Digimon -3000 DP")
         effect1.set_effect_description(
             "[Your Turn] All of your opponent's security Digimon get -3000 DP."

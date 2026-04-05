@@ -22,7 +22,7 @@ class P_186(CardScript):
         # Alternate digivolution: Lv.5 WarGrowlmon for cost 3
         effect0._alt_digi_cost = 3
         effect0._alt_digi_level = 5
-        effect0._alt_digi_name_filter = "WarGrowlmon"
+        effect0._alt_digi_name = "WarGrowlmon"
 
         def condition0(context: Dict[str, Any]) -> bool:
             return True
@@ -100,25 +100,51 @@ class P_186(CardScript):
 
         def _p186_delete_or_recovery(player, game):
             """Delete 1 Digimon (either field) with 13000+ DP. If none deleted, Recovery +1."""
+            from ....game.constants import (
+                SEL_MY_FIELD_START, SEL_OPP_FIELD_START, FIELD_SLOTS,
+            )
+            from ....data.enums import GamePhase as GP
+
             enemy = player.enemy if player else None
             high_filter = lambda p: p.is_digimon and p.dp is not None and p.dp >= 13000
-            # Check both fields for eligible targets
-            opp_targets = [p for p in enemy.battle_area if high_filter(p)] if enemy else []
-            own_targets = [p for p in player.battle_area if high_filter(p)] if player else []
 
-            if opp_targets:
-                # Prefer targeting opponent's Digimon if available
-                def on_delete_opp(target_perm):
-                    enemy.delete_permanent(target_perm)
-                game.effect_select_opponent_permanent(
-                    player, on_delete_opp, filter_fn=high_filter, is_optional=False)
-            elif own_targets:
-                def on_delete_own(target_perm):
-                    player.delete_permanent(target_perm)
-                game.effect_select_own_permanent(
-                    player, on_delete_own, filter_fn=high_filter, is_optional=False)
-            else:
+            # Build combined valid indices from both fields
+            valid = []
+            for i, perm in enumerate(player.battle_area):
+                if game.modifiers.can_be_selected_by_effect(perm) and high_filter(perm):
+                    valid.append(SEL_MY_FIELD_START + i)
+            if enemy:
+                for i, perm in enumerate(enemy.battle_area):
+                    if game.modifiers.can_be_selected_by_effect(perm) and high_filter(perm):
+                        valid.append(SEL_OPP_FIELD_START + i)
+
+            if not valid:
+                # No eligible targets — Recovery +1
                 player.recovery(1)
+                return
+
+            def on_select(action_id: int):
+                deleted = False
+                if SEL_MY_FIELD_START <= action_id < SEL_MY_FIELD_START + FIELD_SLOTS:
+                    idx = action_id - SEL_MY_FIELD_START
+                    if 0 <= idx < len(player.battle_area):
+                        target = player.battle_area[idx]
+                        deleted = player.delete_permanent(target)
+                elif SEL_OPP_FIELD_START <= action_id < SEL_OPP_FIELD_START + FIELD_SLOTS:
+                    idx = action_id - SEL_OPP_FIELD_START
+                    opp = game.player2 if player is game.player1 else game.player1
+                    if 0 <= idx < len(opp.battle_area):
+                        target = opp.battle_area[idx]
+                        deleted = opp.delete_permanent(target, is_opponent_effect=True)
+                if not deleted:
+                    # Deletion was prevented — Recovery +1
+                    player.recovery(1)
+
+            game.request_selection(
+                GP.SelectTarget, player, on_select, valid,
+                is_optional=False,
+                prompt="Delete 1 Digimon with 13000 DP or more."
+            )
 
         def process4(ctx: Dict[str, Any]):
             """Action: Delete 13000+ DP or Recovery +1"""

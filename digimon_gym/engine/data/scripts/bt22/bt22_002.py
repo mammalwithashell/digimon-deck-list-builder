@@ -14,28 +14,34 @@ class BT22_002(CardScript):
     def get_card_effects(self, card: 'CardSource') -> List['ICardEffect']:
         effects = []
 
-        # Timing: EffectTiming.OnDestroyedAnyone
-        # [Your Turn] [Once Per Turn] When any of your Tokens or other [Puppet] trait Digimon are deleted, <Draw 1> (Draw 1 card from your deck.).
+        # Uses NoTiming + _is_deletion_observer so _fire_deletion_observers() picks it up.
+        # This is an observer effect — it watches OTHER permanents being deleted,
+        # NOT a self-deletion trigger.
+        # [Your Turn] [Once Per Turn] When any of your Tokens or other [Puppet] trait Digimon are deleted, <Draw 1>.
         effect0 = ICardEffect()
-        effect0.set_timing(EffectTiming.OnDestroyedAnyone)
         effect0.set_effect_name("BT22-002 Draw 1")
         effect0.set_effect_description("[Your Turn] [Once Per Turn] When any of your Tokens or other [Puppet] trait Digimon are deleted, <Draw 1> (Draw 1 card from your deck.).")
         effect0.is_inherited_effect = True
         effect0.set_max_count_per_turn(1)
         effect0.set_hash_string("BT22_002_Draw1")
-        effect0.is_on_deletion = True
+        effect0._is_deletion_observer = True
 
-        effect = effect0  # alias for condition closure
         def condition0(context: Dict[str, Any]) -> bool:
             if card and card.permanent_of_this_card() is None:
                 return False
             if not (card and card.owner and card.owner.is_my_turn):
                 return False
-            # Deleted permanent must be a Token or [Puppet] trait Digimon (and not self)
-            my_perm = card.permanent_of_this_card()
-            deleted_perm = context.get('permanent')
-            if not deleted_perm or deleted_perm is my_perm:
+            deleted_perm = context.get('deleted_permanent')
+            if not deleted_perm:
                 return False
+            # Deleted permanent must belong to the same player as card owner
+            owner = card.owner
+            deleted_owner = None
+            if deleted_perm.top_card:
+                deleted_owner = getattr(deleted_perm.top_card, 'owner', None)
+            if deleted_owner is not owner:
+                return False
+            # Must be a Token or a Digimon with [Puppet] trait
             if getattr(deleted_perm, 'is_token', False):
                 return True
             top = deleted_perm.top_card
@@ -50,8 +56,6 @@ class BT22_002(CardScript):
         def process0(ctx: Dict[str, Any]):
             """Action: Draw 1"""
             player = ctx.get('player')
-            perm = ctx.get('permanent')
-            game = ctx.get('game')
             if player:
                 player.draw_cards(1)
 

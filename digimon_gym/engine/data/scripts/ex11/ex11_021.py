@@ -75,13 +75,13 @@ class EX11_021(CardScript):
 
         # --- Effect 2 (Inherited): [Opponent's Turn][Once Per Turn] End attack by deleting other Digimon ---
         effect2 = ICardEffect()
-        effect2.set_timing(EffectTiming.OnUseAttack)
+        effect2.set_timing(EffectTiming.OnAllyAttack)
         effect2.set_effect_name("EX11-021 End the attack by deleting 1 of your Digimon")
         effect2.set_effect_description("[Opponent's Turn][Once Per Turn] When an opponent's Digimon attacks, by deleting 1 of your other Digimon, end the attack.")
         effect2.is_inherited_effect = True
         effect2.is_optional = True
         effect2.set_max_count_per_turn(1)
-        effect2.set_hash_string("StopAttack_EX9-027")
+        effect2.set_hash_string("StopAttack_EX11-021")
         effect2.is_on_attack = True
 
         def condition2(context: Dict[str, Any]) -> bool:

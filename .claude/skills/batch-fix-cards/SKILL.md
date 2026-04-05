@@ -1,20 +1,20 @@
 ---
 name: batch-fix-cards
-description: Archetype-scoped batch faithfulness pipeline. Resolves full card pool, processes in batches of 4. Each sub-agent writes DebugRunner tests from card text FIRST, then fixes scripts to pass them. A review agent audits each batch before continuing. Tracks in validated_cards.json and Notion.
+description: Archetype-scoped batch faithfulness pipeline. Resolves full card pool, processes in batches of 4. Each sub-agent writes DebugRunner tests from card text FIRST, then implements or fixes scripts to pass them. A review agent audits each batch before continuing. Tracks in validated_cards.json and Notion.
 argument-hint: <ARCHETYPE_NAME> [--cards CARD1,CARD2,...] [--batch-size N] [--report-only] [--skip-tests] [--skip-notion]
 ---
 
 # Batch Fix Cards — Archetype-Scoped Test-First Faithfulness Pipeline
 
-Process an entire archetype's card scripts through a test-driven faithfulness pipeline. Cards are processed in batches of 4 with parallel Opus sub-agents. Each agent writes behavioral tests from card text first, then fixes scripts to pass them. A separate review agent audits each batch.
+Process an entire archetype's card scripts through a test-driven faithfulness pipeline. Cards are processed in batches of 4 with parallel Opus sub-agents. Each agent writes behavioral tests from card text first, then **implements new scripts from scratch or fixes existing ones** to pass them. A separate review agent audits each batch. Cards without existing scripts are implemented; cards with scripts are reviewed and fixed.
 
 ## When to Use
 
-- Systematically verifying and fixing all card scripts for an archetype
+- Systematically implementing, verifying, and fixing all card scripts for an archetype
 - Running a test-driven faithfulness pass across a deck list
 - Combining the depth of `/fix-card` with the scope of `/implement-archetype`
 
-**Not for:** Single card fixes (use `/fix-card`). Not for implementing cards from scratch (use `/implement-archetype`). Not for gameplay testing (use `/gameplay-qa`).
+**Not for:** Single card fixes (use `/fix-card`). Not for gameplay testing (use `/gameplay-qa`).
 
 ## Flags
 
@@ -65,9 +65,15 @@ for card_id in sorted(all_cards):
     print(f'  {card_id}')
 ```
 
-### 1b. Verify scripts exist
+### 1b. Categorize cards by script status
 
-For each card ID, check that a Python script exists at `digimon_gym/engine/data/scripts/{set_lower}/{set_lower}_{nnn}.py`. Cards without scripts go on a skip list — report to user but do not process.
+For each card ID, check whether a Python script exists at `digimon_gym/engine/data/scripts/{set_lower}/{set_lower}_{nnn}.py`.
+
+Categorize each card:
+- **FIX**: Script exists — will be reviewed and fixed for faithfulness
+- **IMPLEMENT**: No script exists — will be implemented from scratch
+
+Both categories are processed through the same test-first pipeline. The agent prompt adapts based on category (see Phase 4B).
 
 ### 1c. Build cross-archetype reverse map
 
@@ -101,14 +107,12 @@ Default batch size is 4, configurable via `--batch-size N`.
 
 ```
 ## Batch Fix Plan: {archetype_name}
-Total cards with scripts: N
+Total cards: N (M to fix, K to implement)
 Batches of {batch_size}: {ceil(N/batch_size)}
 
-Batch 1: [CARD-001, CARD-002, CARD-003, CARD-004]
-Batch 2: [CARD-005, CARD-006, CARD-007, CARD-008]
+Batch 1: [CARD-001 (fix), CARD-002 (implement), CARD-003 (implement), CARD-004 (fix)]
+Batch 2: [CARD-005 (implement), CARD-006 (implement), CARD-007 (implement), CARD-008 (implement)]
 ...
-
-Skipped (no script): [list, if any]
 ```
 
 **Wait for user approval before proceeding.**
@@ -134,13 +138,18 @@ This is approximately 350 lines. Include verbatim in every agent prompt.
 
 Read `qa/archetype-qa/engine-gaps.md` in full. Include in every agent prompt.
 
-### 3c. Pre-create test directories
+### 3c. Pre-create directories
 
-For each set that appears in the batch, ensure `tests/behavioral/{set_lower}/` exists with an `__init__.py`. This prevents agents from conflicting on directory creation.
+For each set that appears in the card pool, ensure both test and script directories exist. This prevents agents from conflicting on directory creation.
 
 ```bash
+# Test directories
 mkdir -p tests/behavioral/{set_lower}
 touch tests/behavioral/{set_lower}/__init__.py
+
+# Script directories (for IMPLEMENT cards that need new scripts)
+mkdir -p digimon_gym/engine/data/scripts/{set_lower}
+touch digimon_gym/engine/data/scripts/{set_lower}/__init__.py
 ```
 
 ### 3d. Initialize Notion tracker
@@ -154,7 +163,7 @@ If not found: create a new row:
 - Archetype: `{archetype_name}`
 - Status: "In Progress"
 - Total Cards: N
-- Faithful: 0, Fixed: 0, Deferred: 0, Engine Gaps: 0
+- Faithful: 0, Implemented: 0, Fixed: 0, Deferred: 0, Engine Gaps: 0
 
 If found: update Status to "In Progress".
 
@@ -164,7 +173,7 @@ Track the Notion page URL for subsequent updates.
 
 ## Phase 4: Batch Loop
 
-Repeat for each batch of 4 cards. Maintain running totals: `faithful_count`, `fixed_count`, `deferred_count`, `blocked_count`.
+Repeat for each batch of 4 cards. Maintain running totals: `faithful_count`, `implemented_count`, `fixed_count`, `deferred_count`, `blocked_count`.
 
 ### Phase 4A: Gather Per-Card Context (orchestrator)
 
@@ -172,9 +181,9 @@ For each card in the current batch, the orchestrator reads:
 
 1. **Card metadata** from `digimon_gym/engine/data/cards.json` — extract entry for this card ID. Key fields: `card_name_eng`, `effect_description_eng`, `inherited_effect_description_eng`, `card_kind`, `level`, `dp`, `play_cost`, `card_colors`, `type_eng` (traits), `evo_costs`
 
-2. **Current Python script** from `digimon_gym/engine/data/scripts/{set}/{set}_{nnn}.py`
+2. **Current Python script** from `digimon_gym/engine/data/scripts/{set}/{set}_{nnn}.py` — if the card is categorized as IMPLEMENT (no script exists), set to `null` in the agent prompt
 
-3. **C# reference** — glob for `DCGO/Assets/Scripts/CardEffect/{SET}/*/{CLASS_NAME}.cs` (color subdirectory varies). If not found, note "C# reference not available".
+3. **C# reference** — glob for `DCGO/Assets/Scripts/CardEffect/{SET}/*/{CLASS_NAME}.cs` (color subdirectory varies; C# class name uses underscores: BT17-001 → BT17_001.cs). The C# source is the **behavioral source of truth** for implementation. If not found, note "C# reference not available — use card text as sole source of truth".
 
 4. **Prior QA status** from `qa/qa-reports/validated_cards.json`
 
@@ -191,10 +200,16 @@ Agent tool:
 
 **IMPORTANT:** All agents must run at high effort. Each agent handles exactly ONE card.
 
-#### Fix Agent Prompt Template
+#### Fix/Implement Agent Prompt Template
+
+The prompt adapts based on the card's category (FIX or IMPLEMENT):
 
 ```
-You are performing a test-driven faithfulness review, fix, and test for a single Digimon TCG card script. You must work at high effort — be thorough and precise.
+You are performing a test-driven {MODE: "faithfulness review and fix" | "implementation"} for a single Digimon TCG card script. You must work at high effort — be thorough and precise.
+
+## Mode: {FIX | IMPLEMENT}
+{If FIX: "An existing script is provided below. Review it for faithfulness, write tests, and fix any discrepancies."}
+{If IMPLEMENT: "No script exists for this card. Write tests from card text first, then implement the script from scratch using the C# reference as behavioral guide."}
 
 ## Your Card
 
@@ -209,12 +224,15 @@ You are performing a test-driven faithfulness review, fix, and test for a single
 {inherited_effect_description_eng}
 
 ## Current Python Script
+{If FIX:}
 File: `digimon_gym/engine/data/scripts/{set}/{set}_{nnn}.py`
 ```python
 {script contents}
 ```
+{If IMPLEMENT:}
+No existing script. You will create: `digimon_gym/engine/data/scripts/{set}/{set}_{nnn}.py`
 
-## C# Reference Implementation
+## C# Reference Implementation (Behavioral Source of Truth)
 File: `{csharp_path}`
 ```csharp
 {C# contents, or "Not available — use card text as sole source of truth"}
@@ -232,9 +250,10 @@ Break the card text into numbered clauses. For each clause identify:
 - Type: Trigger / Condition / Action / Target / Optionality / Duration / Frequency / Inheritance / Security / Cost / Keyword / Alt-Digi
 - The exact card text
 - The expected engine behavior (timing enum, API call, parameters)
+- How the C# reference handles this clause (if available)
 
 ### Step 2: Write DebugRunner Tests FIRST
-BEFORE reading or modifying the script, write tests that encode what the card SHOULD do based on the card text (source of truth).
+BEFORE reading or modifying any script, write tests that encode what the card SHOULD do based on the card text (source of truth).
 
 Create `tests/behavioral/{set_lower}/test_{set_lower}_{nnn}.py`:
 
@@ -268,19 +287,29 @@ class Test{CLASS_NAME}{CardName}:
 - Tests should verify specific state changes described in the card text
 - Use the `debug_runner` fixture from `tests/conftest.py`
 
-### Step 3: Run Tests Against Current Script
+### Step 3: Run Tests
 ```bash
 python -m pytest tests/behavioral/{set_lower}/test_{set_lower}_{nnn}.py -v
 ```
-Failures reveal the discrepancies between card text and current script.
+{If FIX: "Failures reveal discrepancies between card text and current script."}
+{If IMPLEMENT: "Tests will fail since no script exists yet. This confirms your test expectations before implementation."}
 
-### Step 4: Faithfulness Analysis
-Now read the script carefully. Compare each clause against:
+### Step 4: {FIX: "Faithfulness Analysis" | IMPLEMENT: "Implement the Script"}
+
+{If FIX:}
+Read the script carefully. Compare each clause against:
 - The Python script implementation
 - The C# reference (for behavioral ambiguities)
 - Run the 16-item Error Checklist below
 
-### Step 5: Fix the Script
+{If IMPLEMENT:}
+Create `digimon_gym/engine/data/scripts/{set}/{set}_{nnn}.py` from scratch:
+- Use the C# reference as behavioral guide for timing, conditions, and flow
+- Follow patterns from the Engine API Reference excerpt below
+- Translate C# patterns to Python engine API (see Error Checklist for correct API usage)
+- Ensure the script directory exists: `digimon_gym/engine/data/scripts/{set}/` (create `__init__.py` if needed)
+
+### Step 5: {FIX: "Fix the Script" | IMPLEMENT: "Refine the Script"}
 For each failing test / MISMATCH clause:
 - Edit the script to correctly implement the card text
 - Follow patterns from the Engine API Reference
@@ -297,9 +326,10 @@ python -m pytest tests/behavioral/{set_lower}/test_{set_lower}_{nnn}.py -v
 If tests fail: analyze → fix script or test → rerun. ONE revision round maximum.
 
 ### Step 7: Report Verdict
-- **FAITHFUL**: No script changes needed, all tests pass
-- **FIXED**: Script corrected, all tests now pass
-- **PARTIAL**: Some clauses fixed, some blocked by engine gaps
+- **FAITHFUL**: (FIX only) No script changes needed, all tests pass
+- **IMPLEMENTED**: (IMPLEMENT only) New script created, all tests pass
+- **FIXED**: (FIX only) Script corrected, all tests now pass
+- **PARTIAL**: Some clauses working, some blocked by engine gaps
 - **BLOCKED**: Cannot faithfully implement due to engine gaps
 
 ### Step 8: Flag New Patterns
@@ -362,12 +392,13 @@ Report your results in this exact format:
 ```
 ## {CARD_ID} — {card_name}
 
-### Verdict: {FAITHFUL|FIXED|PARTIAL|BLOCKED}
+### Verdict: {FAITHFUL|IMPLEMENTED|FIXED|PARTIAL|BLOCKED}
 
 ### Clause Analysis
 Clause 1 ({type}): "{exact card text}"
 Script: {what the script does for this clause}
-Result: MATCH | FIXED | BLOCKED
+Result: MATCH | IMPLEMENTED | FIXED | BLOCKED
+{If IMPLEMENTED: description of how the clause was implemented}
 {If FIXED: description of what was wrong and how it was corrected}
 
 Clause 2 ...
@@ -378,8 +409,9 @@ Clause 2 ...
   ...
 
 ### Script Changes
-- {description of each fix applied}
+- {description of each change applied}
 {or "No changes needed" if FAITHFUL}
+{or "New script created from scratch" if IMPLEMENTED}
 
 ### New Patterns Discovered
 - {pattern name}: {description of engine API usage not in the reference}
@@ -487,8 +519,8 @@ After the review agent returns:
 
 #### 4D-i. Copy files from worktrees
 
-For each fix agent's worktree, copy:
-- Modified script: `digimon_gym/engine/data/scripts/{set}/{set}_{nnn}.py`
+For each agent's worktree, copy:
+- Script: `digimon_gym/engine/data/scripts/{set}/{set}_{nnn}.py` (modified for FIX cards, newly created for IMPLEMENT cards)
 - New test file: `tests/behavioral/{set_lower}/test_{set_lower}_{nnn}.py`
 
 #### 4D-ii. Apply review fixes
@@ -517,7 +549,7 @@ Read `qa/qa-reports/validated_cards.json`, then for each card in the batch, add/
 ```
 Increment `version` once, update `last_updated` once for the entire batch.
 
-Map verdicts: FAITHFUL → PASS, FIXED → FIXED, PARTIAL → PARTIAL, BLOCKED → BLOCKED.
+Map verdicts: FAITHFUL → PASS, IMPLEMENTED → IMPLEMENTED, FIXED → FIXED, PARTIAL → PARTIAL, BLOCKED → BLOCKED.
 
 #### 4D-v. Update running totals
 
@@ -525,6 +557,7 @@ Map verdicts: FAITHFUL → PASS, FIXED → FIXED, PARTIAL → PARTIAL, BLOCKED �
 # Update counts based on this batch's verdicts
 for card in batch:
     if verdict == "FAITHFUL": faithful_count += 1
+    elif verdict == "IMPLEMENTED": implemented_count += 1
     elif verdict == "FIXED": fixed_count += 1
     elif verdict == "PARTIAL": deferred_count += 1
     elif verdict == "BLOCKED": blocked_count += 1
@@ -536,6 +569,7 @@ Skip if `--skip-notion`.
 
 Update the archetype's row in the tracker with cumulative totals:
 - Faithful: `{faithful_count}`
+- Implemented: `{implemented_count}`
 - Fixed: `{fixed_count}`
 - Deferred: `{deferred_count}`
 - Engine Gaps: `{blocked_count}`
@@ -553,8 +587,8 @@ Skip if `--skip-notion`.
 
 For each card in the batch, update the PM board (`31f97972-7634-80d0-97eb-000b817cdae1`):
 1. Search for card ID in the board
-2. If found: update Status (Done if PASS/FIXED, In progress if PARTIAL, Not started if BLOCKED)
-3. If not found: create new page — Name: `Fix: {CARD_ID} {card_name}`, Status: Done/In progress, Priority: Medium, Category: QA, Effort: S
+2. If found: update Status (Done if PASS/IMPLEMENTED/FIXED, In progress if PARTIAL, Not started if BLOCKED)
+3. If not found: create new page — Name: `{CARD_ID} {card_name}`, Status: Done/In progress, Priority: Medium, Category: QA, Effort: S
 
 #### 4D-viii. Update engine API reference
 
@@ -574,7 +608,7 @@ If `qa/archetype-qa/{archetype_name}.md` exists, update per-card verdicts. If no
 | {ID} | {name} | {verdict} | {APPROVED/NEEDS-FIX} | {N/N pass} |
 | ... | ... | ... | ... | ... |
 
-Running totals: {faithful} faithful, {fixed} fixed, {deferred} deferred, {blocked} blocked
+Running totals: {faithful} faithful, {implemented} implemented, {fixed} fixed, {deferred} deferred, {blocked} blocked
 Batch tests: all passing
 ```
 
@@ -597,6 +631,7 @@ Total cards: N processed across {K} batches
 | Verdict | Count |
 |---------|-------|
 | FAITHFUL | {faithful_count} |
+| IMPLEMENTED | {implemented_count} |
 | FIXED | {fixed_count} |
 | PARTIAL | {deferred_count} |
 | BLOCKED | {blocked_count} |
@@ -633,8 +668,8 @@ Skip if `--skip-notion`.
 
 Update the archetype's row:
 - Status: "Complete" (if no PARTIAL/BLOCKED) or "In Progress" (if any remain)
-- Final counts: Faithful, Fixed, Deferred, Engine Gaps
-- Notes: one-line summary (e.g., "28/32 faithful, 3 fixed, 1 blocked (token piercing gap)")
+- Final counts: Faithful, Implemented, Fixed, Deferred, Engine Gaps
+- Notes: one-line summary (e.g., "28/53 implemented, 5 faithful, 3 fixed, 1 blocked (token piercing gap)")
 
 ### 5b. Update archetype QA doc
 
@@ -648,7 +683,8 @@ Pipeline: batch-fix-cards
 
 ## Summary
 - FAITHFUL: {N} (no changes needed)
-- FIXED: {N} (script corrected)
+- IMPLEMENTED: {N} (new script created from scratch)
+- FIXED: {N} (existing script corrected)
 - PARTIAL: {N} (some clauses blocked)
 - BLOCKED: {N} (engine gaps)
 

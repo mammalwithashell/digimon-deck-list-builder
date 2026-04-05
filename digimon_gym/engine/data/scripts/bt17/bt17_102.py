@@ -8,8 +8,75 @@ if TYPE_CHECKING:
     from ....core.card_source import CardSource
 
 
+class _DynamicNamesList(list):
+    """A list subclass that recomputes its contents on every access.
+
+    C# ChangeCardNamesClass dynamically computes names in the CardNames
+    property getter.  Our engine reads card.also_treated_as_names as a
+    plain list.  This class bridges the gap: every time the list is
+    iterated, checked for length, or used in ``in`` comparisons, it
+    refreshes from the card's digivolution stack.
+    """
+
+    def __init__(self, card: 'CardSource'):
+        super().__init__()
+        self._card = card
+        self._refreshing = False  # guard against recursion
+
+    def _refresh(self):
+        """Recompute names from Lv.3-and-lower digivolution cards."""
+        if self._refreshing:
+            return
+        self._refreshing = True
+        try:
+            list.clear(self)
+            card = self._card
+            perm = card.permanent_of_this_card() if card else None
+            if not perm or perm.top_card is not card:
+                return
+            seen: set = set()
+            for digi_card in perm.card_sources:
+                if digi_card is card:
+                    continue
+                level = getattr(digi_card, 'level', None)
+                if level is not None and level <= 3:
+                    # Read base card_names without triggering also_treated_as_names
+                    base = digi_card.c_entity_base
+                    if base:
+                        name = base.card_name_eng
+                        if name and name not in seen:
+                            seen.add(name)
+                            list.append(self, name)
+        finally:
+            self._refreshing = False
+
+    def __iter__(self):
+        self._refresh()
+        return list.__iter__(self)
+
+    def __len__(self):
+        self._refresh()
+        return list.__len__(self)
+
+    def __bool__(self):
+        self._refresh()
+        return list.__len__(self) > 0
+
+    def __contains__(self, item):
+        self._refresh()
+        return list.__contains__(self, item)
+
+    def __add__(self, other):
+        self._refresh()
+        return list.__add__(self, list(other))
+
+    def __radd__(self, other):
+        self._refresh()
+        return list.__add__(list(other), list(self))
+
+
 class BT17_102(CardScript):
-    """BT17-102 Agumon -Bond of Bravery- | Lv.4 White Digimon (SEC)
+    """BT17-102 Greymon | Lv.4 White Digimon
 
     Alt digivolve: from Lv.3 [Agumon] for 2.
     [When Digivolving] If this Digimon's name is [Koromon], it gains +3000
@@ -25,6 +92,12 @@ class BT17_102(CardScript):
 
     def get_card_effects(self, card: 'CardSource') -> List['ICardEffect']:
         effects = []
+
+        # Install dynamic name list for [All Turns] name absorption.
+        # This replaces the static also_treated_as_names with a list that
+        # recomputes from the digivolution stack on every access, mirroring
+        # C#'s ChangeCardNamesClass dynamic evaluation in CardNames getter.
+        card.also_treated_as_names = _DynamicNamesList(card)
 
         # --- Effect 0: Alt digivolve from Lv.3 [Agumon] for 2 ---
         effect0 = ICardEffect()
@@ -65,26 +138,23 @@ class BT17_102(CardScript):
             if not perm:
                 return
 
-            # If this Digimon's name is [Koromon], gain +3000 DP for the turn
-            # The "All Turns" name effect makes this Digimon also have names
-            # from Lv.3 and lower digi-cards. If Koromon is underneath, it
-            # gains the name. Check top card name directly per C# code.
-            top = perm.top_card
-            if top and any('Koromon' == n for n in (top.card_names or [])):
-                from ....interfaces.modifiers import ModifierType
-                game.register_modifier(
-                    perm, ModifierType.DP_CHANGE,
-                    value_fn=lambda p, c: 3000,
-                    expiry='end_of_turn')
+            # C# checks: card.PermanentOfThisCard().TopCard.EqualsCardName("Koromon")
+            # The _DynamicNamesList on also_treated_as_names ensures names from
+            # Lv.3-and-lower digivolution cards are included in card_names.
+            if perm.contains_card_name("Koromon"):
+                # +3000 DP for the turn (C#: ChangeDigimonDP, UntilEachTurnEnd)
+                # change_dp appends to _dp_modifiers, cleared at end of turn.
+                perm.change_dp(3000)
 
             # Then, delete 1 opponent Digimon with DP <= this Digimon's DP
             enemy = player.enemy
             if not enemy:
                 return
-            my_dp = perm.dp
 
+            # C# evaluates DP dynamically in IsOpponentsDigimonSelectable
+            # Use a closure that reads perm.dp at selection time (after +3000)
             def delete_filter(p):
-                return p.is_digimon and p.dp <= my_dp
+                return p.is_digimon and p.dp is not None and p.dp <= perm.dp
 
             has_target = any(delete_filter(p) for p in enemy.battle_area)
             if has_target:
@@ -100,16 +170,17 @@ class BT17_102(CardScript):
         effects.append(effect1)
 
         # --- Effect 2: [All Turns] Has names of Lv.3 and lower digi-cards ---
-        # This is a static name-changing effect. When this card is the top
-        # card of a permanent, it also has the names of all Lv.3 and lower
-        # cards in its digivolution cards.
+        # C# uses ChangeCardNamesClass with a dynamic name function evaluated
+        # inside the CardNames property getter.  We installed a _DynamicNamesList
+        # on card.also_treated_as_names that recomputes on every access, so no
+        # explicit process callback is needed.  This effect exists only as a
+        # descriptive marker (no timing, no callback).
         effect2 = ICardEffect()
         effect2.set_effect_name("BT17-102 Has names of Lv.3- digi-cards")
         effect2.set_effect_description(
             "[All Turns] This Digimon also has the names of all level 3 and "
             "lower cards in its digivolution cards."
         )
-        effect2._change_card_names = True
 
         def condition2(context: Dict[str, Any]) -> bool:
             perm = card.permanent_of_this_card() if card else None
@@ -119,24 +190,6 @@ class BT17_102(CardScript):
                 return False
             return perm.top_card is card
         effect2.set_can_use_condition(condition2)
-
-        def name_change2(card_source, names: list) -> list:
-            if card_source is not card:
-                return names
-            perm = card.permanent_of_this_card() if card else None
-            if not perm:
-                return names
-            for digi_card in perm.card_sources:
-                if digi_card is card:
-                    continue
-                level = getattr(digi_card, 'level', None)
-                if level is not None and level <= 3:
-                    for n in (getattr(digi_card, 'card_names', []) or []):
-                        if n not in names:
-                            names.append(n)
-            return names
-
-        effect2._name_change_fn = name_change2
         effects.append(effect2)
 
         # --- Shared: On Deletion process (play tamer or hatch) ---
