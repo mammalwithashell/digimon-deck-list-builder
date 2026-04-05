@@ -101,9 +101,18 @@ class LM_027(CardScript):
 
         effect = effect2  # alias for condition closure
         def condition2(context: Dict[str, Any]) -> bool:
-            if card and card.permanent_of_this_card() is None:
+            # Delay callback: card is already trashed when this fires.
+            # Check the delay gating condition: opponent must have a Digimon.
+            player_ref = context.get('player') or (card.owner if card else None)
+            if not player_ref:
                 return False
-            if not (card and card.owner and card.owner.is_my_turn):
+            enemy = player_ref.enemy if player_ref else None
+            if not enemy:
+                return False
+            has_opp_digimon = any(
+                p.is_digimon for p in (enemy.battle_area or [])
+            )
+            if not has_opp_digimon:
                 return False
             return True
 
@@ -159,5 +168,50 @@ class LM_027(CardScript):
 
         effect2.set_on_process_callback(process2)
         effects.append(effect2)
+
+        # ── Security effect ─────────────────────────────────────────────────────
+        # [Security] You may play 1 red Digimon card with 2000 DP or less from
+        # your trash without paying the cost. Then, add this card to the hand.
+        effect_sec = ICardEffect()
+        effect_sec.set_timing(EffectTiming.SecuritySkill)
+        effect_sec.set_effect_name("LM-027 Security: Play red Digimon from trash, add to hand")
+        effect_sec.set_effect_description(
+            "[Security] You may play 1 red Digimon card with 2000 DP or less from "
+            "your trash without paying the cost. Then, add this card to the hand."
+        )
+        effect_sec.is_security_effect = True
+
+        def condition_sec(context: Dict[str, Any]) -> bool:
+            return True
+        effect_sec.set_can_use_condition(condition_sec)
+
+        def process_sec(ctx: Dict[str, Any]):
+            """Play 1 red Digimon DP<=2000 from trash free, then add this card to hand."""
+            player = ctx.get('player')
+            game = ctx.get('game')
+            if not (player and game):
+                return
+
+            def play_filter(c):
+                if not getattr(c, 'is_digimon', False):
+                    return False
+                colors = getattr(c, 'card_colors', [])
+                if not any(col.name == 'Red' for col in colors):
+                    return False
+                if getattr(c, 'dp', None) is not None and c.dp > 2000:
+                    return False
+                return True
+
+            game.effect_play_from_zone(
+                player, 'trash', play_filter, free=True, is_optional=True)
+
+            # Then, add this card to the hand
+            if card and player:
+                if card in player.trash_cards:
+                    player.trash_cards.remove(card)
+                    player.hand_cards.append(card)
+
+        effect_sec.set_on_process_callback(process_sec)
+        effects.append(effect_sec)
 
         return effects

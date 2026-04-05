@@ -192,6 +192,10 @@ class Permanent:
             for effect in effects:
                 if not effect.is_inherited_effect:
                     if effect.dp_modifier != 0:
+                        # Skip aura effects — they are handled by _get_aura_dp_modifier()
+                        # on OTHER permanents. Including them here would double-count.
+                        if getattr(effect, '_applies_to_all_own_digimon', False):
+                            continue
                         ctx = {"permanent": self}
                         if effect.can_use_condition and effect.can_use_condition(ctx):
                             active.append(effect)

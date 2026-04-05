@@ -20,20 +20,18 @@ class ST22_08(CardScript):
     """
 
     def get_card_effects(self, card: 'CardSource') -> List['ICardEffect']:
-        effects = []
-
-        # Ignore color requirements while you have a Tamer (descriptive — engine handles)
-        effect_color = ICardEffect()
-        effect_color.set_effect_name("ST22-08 Ignore color requirements")
-        effect_color.set_effect_description("While you have a Tamer, you can ignore this card's color requirements.")
-
-        def condition_color(context: Dict[str, Any]) -> bool:
+        # --- Color requirement bypass: while you have a Tamer ---
+        def _check_color_req():
             owner = card.owner if card else None
             if not owner:
-                return False
-            return any(getattr(p, 'is_tamer', False) for p in owner.battle_area)
-        effect_color.set_can_use_condition(condition_color)
-        effects.append(effect_color)
+                return True  # enforce
+            has_tamer = any(getattr(p, 'is_tamer', False) for p in owner.battle_area)
+            if has_tamer:
+                return False  # bypass color requirement
+            return True  # enforce color requirement
+        card._match_color_requirement_fn = _check_color_req
+
+        effects = []
 
         # [Security] Delete lowest DP opponent Digimon. Then add this card to hand.
         effect_sec = ICardEffect()

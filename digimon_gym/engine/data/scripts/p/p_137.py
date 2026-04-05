@@ -79,7 +79,7 @@ class P_137(CardScript):
                 return
             enemy = player.enemy if player else None
             if enemy and enemy.security_cards:
-                top_sec = enemy.security_cards.pop()  # top = last element
+                top_sec = enemy.security_cards.pop(0)  # top = index 0
                 enemy.hand_cards.append(top_sec)
 
         effect3.set_on_process_callback(process3)

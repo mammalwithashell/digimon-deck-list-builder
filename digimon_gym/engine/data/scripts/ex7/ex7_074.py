@@ -23,35 +23,20 @@ class EX7_074(CardScript):
     """
 
     def get_card_effects(self, card: 'CardSource') -> List['ICardEffect']:
-        effects = []
-
-        # --- Effect 0: Ignore color requirements while you have LIBERATOR ---
-        effect0 = ICardEffect()
-        effect0.set_effect_name("EX7-074 Ignore color requirements")
-        effect0.set_effect_description(
-            "While you have [LIBERATOR] trait Digimon or Tamer, you can ignore "
-            "this card's color requirements."
-        )
-
-        def condition0(context: Dict[str, Any]) -> bool:
+        # --- Color requirement bypass: while you have LIBERATOR trait Digimon or Tamer ---
+        def _check_color_req():
             owner = card.owner if card else None
             if not owner:
-                return False
-            has_liberator = any(
-                (p.is_digimon or p.is_tamer) and p.top_card and
-                any('LIBERATOR' in t or 'Liberator' in t
-                    for t in (getattr(p.top_card, 'card_traits', []) or []))
-                for p in owner.battle_area
-            )
-            return has_liberator
+                return True  # enforce
+            for p in owner.battle_area:
+                if (p.is_digimon or p.is_tamer) and p.top_card:
+                    traits = getattr(p.top_card, 'card_traits', []) or []
+                    if any('LIBERATOR' in t or 'Liberator' in t for t in traits):
+                        return False  # bypass color requirement
+            return True  # enforce color requirement
+        card._match_color_requirement_fn = _check_color_req
 
-        effect0.set_can_use_condition(condition0)
-
-        def process0(ctx: Dict[str, Any]):
-            pass  # Color requirement bypass handled by condition check
-
-        effect0.set_on_process_callback(process0)
-        effects.append(effect0)
+        effects = []
 
         # --- Effect 1: [Main] Reveal top 3, add 1 LIBERATOR, then digivolve -4 ---
         effect1 = ICardEffect()

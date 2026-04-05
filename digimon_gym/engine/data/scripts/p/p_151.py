@@ -21,9 +21,19 @@ class P_151(CardScript):
     """
 
     def get_card_effects(self, card: 'CardSource') -> List['ICardEffect']:
-        # Bypass color requirement since any deck running this card
-        # will have LIBERATOR cards.
-        card._match_color_requirement = False
+        # --- Color requirement bypass: while you have LIBERATOR trait Digimon or Tamer ---
+        def _check_color_req():
+            owner = card.owner if card else None
+            if not owner:
+                return True  # enforce
+            for p in owner.battle_area:
+                if (p.is_digimon or p.is_tamer) and p.top_card:
+                    traits = getattr(p.top_card, 'card_traits', []) or []
+                    if any('LIBERATOR' in t for t in traits):
+                        return False  # bypass color requirement
+            return True  # enforce color requirement
+        card._match_color_requirement_fn = _check_color_req
+
         effects = []
 
         def _has_liberator_trait(c):

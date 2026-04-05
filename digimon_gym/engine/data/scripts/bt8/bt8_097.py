@@ -108,15 +108,23 @@ class BT8_097(CardScript):
         effect1.set_on_process_callback(process1)
         effects.append(effect1)
 
-        # ── Security effect: play this card ───────────────────────────────────
+        # ── Security effect: activate Main effects ─────────────────────────────
+        # [Security] Activate this card's [Main] effects.
         effect2 = ICardEffect()
-        effect2.set_effect_name("BT8-097 Security: Play this card")
-        effect2.set_effect_description("Security: Play this card")
+        effect2.set_timing(EffectTiming.SecuritySkill)
+        effect2.set_effect_name("BT8-097 Security: Activate Main effects")
+        effect2.set_effect_description("[Security] Activate this card's [Main] effects.")
         effect2.is_security_effect = True
 
         def condition2(context: Dict[str, Any]) -> bool:
             return True
         effect2.set_can_use_condition(condition2)
+
+        def process2(ctx: Dict[str, Any]):
+            """Security: re-invoke the Main effect logic."""
+            process1(ctx)
+
+        effect2.set_on_process_callback(process2)
         effects.append(effect2)
 
         return effects

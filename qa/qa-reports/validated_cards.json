@@ -1,5 +1,5 @@
 {
-  "version": 102,
+  "version": 103,
   "last_updated": "2026-04-04",
   "cards": {
     "BT1-087": {
@@ -14,7 +14,7 @@
       "validated_date": "2026-04-04",
       "report": "batch-fix-cards",
       "status": "PASS",
-      "notes": "Faithful (already validated). 3 tests."
+      "notes": "FAITHFUL."
     },
     "BT10-016": {
       "card_name": "Jesmon (X Antibody)",
@@ -527,8 +527,8 @@
       "card_name": "Ukkomon",
       "validated_date": "2026-04-04",
       "report": "batch-fix-cards",
-      "status": "FIXED",
-      "notes": "Fixed is_optional (True->False). 6 tests."
+      "status": "PASS",
+      "notes": "FAITHFUL."
     },
     "BT16-102": {
       "card_name": "Magnamon (X Antibody)",
@@ -2380,10 +2380,10 @@
     },
     "BT5-008": {
       "card_name": "Gaossmon",
-      "validated_date": "2026-03-14",
-      "report": "2026-03-14-medusamon-qa.md",
-      "status": "PASS",
-      "notes": "DP aura correctly restricted to other Gaossmon."
+      "validated_date": "2026-04-04",
+      "report": "batch-fix-cards",
+      "status": "FIXED",
+      "notes": "Engine fix: aura DP double-count in permanent.py."
     },
     "BT5-033": {
       "card_name": "Cutemon",
@@ -2633,8 +2633,8 @@
       "card_name": "Crimson Blaze",
       "validated_date": "2026-04-04",
       "report": "batch-fix-cards",
-      "status": "PASS",
-      "notes": "Faithful. 4 tests."
+      "status": "FIXED",
+      "notes": "Added security process callback + SecuritySkill timing."
     },
     "BT8-107": {
       "verdict": "PASS",
@@ -3198,10 +3198,10 @@
     },
     "EX4-006": {
       "card_name": "Guilmon",
+      "validated_date": "2026-04-04",
+      "report": "batch-fix-cards",
       "status": "PASS",
-      "validated_date": "2026-03-22",
-      "report": "2026-03-22-medusamon-royal-knights-regression.md",
-      "notes": "Digivolves onto Lv2 correctly. Rush condition requires 20+ trash cards."
+      "notes": "FAITHFUL."
     },
     "EX4-011": {
       "verdict": "PASS",
@@ -3466,10 +3466,10 @@
     },
     "EX7-074": {
       "card_name": "Vortex Resonance",
-      "validated_date": "2026-03-14",
-      "report": "2026-03-14-rocks-qa.md",
-      "status": "PASS",
-      "notes": "Reveal+select, digivolve cost -4, security play correct."
+      "validated_date": "2026-04-04",
+      "report": "batch-fix-cards",
+      "status": "FIXED",
+      "notes": "Fixed color requirement bypass using _match_color_requirement_fn."
     },
     "EX8-005": {
       "verdict": "PASS",
@@ -3570,10 +3570,10 @@
     },
     "EX8-074": {
       "card_name": "MedievalGallantmon",
-      "status": "PARTIAL",
-      "validated_date": "2026-03-22",
-      "report": "2026-03-22-medusamon-royal-knights-regression.md",
-      "notes": "Functions but suspend-2-to-reduce-cost auto-fires without player choice (systemic by-cost issue)."
+      "validated_date": "2026-04-04",
+      "report": "batch-fix-cards",
+      "status": "PASS",
+      "notes": "FAITHFUL."
     },
     "EX9-002": {
       "verdict": "IMPLEMENTED",
@@ -3589,10 +3589,10 @@
     },
     "EX9-008": {
       "card_name": "Biyomon",
-      "status": "PASS",
-      "validated_date": "2026-03-22",
-      "report": "2026-03-22-medusamon-royal-knights-regression.md",
-      "notes": "Play cost 3 correct. Training/Raid are inherited effects."
+      "validated_date": "2026-04-04",
+      "report": "batch-fix-cards",
+      "status": "FIXED",
+      "notes": "Added missing alt-digi from Lv.2 DM trait for cost 0."
     },
     "EX9-009": {
       "verdict": "PASS",
@@ -3802,17 +3802,17 @@
     },
     "LM-021": {
       "card_name": "Agumon - Bond of Bravery",
-      "validated_date": "2026-03-14",
-      "report": "2026-03-14-medusamon-qa.md",
-      "status": "PASS",
-      "notes": "New script: Blast Digivolve, delete up to DP, WA trash security, ACE."
+      "validated_date": "2026-04-04",
+      "report": "batch-fix-cards",
+      "status": "FIXED",
+      "notes": "Fixed missing Ace alt-digi, security pop direction."
     },
     "LM-027": {
       "card_name": "Red Scramble",
-      "validated_date": "2026-02-28",
-      "report": "2026-02-28-retest-medusa-hudie.md",
-      "status": "PASS",
-      "notes": "Digivolve with cost -3 and Delay verified."
+      "validated_date": "2026-04-04",
+      "report": "batch-fix-cards",
+      "status": "FIXED",
+      "notes": "Added missing security effect, fixed delay condition."
     },
     "LM-028": {
       "card_name": "Blue Scramble",
@@ -3919,10 +3919,10 @@
     },
     "P-035": {
       "card_name": "Red Memory Boost!",
-      "validated_date": "2026-02-28",
-      "report": "2026-02-28-retest-medusa-hudie.md",
+      "validated_date": "2026-04-04",
+      "report": "batch-fix-cards",
       "status": "PASS",
-      "notes": "Main effect and Delay activation fixed and verified."
+      "notes": "FAITHFUL."
     },
     "P-037": {
       "card_name": "Yellow Memory Boost!",
@@ -3961,10 +3961,10 @@
     },
     "P-103": {
       "card_name": "Offense Training",
-      "validated_date": "2026-02-28",
-      "report": "2026-02-28-retest-medusa-hudie.md",
+      "validated_date": "2026-04-04",
+      "report": "batch-fix-cards",
       "status": "PASS",
-      "notes": "Reveal 2 + Delay verified."
+      "notes": "FAITHFUL."
     },
     "P-104": {
       "verdict": "IMPLEMENTED",
@@ -4029,17 +4029,17 @@
     },
     "P-137": {
       "card_name": "Flamedramon",
-      "validated_date": "2026-03-14",
-      "report": "2026-03-14-medusamon-qa.md",
-      "status": "PASS",
-      "notes": "Fixed: Opponent adds security to their hand on target switch."
+      "validated_date": "2026-04-04",
+      "report": "batch-fix-cards",
+      "status": "FIXED",
+      "notes": "Fixed security pop direction (bottom->top)."
     },
     "P-151": {
       "card_name": "Digimon Liberator",
-      "validated_date": "2026-03-14",
-      "report": "2026-03-14-wave1-reverify.md",
-      "status": "PASS",
-      "notes": "Fixed color bypass. Reveal/select/play correct. LIBERATOR trait filter correct."
+      "validated_date": "2026-04-04",
+      "report": "batch-fix-cards",
+      "status": "FIXED",
+      "notes": "Fixed unconditional color bypass -> conditional on LIBERATOR in play."
     },
     "P-156": {
       "card_name": "Future Potential!",
@@ -4160,7 +4160,7 @@
       "validated_date": "2026-04-04",
       "report": "batch-fix-cards",
       "status": "PASS",
-      "notes": "Faithful. 4 tests."
+      "notes": "FAITHFUL."
     },
     "P-207": {
       "card_name": "Minervamon",
@@ -4223,10 +4223,10 @@
     },
     "ST1-07": {
       "card_name": "Greymon",
-      "validated_date": "2026-03-14",
-      "report": "2026-03-14-wave1-reverify.md",
+      "validated_date": "2026-04-04",
+      "report": "batch-fix-cards",
       "status": "PASS",
-      "notes": "Plays without hang. Inherited SA+1 correct."
+      "notes": "FAITHFUL."
     },
     "ST10-02": {
       "card_name": "Salamon",
@@ -4424,10 +4424,10 @@
     },
     "ST22-08": {
       "card_name": "Offensive Plug-In V",
-      "validated_date": "2026-03-14",
-      "report": "2026-03-14-medusamon-qa.md",
-      "status": "PASS",
-      "notes": "New script: Security delete lowest DP. Main delete DP-based."
+      "validated_date": "2026-04-04",
+      "report": "batch-fix-cards",
+      "status": "FIXED",
+      "notes": "Fixed color requirement bypass using _match_color_requirement_fn."
     },
     "ST22-11": {
       "card_name": "Defense Plug-In F",

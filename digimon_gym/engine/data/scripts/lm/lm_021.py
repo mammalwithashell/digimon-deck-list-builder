@@ -22,6 +22,21 @@ class LM_021(CardScript):
     def get_card_effects(self, card: 'CardSource') -> List['ICardEffect']:
         effects = []
 
+        # --- Ace: Alt digi from Agumon for cost 3 when security <= 2 ---
+        effect_alt = ICardEffect()
+        effect_alt.set_effect_name("LM-021 Ace digi from Agumon")
+        effect_alt.set_effect_description("Ace: Digivolve from [Agumon] for 3 cost when security <= 2")
+        effect_alt._alt_digi_cost = 3
+        effect_alt._alt_digi_name = "Agumon"
+
+        def condition_alt(context: Dict[str, Any]) -> bool:
+            # Ace condition: owner's security must be <= 2
+            if card and card.owner:
+                return len(card.owner.security_cards) <= 2
+            return False
+        effect_alt.set_can_use_condition(condition_alt)
+        effects.append(effect_alt)
+
         # Blast Digivolve
         effect_blast = ICardEffect()
         effect_blast.set_effect_name("LM-021 Blast Digivolve")
@@ -165,7 +180,7 @@ class LM_021(CardScript):
                 return
             enemy = player.enemy if player else None
             if enemy and enemy.security_cards:
-                top_sec = enemy.security_cards.pop()  # top = last
+                top_sec = enemy.security_cards.pop(0)  # top = index 0
                 enemy.trash_cards.append(top_sec)
 
         effect_atk.set_on_process_callback(process_atk)
