@@ -1,5 +1,5 @@
 {
-  "version": 101,
+  "version": 102,
   "last_updated": "2026-04-04",
   "cards": {
     "BT1-087": {
@@ -563,7 +563,7 @@
       "validated_date": "2026-04-04",
       "report": "batch-fix-cards",
       "status": "FIXED",
-      "notes": "_alt_digi_name_filter -> _alt_digi_name; security from top; first delete mandatory"
+      "notes": "Fixed alt_digi_name_filter->alt_digi_name, mandatory first delete selection."
     },
     "BT17-019": {
       "card_name": "Gabumon",
@@ -962,10 +962,10 @@
     },
     "BT20-016": {
       "card_name": "Paildramon",
-      "validated_date": "2026-03-14",
-      "report": "2026-03-14-medusamon-qa.md",
-      "status": "PASS",
-      "notes": "FORCE_ATTACK implemented via register_modifier"
+      "validated_date": "2026-04-04",
+      "report": "batch-fix-cards",
+      "status": "FIXED",
+      "notes": "Fixed Piercing grant missing turn expiry."
     },
     "BT20-017": {
       "card_name": "Jesmon",
@@ -1073,8 +1073,8 @@
       "card_name": "Omnimon (X Antibody)",
       "validated_date": "2026-04-04",
       "report": "batch-fix-cards",
-      "status": "PASS",
-      "notes": "Faithful. 4 tests."
+      "status": "FIXED",
+      "notes": "Fixed X Antibody check (trait->card name)."
     },
     "BT21-001": {
       "card_name": "Gigimon",
@@ -1216,10 +1216,10 @@
     },
     "BT21-072": {
       "card_name": "Arresterdramon: Superior Mode",
-      "validated_date": "2026-03-01",
-      "report": "2026-03-01-partial-fixes.md",
-      "status": "PASS",
-      "notes": "Piercing added. CAN_ATTACK_UNSUSPENDED modifier. Dynamic DP per opponent Digimon count."
+      "validated_date": "2026-04-04",
+      "report": "batch-fix-cards",
+      "status": "FIXED",
+      "notes": "Fixed All Turns DP modifier (non-functional register_modifier -> dynamic static effect)."
     },
     "BT21-081": {
       "card_name": "Owen Dreadnought",
@@ -1616,7 +1616,7 @@
       "validated_date": "2026-04-04",
       "report": "batch-fix-cards",
       "status": "FIXED",
-      "notes": "Added _alt_digi_trait=CS for CS-only alt-digi"
+      "notes": "Added missing alt-digi CS trait requirement."
     },
     "BT23-017": {
       "card_name": "Betamon",
@@ -2709,10 +2709,10 @@
     },
     "BT9-112": {
       "card_name": "DeathXmon",
-      "validated_date": "2026-03-14",
-      "report": "2026-03-14-hudiemon-qa.md",
+      "validated_date": "2026-04-04",
+      "report": "batch-fix-cards",
       "status": "PASS",
-      "notes": "Already fixed. Cost reduction, De-Digivolve, delete, EOT delete correct."
+      "notes": "FAITHFUL. Cost reduction, de-digivolve all, delete no-digi-cards, play observer all correct."
     },
     "EX1-021": {
       "card_name": "MetalGarurumon",
@@ -2795,7 +2795,7 @@
       "validated_date": "2026-04-04",
       "report": "batch-fix-cards",
       "status": "FIXED",
-      "notes": "Major rewrite: De-Digivolve 2 + trash top card. 7 tests."
+      "notes": "Fixed play_cost property access, current_dp->dp."
     },
     "EX10-012": {
       "verdict": "PASS",
@@ -3608,10 +3608,10 @@
     },
     "EX9-013": {
       "card_name": "BlitzGreymon",
-      "validated_date": "2026-03-14",
-      "report": "2026-03-14-medusamon-qa.md",
-      "status": "PASS",
-      "notes": "New script: Blast Digivolve, Alliance, Blocker, De-Digivolve 3."
+      "validated_date": "2026-04-04",
+      "report": "batch-fix-cards",
+      "status": "FIXED",
+      "notes": "Added missing inherited Security Attack +1."
     },
     "EX9-014": {
       "verdict": "PASS",

@@ -68,14 +68,18 @@ class BT20_102(CardScript):
         effects.append(effect2)
 
         def _check_omnimon_or_xantibody_in_sources(permanent):
-            """Check if [Omnimon] or [X Antibody] is in this Digimon's digivolution cards."""
+            """Check if [Omnimon] or [X Antibody] is in this Digimon's digivolution cards.
+
+            C# uses EqualsCardName("Omnimon") || EqualsCardName("X Antibody")
+            which checks CARD NAME, not trait.
+            """
             if not permanent:
                 return False
             # digivolution cards = all card_sources under the top card (bottom-to-top, top is [-1])
             for src in permanent.card_sources[:-1]:
                 if src.contains_card_name('Omnimon'):
                     return True
-                if any('X Antibody' in t for t in getattr(src, 'card_traits', [])):
+                if src.contains_card_name('X Antibody'):
                     return True
             return False
 

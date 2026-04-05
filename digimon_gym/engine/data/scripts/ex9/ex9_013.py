@@ -224,6 +224,18 @@ class EX9_013(CardScript):
         effect_eot.set_on_process_callback(process_eot)
         effects.append(effect_eot)
 
+        # ── Inherited: Security Attack +1 (per C# behavioral reference) ────
+        # C# has ChangeSelfSAttackStaticEffect(changeValue: 1, isInheritedEffect: true)
+        effect_sa = ICardEffect()
+        effect_sa.set_effect_name("EX9-013 Security Attack +1")
+        effect_sa.set_effect_description("Security Attack +1")
+        effect_sa.is_inherited_effect = True
+        effect_sa._security_attack_modifier = 1
+        def condition_sa(context: Dict[str, Any]) -> bool:
+            return True
+        effect_sa.set_can_use_condition(condition_sa)
+        effects.append(effect_sa)
+
         # ── Inherited: Ace Overflow <-4> ─────────────────────────────────────
         # Ace Overflow is handled by the engine via entity_base.is_ace / ace_overflow_cost.
         # The inherited effect is a marker so the engine recognizes it.

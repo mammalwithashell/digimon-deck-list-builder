@@ -79,8 +79,24 @@ class BT21_072(CardScript):
         effects.append(effect2)
 
         # [All Turns] This Digimon gets +1000 DP for each of its digivolution cards.
-        effect3 = ICardEffect()
-        effect3.set_timing(EffectTiming.OnEnterFieldAnyone)
+        # C# uses ChangeSelfDPStaticEffect (EffectTiming.None) — a static DP modifier.
+        # We override dp_modifier on the effect instance to return a dynamic value
+        # based on the current digivolution card count.
+        class _DynamicDPEffect(ICardEffect):
+            """ICardEffect subclass with dynamic dp_modifier property."""
+            @property
+            def dp_modifier(self):
+                this_perm = card.permanent_of_this_card() if card else None
+                if not this_perm:
+                    return 0
+                digi_card_count = max(0, len(this_perm.card_sources) - 1)
+                return 1000 * digi_card_count
+
+            @dp_modifier.setter
+            def dp_modifier(self, value):
+                pass  # Ignore static assignment; always computed dynamically
+
+        effect3 = _DynamicDPEffect()
         effect3.set_effect_name("BT21-072 DP +1000 per digivolution card")
         effect3.set_effect_description("[All Turns] This Digimon gets +1000 DP for each of its digivolution cards.")
 
@@ -89,25 +105,6 @@ class BT21_072(CardScript):
                 return False
             return True
         effect3.set_can_use_condition(condition3)
-
-        def process3(ctx: Dict[str, Any]):
-            """Register dynamic DP modifier: +1000 per digivolution card"""
-            perm = ctx.get('permanent')
-            game = ctx.get('game')
-            if perm and game:
-                from digimon_gym.engine.interfaces.modifiers import ModifierType
-                def dp_value_fn():
-                    this_perm = card.permanent_of_this_card() if card else None
-                    if not this_perm:
-                        return 0
-                    # Digivolution cards = all card_sources except the top card
-                    digi_card_count = max(0, len(this_perm.card_sources) - 1)
-                    return 1000 * digi_card_count
-                game.register_modifier(
-                    perm, ModifierType.CHANGE_DP,
-                    value_fn=dp_value_fn, expiry='permanent')
-
-        effect3.set_on_process_callback(process3)
         effects.append(effect3)
 
         # Factory effect: dp_modifier

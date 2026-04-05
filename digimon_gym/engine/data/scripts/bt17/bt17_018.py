@@ -28,7 +28,7 @@ class BT17_018(CardScript):
         effect_alt.set_effect_description("Alternate digivolution: Lv.6 [Gallantmon] for cost 4")
         effect_alt._alt_digi_cost = 4
         effect_alt._alt_digi_level = 6
-        effect_alt._alt_digi_name_filter = "Gallantmon"
+        effect_alt._alt_digi_name = "Gallantmon"
 
         def condition_alt(context: Dict[str, Any]) -> bool:
             return True
@@ -49,7 +49,11 @@ class BT17_018(CardScript):
 
         # --- Helper: shared deletion logic for On Play / When Digivolving ---
         def _delete_up_to_15000(ctx: Dict[str, Any]):
-            """Delete opponent Digimon with total DP <= 15000."""
+            """Delete opponent Digimon with total DP <= 15000.
+
+            C# reference: canNoSelect=false (must select at least 1),
+            canEndNotMax=true (can stop after selecting some).
+            """
             player = ctx.get('player')
             game = ctx.get('game')
             if not (player and game):
@@ -90,11 +94,14 @@ class BT17_018(CardScript):
                         if target in enemy.battle_area:
                             enemy.delete_permanent(target)
 
+                # First selection is mandatory (canNoSelect: false),
+                # subsequent selections are optional (canEndNotMax: true)
+                is_first = len(to_delete) == 0
                 game.effect_select_opponent_permanent(
                     player, on_select, filter_fn=target_filter,
-                    is_optional=True)
+                    is_optional=not is_first)
                 # Set on_decline on the pending selection for when player passes
-                if game.pending_selection:
+                if game.pending_selection and not is_first:
                     game.pending_selection.on_decline = on_done
 
             select_next()

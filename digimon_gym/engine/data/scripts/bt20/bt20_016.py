@@ -55,7 +55,7 @@ class BT20_016(CardScript):
                 return p.is_digimon
             def on_target(target_perm):
                 target_perm.change_dp(4000)
-                target_perm.grant_keyword('_is_piercing')
+                target_perm.grant_keyword('_is_piercing', duration=game.turn_count)
                 # "Then, this Digimon may attack"
                 from ....interfaces.modifiers import ModifierType
                 game.register_modifier(
@@ -96,7 +96,7 @@ class BT20_016(CardScript):
                 return p.is_digimon
             def on_target(target_perm):
                 target_perm.change_dp(4000)
-                target_perm.grant_keyword('_is_piercing')
+                target_perm.grant_keyword('_is_piercing', duration=game.turn_count)
                 # "Then, this Digimon may attack"
                 from ....interfaces.modifiers import ModifierType
                 game.register_modifier(
