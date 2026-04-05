@@ -70,6 +70,23 @@ class CardEntry:
     deck_frequency: int
 
 
+@dataclass
+class ArchetypeManifest:
+    """Full resolved manifest for an archetype's card pool."""
+    archetype_name: str
+    input_name: str
+    total_decklists: int
+    unique_cards: list[CardEntry]
+    meta_share: float
+    coverage_pct: float
+    frozen_count: int
+    generated_count: int
+    missing_count: int
+    missing_cards: list[str]
+    best_decklist: list[str]
+    deck_pool_path: str
+
+
 def _load_frozen_manifest() -> dict:
     """Load _frozen_manifest.json and return the 'cards' dict."""
     try:
@@ -201,3 +218,113 @@ def resolve_cards(card_ids: list[str]) -> list[CardEntry]:
     db = CardDatabase()
     unique = sorted(set(card_ids))
     return [_build_card_entry(cid, manifest, db) for cid in unique]
+
+
+def _slugify(name: str) -> str:
+    """Convert archetype name to a filesystem-safe slug."""
+    import re
+    slug = name.lower().strip()
+    slug = re.sub(r"[^a-z0-9]+", "-", slug)
+    slug = slug.strip("-")
+    return slug
+
+
+def _write_deck_pool(slug: str, card_ids: list[str]) -> str:
+    """Write sorted card IDs to qa/archetype-qa/{slug}/deck_pool.json."""
+    pool_dir = _QA_DIR / slug
+    pool_dir.mkdir(parents=True, exist_ok=True)
+    pool_path = pool_dir / "deck_pool.json"
+    pool_path.write_text(
+        json.dumps(sorted(card_ids), indent=2) + "\n", encoding="utf-8"
+    )
+    try:
+        return str(pool_path.relative_to(_PROJECT_ROOT))
+    except ValueError:
+        return str(pool_path)
+
+
+def resolve_archetype(
+    name: str,
+    *,
+    cards_override: list[str] | None = None,
+) -> ArchetypeManifest:
+    """Resolve an archetype to its full enriched card manifest."""
+    from tools.meta_loader import canonicalize_archetype, SOURCE_PRIORITY
+
+    canonical = canonicalize_archetype(name) if not cards_override else name
+    slug = _slugify(canonical)
+
+    if cards_override:
+        unique_ids = sorted(set(cards_override))
+        frequency: dict[str, int] = Counter(cards_override)
+        total_decklists = 0
+        meta_share = 0.0
+        best_decklist: list[str] = []
+    else:
+        try:
+            with open(_DECK_LIBRARY_PATH, "r", encoding="utf-8") as f:
+                library = json.load(f)
+        except FileNotFoundError:
+            library = {"archetypes": {}}
+
+        archetype_data = library.get("archetypes", {}).get(canonical, {})
+        decklists = archetype_data.get("decklists", [])
+        total_decklists = len(decklists)
+        meta_share = archetype_data.get("stats", {}).get("meta_share", 0.0)
+
+        frequency = Counter()
+        for dl in decklists:
+            try:
+                cards = json.loads(dl.get("decklist", "[]"))
+            except (json.JSONDecodeError, TypeError):
+                continue
+            for cid in set(cards):
+                frequency[cid] += 1
+
+        unique_ids = sorted(frequency.keys())
+
+        best_decklist = []
+        if decklists:
+            sorted_dls = sorted(
+                decklists,
+                key=lambda d: SOURCE_PRIORITY.get(d.get("source", ""), 0),
+                reverse=True,
+            )
+            for dl in sorted_dls:
+                try:
+                    parsed = json.loads(dl.get("decklist", "[]"))
+                    if parsed:
+                        best_decklist = parsed
+                        break
+                except (json.JSONDecodeError, TypeError):
+                    continue
+
+    manifest_data = _load_frozen_manifest()
+    db = CardDatabase()
+    entries = [
+        _build_card_entry(cid, manifest_data, db, frequency.get(cid, 0))
+        for cid in unique_ids
+    ]
+
+    frozen_count = sum(1 for e in entries if e.script_status == "frozen")
+    generated_count = sum(1 for e in entries if e.script_status == "generated")
+    missing_count = sum(1 for e in entries if e.script_status == "missing")
+    missing_cards = [e.card_id for e in entries if e.script_status == "missing"]
+    coverage_pct = frozen_count / len(entries) if entries else 0.0
+
+    deck_pool_path = _write_deck_pool(slug, unique_ids) if unique_ids else ""
+
+    return ArchetypeManifest(
+        archetype_name=canonical,
+        input_name=name,
+        total_decklists=total_decklists,
+        unique_cards=entries,
+        meta_share=meta_share,
+        coverage_pct=coverage_pct,
+        frozen_count=frozen_count,
+        generated_count=generated_count,
+        missing_count=missing_count,
+        missing_cards=missing_cards,
+        best_decklist=best_decklist,
+        deck_pool_path=deck_pool_path,
+    )
