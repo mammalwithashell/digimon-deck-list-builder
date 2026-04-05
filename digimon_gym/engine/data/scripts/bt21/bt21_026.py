@@ -82,27 +82,42 @@ class BT21_026(CardScript):
 
         # [All Turns] [Once Per Turn] When any of your opponent's Digimon are deleted,
         # this Digimon may unsuspend.
+        # Uses NoTiming + _is_deletion_observer so _fire_deletion_observers() picks it up
         effect4 = ICardEffect()
-        effect4.set_timing(EffectTiming.OnDestroyedAnyone)
         effect4.set_effect_name("BT21-026 Unsuspend")
         effect4.set_effect_description("[All Turns] [Once Per Turn] When any of your opponent's Digimon are deleted, this Digimon may unsuspend.")
-        effect4.is_optional = True
-        effect4.set_max_count_per_turn(1)
         effect4.set_hash_string("Unsuspend_BT21_026")
-        effect4.is_on_deletion = True
+        effect4._is_deletion_observer = True
+        effect4.set_max_count_per_turn(1)
 
         def condition4(context: Dict[str, Any]) -> bool:
             if card and card.permanent_of_this_card() is None:
                 return False
-            # Only trigger when an opponent's Digimon is destroyed
-            destroyed = context.get('permanent') or context.get('destroyed_permanent')
+            # Only trigger when an opponent's Digimon is deleted.
+            # DCGO: CardEffectCommons.IsPermanentExistsOnOpponentBattleAreaDigimon
+            deleted_perm = context.get('deleted_permanent')
+            if not deleted_perm:
+                return False
+            if not getattr(deleted_perm, 'is_digimon', False):
+                return False
+            # Check the deleted perm belonged to the opponent, not to us.
+            # _fire_deletion_observers passes owner=deleted_perm's owner.
+            # In the owner-scan branch, context['player'] = deleted_perm's owner.
+            # In the enemy-scan branch, context['player'] = card.owner.
+            # We want to trigger only when the deleted perm is on the opponent's side.
             owner = card.owner if card else None
-            if destroyed and owner:
-                destroyed_owner = None
-                if getattr(destroyed, 'top_card', None):
-                    destroyed_owner = getattr(destroyed.top_card, 'owner', None)
-                if destroyed_owner is owner:
-                    return False  # Own Digimon deleted, not opponent's
+            if not owner or not owner.enemy:
+                return False
+            # The deleted permanent should NOT belong to card's owner
+            # Check by looking at whose trash the deleted cards ended up in, or
+            # simply check that context['player'] is card.owner AND this is
+            # the enemy-scan (deleted perm's owner is the enemy).
+            # Simplest: check deleted_perm's top_card.owner is the enemy.
+            deleted_card_owner = None
+            if deleted_perm.top_card:
+                deleted_card_owner = getattr(deleted_perm.top_card, 'owner', None)
+            if deleted_card_owner is owner:
+                return False  # Own Digimon deleted, not opponent's
             return True
 
         effect4.set_can_use_condition(condition4)

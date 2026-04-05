@@ -1,5 +1,5 @@
 {
-  "version": 99,
+  "version": 101,
   "last_updated": "2026-04-04",
   "cards": {
     "BT1-087": {
@@ -11,10 +11,10 @@
     },
     "BT1-090": {
       "card_name": "Gravity Crush",
-      "validated_date": "2026-03-01",
-      "report": "2026-03-01-cs-hudiemon-partial-retest.md",
+      "validated_date": "2026-04-04",
+      "report": "batch-fix-cards",
       "status": "PASS",
-      "notes": "Core +2 memory works. End-of-turn -2 is a rules contradiction (Option trashes before EOT); correctly omitted."
+      "notes": "Faithful (already validated). 3 tests."
     },
     "BT10-016": {
       "card_name": "Jesmon (X Antibody)",
@@ -1071,10 +1071,10 @@
     },
     "BT20-102": {
       "card_name": "Omnimon (X Antibody)",
-      "status": "PARTIAL",
-      "validated_date": "2026-03-22",
-      "report": "2026-03-22-medusamon-royal-knights-regression.md",
-      "notes": "When Digivolving board wipe + bottom-deck works (evo card condition checked, two-step selection). On Play auto-skips without evo cards (correct). END OF TURN Rush grant NEVER FIRES — engine bug: pass_turn() and check_turn_end() both skip phase_end(), so OnEndTurn effects never execute."
+      "validated_date": "2026-04-04",
+      "report": "batch-fix-cards",
+      "status": "PASS",
+      "notes": "Faithful. 4 tests."
     },
     "BT21-001": {
       "card_name": "Gigimon",
@@ -1092,10 +1092,10 @@
     },
     "BT21-007": {
       "card_name": "Agumon",
-      "validated_date": "2026-03-14",
-      "report": "2026-03-14-medusamon-qa.md",
-      "status": "PASS",
-      "notes": "Fixed: On Play trash return filters for Reptile/Dragonkin trait."
+      "validated_date": "2026-04-04",
+      "report": "batch-fix-cards",
+      "status": "FIXED",
+      "notes": "Fixed trash selection SEL_TRASH_START offset bug (callback received raw action_id)."
     },
     "BT21-008": {
       "card_name": "Elizamon",
@@ -1106,10 +1106,10 @@
     },
     "BT21-013": {
       "card_name": "Agunimon",
-      "validated_date": "2026-03-14",
-      "report": "2026-03-14-medusamon-qa.md",
-      "status": "PASS",
-      "notes": "Fixed: WD places Hybrid/Hero from hand/trash. WA digivolve filter+cost-1."
+      "validated_date": "2026-04-04",
+      "report": "batch-fix-cards",
+      "status": "FIXED",
+      "notes": "Fixed Hybrid form check (form_eng not card_traits), WA filter (red Lv.5 not Hybrid), cost_reduction 2 not 1."
     },
     "BT21-015": {
       "card_name": "Cyclonemon",
@@ -1134,10 +1134,10 @@
     },
     "BT21-024": {
       "card_name": "Cyberdramon",
-      "validated_date": "2026-03-14",
-      "report": "2026-03-14-medusamon-qa.md",
-      "status": "PASS",
-      "notes": "Fixed: Complete rewrite. Opponent places hand as security, trash top security."
+      "validated_date": "2026-04-04",
+      "report": "batch-fix-cards",
+      "status": "FIXED",
+      "notes": "Fixed security trash method (fire OnLoseSecurity), hand card bottom placement, top vs bottom index."
     },
     "BT21-025": {
       "card_name": "Lamiamon",
@@ -1148,10 +1148,10 @@
     },
     "BT21-026": {
       "card_name": "WarGreymon",
-      "validated_date": "2026-03-14",
-      "report": "2026-03-14-medusamon-qa.md",
-      "status": "PASS",
-      "notes": "Fixed: Cost reduction 2*opponent count. Unsuspend self. Deletion observer."
+      "validated_date": "2026-04-04",
+      "report": "batch-fix-cards",
+      "status": "FIXED",
+      "notes": "Fixed deletion observer timing (OnDestroyedAnyone->_is_deletion_observer), opponent check logic."
     },
     "BT21-029": {
       "card_name": "Medusamon",
@@ -2631,10 +2631,10 @@
     },
     "BT8-097": {
       "card_name": "Crimson Blaze",
+      "validated_date": "2026-04-04",
+      "report": "batch-fix-cards",
       "status": "PASS",
-      "validated_date": "2026-03-22",
-      "report": "2026-03-22-medusamon-royal-knights-regression.md",
-      "notes": "Cost reduced by 1 per opponent Digimon (6->5). Deletes all 6000 DP or less. Option trashed."
+      "notes": "Faithful. 4 tests."
     },
     "BT8-107": {
       "verdict": "PASS",
@@ -2716,10 +2716,10 @@
     },
     "EX1-021": {
       "card_name": "MetalGarurumon",
-      "validated_date": "2026-03-13",
-      "report": "2026-03-13-dna-omnimon.md",
-      "status": "PASS",
-      "notes": "When Digivolving memory per 4 hand cards. When Attacking return On Deletion Digimon."
+      "validated_date": "2026-04-04",
+      "report": "batch-fix-cards",
+      "status": "FIXED",
+      "notes": "Fixed memory gain API, removed incorrect digi card trashing. 4 tests."
     },
     "EX1-044": {
       "card_name": "Keramon",
@@ -2750,10 +2750,10 @@
     },
     "EX1-068": {
       "card_name": "Ice Wall!",
-      "validated_date": "2026-03-14",
-      "report": "2026-03-14-hudiemon-qa.md",
+      "validated_date": "2026-04-04",
+      "report": "batch-fix-cards",
       "status": "PASS",
-      "notes": "Implemented approximation. Engine cant grant per-attack callbacks to opponent."
+      "notes": "Faithful. 3 tests."
     },
     "EX1-071": {
       "card_name": "Win Rate: 60%!",
@@ -2792,10 +2792,10 @@
     },
     "EX10-010": {
       "card_name": "BlackWarGreymon",
-      "validated_date": "2026-03-01",
-      "report": "2026-03-01-partial-fixes.md",
-      "status": "PASS",
-      "notes": "play_cost<=7 filter added. Tamer targets added. Duplicate effects merged with unique hashes."
+      "validated_date": "2026-04-04",
+      "report": "batch-fix-cards",
+      "status": "FIXED",
+      "notes": "Major rewrite: De-Digivolve 2 + trash top card. 7 tests."
     },
     "EX10-012": {
       "verdict": "PASS",
@@ -3857,10 +3857,10 @@
     },
     "LM-034": {
       "card_name": "Wisteria Memory Boost!",
-      "validated_date": "2026-03-14",
-      "report": "2026-03-14-wave1-reverify.md",
+      "validated_date": "2026-04-04",
+      "report": "batch-fix-cards",
       "status": "PASS",
-      "notes": "Fixed color bypass. Reveal top 3, Delay placement correct."
+      "notes": "Faithful. 4 tests."
     },
     "LM-035": {
       "card_name": "Amber Memory Boost!",
@@ -4077,10 +4077,10 @@
     },
     "P-182": {
       "card_name": "WarGreymon",
-      "validated_date": "2026-03-13",
-      "report": "2026-03-13-dna-omnimon.md",
-      "status": "PASS",
-      "notes": "SA+1, Blocker, delete on digivolve, DP per color."
+      "validated_date": "2026-04-04",
+      "report": "batch-fix-cards",
+      "status": "FIXED",
+      "notes": "Fixed DP filter + added missing color-based DP boost. 6 tests."
     },
     "P-186": {
       "card_name": "Gallantmon",
@@ -4157,10 +4157,10 @@
     },
     "P-206": {
       "card_name": "Digital Gate Open",
+      "validated_date": "2026-04-04",
+      "report": "batch-fix-cards",
       "status": "PASS",
-      "validated_date": "2026-03-22",
-      "report": "2026-03-22-medusamon-royal-knights-regression.md",
-      "notes": "Cost 4 correct. Reveal top 3, add 1 Digimon + 1 Tamer. Placed as Delay."
+      "notes": "Faithful. 4 tests."
     },
     "P-207": {
       "card_name": "Minervamon",
@@ -4389,10 +4389,10 @@
     },
     "ST2-13": {
       "card_name": "Hammer Spark",
-      "validated_date": "2026-03-13",
-      "report": "2026-03-13-dna-omnimon.md",
-      "status": "PASS",
-      "notes": "Gain 1 memory. Security gain 2."
+      "validated_date": "2026-04-04",
+      "report": "batch-fix-cards",
+      "status": "FIXED",
+      "notes": "Fixed memory gain to use player.add_memory(). 3 tests."
     },
     "ST20-05": {
       "card_name": "Gatomon",
@@ -4657,6 +4657,13 @@
       "report": "batch-fix-cards",
       "status": "FIXED",
       "notes": "Fixed Blocker/Draw order, target filter, spurious keyword. 7 tests."
+    },
+    "EX5-015": {
+      "card_name": "Gabumon (X Antibody)",
+      "validated_date": "2026-04-04",
+      "report": "batch-fix-cards",
+      "status": "FIXED",
+      "notes": "Major rewrite: reveal logic + inherited deletion prevention. 5 tests."
     }
   }
 }
