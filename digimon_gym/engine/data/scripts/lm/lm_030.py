@@ -110,19 +110,18 @@ class LM_030(CardScript):
             "the cost."
         )
         effect2.is_optional = True
+        effect2._is_delay_effect = True
 
         def condition2(context: Dict[str, Any]) -> bool:
-            # Delay card must still be in battle area.
-            if card and card.permanent_of_this_card() is None:
-                return False
-            owner = card.owner if card else None
-            if not (owner and owner.is_my_turn):
+            # Note: _execute_delay trashes the card BEFORE calling this condition,
+            # so permanent_of_this_card() would return None. Don't check it here.
+            if not (card and card.owner and card.owner.is_my_turn):
                 return False
             # C# requires opponent to have at least 1 Digimon
-            enemy = owner.enemy if owner else None
-            if not enemy or not any(p.is_digimon for p in enemy.battle_area):
+            enemy = card.owner.enemy if card and card.owner else None
+            if not enemy:
                 return False
-            return True
+            return any(p.is_digimon for p in enemy.battle_area)
 
         effect2.set_can_use_condition(condition2)
 
@@ -130,16 +129,14 @@ class LM_030(CardScript):
         _SEL_TRASH_START = 130
 
         def process2(ctx: Dict[str, Any]):
-            """Trash this delay card; return green Digimon to deck top; play if no field Digimon."""
+            """Return green Digimon to deck top; play if no field Digimon."""
             player = ctx.get('player')
             game = ctx.get('game')
             if not (player and game):
                 return
 
-            # Cost: trash this delay card from the battle area.
-            my_perm = card.permanent_of_this_card() if card else None
-            if my_perm is not None:
-                player.delete_permanent(my_perm)
+            # Note: the engine's _execute_delay already trashes this card
+            # from the battle area before calling this callback.
 
             def _green_digimon_filter(c):
                 if not getattr(c, 'is_digimon', False):

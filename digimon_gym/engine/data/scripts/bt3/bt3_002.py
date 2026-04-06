@@ -29,9 +29,7 @@ class BT3_002(CardScript):
         effect0.set_hash_string("Draw1_BT3_002")
 
         def condition0(context: Dict[str, Any]) -> bool:
-            if card and card.permanent_of_this_card() is None:
-                return False
-            perm = card.permanent_of_this_card()
+            perm = context.get('permanent') or card.permanent_of_this_card()
             if perm is None:
                 return False
             # Check that this Digimon has Jamming

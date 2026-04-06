@@ -68,6 +68,8 @@ class BT16_028(CardScript):
             from digimon_gym.engine.interfaces.modifiers import ModifierType
 
             # Step 1: Select 1 opponent Digimon or Tamer → apply cannot-unsuspend
+            # Step 2 is chained inside on_freeze so the selections don't
+            # overwrite each other (engine supports one pending_selection).
             def opp_digi_or_tamer(p):
                 return p.is_digimon or p.is_tamer
 
@@ -77,38 +79,38 @@ class BT16_028(CardScript):
                     ModifierType.CANNOT_UNSUSPEND,
                     expiry='end_of_opponent_turn')
 
+                # Step 2 (optional): Suspend 1 of opponent's unsuspended
+                # Digimon/Tamers, then unsuspend 1 of your own suspended Digimon
+                def opp_unsuspended_digi_or_tamer(p):
+                    return (p.is_digimon or p.is_tamer) and not p.is_suspended
+
+                def on_suspend_opp(susp_perm):
+                    susp_perm.suspend()
+                    # After suspending opponent's permanent, unsuspend own Digimon
+                    def own_suspended_digimon(p):
+                        return p.is_digimon and p.is_suspended
+
+                    def on_unsuspend_own(own_perm):
+                        own_perm.unsuspend()
+
+                    game.effect_select_own_permanent(
+                        player, on_unsuspend_own,
+                        filter_fn=own_suspended_digimon,
+                        is_optional=False,
+                        prompt="Select 1 of your suspended Digimon to unsuspend.")
+
+                game.effect_select_opponent_permanent(
+                    player, on_suspend_opp,
+                    filter_fn=opp_unsuspended_digi_or_tamer,
+                    is_optional=True,
+                    prompt="Suspend 1 of your opponent's Digimon or Tamers "
+                           "to unsuspend 1 of yours.")
+
             game.effect_select_opponent_permanent(
                 player, on_freeze, filter_fn=opp_digi_or_tamer,
                 is_optional=False,
                 prompt="Select 1 of your opponent's Digimon or Tamers "
                        "(can't unsuspend until end of their turn).")
-
-            # Step 2 (optional): Suspend 1 of opponent's unsuspended
-            # Digimon/Tamers, then unsuspend 1 of your own suspended Digimon
-            def opp_unsuspended_digi_or_tamer(p):
-                return (p.is_digimon or p.is_tamer) and not p.is_suspended
-
-            def on_suspend_opp(target_perm):
-                target_perm.suspend()
-                # After suspending opponent's permanent, unsuspend own Digimon
-                def own_suspended_digimon(p):
-                    return p.is_digimon and p.is_suspended
-
-                def on_unsuspend_own(own_perm):
-                    own_perm.unsuspend()
-
-                game.effect_select_own_permanent(
-                    player, on_unsuspend_own,
-                    filter_fn=own_suspended_digimon,
-                    is_optional=False,
-                    prompt="Select 1 of your suspended Digimon to unsuspend.")
-
-            game.effect_select_opponent_permanent(
-                player, on_suspend_opp,
-                filter_fn=opp_unsuspended_digi_or_tamer,
-                is_optional=True,
-                prompt="Suspend 1 of your opponent's Digimon or Tamers "
-                       "to unsuspend 1 of yours.")
 
         effect1.set_on_process_callback(process1)
         effects.append(effect1)

@@ -1,5 +1,5 @@
 {
-  "version": 113,
+  "version": 120,
   "last_updated": "2026-04-05",
   "cards": {
     "BT1-087": {
@@ -463,10 +463,10 @@
     },
     "BT16-025": {
       "card_name": "Paildramon",
-      "validated_date": "2026-02-28",
-      "report": "2026-02-28-retest-medusa-hudie.md",
-      "status": "PASS",
-      "notes": "Suspend ALL opponents verified. WhenDigivolving callback verified."
+      "validated_date": "2026-04-05",
+      "report": "batch-fix-cards",
+      "status": "FIXED",
+      "notes": "Fixed: CANNOT_UNSUSPEND modifier condition leak, WA suspend/unsuspend async race."
     },
     "BT16-026": {
       "card_name": "Vikemon",
@@ -636,10 +636,11 @@
       "notes": "Script correct. Prior cost anomaly was test artifact from field leak."
     },
     "BT17-077": {
-      "verdict": "PASS",
-      "card_name": "Imperialdramon: PM",
-      "archetype": "Archetype",
-      "notes": "Complex trash-return + memory gain logic correct"
+      "card_name": "Imperialdramon: Paladin Mode",
+      "validated_date": "2026-04-05",
+      "report": "batch-fix-cards",
+      "status": "PASS",
+      "notes": "FAITHFUL. Blast Digivolve, trash all digi-cards, return trash (branch), WA bounce+unsuspend, Ace Overflow."
     },
     "BT17-078": {
       "card_name": "Omnimon",
@@ -2305,10 +2306,11 @@
       "notes": "Memory gain restriction declarative only (engine gap)."
     },
     "BT3-093": {
-      "verdict": "PASS",
       "card_name": "Davis Motomiya",
-      "archetype": "TS Neptunemon",
-      "notes": "Memory set to 3, On Play reveal blue+green, security play"
+      "validated_date": "2026-04-05",
+      "report": "batch-fix-cards",
+      "status": "PASS",
+      "notes": "FAITHFUL. Memory set, reveal top 3, security play."
     },
     "BT3-096": {
       "verdict": "PASS",
@@ -2331,10 +2333,10 @@
     },
     "BT3-103": {
       "card_name": "Hidden Potential Discovered!",
-      "validated_date": "2026-03-14",
-      "report": "2026-03-14-hudiemon-qa.md",
+      "validated_date": "2026-04-05",
+      "report": "batch-fix-cards",
       "status": "PASS",
-      "notes": "Implemented: Suspend Digimon, CHANGE_DIGIVOLUTION_COST -5."
+      "notes": "FAITHFUL. One-shot green digi cost -5 via CHANGE_DIGIVOLUTION_COST, security add to hand."
     },
     "BT4-001": {
       "card_name": "Sakuttomon",
@@ -3831,10 +3833,10 @@
     },
     "LM-030": {
       "card_name": "Green Scramble",
-      "validated_date": "2026-03-14",
-      "report": "2026-03-14-hudiemon-qa.md",
-      "status": "PASS",
-      "notes": "Digivolve-with-reduction and delay correct."
+      "validated_date": "2026-04-05",
+      "report": "batch-fix-cards",
+      "status": "FIXED",
+      "notes": "Fixed: Delay condition checked permanent_of_this_card after engine already trashed it. Removed redundant delete."
     },
     "LM-031": {
       "card_name": "Black Scramble",
@@ -4451,10 +4453,10 @@
     },
     "ST9-05": {
       "card_name": "Paildramon",
-      "validated_date": "2026-03-01",
-      "report": "2026-03-01-medusa-hudie-coverage.md",
+      "validated_date": "2026-04-05",
+      "report": "batch-fix-cards",
       "status": "PASS",
-      "notes": "New script. DNA WhenDigivolving return <=6000 DP to deck bottom. Once/turn unsuspend. Fully implemented."
+      "notes": "FAITHFUL. DNA bounce + unsuspend self both correct."
     },
     "BT23-053": {
       "card_name": "Strikedramon",
@@ -4479,17 +4481,17 @@
     },
     "BT12-021": {
       "card_name": "Veemon",
-      "status": "PASS",
-      "validated_date": "2026-03-15",
-      "report": "2026-03-15-bg-imperial-galacticmon-qa.md",
-      "notes": "Upgraded FAIL->PASS. On Play reveal-and-select works."
+      "validated_date": "2026-04-05",
+      "report": "batch-fix-cards",
+      "status": "FIXED",
+      "notes": "Added inherited DNA digivolve effect (was incorrectly BLOCKED). Fixed Free trait check to use attribute_eng."
     },
     "BT12-047": {
       "card_name": "Wormmon",
-      "status": "PASS",
-      "validated_date": "2026-03-15",
-      "report": "2026-03-15-bg-imperial-galacticmon-qa.md",
-      "notes": "Upgraded FAIL->PASS. Same pattern as BT12-021."
+      "validated_date": "2026-04-05",
+      "report": "batch-fix-cards",
+      "status": "FIXED",
+      "notes": "Fixed Free trait check (attribute_eng). Added inherited DNA digivolve effect (was BLOCKED)."
     },
     "BT14-044": {
       "card_name": "Palmon",
@@ -4665,6 +4667,139 @@
       "report": "batch-fix-cards",
       "status": "FIXED",
       "notes": "Major rewrite: reveal logic + inherited deletion prevention. 5 tests."
+    },
+    "BT12-002": {
+      "card_name": "DemiVeemon",
+      "validated_date": "2026-04-05",
+      "report": "batch-fix-cards",
+      "status": "FIXED",
+      "notes": "Added library count check (empty deck guard), improved CardColor.Green enum check."
+    },
+    "BT3-002": {
+      "card_name": "DemiVeemon",
+      "validated_date": "2026-04-05",
+      "report": "batch-fix-cards",
+      "status": "PASS",
+      "notes": "FAITHFUL. Minor condition cleanup only."
+    },
+    "P-117": {
+      "card_name": "Veemon",
+      "validated_date": "2026-04-05",
+      "report": "batch-fix-cards",
+      "status": "FIXED",
+      "notes": "Timing: BeforePayCost->WhenWouldDigivolve. Added permanent match check. Fixed Free trait to use attribute_eng."
+    },
+    "BT16-040": {
+      "card_name": "Wormmon",
+      "validated_date": "2026-04-05",
+      "report": "batch-fix-cards",
+      "status": "FIXED",
+      "notes": "Fixed Free trait in trash filter (attribute_eng). Fixed trash selection offset bug."
+    },
+    "EX1-014": {
+      "card_name": "ExVeemon",
+      "validated_date": "2026-04-05",
+      "report": "batch-fix-cards",
+      "status": "FIXED",
+      "notes": "Fixed Free trait check in inherited Jamming condition (attribute_eng)."
+    },
+    "BT12-022": {
+      "card_name": "ExVeemon",
+      "validated_date": "2026-04-05",
+      "report": "batch-fix-cards",
+      "status": "FIXED",
+      "notes": "Fixed Free trait in inherited Jamming. Removed spurious EOT DNA digivolve effect not in card text."
+    },
+    "BT12-050": {
+      "card_name": "Stingmon",
+      "validated_date": "2026-04-05",
+      "report": "batch-fix-cards",
+      "status": "FIXED",
+      "notes": "Fixed Free trait (attribute_eng). Removed spurious EOT DNA digivolve effect not in card text."
+    },
+    "ST9-09": {
+      "card_name": "Stingmon",
+      "validated_date": "2026-04-05",
+      "report": "batch-fix-cards",
+      "status": "PASS",
+      "notes": "FAITHFUL. Cost reduction + inherited draw both correct."
+    },
+    "BT21-037": {
+      "card_name": "Lighdramon",
+      "validated_date": "2026-04-05",
+      "report": "batch-fix-cards",
+      "status": "FIXED",
+      "notes": "Engine fix: CHANGE_DP modifiers from registry now applied in Permanent.dp. DP +2000 buff now works."
+    },
+    "BT12-028": {
+      "card_name": "Paildramon",
+      "validated_date": "2026-04-05",
+      "report": "batch-fix-cards",
+      "status": "FIXED",
+      "notes": "Fixed: trash not moving to trash_cards, DNA selection overwrite, modifier condition leak, Free trait (attribute_eng)."
+    },
+    "AD1-011": {
+      "card_name": "Paildramon",
+      "validated_date": "2026-04-05",
+      "report": "batch-fix-cards",
+      "status": "IMPLEMENTED",
+      "notes": "New script: Partition, WD battle immunity + DNA target lock, WA digivolve into Imperialdramon -2 cost."
+    },
+    "BT16-028": {
+      "card_name": "Imperialdramon: Dragon Mode",
+      "validated_date": "2026-04-05",
+      "report": "batch-fix-cards",
+      "status": "FIXED",
+      "notes": "Fixed: WD selection chain overwrite. Alt-digi from Paildramon/Dinobeemon, All Turns reactive verified."
+    },
+    "ST9-06": {
+      "card_name": "Imperialdramon Dragon Mode",
+      "validated_date": "2026-04-05",
+      "report": "batch-fix-cards",
+      "status": "FIXED",
+      "notes": "Fixed: SelectSource phase -> SelectTarget for digi-stack card selection."
+    },
+    "BT12-031": {
+      "card_name": "Imperialdramon: Fighter Mode",
+      "validated_date": "2026-04-05",
+      "report": "batch-fix-cards",
+      "status": "FIXED",
+      "notes": "Fixed: DP modifier changed from register_modifier to declarative dp_modifier for continuous effect."
+    },
+    "BT16-027": {
+      "card_name": "Imperialdramon: Fighter Mode",
+      "validated_date": "2026-04-05",
+      "report": "batch-fix-cards",
+      "status": "PASS",
+      "notes": "FAITHFUL. Blast Digivolve, On Play/WD bounce, End of Attack unsuspend + conditional bounce, Ace Overflow."
+    },
+    "BT20-020": {
+      "card_name": "Imperialdramon: Fighter Mode",
+      "validated_date": "2026-04-05",
+      "report": "batch-fix-cards",
+      "status": "FIXED",
+      "notes": "Fixed: Play restriction CANNOT_PLAY_CARD -> CANNOT_PLAY_BY_EFFECT with Digimon/Tamer filter."
+    },
+    "AD1-024": {
+      "card_name": "Imperialdramon: Fighter Mode",
+      "validated_date": "2026-04-05",
+      "report": "batch-fix-cards",
+      "status": "IMPLEMENTED",
+      "notes": "New script: SA+1, Blocker, WD/WA OPT lowest DP bounce, All Turns reactive suspend+unsuspend. Effect-play clause PARTIAL."
+    },
+    "BT16-085": {
+      "card_name": "Davis Motomiya & Ken Ichijoji",
+      "validated_date": "2026-04-05",
+      "report": "batch-fix-cards",
+      "status": "FIXED",
+      "notes": "Fixed: game.opponent(player) -> player.enemy crash in DNA trash path."
+    },
+    "BT17-097": {
+      "card_name": "Return to the Primogenitor",
+      "validated_date": "2026-04-05",
+      "report": "batch-fix-cards",
+      "status": "FIXED",
+      "notes": "Fixed: Free trait checks in main filter and delay condition (attribute_eng not card_traits)."
     }
   }
 }

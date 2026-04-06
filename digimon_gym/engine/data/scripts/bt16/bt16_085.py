@@ -236,7 +236,7 @@ class BT16_085(CardScript):
             # your opponent's Digimon.
             is_dna = ctx.get('is_dna_digivolve', False)
             if is_dna:
-                enemy = game.opponent(player)
+                enemy = player.enemy
                 trashed_total = 0
                 max_trash = 3
                 # Collect opponent Digimon with digivolution cards

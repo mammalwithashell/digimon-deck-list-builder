@@ -328,3 +328,133 @@ def resolve_archetype(
         best_decklist=best_decklist,
         deck_pool_path=deck_pool_path,
     )
+
+
+def _print_table(manifest: ArchetypeManifest) -> None:
+    """Print a human-readable summary table to stdout."""
+    print(f"Archetype: {manifest.archetype_name}", end="")
+    if manifest.input_name != manifest.archetype_name:
+        print(f" (resolved from '{manifest.input_name}')", end="")
+    print()
+    print(
+        f"Meta share: {manifest.meta_share:.1%} | "
+        f"Decklists: {manifest.total_decklists}"
+    )
+    print(
+        f"Coverage: {manifest.frozen_count}/{len(manifest.unique_cards)} frozen "
+        f"({manifest.coverage_pct:.1%}) | "
+        f"{manifest.generated_count} generated | "
+        f"{manifest.missing_count} missing"
+    )
+    print()
+
+    header = f" {'Card ID':<12}| {'Name':<28}| {'Kind':<8}| {'Lv':>3} | {'Script':<10}| {'C#':>3} | {'Freq':>5}"
+    print(header)
+    print("-" * len(header))
+
+    for c in manifest.unique_cards:
+        lv = str(c.level) if c.level else "-"
+        cs = "yes" if c.csharp_path else "no"
+        freq = (
+            f"{c.deck_frequency}/{manifest.total_decklists}"
+            if manifest.total_decklists > 0
+            else "-"
+        )
+        name = c.card_name[:27] if c.card_name else "(unknown)"
+        print(
+            f" {c.card_id:<12}| {name:<28}| {c.card_kind:<8}| {lv:>3} | {c.script_status:<10}| {cs:>3} | {freq:>5}"
+        )
+
+    print()
+    if manifest.deck_pool_path:
+        print(
+            f"Deck pool written: {manifest.deck_pool_path} "
+            f"({len(manifest.unique_cards)} cards)"
+        )
+
+
+def _list_archetypes(min_share: float = 0.0) -> None:
+    """List all archetype names from deck_library.json."""
+    try:
+        with open(_DECK_LIBRARY_PATH, "r", encoding="utf-8") as f:
+            library = json.load(f)
+    except FileNotFoundError:
+        print("Error: deck_library.json not found", file=sys.stderr)
+        sys.exit(1)
+
+    archetypes = library.get("archetypes", {})
+    rows = []
+    for name, data in archetypes.items():
+        share = data.get("stats", {}).get("meta_share", 0.0)
+        n_decks = len(data.get("decklists", []))
+        if share >= min_share:
+            rows.append((share, n_decks, name))
+
+    rows.sort(key=lambda r: -r[0])
+    print(f"{'Meta%':>6}  {'Decks':>5}  Archetype")
+    print(f"{'-----':>6}  {'-----':>5}  ---------")
+    for share, n_decks, name in rows:
+        print(f"{share:>5.1%}  {n_decks:>5}  {name}")
+    print(f"\nTotal: {len(rows)} archetypes")
+
+
+def main() -> None:
+    """CLI entrypoint."""
+    import argparse
+
+    parser = argparse.ArgumentParser(
+        description="Resolve archetype deck lists into enriched card manifests."
+    )
+    parser.add_argument(
+        "archetype",
+        nargs="?",
+        help="Archetype name (alias-resolved automatically)",
+    )
+    parser.add_argument(
+        "--cards",
+        type=str,
+        help="Comma-separated card IDs (overrides archetype lookup)",
+    )
+    parser.add_argument(
+        "--json",
+        action="store_true",
+        dest="json_output",
+        help="Output full manifest as JSON",
+    )
+    parser.add_argument(
+        "--list-archetypes",
+        action="store_true",
+        help="List all archetype names from deck_library.json",
+    )
+    parser.add_argument(
+        "--min-share",
+        type=float,
+        default=0.0,
+        help="Filter archetypes by minimum meta share (with --list-archetypes)",
+    )
+    args = parser.parse_args()
+
+    if args.list_archetypes:
+        _list_archetypes(args.min_share)
+        return
+
+    if not args.archetype and not args.cards:
+        parser.error("Provide an archetype name or --cards")
+
+    cards_override = None
+    if args.cards:
+        cards_override = [c.strip() for c in args.cards.split(",") if c.strip()]
+
+    name = args.archetype or "custom"
+    manifest = resolve_archetype(name, cards_override=cards_override)
+
+    if args.json_output:
+        output = asdict(manifest)
+        json.dump(output, sys.stdout, indent=2, ensure_ascii=False)
+        print()
+    else:
+        _print_table(manifest)
+
+
+if __name__ == "__main__":
+    main()

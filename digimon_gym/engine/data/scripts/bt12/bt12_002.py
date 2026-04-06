@@ -35,12 +35,16 @@ class BT12_002(CardScript):
             if not owner:
                 return False
             # Check that the owner has a green Digimon in play
+            from ....data.enums import CardColor
             has_green_digimon = any(
                 p.is_digimon and p.top_card is not None
-                and 'Green' in [col.name for col in (getattr(p.top_card, 'card_colors', None) or [])]
+                and CardColor.Green in (p.top_card.card_colors or [])
                 for p in owner.battle_area
             )
             if not has_green_digimon:
+                return False
+            # Must have at least 1 card in deck to draw (C#: LibraryCards.Count >= 1)
+            if len(owner.library_cards) < 1:
                 return False
             return True
 

@@ -260,6 +260,7 @@ class EffectHelpersMixin:
                     "played_permanent": perm,
                     "event_permanent": perm,
                     "event_player": target_player,
+                    "is_effect_play": True,
                 },
             )
             self._fire_play_observers(perm, target_player)
@@ -294,6 +295,7 @@ class EffectHelpersMixin:
                 "played_permanent": perm,
                 "event_permanent": perm,
                 "event_player": player,
+                "is_effect_play": True,
             },
         )
         self._fire_play_observers(perm, player)
@@ -378,7 +380,7 @@ class EffectHelpersMixin:
                         )
                     self.execute_effects(
                         EffectTiming.OnEnterFieldAnyone,
-                        {"played_card": card, "played_permanent": played_perm, "event_player": player},
+                        {"played_card": card, "played_permanent": played_perm, "event_player": player, "is_effect_play": True},
                     )
                     self._fire_play_observers(played_perm, player)
                     if card.is_option and not self._option_stays_on_field(card):
@@ -433,7 +435,7 @@ class EffectHelpersMixin:
                     )
                 self.execute_effects(
                     EffectTiming.OnEnterFieldAnyone,
-                    {"played_card": card, "played_permanent": played_perm, "event_player": player},
+                    {"played_card": card, "played_permanent": played_perm, "event_player": player, "is_effect_play": True},
                 )
                 self._fire_play_observers(played_perm, player)
                 if card.is_option and not self._option_stays_on_field(card):
@@ -518,7 +520,7 @@ class EffectHelpersMixin:
                 f"(cost: {cost})")
             player.draw()
             self.execute_effects(EffectTiming.WhenDigivolving,
-                                 {"digivolved_permanent": permanent})
+                                 {"digivolved_permanent": permanent, "is_effect_play": True})
 
         self.request_selection(
             GamePhase.SelectTarget, player, on_select, valid, is_optional,
@@ -887,7 +889,7 @@ class EffectHelpersMixin:
         new_perm = player.battle_area[-1] if player.battle_area else None
 
         self.execute_effects(EffectTiming.WhenDigivolving, {
-            "digivolved_permanent": new_perm, "is_dna_digivolve": True})
+            "digivolved_permanent": new_perm, "is_dna_digivolve": True, "is_effect_play": True})
         self.check_turn_end()
 
     # ─── DigiXros ────────────────────────────────────────────────────

@@ -7,9 +7,9 @@ from ....data.enums import EffectTiming, GamePhase
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
 
-# Source-selection action-ID offset (mirrors game.py SEL_SOURCE_START logic)
-# We reuse SelectSource phase with indices 0..MAX_SOURCES
-_SEL_SOURCE_START = 0
+# Use SEL_HAND_START so indices are in the generic selection range (0..29).
+# We use SelectTarget phase which routes through the generic _decode_selection.
+_SEL_IDX_START = 0
 
 
 class ST9_06(CardScript):
@@ -113,21 +113,21 @@ class ST9_06(CardScript):
                 valid_indices = []
                 for i, cs in enumerate(cur_perm.card_sources):
                     if _is_green_lv4(cs, cur_top) and cs not in selected_cards:
-                        valid_indices.append(_SEL_SOURCE_START + i)
+                        valid_indices.append(_SEL_IDX_START + i)
 
                 if not valid_indices:
                     _play_selected()
                     return
 
                 def on_green_selected(action_id: int):
-                    idx = action_id - _SEL_SOURCE_START
+                    idx = action_id - _SEL_IDX_START
                     inner_perm = card.permanent_of_this_card() if card else None
                     if inner_perm and 0 <= idx < len(inner_perm.card_sources):
                         selected_cards.append(inner_perm.card_sources[idx])
                     _play_selected()
 
                 game.request_selection(
-                    GamePhase.SelectSource,
+                    GamePhase.SelectTarget,
                     player,
                     on_green_selected,
                     valid_indices,
@@ -139,18 +139,18 @@ class ST9_06(CardScript):
             blue_valid = []
             for i, cs in enumerate(perm.card_sources):
                 if _is_blue_lv4(cs, top):
-                    blue_valid.append(_SEL_SOURCE_START + i)
+                    blue_valid.append(_SEL_IDX_START + i)
 
             if blue_valid:
                 def on_blue_selected(action_id: int):
-                    idx = action_id - _SEL_SOURCE_START
+                    idx = action_id - _SEL_IDX_START
                     inner_perm = card.permanent_of_this_card() if card else None
                     if inner_perm and 0 <= idx < len(inner_perm.card_sources):
                         selected_cards.append(inner_perm.card_sources[idx])
                     _select_green()
 
                 game.request_selection(
-                    GamePhase.SelectSource,
+                    GamePhase.SelectTarget,
                     player,
                     on_blue_selected,
                     blue_valid,

@@ -1,49 +1,59 @@
 # Archetype QA: BG Imperial
-Date: 2026-03-17 (faithfulness campaign)
-Total cards: 25
+Date: 2026-04-05
+Total cards: 27 (25 original + 2 AD1 additions)
+Pipeline: batch-fix-cards
 
 ## Summary
-- FAITHFUL: 21
-- FIXED: 0 (this campaign -- all fixes applied in prior passes)
-- DEFERRED: 4 (end-of-turn DNA engine gap, one-shot digivolve hook, per-permanent digi compatibility)
-- ENGINE GAP: 0
+- FAITHFUL: 7
+- IMPLEMENTED: 3 (AD1-011, AD1-024 new scripts; BT12-021/BT12-047 DNA digivolve unblocked)
+- FIXED: 17
+- PARTIAL: 0
+- BLOCKED: 0
 
-## Card-by-Card Verdicts
-| Card ID | Name | Verdict | Notes |
-|---------|------|---------|-------|
-| BT3-002 | DemiVeemon | FAITHFUL | Inherited draw if Jamming |
-| BT3-093 | Davis Motomiya | FAITHFUL | Memory 3, reveal select |
-| BT3-103 | Hidden Potential Discovered! | DEFERRED | One-shot digivolve hook engine gap (main effect) |
-| BT12-002 | DemiVeemon | FAITHFUL | Inherited draw if green Digimon |
-| BT12-021 | Veemon | FAITHFUL | Reveal 3, add Imperialdramon/Free + Davis |
-| BT12-022 | ExVeemon | FAITHFUL | DNA into green +1 memory, inherited Jamming |
-| BT12-028 | Paildramon | FAITHFUL | register_modifier corrected, inherited Imperialdramon check |
-| BT12-031 | Imperialdramon: Fighter Mode | FAITHFUL | register_modifier + value_fn corrected |
-| BT12-047 | Wormmon | FAITHFUL | Reveal 3, add Imperialdramon/Free + Ken |
-| BT12-050 | Stingmon | FAITHFUL | DNA into blue +1 memory, inherited Piercing |
-| BT16-025 | Paildramon | FAITHFUL | CANNOT_UNSUSPEND modifier corrected |
-| BT16-027 | Imperialdramon: Fighter Mode | FAITHFUL | Blast digi, bottom deck, end of attack unsuspend |
-| BT16-028 | Imperialdramon: Dragon Mode | FAITHFUL | Alt-digi, CANNOT_UNSUSPEND, suspend/unsuspend trade |
-| BT16-040 | Wormmon | DEFERRED | Per-permanent digi compatibility (engine gap) |
-| BT16-085 | Davis Motomiya & Ken Ichijoji | FAITHFUL | Security play, play Veemon/Wormmon, DNA trash |
-| BT17-077 | Imperialdramon: Paladin Mode | FAITHFUL | When Attacking unsuspend checks bounce success |
-| BT17-097 | Return to the Primogenitor | FAITHFUL | Digi from hand, delay digi+protection, security play |
-| BT20-020 | Imperialdramon: Fighter Mode | FAITHFUL | Raid, Piercing, play restriction, delete |
-| BT21-037 | Lighdramon | FAITHFUL | DP register_modifier, suspend filter, effect order |
-| EX1-014 | ExVeemon | FAITHFUL | Jamming, inherited conditional Jamming |
-| LM-030 | Green Scramble | FAITHFUL | Delay selection corrected, opponent gate |
-| P-117 | Veemon | FAITHFUL | Digi cost -1 for Free, inherited draw |
-| ST9-05 | Paildramon | FAITHFUL | DNA bounce, unsuspend self |
-| ST9-06 | Imperialdramon Dragon Mode | FAITHFUL | Proper selection for blue and green |
-| ST9-09 | Stingmon | FAITHFUL | Play cost -1 with leak guard |
+## Per-Card Verdicts
+| Card ID | Name | Verdict | Tests | Notes |
+|---------|------|---------|-------|-------|
+| BT12-002 | DemiVeemon | FIXED | 6 | Empty deck guard, CardColor enum |
+| BT3-002 | DemiVeemon | FAITHFUL | 6 | Minor cleanup |
+| BT12-021 | Veemon | FIXED | 11 | Added inherited DNA digivolve, fixed Free trait |
+| P-117 | Veemon | FIXED | 10 | Timing fix, permanent match, Free trait |
+| BT12-047 | Wormmon | FIXED | 8 | Added inherited DNA digivolve, fixed Free trait |
+| BT16-040 | Wormmon | FIXED | 12 | Free trait, trash selection offset |
+| EX1-014 | ExVeemon | FIXED | 6 | Free trait in inherited Jamming |
+| BT12-022 | ExVeemon | FIXED | 8 | Free trait, removed spurious EOT DNA digivolve |
+| BT12-050 | Stingmon | FIXED | 8 | Free trait, removed spurious EOT DNA digivolve |
+| ST9-09 | Stingmon | FAITHFUL | 10 | Correct |
+| BT21-037 | Lighdramon | FIXED | 10 | Engine CHANGE_DP fix |
+| ST9-05 | Paildramon | FAITHFUL | 13 | Correct |
+| BT12-028 | Paildramon | FIXED | 9 | Selection chaining, modifier conditions, Free trait |
+| BT16-025 | Paildramon | FIXED | 13 | Modifier conditions, WA async race |
+| AD1-011 | Paildramon | IMPLEMENTED | 13 | Partition, battle immunity, WA digivolve |
+| BT16-028 | Imperialdramon DM | FIXED | 20 | Selection chain overwrite |
+| ST9-06 | Imperialdramon DM | FIXED | 7 | SelectSource→SelectTarget |
+| BT12-031 | Imperialdramon FM | FIXED | 10 | DP modifier pattern |
+| BT16-027 | Imperialdramon FM | FAITHFUL | 13 | Correct |
+| BT20-020 | Imperialdramon FM | FIXED | 14 | CANNOT_PLAY_BY_EFFECT |
+| AD1-024 | Imperialdramon FM | IMPLEMENTED | 14 | SA+1, Blocker, reactive suspend |
+| BT17-077 | Imperialdramon PM | FAITHFUL | 16 | Correct |
+| BT16-085 | Davis & Ken | FIXED | 18 | game.opponent→player.enemy crash |
+| BT3-093 | Davis Motomiya | FAITHFUL | 16 | Correct |
+| BT3-103 | Hidden Potential | FAITHFUL | 8 | Correct |
+| BT17-097 | Return to Primogenitor | FIXED | 16 | Free trait (attribute_eng) |
+| LM-030 | Green Scramble | FIXED | 16 | Delay condition after engine trash |
 
-## Deferred Items
-| Card ID | Issue | Priority |
-|---------|-------|----------|
-| BT3-103 | One-shot digivolve cost reduction hook (main effect only) | Low |
-| BT12-021 | Inherited end-of-turn DNA digivolve engine gap | Low |
-| BT12-047 | Inherited end-of-turn DNA digivolve engine gap | Low |
-| BT16-040 | Per-permanent digi compatibility check (engine lacks CanPlayCardTargetFrame) | Low |
+## Systemic Issues Found
 
-## Fixes Applied (2026-03-17 Campaign)
-No new fixes required this campaign. All prior fixes (register_modifier arg order, value_fn signatures, timing corrections, selection improvements) were applied in earlier passes and verified faithful.
+### Free trait (attribute_eng vs card_traits)
+`card_traits` returns `type_eng` only; "Free" is in `attribute_eng`. Fixed in 10+ scripts.
+
+### Engine: CHANGE_DP modifiers
+`Permanent.dp` now queries modifier registry for CHANGE_DP (engine fix in permanent.py).
+
+### Spurious EOT DNA effects
+BT12-022 and BT12-050 had incorrect inherited DNA digivolve effects. Removed.
+
+### Selection overwrite
+Multiple `effect_select_opponent_permanent` calls must be chained in callbacks.
+
+## Test Coverage
+27 test files, 308 total test methods, all passing.

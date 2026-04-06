@@ -22,13 +22,15 @@ class P_117(CardScript):
         effects = []
 
         # --- Effect 0: [Your Turn] [Once Per Turn] Reduce digivolution cost by 1
-        # when digivolving into a [Free] trait Digimon, if you have a Tamer ---
+        # when digivolving into a [Free] trait card, if you have a Tamer ---
+        # Uses WhenWouldDigivolve timing (scanned by Player.digivolve()),
+        # NOT BeforePayCost (which is for play cost only).
         effect0 = ICardEffect()
-        effect0.set_timing(EffectTiming.BeforePayCost)
+        effect0.set_timing(EffectTiming.WhenWouldDigivolve)
         effect0.set_effect_name("P-117 Reduce digivolution cost by 1 (Free trait)")
         effect0.set_effect_description(
             "[Your Turn][Once Per Turn] When this Digimon would digivolve into "
-            "a Digimon card with the [Free] trait, if you have a Tamer, reduce "
+            "a card with the [Free] trait, if you have a Tamer, reduce "
             "the digivolution cost by 1."
         )
         effect0.set_max_count_per_turn(1)
@@ -36,26 +38,38 @@ class P_117(CardScript):
         effect0.cost_reduction = 1
 
         def condition0(context: Dict[str, Any]) -> bool:
-            # This is a digivolution cost reduction — the card_source key holds
-            # the card being digivolved INTO. We apply the reduction only when:
-            # 1. This card is on the field as the base being digivolved
-            # 2. It is the owner's turn
-            # 3. The target digivolution card has the [Free] trait
-            # 4. The owner has at least one Tamer in play
-            if card and card.permanent_of_this_card() is None:
+            # This is a digivolution cost reduction. Context keys from
+            # Player.digivolve():
+            #   "permanent" = the base permanent being digivolved
+            #   "card_source" = the card being digivolved INTO
+            #   "player" = the owner
+            #
+            # Conditions (per C# reference):
+            # 1. This card must be on the field (permanent_of_this_card not None)
+            # 2. The digivolving permanent must be THIS card's permanent
+            # 3. It must be the owner's turn
+            # 4. The target card must have the [Free] trait (attribute_eng)
+            # 5. The owner must have at least one Tamer in play
+            perm = card.permanent_of_this_card() if card else None
+            if perm is None:
+                return False
+            # Check that THIS permanent is the one digivolving
+            digivolving_perm = context.get('permanent')
+            if digivolving_perm is not perm:
                 return False
             owner = card.owner if card else None
             if not owner:
                 return False
             if not owner.is_my_turn:
                 return False
-            # Check that the card whose cost is being calculated has [Free] trait
+            # Check that the target card has the [Free] trait
+            # Note: "Free" is in attribute_eng, NOT type_eng (card_traits)
             target = context.get('card_source')
             if target is None:
                 return False
-            if not getattr(target, 'is_digimon', False):
-                return False
-            if not any('Free' in t for t in getattr(target, 'card_traits', [])):
+            target_attrs = (target.c_entity_base.attribute_eng
+                            if target and target.c_entity_base else [])
+            if 'Free' not in target_attrs:
                 return False
             # Check that owner has a Tamer in play
             has_tamer = any(p.is_tamer for p in owner.battle_area)
@@ -64,12 +78,6 @@ class P_117(CardScript):
             return True
 
         effect0.set_can_use_condition(condition0)
-
-        def process0(ctx: Dict[str, Any]):
-            # Cost reduction handled via cost_reduction property
-            pass
-
-        effect0.set_on_process_callback(process0)
         effects.append(effect0)
 
         # --- Inherited Effect: [When Attacking] If this Digimon has 2 or more

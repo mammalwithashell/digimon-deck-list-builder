@@ -16,9 +16,8 @@ class BT12_021(CardScript):
     [Davis Motomiya] in its name among them to your hand. Place the remaining
     cards at the bottom of your deck in any order.
 
-    BLOCKED (inherited): [End of Your Turn] This Digimon and any of your other
-    Digimon may DNA digivolve into a Digimon card in the hand.
-    DNA digivolve from end-of-turn effect is not supported by the engine.
+    [Inherited] [End of Your Turn] This Digimon and any of your other Digimon
+    may DNA digivolve into a Digimon card in the hand.
     """
 
     def get_card_effects(self, card: 'CardSource') -> List['ICardEffect']:
@@ -58,8 +57,9 @@ class BT12_021(CardScript):
                 # Check name contains Imperialdramon
                 if any('Imperialdramon' in n for n in getattr(c, 'card_names', [])):
                     return True
-                # Check [Free] trait
-                if any('Free' in t for t in getattr(c, 'card_traits', [])):
+                # Check [Free] trait (in attribute_eng, not type_eng/card_traits)
+                attrs = c.c_entity_base.attribute_eng if c.c_entity_base else []
+                if 'Free' in attrs:
                     return True
                 return False
 
@@ -84,8 +84,55 @@ class BT12_021(CardScript):
         effect0.set_on_process_callback(process0)
         effects.append(effect0)
 
-        # NOTE: The inherited [End of Your Turn] DNA digivolve effect is BLOCKED.
-        # The engine does not support triggering DNA digivolve as an end-of-turn
-        # inherited effect from a Digimon card. No stub is included per engine rules.
+        # --- Effect 1: [Inherited] [End of Your Turn] DNA digivolve from hand ---
+        effect_inh = ICardEffect()
+        effect_inh.set_timing(EffectTiming.OnEndTurn)
+        effect_inh.set_effect_name("BT12-021 End of turn DNA digivolve (inherited)")
+        effect_inh.set_effect_description(
+            "[End of Your Turn] This Digimon and any of your other Digimon "
+            "may DNA digivolve into a Digimon card in the hand."
+        )
+        effect_inh.is_inherited_effect = True
+        effect_inh.is_optional = True
+
+        def condition_inh(context: Dict[str, Any]) -> bool:
+            if not (card and card.owner and card.owner.is_my_turn):
+                return False
+            perm = card.permanent_of_this_card()
+            if not perm:
+                return False
+            owner = card.owner
+            # Need at least 1 other Digimon on field for DNA material
+            other_digimon = [
+                p for p in owner.battle_area
+                if p is not perm and p.is_digimon
+            ]
+            if not other_digimon:
+                return False
+            # Need at least 1 Digimon card in hand (DNA target)
+            hand_digimon = [
+                c for c in owner.hand_cards
+                if getattr(c, 'is_digimon', False)
+            ]
+            if not hand_digimon:
+                return False
+            return True
+
+        effect_inh.set_can_use_condition(condition_inh)
+
+        def process_inh(ctx: Dict[str, Any]):
+            player = ctx.get('player')
+            game = ctx.get('game')
+            if not (player and game):
+                return
+            game.effect_dna_digivolve_from_hand(
+                player,
+                filter_fn=lambda c: True,
+                is_optional=True,
+                prompt="Select a card from hand to DNA digivolve (end of turn).",
+            )
+
+        effect_inh.set_on_process_callback(process_inh)
+        effects.append(effect_inh)
 
         return effects

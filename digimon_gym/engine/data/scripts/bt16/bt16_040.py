@@ -80,8 +80,15 @@ class BT16_040(CardScript):
             """Level 4 with Insectoid or Free trait."""
             if getattr(c, 'level', None) != 4:
                 return False
+            # Check Insectoid in type_eng (card_traits)
             traits = getattr(c, 'card_traits', []) or []
-            return any('Insectoid' in t or 'Free' in t for t in traits)
+            if any('Insectoid' in t for t in traits):
+                return True
+            # Check Free in attribute_eng (not in card_traits/type_eng)
+            attrs = c.c_entity_base.attribute_eng if c.c_entity_base else []
+            if 'Free' in attrs:
+                return True
+            return False
 
         def _make_trash_digivolve_process():
             def process(ctx: Dict[str, Any]):
@@ -107,8 +114,9 @@ class BT16_040(CardScript):
                     if not valid_indices:
                         return
 
-                    def on_trash_selected(idx: int):
-                        # _decode_trash_selection already subtracts SEL_TRASH_START
+                    def on_trash_selected(action_id_raw: int):
+                        # Callback receives raw action_id; subtract offset
+                        idx = action_id_raw - _SEL_TRASH_START
                         if not (0 <= idx < len(player.trash_cards)):
                             return
                         chosen_card = player.trash_cards[idx]

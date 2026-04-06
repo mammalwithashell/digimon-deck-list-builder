@@ -96,15 +96,19 @@ class Permanent:
         else:
             temp_modifier = sum(self._dp_modifiers)
         computed = max(0, base + modifier + aura_modifier + temp_modifier)
-        # Apply DP floor if any (e.g. "DP cannot be reduced below X")
+        # Apply CHANGE_DP modifiers from the modifier registry
+        # (registered by card scripts via game.register_modifier)
         owner = self.owner
         if owner and hasattr(owner, 'game') and owner.game:
             from ..interfaces.modifiers import ModifierType
+            computed = owner.game.modifiers.get_int_modifier(
+                self, ModifierType.CHANGE_DP, computed)
+            # Apply DP floor if any (e.g. "DP cannot be reduced below X")
             floor = owner.game.modifiers.get_int_modifier(
                 self, ModifierType.DP_FLOOR, 0)
             if floor > 0:
                 computed = max(floor, computed)
-        return computed
+        return max(0, computed)
 
     def _get_aura_dp_modifier(self) -> int:
         """Sum DP modifiers from aura effects on other friendly permanents.
