@@ -24,43 +24,41 @@ You are implementing all card effects for archetype **$ARGUMENTS** in the Digimo
 
 ## Phase 1: Resolve Card Pool
 
-### 1a. Parse input
+### 1a. Resolve card pool and build manifest
 
-If `$ARGUMENTS` contains `--cards`, use the provided comma-separated card IDs.
-Otherwise, look up the archetype name in `deck_library.json`:
+Use the `resolve_deck` tool to resolve the full card pool with enriched metadata:
 
 ```python
-import json
-from pathlib import Path
-from collections import Counter
+import sys; sys.path.insert(0, '.')
+from tools.resolve_deck import resolve_archetype
 
-lib = json.loads(Path('digimon_gym/engine/data/deck_library.json').read_text())
-archetype = lib['archetypes'].get('ARCHETYPE_NAME', {})
-
-all_cards = set()
-for dl in archetype.get('decklists', []):
-    all_cards.update(json.loads(dl['decklist']))
-
-print(f'Unique cards: {len(all_cards)}')
-for card_id in sorted(all_cards):
-    print(f'  {card_id}')
+# If $ARGUMENTS contains --cards, pass as override:
+# manifest = resolve_archetype('ARCHETYPE_NAME', cards_override=['CARD1', 'CARD2', ...])
+# Otherwise:
+manifest = resolve_archetype('ARCHETYPE_NAME')
 ```
+
+The `manifest` object provides:
+- `manifest.unique_cards` — list of `CardEntry` objects, each with:
+  - `card_id`, `card_name`, `card_kind`, `level`, `colors`, `traits`, `dp`, `play_cost`, `evo_costs`
+  - `effect_text`, `inherited_text`, `security_text`
+  - `script_status` — `"frozen"` (QA-only), `"generated"` (implement from generated), `"missing"` (implement from scratch)
+  - `script_path` — relative path to existing script, or `None`
+  - `csharp_path` — relative path to C# reference, or `None`
+  - `deck_frequency` — how many decklists include this card
+- `manifest.coverage_pct`, `manifest.frozen_count`, `manifest.generated_count`, `manifest.missing_count`
+- `manifest.missing_cards` — card IDs with no script at all
+- `manifest.best_decklist` — single best deck list (for smoke test in Phase 6)
+- `manifest.meta_share`, `manifest.total_decklists`
+- `deck_pool.json` is auto-written to `qa/archetype-qa/{slug}/`
 
 ### 1b. Build card manifest
 
-For each card ID, determine:
-
-1. **Existing script status**: Check `_frozen_manifest.json` for a frozen entry. If present → QA-only. If only in `generated/` → Implement (use generated as starting point). If missing → Implement from scratch.
-
-2. **C# source availability**: Search `DCGO/Assets/Scripts/CardEffect/` for `{CARD_ID}.cs`. The directory structure is `{SET}/{COLOR}/{CARD_ID}.cs`. Use glob/find to locate since color subdirectory varies.
-
-3. **Card metadata**: Fetch from DigimonCard.io API or local `cards.json`:
-   ```
-   https://digimoncard.io/index.php/api-public/search?card=CARD_ID
-   ```
-   Extract: name, kind, level, colors, traits, DP, play cost, effect text, inherited text, security text.
-
-4. **Complexity check**: Cards with 4+ distinct effects, DNA digivolve, or listed in `known_complex_cards.json` are categorized as Complex.
+**This is handled by `resolve_archetype()` above.** Each `CardEntry` in `manifest.unique_cards` already contains:
+1. **Script status**: `card.script_status` — `"frozen"` (→ QA-only), `"generated"` (→ implement from generated), `"missing"` (→ implement from scratch)
+2. **C# source**: `card.csharp_path` — path to C# reference, or `None`
+3. **Card metadata**: all fields populated from `cards.json`
+4. **Complexity check**: Cards with 4+ distinct effects, DNA digivolve, or listed in `known_complex_cards.json` are categorized as Complex (done in Phase 1c below)
 
 ### 1c. Categorize cards
 
@@ -607,12 +605,8 @@ Skip if `--skip-smoke-test` flag was passed.
 Pick a deck list from the archetype and run 50 mirror-match episodes:
 
 ```python
-import json
-from pathlib import Path
-
-lib = json.loads(Path('digimon_gym/engine/data/deck_library.json').read_text())
-archetype = lib['archetypes']['ARCHETYPE_NAME']
-deck = json.loads(archetype['decklists'][0]['decklist'])
+# manifest.best_decklist is already populated from Phase 1
+deck = manifest.best_decklist
 
 # Run via engine directly
 from digimon_gym.engine.game import HeadlessGame
