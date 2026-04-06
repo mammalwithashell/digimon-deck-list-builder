@@ -44,36 +44,42 @@ Process an entire archetype's card scripts through a test-driven faithfulness pi
 
 ## Phase 1: Resolve Card Pool
 
-### 1a. Parse input
+### 1a. Resolve card pool and build manifest
 
-If `$ARGUMENTS` contains `--cards`, use the provided comma-separated card IDs.
-Otherwise, look up the archetype name in `deck_library.json`:
+Use the `resolve_deck` tool to resolve the full card pool with enriched metadata:
 
 ```python
-import json
-from pathlib import Path
+import sys; sys.path.insert(0, '.')
+from tools.resolve_deck import resolve_archetype
 
-lib = json.loads(Path('digimon_gym/engine/data/deck_library.json').read_text())
-archetype = lib['archetypes'].get('ARCHETYPE_NAME', {})
-
-all_cards = set()
-for dl in archetype.get('decklists', []):
-    all_cards.update(json.loads(dl['decklist']))
-
-print(f'Unique cards: {len(all_cards)}')
-for card_id in sorted(all_cards):
-    print(f'  {card_id}')
+# If $ARGUMENTS contains --cards, pass as override:
+# manifest = resolve_archetype('ARCHETYPE_NAME', cards_override=['CARD1', 'CARD2', ...])
+# Otherwise:
+manifest = resolve_archetype('ARCHETYPE_NAME')
 ```
 
-### 1b. Categorize cards by script status
+The `manifest` object provides:
+- `manifest.unique_cards` — list of `CardEntry` objects, each with:
+  - `card_id`, `card_name`, `card_kind`, `level`, `colors`, `traits`, `dp`, `play_cost`, `evo_costs`
+  - `effect_text`, `inherited_text`, `security_text`
+  - `script_status` — `"frozen"`, `"generated"`, or `"missing"`
+  - `script_path` — relative path to existing script, or `None`
+  - `csharp_path` — relative path to C# reference, or `None`
+  - `deck_frequency` — how many decklists include this card
+- `manifest.coverage_pct`, `manifest.frozen_count`, `manifest.generated_count`, `manifest.missing_count`
+- `manifest.missing_cards` — card IDs with no script at all
+- `manifest.best_decklist` — single best deck list
+- `manifest.meta_share`, `manifest.total_decklists`
+- `deck_pool.json` is auto-written to `qa/archetype-qa/{slug}/`
 
-For each card ID, check whether a Python script exists at `digimon_gym/engine/data/scripts/{set_lower}/{set_lower}_{nnn}.py`.
+### 1b. Filter to processable cards
 
-Categorize each card:
-- **FIX**: Script exists — will be reviewed and fixed for faithfulness
-- **IMPLEMENT**: No script exists — will be implemented from scratch
+Cards with `script_status == "missing"` go on a skip list — report to user but do not process (no script to fix). Only cards with `"frozen"` or `"generated"` scripts are processed.
 
-Both categories are processed through the same test-first pipeline. The agent prompt adapts based on category (see Phase 4B).
+```python
+processable = [c for c in manifest.unique_cards if c.script_status != "missing"]
+skipped = [c for c in manifest.unique_cards if c.script_status == "missing"]
+```
 
 ### 1c. Build cross-archetype reverse map
 
