@@ -340,6 +340,44 @@ Output columns: archetype name, meta_share, number of decklists, unique card cou
 
 ---
 
+### 6.3 Resolve Deck
+
+**Module:** `tools/resolve_deck.py`
+
+Resolves an archetype name into an enriched card manifest. Handles alias resolution, deck library lookup, frozen manifest checks, C# script discovery, and card metadata loading. Auto-writes `qa/archetype-qa/{slug}/deck_pool.json`.
+
+**Primary consumer:** skill agents (`/implement-archetype`, `/batch-fix-cards`, `/review-archetype`).
+
+**As a library:**
+```python
+from tools.resolve_deck import resolve_archetype, resolve_cards
+
+# Full archetype resolution
+manifest = resolve_archetype("Royal Knights")
+print(manifest.coverage_pct, manifest.frozen_count, manifest.missing_count)
+for card in manifest.unique_cards:
+    print(card.card_id, card.script_status, card.csharp_path)
+
+# Ad-hoc card enrichment (no archetype context)
+cards = resolve_cards(["BT24-017", "BT24-018"])
+```
+
+**As a CLI:**
+```bash
+python tools/resolve_deck.py "Royal Knights"                # Human-readable table
+python tools/resolve_deck.py "Royal Knights" --json         # Full JSON manifest
+python tools/resolve_deck.py --cards BT24-017,BT24-018     # Explicit card list
+python tools/resolve_deck.py --list-archetypes              # List all archetypes
+python tools/resolve_deck.py --list-archetypes --min-share 0.01  # Filter by meta share
+```
+
+**Return types:**
+- `resolve_archetype()` → `ArchetypeManifest` (archetype stats + list of `CardEntry`)
+- `resolve_cards()` → `list[CardEntry]` (enriched cards without archetype context)
+- `CardEntry` fields: `card_id`, `card_name`, `card_kind`, `level`, `colors`, `traits`, `dp`, `play_cost`, `evo_costs`, `effect_text`, `inherited_text`, `security_text`, `script_status`, `script_path`, `csharp_path`, `deck_frequency`
+
+---
+
 ## 7. Model Export & Build
 
 ### 7.1 ONNX Export
