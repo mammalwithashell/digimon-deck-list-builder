@@ -57,6 +57,8 @@ class EX8_050(CardScript):
             game = ctx.get('game')
             if not (player and game):
                 return
+            from ....data.enums import GamePhase
+            from ....game.constants import SEL_REVEALED_START
 
             def play_filter(c):
                 if not getattr(c, 'is_digimon', False):
@@ -70,42 +72,61 @@ class EX8_050(CardScript):
                     cost = getattr(c, 'play_cost', None)
                 return cost is not None and cost <= 5
 
-            def on_selected(selected, remaining):
-                # Play the selected card for free
-                played_perm = player.play_card_from_source(selected, pay_cost=False)
-                game.execute_effects(
-                    EffectTiming.OnEnterFieldAnyone,
-                    {"played_card": selected, "played_permanent": played_perm,
-                     "event_player": player})
-                # Trash the rest
-                for c in remaining:
-                    player.trash_cards.append(c)
+            # Reveal top 3
+            revealed = player.library_cards[:3]
+            if not revealed:
+                return
 
-            def on_decline_reveal():
-                # Trash all revealed
-                revealed = game.revealed_cards
+            game.revealed_cards = list(revealed)
+
+            valid = []
+            for i, c in enumerate(revealed):
+                if play_filter(c):
+                    valid.append(SEL_REVEALED_START + i)
+
+            if not valid:
+                # No valid plays: trash all revealed
+                for c in revealed:
+                    player.library_cards.remove(c)
+                    player.trash_cards.append(c)
+                game.revealed_cards = []
+                return
+
+            def on_select(action_id):
+                idx = action_id - SEL_REVEALED_START
+                if 0 <= idx < len(revealed):
+                    selected = revealed[idx]
+                    remaining = [c for c in revealed if c is not selected]
+                    for c in revealed:
+                        if c in player.library_cards:
+                            player.library_cards.remove(c)
+                    # Play selected card for free
+                    played_perm = player.play_card_from_source(selected, pay_cost=False)
+                    game.logger.log(f"[Effect] {player.player_name} played "
+                                    f"{game._card_ref(selected)} from revealed cards")
+                    game.execute_effects(
+                        EffectTiming.OnEnterFieldAnyone,
+                        {"played_card": selected, "played_permanent": played_perm,
+                         "event_player": player, "is_effect_play": True})
+                    game._fire_play_observers(played_perm, player)
+                    # Trash the rest
+                    for c in remaining:
+                        player.trash_cards.append(c)
+                game.revealed_cards = []
+
+            def on_decline():
+                # Trash all revealed cards (card text: "Trash the rest")
                 for c in revealed:
                     if c in player.library_cards:
                         player.library_cards.remove(c)
                     player.trash_cards.append(c)
                 game.revealed_cards = []
 
-            # Reveal top 3
-            revealed = player.library_cards[:3]
-            if not revealed:
-                return
-
-            valid_plays = [c for c in revealed if play_filter(c)]
-            if valid_plays:
-                game.effect_reveal_and_select(
-                    player, 3, play_filter, on_selected,
-                    is_optional=True,
-                    prompt="Select 1 [Mineral]/[Rock] Digimon (cost 5-) to play free. Rest trashed.")
-            else:
-                # No valid plays: trash all revealed
-                for c in revealed:
-                    player.library_cards.remove(c)
-                    player.trash_cards.append(c)
+            game.request_selection(
+                GamePhase.SelectReveal, player, on_select, valid,
+                is_optional=True,
+                prompt="Select 1 [Mineral]/[Rock] Digimon (cost 5-) to play free. Rest trashed.",
+                on_decline=on_decline)
 
         effect1.set_on_process_callback(process1)
         effects.append(effect1)
@@ -123,6 +144,7 @@ class EX8_050(CardScript):
         effect2.is_optional = True
         effect2.set_max_count_per_turn(1)
         effect2.set_hash_string("Redirect_EX8_050")
+        effect2._is_when_attacked_observer = True
 
         def condition2(context: Dict[str, Any]) -> bool:
             if card and card.permanent_of_this_card() is None:
@@ -135,9 +157,12 @@ class EX8_050(CardScript):
         effect2.set_can_use_condition(condition2)
 
         def process2(ctx: Dict[str, Any]):
-            """Redirect attack — not yet fully in engine (SwitchDefender)."""
-            # descriptive-tagged: redirect_attack (engine partial)
-            pass
+            """Redirect attack to this Digimon via game.redirect_attack."""
+            perm = ctx.get('permanent')
+            game = ctx.get('game')
+            if not (perm and game):
+                return
+            game.redirect_attack(perm)
 
         effect2.set_on_process_callback(process2)
         effects.append(effect2)

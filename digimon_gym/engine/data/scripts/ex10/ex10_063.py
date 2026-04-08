@@ -34,21 +34,7 @@ class EX10_063(CardScript):
             owner = card.owner if card else None
             if not owner or not owner.is_my_turn:
                 return False
-            # Worthwhile if there is a Close in hand or a Sunarizamon in trash when no Digimon
-            has_close = any(
-                any('Close' in n for n in getattr(c, 'card_names', []))
-                for c in owner.hand_cards
-            )
-            if has_close:
-                return True
-            has_digimon = any(p.is_digimon for p in owner.battle_area)
-            if not has_digimon:
-                has_suna = any(
-                    any('Sunarizamon' in n for n in getattr(c, 'card_names', []))
-                    for c in owner.trash_cards
-                )
-                return has_suna
-            return False
+            return True
 
         effect0.set_can_use_condition(condition0)
 

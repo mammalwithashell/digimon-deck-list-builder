@@ -204,7 +204,14 @@ class CombatMixin:
                 return False
             result = defender_player.security_attack(attacker)
             # Fire OnSecurityCheck per check, AFTER security effects (DCGO deferred timing)
-            self.execute_effects(EffectTiming.OnSecurityCheck, {"attacker": attacker})
+            # Include security card info so field effects can react to face-up checks
+            sec_check_ctx = {
+                "attacker": attacker,
+                "event_player": self.turn_player,
+                "security_card": getattr(defender_player, '_last_security_card', None),
+                "security_was_face_up": getattr(defender_player, '_last_security_was_face_up', False),
+            }
+            self.execute_effects(EffectTiming.OnSecurityCheck, sec_check_ctx)
             if result == AttackResolution.AttackerDeleted:
                 self.turn_player.delete_permanent(attacker, is_battle=True)
                 return False

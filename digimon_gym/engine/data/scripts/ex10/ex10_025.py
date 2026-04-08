@@ -48,43 +48,76 @@ class EX10_025(CardScript):
             def target_filter(p):
                 return p.is_digimon and (p.has_trait('Mineral') or p.has_trait('Rock'))
 
-            def on_target(target_perm):
-                # Player selects up to 2 Mineral/Rock cards from trash
-                placed_holder = [0]
+            if not any(target_filter(p) for p in player.battle_area):
+                return
 
-                def _place_one():
-                    if placed_holder[0] >= 2:
-                        return
-                    eligible = [c for c in player.trash_cards if source_filter(c)]
-                    if not eligible:
-                        return
+            # C# order: select up to 2 Mineral/Rock cards from trash FIRST,
+            # then select the permanent target to place them under.
+            selected_cards_holder = []
 
-                    from ....data.enums import GamePhase
-                    _SEL_TRASH_START = 130
-                    valid_trash = []
-                    for i, c in enumerate(player.trash_cards):
-                        if source_filter(c):
-                            valid_trash.append(_SEL_TRASH_START + i)
-                    if not valid_trash:
-                        return
+            def _select_trash_card():
+                if len(selected_cards_holder) >= 2:
+                    # Done selecting trash cards, move to permanent selection
+                    _select_permanent()
+                    return
 
-                    def on_trash_selected(idx):
-                        if idx < len(player.trash_cards):
-                            selected = player.trash_cards[idx]
-                            player.trash_cards.remove(selected)
-                            target_perm.add_card_source_bottom(selected)
-                            placed_holder[0] += 1
-                            _place_one()
+                from ....data.enums import GamePhase
+                from ....game.constants import SEL_TRASH_START
 
-                    game.request_selection(
-                        GamePhase.SelectTrash, player, on_trash_selected,
-                        valid_trash, is_optional=True,
-                        prompt=f"Select a [Mineral] or [Rock] card from trash ({placed_holder[0]+1}/2).")
+                eligible = [c for c in player.trash_cards if source_filter(c)]
+                if not eligible:
+                    if selected_cards_holder:
+                        _select_permanent()
+                    return
 
-                _place_one()
+                valid_trash = []
+                for i, c in enumerate(player.trash_cards):
+                    if source_filter(c):
+                        valid_trash.append(SEL_TRASH_START + i)
+                if not valid_trash:
+                    if selected_cards_holder:
+                        _select_permanent()
+                    return
 
-            game.effect_select_own_permanent(
-                player, on_target, filter_fn=target_filter, is_optional=True)
+                max_count = min(2, len(eligible))
+
+                def on_trash_selected(action_id):
+                    idx = action_id - SEL_TRASH_START
+                    if 0 <= idx < len(player.trash_cards):
+                        selected = player.trash_cards[idx]
+                        player.trash_cards.remove(selected)
+                        selected_cards_holder.append(selected)
+                        _select_trash_card()
+
+                def on_trash_declined():
+                    # Player declined further selection
+                    if selected_cards_holder:
+                        _select_permanent()
+
+                game.request_selection(
+                    GamePhase.SelectTrash, player, on_trash_selected,
+                    valid_trash, is_optional=True,
+                    prompt=f"Select a [Mineral] or [Rock] card from trash ({len(selected_cards_holder)+1}/{max_count}).",
+                    on_decline=on_trash_declined)
+
+            def _select_permanent():
+                if not selected_cards_holder:
+                    return
+
+                def on_target(target_perm):
+                    for sc in selected_cards_holder:
+                        target_perm.add_card_source_bottom(sc)
+
+                def on_perm_declined():
+                    # Player declined: return selected cards to trash
+                    for sc in selected_cards_holder:
+                        player.trash_cards.append(sc)
+                    selected_cards_holder.clear()
+
+                game.effect_select_own_permanent(
+                    player, on_target, filter_fn=target_filter, is_optional=True)
+
+            _select_trash_card()
 
         effect0.set_on_process_callback(process0)
         effects.append(effect0)
@@ -106,11 +139,15 @@ class EX10_025(CardScript):
             trashed_cards = context.get('trashed_cards', [])
             if card not in trashed_cards:
                 return False
-            # Check the permanent has [Mineral] or [Rock] trait
-            permanent = context.get('permanent')
-            if permanent is None:
+            # Check the parent permanent has [Mineral] or [Rock] trait
+            # Use event_permanent (the permanent from which cards were trashed)
+            event_perm = context.get('event_permanent')
+            if event_perm is None:
+                # Fall back to permanent for direct-invoke contexts
+                event_perm = context.get('permanent')
+            if event_perm is None:
                 return False
-            if not (permanent.has_trait('Mineral') or permanent.has_trait('Rock')):
+            if not (event_perm.has_trait('Mineral') or event_perm.has_trait('Rock')):
                 return False
             return True
 
@@ -123,7 +160,7 @@ class EX10_025(CardScript):
                 return
 
             def target_filter(p):
-                return p.is_digimon and getattr(p.top_card, 'get_cost_itself', 0) <= 4
+                return p.is_digimon and p.top_card.get_cost_itself <= 4
 
             def on_delete(target_perm):
                 enemy = player.enemy if player else None

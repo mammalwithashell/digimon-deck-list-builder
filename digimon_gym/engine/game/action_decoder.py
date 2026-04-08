@@ -283,6 +283,7 @@ class ActionDecoderMixin:
             if on_decline:
                 on_decline()
             self._recover_from_stale_selection()
+            self._maybe_resume_combat_after_wa_selection()
             self._check_deferred_turn_end()
             return
 
@@ -297,6 +298,7 @@ class ActionDecoderMixin:
                 self.active_player = None
                 callback(action_id)
                 self._recover_from_stale_selection()
+                self._maybe_resume_combat_after_wa_selection()
                 self._check_deferred_turn_end()
 
     def _decode_source_selection(self, action_id: int):
@@ -314,6 +316,7 @@ class ActionDecoderMixin:
             if on_decline:
                 on_decline()
             self._recover_from_stale_selection()
+            self._maybe_resume_combat_after_wa_selection()
             self._check_deferred_turn_end()
             return
 
@@ -333,6 +336,7 @@ class ActionDecoderMixin:
                     self.active_player = None
                     callback(action_id)
                     self._recover_from_stale_selection()
+                    self._maybe_resume_combat_after_wa_selection()
                     self._check_deferred_turn_end()
 
     def _execute_training(self, perm: "Permanent", owner: "Player"):

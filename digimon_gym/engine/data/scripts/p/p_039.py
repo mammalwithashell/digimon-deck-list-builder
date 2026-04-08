@@ -87,4 +87,42 @@ class P_039(CardScript):
         effect2.set_on_process_callback(process2)
         effects.append(effect2)
 
+        # --- Effect 3: [Security] Place this card in the battle area ---
+        # C# ref: CardEffectFactory.PlaceSelfDelayOptionSecurityEffect(card)
+        effect3 = ICardEffect()
+        effect3.set_timing(EffectTiming.SecuritySkill)
+        effect3.set_effect_name("P-039 Security: Place in battle area")
+        effect3.set_effect_description(
+            "[Security] Place this card in the battle area."
+        )
+        effect3.is_security_effect = True
+
+        def condition3(context: Dict[str, Any]) -> bool:
+            return True
+        effect3.set_can_use_condition(condition3)
+
+        def process3(ctx: Dict[str, Any]):
+            """Place this card in the battle area from security."""
+            player = ctx.get('player')
+            game = ctx.get('game')
+            if not (player and game):
+                return
+            if card is None:
+                return
+            # Mark as security_played so the engine won't trash it after the
+            # security check resolves.
+            card._security_played = True
+
+            # Create a permanent for the option and place it in the battle area.
+            from ....core.permanent import Permanent
+            FIELD_SLOTS = 15
+            if len(player.battle_area) >= FIELD_SLOTS:
+                return
+            perm = Permanent([card])
+            perm.turn_played = game.turn_count
+            perm._owner_game = game
+            player.battle_area.append(perm)
+        effect3.set_on_process_callback(process3)
+        effects.append(effect3)
+
         return effects

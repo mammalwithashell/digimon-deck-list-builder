@@ -27,9 +27,15 @@ class BT9_103(CardScript):
             if not enemy:
                 return
 
-            # Part 1: Opponent's Digimon with play cost 7 or less can't attack players
-            # until end of opponent's turn.  Apply CANNOT_ATTACK to each qualifying
-            # permanent currently on the field.
+            # Part 1: Opponent's Digimon with play cost 7 or less can't attack PLAYERS
+            # (they CAN still attack other Digimon) until end of opponent's turn.
+            # C# ref: GainCanNotAttackPlayerEffect with attackerCondition + defenderCondition.
+            # Must use CANNOT_ATTACK_PLAYER, NOT CANNOT_ATTACK.
+            #
+            # The condition must match only the specific target permanent —
+            # ModifierRegistry.has_modifier iterates all entries of a type and
+            # calls is_active(query_target); without an identity-filtering
+            # condition, the modifier would apply to every permanent.
             for perm in list(enemy.battle_area):
                 if not perm.is_digimon:
                     continue
@@ -39,10 +45,11 @@ class BT9_103(CardScript):
                 has_play_cost = getattr(top, 'has_play_cost', True)
                 play_cost = top.get_cost_itself
                 if has_play_cost and play_cost <= 7:
+                    target_perm = perm
                     game.register_modifier(
-                        perm,
-                        ModifierType.CANNOT_ATTACK,
-                        value_fn=lambda: True,
+                        target_perm,
+                        ModifierType.CANNOT_ATTACK_PLAYER,
+                        condition=(lambda p=target_perm: (lambda target, ctx: target is p))(),
                         expiry='end_of_opponent_turn',
                     )
 

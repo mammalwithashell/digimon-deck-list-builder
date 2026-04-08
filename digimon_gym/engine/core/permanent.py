@@ -518,25 +518,175 @@ class Permanent:
         # Caller is responsible for putting removed cards in trash
         return removed
 
-    def trash_digivolution_cards(self, count: int, from_top: bool = True) -> List['CardSource']:
+    def trash_digivolution_cards(
+        self, count: int, from_top: bool = True, card_effect: 'ICardEffect' = None,
+    ) -> List['CardSource']:
         """Trash N digivolution cards (from under the top card).
-        Returns the trashed cards."""
-        trashed = []
+
+        Follows DCGO ITrashDigivolutionCards.TrashDigivolutionCards() flow:
+        1. Pre-checks (immunity, can-not-be-affected)
+        2. Identify targets (don't remove yet)
+        3. Fire WhenWouldDigivolutionCardDiscarded cut-in (cards still in permanent)
+        4. Filter out cards saved by cut-in effects (_will_be_removed=False)
+        5. Fire OnDigivolutionCardDiscarded (cards still in permanent)
+        6. ACE Overflow on trashed cards
+        7. Actually remove cards from card_sources
+
+        Returns the trashed cards.
+        """
+        # --- Pre-checks (DCGO: ImmuneFromStackTrashing, CanNotBeAffected) ---
+        if card_effect and self._owner_game and hasattr(self._owner_game, 'modifiers'):
+            from ..interfaces.modifiers import ModifierType
+            if self._owner_game.modifiers.has_modifier(
+                self, ModifierType.IMMUNE_FROM_STACK_TRASHING
+            ):
+                return []
+        if not self.top_card:
+            return []
+        if len(self.card_sources) <= 1:
+            return []
+
+        # --- Identify target cards without removing them ---
+        targets = []
+        taken = set()
+        digivolution_cards = self.card_sources[:-1]  # everything except top card
         for _ in range(count):
-            if len(self.card_sources) <= 1:
-                break
             if from_top:
-                # Trash from just under top (index -2, -3, etc.)
-                idx = len(self.card_sources) - 2
+                # Pick highest-index card not yet taken
+                for i in range(len(digivolution_cards) - 1, -1, -1):
+                    if i not in taken:
+                        targets.append(digivolution_cards[i])
+                        taken.add(i)
+                        break
             else:
-                # Trash from bottom
-                idx = 0
-            if idx >= 0:
-                card = self.card_sources.pop(idx)
-                trashed.append(card)
-        if trashed:
-            self._fire_timing(EffectTiming.OnDigivolutionCardDiscarded,
-                              {"permanent": self, "trashed_cards": trashed})
+                # Pick lowest-index card not yet taken
+                for i in range(len(digivolution_cards)):
+                    if i not in taken:
+                        targets.append(digivolution_cards[i])
+                        taken.add(i)
+                        break
+            if len(taken) >= len(digivolution_cards):
+                break
+
+        if not targets:
+            return []
+
+        # --- Mark for removal (DCGO: willBeRemoveSources = true) ---
+        for cs in targets:
+            cs._will_be_removed = True
+
+        # --- Fire WhenWouldDigivolutionCardDiscarded cut-in ---
+        # Cards are still in card_sources so interrupters (e.g. BT10-084)
+        # can inspect the permanent and set _will_be_removed = False to save cards.
+        self._fire_timing(EffectTiming.WhenWouldDigivolutionCardDiscarded, {
+            "permanent": self,
+            "trashed_cards": targets,
+            "card_effect": card_effect,
+        })
+
+        # --- Filter: only keep cards still marked for removal ---
+        surviving = [cs for cs in targets if getattr(cs, '_will_be_removed', True)]
+
+        # --- Clean up flags ---
+        for cs in targets:
+            cs._will_be_removed = False
+
+        if not surviving:
+            return []
+
+        # --- Fire OnDigivolutionCardDiscarded BEFORE removal ---
+        # Cards are still in card_sources so inherited effects are found
+        # by the normal effect-gathering loop (no workaround needed).
+        self._fire_timing(EffectTiming.OnDigivolutionCardDiscarded, {
+            "permanent": self,
+            "trashed_cards": surviving,
+            "card_effect": card_effect,
+        })
+
+        # --- ACE Overflow (DCGO: AceOverflowClass.Overflow) ---
+        if self._owner_game:
+            owner = self.top_card.owner if self.top_card else None
+            if owner and hasattr(owner, '_apply_ace_overflow'):
+                owner._apply_ace_overflow(surviving)
+
+        # --- Actually remove cards from card_sources ---
+        trashed = []
+        for cs in surviving:
+            if cs in self.card_sources and cs is not self.top_card:
+                self.card_sources.remove(cs)
+                trashed.append(cs)
+
+        return trashed
+
+    def trash_specific_digivolution_cards(
+        self, cards: List['CardSource'], card_effect: 'ICardEffect' = None,
+    ) -> List['CardSource']:
+        """Trash specific pre-selected digivolution cards from this permanent.
+
+        Matches DCGO ``ITrashDigivolutionCards`` which receives an already-selected
+        card list (from ``SelectTrashDigivolutionCards`` or Digi-Burst selection).
+        Same flow as ``trash_digivolution_cards``: pre-checks → cut-in →
+        OnDigivolutionCardDiscarded → ACE overflow → remove.
+
+        Returns the actually trashed cards (may be fewer if cut-in saved some).
+        """
+        if not cards:
+            return []
+        # --- Pre-checks ---
+        if card_effect and self._owner_game and hasattr(self._owner_game, 'modifiers'):
+            from ..interfaces.modifiers import ModifierType
+            if self._owner_game.modifiers.has_modifier(
+                self, ModifierType.IMMUNE_FROM_STACK_TRASHING
+            ):
+                return []
+        if not self.top_card:
+            return []
+
+        # Validate that all cards are actually digivolution cards of this permanent
+        targets = [cs for cs in cards
+                   if cs in self.card_sources and cs is not self.top_card]
+        if not targets:
+            return []
+
+        # --- Mark for removal ---
+        for cs in targets:
+            cs._will_be_removed = True
+
+        # --- Fire WhenWouldDigivolutionCardDiscarded cut-in ---
+        self._fire_timing(EffectTiming.WhenWouldDigivolutionCardDiscarded, {
+            "permanent": self,
+            "trashed_cards": targets,
+            "card_effect": card_effect,
+        })
+
+        # --- Filter saved cards ---
+        surviving = [cs for cs in targets if getattr(cs, '_will_be_removed', True)]
+        for cs in targets:
+            cs._will_be_removed = False
+
+        if not surviving:
+            return []
+
+        # --- Fire OnDigivolutionCardDiscarded BEFORE removal ---
+        self._fire_timing(EffectTiming.OnDigivolutionCardDiscarded, {
+            "permanent": self,
+            "trashed_cards": surviving,
+            "card_effect": card_effect,
+        })
+
+        # --- ACE Overflow ---
+        if self._owner_game:
+            owner = self.top_card.owner if self.top_card else None
+            if owner and hasattr(owner, '_apply_ace_overflow'):
+                owner._apply_ace_overflow(surviving)
+
+        # --- Remove ---
+        trashed = []
+        for cs in surviving:
+            if cs in self.card_sources and cs is not self.top_card:
+                self.card_sources.remove(cs)
+                trashed.append(cs)
+
         return trashed
 
     def contains_card_name(self, name: str) -> bool:

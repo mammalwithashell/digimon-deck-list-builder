@@ -3,7 +3,7 @@ from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
 from ....interfaces.modifiers import ModifierType, ModifierEntry
-from ....data.enums import EffectTiming
+from ....data.enums import EffectTiming, GamePhase
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -55,72 +55,136 @@ class P_215(CardScript):
             return False
 
         def _place_and_protect(ctx: Dict[str, Any]):
-            """Place 1 Lv.4- card as bottom source, then grant protection."""
+            """Place 1 Lv.4- card as bottom source, then grant protection to 1 Digimon."""
             player = ctx.get('player')
             perm = ctx.get('permanent')
             game = ctx.get('game')
             if not (player and perm and game):
                 return
 
-            def hand_filter(c):
+            def card_filter(c):
                 level = getattr(c, 'level', None)
                 if level is None or level > 4:
                     return False
                 traits = getattr(c, 'card_traits', []) or []
                 return 'Ice-Snow' in traits or 'Mineral' in traits or 'Rock' in traits
 
-            hand_candidates = [c for c in player.hand_cards if hand_filter(c)]
+            has_hand = any(card_filter(c) for c in player.hand_cards)
+            has_trash = any(card_filter(c) for c in player.trash_cards)
 
-            if hand_candidates:
-                def on_selected(selected):
-                    if selected in player.hand_cards:
-                        player.hand_cards.remove(selected)
-                        perm.add_card_source_bottom(selected)
-                    _apply_protection(player, game)
+            if not (has_hand or has_trash):
+                return
 
+            def _after_placement():
+                """After placing a card, let the player select 1 Digimon to protect."""
+                _apply_protection(player, game)
+
+            def place_from_hand(selected):
+                if selected is None:
+                    return
+                if selected in player.hand_cards:
+                    player.hand_cards.remove(selected)
+                    perm.add_card_source_bottom(selected)
+                _after_placement()
+
+            def place_from_trash(selected):
+                if selected is None:
+                    return
+                if selected in player.trash_cards:
+                    player.trash_cards.remove(selected)
+                    perm.add_card_source_bottom(selected)
+                _after_placement()
+
+            if has_hand and has_trash:
+                # Player chooses which zone to place from
+                def on_branch(branch: int):
+                    if branch == 0:
+                        game.effect_select_hand_card(
+                            player, card_filter, place_from_hand, is_optional=True,
+                            prompt="Place 1 Lv.4- [Ice-Snow/Mineral/Rock] card from hand as bottom source.")
+                    else:
+                        from ....game.constants import SEL_TRASH_START
+                        valid_indices = [
+                            SEL_TRASH_START + i
+                            for i, c in enumerate(player.trash_cards)
+                            if card_filter(c)
+                        ]
+
+                        def on_trash_select(action_id: int):
+                            from ....game.constants import SEL_TRASH_START as _TST
+                            idx = action_id - _TST
+                            if 0 <= idx < len(player.trash_cards):
+                                place_from_trash(player.trash_cards[idx])
+
+                        game.request_selection(
+                            GamePhase.SelectTrash, player, on_trash_select,
+                            valid_indices=valid_indices, is_optional=True,
+                            prompt="Place 1 Lv.4- [Ice-Snow/Mineral/Rock] card from trash as bottom source.")
+
+                game.effect_choose_branch(
+                    player, 2, on_branch,
+                    prompt="Place qualifying card from hand or trash?",
+                    branch_labels=["From Hand", "From Trash"])
+
+            elif has_hand:
                 game.effect_select_hand_card(
-                    player, hand_filter, on_selected, is_optional=True,
+                    player, card_filter, place_from_hand, is_optional=True,
                     prompt="Place 1 Lv.4- [Ice-Snow/Mineral/Rock] card from hand as bottom source.")
             else:
-                # Place from trash
-                placed = False
-                for c in list(player.trash_cards):
-                    if placed:
-                        break
-                    if hand_filter(c):
-                        player.trash_cards.remove(c)
-                        perm.add_card_source_bottom(c)
-                        placed = True
-                if placed:
-                    _apply_protection(player, game)
+                # Trash only -- player selects which trash card
+                from ....game.constants import SEL_TRASH_START
+                valid_indices = [
+                    SEL_TRASH_START + i
+                    for i, c in enumerate(player.trash_cards)
+                    if card_filter(c)
+                ]
+
+                def on_trash_select(action_id: int):
+                    from ....game.constants import SEL_TRASH_START as _TST
+                    idx = action_id - _TST
+                    if 0 <= idx < len(player.trash_cards):
+                        place_from_trash(player.trash_cards[idx])
+
+                game.request_selection(
+                    GamePhase.SelectTrash, player, on_trash_select,
+                    valid_indices=valid_indices, is_optional=True,
+                    prompt="Place 1 Lv.4- [Ice-Snow/Mineral/Rock] card from trash as bottom source.")
 
         def _apply_protection(player, game):
-            """Grant protection to Ice-Snow/Mineral/Rock Digimon."""
-            for field_perm in player.battle_area:
-                if not field_perm.is_digimon:
-                    continue
-                if not (field_perm.has_trait('Ice-Snow') or
-                        field_perm.has_trait('Mineral') or
-                        field_perm.has_trait('Rock')):
-                    continue
+            """Let the player select 1 [Ice-Snow/Mineral/Rock] Digimon to protect."""
+
+            def prot_filter(p):
+                if not p.is_digimon:
+                    return False
+                return (p.has_trait('Ice-Snow') or
+                        p.has_trait('Mineral') or
+                        p.has_trait('Rock'))
+
+            def on_protect(target_perm):
                 # Cannot be returned to hand by opponent effects
                 game.register_modifier(
-                    field_perm, ModifierType.CANNOT_RETURN_TO_HAND,
-                    condition=lambda p, c, fp=field_perm: p is fp,
+                    target_perm, ModifierType.CANNOT_RETURN_TO_HAND,
+                    condition=lambda p, c, tp=target_perm: p is tp,
                     expiry='end_of_opponent_turn',
                 )
                 # Cannot be returned to deck by opponent effects
                 game.register_modifier(
-                    field_perm, ModifierType.CANNOT_RETURN_TO_DECK,
-                    condition=lambda p, c, fp=field_perm: p is fp,
+                    target_perm, ModifierType.CANNOT_RETURN_TO_DECK,
+                    condition=lambda p, c, tp=target_perm: p is tp,
                     expiry='end_of_opponent_turn',
                 )
                 # Immune from De-Digivolve
                 game.register_modifier(
-                    field_perm, ModifierType.IMMUNE_FROM_DE_DIGIVOLVE,
-                    condition=lambda p, c, fp=field_perm: p is fp,
+                    target_perm, ModifierType.IMMUNE_FROM_DE_DIGIVOLVE,
+                    condition=lambda p, c, tp=target_perm: p is tp,
                     expiry='end_of_opponent_turn',
                 )
+
+            game.effect_select_own_permanent(
+                player, on_protect, filter_fn=prot_filter,
+                is_optional=False,
+                prompt="Select 1 [Ice-Snow/Mineral/Rock] Digimon to protect from return and De-Digivolve."
+            )
 
         # [When Moving]
         eff_move = ICardEffect()

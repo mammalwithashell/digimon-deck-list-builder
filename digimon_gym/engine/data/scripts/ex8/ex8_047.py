@@ -96,7 +96,7 @@ class EX8_047(CardScript):
             def on_delete(target_perm):
                 enemy = player.enemy if player else None
                 if enemy:
-                    enemy.delete_permanent(target_perm)
+                    enemy.delete_permanent(target_perm, is_opponent_effect=True)
 
             game.effect_select_opponent_permanent(
                 player, on_delete, filter_fn=target_filter, is_optional=False)

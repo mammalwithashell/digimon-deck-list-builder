@@ -116,4 +116,28 @@ class P_107(CardScript):
         effect2.set_on_process_callback(process2)
         effects.append(effect2)
 
+        # --- Effect 3: [Security] Place this card in the battle area. ---
+        effect3 = ICardEffect()
+        effect3.set_timing(EffectTiming.SecuritySkill)
+        effect3.set_effect_name("P-107 Security: Place this card in battle area")
+        effect3.set_effect_description(
+            "[Security] Place this card in the battle area."
+        )
+        effect3.is_security_effect = True
+
+        def condition3(context: Dict[str, Any]) -> bool:
+            return True
+
+        effect3.set_can_use_condition(condition3)
+
+        def process3(ctx: Dict[str, Any]):
+            player = ctx.get('player')
+            game = ctx.get('game')
+            if not (player and game and card):
+                return
+            game.effect_play_from_security(player, card)
+
+        effect3.set_on_process_callback(process3)
+        effects.append(effect3)
+
         return effects

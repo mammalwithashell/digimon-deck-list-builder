@@ -533,7 +533,11 @@ class Player:
 
         # Reveal top card
         security_card = self.security_cards.pop(0)
+        was_face_up = security_card in self.face_up_security
         self.face_up_security.discard(security_card)
+        # Store last checked card info for OnSecurityCheck timing consumers
+        self._last_security_card = security_card
+        self._last_security_was_face_up = was_face_up
         sec_name = security_card.card_names[0] if security_card.card_names else "Unknown"
         sec_id = getattr(security_card, 'card_id', None)
         self._log(f"Security Check: Revealed {sec_name}")

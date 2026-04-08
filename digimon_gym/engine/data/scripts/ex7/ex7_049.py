@@ -138,17 +138,32 @@ class EX7_049(CardScript):
         effect3.set_hash_string("EX7_049_WhenLeave")
 
         def condition3(context: Dict[str, Any]) -> bool:
-            if card and card.permanent_of_this_card() is None:
-                return False
             owner = card.owner if card else None
             if not owner:
                 return False
-            # "other than by one of your effects" — skip if removed by own effect
+            # WhenRemoveField fires after the permanent is removed from the
+            # field — card is now in trash. Identify this card as part of the
+            # leaving permanent via event_permanent or permanent context keys.
+            leaving_perm = context.get('event_permanent') or context.get('permanent')
+            if leaving_perm is not None:
+                # When scanned from the field (other permanents watching), the
+                # leaving permanent is in event_permanent. Verify this card's
+                # permanent is the one leaving.
+                my_perm = card.permanent_of_this_card()
+                if my_perm is not None and my_perm is not leaving_perm:
+                    return False
+                # When scanned from trash (this card moved to trash after
+                # deletion), permanent_of_this_card() returns None. Verify
+                # this card was part of the leaving permanent's stack.
+                if my_perm is None and card not in leaving_perm.card_sources:
+                    return False
+            else:
+                return False
+            # "other than by one of your effects" — only block when removed
+            # by an own CARD EFFECT. Non-effect removals (battle, rule, cost,
+            # de-digivolve) are not "your effects".
             removal_cause = context.get('removal_cause', 'effect')
-            if removal_cause == 'effect':
-                # Removed by an effect — card text says don't fire for own effects.
-                # Since we can't distinguish own vs opponent effects here, we block
-                # all effect-based removals. Battle/rule/cost/de-digivolve are allowed.
+            if removal_cause == 'effect' and context.get('is_own_effect', False):
                 return False
             # Check that trash has a qualifying Digimon
             return any(

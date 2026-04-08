@@ -1,6 +1,6 @@
 {
-  "version": 120,
-  "last_updated": "2026-04-05",
+  "version": 121,
+  "last_updated": "2026-04-06",
   "cards": {
     "BT1-087": {
       "card_name": "T.K. Takaishi",
@@ -2835,10 +2835,10 @@
     },
     "EX10-028": {
       "card_name": "Landramon",
-      "validated_date": "2026-03-02",
-      "report": "2026-03-02-rocks-retest.md",
-      "status": "PASS",
-      "notes": "Evo cost 2 from Lv3 verified. When Digivolving trash+grant (Reboot, Blocker, +3K DP) correct."
+      "validated_date": "2026-04-06",
+      "report": "batch-fix-cards",
+      "status": "FIXED",
+      "notes": "Inherited condition missing card-in-trashed check, uses trash_specific_digivolution_cards API"
     },
     "EX10-032": {
       "card_name": "Proganomon",
@@ -2849,17 +2849,17 @@
     },
     "EX10-033": {
       "card_name": "Pyramidimon",
-      "validated_date": "2026-03-02",
-      "report": "2026-03-02-rocks-retest.md",
-      "status": "PASS",
-      "notes": "Evo cost 3 from Lv5 verified. When Digivolving chain effects work. Fragment keyword present."
+      "validated_date": "2026-04-06",
+      "report": "batch-fix-cards",
+      "status": "FIXED",
+      "notes": "SEL_TRASH_START bug, cost-reduce uses player selection, trash_specific_digivolution_cards API"
     },
     "EX10-034": {
       "card_name": "Blastmon",
-      "validated_date": "2026-03-02",
-      "report": "2026-03-02-rocks-retest.md",
-      "status": "PASS",
-      "notes": "Play cost 13 verified. Keywords: blocker, collision, fragment correct."
+      "validated_date": "2026-04-06",
+      "report": "batch-fix-cards",
+      "status": "FIXED",
+      "notes": "Condition fix (need 3+ cards in stack), player selects which 2 to trash"
     },
     "EX10-035": {
       "verdict": "PASS",
@@ -2869,10 +2869,10 @@
     },
     "EX10-036": {
       "card_name": "Magneticdramon",
-      "validated_date": "2026-03-02",
-      "report": "2026-03-02-rocks-retest.md",
-      "status": "PASS",
-      "notes": "Evo cost 4 from Lv6 verified. When Digivolving chain effects fire correctly."
+      "validated_date": "2026-04-06",
+      "report": "batch-fix-cards",
+      "status": "FIXED",
+      "notes": "Alt-digi (Proganomon base + Close condition), delete uses player selection, SEL_TRASH_START fix"
     },
     "EX10-040": {
       "verdict": "PASS",

@@ -105,11 +105,14 @@ class EX10_069(CardScript):
             owner = card.owner if card else None
             if not (owner and owner.is_my_turn):
                 return False
-            # The suspended permanent must be one of our [Close] trait Digimon
+            # The suspended permanent must be one of our [Close] Tamers
+            # C# IsArisaKinosaki checks: on owner battle area, IsTamer, EqualsCardName("Close")
             event_perm = context.get('event_permanent')
             if not event_perm:
                 return False
             if event_perm not in owner.battle_area:
+                return False
+            if not event_perm.is_tamer:
                 return False
             if not event_perm.contains_card_name('Close'):
                 return False
@@ -138,7 +141,9 @@ class EX10_069(CardScript):
                     if not getattr(c, 'is_digimon', False):
                         return False
                     traits = set(getattr(c, 'card_traits', []) or [])
-                    return 'Mineral' in traits and 'LIBERATOR' in traits
+                    # C# CardCondition: HasRockMineralTraits && HasLiberatorTraits
+                    # HasRockMineralTraits = Rock OR Mineral
+                    return ('Mineral' in traits or 'Rock' in traits) and 'LIBERATOR' in traits
 
                 game.effect_digivolve_from_hand(
                     player,

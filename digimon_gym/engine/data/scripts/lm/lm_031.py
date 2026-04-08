@@ -108,17 +108,27 @@ class LM_031(CardScript):
         effect2.is_optional = True
 
         def condition2(context: Dict[str, Any]) -> bool:
-            # Card must be in the battle area
-            if card and card.permanent_of_this_card() is None:
-                return False
+            # This condition is checked both at action-mask query time
+            # (card on field) AND from _execute_delay AFTER the engine
+            # trashes the card.  Use context['permanent'] to distinguish:
+            # when permanent is in context, we're in the delay-fire path
+            # and skip the on-field check.
             owner = card.owner if card else None
             if not (owner and owner.is_my_turn):
                 return False
-            # Condition: opponent must have at least 1 Digimon
             enemy = owner.enemy if owner else None
             if not enemy:
                 return False
-            return any(p.is_digimon for p in enemy.battle_area)
+            # Opponent must have at least 1 Digimon (both pre- and post-trash)
+            if not any(p.is_digimon for p in enemy.battle_area):
+                return False
+            # Pre-trash field check: card must be on the field to declare.
+            # The action mask call passes empty context; _execute_delay
+            # passes the (now-trashed) permanent.
+            if context.get('permanent') is None:
+                if card and card.permanent_of_this_card() is None:
+                    return False
+            return True
         effect2.set_can_use_condition(condition2)
 
         def process2(ctx: Dict[str, Any]):
@@ -147,33 +157,43 @@ class LM_031(CardScript):
                 if _is_black_digimon(c):
                     valid_trash.append(_SEL_TRASH_START + i)
 
+            def _play_sub_effect():
+                """After returning a card, if no Digimon on field, may play
+                a black Digimon with <=2000 DP from trash without paying."""
+                has_digimon = any(p.is_digimon for p in (player.battle_area or []))
+                if not has_digimon:
+                    def play_filter(c):
+                        if not getattr(c, 'is_digimon', False):
+                            return False
+                        colors = getattr(c, 'card_colors', []) or []
+                        if not any(col.name == 'Black' for col in colors):
+                            return False
+                        dp = getattr(c, 'base_dp', None)
+                        if dp is not None and dp > 2000:
+                            return False
+                        return True
+                    game.effect_play_from_zone(
+                        player, 'trash', play_filter, free=True, is_optional=True)
+
             if valid_trash:
-                def on_trash_selected(idx):
-                    if idx < len(player.trash_cards):
+                def on_trash_selected(action_id):
+                    # action_id is the full action (130 + trash_index);
+                    # strip the offset to get the trash list index.
+                    idx = action_id - _SEL_TRASH_START
+                    if 0 <= idx < len(player.trash_cards):
                         moved = player.trash_cards[idx]
                         player.trash_cards.remove(moved)
                         player.library_cards.insert(0, moved)
+                    # Chain the second selection AFTER this one resolves.
+                    _play_sub_effect()
 
                 game.request_selection(
                     GamePhase.SelectTrash, player, on_trash_selected,
                     valid_trash, is_optional=False,
                     prompt="Select a black Digimon card from trash to return to the top of the deck.")
-
-            # Then, if you don't have a Digimon, play 1 black Digimon <= 2000 DP from trash
-            has_digimon = any(p.is_digimon for p in (player.battle_area or []))
-            if not has_digimon:
-                def play_filter(c):
-                    if not getattr(c, 'is_digimon', False):
-                        return False
-                    colors = getattr(c, 'card_colors', []) or []
-                    if not any(col.name == 'Black' for col in colors):
-                        return False
-                    dp = getattr(c, 'base_dp', None)
-                    if dp is not None and dp > 2000:
-                        return False
-                    return True
-                game.effect_play_from_zone(
-                    player, 'trash', play_filter, free=True, is_optional=True)
+            else:
+                # Nothing valid to return — still try the play sub-effect.
+                _play_sub_effect()
 
         effect2.set_on_process_callback(process2)
         effects.append(effect2)

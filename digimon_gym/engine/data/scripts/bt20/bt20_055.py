@@ -41,12 +41,14 @@ class BT20_055(CardScript):
 
         def process0(ctx: Dict[str, Any]):
             player = ctx.get('player')
-            if not player:
+            game = ctx.get('game')
+            if not (player and game):
                 return
             # Play this card from security without paying cost
+            # Use game.effect_play_from_security so On Play effects fire
             if card and card in player.security_cards:
                 player.security_cards.remove(card)
-                player.play_card_from_source(card, pay_cost=False)
+                game.effect_play_from_security(player, card)
 
         effect0.set_on_process_callback(process0)
         effects.append(effect0)
@@ -149,14 +151,9 @@ class BT20_055(CardScript):
             event_player = context.get('event_player')
             if event_player is None or event_player is not card.owner:
                 return False
-            # The checked security card must be face-up (in opponent's security)
-            checked_card = context.get('security_card')
-            if checked_card is None:
-                return False
-            enemy = card.owner.enemy if card.owner else None
-            if enemy is None:
-                return False
-            if not enemy.is_security_face_up(checked_card):
+            # The checked security card must have been face-up before it was checked
+            # (security_was_face_up is set by combat.py when passing OnSecurityCheck context)
+            if not context.get('security_was_face_up', False):
                 return False
             # This permanent must have at least 1 digivolution card to give away
             perm = card.permanent_of_this_card()

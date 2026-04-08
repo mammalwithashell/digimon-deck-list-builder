@@ -22,6 +22,17 @@ class ST22_11(CardScript):
     """
 
     def get_card_effects(self, card: 'CardSource') -> List['ICardEffect']:
+        # --- Color requirement bypass: while you have a Tamer ---
+        def _check_color_req():
+            owner = card.owner if card else None
+            if not owner:
+                return True  # enforce
+            has_tamer = any(getattr(p, 'is_tamer', False) for p in owner.battle_area)
+            if has_tamer:
+                return False  # bypass color requirement
+            return True  # enforce color requirement
+        card._match_color_requirement_fn = _check_color_req
+
         effects = []
 
         # [Security] De-Digivolve 2, then add to hand

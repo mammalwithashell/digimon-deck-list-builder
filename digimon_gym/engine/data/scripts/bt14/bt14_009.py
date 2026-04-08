@@ -18,11 +18,9 @@ class BT14_009(CardScript):
     def get_card_effects(self, card: 'CardSource') -> List['ICardEffect']:
         effects = []
 
-        # Timing: EffectTiming.OnEnterFieldAnyone
         # [All Turns] Players can't play Digimon by effects.
-        # Implemented by registering a CANNOT_PLAY_CARD modifier when this Digimon
-        # enters the field (on play). The modifier persists while this Digimon is on
-        # the field and is automatically cleaned up when it leaves.
+        # Uses CANNOT_PLAY_BY_EFFECT (not CANNOT_PLAY_CARD) because card text says
+        # "by effects" — normal hand plays are unaffected. Same as BT9-047 Pomumon.
         effect0 = ICardEffect()
         effect0.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect0.set_effect_name("BT14-009 Players can't play Digimon by effects")
@@ -46,12 +44,11 @@ class BT14_009(CardScript):
             if not perm:
                 return
 
-            # Register CANNOT_PLAY_CARD blocking Digimon cards for both players.
-            # The condition receives (target_permanent, context_dict) and blocks
-            # any play where the card being played is a Digimon.
+            # Register CANNOT_PLAY_BY_EFFECT blocking Digimon cards for both players.
+            # Blocks effect-based plays; normal hand plays are unaffected.
             game.register_modifier(
                 perm,
-                ModifierType.CANNOT_PLAY_CARD,
+                ModifierType.CANNOT_PLAY_BY_EFFECT,
                 condition=lambda target, c: c.get('card') and c['card'].is_digimon,
                 source_effect=effect0,
                 expiry='permanent',

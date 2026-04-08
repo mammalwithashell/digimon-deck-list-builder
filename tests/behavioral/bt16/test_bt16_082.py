@@ -113,3 +113,102 @@ class TestBT16082Ukkomon:
         if tamer_perm.is_tamer and not tamer_perm.is_digimon:
             assert not on_move.can_use_condition(ctx), \
                 "Should NOT trigger for Tamer moves"
+
+    def test_process_reveals_top_3_and_adds_digimon_to_hand(self, debug_runner):
+        """Process should reveal top 3, let agent pick 1 Digimon/Tamer, rest to bottom."""
+        runner = debug_runner(initial_memory=5)
+        perm = runner.place_on_field(1, ["BT16-082"])
+        game = runner.game
+
+        # Clear deck and inject known cards
+        runner.clear_zone(1, "library")
+        runner.inject_card(1, "ST1-03", "library_top")  # Agumon (Digimon)
+        runner.inject_card(1, "ST1-03", "library_top")  # Agumon (Digimon)
+        runner.inject_card(1, "ST1-03", "library_top")  # Agumon (Digimon)
+
+        card = perm.top_card
+        effects = card.effect_list(None)
+        on_move = [e for e in effects if e.timing == EffectTiming.OnMove][0]
+
+        hand_before = len(game.player1.hand_cards)
+
+        # Execute the process callback
+        on_move.on_process_callback({
+            'player': game.player1,
+            'game': game,
+        })
+        runner.auto_resolve()
+
+        # Should have added 1 card to hand (from the reveal)
+        hand_after = len(game.player1.hand_cards)
+        assert hand_after == hand_before + 1, (
+            f"Should add 1 Digimon/Tamer to hand. Before: {hand_before}, after: {hand_after}"
+        )
+        # Rest should go to deck bottom (2 cards)
+        assert len(game.player1.library_cards) == 2, (
+            f"2 remaining cards should go to deck bottom, got {len(game.player1.library_cards)}"
+        )
+
+    def test_process_hatch_is_optional(self, debug_runner):
+        """After reveal+select, the hatch should be offered as an optional choice."""
+        runner = debug_runner(initial_memory=5)
+        perm = runner.place_on_field(1, ["BT16-082"])
+        game = runner.game
+
+        card = perm.top_card
+        effects = card.effect_list(None)
+        on_move = [e for e in effects if e.timing == EffectTiming.OnMove][0]
+
+        # Ensure there are cards to reveal
+        runner.inject_card(1, "ST1-03", "library_top")
+        runner.inject_card(1, "ST1-03", "library_top")
+        runner.inject_card(1, "ST1-03", "library_top")
+
+        # Ensure hatching is possible: digitama deck has cards, breeding area empty
+        assert game.player1.breeding_area is None, "Breeding area should be empty"
+        assert len(game.player1.digitama_library_cards) > 0, "Should have digitama cards"
+
+        on_move.on_process_callback({
+            'player': game.player1,
+            'game': game,
+        })
+        runner.auto_resolve()
+
+        # After auto_resolve picks first option for hatch (Yes, hatch),
+        # breeding area should now have a Digimon if hatch was offered and accepted
+        # Note: auto_resolve picks first legal action (index 0 = "Yes, hatch")
+        assert game.player1.breeding_area is not None, (
+            "Hatch option should be offered and auto_resolve picks 'Yes, hatch'"
+        )
+
+    def test_process_no_hatch_when_breeding_occupied(self, debug_runner):
+        """Should NOT offer hatch if breeding area is already occupied."""
+        runner = debug_runner(initial_memory=5)
+        perm = runner.place_on_field(1, ["BT16-082"])
+        game = runner.game
+
+        # Place something in breeding area
+        runner.place_in_breeding(1, ["BT1-001"])
+
+        # Ensure there are cards to reveal
+        runner.inject_card(1, "ST1-03", "library_top")
+        runner.inject_card(1, "ST1-03", "library_top")
+        runner.inject_card(1, "ST1-03", "library_top")
+
+        card = perm.top_card
+        effects = card.effect_list(None)
+        on_move = [e for e in effects if e.timing == EffectTiming.OnMove][0]
+
+        on_move.on_process_callback({
+            'player': game.player1,
+            'game': game,
+        })
+        runner.auto_resolve()
+
+        # Hatch should not have been offered since breeding is occupied
+        # The breeding area should still have the original egg
+        assert game.player1.breeding_area is not None
+        top_id = game.player1.breeding_area.top_card.c_entity_base.card_id
+        assert top_id == "BT1-001", (
+            "Breeding area should still have original egg, hatch should not be offered"
+        )

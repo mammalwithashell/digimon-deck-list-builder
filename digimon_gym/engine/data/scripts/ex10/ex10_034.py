@@ -115,9 +115,8 @@ class EX10_034(CardScript):
             perm = card.permanent_of_this_card()
             if perm is None:
                 return False
-            if perm.has_no_digivolution_cards:
-                return False
-            return len(perm.digivolution_cards) >= 2
+            # Need at least 3 cards in stack (top + 2 trashable under-cards)
+            return len(perm.card_sources) >= 3
 
         effect_at.set_can_use_condition(condition_at)
 
@@ -130,23 +129,71 @@ class EX10_034(CardScript):
             if not perm:
                 return
             from ....interfaces.modifiers import ModifierType
-            # Trash 2 digivolution cards
-            trashed = perm.trash_digivolution_cards(2)
-            player.trash_cards.extend(trashed)
-            # Grant +3000 DP until end of turn
-            game.register_modifier(
-                perm,
-                ModifierType.CHANGE_DP,
-                value_fn=lambda cur, t, c: cur + 3000,
-                expiry='end_of_turn',
-            )
-            # Grant Security A. +1 until end of turn
-            game.register_modifier(
-                perm,
-                ModifierType.CHANGE_SECURITY_ATTACK,
-                value_fn=lambda cur, t, c: cur + 1,
-                expiry='end_of_turn',
-            )
+
+            # Collect under-cards (all except top)
+            under_cards = [c for c in perm.card_sources if c is not perm.top_card]
+            if len(under_cards) < 2:
+                return
+
+            selected_cards = []
+
+            def _apply_buffs():
+                """After 2 cards selected, trash them and grant buffs."""
+                trashed = perm.trash_specific_digivolution_cards(selected_cards)
+                player.trash_cards.extend(trashed)
+                game.register_modifier(
+                    perm,
+                    ModifierType.CHANGE_DP,
+                    value_fn=lambda cur, t, c: cur + 3000,
+                    expiry='end_of_turn',
+                )
+                game.register_modifier(
+                    perm,
+                    ModifierType.CHANGE_SECURITY_ATTACK,
+                    value_fn=lambda cur, t, c: cur + 1,
+                    expiry='end_of_turn',
+                )
+
+            if len(under_cards) == 2:
+                # Exactly 2 under-cards: no choice needed, trash both
+                selected_cards.extend(under_cards)
+                _apply_buffs()
+            else:
+                # More than 2 under-cards: player selects which 2 to trash
+                labels = [
+                    ', '.join(getattr(c, 'card_names', ['?'])) for c in under_cards
+                ]
+
+                def _on_first_choice(idx):
+                    first_card = under_cards[idx] if idx < len(under_cards) else under_cards[0]
+                    selected_cards.append(first_card)
+                    # Build remaining choices for second pick
+                    remaining = [c for c in under_cards if c is not first_card]
+                    if len(remaining) == 1:
+                        # Only 1 left, auto-select
+                        selected_cards.append(remaining[0])
+                        _apply_buffs()
+                    else:
+                        remaining_labels = [
+                            ', '.join(getattr(c, 'card_names', ['?'])) for c in remaining
+                        ]
+
+                        def _on_second_choice(idx2):
+                            second_card = remaining[idx2] if idx2 < len(remaining) else remaining[0]
+                            selected_cards.append(second_card)
+                            _apply_buffs()
+
+                        game.effect_choose_branch(
+                            player, len(remaining), _on_second_choice,
+                            prompt="Select 2nd digivolution card to trash.",
+                            branch_labels=remaining_labels,
+                        )
+
+                game.effect_choose_branch(
+                    player, len(under_cards), _on_first_choice,
+                    prompt="Select 1st digivolution card to trash.",
+                    branch_labels=labels,
+                )
 
         effect_at.set_on_process_callback(process_at)
         effects.append(effect_at)

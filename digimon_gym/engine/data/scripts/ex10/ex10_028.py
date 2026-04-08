@@ -80,12 +80,10 @@ class EX10_028(CardScript):
                         return
 
                     def _do_trash_and_grant(cs_to_trash):
-                        if cs_to_trash in trash_perm.card_sources:
-                            trash_perm.card_sources.remove(cs_to_trash)
-                        player.trash_cards.append(cs_to_trash)
-                        game.execute_effects(EffectTiming.OnDigivolutionCardDiscarded,
-                                             {'trashed_cards': [cs_to_trash],
-                                              'permanent': trash_perm})
+                        trashed = trash_perm.trash_specific_digivolution_cards([cs_to_trash])
+                        if not trashed:
+                            return  # cut-in saved the card
+                        player.trash_cards.extend(trashed)
 
                         # Step 2: Select a Mineral/Rock Digimon to receive the buff.
                         def grant_filter(perm2):
@@ -154,6 +152,11 @@ class EX10_028(CardScript):
         effect2.is_inherited_effect = True
 
         def condition2(context: Dict[str, Any]) -> bool:
+            # Check this card was the one trashed
+            trashed_cards = context.get('trashed_cards', [])
+            if card not in trashed_cards:
+                return False
+            # Check the permanent has [Mineral] or [Rock] trait
             event_perm = context.get('event_permanent')
             if event_perm is None:
                 return False

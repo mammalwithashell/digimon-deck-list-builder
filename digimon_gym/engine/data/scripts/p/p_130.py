@@ -31,6 +31,28 @@ class P_130(CardScript):
             return True
 
         effect0.set_can_use_condition(condition0)
+
+        def process0(ctx: Dict[str, Any]):
+            """You may move 1 of your Lv.3+ Digimon from breeding to battle."""
+            player = ctx.get('player')
+            game = ctx.get('game')
+            if not (player and game):
+                return
+            # Must have a Lv.3+ Digimon in breeding to move
+            breeding = player.breeding_area
+            if breeding is None or breeding.level is None or breeding.level < 3:
+                return
+            # Offer optional move
+            def on_choice(choice_idx):
+                if choice_idx == 0:
+                    player.move_from_breeding()
+            game.effect_choose_branch(
+                player, 2, on_choice,
+                prompt="Move your Lv.3+ Digimon from breeding to battle area?",
+                branch_labels=["Yes, move", "No, skip"],
+            )
+
+        effect0.set_on_process_callback(process0)
         effects.append(effect0)
 
         # Timing: EffectTiming.OnMove

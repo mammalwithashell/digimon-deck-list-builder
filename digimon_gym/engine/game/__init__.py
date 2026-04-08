@@ -470,6 +470,29 @@ class Game(CombatMixin, ActionDecoderMixin, EffectHelpersMixin):
         reduction = max(0, manual_reduction)
         activated_effects: list = []
 
+        # Check for passive "players can't reduce play costs" declarative
+        # effects on either player's battle area (e.g. ST13-08 Chikurimon).
+        # If any such effect is active, cost reduction is globally disabled.
+        cannot_reduce = False
+        for entry in self.modifiers._modifiers.get(ModifierType.CANNOT_REDUCE_COST, []):
+            if entry.is_active(None, None):
+                cannot_reduce = True
+                break
+        if not cannot_reduce:
+            for scan_player in (self.player1, self.player2):
+                for scan_perm in scan_player.battle_area:
+                    for scan_effect in scan_perm.effect_list(EffectTiming.NoTiming):
+                        if not getattr(scan_effect, '_blocks_cost_reduction', False):
+                            continue
+                        if scan_effect.can_use_condition and not scan_effect.can_use_condition({}):
+                            continue
+                        cannot_reduce = True
+                        break
+                    if cannot_reduce:
+                        break
+                if cannot_reduce:
+                    break
+
         def apply_effect(effect, context: Dict[str, Any]) -> None:
             nonlocal reduction
             if getattr(effect, 'timing', None) != EffectTiming.BeforePayCost:
@@ -542,6 +565,11 @@ class Game(CombatMixin, ActionDecoderMixin, EffectHelpersMixin):
             )
 
         reduction += max(0, int(getattr(player, "_temp_play_cost_reduction", 0)))
+
+        # Apply CANNOT_REDUCE_COST lockout: players can't reduce play costs.
+        # Manual reductions (from costs being "paid" via other means) still apply.
+        if cannot_reduce:
+            reduction = max(0, manual_reduction)
 
         if commit:
             for effect in activated_effects:
@@ -643,6 +671,7 @@ class Game(CombatMixin, ActionDecoderMixin, EffectHelpersMixin):
                 zone_cards = [
                     (player.trash_cards, 'trash'),
                     (player.hand_cards, 'hand'),
+                    (player.security_cards, 'security'),
                 ]
                 for card_list, zone_name in zone_cards:
                     for card_source in list(card_list):
@@ -1379,9 +1408,14 @@ class Game(CombatMixin, ActionDecoderMixin, EffectHelpersMixin):
             and len(self.turn_player.battle_area) > before_battle_count
         )
         if moved:
-            self.execute_effects(EffectTiming.OnMove, {"moved_permanent": self.turn_player.battle_area[-1]})
+            # Set Main phase BEFORE executing OnMove effects so that any
+            # request_selection saves previous_phase=Main (not Breeding).
+            # This ensures selections resolve back to Main correctly.
             self.current_phase = GamePhase.Main
-            self.phase_main()
+            self.execute_effects(EffectTiming.OnMove, {"moved_permanent": self.turn_player.battle_area[-1]})
+            # Only run phase_main if no pending selection from OnMove effects
+            if self.pending_selection is None:
+                self.phase_main()
 
     def action_breeding_pass(self):
         """Skip breeding phase and advance to main."""

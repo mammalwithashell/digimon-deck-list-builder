@@ -79,36 +79,67 @@ class EX8_055(CardScript):
                 if not (player and perm and game):
                     return
                 from ....interfaces.modifiers import ModifierType
-                # Trash 3 Mineral/Rock trait source cards from any of your Digimon
-                # Collect all eligible sources across all Digimon
-                trashed_count = 0
-                for p in list(player.battle_area):
-                    if trashed_count >= 3:
-                        break
-                    if not p.is_digimon:
-                        continue
-                    for src in list(p.card_sources):
-                        if trashed_count >= 3:
-                            break
-                        if src is p.top_card:
+                from ....data.enums import GamePhase
+                from ....game.constants import SOURCES_PER_FIELD
+
+                # Player selects 3 Mineral/Rock digivolution cards from any of
+                # their Digimon.  Uses SelectSource phase with recursive callback.
+                trashed_holder = [0]  # mutable counter
+
+                def _has_trait(src):
+                    traits = getattr(src, 'card_traits', [])
+                    return 'Mineral' in traits or 'Rock' in traits
+
+                def _select_next():
+                    if trashed_holder[0] >= 3:
+                        # All 3 trashed — apply the reward
+                        perm.unsuspend()
+                        game.register_modifier(
+                            perm,
+                            ModifierType.CHANGE_SECURITY_ATTACK,
+                            value_fn=lambda cur, t, c: cur + 1,
+                            expiry='end_of_turn',
+                        )
+                        return
+
+                    # Build valid SelectSource action IDs across all player Digimon
+                    valid = []
+                    for fi, fp in enumerate(player.battle_area):
+                        if not fp.is_digimon:
                             continue
-                        traits = getattr(src, 'card_traits', [])
-                        if 'Mineral' in traits or 'Rock' in traits:
-                            p.card_sources.remove(src)
-                            player.trash_cards.append(src)
-                            game.execute_effects(EffectTiming.OnDigivolutionCardDiscarded,
-                                                 {'trashed_cards': [src],
-                                                  'permanent': p})
-                            trashed_count += 1
-                if trashed_count >= 3:
-                    perm.unsuspend()
-                    # Grant SA+1 for the turn (persists across multiple attacks)
-                    game.register_modifier(
-                        perm,
-                        ModifierType.CHANGE_SECURITY_ATTACK,
-                        value_fn=lambda cur, t, c: cur + 1,
-                        expiry='end_of_turn',
-                    )
+                        base = 2000 + fi * SOURCES_PER_FIELD
+                        for si, src in enumerate(fp.card_sources):
+                            if src is fp.top_card:
+                                continue
+                            if _has_trait(src) and (base + si) < 2168:
+                                valid.append(base + si)
+                    if not valid:
+                        return  # shouldn't happen if condition passed
+
+                    def on_source_selected(action_id):
+                        normalized = action_id - 2000
+                        field_idx = normalized // SOURCES_PER_FIELD
+                        source_idx = normalized % SOURCES_PER_FIELD
+                        if field_idx >= len(player.battle_area):
+                            return
+                        target_perm = player.battle_area[field_idx]
+                        if source_idx >= len(target_perm.card_sources):
+                            return
+                        selected = target_perm.card_sources[source_idx]
+                        target_perm.card_sources.remove(selected)
+                        player.trash_cards.append(selected)
+                        game.execute_effects(EffectTiming.OnDigivolutionCardDiscarded,
+                                             {'trashed_cards': [selected],
+                                              'permanent': target_perm})
+                        trashed_holder[0] += 1
+                        _select_next()
+
+                    game.request_selection(
+                        GamePhase.SelectSource, player, on_source_selected,
+                        valid, is_optional=False,
+                        prompt=f"Select a [Mineral] or [Rock] digivolution card to trash ({trashed_holder[0]+1}/3).")
+
+                _select_next()
 
             effect.set_on_process_callback(process)
             return effect
@@ -173,8 +204,9 @@ class EX8_055(CardScript):
                 if not valid_trash:
                     return
 
-                def on_trash_selected(idx):
-                    if idx < len(player.trash_cards):
+                def on_trash_selected(action_id):
+                    idx = action_id - _SEL_TRASH_START
+                    if 0 <= idx < len(player.trash_cards):
                         selected = player.trash_cards[idx]
                         player.trash_cards.remove(selected)
                         perm.add_card_source_bottom(selected)
