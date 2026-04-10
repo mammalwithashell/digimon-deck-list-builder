@@ -28,17 +28,12 @@ class P_205(CardScript):
         # --- Effect 0: Ignore color requirements if [DM] trait on field ---
         # DCGO: IgnoreColorConditionClass with HasMatchConditionPermanent
         # checking for (IsTamer || IsDigimon) && HasDMTraits
-        effect0 = ICardEffect()
-        effect0.set_effect_name("P-205 Ignore color requirements")
-        effect0.set_effect_description("Ignore Color Req")
-        effect0.is_declarative = True
-        effect0._ignore_color_requirement = True
-
-        def condition0(context: Dict[str, Any]) -> bool:
+        # Set card._match_color_requirement_fn so the action mask dynamically
+        # checks whether a DM Digimon/Tamer is on the field.
+        def _check_color_req() -> bool:
             owner = card.owner if card else None
             if not owner:
-                return False
-            # Check if owner has a Digimon or Tamer with [DM] trait on the field
+                return True  # enforce color requirement if no owner
             for p in owner.battle_area:
                 if not (p.is_digimon or p.is_tamer):
                     continue
@@ -46,8 +41,17 @@ class P_205(CardScript):
                     continue
                 traits = getattr(p.top_card, 'card_traits', []) or []
                 if any('DM' in tr for tr in traits):
-                    return True
-            return False
+                    return False  # bypass color requirement
+            return True  # enforce color requirement
+        card._match_color_requirement_fn = _check_color_req
+
+        effect0 = ICardEffect()
+        effect0.set_effect_name("P-205 Ignore color requirements")
+        effect0.set_effect_description("Ignore Color Req")
+        effect0.is_declarative = True
+
+        def condition0(context: Dict[str, Any]) -> bool:
+            return not _check_color_req()
         effect0.set_can_use_condition(condition0)
         effects.append(effect0)
 
@@ -116,7 +120,6 @@ class P_205(CardScript):
         # success plays from trash with fixedCost = BasePlayCost - 3.
         effect3 = ICardEffect()
         effect3.set_timing(EffectTiming.OnDeclaration)
-        effect3._is_field_main = True
         effect3.set_effect_name(
             "P-205 Delay: delete own Digimon, play Kimeramon/Millenniummon from trash")
         effect3.set_effect_description(
@@ -188,7 +191,22 @@ class P_205(CardScript):
         def condition4(context: Dict[str, Any]) -> bool:
             return True
         effect4.set_can_use_condition(condition4)
-        effect4.set_on_process_callback(_draw_and_trash)
+
+        def _security_process(ctx: Dict[str, Any]):
+            """Security: Draw 2, trash 2, then place this card in battle area."""
+            _draw_and_trash(ctx)
+            # Place this card in the battle area (PlaceDelayOptionCards)
+            player = ctx.get('player')
+            game = ctx.get('game')
+            if player and card:
+                from ....core.permanent import Permanent
+                perm = Permanent([card])
+                perm.turn_played = game.turn_count if game else 0
+                player.battle_area.append(perm)
+                # Prevent the engine from trashing this card after security
+                card._security_played = True
+
+        effect4.set_on_process_callback(_security_process)
         effects.append(effect4)
 
         return effects

@@ -84,6 +84,37 @@ class TestEX4006Guilmon:
 
         assert not perm.has_keyword('_is_rush'), "Should NOT have Rush when trash < 20"
 
+    def test_on_play_rush_expires_after_turn(self, debug_runner):
+        """[On Play] Rush granted 'for the turn' should expire when the next turn starts."""
+        runner = debug_runner(initial_memory=5)
+        perm = runner.place_on_field(1, ["EX4-006"])
+        game = runner.game
+
+        # Fill trashes to total >= 20
+        for _ in range(10):
+            runner.inject_card(1, "ST1-03", "trash")
+            runner.inject_card(2, "ST1-03", "trash")
+
+        card = perm.top_card
+        effects = card.effect_list(None)
+        on_play = [e for e in effects
+                   if e.timing == EffectTiming.OnEnterFieldAnyone and e.is_on_play]
+        assert len(on_play) == 1
+
+        ctx = {'player': game.player1, 'game': game, 'permanent': perm}
+        on_play[0].on_process_callback(ctx)
+
+        # Rush should be active during this turn
+        assert perm.has_keyword('_is_rush'), "Should have Rush during the current turn"
+
+        # Simulate turn change: increment turn_count and clear expired grants
+        game.turn_count += 1
+        perm.clear_expired_grants(game.turn_count)
+
+        # Rush should have expired
+        assert not perm.has_keyword('_is_rush'), \
+            "Rush should expire after the turn (duration=turn_count)"
+
     def test_on_play_condition_requires_field_presence(self, debug_runner):
         """Condition should require the card to be on the field."""
         runner = debug_runner(initial_memory=5)

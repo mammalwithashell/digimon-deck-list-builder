@@ -102,6 +102,14 @@ Last updated: 2026-03-17
 - **Card(s):** 60 cards across BT10-BT24, EX3-EX10, P sets
 - **Resolution:** Engine natively supports DigiXros/Assembly: `DigiXrosCost` data model, `parse_digixros_req()` parser (all 60 cards), `digixros_validator.py` for material matching, play intercept → `SelectMaterial` loop → `_execute_digixros_play()`, field materials fire `WhenRemoveField` with `removal_cause='digixros'`, `digixros_count` in `OnEnterFieldAnyone` context.
 
+### Deletion Observer Optionality Not Exposed to Agent
+- **Discovered in:** Chaos Control (2026-04-10)
+- **Card(s):** EX1-066 — Analog Youth, ST6-14 — Matt Ishida
+- **Effect text:** "you may suspend this Tamer" / "you may suspend this Tamer to gain 1 memory"
+- **What's missing:** `_fire_deletion_observers` (game/__init__.py:1128) auto-fires effects when conditions pass, ignoring `is_optional`. The DCGO `ActivateClass` offers the player a decline choice (`canNoSelect: true`) before the coroutine runs. In the Python engine, "you may" effects fire automatically with no agent choice to decline.
+- **Suggested change:** When `effect.is_optional` is True, create a branch selection (accept/decline) before calling `on_process_callback`. This would expose the choice to the RL action space.
+- **Workaround:** Scripts use condition gates (e.g., `perm.is_suspended`) that prevent re-activation, effectively limiting to once per event. The auto-fire behavior is functionally correct but removes the agent's ability to strategically decline (e.g., keeping tamer unsuspended for a later, more valuable deletion).
+
 <!-- Entry template:
 ### {Gap Title}
 - **Discovered in:** {archetype name} ({date})

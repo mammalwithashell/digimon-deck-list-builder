@@ -32,10 +32,32 @@ class EX11_005(CardScript):
         effect0.is_inherited_effect = True
         effect0.is_optional = True
 
+        def _has_qualifying_trait(c) -> bool:
+            """Check if card has [Dark Dragon] or [Evil Dragon] trait (exact match)."""
+            traits = getattr(c, 'card_traits', []) or []
+            return 'Dark Dragon' in traits or 'Evil Dragon' in traits
+
+        def _trash_card_filter(c, perm) -> bool:
+            """Check if a trash card qualifies: Digimon + trait + can digivolve onto perm."""
+            if not getattr(c, 'is_digimon', False):
+                return False
+            if not _has_qualifying_trait(c):
+                return False
+            # Check digivolve legality (level/color requirements)
+            from ....validation.digivolve_validator import can_digivolve
+            if not can_digivolve(c, perm):
+                return False
+            return True
+
         def condition0(context: Dict[str, Any]) -> bool:
-            if card and card.permanent_of_this_card() is None:
+            perm = card.permanent_of_this_card() if card else None
+            if perm is None:
                 return False
             if not (card and card.owner and card.owner.is_my_turn):
+                return False
+            # CanActivateCondition: must have qualifying cards in trash
+            player = card.owner
+            if not any(_trash_card_filter(c, perm) for c in player.trash_cards):
                 return False
             return True
         effect0.set_can_use_condition(condition0)
@@ -50,24 +72,13 @@ class EX11_005(CardScript):
             if not (player and perm and game):
                 return
 
-            def trash_digi_filter(c):
-                if not getattr(c, 'is_digimon', False):
-                    return False
-                traits = getattr(c, 'card_traits', []) or []
-                return any('Dark Dragon' in t or 'Evil Dragon' in t for t in traits)
-
-            # Find qualifying cards in trash
-            candidates = [c for c in player.trash_cards if trash_digi_filter(c)]
-            if not candidates:
-                return
-
-            # Use SEL_TRASH_START to let agent select from trash
             from ....game.constants import SEL_TRASH_START
             from ....data.enums import GamePhase
 
+            # Build valid selection list from trash
             valid = []
             for i, c in enumerate(player.trash_cards):
-                if trash_digi_filter(c):
+                if _trash_card_filter(c, perm):
                     valid.append(SEL_TRASH_START + i)
             if not valid:
                 return
@@ -78,14 +89,13 @@ class EX11_005(CardScript):
                     return
                 chosen = player.trash_cards[idx]
 
-                # Calculate cost: digivolution cost reduced by 1
-                # Use the card's evo_costs (digivolution costs) rather than play cost
+                # Cost = digivolution_cost - 1 (minimum 0)
+                # C#: payCost=true, reduceCostTuple=(reduceCost:1, null)
+                # DigivolveIntoHandOrTrashCard uses evo_costs, not play_cost
                 base_cost = None
                 if chosen.c_entity_base and chosen.c_entity_base.evo_costs:
-                    # Use the minimum digivolution memory cost from all evo routes
                     base_cost = min(ec.memory_cost for ec in chosen.c_entity_base.evo_costs)
                 if base_cost is None:
-                    # Fallback to play cost if no evo_costs defined
                     base_cost = chosen.get_cost_itself if chosen.get_cost_itself is not None else 0
                 cost = max(0, base_cost - 1)
 
@@ -100,13 +110,14 @@ class EX11_005(CardScript):
                 player.draw()
                 game.execute_effects(
                     EffectTiming.WhenDigivolving,
-                    {"digivolved_permanent": perm})
+                    {"digivolved_permanent": perm, "is_effect_play": True})
 
-                # If digivolve succeeded, trash 2 cards from hand
+                # SuccessProcess: trash up to 2 cards from hand
+                discard_count = min(2, len(player.hand_cards))
                 _trash_count = [0]
 
                 def _trash_one():
-                    if _trash_count[0] >= 2 or not player.hand_cards:
+                    if _trash_count[0] >= discard_count or not player.hand_cards:
                         return
 
                     def on_hand_trashed(selected):
@@ -119,7 +130,7 @@ class EX11_005(CardScript):
                     game.effect_select_hand_card(
                         player, lambda c: True, on_hand_trashed,
                         is_optional=False,
-                        prompt=f"Trash card {_trash_count[0]+1}/2 from your hand.")
+                        prompt=f"Trash card {_trash_count[0]+1}/{discard_count} from your hand.")
 
                 _trash_one()
 

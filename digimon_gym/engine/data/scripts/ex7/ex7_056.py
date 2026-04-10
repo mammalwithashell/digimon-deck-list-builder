@@ -52,29 +52,25 @@ class EX7_056(CardScript):
             if not (player and game):
                 return
 
-            # Step 1: Trash 1 card from hand (mandatory)
-            def on_hand_trashed(hand_card):
-                if hand_card and hand_card in player.hand_cards:
-                    player.trash_from_hand([hand_card])
+            enemy = player.enemy
 
-                # Step 2: Delete 1 opponent's level 3 Digimon
-                enemy = player.enemy
+            def _delete_lv3_and_lv4():
+                """Step 2+3: Delete 1 opponent lv3 then 1 opponent lv4."""
                 if not enemy:
                     return
 
                 def lv3_filter(p):
                     return p.is_digimon and getattr(p, 'level', None) == 3
 
+                def lv4_filter(p):
+                    return p.is_digimon and getattr(p, 'level', None) == 4
+
                 def on_delete_lv3(target_perm):
                     enemy.delete_permanent(target_perm)
+                    # After lv3 deletion, proceed to lv4
+                    _select_lv4()
 
-                    # Step 3: Delete 1 opponent's level 4 Digimon
-                    def lv4_filter(p):
-                        return p.is_digimon and getattr(p, 'level', None) == 4
-
-                    def on_delete_lv4(target_perm2):
-                        enemy.delete_permanent(target_perm2)
-
+                def _select_lv4():
                     opp_lv4 = [p for p in enemy.battle_area if lv4_filter(p)]
                     if opp_lv4:
                         game.effect_select_opponent_permanent(
@@ -82,6 +78,9 @@ class EX7_056(CardScript):
                             is_optional=False,
                             prompt="Delete 1 of your opponent's level 4 Digimon."
                         )
+
+                def on_delete_lv4(target_perm):
+                    enemy.delete_permanent(target_perm)
 
                 opp_lv3 = [p for p in enemy.battle_area if lv3_filter(p)]
                 if opp_lv3:
@@ -92,21 +91,16 @@ class EX7_056(CardScript):
                     )
                 else:
                     # No lv3 targets, still try lv4
-                    def lv4_filter(p):
-                        return p.is_digimon and getattr(p, 'level', None) == 4
+                    _select_lv4()
 
-                    def on_delete_lv4(target_perm2):
-                        enemy.delete_permanent(target_perm2)
-
-                    opp_lv4 = [p for p in enemy.battle_area if lv4_filter(p)]
-                    if opp_lv4:
-                        game.effect_select_opponent_permanent(
-                            player, on_delete_lv4, filter_fn=lv4_filter,
-                            is_optional=False,
-                            prompt="Delete 1 of your opponent's level 4 Digimon."
-                        )
-
+            # Step 1: Trash 1 card from hand (mandatory) if hand has cards
             if player.hand_cards:
+                def on_hand_trashed(hand_card):
+                    if hand_card and hand_card in player.hand_cards:
+                        player.trash_from_hand([hand_card])
+                    # Then proceed to deletion steps
+                    _delete_lv3_and_lv4()
+
                 game.effect_select_hand_card(
                     player,
                     filter_fn=lambda c: True,
@@ -114,6 +108,9 @@ class EX7_056(CardScript):
                     is_optional=False,
                     prompt="Trash 1 card from your hand."
                 )
+            else:
+                # No hand cards to trash — still proceed with deletions
+                _delete_lv3_and_lv4()
 
         effect1.set_on_process_callback(process1)
         effects.append(effect1)

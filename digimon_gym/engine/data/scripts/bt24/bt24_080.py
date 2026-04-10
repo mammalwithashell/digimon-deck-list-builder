@@ -3,6 +3,7 @@ from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
 from ....data.enums import EffectTiming
+from ....validation.digivolve_validator import can_digivolve
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -66,10 +67,12 @@ class BT24_080(CardScript):
             if len(player.hand_cards) > 4:
                 return False
             # Must have a Dark Dragon or Evil Dragon Digimon on field
+            # that also meets Megidramon's digivolve requirements (Lv.5 + color)
             has_target = any(
                 p.is_digimon and p.top_card and
-                any('Dark Dragon' in t or 'Evil Dragon' in t
+                any(t == 'Dark Dragon' or t == 'Evil Dragon'
                     for t in (getattr(p.top_card, 'card_traits', []) or []))
+                and can_digivolve(card, p)
                 for p in player.battle_area
             )
             return has_target
@@ -91,8 +94,14 @@ class BT24_080(CardScript):
                 if not tc:
                     return False
                 traits = getattr(tc, 'card_traits', []) or []
-                return any('Dark Dragon' in t or 'Evil Dragon' in t
-                           for t in traits)
+                if not any(t == 'Dark Dragon' or t == 'Evil Dragon'
+                           for t in traits):
+                    return False
+                # Must meet Megidramon's digivolve requirements (Lv.5 + color)
+                # per C# CanPlayCardTargetFrame → CanEvolve check
+                if not can_digivolve(card, p):
+                    return False
+                return True
 
             def on_select(target_perm):
                 if target_perm is None:

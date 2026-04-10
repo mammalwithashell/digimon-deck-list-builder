@@ -94,8 +94,10 @@ class EX11_069(CardScript):
 
         # --- Effect 3: [Your Turn] [Once Per Turn] When attacking,
         #     digivolve into [Dark Dragon]/[Evil Dragon] from trash, cost -1 ---
+        # C# uses OnAllyAttack timing — the Tamer observes "one of your Digimon"
+        # attacking, so OnUseAttack (which only fires on the attacker) is wrong.
         effect3 = ICardEffect()
-        effect3.set_timing(EffectTiming.OnUseAttack)
+        effect3.set_timing(EffectTiming.OnAllyAttack)
         effect3.set_effect_name("EX11-069 Digivolve attacking Digimon from trash")
         effect3.set_effect_description(
             "[Your Turn] [Once Per Turn] When one of your Digimon attacks, if "
@@ -122,9 +124,11 @@ class EX11_069(CardScript):
             """Digivolve the attacking Digimon into a [Dark Dragon]/[Evil Dragon]
             from trash with cost reduced by 1."""
             player = ctx.get('player')
-            perm = ctx.get('permanent')  # the attacking permanent
+            # OnAllyAttack: ctx['permanent'] is the Tamer, ctx['attacker'] is
+            # the attacking Digimon that should be digivolved.
+            attacker = ctx.get('attacker')
             game = ctx.get('game')
-            if not (player and perm and game):
+            if not (player and attacker and game):
                 return
 
             if len(player.hand_cards) > 4:
@@ -163,16 +167,16 @@ class EX11_069(CardScript):
                     base_cost = chosen.get_cost_itself if chosen.get_cost_itself is not None else 0
                 cost = max(0, base_cost - 1)
                 player.trash_cards.remove(chosen)
-                perm.add_card_source(chosen)
-                perm.turn_digivolved = game.turn_count
+                attacker.add_card_source(chosen)
+                attacker.turn_digivolved = game.turn_count
                 player.lose_memory(cost)
                 game.logger.log(
                     f"[Effect Digivolve] {game._card_ref(chosen)} onto "
-                    f"{game._perm_ref(perm)} (cost: {cost}, from trash)")
+                    f"{game._perm_ref(attacker)} (cost: {cost}, from trash)")
                 player.draw()
                 game.execute_effects(
                     EffectTiming.WhenDigivolving,
-                    {"digivolved_permanent": perm})
+                    {"digivolved_permanent": attacker})
 
             game.request_selection(
                 GamePhase.SelectTarget, player, on_select, valid,

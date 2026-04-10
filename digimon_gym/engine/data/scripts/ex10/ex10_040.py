@@ -51,11 +51,7 @@ class EX10_040(CardScript):
             if len(enemy.trash_cards) <= 10:
                 # Trash top 2 of both players' decks
                 for p in [player, enemy]:
-                    count = min(2, len(p.library_cards))
-                    for _ in range(count):
-                        if p.library_cards:
-                            top = p.library_cards.pop(0)
-                            p.trash_cards.append(top)
+                    p.mill(min(2, len(p.library_cards)))
 
             # Then, if opponent has 10 or more in trash, gain 1 memory
             if len(enemy.trash_cards) >= 10:
@@ -94,9 +90,7 @@ class EX10_040(CardScript):
 
             # Trash top 1 card of both players' decks
             for p in [player, enemy]:
-                if p.library_cards:
-                    top = p.library_cards.pop(0)
-                    p.trash_cards.append(top)
+                p.mill(min(1, len(p.library_cards)))
 
         effect1.set_on_process_callback(process1)
         effects.append(effect1)

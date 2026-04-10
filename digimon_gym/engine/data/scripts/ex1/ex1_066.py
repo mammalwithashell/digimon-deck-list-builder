@@ -77,8 +77,9 @@ class EX1_066(CardScript):
         effects.append(effect0)
 
         # --- Effect 1: [All Turns] On ally Lv5+ deletion, suspend for memory + hatch ---
+        # Uses NoTiming + _is_deletion_observer so _fire_deletion_observers() picks it up
         effect1 = ICardEffect()
-        effect1.set_timing(EffectTiming.OnDestroyedAnyone)
+        effect1._is_deletion_observer = True
         effect1.set_effect_name("EX1-066 On ally Lv5+ deletion: gain memory + hatch")
         effect1.set_effect_description(
             "[All Turns] When one of your level 5 or higher Digimon with "
@@ -92,16 +93,16 @@ class EX1_066(CardScript):
             if card and card.permanent_of_this_card() is None:
                 return False
             perm = card.permanent_of_this_card()
-            # Must not already be suspended
+            # Must not already be suspended (suspend is the cost)
             if perm and perm.is_suspended:
                 return False
             # The deleted Digimon must be ours, lv5+, with digi cards
-            deleted = context.get('event_permanent')
+            deleted = context.get('deleted_permanent')
             if deleted is None:
                 return False
-            event_player = context.get('event_player')
+            # Must be our permanent (deleted perm's owner == tamer's owner)
             owner = card.owner if card else None
-            if event_player is None or event_player is not owner:
+            if deleted.owner is not owner:
                 return False
             if not deleted.is_digimon:
                 return False

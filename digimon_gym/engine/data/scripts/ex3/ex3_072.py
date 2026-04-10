@@ -45,6 +45,7 @@ class EX3_072(CardScript):
                 return
 
             def _delete_opp_by_level(max_level: int):
+                """Select and delete 1 of opponent's Digimon with level <= max_level."""
                 def target_filter(p):
                     return (p.is_digimon and
                             p.level is not None and p.level <= max_level)
@@ -58,37 +59,31 @@ class EX3_072(CardScript):
                         is_optional=False,
                         prompt=f"Delete 1 of your opponent's level {max_level} or lower Digimon.")
 
-            # Check if player has own Digimon to delete for the upgrade
+            # C# flow: optionally select own Digimon to delete (canNoSelect: true).
+            # If deleted, maxLevel upgrades from 4 to 6.
+            # Then proceed to delete opponent's Digimon with current maxLevel.
             own_digimon = [p for p in player.battle_area if p.is_digimon]
 
-            # Player chooses: delete own Digimon for lv6 threshold,
-            # or just use base lv4 threshold
             if own_digimon:
-                # Give player the choice via effect_choose_branch
-                def on_branch(branch: int):
-                    if branch == 0:
-                        # Base: delete lv4 or lower
-                        _delete_opp_by_level(4)
-                    else:
-                        # Upgrade: delete own Digimon first, then lv6 or lower
-                        def on_own_deleted(own_perm):
-                            if own_perm is None:
-                                return
-                            player.delete_permanent(own_perm)
-                            _delete_opp_by_level(6)
+                def on_own_selected(own_perm):
+                    # Own Digimon selected and deleted: upgrade to lv6
+                    player.delete_permanent(own_perm)
+                    _delete_opp_by_level(6)
 
-                        game.effect_select_own_permanent(
-                            player, on_own_deleted,
-                            filter_fn=lambda p: p.is_digimon,
-                            is_optional=False,
-                            prompt="Delete 1 of your Digimon to upgrade the deletion.")
+                def on_decline_own():
+                    # Declined own deletion: use base lv4
+                    _delete_opp_by_level(4)
 
-                game.effect_choose_branch(
-                    player, 2, on_branch,
-                    prompt="Choose: delete opponent's lv4 or lower, OR delete own Digimon to delete lv6 or lower instead.",
-                    branch_labels=["Delete lv4 or lower", "Delete own Digimon, then lv6 or lower"])
+                game.effect_select_own_permanent(
+                    player, on_own_selected,
+                    filter_fn=lambda p: p.is_digimon,
+                    is_optional=True,
+                    prompt="Select 1 of your Digimon to delete to upgrade the deletion to level 6 or lower.")
+                # Attach on_decline handler for when player declines
+                if game.pending_selection:
+                    game.pending_selection.on_decline = on_decline_own
             else:
-                # No own Digimon to delete, just use base
+                # No own Digimon: use base lv4 threshold
                 _delete_opp_by_level(4)
 
         effect0.set_on_process_callback(process0)
