@@ -16,25 +16,33 @@ class BT19_093(CardScript):
 
         # Color bypass: "While you don't have [Queen Device] in the battle area,
         # you may ignore this card's color requirements."
-        # Setting unconditionally is safe: if a Queen Device is already in the
-        # battle area, its black color already satisfies the color requirement.
-        card._match_color_requirement = False
+        # DCGO: IgnoreColorConditionClass with condition checking that NO Queen Device
+        # is currently on the owner's field.
+        def _color_bypass_fn() -> bool:
+            owner = card.owner if card else None
+            if not owner:
+                return True  # no owner context => bypass
+            for perm in owner.battle_area:
+                if perm.contains_card_name("Queen Device"):
+                    return True  # Queen Device already on field => enforce color
+            return False  # no Queen Device on field => bypass color
+
+        card._match_color_requirement_fn = _color_bypass_fn
 
         # --- Effect 0: When this card is trashed from your battle area ---
-        # "When this card is trashed in your battle area, until the end of your
+        # "When this card is trashed from the battle area, until the end of your
         #  opponent's turn, 1 of their Digimon can't activate [When Digivolving]
         #  effects and gets -3000 DP."
         effect0 = ICardEffect()
         effect0.set_timing(EffectTiming.OnDestroyedAnyone)
         effect0.set_effect_name("BT19-093 On trashed: -3000 DP + disable When Digivolving")
         effect0.set_effect_description(
-            "When this card is trashed in your battle area, until the end of your "
+            "When this card is trashed from the battle area, until the end of your "
             "opponent's turn, 1 of their Digimon can't activate [When Digivolving] "
             "effects and gets -3000 DP."
         )
         effect0.is_on_deletion = True
 
-        effect = effect0
         def condition0(context: Dict[str, Any]) -> bool:
             return True
 
@@ -54,13 +62,25 @@ class BT19_093(CardScript):
                 return p.is_digimon
 
             def on_select(target_perm):
-                target_perm.change_dp(-3000)
-                # [When Digivolving] disable is not yet modeled in engine
-                # descriptive-tagged: disable_when_digivolving
+                from ....interfaces.modifiers import ModifierType
+                # -3000 DP until end of opponent's turn
+                game.register_modifier(
+                    target_perm, ModifierType.CHANGE_DP,
+                    value_fn=lambda cur, t, c: cur - 3000,
+                    expiry='end_of_opponent_turn')
+                # Disable [When Digivolving] effects until end of opponent's turn
+                game.register_modifier(
+                    target_perm, ModifierType.DISABLE_EFFECT,
+                    condition=lambda p, c, fp=target_perm: (
+                        p is fp
+                        and c.get('effect') is not None
+                        and getattr(c['effect'], 'is_when_digivolving', False)
+                    ),
+                    expiry='end_of_opponent_turn')
 
             game.effect_select_opponent_permanent(
                 player, on_select, filter_fn=target_filter, is_optional=False,
-                prompt="Select 1 opponent Digimon to give -3000 DP.")
+                prompt="Select 1 opponent Digimon to give -3000 DP and disable [When Digivolving].")
 
         effect0.set_on_process_callback(process0)
         effects.append(effect0)
@@ -77,8 +97,9 @@ class BT19_093(CardScript):
             "can't activate [When Digivolving] effects and gets -3000 DP. Then, "
             "place this card in the battle area."
         )
+        # _is_delay keeps the option card on the field after resolution
+        effect1._is_delay = True
 
-        effect = effect1
         def condition1(context: Dict[str, Any]) -> bool:
             return True
 
@@ -98,15 +119,25 @@ class BT19_093(CardScript):
                 return p.is_digimon
 
             def on_select(target_perm):
-                target_perm.change_dp(-3000)
-                # [When Digivolving] disable is not yet modeled in engine
-                # descriptive-tagged: disable_when_digivolving
+                from ....interfaces.modifiers import ModifierType
+                # -3000 DP until end of opponent's turn
+                game.register_modifier(
+                    target_perm, ModifierType.CHANGE_DP,
+                    value_fn=lambda cur, t, c: cur - 3000,
+                    expiry='end_of_opponent_turn')
+                # Disable [When Digivolving] effects until end of opponent's turn
+                game.register_modifier(
+                    target_perm, ModifierType.DISABLE_EFFECT,
+                    condition=lambda p, c, fp=target_perm: (
+                        p is fp
+                        and c.get('effect') is not None
+                        and getattr(c['effect'], 'is_when_digivolving', False)
+                    ),
+                    expiry='end_of_opponent_turn')
 
             game.effect_select_opponent_permanent(
                 player, on_select, filter_fn=target_filter, is_optional=False,
-                prompt="Select 1 opponent Digimon to give -3000 DP.")
-            # "Then, place this card in the battle area" — handled by engine
-            # (OptionSkill cards with delay placement are auto-placed)
+                prompt="Select 1 opponent Digimon to give -3000 DP and disable [When Digivolving].")
 
         effect1.set_on_process_callback(process1)
         effects.append(effect1)
@@ -123,7 +154,6 @@ class BT19_093(CardScript):
         )
         effect2.is_security_effect = True
 
-        effect = effect2
         def condition2(context: Dict[str, Any]) -> bool:
             return True
 
@@ -137,6 +167,10 @@ class BT19_093(CardScript):
                 return
             enemy = player.enemy if player else None
             if not enemy:
+                # No opponent => just add to hand
+                if card in player.trash_cards:
+                    player.trash_cards.remove(card)
+                    player.hand_cards.append(card)
                 return
 
             # Apply SA-2 to up to 2 opponent Digimon via selection
@@ -148,15 +182,30 @@ class BT19_093(CardScript):
                 def _select_next():
                     nonlocal remaining_count
                     if remaining_count <= 0:
+                        # All selections done, add card to hand
+                        if card in player.trash_cards:
+                            player.trash_cards.remove(card)
+                            player.hand_cards.append(card)
                         return
                     def sa_filter(p):
                         return p.is_digimon and id(p) not in selected_set
                     if not any(sa_filter(p) for p in enemy.battle_area):
+                        # No more valid targets, add card to hand
+                        if card in player.trash_cards:
+                            player.trash_cards.remove(card)
+                            player.hand_cards.append(card)
                         return
 
                     def on_sa_select(target_perm):
                         nonlocal remaining_count
-                        target_perm._temp_sa_modifier -= 2
+                        from ....interfaces.modifiers import ModifierType
+                        # SA-2 via modifier with end_of_turn expiry
+                        # condition restricts to this specific target permanent
+                        game.register_modifier(
+                            target_perm, ModifierType.CHANGE_SECURITY_ATTACK,
+                            condition=lambda p, c, fp=target_perm: p is fp,
+                            value_fn=lambda cur, t, c: cur - 2,
+                            expiry='end_of_turn')
                         selected_set.add(id(target_perm))
                         remaining_count -= 1
                         _select_next()
@@ -167,11 +216,11 @@ class BT19_093(CardScript):
                         prompt=f"Select opponent Digimon to give Security A. -2 ({remaining_count} remaining).")
 
                 _select_next()
-
-            # Add this card to hand
-            if card in player.trash_cards:
-                player.trash_cards.remove(card)
-                player.hand_cards.append(card)
+            else:
+                # No Digimon targets, just add card to hand
+                if card in player.trash_cards:
+                    player.trash_cards.remove(card)
+                    player.hand_cards.append(card)
 
         effect2.set_on_process_callback(process2)
         effects.append(effect2)

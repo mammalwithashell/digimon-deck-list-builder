@@ -77,6 +77,7 @@ class EX2_046(CardScript):
         effects.append(effect2)
 
         # --- Effect 3: Inherited [Your Turn] All D-Reaper Digimon +1000 DP ---
+        # C# PermanentCondition: checks permanent.TopCard.CardTraits.Contains("D-Reaper")
         effect3 = ICardEffect()
         effect3.set_effect_name("EX2-046 Inherited: D-Reaper +1000 DP")
         effect3.set_effect_description(
@@ -86,6 +87,15 @@ class EX2_046(CardScript):
         effect3.is_inherited_effect = True
         effect3.dp_modifier = 1000
         effect3._applies_to_all_own_digimon = True
+
+        def _dp_dreaper_filter(permanent) -> bool:
+            """Only apply DP boost to Digimon with D-Reaper trait."""
+            top = permanent.top_card if permanent else None
+            if not top:
+                return False
+            traits = getattr(top, 'card_traits', []) or []
+            return any('D-Reaper' in t for t in traits)
+        effect3._dp_permanent_condition = _dp_dreaper_filter
 
         def condition3(context: Dict[str, Any]) -> bool:
             if card and card.owner and card.owner.is_my_turn:

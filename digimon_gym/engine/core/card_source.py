@@ -78,7 +78,24 @@ class CardSource:
 
     @property
     def card_traits(self) -> List[str]:
-        return self.c_entity_base.type_eng if self.c_entity_base else []
+        """Return combined traits matching C# CardTraits: Form + Attribute + Type.
+
+        DCGO CardSource.cs CardTraits property concatenates:
+            Form_ENG + Attribute_ENG + Type_ENG (filtering empty strings)
+        """
+        if not self.c_entity_base:
+            return []
+        traits = []
+        for s in (self.c_entity_base.form_eng or []):
+            if s:
+                traits.append(s)
+        for s in (self.c_entity_base.attribute_eng or []):
+            if s:
+                traits.append(s)
+        for s in (self.c_entity_base.type_eng or []):
+            if s:
+                traits.append(s)
+        return traits
 
     @property
     def card_text(self) -> str:

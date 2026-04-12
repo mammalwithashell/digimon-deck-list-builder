@@ -128,10 +128,15 @@ class LM_043(CardScript):
         effects.append(effect3)
 
         # --- Effect 4: Inherited Ace Overflow -4 ---
+        # Engine handles ACE Overflow automatically via entity_base.is_ace /
+        # ace_overflow_cost parsed from inherited_effect_description_eng.
+        # This effect tag documents the inherited effect in the script.
         effect_ace = ICardEffect()
         effect_ace.set_effect_name("LM-043 Ace Overflow <-4>")
         effect_ace.set_effect_description("Ace Overflow <-4>")
         effect_ace.is_inherited_effect = True
+        effect_ace._is_ace_overflow = True
+        effect_ace._overflow_amount = -4
 
         def condition_ace(context: Dict[str, Any]) -> bool:
             return True

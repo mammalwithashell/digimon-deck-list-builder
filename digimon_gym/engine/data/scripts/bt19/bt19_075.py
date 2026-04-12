@@ -132,85 +132,127 @@ class BT19_075(CardScript):
         # [All Turns] When this Digimon would leave the battle area, by deleting 1 of your
         # Digimon with the [Composite] trait, it doesn't leave.
         # C#: HasCompositeTrait checks IsPermanentExistsOnOwnerBattleAreaDigimon + EqualsTraits("Composite")
+        # Uses WhenPermanentWouldBeDeleted timing + _will_not_be_removed flag
+        # (matches ST19-11 / EX7-027 canonical pattern)
         effect3 = ICardEffect()
-        effect3.set_timing(EffectTiming.WhenRemoveField)
+        effect3.set_timing(EffectTiming.WhenPermanentWouldBeDeleted)
         effect3.set_effect_name("BT19-075 Delete [Composite] trait digimon to prevent removal")
         effect3.set_effect_description("[All Turns] When this Digimon would leave the battle area, by deleting 1 of your Digimon with the [Composite] trait, it doesn't leave.")
         effect3.is_optional = True
 
+        def _has_composite(p, my_perm):
+            """Check if a permanent is a valid [Composite] sacrifice target."""
+            if p is my_perm or not p.is_digimon:
+                return False
+            top = getattr(p, 'top_card', None)
+            if not top:
+                return False
+            traits = getattr(top, 'card_traits', []) or []
+            return any('Composite' in t for t in traits)
+
+        # Guard: prevent re-entrant triggering during on_decline re-deletion
+        _preventing = [False]
+
         def condition3(context: Dict[str, Any]) -> bool:
+            if _preventing[0]:
+                return False
             my_perm = card.permanent_of_this_card() if card else None
             if not my_perm:
+                return False
+            # Only triggers for THIS permanent being removed
+            event_perm = context.get('event_permanent') or context.get('permanent')
+            if event_perm is not my_perm:
                 return False
             player = card.owner if card else None
             if not player:
                 return False
             # Must have at least 1 own Digimon with [Composite] trait (not self)
-            def _has_composite(p):
-                if p is my_perm:
-                    return False
-                if not p.is_digimon:
-                    return False
-                top = getattr(p, 'top_card', None)
-                if not top:
-                    return False
-                traits = getattr(top, 'card_traits', []) or []
-                return any('Composite' in t for t in traits)
-            return any(_has_composite(p) for p in player.battle_area)
+            return any(_has_composite(p, my_perm) for p in player.battle_area)
         effect3.set_can_use_condition(condition3)
 
         def process3(ctx: Dict[str, Any]):
-            """Delete 1 own [Composite] Digimon to prevent this Digimon from leaving."""
+            """Delete 1 own [Composite] Digimon to prevent this Digimon from leaving.
+
+            Pattern: Set _will_not_be_removed = True IMMEDIATELY to prevent
+            deletion (since delete_permanent checks the flag synchronously after
+            firing WhenPermanentWouldBeDeleted), then start async selection.
+            If the player declines, undo prevention by deleting the permanent.
+            """
             player = ctx.get('player')
-            perm = ctx.get('permanent')
             game = ctx.get('game')
-            if not (player and perm and game):
+            if not (player and game):
+                return
+            my_perm = card.permanent_of_this_card() if card else None
+            if not my_perm:
                 return
 
-            def composite_filter(p):
-                if p is perm:
-                    return False
-                if not p.is_digimon:
-                    return False
-                top = getattr(p, 'top_card', None)
-                if not top:
-                    return False
-                traits = getattr(top, 'card_traits', []) or []
-                return any('Composite' in t for t in traits)
+            # Immediately prevent deletion — selection will confirm or undo
+            my_perm._will_not_be_removed = True
 
-            def on_sacrifice(target_perm):
-                if target_perm is None:
-                    return
-                player.delete_permanent(target_perm)
-                # Prevent this Digimon from leaving (DCGO: willBeRemoveField = false)
-                perm._will_not_be_removed = True
+            # Build valid target list
+            from ....game.effects import SEL_MY_FIELD_START
+            valid = []
+            for i, p in enumerate(player.battle_area):
+                if _has_composite(p, my_perm):
+                    valid.append(SEL_MY_FIELD_START + i)
+            if not valid:
+                # No valid targets — should not reach here (condition checks)
+                my_perm._will_not_be_removed = False
+                return
 
-            game.effect_select_own_permanent(
-                player, on_sacrifice,
-                filter_fn=composite_filter,
+            def on_select(action_id: int):
+                idx = action_id - SEL_MY_FIELD_START
+                if 0 <= idx < len(player.battle_area):
+                    target_perm = player.battle_area[idx]
+                    player.delete_permanent(target_perm)
+
+            def on_decline():
+                # Player chose not to sacrifice — undo prevention, delete the permanent
+                # Set guard to prevent re-entrant triggering of this effect
+                _preventing[0] = True
+                try:
+                    player.delete_permanent(my_perm)
+                finally:
+                    _preventing[0] = False
+
+            from ....data.enums import GamePhase as GP
+            game.request_selection(
+                GP.SelectTarget, player, on_select, valid,
                 is_optional=True,
-                prompt="Select 1 [Composite] Digimon to delete to prevent leaving.")
+                prompt="Select 1 [Composite] Digimon to delete to prevent leaving.",
+                on_decline=on_decline,
+            )
 
         effect3.set_on_process_callback(process3)
         effects.append(effect3)
 
         # [All Turns] [Once Per Turn] When other Digimon or Tamers are deleted,
         # trash your opponent's top security card.
+        # Uses _is_deletion_observer so _fire_deletion_observers() picks it up
+        # when ANY Digimon/Tamer is deleted (not just self)
         effect4 = ICardEffect()
-        effect4.set_timing(EffectTiming.OnDestroyedAnyone)
+        effect4._is_deletion_observer = True
         effect4.set_effect_name("BT19-075 Trash your opponent's top security card")
         effect4.set_effect_description("[All Turns] [Once Per Turn] When other Digimon or Tamers are deleted, trash your opponent's top security card.")
         effect4.set_max_count_per_turn(1)
         effect4.set_hash_string("TrashSecurity_BT19-075")
-        effect4.is_on_deletion = True
 
         def condition4(context: Dict[str, Any]) -> bool:
             my_perm = card.permanent_of_this_card() if card else None
             if not my_perm:
                 return False
             # C#: OtherPermanentDeleted checks (IsDigimon || IsTamer) && permanent != self
-            deleted_perm = context.get('deleted_permanent') or context.get('permanent')
+            deleted_perm = context.get('deleted_permanent')
             if deleted_perm is my_perm:
+                return False
+            # Must be a Digimon or Tamer
+            if deleted_perm and not (deleted_perm.is_digimon or deleted_perm.is_tamer):
+                return False
+            # Must have enemy security to trash
+            owner = card.owner if card else None
+            if not owner or not owner.enemy:
+                return False
+            if not owner.enemy.security_cards:
                 return False
             return True
         effect4.set_can_use_condition(condition4)
@@ -219,6 +261,8 @@ class BT19_075(CardScript):
             """Trash opponent's top security card."""
             player = ctx.get('player')
             game = ctx.get('game')
+            if not player:
+                return
             enemy = player.enemy if player else None
             if enemy and enemy.security_cards:
                 trashed = enemy.security_cards.pop(0)

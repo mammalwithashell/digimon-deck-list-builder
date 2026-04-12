@@ -266,6 +266,36 @@ game.effect_choose_branch(
 )
 ```
 
+#### `effect_select_trash_digivolution_cards(player, max_count, perm_filter=None, card_filter=None, card_effect=None, is_optional=False, from_only_one_permanent=False, on_complete=None, prompt_perm="...", prompt_card="...")`
+
+Two-step selection: pick permanent → pick digivolution cards → trash. Matches DCGO `CardEffectCommons.SelectTrashDigivolutionCards`.
+
+- `player`: The player making the selection (the effect owner).
+- `max_count`: Total digivolution cards to trash across all permanents.
+- `perm_filter(perm) -> bool`: Filter for which permanents can be chosen.
+- `card_filter(card) -> bool`: Filter for which digivolution cards can be chosen.
+- `card_effect`: The ICardEffect that caused this (for immunity/cut-in checks).
+- `from_only_one_permanent`: If True, all cards must come from 1 permanent.
+- `on_complete(trashed: List[CardSource])`: Callback with all trashed cards when done.
+
+Cards are trashed via `Permanent.trash_specific_digivolution_cards()`, which fires the full DCGO flow (WhenWouldDigivolutionCardDiscarded cut-in → OnDigivolutionCardDiscarded → ACE overflow).
+
+```python
+# BT16-085 DNA: trash any 3 opponent digivolution cards (player chooses)
+def opp_digi_filter(p):
+    return p.is_digimon and p.top_card.owner is not player
+
+game.effect_select_trash_digivolution_cards(
+    player,
+    max_count=3,
+    perm_filter=opp_digi_filter,
+    is_optional=False,
+    from_only_one_permanent=False,
+    prompt_perm="Select opponent Digimon to trash digivolution cards from.",
+    prompt_card="Select digivolution card to trash.",
+)
+```
+
 ### Reveal Methods
 
 #### `effect_reveal_and_select(player, count, filter_fn, on_selected, is_optional=False, prompt="")`
@@ -563,8 +593,8 @@ Import: `from digimon_gym.engine.data.enums import EffectTiming`
 | `WhenWouldDigivolve` (57) | Before digivolution happens |
 | `WhenDigisorption` (7) | Digisorption is used |
 | `OnAddDigivolutionCards` (31) | Cards added to digi-stack |
-| `OnDigivolutionCardDiscarded` (46) | Digi-card is discarded |
-| `WhenWouldDigivolutionCardDiscarded` (52) | Before digi-card would be discarded |
+| `OnDigivolutionCardDiscarded` (46) | Digi-card is trashed (fires BEFORE removal from stack; inherited effects on trashed cards are found by normal gathering). Context: `permanent`, `trashed_cards`, `card_effect`. |
+| `WhenWouldDigivolutionCardDiscarded` (52) | Cut-in: before digi-card would be trashed. Interrupters can set `cs._will_be_removed = False` to save cards (e.g. BT10-084 redirect). Context: `permanent`, `trashed_cards`, `card_effect`. |
 | `OnDigivolutionCardReturnToDeckBottom` (47) | Digi-card returns to deck bottom |
 | `WhenTopCardTrashed` (54) | Top card is trashed |
 
@@ -688,7 +718,8 @@ Access via `ctx.get('permanent')` or from selection callbacks.
 | `change_dp(amount)` | Temporary DP change (until end of turn) |
 | `grant_keyword(keyword_attr)` | Grant a keyword (e.g., `'_is_rush'`) |
 | `de_digivolve(count) -> List[CardSource]` | Remove top N cards from stack, return removed |
-| `trash_digivolution_cards(count, from_top=True) -> List[CardSource]` | Trash N under-cards |
+| `trash_digivolution_cards(count, from_top=True, card_effect=None) -> List[CardSource]` | Trash N under-cards (auto-selected from top/bottom). Fires WhenWouldDigivolutionCardDiscarded cut-in, then OnDigivolutionCardDiscarded. Checks IMMUNE_FROM_STACK_TRASHING. |
+| `trash_specific_digivolution_cards(cards, card_effect=None) -> List[CardSource]` | Trash specific pre-selected digivolution cards. Same flow as above but with an explicit card list (for player-choice effects like Digi-Burst, DCGO SelectTrashDigivolutionCards). |
 | `add_card_source(card)` | Add card to top of stack |
 | `add_card_source_bottom(card)` | Add card to bottom of stack |
 | `link_card(card)` | Link option card sideways |
@@ -1213,6 +1244,33 @@ def process(ctx):
 effect.set_on_process_callback(process)
 ```
 
+### Pattern 14: Trash Opponent Digivolution Cards (Player Choice)
+
+When an effect says "trash N digivolution cards from opponent's Digimon" and the player
+should choose which permanent and which cards, use `effect_select_trash_digivolution_cards`.
+This handles the two-step DCGO `SelectTrashDigivolutionCards` flow: select permanent → select
+cards → trash (with full cut-in and OnDigivolutionCardDiscarded flow).
+
+```python
+# Trash any 3 opponent digivolution cards (can span multiple Digimon)
+def opp_digi_filter(p):
+    return p.is_digimon and p.top_card.owner is not player
+
+game.effect_select_trash_digivolution_cards(
+    player,
+    max_count=3,
+    perm_filter=opp_digi_filter,
+    is_optional=False,
+    from_only_one_permanent=False,
+)
+```
+
+For auto-selected trashing (no player choice, e.g. "trash 1 of target Digimon's
+digivolution cards"), continue to use `perm.trash_digivolution_cards(count)`.
+
+For pre-selected specific cards (e.g. Digi-Burst where cards were already chosen),
+use `perm.trash_specific_digivolution_cards(cards, card_effect=effect)`.
+
 ---
 
 ## 11. Anti-Patterns
@@ -1736,5 +1794,7 @@ These constants define which action IDs correspond to which selection targets:
 | 114–127 | `SEL_OPP_FIELD_START` – `SEL_OPP_FIELD_END` | Opponent's battle area |
 | 130–179 | `SEL_TRASH_START` – `SEL_TRASH_END` | Trash card by index |
 | 1000–1009 | `SEL_EFFECT_CHOICE_START` – `SEL_EFFECT_CHOICE_END` | Effect branch choice |
+
+| 2000–2167 | `2000 + field_idx * SOURCES_PER_FIELD + source_idx` | Digivolution card source selection (within a permanent's card_sources) |
 
 Card scripts should NOT reference these directly — use `game.effect_select_*` methods which handle action mapping internally.

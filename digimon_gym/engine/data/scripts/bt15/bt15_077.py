@@ -102,8 +102,43 @@ class BT15_077(CardScript):
                         return False
                     traits = getattr(c, 'card_traits', []) or []
                     return any('Dark Masters' in t for t in traits)
-                game.effect_play_from_zone(
-                    player, 'hand', play_filter, free=True, is_optional=True)
+
+                from ....game.constants import SEL_HAND_START, ACTION_SPACE_SIZE
+                from ....core.permanent import Permanent
+                from ....data.enums import GamePhase
+
+                valid = []
+                for i, c in enumerate(player.hand_cards):
+                    if play_filter(c) and (SEL_HAND_START + i) < ACTION_SPACE_SIZE:
+                        valid.append(SEL_HAND_START + i)
+                if not valid:
+                    return
+
+                def on_select_breeding(action_id):
+                    idx = action_id - SEL_HAND_START
+                    if 0 <= idx < len(player.hand_cards):
+                        chosen = player.hand_cards[idx]
+                        player.hand_cards.remove(chosen)
+                        new_perm = Permanent([chosen])
+                        if game:
+                            new_perm.turn_played = game.turn_count
+                            new_perm._owner_game = game
+                        player.breeding_area = new_perm
+                        game.logger.log(
+                            f"[Effect] {player.player_name} played "
+                            f"{game._card_ref(chosen)} to breeding area"
+                        )
+                        game.execute_effects(
+                            EffectTiming.OnEnterFieldAnyone,
+                            {"played_card": chosen, "played_permanent": new_perm,
+                             "event_player": player, "is_effect_play": True},
+                        )
+
+                game.request_selection(
+                    GamePhase.SelectTarget, player, on_select_breeding,
+                    valid, True,
+                    prompt="Select 1 Digimon with [Dark Masters] trait from hand to play to breeding area."
+                )
 
             game.effect_select_own_permanent(
                 player, on_delete_own, filter_fn=digimon_filter, is_optional=True,

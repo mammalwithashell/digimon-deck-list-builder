@@ -1,6 +1,7 @@
 from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
+from ....core.permanent import Permanent
 from ....interfaces.card_effect import ICardEffect
 from ....data.enums import EffectTiming
 
@@ -81,17 +82,44 @@ class BT15_062(CardScript):
 
             def on_delete_cost(target_perm):
                 player.delete_permanent(target_perm)
+
+                # Only allow play if breeding area is empty (C# ref: GetBreedingAreaPermanents().Count == 0)
+                if player.breeding_area is not None:
+                    return
+
                 def play_filter(c):
                     if not getattr(c, 'is_digimon', False):
                         return False
                     traits = getattr(c, 'card_traits', []) or []
                     return any('Dark Masters' in t or 'DarkMasters' in t for t in traits)
 
-                game.effect_play_from_zone(
-                    player, 'hand', play_filter, free=True, is_optional=True)
+                def on_select_hand(selected_card):
+                    # Remove from hand and place in breeding area (not battle area)
+                    if selected_card in player.hand_cards:
+                        player.hand_cards.remove(selected_card)
+                    new_perm = Permanent([selected_card])
+                    if game:
+                        new_perm.turn_played = game.turn_count
+                        new_perm._owner_game = game
+                    player.breeding_area = new_perm
+                    game.logger.log(
+                        f"[Effect] {player.player_name} played "
+                        f"{selected_card.card_names[0] if selected_card.card_names else 'Unknown'} "
+                        f"to breeding area without paying the cost")
+                    # Fire On Play effects (C# ref: activateETB: true)
+                    game.execute_effects(
+                        EffectTiming.OnEnterFieldAnyone,
+                        {"played_card": selected_card, "played_permanent": new_perm,
+                         "event_player": player, "is_effect_play": True},
+                    )
+
+                game.effect_select_hand_card(
+                    player, play_filter, on_select_hand, is_optional=True,
+                    prompt="Select 1 Digimon card with [Dark Masters] trait to play to breeding area.")
 
             game.effect_select_own_permanent(
-                player, on_delete_cost, filter_fn=own_digimon_filter, is_optional=True)
+                player, on_delete_cost, filter_fn=own_digimon_filter, is_optional=True,
+                prompt="Select 1 of your Digimon to delete.")
 
         effect1.set_on_process_callback(process1)
         effects.append(effect1)

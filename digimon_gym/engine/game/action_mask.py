@@ -147,7 +147,9 @@ def build_action_mask(game: "Game", player_id: int) -> List[float]:
             for f in range(min(len(me.battle_area), FIELD_SLOTS)):
                 base_perm = me.battle_area[f]
                 # DCGO: ICanNotDigivolveEffect blocks digivolution on target
-                if game.modifiers.has_modifier(base_perm, ModifierType.CANNOT_DIGIVOLVE):
+                # Pass digivolving_card so conditional restrictions (e.g. "only into X") work
+                if game.modifiers.has_modifier(base_perm, ModifierType.CANNOT_DIGIVOLVE,
+                                               {'digivolving_card': card}):
                     continue
                 if can_digivolve(card, base_perm):
                     mask[400 + h * FIELDS_PER_HAND + f] = 1.0

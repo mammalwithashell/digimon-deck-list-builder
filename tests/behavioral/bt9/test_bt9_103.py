@@ -1,259 +1,307 @@
 """Behavioral tests for BT9-103 Kongou (Option, Black, Cost 2).
 
 Card text:
-  [Main] Until the end of your opponent's turn, your opponent's Digimon with
-  play costs of 7 or less can't attack players, and cards can't be added to
-  security stacks by your opponent's effects.
+[Main] Until the end of your opponent's turn, your opponent's Digimon
+    with play costs of 7 or less can't attack players, and cards can't
+    be added to security stacks by your opponent's effects.
+[Security] Activate this card's [Main] effects.
 
-  [Security] Activate this card's [Main] effects.
-
-C# reference: BT9_103.cs
-  - Main: GainCanNotAttackPlayerEffect (NOT general CANNOT_ATTACK!)
-      attackerCondition: IsPermanentExistsOnOpponentBattleAreaDigimon && GetCostItself <= 7
-      defenderCondition: Defender == null (i.e., attacking player)
-      effectDuration: UntilOpponentTurnEnd
-  - Main part 2: CannotAddSecurityClass with IsOpponentEffect condition
-  - Security: AddActivateMainOptionSecurityEffect
-
-Key distinction: "can't attack PLAYERS" means restricted Digimon CAN still
-attack other Digimon. The modifier must be CANNOT_ATTACK_PLAYER, not CANNOT_ATTACK.
-
-Key cards used:
-  BT5-061: Commandramon (Black Lv3, Cost 4) - black Digimon for color requirement
-  BT2-058: Guardromon (Black Lv4, Cost 5) - cost <= 7, should be restricted
-  BT2-064: HiAndromon (Black Lv6, Cost 10) - cost > 7, should NOT be restricted
-  ST1-03: Agumon (Red Lv3, Cost 3) - cost <= 7, should be restricted
+Key behaviors:
+1. Restriction is CANNOT_ATTACK_PLAYER (not general CANNOT_ATTACK)
+   - Affected Digimon can still attack other Digimon
+2. The cost check is dynamic — applies to ALL opponent Digimon with cost <= 7,
+   including ones played AFTER Kongou resolves
+3. Opponent's Digimon with cost > 7 are NOT restricted
+4. CANNOT_ADD_SECURITY prevents opponent's effects from adding cards to security
+5. Duration is "until end of opponent's turn"
+6. Security effect activates the same Main effect
 """
 
 import pytest
-
 from digimon_gym.engine.data.enums import EffectTiming
-
-
-# Need black Digimon in deck to meet option color requirement
-_DECK = ["BT9-103"] * 4 + ["BT5-061"] * 4 + ["ST1-03"] * 42
+from digimon_gym.engine.interfaces.modifiers import ModifierType, ModifierEntry
 
 
 @pytest.mark.behavioral
-class TestBT9103Effects:
-    """Verify BT9-103 has the correct effect structure."""
+class TestBT9103Kongou:
+    """Tests for BT9-103 Kongou."""
 
-    def test_has_option_skill(self):
+    def _activate_kongou(self, runner, player_id=1):
+        """Helper: place Kongou on field and fire its Main effect."""
+        game = runner.game
+        player = game.player1 if player_id == 1 else game.player2
+
         from digimon_gym.engine.data.card_database import CardDatabase
         db = CardDatabase()
-        cs = db.create_card_source("BT9-103")
+        cs = db.create_card_source("BT9-103", player)
         effects = cs.effect_list(None)
-        main_effects = [e for e in effects if e.timing == EffectTiming.OptionSkill]
-        assert len(main_effects) >= 1, "Should have OptionSkill effect"
+        main_effects = [
+            e for e in effects
+            if e.timing == EffectTiming.OptionSkill
+            and e.on_process_callback is not None
+        ]
+        assert len(main_effects) >= 1, "Should have OptionSkill (Main) effect"
+        main_effects[0].on_process_callback({
+            'player': player,
+            'game': game,
+        })
+        return cs
 
-    def test_has_security_skill(self):
+    # --- Test 1: CANNOT_ATTACK_PLAYER (not general CANNOT_ATTACK) ---
+
+    def test_cost_7_digimon_cannot_attack_player(self, debug_runner):
+        """Opponent's Digimon with play cost <= 7 can't attack players after Kongou."""
+        runner = debug_runner(initial_memory=5)
+
+        # Opponent has a cost-7 Digimon (ST1-09 MetalGreymon, cost 7)
+        perm = runner.place_on_field(2, ["ST1-09"])
+        # Give it time so no summoning sickness
+        perm.turn_played = -1
+
+        self._activate_kongou(runner)
+
+        # The Digimon should NOT be able to attack players
+        assert not perm.can_attack_player(), (
+            "Cost-7 Digimon should NOT be able to attack players after Kongou"
+        )
+
+    def test_cost_7_digimon_can_still_attack_digimon(self, debug_runner):
+        """Affected Digimon can still attack — just not players."""
+        runner = debug_runner(initial_memory=5)
+
+        # Opponent has a cost-7 Digimon
+        perm = runner.place_on_field(2, ["ST1-09"])
+        perm.turn_played = -1
+
+        self._activate_kongou(runner)
+
+        # can_attack() should still return True (general attack is fine)
+        assert perm.can_attack(), (
+            "Cost-7 Digimon should still be able to attack (just not players)"
+        )
+
+    def test_cost_over_7_digimon_not_restricted(self, debug_runner):
+        """Opponent's Digimon with play cost > 7 should NOT be restricted."""
+        runner = debug_runner(initial_memory=5)
+
+        # ST1-11 WarGreymon has cost 12
+        perm = runner.place_on_field(2, ["ST1-11"])
+        perm.turn_played = -1
+
+        self._activate_kongou(runner)
+
+        # Should still be able to attack players
+        assert perm.can_attack_player(), (
+            "Cost-12 Digimon should still be able to attack players"
+        )
+
+    def test_cost_3_digimon_restricted(self, debug_runner):
+        """Opponent's low-cost Digimon (cost 3) can't attack players."""
+        runner = debug_runner(initial_memory=5)
+
+        # ST1-03 Agumon has cost 3
+        perm = runner.place_on_field(2, ["ST1-03"])
+        perm.turn_played = -1
+
+        self._activate_kongou(runner)
+
+        assert not perm.can_attack_player(), (
+            "Cost-3 Digimon should NOT be able to attack players after Kongou"
+        )
+
+    # --- Test 2: Dynamic check — new Digimon played after Kongou ---
+
+    def test_new_digimon_played_after_kongou_also_restricted(self, debug_runner):
+        """Digimon played AFTER Kongou should also be restricted (dynamic condition)."""
+        runner = debug_runner(initial_memory=5)
+
+        # Activate Kongou with no opponent Digimon on field
+        self._activate_kongou(runner)
+
+        # Now opponent plays a cost-5 Digimon
+        new_perm = runner.place_on_field(2, ["ST1-06"])
+        new_perm.turn_played = -1  # no summoning sickness
+
+        assert not new_perm.can_attack_player(), (
+            "Digimon played AFTER Kongou should also be restricted "
+            "(dynamic condition check, not just existing permanents)"
+        )
+
+    def test_new_high_cost_digimon_not_restricted(self, debug_runner):
+        """High-cost Digimon played after Kongou should NOT be restricted."""
+        runner = debug_runner(initial_memory=5)
+
+        self._activate_kongou(runner)
+
+        # Opponent plays a cost-12 Digimon
+        new_perm = runner.place_on_field(2, ["ST1-11"])
+        new_perm.turn_played = -1
+
+        assert new_perm.can_attack_player(), (
+            "High-cost Digimon played after Kongou should still attack players"
+        )
+
+    # --- Test 3: CANNOT_ADD_SECURITY modifier ---
+
+    def test_cannot_add_security_registered(self, debug_runner):
+        """Kongou should register a CANNOT_ADD_SECURITY modifier."""
+        runner = debug_runner(initial_memory=5)
+        game = runner.game
+
+        self._activate_kongou(runner)
+
+        # Check that CANNOT_ADD_SECURITY is in the modifier registry
+        entries = game.modifiers._modifiers.get(ModifierType.CANNOT_ADD_SECURITY, [])
+        assert len(entries) >= 1, (
+            "Should have at least one CANNOT_ADD_SECURITY modifier registered"
+        )
+
+    def test_cannot_add_security_has_correct_expiry(self, debug_runner):
+        """CANNOT_ADD_SECURITY should expire at end of opponent's turn."""
+        runner = debug_runner(initial_memory=5)
+        game = runner.game
+
+        self._activate_kongou(runner)
+
+        entries = game.modifiers._modifiers.get(ModifierType.CANNOT_ADD_SECURITY, [])
+        assert len(entries) >= 1
+        assert entries[0].expiry == 'end_of_opponent_turn', (
+            f"CANNOT_ADD_SECURITY should expire at end_of_opponent_turn, got {entries[0].expiry}"
+        )
+
+    def test_cannot_add_security_granting_player(self, debug_runner):
+        """CANNOT_ADD_SECURITY granting_player should be set for expiry tracking."""
+        runner = debug_runner(initial_memory=5)
+        game = runner.game
+
+        self._activate_kongou(runner)
+
+        entries = game.modifiers._modifiers.get(ModifierType.CANNOT_ADD_SECURITY, [])
+        assert len(entries) >= 1
+        assert entries[0].granting_player is game.player1, (
+            "granting_player should be player1 (the Kongou user)"
+        )
+
+    # --- Test 4: CANNOT_ATTACK_PLAYER uses correct modifier type ---
+
+    def test_uses_cannot_attack_player_not_cannot_attack(self, debug_runner):
+        """Must use CANNOT_ATTACK_PLAYER modifier, not CANNOT_ATTACK."""
+        runner = debug_runner(initial_memory=5)
+        game = runner.game
+
+        perm = runner.place_on_field(2, ["ST1-09"])  # cost 7
+        perm.turn_played = -1
+
+        self._activate_kongou(runner)
+
+        # Should have CANNOT_ATTACK_PLAYER entries
+        cap_entries = game.modifiers._modifiers.get(ModifierType.CANNOT_ATTACK_PLAYER, [])
+        assert len(cap_entries) >= 1, (
+            "Should use CANNOT_ATTACK_PLAYER modifier type"
+        )
+
+        # Should NOT have CANNOT_ATTACK entries (that blocks all attacks)
+        ca_entries = game.modifiers._modifiers.get(ModifierType.CANNOT_ATTACK, [])
+        # Filter to entries that would apply to opponent's permanents
+        applicable = [e for e in ca_entries if e.is_active(perm, {})]
+        assert len(applicable) == 0, (
+            "Should NOT use CANNOT_ATTACK (which blocks all attacks including vs Digimon)"
+        )
+
+    # --- Test 5: Player's own Digimon not affected ---
+
+    def test_own_digimon_not_restricted(self, debug_runner):
+        """The player who uses Kongou should NOT have their own Digimon restricted."""
+        runner = debug_runner(initial_memory=5)
+        game = runner.game
+
+        # Player 1's own Digimon (cost 5)
+        own_perm = runner.place_on_field(1, ["ST1-06"])
+        own_perm.turn_played = -1
+
+        self._activate_kongou(runner, player_id=1)
+
+        assert own_perm.can_attack_player(), (
+            "Kongou user's own Digimon should NOT be restricted"
+        )
+
+    # --- Test 6: Security effect activates Main ---
+
+    def test_security_effect_same_as_main(self, debug_runner):
+        """[Security] should activate the same [Main] effects."""
+        runner = debug_runner(initial_memory=5)
+        game = runner.game
+        player = game.player1
+
+        # Set up opponent Digimon
+        perm = runner.place_on_field(2, ["ST1-09"])
+        perm.turn_played = -1
+
         from digimon_gym.engine.data.card_database import CardDatabase
         db = CardDatabase()
-        cs = db.create_card_source("BT9-103")
+        cs = db.create_card_source("BT9-103", player)
         effects = cs.effect_list(None)
-        sec_effects = [e for e in effects if e.timing == EffectTiming.SecuritySkill]
+        sec_effects = [
+            e for e in effects
+            if e.timing == EffectTiming.SecuritySkill
+            and e.on_process_callback is not None
+        ]
         assert len(sec_effects) >= 1, "Should have SecuritySkill effect"
-        assert sec_effects[0].is_security_effect is True
 
+        sec_effects[0].on_process_callback({
+            'player': player,
+            'game': game,
+        })
 
-@pytest.mark.behavioral
-class TestBT9103MainEffect:
-    """[Main] Opponent's Digimon cost<=7 can't attack PLAYERS; no security additions."""
+        # Should restrict opponent's cost-7 Digimon
+        assert not perm.can_attack_player(), (
+            "Security effect should apply same CANNOT_ATTACK_PLAYER restriction"
+        )
 
-    def test_attack_restriction_uses_cannot_attack_player(self, debug_runner):
-        """Must use CANNOT_ATTACK_PLAYER, not CANNOT_ATTACK.
-        Restricted Digimon can still attack other Digimon."""
-        from digimon_gym.engine.interfaces.modifiers import ModifierType
+        # Should also register CANNOT_ADD_SECURITY
+        entries = game.modifiers._modifiers.get(ModifierType.CANNOT_ADD_SECURITY, [])
+        assert len(entries) >= 1, (
+            "Security effect should also register CANNOT_ADD_SECURITY"
+        )
 
-        runner = debug_runner(deck1=_DECK, deck2=_DECK, initial_memory=5)
+    # --- Test 7: Expiry behavior ---
+
+    def test_cannot_attack_player_expiry_is_end_of_opponent_turn(self, debug_runner):
+        """CANNOT_ATTACK_PLAYER should expire at end of opponent's turn."""
+        runner = debug_runner(initial_memory=5)
         game = runner.game
 
-        # Place own black Digimon for color requirement
-        runner.place_on_field(1, ["BT5-061"])
-        # Place opponent Digimon with cost <= 7
-        runner.place_on_field(2, ["BT2-058"])  # Guardromon, cost 5
+        perm = runner.place_on_field(2, ["ST1-09"])
+        perm.turn_played = -1
 
-        runner.clear_zone(1, "hand")
-        runner.inject_card(1, "BT9-103", "hand")
-        runner.set_phase("Main")
+        self._activate_kongou(runner)
 
-        action = runner.find_action("Kongou")
-        if action is None:
-            action = runner.find_action("BT9-103")
-        assert action is not None, f"Available: {runner.actions()}"
-
-        runner.execute(action)
-        runner.auto_resolve()
-
-        # Find Guardromon on P2 field
-        guardromon = None
-        for p in game.player2.battle_area:
-            if p.top_card and p.top_card.c_entity_base.card_id == "BT2-058":
-                guardromon = p
-                break
-        assert guardromon is not None, "Guardromon should be on P2 field"
-
-        # Check that CANNOT_ATTACK_PLAYER is registered
-        has_cant_attack_player = game.modifiers.has_modifier(
-            guardromon, ModifierType.CANNOT_ATTACK_PLAYER
-        )
-        assert has_cant_attack_player, (
-            "Guardromon (cost 5) should have CANNOT_ATTACK_PLAYER modifier"
+        cap_entries = game.modifiers._modifiers.get(ModifierType.CANNOT_ATTACK_PLAYER, [])
+        assert len(cap_entries) >= 1
+        assert cap_entries[0].expiry == 'end_of_opponent_turn', (
+            f"CANNOT_ATTACK_PLAYER should expire at end_of_opponent_turn, "
+            f"got {cap_entries[0].expiry}"
         )
 
-        # MUST NOT have CANNOT_ATTACK (would wrongly prevent all attacks)
-        has_cant_attack = game.modifiers.has_modifier(
-            guardromon, ModifierType.CANNOT_ATTACK
-        )
-        assert not has_cant_attack, (
-            "Should NOT use CANNOT_ATTACK (blocks all attacks). "
-            "Must use CANNOT_ATTACK_PLAYER so Digimon can still attack other Digimon."
-        )
-
-    def test_high_cost_digimon_not_restricted(self, debug_runner):
-        """Opponent's Digimon with cost > 7 should NOT be restricted."""
-        from digimon_gym.engine.interfaces.modifiers import ModifierType
-
-        runner = debug_runner(deck1=_DECK, deck2=_DECK, initial_memory=5)
+    def test_restriction_cleared_after_opponent_turn(self, debug_runner):
+        """After clearing end_of_opponent_turn modifiers, restriction should be gone."""
+        runner = debug_runner(initial_memory=5)
         game = runner.game
 
-        runner.place_on_field(1, ["BT5-061"])  # Black for color req
-        runner.place_on_field(2, ["BT2-064"])  # HiAndromon, cost 10
+        perm = runner.place_on_field(2, ["ST1-09"])
+        perm.turn_played = -1
 
-        runner.clear_zone(1, "hand")
-        runner.inject_card(1, "BT9-103", "hand")
-        runner.set_phase("Main")
+        self._activate_kongou(runner)
 
-        action = runner.find_action("Kongou")
-        if action is None:
-            action = runner.find_action("BT9-103")
-        assert action is not None
+        # Verify restricted
+        assert not perm.can_attack_player()
 
-        runner.execute(action)
-        runner.auto_resolve()
+        # Simulate end of opponent's turn cleanup
+        # clear_opponent_turn_expiry is called with the granting player (player1)
+        # when player1's turn starts again
+        game.modifiers.clear_opponent_turn_expiry(game.player1)
 
-        hiandromon = None
-        for p in game.player2.battle_area:
-            if p.top_card and p.top_card.c_entity_base.card_id == "BT2-064":
-                hiandromon = p
-                break
-        assert hiandromon is not None
-
-        has_modifier = game.modifiers.has_modifier(
-            hiandromon, ModifierType.CANNOT_ATTACK_PLAYER
+        # Should be unrestricted now
+        assert perm.can_attack_player(), (
+            "After clearing end_of_opponent_turn modifiers, Digimon should attack players again"
         )
-        assert not has_modifier, (
-            "HiAndromon (cost 10) should NOT have attack restriction"
-        )
-
-    def test_both_low_and_high_cost_correctly_filtered(self, debug_runner):
-        """With both low-cost and high-cost Digimon, only low-cost gets restricted."""
-        from digimon_gym.engine.interfaces.modifiers import ModifierType
-
-        runner = debug_runner(deck1=_DECK, deck2=_DECK, initial_memory=5)
-        game = runner.game
-
-        runner.place_on_field(1, ["BT5-061"])  # Black for color req
-        runner.place_on_field(2, ["BT2-058"])  # Guardromon, cost 5
-        runner.place_on_field(2, ["BT2-064"])  # HiAndromon, cost 10
-
-        runner.clear_zone(1, "hand")
-        runner.inject_card(1, "BT9-103", "hand")
-        runner.set_phase("Main")
-
-        action = runner.find_action("Kongou")
-        if action is None:
-            action = runner.find_action("BT9-103")
-        assert action is not None
-
-        runner.execute(action)
-        runner.auto_resolve()
-
-        guardromon = hiandromon = None
-        for p in game.player2.battle_area:
-            cid = p.top_card.c_entity_base.card_id if p.top_card else None
-            if cid == "BT2-058":
-                guardromon = p
-            elif cid == "BT2-064":
-                hiandromon = p
-
-        assert guardromon is not None and hiandromon is not None
-
-        assert game.modifiers.has_modifier(
-            guardromon, ModifierType.CANNOT_ATTACK_PLAYER
-        ), "Guardromon (cost 5) should be restricted"
-
-        assert not game.modifiers.has_modifier(
-            hiandromon, ModifierType.CANNOT_ATTACK_PLAYER
-        ), "HiAndromon (cost 10) should NOT be restricted"
-
-    def test_cannot_add_security_modifier_registered(self, debug_runner):
-        """Should register CANNOT_ADD_SECURITY global modifier."""
-        from digimon_gym.engine.interfaces.modifiers import ModifierType
-
-        runner = debug_runner(deck1=_DECK, deck2=_DECK, initial_memory=5)
-        game = runner.game
-
-        runner.place_on_field(1, ["BT5-061"])  # Black for color req
-        runner.clear_zone(1, "hand")
-        runner.inject_card(1, "BT9-103", "hand")
-        runner.set_phase("Main")
-
-        action = runner.find_action("Kongou")
-        if action is None:
-            action = runner.find_action("BT9-103")
-        assert action is not None
-
-        runner.execute(action)
-        runner.auto_resolve()
-
-        # Check that a CANNOT_ADD_SECURITY modifier is registered
-        security_entries = game.modifiers._modifiers.get(
-            ModifierType.CANNOT_ADD_SECURITY, []
-        )
-        assert len(security_entries) >= 1, (
-            "Should have CANNOT_ADD_SECURITY modifier registered"
-        )
-
-
-@pytest.mark.behavioral
-class TestBT9103SecurityEffect:
-    """[Security] Activate this card's [Main] effects."""
-
-    def test_security_activates_main_effects(self, debug_runner):
-        """Security should apply the same restrictions as the Main effect."""
-        from digimon_gym.engine.interfaces.modifiers import ModifierType
-
-        runner = debug_runner(deck1=_DECK, deck2=_DECK, initial_memory=5)
-        game = runner.game
-        p2 = game.player2
-
-        # P1 has a cost<=7 Digimon (should get restricted by P2's security)
-        runner.place_on_field(1, ["ST1-03"])  # Agumon cost 3
-
-        # Clear P2 security, inject BT9-103
-        runner.clear_zone(2, "security")
-        runner.inject_card(2, "BT9-103", "security_top")
-
-        from tests.helpers.game_builder import make_permanent
-        attacker = make_permanent("ATK-001", "StrongAttacker", dp=12000)
-        game.player1.battle_area.append(attacker)
-
-        p2.security_attack(attacker)
-        runner.auto_resolve()
-
-        # After security, the restrictions should be applied
-        # P1's Agumon (cost 3, <= 7) should have CANNOT_ATTACK_PLAYER
-        agumon = None
-        for p in game.player1.battle_area:
-            if p.top_card and p.top_card.c_entity_base and p.top_card.c_entity_base.card_id == "ST1-03":
-                agumon = p
-                break
-
-        if agumon is not None:
-            has_modifier = game.modifiers.has_modifier(
-                agumon, ModifierType.CANNOT_ATTACK_PLAYER
-            )
-            assert has_modifier, (
-                "Security effect should restrict P1's cost<=7 Digimon from attacking players"
-            )

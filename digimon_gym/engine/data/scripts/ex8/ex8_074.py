@@ -30,11 +30,16 @@ class EX8_074(CardScript):
             # LEAK GUARD: only for THIS card being played
             if context.get('card_source') is not card:
                 return False
-            # Need 2+ unsuspended own Digimon to pay the cost
+            # C# CanActivateCondition: need 2+ unsuspended Digimon on ANY field
+            # (IsPermanentExistsOnBattleAreaDigimon checks both fields)
             if card and card.owner:
-                own_digimon = [p for p in card.owner.battle_area
+                enemy = card.owner.enemy if hasattr(card.owner, 'enemy') else None
+                all_digimon = [p for p in card.owner.battle_area
                                if p.is_digimon and not p.is_suspended]
-                return len(own_digimon) >= 2
+                if enemy:
+                    all_digimon += [p for p in enemy.battle_area
+                                    if p.is_digimon and not p.is_suspended]
+                return len(all_digimon) >= 2
             return False
 
         effect0.set_can_use_condition(condition0)

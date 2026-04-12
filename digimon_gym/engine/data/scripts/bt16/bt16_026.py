@@ -16,16 +16,27 @@ class BT16_026(CardScript):
 
         # Factory effect: alt_digivolve_req
         # Alternate digivolution: from [Shakkoumon] or [Zudomon] for cost 3
-        effect0 = ICardEffect()
-        effect0.set_effect_name("BT16-026 Alternate digivolution requirement")
-        effect0.set_effect_description("Alternate digivolution requirement")
-        effect0._alt_digi_cost = 3
-        effect0._alt_digi_name = "Shakkoumon"
+        effect0a = ICardEffect()
+        effect0a.set_effect_name("BT16-026 Alternate digivolution requirement (Shakkoumon)")
+        effect0a.set_effect_description("Alternate digivolution requirement")
+        effect0a._alt_digi_cost = 3
+        effect0a._alt_digi_name = "Shakkoumon"
 
-        def condition0(context: Dict[str, Any]) -> bool:
+        def condition0a(context: Dict[str, Any]) -> bool:
             return True
-        effect0.set_can_use_condition(condition0)
-        effects.append(effect0)
+        effect0a.set_can_use_condition(condition0a)
+        effects.append(effect0a)
+
+        effect0b = ICardEffect()
+        effect0b.set_effect_name("BT16-026 Alternate digivolution requirement (Zudomon)")
+        effect0b.set_effect_description("Alternate digivolution requirement")
+        effect0b._alt_digi_cost = 3
+        effect0b._alt_digi_name = "Zudomon"
+
+        def condition0b(context: Dict[str, Any]) -> bool:
+            return True
+        effect0b.set_can_use_condition(condition0b)
+        effects.append(effect0b)
 
         # Factory effect: blast_digivolve
         effect1 = ICardEffect()
@@ -67,13 +78,15 @@ class BT16_026(CardScript):
 
             def _apply_cant_suspend():
                 # Step 2: All opponent's Digimon with 1 or fewer digivolution cards
-                # cannot suspend until end of their turn
+                # cannot suspend until end of their turn.
+                # DCGO DigivolutionCards = cards below top, so Count <= 1 means
+                # card_sources length <= 2 (top + at most 1 under).
                 from digimon_gym.engine.interfaces.modifiers import ModifierType
                 for p in enemy.battle_area:
-                    if p.is_digimon and len(p.digivolution_cards) <= 1:
+                    if p.is_digimon and len(p.card_sources) - 1 <= 1:
                         game.register_modifier(
-                            ModifierType.CANNOT_SUSPEND, p,
-                            value_fn=lambda: True,
+                            p, ModifierType.CANNOT_SUSPEND,
+                            condition=lambda target, ctx, fp=p: target is fp,
                             expiry='end_of_opponent_turn')
 
         # [On Play] De-Digivolve 2, then can't suspend opponent's Digimon with <= 1 digi-cards
@@ -130,7 +143,9 @@ class BT16_026(CardScript):
                 return
 
             def target_filter(p):
-                return p.is_digimon and len(p.digivolution_cards) <= 1
+                # DCGO DigivolutionCards = cards below top, Count <= 1 means
+                # card_sources length <= 2 (top + at most 1 under).
+                return p.is_digimon and len(p.card_sources) - 1 <= 1
 
             has_target = any(target_filter(p) for p in enemy.battle_area)
             if not has_target:

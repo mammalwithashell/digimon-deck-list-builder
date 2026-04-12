@@ -60,25 +60,51 @@ class EX4_051(CardScript):
 
             def on_branch(choice: int):
                 if choice == 0:
-                    # Branch 0: De-Digivolve 1 up to 3 of opponent's Digimon
+                    # Branch 0: De-Digivolve 1 three of opponent's Digimon
                     opp_digimon = [p for p in enemy.battle_area if p.is_digimon]
-                    targets = opp_digimon[:3]
-                    for target_perm in targets:
-                        if target_perm in enemy.battle_area and len(target_perm.card_sources) > 1:
-                            removed = target_perm.de_digivolve(1)
-                            for rc in removed:
-                                enemy.trash_cards.append(rc)
+                    if not opp_digimon:
+                        return
+
+                    if len(opp_digimon) <= 3:
+                        # 3 or fewer: de-digivolve all of them
+                        for target_perm in list(opp_digimon):
+                            if target_perm in enemy.battle_area:
+                                removed = target_perm.de_digivolve(1)
+                                for rc in removed:
+                                    enemy.trash_cards.append(rc)
+                    else:
+                        # More than 3: player must select 3 targets
+                        remaining = [0]  # mutable counter
+
+                        def _select_next_target(already_selected):
+                            if remaining[0] >= 3:
+                                return
+
+                            def target_filter(p):
+                                return (p.is_digimon
+                                        and p in enemy.battle_area
+                                        and p not in already_selected)
+
+                            def on_target(target_perm):
+                                already_selected.append(target_perm)
+                                removed = target_perm.de_digivolve(1)
+                                for rc in removed:
+                                    enemy.trash_cards.append(rc)
+                                remaining[0] += 1
+                                _select_next_target(already_selected)
+
+                            game.effect_select_opponent_permanent(
+                                player, on_target,
+                                filter_fn=target_filter,
+                                is_optional=False,
+                                prompt="Select an opponent's Digimon to De-Digivolve 1.")
+
+                        _select_next_target([])
 
                 elif choice == 1:
                     # Branch 1: Digivolve 1 of your other Digimon into a
                     # Lv.6 or lower [Garurumon] from hand without paying cost
                     own_perm = card.permanent_of_this_card() if card else None
-                    other_digimon = [
-                        p for p in player.battle_area
-                        if p.is_digimon and p is not own_perm
-                    ]
-                    if not other_digimon:
-                        return
 
                     def garurumon_filter(c):
                         if not getattr(c, 'is_digimon', False):
@@ -89,13 +115,20 @@ class EX4_051(CardScript):
                         names = getattr(c, 'card_names', []) or []
                         return any('Garurumon' in n for n in names)
 
-                    # Select the target Digimon on our field, then digivolve
-                    # from hand. Use the first other Digimon as target.
-                    target_perm = other_digimon[0]
-                    game.effect_digivolve_from_hand(
-                        player, target_perm, garurumon_filter,
-                        cost_override=0, ignore_requirements=True,
-                        is_optional=True)
+                    def other_filter(p):
+                        return p.is_digimon and p is not own_perm
+
+                    def on_target_selected(target_perm):
+                        game.effect_digivolve_from_hand(
+                            player, target_perm, garurumon_filter,
+                            cost_override=0, ignore_requirements=True,
+                            is_optional=True)
+
+                    game.effect_select_own_permanent(
+                        player, on_target_selected,
+                        filter_fn=other_filter,
+                        is_optional=False,
+                        prompt="Select 1 of your other Digimon to digivolve into Garurumon.")
 
                 elif choice == 2:
                     # Branch 2: DNA digivolve this Digimon + another into
