@@ -54,12 +54,14 @@ export function CardGrid() {
       <div className="grid grid-cols-[repeat(auto-fill,minmax(80px,1fr))] gap-2">
         {pageResults.map((card) => {
           const count = getCountInDeck(card.cardnumber);
+          const variantKey = `${card.cardnumber}${card.isAltArt ? '-alt' : ''}`;
           return (
-            <div key={card.cardnumber} className="relative">
+            <div key={variantKey} className="relative">
               <Card
                 cardId={card.cardnumber}
                 cardName={card.name}
                 size="md"
+                isAltArt={card.isAltArt}
                 onClick={() => setSelectedCardId(card.cardnumber)}
                 onMouseEnter={() => setSelectedCardId(card.cardnumber)}
               />

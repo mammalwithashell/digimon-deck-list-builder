@@ -28,6 +28,7 @@ interface CardProps {
   dimmed?: boolean;
   highlighted?: boolean;
   targeted?: boolean;
+  isAltArt?: boolean;
   overlay?: CardOverlay;
   onClick?: () => void;
   onMouseEnter?: () => void;
@@ -45,13 +46,14 @@ export function Card({
   dimmed = false,
   highlighted = false,
   targeted = false,
+  isAltArt = false,
   overlay,
   onClick,
   onMouseEnter,
   onMouseLeave,
   className = '',
 }: CardProps) {
-  const { src, isLoading, hasError } = useCardImage(faceDown ? null : cardId);
+  const { src, isLoading, hasError } = useCardImage(faceDown ? null : cardId, isAltArt);
   const { width, height } = SIZE_MAP[size];
 
   const colorName = cardColor !== undefined ? COLOR_NAMES[cardColor] : undefined;
@@ -129,6 +131,13 @@ export function Card({
       {!faceDown && overlay?.saModifier != null && overlay.saModifier !== 0 && src && (
         <div className="absolute top-0 right-0 bg-red-600/90 text-white text-[9px] font-bold px-1 rounded-bl">
           SA{overlay.saModifier > 0 ? '+' : ''}{overlay.saModifier}
+        </div>
+      )}
+
+      {/* Alt art badge */}
+      {!faceDown && isAltArt && (
+        <div className="absolute top-0 right-0 bg-purple-600/90 text-white text-[8px] font-bold px-1 rounded-bl">
+          ALT
         </div>
       )}
     </div>

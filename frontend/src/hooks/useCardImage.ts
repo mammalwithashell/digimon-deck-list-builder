@@ -10,7 +10,7 @@ import { getCardImageUrl } from '@/utils/cardImages';
  * it, the image loads fine in a normal <img> tag — we just can't draw it to
  * a canvas (which is an acceptable trade-off).
  */
-export function useCardImage(cardId: string | null) {
+export function useCardImage(cardId: string | null, altArt = false) {
   const [src, setSrc] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [hasError, setHasError] = useState(false);
@@ -22,20 +22,31 @@ export function useCardImage(cardId: string | null) {
       return;
     }
 
-    const url = getCardImageUrl(cardId);
+    const url = getCardImageUrl(cardId, altArt);
     setSrc(url);
     setIsLoading(true);
     setHasError(false);
 
-    // Preload so we know when it's ready (or broken)
+    // Preload so we know when it's ready (or broken).
+    // Note: we intentionally do NOT fall back from alt -> base on 404 here
+    // because that would reproduce the "alt art showing as base art" bug the
+    // grid dedupe is trying to eliminate.  Alt-art entries that the CDN
+    // doesn't serve show the card's error state instead.
     const img = new Image();
+    let cancelled = false;
     img.src = url;
-    img.onload = () => setIsLoading(false);
+    img.onload = () => {
+      if (!cancelled) setIsLoading(false);
+    };
     img.onerror = () => {
+      if (cancelled) return;
       setHasError(true);
       setIsLoading(false);
     };
-  }, [cardId]);
+    return () => {
+      cancelled = true;
+    };
+  }, [cardId, altArt]);
 
   return { src, isLoading, hasError };
 }
