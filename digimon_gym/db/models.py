@@ -119,6 +119,12 @@ class Deck(Base):
     titan_role = Column(String, nullable=True)
     main_deck = Column(Text, nullable=False)  # JSON array of card ID strings
     egg_deck = Column(Text, default="[]")  # JSON array of card ID strings
+    # JSON bool arrays aligned with main_deck / egg_deck — true where the
+    # corresponding slot should display the alternate-art printing.  Purely
+    # cosmetic: the engine only reads card IDs, so validation, gameplay, and
+    # training all ignore these columns.
+    main_deck_alt_arts = Column(Text, default="[]")
+    egg_deck_alt_arts = Column(Text, default="[]")
     commander_id = Column(String, nullable=True)
     is_valid = Column(Integer, default=0, nullable=False)
     validation_errors = Column(Text, default="[]")  # JSON array of error strings
@@ -145,6 +151,8 @@ class DeckVersion(Base):
     version_number = Column(Integer, nullable=False)
     main_deck = Column(Text, nullable=False)
     egg_deck = Column(Text, default="[]")
+    main_deck_alt_arts = Column(Text, default="[]")
+    egg_deck_alt_arts = Column(Text, default="[]")
     commander_id = Column(String, nullable=True)
     change_note = Column(Text, default="")
     created_at = Column(DateTime(timezone=True), default=_utcnow, nullable=False)
