@@ -66,11 +66,11 @@ class BT21_029(CardScript):
             enemy = player.enemy if player else None
             if not enemy:
                 return
-            opponents = list(enemy.battle_area)
-            if not opponents:
+            opp_digimon = [p for p in enemy.battle_area if p.is_digimon and p.dp is not None]
+            if not opp_digimon:
                 return
-            min_dp = min((getattr(p.top_card, 'dp', 0) or 0) for p in opponents if p.top_card)
-            lowest = [p for p in opponents if p.top_card and (getattr(p.top_card, 'dp', 0) or 0) == min_dp]
+            min_dp = min(p.dp for p in opp_digimon)
+            lowest = [p for p in opp_digimon if p.dp == min_dp]
             if lowest:
                 def on_delete(selected, _enemy=enemy):
                     _enemy.delete_permanent(selected)
@@ -94,9 +94,11 @@ class BT21_029(CardScript):
 
         effect = effect3  # alias for condition closure
         def condition3(context: Dict[str, Any]) -> bool:
-            if card and card.permanent_of_this_card() is None:
+            perm = card.permanent_of_this_card() if card else None
+            if perm is None:
                 return False
-            if not (card and card.owner and card.owner.is_my_turn):
+            # C# CanTriggerOnEndAttack: only fire when this Digimon was the attacker
+            if not getattr(perm, 'is_attacking', False):
                 return False
             return True
 
@@ -111,11 +113,11 @@ class BT21_029(CardScript):
             enemy = player.enemy if player else None
             if not enemy:
                 return
-            opponents = list(enemy.battle_area)
-            if not opponents:
+            opp_digimon = [p for p in enemy.battle_area if p.is_digimon and p.dp is not None]
+            if not opp_digimon:
                 return
-            min_dp = min((getattr(p.top_card, 'dp', 0) or 0) for p in opponents if p.top_card)
-            lowest = [p for p in opponents if p.top_card and (getattr(p.top_card, 'dp', 0) or 0) == min_dp]
+            min_dp = min(p.dp for p in opp_digimon)
+            lowest = [p for p in opp_digimon if p.dp == min_dp]
             if lowest:
                 def on_delete(selected, _enemy=enemy):
                     _enemy.delete_permanent(selected)
@@ -147,11 +149,12 @@ class BT21_029(CardScript):
                 return False
             if not getattr(deleted_perm, 'is_digimon', False):
                 return False
-            # _fire_deletion_observers(deleted_perm, deleted_owner) scans both sides.
-            # Medusamon is found in the enemy-scan branch where context['player'] = card.owner.
-            # If context['player'] is card.owner, the deleted perm belonged to the opponent.
-            owner = card.owner if card else None
-            if context.get('player') is not owner:
+            # Check that the deleted Digimon belongs to the opponent, not to us.
+            # deleted_perm.owner returns the player who owns the deleted permanent
+            # (via top_card.owner, which persists after field removal).
+            medusamon_owner = card.owner if card else None
+            deleted_owner = getattr(deleted_perm, 'owner', None)
+            if deleted_owner is None or deleted_owner is medusamon_owner:
                 return False
             return True
 

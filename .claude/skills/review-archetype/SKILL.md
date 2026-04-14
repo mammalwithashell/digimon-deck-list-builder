@@ -46,35 +46,41 @@ digraph review_flow {
 
 ## Phase 1: Resolve Cards & Collect Scripts
 
-### 1a. Determine card pool
+### 1a. Resolve card pool and build manifest
 
-If input contains `--cards`, use the provided comma-separated card IDs.
-Otherwise, look up the archetype name in `deck_library.json`:
+Use the `resolve_deck` tool to resolve the full card pool with enriched metadata:
 
 ```python
-import json
-from pathlib import Path
+import sys; sys.path.insert(0, '.')
+from tools.resolve_deck import resolve_archetype
 
-lib = json.loads(Path('digimon_gym/engine/data/deck_library.json').read_text())
-archetype = lib['archetypes'].get('ARCHETYPE_NAME', {})
-
-all_cards = set()
-for dl in archetype.get('decklists', []):
-    all_cards.update(json.loads(dl['decklist']))
-
-print(f'Unique cards: {len(all_cards)}')
+# If input contains --cards, pass as override:
+# manifest = resolve_archetype('ARCHETYPE_NAME', cards_override=['CARD1', 'CARD2', ...])
+# Otherwise:
+manifest = resolve_archetype('ARCHETYPE_NAME')
 ```
+
+The `manifest` object provides:
+- `manifest.unique_cards` — list of `CardEntry` objects, each with:
+  - `card_id`, `card_name`, `card_kind`, `level`, `colors`, `traits`, `dp`, `play_cost`, `evo_costs`
+  - `effect_text`, `inherited_text`, `security_text`
+  - `script_status` — `"frozen"`, `"generated"`, or `"missing"`
+  - `script_path` — relative path to existing script, or `None`
+  - `csharp_path` — relative path to C# reference, or `None`
+  - `deck_frequency` — how many decklists include this card
+- `manifest.coverage_pct`, `manifest.frozen_count`, `manifest.generated_count`, `manifest.missing_count`
+- `manifest.missing_cards` — card IDs with no script at all
+- `manifest.best_decklist`, `manifest.meta_share`, `manifest.total_decklists`
+- `deck_pool.json` is auto-written to `qa/archetype-qa/{slug}/`
 
 ### 1b. Collect per-card inputs
 
-For each card ID:
+For each card in `manifest.unique_cards`:
 
-1. **Python script**: Read from `digimon_gym/engine/data/scripts/{set}/{set}_{nnn}.py`
-2. **C# reference**: Search `DCGO/Assets/Scripts/CardEffect/` for `{CARD_ID}.cs` using glob. Structure: `{SET}/{COLOR}/{CARD_ID}.cs` (e.g., `BT23/WHITE/BT23_057.cs`). Color subdirectory varies — use glob to find.
-3. **Card metadata**: Fetch from Pinecone `card-metadata` namespace, or from local `cards.json` / DigimonCard.io API. Extract: name, kind, level, colors, traits, DP, play cost, effect text, inherited text, security text.
-4. **Existing QA verdict** (if any): Check `qa/archetype-qa/{archetype}.md` for prior verdicts per card.
-
-Skip cards with no Python script — report as MISSING in final output.
+1. **Python script**: Read from `card.script_path` (already resolved). Skip cards where `card.script_status == "missing"` — report as MISSING in final output.
+2. **C# reference**: Read from `card.csharp_path` if not `None`. Uses underscore convention: BT17-001 = BT17_001.cs.
+3. **Card metadata**: Already populated in the `CardEntry` — `card.card_name`, `card.effect_text`, `card.inherited_text`, `card.security_text`, `card.card_kind`, `card.level`, `card.colors`, `card.traits`, `card.dp`, `card.play_cost`.
+4. **Existing QA verdict**: Check `qa/archetype-qa/{archetype}.md` for prior verdicts per card (this remains manual — the tool does not parse QA docs).
 
 ### 1c. Build card manifest
 
@@ -404,46 +410,37 @@ Also update `qa/archetype-qa/INDEX.md` with revised status for this archetype.
 
 For each FIXED card (and any DISCREPANCY cards that were complex), run a targeted debug game that exercises the specific effect. Debug games are superior to smoke tests because they verify the exact behavior, not just crash-freedom.
 
-**Method:** Use the debug game API to set up controlled board states that trigger each fixed card's effects.
+**Method (preferred):** Use `DebugRunner` in-process for fast, deterministic verification. No server required.
 
-```bash
-# Start server (if not running)
-python -m uvicorn digimon_gym.api:app --host 0.0.0.0 --port 8000
+```python
+from digimon_gym.engine.runners.debug_runner import DebugRunner
 
-# Create debug game with controlled deck order
-curl -X POST http://localhost:8000/debug/games -H 'Content-Type: application/json' -d '{
-  "deck1": [...],
-  "deck2": [...],
-  "skip_shuffle": true,
-  "starting_hand1": ["CARD_ID_TO_TEST", ...],
-  "initial_memory": 10
-}'
+runner = DebugRunner(deck1, deck2, initial_memory=10, starting_hand1=["CARD_ID_TO_TEST"])
+runner.place_on_field(2, ["ST1-03"], is_suspended=True)  # target
+action = runner.find_action("Play CARD_NAME")
+result = runner.execute(action)
+runner.auto_resolve()
+
+# Verify state changes
+snap = runner.snapshot()
+assert "ST1-03" in snap.p2_trash  # target was deleted
+assert "CARD_ID" in [s.card_id for s in snap.p1_field]  # card on field
 ```
 
 **For each fixed card, the debug game should:**
-1. Place the card in the starting hand (via `starting_hand1`)
+1. Place the card in the starting hand (via `starting_hand1` or `inject_card`)
 2. Set memory high enough to play it (via `initial_memory`)
-3. Arrange opponents/targets in the deck order so they appear on the board
+3. Place targets/opponents on field via `place_on_field()` or `inject_card()`
 4. Play the card and verify:
-   - Selection phases enter correctly (check action mask for expected options)
+   - Selection phases enter correctly (check `actions()` for expected options)
    - Targets/filters match card text (correct candidates offered)
    - State changes happen (DP changes, cards move to correct zones, memory changes)
    - Costs are paid (cards trashed, Digimon deleted, etc.)
    - Duration is correct (effects expire at the right time)
 
-**Inject cards as needed:**
+**After all fixes, run behavioral tests:**
 ```bash
-# Inject a card to a specific zone during gameplay
-curl -X POST http://localhost:8000/debug/games/{id}/inject-card -d '{"card_id": "CARD_ID", "zone": "hand"}'
-
-# Set memory
-curl -X POST http://localhost:8000/debug/games/{id}/set-memory -d '{"memory": 10}'
-
-# Check internal state
-curl http://localhost:8000/debug/games/{id}/internal-state
-
-# Check action mask
-curl http://localhost:8000/games/{id}/action-mask
+python -m pytest tests/behavioral -v
 ```
 
 **Report format per card:**

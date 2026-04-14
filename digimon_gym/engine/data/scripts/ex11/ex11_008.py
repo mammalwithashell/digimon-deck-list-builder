@@ -24,6 +24,12 @@ class EX11_008(CardScript):
         def condition0(context: Dict[str, Any]) -> bool:
             if card and card.permanent_of_this_card() is None:
                 return False
+            # [When Moving] — only fires when THIS card's permanent moves
+            moved_perm = context.get('moved_permanent') if context else None
+            my_perm = card.permanent_of_this_card() if card else None
+            if moved_perm is not None and my_perm is not None:
+                if moved_perm is not my_perm:
+                    return False
             return True
 
         effect0.set_can_use_condition(condition0)
@@ -100,6 +106,12 @@ class EX11_008(CardScript):
                 return False
             if not (card and card.owner and card.owner.is_my_turn):
                 return False
+            # Must be opponent's security that was removed, not own
+            # C#: PlayerCondition => player == card.Owner.Enemy
+            event_player = context.get('event_player') if context else None
+            if event_player is not None and card.owner:
+                if event_player is not card.owner.enemy:
+                    return False
             return True
 
         effect2.set_can_use_condition(condition2)

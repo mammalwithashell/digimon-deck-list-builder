@@ -174,45 +174,39 @@ class BT24_030(CardScript):
         effect5.set_on_process_callback(process5)
         effects.append(effect5)
 
-        # Timing: EffectTiming.WhenRemoveField
+        # Timing: EffectTiming.WhenPermanentWouldBeDeleted
         # [All Turns] When any of your Digimon with the [TS] trait or [Aqua] or [Sea Animal] in any of their
         # traits would leave the battle area by your opponent's effects, by suspending this Digimon, they don't leave.
+        # Pattern: WhenPermanentWouldBeDeleted + _will_not_be_removed flag (matches BT23-058 Craniamon)
         effect6 = ICardEffect()
-        effect6.set_timing(EffectTiming.WhenRemoveField)
+        effect6.set_timing(EffectTiming.WhenPermanentWouldBeDeleted)
         effect6.set_effect_name("BT24-030 By suspending this digimon, your [TS]/[Aqua]/[Sea Animal] digimon wont leave the field")
         effect6.set_effect_description("[All Turns] When any of your Digimon with the [TS] trait or [Aqua] or [Sea Animal] in any of their traits would leave the battle area by your opponent's effects, by suspending this Digimon, they don't leave.")
         effect6.is_optional = True
 
-        def _is_protected_digimon(p) -> bool:
-            """Check if a permanent is a player-owned Digimon with TS, Aqua, or Sea Animal trait."""
-            if not p.is_digimon:
-                return False
-            traits = getattr(p.top_card, 'card_traits', []) or []
-            return any(t in ('TS', 'Aqua', 'Sea Animal') for t in traits)
-
         def condition6(context: Dict[str, Any]) -> bool:
             if card and card.permanent_of_this_card() is None:
                 return False
-            owner = getattr(card, 'owner', None)
-            if not owner:
-                return False
-            # Must fire when a player-owned TS/Aqua/Sea Animal Digimon would leave by opponent's effect.
-            # The event_permanent is the one being removed.
-            event_perm = context.get('event_permanent') or context.get('permanent')
-            if event_perm is None:
-                return False
-            # Check the leaving permanent belongs to this card's owner
-            if event_perm not in owner.battle_area:
-                return False
-            # Check it has the required trait
-            if not _is_protected_digimon(event_perm):
-                return False
-            # Check it is by opponent's effect (context flag)
-            if not context.get('is_opponent_effect', False):
-                return False
-            # This Digimon must not already be suspended (must be able to pay the suspend cost)
+            # Cost: must be able to suspend this Digimon (not already suspended)
             owner_perm = card.permanent_of_this_card()
             if owner_perm and owner_perm.is_suspended:
+                return False
+            # The leaving permanent (event_permanent from execute_effects context mapping)
+            leaving_perm = context.get('event_permanent')
+            if leaving_perm is None:
+                return False
+            # The leaving permanent must belong to this card's owner
+            owner = getattr(card, 'owner', None)
+            event_player = context.get('event_player')
+            if not owner or not event_player or event_player is not owner:
+                return False
+            # Must be a Digimon with TS, Aqua, or Sea Animal trait
+            if not getattr(leaving_perm, 'is_digimon', False):
+                return False
+            if not (leaving_perm.has_trait('TS') or leaving_perm.has_trait('Aqua') or leaving_perm.has_trait('Sea Animal')):
+                return False
+            # Must be by opponent's effect
+            if not context.get('is_opponent_effect', False):
                 return False
             return True
 
@@ -221,20 +215,14 @@ class BT24_030(CardScript):
         def process6(ctx: Dict[str, Any]):
             """Action: Suspend THIS Digimon to protect the leaving Digimon."""
             owner_perm = card.permanent_of_this_card()
-            game = ctx.get('game')
             if not owner_perm:
                 return
+            # Cost: suspend this Digimon
             owner_perm.suspend()
-            # If the suspend succeeded (we are now suspended), prevent the target from leaving.
-            if owner_perm.is_suspended:
-                event_perm = ctx.get('event_permanent') or ctx.get('permanent')
-                if event_perm and game:
-                    # Cancel the removal by registering protection
-                    from digimon_gym.engine.interfaces.modifiers import ModifierType
-                    game.register_modifier(
-                        event_perm, ModifierType.CANNOT_BE_REMOVED,
-                        value_fn=lambda: True, expiry='end_of_turn'
-                    )
+            # Prevent the leaving permanent from being removed (DCGO: willBeRemoveField = false)
+            leaving_perm = ctx.get('event_permanent')
+            if leaving_perm:
+                leaving_perm._will_not_be_removed = True
 
         effect6.set_on_process_callback(process6)
         effects.append(effect6)

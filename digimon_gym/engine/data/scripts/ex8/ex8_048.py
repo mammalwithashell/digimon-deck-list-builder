@@ -67,12 +67,15 @@ class EX8_048(CardScript):
         effect1.is_inherited_effect = True
 
         def condition1(context: Dict[str, Any]) -> bool:
-            # The engine fires OnDigivolutionCardDiscarded on the card being trashed.
-            # We must verify the host Digimon has the Mineral or Rock trait.
-            event_perm = context.get('event_permanent')
-            if event_perm is None:
+            # Check this card was the one trashed (not a different digi-card)
+            trashed_cards = context.get('trashed_cards', [])
+            if card not in trashed_cards:
                 return False
-            if not (event_perm.has_trait('Mineral') or event_perm.has_trait('Rock')):
+            # Check the host permanent has [Mineral] or [Rock] trait
+            permanent = context.get('permanent')
+            if permanent is None:
+                return False
+            if not (permanent.has_trait('Mineral') or permanent.has_trait('Rock')):
                 return False
             return True
 

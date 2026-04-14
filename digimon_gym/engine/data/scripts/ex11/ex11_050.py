@@ -133,7 +133,7 @@ class EX11_050(CardScript):
                                 p.dp is not None and p.dp <= ref_dp)
 
                     def on_opp_delete(target_perm):
-                        enemy.delete_permanent(target_perm)
+                        enemy.delete_permanent(target_perm, is_opponent_effect=True)
 
                     if any(opp_filter(p) for p in enemy.battle_area):
                         game.effect_select_opponent_permanent(

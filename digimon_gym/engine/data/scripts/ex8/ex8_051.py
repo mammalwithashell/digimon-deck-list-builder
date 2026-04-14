@@ -50,6 +50,7 @@ class EX8_051(CardScript):
             "digivolution cards, it isn't deleted.)"
         )
         effect_fragment._is_fragment = True
+        effect_fragment._fragment_count = 3
 
         def condition_fragment(context: Dict[str, Any]) -> bool:
             return True

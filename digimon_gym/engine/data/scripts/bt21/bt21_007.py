@@ -49,7 +49,8 @@ class BT21_007(CardScript):
             if not valid:
                 return
 
-            def on_trash_selected(idx: int):
+            def on_trash_selected(action_id: int):
+                idx = action_id - SEL_TRASH_START
                 if not (0 <= idx < len(player.trash_cards)):
                     return
                 chosen = player.trash_cards[idx]

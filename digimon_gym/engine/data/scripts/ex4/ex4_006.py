@@ -52,12 +52,13 @@ class EX4_006(CardScript):
         def process0(ctx: Dict[str, Any]):
             player = ctx.get('player')
             perm = ctx.get('permanent')
-            if not (player and perm):
+            game = ctx.get('game')
+            if not (player and perm and game):
                 return
             enemy = player.enemy if player else None
             total_trash = len(player.trash_cards) + (len(enemy.trash_cards) if enemy else 0)
             if total_trash >= 20:
-                perm.grant_keyword('_is_rush')
+                perm.grant_keyword('_is_rush', duration=game.turn_count)
         effect0.set_on_process_callback(process0)
         effects.append(effect0)
 

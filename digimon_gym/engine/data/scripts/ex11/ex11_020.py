@@ -47,6 +47,9 @@ class EX11_020(CardScript):
         effect1.is_on_deletion = True
 
         def condition1(context: Dict[str, Any]) -> bool:
+            # C# ref: CanTriggerOnDeletion(hashtable, card) && !IsByBattle(hashtable)
+            if context.get('is_battle', False):
+                return False
             return True
         effect1.set_can_use_condition(condition1)
 
@@ -58,7 +61,7 @@ class EX11_020(CardScript):
 
             def play_filter(c):
                 names = getattr(c, 'card_names', []) or []
-                return any('Shoemon' in n for n in names)
+                return any('Shoemon' == n for n in names)
 
             game.effect_play_from_zone(
                 player, 'hand', play_filter, free=True, is_optional=True,
@@ -69,7 +72,7 @@ class EX11_020(CardScript):
 
         # --- Effect 2 (Inherited): [Opponent's Turn][Once Per Turn] End attack by deleting other Digimon ---
         effect2 = ICardEffect()
-        effect2.set_timing(EffectTiming.OnUseAttack)
+        effect2.set_timing(EffectTiming.OnAllyAttack)
         effect2.set_effect_name("EX11-020 End the attack by deleting 1 of your Digimon")
         effect2.set_effect_description("[Opponent's Turn][Once Per Turn] When one of your opponent's Digimon attacks, by deleting 1 of your other Digimon, end that attack.")
         effect2.is_inherited_effect = True

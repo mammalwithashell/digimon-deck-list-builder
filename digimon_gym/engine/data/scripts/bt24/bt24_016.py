@@ -112,8 +112,9 @@ class BT24_016(CardScript):
             if not valid_trash:
                 return
 
-            def _on_trash_action(idx):
-                # _decode_trash_selection already subtracts SEL_TRASH_START
+            def _on_trash_action(action_id):
+                # _decode_trash_selection passes raw action_id; subtract offset
+                idx = action_id - _SEL_TRASH_START
                 on_dimetromon_selected(idx)
 
             game.request_selection(
@@ -135,18 +136,18 @@ class BT24_016(CardScript):
             if not enemy.hand_cards:
                 # If opponent has no hand cards, still trash top security if able
                 if enemy.security_cards:
-                    trashed = enemy.security_cards.pop(0)
-                    enemy.trash_cards.append(trashed)
+                    top_sec = enemy.security_cards[-1]
+                    enemy.trash_security_card(top_sec)
                 return
 
             def on_hand_selected(selected_card):
                 if selected_card in enemy.hand_cards:
                     enemy.hand_cards.remove(selected_card)
-                enemy.security_cards.append(selected_card)  # bottom of security
-                # Trash opponent's top security card
+                enemy.security_cards.insert(0, selected_card)  # bottom of security (index 0)
+                # Trash opponent's top security card (index -1)
                 if enemy.security_cards:
-                    trashed = enemy.security_cards.pop(0)
-                    enemy.trash_cards.append(trashed)
+                    top_sec = enemy.security_cards[-1]
+                    enemy.trash_security_card(top_sec)
 
             game.effect_select_hand_card(
                 enemy, filter_fn=lambda c: True, callback=on_hand_selected,
@@ -171,7 +172,9 @@ class BT24_016(CardScript):
         effect1.set_on_process_callback(_security_effect_process)
         effects.append(effect1)
 
-        # [When Attacking] [Once Per Turn] Opponent places 1 card from hand as bottom security. Trash their top security.
+        # [When Attacking] [Once Per Turn] — shared OPT with When Digivolving
+        # Instead of a separate effect object, wrap the WhenAttacking to share
+        # the same activation counter as effect1.
         effect1b = ICardEffect()
         effect1b.set_timing(EffectTiming.OnUseAttack)
         effect1b.set_effect_name("BT24-016 [When Attacking] Opponent places 1 card from hand in security bottom. Trash their security top")
@@ -179,6 +182,13 @@ class BT24_016(CardScript):
         effect1b.set_hash_string("WAWD_BT24-016")
         effect1b.is_on_attack = True
         effect1b.set_max_count_per_turn(1)
+
+        # Share OPT counter: override can_activate_this_turn and record_activation
+        # so both effects share the same counter via effect1.
+        effect1b.can_activate_this_turn = lambda: effect1.can_activate_this_turn()
+        def _shared_record():
+            effect1.record_activation()
+        effect1b.record_activation = _shared_record
 
         def condition1b(context: Dict[str, Any]) -> bool:
             if card and card.permanent_of_this_card() is None:
@@ -203,9 +213,12 @@ class BT24_016(CardScript):
         def condition3(context: Dict[str, Any]) -> bool:
             if card and card.permanent_of_this_card() is None:
                 return False
-            # Only fires on your turn
-            if not (card and card.owner and card.owner.is_my_turn):
-                return False
+            # [All Turns] — no is_my_turn check
+            # Must fire only when OPPONENT's security is removed
+            event_player = context.get('event_player') or context.get('player')
+            if event_player and card and card.owner:
+                if event_player is card.owner:
+                    return False  # own security lost, not opponent's
             return True
 
         effect3.set_can_use_condition(condition3)
@@ -223,7 +236,7 @@ class BT24_016(CardScript):
                 if not (any('Reptile' in _t or 'Dragonkin' in _t for _t in (getattr(c, 'card_traits', []) or []))):
                     return False
                 # Must be 5000 DP or lower
-                card_dp = getattr(c, 'dp', None)
+                card_dp = getattr(c, 'base_dp', None)
                 if card_dp is None or card_dp > 5000:
                     return False
                 return True

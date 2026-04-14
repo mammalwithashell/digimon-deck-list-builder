@@ -83,24 +83,55 @@ class EX8_067(CardScript):
 
         def process1(ctx: Dict[str, Any]):
             player = ctx.get('player')
+            game = ctx.get('game')
             digivolved_perm = ctx.get('digivolved_permanent')
-            if not (player and digivolved_perm):
+            if not (player and game and digivolved_perm):
                 return
             # Cost: suspend this tamer
             tamer_perm = card.permanent_of_this_card() if card else None
             if not tamer_perm:
                 return
             tamer_perm.suspend()
+
             # Place up to 2 Mineral/Rock cards from trash as bottom digivolution cards
-            placed = 0
-            for source_card in list(player.trash_cards):
-                if placed >= 2:
-                    break
-                traits = getattr(source_card, 'card_traits', [])
-                if 'Mineral' in traits or 'Rock' in traits:
-                    player.trash_cards.remove(source_card)
-                    digivolved_perm.add_card_source_bottom(source_card)
-                    placed += 1
+            # Uses recursive request_selection pattern for player-driven choice
+            def _mineral_rock_filter(c):
+                traits = getattr(c, 'card_traits', [])
+                return 'Mineral' in traits or 'Rock' in traits
+
+            placed_holder = [0]
+
+            def _place_one():
+                if placed_holder[0] >= 2:
+                    return
+                eligible = [c for c in player.trash_cards if _mineral_rock_filter(c)]
+                if not eligible:
+                    return
+
+                from ....data.enums import GamePhase
+                from ....game.constants import SEL_TRASH_START
+                valid_trash = []
+                for i, c in enumerate(player.trash_cards):
+                    if _mineral_rock_filter(c):
+                        valid_trash.append(SEL_TRASH_START + i)
+                if not valid_trash:
+                    return
+
+                def on_trash_selected(action_id):
+                    idx = action_id - SEL_TRASH_START
+                    if 0 <= idx < len(player.trash_cards):
+                        selected = player.trash_cards[idx]
+                        player.trash_cards.remove(selected)
+                        digivolved_perm.add_card_source_bottom(selected)
+                        placed_holder[0] += 1
+                        _place_one()  # recurse for next selection
+
+                game.request_selection(
+                    GamePhase.SelectTrash, player, on_trash_selected,
+                    valid_trash, is_optional=True,
+                    prompt=f"Select a [Mineral] or [Rock] card from trash to place as bottom digivolution card ({placed_holder[0]+1}/2).")
+
+            _place_one()
 
         effect1.set_on_process_callback(process1)
         effects.append(effect1)

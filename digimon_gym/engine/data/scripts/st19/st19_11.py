@@ -131,8 +131,10 @@ class ST19_11(CardScript):
         # When this Digimon would leave the battle area other than by your
         # effects, by deleting 1 of your Tokens or other [Puppet] trait
         # Digimon, prevent it from leaving.
+        # Uses WhenPermanentWouldBeDeleted timing + _will_not_be_removed flag
+        # (matches EX7-027 canonical pattern)
         effect2 = ICardEffect()
-        effect2.set_timing(EffectTiming.WhenRemoveField)
+        effect2.set_timing(EffectTiming.WhenPermanentWouldBeDeleted)
         effect2.set_effect_name("ST19-11 Prevent leaving by deleting Token/Puppet")
         effect2.set_effect_description(
             "[All Turns] [Once Per Turn] When this Digimon would leave the "
@@ -144,66 +146,84 @@ class ST19_11(CardScript):
         effect2.set_max_count_per_turn(1)
         effect2.set_hash_string("Substitute_EX7_027")
 
+        def _is_substitute(p, my_perm):
+            """Check if a permanent can be sacrificed (Token or other Puppet Digimon)."""
+            if p is my_perm or not p.is_digimon:
+                return False
+            if getattr(p, 'is_token', False):
+                return True
+            top = p.top_card
+            if top:
+                traits = getattr(top, 'card_traits', []) or []
+                return any('Puppet' in t for t in traits)
+            return False
+
         def condition2(context: Dict[str, Any]) -> bool:
             if card and card.permanent_of_this_card() is None:
+                return False
+            my_perm = card.permanent_of_this_card()
+            # Only triggers for THIS permanent being removed
+            # In execute_effects context, event_permanent is the permanent being deleted
+            event_perm = context.get('event_permanent') or context.get('permanent')
+            if event_perm is not my_perm:
                 return False
             owner = card.owner if card else None
             if not owner:
                 return False
-            my_perm = card.permanent_of_this_card()
-            # The leaving permanent must be this Digimon
-            leaving_perm = context.get('permanent')
-            if leaving_perm is not my_perm:
+            # "other than by your effects" — skip if removal is by own effect
+            if context.get('is_own_effect', False):
                 return False
-            # Must not be caused by own effects
-            by_effect = context.get('by_effect')
-            if by_effect:
-                effect_card = getattr(by_effect, 'effect_source_card', None)
-                if effect_card and effect_card.owner is owner:
-                    return False
             # Must have a Token or other Puppet Digimon to sacrifice
-            has_sacrifice = any(
-                p is not my_perm and (
-                    p.is_token or
-                    (p.is_digimon and p.top_card and
-                     any('Puppet' in t for t in (getattr(p.top_card, 'card_traits', []) or [])))
-                )
-                for p in owner.battle_area
-            )
-            return has_sacrifice
+            return any(_is_substitute(p, my_perm) for p in owner.battle_area)
 
         effect2.set_can_use_condition(condition2)
 
         def process2(ctx: Dict[str, Any]):
-            """Delete a Token or Puppet Digimon to prevent this Digimon from leaving."""
+            """Delete a Token or Puppet Digimon to prevent this Digimon from leaving.
+
+            Pattern: Set _will_not_be_removed = True IMMEDIATELY to prevent
+            deletion (since delete_permanent checks the flag synchronously after
+            firing WhenPermanentWouldBeDeleted), then start async selection.
+            If the player declines, undo prevention by deleting the permanent.
+            """
             player = ctx.get('player')
             game = ctx.get('game')
-            perm = ctx.get('permanent')
-            if not (player and game and perm):
+            if not (player and game):
+                return
+            my_perm = card.permanent_of_this_card() if card else None
+            if not my_perm:
                 return
 
-            def sacrifice_filter(p):
-                if p is perm:
-                    return False
-                if p.is_token:
-                    return True
-                if p.is_digimon and p.top_card:
-                    traits = getattr(p.top_card, 'card_traits', []) or []
-                    return any('Puppet' in t for t in traits)
-                return False
+            # Immediately prevent deletion — selection will confirm or undo
+            my_perm._will_not_be_removed = True
 
-            def on_sacrifice(sacrifice_perm):
-                player.delete_permanent(sacrifice_perm)
-                # Prevent the original permanent from leaving
-                perm.will_be_remove_field = False
-                if hasattr(perm, 'willBeRemoveField'):
-                    perm.willBeRemoveField = False
+            # Build valid target list
+            from ....game.effects import SEL_MY_FIELD_START
+            valid = []
+            for i, p in enumerate(player.battle_area):
+                if _is_substitute(p, my_perm):
+                    valid.append(SEL_MY_FIELD_START + i)
+            if not valid:
+                # No valid targets — should not reach here (condition checks)
+                my_perm._will_not_be_removed = False
+                return
 
-            game.effect_select_own_permanent(
-                player, on_sacrifice,
-                filter_fn=sacrifice_filter,
+            def on_select(action_id: int):
+                idx = action_id - SEL_MY_FIELD_START
+                if 0 <= idx < len(player.battle_area):
+                    target_perm = player.battle_area[idx]
+                    player.delete_permanent(target_perm)
+
+            def on_decline():
+                # Player chose not to sacrifice — undo prevention, delete the permanent
+                player.delete_permanent(my_perm)
+
+            from ....data.enums import GamePhase as GP
+            game.request_selection(
+                GP.SelectTarget, player, on_select, valid,
                 is_optional=True,
-                prompt="Select 1 of your Tokens or [Puppet] Digimon to delete.",
+                prompt="Select 1 Token or [Puppet] Digimon to delete to prevent leaving.",
+                on_decline=on_decline,
             )
 
         effect2.set_on_process_callback(process2)

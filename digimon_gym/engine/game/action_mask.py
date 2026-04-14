@@ -341,6 +341,26 @@ def build_action_mask(game: "Game", player_id: int) -> List[float]:
                 if has_sacrifice:
                     mask[1000 + i * EFFECTS_PER_PERM] = 1.0
 
+            # MAY_ATTACK: Digimon granted optional attack at end of turn
+            if game.modifiers.has_modifier(perm, ModifierType.MAY_ATTACK) and perm.can_attack():
+                if perm.can_attack_player():
+                    mask[100 + i * TARGETS_PER_ATTACKER + SECURITY_TARGET] = 1.0
+                if not perm.has_keyword('_is_cannot_attack_digimon'):
+                    for j in range(min(len(opp.battle_area), FIELD_SLOTS)):
+                        target = opp.battle_area[j]
+                        if target.is_digimon:
+                            mask[100 + i * TARGETS_PER_ATTACKER + j] = 1.0
+
+            # FORCE_ATTACK: Digimon granted mandatory attack at end of turn
+            if game.modifiers.has_modifier(perm, ModifierType.FORCE_ATTACK) and perm.can_attack():
+                if perm.can_attack_player():
+                    mask[100 + i * TARGETS_PER_ATTACKER + SECURITY_TARGET] = 1.0
+                if not perm.has_keyword('_is_cannot_attack_digimon'):
+                    for j in range(min(len(opp.battle_area), FIELD_SLOTS)):
+                        target = opp.battle_area[j]
+                        if target.is_digimon:
+                            mask[100 + i * TARGETS_PER_ATTACKER + j] = 1.0
+
     elif phase == GamePhase.AllianceTiming:
         # Alliance: select an unsuspended ally to suspend for DP + SA+1 bonus
         mask[62] = 1.0  # Can always decline Alliance

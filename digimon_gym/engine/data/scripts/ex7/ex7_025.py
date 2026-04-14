@@ -53,7 +53,7 @@ class EX7_025(CardScript):
             def play_filter(c):
                 names = getattr(c, 'card_names', []) or []
                 return (getattr(c, 'is_tamer', False) and
-                        any('Arisa Kinosaki' in n for n in names))
+                        any(n == 'Arisa Kinosaki' for n in names))
 
             game.effect_play_from_zone(
                 player, 'hand', play_filter, free=True, is_optional=True)
@@ -68,7 +68,8 @@ class EX7_025(CardScript):
             "[Inherited][Your Turn] All of your opponent's Security Digimon get -3000 DP."
         )
         effect1.is_inherited_effect = True
-        effect1.security_dp_modifier = -3000
+        effect1.dp_modifier = -3000
+        effect1._applies_to_opponent_security_digimon = True
 
         def condition1(context: Dict[str, Any]) -> bool:
             if card and card.permanent_of_this_card() is None:

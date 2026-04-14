@@ -78,8 +78,25 @@ class BT13_111(CardScript):
 
         effect2.set_can_use_condition(condition2)
 
+        def _gallantmon_try_high_dp_delete(player, game, enemy):
+            """Fallback: delete 1 opponent Digimon with 13000 DP or more."""
+            high_filter = lambda p: p.is_digimon and p.dp is not None and p.dp >= 13000
+            has_high = any(high_filter(p) for p in enemy.battle_area)
+            if has_high:
+                def on_delete_high(target_perm):
+                    enemy.delete_permanent(target_perm)
+                game.effect_select_opponent_permanent(
+                    player, on_delete_high, filter_fn=high_filter, is_optional=False)
+
         def _gallantmon_delete(player, game):
-            """Delete 1 opponent Digimon with 6000 DP or less. If none deleted, delete 1 with 13000 DP or more."""
+            """Delete 1 opponent Digimon with 6000 DP or less.
+            If no Digimon was deleted by this effect (no targets OR deletion
+            was prevented), delete 1 opponent Digimon with 13000 DP or more.
+
+            C# ref: DeletePeremanentAndProcessAccordingToResult with FailureProcess.
+            The fallback triggers on deletion failure (prevention), not just
+            absence of targets.
+            """
             enemy = player.enemy if player else None
             if not enemy:
                 return
@@ -90,18 +107,16 @@ class BT13_111(CardScript):
 
             if has_low:
                 def on_delete_low(target_perm):
-                    enemy.delete_permanent(target_perm)
+                    deleted = enemy.delete_permanent(target_perm)
+                    if not deleted:
+                        # Deletion was prevented (Armor Purge, Evade, etc.)
+                        # Trigger the fallback to 13000+ DP
+                        _gallantmon_try_high_dp_delete(player, game, enemy)
                 game.effect_select_opponent_permanent(
                     player, on_delete_low, filter_fn=low_filter, is_optional=False)
             else:
-                # Fallback: delete 1 with 13000 DP or more
-                high_filter = lambda p: p.is_digimon and p.dp is not None and p.dp >= 13000
-                has_high = any(high_filter(p) for p in enemy.battle_area)
-                if has_high:
-                    def on_delete_high(target_perm):
-                        enemy.delete_permanent(target_perm)
-                    game.effect_select_opponent_permanent(
-                        player, on_delete_high, filter_fn=high_filter, is_optional=False)
+                # No low DP targets — go straight to high DP fallback
+                _gallantmon_try_high_dp_delete(player, game, enemy)
 
         def process2(ctx: Dict[str, Any]):
             """Action: Delete 6000 DP or less, else 13000 DP or more"""

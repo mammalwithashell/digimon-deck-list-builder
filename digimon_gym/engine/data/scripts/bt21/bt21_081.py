@@ -52,13 +52,16 @@ class BT21_081(CardScript):
         effect1.set_effect_name("BT21-081 Give piercing and attack")
         effect1.set_effect_description("[End of Your Turn] By suspending this Tamer, 1 of your Digimon with the [Reptile] or [Dragonkin] trait gains <Piercing> for the turn. Then, that Digimon attacks.")
         effect1.is_optional = True
-        effect1._is_piercing = True
 
         effect = effect1  # alias for condition closure
         def condition1(context: Dict[str, Any]) -> bool:
             if card and card.permanent_of_this_card() is None:
                 return False
             if not (card and card.owner and card.owner.is_my_turn):
+                return False
+            # Suspend cost: tamer must not already be suspended
+            tamer_perm = card.permanent_of_this_card() if card else None
+            if tamer_perm and tamer_perm.is_suspended:
                 return False
             return True
 
@@ -86,7 +89,7 @@ class BT21_081(CardScript):
                     target_perm, ModifierType.FORCE_ATTACK,
                     value_fn=lambda: True, expiry='end_of_turn')
             game.effect_select_own_permanent(
-                player, on_grant, filter_fn=target_filter, is_optional=True)
+                player, on_grant, filter_fn=target_filter, is_optional=False)
 
         effect1.set_on_process_callback(process1)
         effects.append(effect1)

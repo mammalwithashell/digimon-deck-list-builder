@@ -103,6 +103,20 @@ class BT11_112(CardScript):
                 return False
             if not (card and card.owner and card.owner.is_my_turn):
                 return False
+            # Must be one of owner's blue Digimon that unsuspended
+            unsuspended_perm = context.get('event_permanent', context.get('permanent'))
+            if unsuspended_perm is None:
+                return False
+            if not getattr(unsuspended_perm, 'is_digimon', False):
+                return False
+            if getattr(unsuspended_perm, 'owner', None) != (card.owner if card else None):
+                return False
+            top = getattr(unsuspended_perm, 'top_card', None)
+            if top is None:
+                return False
+            colors = [col.name for col in (getattr(top, 'card_colors', []) or [])]
+            if 'Blue' not in colors:
+                return False
             return True
 
         effect2.set_can_use_condition(condition2)

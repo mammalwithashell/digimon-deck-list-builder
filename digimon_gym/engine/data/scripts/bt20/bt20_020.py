@@ -79,13 +79,20 @@ class BT20_020(CardScript):
             if not (player and game and perm):
                 return
 
-            # Fix #2: Register play restriction modifier on opponent
             # "Your opponent can't play Digimon or Tamers by effects until end of their turn"
-            # Uses CANNOT_PLAY_CARD modifier with end_of_opponent_turn expiry
+            # Uses CANNOT_PLAY_BY_EFFECT: only blocks effect-based plays (card text says "by effects")
+            # Condition filters to Digimon and Tamers only (Options are unaffected)
+            def _block_digimon_or_tamer(target_perm, c):
+                being_played = c.get('card')
+                if not being_played:
+                    return False
+                return (getattr(being_played, 'is_digimon', False)
+                        or getattr(being_played, 'is_tamer', False))
+
             game.register_modifier(
                 perm,
-                ModifierType.CANNOT_PLAY_CARD,
-                condition=lambda target_perm, ctx: True,
+                ModifierType.CANNOT_PLAY_BY_EFFECT,
+                condition=_block_digimon_or_tamer,
                 source_effect=effect2,
                 expiry='end_of_opponent_turn',
             )

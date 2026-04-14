@@ -98,32 +98,43 @@ class P_169(CardScript):
                 return
             tamer_perm.suspend()
 
-            # Find the first Mineral/Rock card from trash to place
+            # Player selects which Mineral/Rock card from trash to place
             def source_filter(source_card) -> bool:
                 traits = getattr(source_card, 'card_traits', [])
                 return 'Mineral' in traits or 'Rock' in traits
 
-            # Pick the source card first (first qualifying in trash)
-            source_to_place = None
-            for c in player.trash_cards:
+            from ....game.constants import SEL_TRASH_START
+            from ....data.enums import GamePhase
+
+            valid = []
+            for i, c in enumerate(player.trash_cards):
                 if source_filter(c):
-                    source_to_place = c
-                    break
-            if source_to_place is None:
+                    valid.append(SEL_TRASH_START + i)
+            if not valid:
                 return
 
-            # Remove from trash before selection to avoid re-entrancy issues
-            player.trash_cards.remove(source_to_place)
+            def on_trash_selected(action_id: int):
+                idx = action_id - SEL_TRASH_START
+                if not (0 <= idx < len(player.trash_cards)):
+                    return
+                source_to_place = player.trash_cards[idx]
+                player.trash_cards.remove(source_to_place)
 
-            def target_filter(p):
-                return p.is_digimon
+                def target_filter(p):
+                    return p.is_digimon
 
-            def on_target(target_perm):
-                target_perm.add_card_source_bottom(source_to_place)
+                def on_target(target_perm):
+                    target_perm.add_card_source_bottom(source_to_place)
 
-            game.effect_select_own_permanent(
-                player, on_target, filter_fn=target_filter, is_optional=False,
-                prompt="Select 1 of your Digimon to place a [Mineral] or [Rock] card from trash under."
+                game.effect_select_own_permanent(
+                    player, on_target, filter_fn=target_filter, is_optional=False,
+                    prompt="Select 1 of your Digimon to place a [Mineral] or [Rock] card from trash under."
+                )
+
+            game.request_selection(
+                GamePhase.SelectTrash, player, on_trash_selected, valid,
+                is_optional=False,
+                prompt="Select 1 card with [Mineral] or [Rock] trait from your trash to place as a bottom digivolution card."
             )
 
         effect1.set_on_process_callback(process1)

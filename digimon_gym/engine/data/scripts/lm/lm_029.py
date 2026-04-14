@@ -86,9 +86,9 @@ class LM_029(CardScript):
                 is_optional=True
             )
 
-            # Then place this card in the battle area (Delay placement)
-            if card and player:
-                player.play_card_from_source(card, pay_cost=False)
+            # "Then, place this card in the battle area" — handled by the engine:
+            # _option_stays_on_field returns True because _is_delay is set,
+            # so the engine keeps this option card on the field after resolution.
 
         effect0.set_on_process_callback(process0)
         effects.append(effect0)
@@ -121,9 +121,9 @@ class LM_029(CardScript):
         effect2._is_delay_effect = True
 
         def condition2(context: Dict[str, Any]) -> bool:
+            # Note: _execute_delay trashes the card BEFORE calling this condition,
+            # so permanent_of_this_card() would return None. Don't check it here.
             if not (card and card.owner and card.owner.is_my_turn):
-                return False
-            if card and card.permanent_of_this_card() is None:
                 return False
             # Opponent must have a Digimon
             enemy = card.owner.enemy if card and card.owner else None
@@ -141,10 +141,8 @@ class LM_029(CardScript):
             if not (player and game):
                 return
 
-            # Trash this card from the battle area first (Delay consumption)
-            perm = card.permanent_of_this_card() if card else None
-            if perm:
-                player.delete_permanent(perm)
+            # Note: the engine's _execute_delay already trashes this card
+            # from the battle area before calling this callback.
 
             def _after_return():
                 # Then, if you don't have a Digimon, play 1 yellow Digimon DP <= 2000 from trash

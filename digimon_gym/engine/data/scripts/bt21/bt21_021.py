@@ -36,9 +36,14 @@ class BT21_021(CardScript):
         effect1 = ICardEffect()
         effect1.set_effect_name("BT21-021 Alternate digivolution requirement")
         effect1.set_effect_description("Alternate digivolution requirement")
-        # Alternate digivolution: with [Xros Heart] trait for cost 3
+        # Alternate digivolution: Lv.4 with [Xros Heart] or [Hero] trait for cost 3
         effect1._alt_digi_cost = 3
-        effect1._alt_digi_trait = "Xros Heart"
+        effect1._alt_digi_level = 4
+
+        def _xros_or_hero_check(base_perm) -> bool:
+            traits = getattr(base_perm.top_card, 'card_traits', []) or []
+            return any('Xros Heart' in t or 'Hero' in t for t in traits)
+        effect1._alt_digi_condition_fn = _xros_or_hero_check
 
         def condition1(context: Dict[str, Any]) -> bool:
             permanent = card.permanent_of_this_card() if card else None
@@ -188,13 +193,22 @@ class BT21_021(CardScript):
                 return
 
             def play_filter(c):
+                # Card text: "play 1 CARD with [Xros Heart]/[Blue Flare]/[Hero]
+                # trait" — any card type (Digimon/Tamer/Option) matching the trait.
                 traits = getattr(c, 'card_traits', []) or []
                 return any('Xros Heart' in t or 'Blue Flare' in t or 'Hero' in t for t in traits)
+
+            def on_played(_played_card, _played_perm):
+                # "If you did, delete this Digimon" — delete Gogmamon after
+                # successfully playing the card.
+                self_perm = card.permanent_of_this_card() if card else None
+                if self_perm and player:
+                    player.delete_permanent(self_perm, removal_cause='effect')
 
             # Play from hand with cost reduction of 5
             game.effect_play_from_zone(
                 player, 'hand', play_filter, free=False, manual_reduction=5,
-                is_optional=True)
+                is_optional=True, on_played=on_played)
 
         effect5.set_on_process_callback(process5)
         effects.append(effect5)

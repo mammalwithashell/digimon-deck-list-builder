@@ -59,8 +59,9 @@ class EX7_063(CardScript):
 
         # --- Effect 1: [All Turns] When Token or Puppet Digimon deleted,
         #     suspend this Tamer to play Lv.3 Puppet from hand free ---
+        # Uses NoTiming + _is_deletion_observer so _fire_deletion_observers() picks it up
         effect1 = ICardEffect()
-        effect1.set_timing(EffectTiming.OnDestroyedAnyone)
+        effect1._is_deletion_observer = True
         effect1.set_effect_name("EX7-063 Suspend to play Lv.3 Puppet on Token/Puppet deletion")
         effect1.set_effect_description(
             "[All Turns] When one of your Tokens or Digimon with the [Puppet] "
@@ -70,14 +71,31 @@ class EX7_063(CardScript):
         )
         effect1.is_optional = True
 
+        def _is_puppet_trait(c) -> bool:
+            traits = getattr(c, 'card_traits', []) or []
+            return any('Puppet' in t for t in traits)
+
         def condition1(context: Dict[str, Any]) -> bool:
             if card and card.permanent_of_this_card() is None:
                 return False
             tamer_perm = card.permanent_of_this_card()
-            # Tamer must not already be suspended
+            # Tamer must not already be suspended (suspend is the cost)
             if tamer_perm and tamer_perm.is_suspended:
                 return False
-            return True
+            # Check that the deleted permanent is one of OUR Tokens or Puppet Digimon
+            deleted_perm = context.get('deleted_permanent')
+            if not deleted_perm:
+                return False
+            # Must be our permanent (deleted perm's owner == tamer's owner)
+            owner = card.owner if card else None
+            if deleted_perm.owner is not owner:
+                return False
+            # Must be a Token or have [Puppet] trait
+            if getattr(deleted_perm, 'is_token', False):
+                return True
+            if deleted_perm.is_digimon and deleted_perm.top_card and _is_puppet_trait(deleted_perm.top_card):
+                return True
+            return False
 
         effect1.set_can_use_condition(condition1)
 
@@ -101,8 +119,7 @@ class EX7_063(CardScript):
                 level = getattr(c, 'level', None)
                 if level != 3:
                     return False
-                traits = getattr(c, 'card_traits', []) or []
-                return any('Puppet' in t for t in traits)
+                return _is_puppet_trait(c)
 
             game.effect_play_from_zone(
                 player, 'hand', play_filter, free=True, is_optional=True)
@@ -112,6 +129,7 @@ class EX7_063(CardScript):
 
         # --- Effect 2: [Security] Play this card without paying the cost ---
         effect2 = ICardEffect()
+        effect2.set_timing(EffectTiming.SecuritySkill)
         effect2.set_effect_name("EX7-063 Security: Play free")
         effect2.set_effect_description(
             "[Security] Play this card without paying the cost."

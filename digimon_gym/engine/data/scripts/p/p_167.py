@@ -170,12 +170,8 @@ class P_167(CardScript):
                 # Trash the first Mineral/Rock source (player picks via choose_branch
                 # only when multiple options exist)
                 def do_trash_and_reveal(cs_to_trash):
-                    if cs_to_trash in trash_perm.card_sources:
-                        trash_perm.card_sources.remove(cs_to_trash)
-                    player.trash_cards.append(cs_to_trash)
-                    game.execute_effects(EffectTiming.OnDigivolutionCardDiscarded,
-                                         {'trashed_cards': [cs_to_trash],
-                                          'permanent': trash_perm})
+                    trashed = trash_perm.trash_specific_digivolution_cards([cs_to_trash])
+                    player.trash_cards.extend(trashed)
                     _execute_reveal_and_select_branch(player, game, this_perm)
 
                 if len(mr_sources) == 1:
@@ -240,12 +236,8 @@ class P_167(CardScript):
                     return
 
                 def do_trash_and_reveal(cs_to_trash):
-                    if cs_to_trash in trash_perm.card_sources:
-                        trash_perm.card_sources.remove(cs_to_trash)
-                    player.trash_cards.append(cs_to_trash)
-                    game.execute_effects(EffectTiming.OnDigivolutionCardDiscarded,
-                                         {'trashed_cards': [cs_to_trash],
-                                          'permanent': trash_perm})
+                    trashed = trash_perm.trash_specific_digivolution_cards([cs_to_trash])
+                    player.trash_cards.extend(trashed)
                     _execute_reveal_and_select_branch(player, game, this_perm)
 
                 if len(mr_sources) == 1:
@@ -281,6 +273,11 @@ class P_167(CardScript):
         effect2.is_inherited_effect = True
 
         def condition2(context: Dict[str, Any]) -> bool:
+            # Must be THIS card that was trashed, not just any card
+            trashed_cards = context.get('trashed_cards', [])
+            if card not in trashed_cards:
+                return False
+            # The Digimon whose sources were trashed must have Mineral or Rock trait
             event_perm = context.get('event_permanent')
             if event_perm is None:
                 return False

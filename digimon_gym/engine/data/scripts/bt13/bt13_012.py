@@ -64,7 +64,10 @@ class BT13_012(CardScript):
             if not player.security_cards:
                 return
 
-            from ....data.enums import CardColor
+            import random
+            from ....data.enums import CardColor, GamePhase
+            from ....core.permanent import Permanent
+            from ....game.constants import SEL_MY_SECURITY_START
 
             def tamer_filter(c):
                 if not getattr(c, 'is_tamer', False):
@@ -72,26 +75,53 @@ class BT13_012(CardScript):
                 colors = getattr(c, 'card_colors', []) or []
                 return CardColor.Red in colors or CardColor.Yellow in colors
 
-            # Search security: find qualifying tamers
-            matching = [c for c in player.security_cards if tamer_filter(c)]
-            played = False
+            # Build valid selection indices
+            valid = []
+            for i, c in enumerate(player.security_cards):
+                if tamer_filter(c):
+                    valid.append(SEL_MY_SECURITY_START + i)
 
-            if matching:
-                # Play the first matching tamer from security
-                chosen = matching[0]
-                player.security_cards.remove(chosen)
-                played_perm = player.play_card_from_source(chosen, pay_cost=False)
-                if played_perm:
-                    played = True
-
-            # If we played a tamer, Recovery +1
-            if played:
-                player.recovery(1)
-
-            # Shuffle security stack
-            if player.security_cards:
-                import random
+            if not valid:
+                # No valid tamers — just shuffle security
                 random.shuffle(player.security_cards)
+                return
+
+            def on_select(action_id: int):
+                idx = action_id - SEL_MY_SECURITY_START
+                if 0 <= idx < len(player.security_cards):
+                    chosen = player.security_cards[idx]
+                    # Remove from security
+                    player.remove_from_security(chosen)
+                    # Play as new permanent (free)
+                    played_perm = player.play_card_from_source(chosen, pay_cost=False)
+                    if played_perm:
+                        played_perm.turn_played = game.turn_count
+                        played_perm._owner_game = game
+                        # Fire OnEnterFieldAnyone for the played tamer
+                        game.execute_effects(
+                            EffectTiming.OnEnterFieldAnyone,
+                            {
+                                'played_card': chosen,
+                                'played_permanent': played_perm,
+                                'event_permanent': played_perm,
+                                'event_player': player,
+                            },
+                        )
+                        game._fire_play_observers(played_perm, player)
+                        # Recovery +1
+                        player.recovery(1)
+                    # Shuffle security
+                    random.shuffle(player.security_cards)
+
+            def on_decline():
+                # Player declined — just shuffle security (no recovery)
+                random.shuffle(player.security_cards)
+
+            game.request_selection(
+                GamePhase.SelectSecurity, player, on_select, valid,
+                is_optional=True,
+                prompt="You may play 1 red or yellow Tamer card from your security stack without paying its cost.",
+                on_decline=on_decline)
 
         effect1.set_on_process_callback(process1)
         effects.append(effect1)

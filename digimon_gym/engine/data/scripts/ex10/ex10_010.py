@@ -72,7 +72,7 @@ class EX10_010(CardScript):
             if not (player and game):
                 return
             def target_filter(p):
-                return (p.is_digimon or p.is_tamer) and (getattr(p.top_card, 'play_cost', 99) or 99) <= 7
+                return (p.is_digimon or p.is_tamer) and p.top_card.has_play_cost and p.top_card.get_cost_itself <= 7
             def on_delete(target_perm):
                 enemy = player.enemy if player else None
                 if enemy:
@@ -132,7 +132,7 @@ class EX10_010(CardScript):
             enemy = player.enemy
             for p in enemy.battle_area:
                 if p.is_digimon:
-                    dp = p.current_dp
+                    dp = p.dp
                     if dp is not None and dp >= 13000:
                         return True
             return False

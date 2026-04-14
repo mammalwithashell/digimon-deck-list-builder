@@ -13,7 +13,7 @@ class BT21_102(CardScript):
 
     [Start of Your Turn] If your memory is at 2 or less, it becomes 3.
     [Your Turn] When one of your Digimon attacks, by suspending this Tamer,
-        <Draw 1>.
+        <Draw 1>. Then, 1 of your Digimon gets +2000 DP for the turn.
     [Main][Once Per Turn] You may play 1 [ADVENTURE]/[Hero] trait card with
         a play cost of 2 or less from your hand without paying the cost.
         For each of your Tamers' colors, add 1 to this effect's play cost
@@ -55,7 +55,7 @@ class BT21_102(CardScript):
         effect1.set_effect_name("BT21-102 Suspend to draw 1")
         effect1.set_effect_description(
             "[Your Turn] When one of your Digimon attacks, by suspending this "
-            "Tamer, <Draw 1>."
+            "Tamer, <Draw 1>. Then, 1 of your Digimon gets +2000 DP for the turn."
         )
         effect1.is_optional = True
         effect1.is_on_attack = True
@@ -74,7 +74,7 @@ class BT21_102(CardScript):
         effect1.set_can_use_condition(condition1)
 
         def process1(ctx: Dict[str, Any]):
-            """Suspend this Tamer as cost, then Draw 1."""
+            """Suspend this Tamer as cost, then Draw 1, then +2000 DP to a Digimon."""
             player = ctx.get('player')
             game = ctx.get('game')
             perm = card.permanent_of_this_card() if card else None
@@ -82,8 +82,18 @@ class BT21_102(CardScript):
                 return
             # Cost: suspend this Tamer
             perm.suspend()
-            # Reward: draw 1
+            # Draw 1
             player.draw_cards(1)
+            # Then, 1 of your Digimon gets +2000 DP for the turn
+            def dp_boost_callback(target_perm):
+                target_perm.change_dp(2000)
+
+            game.effect_select_own_permanent(
+                player, dp_boost_callback,
+                filter_fn=lambda p: p.is_digimon,
+                is_optional=False,
+                prompt="Select 1 of your Digimon to get +2000 DP for the turn.",
+            )
 
         effect1.set_on_process_callback(process1)
         effects.append(effect1)

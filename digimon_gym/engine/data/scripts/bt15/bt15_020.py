@@ -34,7 +34,6 @@ class BT15_020(CardScript):
         effect1.set_timing(EffectTiming.OnStartMainPhase)
         effect1.set_effect_name("BT15-020 Your 1 Digimon gains Blocker and Draw 1")
         effect1.set_effect_description("[Start of Your Main Phase] 1 of your Digimon gains <Blocker> until the end of your opponent's turn. Then, if you have a Tamer with [Matt Ishida] in its name, <Draw 1>.")
-        effect1._is_blocker = True
 
         effect = effect1  # alias for condition closure
         def condition1(context: Dict[str, Any]) -> bool:
@@ -47,22 +46,29 @@ class BT15_020(CardScript):
         effect1.set_can_use_condition(condition1)
 
         def process1(ctx: Dict[str, Any]):
-            """Action: Draw 1, Gain Keyword Blocker"""
+            """Grant 1 own Digimon Blocker, then Draw 1 if Matt Ishida tamer."""
             player = ctx.get('player')
-            perm = ctx.get('permanent')
             game = ctx.get('game')
-            if player:
-                player.draw_cards(1)
             if not (player and game):
                 return
-            def target_filter(p):
-                if not (p.contains_card_name('Matt Ishida')):
-                    return False
+
+            # Step 1: Select 1 of your Digimon to gain Blocker until end of opponent's turn
+            def digimon_filter(p):
                 return p.is_digimon
+
             def on_grant(target_perm):
                 target_perm.grant_keyword('_is_blocker')
+
             game.effect_select_own_permanent(
-                player, on_grant, filter_fn=target_filter, is_optional=False)
+                player, on_grant, filter_fn=digimon_filter, is_optional=False)
+
+            # Step 2: Then, if you have a Tamer with [Matt Ishida], Draw 1
+            has_matt = any(
+                p.is_tamer and p.contains_card_name('Matt Ishida')
+                for p in player.battle_area
+            )
+            if has_matt:
+                player.draw_cards(1)
 
         effect1.set_on_process_callback(process1)
         effects.append(effect1)
@@ -72,7 +78,7 @@ class BT15_020(CardScript):
         effect2 = ICardEffect()
         effect2.set_timing(EffectTiming.OnUseAttack)
         effect2.set_effect_name("BT15-020 Draw 1")
-        effect2.set_effect_description("[When Attacking][Once Per Turn] When this Digimon attacks a player, <Draw 1>. (Draw 1 card from your deck.)")
+        effect2.set_effect_description("[When Attacking] [Once Per Turn] <Draw 1>. (Draw 1 card from your deck.)")
         effect2.is_inherited_effect = True
         effect2.set_max_count_per_turn(1)
         effect2.set_hash_string("Draw1_BT15_020")

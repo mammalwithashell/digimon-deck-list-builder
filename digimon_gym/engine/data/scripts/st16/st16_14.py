@@ -9,7 +9,7 @@ if TYPE_CHECKING:
 
 
 class ST16_14(CardScript):
-    """ST16-14 Matt Ishida | Tamer | White | Cost 4
+    """ST16-14 Matt Ishida | Tamer | Purple | Cost 4
 
     [Start of Your Turn] If your memory is at 2 or less, it becomes 3.
     [All Turns] When one of your effects trashes a card in your hand,
@@ -22,7 +22,7 @@ class ST16_14(CardScript):
 
         # --- Effect 0: [Start of Your Turn] Memory to 3 ---
         effect0 = ICardEffect()
-        effect0.set_timing(EffectTiming.OnStartMainPhase)
+        effect0.set_timing(EffectTiming.OnStartTurn)
         effect0.set_effect_name("ST16-14 Set memory to 3")
         effect0.set_effect_description(
             "[Start of Your Turn] If your memory is at 2 or less, it becomes 3."

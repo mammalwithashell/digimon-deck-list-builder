@@ -56,18 +56,21 @@ class EX11_047(CardScript):
                 return
 
             # Step 1: Trash 1 card from hand (mandatory)
+            # C# reference: discard selection is inside if (HandCards.Count >= 1)
             def on_trashed(selected):
                 if selected in player.hand_cards:
                     player.hand_cards.remove(selected)
                     player.trash_cards.append(selected)
-                # Step 2: Gain 1 memory
-                player.add_memory(1)
 
             if player.hand_cards:
                 game.effect_select_hand_card(
                     player, lambda c: True, on_trashed,
                     is_optional=False,
                     prompt="Trash 1 card from your hand.")
+
+            # Step 2: Gain 1 memory (unconditional — C# AddMemory is outside
+            # the hand-count check; "Then" is sequential, not conditional)
+            player.add_memory(1)
 
         effect1.set_on_process_callback(process1)
         effects.append(effect1)

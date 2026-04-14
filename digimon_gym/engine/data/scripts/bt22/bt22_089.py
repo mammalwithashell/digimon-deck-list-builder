@@ -44,13 +44,14 @@ class BT22_089(CardScript):
                 player.return_permanent_to_deck_bottom(perm)
             # Then play 1 play cost 4+ [Mirei Mikagura] or [CS] trait tamer from hand free
             def play_filter(c):
-                if not getattr(c, 'is_tamer', False):
-                    return False
                 if not getattr(c, 'has_play_cost', False):
                     return False
                 if getattr(c, 'get_cost_itself', 0) < 4:
                     return False
-                if not (any('Mirei Mikagura' in _n for _n in getattr(c, 'card_names', [])) or any('CS' in _t for _t in (getattr(c, 'card_traits', []) or []))):
+                # Per C#: EqualsCardName("Mirei Mikagura") || (IsTamer && HasCSTraits)
+                is_mirei = any('Mirei Mikagura' in _n for _n in getattr(c, 'card_names', []))
+                is_cs_tamer = getattr(c, 'is_tamer', False) and any('CS' in _t for _t in (getattr(c, 'card_traits', []) or []))
+                if not (is_mirei or is_cs_tamer):
                     return False
                 return True
             game.effect_play_from_zone(

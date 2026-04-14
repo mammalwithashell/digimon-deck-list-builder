@@ -58,8 +58,9 @@ class BT17_097(CardScript):
                     return False
                 if (getattr(c, 'level', None) or 0) < 5:
                     return False
-                traits = getattr(c, 'card_traits', []) or []
-                return any('Free' in t for t in traits)
+                # [Free] is an attribute (Vaccine, Data, Virus, Free), not a type/trait
+                attrs = c.c_entity_base.attribute_eng if c.c_entity_base else []
+                return 'Free' in attrs
 
             def own_filter(p):
                 if not p.is_digimon:
@@ -129,8 +130,9 @@ class BT17_097(CardScript):
             top = getattr(event_perm, 'top_card', None)
             if top is None:
                 return False
-            traits = getattr(top, 'card_traits', []) or []
-            if not any('Free' in t for t in traits):
+            # [Free] is an attribute (Vaccine, Data, Virus, Free), not a type/trait
+            attrs = top.c_entity_base.attribute_eng if top.c_entity_base else []
+            if 'Free' not in attrs:
                 return False
             # Must be owned by us (on our battle area).
             owner = card.owner if card else None

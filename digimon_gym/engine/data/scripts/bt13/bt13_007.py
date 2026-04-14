@@ -16,19 +16,20 @@ class BT13_007(CardScript):
         effects = []
 
         # [Breeding][Your Turn] All of your Digimon can't digivolve.
-        # Implemented as a continuous modifier registered when this card enters
-        # the breeding area and cleaned up when it leaves.
+        # DCGO: CanNotDigivolveStaticEffect (EffectTiming.None) — continuous
+        # static check that evaluates on every digivolve attempt.
+        # Implementation: register a single global CANNOT_DIGIVOLVE modifier
+        # at OnStartMainPhase with a dynamic condition. The modifier checks
+        # target ownership, breeding state, and turn state on each query.
         effect_nodigi = ICardEffect()
-        effect_nodigi.set_timing(EffectTiming.OnEnterFieldAnyone)
+        effect_nodigi.set_timing(EffectTiming.OnStartMainPhase)
         effect_nodigi.set_effect_name("BT13-007 All your Digimon can't digivolve")
         effect_nodigi.set_effect_description(
             "[Breeding][Your Turn] All of your Digimon can't digivolve."
         )
-        effect_nodigi._allow_breeding_source = True
+        _nodigi_registered = [False]  # mutable flag for closure
 
         def condition_nodigi(context: Dict[str, Any]) -> bool:
-            # This is a continuous effect — we register it once from any timing.
-            # We need the card to be in the breeding area.
             if not (card and card.owner):
                 return False
             perm = card.permanent_of_this_card()
@@ -39,22 +40,42 @@ class BT13_007(CardScript):
         effect_nodigi.set_can_use_condition(condition_nodigi)
 
         def process_nodigi(ctx: Dict[str, Any]):
-            player = ctx.get("player")
-            perm = ctx.get("permanent")
-            game = ctx.get("game")
-            if not (player and perm and game):
+            if _nodigi_registered[0]:
                 return
-            from digimon_gym.engine.interfaces.modifiers import ModifierType
-            # Register CANNOT_DIGIVOLVE on all of this player's battle area Digimon.
-            # The modifier condition checks ownership and your-turn.
-            for battle_perm in player.battle_area:
-                game.register_modifier(
-                    battle_perm,
-                    ModifierType.CANNOT_DIGIVOLVE,
-                    condition=lambda p, ctx, owner=player: owner.is_my_turn,
-                    source_effect=effect_nodigi,
-                    expiry='permanent',
-                )
+            player = ctx.get("player")
+            game = ctx.get("game")
+            breeding_perm = ctx.get("permanent")
+            if not (player and game and breeding_perm):
+                return
+            from digimon_gym.engine.interfaces.modifiers import ModifierType, ModifierEntry
+            # Register a SINGLE global CANNOT_DIGIVOLVE modifier.
+            # The condition dynamically checks any target permanent for ownership,
+            # breeding state, and turn state — matching C#'s continuous
+            # CanNotDigivolveStaticEffect + PermanentCondition.
+            def nodigi_condition(target_perm, mod_ctx):
+                if not (card and card.owner):
+                    return False
+                owner = card.owner
+                perm = card.permanent_of_this_card()
+                if perm is None or owner.breeding_area is not perm:
+                    return False
+                if not owner.is_my_turn:
+                    return False
+                # Only affect owner's battle area Digimon (DCGO:
+                # IsPermanentExistsOnOwnerBattleAreaDigimon)
+                if target_perm and target_perm.top_card:
+                    return target_perm.top_card.owner is owner
+                return False
+
+            entry = ModifierEntry(
+                modifier_type=ModifierType.CANNOT_DIGIVOLVE,
+                condition=nodigi_condition,
+                source_effect=effect_nodigi,
+                source_permanent=breeding_perm,
+                expiry='permanent',
+            )
+            game.modifiers.register(entry)
+            _nodigi_registered[0] = True
 
         effect_nodigi.set_on_process_callback(process_nodigi)
         effects.append(effect_nodigi)
@@ -132,6 +153,9 @@ class BT13_007(CardScript):
 
             for field_perm in list(player.battle_area):
                 if field_perm is perm or not field_perm.top_card:
+                    continue
+                # DCGO: skip tokens (BT13_007.cs line 320)
+                if getattr(field_perm, 'is_token', False):
                     continue
                 traits = getattr(field_perm.top_card, "card_traits", []) or []
                 if not any("Royal Knight" in trait for trait in traits):

@@ -76,11 +76,18 @@ Last updated: 2026-03-17
 - **What's missing:** No engine helper to enumerate a card's WD effects and execute a player-selected one.
 - **Workaround:** Both BT10-112 and BT10-110 manually iterate `card.effect_list()` and present branch selection. Functional but could benefit from a `game.effect_activate_card_effect()` helper.
 
+### ~~When Attacking Selection Phase Override~~ — RESOLVED 2026-04-02
+- **Discovered in:** BT24-024 Submarimon fix-card review
+- **Card(s):** All cards with [When Attacking] effects that use selection-based APIs (effect_play_from_zone, effect_select_opponent_permanent, etc.)
+- **What was broken:** `declare_attack()` in combat.py continued to counter/block/security after `execute_effects(OnUseAttack)` without checking if effects created a pending selection. The selection phase was overwritten by counter timing.
+- **Resolution:** Added park-and-resume pattern: `declare_attack` checks for `pending_selection` after WA effects fire and returns early; `_decode_selection` calls `_maybe_resume_combat_after_wa_selection()` to continue the attack flow after all selections resolve.
+
 ### ~~Dynamic Security Attack Modifier~~ — RESOLVED 2026-03-17
 - **Resolution:** Wired `ModifierType.CHANGE_SECURITY_ATTACK` into `permanent.security_attack_modifier()` via registry query. BT10-112 uses `_DynamicSAEffect` subclass with `@property` for computed count. Fixed 6 scripts with wrong `value_fn` arity (`lambda: -1` → `lambda cur, t, c: cur - 1`): BT10-042, BT15-084, BT23-094, BT24-071, EX6-022.
 
-### ~~Optional Attack ("may attack")~~ — RESOLVED 2026-03-17
+### ~~Optional Attack ("may attack")~~ — RESOLVED 2026-03-17, EXTENDED 2026-04-04
 - **Resolution:** Added `ModifierType.MAY_ATTACK` semantic marker. Unlike `FORCE_ATTACK`, `MAY_ATTACK` does NOT trigger the forced attackers block in `action_mask.py` — pass (action 62) remains available. Scripts grant Rush + unsuspend alongside `MAY_ATTACK`. Updated 4 scripts: BT24-085, BT24-037, BT24-082, BT24-051.
+- **Extension (2026-04-04):** MAY_ATTACK now works at end of turn: `_has_end_of_turn_keywords()` checks MAY_ATTACK, `EndOfTurnAction` action mask offers attack actions (Digimon + player), `_decode_end_of_turn_action` handles SECURITY_TARGET. Also added deferred end-phase completion (`_end_phase_deferred`) for OnEndTurn effects that create pending selections.
 
 ### ~~Digimon-Only Attack Target Restriction~~ — RESOLVED 2026-03-17
 - **Resolution:** Added `ModifierType.CANNOT_ATTACK_PLAYER` checked in `permanent.can_attack_player()` via modifier registry. BT24-051 Merukimon registers it in the "attack your opponent's Digimon" callback.
@@ -94,6 +101,14 @@ Last updated: 2026-03-17
 ### ~~DigiXros~~ — RESOLVED 2026-03-15
 - **Card(s):** 60 cards across BT10-BT24, EX3-EX10, P sets
 - **Resolution:** Engine natively supports DigiXros/Assembly: `DigiXrosCost` data model, `parse_digixros_req()` parser (all 60 cards), `digixros_validator.py` for material matching, play intercept → `SelectMaterial` loop → `_execute_digixros_play()`, field materials fire `WhenRemoveField` with `removal_cause='digixros'`, `digixros_count` in `OnEnterFieldAnyone` context.
+
+### Deletion Observer Optionality Not Exposed to Agent
+- **Discovered in:** Chaos Control (2026-04-10)
+- **Card(s):** EX1-066 — Analog Youth, ST6-14 — Matt Ishida
+- **Effect text:** "you may suspend this Tamer" / "you may suspend this Tamer to gain 1 memory"
+- **What's missing:** `_fire_deletion_observers` (game/__init__.py:1128) auto-fires effects when conditions pass, ignoring `is_optional`. The DCGO `ActivateClass` offers the player a decline choice (`canNoSelect: true`) before the coroutine runs. In the Python engine, "you may" effects fire automatically with no agent choice to decline.
+- **Suggested change:** When `effect.is_optional` is True, create a branch selection (accept/decline) before calling `on_process_callback`. This would expose the choice to the RL action space.
+- **Workaround:** Scripts use condition gates (e.g., `perm.is_suspended`) that prevent re-activation, effectively limiting to once per event. The auto-fire behavior is functionally correct but removes the agent's ability to strategically decline (e.g., keeping tamer unsuspended for a later, more valuable deletion).
 
 <!-- Entry template:
 ### {Gap Title}

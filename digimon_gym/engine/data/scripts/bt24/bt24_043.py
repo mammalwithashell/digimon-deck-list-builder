@@ -75,7 +75,7 @@ class BT24_043(CardScript):
 
             game.effect_reveal_and_select_multi(
                 player, 3, [(reveal_filter_0, 'hand'), (reveal_filter_1, 'hand')],
-                remaining_placement='deck_bottom', is_optional=True)
+                remaining_placement='deck_bottom', is_optional=False)
 
         effect1.set_on_process_callback(process1)
         effects.append(effect1)

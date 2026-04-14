@@ -189,6 +189,62 @@ def find_action_by_substring(actions: dict, substring: str) -> int | None:
     return None
 
 
+def place_on_field(
+    game_id: str, player_id: int, card_ids: list[str],
+    is_suspended: bool = False, turn_played: int = -1,
+) -> dict:
+    """Place a digivolution stack on a player's field."""
+    resp = requests.post(
+        f"{BASE_URL}/debug/games/{game_id}/place-on-field",
+        json={
+            "player_id": player_id, "card_ids": card_ids,
+            "is_suspended": is_suspended, "turn_played": turn_played,
+        },
+    )
+    resp.raise_for_status()
+    return resp.json()
+
+
+def place_in_breeding(game_id: str, player_id: int, card_ids: list[str]) -> dict:
+    """Place a digivolution stack in a player's breeding area."""
+    resp = requests.post(
+        f"{BASE_URL}/debug/games/{game_id}/place-in-breeding",
+        json={"player_id": player_id, "card_ids": card_ids},
+    )
+    resp.raise_for_status()
+    return resp.json()
+
+
+def bulk_setup(game_id: str, config: dict) -> dict:
+    """Apply bulk state manipulation to a game."""
+    resp = requests.post(
+        f"{BASE_URL}/debug/games/{game_id}/bulk-setup",
+        json=config,
+    )
+    resp.raise_for_status()
+    return resp.json()
+
+
+def clear_zone(game_id: str, player_id: int, zone: str) -> dict:
+    """Clear all cards from a player's zone."""
+    resp = requests.post(
+        f"{BASE_URL}/debug/games/{game_id}/clear-zone",
+        json={"player_id": player_id, "zone": zone},
+    )
+    resp.raise_for_status()
+    return resp.json()
+
+
+def set_phase(game_id: str, phase: str) -> dict:
+    """Set the game phase."""
+    resp = requests.post(
+        f"{BASE_URL}/debug/games/{game_id}/set-phase",
+        json={"phase": phase},
+    )
+    resp.raise_for_status()
+    return resp.json()
+
+
 def advance_past_breeding(game_id: str) -> dict:
     """Pass the breeding phase to reach main phase.
 

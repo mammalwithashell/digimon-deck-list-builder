@@ -57,10 +57,6 @@ class BT24_089(CardScript):
                 return False
             if card and card.permanent_of_this_card() is None:
                 return False
-            # Check that the suspended permanent is an Owen Dreadnought
-            suspended_perm = context.get('permanent')
-            if not (suspended_perm and suspended_perm.contains_card_name('Owen Dreadnought')):
-                return False
             return True
         effect1.set_can_use_condition(condition1)
         effects.append(effect1)
@@ -80,21 +76,30 @@ class BT24_089(CardScript):
                 return False
             if not (card and card.owner and card.owner.is_my_turn):
                 return False
-            # Check that the suspended permanent is an Owen Dreadnought
-            suspended_perm = context.get('permanent')
-            if not (suspended_perm and suspended_perm.contains_card_name('Owen Dreadnought')):
+            # Check that the suspended permanent is an Owen Dreadnought owned by us
+            event_perm = context.get('event_permanent')
+            if not event_perm:
+                return False
+            player = card.owner if card else None
+            if player and event_perm not in player.battle_area:
+                return False
+            if not event_perm.contains_card_name('Owen Dreadnought'):
                 return False
             return True
 
         effect2.set_can_use_condition(condition2)
 
         def process2(ctx: Dict[str, Any]):
-            """Action: Select Reptile/Dragonkin source Digimon, then digivolve from hand with cost reduction 3"""
+            """Action: Trash this delay card, then select Reptile/Dragonkin source Digimon, then digivolve from hand with cost reduction 3"""
             player = ctx.get('player')
-            perm = ctx.get('permanent')
             game = ctx.get('game')
             if not (player and game):
                 return
+            # Trash this delay card from battle area
+            delay_perm = card.permanent_of_this_card() if card else None
+            if delay_perm and delay_perm in player.battle_area:
+                player.delete_permanent(delay_perm)
+
             # Select 1 of own Digimon with Reptile or Dragonkin trait as the source
             def source_filter(p):
                 if not p.is_digimon:
@@ -106,6 +111,8 @@ class BT24_089(CardScript):
                     return
                 # Digivolve that Digimon from hand with cost reduced by 3
                 def digi_filter(c):
+                    if not getattr(c, 'is_digimon', False):
+                        return False
                     traits = getattr(c, 'card_traits', []) or []
                     has_reptile_or_dragonkin = any('Reptile' in t or 'Dragonkin' in t for t in traits)
                     has_liberator = any('LIBERATOR' in t for t in traits)

@@ -2,7 +2,8 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
-from ....data.enums import EffectTiming
+from ....data.enums import EffectTiming, GamePhase
+from ....game.constants import SEL_MY_FIELD_START
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -97,6 +98,9 @@ class EX7_027(CardScript):
             ctx_perm = context.get('permanent')
             if ctx_perm is not my_perm:
                 return False
+            # "other than by your effects" — skip if own effect
+            if context.get('is_own_effect', False):
+                return False
             owner = card.owner if card else None
             if not owner:
                 return False
@@ -139,17 +143,29 @@ class EX7_027(CardScript):
                     return any('Puppet' in t for t in traits)
                 return False
 
-            def on_delete_substitute(target_perm):
-                player.delete_permanent(target_perm)
-                # Set flag to prevent the original permanent from leaving
-                my_perm._will_not_be_removed = True
-                game.logger.log(
-                    "[EX7-027] Deleted a Token/Puppet to prevent "
-                    "this Digimon from leaving the battle area.")
+            # Build valid selection indices
+            valid = []
+            for i, p in enumerate(player.battle_area):
+                if substitute_filter(p):
+                    valid.append(SEL_MY_FIELD_START + i)
+            if not valid:
+                return
 
-            game.effect_select_own_permanent(
-                player, on_delete_substitute,
-                filter_fn=substitute_filter,
+            # Optimistic: set prevent flag NOW so delete_permanent sees it
+            # before the selection is resolved (engine checks flag synchronously)
+            my_perm._will_not_be_removed = True
+
+            def on_select(action_id: int):
+                idx = action_id - SEL_MY_FIELD_START
+                if 0 <= idx < len(player.battle_area):
+                    target_perm = player.battle_area[idx]
+                    player.delete_permanent(target_perm)
+                    game.logger.log(
+                        "[EX7-027] Deleted a Token/Puppet to prevent "
+                        "this Digimon from leaving the battle area.")
+
+            game.request_selection(
+                GamePhase.SelectTarget, player, on_select, valid,
                 is_optional=False,
                 prompt="Select 1 Token or [Puppet] Digimon to delete to prevent leaving.",
             )

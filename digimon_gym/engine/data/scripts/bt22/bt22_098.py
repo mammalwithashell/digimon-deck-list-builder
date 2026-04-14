@@ -14,39 +14,45 @@ class BT22_098(CardScript):
     def get_card_effects(self, card: 'CardSource') -> List['ICardEffect']:
         effects = []
 
-        # Timing: EffectTiming.OptionSkill
-        # [Main] You may play 1 [Shoemon] or [Arisa Kinosaki] from your hand or trash without paying the cost. Then, place this card in the battle area.
+        def _play_shoemon_or_arisa(player, game):
+            """Shared play logic for [Main] and [Security]."""
+            def play_filter(c):
+                names = getattr(c, 'card_names', []) or []
+                # C# uses EqualsCardName — exact name match for [Shoemon] and [Arisa Kinosaki]
+                return any(
+                    _n == 'Shoemon' or _n == 'Arisa Kinosaki'
+                    for _n in names
+                )
+            game.effect_play_from_zone(
+                player, 'hand_or_trash', play_filter, free=True, is_optional=True)
+
+        # --- Effect 0: [Main] ---
         effect0 = ICardEffect()
         effect0.set_timing(EffectTiming.OptionSkill)
-        effect0.set_effect_name("BT22-098 Play 1 [Shoemon]/[Arisa Kinosaki] from hand or trash, then place in battle area")
-        effect0.set_effect_description("[Main] You may play 1 [Shoemon] or [Arisa Kinosaki] from your hand or trash without paying the cost. Then, place this card in the battle area.")
+        effect0.set_effect_name(
+            "BT22-098 Play 1 [Shoemon]/[Arisa Kinosaki] from hand or trash, "
+            "then place in battle area"
+        )
+        effect0.set_effect_description(
+            "[Main] You may play 1 [Shoemon] or [Arisa Kinosaki] from your hand "
+            "or trash without paying the cost. Then, place this card in the battle area."
+        )
 
-        effect = effect0  # alias for condition closure
         def condition0(context: Dict[str, Any]) -> bool:
-            # Security effect — validated by engine timing
             return True
-
         effect0.set_can_use_condition(condition0)
 
         def process0(ctx: Dict[str, Any]):
-            """Action: Play Card"""
             player = ctx.get('player')
-            perm = ctx.get('permanent')
             game = ctx.get('game')
             if not (player and game):
                 return
-            def play_filter(c):
-                if not (any('Shoemon' in _n or 'Arisa Kinosaki' in _n for _n in getattr(c, 'card_names', []))):
-                    return False
-                return True
-            game.effect_play_from_zone(
-                player, 'hand_or_trash', play_filter, free=True, is_optional=True)
+            _play_shoemon_or_arisa(player, game)
 
         effect0.set_on_process_callback(process0)
         effects.append(effect0)
 
-        # Factory effect: delay
-        # Delay
+        # --- Effect 1: Delay marker ---
         effect1 = ICardEffect()
         effect1.set_effect_name("BT22-098 Delay")
         effect1.set_effect_description("Delay")
@@ -61,79 +67,100 @@ class BT22_098(CardScript):
         effect1.set_can_use_condition(condition1)
         effects.append(effect1)
 
-        # Timing: EffectTiming.OnTappedAnyone
-        # [Your Turn] When any of your [Arisa Kinosaki] suspend, <Delay> (By trashing this card after the placing turn, activate the effect below.)\r\n・1 of your [Puppet] trait Digimon may digivolve into a [Puppet] and [LIBERATOR] trait Digimon card in the hand with the digivolution cost reduced by 3.
+        # --- Effect 2: [Your Turn] When any of your [Arisa Kinosaki] suspend, activate Delay ---
         effect2 = ICardEffect()
         effect2.set_timing(EffectTiming.OnTappedAnyone)
-        effect2.set_effect_name("BT22-098 1 of your [Puppet] trait Digimon may digivolve")
-        effect2.set_effect_description("[Your Turn] When any of your [Arisa Kinosaki] suspend, <Delay> (By trashing this card after the placing turn, activate the effect below.)\r\n・1 of your [Puppet] trait Digimon may digivolve into a [Puppet] and [LIBERATOR] trait Digimon card in the hand with the digivolution cost reduced by 3.")
+        effect2.set_effect_name(
+            "BT22-098 When your [Arisa Kinosaki] suspends, digivolve a Puppet Digimon "
+            "into Puppet+LIBERATOR with cost -3"
+        )
+        effect2.set_effect_description(
+            "[Your Turn] When any of your [Arisa Kinosaki] suspend, <Delay> "
+            "(By trashing this card after the placing turn, activate the effect below.)\n"
+            "・1 of your [Puppet] trait Digimon may digivolve into a [Puppet] and "
+            "[LIBERATOR] trait Digimon card in the hand with the digivolution cost "
+            "reduced by 3."
+        )
         effect2.is_optional = True
 
-        effect = effect2  # alias for condition closure
         def condition2(context: Dict[str, Any]) -> bool:
+            # This card must be in the battle area
             if card and card.permanent_of_this_card() is None:
                 return False
-            if not (card and card.owner and card.owner.is_my_turn):
+            owner = card.owner if card else None
+            if not (owner and owner.is_my_turn):
                 return False
-            # The suspended permanent must be one of your [Arisa Kinosaki]
-            tapped_perm = context.get('permanent')
-            if not tapped_perm:
+            # The suspended permanent must be one of our [Arisa Kinosaki]
+            # In execute_effects, extra_context {"permanent": suspended_perm}
+            # becomes context["event_permanent"]
+            event_perm = context.get('event_permanent')
+            if not event_perm:
                 return False
-            player = card.owner if card else None
-            if player and tapped_perm not in player.battle_area:
+            if event_perm not in owner.battle_area:
                 return False
-            if not tapped_perm.contains_card_name('Arisa Kinosaki'):
+            if not event_perm.contains_card_name('Arisa Kinosaki'):
                 return False
             return True
-
         effect2.set_can_use_condition(condition2)
 
         def process2(ctx: Dict[str, Any]):
-            """1 of your [Puppet] trait Digimon may digivolve into a [Puppet]+[LIBERATOR] card with cost -3."""
+            """1 of your [Puppet] trait Digimon may digivolve into a
+            [Puppet]+[LIBERATOR] card in hand with cost -3."""
             player = ctx.get('player')
             game = ctx.get('game')
             if not (player and game):
                 return
-            # Trash this delay card from battle area
-            delay_perm = card.permanent_of_this_card() if card else None
-            if delay_perm and delay_perm in player.battle_area:
-                player.delete_permanent(delay_perm)
 
-            def hand_filter(c):
-                if not getattr(c, 'is_digimon', False):
+            # Cost: trash this delay card from the battle area
+            my_perm = card.permanent_of_this_card() if card else None
+            if my_perm is not None:
+                player.delete_permanent(my_perm)
+
+            def base_filter(target_perm):
+                """Select a [Puppet] trait Digimon you control."""
+                if not target_perm.is_digimon:
                     return False
-                traits = getattr(c, 'card_traits', []) or []
-                has_puppet = any('Puppet' in t for t in traits)
-                has_liberator = any('LIBERATOR' in t or 'Liberator' in t for t in traits)
-                return has_puppet and has_liberator
+                return target_perm.has_trait('Puppet')
 
-            def own_filter(p):
-                if not p.is_digimon:
-                    return False
-                traits = getattr(p.top_card, 'card_traits', []) or [] if p.top_card else []
-                return any('Puppet' in t for t in traits)
+            def on_target(target_perm):
+                def digi_filter(c):
+                    if not getattr(c, 'is_digimon', False):
+                        return False
+                    traits = set(getattr(c, 'card_traits', []) or [])
+                    return 'Puppet' in traits and 'LIBERATOR' in traits
 
-            def on_select(target_perm):
                 game.effect_digivolve_from_hand(
-                    player, target_perm, hand_filter,
+                    player, target_perm, digi_filter,
                     cost_reduction=3, is_optional=True)
 
             game.effect_select_own_permanent(
-                player, on_select, filter_fn=own_filter, is_optional=True)
+                player, on_target, filter_fn=base_filter, is_optional=True,
+                prompt="Select 1 of your [Puppet] trait Digimon to digivolve.")
 
         effect2.set_on_process_callback(process2)
         effects.append(effect2)
 
-        # Factory effect: security_play
-        # Security: Play this card
+        # --- Effect 3: [Security] Activate this card's [Main] effects ---
         effect3 = ICardEffect()
-        effect3.set_effect_name("BT22-098 Security: Play this card")
-        effect3.set_effect_description("Security: Play this card")
+        effect3.set_timing(EffectTiming.SecuritySkill)
+        effect3.set_effect_name("BT22-098 Security: Activate Main effects")
+        effect3.set_effect_description(
+            "[Security] Activate this card's [Main] effects."
+        )
         effect3.is_security_effect = True
 
         def condition3(context: Dict[str, Any]) -> bool:
             return True
         effect3.set_can_use_condition(condition3)
+
+        def process3(ctx: Dict[str, Any]):
+            player = ctx.get('player')
+            game = ctx.get('game')
+            if not (player and game):
+                return
+            _play_shoemon_or_arisa(player, game)
+
+        effect3.set_on_process_callback(process3)
         effects.append(effect3)
 
         return effects

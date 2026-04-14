@@ -58,8 +58,15 @@ class BT7_107(CardScript):
                 prompt="Delete 1 of your Digimon."
             )
 
-        def _select_purple_from_trash(player, game, remaining):
-            """Select up to `remaining` purple Digimon from trash to hand."""
+        def _select_purple_from_trash(player, game, remaining, picked_count=0):
+            """Select purple Digimon from trash to hand.
+
+            Per C# reference (BT7_107.cs):
+            - canNoSelect = () => false (cannot skip entirely)
+            - CanEndSelectCondition requires count > 0 when maxCount >= 1
+            - canEndNotMax = true (can stop after first pick)
+            So: first pick is mandatory, subsequent picks are optional.
+            """
             if remaining <= 0:
                 return
 
@@ -78,6 +85,9 @@ class BT7_107(CardScript):
             if not valid_indices:
                 return
 
+            # First pick mandatory, subsequent picks optional (canEndNotMax=true)
+            is_optional = picked_count >= 1
+
             def on_trash_selected(action_id):
                 idx = action_id - SEL_TRASH_START
                 if 0 <= idx < len(player.trash_cards):
@@ -85,11 +95,11 @@ class BT7_107(CardScript):
                     player.trash_cards.remove(chosen)
                     player.hand_cards.append(chosen)
                     # Recurse for the next selection
-                    _select_purple_from_trash(player, game, remaining - 1)
+                    _select_purple_from_trash(player, game, remaining - 1, picked_count + 1)
 
             game.request_selection(
                 GamePhase.SelectTrash, player, on_trash_selected,
-                valid_indices, is_optional=True,
+                valid_indices, is_optional=is_optional,
                 prompt="Select a purple Digimon card from trash to add to hand.")
 
         effect0.set_on_process_callback(process0)

@@ -122,7 +122,7 @@ class EX9_027(CardScript):
 
         # --- Effect 3 (Inherited): [Opponent's Turn][Once Per Turn] End attack ---
         effect3 = ICardEffect()
-        effect3.set_timing(EffectTiming.OnUseAttack)
+        effect3.set_timing(EffectTiming.OnAllyAttack)
         effect3.set_effect_name("EX9-027 End attack by deleting own Digimon")
         effect3.set_effect_description(
             "[Opponent's Turn][Once Per Turn] When an opponent's Digimon attacks, "

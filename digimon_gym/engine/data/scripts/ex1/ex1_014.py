@@ -48,7 +48,8 @@ class EX1_014(CardScript):
                 return False
             if perm.contains_card_name('Imperialdramon'):
                 return True
-            if any('Free' in tr for tr in getattr(top, 'card_traits', [])):
+            attrs = top.c_entity_base.attribute_eng if top.c_entity_base else []
+            if 'Free' in attrs:
                 return True
             return False
 

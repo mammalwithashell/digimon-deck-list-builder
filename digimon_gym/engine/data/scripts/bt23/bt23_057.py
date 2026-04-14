@@ -20,6 +20,7 @@ class BT23_057(CardScript):
         effect0.set_effect_description("Alternate digivolution requirement")
         effect0._alt_digi_cost = 3
         effect0._alt_digi_level = 5
+        effect0._alt_digi_trait = "CS"
 
         def condition0(context: Dict[str, Any]) -> bool:
             return True
@@ -72,7 +73,9 @@ class BT23_057(CardScript):
                 if not valid:
                     return
 
-                def on_trash_selected(idx: int):
+                def on_trash_selected(action_id: int):
+                    from digimon_gym.engine.game.constants import SEL_TRASH_START
+                    idx = action_id - SEL_TRASH_START
                     if not (0 <= idx < len(player.trash_cards)):
                         return
                     chosen = player.trash_cards[idx]
@@ -125,6 +128,8 @@ class BT23_057(CardScript):
 
                 def target_filter(p):
                     if not p.is_digimon or not p.top_card:
+                        return False
+                    if not p.top_card.has_play_cost:
                         return False
                     return p.top_card.get_cost_itself <= max_play_cost
 

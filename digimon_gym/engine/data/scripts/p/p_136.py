@@ -9,13 +9,18 @@ if TYPE_CHECKING:
 
 
 class P_136(CardScript):
-    """P-136 Arisa Kinosaki"""
+    """P-136 Arisa Kinosaki
+
+    [On Play] You may play 1 [Shoemon] from your hand without paying the cost.
+    [Your Turn][Once Per Turn] When one of your Digimon digivolves into a Digimon
+        with the [Puppet] trait, by suspending this Tamer, gain 1 memory.
+    [Security] Play this card without paying the cost.
+    """
 
     def get_card_effects(self, card: 'CardSource') -> List['ICardEffect']:
         effects = []
 
-        # Timing: EffectTiming.OnEnterFieldAnyone
-        # [On Play] You may play 1 [Shoemon] from your hand without paying the cost.
+        # --- Effect 0: [On Play] Play 1 [Shoemon] from hand free ---
         effect0 = ICardEffect()
         effect0.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect0.set_effect_name("P-136 Play 1 [Shoemon] from your hand")
@@ -23,51 +28,49 @@ class P_136(CardScript):
         effect0.is_optional = True
         effect0.is_on_play = True
 
-        effect = effect0  # alias for condition closure
         def condition0(context: Dict[str, Any]) -> bool:
             if card and card.permanent_of_this_card() is None:
                 return False
-            # Triggered on play — validated by engine timing
             return True
-
         effect0.set_can_use_condition(condition0)
+
+        def _is_exact_shoemon(c) -> bool:
+            """C# uses CardNames.Contains('Shoemon') — exact list membership."""
+            return 'Shoemon' in c.card_names
 
         def process0(ctx: Dict[str, Any]):
             """Action: Play 1 [Shoemon] from hand free."""
             player = ctx.get('player')
-            perm = ctx.get('permanent')
             game = ctx.get('game')
             if not (player and game):
                 return
-            def play_filter(c):
-                return c.contains_card_name('Shoemon')
             game.effect_play_from_zone(
-                player, 'hand', play_filter, free=True, is_optional=True)
+                player, 'hand', _is_exact_shoemon, free=True, is_optional=True)
 
         effect0.set_on_process_callback(process0)
         effects.append(effect0)
 
-        # Timing: EffectTiming.OnEnterFieldAnyone
-        # [Your Turn][Once Per Turn] When one of your Digimon digivolves into a Digimon with the[Puppet] trait, by suspending this Tamer, gain 1 memory.
+        # --- Effect 1: [Your Turn][OPT] Digivolve observer ---
+        # "When one of your Digimon digivolves into a Digimon with the [Puppet] trait,
+        #  by suspending this Tamer, gain 1 memory."
+        # Uses _is_digivolve_observer (NOT is_when_digivolving) since this fires
+        # on the tamer when a DIFFERENT permanent digivolves.
         effect1 = ICardEffect()
-        effect1.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect1.set_effect_name("P-136 Memory +1")
-        effect1.set_effect_description("[Your Turn][Once Per Turn] When one of your Digimon digivolves into a Digimon with the[Puppet] trait, by suspending this Tamer, gain 1 memory.")
+        effect1.set_effect_description("[Your Turn][Once Per Turn] When one of your Digimon digivolves into a Digimon with the [Puppet] trait, by suspending this Tamer, gain 1 memory.")
         effect1.is_optional = True
         effect1.set_max_count_per_turn(1)
         effect1.set_hash_string("Digivoles_P_136")
-        effect1.is_when_digivolving = True
         effect1._is_digivolve_observer = True
 
-        def _is_puppet_trait(c) -> bool:
-            traits = getattr(c, 'card_traits', []) or []
-            return any('Puppet' in t for t in traits)
-
-        effect = effect1  # alias for condition closure
         def condition1(context: Dict[str, Any]) -> bool:
             if card and card.permanent_of_this_card() is None:
                 return False
             if not (card and card.owner and card.owner.is_my_turn):
+                return False
+            # Cost: tamer must not already be suspended
+            tamer_perm = card.permanent_of_this_card()
+            if tamer_perm and getattr(tamer_perm, 'is_suspended', False):
                 return False
             # Check the digivolved permanent has Puppet trait
             trigger_perm = context.get('digivolved_permanent')
@@ -77,8 +80,10 @@ class P_136(CardScript):
                 return False
             if not trigger_perm.is_digimon:
                 return False
-            if trigger_perm.top_card and _is_puppet_trait(trigger_perm.top_card):
-                return True
+            if trigger_perm.top_card:
+                traits = getattr(trigger_perm.top_card, 'card_traits', []) or []
+                if any('Puppet' in t for t in traits):
+                    return True
             return False
 
         effect1.set_can_use_condition(condition1)
@@ -100,16 +105,23 @@ class P_136(CardScript):
         effect1.set_on_process_callback(process1)
         effects.append(effect1)
 
-        # Factory effect: security_play
-        # Security: Play this card
+        # --- Effect 2: [Security] Play this card without paying the cost ---
         effect2 = ICardEffect()
+        effect2.set_timing(EffectTiming.SecuritySkill)
         effect2.set_effect_name("P-136 Security: Play this card")
-        effect2.set_effect_description("Security: Play this card")
+        effect2.set_effect_description("[Security] Play this card without paying the cost.")
         effect2.is_security_effect = True
 
         def condition2(context: Dict[str, Any]) -> bool:
             return True
         effect2.set_can_use_condition(condition2)
+
+        def process2(ctx: Dict[str, Any]):
+            player = ctx.get('player')
+            if player and card:
+                player.play_card_from_source(card, pay_cost=False)
+
+        effect2.set_on_process_callback(process2)
         effects.append(effect2)
 
         return effects

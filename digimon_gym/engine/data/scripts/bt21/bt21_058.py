@@ -106,11 +106,11 @@ class BT21_058(CardScript):
                     return
 
                 from ....data.enums import GamePhase
+                from ....game.constants import SEL_TRASH_START
 
                 # C# uses SelectCardEffect from trash (up to 2, canNoSelect=true,
                 # canEndNotMax=true), then SelectPermanentEffect if >1 Digimon.
                 # Step 1: Select up to 2 [Vemmon] from trash
-                SEL_TRASH_START = 1500
                 trash_valid = []
                 for i, c in enumerate(player.trash_cards):
                     if _is_vemmon_name(c):

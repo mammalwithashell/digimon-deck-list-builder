@@ -47,6 +47,8 @@ class EX8_070(CardScript):
                 return
 
             from digimon_gym.engine.interfaces.modifiers import ModifierType
+            from digimon_gym.engine.data.enums import GamePhase
+            from digimon_gym.engine.game.constants import SOURCES_PER_FIELD, ACTION_SPACE_SIZE
 
             def target_filter(p):
                 if not p.is_digimon:
@@ -56,16 +58,8 @@ class EX8_070(CardScript):
                 # Must have at least 1 digivolution card to trash
                 return not p.has_no_digivolution_cards
 
-            def on_target(target_perm):
-                # Trash 1 digivolution card as the cost
-                trashed = target_perm.trash_digivolution_cards(1)
-                for c in trashed:
-                    if c not in player.trash_cards:
-                        player.trash_cards.append(c)
-
-                # Grant keywords until end of opponent's turn.
-                # duration = turn_count + 1 expires at start of granting player's
-                # next turn, covering the full opponent turn.
+            def _apply_grants(target_perm):
+                """Grant keywords and DP boost until end of opponent's turn."""
                 expiry_turn = game.turn_count + 1
                 target_perm.grant_keyword('_is_collision', duration=expiry_turn)
                 target_perm.grant_keyword('_is_piercing', duration=expiry_turn)
@@ -73,13 +67,56 @@ class EX8_070(CardScript):
                 target_perm.grant_keyword('_is_cannot_return_to_hand', duration=expiry_turn)
                 target_perm.grant_keyword('_is_cannot_return_to_deck', duration=expiry_turn)
 
-                # +3000 DP until end of opponent's turn
                 game.register_modifier(
                     target_perm,
                     ModifierType.CHANGE_DP,
                     value_fn=lambda base, perm, ctx: base + 3000,
                     expiry='end_of_opponent_turn',
                 )
+
+            def on_target(target_perm):
+                # C# uses SelectTrashDigivolutionCards: player chooses which
+                # digivolution card to trash. Use SelectSource phase.
+                field_idx = None
+                for fi, fp in enumerate(player.battle_area):
+                    if fp is target_perm:
+                        field_idx = fi
+                        break
+                if field_idx is None:
+                    return
+
+                base = 2000 + field_idx * SOURCES_PER_FIELD
+                top = target_perm.top_card
+                valid = []
+                for i, cs in enumerate(target_perm.card_sources):
+                    if cs is top:
+                        continue
+                    if (base + i) < ACTION_SPACE_SIZE:
+                        valid.append(base + i)
+                if not valid:
+                    return
+
+                def on_source_selected(action_id):
+                    idx = action_id - base
+                    if not (0 <= idx < len(target_perm.card_sources)):
+                        return
+                    selected = target_perm.card_sources[idx]
+                    # Trash the selected digivolution card
+                    target_perm.card_sources.remove(selected)
+                    if selected not in player.trash_cards:
+                        player.trash_cards.append(selected)
+                    # Fire OnDigivolutionCardDiscarded timing
+                    game.execute_effects(EffectTiming.OnDigivolutionCardDiscarded,
+                                         {'trashed_cards': [selected],
+                                          'permanent': target_perm})
+
+                    # Apply grants after successful trash
+                    _apply_grants(target_perm)
+
+                game.request_selection(
+                    GamePhase.SelectSource, player, on_source_selected,
+                    valid, is_optional=True,
+                    prompt="Select 1 digivolution card to trash.")
 
             game.effect_select_own_permanent(
                 player, on_target, filter_fn=target_filter, is_optional=True)

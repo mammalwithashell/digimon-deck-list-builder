@@ -24,7 +24,8 @@ class BT4_072(CardScript):
 
         # [Main] Digi-Burst 1: trash 1 source, give 1 own Digimon +2000 DP
         effect0 = ICardEffect()
-        effect0.set_timing(EffectTiming.MainAction)
+        effect0.set_timing(EffectTiming.NoTiming)
+        effect0._is_field_main = True
         effect0.set_effect_name("BT4-072 Digi-Burst 1: +2000 DP to 1 Digimon")
         effect0.set_effect_description(
             "[Main] Digi-Burst 1: 1 of your Digimon gets +2000 DP until "
@@ -57,9 +58,14 @@ class BT4_072(CardScript):
             trashed = perm.trash_digivolution_cards(1)
             player.trash_cards.extend(trashed)
 
-            # Give 1 own Digimon +2000 DP
+            # Give 1 own Digimon +2000 DP until end of opponent's next turn
             def on_target(target_perm):
-                target_perm.change_dp(2000)
+                from digimon_gym.engine.interfaces.modifiers import ModifierType
+                game.register_modifier(
+                    target_perm, ModifierType.CHANGE_DP,
+                    value_fn=lambda current, target, c: current + 2000,
+                    expiry='end_of_opponent_turn',
+                )
 
             game.effect_select_own_permanent(
                 player, on_target,

@@ -65,7 +65,7 @@ class BT13_019(CardScript):
 
                 def _is_excluded(c):
                     names = getattr(c, 'card_names', [])
-                    return any('Gankoomon' in n or 'Omnimon' in n for n in names)
+                    return any(n == 'Gankoomon' or n == 'Omnimon' for n in names)
 
                 def sistermon_filter(c):
                     if not getattr(c, 'is_digimon', False):

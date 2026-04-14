@@ -57,7 +57,10 @@ class Permanent:
 
     @property
     def is_digimon(self) -> bool:
-        return self.top_card.is_digimon if self.top_card else False
+        # DCGO Permanent.cs:3309 — DigiEggs are treated as Digimon at the
+        # permanent level (hatched eggs ARE baby Digimon on the field/breeding).
+        # CardSource.is_digimon remains strict (CardKind.Digimon only).
+        return (self.top_card.is_digimon or self.top_card.is_digi_egg) if self.top_card else False
 
     @property
     def is_tamer(self) -> bool:
@@ -93,15 +96,19 @@ class Permanent:
         else:
             temp_modifier = sum(self._dp_modifiers)
         computed = max(0, base + modifier + aura_modifier + temp_modifier)
-        # Apply DP floor if any (e.g. "DP cannot be reduced below X")
+        # Apply CHANGE_DP modifiers from the modifier registry
+        # (registered by card scripts via game.register_modifier)
         owner = self.owner
         if owner and hasattr(owner, 'game') and owner.game:
             from ..interfaces.modifiers import ModifierType
+            computed = owner.game.modifiers.get_int_modifier(
+                self, ModifierType.CHANGE_DP, computed)
+            # Apply DP floor if any (e.g. "DP cannot be reduced below X")
             floor = owner.game.modifiers.get_int_modifier(
                 self, ModifierType.DP_FLOOR, 0)
             if floor > 0:
                 computed = max(floor, computed)
-        return computed
+        return max(0, computed)
 
     def _get_aura_dp_modifier(self) -> int:
         """Sum DP modifiers from aura effects on other friendly permanents.
@@ -189,6 +196,10 @@ class Permanent:
             for effect in effects:
                 if not effect.is_inherited_effect:
                     if effect.dp_modifier != 0:
+                        # Skip aura effects — they are handled by _get_aura_dp_modifier()
+                        # on OTHER permanents. Including them here would double-count.
+                        if getattr(effect, '_applies_to_all_own_digimon', False):
+                            continue
                         ctx = {"permanent": self}
                         if effect.can_use_condition and effect.can_use_condition(ctx):
                             active.append(effect)
@@ -329,24 +340,44 @@ class Permanent:
             del self._granted_keywords[k]
 
     def security_attack_modifier(self) -> int:
-        """Sum of all <Security Attack +/-X> modifiers on this permanent."""
+        """Sum of all <Security Attack +/-X> modifiers on this permanent.
+
+        Checks can_use_condition on each effect so conditional SA modifiers
+        (e.g. "[Your Turn] While hand <= 4 ... gain SA+1") are properly gated.
+        """
         total = 0
+        ctx = {"permanent": self}
         for source in self.card_sources[:-1]:
             effects = source.effect_list(EffectTiming.NoTiming)
             for effect in effects:
                 if effect.is_inherited_effect:
-                    total += getattr(effect, '_security_attack_modifier', 0)
+                    sa = getattr(effect, '_security_attack_modifier', 0)
+                    if sa == 0:
+                        continue
+                    if effect.can_use_condition and not effect.can_use_condition(ctx):
+                        continue
+                    total += sa
         if self.top_card:
             effects = self.top_card.effect_list(EffectTiming.NoTiming)
             for effect in effects:
                 if not effect.is_inherited_effect:
-                    total += getattr(effect, '_security_attack_modifier', 0)
+                    sa = getattr(effect, '_security_attack_modifier', 0)
+                    if sa == 0:
+                        continue
+                    if effect.can_use_condition and not effect.can_use_condition(ctx):
+                        continue
+                    total += sa
         # Linked option cards (non-inherited)
         for linked in self.linked_cards:
             effects = linked.effect_list(EffectTiming.NoTiming)
             for effect in effects:
                 if not effect.is_inherited_effect:
-                    total += getattr(effect, '_security_attack_modifier', 0)
+                    sa = getattr(effect, '_security_attack_modifier', 0)
+                    if sa == 0:
+                        continue
+                    if effect.can_use_condition and not effect.can_use_condition(ctx):
+                        continue
+                    total += sa
         # Temporary modifier (e.g. from Alliance)
         total += self._temp_sa_modifier
         # Query modifier registry for CHANGE_SECURITY_ATTACK modifiers

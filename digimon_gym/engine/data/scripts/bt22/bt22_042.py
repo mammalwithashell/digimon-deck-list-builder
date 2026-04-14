@@ -67,23 +67,12 @@ class BT22_042(CardScript):
         effects.append(effect1)
 
         # --- Shared: When Digivolving effect (play Puppet + DP reduction) ---
-        def _when_digivolving_effect(ctx: Dict[str, Any]):
-            player = ctx.get('player')
-            game = ctx.get('game')
-            if not (player and game):
-                return
-            # Play 1 level 4 or lower Puppet Digimon from hand
-            def play_filter(c):
-                if not getattr(c, 'is_digimon', False):
-                    return False
-                level = getattr(c, 'level', None)
-                if level is None or level > 4:
-                    return False
-                return _is_puppet_trait(c)
-            game.effect_play_from_zone(
-                player, 'hand', play_filter, free=True, is_optional=True,
-                prompt="You may play 1 level 4 or lower [Puppet] Digimon from hand.")
-            # Then give -3000 DP per own Digimon to 1 opponent's Digimon
+        def _dp_reduction_step(player, game):
+            """Step 2: give -3000 DP per own Digimon to 1 opponent's Digimon.
+
+            Count is computed at this point (AFTER the optional play resolves),
+            matching the C# behavior where play happens first, then DP count.
+            """
             enemy = player.enemy if player else None
             if not enemy:
                 return
@@ -99,11 +88,60 @@ class BT22_042(CardScript):
                 return p.is_digimon
 
             def on_select(target_perm):
+                # "until their turn ends" — change_dp lasts until end of current turn
                 target_perm.change_dp(dp_change)
 
             game.effect_select_opponent_permanent(
                 player, on_select, filter_fn=target_filter, is_optional=False,
                 prompt=f"Select 1 opponent's Digimon to give {dp_change} DP.")
+
+        def _when_digivolving_effect(ctx: Dict[str, Any]):
+            player = ctx.get('player')
+            game = ctx.get('game')
+            if not (player and game):
+                return
+
+            # Step 1: Play 1 level 4 or lower Puppet Digimon from hand (optional)
+            def play_filter(c):
+                if not getattr(c, 'is_digimon', False):
+                    return False
+                level = getattr(c, 'level', None)
+                if level is None or level > 4:
+                    return False
+                return _is_puppet_trait(c)
+
+            # Check if there are valid Puppet cards to play
+            has_valid = any(play_filter(c) for c in player.hand_cards)
+            if has_valid:
+                # Set up play selection; chain DP reduction into play callbacks
+                # so it runs AFTER the play resolves (or is declined)
+                game.effect_play_from_zone(
+                    player, 'hand', play_filter, free=True, is_optional=True,
+                    prompt="You may play 1 level 4 or lower [Puppet] Digimon from hand.")
+                # Wrap the pending selection's callbacks to chain DP reduction
+                if game.pending_selection is not None:
+                    ps = game.pending_selection
+                    original_callback = ps.callback
+                    original_on_decline = ps.on_decline
+
+                    def chained_callback(action_id, _orig=original_callback):
+                        _orig(action_id)
+                        _dp_reduction_step(player, game)
+
+                    def chained_decline(_orig=original_on_decline):
+                        if _orig:
+                            _orig()
+                        _dp_reduction_step(player, game)
+
+                    ps.callback = chained_callback
+                    ps.on_decline = chained_decline
+                else:
+                    # effect_play_from_zone found no valid cards (shouldn't happen
+                    # since we checked, but handle gracefully)
+                    _dp_reduction_step(player, game)
+            else:
+                # No valid cards to play — skip directly to DP reduction
+                _dp_reduction_step(player, game)
 
         # --- Effect 2: [When Digivolving] Play Puppet + -3000 DP ---
         effect2 = ICardEffect()
@@ -122,19 +160,20 @@ class BT22_042(CardScript):
 
         # --- Effect 3: [All Turns][Once Per Turn] On other Digimon deletion, re-activate WD ---
         effect3 = ICardEffect()
-        effect3.set_timing(EffectTiming.OnDestroyedAnyone)
+        # Use NoTiming + _is_deletion_observer for the observer pattern
+        # (fires via _fire_deletion_observers, not via OnDestroyedAnyone timing)
         effect3.set_effect_name("BT22-042 Activate a [When Digivolving] effect")
         effect3.set_effect_description("[All Turns][Once Per Turn] When any of your other Digimon are deleted, you may activate 1 of this Digimon's [When Digivolving] effects.")
         effect3.is_optional = True
         effect3.set_max_count_per_turn(1)
         effect3.set_hash_string("BT22_042_UseWD")
-        effect3.is_on_deletion = True
+        effect3._is_deletion_observer = True
 
         def condition3(context: Dict[str, Any]) -> bool:
             if card and card.permanent_of_this_card() is None:
                 return False
             # The deleted permanent must be one of our other Digimon
-            deleted_perm = context.get('permanent')
+            deleted_perm = context.get('deleted_permanent')
             if deleted_perm:
                 my_perm = card.permanent_of_this_card()
                 if deleted_perm is my_perm:

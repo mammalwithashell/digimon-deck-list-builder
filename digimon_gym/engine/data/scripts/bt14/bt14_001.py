@@ -30,6 +30,12 @@ class BT14_001(CardScript):
                 return False
             if not (card and card.owner and card.owner.is_my_turn):
                 return False
+            # C#: CanTriggerWhenLoseSecurity(hashtable, player => player == card.Owner.Enemy)
+            # The player losing security must be the opponent (card.owner.enemy).
+            # The event context puts the losing player into 'event_player'.
+            event_player = context.get('event_player') if context else None
+            if event_player is not None and event_player != card.owner.enemy:
+                return False
             return True
 
         effect0.set_can_use_condition(condition0)

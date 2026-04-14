@@ -1,6 +1,6 @@
 ---
 name: gameplay-qa
-description: QA test the Digimon TCG simulator by playing games with a critical eye for correct play costs, game flow, card effects, and keywords. Finds fully-implemented decks, creates deterministic test games, plays through them via API + Playwright, validates correctness against official rules, and files issues for bugs found.
+description: QA test the Digimon TCG simulator by playing games with a critical eye for correct play costs, game flow, card effects, and keywords. Uses in-process DebugRunner for fast testing, creates deterministic test games, validates correctness against official rules, generates YAML scenario files for regression testing, and files issues for bugs found.
 argument-hint: [ARCHETYPE_NAME] [--focus play_costs|digivolution|keywords|effects|all]
 ---
 
@@ -12,6 +12,15 @@ for any bugs you find.
 
 ## Prerequisites
 
+**Primary (In-Process — preferred):**
+No server required. Use `DebugRunner` directly in Python:
+```python
+from digimon_gym.engine.runners.debug_runner import DebugRunner
+runner = DebugRunner(deck1, deck2, initial_memory=8, starting_hand1=["BT24-059"])
+print(runner.board_with_actions())
+```
+
+**Secondary (HTTP — for Playwright visual testing only):**
 - Backend server running at http://localhost:8000 with `DEBUG_MODE=1`
 - Frontend running at http://localhost:5173
 
@@ -138,14 +147,66 @@ Before playing, understand what each card should do:
 
 ## Phase 3: Create Test Game
 
-Use the debug API to create a deterministic test game.
+### 3a. In-Process (Preferred)
 
-### 3a. Arrange the deck for targeted testing
+Use `DebugRunner` for fast, no-server testing:
 
-Organize card IDs so cards you want to test appear in specific positions.
-The first 5 non-egg cards will be drawn as the opening hand (if skip_shuffle=true).
+```python
+from digimon_gym.engine.runners.debug_runner import DebugRunner
 
-### 3b. Create the game
+# Load decks from deck_library.json
+import json
+from pathlib import Path
+lib = json.loads(Path("digimon_gym/engine/data/deck_library.json").read_text())
+deck1 = json.loads(lib["archetypes"]["ARCHETYPE"]["decklists"][0]["decklist"])
+deck2 = json.loads(lib["archetypes"]["OPPONENT"]["decklists"][0]["decklist"])
+
+# Create game with specific starting hand
+runner = DebugRunner(
+    deck1, deck2,
+    initial_memory=8,
+    starting_hand1=["BT24-059", "BT24-045"],
+)
+
+# Set up board state
+runner.place_on_field(2, ["ST1-03"])  # Lv.4 target on opponent field
+runner.place_on_field(2, ["BT1-025"])  # Lv.5 non-target
+runner.inject_card(1, "BT16-082", "trash")  # Card in trash for effects
+
+# View board and available actions
+print(runner.board_with_actions())
+```
+
+### 3b. State injection — build any board state
+
+```python
+# Full digivolution stack (egg → rookie → champion → ultimate)
+runner.place_on_field(1, ["BT1-001", "ST1-03", "BT1-025", "BT24-059"])
+
+# Breeding area
+runner.place_in_breeding(1, ["BT1-001", "ST1-03"])
+
+# Bulk setup for complex scenarios
+runner.bulk_setup({
+    "player1": {
+        "hand": ["BT24-059"],
+        "field": [
+            {"card_ids": ["ST1-03"], "is_suspended": True},
+        ],
+        "trash": ["BT16-082", "BT16-082", "BT16-082"],
+    },
+    "player2": {
+        "field": [{"card_ids": ["BT1-025"]}],
+        "security": ["ST1-06", "ST1-07"],
+    },
+    "memory": 10,
+})
+
+# Clear zones
+runner.clear_zone(1, "trash")
+```
+
+### 3c. HTTP mode (for Playwright visual testing)
 
 ```bash
 curl -s -X POST http://localhost:8000/debug/games \
@@ -158,52 +219,57 @@ curl -s -X POST http://localhost:8000/debug/games \
     "first_player": 1,
     "skip_shuffle": true,
     "auto_mulligan": "keep",
-    "initial_memory": 0,
-    "agent_action_delay_ms": 0
+    "initial_memory": 0
   }'
 ```
 
-Save the `game_id` from the response.
-
-### 3c. Verify initial state
-
-```bash
-curl -s http://localhost:8000/debug/games/GAME_ID/internal-state | python -m json.tool
-```
-
-Confirm:
-- Hand cards match expected (first 5 non-egg cards from deck1)
-- Library order is preserved
-- Memory is at expected value
-- Phase is correct (Main after auto-mulligan, or Mulligan if manual)
+New HTTP endpoints for state injection:
+- `POST /debug/games/{id}/place-on-field` — `{player_id, card_ids, is_suspended, turn_played}`
+- `POST /debug/games/{id}/place-in-breeding` — `{player_id, card_ids}`
+- `POST /debug/games/{id}/bulk-setup` — `{player1: {hand, field, ...}, player2: {...}, memory}`
+- `POST /debug/games/{id}/clear-zone` — `{player_id, zone}`
+- `POST /debug/games/{id}/set-phase` — `{phase}`
 
 ---
 
-## Phase 4: Play Game (API-Driven)
+## Phase 4: Play Game
 
-Drive gameplay through the API. For each turn:
+### 4a. In-Process (Preferred)
 
-### 4a. Check available actions
+Use `DebugRunner` for structured output:
+
+```python
+# View board + legal actions
+print(runner.board_with_actions())
+
+# Find and execute an action by description
+action_id = runner.find_action("Play Medusamon")
+result = runner.execute(action_id)
+
+# See what changed (structured diff)
+print(result.diff_summary)
+
+# See engine logs for this action
+for log in result.logs:
+    print(log)
+
+# Auto-resolve follow-up selections (mandatory picks)
+auto_results = runner.auto_resolve()
+
+# Check final state
+print(runner.board())
+snap = runner.snapshot()
+print(f"Memory: {snap.memory}, Phase: {snap.phase}")
+```
+
+### 4b. HTTP mode
 
 ```bash
 curl -s http://localhost:8000/games/GAME_ID/actions | python -m json.tool
-```
-
-This returns human-readable action descriptions for every legal action.
-
-### 4b. Execute an action
-
-```bash
 curl -s -X POST http://localhost:8000/games/GAME_ID/actions \
   -H "Content-Type: application/json" \
   -d '{"action": ACTION_ID}'
 ```
-
-The response includes:
-- `action_context.memory_before` and `action_context.memory_after` — verify cost deduction
-- `state` — full game state after action
-- `logs` — engine log messages describing what happened
-- `action_descriptions` — next available actions
 
 ### 4c. Validate after each action
 
@@ -462,3 +528,65 @@ Always include:
 - **[When Attacking]**: Attack, verify effect fires
 - **[On Deletion]**: Get a digimon deleted, verify effect fires
 - **[Start of Your Turn]**: Pass to opponent and back, verify start-of-turn effects
+
+---
+
+## YAML Scenario Files (Regression Testing)
+
+After testing a card, save the test as a YAML scenario for regression testing.
+
+### Generate scenario stubs
+```bash
+python tools/generate_scenarios.py --archetype "ARCHETYPE" --output tests/scenarios/ARCHETYPE/
+```
+
+Scenarios in `tests/scenarios/` are auto-discovered by `pytest -m scenario`.
+
+### Write a scenario
+```yaml
+# tests/scenarios/archetype/bt24_059.yaml
+name: "Medusamon On Play trashes Lv.4 target"
+setup:
+  deck1_archetype: "medusamon"
+  deck2_archetype: "royal-knights"
+  memory: 8
+  player1:
+    hand: ["BT24-059"]
+  player2:
+    field:
+      - card_ids: ["ST1-03"]    # Lv.4 target
+      - card_ids: ["BT1-025"]   # Lv.5 non-target
+
+actions:
+  - find: "Play Medusamon"
+  - find: "ST1-03"             # select target
+  - auto_resolve: true
+
+assertions:
+  - { zone_contains: { player: 2, zone: trash, card: "ST1-03" } }
+  - { field_count: { player: 2, count: 1 } }
+  - { zone_contains: { player: 1, zone: field, card: "BT24-059" } }
+```
+
+### Run scenarios
+```bash
+# Via pytest (preferred — auto-discovers all scenarios)
+python -m pytest tests -m scenario -v
+
+# Single scenario via CLI
+python tools/run_scenario.py tests/scenarios/medusamon/bt24_059.yaml
+
+# All scenarios for an archetype via CLI
+python tools/run_scenario.py tests/scenarios/medusamon/ --all
+```
+
+### Assertion types
+- `zone_contains` / `zone_not_contains` — card in/not-in zone (hand, field, trash)
+- `zone_count` / `field_count` — count of cards in zone
+- `memory_exact` / `memory_range` — memory gauge checks
+- `phase` — current game phase
+- `is_suspended` / `not_suspended` — permanent state
+- `has_keyword` / `no_keyword` — keyword on permanent
+- `dp_range` — DP within range
+- `game_over` / `not_game_over` / `winner` — game end state
+- `log_contains` — substring in engine logs

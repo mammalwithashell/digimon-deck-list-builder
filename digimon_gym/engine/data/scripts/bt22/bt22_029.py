@@ -26,7 +26,7 @@ class BT22_029(CardScript):
                 return True
             return False
 
-        # --- Shared: Grant Blocker to 1 Puppet Digimon ---
+        # --- Shared: Grant Blocker to 1 Puppet Digimon until opponent's turn ends ---
         def _grant_blocker(ctx: Dict[str, Any]):
             player = ctx.get('player')
             game = ctx.get('game')
@@ -34,7 +34,10 @@ class BT22_029(CardScript):
                 return
 
             def on_grant(target_perm):
-                target_perm.grant_keyword('_is_blocker')
+                from ....interfaces.modifiers import ModifierType
+                game.register_modifier(
+                    target_perm, ModifierType.GRANT_BLOCKER,
+                    value_fn=lambda: True, expiry='end_of_opponent_turn')
 
             game.effect_select_own_permanent(
                 player, on_grant, filter_fn=_puppet_digimon_filter,
@@ -45,7 +48,7 @@ class BT22_029(CardScript):
         effect0 = ICardEffect()
         effect0.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect0.set_effect_name("BT22-029 1 [Puppet] digimon gain <Blocker>")
-        effect0.set_effect_description("[On Play] 1 of your Digimon with the [Puppet] trait gains <Blocker> (At blocker timing, by suspending this Digimon, it becomes the attack target.) until your opponent's turn ends.")
+        effect0.set_effect_description("[On Play] 1 of your Digimon with the [Puppet] trait gains <Blocker> until your opponent's turn ends.")
         effect0.is_on_play = True
 
         def condition0(context: Dict[str, Any]) -> bool:
@@ -61,7 +64,7 @@ class BT22_029(CardScript):
         effect1 = ICardEffect()
         effect1.set_timing(EffectTiming.OnDestroyedAnyone)
         effect1.set_effect_name("BT22-029 1 [Puppet] digimon gain <Blocker>")
-        effect1.set_effect_description("[On Deletion] 1 of your Digimon with the [Puppet] trait gains <Blocker> (At blocker timing, by suspending this Digimon, it becomes the attack target.) until your opponent's turn ends.")
+        effect1.set_effect_description("[On Deletion] 1 of your Digimon with the [Puppet] trait gains <Blocker> until your opponent's turn ends.")
         effect1.is_on_deletion = True
 
         def condition1(context: Dict[str, Any]) -> bool:
@@ -73,7 +76,7 @@ class BT22_029(CardScript):
 
         # --- Effect 2 (Inherited): [When Attacking][Once Per Turn] -2000 DP ---
         effect2 = ICardEffect()
-        effect2.set_timing(EffectTiming.OnUseAttack)
+        effect2.set_timing(EffectTiming.OnAllyAttack)
         effect2.set_effect_name("BT22-029 -2K DP")
         effect2.set_effect_description("[When Attacking] [Once Per Turn] 1 of your opponent's Digimon gets -2000 DP for the turn.")
         effect2.is_inherited_effect = True

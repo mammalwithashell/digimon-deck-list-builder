@@ -260,6 +260,7 @@ class EffectHelpersMixin:
                     "played_permanent": perm,
                     "event_permanent": perm,
                     "event_player": target_player,
+                    "is_effect_play": True,
                 },
             )
             self._fire_play_observers(perm, target_player)
@@ -294,6 +295,7 @@ class EffectHelpersMixin:
                 "played_permanent": perm,
                 "event_permanent": perm,
                 "event_player": player,
+                "is_effect_play": True,
             },
         )
         self._fire_play_observers(perm, player)
@@ -330,8 +332,15 @@ class EffectHelpersMixin:
         manual_reduction: int = 0,
         is_optional: bool = True,
         prompt: str = "",
+        on_played: Optional[Callable[["CardSource", Optional["Permanent"]], None]] = None,
     ):
-        """Let agent pick a card from a zone to play onto the field."""
+        """Let agent pick a card from a zone to play onto the field.
+
+        Args:
+            on_played: Optional callback invoked AFTER a card is successfully
+                played. Receives (card_source, played_permanent). Not called
+                if the player declines or if no valid card exists.
+        """
         if not prompt:
             cost_text = "without paying its cost" if free else "by paying its cost"
             prompt = f"Select a card from {zone} to play {cost_text}."
@@ -378,11 +387,13 @@ class EffectHelpersMixin:
                         )
                     self.execute_effects(
                         EffectTiming.OnEnterFieldAnyone,
-                        {"played_card": card, "played_permanent": played_perm, "event_player": player},
+                        {"played_card": card, "played_permanent": played_perm, "event_player": player, "is_effect_play": True},
                     )
                     self._fire_play_observers(played_perm, player)
                     if card.is_option and not self._option_stays_on_field(card):
                         self._trash_option_after_resolution(player, played_perm)
+                    if on_played is not None:
+                        on_played(card, played_perm)
 
             self.request_selection(GamePhase.SelectTarget, player,
                                    on_select_hot, valid, is_optional,
@@ -433,11 +444,13 @@ class EffectHelpersMixin:
                     )
                 self.execute_effects(
                     EffectTiming.OnEnterFieldAnyone,
-                    {"played_card": card, "played_permanent": played_perm, "event_player": player},
+                    {"played_card": card, "played_permanent": played_perm, "event_player": player, "is_effect_play": True},
                 )
                 self._fire_play_observers(played_perm, player)
                 if card.is_option and not self._option_stays_on_field(card):
                     self._trash_option_after_resolution(player, played_perm)
+                if on_played is not None:
+                    on_played(card, played_perm)
 
         phase = GamePhase.SelectReveal if zone == 'revealed' else GamePhase.SelectTarget
         self.request_selection(phase, player, on_select, valid, is_optional,
@@ -518,7 +531,7 @@ class EffectHelpersMixin:
                 f"(cost: {cost})")
             player.draw()
             self.execute_effects(EffectTiming.WhenDigivolving,
-                                 {"digivolved_permanent": permanent})
+                                 {"digivolved_permanent": permanent, "is_effect_play": True})
 
         self.request_selection(
             GamePhase.SelectTarget, player, on_select, valid, is_optional,
@@ -562,9 +575,16 @@ class EffectHelpersMixin:
             if 0 <= branch < num_choices:
                 callback(branch)
 
+        effect_choices = None
+        if branch_labels:
+            effect_choices = [
+                {"index": SEL_EFFECT_CHOICE_START + i, "label": label}
+                for i, label in enumerate(branch_labels)
+            ]
+
         self.request_selection(
             GamePhase.SelectEffectChoice, player, on_select, valid,
-            prompt=prompt)
+            prompt=prompt, effect_choices=effect_choices)
 
     def effect_choose_deck_placement(
         self, player: "Player", card: "CardSource",
@@ -880,7 +900,7 @@ class EffectHelpersMixin:
         new_perm = player.battle_area[-1] if player.battle_area else None
 
         self.execute_effects(EffectTiming.WhenDigivolving, {
-            "digivolved_permanent": new_perm, "is_dna_digivolve": True})
+            "digivolved_permanent": new_perm, "is_dna_digivolve": True, "is_effect_play": True})
         self.check_turn_end()
 
     # ─── DigiXros ────────────────────────────────────────────────────
@@ -1097,3 +1117,168 @@ class EffectHelpersMixin:
         if is_option and not self._option_stays_on_field(card):
             self._trash_option_after_resolution(player, new_perm)
         self.check_turn_end()
+
+    # ------------------------------------------------------------------
+    # Trash digivolution cards — player-selected (DCGO SelectTrashDigivolutionCards)
+    # ------------------------------------------------------------------
+    def effect_select_trash_digivolution_cards(
+        self,
+        player: "Player",
+        max_count: int,
+        perm_filter: Optional[Callable[["Permanent"], bool]] = None,
+        card_filter: Optional[Callable[["CardSource"], bool]] = None,
+        card_effect=None,
+        is_optional: bool = False,
+        from_only_one_permanent: bool = False,
+        on_complete: Optional[Callable[[List["CardSource"]], None]] = None,
+        prompt_perm: str = "Select a Digimon to trash digivolution cards from.",
+        prompt_card: str = "Select digivolution card(s) to trash.",
+    ):
+        """Two-step selection: pick permanent → pick digivolution cards → trash.
+
+        Matches DCGO ``CardEffectCommons.SelectTrashDigivolutionCards``.
+
+        Args:
+            player: The player making the selection (the effect owner).
+            max_count: Total digivolution cards to trash across all permanents.
+            perm_filter: Filter for which permanents can be chosen (default: any
+                         on-field permanent with eligible digivolution cards).
+            card_filter: Filter for which digivolution cards can be chosen
+                         (default: any card under the top card).
+            card_effect: The ICardEffect that caused this (for immunity checks).
+            is_optional: If True, the player may decline to trash at all.
+            from_only_one_permanent: If True, all cards must come from 1 permanent.
+            on_complete: Callback with the full list of trashed cards when done.
+            prompt_perm: Prompt text for permanent selection.
+            prompt_card: Prompt text for card selection within a permanent.
+        """
+        all_trashed: List["CardSource"] = []
+        remaining = [max_count]
+
+        def _default_card_filter(cs: "CardSource") -> bool:
+            return True
+
+        cf = card_filter or _default_card_filter
+
+        def _perm_has_eligible(perm: "Permanent") -> bool:
+            if perm_filter and not perm_filter(perm):
+                return False
+            return any(cf(cs) for cs in perm.card_sources[:-1])
+
+        def _collect_eligible_perms() -> list:
+            """Build (action_id, perm, perm_owner) for permanent selection."""
+            result = []
+            for p in [self.player1, self.player2]:
+                for i, perm in enumerate(p.battle_area):
+                    if _perm_has_eligible(perm):
+                        if p is player:
+                            result.append((SEL_MY_FIELD_START + i, perm, p))
+                        else:
+                            result.append((SEL_OPP_FIELD_START + i, perm, p))
+            return result
+
+        def _start_permanent_selection():
+            if remaining[0] <= 0:
+                if on_complete:
+                    on_complete(all_trashed)
+                return
+
+            eligible = _collect_eligible_perms()
+            if not eligible:
+                if on_complete:
+                    on_complete(all_trashed)
+                return
+
+            valid_ids = [aid for aid, _, _ in eligible]
+            perm_map = {aid: (perm, p) for aid, perm, p in eligible}
+            first_pick = len(all_trashed) == 0
+
+            def on_perm_selected(action_id: int):
+                entry = perm_map.get(action_id)
+                if not entry:
+                    return
+                selected_perm, perm_owner = entry
+                _start_card_selection(selected_perm, perm_owner)
+
+            def on_perm_declined():
+                if on_complete:
+                    on_complete(all_trashed)
+
+            self.request_selection(
+                GamePhase.SelectTarget, player, on_perm_selected, valid_ids,
+                is_optional=(is_optional and first_pick),
+                prompt=prompt_perm,
+                on_decline=on_perm_declined,
+            )
+
+        def _start_card_selection(perm: "Permanent", perm_owner: "Player"):
+            eligible_cards = [cs for cs in perm.card_sources[:-1] if cf(cs)]
+            if not eligible_cards:
+                _start_permanent_selection()
+                return
+
+            cards_from_this = min(remaining[0], len(eligible_cards))
+
+            selected_from_perm: List["CardSource"] = []
+            count_for_perm = [cards_from_this]
+
+            def _select_next_card():
+                if count_for_perm[0] <= 0:
+                    _finish_perm_selection(perm, perm_owner, selected_from_perm)
+                    return
+
+                # Build revealed-card list of eligible digi cards not yet selected
+                choices = [cs for cs in perm.card_sources[:-1]
+                           if cf(cs) and cs not in selected_from_perm]
+                if not choices:
+                    _finish_perm_selection(perm, perm_owner, selected_from_perm)
+                    return
+
+                # Use revealed_cards slot + SelectReveal for cross-player safe
+                # card-within-permanent selection
+                self.revealed_cards = list(choices)
+                valid = [SEL_REVEALED_START + i for i in range(len(choices))]
+
+                n = len(selected_from_perm) + 1
+                can_end_early = (cards_from_this >= 2 and not from_only_one_permanent)
+
+                def on_card_selected(action_id: int):
+                    idx = action_id - SEL_REVEALED_START
+                    if 0 <= idx < len(choices):
+                        chosen = choices[idx]
+                        selected_from_perm.append(chosen)
+                    self.revealed_cards = []
+                    count_for_perm[0] -= 1
+                    _select_next_card()
+
+                def on_card_declined():
+                    self.revealed_cards = []
+                    _finish_perm_selection(perm, perm_owner, selected_from_perm)
+
+                self.request_selection(
+                    GamePhase.SelectReveal, player, on_card_selected, valid,
+                    is_optional=can_end_early,
+                    prompt=f"{prompt_card} ({n}/{cards_from_this})",
+                    on_decline=on_card_declined if can_end_early else None,
+                )
+
+            _select_next_card()
+
+        def _finish_perm_selection(
+            perm: "Permanent", perm_owner: "Player",
+            selected: List["CardSource"],
+        ):
+            if selected:
+                trashed = perm.trash_specific_digivolution_cards(
+                    selected, card_effect=card_effect)
+                perm_owner.trash_cards.extend(trashed)
+                all_trashed.extend(trashed)
+                remaining[0] -= len(trashed)
+
+            if from_only_one_permanent or remaining[0] <= 0:
+                if on_complete:
+                    on_complete(all_trashed)
+            else:
+                _start_permanent_selection()
+
+        _start_permanent_selection()

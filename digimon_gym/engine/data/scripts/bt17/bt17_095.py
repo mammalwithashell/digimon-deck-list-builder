@@ -9,7 +9,7 @@ if TYPE_CHECKING:
 
 
 class BT17_095(CardScript):
-    """BT17-095 Brave Tornado | Option Red (Cost 4)
+    """BT17-095 Miraculous Mega Knight | Option Red/Blue (Cost 2)
 
     [Main] You may play 1 [Agumon]/[Gabumon] from your hand or trash without
         paying the cost. Then, place this card in the battle area.
@@ -124,15 +124,9 @@ class BT17_095(CardScript):
             if not (top.contains_card_name('Greymon') or
                     top.contains_card_name('Garurumon')):
                 return False
-            # Need an Omnimon card in hand with DNA conditions
-            has_omnimon = any(
-                getattr(c, 'is_digimon', False) and
-                c.contains_card_name('Omnimon') and
-                getattr(c, 'level', None) == 7 and
-                c.c_entity_base and c.c_entity_base.dna_costs
-                for c in card.owner.hand_cards
-            )
-            return has_omnimon
+            # Per C# CanUseCondition: do NOT check for Omnimon in hand here.
+            # The DNA availability check happens in the process callback.
+            return True
 
         effect2.set_can_use_condition(condition2)
 
@@ -205,9 +199,7 @@ class BT17_095(CardScript):
                 if not getattr(c, 'is_tamer', False):
                     return False
                 return (c.contains_card_name('Tai Kamiya') or
-                        c.contains_card_name('TaiKamiya') or
-                        c.contains_card_name('Matt Ishida') or
-                        c.contains_card_name('MattIshida'))
+                        c.contains_card_name('Matt Ishida'))
 
             hand_ok = any(tamer_filter(c) for c in player.hand_cards)
             trash_ok = any(tamer_filter(c) for c in player.trash_cards)

@@ -9,119 +9,145 @@ if TYPE_CHECKING:
 
 
 class P_165(CardScript):
-    """P-165 ShoeShoemon | Lv.4"""
+    """P-165 ShoeShoemon | Lv.4 Yellow Puppet/LIBERATOR DP 4000 Cost 4
+
+    [Security] At the end of the battle, play this card without paying the cost.
+    [On Play] [When Digivolving] Play 1 [Familiar] Token.
+        At the end of your opponent's turn, delete that token.
+    Inherited: <Barrier>
+
+    C# ref: PlaySelfDigimonAfterBattleSecurityEffect,
+            PlaySelfDeleteFamiliarToken, BarrierSelfEffect
+    """
 
     def get_card_effects(self, card: 'CardSource') -> List['ICardEffect']:
         effects = []
 
-        # Factory effect: security_play
-        # Security: Play this card
+        # --- Effect 0: [Security] At the end of the battle, play this card ---
+        # C# uses PlaySelfDigimonAfterBattleSecurityEffect which plays the
+        # Digimon after the security battle resolves.  In our engine the
+        # security_attack flow is: fire SecuritySkill effects -> battle ->
+        # trash unless _security_played.  We play the card during the
+        # SecuritySkill callback and set _security_played so it is not
+        # trashed afterward.  (The card still battles as a Security Digimon
+        # since is_digimon is evaluated on the CardSource before the effect.)
         effect0 = ICardEffect()
-        effect0.set_effect_name("P-165 Security: Play this card")
-        effect0.set_effect_description("Security: Play this card")
+        effect0.set_timing(EffectTiming.SecuritySkill)
+        effect0.set_effect_name("P-165 Security: play this card after battle")
+        effect0.set_effect_description(
+            "[Security] At the end of the battle, play this card without "
+            "paying the cost."
+        )
         effect0.is_security_effect = True
+        effect0._security_play_self = True
 
         def condition0(context: Dict[str, Any]) -> bool:
             return True
         effect0.set_can_use_condition(condition0)
+
+        def process0(ctx: Dict[str, Any]):
+            player = ctx.get('player')
+            game = ctx.get('game')
+            if not (player and game and card):
+                return
+            game.effect_play_from_security(player, card)
+
+        effect0.set_on_process_callback(process0)
         effects.append(effect0)
 
-        # Timing: EffectTiming.OnEnterFieldAnyone
-        # [When Digivolving] Play 1 [Familiar] Token. (Digimon/Yellow/3000 DP/[On Deletion] 1 of your opponent's Digimon gets -3000 DP for the turn.) At the end of your opponent's turn, delete that token.
-        effect1 = ICardEffect()
-        effect1.set_timing(EffectTiming.OnEnterFieldAnyone)
-        effect1.set_effect_name("P-165 Play 1 [Familiar] Token")
-        effect1.set_effect_description("[When Digivolving] Play 1 [Familiar] Token. (Digimon/Yellow/3000 DP/[On Deletion] 1 of your opponent's Digimon gets -3000 DP for the turn.) At the end of your opponent's turn, delete that token.")
-        effect1.is_when_digivolving = True
-
-        effect = effect1  # alias for condition closure
-        def condition1(context: Dict[str, Any]) -> bool:
-            if card and card.permanent_of_this_card() is None:
-                return False
-            # Triggered when digivolving — validated by engine timing
-            return True
-
-        effect1.set_can_use_condition(condition1)
-
+        # --- Shared helper: play Familiar Token + schedule EOT deletion ---
         def _play_familiar_and_schedule_deletion(ctx: Dict[str, Any]):
-            """Play 1 Familiar Token and schedule its deletion at end of opponent's turn."""
+            """Play 1 Familiar Token and schedule its deletion at end of opponent's turn.
+
+            C# ref: CardEffectCommons.PlaySelfDeleteFamiliarToken
+            The token type is SelfDeleteFamiliarToken which has an OnEndTurn
+            effect that deletes itself when IsOpponentTurn is true.
+            """
             player = ctx.get('player')
             game = ctx.get('game')
             if not (player and game):
                 return
-            # Track battle_area before to identify the new token
-            before = set(id(p) for p in player.battle_area)
+
+            # Track field before to identify the new token
+            before_ids = set(id(p) for p in player.battle_area)
             game.effect_play_token(player, 'familiar')
-            # Find new token
-            new_tokens = [p for p in player.battle_area if id(p) not in before]
+
+            # Find newly created token(s)
+            new_tokens = [p for p in player.battle_area if id(p) not in before_ids]
             for token_perm in new_tokens:
-                # Register an OnEndTurn effect that deletes the token at end of opponent's turn
-                delete_eff = ICardEffect()
-                delete_eff.set_timing(EffectTiming.OnEndTurn)
-                delete_eff.set_effect_name("P-165 Delete Familiar Token at end of opponent's turn")
-                _token_ref = token_perm  # capture
+                # Create an OnEndTurn effect that deletes the token at end
+                # of opponent's turn.  Inject it into the token's cached
+                # effects so the engine picks it up via effect_list().
+                eot_effect = ICardEffect()
+                eot_effect.set_timing(EffectTiming.OnEndTurn)
+                eot_effect.set_effect_name(
+                    "P-165 Delete Familiar Token at end of opponent's turn"
+                )
 
-                def make_delete_cond(t_perm):
-                    def cond(context: Dict[str, Any]) -> bool:
-                        owner = card.owner if card else None
-                        if not owner:
-                            return False
-                        # Only fire on opponent's turn end
-                        if owner.is_my_turn:
-                            return False
-                        return t_perm in owner.battle_area
-                    return cond
+                _perm = token_perm  # capture for closures
 
-                def make_delete_proc(t_perm):
-                    def proc(context: Dict[str, Any]) -> None:
-                        p = context.get('player')
-                        if not p:
-                            p = card.owner if card else None
-                        if p and t_perm in p.battle_area:
-                            p.delete_permanent(t_perm)
-                    return proc
+                def eot_cond(context: Dict[str, Any], p=_perm) -> bool:
+                    owner = card.owner if card else None
+                    if not owner:
+                        return False
+                    # Only fire at end of opponent's turn
+                    if owner.is_my_turn:
+                        return False
+                    return p in owner.battle_area
 
-                delete_eff.set_can_use_condition(make_delete_cond(_token_ref))
-                delete_eff.set_on_process_callback(make_delete_proc(_token_ref))
-                # Attach the effect to the token's card source so it fires
-                if _token_ref.top_card:
-                    _token_ref.top_card._additional_effects = getattr(
-                        _token_ref.top_card, '_additional_effects', [])
-                    _token_ref.top_card._additional_effects.append(delete_eff)
+                def eot_proc(ctx: Dict[str, Any], p=_perm):
+                    owner = card.owner if card else None
+                    if owner and p in owner.battle_area:
+                        owner.delete_permanent(p)
 
-        def process1(ctx: Dict[str, Any]):
-            """Action: Play Familiar Token (When Digivolving), delete at end of opponent's turn"""
-            _play_familiar_and_schedule_deletion(ctx)
+                eot_effect.set_can_use_condition(eot_cond)
+                eot_effect.set_on_process_callback(eot_proc)
 
-        effect1.set_on_process_callback(process1)
+                # Inject into the token's CardSource cached effects so the
+                # engine sees it (same pattern as EX11-022).
+                if _perm.top_card:
+                    _perm.top_card._cached_effects = (
+                        _perm.top_card._cached_effects or []
+                    )
+                    _perm.top_card._cached_effects.append(eot_effect)
+
+        # --- Effect 1: [When Digivolving] Play 1 Familiar Token ---
+        effect1 = ICardEffect()
+        effect1.set_timing(EffectTiming.OnEnterFieldAnyone)
+        effect1.set_effect_name("P-165 Play 1 [Familiar] Token")
+        effect1.set_effect_description(
+            "[When Digivolving] Play 1 [Familiar] Token. At the end of your "
+            "opponent's turn, delete that token."
+        )
+        effect1.is_when_digivolving = True
+
+        def condition1(context: Dict[str, Any]) -> bool:
+            if card and card.permanent_of_this_card() is None:
+                return False
+            return True
+        effect1.set_can_use_condition(condition1)
+        effect1.set_on_process_callback(_play_familiar_and_schedule_deletion)
         effects.append(effect1)
 
-        # Timing: EffectTiming.OnEnterFieldAnyone
-        # [On Play] Play 1 [Familiar] Token, delete at end of opponent's turn.
+        # --- Effect 2: [On Play] Play 1 Familiar Token ---
         effect2 = ICardEffect()
         effect2.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect2.set_effect_name("P-165 Play 1 [Familiar] Token")
-        effect2.set_effect_description("[On Play] Play 1 [Familiar] Token. (Digimon/Yellow/3000 DP/[On Deletion] 1 of your opponent's Digimon gets -3000 DP for the turn.) At the end of your opponent's turn, delete that token.")
+        effect2.set_effect_description(
+            "[On Play] Play 1 [Familiar] Token. At the end of your "
+            "opponent's turn, delete that token."
+        )
         effect2.is_on_play = True
 
-        effect = effect2  # alias for condition closure
         def condition2(context: Dict[str, Any]) -> bool:
             if card and card.permanent_of_this_card() is None:
                 return False
-            # Triggered on play — validated by engine timing
             return True
-
         effect2.set_can_use_condition(condition2)
-
-        def process2(ctx: Dict[str, Any]):
-            """Action: Play Familiar Token (On Play), delete at end of opponent's turn"""
-            _play_familiar_and_schedule_deletion(ctx)
-
-        effect2.set_on_process_callback(process2)
+        effect2.set_on_process_callback(_play_familiar_and_schedule_deletion)
         effects.append(effect2)
 
-        # Factory effect: barrier
-        # Barrier
+        # --- Effect 3: Inherited <Barrier> ---
         effect3 = ICardEffect()
         effect3.set_effect_name("P-165 Barrier")
         effect3.set_effect_description("Barrier")

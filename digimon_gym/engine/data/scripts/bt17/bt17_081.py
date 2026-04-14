@@ -42,8 +42,8 @@ class BT17_081(CardScript):
             # Suspend cost: must not already be suspended
             if perm.is_suspended:
                 return False
-            # Triggering permanent must be one of our Digimon
-            trigger_perm = context.get('permanent')
+            # Triggering permanent must be one of our Digimon (played or digivolved)
+            trigger_perm = context.get('played_permanent')
             if trigger_perm is None:
                 return False
             if not trigger_perm.is_digimon:
@@ -130,11 +130,17 @@ class BT17_081(CardScript):
                         p.can_attack())
 
             def on_select_omnimon(target_perm):
-                # Grant this Digimon a FORCE_ATTACK to attack a player
+                # Grant MAY_ATTACK (optional end-of-turn attack) + Rush + unsuspend
+                # Card says "may attack a player" — player-only, so also restrict
+                # Digimon targeting via _is_cannot_attack_digimon keyword grant
                 from ....interfaces.modifiers import ModifierType
+                if target_perm.is_suspended:
+                    target_perm.unsuspend()
+                target_perm.grant_keyword('_is_rush')
+                target_perm.grant_keyword(
+                    '_is_cannot_attack_digimon', game.turn_count)
                 game.register_modifier(
-                    target_perm, ModifierType.FORCE_ATTACK,
-                    condition=lambda perm, c: perm is target_perm,
+                    target_perm, ModifierType.MAY_ATTACK,
                     expiry='end_of_turn')
 
             game.effect_select_own_permanent(

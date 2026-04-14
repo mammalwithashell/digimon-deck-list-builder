@@ -9,9 +9,9 @@ if TYPE_CHECKING:
 
 
 class ST20_10(CardScript):
-    """ST20-10 Agumon | Lv.3 Red Digimon | Adventure/Hero
+    """ST20-10 Agumon | Lv.3 Black Digimon | Reptile/ADVENTURE/Hero
 
-    Alt Digivolution: [Adventure] or [Hero] trait Lv.2 for cost 0.
+    Alt Digivolution: [ADVENTURE] or [Hero] trait Lv.2 for cost 0.
     Warp Digivolution: [Your Turn] If your opponent has a Digimon with
         10000 DP or more, or you have 3 or more colors among your Tamers,
         this Digimon may digivolve into [WarGreymon] in your hand for a
@@ -22,36 +22,46 @@ class ST20_10(CardScript):
     def get_card_effects(self, card: 'CardSource') -> List['ICardEffect']:
         effects = []
 
-        # --- Effect 0: Alt Digivolution from [Adventure]/[Hero] trait Lv.2 for cost 0 ---
-        effect0 = ICardEffect()
-        effect0.set_effect_name("ST20-10 Alt digi: Adventure/Hero Lv.2 cost 0")
-        effect0.set_effect_description(
-            "Digivolve: Lv.2 w/[Adventure] or [Hero] trait for cost 0."
+        # --- Effect 0a: Alt Digivolution from [ADVENTURE] trait Lv.2 for cost 0 ---
+        effect0a = ICardEffect()
+        effect0a.set_effect_name("ST20-10 Alt digi: ADVENTURE Lv.2 cost 0")
+        effect0a.set_effect_description(
+            "Digivolve: Lv.2 w/[ADVENTURE] trait for cost 0."
         )
+        effect0a._alt_digi_cost = 0
+        effect0a._alt_digi_level = 2
+        effect0a._alt_digi_trait = 'ADVENTURE'
 
-        def alt_digi_permanent_condition(permanent) -> bool:
-            if not permanent.top_card:
-                return False
-            tc = permanent.top_card
-            traits = getattr(tc, 'card_traits', []) or []
-            has_adventure = any('Adventure' in t for t in traits)
-            has_hero = any('Hero' in t for t in traits)
-            if not (has_adventure or has_hero):
-                return False
-            level = getattr(permanent, 'level', None)
-            return level == 2
-
-        effect0._alt_digi_permanent_condition = alt_digi_permanent_condition
-        effect0._alt_digi_cost = 0
-        effect0._alt_digi_ignore_requirements = False
-
-        def condition0(context: Dict[str, Any]) -> bool:
+        def condition0a(context: Dict[str, Any]) -> bool:
             return True
-        effect0.set_can_use_condition(condition0)
-        effects.append(effect0)
+        effect0a.set_can_use_condition(condition0a)
+        effects.append(effect0a)
+
+        # --- Effect 0b: Alt Digivolution from [Hero] trait Lv.2 for cost 0 ---
+        effect0b = ICardEffect()
+        effect0b.set_effect_name("ST20-10 Alt digi: Hero Lv.2 cost 0")
+        effect0b.set_effect_description(
+            "Digivolve: Lv.2 w/[Hero] trait for cost 0."
+        )
+        effect0b._alt_digi_cost = 0
+        effect0b._alt_digi_level = 2
+        effect0b._alt_digi_trait = 'Hero'
+
+        def condition0b(context: Dict[str, Any]) -> bool:
+            return True
+        effect0b.set_can_use_condition(condition0b)
+        effects.append(effect0b)
 
         # --- Effect 1: Warp Digivolution into [WarGreymon] for cost 4 ---
+        # [Your Turn] While your opponent has a Digimon with 10000 DP or more,
+        # or your Tamers have 3 or more total colors, this Digimon can digivolve
+        # into [WarGreymon] in the hand for a digivolution cost of 4, ignoring
+        # digivolution requirements.
+        #
+        # This is a continuous effect that enables a warp digivolve action.
+        # Uses effect_digivolve_from_hand to let the agent pick a WarGreymon.
         effect1 = ICardEffect()
+        effect1.set_timing(EffectTiming.OnStartMainPhase)
         effect1.set_effect_name("ST20-10 Warp digi: into WarGreymon cost 4")
         effect1.set_effect_description(
             "[Your Turn] If your opponent has a Digimon with 10000 DP or more, "
@@ -59,6 +69,7 @@ class ST20_10(CardScript):
             "digivolve into [WarGreymon] in your hand for a memory cost of 4, "
             "ignoring digivolution requirements."
         )
+        effect1.is_optional = True
 
         def _count_tamer_colors():
             """Count distinct colors among owner's Tamers."""
@@ -72,20 +83,7 @@ class ST20_10(CardScript):
                         color_set.add(col)
             return len(color_set)
 
-        def warp_permanent_condition(permanent) -> bool:
-            return permanent is (card.permanent_of_this_card() if card else None)
-
-        def warp_card_condition(card_source) -> bool:
-            if card_source is None:
-                return False
-            owner = card.owner if card else None
-            if not owner:
-                return False
-            if card_source not in owner.hand_cards:
-                return False
-            return card_source.contains_card_name('WarGreymon')
-
-        def warp_condition() -> bool:
+        def condition1(context: Dict[str, Any]) -> bool:
             if not (card and card.owner and card.owner.is_my_turn):
                 return False
             if card.permanent_of_this_card() is None:
@@ -101,16 +99,27 @@ class ST20_10(CardScript):
             if _count_tamer_colors() >= 3:
                 return True
             return False
-
-        effect1._alt_digi_permanent_condition = warp_permanent_condition
-        effect1._alt_digi_card_condition = warp_card_condition
-        effect1._alt_digi_cost = 4
-        effect1._alt_digi_ignore_requirements = True
-        effect1._alt_digi_condition = warp_condition
-
-        def condition1(context: Dict[str, Any]) -> bool:
-            return True
         effect1.set_can_use_condition(condition1)
+
+        def process1(ctx: Dict[str, Any]):
+            """Warp digivolve this permanent into a WarGreymon from hand."""
+            player = ctx.get('player')
+            perm = ctx.get('permanent')
+            game = ctx.get('game')
+            if not (player and perm and game):
+                return
+
+            def wargreymon_filter(c):
+                return c.contains_card_name('WarGreymon')
+
+            game.effect_digivolve_from_hand(
+                player, perm, wargreymon_filter,
+                cost_override=4,
+                ignore_requirements=True,
+                is_optional=True,
+            )
+
+        effect1.set_on_process_callback(process1)
         effects.append(effect1)
 
         # --- Effect 2: Inherited <Reboot> ---

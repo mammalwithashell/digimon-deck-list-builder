@@ -135,17 +135,12 @@ class BT11_105(CardScript):
                             return
                         digi_card = player.trash_cards[idx2]
 
-                        # Find digivolution cost
-                        evo_costs = getattr(digi_card, 'evo_costs', []) or []
+                        # Find digivolution cost from card entity
+                        entity = getattr(digi_card, 'c_entity_base', None)
+                        evo_costs = getattr(entity, 'evo_costs', []) or []
                         cost = 0
                         if evo_costs:
-                            first_evo = evo_costs[0]
-                            if hasattr(first_evo, 'memory_cost'):
-                                cost = first_evo.memory_cost
-                            elif isinstance(first_evo, dict):
-                                cost = first_evo.get('cost', first_evo.get('memory_cost', 0))
-                            elif isinstance(first_evo, int):
-                                cost = first_evo
+                            cost = evo_costs[0].memory_cost
 
                         player.trash_cards.remove(digi_card)
 

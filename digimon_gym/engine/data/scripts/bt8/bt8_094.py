@@ -14,17 +14,17 @@ class BT8_094(CardScript):
     def get_card_effects(self, card: 'CardSource') -> List['ICardEffect']:
         effects = []
 
-        # Timing: EffectTiming.OnDestroyedAnyone
-        # [All Turns] When one of your opponent's level 5 or lower Digimon is deleted,
-        # you may suspend this Tamer to <Draw 1>.
+        # Deletion observer: [All Turns] When one of your opponent's level 5
+        # or lower Digimon is deleted, you may suspend this Tamer to <Draw 1>.
         effect0 = ICardEffect()
-        effect0.set_timing(EffectTiming.OnDestroyedAnyone)
+        effect0.set_timing(EffectTiming.NoTiming)
         effect0.set_effect_name("BT8-094 Draw 1")
         effect0.set_effect_description(
             "[All Turns] When one of your opponent's level 5 or lower Digimon is deleted, "
             "you may suspend this Tamer to <Draw 1>."
         )
         effect0.is_optional = True
+        effect0._is_deletion_observer = True
 
         def condition0(context: Dict[str, Any]) -> bool:
             perm = card.permanent_of_this_card() if card else None
@@ -36,13 +36,13 @@ class BT8_094(CardScript):
             player = card.owner if card else None
             if not player:
                 return False
-            # The deleted permanent is in event_permanent (from extra_context)
-            deleted = context.get('event_permanent')
+            # The deleted permanent is passed via _fire_deletion_observers
+            deleted = context.get('deleted_permanent')
             if deleted is None:
                 return False
-            # Must be opponent's Digimon
-            event_player = context.get('event_player')
-            if event_player is None or event_player is player:
+            # Must be opponent's Digimon (check via card source owner)
+            deleted_owner = deleted.owner
+            if deleted_owner is None or deleted_owner is player:
                 return False
             if not deleted.is_digimon:
                 return False

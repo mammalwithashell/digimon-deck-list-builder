@@ -100,12 +100,12 @@ class BT20_017(CardScript):
                         return
                     from ....interfaces.modifiers import ModifierType
                     game.register_modifier(
-                        selected_perm, ModifierType.FORCE_ATTACK,
-                        value_fn=lambda: True, expiry='end_of_turn')
+                        selected_perm, ModifierType.MAY_ATTACK,
+                        expiry='end_of_turn')
 
                 game.effect_select_own_permanent(
                     player, on_attack_selected,
-                    filter_fn=lambda p: p.is_digimon,
+                    filter_fn=lambda p: p.is_digimon and not p.is_suspended,
                     is_optional=True,
                     prompt="Select a Digimon to attack.")
 

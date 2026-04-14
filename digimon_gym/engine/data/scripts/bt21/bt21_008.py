@@ -76,6 +76,14 @@ class BT21_008(CardScript):
                 return False
             if not (card and card.owner and card.owner.is_my_turn):
                 return False
+            # DCGO: CanTriggerWhenLoseSecurity with PlayerCondition(player => player == card.Owner.Enemy)
+            # Only trigger when the OPPONENT loses security, not the card owner.
+            # OnLoseSecurity fires with extra_context {"player": <player who lost security>}
+            # which gets mapped to ctx["event_player"] by execute_effects.
+            event_player = context.get('event_player')
+            owner = context.get('player')
+            if event_player and owner and event_player is not owner.enemy:
+                return False
             return True
 
         effect1.set_can_use_condition(condition1)

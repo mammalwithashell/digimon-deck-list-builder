@@ -73,7 +73,7 @@ class ST19_05(CardScript):
 
             game.effect_select_hand_card(
                 player, puppet_filter, on_trash,
-                is_optional=False,
+                is_optional=True,
                 prompt="Select 1 card with [Puppet] trait to trash.",
             )
 

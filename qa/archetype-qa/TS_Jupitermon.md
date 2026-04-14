@@ -17,25 +17,25 @@ Total cards: 30
 | BT15-003 | Nyaromon | FAITHFUL | Trash top/bottom security branch choice |
 | BT24-003 | Puttimon | FAITHFUL | Shaman trait digi_filter with cost_reduction=1 |
 | BT24-014 | Aegiochusmon | FAITHFUL | Delete gated on security count <= 3 |
-| BT24-030 | Neptunemon | FAITHFUL | Cost reduction, bottom-deck, self-unsuspend, protect TS |
+| BT24-030 | Neptunemon | FIXED | Cost reduction, bottom-deck, self-unsuspend, protect TS (fixed: WhenRemoveField→WhenPermanentWouldBeDeleted) |
 | BT24-031 | Elecmon | FAITHFUL | On Play reveal 3 multi-select |
 | BT24-034 | Aegiomon | FAITHFUL | Barrier, security-to-hand to play TS Tamer |
 | BT24-037 | Jupitermon | FIXED | Auto-select removed; AND->OR logic (Yellow/Red/TS); source zone hand->digi-stack |
-| BT24-040 | Venusmon | FAITHFUL | Trash all digi cards + stun 2, protect TS |
-| BT24-041 | Minervamon | FIXED | Fabricated effects removed; process callback for security trash deletion prevention |
-| BT24-043 | Tapirmon | FAITHFUL | Suspend target filter corrected to is_digimon |
+| BT24-040 | Venusmon | FIXED | 3 bugs: CANNOT_SUSPEND leaked globally, DISABLE_EFFECT hit all effects not just WD, freeze dupe selection |
+| BT24-041 | Minervamon | FIXED | Alt-digi encodes all 3 traits, _fire_play_observers + play-block checks added |
+| BT24-043 | Tapirmon | FIXED | Reveal selection was optional, now mandatory per card text |
 | BT24-046 | Garurumon | FAITHFUL | Alt-digi with Gabumon name |
-| BT24-051 | Merukimon | FIXED | Fabricated effects removed; duplicate cost removed; player-selected suspend |
+| BT24-051 | Merukimon | PASS | 4 fixes: alt-digi TS trait, suspend chaining, DP turn-scoped, WA→OnUseAttack |
 | BT24-083 | Hiroko Sagisaka | FAITHFUL | Start-of-turn return-to-deck to play |
 | BT24-084 | Megumi Hinata | FAITHFUL | Condition uses card.permanent_of_this_card() |
 | BT24-085 | Dan Yuki & Kanan Yuki | FIXED | Memory threshold: opponent's memory, not Digimon count |
 | BT24-088 | Asuna Shiroki | FAITHFUL | Start-of-turn return-to-deck to play from trash |
-| BT24-090 | Abyss Sanctuary | FIXED | Color bypass: Blocker (not +2000 DP) + Alliance aura effects |
-| BT24-094 | Central Town | FAITHFUL | Alliance aura effect correct |
-| BT24-095 | Sonic Shot | FAITHFUL | Link timing, keyword target |
-| BT24-100 | In-Between Theater | FAITHFUL | Delay timing corrected to field_main |
+| BT24-090 | Abyss Sanctuary | FIXED | Dynamic color bypass, face-down security gate for Blocker/Alliance aura, proper security API |
+| BT24-094 | Central Town | FIXED | Color bypass, face-down aura condition, security placement |
+| BT24-095 | Sonic Shot | FIXED | Color bypass fn, TS link filter, is_on_attack, chained selections |
+| BT24-100 | In-Between Theater | FIXED | Color ignore, delay factory, reveal optionality |
 | BT24-101 | Homeros | FIXED | Dynamic cost: alt-digi cost 5 (not 3); target selection for -13000 DP |
-| BT24-102 | Homeros | FAITHFUL | Start-of-Main memory gain, TS DP aura, EOT reactivate |
+| BT24-102 | Homeros | FIXED | Olympos XII trait check top-card-only; added eligibility+condition filter for EOT reactivation |
 | P-194 | Jupitermon (promo) | FAITHFUL | |
 | P-196 | Gomamon | FAITHFUL | Start-of-Main digivolve into Sea Beast/TS |
 | P-197 | Patamon | FIXED | alt_digi_level corrected; Angel trait + memory <= 4 gate + cost_override=0 |

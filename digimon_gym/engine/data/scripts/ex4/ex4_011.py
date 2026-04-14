@@ -92,16 +92,24 @@ class EX4_011(CardScript):
             def on_select(target_perm):
                 if target_perm is None:
                     return
-                # Delete the selected Gallantmon as cost
-                player.delete_permanent(target_perm)
+                # Deletion is a cost — only play if deletion actually succeeds
+                # (e.g., Evade/Armor Purge may prevent it)
+                deleted = player.delete_permanent(target_perm)
+                if not deleted:
+                    return
                 # Play this card from trash without paying cost
                 if card and card in player.trash_cards:
-                    player.play_card_from_source(card, pay_cost=False)
+                    played = player.play_card_from_source(card, pay_cost=False)
+                    if played:
+                        game.execute_effects(
+                            EffectTiming.OnEnterFieldAnyone,
+                            {"played_card": card, "played_permanent": played,
+                             "event_player": player, "is_effect_play": True})
 
             game.effect_select_own_permanent(
                 player, on_select,
                 filter_fn=gallantmon_filter,
-                is_optional=False,
+                is_optional=True,
                 prompt="Select 1 of your [Gallantmon] with digivolution cards to delete."
             )
 

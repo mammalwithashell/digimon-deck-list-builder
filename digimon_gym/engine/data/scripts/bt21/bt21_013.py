@@ -14,8 +14,8 @@ class BT21_013(CardScript):
     [When Digivolving] You may place 1 [Hybrid] or [Hero] trait Digimon card from
     your hand or trash as this Digimon's bottom digivolution card or under any of
     your red Tamers with inherited effects.
-    [When Attacking] This Digimon may digivolve into a red [Hybrid] or [Hero] trait
-    Digimon card in the hand with the digivolution cost reduced by 1.
+    [When Attacking] This Digimon may digivolve into a red Lv.5 Digimon card in
+    your hand with the digivolution cost reduced by 2.
     Inherited: [Your Turn] This Digimon gets +2000 DP.
     """
 
@@ -50,7 +50,9 @@ class BT21_013(CardScript):
                 if not getattr(c, 'is_digimon', False):
                     return False
                 traits = getattr(c, 'card_traits', []) or []
-                return any('Hybrid' in t or 'Hero' in t for t in traits)
+                forms = c.c_entity_base.form_eng if c.c_entity_base else []
+                return (any('Hero' in t for t in traits)
+                        or any('Hybrid' in f for f in forms))
 
             # Step 1: Player selects a Hybrid/Hero Digimon card from hand or trash
             from ....game.constants import SEL_HAND_START, SEL_TRASH_START
@@ -116,11 +118,11 @@ class BT21_013(CardScript):
         effect2.set_on_process_callback(process2)
         effects.append(effect2)
 
-        # [When Attacking] Digivolve into red Hybrid/Hero from hand with cost -1
+        # [When Attacking] Digivolve into red Lv.5 from hand with cost -2
         effect3 = ICardEffect()
         effect3.set_timing(EffectTiming.OnUseAttack)
-        effect3.set_effect_name("BT21-013 Digivolve into red Hybrid/Hero")
-        effect3.set_effect_description("[When Attacking] This Digimon may digivolve into a red Hybrid/Hero from hand with cost -1.")
+        effect3.set_effect_name("BT21-013 Digivolve into red Lv.5")
+        effect3.set_effect_description("[When Attacking] This Digimon may digivolve into a red Lv.5 from hand with cost -2.")
         effect3.is_optional = True
         effect3.is_on_attack = True
 
@@ -132,7 +134,7 @@ class BT21_013(CardScript):
         effect3.set_can_use_condition(condition3)
 
         def process3(ctx: Dict[str, Any]):
-            """Digivolve into a red Hybrid/Hero Digimon from hand with cost -1."""
+            """Digivolve into a red Lv.5 Digimon from hand with cost -2."""
             player = ctx.get('player')
             perm = ctx.get('permanent')
             game = ctx.get('game')
@@ -146,12 +148,13 @@ class BT21_013(CardScript):
                 colors = getattr(c, 'card_colors', []) or []
                 if CardColor.Red not in colors:
                     return False
-                traits = getattr(c, 'card_traits', []) or []
-                return any('Hybrid' in t or 'Hero' in t for t in traits)
+                if getattr(c, 'level', None) != 5:
+                    return False
+                return True
 
             game.effect_digivolve_from_hand(
-                player, perm, digi_filter, cost_reduction=1, is_optional=True,
-                prompt="Select a red Hybrid/Hero Digimon from hand to digivolve into (cost -1).")
+                player, perm, digi_filter, cost_reduction=2, is_optional=True,
+                prompt="Select a red Lv.5 Digimon from hand to digivolve into (cost -2).")
 
         effect3.set_on_process_callback(process3)
         effects.append(effect3)

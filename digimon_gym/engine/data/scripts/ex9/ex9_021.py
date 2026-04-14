@@ -9,7 +9,7 @@ if TYPE_CHECKING:
 
 
 class EX9_021(CardScript):
-    """EX9-021 Omnimon Alter-S | Lv.7 Blue/Red Digimon | Holy Knight/DM
+    """EX9-021 Omnimon Alter-S | Lv.7 Blue/White Digimon | Holy Warrior/DM
 
     Alt digivolve: Lv.6 w/ [DM] trait for cost 5.
 

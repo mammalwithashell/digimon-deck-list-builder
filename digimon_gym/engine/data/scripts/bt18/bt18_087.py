@@ -61,6 +61,15 @@ class BT18_087(CardScript):
             tamer_perm = card.permanent_of_this_card()
             if tamer_perm and getattr(tamer_perm, 'is_suspended', False):
                 return False
+            # Must have at least 1 valid target (opponent Digimon with DP <= 4000)
+            owner = card.owner
+            if owner and owner.enemy:
+                has_target = any(
+                    p.is_digimon and p.dp is not None and p.dp <= 4000
+                    for p in owner.enemy.battle_area
+                )
+                if not has_target:
+                    return False
             return True
 
         effect1.set_can_use_condition(condition1)

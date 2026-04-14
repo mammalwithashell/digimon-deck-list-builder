@@ -11,11 +11,10 @@ if TYPE_CHECKING:
 class BT22_015(CardScript):
     """BT22-015 Omnimon | Lv.7
 
-    Alt digivolve: from Lv.6 w/ CS trait for 5.
+    Alt digivolve: from Lv.6 w/ [CS] trait for 5.
     DNA: Lv.6 w/ [Greymon] + Lv.6 w/ [Garurumon] for 0.
-    Blocker. Decode (Red/Black) Lv.3. Decode (Blue/Yellow) Lv.3.
-    [On Play] Delete 1 of your opponent's Digimon with the lowest DP.
-    [When Attacking] Delete 1 of your opponent's Digimon with the lowest DP.
+    Blocker. Decode (Red/Black Lv.3). Decode (Blue/Yellow Lv.3).
+    [On Play] [When Attacking] Delete 1 of your opponent's Digimon with the lowest DP.
     [When Digivolving] For every 2 same-level cards this Digimon's stack has,
         return 1 of your opponent's Digimon to the bottom of the deck.
         Then, this Digimon may attack.
@@ -30,6 +29,7 @@ class BT22_015(CardScript):
         effect0.set_effect_description("Alternate digivolution requirement")
         effect0._alt_digi_cost = 5
         effect0._alt_digi_level = 6
+        effect0._alt_digi_trait = "CS"
 
         def condition0(context: Dict[str, Any]) -> bool:
             return True
@@ -159,6 +159,8 @@ class BT22_015(CardScript):
 
         def process7(ctx: Dict[str, Any]):
             """Count same-level pairs, bottom-deck that many, then may attack."""
+            from ....interfaces.modifiers import ModifierType
+
             player = ctx.get('player')
             game = ctx.get('game')
             if not (player and game):
@@ -175,36 +177,45 @@ class BT22_015(CardScript):
                     level_counts[lvl] = level_counts.get(lvl, 0) + 1
             target_count = sum(count // 2 for count in level_counts.values())
 
+            def _grant_may_attack():
+                """Then, this Digimon may attack."""
+                p = card.permanent_of_this_card() if card else None
+                if p and game:
+                    game.register_modifier(
+                        p, ModifierType.MAY_ATTACK,
+                        expiry='end_of_turn',
+                    )
+
             if target_count > 0:
                 enemy = player.enemy
                 if enemy:
-                    enemy_digimon = [p for p in enemy.battle_area if p.is_digimon]
-                    bounced = 0
-                    for _ in range(min(target_count, len(enemy_digimon))):
-                        remaining = [p for p in enemy.battle_area if p.is_digimon]
-                        if not remaining:
-                            break
+                    def _bottom_deck_loop(remaining):
+                        if remaining <= 0:
+                            _grant_may_attack()
+                            return
+                        opp_digimon = [p for p in enemy.battle_area
+                                       if p.is_digimon]
+                        if not opp_digimon:
+                            _grant_may_attack()
+                            return
 
                         def opp_digimon_filter(p):
                             return p.is_digimon
 
                         def on_bottom_deck(target_perm):
-                            nonlocal bounced
                             enemy.return_permanent_to_deck_bottom(target_perm)
-                            bounced += 1
+                            _bottom_deck_loop(remaining - 1)
 
                         game.effect_select_opponent_permanent(
                             player, on_bottom_deck,
                             filter_fn=opp_digimon_filter,
                             is_optional=False)
 
-            # Then, this Digimon may attack
-            perm = card.permanent_of_this_card() if card else None
-            if perm and perm.is_suspended:
-                perm.unsuspend()
-            # Force attack is handled by engine if supported; mark as may attack
-            if perm and hasattr(game, 'effect_force_attack'):
-                game.effect_force_attack(perm, is_optional=True)
+                    _bottom_deck_loop(target_count)
+                else:
+                    _grant_may_attack()
+            else:
+                _grant_may_attack()
 
         effect7.set_on_process_callback(process7)
         effects.append(effect7)

@@ -65,48 +65,99 @@ class BT24_066(CardScript):
             if not (player and game):
                 return
 
-            from ....data.enums import CardColor
+            from ....data.enums import CardColor, GamePhase
 
             def _qualifies(c):
                 traits = getattr(c, 'card_traits', []) or []
                 has_trait = any(
-                    'Evil' in t or 'Dark Dragon' in t or
-                    'Evil Dragon' in t or 'Dark Knight' in t
+                    t == 'Evil' or t == 'Dark Dragon' or
+                    t == 'Evil Dragon' or t == 'Dark Knight'
                     for t in traits)
                 is_purple_tamer = (
                     getattr(c, 'is_tamer', False) and
                     CardColor.Purple in (getattr(c, 'card_colors', []) or []))
                 return has_trait or is_purple_tamer
 
-            # Use effect_reveal_and_select_multi for two passes:
-            # Pass 1: add 1 qualifying card to hand
-            # Pass 2: trash 1 qualifying card
-            # Remaining go to deck bottom
+            def _trash_from_hand():
+                """After reveal resolves, trash 1 card from hand."""
+                if player.hand_cards:
+                    def on_trashed(selected):
+                        if selected in player.hand_cards:
+                            player.hand_cards.remove(selected)
+                            player.trash_cards.append(selected)
+                    game.effect_select_hand_card(
+                        player,
+                        filter_fn=lambda c: True,
+                        callback=on_trashed,
+                        is_optional=False,
+                        prompt="Trash 1 card from your hand.")
+
+            # Reveal top 3, then do 2 selection passes, then trash from hand.
+            # We manually implement the reveal flow to chain trash-from-hand
+            # into the completion callback (effect_reveal_and_select_multi
+            # doesn't support a completion callback).
+            SEL_REVEALED_START = 30  # engine constant from game/constants.py
+
+            revealed = player.library_cards[:3]
+            if not revealed:
+                _trash_from_hand()
+                return
+
+            for c in revealed:
+                player.library_cards.remove(c)
+
+            pool = list(revealed)
+
             passes = [
                 (_qualifies, 'hand'),   # add 1 to hand
                 (_qualifies, 'trash'),  # trash 1
             ]
 
-            def after_reveal():
-                # After reveal resolves, trash 1 from hand
-                if player.hand_cards:
-                    game.effect_select_hand_card(
-                        player,
-                        filter_fn=lambda c: True,
-                        callback=lambda selected: (
-                            player.hand_cards.remove(selected)
-                            if selected in player.hand_cards else None,
-                            player.trash_cards.append(selected)),
-                        is_optional=False,
-                        prompt="Trash 1 card from your hand.")
+            def run_pass(pass_idx):
+                if pass_idx >= len(passes) or not pool:
+                    # All passes done — return remaining to deck bottom
+                    game.revealed_cards = []
+                    for c in pool:
+                        player.library_cards.append(c)
+                    pool.clear()
+                    # Chain: trash 1 from hand
+                    _trash_from_hand()
+                    return
 
-            game.effect_reveal_and_select_multi(
-                player, 3, passes,
-                remaining_placement='deck_bottom',
-                is_optional=True)
+                filter_fn, placement = passes[pass_idx]
+                game.revealed_cards = list(pool)
 
-            # The trash-from-hand step happens after reveal completes
-            after_reveal()
+                valid = []
+                for i, card_in_pool in enumerate(pool):
+                    if filter_fn(card_in_pool):
+                        valid.append(SEL_REVEALED_START + i)
+
+                if not valid:
+                    run_pass(pass_idx + 1)
+                    return
+
+                def on_select(action_id):
+                    idx = action_id - SEL_REVEALED_START
+                    if 0 <= idx < len(pool):
+                        selected = pool.pop(idx)
+                        if placement == 'hand':
+                            player.hand_cards.append(selected)
+                        elif placement == 'trash':
+                            player.trash_cards.append(selected)
+                    game.revealed_cards = []
+                    run_pass(pass_idx + 1)
+
+                def on_decline():
+                    game.revealed_cards = []
+                    run_pass(pass_idx + 1)
+
+                game.request_selection(
+                    GamePhase.SelectReveal, player, on_select, valid,
+                    is_optional=True,
+                    prompt=f"Select a card from the revealed cards (pass {pass_idx + 1}).",
+                    on_decline=on_decline)
+
+            run_pass(0)
 
         effect1.set_on_process_callback(process1)
         effects.append(effect1)

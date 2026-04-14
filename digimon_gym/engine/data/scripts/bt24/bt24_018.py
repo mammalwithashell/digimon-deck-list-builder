@@ -86,24 +86,23 @@ class BT24_018(CardScript):
         effects.append(effect3)
 
         # Timing: EffectTiming.OnEnterFieldAnyone
-        # [When Digivolving] May trash 1 opponent's top security. Then, this may unsuspend.
+        # [When Digivolving] You may trash any 1 of your opponent's security cards.
+        # Then, this Digimon may unsuspend.
         effect4 = ICardEffect()
         effect4.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect4.set_effect_name("BT24-018 May trash 1 opponent's security. Then, this may unsuspend.")
         effect4.set_effect_description("Destroy Security, Unsuspend")
         effect4.is_when_digivolving = True
 
-        effect = effect4  # alias for condition closure
         def condition4(context: Dict[str, Any]) -> bool:
             if card and card.permanent_of_this_card() is None:
                 return False
-            # Triggered when digivolving — validated by engine timing
             return True
 
         effect4.set_can_use_condition(condition4)
 
         def process4(ctx: Dict[str, Any]):
-            """Action: You may trash 1 opponent's security. Then, this Digimon may unsuspend."""
+            """Action: You may trash any 1 opponent's security. Then, this Digimon may unsuspend."""
             player = ctx.get('player')
             perm = ctx.get('permanent')
             game = ctx.get('game')
@@ -123,13 +122,27 @@ class BT24_018(CardScript):
                         branch_labels=["Yes, unsuspend", "No, decline"])
                 # If not suspended, nothing to do
 
-            # First optional step: you may trash 1 opponent's security card
+            # First optional step: you may trash any 1 opponent's security card
+            # C# uses SelectCardEffect with SecurityCards as root — player SELECTS
+            # which security card to trash (face-down selection), not just "pop top"
             if enemy and enemy.security_cards:
                 def on_trash_choice(choice):
-                    if choice == 0 and enemy and enemy.security_cards:
-                        trashed = enemy.security_cards.pop(0)
-                        enemy.trash_cards.append(trashed)
-                    _maybe_unsuspend()
+                    if choice == 0:
+                        # Player chose to trash — let them select which card
+                        def on_security_selected(sec_card):
+                            if sec_card and enemy:
+                                enemy.trash_security_card(sec_card)
+                            _maybe_unsuspend()
+
+                        game.effect_select_opponent_security(
+                            player,
+                            filter_fn=None,
+                            callback=on_security_selected,
+                            is_optional=False,
+                            prompt="Select 1 of your opponent's security cards to trash.")
+                    else:
+                        # Player declined the trash
+                        _maybe_unsuspend()
                 game.effect_choose_branch(
                     player, 2, on_trash_choice,
                     prompt="You may trash 1 of your opponent's security cards.",
@@ -141,7 +154,8 @@ class BT24_018(CardScript):
         effects.append(effect4)
 
         # Timing: EffectTiming.OnLoseSecurity
-        # Delete
+        # [All Turns] [Once Per Turn] When your opponent's security stack is
+        # removed from, you may delete 1 of their Digimon.
         effect5 = ICardEffect()
         effect5.set_timing(EffectTiming.OnLoseSecurity)
         effect5.set_effect_name("BT24-018 Delete 1 of your opponent's Digimon?")
@@ -150,18 +164,27 @@ class BT24_018(CardScript):
         effect5.set_max_count_per_turn(1)
         effect5.set_hash_string("BT24_18_AT_Sec_Removed")
 
-        effect = effect5  # alias for condition closure
         def condition5(context: Dict[str, Any]) -> bool:
             if card and card.permanent_of_this_card() is None:
+                return False
+            # C# checks: player == card.Owner.Enemy
+            # In execute_effects, 'player' = owner of the permanent,
+            # 'event_player' = the player from extra_context (who lost security).
+            # This must only fire when the OPPONENT's security is removed.
+            event_player = context.get('event_player')
+            owner = card.owner if card else None
+            if not owner or not event_player:
+                return False
+            if event_player is owner:
+                # Own security was removed — do NOT trigger
                 return False
             return True
 
         effect5.set_can_use_condition(condition5)
 
         def process5(ctx: Dict[str, Any]):
-            """Action: Delete"""
+            """Action: Delete 1 of your opponent's Digimon."""
             player = ctx.get('player')
-            perm = ctx.get('permanent')
             game = ctx.get('game')
             if not (player and game):
                 return
@@ -177,13 +200,21 @@ class BT24_018(CardScript):
         effect5.set_on_process_callback(process5)
         effects.append(effect5)
 
-        # Timing: EffectTiming.WhenRemoveField
-        # [All Turns] [Once Per Turn] When any of your other Digimon with [Reptile] or [Dragonkin] trait
-        # would leave the battle area by opponent's effects, by deleting 1 of opponent's Digimon, they don't leave.
+        # Timing: EffectTiming.WhenPermanentWouldBeDeleted
+        # [All Turns] [Once Per Turn] When any of your [Reptile] or [Dragonkin]
+        # trait Digimon would leave the battle area, by deleting 1 of your
+        # opponent's lowest DP Digimon, they don't leave.
+        #
+        # Key differences from original:
+        # - Uses WhenPermanentWouldBeDeleted (fires BEFORE deletion, can prevent)
+        # - No is_opponent_effect check (card text has no cause restriction)
+        # - Includes self (Styracomon has Dragonkin trait)
+        # - Target must be lowest DP only (C# uses IsMinDP)
+        # - Sets _will_not_be_removed flag to prevent deletion
         effect6 = ICardEffect()
-        effect6.set_timing(EffectTiming.WhenRemoveField)
-        effect6.set_effect_name("BT24-018 Delete an opponent's Digimon to prevent [Reptile] or [Dragonkin] trait Digimon from leaving the battle area")
-        effect6.set_effect_description("[All Turns] [Once Per Turn] By deleting 1 of your opponent's Digimon, your other [Reptile]/[Dragonkin] Digimon don't leave the battle area by opponent's effects.")
+        effect6.set_timing(EffectTiming.WhenPermanentWouldBeDeleted)
+        effect6.set_effect_name("BT24-018 Delete an opponent's lowest DP Digimon to prevent [Reptile] or [Dragonkin] trait Digimon from leaving the battle area")
+        effect6.set_effect_description("[All Turns] [Once Per Turn] When any of your [Reptile] or [Dragonkin] trait Digimon would leave the battle area, by deleting 1 of your opponent's lowest DP Digimon, they don't leave.")
         effect6.is_optional = True
         effect6.set_max_count_per_turn(1)
         effect6.set_hash_string("BT24_018_AT_Prevent_Deletion")
@@ -191,48 +222,64 @@ class BT24_018(CardScript):
         def condition6(context: Dict[str, Any]) -> bool:
             if card and card.permanent_of_this_card() is None:
                 return False
-            # Must be triggered by opponent's effect
-            if not context.get('is_opponent_effect', False):
-                return False
             # The leaving permanent must have Reptile or Dragonkin trait
             leaving_perm = context.get('permanent')
             if leaving_perm is None:
                 return False
-            traits = getattr(leaving_perm.top_card, 'card_traits', []) or [] if leaving_perm.top_card else []
-            if not any('Reptile' in t or 'Dragonkin' in t for t in traits):
+            # Check traits via permanent's has_trait method
+            if not (leaving_perm.has_trait('Reptile') or leaving_perm.has_trait('Dragonkin')):
                 return False
-            # The leaving permanent must NOT be this Styracomon (must be an "other" Digimon)
-            styracomon_perm = card.permanent_of_this_card()
-            if leaving_perm is styracomon_perm:
+            # Must belong to this card's owner
+            owner = card.owner if card else None
+            if not owner:
+                return False
+            if leaving_perm not in owner.battle_area:
+                return False
+            # Must have opponent Digimon to delete (lowest DP check is in process)
+            enemy = owner.enemy if owner else None
+            if not enemy:
+                return False
+            opp_digimon = [p for p in enemy.battle_area if p.is_digimon and p.dp is not None]
+            if not opp_digimon:
                 return False
             return True
 
         effect6.set_can_use_condition(condition6)
 
         def process6(ctx: Dict[str, Any]):
-            """Action: By deleting 1 opponent's Digimon, prevent leaving_perm from leaving."""
+            """Action: By deleting 1 opponent's lowest DP Digimon, prevent leaving."""
             player = ctx.get('player')
             game = ctx.get('game')
             leaving_perm = ctx.get('permanent')
             if not (player and game):
                 return
             enemy = player.enemy if player else None
-            # "By deleting 1 of your opponent's Digimon" — player selects which to delete
+            if not enemy:
+                return
+
+            # C# uses IsMinDP: only the lowest DP Digimon can be selected
+            opp_digimon = [p for p in enemy.battle_area if p.is_digimon and p.dp is not None]
+            if not opp_digimon:
+                return
+            min_dp = min(p.dp for p in opp_digimon)
+
+            def lowest_dp_filter(p):
+                if not p.is_digimon:
+                    return False
+                if p.dp is None:
+                    return False
+                return p.dp == min_dp
+
             def on_delete(target_perm):
                 if enemy:
                     enemy.delete_permanent(target_perm)
-                # Cost paid — prevent the leaving permanent from leaving
+                # Cost paid — prevent the leaving permanent from being removed
                 if leaving_perm:
-                    from digimon_gym.engine.interfaces.modifiers import ModifierType
-                    game.register_modifier(
-                        leaving_perm, ModifierType.CANNOT_BE_REMOVED,
-                        value_fn=lambda: True, expiry='end_of_turn'
-                    )
-            def target_filter(p):
-                return p.is_digimon
+                    leaving_perm._will_not_be_removed = True
+
             game.effect_select_opponent_permanent(
-                player, on_delete, filter_fn=target_filter, is_optional=False,
-                prompt="Select 1 of your opponent's Digimon to delete (cost to prevent leaving).")
+                player, on_delete, filter_fn=lowest_dp_filter, is_optional=False,
+                prompt="Select 1 of your opponent's lowest DP Digimon to delete (prevents leaving).")
 
         effect6.set_on_process_callback(process6)
         effects.append(effect6)

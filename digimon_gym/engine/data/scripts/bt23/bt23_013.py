@@ -198,8 +198,12 @@ class BT23_013(CardScript):
         effects.append(effect5)
 
         # --- Effect 6: [Your Turn][OPT] When other Digimon played, this may attack ---
-        # Uses _is_play_observer to observe plays of OTHER Digimon
+        # Uses _is_play_observer to observe plays of OTHER Digimon.
+        # Must set timing to NoTiming so execute_effects doesn't pick it up
+        # via the OnEnterFieldAnyone catch-all (which would make it fire on
+        # the host's own play).
         effect6 = ICardEffect()
+        effect6.set_timing(EffectTiming.NoTiming)
         effect6.set_effect_name("BT23-013 This Digimon may attack on ally play")
         effect6.set_effect_description(
             "[Your Turn] [Once Per Turn] When any of your other Digimon are "
@@ -225,10 +229,17 @@ class BT23_013(CardScript):
         effect6.set_can_use_condition(condition6)
 
         def process6(ctx: Dict[str, Any]):
-            """This Digimon may attack - unsuspend it."""
+            """This Digimon may attack - grant MAY_ATTACK if unsuspended."""
+            from ....interfaces.modifiers import ModifierType
             perm = card.permanent_of_this_card() if card else None
-            if perm and perm.is_suspended:
-                perm.unsuspend()
+            game = ctx.get('game')
+            if not (perm and game):
+                return
+            if perm.is_suspended:
+                return  # C# checks CanAttack — suspended Digimon can't attack
+            game.register_modifier(
+                perm, ModifierType.MAY_ATTACK,
+                expiry='end_of_turn')
 
         effect6.set_on_process_callback(process6)
         effects.append(effect6)

@@ -155,6 +155,10 @@ def _describe_single_action(game: "Game", action_id: int, me: "Player", opp: "Pl
             card_name = c.card_names[0] if c.card_names else "Card"
         return f"[Trash][Main]: {card_name}"
 
+    # SelectEffectChoice: branch choices use IDs 1000-1009, handle before effect activation
+    if game.current_phase == GamePhase.SelectEffectChoice and 1000 <= action_id <= 1009:
+        return _describe_selection_action(game, action_id, me, opp)
+
     # Effect activation (1000-1999): Training=0, Delay=1
     if 1000 <= action_id <= 1999:
         normalized = action_id - 1000
@@ -184,7 +188,8 @@ def _describe_single_action(game: "Game", action_id: int, me: "Player", opp: "Pl
     phase = game.current_phase
     if phase in (GamePhase.SelectTarget, GamePhase.SelectMaterial,
                  GamePhase.SelectHand, GamePhase.SelectReveal,
-                 GamePhase.SelectTrash, GamePhase.SelectSecurity):
+                 GamePhase.SelectTrash, GamePhase.SelectSecurity,
+                 GamePhase.SelectEffectChoice):
         return _describe_selection_action(game, action_id, me, opp)
 
     return f"Action {action_id}"
@@ -257,6 +262,13 @@ def _describe_selection_action(game: "Game", action_id: int, me: "Player", opp: 
 
     # Effect branch choice (1000-1009)
     if 1000 <= action_id <= 1009:
+        ps = getattr(game, 'pending_selection', None)
+        if ps and ps.effect_choices:
+            for choice in ps.effect_choices:
+                if choice.get("index") == action_id:
+                    label = choice.get("label", "")
+                    if label:
+                        return f"Branch: {label}"
         return f"Choose effect option {action_id - 1000 + 1}"
 
     return f"Select action {action_id}"

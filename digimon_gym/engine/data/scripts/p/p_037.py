@@ -66,6 +66,9 @@ class P_037(CardScript):
         effects.append(effect1)
 
         # [Main] <Delay> Gain 2 memory.
+        # NOTE: This is the delay callback — invoked by _execute_delay AFTER
+        # the engine has already trashed the card from BA.  Do NOT re-check
+        # permanent_of_this_card() (it will be None) or delete_permanent().
         effect2 = ICardEffect()
         effect2.set_timing(EffectTiming.OnStartMainPhase)
         effect2.set_effect_name("P-037 Delay: Gain 2 memory")
@@ -73,24 +76,15 @@ class P_037(CardScript):
         effect2._is_delay_effect = True
 
         def condition2(context: Dict[str, Any]) -> bool:
-            if not (card and card.owner and card.owner.is_my_turn):
-                return False
-            if card and card.permanent_of_this_card() is None:
-                return False
             return True
 
         effect2.set_can_use_condition(condition2)
 
         def process2(ctx: Dict[str, Any]):
-            """Trash delay card, gain 2 memory."""
+            """Gain 2 memory (card already trashed by engine delay handler)."""
             player = ctx.get('player')
-            game = ctx.get('game')
-            if not (player and game):
-                return
-            perm = card.permanent_of_this_card() if card else None
-            if perm:
-                player.delete_permanent(perm)
-            player.add_memory(2)
+            if player:
+                player.add_memory(2)
 
         effect2.set_on_process_callback(process2)
         effects.append(effect2)

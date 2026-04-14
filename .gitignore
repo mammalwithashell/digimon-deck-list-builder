@@ -34,3 +34,7 @@ src-tauri/resources/models/
 # PyInstaller
 build/
 dist/
+
+# PM Agent
+.claude/pm/sessions/
+.claude/pm/.briefing-lock

@@ -82,25 +82,33 @@ class BT22_040(CardScript):
         effect2.set_on_process_callback(process2)
         effects.append(effect2)
 
-        # Timing: EffectTiming.OnDestroyedAnyone
         # [All Turns] [Once Per Turn] When any of your other Digimon are deleted, you may activate 1 of this Digimon's [When Digivolving] effects.
+        # Uses _is_deletion_observer so _fire_deletion_observers() picks it up.
         effect3 = ICardEffect()
-        effect3.set_timing(EffectTiming.OnDestroyedAnyone)
         effect3.set_effect_name("BT22-040 Activate a [When Digivolving] effect")
         effect3.set_effect_description("[All Turns] [Once Per Turn] When any of your other Digimon are deleted, you may activate 1 of this Digimon's [When Digivolving] effects.")
         effect3.is_optional = True
         effect3.set_max_count_per_turn(1)
         effect3.set_hash_string("BT22_040_UseWD")
-        effect3.is_on_deletion = True
+        effect3._is_deletion_observer = True
 
         effect = effect3  # alias for condition closure
         def condition3(context: Dict[str, Any]) -> bool:
             if card and card.permanent_of_this_card() is None:
                 return False
-            # Must be a different Digimon that was deleted (not self)
-            my_perm = card.permanent_of_this_card()
-            deleted_perm = context.get('permanent')
-            if deleted_perm is my_perm:
+            # Deleted permanent must be a Digimon
+            deleted_perm = context.get('deleted_permanent')
+            if not deleted_perm:
+                return False
+            if not getattr(deleted_perm, 'is_digimon', False):
+                return False
+            # Must belong to same player (our Digimon)
+            # Check deleted permanent's card source owner, since context['player']
+            # is always the observer's owner in both owner/enemy scan branches.
+            owner = card.owner if card else None
+            deleted_owner = (deleted_perm.card_sources[0].owner
+                             if deleted_perm.card_sources else None)
+            if deleted_owner is not owner:
                 return False
             return True
 

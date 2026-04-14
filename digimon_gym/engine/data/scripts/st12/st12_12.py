@@ -2,7 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
-from ....data.enums import EffectTiming
+from ....data.enums import CardColor, EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -72,12 +72,7 @@ class ST12_12(CardScript):
         # --- Effect 1: [All Turns] Conditional Decoy (Red/Black) ---
         # Gains <Decoy (Red/Black)> while you have a Digimon with
         # [Huckmon] in name or [Royal Knight] trait in play.
-        # The engine's _is_decoy allows THIS Digimon to be sacrificed to
-        # protect another ally Digimon from deletion by opponent effect.
-        # NOTE: The color restriction (Red/Black) is not enforced at the
-        # engine level — the engine's decoy check auto-activates without
-        # color filtering. This is an engine gap; full color restriction
-        # would require engine support for conditional decoy targets.
+        # _decoy_colors restricts which Digimon colors this Decoy can protect.
         effect1 = ICardEffect()
         effect1.set_timing(EffectTiming.NoTiming)
         effect1.set_effect_name("ST12-12 Decoy (Red/Black)")
@@ -87,6 +82,7 @@ class ST12_12(CardScript):
             "this Digimon to prevent 1 of those Digimon's deletion.)"
         )
         effect1._is_decoy = True
+        effect1._decoy_colors = [CardColor.Red, CardColor.Black]
         effect1.is_declarative = True
 
         def condition1(context: Dict[str, Any]) -> bool:

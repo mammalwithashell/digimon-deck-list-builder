@@ -102,31 +102,41 @@ class BT24_040(CardScript):
                                 f"{game._perm_ref(target_perm)}")
 
                         # Then freeze 2 opponent Digimon/Tamers
-                        _freeze_count = [0]
-
                         def freeze_filter(p):
                             return p.is_digimon or p.is_tamer
 
+                        _frozen = []
+
                         def on_freeze(t):
                             from digimon_gym.engine.interfaces.modifiers import ModifierType
+                            # CANNOT_SUSPEND scoped to this specific permanent
                             game.register_modifier(
                                 t, ModifierType.CANNOT_SUSPEND,
-                                value_fn=lambda: True, expiry='end_of_opponent_turn')
-                            # Also disable [When Digivolving] effects
+                                condition=lambda target, ctx, fp=t: target is fp,
+                                expiry='end_of_opponent_turn')
+                            # Disable only [When Digivolving] effects
                             game.register_modifier(
                                 t, ModifierType.DISABLE_EFFECT,
-                                condition=lambda p, c, fp=t: p is fp,
+                                condition=lambda p, c, fp=t: (
+                                    p is fp
+                                    and c.get('effect') is not None
+                                    and getattr(c['effect'], 'is_when_digivolving', False)
+                                ),
                                 expiry='end_of_opponent_turn')
                             game.logger.log(
                                 f"[Effect] {game._perm_ref(t)} can't suspend or "
                                 f"activate [When Digivolving] effects")
-                            _freeze_count[0] += 1
-                            if _freeze_count[0] < 2:
-                                game.effect_select_opponent_permanent(
-                                    player, on_freeze, filter_fn=freeze_filter,
-                                    is_optional=False,
-                                    prompt="Select opponent's Digimon/Tamer that can't "
-                                           "suspend (2nd).")
+                            _frozen.append(t)
+                            if len(_frozen) < 2:
+                                def freeze_filter2(p):
+                                    return (p.is_digimon or p.is_tamer) and p not in _frozen
+
+                                if any(freeze_filter2(p) for p in enemy.battle_area):
+                                    game.effect_select_opponent_permanent(
+                                        player, on_freeze, filter_fn=freeze_filter2,
+                                        is_optional=False,
+                                        prompt="Select opponent's Digimon/Tamer that can't "
+                                               "suspend (2nd).")
 
                         if any(freeze_filter(p) for p in enemy.battle_area):
                             game.effect_select_opponent_permanent(

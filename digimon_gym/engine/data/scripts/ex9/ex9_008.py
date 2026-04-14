@@ -17,6 +17,19 @@ class EX9_008(CardScript):
     def get_card_effects(self, card: 'CardSource') -> List['ICardEffect']:
         effects = []
 
+        # --- Alt digi: from Lv.2 w/[DM] trait for cost 0 ---
+        effect_alt = ICardEffect()
+        effect_alt.set_effect_name("EX9-008 Alt digi from Lv.2 DM")
+        effect_alt.set_effect_description("Digivolve: from Lv.2 w/[DM] trait for 0 cost")
+        effect_alt._alt_digi_cost = 0
+        effect_alt._alt_digi_level = 2
+        effect_alt._alt_digi_trait = "DM"
+
+        def condition_alt(context: Dict[str, Any]) -> bool:
+            return True
+        effect_alt.set_can_use_condition(condition_alt)
+        effects.append(effect_alt)
+
         # <Training>
         effect0 = ICardEffect()
         effect0.set_effect_name("EX9-008 Training")

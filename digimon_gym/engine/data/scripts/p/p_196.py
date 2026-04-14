@@ -3,6 +3,7 @@ from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
 from ....data.enums import EffectTiming
+from ....validation.digivolve_validator import can_digivolve
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -67,6 +68,8 @@ class P_196(CardScript):
                 if not getattr(c, 'is_digimon', False):
                     return False
                 if not (any('Sea Beast' in _t or 'TS' in _t for _t in (getattr(c, 'card_traits', []) or []))):
+                    return False
+                if not can_digivolve(c, host_perm):
                     return False
                 return True
             game.effect_digivolve_from_hand(

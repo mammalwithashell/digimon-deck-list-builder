@@ -26,22 +26,35 @@ class BT22_026(CardScript):
     def get_card_effects(self, card: 'CardSource') -> List['ICardEffect']:
         effects = []
 
-        # --- Effect 0: Alt digivolve from Lv.5 w/ Garurumon or CS trait for 3 ---
-        effect0 = ICardEffect()
-        effect0.set_effect_name("BT22-026 Alternate digivolution requirement")
-        effect0.set_effect_description("Alternate digivolution requirement")
-        effect0._alt_digi_cost = 3
-        effect0._alt_digi_level = 5
+        # --- Effect 0a: Alt digivolve from Lv.5 w/ [Garurumon] in name for 3 ---
+        effect0a = ICardEffect()
+        effect0a.set_effect_name("BT22-026 Alt digi (Garurumon name)")
+        effect0a.set_effect_description("Alternate digivolution requirement")
+        effect0a._alt_digi_cost = 3
+        effect0a._alt_digi_level = 5
+        effect0a._alt_digi_name = "Garurumon"
 
-        def condition0(context: Dict[str, Any]) -> bool:
+        def condition0a(context: Dict[str, Any]) -> bool:
             return True
-        effect0.set_can_use_condition(condition0)
-        effects.append(effect0)
+        effect0a.set_can_use_condition(condition0a)
+        effects.append(effect0a)
+
+        # --- Effect 0b: Alt digivolve from Lv.5 w/ [CS] trait for 3 ---
+        effect0b = ICardEffect()
+        effect0b.set_effect_name("BT22-026 Alt digi (CS trait)")
+        effect0b.set_effect_description("Alternate digivolution requirement")
+        effect0b._alt_digi_cost = 3
+        effect0b._alt_digi_level = 5
+        effect0b._alt_digi_trait = "CS"
+
+        def condition0b(context: Dict[str, Any]) -> bool:
+            return True
+        effect0b.set_can_use_condition(condition0b)
+        effects.append(effect0b)
 
         # --- Effect 1: [Hand][Main] Nokia warp digivolve Gabumon into this for 6 ---
         effect1 = ICardEffect()
         effect1.set_timing(EffectTiming.OnDeclaration)
-        effect1._is_field_main = True
         effect1._is_hand_main = True
         effect1.set_effect_name("BT22-026 Digivolve 1 [Gabumon] into this card for 6")
         effect1.set_effect_description(

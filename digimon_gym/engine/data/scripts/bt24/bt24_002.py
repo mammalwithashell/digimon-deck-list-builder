@@ -2,7 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
-from ....data.enums import EffectTiming
+from ....data.enums import CardColor, EffectTiming
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -46,14 +46,7 @@ class BT24_002(CardScript):
             # Pay 1 cost
             player.add_memory(-1)
             # Only unsuspend if top card is Blue and has [TS] trait
-            top = getattr(perm, 'top_card', None)
-            if top is None:
-                return
-            colors = getattr(top, 'card_colors', []) or []
-            traits = getattr(top, 'card_traits', []) or []
-            is_blue = any('Blue' in str(c) for c in colors)
-            has_ts = any('TS' in t for t in traits)
-            if is_blue and has_ts:
+            if perm.top_card and CardColor.Blue in perm.top_card.card_colors and perm.has_trait('TS'):
                 perm.unsuspend()
 
         effect0.set_on_process_callback(process0)

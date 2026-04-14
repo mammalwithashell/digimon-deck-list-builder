@@ -1,6 +1,6 @@
 # QA Issue Resolution Index
 
-**Last updated**: 2026-03-15
+**Last updated**: 2026-03-22
 
 ## Summary
 
@@ -41,7 +41,7 @@
 | [ts-jupitermon](2026-03-13-ts-jupitermon.md) | 5 | 0 | 0 | 5 |
 | [dna-omnimon](2026-03-13-dna-omnimon.md) | 13 | 0 | 0 | 13 |
 | [exmaquinamon](2026-03-13-exmaquinamon.md) | 14 | 0 | 0 | 14 |
-| [galacticmon](2026-03-13-galacticmon.md) | 27 | 0 | 0 | 27 |
+| [galacticmon](2026-03-13-galacticmon.md) | 27 | 22 | 0 | 5 |
 | [puppets](2026-03-13-puppets.md) | 32 | 0 | 0 | 32 |
 | [dark-masters](2026-03-13-dark-masters.md) | 18 | 0 | 0 | 18 |
 | [jesmon](2026-03-13-jesmon.md) | 8 | 0 | 0 | 8 |
@@ -54,7 +54,10 @@
 | [dna-omnimon-medusamon](2026-03-15-dna-omnimon-medusamon-qa.md) | 5 | 0 | 0 | 5 |
 | [ts-jupitermon-royal-knights](2026-03-15-ts-jupitermon-royal-knights-qa.md) | 11 | 0 | 0 | 11 |
 | [campaign-summary](2026-03-15-campaign-summary.md) | — | — | — | — |
-| **Total** | **360** | **161** | **8** | **191** |
+| [royal-knights-vs-medusamon](2026-03-22-royal-knights-vs-medusamon.md) | 5 | 1 | 0 | 4 |
+| [medusamon-royal-knights-regression](2026-03-22-medusamon-royal-knights-regression.md) | 2 | 0 | 0 | 2 |
+| [galacticmon-retest](2026-03-22-galacticmon-retest.md) | 27 | 22 | 0 | 5 |
+| **Total** | **367** | **184** | **8** | **175** |
 
 ---
 
@@ -503,3 +506,24 @@ Post-fix verification of Issues 46-51. Confirmed 5 fixes, 1 known limitation (WO
 | 82 | EX6-072 Mega Digimon Assembly DNA effect does not fire | med | OUTSTANDING | Engine `effect_dna_digivolve_from_hand` doesn't support 1 field + 1 hand DNA pattern. |
 | 83 | LM-048 Chrome Memory Boost duplicated on field | low | OUTSTANDING | Two copies appear on field after playing one. |
 | 84 | P-151 Digimon Liberator ignore color requirement stub | med | OUTSTANDING | Color ignore effect is `pass # descriptive-tagged`. |
+
+## Report 40: Royal Knights vs Medusamon (2026-03-22)
+
+5 issues found across 20+ cards in cross-archetype matchup testing. 2 critical issues: King Drasil_7D6 breeding bug breaks the entire Royal Knights archetype, and "by" cost auto-acceptance is systemic.
+
+| # | Issue | Sev | Status | Notes |
+|---|-------|-----|--------|-------|
+| 85 | BT13-007 King Drasil_7D6 trashed from breeding as "Non-Digimon" | crit | FIXED | `Permanent.is_digimon` now includes DigiEggs (matches DCGO Permanent.cs:3309). |
+| 86 | BT23-035 Dynasmon "by trashing security" auto-accepted | crit | OUTSTANDING | "By" cost effects auto-fire without player choice. Likely systemic. |
+| 87 | BT24-018 Styracomon Lv7 digivolve onto Lv5 Lamiamon offered | high | OUTSTANDING | Digivolve validator allows Lv7 onto Lv5, should require Lv6 base. |
+| 88 | BT20-091 Cool Boy "by suspending" auto-fires | high | OUTSTANDING | Same systemic "by" cost auto-acceptance as #86. |
+| 89 | debug/set-memory doesn't recalculate action mask | med | OUTSTANDING | Debug endpoint limitation, not gameplay bug. |
+
+## Report 41: Medusamon vs Royal Knights Regression (2026-03-22)
+
+1 issue found across 15+ cards. King Drasil_7D6 fix confirmed (Issue 85 → FIXED). 9 previously untested Medusamon cards validated.
+
+| # | Issue | Sev | Status | Notes |
+|---|-------|-----|--------|-------|
+| 90 | EX8-074 MedievalGallantmon "suspend 2 to reduce cost" auto-fires | high | OUTSTANDING | Same systemic "by" cost auto-acceptance as #86/#88. BeforePayCost suspend effects auto-fire. |
+| 91 | SYSTEMIC: OnEndTurn effects never fire (phase_end skipped) | crit | OUTSTANDING | `pass_turn()` and `check_turn_end()` both skip `phase_end()`. All [End of Your Turn] effects across entire card pool are broken. |

@@ -13,7 +13,7 @@ class BT5_093(CardScript):
 
     [Start of Your Turn] If your opponent has a level 6 or higher Digimon
         in play, gain 2 memory.
-    [Your Turn] All of your [Omnimon] gain <Security Attack +1>.
+    [Your Turn] All of your Digimon with [Omnimon] in their names get +2000 DP.
     Security Effect: [Security] Play this card without paying the cost.
     """
 
@@ -46,35 +46,32 @@ class BT5_093(CardScript):
 
         def process0(ctx: Dict[str, Any]):
             """Gain 2 memory."""
-            game = ctx.get('game')
-            if game:
-                game.memory += 2
+            player = ctx.get('player')
+            if player:
+                player.add_memory(2)
         effect0.set_on_process_callback(process0)
         effects.append(effect0)
 
-        # --- Effect 1: [Your Turn] All [Omnimon] gain <Security Attack +1> ---
-        # This is a static/continuous effect. We model it as a declarative
-        # effect with _security_attack_modifier that the engine checks.
+        # --- Effect 1: [Your Turn] All Omnimon get +2000 DP ---
+        # Continuous DP aura effect using the engine's _applies_to_all_own_digimon
+        # pattern with _dp_permanent_condition to filter to [Omnimon] name only.
         effect1 = ICardEffect()
-        effect1.set_effect_name("BT5-093 Your Turn: Omnimon SA+1")
+        effect1.set_effect_name("BT5-093 Your Turn: Omnimon +2000 DP")
         effect1.set_effect_description(
-            "[Your Turn] All of your [Omnimon] gain <Security Attack +1>."
+            "[Your Turn] All of your Digimon with [Omnimon] in their names "
+            "get +2000 DP."
         )
-        effect1._security_attack_modifier = 1
+        effect1.dp_modifier = 2000
+        effect1._applies_to_all_own_digimon = True
 
-        def sa_permanent_condition(permanent) -> bool:
-            """Only applies to own [Omnimon] Digimon during your turn."""
+        def dp_permanent_condition(permanent) -> bool:
+            """Only applies to own [Omnimon] Digimon."""
             if not permanent.is_digimon:
                 return False
             if not permanent.contains_card_name('Omnimon'):
                 return False
-            owner = card.owner if card else None
-            if not owner:
-                return False
-            if permanent.top_card and permanent.top_card.owner is not owner:
-                return False
             return True
-        effect1._sa_permanent_condition = sa_permanent_condition
+        effect1._dp_permanent_condition = dp_permanent_condition
 
         def condition1(context: Dict[str, Any]) -> bool:
             if card and card.permanent_of_this_card() is None:

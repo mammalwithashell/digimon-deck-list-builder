@@ -2,7 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
-from ....data.enums import EffectTiming
+from ....data.enums import EffectTiming, GamePhase
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -11,32 +11,47 @@ if TYPE_CHECKING:
 class LM_028(CardScript):
     """LM-028 Blue Scramble | Option (Blue, Cost 2)
 
-    [Main] 1 of your blue Digimon may digivolve into a blue Digimon card in
-    the hand with the digivolution cost reduced by 3. Then, place this card
-    in the battle area.
-    [Start of Your Turn] If your opponent has more Digimon than you, by
-    trashing this card from the battle area, return 1 of your opponent's
-    Digimon to the bottom of the deck.
+    [Main] 1 of your blue Digimon may digivolve into a blue Digimon card
+        in the hand with the digivolution cost reduced by 3. Then, place this
+        card in the battle area.
+
+    [Start of Your Turn] If your opponent has a Digimon, <Delay>.
+        Return 1 blue Digimon card from your trash to the top of the deck.
+        Then, if you don't have a Digimon, you may play 1 blue Digimon card
+        with 2000 DP or less from your trash without paying the cost.
+
     [Security] You may play 1 blue Digimon card with 2000 DP or less from
-    your trash without paying the cost. Then, add this card to the hand.
+        your trash without paying the cost. Then, add this card to the hand.
     """
 
     def get_card_effects(self, card: 'CardSource') -> List['ICardEffect']:
         effects = []
+
+        def _is_blue_digimon(c) -> bool:
+            if not getattr(c, 'is_digimon', False):
+                return False
+            colors = getattr(c, 'card_colors', []) or []
+            color_names = [col.name for col in colors]
+            return 'Blue' in color_names
+
+        def _is_blue_digimon_dp_2000(c) -> bool:
+            if not _is_blue_digimon(c):
+                return False
+            dp = getattr(c, 'base_dp', None) or getattr(c, 'dp', None) or 0
+            return dp <= 2000
 
         # --- Effect 0: [Main] Blue Digimon digivolves with cost -3, then place in battle area ---
         effect0 = ICardEffect()
         effect0.set_timing(EffectTiming.OptionSkill)
         effect0.set_effect_name("LM-028 Blue Digimon digivolve cost -3, then place in battle area")
         effect0.set_effect_description(
-            "[Main] 1 of your blue Digimon may digivolve into a blue Digimon card in "
-            "the hand with the digivolution cost reduced by 3. Then, place this card "
-            "in the battle area."
+            "[Main] 1 of your blue Digimon may digivolve into a blue Digimon "
+            "card in the hand with the digivolution cost reduced by 3. Then, place "
+            "this card in the battle area."
         )
 
         def condition0(context: Dict[str, Any]) -> bool:
             return True
-
         effect0.set_can_use_condition(condition0)
 
         def process0(ctx: Dict[str, Any]):
@@ -45,7 +60,6 @@ class LM_028(CardScript):
             if not (player and game):
                 return
 
-            # Filter: own blue Digimon permanents that can digivolve into a blue hand card
             def own_perm_filter(p):
                 if not p.is_digimon:
                     return False
@@ -56,12 +70,8 @@ class LM_028(CardScript):
                 return 'Blue' in colors
 
             def hand_card_filter(c):
-                if not getattr(c, 'is_digimon', False):
-                    return False
-                colors = [col.name for col in (getattr(c, 'card_colors', None) or [])]
-                return 'Blue' in colors
+                return _is_blue_digimon(c)
 
-            # Select 1 of your blue Digimon to digivolve, then digivolve with cost -3
             def on_select_perm(selected_perm):
                 game.effect_digivolve_from_hand(
                     player, selected_perm,
@@ -76,128 +86,116 @@ class LM_028(CardScript):
                 is_optional=True
             )
 
-            # Then place this card in the battle area (Delay placement)
-            if card and player:
-                player.play_card_from_source(card, pay_cost=False)
+            # "Then, place this card in the battle area" — handled by the engine:
+            # _option_stays_on_field returns True because _is_delay is set,
+            # so the engine keeps this option card on the field after resolution.
 
         effect0.set_on_process_callback(process0)
         effects.append(effect0)
 
-        # --- Effect 1: Delay keyword factory ---
+        # --- Effect 1: Delay marker ---
         effect1 = ICardEffect()
         effect1.set_effect_name("LM-028 Delay")
         effect1.set_effect_description("Delay")
         effect1._is_delay = True
 
         def condition1(context: Dict[str, Any]) -> bool:
+            if not (card and card.owner and card.owner.is_my_turn):
+                return False
+            if card and card.permanent_of_this_card() is None:
+                return False
             return True
-
         effect1.set_can_use_condition(condition1)
         effects.append(effect1)
 
-        # --- Effect 2: [Start of Your Turn] Delay effect —
-        #    If opponent has a Digimon, trash this card from battle area,
-        #    return 1 opponent's Digimon to bottom of deck ---
+        # --- Effect 2: [Start of Your Turn] Delay effect ---
         effect2 = ICardEffect()
         effect2.set_timing(EffectTiming.OnStartTurn)
-        effect2.set_effect_name("LM-028 Delay: Return opponent Digimon to deck bottom")
+        effect2.set_effect_name("LM-028 Delay: Return blue Digimon to deck top, then play")
         effect2.set_effect_description(
-            "[Start of Your Turn] If your opponent has more Digimon than you, by trashing "
-            "this card from the battle area, return 1 of your opponent's Digimon to the "
-            "bottom of the deck."
+            "[Start of Your Turn] If your opponent has a Digimon, <Delay>. "
+            "Return 1 blue Digimon card from your trash to the top of the deck. "
+            "Then, if you don't have a Digimon, you may play 1 blue Digimon card "
+            "with 2000 DP or less from your trash without paying the cost."
         )
         effect2._is_delay_effect = True
 
         def condition2(context: Dict[str, Any]) -> bool:
-            owner = card.owner if card else None
-            if not owner:
+            # Note: _execute_delay trashes the card BEFORE calling this condition,
+            # so permanent_of_this_card() would return None. Don't check it here.
+            if not (card and card.owner and card.owner.is_my_turn):
                 return False
-            if not owner.is_my_turn:
-                return False
-            perm = card.permanent_of_this_card() if card else None
-            if perm is None:
-                return False
-            enemy = owner.enemy
+            # Opponent must have a Digimon
+            enemy = card.owner.enemy if card and card.owner else None
             if not enemy:
                 return False
-            # Card text: "If your opponent has a Digimon"
             return any(p.is_digimon for p in enemy.battle_area)
-
         effect2.set_can_use_condition(condition2)
 
+        # Trash selection action-ID offset (mirrors game.py SEL_TRASH_START)
+        _SEL_TRASH_START = 130
+
         def process2(ctx: Dict[str, Any]):
-            """Return 1 blue Digimon from trash to top of deck, then maybe play 1 blue 2k DP Digimon."""
             player = ctx.get('player')
             game = ctx.get('game')
             if not (player and game):
                 return
 
-            # Trash this card from the battle area first
-            perm = card.permanent_of_this_card() if card else None
-            if perm:
-                player.delete_permanent(perm)
+            # Note: the engine's _execute_delay already trashes this card
+            # from the battle area before calling this callback.
 
-            # Return 1 blue Digimon card from your trash to the top of the deck
-            def trash_blue_digi_filter(c):
-                if not getattr(c, 'is_digimon', False):
-                    return False
-                colors = [col.name for col in (getattr(c, 'card_colors', None) or [])]
-                return 'Blue' in colors
-
-            def on_trash_select(selected):
-                if selected and selected in player.trash_cards:
-                    player.trash_cards.remove(selected)
-                    player.library_cards.insert(0, selected)
-
-                # Then, if you don't have a Digimon, you may play 1 blue Digimon
-                # with 2000 DP or less from trash without paying cost
-                own_digi = any(p.is_digimon for p in player.battle_area)
-                if not own_digi:
-                    def play_filter(c):
-                        if not getattr(c, 'is_digimon', False):
-                            return False
-                        colors = [col.name for col in (getattr(c, 'card_colors', None) or [])]
-                        if 'Blue' not in colors:
-                            return False
-                        dp = getattr(c, 'base_dp', None) or getattr(c, 'dp', None) or 0
-                        return dp <= 2000
+            def _after_return():
+                # Then, if you don't have a Digimon, play 1 blue Digimon DP <= 2000 from trash
+                has_digimon = any(
+                    p.is_digimon for p in (player.battle_area or [])
+                )
+                if not has_digimon:
                     game.effect_play_from_zone(
-                        player, 'trash', play_filter, free=True, is_optional=True)
+                        player, 'trash', _is_blue_digimon_dp_2000,
+                        free=True, is_optional=True,
+                        prompt="Select 1 blue Digimon with 2000 DP or less from trash to play."
+                    )
 
-            # Select from trash using request_selection with SEL_TRASH_START
-            from ....game.constants import SEL_TRASH_START, ACTION_SPACE_SIZE
-            from ....data.enums import GamePhase
+            # Return 1 blue Digimon card from trash to top of deck (player selection)
             valid_trash = []
             for i, c in enumerate(player.trash_cards):
-                if trash_blue_digi_filter(c) and (SEL_TRASH_START + i) < ACTION_SPACE_SIZE:
-                    valid_trash.append(SEL_TRASH_START + i)
+                if _is_blue_digimon(c):
+                    valid_trash.append(_SEL_TRASH_START + i)
+
             if valid_trash:
-                def on_trash_action(action_id):
-                    idx = action_id - SEL_TRASH_START
+                def on_trash_selected(action_id: int):
+                    idx = action_id - _SEL_TRASH_START
                     if 0 <= idx < len(player.trash_cards):
-                        on_trash_select(player.trash_cards[idx])
+                        moved = player.trash_cards.pop(idx)
+                        player.library_cards.insert(0, moved)
+                    _after_return()
+
                 game.request_selection(
-                    GamePhase.SelectTrash, player, on_trash_action,
-                    valid_trash, is_optional=False,
-                    prompt="Select 1 blue Digimon from trash to return to top of deck.")
+                    GamePhase.SelectTrash,
+                    player,
+                    on_trash_selected,
+                    valid_trash,
+                    is_optional=False,
+                    prompt="Select a blue Digimon from your trash to place at the top of your deck.",
+                )
+            else:
+                _after_return()
 
         effect2.set_on_process_callback(process2)
         effects.append(effect2)
 
-        # --- Effect 3: [Security] Play blue Digimon DP <= 2000 from trash.
-        #    Then add this card to hand. ---
+        # --- Effect 3: [Security] Play blue Digimon DP <= 2000 from trash, add this to hand ---
         effect3 = ICardEffect()
         effect3.set_timing(EffectTiming.SecuritySkill)
-        effect3.set_effect_name("LM-028 Security: Play blue Digimon DP<=2000 from trash")
+        effect3.set_effect_name("LM-028 Security: Play blue Digimon from trash")
         effect3.set_effect_description(
-            "[Security] You may play 1 blue Digimon card with 2000 DP or less from your "
-            "trash without paying the cost. Then, add this card to the hand."
+            "[Security] You may play 1 blue Digimon card with 2000 DP or less "
+            "from your trash without paying the cost. Then, add this card to the hand."
         )
         effect3.is_security_effect = True
 
         def condition3(context: Dict[str, Any]) -> bool:
             return True
-
         effect3.set_can_use_condition(condition3)
 
         def process3(ctx: Dict[str, Any]):
@@ -206,17 +204,10 @@ class LM_028(CardScript):
             if not (player and game):
                 return
 
-            def play_filter(c):
-                if not getattr(c, 'is_digimon', False):
-                    return False
-                colors = [col.name for col in (getattr(c, 'card_colors', None) or [])]
-                if 'Blue' not in colors:
-                    return False
-                dp = getattr(c, 'base_dp', None) or getattr(c, 'dp', None) or 0
-                return dp <= 2000
-
             game.effect_play_from_zone(
-                player, 'trash', play_filter, free=True, is_optional=True
+                player, 'trash', _is_blue_digimon_dp_2000,
+                free=True, is_optional=True,
+                prompt="Select 1 blue Digimon with 2000 DP or less from trash to play."
             )
 
             # Then add this card to hand

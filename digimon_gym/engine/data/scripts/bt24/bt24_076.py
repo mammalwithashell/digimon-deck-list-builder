@@ -62,11 +62,8 @@ class BT24_076(CardScript):
         def condition1(context: Dict[str, Any]) -> bool:
             if context.get('card_source') is not card:
                 return False  # LEAK GUARD
-            owner = card.owner if card else None
-            if not owner:
-                return False
-            if len(owner.hand_cards) > 4:
-                return False
+            # C# CanUseCondition1 returns true unconditionally once card_source
+            # matches — hand count was already verified at declaration time.
             return True
         effect1.set_can_use_condition(condition1)
         effects.append(effect1)

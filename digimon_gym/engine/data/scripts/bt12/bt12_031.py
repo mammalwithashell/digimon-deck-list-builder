@@ -170,51 +170,34 @@ class BT12_031(CardScript):
 
         # ── Static: +1000 DP per unique color in digi-stack ─────────────
         # The C# uses ChangeSelfDPStaticEffect with a dynamic Func<int>.
-        # Python dp_modifier is a fixed int, so we register a CHANGE_DP modifier
-        # with a dynamic value_fn on play/digivolve. expiry='permanent' keeps it
-        # as long as this Digimon is on field, and value_fn re-evaluates each time.
-        for is_digivolve in (True, False):
-            effect_dp = ICardEffect()
-            effect_dp.set_timing(EffectTiming.OnEnterFieldAnyone)
-            suffix = "digivolve" if is_digivolve else "play"
-            effect_dp.set_effect_name(
-                f"BT12-031 register +1000 DP per digi-stack color ({suffix})"
-            )
-            effect_dp.set_effect_description(
-                "This Digimon gets +1000 DP for each of its digivolution cards' colors."
-            )
-            if is_digivolve:
-                effect_dp.is_when_digivolving = True
-            else:
-                effect_dp.is_on_play = True
+        # We use a custom ICardEffect subclass with a dynamic dp_modifier property
+        # that recalculates each time based on current digi-stack color count.
+        class _DynamicColorDPEffect(ICardEffect):
+            """ICardEffect subclass with dp_modifier computed from digi-stack colors."""
+            @property
+            def dp_modifier(self):
+                return 1000 * _digi_stack_color_count(card)
 
-            def make_dp_condition():
-                def condition_dp(context: Dict[str, Any]) -> bool:
-                    if card and card.permanent_of_this_card() is None:
-                        return False
-                    return True
-                return condition_dp
+            @dp_modifier.setter
+            def dp_modifier(self, value):
+                pass  # Ignore static assignment; always computed dynamically
 
-            effect_dp.set_can_use_condition(make_dp_condition())
+        effect_dp = _DynamicColorDPEffect()
+        effect_dp.set_timing(EffectTiming.NoTiming)
+        effect_dp.set_effect_name("BT12-031 +1000 DP per digi-stack color")
+        effect_dp.set_effect_description(
+            "[All Turns] This Digimon gets +1000 DP for each color in its "
+            "digivolution cards."
+        )
+        effect_dp.is_declarative = True
 
-            def make_dp_process():
-                def process_dp(ctx: Dict[str, Any]):
-                    game = ctx.get('game')
-                    if not game:
-                        return
-                    perm = card.permanent_of_this_card() if card else None
-                    if perm is None:
-                        return
-                    from digimon_gym.engine.interfaces.modifiers import ModifierType
-                    game.register_modifier(
-                        perm, ModifierType.CHANGE_DP,
-                        value_fn=lambda current, target, ctx: current + 1000 * _digi_stack_color_count(card),
-                        expiry='permanent'
-                    )
-                return process_dp
+        def condition_dp(context: Dict[str, Any]) -> bool:
+            if card and card.permanent_of_this_card() is None:
+                return False
+            return True
 
-            effect_dp.set_on_process_callback(make_dp_process())
-            effects.append(effect_dp)
+        effect_dp.set_can_use_condition(condition_dp)
+        effects.append(effect_dp)
 
         # ── Static: SA+1 when 2+ colors in digi-stack ──────────────────
         effect_sa = ICardEffect()

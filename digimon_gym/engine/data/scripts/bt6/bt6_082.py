@@ -20,37 +20,41 @@ class BT6_082(CardScript):
     def get_card_effects(self, card: 'CardSource') -> List['ICardEffect']:
         effects = []
 
-        # --- Effect 0: [All Turns] Grant Blocker to this Sistermon while Huckmon/RK exists ---
-        # The card text says "all of your Digimon with [Sistermon]" gain Blocker.
-        # Each Sistermon variant carries its own copy of this aura; the engine's
-        # has_keyword() evaluates the condition per-permanent, so all Sistermons
-        # independently gain Blocker when the condition is met.
-        # The Sistermon name check is included so that if this card's name changes
-        # (e.g. via effect) Blocker is only granted while still a Sistermon.
+        # --- Effect 0: [All Turns] Grant Blocker to all own Sistermon ---
+        # Aura effect: grants Blocker to ALL own Digimon with [Sistermon] in name
+        # (including self and other Sistermon variants like Sistermon Ciel).
+        # Condition: owner has a Digimon with [Huckmon] in name or [Royal Knight] trait.
+        # Uses _applies_to_all_own_digimon + _keyword_permanent_condition pattern
+        # so has_keyword() on other permanents finds this aura.
         effect0 = ICardEffect()
-        effect0.set_timing(EffectTiming.NoTiming)
-        effect0.set_effect_name("BT6-082 Blocker (conditional)")
+        effect0.set_effect_name("BT6-082 Blocker (aura to all Sistermon)")
         effect0.set_effect_description(
             "[All Turns] While you have a Digimon with [Huckmon] in its name "
             "or [Royal Knight] trait in play, all of your Digimon with "
             "[Sistermon] in their name gain <Blocker>."
         )
         effect0._is_blocker = True
-        effect0.is_declarative = True
+        effect0._applies_to_all_own_digimon = True
+
+        def _sistermon_filter(target_perm) -> bool:
+            """Only apply to Digimon with [Sistermon] in their name."""
+            if not target_perm.is_digimon:
+                return False
+            return target_perm.contains_card_name('Sistermon')
+
+        effect0._keyword_permanent_condition = _sistermon_filter
 
         def condition0(context: Dict[str, Any]) -> bool:
+            # Host card must be on field
             if card and card.permanent_of_this_card() is None:
                 return False
             player = card.owner if card else None
             if not player:
                 return False
-            # Check if this permanent is a Sistermon
-            perm = card.permanent_of_this_card() if card else None
-            if perm and perm.top_card:
-                names = getattr(perm.top_card, 'card_names', []) or []
-                name = names[0] if names else ''
-                if 'Sistermon' not in name:
-                    return False
+            # Check target permanent is a Sistermon (for aura path)
+            ctx_perm = context.get('permanent')
+            if ctx_perm is not None and not _sistermon_filter(ctx_perm):
+                return False
             # Check for Huckmon-name or Royal Knight trait ally
             for p in player.battle_area:
                 if not p.is_digimon:
@@ -72,6 +76,8 @@ class BT6_082(CardScript):
         effect1.is_on_play = True
 
         def condition1(context: Dict[str, Any]) -> bool:
+            if card and card.permanent_of_this_card() is None:
+                return False
             return True
 
         effect1.set_can_use_condition(condition1)

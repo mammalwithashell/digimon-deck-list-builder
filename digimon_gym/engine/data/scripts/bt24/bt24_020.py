@@ -84,7 +84,9 @@ class BT24_020(CardScript):
             if not (card and card.owner and card.owner.is_my_turn):
                 return False
             # Trigger only when this card's host permanent unsuspends
-            unsuspended_perm = context.get('permanent')
+            # event_permanent = the perm that actually unsuspended (from extra_context)
+            # context['permanent'] = the scanned perm (always host for inherited effects)
+            unsuspended_perm = context.get('event_permanent', context.get('permanent'))
             if unsuspended_perm is None:
                 return False
             host_perm = card.permanent_of_this_card() if card else None

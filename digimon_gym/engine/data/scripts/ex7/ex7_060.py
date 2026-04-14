@@ -52,10 +52,23 @@ class EX7_060(CardScript):
             game = ctx.get('game')
             if not (player and game):
                 return
-            # Play self from trash with pay_cost=True; the BeforePayCost
-            # effect (effect1) provides the -4 cost reduction
+            # Play self from trash: calculate reduced cost and pay it.
+            # C# registers a ChangeCostClass (-4) then calls PlayPermanentCards
+            # with payCost: true. calculate_play_cost scans the card's own
+            # effects and finds effect1 (BeforePayCost, cost_reduction=4).
             if card in player.trash_cards:
-                player.play_card_from_source(card, pay_cost=True)
+                cost = game.calculate_play_cost(
+                    player, card, source_zone='trash',
+                    commit=True,
+                )
+                played_perm = player.play_card_from_source(card, pay_cost=False)
+                player.lose_memory(cost)
+                game.execute_effects(
+                    EffectTiming.OnEnterFieldAnyone,
+                    {"played_card": card, "played_permanent": played_perm,
+                     "event_player": player},
+                )
+                game._fire_play_observers(played_perm, player)
 
         effect0.set_on_process_callback(process0)
         effects.append(effect0)
@@ -70,12 +83,6 @@ class EX7_060(CardScript):
         def condition1(context: Dict[str, Any]) -> bool:
             if context.get('card_source') is not card:
                 return False  # LEAK GUARD
-            owner = card.owner if card else None
-            if not owner:
-                return False
-            # Only applies when hand <= 4
-            if len(owner.hand_cards) > 4:
-                return False
             return True
         effect1.set_can_use_condition(condition1)
 
@@ -124,7 +131,7 @@ class EX7_060(CardScript):
                 if level is None or level > 5:
                     return False
                 traits = getattr(c, 'card_traits', []) or []
-                return any('Dark Dragon' in t or 'Evil Dragon' in t for t in traits)
+                return any(t == 'Dark Dragon' or t == 'Evil Dragon' for t in traits)
 
             game.effect_play_from_zone(
                 player, 'trash', play_filter, free=True, is_optional=True,

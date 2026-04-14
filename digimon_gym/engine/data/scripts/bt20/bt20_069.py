@@ -32,7 +32,7 @@ class BT20_069(CardScript):
         def condition0(context: Dict[str, Any]) -> bool:
             permanent = card.permanent_of_this_card() if card else None
             if not (permanent and permanent.top_card and
-                    any('Evil' in tr for tr in (getattr(permanent.top_card, 'card_traits', []) or []))):
+                    'Evil' in (getattr(permanent.top_card, 'card_traits', []) or [])):
                 return False
             return True
         effect0.set_can_use_condition(condition0)
@@ -47,24 +47,17 @@ class BT20_069(CardScript):
             if not (player and game):
                 return
 
-            # Step 1: Trash 1 card from hand (mandatory)
-            def hand_filter(c):
-                return True
-
-            def on_trashed(selected):
-                if selected in player.hand_cards:
-                    player.hand_cards.remove(selected)
-                    player.trash_cards.append(selected)
-
-                # Step 2: Select 1 of your Digimon to gain Blocker + Retaliation
+            def _grant_keywords():
+                """Step 2: Select 1 of your Digimon to gain Blocker + Retaliation."""
                 def perm_filter(p):
                     return p.is_digimon
 
                 def on_select_perm(target_perm):
                     if target_perm is None:
                         return
-                    target_perm.grant_keyword('_is_blocker')
-                    target_perm.grant_keyword('_is_retaliation')
+                    expiry_turn = game.turn_count + 1
+                    target_perm.grant_keyword('_is_blocker', duration=expiry_turn)
+                    target_perm.grant_keyword('_is_retaliation', duration=expiry_turn)
 
                 if any(perm_filter(p) for p in player.battle_area):
                     game.effect_select_own_permanent(
@@ -73,9 +66,18 @@ class BT20_069(CardScript):
                         is_optional=False,
                         prompt="Select 1 of your Digimon to gain Blocker and Retaliation.")
 
+            # Step 1: Trash 1 card from hand (mandatory)
+            def on_trashed(selected):
+                if selected in player.hand_cards:
+                    player.hand_cards.remove(selected)
+                    player.trash_cards.append(selected)
+                _grant_keywords()
+
             if player.hand_cards:
                 game.effect_select_hand_card(
-                    player, hand_filter, on_trashed, is_optional=False)
+                    player, lambda c: True, on_trashed, is_optional=False)
+            else:
+                _grant_keywords()
 
         # --- Effect 1: [On Play] ---
         effect1 = ICardEffect()

@@ -30,7 +30,7 @@ class EX11_060(CardScript):
 
         # --- Effect 0: [Start of Your Turn] Set memory to 3 ---
         effect0 = ICardEffect()
-        effect0.set_timing(EffectTiming.OnStartMainPhase)
+        effect0.set_timing(EffectTiming.OnStartTurn)
         effect0.set_effect_name("EX11-060 Set memory to 3")
         effect0.set_effect_description("[Start of Your Turn] If your memory is at 2 or less, it becomes 3.")
 
@@ -64,18 +64,17 @@ class EX11_060(CardScript):
             my_perm = card.permanent_of_this_card()
             if my_perm and my_perm.is_suspended:
                 return False
-            # Check that the deleted permanent is one of our Tokens or Puppet Digimon
+            # Check that the deleted permanent belongs to this tamer's owner
             deleted_perm = context.get('deleted_permanent')
             if not deleted_perm:
                 return False
             player = card.owner if card else None
             if not player:
                 return False
-            # Must be our Digimon
-            owner_player = getattr(deleted_perm, '_owner_player', None)
-            if owner_player is not player:
-                if deleted_perm not in player.battle_area and not getattr(deleted_perm, '_was_on_owner_field', False):
-                    return False
+            # In _fire_deletion_observers, 'player' is the owner of the deleted permanent.
+            # Verify the deleted permanent's owner matches this card's owner.
+            if context.get('player') is not player:
+                return False
             # Check Token or Puppet trait
             is_token = getattr(deleted_perm, 'is_token', False)
             is_puppet = False
@@ -99,17 +98,8 @@ class EX11_060(CardScript):
             # Draw 1
             player.draw_cards(1)
             # If deleted by Overclock, may play 1 level 4 or lower Puppet from hand
-            triggering_effect = ctx.get('triggering_effect')
-            is_overclock = False
-            if triggering_effect:
-                eff_name = getattr(triggering_effect, 'effect_name', '') or ''
-                if 'Overclock' in eff_name or 'overclock' in eff_name:
-                    is_overclock = True
-                if getattr(triggering_effect, '_is_overclock', False):
-                    is_overclock = True
-            # Also check context for overclock flag
-            if ctx.get('is_overclock'):
-                is_overclock = True
+            removal_cause = ctx.get('removal_cause', '')
+            is_overclock = (removal_cause == 'overclock')
 
             if is_overclock:
                 def play_filter(c):

@@ -23,18 +23,16 @@ class BT24_004(CardScript):
         effect0.is_inherited_effect = True
         effect0.set_max_count_per_turn(1)
         effect0.set_hash_string("BT24_004_Draw1")
-        effect0.is_on_play = True
 
         def condition0(context: Dict[str, Any]) -> bool:
             if card and card.permanent_of_this_card() is None:
                 return False
             if not (card and card.owner and card.owner.is_my_turn):
                 return False
-            # The entering permanent must be owned by this card's owner and have [Iliad] trait
-            entering_perm = context.get('permanent')
+            # The played permanent must be owned by this card's owner and have [Iliad] trait
+            entering_perm = context.get('played_permanent')
             if entering_perm is None:
                 return False
-            # Must be on the owner's side (not the opponent's)
             perm_owner = getattr(entering_perm, 'owner', None)
             if perm_owner is None or perm_owner is not (card.owner if card else None):
                 return False

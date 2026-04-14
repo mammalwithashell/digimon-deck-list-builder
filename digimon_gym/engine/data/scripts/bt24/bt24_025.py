@@ -43,7 +43,8 @@ class BT24_025(CardScript):
             if not (card and card.owner and card.owner.is_my_turn):
                 return False
             # Triggering permanent must be one of our OTHER blue TS Digimon
-            triggering_perm = context.get('permanent') if context else None
+            # event_permanent = the perm that actually unsuspended
+            triggering_perm = context.get('event_permanent', context.get('permanent')) if context else None
             my_perm = card.permanent_of_this_card() if card else None
             if triggering_perm is None:
                 return False
@@ -73,9 +74,12 @@ class BT24_025(CardScript):
         def process1(ctx: Dict[str, Any]):
             """Action: Digivolve into Venusmon ignoring level"""
             player = ctx.get('player')
-            perm = ctx.get('permanent')
             game = ctx.get('game')
-            if not (player and perm and game):
+            if not (player and game):
+                return
+            # "this Digimon" digivolves — Shellmon itself, not the triggering perm
+            perm = card.permanent_of_this_card()
+            if perm is None:
                 return
 
             def digi_filter(c):
@@ -97,8 +101,8 @@ class BT24_025(CardScript):
         # with the [TS] trait may unsuspend.
         effect2 = ICardEffect()
         effect2.set_timing(EffectTiming.OnEndTurn)
-        effect2.set_effect_name("BT24-025 Unsuspend 1 other blue TS Digimon")
-        effect2.set_effect_description("[End of Your Turn] [Once Per Turn] 1 of your other blue Digimon with the [TS] trait may unsuspend.")
+        effect2.set_effect_name("BT24-025 Unsuspend 1 other TS Digimon")
+        effect2.set_effect_description("[End of Your Turn] [Once Per Turn] 1 of your other Digimon with the [TS] trait may unsuspend.")
         effect2.is_optional = True
         effect2.set_max_count_per_turn(1)
         effect2.set_hash_string("BT24_025_EOYT")

@@ -101,8 +101,10 @@ class BT16_025(CardScript):
 
             for opp_perm in list(enemy.battle_area):
                 if opp_perm.is_digimon:
+                    _ref = opp_perm  # capture for closure
                     game.register_modifier(
                         opp_perm, ModifierType.CANNOT_UNSUSPEND,
+                        condition=lambda p, ctx, _r=_ref: p is _r,
                         value_fn=lambda: True,
                         expiry='end_of_opponent_turn'
                     )
@@ -141,29 +143,25 @@ class BT16_025(CardScript):
             if not enemy:
                 return
 
-            # Check if there are valid targets: unsuspended opponent Digimon
-            suspended_one = [False]
-
             def target_filter(p):
                 return p.is_digimon and not p.is_suspended
-
-            def on_suspend(target_perm):
-                target_perm.suspend()
-                suspended_one[0] = True
 
             has_targets = any(
                 target_filter(p) for p in enemy.battle_area
             )
 
             if has_targets:
+                def on_suspend(target_perm):
+                    target_perm.suspend()
+                    # Successfully suspended a target — do NOT unsuspend self
+
                 game.effect_select_opponent_permanent(
                     player, on_suspend,
                     filter_fn=target_filter,
                     is_optional=False
                 )
-
-            # If nothing was suspended, unsuspend this Digimon
-            if not suspended_one[0]:
+            else:
+                # No valid targets to suspend — unsuspend this Digimon
                 perm.unsuspend()
 
         effect3.set_on_process_callback(process3)

@@ -112,6 +112,18 @@ class ActionDecoderMixin:
                 if perm.has_keyword('_is_training'):
                     self._execute_training(perm, self.turn_player)
 
+    def _maybe_resume_combat_after_wa_selection(self):
+        """Resume attack flow if parked for a When Attacking selection.
+
+        Called after a selection resolves. If all nested selections are done
+        (pending_selection is None) and we have a pending attack that was
+        waiting for WA selection, continue the attack to counter/block/security.
+        """
+        if (getattr(self, '_post_wa_selection_continuation', False)
+                and self.pending_selection is None):
+            self._post_wa_selection_continuation = False
+            self._continue_attack_post_wa()
+
     def _recover_from_stale_selection(self):
         """Guard against stale selection state after a callback."""
         if (self._is_selection_phase(self.current_phase)
@@ -154,6 +166,8 @@ class ActionDecoderMixin:
                 on_decline()
             self._recover_from_stale_selection()
             self._check_deferred_turn_end()
+            self._maybe_complete_end_phase()
+            self._maybe_resume_combat_after_wa_selection()
             return
 
         if ps.valid_indices and action_id not in ps.valid_indices:
@@ -167,6 +181,8 @@ class ActionDecoderMixin:
         callback(action_id)
         self._recover_from_stale_selection()
         self._check_deferred_turn_end()
+        self._maybe_complete_end_phase()
+        self._maybe_resume_combat_after_wa_selection()
 
     def _decode_block(self, action_id: int):
         """Handle the defender's blocking decision during an attack."""
@@ -267,6 +283,7 @@ class ActionDecoderMixin:
             if on_decline:
                 on_decline()
             self._recover_from_stale_selection()
+            self._maybe_resume_combat_after_wa_selection()
             self._check_deferred_turn_end()
             return
 
@@ -279,8 +296,9 @@ class ActionDecoderMixin:
                 self.pending_selection = None
                 self.current_phase = prev_phase
                 self.active_player = None
-                callback(idx)
+                callback(action_id)
                 self._recover_from_stale_selection()
+                self._maybe_resume_combat_after_wa_selection()
                 self._check_deferred_turn_end()
 
     def _decode_source_selection(self, action_id: int):
@@ -298,6 +316,7 @@ class ActionDecoderMixin:
             if on_decline:
                 on_decline()
             self._recover_from_stale_selection()
+            self._maybe_resume_combat_after_wa_selection()
             self._check_deferred_turn_end()
             return
 
@@ -317,6 +336,7 @@ class ActionDecoderMixin:
                     self.active_player = None
                     callback(action_id)
                     self._recover_from_stale_selection()
+                    self._maybe_resume_combat_after_wa_selection()
                     self._check_deferred_turn_end()
 
     def _execute_training(self, perm: "Permanent", owner: "Player"):
@@ -452,12 +472,18 @@ class ActionDecoderMixin:
             normalized = action_id - 100
             attacker_idx = normalized // TARGETS_PER_ATTACKER
             target_idx = normalized % TARGETS_PER_ATTACKER
-            if attacker_idx < len(self.turn_player.battle_area) and target_idx < len(self.opponent_player.battle_area):
+            if attacker_idx < len(self.turn_player.battle_area):
                 attacker = self.turn_player.battle_area[attacker_idx]
-                target = self.opponent_player.battle_area[target_idx]
-                self.logger.log(f"[Vortex] End-of-turn attack!")
-                self.resolve_attack(attacker, target, is_vortex=True,
-                                    return_phase=GamePhase.EndOfTurnAction)
+                if target_idx == SECURITY_TARGET:
+                    self.logger.log(f"[EndOfTurn] End-of-turn attack on player!")
+                    self.resolve_attack(attacker, self.opponent_player,
+                                        return_phase=GamePhase.EndOfTurnAction)
+                elif target_idx < len(self.opponent_player.battle_area):
+                    target = self.opponent_player.battle_area[target_idx]
+                    is_vortex = attacker.has_keyword('_is_vortex')
+                    self.logger.log(f"[EndOfTurn] End-of-turn attack!")
+                    self.resolve_attack(attacker, target, is_vortex=is_vortex,
+                                        return_phase=GamePhase.EndOfTurnAction)
 
         elif 1000 <= action_id <= 1999:
             normalized = action_id - 1000
@@ -480,7 +506,7 @@ class ActionDecoderMixin:
             if 0 <= idx < len(self.turn_player.battle_area):
                 sacrifice = self.turn_player.battle_area[idx]
                 self.logger.log(f"[Overclock] Sacrificed {self._perm_ref(sacrifice)}")
-                self.turn_player.delete_permanent(sacrifice, removal_cause='cost')
+                self.turn_player.delete_permanent(sacrifice, removal_cause='overclock')
                 self.logger.log(f"[Overclock] End-of-turn attack on player!")
                 self.resolve_attack(overclock_perm, self.opponent_player, without_suspend=True,
                                     return_phase=GamePhase.EndOfTurnAction)

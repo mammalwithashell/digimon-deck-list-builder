@@ -9,7 +9,7 @@ if TYPE_CHECKING:
 
 
 class BT17_093(CardScript):
-    """BT17-093 Kari Kamiya | Tamer White
+    """BT17-093 Tai Kamiya & Kari Kamiya | Tamer White (Cost 3)
 
     [All Turns] When your breeding area is hatched in, by suspending this
         Tamer, gain 1 memory.

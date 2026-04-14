@@ -52,7 +52,8 @@ class BT12_028(CardScript):
                     continue
                 if opp_perm.has_no_digivolution_cards:
                     continue
-                opp_perm.trash_digivolution_cards(3, from_top=True)
+                trashed = opp_perm.trash_digivolution_cards(3, from_top=True)
+                enemy.trash_cards.extend(trashed)
 
             # If DNA digivolving, select up to 2 opponent Digimon with no
             # digivolution cards and apply CANNOT_ATTACK until end of opp turn.
@@ -66,29 +67,43 @@ class BT12_028(CardScript):
                 return p.is_digimon and p.has_no_digivolution_cards
 
             candidates = [p for p in enemy.battle_area if _no_digi_cards(p)]
-            # Select up to 2 — greedy auto-select (engine handles selection UI)
+            if not candidates:
+                return
+
             selected = []
 
-            def on_select(target_perm):
+            def _apply_cannot_attack():
+                for target in selected:
+                    _t = target  # capture for closure
+                    game.register_modifier(
+                        _t, ModifierType.CANNOT_ATTACK,
+                        condition=lambda perm, ctx, _ref=_t: perm is _ref,
+                        value_fn=lambda: True,
+                        expiry='end_of_opponent_turn'
+                    )
+
+            def on_first_selected(target_perm):
                 selected.append(target_perm)
+                # Check for second selection
+                remaining = [p for p in enemy.battle_area
+                             if _no_digi_cards(p) and p not in selected]
+                if remaining:
+                    def on_second_selected(target_perm2):
+                        selected.append(target_perm2)
+                        _apply_cannot_attack()
+                    game.effect_select_opponent_permanent(
+                        player, on_second_selected,
+                        filter_fn=lambda p: _no_digi_cards(p) and p not in selected,
+                        is_optional=False
+                    )
+                else:
+                    _apply_cannot_attack()
 
-            max_count = min(2, len(candidates))
-            for _ in range(max_count):
-                remaining = [p for p in candidates if p not in selected]
-                if not remaining:
-                    break
-                game.effect_select_opponent_permanent(
-                    player, on_select,
-                    filter_fn=lambda p: p.is_digimon and p.has_no_digivolution_cards and p not in selected,
-                    is_optional=False
-                )
-
-            for target in selected:
-                game.register_modifier(
-                    target, ModifierType.CANNOT_ATTACK,
-                    value_fn=lambda: True,
-                    expiry='end_of_opponent_turn'
-                )
+            game.effect_select_opponent_permanent(
+                player, on_first_selected,
+                filter_fn=lambda p: _no_digi_cards(p),
+                is_optional=False
+            )
 
         effect0.set_on_process_callback(process0)
         effects.append(effect0)
@@ -113,7 +128,8 @@ class BT12_028(CardScript):
                 return False
             if perm.contains_card_name('Imperialdramon'):
                 return True
-            if perm.has_trait('Free'):
+            attrs = perm.top_card.c_entity_base.attribute_eng if perm.top_card and perm.top_card.c_entity_base else []
+            if 'Free' in attrs:
                 return True
             return False
 

@@ -87,7 +87,6 @@ class EX9_067(CardScript):
             "play 1 [Arisa Kinosaki] or 1 [Puppet] trait Digimon card from your "
             "hand with the play cost reduced by 3."
         )
-        effect1.is_when_digivolving = True
         effect1.is_optional = True
         effect1._is_digivolve_observer = True
 

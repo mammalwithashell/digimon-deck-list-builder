@@ -58,13 +58,12 @@ class ST19_04(CardScript):
                 return any('Puppet' in t for t in traits)
 
             def on_trash(trashed_card):
-                player.hand_cards.remove(trashed_card)
-                player.trash_cards.append(trashed_card)
+                player.trash_from_hand([trashed_card])
                 player.draw_cards(2)
 
             game.effect_select_hand_card(
                 player, puppet_filter, on_trash,
-                is_optional=False,
+                is_optional=True,
                 prompt="Select 1 card with [Puppet] trait to trash.",
             )
 

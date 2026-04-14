@@ -9,7 +9,7 @@ if TYPE_CHECKING:
 
 
 class EX7_053(CardScript):
-    """EX7-053 Eyesmon: Scatter Mode | Lv.3 Purple
+    """EX7-053 Eyesmon: Scatter Mode | Lv.4 Purple
 
     [On Play] Trash 1 card in your hand. Then, you may return 1 Digimon
         card with the [Evil], [Dark Dragon] or [Evil Dragon] trait from
@@ -53,8 +53,8 @@ class EX7_053(CardScript):
                     if not getattr(c, 'is_digimon', False):
                         return False
                     traits = getattr(c, 'card_traits', []) or []
-                    return any('Evil' in t or 'Dark Dragon' in t or
-                               'Evil Dragon' in t for t in traits)
+                    qualifying = {'Evil', 'Dark Dragon', 'Evil Dragon'}
+                    return any(t in qualifying for t in traits)
 
                 qualifying = [c for c in player.trash_cards if trait_filter(c)]
                 if not qualifying:

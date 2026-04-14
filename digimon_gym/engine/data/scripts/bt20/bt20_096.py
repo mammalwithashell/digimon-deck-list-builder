@@ -111,16 +111,8 @@ class BT20_096(CardScript):
             if not (player and game):
                 return
 
-            # First: trash 1 card in hand
-            def hand_filter(c):
-                return True
-
-            def on_trashed(selected):
-                if selected in player.hand_cards:
-                    player.hand_cards.remove(selected)
-                    player.trash_cards.append(selected)
-
-                # Then: delete 1 opponent Lv4 or lower Digimon
+            def do_delete():
+                """Then: delete 1 opponent Lv4 or lower Digimon."""
                 enemy = player.enemy
                 if not enemy:
                     return
@@ -138,10 +130,22 @@ class BT20_096(CardScript):
                         filter_fn=target_filter, is_optional=False,
                         prompt="Select 1 of your opponent's level 4 or lower Digimon to delete.")
 
+            # First: trash 1 card in hand (if any)
+            def hand_filter(c):
+                return True
+
+            def on_trashed(selected):
+                if selected in player.hand_cards:
+                    player.hand_cards.remove(selected)
+                    player.trash_cards.append(selected)
+                do_delete()
+
             if player.hand_cards:
                 game.effect_select_hand_card(
                     player, hand_filter, on_trashed, is_optional=False,
                     prompt="Trash 1 card in your hand.")
+            else:
+                do_delete()
 
         effect1.set_on_process_callback(process1)
         effects.append(effect1)

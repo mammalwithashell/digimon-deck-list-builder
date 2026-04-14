@@ -55,12 +55,10 @@ class BT24_031(CardScript):
                 return
 
             def iliad_filter(c):
-                traits = getattr(c, 'card_traits', []) or []
-                return any('Iliad' in t for t in traits)
+                return 'Iliad' in (getattr(c, 'card_traits', []) or [])
 
             def ts_filter(c):
-                traits = getattr(c, 'card_traits', []) or []
-                return any('TS' in t for t in traits)
+                return 'TS' in (getattr(c, 'card_traits', []) or [])
 
             game.effect_reveal_and_select_multi(
                 player, 3,
@@ -82,7 +80,6 @@ class BT24_031(CardScript):
         effect2.set_effect_name("BT24-031 May add 1 sec card to hand, if at 0 <Recovery +1>.")
         effect2.set_effect_description("[When Attacking] [Once Per Turn] You may add your top security card to the hand. Then, if you have 0 security cards, <Recovery +1 (Deck)>.")
         effect2.is_inherited_effect = True
-        effect2.is_optional = True
         effect2.set_max_count_per_turn(1)
         effect2.set_hash_string("BT24_031_Inherited")
         effect2.is_on_attack = True

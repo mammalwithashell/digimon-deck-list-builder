@@ -78,6 +78,52 @@ class InjectCardRequest(BaseModel):
     zone: str = "hand"  # "hand", "library_top", "security_top"
 
 
+# ── Enhanced debug endpoints ─────────────────────────────────────────────
+
+
+class FieldEntrySchema(BaseModel):
+    card_ids: list[str]
+    is_suspended: bool = False
+    turn_played: int = -1  # -1 = no summoning sickness
+
+
+class PlaceOnFieldRequest(BaseModel):
+    player_id: int = Field(ge=1, le=2)
+    card_ids: list[str]  # bottom-to-top digivolution stack
+    is_suspended: bool = False
+    turn_played: int = -1
+
+
+class PlaceInBreedingRequest(BaseModel):
+    player_id: int = Field(ge=1, le=2)
+    card_ids: list[str]  # bottom-to-top stack
+
+
+class ZoneSetupSchema(BaseModel):
+    hand: list[str] = Field(default_factory=list)
+    library_top: list[str] = Field(default_factory=list)
+    security: list[str] = Field(default_factory=list)
+    trash: list[str] = Field(default_factory=list)
+    field: list[FieldEntrySchema] = Field(default_factory=list)
+    breeding: list[str] = Field(default_factory=list)
+
+
+class BulkSetupRequest(BaseModel):
+    player1: ZoneSetupSchema = Field(default_factory=ZoneSetupSchema)
+    player2: ZoneSetupSchema = Field(default_factory=ZoneSetupSchema)
+    memory: Optional[int] = None
+    phase: Optional[str] = None
+
+
+class ClearZoneRequest(BaseModel):
+    player_id: int = Field(ge=1, le=2)
+    zone: str  # "hand", "field", "security", "trash", "breeding", "library"
+
+
+class SetPhaseRequest(BaseModel):
+    phase: str  # GamePhase name e.g. "Main", "Breeding"
+
+
 # ── Replay ───────────────────────────────────────────────────────────────
 
 class ReplayRequest(BaseModel):

@@ -15,9 +15,9 @@ class BT20_091(CardScript):
         effects = []
 
         def _has_royal_knight_trait(card_source) -> bool:
-            """Check if a card source has the Royal Knight trait."""
+            """Check if a card source has the Royal Knight trait (exact match)."""
             traits = getattr(card_source, 'card_traits', []) or []
-            return any("Royal Knight" in trait for trait in traits)
+            return any(trait == "Royal Knight" for trait in traits)
 
         def _draw_and_gain_memory(ctx: Dict[str, Any]):
             """Shared process: suspend this tamer, draw 1, gain 1 memory."""
@@ -33,14 +33,15 @@ class BT20_091(CardScript):
 
         # effect0a: [Your Turn] When any of your Digimon are PLAYED, if they have
         # [Royal Knight] trait, by suspending this Tamer, <Draw 1> and gain 1 memory.
+        # Uses _is_play_observer pattern (engine fires via _fire_play_observers).
         effect0a = ICardEffect()
-        effect0a.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect0a.set_effect_name("BT20-091 Draw 1 and gain 1 memory (on play)")
         effect0a.set_effect_description(
             "[Your Turn] When any of your Digimon are played, if any of them have "
             "the [Royal Knight] trait, by suspending this Tamer, <Draw 1> and gain 1 memory."
         )
         effect0a.is_optional = True  # "by suspending" makes this optional (player can decline)
+        effect0a._is_play_observer = True
 
         def condition0a(context: Dict[str, Any]) -> bool:
             if not (card and card.owner and card.owner.is_my_turn):
@@ -51,22 +52,15 @@ class BT20_091(CardScript):
             # Can't pay cost if already suspended
             if perm.is_suspended:
                 return False
-            # Check that a Digimon was played (not this tamer itself)
-            played_card_src = context.get('played_card')
-            if not played_card_src:
+            # Check that a Digimon was played
+            played_perm = context.get('played_permanent')
+            if not played_perm:
                 return False
-            if not getattr(played_card_src, 'is_digimon', False):
+            if not played_perm.is_digimon:
                 return False
-            # Must be OUR Digimon
-            played_perm = context.get('played_permanent') or context.get('event_permanent')
-            if played_perm:
-                owner = context.get('game')
-                if owner and hasattr(owner, '_find_owner'):
-                    perm_owner = owner._find_owner(played_perm)
-                    if perm_owner is not card.owner:
-                        return False
-            # Check Royal Knight trait
-            if not _has_royal_knight_trait(played_card_src):
+            # Check Royal Knight trait on the played Digimon's top card
+            top = played_perm.top_card
+            if not top or not _has_royal_knight_trait(top):
                 return False
             return True
 
@@ -76,15 +70,15 @@ class BT20_091(CardScript):
 
         # effect0b: [Your Turn] When any of your Digimon DIGIVOLVE, if they have
         # [Royal Knight] trait, by suspending this Tamer, <Draw 1> and gain 1 memory.
+        # Uses _is_digivolve_observer pattern (engine fires via _fire_digivolve_observers).
         effect0b = ICardEffect()
-        effect0b.set_timing(EffectTiming.OnEnterFieldAnyone)
-        effect0b.is_when_digivolving = True
         effect0b.set_effect_name("BT20-091 Draw 1 and gain 1 memory (on digivolve)")
         effect0b.set_effect_description(
             "[Your Turn] When any of your Digimon digivolve, if any of them have "
             "the [Royal Knight] trait, by suspending this Tamer, <Draw 1> and gain 1 memory."
         )
         effect0b.is_optional = True  # "by suspending" makes this optional
+        effect0b._is_digivolve_observer = True
 
         def condition0b(context: Dict[str, Any]) -> bool:
             if not (card and card.owner and card.owner.is_my_turn):
@@ -100,11 +94,8 @@ class BT20_091(CardScript):
             if not digivolved_perm:
                 return False
             # Must be OUR Digimon
-            game = context.get('game')
-            if game and hasattr(game, '_find_owner'):
-                digi_owner = game._find_owner(digivolved_perm)
-                if digi_owner is not card.owner:
-                    return False
+            if digivolved_perm not in card.owner.battle_area:
+                return False
             # Check Royal Knight trait on the digivolved Digimon's top card
             top = digivolved_perm.top_card
             if not top or not _has_royal_knight_trait(top):
@@ -165,7 +156,7 @@ class BT20_091(CardScript):
 
             def play_filter(c):
                 card_names = getattr(c, 'card_names', []) or []
-                return any('Omekamon' in name for name in card_names)
+                return any(name == 'Omekamon' for name in card_names)
 
             game.effect_play_from_zone(
                 player, 'hand', play_filter, free=True, is_optional=True)
