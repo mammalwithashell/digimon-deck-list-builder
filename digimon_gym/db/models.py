@@ -6,6 +6,7 @@ import uuid
 from datetime import datetime, timezone
 
 from sqlalchemy import (
+    JSON,
     CheckConstraint,
     Column,
     DateTime,
@@ -916,3 +917,36 @@ class RefreshToken(Base):
     revoked = Column(Integer, default=0, nullable=False)
 
     user = relationship("User", back_populates="refresh_tokens")
+
+
+# ── Patch Notes ─────────────────────────────────────────────────────────
+
+class Release(Base):
+    __tablename__ = "releases"
+    __table_args__ = (
+        UniqueConstraint("version", name="uq_releases_version"),
+        Index("idx_releases_release_date", "release_date"),
+    )
+
+    id = Column(String, primary_key=True, default=_new_uuid)
+    version = Column(String, nullable=False)
+    release_date = Column(DateTime(timezone=True), nullable=False)
+    title = Column(String, nullable=True)
+    added = Column(JSON, nullable=False, default=list)
+    changed = Column(JSON, nullable=False, default=list)
+    fixed = Column(JSON, nullable=False, default=list)
+    created_at = Column(DateTime(timezone=True), default=_utcnow, nullable=False)
+    updated_at = Column(DateTime(timezone=True), default=_utcnow, onupdate=_utcnow, nullable=False)
+
+
+class KnownIssue(Base):
+    __tablename__ = "known_issues"
+    __table_args__ = (
+        Index("idx_known_issues_created_at", "created_at"),
+    )
+
+    id = Column(String, primary_key=True, default=_new_uuid)
+    title = Column(String, nullable=False)
+    description = Column(Text, nullable=False, default="")
+    created_at = Column(DateTime(timezone=True), default=_utcnow, nullable=False)
+    updated_at = Column(DateTime(timezone=True), default=_utcnow, onupdate=_utcnow, nullable=False)
