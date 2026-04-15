@@ -5,6 +5,7 @@ from typing import Any, Dict, List, Optional, Callable
 import numpy as np
 
 from digimon_gym.engine.runners.base_runner import BaseGameRunner
+from digimon_gym.engine.game.rules import Rules
 from digimon_gym.engine.loggers import SilentLogger, VerboseLogger
 from digimon_gym.engine.data.enums import GamePhase
 
@@ -23,14 +24,15 @@ class HeadlessGame(BaseGameRunner):
     def __init__(self, deck1_ids: List[str], deck2_ids: List[str],
                  verbose: bool = False,
                  record_actions: bool = False,
-                 record_tensors: bool = False):
+                 record_tensors: bool = False,
+                 rules: Optional[Rules] = None):
         recorder = None
         if record_actions or record_tensors:
             from digimon_gym.engine.recording import GameRecorder
             recorder = GameRecorder(record_tensors=record_tensors)
 
         logger = VerboseLogger() if verbose else SilentLogger()
-        super().__init__(deck1_ids, deck2_ids, logger, recorder=recorder)
+        super().__init__(deck1_ids, deck2_ids, logger, recorder=recorder, rules=rules)
 
     def step(self, action_id: int) -> None:
         """Execute a single action (decoded from integer action space).

@@ -13,6 +13,7 @@ from typing import List, Tuple, Dict, Any, Optional
 import gymnasium
 from gymnasium import spaces
 from digimon_gym.engine.runners.headless_game import HeadlessGame
+from digimon_gym.engine.game.rules import Rules
 from digimon_gym.engine.game import (
     TENSOR_SIZE, ACTION_SPACE_SIZE, FIELD_SLOTS,
     TARGETS_PER_ATTACKER, FIELDS_PER_HAND, SECURITY_TARGET, BREEDING_SLOT,
@@ -56,7 +57,8 @@ class DigimonEnv(gymnasium.Env):
     def __init__(self, deck1: Optional[List[str]] = None,
                  deck2: Optional[List[str]] = None,
                  render_mode: Optional[str] = None,
-                 max_turns: int = 100):
+                 max_turns: int = 100,
+                 rules: Optional[Rules] = None):
         super().__init__()
 
         # Observation and action spaces
@@ -74,6 +76,7 @@ class DigimonEnv(gymnasium.Env):
 
         self.render_mode = render_mode
         self.max_turns = max_turns
+        self._rules = rules
         self.runner: Optional[HeadlessGame] = None
         self._step_count = 0
 
@@ -97,14 +100,16 @@ class DigimonEnv(gymnasium.Env):
         """
         super().reset(seed=seed)
 
-        # Allow per-episode deck overrides
+        # Allow per-episode deck and rules overrides
         deck1 = self._deck1
         deck2 = self._deck2
+        rules = self._rules
         if options:
             deck1 = options.get("deck1", deck1)
             deck2 = options.get("deck2", deck2)
+            rules = options.get("rules", rules)
 
-        self.runner = HeadlessGame(deck1, deck2)
+        self.runner = HeadlessGame(deck1, deck2, rules=rules)
         self._step_count = 0
 
         obs = self.runner.get_board_tensor(1)

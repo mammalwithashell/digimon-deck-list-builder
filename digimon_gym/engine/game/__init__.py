@@ -10,6 +10,7 @@ from ..core.permanent import Permanent
 from ..loggers import IGameLogger, SilentLogger
 from ..events import GameEvent
 from ..interfaces.modifiers import ModifierRegistry, ModifierType, ModifierEntry
+from .rules import Rules
 
 # ─── Re-export everything from constants for backward compatibility ──
 from .constants import *  # noqa: F401,F403
@@ -38,8 +39,10 @@ if TYPE_CHECKING:
 
 
 class Game(CombatMixin, ActionDecoderMixin, EffectHelpersMixin):
-    def __init__(self, logger: Optional[IGameLogger] = None):
+    def __init__(self, logger: Optional[IGameLogger] = None,
+                 rules: Optional[Rules] = None):
         self.logger: IGameLogger = logger if logger is not None else SilentLogger()
+        self.rules: Rules = rules if rules is not None else Rules.standard()
 
         self.player1: Player = Player()
         self.player2: Player = Player()
@@ -114,7 +117,7 @@ class Game(CombatMixin, ActionDecoderMixin, EffectHelpersMixin):
 
         for player in (self.player1, self.player2):
             player.shuffle_for_game_start()
-            player.draw_opening_hand(5)
+            player.draw_opening_hand(self.rules.starting_hand_size)
 
         self.turn_count = 1
         self.memory = 0
@@ -147,7 +150,7 @@ class Game(CombatMixin, ActionDecoderMixin, EffectHelpersMixin):
     def _finalize_opening_setup(self):
         """Set security stacks and begin the first turn after mulligans."""
         for player in (self.player1, self.player2):
-            player.setup_security_stack(5)
+            player.setup_security_stack(self.rules.starting_security)
         self.active_player = None
         self.current_phase = GamePhase.Start
         self.logger.log("[Setup] Security stacks set. Starting turn 1.")

@@ -12,7 +12,6 @@ from __future__ import annotations
 import argparse
 import os
 import socket
-import time
 from contextlib import asynccontextmanager
 
 import uvicorn
@@ -24,6 +23,7 @@ from digimon_gym.engine.data.deck_loader import parse_deck
 from digimon_gym.engine.model_utils import resolve_model_path, list_onnx_models
 from digimon_gym.engine.runners.interactive_game import InteractiveGame
 from digimon_gym.routers.schemas import CreateGameRequest, GameActionRequest
+from digimon_gym.services.game_service import GameService
 
 
 @asynccontextmanager
@@ -53,25 +53,7 @@ def create_desktop_app(models_dir: str = "./models") -> FastAPI:
         allow_headers=["*"],
     )
 
-    # In-memory game storage (no persistence needed for desktop)
-    active_games: dict[str, InteractiveGame] = {}
-    game_last_access: dict[str, float] = {}
-
-    MAX_GAMES = 10
-    GAME_TTL_SECONDS = 3600  # 1 hour
-
-    def _cleanup_stale_games():
-        """Remove games that haven't been accessed within TTL."""
-        now = time.time()
-        expired = [gid for gid, ts in game_last_access.items()
-                   if now - ts > GAME_TTL_SECONDS]
-        for gid in expired:
-            active_games.pop(gid, None)
-            game_last_access.pop(gid, None)
-
-    def _touch_game(game_id: str):
-        """Update last-access timestamp for a game."""
-        game_last_access[game_id] = time.time()
+    svc = GameService(max_games=10, ttl_seconds=3600)
 
     router = APIRouter(tags=["games"])
 
@@ -82,15 +64,6 @@ def create_desktop_app(models_dir: str = "./models") -> FastAPI:
     @router.post("/games")
     def create_game(request: CreateGameRequest):
         """Create a new local game session."""
-        from uuid import uuid4
-
-        _cleanup_stale_games()
-        # Evict oldest game if at capacity
-        while len(active_games) >= MAX_GAMES and game_last_access:
-            oldest = min(game_last_access, key=game_last_access.get)
-            active_games.pop(oldest, None)
-            game_last_access.pop(oldest, None)
-
         try:
             deck1 = parse_deck(request.deck1_raw) if request.deck1_raw else request.deck1
             deck2 = parse_deck(request.deck2_raw) if request.deck2_raw else request.deck2
@@ -100,7 +73,6 @@ def create_desktop_app(models_dir: str = "./models") -> FastAPI:
         if not deck1 or not deck2:
             raise HTTPException(status_code=400, detail="Both decks must be provided")
 
-        game_id = str(uuid4())
         p1_type = PlayerType.Human if request.player1_type.lower() == "human" else PlayerType.Agent
         p2_type = PlayerType.Human if request.player2_type.lower() == "human" else PlayerType.Agent
         p1_policy = request.player1_policy.lower()
@@ -113,15 +85,14 @@ def create_desktop_app(models_dir: str = "./models") -> FastAPI:
         except FileNotFoundError as exc:
             raise HTTPException(status_code=400, detail=str(exc))
 
-        runner = InteractiveGame(
+        game_id, runner = svc.create_interactive_game(
             deck1, deck2, p1_type, p2_type,
-            player1_policy=p1_policy, player2_policy=p2_policy,
+            p1_policy=p1_policy,
+            p2_policy=p2_policy,
             agent_action_delay_ms=request.agent_action_delay_ms,
-            player1_model_path=p1_model, player2_model_path=p2_model,
+            p1_model_path=p1_model,
+            p2_model_path=p2_model,
         )
-        active_games[game_id] = runner
-        _touch_game(game_id)
-        runner.clear_log()
 
         state = runner.game.to_ui_json()
         mask = runner.get_action_mask().tolist()
@@ -140,10 +111,9 @@ def create_desktop_app(models_dir: str = "./models") -> FastAPI:
 
     @router.post("/games/{game_id}/actions")
     def game_action(game_id: str, request: GameActionRequest):
-        runner = active_games.get(game_id)
+        runner = svc.get(game_id)
         if not runner:
             raise HTTPException(status_code=404, detail="Game not found")
-        _touch_game(game_id)
 
         current_player_id = runner.game.current_player_id
         memory_before = runner.game.memory
@@ -177,10 +147,9 @@ def create_desktop_app(models_dir: str = "./models") -> FastAPI:
 
     @router.post("/games/{game_id}/steps")
     def game_step(game_id: str):
-        runner = active_games.get(game_id)
+        runner = svc.get(game_id)
         if not runner:
             raise HTTPException(status_code=404, detail="Game not found")
-        _touch_game(game_id)
 
         state = runner.run_step()
         mask = runner.get_action_mask().tolist()
@@ -201,26 +170,23 @@ def create_desktop_app(models_dir: str = "./models") -> FastAPI:
 
     @router.get("/games/{game_id}/state")
     def game_state(game_id: str):
-        runner = active_games.get(game_id)
+        runner = svc.get(game_id)
         if not runner:
             raise HTTPException(status_code=404, detail="Game not found")
-        _touch_game(game_id)
         return runner.game.to_ui_json()
 
     @router.get("/games/{game_id}/action-mask")
     def game_mask(game_id: str):
-        runner = active_games.get(game_id)
+        runner = svc.get(game_id)
         if not runner:
             raise HTTPException(status_code=404, detail="Game not found")
-        _touch_game(game_id)
         return {"action_mask": runner.get_action_mask().tolist()}
 
     @router.get("/games/{game_id}/logs")
     def game_logs(game_id: str):
-        runner = active_games.get(game_id)
+        runner = svc.get(game_id)
         if not runner:
             raise HTTPException(status_code=404, detail="Game not found")
-        _touch_game(game_id)
         if isinstance(runner, InteractiveGame):
             logs = runner.get_last_log()
             runner.clear_log()
@@ -233,8 +199,7 @@ def create_desktop_app(models_dir: str = "./models") -> FastAPI:
 
     @router.delete("/games/{game_id}")
     def delete_game(game_id: str):
-        active_games.pop(game_id, None)
-        game_last_access.pop(game_id, None)
+        svc.delete(game_id)
         return {"status": "deleted"}
 
     app.include_router(router)

@@ -5,6 +5,7 @@ from abc import ABC
 from typing import TYPE_CHECKING, List, Optional
 
 from digimon_gym.engine.game import Game
+from digimon_gym.engine.game.rules import Rules
 from digimon_gym.engine.loggers import IGameLogger, SilentLogger
 from digimon_gym.engine.data.card_database import CardDatabase
 from digimon_gym.engine.data.card_registry import CardRegistry
@@ -18,9 +19,10 @@ class BaseGameRunner(ABC):
 
     def __init__(self, deck1_ids: List[str], deck2_ids: List[str],
                  logger: Optional[IGameLogger] = None,
-                 recorder: Optional[GameRecorder] = None):
+                 recorder: Optional[GameRecorder] = None,
+                 rules: Optional[Rules] = None):
         self.logger: IGameLogger = logger if logger is not None else SilentLogger()
-        self.game = Game(self.logger)
+        self.game = Game(self.logger, rules=rules)
         self._deck1_ids = list(deck1_ids)  # Preserve original deck lists
         self._deck2_ids = list(deck2_ids)
         self.recorder = recorder
