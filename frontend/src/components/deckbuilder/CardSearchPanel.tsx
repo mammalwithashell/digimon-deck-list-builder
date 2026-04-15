@@ -11,6 +11,7 @@ export function CardSearchPanel() {
     filters,
     setSearchResults,
     setIsSearching,
+    testedCardIds,
   } = useDeckBuilderStore();
 
   const debounceRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
@@ -67,6 +68,15 @@ export function CardSearchPanel() {
           );
         }
 
+        // Alpha gate: only show cards that have behavioral test coverage.
+        // When the allowlist hasn't loaded yet, show nothing rather than
+        // leaking untested cards.
+        if (testedCardIds) {
+          results = results.filter((c) => testedCardIds.has(c.cardnumber));
+        } else {
+          results = [];
+        }
+
         setSearchResults(results);
       } catch {
         setSearchResults([]);
@@ -76,7 +86,7 @@ export function CardSearchPanel() {
     }, 300);
 
     return () => clearTimeout(debounceRef.current);
-  }, [searchQuery, filters, setSearchResults, setIsSearching]);
+  }, [searchQuery, filters, setSearchResults, setIsSearching, testedCardIds]);
 
   return (
     <div className="flex flex-col gap-2 h-full">

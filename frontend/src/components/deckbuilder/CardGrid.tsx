@@ -14,6 +14,7 @@ export function CardGrid() {
     mainDeck,
     eggDeck,
     isSearching,
+    testedCardIds,
   } = useDeckBuilderStore();
 
   const start = searchPage * CARDS_PER_PAGE;
@@ -42,9 +43,13 @@ export function CardGrid() {
   }
 
   if (searchResults.length === 0) {
+    const message =
+      testedCardIds === null
+        ? 'Loading alpha card pool...'
+        : 'No tested cards match this search (alpha release).';
     return (
-      <div className="flex items-center justify-center h-48 text-gray-500">
-        No results. Search for cards above.
+      <div className="flex items-center justify-center h-48 text-gray-500 text-center px-4">
+        {message}
       </div>
     );
   }
