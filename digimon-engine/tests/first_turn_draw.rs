@@ -91,3 +91,39 @@ fn first_player_draws_on_turn_3() {
     );
     assert_eq!(r.deck_size(0), p0_deck_before_turn3 - 1);
 }
+
+/// Regression: after an explicit mulligan-auto-keep finalize, the first-player
+/// draw skip must still apply on turn 1. Guards §1.6 + §1.7 together.
+#[test]
+fn first_player_skip_still_works_after_mulligan_finalize() {
+    use digimon_engine::card_data::CardData;
+    use digimon_engine::game::Game;
+    use digimon_engine::rules::Rules;
+    use std::collections::HashMap;
+
+    let mut db = HashMap::new();
+    db.insert("FILLER".to_string(), make_test_card("FILLER", "Filler"));
+    // Need a deck large enough to absorb 5 hand + 5 security + more for the
+    // post-finalize turn-1 draw test. 20 cards is plenty.
+    let deck = vec!["FILLER".to_string(); 20];
+    let mut game =
+        Game::new(&[deck.clone(), deck], &db, Rules::standard(), Some(42)).unwrap();
+
+    // Step through both keeps explicitly (not via start_game) to exercise
+    // the real mulligan API.
+    let first = game.mulligan_current_player().unwrap();
+    game.accept_mulligan(first, true).unwrap();
+    let second = game.mulligan_current_player().unwrap();
+    game.accept_mulligan(second, true).unwrap();
+
+    // Finalize put us at turn_count == 1, and the first player's draw was
+    // skipped because `SkipDraw::FirstPlayerOnly` matches on turn_count == 1.
+    assert_eq!(game.turn_count, 1);
+    let tp = game.turn_player();
+    assert_eq!(
+        game.player(tp).hand.len(),
+        5,
+        "first player's hand stays at 5 — no turn-1 draw"
+    );
+    let _: &CardData = &game.card_data[0];
+}
