@@ -8,7 +8,7 @@ use crate::card_data::CardData;
 use crate::card_registry::CardRegistry;
 use crate::enums::PlayerId;
 use crate::game::Game;
-use crate::permanent::Permanent;
+use crate::permanent::{Permanent, PermanentHandle};
 
 // ─── Tensor Layout Constants ──────────────────────────────────────────
 
@@ -97,10 +97,10 @@ pub fn build_tensor(
     // [3-9] reserved
 
     // --- My battle area ---
-    write_field(&mut t, OFF_MY_BATTLE, &me.battle_area, FIELD_SLOTS, &game.card_data, registry);
+    write_field(&mut t, OFF_MY_BATTLE, me_id, FIELD_SLOTS, game, &game.card_data, registry);
 
     // --- Opp battle area ---
-    write_field(&mut t, OFF_OPP_BATTLE, &opp.battle_area, FIELD_SLOTS, &game.card_data, registry);
+    write_field(&mut t, OFF_OPP_BATTLE, opp_id, FIELD_SLOTS, game, &game.card_data, registry);
 
     // --- My hand ---
     write_card_ids(&mut t, OFF_MY_HAND, &me.hand, MAX_HAND, &game.card_data, registry);
@@ -122,13 +122,17 @@ pub fn build_tensor(
     // t[OFF_OPP_SECURITY..] stays 0.0
 
     // --- My breeding ---
+    // Breeding slot has no PermanentHandle (it's not in battle_area), so
+    // per-source DP and OPT state fall back to 0.0. Python computes them
+    // identically since eggs / in-training Digimon rarely have active
+    // effects, but this is a minor residual gap for any that do.
     if let Some(ref perm) = me.breeding_area {
-        write_slot(&mut t, OFF_MY_BREEDING, perm, &game.card_data, registry);
+        write_slot(&mut t, OFF_MY_BREEDING, perm, None, game, &game.card_data, registry);
     }
 
     // --- Opp breeding ---
     if let Some(ref perm) = opp.breeding_area {
-        write_slot(&mut t, OFF_OPP_BREEDING, perm, &game.card_data, registry);
+        write_slot(&mut t, OFF_OPP_BREEDING, perm, None, game, &game.card_data, registry);
     }
 
     // --- Revealed cards ---
@@ -249,10 +253,17 @@ fn get_memory_for(game: &Game, player_id: PlayerId) -> i16 {
 }
 
 /// Write permanent slot data into the tensor.
+///
+/// When `handle` is `Some`, per-source DP and OPT state are computed via
+/// Game helpers (matches Python). When `None` (e.g. the breeding slot —
+/// not part of `battle_area`), those fields fall back to 0.0 since there's
+/// no stable PermanentHandle for them.
 fn write_slot(
     tensor: &mut [f32],
     base: usize,
     perm: &Permanent,
+    handle: Option<PermanentHandle>,
+    game: &Game,
     card_data: &[CardData],
     registry: &CardRegistry,
 ) {
@@ -267,8 +278,11 @@ fn write_slot(
     // +2: suspended
     tensor[base + 2] = if perm.is_suspended { 1.0 } else { 0.0 };
 
-    // +3: OPT total (deferred to effect system)
-    // +4: OPT used (deferred to effect system)
+    // +3: OPT total, +4: OPT used — raw counts (Python matches).
+    if let Some(h) = handle {
+        tensor[base + 3] = game.opt_total(h) as f32;
+        tensor[base + 4] = game.opt_used(h) as f32;
+    }
 
     // +5: linked card count
     tensor[base + 5] = perm.linked_cards.len() as f32;
@@ -281,9 +295,11 @@ fn write_slot(
     for (j, src) in perm.card_sources.iter().take(MAX_SOURCES).enumerate() {
         let off = src_base + j * SOURCE_ENTRY_SIZE;
         tensor[off] = registry.get_index(&src.card_id(card_data)) as f32;
-        // opt_state and dp_contribution deferred to effect system
-        tensor[off + 1] = 0.0;
-        tensor[off + 2] = src.dp(card_data).unwrap_or(0) as f32 / DP_NORM;
+        if let Some(h) = handle {
+            tensor[off + 1] = game.source_opt_state(h, j);
+            tensor[off + 2] =
+                game.source_dp_contribution(h, j) as f32 / DP_NORM;
+        }
     }
 }
 
@@ -291,13 +307,27 @@ fn write_slot(
 fn write_field(
     tensor: &mut [f32],
     start: usize,
-    permanents: &[Permanent],
+    player: PlayerId,
     slots: usize,
+    game: &Game,
     card_data: &[CardData],
     registry: &CardRegistry,
 ) {
+    let permanents = &game.player(player).battle_area;
     for (i, perm) in permanents.iter().take(slots).enumerate() {
-        write_slot(tensor, start + i * SLOT_SIZE, perm, card_data, registry);
+        let handle = PermanentHandle {
+            player,
+            index: i as u8,
+        };
+        write_slot(
+            tensor,
+            start + i * SLOT_SIZE,
+            perm,
+            Some(handle),
+            game,
+            card_data,
+            registry,
+        );
     }
 }
 
