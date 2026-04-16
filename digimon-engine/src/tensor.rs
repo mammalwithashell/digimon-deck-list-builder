@@ -46,8 +46,8 @@ pub const TENSOR_SIZE: usize = GLOBAL_SIZE
 
 // Section start offsets
 const OFF_GLOBAL: usize = 0;
-const OFF_MY_BATTLE: usize = OFF_GLOBAL + GLOBAL_SIZE; // 10
-const OFF_OPP_BATTLE: usize = OFF_MY_BATTLE + BATTLE_SIZE; // 570
+pub const OFF_MY_BATTLE: usize = OFF_GLOBAL + GLOBAL_SIZE; // 10
+pub const OFF_OPP_BATTLE: usize = OFF_MY_BATTLE + BATTLE_SIZE; // 570
 const OFF_MY_HAND: usize = OFF_OPP_BATTLE + BATTLE_SIZE; // 1130
 const OFF_OPP_HAND: usize = OFF_MY_HAND + HAND_SIZE; // 1150
 const OFF_MY_TRASH: usize = OFF_OPP_HAND + HAND_SIZE; // 1170
