@@ -427,6 +427,10 @@ class CreateDeckRequest(BaseModel):
     titan_role: Optional[str] = Field(None, pattern=r"^(titan|team)$")
     main_deck: List[str]  # Card ID strings
     egg_deck: List[str] = []
+    # Optional parallel bool arrays marking which slots are alt-art printings.
+    # When omitted, every slot is treated as the base printing.
+    main_deck_alt_arts: List[bool] = []
+    egg_deck_alt_arts: List[bool] = []
     commander_id: Optional[str] = None
     is_public: bool = False
     tags: List[str] = []
@@ -437,6 +441,8 @@ class UpdateDeckRequest(BaseModel):
     description: Optional[str] = None
     main_deck: Optional[List[str]] = None
     egg_deck: Optional[List[str]] = None
+    main_deck_alt_arts: Optional[List[bool]] = None
+    egg_deck_alt_arts: Optional[List[bool]] = None
     commander_id: Optional[str] = None
     is_public: Optional[bool] = None
     tags: Optional[List[str]] = None
@@ -452,6 +458,8 @@ class DeckResponse(BaseModel):
     titan_role: Optional[str] = None
     main_deck: List[str]
     egg_deck: List[str]
+    main_deck_alt_arts: List[bool] = []
+    egg_deck_alt_arts: List[bool] = []
     commander_id: Optional[str] = None
     is_valid: bool
     validation_errors: List[str]

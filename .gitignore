@@ -22,6 +22,18 @@ frontend/tsconfig.tsbuildinfo
 .worktrees/
 Digimon TCG resources/glossary.pdf
 
+# Rust / Cargo
+# Workspace-level build output (digimon-engine and src-tauri share this target/).
+target/
+# Rustfmt backup files (written when rustfmt runs with --backup).
+**/*.rs.bk
+# Perf / profiling output from `cargo flamegraph`, `perf`, etc.
+perf.data
+perf.data.old
+flamegraph.svg
+# cargo-expand intermediate files
+*.orig
+
 # Tauri
 src-tauri/target/
 src-tauri/binaries/

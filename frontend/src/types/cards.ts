@@ -45,6 +45,9 @@ export interface DigimonCardData {
   card_sets: string[];
   image_url: string;
   color2?: string;
+  /** True when this entry represents an alternate-art printing
+   *  (served from the CDN under the `_alt` suffix). */
+  isAltArt?: boolean;
 }
 
 export interface CardFilters {

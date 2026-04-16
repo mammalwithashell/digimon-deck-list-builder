@@ -22,15 +22,20 @@ export function CardGrid() {
 
   const getCountInDeck = useCallback(
     (cardId: string) => {
-      const main = mainDeck.find((e) => e.cardId === cardId);
-      const egg = eggDeck.find((e) => e.cardId === cardId);
-      return (main?.count ?? 0) + (egg?.count ?? 0);
+      // Sum across both art variants — the 4-per-card limit is shared.
+      const main = mainDeck
+        .filter((e) => e.cardId === cardId)
+        .reduce((sum, e) => sum + e.count, 0);
+      const egg = eggDeck
+        .filter((e) => e.cardId === cardId)
+        .reduce((sum, e) => sum + e.count, 0);
+      return main + egg;
     },
     [mainDeck, eggDeck],
   );
 
   const handleDoubleClick = (card: DigimonCardData) => {
-    addCardToDeck(card.cardnumber, card);
+    addCardToDeck(card.cardnumber, card, card.isAltArt ?? false);
   };
 
   if (isSearching) {
@@ -54,12 +59,14 @@ export function CardGrid() {
       <div className="grid grid-cols-[repeat(auto-fill,minmax(80px,1fr))] gap-2">
         {pageResults.map((card) => {
           const count = getCountInDeck(card.cardnumber);
+          const variantKey = `${card.cardnumber}${card.isAltArt ? '-alt' : ''}`;
           return (
-            <div key={card.cardnumber} className="relative">
+            <div key={variantKey} className="relative">
               <Card
                 cardId={card.cardnumber}
                 cardName={card.name}
                 size="md"
+                isAltArt={card.isAltArt}
                 onClick={() => setSelectedCardId(card.cardnumber)}
                 onMouseEnter={() => setSelectedCardId(card.cardnumber)}
               />

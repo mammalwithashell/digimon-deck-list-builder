@@ -2,14 +2,23 @@ import { useEffect } from 'react';
 import { useDeckBuilderStore } from '@/stores/deckBuilderStore';
 import { getCardById } from '@/api/digimonCardApi';
 import * as deckApi from '@/api/deckApi';
+import type { DeckEntry } from '@/types/deck';
 
-/** Group a flat array of card IDs into DeckEntry objects with counts. */
-function groupCardIds(ids: string[]) {
-  const counts = new Map<string, number>();
-  for (const id of ids) {
-    counts.set(id, (counts.get(id) ?? 0) + 1);
-  }
-  return Array.from(counts.entries()).map(([cardId, count]) => ({ cardId, count }));
+/** Group a flat array of card IDs + parallel alt-art bool array into
+ *  DeckEntry objects, keeping base and alt printings as separate entries. */
+function groupCardIds(ids: string[], altArts: boolean[] = []): DeckEntry[] {
+  const counts = new Map<string, { cardId: string; isAltArt: boolean; count: number }>();
+  ids.forEach((cardId, i) => {
+    const isAltArt = !!altArts[i];
+    const key = `${cardId}|${isAltArt ? '1' : '0'}`;
+    const existing = counts.get(key);
+    if (existing) {
+      existing.count += 1;
+    } else {
+      counts.set(key, { cardId, isAltArt, count: 1 });
+    }
+  });
+  return Array.from(counts.values());
 }
 
 export function DeckSelector() {
@@ -28,9 +37,10 @@ export function DeckSelector() {
     try {
       const deck = await deckApi.getDeck(val);
 
-      // Group duplicate IDs into entries with correct counts
-      const mainEntries = groupCardIds(deck.main_deck);
-      const eggEntries = groupCardIds(deck.egg_deck);
+      // Group duplicate IDs into entries with correct counts, preserving
+      // which slots were saved as alt-art printings.
+      const mainEntries = groupCardIds(deck.main_deck, deck.main_deck_alt_arts);
+      const eggEntries = groupCardIds(deck.egg_deck, deck.egg_deck_alt_arts);
 
       // Fetch card data for display (names, images)
       const allIds = [...new Set([...deck.main_deck, ...deck.egg_deck])];
@@ -45,7 +55,7 @@ export function DeckSelector() {
       // Attach card data to entries
       for (const entry of [...mainEntries, ...eggEntries]) {
         const data = cardDataMap.get(entry.cardId);
-        if (data) (entry as any).cardData = data;
+        if (data) entry.cardData = data;
       }
 
       loadDeck(deck.id, deck.name, mainEntries, eggEntries);
