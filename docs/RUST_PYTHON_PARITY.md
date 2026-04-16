@@ -59,13 +59,17 @@ Each entry cites the canonical source lines so divergences can be rechecked afte
 
 **Fix outline:** After firing `OnEndTurn` effects in `end_turn`, compare `memory_before` vs `memory` and short-circuit the turn switch if the sign flipped back. Gate behind `self.game_over == false`.
 
-### 1.6 🔴 Mulligan phase
+### 1.6 🟢 Mulligan phase — implemented
 
 **Python** — [game/__init__.py:109-156](../digimon_gym/engine/game/__init__.py#L109): after randomizing turn player, each player chooses keep/mulligan once; security is laid *after* mulligan.
 
-**Rust** — [game.rs:175-182](../digimon-engine/src/game.rs#L175) `start_game` jumps straight to turn 1. Mulligan is plumbed in the enum but never used.
+**Rust** — [game.rs](../digimon-engine/src/game.rs) `Game::new` now shuffles `turn_order` via the seeded rng (first-player coin flip), draws opening hands, and initializes `mulligan_pending`/`mulligan_used`. `accept_mulligan(player, keep)` drives the state machine; the last decision triggers `finalize_mulligan`, which lays security and begins turn 1. `start_game` auto-keeps for every pending player, preserving backward compatibility with callers that don't care about mulligan.
 
-**Fix outline:** Introduce `accept_mulligan(player, keep: bool)` action. Stay in `GamePhase::Mulligan` until every player has responded. Lay security after the mulligan resolves, mirroring `_finalize_opening_setup`.
+**Action mask** — [mask.rs](../digimon-engine/src/action/mask.rs): during `GamePhase::Mulligan`, only the current decider sees any non-zero bits. Bit 0 (keep) is always set; bit 1 (mulligan) is suppressed after `mulligan_used[decider]` is true.
+
+**Tauri surface** — `rust_mulligan_decide(keep)` command + `mulligan_current_player` / `mulligan_used` fields on `GameStateDto`. TypeScript adapter at [frontend/src/api/rustEngine.ts](../frontend/src/api/rustEngine.ts).
+
+**Coverage:** [tests/mulligan.rs](../digimon-engine/tests/mulligan.rs) (new) and first-player draw skip regression in [tests/first_turn_draw.rs](../digimon-engine/tests/first_turn_draw.rs).
 
 ### 1.7 🟢 First-turn draw semantics — verified equivalent
 
@@ -257,7 +261,7 @@ Phase 9 (PyO3 bindings) readiness requires, in priority order:
 2. **§1.2 / §1.3 / §1.4 / §1.5 — Memory seesaw semantics** (tight cluster; probably ~30 lines of changes in `game.rs` plus tests). ✅ done
 3. **§2.1 — Rush exemption** (needed for any card with Rush; trivial once modifier lookup is in place).
 4. ~~**§1.7 — First-turn draw rule**~~ — audit was wrong; behavior already matches Python. Tested as of this cycle.
-5. **§1.6 — Mulligan flow** (scoped change: new action, phase transition).
+5. ~~**§1.6 — Mulligan flow**~~ ✅ done — accept_mulligan state machine + first-player coin flip + tests/mulligan.rs.
 6. **§3.1 / §3.2 — Tensor source-DP + OPT slots** (blocks model transfer; requires Effect iteration to sum modifiers).
 7. **§4.2 / §4.3 / §4.4 — Action mask main-phase parity** (Option color, Blitz, Raid).
 8. **§4.5 / §4.6 — Mask phase coverage** (hand/field/trash effects + interrupt phases; depends on the effect-listing query).
