@@ -96,15 +96,19 @@ fn game_creation_standard() {
     assert_eq!(game.current_phase, GamePhase::Mulligan);
     assert!(!game.game_over);
 
-    // Each player should have drawn starting hand (5) and set up security (5)
-    // From a deck of 15 main deck cards: 15 - 5 hand - 5 security = 5 remaining
+    // Opening hands are drawn up-front; security is deferred until mulligan
+    // finalizes (see §1.6 parity fix). Hands are 5; security is still 0.
     assert_eq!(game.player(0).hand_size(), 5);
-    assert_eq!(game.player(0).security_count(), 5);
+    assert_eq!(game.player(0).security_count(), 0);
     assert_eq!(game.player(1).hand_size(), 5);
-    assert_eq!(game.player(1).security_count(), 5);
+    assert_eq!(game.player(1).security_count(), 0);
 
     // Digitama deck should have 4 eggs
     assert_eq!(game.player(0).digitama_deck.len(), 4);
+
+    // Mulligan state is initialized: both players pending, none have re-drawn.
+    assert_eq!(game.mulligan_pending.len(), 2);
+    assert_eq!(game.mulligan_used, vec![false, false]);
 }
 
 #[test]
@@ -116,12 +120,16 @@ fn game_start_and_turn_flow() {
     let mut game = Game::new(&[deck.clone(), deck], &db, rules, Some(42)).unwrap();
     game.start_game();
 
-    // After start_game: turn 1, player 0 active
+    // After start_game: turn 1; whichever player the coin flip picked is active.
+    // Don't assume a specific player — the first-player coin flip randomizes.
     assert_eq!(game.turn_count, 1);
-    assert_eq!(game.turn_player(), 0);
-    // P1 skips draw in standard mode, so hand should still be 5
-    assert_eq!(game.player(0).hand_size(), 5);
-    // Phase should be Breeding (after Unsuspend + Draw)
+    let first_player = game.turn_player();
+    // First player's turn-1 draw is skipped, so their hand is still 5.
+    assert_eq!(game.player(first_player).hand_size(), 5);
+    // Security was laid during finalize_mulligan (auto-kept by start_game).
+    assert_eq!(game.player(0).security_count(), 5);
+    assert_eq!(game.player(1).security_count(), 5);
+    // Phase should be Breeding (after Unsuspend + Draw).
     assert_eq!(game.current_phase, GamePhase::Breeding);
 }
 
@@ -192,17 +200,19 @@ fn pass_turn_advances_player() {
     game.start_game();
     game.enter_main_phase();
 
-    assert_eq!(game.turn_player(), 0);
+    // Coin flip randomizes the first player — capture it rather than assuming P0.
+    let first_player = game.turn_player();
+    let second_player = if first_player == 0 { 1 } else { 0 };
     let initial_turn = game.turn_count;
 
     game.pass_turn();
 
-    // Turn should advance to player 1
-    assert_eq!(game.turn_player(), 1);
+    // Turn should advance to the other player.
+    assert_eq!(game.turn_player(), second_player);
     assert_eq!(game.turn_count, initial_turn + 1);
-    // Player 1 draws (not skipped — only P0 skips on turn 1)
-    // Hand size should be 6 now (5 starting + 1 draw)
-    assert_eq!(game.player(1).hand_size(), 6);
+    // The second player draws on their first turn (only the first player
+    // skips turn-1 draw). Hand should be 6 (5 opening + 1 draw).
+    assert_eq!(game.player(second_player).hand_size(), 6);
 }
 
 #[test]
@@ -355,7 +365,7 @@ fn edh_game_creation() {
     let deck = test_deck();
     let rules = Rules::edh();
 
-    let game = Game::new(
+    let mut game = Game::new(
         &[deck.clone(), deck.clone(), deck.clone(), deck],
         &db,
         rules,
@@ -365,9 +375,13 @@ fn edh_game_creation() {
 
     assert_eq!(game.players.len(), 4);
     assert_eq!(game.turn_order.len(), 4);
+    // All 4 players are pending mulligan decisions.
+    assert_eq!(game.mulligan_pending.len(), 4);
 
-    // EDH: 7 security
+    // Security is laid only after mulligan finalizes.
+    game.start_game();
     assert_eq!(game.player(0).security_count(), 7);
+    assert_eq!(game.player(3).security_count(), 7);
 
     // P0's opponents should be [1, 2, 3]
     let opps = game.opponents(0);

@@ -347,6 +347,13 @@ impl DebugRunnerBuilder {
             p.breeding_area = None;
         }
 
+        // DebugRunner populates zones manually after this point. Clear the
+        // mulligan-pending list so that a subsequent `start_game()` doesn't
+        // walk through `finalize_mulligan` and steal cards from the explicit
+        // deck/security the test just set up. DebugRunner represents a
+        // post-setup snapshot; mulligan is "already done" from its perspective.
+        game.mulligan_pending.clear();
+
         // Populate each player's zones from the builder spec.
         let mut next_card_index: u16 = 0;
         for player_idx in 0..player_count {

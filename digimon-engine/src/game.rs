@@ -1,4 +1,5 @@
 use rand::rngs::StdRng;
+use rand::seq::SliceRandom;
 use rand::SeedableRng;
 
 use crate::card_data::CardData;
@@ -38,6 +39,13 @@ pub struct Game {
     pub rng: StdRng,
     /// Counter for assigning unique card instance indices.
     next_card_index: u16,
+    /// Players still owing a mulligan decision, in order. Empty once mulligan
+    /// is finalized. Driven by `accept_mulligan`; see §1.6 in RUST_PYTHON_PARITY.
+    pub mulligan_pending: Vec<PlayerId>,
+    /// Whether each player has already re-drawn during mulligan. Indexed by
+    /// `PlayerId`. Used by the action mask to suppress the re-draw bit once
+    /// a player has used their single mulligan.
+    pub mulligan_used: Vec<bool>,
 }
 
 impl Game {
@@ -106,9 +114,22 @@ impl Game {
             players.push(player);
         }
 
-        // Build turn order
-        let turn_order: Vec<PlayerId> = (0..rules.player_count).collect();
-        let memory_pair = (0, 1); // P0 active, P1 next
+        // Initial turn order (before coin flip).
+        let mut turn_order: Vec<PlayerId> = (0..rules.player_count).collect();
+        // Coin flip: randomize which player goes first. For N-player we shuffle
+        // the whole order so EDH-style modes pick a starting player uniformly.
+        // Matches Python's `random.choice([True, False])` for 2-player, and
+        // extends the concept cleanly to multiplayer.
+        turn_order.shuffle(&mut rng);
+        let memory_pair = if turn_order.len() >= 2 {
+            (turn_order[0], turn_order[1])
+        } else {
+            (turn_order[0], turn_order[0])
+        };
+
+        let player_count = rules.player_count as usize;
+        let mulligan_pending = turn_order.clone();
+        let mulligan_used = vec![false; player_count];
 
         let mut game = Self {
             rules,
@@ -126,12 +147,15 @@ impl Game {
             effect_registry: build_registry(),
             rng,
             next_card_index,
+            mulligan_pending,
+            mulligan_used,
         };
 
-        // Deal starting hands and security
-        for i in 0..game.rules.player_count as usize {
+        // Deal starting hands. Security is deliberately NOT laid here — it
+        // waits until mulligan finalizes, so a player who mulligans has the
+        // full deck to re-shuffle into (matches Python setup order).
+        for i in 0..player_count {
             game.players[i].draw_many(game.rules.starting_hand);
-            game.players[i].setup_security(game.rules.security_count);
         }
 
         Ok(game)
@@ -140,6 +164,71 @@ impl Game {
     /// Get the current turn player's ID.
     pub fn turn_player(&self) -> PlayerId {
         self.turn_order[self.turn_player_idx]
+    }
+
+    // ─── Mulligan ────────────────────────────────────────────────────
+
+    /// The next player expected to make a mulligan decision, or `None` if
+    /// mulligan is already complete.
+    pub fn mulligan_current_player(&self) -> Option<PlayerId> {
+        self.mulligan_pending.first().copied()
+    }
+
+    /// Record a mulligan decision for the current deciding player.
+    ///
+    /// - `keep = true` — keep the drawn hand as-is.
+    /// - `keep = false` — shuffle the hand back into the deck, reshuffle,
+    ///   draw a fresh `starting_hand`. `mulligan_used[player]` is set so the
+    ///   action mask can suppress a second redraw.
+    ///
+    /// Returns `Err` if it's not this player's turn to decide or if mulligan
+    /// is already complete.
+    pub fn accept_mulligan(
+        &mut self,
+        player: PlayerId,
+        keep: bool,
+    ) -> Result<(), &'static str> {
+        let Some(current) = self.mulligan_current_player() else {
+            return Err("mulligan is already complete");
+        };
+        if current != player {
+            return Err("it is a different player's turn to decide");
+        }
+
+        if !keep {
+            self.redraw_hand(player);
+            self.mulligan_used[player as usize] = true;
+        }
+        self.mulligan_pending.remove(0);
+
+        if self.mulligan_pending.is_empty() {
+            self.finalize_mulligan();
+        }
+        Ok(())
+    }
+
+    /// Shuffle the player's hand back into the deck and redraw `starting_hand`.
+    fn redraw_hand(&mut self, player: PlayerId) {
+        let starting_hand = self.rules.starting_hand;
+        let p = self.player_mut(player);
+        p.deck.extend(p.hand.drain(..));
+        // Borrow the game's rng via a local reshuffle: move the cards into a
+        // local vec, shuffle with game rng, put back.
+        let mut deck = std::mem::take(&mut p.deck);
+        deck.shuffle(&mut self.rng);
+        self.player_mut(player).deck = deck;
+        self.player_mut(player).draw_many(starting_hand);
+    }
+
+    /// Finalize mulligan: lay security for every player and begin turn 1.
+    fn finalize_mulligan(&mut self) {
+        let security_count = self.rules.security_count;
+        for i in 0..self.rules.player_count as usize {
+            self.players[i].setup_security(security_count);
+        }
+        self.turn_count = 1;
+        self.memory = 0;
+        self.begin_turn();
     }
 
     /// Get a reference to a player by ID.
@@ -172,13 +261,23 @@ impl Game {
         self.turn_order[next_pos]
     }
 
-    /// Start the game: transition from Mulligan to first turn.
-    /// In a full implementation, mulligan decisions would be handled via step().
-    /// For now, skip mulligan and go directly to turn 1.
+    /// Start the game: auto-keep for every remaining mulligan-pending player
+    /// and transition into turn 1. UIs / RL agents that want to make mulligan
+    /// decisions explicitly should call `accept_mulligan` for each decider
+    /// before invoking `start_game` (or instead of it — the last
+    /// `accept_mulligan` call triggers `finalize_mulligan`, which begins turn 1).
     pub fn start_game(&mut self) {
-        self.turn_count = 1;
-        self.memory = 0;
-        self.begin_turn();
+        while let Some(p) = self.mulligan_current_player() {
+            // Auto-keep; infallible because we just asked who's current.
+            let _ = self.accept_mulligan(p, true);
+        }
+        // If the game was never in Mulligan phase (defensive), fall through
+        // to an explicit turn-1 transition.
+        if self.turn_count == 0 {
+            self.turn_count = 1;
+            self.memory = 0;
+            self.begin_turn();
+        }
     }
 
     /// Begin a new turn for the current turn player.
@@ -195,7 +294,10 @@ impl Game {
         // Draw phase
         self.current_phase = GamePhase::Draw;
         let should_skip_draw = match self.rules.skip_first_draw {
-            SkipDraw::FirstPlayerOnly => self.turn_count == 1 && tp == 0,
+            // "The first player of the game skips their first draw." Turn 1
+            // uniquely identifies that moment — whoever the coin flip sat at
+            // `turn_order[0]` is the turn player here. Don't hardcode tp == 0.
+            SkipDraw::FirstPlayerOnly => self.turn_count == 1,
             SkipDraw::AllRound1 => {
                 self.turn_count <= self.rules.player_count as u16
             }
