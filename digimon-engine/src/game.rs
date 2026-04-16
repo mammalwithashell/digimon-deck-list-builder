@@ -241,17 +241,15 @@ impl Game {
         let new_next = self.next_clockwise(new_active);
         self.memory_pair = (new_active, new_next);
 
-        // Memory reset: if memory is 0 or on the active player's side, set to 3
-        if self.memory >= 0 {
-            self.memory = 3;
-        }
-        // If memory is on next player's side (negative), negate it for the new perspective
-        // Actually in Digimon TCG: at start of turn, if memory <= 0, set to 3
-        // The memory represents active player's memory: positive = theirs, negative = opponent's
-        // At turn start, the new active player gets at least 3 memory
-        if self.memory <= 0 {
-            self.memory = 3;
-        }
+        // Flip the seesaw. Memory is always expressed from the active player's
+        // perspective: positive = their side, negative = opponent's side. When
+        // the turn switches, the new active player sees the opposite sign.
+        // Matches Python's `switch_turn`: `self.memory = -self.memory`.
+        //
+        // No clamping. Over-cost plays that pushed memory deep negative carry
+        // their magnitude across the switch as positive memory for the next
+        // player — that's the intended tempo consequence.
+        self.memory = -self.memory;
 
         // Check max turns
         if self.turn_count > self.rules.max_turns {

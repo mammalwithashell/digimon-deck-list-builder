@@ -69,18 +69,14 @@ fn check_turn_end_no_op_when_memory_nonnegative() {
 // ── §1.3 — pass_turn preserves overflow ──────────────────────────────
 
 #[test]
-fn pass_turn_forces_minus_three_when_memory_nonnegative() {
+fn pass_turn_gives_next_player_three_from_clean_pass() {
     let mut r = empty_runner();
     r.game.set_memory(5);
-    // Snapshot memory_range to disable turn-switch memory flip for this test.
-    // We only care about what pass_turn DID to memory before end_turn runs.
-    // end_turn will then negate it — which is tested separately in Step 3.
+    let tp_before = r.turn_player();
     r.game.pass_turn();
-    // After pass_turn: set to -3 (>=0 branch), then end_turn negates to +3.
-    // That's the Python behavior: new active player gets 3 memory.
-    // NOTE: this test will be updated once Step 3 lands the `negate` semantics.
-    // For now, pre-Step-3, memory is clamped to 3 in end_turn — same observable.
-    assert_eq!(r.memory(), 3, "next player receives 3 memory from a clean pass");
+    assert_ne!(r.turn_player(), tp_before, "turn switched");
+    // pass_turn clamped to -3, then end_turn negated to +3.
+    assert_eq!(r.memory(), 3);
 }
 
 #[test]
@@ -88,15 +84,33 @@ fn pass_turn_preserves_negative_overflow() {
     let mut r = empty_runner();
     // Simulate an over-cost play that left memory at -4 (in-range).
     r.game.set_memory(-4);
-    // Do NOT call pay_memory — just preset state. Then pass.
     r.game.pass_turn();
-    // Pre-Step-3: end_turn clamps; post-Step-3: end_turn negates → +4.
-    // What matters here is that pass_turn did NOT overwrite -4 with -3.
-    // Step 3 will assert the resulting +4 specifically.
-    assert!(
-        r.memory() >= 3,
-        "the overflow from over-cost plays must not be collapsed to -3 by pass_turn; \
-         got memory={}",
-        r.memory()
-    );
+    // pass_turn must NOT overwrite -4 with -3; end_turn negates -4 → +4.
+    assert_eq!(r.memory(), 4, "overflow must carry through as +4 for the next player");
+}
+
+// ── §1.2 — end_turn negates memory; no clamp ─────────────────────────
+
+#[test]
+fn end_turn_negates_positive_memory() {
+    let mut r = empty_runner();
+    r.game.set_memory(7);
+    r.game.end_turn();
+    assert_eq!(r.memory(), -7, "+7 on active player's side becomes -7 from new perspective");
+}
+
+#[test]
+fn end_turn_negates_negative_memory() {
+    let mut r = empty_runner();
+    r.game.set_memory(-5);
+    r.game.end_turn();
+    assert_eq!(r.memory(), 5, "-5 (on next player's side) becomes +5 from their perspective");
+}
+
+#[test]
+fn end_turn_at_zero_stays_zero() {
+    let mut r = empty_runner();
+    r.game.set_memory(0);
+    r.game.end_turn();
+    assert_eq!(r.memory(), 0, "0 memory flips to 0");
 }
