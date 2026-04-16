@@ -80,7 +80,10 @@ export function DeckListPanel() {
             {section.label} ({section.totalCount})
           </div>
           {section.entries.map((entry) => (
-            <DeckCardEntry key={entry.cardId} entry={entry} />
+            <DeckCardEntry
+              key={`${entry.cardId}${entry.isAltArt ? '-alt' : ''}`}
+              entry={entry}
+            />
           ))}
         </div>
       ))}

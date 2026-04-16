@@ -15,9 +15,20 @@ interface SearchParams {
   series?: string;  // "Digimon Card Game"
 }
 
+/** The digimoncard.io API returns multiple entries per card id — one for the
+ *  base printing plus one per TCGPlayer SKU (alt arts, reprints, promos).
+ *  The only signal distinguishing an alt-art SKU from a reprint is the
+ *  parenthetical in `tcgplayer_name` (e.g. "Omnimon (Alternate Art - sasasi)").
+ *  The CDN only serves a single alt-art image per card under the `_alt`
+ *  suffix, so we collapse all of the "Alternate Art" SKUs down to one entry. */
+function isAltArtEntry(raw: Record<string, unknown>): boolean {
+  const tcgName = (raw.tcgplayer_name as string | null | undefined) ?? '';
+  return /alternate art/i.test(tcgName);
+}
+
 /** Map raw API response to our DigimonCardData shape.
  *  The API returns `id` but our components use `cardnumber`. */
-function mapApiCard(raw: Record<string, unknown>): DigimonCardData {
+function mapApiCard(raw: Record<string, unknown>, isAltArt = false): DigimonCardData {
   return {
     name: (raw.name as string) ?? '',
     type: (raw.type as string) ?? '',
@@ -38,7 +49,48 @@ function mapApiCard(raw: Record<string, unknown>): DigimonCardData {
     card_sets: Array.isArray(raw.set_name) ? (raw.set_name as string[]) : [],
     image_url: '',  // Not provided by API; CDN URL constructed from cardnumber
     color2: (raw.color2 as string) ?? undefined,
+    isAltArt,
   };
+}
+
+/** Collapse multiple API entries sharing the same card id down to at most two
+ *  entries: the base printing and (if present) one alternate-art variant.
+ *  Without this, the grid would render the same image N times because every
+ *  TCGPlayer SKU maps to the same CDN filename. */
+function dedupeByCardId(raw: Record<string, unknown>[]): DigimonCardData[] {
+  const baseByCardId = new Map<string, DigimonCardData>();
+  const altByCardId = new Map<string, DigimonCardData>();
+  const order: string[] = [];
+
+  for (const entry of raw) {
+    const cardId = (entry.id as string) ?? '';
+    if (!cardId) continue;
+    if (!baseByCardId.has(cardId) && !altByCardId.has(cardId)) {
+      order.push(cardId);
+    }
+    if (isAltArtEntry(entry)) {
+      if (!altByCardId.has(cardId)) {
+        altByCardId.set(cardId, mapApiCard(entry, true));
+      }
+    } else if (!baseByCardId.has(cardId)) {
+      baseByCardId.set(cardId, mapApiCard(entry, false));
+    }
+  }
+
+  const out: DigimonCardData[] = [];
+  for (const cardId of order) {
+    const base = baseByCardId.get(cardId);
+    const alt = altByCardId.get(cardId);
+    if (base) out.push(base);
+    // If the card only appears as alt-art SKUs (no plain entry), surface the
+    // alt-art entry as the base so the card still shows up at all.
+    else if (alt) {
+      out.push({ ...alt, isAltArt: false });
+      continue;
+    }
+    if (alt && base) out.push(alt);
+  }
+  return out;
 }
 
 export async function searchCards(params: SearchParams): Promise<DigimonCardData[]> {
@@ -48,7 +100,7 @@ export async function searchCards(params: SearchParams): Promise<DigimonCardData
   }
   const { data } = await axios.get<Record<string, unknown>[]>(DIGIMON_API, { params: query });
   if (!Array.isArray(data)) return [];
-  return data.map(mapApiCard);
+  return dedupeByCardId(data);
 }
 
 export async function getCardById(cardId: string): Promise<DigimonCardData | null> {

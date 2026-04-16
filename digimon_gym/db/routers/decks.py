@@ -79,7 +79,27 @@ def _validate_for_mode(card_ids: list[str], game_mode: str, titan_role: str | No
     return result.is_valid, result.errors
 
 
+def _normalize_alt_arts(flags: list[bool] | None, expected_len: int) -> list[bool]:
+    """Pad/truncate an alt-art flag list to match its card-id list length.
+
+    Accepts `None` or empty input and returns a matching-length list of
+    `False` values, so older decks saved before alt-art support transparently
+    become "all base art".
+    """
+    if not flags:
+        return [False] * expected_len
+    # Explicitly coerce to booleans in case JSON round-tripped as ints.
+    out = [bool(x) for x in flags[:expected_len]]
+    if len(out) < expected_len:
+        out.extend([False] * (expected_len - len(out)))
+    return out
+
+
 def _deck_to_response(deck: Deck) -> DeckResponse:
+    main_ids = json.loads(deck.main_deck)
+    egg_ids = json.loads(deck.egg_deck) if deck.egg_deck else []
+    main_alts = json.loads(deck.main_deck_alt_arts) if deck.main_deck_alt_arts else []
+    egg_alts = json.loads(deck.egg_deck_alt_arts) if deck.egg_deck_alt_arts else []
     return DeckResponse(
         id=deck.id,
         owner_id=deck.owner_id,
@@ -87,8 +107,10 @@ def _deck_to_response(deck: Deck) -> DeckResponse:
         description=deck.description or "",
         game_mode=deck.game_mode,
         titan_role=deck.titan_role,
-        main_deck=json.loads(deck.main_deck),
-        egg_deck=json.loads(deck.egg_deck) if deck.egg_deck else [],
+        main_deck=main_ids,
+        egg_deck=egg_ids,
+        main_deck_alt_arts=_normalize_alt_arts(main_alts, len(main_ids)),
+        egg_deck_alt_arts=_normalize_alt_arts(egg_alts, len(egg_ids)),
         commander_id=deck.commander_id,
         is_valid=bool(deck.is_valid),
         validation_errors=json.loads(deck.validation_errors) if deck.validation_errors else [],
@@ -119,6 +141,9 @@ async def create_deck(
     all_cards = request.main_deck + request.egg_deck
     is_valid, errors = _validate_for_mode(all_cards, request.game_mode, request.titan_role)
 
+    main_alts = _normalize_alt_arts(request.main_deck_alt_arts, len(request.main_deck))
+    egg_alts = _normalize_alt_arts(request.egg_deck_alt_arts, len(request.egg_deck))
+
     deck = Deck(
         owner_id=user.id,
         name=request.name,
@@ -127,6 +152,8 @@ async def create_deck(
         titan_role=request.titan_role,
         main_deck=json.dumps(request.main_deck),
         egg_deck=json.dumps(request.egg_deck),
+        main_deck_alt_arts=json.dumps(main_alts),
+        egg_deck_alt_arts=json.dumps(egg_alts),
         commander_id=request.commander_id,
         is_valid=1 if is_valid else 0,
         validation_errors=json.dumps(errors),
@@ -231,8 +258,25 @@ async def update_deck(
         deck.description = request.description
     if request.main_deck is not None:
         deck.main_deck = json.dumps(request.main_deck)
+        # Normalize whatever alt-art list the client sent against the new
+        # card list length, or reset to all-base-art if the client didn't
+        # send one alongside the card update.
+        main_alts = _normalize_alt_arts(request.main_deck_alt_arts, len(request.main_deck))
+        deck.main_deck_alt_arts = json.dumps(main_alts)
+    elif request.main_deck_alt_arts is not None:
+        current_len = len(json.loads(deck.main_deck))
+        deck.main_deck_alt_arts = json.dumps(
+            _normalize_alt_arts(request.main_deck_alt_arts, current_len)
+        )
     if request.egg_deck is not None:
         deck.egg_deck = json.dumps(request.egg_deck)
+        egg_alts = _normalize_alt_arts(request.egg_deck_alt_arts, len(request.egg_deck))
+        deck.egg_deck_alt_arts = json.dumps(egg_alts)
+    elif request.egg_deck_alt_arts is not None:
+        current_len = len(json.loads(deck.egg_deck or "[]"))
+        deck.egg_deck_alt_arts = json.dumps(
+            _normalize_alt_arts(request.egg_deck_alt_arts, current_len)
+        )
     if request.commander_id is not None:
         deck.commander_id = request.commander_id
     if request.is_public is not None:
@@ -258,6 +302,8 @@ async def update_deck(
             version_number=current_max + 1,
             main_deck=deck.main_deck,
             egg_deck=deck.egg_deck or "[]",
+            main_deck_alt_arts=deck.main_deck_alt_arts or "[]",
+            egg_deck_alt_arts=deck.egg_deck_alt_arts or "[]",
             commander_id=deck.commander_id,
             change_note=request.change_note,
         )

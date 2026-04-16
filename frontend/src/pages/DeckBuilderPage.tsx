@@ -31,18 +31,28 @@ export function DeckBuilderPage() {
     try {
       const mainIds = mainDeck.flatMap((e) => Array(e.count).fill(e.cardId) as string[]);
       const eggIds = eggDeck.flatMap((e) => Array(e.count).fill(e.cardId) as string[]);
+      const mainAlts = mainDeck.flatMap(
+        (e) => Array(e.count).fill(!!e.isAltArt) as boolean[],
+      );
+      const eggAlts = eggDeck.flatMap(
+        (e) => Array(e.count).fill(!!e.isAltArt) as boolean[],
+      );
 
       if (deckId) {
         await deckApi.updateDeck(deckId, {
           name: deckName,
           main_deck: mainIds,
           egg_deck: eggIds,
+          main_deck_alt_arts: mainAlts,
+          egg_deck_alt_arts: eggAlts,
         });
       } else {
         const created = await deckApi.createDeck({
           name: deckName,
           main_deck: mainIds,
           egg_deck: eggIds,
+          main_deck_alt_arts: mainAlts,
+          egg_deck_alt_arts: eggAlts,
           game_mode: 'standard',
         });
         setDeckId(created.id);

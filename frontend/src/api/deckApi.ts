@@ -7,6 +7,9 @@ interface CreateDeckParams {
   game_mode?: string;
   main_deck: string[];
   egg_deck: string[];
+  /** Optional parallel bool arrays marking which slots are alt-art. */
+  main_deck_alt_arts?: boolean[];
+  egg_deck_alt_arts?: boolean[];
   is_public?: boolean;
   tags?: string[];
 }
@@ -19,6 +22,8 @@ interface DeckResponse {
   game_mode: string;
   main_deck: string[];
   egg_deck: string[];
+  main_deck_alt_arts?: boolean[];
+  egg_deck_alt_arts?: boolean[];
   commander_id: string | null;
   is_valid: boolean;
   validation_errors: string[];
