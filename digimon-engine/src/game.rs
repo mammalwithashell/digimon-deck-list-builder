@@ -5,7 +5,7 @@ use rand::SeedableRng;
 use crate::card_data::CardData;
 use crate::card_source::CardSource;
 use crate::cards::{build_registry, CardEffectRegistry};
-use crate::effect_context::EffectContext;
+use crate::effect_context::{EffectContext, EffectReadContext};
 use crate::enums::{GamePhase, PlayerId, SkipDraw};
 use crate::modifiers::ModifierRegistry;
 use crate::permanent::PermanentHandle;
@@ -656,5 +656,156 @@ impl Game {
         }
         player.battle_area[field_index].digivolve(card, turn);
         true
+    }
+
+    // ─── Tensor support: per-source DP + OPT helpers (§3.1 / §3.2) ───
+
+    /// Sum of static `dp_modifier` values from a single source's effects
+    /// that pass the inherited/top filter and their condition (if any).
+    /// Returns a signed raw DP delta. Tensor writes this divided by DP_NORM.
+    pub fn source_dp_contribution(
+        &self,
+        perm: PermanentHandle,
+        source_index: usize,
+    ) -> i32 {
+        let Some(permanent) = self
+            .players
+            .get(perm.player as usize)
+            .and_then(|p| p.battle_area.get(perm.index as usize))
+        else {
+            return 0;
+        };
+        let stack_size = permanent.card_sources.len();
+        let Some(source) = permanent.card_sources.get(source_index) else {
+            return 0;
+        };
+        let is_under = source_index + 1 < stack_size;
+        let card_id = source.card_id(&self.card_data).to_string();
+        let Some(impl_) = self.effect_registry.get(&card_id) else {
+            return 0;
+        };
+        let effects = impl_.effects(source.handle());
+
+        let mut total = 0i32;
+        for effect in &effects {
+            if effect.dp_modifier == 0 {
+                continue;
+            }
+            if is_under != effect.inherited {
+                continue;
+            }
+            if let Some(cond) = &effect.condition {
+                let ctx = EffectReadContext::new(
+                    self,
+                    source.handle(),
+                    Some(perm),
+                    perm.player,
+                );
+                if !cond(&ctx) {
+                    continue;
+                }
+            }
+            total += effect.dp_modifier;
+        }
+        total
+    }
+
+    /// OPT effects on a permanent, counted across its entire digivolution
+    /// stack with the same inherited/top filter as `source_dp_contribution`.
+    /// Linked card effects are not iterated (residual gap §3.1b).
+    pub fn opt_total(&self, perm: PermanentHandle) -> u32 {
+        self.opt_counts(perm).0
+    }
+
+    /// Number of OPT effects whose activation count this turn has reached
+    /// their `max_per_turn` cap.
+    pub fn opt_used(&self, perm: PermanentHandle) -> u32 {
+        self.opt_counts(perm).1
+    }
+
+    /// Per-source OPT availability fraction in `[0.0, 1.0]`. `0.0` when the
+    /// source has no OPT effects (matches Python's `source_opt_state`).
+    pub fn source_opt_state(
+        &self,
+        perm: PermanentHandle,
+        source_index: usize,
+    ) -> f32 {
+        let Some(permanent) = self
+            .players
+            .get(perm.player as usize)
+            .and_then(|p| p.battle_area.get(perm.index as usize))
+        else {
+            return 0.0;
+        };
+        let stack_size = permanent.card_sources.len();
+        let Some(source) = permanent.card_sources.get(source_index) else {
+            return 0.0;
+        };
+        let is_under = source_index + 1 < stack_size;
+        let card_id = source.card_id(&self.card_data).to_string();
+        let Some(impl_) = self.effect_registry.get(&card_id) else {
+            return 0.0;
+        };
+        let effects = impl_.effects(source.handle());
+
+        let mut total = 0u32;
+        let mut available = 0u32;
+        for (slot, effect) in effects.iter().enumerate() {
+            if effect.max_per_turn == 0 {
+                continue;
+            }
+            if is_under != effect.inherited {
+                continue;
+            }
+            total += 1;
+            let used = permanent.activation_count(source.handle(), slot as u8);
+            if used < effect.max_per_turn {
+                available += 1;
+            }
+        }
+
+        if total == 0 {
+            0.0
+        } else {
+            available as f32 / total as f32
+        }
+    }
+
+    /// Shared implementation: `(total_opt_effects, used_opt_effects)` across
+    /// every source in the permanent's stack with the inherited/top filter.
+    fn opt_counts(&self, perm: PermanentHandle) -> (u32, u32) {
+        let Some(permanent) = self
+            .players
+            .get(perm.player as usize)
+            .and_then(|p| p.battle_area.get(perm.index as usize))
+        else {
+            return (0, 0);
+        };
+        let stack_size = permanent.card_sources.len();
+
+        let mut total = 0u32;
+        let mut used = 0u32;
+        for (source_index, source) in permanent.card_sources.iter().enumerate() {
+            let is_under = source_index + 1 < stack_size;
+            let card_id = source.card_id(&self.card_data).to_string();
+            let Some(impl_) = self.effect_registry.get(&card_id) else {
+                continue;
+            };
+            let effects = impl_.effects(source.handle());
+            for (slot, effect) in effects.iter().enumerate() {
+                if effect.max_per_turn == 0 {
+                    continue;
+                }
+                if is_under != effect.inherited {
+                    continue;
+                }
+                total += 1;
+                let count = permanent.activation_count(source.handle(), slot as u8);
+                if count >= effect.max_per_turn {
+                    used += 1;
+                }
+            }
+        }
+        (total, used)
     }
 }
