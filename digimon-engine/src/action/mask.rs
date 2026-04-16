@@ -193,22 +193,14 @@ pub fn build_action_mask(game: &Game, player_id: PlayerId) -> Vec<f32> {
             // --- DNA Digivolve (63-92) --- §4.5 slice.
             // A hand Digimon with non-empty dna_costs is playable if some
             // pair of permanents in battle_area satisfies any of its DnaCost
-            // entries (either ordering). Memory cost is checked against
-            // memory_range.0 like play_cost. Data population (cards.json
-            // ingest of dna_costs) is §4.5b.
+            // entries (either ordering). Python's mask does NOT gate on
+            // memory (action_mask.py:161-166) — the memory check runs at
+            // action-execution time, not mask generation. Mirror that here.
+            // Data population (cards.json ingest of dna_costs) is §4.5b.
             for h in 0..max_hand as usize {
                 let card = &me.hand[h];
                 let evo_meta = &game.card_data[card.data_index];
                 if evo_meta.dna_costs.is_empty() {
-                    continue;
-                }
-                let min_mem_cost = evo_meta
-                    .dna_costs
-                    .iter()
-                    .map(|c| c.memory_cost)
-                    .min()
-                    .unwrap_or(0);
-                if (game.memory - min_mem_cost) < game.rules.memory_range.0 {
                     continue;
                 }
                 if crate::dna_digivolve::has_valid_dna_targets(

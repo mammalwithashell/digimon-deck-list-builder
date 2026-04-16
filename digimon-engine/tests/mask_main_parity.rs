@@ -480,11 +480,12 @@ fn mask_dna_digivolve_rejects_when_no_pair() {
 }
 
 #[test]
-fn mask_dna_digivolve_respects_memory_cost() {
-    // memory_cost = 5, current memory = 2 → memory - 5 = -3, below
-    // memory_range.0 (which is -10 by default). Actually, -3 >= -10, so it
-    // IS affordable in terms of memory range. Use memory = -8 instead so
-    // the subtraction pushes us out of range.
+fn mask_dna_digivolve_does_not_gate_on_memory() {
+    // Python's DNA mask section (action_mask.py:161-166) emits the bit
+    // whenever a valid pair exists, regardless of memory. Memory is
+    // validated at action-execution time. Locks in the Python-parity
+    // behavior for Rust — at negative memory with a valid pair, the bit
+    // still fires.
     let dna_costs = vec![DnaCost {
         requirement1: req(3, CardColor::Red),
         requirement2: req(3, CardColor::Blue),
@@ -504,8 +505,8 @@ fn mask_dna_digivolve_respects_memory_cost() {
 
     let mask = build_action_mask(&r.game, 0);
     assert_eq!(
-        mask[DNA_DIGIVOLVE_START as usize], 0.0,
-        "memory - memory_cost below memory_range.0 → mask bit stays off",
+        mask[DNA_DIGIVOLVE_START as usize], 1.0,
+        "DNA mask emits bit regardless of memory — Python parity",
     );
 }
 

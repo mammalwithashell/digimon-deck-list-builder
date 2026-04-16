@@ -220,7 +220,7 @@ DNA digivolve plumbing has landed; Hand/Field/Trash `[Main]` effect masks remain
 
 **Python** — [action_mask.py:161-166](../digimon_gym/engine/game/action_mask.py#L161): `if card.is_digimon and has_valid_dna_targets(card, me.battle_area): mask[63 + h] = 1.0`.
 
-**Rust** — [mask.rs](../digimon-engine/src/action/mask.rs) `GamePhase::Main` arm emits `DNA_DIGIVOLVE_START + hand_index` when the hand card's `CardData.dna_costs` is non-empty, memory covers the cheapest `memory_cost`, and [`dna_digivolve::has_valid_dna_targets`](../digimon-engine/src/dna_digivolve.rs) finds some pair of battle-area permanents satisfying any `DnaCost` entry in either ordering. Matches Python's `can_dna_digivolve` / `has_valid_dna_targets` semantics.
+**Rust** — [mask.rs](../digimon-engine/src/action/mask.rs) `GamePhase::Main` arm emits `DNA_DIGIVOLVE_START + hand_index` when the hand card's `CardData.dna_costs` is non-empty and [`dna_digivolve::has_valid_dna_targets`](../digimon-engine/src/dna_digivolve.rs) finds some pair of battle-area permanents satisfying any `DnaCost` entry in either ordering. Memory cost is NOT gated at mask-generation time — Python's `action_mask.py:161-166` emits the bit regardless of memory and defers the cost check to action execution. `text_contains` searches the concatenation of `effect_text + inherited_text + security_text` to match Python's `_perm_matches_dna_req`.
 
 **Coverage:** [tests/mask_main_parity.rs](../digimon-engine/tests/mask_main_parity.rs) — `mask_dna_digivolve_emits_when_valid_pair_exists`, `mask_dna_digivolve_accepts_either_ordering`, `mask_dna_digivolve_rejects_when_no_pair`, `mask_dna_digivolve_respects_memory_cost`, `mask_dna_digivolve_skips_cards_without_dna_costs`.
 

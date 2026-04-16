@@ -38,13 +38,20 @@ fn perm_matches_req(perm: &Permanent, req: &DnaRequirement, data: &[CardData]) -
     {
         return false;
     }
-    if !req.text_contains.is_empty()
-        && !meta
-            .effect_text
-            .to_lowercase()
-            .contains(&req.text_contains.to_lowercase())
-    {
-        return false;
+    if !req.text_contains.is_empty() {
+        // Python's `_perm_matches_dna_req` searches effect + inherited +
+        // security text concatenated (digivolve_validator.py:189-199).
+        let needle = req.text_contains.to_lowercase();
+        let haystack = [
+            meta.effect_text.as_str(),
+            meta.inherited_text.as_str(),
+            meta.security_text.as_str(),
+        ]
+        .join(" ")
+        .to_lowercase();
+        if !haystack.contains(&needle) {
+            return false;
+        }
     }
     true
 }
