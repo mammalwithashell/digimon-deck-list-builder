@@ -209,6 +209,34 @@ pub fn build_action_mask(game: &Game, player_id: PlayerId) -> Vec<f32> {
             mask[PASS as usize] = 1.0;
         }
 
+        GamePhase::EndOfTurnAction => {
+            // Decline end-of-turn action — always legal.
+            mask[PASS as usize] = 1.0;
+            // §4.6 slice — Vortex. A permanent with modifier-granted
+            // Keyword::Vortex whose `can_attack(handle, vortex=true)` is
+            // true may attack any enemy Digimon (suspended or not).
+            // Mirrors Python action_mask.py:321-335. Overclock /
+            // MAY_ATTACK / FORCE_ATTACK bits are tracked as §4.6c.
+            let max_field = me.battle_area.len().min(FIELD_SLOTS);
+            for i in 0..max_field {
+                let handle = PermanentHandle { player: player_id, index: i as u8 };
+                if !game.modifiers.has_keyword(handle, Keyword::Vortex) {
+                    continue;
+                }
+                if !game.can_attack(handle, /* vortex = */ true) {
+                    continue;
+                }
+                mask[encode_attack(i as u16, SECURITY_TARGET) as usize] = 1.0;
+                let max_opp = opp.battle_area.len().min(FIELD_SLOTS);
+                for j in 0..max_opp {
+                    let target = &opp.battle_area[j];
+                    if target.is_digimon(&game.card_data) {
+                        mask[encode_attack(i as u16, j as u16) as usize] = 1.0;
+                    }
+                }
+            }
+        }
+
         // Selection / combat phases require effect system + pending_selection support.
         // Defer to later phases. For now, allow pass to avoid soft-locking.
         _ => {

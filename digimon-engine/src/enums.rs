@@ -137,6 +137,7 @@ pub enum Keyword {
     Decoy,
     Material,
     Partition,
+    Vortex,
 }
 
 /// Zone where a card can exist.
@@ -199,6 +200,7 @@ pub enum ModifierType {
     GrantBarrier,
     GrantArmor,
     GrantDecoy,
+    GrantVortex,
 
     // Security
     SecurityAttackChange,
