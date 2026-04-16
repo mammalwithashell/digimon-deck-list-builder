@@ -7,8 +7,8 @@
 //! §4.3 — Blitz attack exception (memory < 0)
 //! §4.4 — Raid + CAN_ATTACK_UNSUSPENDED target rule (unsuspended targets)
 
-use digimon_engine::action::{build_action_mask, encode_attack, SECURITY_TARGET};
-use digimon_engine::card_data::CardData;
+use digimon_engine::action::{build_action_mask, encode_attack, DNA_DIGIVOLVE_START, SECURITY_TARGET};
+use digimon_engine::card_data::{CardData, DnaCost, DnaRequirement};
 use digimon_engine::debug_runner::DebugRunner;
 use digimon_engine::enums::{CardColor, CardKind, Expiry, Keyword, ModifierType};
 
@@ -25,6 +25,7 @@ fn make_option(id: &str, color: CardColor) -> CardData {
         colors: vec![color],
         traits: Vec::new(),
         evo_costs: Vec::new(),
+        dna_costs: Vec::new(),
         effect_text: String::new(),
         inherited_text: String::new(),
         security_text: String::new(),
@@ -49,6 +50,7 @@ fn make_digimon_dp(id: &str, color: CardColor, dp: i32) -> CardData {
         colors: vec![color],
         traits: Vec::new(),
         evo_costs: Vec::new(),
+        dna_costs: Vec::new(),
         effect_text: String::new(),
         inherited_text: String::new(),
         security_text: String::new(),
@@ -69,6 +71,7 @@ fn make_tamer(id: &str, color: CardColor) -> CardData {
         colors: vec![color],
         traits: Vec::new(),
         evo_costs: Vec::new(),
+        dna_costs: Vec::new(),
         effect_text: String::new(),
         inherited_text: String::new(),
         security_text: String::new(),
@@ -330,5 +333,200 @@ fn mask_can_attack_unsuspended_modifier_allows_all_unsuspended() {
     assert_eq!(
         mask[encode_attack(attacker.index as u16, strong_idx as u16) as usize], 1.0,
         "CAN_ATTACK_UNSUSPENDED → higher-DP unsuspended is attackable",
+    );
+}
+
+// ─── §4.5 DNA Digivolve mask (range 63-92) ─────────────────────────────
+
+/// A DNA-digivolve card (Digimon with `dna_costs`) is playable via mask bit
+/// `DNA_DIGIVOLVE_START + hand_index` when two permanents on the battle
+/// area satisfy any of its DnaCost entries in either ordering.
+fn make_digimon_level(id: &str, color: CardColor, level: u8) -> CardData {
+    CardData {
+        card_id: id.to_string(),
+        card_name: id.to_string(),
+        card_kind: CardKind::Digimon,
+        level: Some(level),
+        dp: Some(4000),
+        play_cost: 5,
+        colors: vec![color],
+        traits: Vec::new(),
+        evo_costs: Vec::new(),
+        dna_costs: Vec::new(),
+        effect_text: String::new(),
+        inherited_text: String::new(),
+        security_text: String::new(),
+        effect_class_name: id.replace('-', "_"),
+        index: 0,
+        norm_id: 0.0,
+    }
+}
+
+/// A Digimon hand card carrying DNA costs — used as the evolution target.
+fn make_dna_digimon(
+    id: &str,
+    color: CardColor,
+    dna_costs: Vec<DnaCost>,
+) -> CardData {
+    CardData {
+        card_id: id.to_string(),
+        card_name: id.to_string(),
+        card_kind: CardKind::Digimon,
+        level: Some(5),
+        dp: Some(6000),
+        play_cost: 7,
+        colors: vec![color],
+        traits: Vec::new(),
+        evo_costs: Vec::new(),
+        dna_costs,
+        effect_text: String::new(),
+        inherited_text: String::new(),
+        security_text: String::new(),
+        effect_class_name: id.replace('-', "_"),
+        index: 0,
+        norm_id: 0.0,
+    }
+}
+
+fn req(level: u8, color: CardColor) -> DnaRequirement {
+    DnaRequirement {
+        level,
+        card_color: Some(color),
+        name_contains: String::new(),
+        text_contains: String::new(),
+    }
+}
+
+#[test]
+fn mask_dna_digivolve_emits_when_valid_pair_exists() {
+    // DNA card needs Red Lv3 + Blue Lv3. Field has both → mask bit set.
+    let dna_costs = vec![DnaCost {
+        requirement1: req(3, CardColor::Red),
+        requirement2: req(3, CardColor::Blue),
+        memory_cost: 0,
+    }];
+    let mut r = DebugRunner::builder()
+        .add_card(make_dna_digimon("DNA-X", CardColor::Purple, dna_costs))
+        .add_card(make_digimon_level("RED-MON", CardColor::Red, 3))
+        .add_card(make_digimon_level("BLUE-MON", CardColor::Blue, 3))
+        .hand(0, &["DNA-X"])
+        .start();
+
+    r.game.set_memory(3);
+    r.game.enter_main_phase();
+    r.place_on_field(0, "RED-MON", Some(0));
+    r.place_on_field(0, "BLUE-MON", Some(0));
+
+    let mask = build_action_mask(&r.game, 0);
+    assert_eq!(
+        mask[DNA_DIGIVOLVE_START as usize], 1.0,
+        "DNA-X is in hand slot 0 → bit DNA_DIGIVOLVE_START + 0 should be 1",
+    );
+}
+
+#[test]
+fn mask_dna_digivolve_accepts_either_ordering() {
+    // Same requirement, but place Blue BEFORE Red in the battle_area.
+    // Validator must try both orderings.
+    let dna_costs = vec![DnaCost {
+        requirement1: req(3, CardColor::Red),
+        requirement2: req(3, CardColor::Blue),
+        memory_cost: 0,
+    }];
+    let mut r = DebugRunner::builder()
+        .add_card(make_dna_digimon("DNA-X", CardColor::Purple, dna_costs))
+        .add_card(make_digimon_level("RED-MON", CardColor::Red, 3))
+        .add_card(make_digimon_level("BLUE-MON", CardColor::Blue, 3))
+        .hand(0, &["DNA-X"])
+        .start();
+
+    r.game.set_memory(3);
+    r.game.enter_main_phase();
+    r.place_on_field(0, "BLUE-MON", Some(0)); // Blue first
+    r.place_on_field(0, "RED-MON", Some(0));
+
+    let mask = build_action_mask(&r.game, 0);
+    assert_eq!(
+        mask[DNA_DIGIVOLVE_START as usize], 1.0,
+        "reversed battle_area order must still satisfy the DNA pair",
+    );
+}
+
+#[test]
+fn mask_dna_digivolve_rejects_when_no_pair() {
+    // Needs Red + Blue; field has two Reds. No valid pair.
+    let dna_costs = vec![DnaCost {
+        requirement1: req(3, CardColor::Red),
+        requirement2: req(3, CardColor::Blue),
+        memory_cost: 0,
+    }];
+    let mut r = DebugRunner::builder()
+        .add_card(make_dna_digimon("DNA-X", CardColor::Purple, dna_costs))
+        .add_card(make_digimon_level("RED-A", CardColor::Red, 3))
+        .add_card(make_digimon_level("RED-B", CardColor::Red, 3))
+        .hand(0, &["DNA-X"])
+        .start();
+
+    r.game.set_memory(3);
+    r.game.enter_main_phase();
+    r.place_on_field(0, "RED-A", Some(0));
+    r.place_on_field(0, "RED-B", Some(0));
+
+    let mask = build_action_mask(&r.game, 0);
+    assert_eq!(
+        mask[DNA_DIGIVOLVE_START as usize], 0.0,
+        "no Red+Blue pair → mask bit must stay off",
+    );
+}
+
+#[test]
+fn mask_dna_digivolve_respects_memory_cost() {
+    // memory_cost = 5, current memory = 2 → memory - 5 = -3, below
+    // memory_range.0 (which is -10 by default). Actually, -3 >= -10, so it
+    // IS affordable in terms of memory range. Use memory = -8 instead so
+    // the subtraction pushes us out of range.
+    let dna_costs = vec![DnaCost {
+        requirement1: req(3, CardColor::Red),
+        requirement2: req(3, CardColor::Blue),
+        memory_cost: 5,
+    }];
+    let mut r = DebugRunner::builder()
+        .add_card(make_dna_digimon("DNA-X", CardColor::Purple, dna_costs))
+        .add_card(make_digimon_level("RED-MON", CardColor::Red, 3))
+        .add_card(make_digimon_level("BLUE-MON", CardColor::Blue, 3))
+        .hand(0, &["DNA-X"])
+        .start();
+
+    r.game.set_memory(-8);
+    r.game.enter_main_phase();
+    r.place_on_field(0, "RED-MON", Some(0));
+    r.place_on_field(0, "BLUE-MON", Some(0));
+
+    let mask = build_action_mask(&r.game, 0);
+    assert_eq!(
+        mask[DNA_DIGIVOLVE_START as usize], 0.0,
+        "memory - memory_cost below memory_range.0 → mask bit stays off",
+    );
+}
+
+#[test]
+fn mask_dna_digivolve_skips_cards_without_dna_costs() {
+    // A regular Digimon in hand (no dna_costs) must never emit a DNA bit.
+    let mut r = DebugRunner::builder()
+        .add_card(make_digimon_level("REGULAR", CardColor::Red, 5))
+        .add_card(make_digimon_level("RED-MON", CardColor::Red, 3))
+        .add_card(make_digimon_level("BLUE-MON", CardColor::Blue, 3))
+        .hand(0, &["REGULAR"])
+        .start();
+
+    r.game.set_memory(3);
+    r.game.enter_main_phase();
+    r.place_on_field(0, "RED-MON", Some(0));
+    r.place_on_field(0, "BLUE-MON", Some(0));
+
+    let mask = build_action_mask(&r.game, 0);
+    assert_eq!(
+        mask[DNA_DIGIVOLVE_START as usize], 0.0,
+        "Digimon without dna_costs must not emit the DNA bit even if a pair exists",
     );
 }

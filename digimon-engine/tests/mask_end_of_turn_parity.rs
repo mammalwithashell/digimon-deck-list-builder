@@ -29,6 +29,7 @@ fn make_digimon(id: &str, color: CardColor, dp: i32) -> CardData {
         colors: vec![color],
         traits: Vec::new(),
         evo_costs: Vec::new(),
+        dna_costs: Vec::new(),
         effect_text: String::new(),
         inherited_text: String::new(),
         security_text: String::new(),

@@ -27,6 +27,7 @@ fn fighter(id: &str, dp: i32) -> CardData {
         colors: vec![CardColor::Red],
         traits: Vec::new(),
         evo_costs: Vec::new(),
+        dna_costs: Vec::new(),
         effect_text: String::new(),
         inherited_text: String::new(),
         security_text: String::new(),
