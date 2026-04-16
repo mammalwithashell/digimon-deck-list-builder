@@ -37,9 +37,17 @@ pub fn build_action_mask(game: &Game, player_id: PlayerId) -> Vec<f32> {
 
     match game.current_phase {
         GamePhase::Mulligan => {
-            // 0 = keep, 1 = mulligan (single use)
+            // Mulligan is sequential: only the currently-deciding player has
+            // a non-empty mask. Everyone else sees all zeros.
+            if game.mulligan_current_player() != Some(player_id) {
+                return mask;
+            }
+            // Bit 0 = keep (always available for the decider).
             mask[0] = 1.0;
-            mask[1] = 1.0;
+            // Bit 1 = mulligan (one per player). Suppress if already used.
+            if !game.mulligan_used[player_id as usize] {
+                mask[1] = 1.0;
+            }
         }
 
         GamePhase::Main => {
