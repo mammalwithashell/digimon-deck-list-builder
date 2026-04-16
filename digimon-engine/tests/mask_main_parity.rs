@@ -77,27 +77,42 @@ fn make_tamer(id: &str, color: CardColor) -> CardData {
 // ─── §4.2 Option color requirement ────────────────────────────────────
 
 /// An Option card must be masked out (mask[0] == 0.0) when the player has
-/// no Digimon or Tamer of a matching color on the field.
+/// no Digimon or Tamer of a matching color on the field. Walks through the
+/// empty-field, wrong-color, and matching-color transitions in one test so
+/// a regression at any stage is caught immediately.
 #[test]
 fn mask_option_requires_matching_color_on_field() {
-    // Red Option in hand; Blue Digimon on field — no color match.
     let mut r = DebugRunner::builder()
         .add_card(make_option("OPT-R", CardColor::Red))
         .add_card(make_digimon("BLUE-MON", CardColor::Blue))
+        .add_card(make_digimon("RED-MON", CardColor::Red))
         .hand(0, &["OPT-R"])
         .start();
 
     r.game.set_memory(5);
     r.game.enter_main_phase();
 
-    // Place a Blue Digimon for the player — wrong color.
-    r.place_on_field(0, "BLUE-MON", Some(0));
-
-    let mask = build_action_mask(&r.game, 0);
-
+    // Empty field → no matching color → masked out.
+    let mask_no_field = build_action_mask(&r.game, 0);
     assert_eq!(
-        mask[0], 0.0,
-        "Option with no matching-color Digimon on field must be masked out"
+        mask_no_field[0], 0.0,
+        "Option with empty field must be masked out"
+    );
+
+    // Wrong-color Digimon on field → still masked out.
+    r.place_on_field(0, "BLUE-MON", Some(0));
+    let mask_wrong_color = build_action_mask(&r.game, 0);
+    assert_eq!(
+        mask_wrong_color[0], 0.0,
+        "Blue Digimon does not satisfy Red Option color requirement"
+    );
+
+    // Matching-color Digimon on field → unmasked.
+    r.place_on_field(0, "RED-MON", Some(0));
+    let mask_match = build_action_mask(&r.game, 0);
+    assert_eq!(
+        mask_match[0], 1.0,
+        "Red Digimon on field should unmask Red Option"
     );
 }
 
@@ -125,25 +140,3 @@ fn mask_option_color_check_accepts_tamer() {
     );
 }
 
-/// When the field has a same-color Digimon, the Option is playable.
-#[test]
-fn mask_option_accepts_matching_digimon() {
-    // Red Option in hand; Red Digimon on field — should be playable.
-    let mut r = DebugRunner::builder()
-        .add_card(make_option("OPT-R", CardColor::Red))
-        .add_card(make_digimon("RED-MON", CardColor::Red))
-        .hand(0, &["OPT-R"])
-        .start();
-
-    r.game.set_memory(5);
-    r.game.enter_main_phase();
-
-    r.place_on_field(0, "RED-MON", Some(0));
-
-    let mask = build_action_mask(&r.game, 0);
-
-    assert_eq!(
-        mask[0], 1.0,
-        "Option with matching-color Digimon on field must be playable"
-    );
-}
