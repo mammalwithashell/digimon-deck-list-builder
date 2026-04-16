@@ -1,9 +1,13 @@
 // Prevents additional console window on Windows in release.
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
+mod engine_commands;
+
 use std::sync::{Arc, Mutex};
 use tauri::Manager;
 use tauri_plugin_shell::ShellExt;
+
+use engine_commands::RustEngineState;
 
 /// State to hold the sidecar process handle for cleanup and the discovered port.
 struct SidecarState {
@@ -22,7 +26,19 @@ fn get_sidecar_port(state: tauri::State<'_, SidecarState>) -> Option<u16> {
 fn main() {
     tauri::Builder::default()
         .plugin(tauri_plugin_shell::init())
-        .invoke_handler(tauri::generate_handler![get_sidecar_port])
+        .manage(RustEngineState::default())
+        .invoke_handler(tauri::generate_handler![
+            get_sidecar_port,
+            engine_commands::create_test_game,
+            engine_commands::get_rust_game_state,
+            engine_commands::rust_play_card,
+            engine_commands::rust_attack_digimon,
+            engine_commands::rust_attack_player,
+            engine_commands::rust_end_turn,
+            engine_commands::rust_pass_turn,
+            engine_commands::rust_hatch,
+            engine_commands::rust_move_from_breeding,
+        ])
         .setup(|app| {
             // Resolve models directory from bundled resources
             let resource_dir = app

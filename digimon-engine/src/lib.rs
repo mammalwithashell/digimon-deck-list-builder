@@ -1,0 +1,35 @@
+pub mod enums;
+pub mod rules;
+pub mod card_data;
+pub mod card_registry;
+pub mod card_source;
+pub mod permanent;
+pub mod player;
+pub mod game;
+pub mod action;
+pub mod phases;
+pub mod tensor;
+pub mod modifiers;
+pub mod effect;
+pub mod effect_context;
+pub mod cards;
+pub mod combat;
+pub mod debug_runner;
+
+// Re-export key types at crate root
+pub use enums::*;
+pub use rules::Rules;
+pub use card_data::CardData;
+pub use card_registry::CardRegistry;
+pub use card_source::{CardHandle, CardSource};
+pub use permanent::{Permanent, PermanentHandle};
+pub use player::Player;
+pub use game::Game;
+pub use tensor::{build_tensor, TENSOR_SIZE};
+pub use action::build_action_mask;
+pub use modifiers::{ModifierEntry, ModifierRegistry};
+pub use effect::{CardEffect, Effect, EffectBuilder};
+pub use effect_context::EffectContext;
+pub use cards::{build_registry, CardEffectRegistry};
+pub use combat::AttackResult;
+pub use debug_runner::{DebugRunner, DebugRunnerBuilder};

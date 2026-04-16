@@ -204,6 +204,8 @@ Key references:
 - **Tools**: `docs/TOOLS.md` — card pipeline, transpiler, Pinecone, model export, new-set workflow
 - **Training**: `docs/TRAINING_RUNBOOK.md` + `AGENTS.md` (wrapper chain, gauntlet, pipeline)
 - **Rules**: `docs/RULES_CONTEXT.md` — official Digimon TCG rules reference
+- **Rust engine**: `docs/RUST_ENGINE_API.md` — scripting reference for `digimon-engine`
+- **Rust/Python parity**: `docs/RUST_PYTHON_PARITY.md` — cross-engine divergence tracker (check before touching engine code)
 
 ## QA Artifacts
 
