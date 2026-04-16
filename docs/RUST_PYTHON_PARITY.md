@@ -212,29 +212,61 @@ Same pattern as §2.1b — only modifier-granted Blitz is honored because `CardD
 
 **Coverage:** [tests/mask_main_parity.rs](../digimon-engine/tests/mask_main_parity.rs) — `mask_raid_targets_highest_dp_unsuspended`, `mask_raid_allows_all_tied_for_highest`, `mask_can_attack_unsuspended_modifier_allows_all_unsuspended`.
 
-### 4.5 🔴 Entire action categories ungenerated
+### 4.5 🟡 Entire action categories ungenerated — partial
 
-Rust's mask always emits 0.0 for:
-- Hand effects (30-59) — [action_mask.py:176-185](../digimon_gym/engine/game/action_mask.py#L176) in Python
-- DNA digivolve (63-92) — [action_mask.py:168-174](../digimon_gym/engine/game/action_mask.py#L168)
+DNA digivolve plumbing has landed; Hand/Field/Trash `[Main]` effect masks remain blocked on effect-listing infrastructure.
+
+### 4.5a 🟢 DNA digivolve mask — implemented
+
+**Python** — [action_mask.py:161-166](../digimon_gym/engine/game/action_mask.py#L161): `if card.is_digimon and has_valid_dna_targets(card, me.battle_area): mask[63 + h] = 1.0`.
+
+**Rust** — [mask.rs](../digimon-engine/src/action/mask.rs) `GamePhase::Main` arm emits `DNA_DIGIVOLVE_START + hand_index` when the hand card's `CardData.dna_costs` is non-empty, memory covers the cheapest `memory_cost`, and [`dna_digivolve::has_valid_dna_targets`](../digimon-engine/src/dna_digivolve.rs) finds some pair of battle-area permanents satisfying any `DnaCost` entry in either ordering. Matches Python's `can_dna_digivolve` / `has_valid_dna_targets` semantics.
+
+**Coverage:** [tests/mask_main_parity.rs](../digimon-engine/tests/mask_main_parity.rs) — `mask_dna_digivolve_emits_when_valid_pair_exists`, `mask_dna_digivolve_accepts_either_ordering`, `mask_dna_digivolve_rejects_when_no_pair`, `mask_dna_digivolve_respects_memory_cost`, `mask_dna_digivolve_skips_cards_without_dna_costs`.
+
+### 4.5b 🟡 `dna_costs` data-population pipeline
+
+`CardData.dna_costs` is present and deserialized, but cards.json's ingest pipeline doesn't emit the field today. Every card loaded from production data has `dna_costs = []`, so the mask branch above never fires in actual games. Python populates DNA costs from per-card scripts; Rust needs the cross-language export pipeline to emit DNA costs (or an auxiliary `dna_costs.json` sidecar) before this work is meaningful at runtime.
+
+### 4.5c 🔴 Hand / Field / Trash `[Main]` effect masks
+
+Rust's mask emits 0.0 for:
+- Hand effects (30-59) — [action_mask.py:176-185](../digimon_gym/engine/game/action_mask.py#L176)
 - Field effects (1000-1149) — [action_mask.py:201-214](../digimon_gym/engine/game/action_mask.py#L201)
 - Trash effects (1150-1194) — [action_mask.py:216-225](../digimon_gym/engine/game/action_mask.py#L216)
 
-These require the full effect-listing machinery (iterating permanent `effect_list()` by timing). Rust has the `Effect` struct but no equivalent "list all activatable effects" query yet.
+All three require a `CardSource::effect_list(registry, timing)` query that iterates compiled effects — a multi-day architectural lift that unlocks many downstream parity items.
 
-### 4.6 🔴 Interrupt-phase mask coverage
+### 4.6 🟡 Interrupt-phase mask coverage — partial
 
-**Rust** — [mask.rs:130](../digimon-engine/src/action/mask.rs#L130) default arm returns `mask[PASS] = 1.0` for every non-Main/Breeding/Mulligan phase.
+Vortex mask emission has landed; phase transition, other end-of-turn actions, and the full interrupt/selection subsystem remain future work.
 
-**Python** has dedicated builders for:
+### 4.6a 🟢 Vortex mask emission — implemented
+
+**Python** — [action_mask.py:321-335](../digimon_gym/engine/game/action_mask.py#L321): during `GamePhase.EndOfTurnAction`, permanents with `_is_vortex` and a passing `can_attack(is_vortex=True)` emit attack bits against any enemy Digimon.
+
+**Rust** — [mask.rs](../digimon-engine/src/action/mask.rs) `GamePhase::EndOfTurnAction` arm: mirrors Python via `modifiers.has_keyword(handle, Keyword::Vortex)` + `can_attack(handle, /* vortex = */ true)`. Any enemy Digimon (suspended or not) is a valid target.
+
+**Coverage:** [tests/mask_end_of_turn_parity.rs](../digimon-engine/tests/mask_end_of_turn_parity.rs) — `mask_vortex_emits_attacks_in_end_of_turn_phase`, `mask_vortex_without_keyword_only_emits_pass`, `mask_vortex_bypasses_summoning_sickness`, `mask_vortex_targets_unsuspended_digimon_too`.
+
+### 4.6b 🔴 Phase transition into `EndOfTurnAction`
+
+Nothing in `game::end_turn` inspects for pending vortex / overclock / may-attack / force-attack and flips `current_phase` to `EndOfTurnAction`. Python triggers the phase via `_has_end_of_turn_keywords`. Wiring the transition plus resume-after-action requires the interrupt state machine — tracked with §4.6d.
+
+### 4.6c 🔴 Overclock / MAY_ATTACK / FORCE_ATTACK mask bits
+
+Python's `EndOfTurnAction` branch also emits bits for Overclock sacrifices and `MAY_ATTACK`/`FORCE_ATTACK` attacks. Each needs its own modifier variant plus a mask arm (Overclock additionally needs sacrifice selection).
+
+### 4.6d 🔴 Full interrupt / selection-phase mask builders
+
+Python has dedicated builders for:
 - `BlockTiming` — which permanents can declare blocker
 - `CounterTiming` — valid blast digivolve hand/field pairs
 - `AllianceTiming` — which unsuspended allies can suspend for alliance
 - `SelectTarget` / `SelectHand` / `SelectMaterial` / `SelectTrash` / `SelectSource` / `SelectReveal` / `SelectSecurity`
 - `EffectChoice`
-- `EndOfTurnAction` — Vortex, Overclock, MAY_ATTACK, FORCE_ATTACK
 
-All are 0.0 in Rust except PASS. Model samples PASS universally in these phases.
+All still 0.0 in Rust except PASS. Unlocking these is a Phase-4 architectural project (combat state machine + `PendingSelection` infra — see §2.3).
 
 ### 4.7 🟡 Modifier-gated mask checks
 
@@ -284,7 +316,7 @@ Phase 9 (PyO3 bindings) readiness requires, in priority order:
 5. ~~**§1.6 — Mulligan flow**~~ ✅ done — accept_mulligan state machine + first-player coin flip + tests/mulligan.rs.
 6. ~~**§3.1 / §3.2 — Tensor source-DP + OPT slots**~~ ✅ done — `EffectReadContext` + `Permanent::effect_activations` + Game helpers + tensor wiring. Residual §3.1b (linked-card effects) deferred.
 7. ~~**§4.2 / §4.3 / §4.4 — Action mask main-phase parity**~~ ✅ done — Option color check, Blitz memory exception, Raid / CAN_ATTACK_UNSUSPENDED targeting. Residual: §4.2b (script-based bypass) and §4.3b (native/static Blitz) await §4.5 effect-listing.
-8. **§4.5 / §4.6 — Mask phase coverage** (hand/field/trash effects + interrupt phases; depends on the effect-listing query).
+8. **§4.5 / §4.6 — Mask phase coverage** — partial. ✅ §4.5a DNA digivolve mask + data types; ✅ §4.6a Vortex mask emission. Blocked: §4.5b `dna_costs` data-population pipeline (cards.json ingest); §4.5c Hand/Field/Trash `[Main]` masks (need `CardSource::effect_list(timing)` infra); §4.6b phase transition; §4.6c Overclock/MAY_ATTACK/FORCE_ATTACK bits; §4.6d interrupt/selection phase builders (Phase-4 state machine).
 
 The rest (combat interrupts §2.3, face-down security §3.3, etc.) can follow as cards that need them get implemented.
 
