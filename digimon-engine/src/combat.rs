@@ -22,7 +22,7 @@
 
 use crate::card_source::CardSource;
 use crate::effect_context::EffectContext;
-use crate::enums::{CardKind, ModifierType, PlayerId};
+use crate::enums::{CardKind, Keyword, ModifierType, PlayerId};
 use crate::game::Game;
 use crate::permanent::PermanentHandle;
 
@@ -69,12 +69,13 @@ impl Game {
         if perm.is_suspended {
             return false;
         }
-        // Summoning sickness: can't attack on the turn it was played (unless Rush).
-        // Rush-granting is a keyword check we'll add later; for MVP, require not
-        // freshly-played. turn_played == turn_count means "this turn".
+        // Summoning sickness: can't attack on the turn it was played unless
+        // Rush has been granted (§2.1 parity fix). Native Rush from a card's
+        // static keyword list is not yet checked — that requires the
+        // effect-listing infrastructure to be in place. For now, only
+        // modifier-granted Rush exempts a permanent.
         let is_fresh = perm.turn_played == self.turn_count && perm.turn_digivolved == 0;
-        if is_fresh {
-            // TODO: allow Rush keyword override via modifiers/granted keywords.
+        if is_fresh && !self.modifiers.has_keyword(handle, Keyword::Rush) {
             return false;
         }
         true
