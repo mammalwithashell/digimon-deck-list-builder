@@ -35,6 +35,38 @@ impl DebugRunner {
         DebugRunnerBuilder::default()
     }
 
+    /// Wrap an existing `Game` in a DebugRunner. Useful for tests that
+    /// construct the game via `Game::new` directly (e.g. mulligan tests that
+    /// want real deck draws) and still want DebugRunner's convenience API.
+    pub fn wrap(game: Game) -> Self {
+        Self { game }
+    }
+
+    // ─── Mulligan helpers ─────────────────────────────────────────────
+
+    /// Who is expected to make the next mulligan decision, or `None` if done.
+    pub fn mulligan_current(&self) -> Option<PlayerId> {
+        self.game.mulligan_current_player()
+    }
+
+    /// Apply a mulligan decision for the currently-deciding player.
+    /// `keep = true` keeps the hand; `keep = false` redraws.
+    pub fn mulligan_decide(&mut self, keep: bool) -> Result<(), &'static str> {
+        let p = self
+            .game
+            .mulligan_current_player()
+            .ok_or("mulligan is already complete")?;
+        self.game.accept_mulligan(p, keep)
+    }
+
+    /// Auto-keep for every remaining mulligan-pending player. Equivalent to
+    /// calling `start_game` but without the `turn_count == 0` defensive branch.
+    pub fn skip_mulligan(&mut self) {
+        while let Some(p) = self.game.mulligan_current_player() {
+            let _ = self.game.accept_mulligan(p, true);
+        }
+    }
+
     // ─── Action helpers ───────────────────────────────────────────────
 
     /// Play a card from a player's hand. Returns the new field index.
