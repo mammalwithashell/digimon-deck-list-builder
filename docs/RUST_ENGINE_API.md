@@ -565,3 +565,52 @@ The DTO returned from every `rust_*` command carries `mulligan_current_player: O
 
 - **Rule-driven mulligan variants** (e.g. redraw fewer cards, double mulligan). Digimon TCG has a single, full-size redraw only.
 - **Tensor slot for mulligan context.** The current tensor has no dedicated "who's deciding" slot; if RL needs to learn mulligan policy, we'd extend the selection-context section of the tensor. Not required for current training loops.
+
+---
+
+## 13. OPT (once-per-turn) tracking and tensor DP contributions
+
+Card scripts rarely touch this directly, but two things matter when you write an effect with `max_per_turn > 0` or a static `dp_modifier`:
+
+### Once-per-turn activation counters
+
+`Permanent::effect_activations: HashMap<(CardHandle, u8), u8>` tracks how many times each `(source_card, effect_slot_index)` has fired this turn. The slot index is the effect's position in the `Vec<Effect>` returned by `CardEffect::effects(handle)` — so order your effects intentionally and keep them stable across edits, or the counters key into the wrong slot.
+
+Counters reset in `Permanent::new_turn` (called from `Player::new_turn` inside `Game::begin_turn`). You don't need to call any reset manually.
+
+To gate your own effect firing:
+```rust
+.condition(|ctx| {
+    let Some(h) = ctx.source_permanent else { return false; };
+    let perm = &ctx.game.players[h.player as usize].battle_area[h.index as usize];
+    perm.activation_count(ctx.source_card, /* my slot */ 0) == 0
+})
+.process(|ctx| {
+    // ... do the work ...
+    if let Some(h) = ctx.source_permanent {
+        let perm = &mut ctx.game.players[h.player as usize].battle_area[h.index as usize];
+        perm.record_activation(ctx.source_card, 0);
+    }
+})
+```
+
+(A `ctx`-level `record_activation` helper would be a nice follow-up; not yet wired.)
+
+### Static `dp_modifier` and the tensor
+
+Use `Effect::declarative(card).dp_modifier(n)` for a non-inherited static buff (e.g. "This Digimon gains +1000 DP"), or `Effect::inherited(card).dp_modifier(n)` for an inherited version (carries up the stack). Add a `.condition(...)` if the buff only applies in certain situations — the condition is evaluated at tensor-build time too, so `"[Your Turn] +3000"` contributes 0 on the opponent's turn.
+
+Avoid encoding DP-change effects via `ctx.add_dp_modifier(...)` for *static* buffs — that writes to `ModifierRegistry`, which the tensor's per-source contributions don't currently sum (permanent-level, yes; per-source, no). Stick with `dp_modifier` on `Effect` for anything you want the tensor to see per source.
+
+### How the tensor reads these
+
+`build_tensor` calls four `Game` helpers per permanent slot:
+
+```rust
+game.opt_total(handle)            -> u32        // slot offset +3
+game.opt_used(handle)             -> u32        // slot offset +4
+game.source_dp_contribution(h, i) -> i32 / f32  // per-source offset +2
+game.source_opt_state(h, i)       -> f32        // per-source offset +1
+```
+
+Each one iterates effects via `CardEffectRegistry::get(card_id).effects(handle)`, applies the inherited/top filter (`is_under == effect.inherited`), and evaluates conditions through `EffectReadContext`. You can call them yourself in tests or diagnostics.

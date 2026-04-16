@@ -121,19 +121,23 @@ Each entry cites the canonical source lines so divergences can be rechecked afte
 
 ## 3. Tensor encoding (1375 floats)
 
-### 3.1 🔴 Source DP contributions (slot offsets +8, +11, …)
+### 3.1 🟢 Source DP contributions — implemented
 
 **Python** — [permanent.py:755-774](../digimon_gym/engine/core/permanent.py#L755) `source_dp_contribution()` sums DP modifiers on each inherited source, gated by `can_use_condition`.
 
-**Rust** — [tensor.rs:286](../digimon-engine/src/tensor.rs#L286) writes the raw card DP from `card_data`, no modifier lookup.
+**Rust** — `Game::source_dp_contribution(perm, source_index)` ([game.rs](../digimon-engine/src/game.rs)) mirrors the Python impl: iterates the single source's effects via `CardEffectRegistry`, applies the inherited-vs-top filter (`is_under == effect.inherited`), and evaluates each effect's condition via a read-only `EffectReadContext`. The tensor writes `source_dp_contribution / DP_NORM` at per-source offset +2 ([tensor.rs `write_slot`](../digimon-engine/src/tensor.rs)).
 
-**Consequence:** Rust feeds different floats at these positions whenever a permanent has active DP-modifying sources (any archetype with stat boosts).
+**Coverage:** [tests/tensor_helpers.rs](../digimon-engine/tests/tensor_helpers.rs) unit-tests the helper; [tests/tensor_source_contributions.rs](../digimon-engine/tests/tensor_source_contributions.rs) drives through `build_tensor` end-to-end including the digivolution-stack and memory-gated cases.
 
-### 3.2 🔴 OPT state fields (slot offsets +3, +4)
+**Residual gap §3.1b:** linked-card effects are still not iterated — if a card's `dp_modifier` lives on a linked Option, it won't contribute. No current archetype needs this; will flag if it arises.
 
-**Python** — [tensor.py:158-159](../digimon_gym/engine/game/tensor.py#L158): `opt_total` and `opt_used` populate these slots.
+### 3.2 🟢 OPT state fields — implemented
 
-**Rust** — [tensor.rs:270-271](../digimon-engine/src/tensor.rs#L270) hardcoded to `0.0`, comment: "deferred".
+**Python** — [tensor.py:158-159](../digimon_gym/engine/game/tensor.py#L158): `opt_total` and `opt_used` populate slot offsets +3/+4; `source_opt_state(src)` at each source's +1.
+
+**Rust** — `Game::opt_total / opt_used / source_opt_state` ([game.rs](../digimon-engine/src/game.rs)) count effects with `max_per_turn > 0` across the permanent's stack with the same inherited/top filter, consulting `Permanent::effect_activations` to determine which have reached their cap this turn. Counters reset in `Permanent::new_turn` (via `Player::new_turn` during `begin_turn`). Tensor offsets +3/+4 write the raw counts, and per-source +1 writes the availability fraction — matching Python's `build_board_state_tensor`.
+
+**Coverage:** Same tests as §3.1.
 
 ### 3.3 🟡 My face-down security visibility
 
@@ -262,7 +266,7 @@ Phase 9 (PyO3 bindings) readiness requires, in priority order:
 3. **§2.1 — Rush exemption** (needed for any card with Rush; trivial once modifier lookup is in place).
 4. ~~**§1.7 — First-turn draw rule**~~ — audit was wrong; behavior already matches Python. Tested as of this cycle.
 5. ~~**§1.6 — Mulligan flow**~~ ✅ done — accept_mulligan state machine + first-player coin flip + tests/mulligan.rs.
-6. **§3.1 / §3.2 — Tensor source-DP + OPT slots** (blocks model transfer; requires Effect iteration to sum modifiers).
+6. ~~**§3.1 / §3.2 — Tensor source-DP + OPT slots**~~ ✅ done — `EffectReadContext` + `Permanent::effect_activations` + Game helpers + tensor wiring. Residual §3.1b (linked-card effects) deferred.
 7. **§4.2 / §4.3 / §4.4 — Action mask main-phase parity** (Option color, Blitz, Raid).
 8. **§4.5 / §4.6 — Mask phase coverage** (hand/field/trash effects + interrupt phases; depends on the effect-listing query).
 
