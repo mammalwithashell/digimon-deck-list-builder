@@ -59,10 +59,18 @@ pub fn build_action_mask(game: &Game, player_id: PlayerId) -> Vec<f32> {
                 let card = &me.hand[i];
                 let cost = card.play_cost(&game.card_data) as i16;
                 // Memory check: card is affordable if memory - cost >= memory_min
-                if (game.memory - cost) >= game.rules.memory_range.0 {
-                    // Color requirement for Options is deferred to effect system.
-                    mask[i] = 1.0;
+                if (game.memory - cost) < game.rules.memory_range.0 {
+                    continue;
                 }
+                // §4.2 Option color requirement: an Option is only playable
+                // when the player has a Digimon or Tamer of a matching color
+                // on the field or in the breeding area.
+                if card.card_kind(&game.card_data) == CardKind::Option {
+                    if !option_color_match_available(card, me, &game.card_data) {
+                        continue;
+                    }
+                }
+                mask[i] = 1.0;
             }
 
             // --- Attack (100-399) ---
@@ -152,6 +160,44 @@ pub fn build_action_mask(game: &Game, player_id: PlayerId) -> Vec<f32> {
 }
 
 // ─── Helpers ──────────────────────────────────────────────────────────
+
+/// §4.2 — Check that the player has at least one Digimon or Tamer of a
+/// color matching any of the Option card's colors, either on the battle
+/// area or in the breeding area.
+///
+/// Mirror of Python's `action_mask.py` lines 77-99. Script-level
+/// `match_color_requirement=False` and the `IGNORE_COLOR_REQUIREMENT` aura
+/// modifier are residual §4.2b work; both are absent here.
+fn option_color_match_available(
+    card: &crate::card_source::CardSource,
+    me: &crate::player::Player,
+    card_data: &[crate::card_data::CardData],
+) -> bool {
+    let option_colors = card.colors(card_data);
+
+    // Battle area: Digimon or Tamer with an overlapping color.
+    for perm in &me.battle_area {
+        if !perm.is_digimon(card_data) && !perm.is_tamer(card_data) {
+            continue;
+        }
+        let perm_colors = perm.top_card().colors(card_data);
+        if option_colors.iter().any(|c| perm_colors.contains(c)) {
+            return true;
+        }
+    }
+
+    // Breeding area: only Digimon counts (Tamers can't be in breeding).
+    if let Some(ref breeding) = me.breeding_area {
+        if breeding.is_digimon(card_data) {
+            let perm_colors = breeding.top_card().colors(card_data);
+            if option_colors.iter().any(|c| perm_colors.contains(c)) {
+                return true;
+            }
+        }
+    }
+
+    false
+}
 
 /// Basic attack eligibility: unsuspended Digimon not played this turn,
 /// unless modifier-granted Rush exempts summoning sickness.
