@@ -83,6 +83,11 @@ impl Effect {
     pub fn declarative(card: CardHandle) -> EffectBuilder {
         EffectBuilder::new(card, EffectTiming::Declarative).declarative_flag()
     }
+
+    /// Builder constructor for an `End of Your Turn` effect.
+    pub fn end_of_your_turn(card: CardHandle) -> EffectBuilder {
+        EffectBuilder::new(card, EffectTiming::EndOfYourTurn)
+    }
 }
 
 /// Builder for constructing effects ergonomically.

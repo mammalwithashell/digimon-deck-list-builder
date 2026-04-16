@@ -114,3 +114,66 @@ fn end_turn_at_zero_stays_zero() {
     r.game.end_turn();
     assert_eq!(r.memory(), 0, "0 memory flips to 0");
 }
+
+// ── §1.5 — Memory swing-back ─────────────────────────────────────────
+
+#[test]
+fn end_turn_swing_back_keeps_turn_with_same_player() {
+    // TEST-006 is "End of your turn: Gain 5 memory." If the active player
+    // ends their turn at -3 and TEST-006 swings memory back to +2, the turn
+    // continues and returns to Main phase with the same player still active.
+    let mut r = DebugRunner::builder()
+        .add_card(make_test_card("TEST-006", "SwingBack"))
+        .start();
+    let tp_before = r.turn_player();
+    let turn_before = r.turn_count();
+
+    r.place_on_field(tp_before, "TEST-006", Some(0));
+    r.game.set_memory(-3);
+    r.game.end_turn();
+
+    // Swing-back triggered: memory went from -3 to +2 during OnEndTurn.
+    assert_eq!(r.memory(), 2, "TEST-006 should have added 5 to -3 → +2");
+    assert_eq!(r.turn_player(), tp_before, "turn must stay with the same player");
+    assert_eq!(r.turn_count(), turn_before, "turn count must not advance");
+    assert_eq!(
+        r.current_phase(),
+        digimon_engine::enums::GamePhase::Main,
+        "phase should return to Main after swing-back"
+    );
+}
+
+#[test]
+fn end_turn_no_swing_back_when_memory_stays_negative() {
+    // Memory starts at -10 (min). TEST-006 adds 5 → -5 (still negative).
+    // No swing-back; turn advances normally and memory flips to +5 for next player.
+    let mut r = DebugRunner::builder()
+        .add_card(make_test_card("TEST-006", "SwingBack"))
+        .start();
+    let tp_before = r.turn_player();
+
+    r.place_on_field(tp_before, "TEST-006", Some(0));
+    r.game.set_memory(-10);
+    r.game.end_turn();
+
+    assert_ne!(r.turn_player(), tp_before, "turn must advance");
+    // -10 + 5 = -5 at end of effects, negate = +5.
+    assert_eq!(r.memory(), 5);
+}
+
+#[test]
+fn end_turn_no_swing_back_when_memory_already_nonnegative() {
+    // Memory starts at 0. TEST-006 adds 5 → 5. memory_before wasn't negative,
+    // so swing-back does NOT fire — turn advances and memory negates to -5.
+    let mut r = DebugRunner::builder()
+        .add_card(make_test_card("TEST-006", "SwingBack"))
+        .start();
+    let tp_before = r.turn_player();
+
+    r.place_on_field(tp_before, "TEST-006", Some(0));
+    r.game.set_memory(0);
+    r.game.end_turn();
+
+    assert_ne!(r.turn_player(), tp_before, "turn must advance");
+    assert_eq!(r.memory(), -5);
+}

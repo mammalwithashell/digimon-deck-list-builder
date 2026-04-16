@@ -221,6 +221,11 @@ impl Game {
     }
 
     /// End the current turn and advance to the next player.
+    ///
+    /// Fires OnEndTurn effects (when the effect system is wired to this),
+    /// checks memory swing-back (§1.5): if an OnEndTurn effect restored memory
+    /// from negative to non-negative, the turn continues and returns to Main
+    /// phase instead of switching. Matches Python `_complete_end_phase`.
     pub fn end_turn(&mut self) {
         if self.game_over {
             return;
@@ -228,8 +233,18 @@ impl Game {
 
         self.current_phase = GamePhase::EndTurn;
 
-        // Expire end-of-turn modifiers/keywords for the ending player's turn.
+        // Memory swing-back: capture memory before firing OnEndTurn effects,
+        // fire them, then see if an effect restored memory from negative.
+        let memory_before = self.memory;
         let ending_player = self.turn_player();
+        self.fire_end_of_your_turn(ending_player);
+
+        if memory_before < 0 && self.memory >= 0 && !self.game_over {
+            self.current_phase = GamePhase::Main;
+            return;
+        }
+
+        // Expire end-of-turn modifiers/keywords for the ending player's turn.
         self.modifiers.expire_end_of_turn(ending_player);
 
         // Advance turn
@@ -402,6 +417,54 @@ impl Game {
         self.fire_on_play(player_id, field_index);
 
         Some(field_index)
+    }
+
+    /// Fire `EndOfYourTurn` effects on every permanent in `player`'s battle area.
+    /// Called by `end_turn`; exposed for tests that want to trigger swing-back.
+    pub fn fire_end_of_your_turn(&mut self, player: PlayerId) {
+        // Snapshot (card_id, handle) for each permanent up-front, because
+        // firing an effect could mutate the battle_area (e.g. self-deletion).
+        let snapshot: Vec<(String, crate::card_source::CardHandle, PermanentHandle)> = {
+            let area = &self.player(player).battle_area;
+            area.iter()
+                .enumerate()
+                .map(|(i, p)| {
+                    let top = p.top_card();
+                    (
+                        top.card_id(&self.card_data).to_string(),
+                        top.handle(),
+                        PermanentHandle {
+                            player,
+                            index: i as u8,
+                        },
+                    )
+                })
+                .collect()
+        };
+
+        for (card_id, card_handle, perm_handle) in snapshot {
+            let Some(effect_impl) = self.effect_registry.get(&card_id) else {
+                continue;
+            };
+            let effects = effect_impl.effects(card_handle);
+            for effect in &effects {
+                if effect.timing != crate::enums::EffectTiming::EndOfYourTurn {
+                    continue;
+                }
+                if let Some(cond) = &effect.condition {
+                    let ctx =
+                        EffectContext::new(self, card_handle, Some(perm_handle), player);
+                    if !cond(&ctx) {
+                        continue;
+                    }
+                }
+                if let Some(process) = &effect.process {
+                    let mut ctx =
+                        EffectContext::new(self, card_handle, Some(perm_handle), player);
+                    process(&mut ctx);
+                }
+            }
+        }
     }
 
     /// Fire OnPlay effects for the permanent at `(player, field_index)`.

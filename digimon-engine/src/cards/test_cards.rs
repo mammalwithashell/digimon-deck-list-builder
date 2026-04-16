@@ -98,6 +98,21 @@ impl CardEffect for Test005 {
     }
 }
 
+/// TEST-006: "End of your turn: Gain 5 memory."
+/// Exercises EndOfYourTurn timing and memory swing-back (§1.5).
+pub struct Test006;
+
+impl CardEffect for Test006 {
+    fn effects(&self, card: CardHandle) -> Vec<Effect> {
+        vec![Effect::end_of_your_turn(card)
+            .name("Gain 5 memory at end of turn")
+            .process(|ctx| {
+                ctx.gain_memory(5);
+            })
+            .build()]
+    }
+}
+
 /// Register all test cards into the registry.
 pub fn register(registry: &mut CardEffectRegistry) {
     registry.insert("TEST-001", Arc::new(Test001));
@@ -105,6 +120,7 @@ pub fn register(registry: &mut CardEffectRegistry) {
     registry.insert("TEST-003", Arc::new(Test003));
     registry.insert("TEST-004", Arc::new(Test004));
     registry.insert("TEST-005", Arc::new(Test005));
+    registry.insert("TEST-006", Arc::new(Test006));
 
     // Suppress unused warning on ModifierType (referenced via add_dp_modifier helper).
     let _ = ModifierType::ChangeDp;
