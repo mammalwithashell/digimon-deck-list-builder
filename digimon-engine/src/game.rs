@@ -264,10 +264,16 @@ impl Game {
         self.begin_turn();
     }
 
-    /// Pass action: set memory to give the next player 3, then end turn.
+    /// Pass action: give the next player 3 memory, then end turn.
+    ///
+    /// Only forces memory to -3 if the passing player still had memory to give
+    /// (i.e., memory >= 0). If memory is already negative — because an
+    /// over-cost play pushed it there — that overflow is preserved and carried
+    /// through the turn switch. Matches Python `game.pass_turn`.
     pub fn pass_turn(&mut self) {
-        // When passing, memory goes to -3 (3 on opponent's side)
-        self.memory = -3;
+        if self.memory >= 0 {
+            self.memory = -3;
+        }
         self.end_turn();
     }
 
