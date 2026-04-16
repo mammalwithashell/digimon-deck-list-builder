@@ -74,35 +74,43 @@ pub fn build_action_mask(game: &Game, player_id: PlayerId) -> Vec<f32> {
             }
 
             // --- Attack (100-399) ---
-            // Basic rule: attacker must be unsuspended Digimon and memory >= 0.
-            // Blitz/special rules deferred to effect system.
-            if game.memory >= 0 {
-                let max_field = me.battle_area.len().min(FIELD_SLOTS);
-                for i in 0..max_field {
-                    let attacker = &me.battle_area[i];
-                    let handle = PermanentHandle { player: player_id, index: i as u8 };
-                    if !can_basic_attack(
-                        attacker,
-                        handle,
-                        game.turn_count,
-                        &game.card_data,
-                        &game.modifiers,
-                    ) {
-                        continue;
-                    }
+            // Memory gate is per-attacker: baseline requires memory >= 0,
+            // but §4.3 Blitz carves out "Blitz + digivolved this turn" even
+            // when memory < 0. Native/static Blitz parsing remains §4.3b.
+            let max_field = me.battle_area.len().min(FIELD_SLOTS);
+            for i in 0..max_field {
+                let attacker = &me.battle_area[i];
+                let handle = PermanentHandle { player: player_id, index: i as u8 };
+                if !can_basic_attack(
+                    attacker,
+                    handle,
+                    game.turn_count,
+                    &game.card_data,
+                    &game.modifiers,
+                ) {
+                    continue;
+                }
+                let memory_ok = game.memory >= 0 || {
+                    let digivolved_this_turn =
+                        attacker.turn_digivolved == game.turn_count;
+                    digivolved_this_turn
+                        && game.modifiers.has_keyword(handle, Keyword::Blitz)
+                };
+                if !memory_ok {
+                    continue;
+                }
 
-                    // Security attack
-                    let sec_action =
-                        encode_attack(i as u16, SECURITY_TARGET);
-                    mask[sec_action as usize] = 1.0;
+                // Security attack.
+                let sec_action = encode_attack(i as u16, SECURITY_TARGET);
+                mask[sec_action as usize] = 1.0;
 
-                    // Digimon attacks: only suspended targets by default
-                    let max_opp = opp.battle_area.len().min(FIELD_SLOTS);
-                    for j in 0..max_opp {
-                        let target = &opp.battle_area[j];
-                        if target.is_suspended && target.is_digimon(&game.card_data) {
-                            mask[encode_attack(i as u16, j as u16) as usize] = 1.0;
-                        }
+                // Digimon attacks: suspended targets only (baseline); Raid
+                // and CAN_ATTACK_UNSUSPENDED extensions land in Task 3.
+                let max_opp = opp.battle_area.len().min(FIELD_SLOTS);
+                for j in 0..max_opp {
+                    let target = &opp.battle_area[j];
+                    if target.is_suspended && target.is_digimon(&game.card_data) {
+                        mask[encode_attack(i as u16, j as u16) as usize] = 1.0;
                     }
                 }
             }

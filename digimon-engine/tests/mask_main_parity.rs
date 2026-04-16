@@ -140,3 +140,74 @@ fn mask_option_color_check_accepts_tamer() {
     );
 }
 
+// ─── §4.3 Blitz under negative memory ──────────────────────────────────
+
+/// A Digimon that digivolved this turn and has modifier-granted Blitz can
+/// attack even when memory < 0 (§4.3 parity with Python's action_mask.py
+/// lines 107-114).
+#[test]
+fn mask_blitz_can_attack_under_negative_memory() {
+    let mut r = DebugRunner::builder()
+        .add_card(make_digimon("ATK", CardColor::Red))
+        .add_card(make_digimon("DEF", CardColor::Red))
+        .start();
+
+    let tp = r.game.turn_player();
+    let opp = 1 - tp;
+    let attacker = r.place_on_field(tp, "ATK", Some(0));
+    r.place_on_field(opp, "DEF", Some(0));
+
+    // Simulate "digivolved this turn" on the attacker, and suspend the
+    // opponent so there's a Digimon target available.
+    r.game.players[tp as usize].battle_area[attacker.index as usize]
+        .turn_digivolved = r.game.turn_count;
+    r.game.players[opp as usize].battle_area[0].is_suspended = true;
+
+    r.game.enter_main_phase();
+    r.game.set_memory(-3);
+
+    // Baseline: no Blitz → no attack bit while memory<0.
+    let mask_no_blitz = build_action_mask(&r.game, tp);
+    let sec_bit = encode_attack(attacker.index as u16, SECURITY_TARGET) as usize;
+    let dig_bit = encode_attack(attacker.index as u16, 0) as usize;
+    assert_eq!(mask_no_blitz[sec_bit], 0.0, "no Blitz + memory<0 → no security attack");
+    assert_eq!(mask_no_blitz[dig_bit], 0.0, "no Blitz + memory<0 → no digimon attack");
+
+    // Grant Blitz → both attack bits should light up.
+    r.game.modifiers.grant_keyword(
+        attacker, Keyword::Blitz, Expiry::EndOfTurn, tp,
+    );
+    let mask_blitz = build_action_mask(&r.game, tp);
+    assert_eq!(mask_blitz[sec_bit], 1.0, "Blitz + digivolved this turn → security");
+    assert_eq!(mask_blitz[dig_bit], 1.0, "Blitz + digivolved this turn → digimon");
+}
+
+/// Blitz only exempts memory<0 when the attacker digivolved *this* turn.
+/// A Blitz Digimon that wasn't freshly digivolved still can't attack.
+#[test]
+fn mask_blitz_without_digivolving_does_not_attack_under_negative_memory() {
+    let mut r = DebugRunner::builder()
+        .add_card(make_digimon("ATK", CardColor::Red))
+        .add_card(make_digimon("DEF", CardColor::Red))
+        .start();
+
+    let tp = r.game.turn_player();
+    let opp = 1 - tp;
+    let attacker = r.place_on_field(tp, "ATK", Some(0));
+    r.place_on_field(opp, "DEF", Some(0));
+    r.game.players[opp as usize].battle_area[0].is_suspended = true;
+
+    r.game.enter_main_phase();
+    r.game.set_memory(-3);
+    r.game.modifiers.grant_keyword(
+        attacker, Keyword::Blitz, Expiry::EndOfTurn, tp,
+    );
+    // NOTE: no turn_digivolved assignment — attacker was placed as-is.
+
+    let mask = build_action_mask(&r.game, tp);
+    let sec_bit = encode_attack(attacker.index as u16, SECURITY_TARGET) as usize;
+    assert_eq!(
+        mask[sec_bit], 0.0,
+        "Blitz without this-turn digivolve must not unlock attack under memory<0"
+    );
+}
