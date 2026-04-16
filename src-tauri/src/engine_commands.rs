@@ -69,6 +69,13 @@ pub struct GameStateDto {
     pub game_over: bool,
     pub winner: Option<PlayerId>,
     pub players: Vec<PlayerDto>,
+    /// The player expected to make the next mulligan decision. `None` once
+    /// mulligan is finalized (i.e., during every normal phase of play).
+    pub mulligan_current_player: Option<PlayerId>,
+    /// Whether each player has used their one re-draw. Indexed by player id.
+    /// During mulligan, the UI hides the "Mulligan" button for a player whose
+    /// entry here is `true`.
+    pub mulligan_used: Vec<bool>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -207,6 +214,8 @@ fn game_state_dto(game: &Game) -> GameStateDto {
         game_over: game.game_over,
         winner: game.winner,
         players,
+        mulligan_current_player: game.mulligan_current_player(),
+        mulligan_used: game.mulligan_used.clone(),
     }
 }
 
@@ -382,6 +391,23 @@ pub fn rust_pass_turn(
     let mut guard = state.game.lock().map_err(|e| e.to_string())?;
     let game = guard.as_mut().ok_or("No active game")?;
     game.pass_turn();
+    Ok(game_state_dto(game))
+}
+
+/// Apply a mulligan decision for the currently-deciding player.
+/// `keep = true` keeps the opening hand; `keep = false` shuffles it back
+/// and redraws the same count. Returns the updated state.
+#[tauri::command]
+pub fn rust_mulligan_decide(
+    state: tauri::State<'_, RustEngineState>,
+    keep: bool,
+) -> Result<GameStateDto, String> {
+    let mut guard = state.game.lock().map_err(|e| e.to_string())?;
+    let game = guard.as_mut().ok_or("No active game")?;
+    let p = game
+        .mulligan_current_player()
+        .ok_or("Mulligan is already complete")?;
+    game.accept_mulligan(p, keep).map_err(|e| e.to_string())?;
     Ok(game_state_dto(game))
 }
 

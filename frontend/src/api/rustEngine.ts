@@ -48,6 +48,10 @@ export interface GameStateDto {
   game_over: boolean;
   winner: number | null;
   players: PlayerDto[];
+  /** Player expected to make the next mulligan decision, or null if done. */
+  mulligan_current_player: number | null;
+  /** Whether each player has used their one redraw. Indexed by player id. */
+  mulligan_used: boolean[];
 }
 
 export type AttackResult =
@@ -135,4 +139,16 @@ export async function rustMoveFromBreeding(
   playerId: number,
 ): Promise<GameStateDto> {
   return invoke<GameStateDto>('rust_move_from_breeding', { playerId });
+}
+
+/**
+ * Apply a mulligan decision for the currently-deciding player.
+ * `keep = true` keeps the opening hand; `keep = false` shuffles the hand
+ * back into the deck and redraws. Only valid while `mulligan_current_player`
+ * is non-null in the game state.
+ */
+export async function rustMulliganDecide(
+  keep: boolean,
+): Promise<GameStateDto> {
+  return invoke<GameStateDto>('rust_mulligan_decide', { keep });
 }

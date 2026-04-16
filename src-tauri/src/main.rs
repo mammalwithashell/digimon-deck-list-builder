@@ -38,6 +38,7 @@ fn main() {
             engine_commands::rust_pass_turn,
             engine_commands::rust_hatch,
             engine_commands::rust_move_from_breeding,
+            engine_commands::rust_mulligan_decide,
         ])
         .setup(|app| {
             // Resolve models directory from bundled resources
