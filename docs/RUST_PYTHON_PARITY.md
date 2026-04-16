@@ -180,25 +180,37 @@ Rust's [CardData](../digimon-engine/src/card_data.rs#L18) has no `keywords: Vec<
 - Encode/decode formulas for attack, digivolve, field effect, source select.
 - Total `ACTION_SPACE_SIZE = 2168`.
 
-### 4.2 🔴 Option card color requirement
+### 4.2 🟢 Option card color requirement — implemented
 
-**Python** — [action_mask.py:77-99](../digimon_gym/engine/game/action_mask.py#L77): an Option card is only playable if the player has a Digimon of a matching color on the field (unless `IGNORE_COLOR_REQUIREMENT` is active).
+**Python** — [action_mask.py:77-99](../digimon_gym/engine/game/action_mask.py#L77): an Option card is only playable if the player has a matching-color Digimon or Tamer on field or a matching-color Digimon in breeding.
 
-**Rust** — [mask.rs:53](../digimon-engine/src/action/mask.rs#L53) doesn't check; comment marks this as "deferred to effect system".
+**Rust** — [mask.rs](../digimon-engine/src/action/mask.rs) Play-cards loop calls `option_color_match_available(card, me, &card_data)`, which iterates the player's battle_area + breeding_area for a color-set intersection with the Option's colors.
 
-**Consequence:** a Python-trained policy will sample Option plays that Rust's decoder will attempt. If the engine ever enforces the rule, the action silently fails; if not, games diverge from Python's.
+**Coverage:** [tests/mask_main_parity.rs](../digimon-engine/tests/mask_main_parity.rs) — `mask_option_requires_matching_color_on_field` (walks empty → wrong-color → matching-color), `mask_option_color_check_accepts_tamer`.
 
-### 4.3 🔴 Blitz attack exception
+### 4.2b 🟡 Script-based color bypasses not yet honored
 
-**Python** — [action_mask.py:107-114](../digimon_gym/engine/game/action_mask.py#L107): with memory < 0, a Blitz Digimon that digivolved this turn can still attack.
+Python cards can set `card._match_color_requirement = False` or register a `_match_color_requirement_fn` callback (~10 cards, e.g. `ex1_071`, `lm_050`, `st20_15`). Rust's `CardData` has no such field and no scripting infra — these Options will be *over*-masked (Rust refuses to play them when Python would allow). Similarly, Python's `IGNORE_COLOR_REQUIREMENT` aura modifier has no `ModifierType` variant in Rust yet. Both await §4.5 effect-listing / card-scripting infra.
 
-**Rust** — [mask.rs:60](../digimon-engine/src/action/mask.rs#L60) blocks all attacks when memory < 0.
+### 4.3 🟢 Blitz attack exception under negative memory — implemented
 
-### 4.4 🔴 Raid target rule
+**Python** — [action_mask.py:107-114](../digimon_gym/engine/game/action_mask.py#L107): with `memory < 0`, a Blitz Digimon that digivolved this turn can still attack.
 
-**Python** — [action_mask.py:142-148](../digimon_gym/engine/game/action_mask.py#L142): a Raid Digimon can attack the highest-DP unsuspended opponent.
+**Rust** — [mask.rs](../digimon-engine/src/action/mask.rs): the memory gate is per-attacker. `memory_ok = memory >= 0 || (turn_digivolved == turn_count && modifiers.has_keyword(handle, Keyword::Blitz))`.
 
-**Rust** — [mask.rs:78](../digimon-engine/src/action/mask.rs#L78) filters to suspended targets only.
+**Coverage:** [tests/mask_main_parity.rs](../digimon-engine/tests/mask_main_parity.rs) — `mask_blitz_can_attack_under_negative_memory`, `mask_blitz_without_digivolving_does_not_attack_under_negative_memory`.
+
+### 4.3b 🟡 Native / static Blitz not parsed
+
+Same pattern as §2.1b — only modifier-granted Blitz is honored because `CardData` has no `keywords` field. Native Blitz printed on a card's face awaits §4.5 effect-listing / keyword-parsing infra.
+
+### 4.4 🟢 Raid target rule — implemented
+
+**Python** — [action_mask.py:121-140](../digimon_gym/engine/game/action_mask.py#L121): unsuspended enemies are targetable if attacker has `CAN_ATTACK_UNSUSPENDED` (any unsuspended) or Raid (tied-for-highest-DP unsuspended).
+
+**Rust** — [mask.rs](../digimon-engine/src/action/mask.rs): target loop precomputes the max effective DP across unsuspended enemy Digimon and emits attack bits for each target whose `effective_dp` equals the max under Raid; emits for every unsuspended target under `ModifierType::CanAttackUnsuspended`. DP tiebreak uses `Game::effective_dp` so `ChangeDp` modifiers are honored (slight improvement over Python's raw `.dp`).
+
+**Coverage:** [tests/mask_main_parity.rs](../digimon-engine/tests/mask_main_parity.rs) — `mask_raid_targets_highest_dp_unsuspended`, `mask_raid_allows_all_tied_for_highest`, `mask_can_attack_unsuspended_modifier_allows_all_unsuspended`.
 
 ### 4.5 🔴 Entire action categories ungenerated
 
@@ -271,7 +283,7 @@ Phase 9 (PyO3 bindings) readiness requires, in priority order:
 4. ~~**§1.7 — First-turn draw rule**~~ — audit was wrong; behavior already matches Python. Tested as of this cycle.
 5. ~~**§1.6 — Mulligan flow**~~ ✅ done — accept_mulligan state machine + first-player coin flip + tests/mulligan.rs.
 6. ~~**§3.1 / §3.2 — Tensor source-DP + OPT slots**~~ ✅ done — `EffectReadContext` + `Permanent::effect_activations` + Game helpers + tensor wiring. Residual §3.1b (linked-card effects) deferred.
-7. **§4.2 / §4.3 / §4.4 — Action mask main-phase parity** (Option color, Blitz, Raid).
+7. ~~**§4.2 / §4.3 / §4.4 — Action mask main-phase parity**~~ ✅ done — Option color check, Blitz memory exception, Raid / CAN_ATTACK_UNSUSPENDED targeting. Residual: §4.2b (script-based bypass) and §4.3b (native/static Blitz) await §4.5 effect-listing.
 8. **§4.5 / §4.6 — Mask phase coverage** (hand/field/trash effects + interrupt phases; depends on the effect-listing query).
 
 The rest (combat interrupts §2.3, face-down security §3.3, etc.) can follow as cards that need them get implemented.
