@@ -4,8 +4,8 @@
 //! RUST_PYTHON_PARITY.md so that regressions are caught immediately.
 //!
 //! §4.2 — Option card color requirement
-//! §4.3 — Blitz attack exception (memory < 0)       [reserved]
-//! §4.4 — Raid target rule (unsuspended targets)     [reserved]
+//! §4.3 — Blitz attack exception (memory < 0)
+//! §4.4 — Raid + CAN_ATTACK_UNSUSPENDED target rule (unsuspended targets)
 
 use digimon_engine::action::{build_action_mask, encode_attack, SECURITY_TARGET};
 use digimon_engine::card_data::CardData;
