@@ -7,16 +7,21 @@ use digimon_engine::debug_runner::{make_test_card, make_test_egg, DebugRunner};
 use digimon_engine::enums::{EffectTiming, Expiry, ModifierType};
 use digimon_engine::permanent::PermanentHandle;
 
-/// TEST-001: "On Play: Gain 1 memory."
+/// TEST-001: "On Play: Gain 1 memory." (card also costs 3)
 #[test]
 fn test_001_gains_one_memory_on_play() {
     let mut r = DebugRunner::builder()
         .add_card(make_test_card("TEST-001", "TestOne"))
         .hand(0, &["TEST-001"])
+        .memory(5) // pre-fund: 5 − 3 cost + 1 OnPlay = 3
         .start();
     let m_before = r.memory();
     r.play(0, 0);
-    assert_eq!(r.memory(), m_before + 1, "TEST-001 should gain +1 memory");
+    assert_eq!(
+        r.memory(),
+        m_before - 3 + 1,
+        "play should cost 3, then OnPlay grants +1"
+    );
     assert_eq!(r.battle_area_size(0), 1);
     assert_eq!(r.hand_size(0), 0);
 }
@@ -233,27 +238,31 @@ fn unregistered_card_plays_silently() {
     let mut r = DebugRunner::builder()
         .add_card(make_test_card("UNKNOWN", "Unknown"))
         .hand(0, &["UNKNOWN"])
+        .memory(5)
         .start();
     let m_before = r.memory();
     let result = r.play(0, 0);
     assert_eq!(result, Some(0));
     assert_eq!(r.battle_area_size(0), 1);
-    assert_eq!(r.memory(), m_before, "memory unchanged for unknown card");
+    assert_eq!(
+        r.memory(),
+        m_before - 3,
+        "memory only drops by the play cost (no OnPlay effect)"
+    );
 }
 
 /// Sanity: registered cards in opponent's hand don't fire when played by their
 /// owner — they fire for the player who plays them (which is correct).
 #[test]
 fn opp_plays_test_001_credits_active_player() {
-    // P0's turn. P1 doesn't get to play. Just verify P0 playing TEST-001 still
-    // works regardless of who owns the card_data.
     let mut r = DebugRunner::builder()
         .add_card(make_test_card("TEST-001", "TestOne"))
         .hand(0, &["TEST-001"])
+        .memory(5)
         .start();
     let m_before = r.memory();
     r.play(0, 0);
-    assert_eq!(r.memory(), m_before + 1);
+    assert_eq!(r.memory(), m_before - 3 + 1);
 }
 
 /// Modifier with Expiry::Permanent should NOT expire on end_of_turn.

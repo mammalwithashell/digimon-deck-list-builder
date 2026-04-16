@@ -204,6 +204,9 @@ pub struct DebugRunnerBuilder {
     registry: Option<CardEffectRegistry>,
     /// Number of players (defaults to rules.player_count).
     player_count: Option<u8>,
+    /// Initial memory value applied after `start()`. Useful for tests that
+    /// want to play non-zero-cost cards without thinking about the seesaw.
+    initial_memory: Option<i16>,
 }
 
 impl Default for DebugRunnerBuilder {
@@ -217,6 +220,7 @@ impl Default for DebugRunnerBuilder {
             rules: Rules::standard(),
             registry: None,
             player_count: None,
+            initial_memory: None,
         }
     }
 }
@@ -280,10 +284,21 @@ impl DebugRunnerBuilder {
         self
     }
 
+    /// Pre-fund the memory seesaw after `start()`. Without this, games begin
+    /// at memory 0 and most non-zero-cost plays would be unaffordable.
+    pub fn memory(mut self, value: i16) -> Self {
+        self.initial_memory = Some(value);
+        self
+    }
+
     /// Build the runner and start the game (advances past Mulligan into turn 1).
     pub fn start(mut self) -> DebugRunner {
+        let initial_memory = self.initial_memory;
         let mut r = self.build_inner();
         r.game.start_game();
+        if let Some(m) = initial_memory {
+            r.game.set_memory(m);
+        }
         r
     }
 
@@ -459,14 +474,16 @@ mod tests {
 
     #[test]
     fn play_test_001_gains_memory() {
+        // TEST-001 costs 3 (default `make_test_card`). Pre-fund memory so the
+        // play is affordable, then verify the OnPlay adds 1.
         let mut r = DebugRunner::builder()
             .add_card(make_test_card("TEST-001", "TestOne"))
             .hand(0, &["TEST-001"])
+            .memory(5)
             .start();
-        // Memory starts at 3 for the active player on turn 1.
-        let m_before = r.memory();
-        r.play(0, 0);
-        assert_eq!(r.memory(), m_before + 1);
+        let m_before = r.memory(); // 5
+        r.play(0, 0); // -3 for cost, +1 for OnPlay = net -2
+        assert_eq!(r.memory(), m_before - 3 + 1);
         assert_eq!(r.battle_area_size(0), 1);
     }
 }

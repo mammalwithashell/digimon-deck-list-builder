@@ -397,23 +397,51 @@ impl Game {
     }
 
     /// Play a card from hand to field for a player.
-    /// Fires any registered OnPlay effects after the card hits the field.
+    ///
+    /// Flow (matches Python):
+    /// 1. Validate hand index and field capacity.
+    /// 2. Read the card's play cost from `card_data`.
+    /// 3. Call `pay_memory(cost)`; if unaffordable, abort with `None` and
+    ///    leave state unchanged.
+    /// 4. Remove the card from hand, create a Permanent on the field.
+    /// 5. Fire `OnPlay` effects via the registry.
+    ///
+    /// Cost reduction (BeforePayCost scanning, DigiXros reductions, etc.) is
+    /// not yet implemented — the base `play_cost` is used verbatim. See §4.7
+    /// and the deferred list in docs/RUST_PYTHON_PARITY.md.
+    ///
+    /// Does NOT call `check_turn_end`. Callers that want to end the turn when
+    /// memory goes negative after OnPlay effects resolve should invoke
+    /// `check_turn_end` explicitly.
     pub fn play_from_hand(&mut self, player_id: PlayerId, hand_index: usize) -> Option<usize> {
         let turn = self.turn_count;
         let field_slots = self.rules.field_slots;
+
+        // Borrow-check-friendly pre-checks: gather everything we need from
+        // immutable borrows before taking a mutable borrow.
+        let cost = {
+            let player = self.player(player_id);
+            if hand_index >= player.hand.len() {
+                return None;
+            }
+            if player.battle_area.len() >= field_slots as usize {
+                return None;
+            }
+            player.hand[hand_index].play_cost(&self.card_data)
+        };
+
+        // Pay the cost up-front. If unaffordable, do not remove the card.
+        if !self.pay_memory(cost) {
+            return None;
+        }
+
+        // Now the cost is paid — commit the play.
         let player = self.player_mut(player_id);
-        if hand_index >= player.hand.len() {
-            return None;
-        }
-        if player.battle_area.len() >= field_slots as usize {
-            return None;
-        }
         let card = player.hand.remove(hand_index);
         let perm = crate::permanent::Permanent::new(card, turn);
         player.battle_area.push(perm);
         let field_index = player.battle_area.len() - 1;
 
-        // Fire OnPlay effects from the registry, if any.
         self.fire_on_play(player_id, field_index);
 
         Some(field_index)

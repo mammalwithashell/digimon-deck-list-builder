@@ -177,3 +177,49 @@ fn end_turn_no_swing_back_when_memory_already_nonnegative() {
     assert_ne!(r.turn_player(), tp_before, "turn must advance");
     assert_eq!(r.memory(), -5);
 }
+
+// ── §1.1 — play_from_hand deducts memory cost ────────────────────────
+
+#[test]
+fn play_from_hand_deducts_cost() {
+    let mut r = DebugRunner::builder()
+        .add_card(make_test_card("FILLER", "Filler")) // cost 3
+        .hand(0, &["FILLER"])
+        .memory(5)
+        .start();
+    assert_eq!(r.memory(), 5);
+    let result = r.play(0, 0);
+    assert_eq!(result, Some(0), "play should succeed");
+    assert_eq!(r.memory(), 2, "5 − 3 cost = 2 (FILLER has no OnPlay)");
+    assert_eq!(r.battle_area_size(0), 1);
+    assert_eq!(r.hand_size(0), 0);
+}
+
+#[test]
+fn play_from_hand_rejects_unaffordable() {
+    let mut r = DebugRunner::builder()
+        .add_card(make_test_card("FILLER", "Filler")) // cost 3
+        .hand(0, &["FILLER"])
+        .memory(-9) // -9 - 3 = -12, below memory_range.0 = -10
+        .start();
+    let result = r.play(0, 0);
+    assert_eq!(result, None, "unaffordable play must return None");
+    assert_eq!(r.memory(), -9, "memory unchanged when play is rejected");
+    assert_eq!(r.battle_area_size(0), 0, "card did NOT hit the field");
+    assert_eq!(r.hand_size(0), 1, "card stays in hand");
+}
+
+#[test]
+fn play_from_hand_does_not_auto_end_turn_on_negative_memory() {
+    // Paying 3 from memory 1 puts memory at -2, but the turn must continue
+    // so any OnPlay / follow-up effects can resolve.
+    let mut r = DebugRunner::builder()
+        .add_card(make_test_card("FILLER", "Filler"))
+        .hand(0, &["FILLER"])
+        .memory(1)
+        .start();
+    let tp_before = r.turn_player();
+    r.play(0, 0);
+    assert_eq!(r.memory(), -2);
+    assert_eq!(r.turn_player(), tp_before, "turn must not advance during play");
+}
