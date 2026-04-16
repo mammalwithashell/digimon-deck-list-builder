@@ -32,24 +32,35 @@ class BT15_006(CardScript):
         effect0.set_can_use_condition(condition0)
 
         def process0(ctx: Dict[str, Any]):
-            """Action: Draw 2, Trash From Hand"""
+            """Action: Trash 1 Lv.5+ Digimon from hand, then Draw 2."""
             player = ctx.get('player')
             perm = ctx.get('permanent')
             game = ctx.get('game')
             if not (player and game):
                 return
+
             def hand_filter(c):
+                # Must be a Digimon card with level >= 5
+                if not getattr(c, 'is_digimon', False):
+                    return False
                 if getattr(c, 'level', None) is None or c.level < 5:
                     return False
                 return True
+
+            # Check if any valid targets exist before entering selection
+            valid_targets = [c for c in player.hand_cards if hand_filter(c)]
+            if not valid_targets:
+                return
+
             def on_trashed(selected):
                 if selected in player.hand_cards:
                     player.hand_cards.remove(selected)
                     player.trash_cards.append(selected)
+                    # Draw 2 only after successfully trashing (pay-before-reward)
+                    player.draw_cards(2)
+
             game.effect_select_hand_card(
                 player, hand_filter, on_trashed, is_optional=True)
-            if player:
-                player.draw_cards(2)
 
         effect0.set_on_process_callback(process0)
         effects.append(effect0)

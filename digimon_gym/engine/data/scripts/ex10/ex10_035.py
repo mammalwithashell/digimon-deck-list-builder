@@ -132,11 +132,8 @@ class EX10_035(CardScript):
                         enemy.trash_cards.extend(removed)
                     do_de_digivolve(count_remaining - 1)
 
-                if len(candidates) == 1:
-                    on_select(candidates[0])
-                else:
-                    game.effect_select_opponent_permanent(
-                        player, on_select, filter_fn=target_filter, is_optional=False)
+                game.effect_select_opponent_permanent(
+                    player, on_select, filter_fn=target_filter, is_optional=False)
 
             do_de_digivolve(2)
 
@@ -178,7 +175,52 @@ class EX10_035(CardScript):
         effect3.set_on_process_callback(_de_digivolve_2_twice)
         effects.append(effect3)
 
-        # --- Effect 4: [On Deletion] Place face-up as bottom security ---
+        # --- Effect 4: [All Turns] This Digimon can only digivolve into [Apocalymon] ---
+        # DCGO: CanNotDigivolveStaticSelfEffect with CardCondition = !Apocalymon
+        # Register CANNOT_DIGIVOLVE modifier with condition that allows Apocalymon
+        effect_digi_restrict = ICardEffect()
+        effect_digi_restrict.set_effect_name("EX10-035 Digivolve restriction")
+        effect_digi_restrict.set_effect_description(
+            "[All Turns] This Digimon can only digivolve into [Apocalymon]."
+        )
+        effect_digi_restrict.is_declarative = True
+
+        def condition_digi_restrict(context: Dict[str, Any]) -> bool:
+            if card and card.permanent_of_this_card() is None:
+                return False
+            return True
+        effect_digi_restrict.set_can_use_condition(condition_digi_restrict)
+
+        def process_digi_restrict(ctx: Dict[str, Any]):
+            game = ctx.get('game')
+            perm = card.permanent_of_this_card() if card else None
+            if game and perm:
+                from ....interfaces.modifiers import ModifierType
+
+                def restriction_condition(target, context):
+                    """Block digivolve unless the card being placed is Apocalymon."""
+                    if target is not perm:
+                        return False
+                    # context['digivolving_card'] is set by action_mask and
+                    # action_digivolve when checking CANNOT_DIGIVOLVE
+                    digi_card = (context or {}).get('digivolving_card')
+                    if digi_card is not None:
+                        card_names = getattr(digi_card, 'card_names', []) or []
+                        if any('Apocalymon' in n for n in card_names):
+                            return False  # Allow digivolving into Apocalymon
+                    return True  # Block everything else
+
+                game.register_modifier(
+                    perm,
+                    ModifierType.CANNOT_DIGIVOLVE,
+                    condition=restriction_condition,
+                    source_effect=effect_digi_restrict,
+                    expiry='permanent',
+                )
+        effect_digi_restrict.set_on_process_callback(process_digi_restrict)
+        effects.append(effect_digi_restrict)
+
+        # --- Effect 5: [On Deletion] Place face-up as bottom security ---
         effect4 = ICardEffect()
         effect4.set_timing(EffectTiming.OnDestroyedAnyone)
         effect4.set_effect_name("EX10-035 On Deletion: Place as bottom security")
@@ -239,6 +281,8 @@ class EX10_035(CardScript):
 
             def play_filter(c):
                 if getattr(c, 'is_digi_egg', False):
+                    return False
+                if not getattr(c, 'is_digimon', False):
                     return False
                 lv = getattr(c, 'level', None)
                 if lv is None or lv > 5:

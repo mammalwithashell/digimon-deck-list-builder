@@ -14,11 +14,74 @@ class BT15_031(CardScript):
     def get_card_effects(self, card: 'CardSource') -> List['ICardEffect']:
         effects = []
 
-        # --- "Can only digivolve into white Digimon" restriction (during owner's turn) ---
+        # --- [Your Turn] This Digimon can only digivolve into white Digimon ---
         # Per C#: CanNotDigivolveStaticSelfEffect with CardCondition = !White
-        # This is a continuous restriction, not a triggered effect
-        # Engine handles this via CANNOT_DIGIVOLVE modifier pattern
-        # For now, mark as declarative (engine enforces via digivolve validator)
+        # Registers a CANNOT_DIGIVOLVE modifier whose condition dynamically checks:
+        #   1. The card being digivolved into (from context) is NOT white
+        #   2. It's the owner's turn
+        # Uses a declarative effect (no timing) that fires on OnEnterFieldAnyone
+        # when the card is played. The modifier persists as long as the permanent
+        # is on the field.
+        effect_digi_restrict = ICardEffect()
+        effect_digi_restrict.set_effect_name("BT15-031 Can only digivolve into white Digimon")
+        effect_digi_restrict.set_effect_description(
+            "[Your Turn] This Digimon can only digivolve into white Digimon."
+        )
+        effect_digi_restrict.is_declarative = True
+
+        _digi_restrict_registered = [False]
+
+        def condition_digi_restrict(context: Dict[str, Any]) -> bool:
+            if card and card.permanent_of_this_card() is None:
+                return False
+            return True
+        effect_digi_restrict.set_can_use_condition(condition_digi_restrict)
+
+        def _register_digivolve_restriction(game_obj, perm_obj):
+            """Register the CANNOT_DIGIVOLVE modifier on the permanent."""
+            if _digi_restrict_registered[0]:
+                return
+            from ....interfaces.modifiers import ModifierType, ModifierEntry
+            from ....data.enums import CardColor
+
+            def restrict_condition(target_perm, mod_ctx):
+                # Only apply during owner's turn
+                if not (card and card.owner and card.owner.is_my_turn):
+                    return False
+                # Only apply to THIS permanent
+                if target_perm is not perm_obj:
+                    return False
+                # Check the digivolving card's color from context
+                digi_card = (mod_ctx or {}).get('digivolving_card')
+                if digi_card is None:
+                    # No context about digivolving card — don't block
+                    return False
+                # Block if the digivolving card is NOT white
+                card_colors = getattr(digi_card, 'card_colors', []) or []
+                return CardColor.White not in card_colors
+
+            entry = ModifierEntry(
+                modifier_type=ModifierType.CANNOT_DIGIVOLVE,
+                condition=restrict_condition,
+                source_effect=effect_digi_restrict,
+                source_permanent=perm_obj,
+                expiry='permanent',
+            )
+            game_obj.modifiers.register(entry)
+            _digi_restrict_registered[0] = True
+
+        # Expose registration function for test access
+        effect_digi_restrict._register_digivolve_restriction = _register_digivolve_restriction
+
+        def process_digi_restrict(ctx: Dict[str, Any]):
+            game = ctx.get('game')
+            perm = card.permanent_of_this_card() if card else None
+            if not (game and perm):
+                return
+            _register_digivolve_restriction(game, perm)
+
+        effect_digi_restrict.set_on_process_callback(process_digi_restrict)
+        effects.append(effect_digi_restrict)
 
         # --- Shared bounce logic for On Play / When Attacking ---
         def _bounce_process(ctx: Dict[str, Any]):

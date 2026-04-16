@@ -1,4 +1,4 @@
-"""Behavioral tests for BT9-112 DeathXmon (Lv.7 Purple/Red).
+"""Behavioral tests for BT9-112 DeathXmon (Lv.7 Purple/Black).
 
 Card text:
 When you would play this card, reduce its memory cost by 3 for each
@@ -77,6 +77,92 @@ class TestBT9112DeathXmon:
         # Should return True for THIS card
         result = cost_effects[0].can_use_condition({'card_source': cs})
         assert result, "Cost reduction should apply to THIS card"
+
+    def test_process0_does_not_set_temp_play_cost_reduction(self, debug_runner):
+        """process0 must NOT set _temp_play_cost_reduction (broken double-reduction pattern).
+
+        The _cost_reduction_value_fn already handles cost reduction correctly.
+        If process0 also sets _temp_play_cost_reduction, it creates a fragile
+        double-reduction path that could leak across plays.
+        """
+        runner = debug_runner(initial_memory=20)
+
+        # Set up opponent field so cost reduction is non-zero
+        runner.place_on_field(2, ["ST1-03"])
+        runner.place_on_field(2, ["ST1-06"])
+
+        game = runner.game
+
+        from digimon_gym.engine.data.card_database import CardDatabase
+        db = CardDatabase()
+        cs = db.create_card_source("BT9-112", game.player1)
+
+        effects = cs.effect_list(None)
+        cost_effects = [
+            e for e in effects
+            if e.timing == EffectTiming.BeforePayCost
+        ]
+        assert len(cost_effects) >= 1
+
+        # Ensure _temp_play_cost_reduction starts at 0
+        game.player1._temp_play_cost_reduction = 0
+
+        # Fire the process callback (simulating commit phase)
+        if cost_effects[0].on_process_callback:
+            cost_effects[0].on_process_callback({
+                'player': game.player1,
+                'game': game,
+            })
+
+        # _temp_play_cost_reduction should NOT have been set by process0
+        temp_reduction = getattr(game.player1, '_temp_play_cost_reduction', 0)
+        assert temp_reduction == 0, (
+            f"process0 should NOT set _temp_play_cost_reduction (got {temp_reduction}). "
+            f"The _cost_reduction_value_fn already handles cost reduction."
+        )
+
+    def test_calculate_play_cost_integration(self, debug_runner):
+        """Verify calculate_play_cost gives correct cost (no double-reduction).
+
+        Base cost 20, 3 opponent Digimon = -9 reduction -> cost should be 11.
+        """
+        runner = debug_runner(initial_memory=20)
+
+        runner.place_on_field(2, ["ST1-03"])
+        runner.place_on_field(2, ["ST1-06"])
+        runner.place_on_field(2, ["ST1-07"])
+
+        game = runner.game
+
+        from digimon_gym.engine.data.card_database import CardDatabase
+        db = CardDatabase()
+        cs = db.create_card_source("BT9-112", game.player1)
+        game.player1.hand_cards.append(cs)
+
+        # Calculate cost without commit (for display/mask)
+        cost_display = game.calculate_play_cost(game.player1, cs)
+        assert cost_display == 11, (
+            f"Cost with 3 opponent Digimon should be 20 - 9 = 11, got {cost_display}"
+        )
+
+        # Calculate cost with commit (for actual play)
+        cost_commit = game.calculate_play_cost(game.player1, cs, commit=True)
+        assert cost_commit == 11, (
+            f"Committed cost should also be 11, got {cost_commit}"
+        )
+
+    def test_cost_reduction_zero_opponents(self, debug_runner):
+        """With no opponent Digimon/Tamer, cost should remain at base (20)."""
+        runner = debug_runner(initial_memory=20)
+        game = runner.game
+
+        from digimon_gym.engine.data.card_database import CardDatabase
+        db = CardDatabase()
+        cs = db.create_card_source("BT9-112", game.player1)
+        game.player1.hand_cards.append(cs)
+
+        cost = game.calculate_play_cost(game.player1, cs)
+        assert cost == 20, f"Cost with 0 opponents should be 20, got {cost}"
 
     # --- De-Digivolve + Delete tests ---
 
@@ -182,6 +268,37 @@ class TestBT9112DeathXmon:
         snap = runner.snapshot()
         assert len(snap.p2_field) == 0, "Bare Lv.3 Digimon should be deleted"
 
+    def test_when_digivolving_effect_same_as_on_play(self, debug_runner):
+        """[When Digivolving] should perform the same de-digivolve + delete as On Play."""
+        runner = debug_runner(initial_memory=10)
+
+        # Opponent: bare Lv.4 Digimon -> should be deleted (Lv.4 <= 4)
+        runner.place_on_field(2, ["ST1-07"])
+
+        game = runner.game
+        perm = runner.place_on_field(1, ["BT9-112"])
+
+        top_card = perm.top_card
+        effects = top_card.effect_list(None)
+        wd = [
+            e for e in effects
+            if e.timing == EffectTiming.OnEnterFieldAnyone
+            and getattr(e, 'is_when_digivolving', False)
+            and e.on_process_callback is not None
+        ]
+        assert len(wd) >= 1, "Should have When Digivolving effect"
+
+        wd[0].on_process_callback({
+            'player': game.player1,
+            'game': game,
+            'permanent': perm,
+        })
+
+        snap = runner.snapshot()
+        assert len(snap.p2_field) == 0, (
+            "When Digivolving should delete Lv.4 Digimon same as On Play"
+        )
+
     # --- End of Opponent's Turn tests ---
 
     def test_end_of_opponent_turn_deletes_lowest_cost(self, debug_runner):
@@ -257,3 +374,51 @@ class TestBT9112DeathXmon:
         assert eot[0].can_use_condition({}), (
             "End of turn effect SHOULD activate on opponent's turn"
         )
+
+    def test_end_of_turn_once_per_turn(self, debug_runner):
+        """End of turn effect should be once per turn."""
+        runner = debug_runner(initial_memory=10)
+
+        perm = runner.place_on_field(1, ["BT9-112"])
+
+        top_card = perm.top_card
+        effects = top_card.effect_list(None)
+        eot = [
+            e for e in effects
+            if e.timing == EffectTiming.OnEndTurn
+            and e.on_process_callback is not None
+        ]
+        assert len(eot) >= 1
+
+        assert eot[0].max_count_per_turn == 1, (
+            "End of turn effect should be once per turn"
+        )
+
+    def test_end_of_turn_no_opponent_digimon(self, debug_runner):
+        """End of turn effect should do nothing if opponent has no Digimon."""
+        runner = debug_runner(initial_memory=10)
+
+        perm = runner.place_on_field(1, ["BT9-112"])
+        game = runner.game
+
+        game.player1.is_my_turn = False
+        game.player2.is_my_turn = True
+
+        top_card = perm.top_card
+        effects = top_card.effect_list(None)
+        eot = [
+            e for e in effects
+            if e.timing == EffectTiming.OnEndTurn
+            and e.on_process_callback is not None
+        ]
+
+        # Should not raise when no opponent Digimon exist
+        eot[0].on_process_callback({
+            'player': game.player1,
+            'game': game,
+            'permanent': perm,
+        })
+
+        # No crash, no changes
+        snap = runner.snapshot()
+        assert len(snap.p2_field) == 0

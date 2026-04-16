@@ -73,12 +73,10 @@ class EX9_068(CardScript):
             play_cost = top.get_cost_itself if top else 0
             if play_cost < 7:
                 return False
-            traits = getattr(top, 'card_traits', []) or []
-            return any(
-                t in ('Cyborg', 'Machine', 'DM') or
-                'Cyborg' in t or 'Machine' in t or 'DM' in t
-                for t in traits
-            )
+            # DCGO uses EqualsTraits() — exact trait match
+            return (perm.has_trait('Cyborg') or
+                    perm.has_trait('Machine') or
+                    perm.has_trait('DM'))
 
         def condition1(context: Dict[str, Any]) -> bool:
             if card and card.permanent_of_this_card() is None:
@@ -87,7 +85,7 @@ class EX9_068(CardScript):
             if not (card and card.owner and card.owner.is_my_turn):
                 return False
             # Check that the played permanent qualifies
-            trigger_perm = context.get('permanent')
+            trigger_perm = context.get('played_permanent') or context.get('event_permanent')
             if not trigger_perm:
                 return False
             # Must be our Digimon, not opponent's
@@ -115,17 +113,15 @@ class EX9_068(CardScript):
             # Suspend this Tamer
             my_perm.suspend()
 
-            # Draw 1
-            if player.library_cards:
-                drawn = player.library_cards.pop(0)
-                player.hand_cards.append(drawn)
+            # Draw 1 (use proper API to fire OnAddHand timing)
+            player.draw_cards(1)
 
             # Gain 1 memory
             player.add_memory(1)
 
             # Optionally place 1 card from hand as bottom digivolution card
             # of the played Digimon
-            trigger_perm = ctx.get('permanent')
+            trigger_perm = ctx.get('played_permanent') or ctx.get('event_permanent')
             if not trigger_perm or trigger_perm not in player.battle_area:
                 return
             if not player.hand_cards:

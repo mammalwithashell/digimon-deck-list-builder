@@ -167,6 +167,7 @@ class ActionDecoderMixin:
             self._recover_from_stale_selection()
             self._check_deferred_turn_end()
             self._maybe_complete_end_phase()
+            self._maybe_complete_move_to_main()
             self._maybe_resume_combat_after_wa_selection()
             return
 
@@ -182,6 +183,7 @@ class ActionDecoderMixin:
         self._recover_from_stale_selection()
         self._check_deferred_turn_end()
         self._maybe_complete_end_phase()
+        self._maybe_complete_move_to_main()
         self._maybe_resume_combat_after_wa_selection()
 
     def _decode_block(self, action_id: int):
@@ -285,6 +287,7 @@ class ActionDecoderMixin:
             self._recover_from_stale_selection()
             self._maybe_resume_combat_after_wa_selection()
             self._check_deferred_turn_end()
+            self._maybe_complete_move_to_main()
             return
 
         if SEL_TRASH_START <= action_id <= SEL_TRASH_END:
@@ -300,6 +303,7 @@ class ActionDecoderMixin:
                 self._recover_from_stale_selection()
                 self._maybe_resume_combat_after_wa_selection()
                 self._check_deferred_turn_end()
+                self._maybe_complete_move_to_main()
 
     def _decode_source_selection(self, action_id: int):
         """Handle digivolution source selection from an effect callback."""
@@ -318,6 +322,7 @@ class ActionDecoderMixin:
             self._recover_from_stale_selection()
             self._maybe_resume_combat_after_wa_selection()
             self._check_deferred_turn_end()
+            self._maybe_complete_move_to_main()
             return
 
         if 2000 <= action_id < ACTION_SPACE_SIZE:
@@ -338,6 +343,7 @@ class ActionDecoderMixin:
                     self._recover_from_stale_selection()
                     self._maybe_resume_combat_after_wa_selection()
                     self._check_deferred_turn_end()
+                    self._maybe_complete_move_to_main()
 
     def _execute_training(self, perm: "Permanent", owner: "Player"):
         """Execute <Training>: suspend this Digimon and place top deck card at bottom of digi stack."""

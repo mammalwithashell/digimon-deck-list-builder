@@ -21,6 +21,17 @@ class EX10_074(CardScript):
         effect0.set_effect_description("Alternate digivolution requirement")
         effect0._alt_digi_cost = 4
         effect0._alt_digi_level = 3
+        effect0._alt_digi_name = "Impmon"
+
+        # Trash count condition: validator doesn't check can_use_condition for alt-digi
+        # (card is in hand, not on field). Use _alt_digi_condition_fn instead.
+        # base_perm.owner gives the player who owns the base Digimon.
+        def _alt_digi_trash_check(base_perm) -> bool:
+            owner = base_perm.owner if base_perm else None
+            if owner is None and card:
+                owner = card.owner
+            return owner is not None and len(owner.trash_cards) >= 20
+        effect0._alt_digi_condition_fn = _alt_digi_trash_check
 
         def condition0(context: Dict[str, Any]) -> bool:
             if card and card.owner:
@@ -116,6 +127,9 @@ class EX10_074(CardScript):
         # --- Shared logic for effects 5/6: Return 2 from trash to deck top, De-Digivolve 2 ---
         def _second_effect_process(ctx: Dict[str, Any]):
             """[On Play]/[When Digivolving] If 10+ trash, by returning 2 non-Digi-Egg from trash to deck top, De-Digivolve 2 one opponent Digimon."""
+            from ....game.constants import SEL_TRASH_START
+            from ....data.enums import GamePhase as GP
+
             player = ctx.get('player')
             game = ctx.get('game')
             if not (player and game):
@@ -130,42 +144,66 @@ class EX10_074(CardScript):
             enemy = player.enemy
             if not enemy or not any(p.is_digimon for p in enemy.battle_area):
                 return
+
             # "By returning 2 non-Digi-Egg cards from trash to deck top" is a cost
-            # Select first card from trash
             returned_cards = []
 
             def trash_filter(c):
                 return not getattr(c, 'is_digi_egg', False)
 
-            def on_first_selected(first_card):
-                if first_card in player.trash_cards:
-                    player.trash_cards.remove(first_card)
-                    returned_cards.append(first_card)
+            def _build_valid_trash_indices():
+                return [SEL_TRASH_START + i
+                        for i, c in enumerate(player.trash_cards)
+                        if trash_filter(c)]
 
-                    def on_second_selected(second_card):
-                        if second_card in player.trash_cards:
-                            player.trash_cards.remove(second_card)
-                            returned_cards.append(second_card)
-                            # Place both on top of deck (reversed order per C#)
-                            for rc in reversed(returned_cards):
-                                player.library_cards.insert(0, rc)
-                            # Now De-Digivolve 2 one opponent Digimon
-                            def on_de_digivolve(target_perm):
-                                removed = target_perm.de_digivolve(2)
-                                if enemy:
-                                    enemy.trash_cards.extend(removed)
-                            game.effect_select_opponent_permanent(
-                                player, on_de_digivolve,
-                                filter_fn=lambda p: p.is_digimon,
-                                is_optional=False)
+            def on_first_selected(action_id: int):
+                idx = action_id - SEL_TRASH_START
+                if not (0 <= idx < len(player.trash_cards)):
+                    return
+                first_card = player.trash_cards[idx]
+                player.trash_cards.remove(first_card)
+                returned_cards.append(first_card)
 
-                    game.effect_select_hand_card(
-                        player, trash_filter, on_second_selected,
-                        is_optional=False,
-                        prompt="Select a 2nd non-Digi-Egg card from trash to return to deck top.")
+                # Select second card from trash
+                valid2 = _build_valid_trash_indices()
+                if not valid2:
+                    # Can't find a second card; revert first selection
+                    player.trash_cards.append(first_card)
+                    returned_cards.clear()
+                    return
 
-            game.effect_select_hand_card(
-                player, trash_filter, on_first_selected,
+                def on_second_selected(action_id2: int):
+                    idx2 = action_id2 - SEL_TRASH_START
+                    if not (0 <= idx2 < len(player.trash_cards)):
+                        return
+                    second_card = player.trash_cards[idx2]
+                    player.trash_cards.remove(second_card)
+                    returned_cards.append(second_card)
+
+                    # Place both on top of deck (reversed order per C#)
+                    for rc in reversed(returned_cards):
+                        player.library_cards.insert(0, rc)
+
+                    # Now De-Digivolve 2 one opponent Digimon
+                    def on_de_digivolve(target_perm):
+                        removed = target_perm.de_digivolve(2)
+                        if enemy:
+                            enemy.trash_cards.extend(removed)
+                    game.effect_select_opponent_permanent(
+                        player, on_de_digivolve,
+                        filter_fn=lambda p: p.is_digimon,
+                        is_optional=False)
+
+                game.request_selection(
+                    GP.SelectTrash, player, on_second_selected, valid2,
+                    is_optional=False,
+                    prompt="Select a 2nd non-Digi-Egg card from trash to return to deck top.")
+
+            valid1 = _build_valid_trash_indices()
+            if not valid1:
+                return
+            game.request_selection(
+                GP.SelectTrash, player, on_first_selected, valid1,
                 is_optional=True,
                 prompt="Select a non-Digi-Egg card from trash to return to deck top.")
 

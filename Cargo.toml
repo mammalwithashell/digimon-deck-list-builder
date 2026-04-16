@@ -1,0 +1,6 @@
+[workspace]
+members = [
+    "digimon-engine",
+    "src-tauri",
+]
+resolver = "2"

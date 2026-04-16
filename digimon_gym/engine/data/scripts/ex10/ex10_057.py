@@ -50,6 +50,7 @@ class EX10_057(CardScript):
             "the play cost reduced by 5."
         )
         effect0.is_optional = True
+        effect0.cost_reduction = 5
 
         def condition0(context: Dict[str, Any]) -> bool:
             if context.get('card_source') is not card:
@@ -61,13 +62,7 @@ class EX10_057(CardScript):
         effect0.set_can_use_condition(condition0)
 
         def process0(ctx: Dict[str, Any]):
-            player = ctx.get('player')
-            if not player:
-                return
-            if hasattr(player, '_temp_play_cost_reduction'):
-                player._temp_play_cost_reduction += 5
-            else:
-                player._temp_play_cost_reduction = 5
+            # Mark for end-of-turn deletion when played via cost reduction
             card._ex10_eot_delete = True
         effect0.set_on_process_callback(process0)
         effects.append(effect0)
@@ -99,6 +94,24 @@ class EX10_057(CardScript):
                 card._ex10_eot_delete = False
         effect1.set_on_process_callback(process1)
         effects.append(effect1)
+
+        # --- Effect: [All Turns] Can only digivolve into [Apocalymon] ---
+        # DCGO: CanNotDigivolveStaticSelfEffect — blocks all non-Apocalymon digivolutions.
+        # Engine gap: CANNOT_DIGIVOLVE modifier does not receive hand card context,
+        # so conditional "only into X" cannot be enforced by the action mask.
+        # Declarative effect until engine supports digivolve-target filtering.
+        effect_restriction = ICardEffect()
+        effect_restriction.set_effect_name("EX10-057 Can only digivolve into Apocalymon")
+        effect_restriction.set_effect_description(
+            "[All Turns] This Digimon can only digivolve into [Apocalymon]."
+        )
+
+        def condition_restriction(context: Dict[str, Any]) -> bool:
+            if card and card.permanent_of_this_card() is None:
+                return False
+            return True
+        effect_restriction.set_can_use_condition(condition_restriction)
+        effects.append(effect_restriction)
 
         # --- Shared delete unsuspended process for On Play / When Attacking ---
         def _delete_unsuspended(ctx: Dict[str, Any]):
@@ -219,6 +232,9 @@ class EX10_057(CardScript):
 
             def play_filter(c):
                 if getattr(c, 'is_digi_egg', False):
+                    return False
+                # C# requires IsDigimon — only Digimon cards
+                if not getattr(c, 'is_digimon', False):
                     return False
                 lv = getattr(c, 'level', None)
                 if lv is None or lv > 5:

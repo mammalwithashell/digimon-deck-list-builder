@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
+from ....interfaces.modifiers import ModifierType, ModifierEntry
 from ....data.enums import EffectTiming
 
 if TYPE_CHECKING:
@@ -16,8 +17,6 @@ class BT8_097(CardScript):
 
         # ── BeforePayCost: variable cost reduction ────────────────────────────
         # Reduce memory cost by 1 for each Digimon opponent has in play.
-        # Uses value_fn so the reduction is computed at cost-calculation time,
-        # not as a side-effect mutation inside condition.
         effect0 = ICardEffect()
         effect0.set_timing(EffectTiming.BeforePayCost)
         effect0.set_effect_name("BT8-097 Cost reduction")
@@ -67,8 +66,9 @@ class BT8_097(CardScript):
 
         def process1(ctx: Dict[str, Any]):
             """
-            1. Register CANNOT_PUT_ON_FIELD on opponent until end of their turn (engine gap #6
-               best-effort — restricts by-effect Digimon plays; normal plays unaffected).
+            1. Register CANNOT_PLAY_BY_EFFECT for opponent's Digimon until end of
+               their turn.  Uses global ModifierEntry (source_permanent=None) since
+               this is an Option card that goes to trash after use.
             2. Delete all opponent Digimon with 6000 DP or less.
             """
             player = ctx.get('player')
@@ -77,24 +77,21 @@ class BT8_097(CardScript):
                 return
             enemy = player.enemy if player else None
 
-            # Play restriction (engine gap #6 — best-effort CANNOT_PUT_ON_FIELD tag)
+            # "Your opponent can't play Digimon by effects until the end of their turn."
+            # Register CANNOT_PLAY_BY_EFFECT: blocks effect-based Digimon plays only.
+            # Normal hand plays are unaffected. Uses global registration pattern
+            # (source_permanent=None) since this Option card doesn't stay on the field.
             if enemy:
-                from digimon_gym.engine.interfaces.modifiers import ModifierType
-                # Register a player-level modifier on a sentinel if available,
-                # or tag each existing permanent. CANNOT_PUT_ON_FIELD with
-                # expiry='end_of_opponent_turn' covers "until end of their turn".
-                # We register on the breeding slot permanent as a carrier if it exists,
-                # otherwise we attach to each opponent Digimon as a best-effort.
-                # The condition function checks the card being played is an effect-play.
-                # Since we can't easily distinguish effect-plays in the engine, we use
-                # a descriptive tag here (known gap #6).
-                for opp_perm in list(enemy.battle_area):
-                    game.register_modifier(
-                        opp_perm,
-                        ModifierType.CANNOT_PUT_ON_FIELD,
-                        value_fn=lambda: True,
-                        expiry='end_of_opponent_turn',
-                    )
+                game.modifiers.register(ModifierEntry(
+                    modifier_type=ModifierType.CANNOT_PLAY_BY_EFFECT,
+                    condition=lambda target, c: (
+                        c.get('card') is not None
+                        and getattr(c['card'], 'is_digimon', False)
+                    ),
+                    source_permanent=None,
+                    expiry='end_of_opponent_turn',
+                    granting_player=player,
+                ))
 
             # Delete all opponent Digimon with 6000 DP or less
             if enemy:

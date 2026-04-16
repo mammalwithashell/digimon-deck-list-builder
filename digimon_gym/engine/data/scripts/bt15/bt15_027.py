@@ -2,7 +2,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Dict, Any
 from ....core.card_script import CardScript
 from ....interfaces.card_effect import ICardEffect
-from ....data.enums import EffectTiming
+from ....data.enums import EffectTiming, GamePhase
 
 if TYPE_CHECKING:
     from ....core.card_source import CardSource
@@ -82,18 +82,62 @@ class BT15_027(CardScript):
             if not has_own:
                 return
 
+            def play_filter(c):
+                """Only Dark Masters Digimon when breeding area is empty."""
+                # C# checks breeding area empty inside CanSelectCardCondition
+                if player.breeding_area is not None:
+                    return False
+                if not getattr(c, 'is_digimon', False):
+                    return False
+                traits = getattr(c, 'card_traits', []) or []
+                return any('Dark Masters' in t or 'DarkMasters' in t for t in traits)
+
             def on_delete_cost(target_perm):
                 # Cost paid: delete own Digimon
                 player.delete_permanent(target_perm)
-                # Now play 1 Dark Masters Digimon from hand
-                def play_filter(c):
-                    if not getattr(c, 'is_digimon', False):
-                        return False
-                    traits = getattr(c, 'card_traits', []) or []
-                    return any('Dark Masters' in t or 'DarkMasters' in t for t in traits)
 
-                game.effect_play_from_zone(
-                    player, 'hand', play_filter, free=True, is_optional=True)
+                # Check if any qualifying cards in hand
+                if not any(play_filter(c) for c in player.hand_cards):
+                    return
+
+                # Select a Dark Masters Digimon from hand to play to breeding area
+                from ....game.constants import SEL_HAND_START, ACTION_SPACE_SIZE
+
+                valid = []
+                for i, hc in enumerate(player.hand_cards):
+                    if play_filter(hc) and (SEL_HAND_START + i) < ACTION_SPACE_SIZE:
+                        valid.append(SEL_HAND_START + i)
+
+                if not valid:
+                    return
+
+                def on_hand_select(action_id: int):
+                    idx = action_id - SEL_HAND_START
+                    if 0 <= idx < len(player.hand_cards):
+                        chosen = player.hand_cards[idx]
+                        # Remove from hand
+                        player.hand_cards.remove(chosen)
+                        # Place in breeding area as a new Permanent (NOT battle area)
+                        from ....core.permanent import Permanent
+                        new_perm = Permanent([chosen])
+                        if game:
+                            new_perm.turn_played = game.turn_count
+                            new_perm._owner_game = game
+                        player.breeding_area = new_perm
+                        game.logger.log(
+                            f"[Effect] {player.player_name} played "
+                            f"{game._card_ref(chosen)} to breeding area")
+                        # Fire On Play effects for the played card
+                        game.execute_effects(
+                            EffectTiming.OnEnterFieldAnyone,
+                            {"played_card": chosen, "played_permanent": new_perm,
+                             "event_player": player, "is_effect_play": True},
+                        )
+
+                game.request_selection(
+                    GamePhase.SelectHand, player, on_hand_select, valid,
+                    is_optional=True,
+                    prompt="Select 1 Dark Masters Digimon from hand to play to breeding area.")
 
             game.effect_select_own_permanent(
                 player, on_delete_cost, filter_fn=own_digimon_filter, is_optional=True)

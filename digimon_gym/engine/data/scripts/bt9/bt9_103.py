@@ -27,31 +27,31 @@ class BT9_103(CardScript):
             if not enemy:
                 return
 
-            # Part 1: Opponent's Digimon with play cost 7 or less can't attack PLAYERS
-            # (they CAN still attack other Digimon) until end of opponent's turn.
-            # C# ref: GainCanNotAttackPlayerEffect with attackerCondition + defenderCondition.
-            # Must use CANNOT_ATTACK_PLAYER, NOT CANNOT_ATTACK.
-            #
-            # The condition must match only the specific target permanent —
-            # ModifierRegistry.has_modifier iterates all entries of a type and
-            # calls is_active(query_target); without an identity-filtering
-            # condition, the modifier would apply to every permanent.
-            for perm in list(enemy.battle_area):
-                if not perm.is_digimon:
-                    continue
-                top = perm.top_card
+            # Part 1: Opponent's Digimon with play cost 7 or less can't attack players
+            # until end of opponent's turn.  Registered as a GLOBAL modifier with a
+            # dynamic condition — checks at attack time whether the attacking permanent
+            # is an opponent's Digimon with play cost <= 7.  This covers Digimon
+            # played AFTER Kongou resolves (C# uses AttackerCondition callback).
+            def _cannot_attack_player_condition(target_perm, ctx):
+                if not target_perm.is_digimon:
+                    return False
+                top = target_perm.top_card
                 if top is None:
-                    continue
+                    return False
+                if top.owner is not enemy:
+                    return False
                 has_play_cost = getattr(top, 'has_play_cost', True)
-                play_cost = top.get_cost_itself
-                if has_play_cost and play_cost <= 7:
-                    target_perm = perm
-                    game.register_modifier(
-                        target_perm,
-                        ModifierType.CANNOT_ATTACK_PLAYER,
-                        condition=(lambda p=target_perm: (lambda target, ctx: target is p))(),
-                        expiry='end_of_opponent_turn',
-                    )
+                if not has_play_cost:
+                    return False
+                return top.get_cost_itself <= 7
+
+            cap_entry = ModifierEntry(
+                modifier_type=ModifierType.CANNOT_ATTACK_PLAYER,
+                condition=_cannot_attack_player_condition,
+                expiry='end_of_opponent_turn',
+                granting_player=player,
+            )
+            game.modifiers.register(cap_entry)
 
             # Part 2: Cards can't be added to security stacks by opponent's effects
             # until end of opponent's turn.  Registered as a global modifier entry.

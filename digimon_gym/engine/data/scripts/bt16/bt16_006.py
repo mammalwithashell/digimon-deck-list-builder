@@ -26,17 +26,26 @@ class BT16_006(CardScript):
 
         effect = effect0  # alias for condition closure
         def condition0(context: Dict[str, Any]) -> bool:
-            # Triggered on deletion — validated by engine timing
+            # Inherited effect: must not fire from top-card position
+            perm = context.get('permanent') or context.get('deleted_permanent')
+            if perm and perm.top_card is card:
+                return False
+            # C# CanActivateCondition: card.Owner.HandCards.Count >= 1
+            owner = card.owner if card else None
+            if owner and len(owner.hand_cards) < 1:
+                return False
             return True
 
         effect0.set_can_use_condition(condition0)
 
         def process0(ctx: Dict[str, Any]):
-            """Action: Gain 1 memory, Trash From Hand"""
+            """Action: Trash From Hand → Gain 1 memory (cost-first)"""
             player = ctx.get('player')
             perm = ctx.get('permanent')
             game = ctx.get('game')
             if not (player and game):
+                return
+            if not player.hand_cards:
                 return
             def hand_filter(c):
                 return True
@@ -44,10 +53,10 @@ class BT16_006(CardScript):
                 if selected in player.hand_cards:
                     player.hand_cards.remove(selected)
                     player.trash_cards.append(selected)
+                    # "By trashing" = cost: memory gain only after successful trash
+                    player.add_memory(1)
             game.effect_select_hand_card(
                 player, hand_filter, on_trashed, is_optional=True)
-            if player:
-                player.add_memory(1)
 
         effect0.set_on_process_callback(process0)
         effects.append(effect0)

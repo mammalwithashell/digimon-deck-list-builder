@@ -8,27 +8,58 @@ if TYPE_CHECKING:
     from ....core.card_source import CardSource
 
 
-def _is_dark_masters_digimon(c) -> bool:
-    """Check if a card is a Digimon with the [Dark Masters] trait."""
-    if not getattr(c, 'is_digimon', False):
-        return False
+def _has_dark_masters_trait(c) -> bool:
+    """Check if a card has the [Dark Masters] trait (any card type)."""
     traits = getattr(c, 'card_traits', []) or []
     return any('Dark Masters' in t for t in traits)
 
 
-def _get_distinct_dark_masters_from_trash(player, max_count=3):
-    """Get up to max_count distinct-named Dark Masters Digimon from trash."""
+def _has_dark_masters_trait_perm(perm) -> bool:
+    """Check if a permanent's top card has the [Dark Masters] trait."""
+    top = perm.top_card if perm else None
+    if not top:
+        return False
+    return _has_dark_masters_trait(top)
+
+
+def _get_distinct_dm_from_field_and_trash(player, max_count=3):
+    """Get up to max_count distinct-named Dark Masters cards from battle area and trash.
+
+    Card text: "cards with different names from your battle area or trash"
+    - Any card type with [Dark Masters] trait (not just Digimon)
+    - Battle area permanents: use top_card for trait check, collect the permanent
+    - Trash cards: check trait directly
+    """
     seen_names = set()
-    result = []
+    result = []  # list of (source, card_or_perm) tuples
+
+    # Check battle area permanents first
+    for perm in player.battle_area:
+        top = perm.top_card if perm else None
+        if not top:
+            continue
+        if not _has_dark_masters_trait(top):
+            continue
+        names = getattr(top, 'card_names', []) or []
+        name = names[0] if names else None
+        if name and name not in seen_names:
+            seen_names.add(name)
+            result.append(('field', perm))
+            if len(result) >= max_count:
+                return result
+
+    # Then check trash
     for c in player.trash_cards:
-        if _is_dark_masters_digimon(c):
-            names = getattr(c, 'card_names', []) or []
-            name = names[0] if names else None
-            if name and name not in seen_names:
-                seen_names.add(name)
-                result.append(c)
-                if len(result) >= max_count:
-                    break
+        if not _has_dark_masters_trait(c):
+            continue
+        names = getattr(c, 'card_names', []) or []
+        name = names[0] if names else None
+        if name and name not in seen_names:
+            seen_names.add(name)
+            result.append(('trash', c))
+            if len(result) >= max_count:
+                return result
+
     return result
 
 
@@ -49,8 +80,8 @@ class BT15_102(CardScript):
         effects = []
 
         # --- Effect 0: BeforePayCost ---
-        # Place up to 3 distinct-named Dark Masters from trash under this card,
-        # reduce play cost by 4 per card placed.
+        # Place up to 3 distinct-named Dark Masters cards from battle area or
+        # trash under this card, reduce play cost by 4 per card placed.
         effect0 = ICardEffect()
         effect0.set_timing(EffectTiming.BeforePayCost)
         effect0.set_effect_name("BT15-102 Placing 1 [Dark Masters] to get Play Cost -4")
@@ -62,11 +93,11 @@ class BT15_102(CardScript):
         effect0.set_hash_string("PlayCost-12_BT15_102")
 
         def _count_distinct_dm():
-            """Count distinct Dark Masters Digimon names in owner's trash."""
+            """Count distinct Dark Masters card names in owner's battle area and trash."""
             player = card.owner if card else None
             if not player:
                 return 0
-            return len(_get_distinct_dark_masters_from_trash(player, 3))
+            return len(_get_distinct_dm_from_field_and_trash(player, 3))
 
         def _cost_reduction_fn(context):
             return _count_distinct_dm() * 4
@@ -79,27 +110,88 @@ class BT15_102(CardScript):
             player = card.owner if card else None
             if not player:
                 return False
-            return any(_is_dark_masters_digimon(c) for c in player.trash_cards)
+            # Check battle area
+            for perm in player.battle_area:
+                if _has_dark_masters_trait_perm(perm):
+                    return True
+            # Check trash
+            for c in player.trash_cards:
+                if _has_dark_masters_trait(c):
+                    return True
+            return False
 
         effect0.set_can_use_condition(condition0)
 
         def process0(ctx: Dict[str, Any]):
-            """Place up to 3 distinct Dark Masters from trash under this card."""
+            """Place up to 3 distinct Dark Masters cards from field/trash under this card."""
             player = ctx.get('player')
             if not player:
                 return
-            to_place = _get_distinct_dark_masters_from_trash(player, 3)
-            for c in to_place:
-                if c in player.trash_cards:
-                    player.trash_cards.remove(c)
-                # The cards will become digivolution sources when the card is played.
-                # Store them temporarily for the play resolution to pick up.
+            to_place = _get_distinct_dm_from_field_and_trash(player, 3)
+            collected_cards = []
+            for source, item in to_place:
+                if source == 'field':
+                    # item is a Permanent on the battle area
+                    perm = item
+                    if perm in player.battle_area:
+                        # Remove permanent from battle area, collect all its card sources
+                        player.battle_area.remove(perm)
+                        # Take the top card as the DM card to place under
+                        top = perm.top_card
+                        if top:
+                            collected_cards.append(top)
+                        # Remaining digivolution sources go to trash
+                        for cs in perm.card_sources:
+                            if cs is not top:
+                                player.trash_cards.append(cs)
+                elif source == 'trash':
+                    # item is a CardSource in trash
+                    c = item
+                    if c in player.trash_cards:
+                        player.trash_cards.remove(c)
+                        collected_cards.append(c)
+
+            # Store collected cards for attachment after the permanent is created
+            if collected_cards:
                 if not hasattr(card, '_pending_digi_sources'):
                     card._pending_digi_sources = []
-                card._pending_digi_sources.append(c)
+                card._pending_digi_sources.extend(collected_cards)
 
         effect0.set_on_process_callback(process0)
         effects.append(effect0)
+
+        # --- Effect 1: On Play — consume _pending_digi_sources ---
+        # This fires after the permanent is created and attaches the
+        # collected DM cards as digivolution sources.
+        effect1 = ICardEffect()
+        effect1.set_timing(EffectTiming.OnEnterFieldAnyone)
+        effect1.set_effect_name("BT15-102 Attach pending digi sources")
+        effect1.set_effect_description(
+            "Attach Dark Masters cards placed during cost reduction as digivolution sources."
+        )
+        effect1.is_on_play = True
+
+        def condition1(context: Dict[str, Any]) -> bool:
+            if card and card.permanent_of_this_card() is None:
+                return False
+            return bool(getattr(card, '_pending_digi_sources', None))
+
+        effect1.set_can_use_condition(condition1)
+
+        def process1(ctx: Dict[str, Any]):
+            """Attach pending digi sources to the permanent."""
+            perm = ctx.get('permanent') or ctx.get('played_permanent')
+            if not perm:
+                return
+            pending = getattr(card, '_pending_digi_sources', None)
+            if not pending:
+                return
+            for cs in pending:
+                perm.add_card_source_bottom(cs)
+            card._pending_digi_sources = []
+
+        effect1.set_on_process_callback(process1)
+        effects.append(effect1)
 
         # --- Effect 2: [End of Your Turn] [Once Per Turn] ---
         # Place 1 Lv.6 or lower card from trash as bottom digi card,
@@ -183,10 +275,7 @@ class BT15_102(CardScript):
                     mill_count = 2 * lv6_count
                     enemy = player.enemy
                     if enemy and mill_count > 0:
-                        actual_mill = min(mill_count, len(enemy.library_cards))
-                        trashed = enemy.library_cards[:actual_mill]
-                        enemy.library_cards = enemy.library_cards[actual_mill:]
-                        enemy.trash_cards.extend(trashed)
+                        enemy.mill(mill_count)
 
             game.request_selection(
                 GamePhase.SelectTrash, player, _on_select, valid, True,

@@ -115,46 +115,73 @@ class EX8_026(CardScript):
         effect3.set_on_process_callback(_dedigivolve_and_bounce)
         effects.append(effect3)
 
-        # [All Turns] While you have 1 or more memory, all opponent Digimon can't suspend.
-        # Per C#: CanNotSuspendClass with condition checking opponent Digimon,
-        # active when card.Owner.MemoryForPlayer >= 1
-        # This is a continuous/static effect using CANNOT_SUSPEND modifier
+        # [All Turns] While you have 1 or more memory, none of your opponent's
+        # Digimon can suspend.
+        # Continuous aura: register a permanent CANNOT_SUSPEND modifier with a
+        # dynamic condition that checks owner's memory >= 1.
+        # Registered on play / when digivolving; cleaned up when leaving field.
         effect4 = ICardEffect()
+        effect4.set_timing(EffectTiming.OnEnterFieldAnyone)
         effect4.set_effect_name("EX8-026 Opponents Digimon Can't Suspend")
         effect4.set_effect_description("[All Turns] While you have 1 or more memory, none of your opponent's Digimon can suspend.")
-        effect4.is_declarative = True
+        effect4.is_on_play = True
 
         def condition4(context: Dict[str, Any]) -> bool:
             if card and card.permanent_of_this_card() is None:
                 return False
-            # Active while player has 1+ memory
-            if card and card.owner:
-                return card.owner.memory >= 1
-            return False
+            return True
         effect4.set_can_use_condition(condition4)
 
-        # Register CANNOT_SUSPEND modifiers on all opponent Digimon
         def process4(ctx: Dict[str, Any]):
-            """Apply CANNOT_SUSPEND to all opponent Digimon while player has 1+ memory."""
+            """Register permanent CANNOT_SUSPEND modifier on all opponent Digimon."""
             player = ctx.get('player')
             game = ctx.get('game')
             if not (player and game):
                 return
-            if player.memory < 1:
-                return
-            enemy = player.enemy
-            if not enemy:
+            my_perm = card.permanent_of_this_card() if card else None
+            if not my_perm:
                 return
             from digimon_gym.engine.interfaces.modifiers import ModifierType
-            for p in enemy.battle_area:
-                if p.is_digimon:
-                    game.register_modifier(
-                        ModifierType.CANNOT_SUSPEND, p,
-                        value_fn=lambda: True,
-                        expiry='end_of_turn')
+
+            # Condition: active when owner has 1+ memory AND target is
+            # an opponent's Digimon (not our own)
+            def cant_suspend_condition(target, context, _player=player, _game=game):
+                # Check owner still has 1+ memory
+                if _player is _game.player1:
+                    if _game.memory < 1:
+                        return False
+                else:
+                    if _game.memory > -1:
+                        return False
+                # Check target is opponent's Digimon
+                if not target.is_digimon:
+                    return False
+                if target in _player.battle_area:
+                    return False
+                return True
+
+            game.register_modifier(
+                my_perm, ModifierType.CANNOT_SUSPEND,
+                condition=cant_suspend_condition,
+                expiry='permanent')
 
         effect4.set_on_process_callback(process4)
         effects.append(effect4)
+
+        # Duplicate for [When Digivolving] timing
+        effect4b = ICardEffect()
+        effect4b.set_timing(EffectTiming.OnEnterFieldAnyone)
+        effect4b.set_effect_name("EX8-026 Opponents Digimon Can't Suspend")
+        effect4b.set_effect_description("[All Turns] While you have 1 or more memory, none of your opponent's Digimon can suspend.")
+        effect4b.is_when_digivolving = True
+
+        def condition4b(context: Dict[str, Any]) -> bool:
+            if card and card.permanent_of_this_card() is None:
+                return False
+            return True
+        effect4b.set_can_use_condition(condition4b)
+        effect4b.set_on_process_callback(process4)
+        effects.append(effect4b)
 
         # Ace Overflow <-4> — engine handles via card data, descriptive effect
         effect_ace = ICardEffect()

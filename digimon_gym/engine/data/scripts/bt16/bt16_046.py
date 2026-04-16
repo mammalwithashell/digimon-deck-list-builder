@@ -41,6 +41,77 @@ class BT16_046(CardScript):
         effect1.set_can_use_condition(condition1)
         effects.append(effect1)
 
+        # ── Shared helper: Suspend 2 opp Digimon/Tamers + cannot unsuspend + delete 1 suspended Tamer ──
+        def _suspend_and_delete(ctx: Dict[str, Any]):
+            """Suspend 2 opp Digimon/Tamers (CANNOT_UNSUSPEND via modifier),
+            then delete 1 of their suspended Tamers.
+            Selections are chained: 1st suspend -> 2nd suspend -> delete tamer."""
+            player = ctx.get('player')
+            game = ctx.get('game')
+            if not (player and game):
+                return
+            enemy = player.enemy if player else None
+            if not enemy:
+                return
+
+            from ....interfaces.modifiers import ModifierType
+
+            # Track targets chosen by this effect so selections don't repeat
+            already_chosen: list = []
+
+            def suspend_filter(p):
+                return (p.is_digimon or p.is_tamer) and p not in already_chosen
+
+            def _delete_suspended_tamer():
+                """Final step: delete 1 of opponent's suspended Tamers."""
+                def suspended_tamer_filter(p):
+                    return p.is_tamer and p.is_suspended
+                game.effect_select_opponent_permanent(
+                    player, lambda tp: enemy.delete_permanent(tp),
+                    filter_fn=suspended_tamer_filter, is_optional=False)
+
+            def _suspend_second():
+                """Second suspend selection, chained from the first."""
+                opp_targets_2 = [p for p in enemy.battle_area if suspend_filter(p)]
+                if not opp_targets_2:
+                    _delete_suspended_tamer()
+                    return
+
+                def on_suspend_2(target_perm):
+                    already_chosen.append(target_perm)
+                    was_already_suspended = target_perm.is_suspended
+                    target_perm.suspend()
+                    if not was_already_suspended:
+                        game.register_modifier(
+                            target_perm, ModifierType.CANNOT_UNSUSPEND,
+                            expiry='end_of_opponent_turn')
+                    _delete_suspended_tamer()
+
+                game.effect_select_opponent_permanent(
+                    player, on_suspend_2, filter_fn=suspend_filter, is_optional=False)
+
+            # First suspend selection
+            opp_targets_1 = [p for p in enemy.battle_area
+                             if p.is_digimon or p.is_tamer]
+            if not opp_targets_1:
+                _delete_suspended_tamer()
+                return
+
+            def on_suspend_1(target_perm):
+                already_chosen.append(target_perm)
+                was_already_suspended = target_perm.is_suspended
+                target_perm.suspend()
+                if not was_already_suspended:
+                    game.register_modifier(
+                        target_perm, ModifierType.CANNOT_UNSUSPEND,
+                        expiry='end_of_opponent_turn')
+                _suspend_second()
+
+            game.effect_select_opponent_permanent(
+                player, on_suspend_1,
+                filter_fn=lambda p: p.is_digimon or p.is_tamer,
+                is_optional=False)
+
         # Timing: EffectTiming.OnEnterFieldAnyone
         # [On Play] Suspend 2 of your opponent's Digimon or Tamers. Cards suspended by this effect cant unsuspend during your opponent's next unsuspend phase. Then, delete 1 of your opponent's suspended Tamers.
         effect2 = ICardEffect()
@@ -58,46 +129,7 @@ class BT16_046(CardScript):
             return True
 
         effect2.set_can_use_condition(condition2)
-
-        def process2(ctx: Dict[str, Any]):
-            """Action: Suspend 2 opp Digimon/Tamers (cannot unsuspend), then delete 1 suspended Tamer"""
-            player = ctx.get('player')
-            perm = ctx.get('permanent')
-            game = ctx.get('game')
-            if not (player and game):
-                return
-            enemy = player.enemy if player else None
-            if not enemy:
-                return
-            # Track which permanents we suspend so we can grant cannot-unsuspend
-            suspended_by_effect = []
-
-            def suspend_filter(p):
-                return p.is_digimon or p.is_tamer
-
-            def on_suspend(target_perm):
-                was_already_suspended = target_perm.is_suspended
-                target_perm.suspend()
-                if not was_already_suspended:
-                    suspended_by_effect.append(target_perm)
-                    # Grant cannot-unsuspend during opponent's next unsuspend phase
-                    target_perm.grant_keyword('_is_cannot_unsuspend')
-
-            # Suspend up to 2 opponent Digimon or Tamers
-            opp_targets = [p for p in enemy.battle_area if suspend_filter(p)]
-            for _ in range(min(2, len(opp_targets))):
-                game.effect_select_opponent_permanent(
-                    player, on_suspend, filter_fn=suspend_filter, is_optional=False)
-
-            # Then, delete 1 of their suspended Tamers
-            def suspended_tamer_filter(p):
-                return p.is_tamer and p.is_suspended
-
-            game.effect_select_opponent_permanent(
-                player, lambda tp: enemy.delete_permanent(tp),
-                filter_fn=suspended_tamer_filter, is_optional=False)
-
-        effect2.set_on_process_callback(process2)
+        effect2.set_on_process_callback(_suspend_and_delete)
         effects.append(effect2)
 
         # Timing: EffectTiming.OnEnterFieldAnyone
@@ -117,42 +149,7 @@ class BT16_046(CardScript):
             return True
 
         effect3.set_can_use_condition(condition3)
-
-        def process3(ctx: Dict[str, Any]):
-            """Action: Suspend 2 opp Digimon/Tamers (cannot unsuspend), then delete 1 suspended Tamer"""
-            player = ctx.get('player')
-            perm = ctx.get('permanent')
-            game = ctx.get('game')
-            if not (player and game):
-                return
-            enemy = player.enemy if player else None
-            if not enemy:
-                return
-            suspended_by_effect = []
-
-            def suspend_filter(p):
-                return p.is_digimon or p.is_tamer
-
-            def on_suspend(target_perm):
-                was_already_suspended = target_perm.is_suspended
-                target_perm.suspend()
-                if not was_already_suspended:
-                    suspended_by_effect.append(target_perm)
-                    target_perm.grant_keyword('_is_cannot_unsuspend')
-
-            opp_targets = [p for p in enemy.battle_area if suspend_filter(p)]
-            for _ in range(min(2, len(opp_targets))):
-                game.effect_select_opponent_permanent(
-                    player, on_suspend, filter_fn=suspend_filter, is_optional=False)
-
-            def suspended_tamer_filter(p):
-                return p.is_tamer and p.is_suspended
-
-            game.effect_select_opponent_permanent(
-                player, lambda tp: enemy.delete_permanent(tp),
-                filter_fn=suspended_tamer_filter, is_optional=False)
-
-        effect3.set_on_process_callback(process3)
+        effect3.set_on_process_callback(_suspend_and_delete)
         effects.append(effect3)
 
         # Timing: EffectTiming.OnTappedAnyone

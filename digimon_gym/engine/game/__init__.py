@@ -80,6 +80,8 @@ class Game(CombatMixin, ActionDecoderMixin, EffectHelpersMixin):
         # Deferred end-phase: set when OnEndTurn effects create pending selections.
         self._end_phase_deferred: bool = False
         self._end_phase_memory_before: int = 0
+        # Deferred move-to-main: set when OnMove effects create pending selections.
+        self._move_to_main_deferred: bool = False
 
         # Opening mulligan state (set during start_game()).
         self._mulligan_order: List[Player] = []
@@ -288,6 +290,13 @@ class Game(CombatMixin, ActionDecoderMixin, EffectHelpersMixin):
             self._end_phase_deferred = False
             self._complete_end_phase(mb)
 
+    def _maybe_complete_move_to_main(self):
+        """Complete the move-to-main transition if it was deferred for OnMove selections."""
+        if self._move_to_main_deferred and self.pending_selection is None:
+            self._move_to_main_deferred = False
+            self.current_phase = GamePhase.Main
+            self.phase_main()
+
     def _has_end_of_turn_keywords(self) -> bool:
         """Check if the turn player has any Digimon with Vortex, Overclock, or MAY_ATTACK."""
         from ..interfaces.modifiers import ModifierType
@@ -315,6 +324,7 @@ class Game(CombatMixin, ActionDecoderMixin, EffectHelpersMixin):
         self.opponent_player.is_my_turn = False
         self._turn_end_deferred = False
         self._end_phase_deferred = False
+        self._move_to_main_deferred = False
 
     def pass_turn(self):
         if self.memory >= 0:
@@ -1299,7 +1309,9 @@ class Game(CombatMixin, ActionDecoderMixin, EffectHelpersMixin):
         card = self.turn_player.hand_cards[card_index]
 
         # Runtime guard: CANNOT_DIGIVOLVE modifier
-        if self.modifiers.has_modifier(perm, ModifierType.CANNOT_DIGIVOLVE):
+        # Pass digivolving_card so conditional restrictions (e.g. "only into X") work
+        if self.modifiers.has_modifier(perm, ModifierType.CANNOT_DIGIVOLVE,
+                                       {'digivolving_card': card}):
             self.logger.log(f"[Rejected] action_digivolve: {self._perm_ref(perm)} blocked by CANNOT_DIGIVOLVE modifier")
             return
 
@@ -1411,11 +1423,13 @@ class Game(CombatMixin, ActionDecoderMixin, EffectHelpersMixin):
             # Set Main phase BEFORE executing OnMove effects so that any
             # request_selection saves previous_phase=Main (not Breeding).
             # This ensures selections resolve back to Main correctly.
-            self.current_phase = GamePhase.Main
             self.execute_effects(EffectTiming.OnMove, {"moved_permanent": self.turn_player.battle_area[-1]})
-            # Only run phase_main if no pending selection from OnMove effects
-            if self.pending_selection is None:
-                self.phase_main()
+            # If OnMove effects created pending selections, defer Main transition
+            if self.pending_selection is not None:
+                self._move_to_main_deferred = True
+                return
+            self.current_phase = GamePhase.Main
+            self.phase_main()
 
     def action_breeding_pass(self):
         """Skip breeding phase and advance to main."""

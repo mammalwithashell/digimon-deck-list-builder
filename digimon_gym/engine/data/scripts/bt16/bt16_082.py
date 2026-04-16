@@ -37,16 +37,15 @@ class BT16_082(CardScript):
                 return False
             if not (card and card.owner and card.owner.is_my_turn):
                 return False
-            # Event must be owner's Digimon moving (from breeding to battle area)
-            event_perm = context.get('event_permanent')
-            if event_perm is None:
+            # OnMove context key is 'moved_permanent' (the Digimon that moved
+            # from breeding to battle area).  Must be owner's Digimon.
+            moved_perm = context.get('moved_permanent')
+            if moved_perm is None:
                 return False
-            event_player = context.get('event_player')
-            if event_player is None:
+            if not moved_perm.is_digimon:
                 return False
-            if event_player is not card.owner:
-                return False
-            if not event_perm.is_digimon:
+            # Check the moved Digimon belongs to the same owner
+            if moved_perm not in (card.owner.battle_area or []):
                 return False
             return True
 
@@ -57,12 +56,9 @@ class BT16_082(CardScript):
             game = ctx.get('game')
             if not (player and game):
                 return
-            # Reveal top 3, pick 1 Digimon or Tamer card to hand, rest to deck bottom
-            def reveal_filter(c):
-                return getattr(c, 'is_digimon', False) or getattr(c, 'is_tamer', False)
 
-            def offer_hatch():
-                # "Then, you may hatch in your breeding area." — optional
+            def _maybe_hatch():
+                """Then, you may hatch in your breeding area (optional)."""
                 if player.digitama_library_cards and player.breeding_area is None:
                     def on_hatch_choice(choice_idx):
                         if choice_idx == 0:
@@ -73,17 +69,24 @@ class BT16_082(CardScript):
                         branch_labels=["Yes, hatch", "No, skip"],
                     )
 
+            # Reveal top 3, pick 1 Digimon or Tamer card to hand, rest to deck bottom
+            def reveal_filter(c):
+                return getattr(c, 'is_digimon', False) or getattr(c, 'is_tamer', False)
+
             def on_selected(selected, remaining):
                 player.hand_cards.append(selected)
                 for c in remaining:
                     player.library_cards.append(c)
-                # Chain the hatch branch after reveal completes so the pending
-                # selection sequences correctly instead of being overwritten.
-                offer_hatch()
+                # Chain the hatch choice after reveal selection resolves
+                _maybe_hatch()
 
             game.effect_reveal_and_select(
                 player, 3, reveal_filter, on_selected, is_optional=False
             )
+            # If no selection was created (empty deck or no valid cards),
+            # the hatch choice can proceed synchronously.
+            if game.pending_selection is None:
+                _maybe_hatch()
 
         effect0.set_on_process_callback(process0)
         effects.append(effect0)

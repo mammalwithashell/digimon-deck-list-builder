@@ -141,15 +141,6 @@ class P_216(CardScript):
 
         effect2.set_can_use_condition(condition2)
 
-        def _security_filter(c):
-            """Dark Masters trait Digimon, face-up in security."""
-            if not getattr(c, 'is_digimon', False):
-                return False
-            if getattr(c, 'is_flipped', False):
-                return False
-            traits = getattr(c, 'card_traits', []) or []
-            return any('Dark Masters' in t for t in traits)
-
         def process2(ctx: Dict[str, Any]):
             """Select and play a Dark Masters Digimon from security, then
             register end-of-owner-turn deletion."""
@@ -158,22 +149,32 @@ class P_216(CardScript):
             if not (player and game):
                 return
 
+            def _security_filter(c):
+                """Dark Masters trait Digimon, face-up in security."""
+                if not getattr(c, 'is_digimon', False):
+                    return False
+                if not player.is_security_face_up(c):
+                    return False
+                traits = getattr(c, 'card_traits', []) or []
+                return any('Dark Masters' in t for t in traits)
+
             def on_security_selected(selected_card):
                 # Remove from security and play onto the field
-                if selected_card in player.security_cards:
-                    player.security_cards.remove(selected_card)
+                removed = player.remove_from_security(selected_card)
+                if not removed:
+                    return
                 played_perm = player.play_card_from_source(
-                    selected_card, pay_cost=False)
+                    removed, pay_cost=False)
                 if not played_perm:
                     return
                 game.logger.log(
                     f"[Effect] {player.player_name} played "
-                    f"{game._card_ref(selected_card)} from security via P-216 On Deletion")
+                    f"{game._card_ref(removed)} from security via P-216 On Deletion")
 
                 # Fire On Enter Field effects for the played card
                 game.execute_effects(
                     EffectTiming.OnEnterFieldAnyone,
-                    {"played_card": selected_card,
+                    {"played_card": removed,
                      "played_permanent": played_perm,
                      "event_player": player})
                 game._fire_play_observers(played_perm, player)

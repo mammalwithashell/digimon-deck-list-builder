@@ -44,9 +44,9 @@ class BT13_102(CardScript):
                 return getattr(c, 'is_tamer', False) or getattr(c, 'is_option', False)
 
             def on_decline():
-                """Opponent declined to trash -- owner gains 1 memory and draws 1."""
-                player.add_memory(1)
+                """Opponent declined to trash -- owner draws 1 and gains 1 memory (C# order)."""
                 player.draw_cards(1)
+                player.add_memory(1)
 
             # Build valid indices for the opponent's hand (Tamer or Option cards only)
             valid = []
@@ -97,11 +97,14 @@ class BT13_102(CardScript):
             this_perm = card.permanent_of_this_card()
             if this_perm and this_perm.is_suspended:
                 return False
-            # Must be triggered by a Digimon entering the field (effect-played)
-            entering_perm = context.get('permanent')
+            # Must be triggered by a Digimon entering the field
+            entering_perm = context.get('played_permanent')
             if entering_perm is None:
                 return False
             if not getattr(entering_perm, 'is_digimon', False):
+                return False
+            # Must be played BY EFFECT (not normal hand play)
+            if not context.get('is_effect_play', False):
                 return False
             return True
 

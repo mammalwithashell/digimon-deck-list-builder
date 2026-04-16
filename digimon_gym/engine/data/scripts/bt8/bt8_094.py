@@ -14,10 +14,10 @@ class BT8_094(CardScript):
     def get_card_effects(self, card: 'CardSource') -> List['ICardEffect']:
         effects = []
 
-        # Deletion observer: [All Turns] When one of your opponent's level 5
-        # or lower Digimon is deleted, you may suspend this Tamer to <Draw 1>.
+        # Effect 0: Deletion observer (NoTiming + _is_deletion_observer)
+        # [All Turns] When one of your opponent's level 5 or lower Digimon is deleted,
+        # you may suspend this Tamer to <Draw 1>.
         effect0 = ICardEffect()
-        effect0.set_timing(EffectTiming.NoTiming)
         effect0.set_effect_name("BT8-094 Draw 1")
         effect0.set_effect_description(
             "[All Turns] When one of your opponent's level 5 or lower Digimon is deleted, "
@@ -36,14 +36,37 @@ class BT8_094(CardScript):
             player = card.owner if card else None
             if not player:
                 return False
-            # The deleted permanent is passed via _fire_deletion_observers
+            # The deleted permanent comes via 'deleted_permanent' in observer context
             deleted = context.get('deleted_permanent')
             if deleted is None:
                 return False
-            # Must be opponent's Digimon (check via card source owner)
-            deleted_owner = deleted.owner
-            if deleted_owner is None or deleted_owner is player:
+            # Must be opponent's Digimon (deleted permanent's owner != our player)
+            # In observer pattern: context['player'] is the observer's owner
+            # The deleted permanent belongs to the opponent if its owner is not us
+            # Check by seeing if deleted is NOT in our battle area/trash
+            # Actually: _fire_deletion_observers passes 'player' as the observer's owner.
+            # The 'owner' param to _fire_deletion_observers is the deleted perm's owner.
+            # For cross-side: deleted perm owner != observer owner (context['player'])
+            # We need to check that the deleted permanent belongs to player's enemy.
+            enemy = player.enemy if hasattr(player, 'enemy') else None
+            if enemy is None:
                 return False
+            # The deleted perm should belong to our opponent
+            # Since _fire_deletion_observers is called with owner=deleted perm's owner,
+            # and context['player'] is the observer's owner, we check that the deleted
+            # perm is NOT ours. We can check if it was in enemy's trash after deletion.
+            # Simplest: check if deleted perm is not in player's battle_area
+            # (it's already been removed, so check card sources in trash)
+            # Actually the reliable way: check the top_card's owner
+            if deleted.top_card and hasattr(deleted.top_card, 'owner') and deleted.top_card.owner is player:
+                return False
+            # Also guard: if the deleted perm was in our own battle_area, skip
+            # For robustness, just verify it's not ours by checking card source owner
+            for cs in deleted.card_sources:
+                if hasattr(cs, 'owner') and cs.owner is player:
+                    return False
+                break  # Just check the first card source
+
             if not deleted.is_digimon:
                 return False
             # Level 5 or lower
@@ -69,7 +92,7 @@ class BT8_094(CardScript):
         effect0.set_on_process_callback(process0)
         effects.append(effect0)
 
-        # Timing: EffectTiming.OnMove
+        # Effect 1: OnMove timing
         # [Opponent's Turn] When one of your opponent's level 3 Digimon is moved
         # from their breeding area to their battle area, gain 2 memory.
         effect1 = ICardEffect()
@@ -94,8 +117,7 @@ class BT8_094(CardScript):
             moved = context.get('moved_permanent')
             if moved is None:
                 return False
-            # Must be opponent's Digimon (moved from breeding = opponent's action)
-            # The move is done by the turn player, who is the opponent
+            # Must be a Digimon
             if not moved.is_digimon:
                 return False
             # Level 3 check

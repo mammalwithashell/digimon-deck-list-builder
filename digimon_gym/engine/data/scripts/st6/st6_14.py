@@ -16,8 +16,7 @@ class ST6_14(CardScript):
 
         # --- Effect 0: [Your Turn] When one of your Digimon is deleted,
         #     you may suspend this Tamer to gain 1 memory. ---
-        # Uses _is_deletion_observer pattern: fires via _fire_deletion_observers
-        # when OTHER permanents are deleted (not OnDestroyedAnyone self-deletion).
+        # Uses NoTiming + _is_deletion_observer so _fire_deletion_observers() picks it up
         effect0 = ICardEffect()
         effect0.set_effect_name("ST6-14 Suspend to gain 1 memory on own Digimon deletion")
         effect0.set_effect_description(
@@ -44,11 +43,11 @@ class ST6_14(CardScript):
             deleted = context.get('deleted_permanent')
             if deleted is None:
                 return False
-            if not getattr(deleted, 'is_digimon', False):
-                return False
-            # Must be OUR Digimon, not opponent's
+            # Check the deleted Digimon belongs to us
             deleted_owner = getattr(deleted, 'owner', None)
-            if deleted_owner is not player:
+            if deleted_owner is None or deleted_owner is not player:
+                return False
+            if not deleted.is_digimon:
                 return False
             return True
 
@@ -84,8 +83,9 @@ class ST6_14(CardScript):
         def process1(ctx: Dict[str, Any]):
             """Play this tamer from security without paying cost."""
             player = ctx.get('player')
-            if player and card:
-                player.play_card_from_source(card, pay_cost=False)
+            game = ctx.get('game')
+            if player and card and game:
+                game.effect_play_from_security(player, card)
 
         effect1.set_on_process_callback(process1)
         effects.append(effect1)
