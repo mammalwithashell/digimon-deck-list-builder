@@ -57,7 +57,7 @@ fn attacker_wins_deletes_defender() {
     let atk = r.place_on_field(0, "BIG", Some(0)); // turn 0 so not summoning-sick
     let def = r.place_on_field(1, "SMALL", Some(0));
 
-    let result = r.attack_digimon(atk, def);
+    let result = r.attack_digimon(atk, def, false);
     assert_eq!(result, AttackResult::AttackerWins);
     assert_eq!(r.battle_area_size(0), 1, "attacker still on field");
     assert_eq!(r.battle_area_size(1), 0, "defender deleted");
@@ -74,7 +74,7 @@ fn defender_wins_deletes_attacker() {
     let atk = r.place_on_field(0, "SMALL", Some(0));
     let def = r.place_on_field(1, "BIG", Some(0));
 
-    let result = r.attack_digimon(atk, def);
+    let result = r.attack_digimon(atk, def, false);
     assert_eq!(result, AttackResult::DefenderWins);
     assert_eq!(r.battle_area_size(0), 0, "attacker deleted");
     assert_eq!(r.battle_area_size(1), 1, "defender survived");
@@ -90,7 +90,7 @@ fn tie_deletes_both() {
     let atk = r.place_on_field(0, "EQUAL", Some(0));
     let def = r.place_on_field(1, "EQUAL", Some(0));
 
-    let result = r.attack_digimon(atk, def);
+    let result = r.attack_digimon(atk, def, false);
     assert_eq!(result, AttackResult::MutualDestruction);
     assert_eq!(r.battle_area_size(0), 0);
     assert_eq!(r.battle_area_size(1), 0);
@@ -110,7 +110,7 @@ fn suspended_attacker_cannot_attack() {
     // Manually suspend the attacker.
     r.game.players[atk.player as usize].battle_area[atk.index as usize].is_suspended = true;
 
-    let result = r.attack_digimon(atk, def);
+    let result = r.attack_digimon(atk, def, false);
     assert_eq!(result, AttackResult::Invalid);
     assert_eq!(r.battle_area_size(1), 1);
 }
@@ -125,7 +125,7 @@ fn summoning_sick_attacker_cannot_attack() {
     let atk = r.place_on_field(0, "BIG", None);
     let def = r.place_on_field(1, "SMALL", Some(0));
 
-    let result = r.attack_digimon(atk, def);
+    let result = r.attack_digimon(atk, def, false);
     assert_eq!(result, AttackResult::Invalid);
     assert_eq!(r.battle_area_size(0), 1, "attacker still there");
 }
@@ -139,7 +139,7 @@ fn attacker_gets_suspended_after_attack() {
     let atk = r.place_on_field(0, "BIG", Some(0));
     let def = r.place_on_field(1, "SMALL", Some(0));
 
-    r.attack_digimon(atk, def);
+    r.attack_digimon(atk, def, false);
     assert!(
         r.game.players[0].battle_area[0].is_suspended,
         "attacker should be suspended after attacking"
@@ -155,7 +155,7 @@ fn attack_player_with_security_survives() {
         .start();
 
     let atk = r.place_on_field(0, "BIG", Some(0));
-    let result = r.attack_player(atk, 1);
+    let result = r.attack_player(atk, 1, false);
     assert_eq!(result, AttackResult::SecurityCheckSurvived);
     assert_eq!(r.security_count(1), 2, "one security consumed");
     assert_eq!(r.trash_size(1), 1, "security card trashed");
@@ -171,7 +171,7 @@ fn attack_player_with_digimon_security_survives_when_attacker_stronger() {
         .start();
 
     let atk = r.place_on_field(0, "ATK", Some(0));
-    let result = r.attack_player(atk, 1);
+    let result = r.attack_player(atk, 1, false);
     // Security drained to 0 after consuming the Digimon sec, but attacker
     // is still alive. Game doesn't end unless a subsequent attack with no
     // security remaining comes in.
@@ -189,7 +189,7 @@ fn attack_player_with_strong_digimon_security_deletes_attacker() {
         .start();
 
     let atk = r.place_on_field(0, "WEAK", Some(0));
-    let result = r.attack_player(atk, 1);
+    let result = r.attack_player(atk, 1, false);
     assert_eq!(result, AttackResult::AttackerDeletedBySecurity);
     assert_eq!(r.battle_area_size(0), 0, "attacker deleted");
     assert_eq!(r.security_count(1), 0, "security trashed too");
@@ -203,7 +203,7 @@ fn attack_player_with_no_security_wins_game() {
         .start();
 
     let atk = r.place_on_field(0, "BIG", Some(0));
-    let result = r.attack_player(atk, 1);
+    let result = r.attack_player(atk, 1, false);
     assert_eq!(result, AttackResult::GameWon);
     assert!(r.game_over());
     assert_eq!(r.winner(), Some(0));
@@ -222,7 +222,7 @@ fn test_005_on_deletion_fires_during_combat() {
     let def = r.place_on_field(1, "TEST-005", Some(0));
 
     let m_before = r.memory();
-    let result = r.attack_digimon(atk, def);
+    let result = r.attack_digimon(atk, def, false);
     assert_eq!(result, AttackResult::AttackerWins);
     assert_eq!(
         r.memory(),
@@ -249,7 +249,7 @@ fn test_003_buff_persists_until_end_of_turn() {
     let def = r.place_on_field(1, "DEF", Some(0));
     // Ally at 2000 + 1000 buff = 3000 vs Def 2500 = ally wins
     assert_eq!(r.effective_dp(ally), Some(3000));
-    let result = r.attack_digimon(ally, def);
+    let result = r.attack_digimon(ally, def, false);
     assert_eq!(result, AttackResult::AttackerWins);
 }
 
@@ -280,7 +280,7 @@ fn attack_count_this_turn_increments() {
     let def = r.place_on_field(1, "SMALL", Some(0));
 
     assert_eq!(r.game.players[0].battle_area[0].attacks_this_turn, 0);
-    r.attack_digimon(atk, def);
+    r.attack_digimon(atk, def, false);
     assert_eq!(r.game.players[0].battle_area[0].attacks_this_turn, 1);
 }
 
@@ -296,7 +296,7 @@ fn non_digimon_target_is_invalid() {
 
     let atk = r.place_on_field(0, "BIG", Some(0));
     let tamer = r.place_on_field(1, "TAMER", Some(0));
-    let result = r.attack_digimon(atk, tamer);
+    let result = r.attack_digimon(atk, tamer, false);
     assert_eq!(result, AttackResult::Invalid);
     // Attacker did NOT suspend or consume turn; game state unchanged.
     assert!(!r.game.players[0].battle_area[0].is_suspended);
@@ -324,7 +324,7 @@ fn multiple_security_checks_with_sec_attack_plus() {
         },
     );
 
-    r.attack_player(atk, 1);
+    r.attack_player(atk, 1, false);
     assert_eq!(
         r.security_count(1),
         1,

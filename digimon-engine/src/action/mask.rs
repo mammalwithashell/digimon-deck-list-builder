@@ -10,8 +10,10 @@
 
 use crate::action::space::*;
 use crate::card_data::CardData;
-use crate::enums::{CardColor, CardKind, GamePhase, PlayerId};
+use crate::enums::{CardColor, CardKind, GamePhase, Keyword, PlayerId};
 use crate::game::Game;
+use crate::modifiers::ModifierRegistry;
+use crate::permanent::PermanentHandle;
 use crate::tensor::FIELD_SLOTS;
 
 fn evo_color(raw: u8) -> Option<CardColor> {
@@ -70,7 +72,14 @@ pub fn build_action_mask(game: &Game, player_id: PlayerId) -> Vec<f32> {
                 let max_field = me.battle_area.len().min(FIELD_SLOTS);
                 for i in 0..max_field {
                     let attacker = &me.battle_area[i];
-                    if !can_basic_attack(attacker, game.turn_count, &game.card_data) {
+                    let handle = PermanentHandle { player: player_id, index: i as u8 };
+                    if !can_basic_attack(
+                        attacker,
+                        handle,
+                        game.turn_count,
+                        &game.card_data,
+                        &game.modifiers,
+                    ) {
                         continue;
                     }
 
@@ -144,12 +153,17 @@ pub fn build_action_mask(game: &Game, player_id: PlayerId) -> Vec<f32> {
 
 // ─── Helpers ──────────────────────────────────────────────────────────
 
-/// Basic attack eligibility: unsuspended Digimon not played this turn.
-/// Full keyword/modifier checks deferred.
+/// Basic attack eligibility: unsuspended Digimon not played this turn,
+/// unless modifier-granted Rush exempts summoning sickness.
+///
+/// Vortex is not checked here — Vortex attacks belong to `EndOfTurnAction`
+/// phase mask generation (§4.6), not the Main-phase attack range.
 fn can_basic_attack(
     perm: &crate::permanent::Permanent,
+    handle: PermanentHandle,
     turn: u16,
     card_data: &[CardData],
+    modifiers: &ModifierRegistry,
 ) -> bool {
     if perm.is_suspended {
         return false;
@@ -157,9 +171,11 @@ fn can_basic_attack(
     if !perm.is_digimon(card_data) {
         return false;
     }
-    // Summoning sickness: can't attack the turn it was played, unless Rush
-    // (Rush handling deferred to keyword system).
-    if perm.turn_played == turn && perm.turn_digivolved != turn {
+    // Summoning sickness: can't attack the turn it was played unless Rush
+    // has been granted (modifier-granted only; native/static Rush pending
+    // §2.1b).
+    let is_fresh = perm.turn_played == turn && perm.turn_digivolved != turn;
+    if is_fresh && !modifiers.has_keyword(handle, Keyword::Rush) {
         return false;
     }
     true

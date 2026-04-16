@@ -85,13 +85,17 @@ Each entry cites the canonical source lines so divergences can be rechecked afte
 
 ## 2. Combat & permanent state
 
-### 2.1 🔴 Rush / Vortex summoning sickness exemption
+### 2.1 🟢 Rush / Vortex summoning-sickness exemption — implemented
 
-**Python** — [permanent.py:405-407](../digimon_gym/engine/core/permanent.py#L405): a permanent with `_is_rush` or invoked with `is_vortex=True` can attack the turn it arrived.
+**Python** — [permanent.py:404-407](../digimon_gym/engine/core/permanent.py#L404): a permanent with `_is_rush` or invoked with `is_vortex=True` can attack the turn it arrived.
 
-**Rust** — [combat.rs:77-87](../digimon-engine/src/combat.rs#L77): if `turn_played == turn_count`, `can_attack` returns false. No keyword check.
+**Rust** — [combat.rs](../digimon-engine/src/combat.rs) `can_attack(handle, vortex)`, `attack_digimon(…, vortex)`, `attack_player(…, vortex)` all carry the `vortex: bool` flag. Summoning sickness short-circuits when `vortex` is true *or* `modifiers.has_keyword(handle, Keyword::Rush)` is true. The mask helper `can_basic_attack` in [mask.rs](../digimon-engine/src/action/mask.rs) checks modifier-granted Rush so the Main-phase mask agrees with the engine.
 
-**Fix outline:** After the summoning-sickness check, short-circuit with `|| self.modifiers.has_keyword(handle, Keyword::Rush)`. Accept a `vortex: bool` parameter on `can_attack` for vortex-triggered attacks.
+**Coverage:** [tests/rush_exemption.rs](../digimon-engine/tests/rush_exemption.rs) — `freshly_played_without_rush_cannot_attack`, `freshly_played_with_rush_can_attack`, `rush_does_not_override_suspended_state`, `freshly_played_with_vortex_can_attack`, `vortex_does_not_override_suspended_state`, `mask_allows_rush_granted_attack_on_turn_played`.
+
+### 2.1b 🟡 Native (card-text) Rush not parsed
+
+Rust's [CardData](../digimon-engine/src/card_data.rs#L18) has no `keywords: Vec<Keyword>` field — static card keywords live inside `effect_text: String`. Cards that print Rush on their face don't trigger the exemption in `can_attack` because there's nothing to inspect. Fix requires either a keyword-parsing pass over `effect_text` or an explicit `keywords` field on `CardData` + a migration of cards.json. Track with §4.5 effect-listing work.
 
 ### 2.2 🟡 `is_attacking` flag missing
 
@@ -263,7 +267,7 @@ Phase 9 (PyO3 bindings) readiness requires, in priority order:
 
 1. **§1.1 — Deduct play cost** (single biggest correctness bug; every play is free today). ✅ done
 2. **§1.2 / §1.3 / §1.4 / §1.5 — Memory seesaw semantics** (tight cluster; probably ~30 lines of changes in `game.rs` plus tests). ✅ done
-3. **§2.1 — Rush exemption** (needed for any card with Rush; trivial once modifier lookup is in place).
+3. ~~**§2.1 — Rush / Vortex exemption**~~ ✅ done — `vortex: bool` threaded through combat, modifier-granted Rush honored in both combat and Main-phase mask. Residual §2.1b (native static keyword) deferred until effect-listing lands.
 4. ~~**§1.7 — First-turn draw rule**~~ — audit was wrong; behavior already matches Python. Tested as of this cycle.
 5. ~~**§1.6 — Mulligan flow**~~ ✅ done — accept_mulligan state machine + first-player coin flip + tests/mulligan.rs.
 6. ~~**§3.1 / §3.2 — Tensor source-DP + OPT slots**~~ ✅ done — `EffectReadContext` + `Permanent::effect_activations` + Game helpers + tensor wiring. Residual §3.1b (linked-card effects) deferred.
