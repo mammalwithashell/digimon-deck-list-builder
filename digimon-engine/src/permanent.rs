@@ -1,5 +1,7 @@
+use std::collections::HashMap;
+
 use crate::card_data::CardData;
-use crate::card_source::CardSource;
+use crate::card_source::{CardHandle, CardSource};
 use crate::enums::{CardKind, PlayerId};
 
 /// Lightweight handle to a Permanent on a player's field. Copy-able, used in closures.
@@ -24,6 +26,12 @@ pub struct Permanent {
     pub turn_digivolved: u16,
     /// Number of attacks made this turn.
     pub attacks_this_turn: u8,
+    /// Per-source, per-effect activation counts this turn.
+    /// Key: (source card handle, effect slot index within that card's
+    /// `CardEffect::effects(handle)` vec). Value: number of activations.
+    /// Reset in `new_turn`. Used to compute OPT (once-per-turn) state for
+    /// the observation tensor and to gate future effect firing.
+    pub effect_activations: HashMap<(CardHandle, u8), u8>,
 }
 
 impl Permanent {
@@ -36,7 +44,22 @@ impl Permanent {
             turn_played: turn,
             turn_digivolved: 0,
             attacks_this_turn: 0,
+            effect_activations: HashMap::new(),
         }
+    }
+
+    /// Increment the activation count for a specific effect on this permanent.
+    pub fn record_activation(&mut self, card: CardHandle, slot: u8) {
+        let entry = self.effect_activations.entry((card, slot)).or_insert(0);
+        *entry = entry.saturating_add(1);
+    }
+
+    /// How many times a given effect has fired this turn.
+    pub fn activation_count(&self, card: CardHandle, slot: u8) -> u8 {
+        self.effect_activations
+            .get(&(card, slot))
+            .copied()
+            .unwrap_or(0)
     }
 
     /// The top card of the digivolution stack.
@@ -126,5 +149,6 @@ impl Permanent {
     /// Reset per-turn state.
     pub fn new_turn(&mut self) {
         self.attacks_this_turn = 0;
+        self.effect_activations.clear();
     }
 }
