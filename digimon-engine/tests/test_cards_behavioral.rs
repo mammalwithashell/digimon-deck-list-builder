@@ -147,7 +147,7 @@ fn test_004_condition_true_when_opponent_has_digimon() {
         0,
     );
     let cond = when_dig.condition.as_ref().unwrap();
-    assert!(!cond(&ctx), "condition should be false (no opp Digimon)");
+    assert!(!cond(&ctx.as_read()), "condition should be false (no opp Digimon)");
 }
 
 #[test]
@@ -184,7 +184,7 @@ fn test_004_condition_true_then_gains_memory() {
             0,
         );
         let cond = when_dig.condition.as_ref().unwrap();
-        assert!(cond(&ctx), "condition should be true (opp has Digimon)");
+        assert!(cond(&ctx.as_read()), "condition should be true (opp has Digimon)");
     }
     {
         let mut ctx = digimon_engine::effect_context::EffectContext::new(

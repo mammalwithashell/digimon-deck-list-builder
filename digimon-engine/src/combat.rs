@@ -239,7 +239,7 @@ impl Game {
             }
             if let Some(cond) = &effect.condition {
                 let ctx = EffectContext::new(self, card_handle, Some(handle), handle.player);
-                if !cond(&ctx) {
+                if !cond(&ctx.as_read()) {
                     continue;
                 }
             }
@@ -351,7 +351,7 @@ impl Game {
                 if let Some(cond) = &effect.condition {
                     let ctx =
                         EffectContext::new(self, card_handle, Some(handle), handle.player);
-                    if !cond(&ctx) {
+                    if !cond(&ctx.as_read()) {
                         continue;
                     }
                 }

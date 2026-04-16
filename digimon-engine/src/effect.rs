@@ -1,10 +1,13 @@
 //! Card effect representation — Effect struct and EffectBuilder.
 
 use crate::card_source::CardHandle;
-use crate::effect_context::EffectContext;
+use crate::effect_context::{EffectContext, EffectReadContext};
 use crate::enums::EffectTiming;
 
-pub type ConditionFn = Box<dyn Fn(&EffectContext) -> bool + Send + Sync>;
+/// Condition closures run during effect evaluation and during tensor-time
+/// inspection (for static DP modifiers / OPT state). They receive a
+/// read-only view of game state; they must not mutate.
+pub type ConditionFn = Box<dyn Fn(&EffectReadContext) -> bool + Send + Sync>;
 pub type ProcessFn = Box<dyn Fn(&mut EffectContext) + Send + Sync>;
 
 /// A single card effect with timing and behavior.
@@ -171,7 +174,7 @@ impl EffectBuilder {
 
     pub fn condition(
         mut self,
-        f: impl Fn(&EffectContext) -> bool + Send + Sync + 'static,
+        f: impl Fn(&EffectReadContext) -> bool + Send + Sync + 'static,
     ) -> Self {
         self.inner.condition = Some(Box::new(f));
         self
